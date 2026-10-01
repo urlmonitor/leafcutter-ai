@@ -1,13 +1,13 @@
 ---
 title: "Decision Kernel — Container Overview"
-description: "Container-level overview of the Leafcutter decision kernel (kernel/): the client-independent run service, the fixed LangGraph scheduler, the Jev decision port, the new capability registry, native decision and research capabilities, the read-only retrieval adapter, cooperative Claude Code handoff, and Langfuse observability. Status: planned; Phase 0 of TICKET-20260930-KernelBootstrapV0."
+description: "Container-level overview of the Leafcutter decision kernel (kernel/): the client-independent run service, the fixed LangGraph scheduler, the Jev decision port, the new capability registry, native decision and research capabilities, the read-only retrieval adapter, cooperative Claude Code handoff, and Langfuse observability. Status: active (Stage 1 MVP built, phases P0-P10 of TICKET-20260930-KernelBootstrapV0)."
 type: reference
-status: draft
+status: active
 flight_level: L2-Container
 diagram_type: container
 root: true
 created: 2026-09-30
-last_updated: 2026-09-30
+last_updated: 2026-10-01
 components:
   - decision_kernel
 related_docs:
@@ -19,8 +19,14 @@ related_docs:
   - docs/architecture/adrs/ADR-054-process-representation-and-maturity-model.md
   - docs/architecture/adrs/ADR-055-capability-registry-starts-empty.md
   - docs/architecture/adrs/ADR-056-colony-memory-evidence-reinforcement.md
+  - docs/how-to/run-the-decision-kernel.md
+  - docs/how-to/inspect-kernel-traces-with-langfuse-mcp.md
+  - docs/analysis/2026-10-01-decision-kernel-v0-demo-report.md
 related_code:
   - kernel/__init__.py
+  - kernel/service.py
+  - kernel/adapters/cli.py
+  - kernel/adapters/claude_code/SKILL.md
 tags:
   - decision-kernel
   - langgraph
@@ -39,8 +45,16 @@ trace.
 It lives only in leafcutter-ai, as the top-level package `kernel/`. It is **not**
 shipped to adopter projects.
 
-**Status: planned.** Phase 0 is complete: dependencies are pinned, the Stage 0 mapping and live
-smoke evidence are recorded, and the design is written. Implementation proceeds in phases P1–P10.
+**Status: active.** Stage 1 (the MVP) is built: phases P0-P10 are complete. The exit gate of
+spec Rev 3 section 16 is proven by offline tests and one live run; the checklist, the live trace
+references and the deferred work are in the
+[V0 demo and run report](../../analysis/2026-10-01-decision-kernel-v0-demo-report.md). Stages 2-5
+(later capabilities, a policy store, native replacements for host operations, colony memory) are
+deferred and listed there.
+
+Run it with [How to run the decision kernel](../../how-to/run-the-decision-kernel.md) and inspect
+its traces with
+[How to inspect kernel traces with the Langfuse MCP server](../../how-to/inspect-kernel-traces-with-langfuse-mcp.md).
 
 ```mermaid
 flowchart LR
@@ -58,6 +72,16 @@ flowchart LR
 
 Diagram parent: none (`root: true`). This overview is the entry point. The detailed design is
 in [Decision Kernel V0 Design — Part 1](../../analysis/2026-09-30-decision-kernel-design.md).
+
+## Exposed interfaces
+
+Registered in `docs/components.json` under `decision_kernel.exposed_interfaces`:
+
+| Interface | Where | Contract |
+|---|---|---|
+| CLI | `python -m kernel <run\|resume\|status\|cancel\|gaps\|install-skill>` | One JSON document on stdout; exit 0 envelope, 2 usage, 3 rejected, 4 unknown run, 5 internal |
+| RunService API | `kernel/service.py` | `start_run`, `resume_run`, `get_run`, `cancel_run`, `list_gaps` |
+| `/leafcutter` skill | `kernel/adapters/claude_code/SKILL.md` | Transport-only Claude Code skill installed by `install-skill` |
 
 ## Containers
 

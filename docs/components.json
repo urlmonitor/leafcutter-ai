@@ -133,14 +133,33 @@
       "type": "orchestration",
       "description": "Resumable LangGraph decision-and-research runtime (kernel/): Jev-routed capabilities over its own capability registry, native decision and research graphs, read-only repository retrieval, cooperative Claude Code handoff, capability-gap records and Langfuse tracing. leafcutter-ai only; not shipped to adopters.",
       "detail_ref": "docs/architecture/components/decision-kernel.md",
-      "status": "planned",
+      "status": "active",
       "primary_code": [
         "kernel/",
         "config/capability_registry.json",
         "config/kernel_config.default.json"
       ],
       "agent_affinity": [],
-      "exposed_interfaces": []
+      "exposed_interfaces": [
+        {
+          "name": "kernel-cli",
+          "type": "cli_command",
+          "path": "kernel/adapters/cli.py",
+          "shape": "python -m kernel <run|resume|status|cancel|gaps|install-skill> [--config FILE] [--env-file FILE] [--input-file FILE|-] --json. Prints exactly one JSON document on stdout (a RunEnvelope, a gaps document or an error payload). Exit codes: 0 envelope produced, 2 usage error, 3 input or submission rejected with state unchanged, 4 unknown run, 5 internal or environment error."
+        },
+        {
+          "name": "run-service-api",
+          "type": "function_signature",
+          "path": "kernel/service.py",
+          "shape": "RunService protocol: start_run(task_input: TaskInput, *, run_id: str | None = None) -> RunEnvelope; resume_run(run_id: str, submission: InteractionSubmission | Mapping) -> RunEnvelope; get_run(run_id: str) -> RunEnvelope; cancel_run(run_id: str, actor: Actor) -> RunEnvelope; list_gaps() -> list[CapabilityGap]. All coroutines except list_gaps. A refused submission raises SubmissionRejected carrying the current envelope; a status such as waiting_host or blocked is a normal envelope, not an exception."
+        },
+        {
+          "name": "leafcutter-skill",
+          "type": "file_contract",
+          "path": "kernel/adapters/claude_code/SKILL.md",
+          "shape": "Claude Code project skill (transport only), installed with python -m kernel install-skill --target-dir <workspace>/.claude/skills --name <name>. Writes <target>/<name>/SKILL.md, carries the marker <!-- leafcutter-kernel-skill -->, and refuses to overwrite a SKILL.md without that marker unless --force is given."
+        }
+      ]
     },
     "doc_compliance": {
       "id": "doc_compliance",

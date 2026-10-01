@@ -11,6 +11,10 @@ components:
 
 # Decision Kernel V0 Design — Part 6 of 6: Tests, phases and risks
 
+**Status (2026-10-01): P0-P10 complete.** The Stage 1 exit gate is proven by offline scenario
+tests and one live run; see the [V0 demo and run report](2026-10-01-decision-kernel-v0-demo-report.md).
+The tables below are the plan; the test names in the §16 table are the as-built ones.
+
 Back to [part 1](2026-09-30-decision-kernel-design.md). Exit gate: §16 in
 [spec part 6](2026-09-30-leafcutter-kernel-spec-rev3-6-gaps-build-verification.md).
 
@@ -45,25 +49,28 @@ Rules for every test:
 
 | §16 scenario | Test (path under `tests/kernel/`) | Phase |
 |---|---|---|
-| Existing applicable decision basis | `integration/test_demo_scenarios.py::test_existing_basis_resolves_without_host_work` | P10 |
-| Missing decision basis → evidence → resume | `integration/test_decision_loop.py::test_insufficient_then_research_then_resolved` | P10 |
-| Unknown options | `integration/test_demo_scenarios.py::test_unknown_options_use_host_proposals` | P10 |
-| Missing human preference | `interaction/test_human_interrupt_resume.py`; `integration/test_demo_scenarios.py::test_preference_pauses_and_resumes` | P6, P10 |
-| Two independent evidence needs run concurrently | `scheduler/test_parallel_fanout.py` (time overlap + deterministic merge order) | P4 |
-| Child finishes before root | `scheduler/test_root_completion.py` | P4 |
-| True capability gap | `integration/test_gap_fallback.py`, `integration/test_gap_no_fallback.py` | P9 |
-| Known but unavailable | `registry/test_eligibility.py`, `scheduler/test_routing.py::test_unavailable_is_not_a_gap` | P1, P4 |
-| Invalid host result or forged IDs | `interaction/test_submissions.py::test_rejects_*` | P6 |
-| Duplicate resume | `interaction/test_submissions.py::test_identical_replay_idempotent`, `…conflicting…`, `…stale…` | P6 |
-| Process restart at handoff | `interaction/test_restart_resume.py` (CLI subprocess killed before and after the ledger write) | P6, P7 |
-| Repeated question, no new information | `scheduler/test_guards.py::test_no_progress_*` | P4, P9 |
-| Provider failure | `providers/test_jev_adapter.py::test_retries_then_unavailable`, `scheduler/test_routing.py::test_provider_unavailable_fails_without_gap` | P3, P4 |
-| Conflicting evidence | `capabilities/test_decision_graph.py::test_conflict_escalates`, `capabilities/test_research_graph.py::test_conflict_recorded` | P5 |
-| Unknown billing | `contracts/test_models.py::test_usage_unknown_is_none`, `capabilities/test_host_operations.py::test_host_usage_unavailable` | P1, P8 |
-| Malicious source instructions | `capabilities/test_retrieval_repository.py::test_instruction_text_stays_evidence` | P5 |
+| Existing applicable decision basis | `integration/test_demo_scenarios.py::TestExistingBasis::test_existing_basis_resolves_without_host_work` | P10 |
+| Missing decision basis → evidence → resume | `integration/test_decision_loop.py::TestDecisionLoop::test_insufficient_then_research_then_resolved` | P10 |
+| Unknown options | `integration/test_demo_scenarios.py::TestUnknownOptions::test_unknown_options_use_host_proposals_then_human_approval`; `interaction/test_criteria_approval.py` | P6, P10 |
+| Missing human preference | `interaction/test_human_interrupt_resume.py`; `integration/test_demo_scenarios.py::TestPreferencePause::test_preference_pauses_and_resumes` | P6, P10 |
+| Two independent evidence needs run concurrently | `scheduler/test_parallel_fanout.py::test_independent_children_overlap_in_time` and `::test_merge_order_is_independent_of_completion_order` | P4 |
+| Child finishes before root | `scheduler/test_root_completion.py::test_root_resumes_after_child_and_only_then_completes`, `::test_child_completed_but_root_blocked_is_not_completed` | P4 |
+| True capability gap | `integration/test_gap_fallback.py`, `integration/test_gap_no_fallback.py`; `integration/test_demo_scenarios.py::TestUnavailableCapability` | P9, P10 |
+| Known but unavailable | `registry/test_eligibility.py`; `scheduler/test_routing.py::test_unavailable_is_not_a_gap`; `integration/test_gap_no_fallback.py::test_unavailable_native_capability_is_not_recorded_or_rerouted` | P1, P4, P9 |
+| Invalid host result or forged IDs | `interaction/test_submissions.py::TestRejections` (`test_rejects_*`); `interaction/test_host_security.py` | P6, P8 |
+| Duplicate resume | `interaction/test_submissions.py::TestReplayAndLedger::test_identical_replay_idempotent`, `::test_conflicting_replay_is_rejected_without_state_loss`, `TestRejections::test_rejects_stale_revision` | P6 |
+| Process restart at handoff | `interaction/test_restart_resume.py` and `adapters/test_cli_restart.py` (CLI subprocess killed before and after the ledger write) | P6, P7 |
+| Repeated question, no new information | `scheduler/test_guards.py::test_reworded_repeat_is_blocked_after_the_limit`, `::test_passes_without_progress_across_items_halt_the_run`; `scheduler/test_guards_hardening.py`; `capabilities/test_decision_graph.py::test_same_request_at_same_revision_is_partial_no_progress` | P4, P9 |
+| Provider failure | `integration/test_exit_gate_failures.py::TestProviderFailure`; `providers/test_jev_adapter.py::test_retries_then_unavailable`; `scheduler/test_routing.py::test_provider_unavailable_fails_without_gap` | P3, P4, P10 |
+| Conflicting evidence | `integration/test_exit_gate_failures.py::TestConflictingEvidence`; `capabilities/test_decision_graph.py::TestConflict::test_conflict_escalates`; `capabilities/test_research_graph.py::test_conflict_recorded` | P5, P10 |
+| Unknown billing | `integration/test_exit_gate_failures.py::TestUnknownBilling`; `contracts/test_models.py::test_usage_unknown_is_none`; `capabilities/test_host_operations.py::test_host_usage_unavailable` | P1, P8, P10 |
+| Malicious source instructions | `integration/test_exit_gate_failures.py::TestMaliciousSourceInstructions`; `capabilities/test_retrieval_repository.py::TestInstructionText` | P5, P10 |
 | Cancelled run | `integration/test_cancel.py` | P9 |
-| Trace inspection | `observability/test_langfuse_tracer.py` (in-memory OTel exporter; correlation IDs); `live/test_live_langfuse.py` | P2, P10 |
-| Different decision domain | `integration/test_demo_scenarios.py::test_cache_location_question_uses_same_graphs` | P10 |
+| Trace inspection | `integration/test_decision_loop.py::TestTraceInspection`; `observability/test_langfuse_tracer.py` (in-memory OTel exporter; correlation IDs); `live/test_live_langfuse.py`, `live/test_live_end_to_end.py` | P2, P10 |
+| Different decision domain | `integration/test_demo_scenarios.py::TestDifferentDomain::test_cache_location_question_uses_same_graphs` | P10 |
+
+The as-built checklist (scenario, proof, status), with the live evidence, is in the
+[V0 demo and run report](2026-10-01-decision-kernel-v0-demo-report.md).
 
 Earlier V0 §25 items are covered as follows:
 
@@ -73,7 +80,7 @@ Earlier V0 §25 items are covered as follows:
 - **Every guard.** `scheduler/test_guards.py`.
 - **Registry adaptation.** `registry/test_registry_load.py` and `test_bindings.py`.
 - **Host fallback with a fake adapter.** `capabilities/test_host_operations.py`.
-- **Live suite.** `live/test_live_jev.py` and `live/test_live_end_to_end.py`.
+- **Live suite.** `live/test_live_jev.py`, `live/test_live_langfuse.py`, `live/test_live_end_to_end.py` and `live/test_live_eval.py` (the labelled evaluation set, `fixtures/eval/eval_set.json`; its shape is checked offline by `integration/test_eval_set.py`).
 
 ## Phase plan (spec §15.2 order)
 
@@ -151,13 +158,13 @@ A config key missing from part 2 needs an orchestrator-sequenced edit. Never add
 |---|---|---|
 | 1 | The `/leafcutter` skill-vs-command precedence is undocumented, and the name collides with the shipped knowledge hub | User decision (part 5); P7 verifies empirically |
 | 2 | `langchain-typesafe` 0.0.1a3 is a `@beta` pre-release, so its API may change | Exact pin; the port isolates it; fallback is the `judge.py` HTTP shape behind the same port (P3) |
-| 3 | Thresholds are uncalibrated (the smoke noul gave 0.69 for "requirements missing" on a clear task) | All values live in config and are traced; a labelled eval set is P10/P11 work (§16) |
+| 3 | Thresholds are uncalibrated (the smoke noul gave 0.69 for "requirements missing" on a clear task) | All values live in config and are traced. P10 added the labelled set (8 cases) and a live runner; results are reported in the demo report, not asserted. Still uncalibrated: a supporting need only a host could serve paused an ADR-settled decision at the default threshold |
 | 4 | Jev cannot follow state across calls ("indirection"; see [the Jev triage evaluation](2026-09-25-jev-test-triage-evaluation.md)) | Literal, atomic templates; dependent judgments are combined in code |
 | 5 | `aupdate_state(as_node="finalize")` on an interrupted thread is not yet verified | P9 verifies; `run.json` stays authoritative for cancellation |
 | 6 | Nodes re-execute on resume | No side effects before `interrupt()`; tracer spans in `await_interaction` open only after resume |
 | 7 | The knowledge map takes about 11.7 s per full build and is rebuilt per CLI process | Surface filter, per-process cache, timeout; a slow source becomes a limitation |
-| 8 | The CI ruff job lints only `scripts tests unit_tests`, so `kernel/` is not linted in CI | Proposed ci.yml change needs user approval; phases run `ruff check kernel` locally |
-| 9 | The Langfuse legacy trace API returns 410; MCP tool names are unverified | Use the observations API; P10 reads the current L3 docs; the user configures MCP |
+| 8 | The CI ruff job lints only `scripts tests unit_tests`, so `kernel/` is not linted in CI | **Resolved in P10** (user-approved): the job now runs `ruff check scripts tests unit_tests kernel` and `ruff check kernel --select E722,BLE001,TRY` |
+| 9 | The Langfuse legacy trace API returns 410; MCP tool names are unverified | **Resolved in P10:** the observations API is used everywhere; the MCP tools are documented in [the MCP how-to](../how-to/inspect-kernel-traces-with-langfuse-mcp.md); the user configures MCP |
 | 10 | CI now installs langchain, langgraph and langfuse | Accepted; the pins keep it reproducible |
 | 11 | `transform-doc-index` regenerates `docs/INDEX.md` on every docs commit | Review the INDEX diff before each commit |
 | 12 | In the main checkout, `.leafcutter/` may be a symlink to the shared install tree | Run data is then shared across checkouts. That is harmless (unique run ids) and even useful for gap telemetry |

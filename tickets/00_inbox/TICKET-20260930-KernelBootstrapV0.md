@@ -107,3 +107,22 @@ _(Append-only log — leave blank when authoring.)_
 ### 2026-09-30 12:00 — commit (status: ok)
 feedback-id: fb_2026-09-30_29582173
 Auto-authorized commit gate: subject "chore(kernel): add Phase 0 design, Rev 3 spec and dependency pins"; staged files: docs/INDEX.md docs/analysis/2026-09-30-decision-kernel-design-2-contracts-registry-config.md docs/analysis/2026-09-30-decision-kernel-design-3-kernel-scheduler.md docs/analysis/2026-09-30-decision-kernel-design-4-jev-and-capabilities.md docs/analysis/2026-09-30-decision-kernel-design-5-client-observability.md docs/analysis/2026-09-30-decision-kernel-design-6-tests-phases-risks.md docs/analysis/2026-09-30-decision-kernel-design.md docs/analysis/2026-09-30-leafcutter-kernel-spec-rev3-2-runtime-and-registry.md docs/analysis/2026-09-30-leafcutter-kernel-spec-rev3-3-contracts.md docs/analysis/2026-09-30-leafcutter-kernel-spec-rev3-4-scheduler-jev-capabilities.md docs/analysis/2026-09-30-leafcutter-kernel-spec-rev3-5-client-observability-safeguards.md docs/analysis/2026-09-30-leafcutter-kernel-spec-rev3-6-gaps-build-verification.md docs/analysis/2026-09-30-leafcutter-kernel-spec-rev3-7-later-stages.md docs/analysis/2026-09-30-leafcutter-kernel-spec-rev3-8-audit-links-handoff.md docs/analysis/2026-09-30-leafcutter-kernel-spec-rev3.md docs/architecture/components/decision-kernel.md docs/components.json leafcutter_kernel/__init__.py requirements-dev.txt tickets/00_inbox/TICKET-20260930-KernelBootstrapV0.md 
+
+### 2026-10-01 18:40 — python-coder (status: ok)
+feedback-id: fb_2026-10-01_47aab4ac
+Progress note (P10, branch `feature/kernel-v0-p10`). Phases and commits:
+
+- P0 `b46ea27e` design, spec Rev 3, pins. ADR-052..055 `6d0ea5fb`.
+- P1 `54a09cbf` contracts, registry, config, ports.
+- P2 `1669d6fd` persistence and Langfuse tracer. P3 `9ff68bb0` Jev adapter.
+- P4 `b37c03fe` scheduler. P5 `4b6021d2` + `3a16a121` registry entries and native capabilities.
+- Integration `dec5f2da`, `6ac57af6`, `90fda82e` (seam fixes, queued P1 changes, as-built docs); ADR-056 `d6b57ad4`.
+- OBS `c95542cb` Jev generations and observation types.
+- P6 `f49674d1` interactions, ledger and resume. P7 `d3e47119` service, CLI, skill (obs merged `e9821055`).
+- P8 `0c7eff1c` host operations. P9 `486b7d58` gaps, fallback, cancel, guards. INT2 `5a066dad` host_only gaps, cancel safe points, formulate_question routing.
+- P10 commits tagged `(#KernelBootstrapV0/P10)`: exit-gate scenario tests, live suite and eval set, docs, CI lint of `kernel/`, changelog, `cost_usd_known` fix.
+
+Exit gate: 19 of 19 scenarios proven (checklist and live trace references in
+`docs/analysis/2026-10-01-decision-kernel-v0-demo-report.md`). Not shown: the `/leafcutter` skill run
+inside Claude Code, the Langfuse MCP read path (user setup), and a run driven by a real host and
+human (live resumes used labelled synthetic answers). Ticket left open for the orchestrator to close after the PR.
