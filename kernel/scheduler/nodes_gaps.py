@@ -36,10 +36,9 @@ from kernel.contracts import (
     WorkItem,
     WorkItemStatus,
     compute_gap_key,
-    new_id,
 )
 from kernel.contracts.work import Binding
-from kernel.persistence.gap_store import publish_gap
+from kernel.persistence.gap_store import observation_id, publish_gap
 from kernel.registry.eligibility import MVP_SIDE_EFFECTS
 from kernel.scheduler import guards
 from kernel.scheduler.context import KernelRuntime, run_corr
@@ -89,7 +88,7 @@ def build_gap(state: KernelState, item: WorkItem, request: Request,
     excluded = assessment.excluded if assessment else []
     considered = sorted({*eligible, *(e.capability_id for e in excluded)})
     return CapabilityGap(
-        id=new_id("gap"), created_at=now, updated_at=now, first_seen=now, last_seen=now,
+        id=observation_id(state["run_id"], item.id, item.attempts, gap_type), created_at=now, updated_at=now, first_seen=now, last_seen=now,
         gap_key=compute_gap_key(gap_type, request.kind, request.payload_schema,
                                 request.requested_output_schema, need, component_ids),
         gap_type=gap_type, goal=request.goal or request.question or "", normalized_need=need,
@@ -358,6 +357,10 @@ def settle_gap_outcomes(state: KernelState, ctx: KernelRuntime, draft: Draft, *,
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-01 20:00 [python-coder]: Observation ids are deterministic (run, work item, attempt,
+#   gap type) instead of random, because the stores dedupe on the id: a node that re-executes
+#   after publishing but before its checkpoint committed must not double-count an occurrence.
+#   (#KernelBootstrapV0/FIXB)
 # - 2026-10-01 16:00 [python-coder]: `record_host_only` is public and returns the events to append
 #   instead of writing state, so the interaction node can call it at answer time (every executed
 #   host operation, ADR-056) and `schedule` can still settle runs where it did not. A native

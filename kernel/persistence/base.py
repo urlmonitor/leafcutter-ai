@@ -120,8 +120,12 @@ class RunStorePort(Protocol):
                          ) -> HostWorkRequest | HumanQuestion | None:
         """Return a saved packet or None."""
 
-    def record_submission(self, record: SubmissionRecord) -> None:
-        """Write the ledger entry for an accepted submission."""
+    def record_submission(self, record: SubmissionRecord) -> bool:
+        """Write the ledger entry for an accepted submission unless one exists.
+
+        Returns True when this call created the entry and False when an earlier entry (first
+        write wins, atomic across processes) was kept; the caller must then compare hashes.
+        """
 
     def get_submission(self, run_id: str, interaction_id: str) -> SubmissionRecord | None:
         """Return the ledger entry or None."""

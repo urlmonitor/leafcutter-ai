@@ -46,14 +46,15 @@ class CrashingRunStore(FileRunStore):
         self.crash = crash
         self.armed = False
 
-    def record_submission(self, record: Any) -> None:
+    def record_submission(self, record: Any) -> bool:
         """Write the ledger entry, crashing before or right after it when asked."""
         if self.crash == "before_ledger":
             os._exit(CRASH_CODES["before_ledger"])
-        super().record_submission(record)
+        created = super().record_submission(record)
         if self.crash == "after_ledger":
             os._exit(CRASH_CODES["after_ledger"])
         self.armed = self.crash == "mid_flight"
+        return created
 
     def append_event(self, event: Any) -> None:
         """Crash on the first event flushed after an armed ledger write (mid-resume)."""

@@ -15,7 +15,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from kernel.contracts import RequestKind, RequestProposal, ResultStatus, schema_ids
+from kernel.contracts import Priority, RequestKind, RequestProposal, ResultStatus, schema_ids
 from kernel.contracts.payloads import HumanQuestionRequestPayload
 
 FORMULATE_CAPABILITY = "host.formulate_question"
@@ -23,7 +23,11 @@ FORMULATE_OPERATION = "formulate_question"
 
 
 def formulation_proposal(request: Any) -> RequestProposal:
-    """Return the request to word `request`, a human question, through the host."""
+    """Return the SUPPORTING request to word `request`, a human question, through the host.
+
+    Supporting, because wording is optional help: a failed wording must never block the item it
+    words or discard the human's answer.
+    """
     if request.payload_schema == schema_ids.HUMAN_QUESTION_REQUEST:
         body = HumanQuestionRequestPayload.model_validate(request.payload)
     else:
@@ -33,7 +37,7 @@ def formulation_proposal(request: Any) -> RequestProposal:
         kind=RequestKind.CAPABILITY, goal=f"Word the question: {body.question}"[:300],
         payload_schema=schema_ids.HUMAN_QUESTION_REQUEST, payload=body.model_dump(mode="json"),
         requested_output_schema=schema_ids.HUMAN_QUESTION_REQUEST,
-        operation=FORMULATE_OPERATION)
+        operation=FORMULATE_OPERATION, priority=Priority.SUPPORTING)
 
 
 def formulation_child(draft: Any, item: Any) -> Any | None:
@@ -67,6 +71,9 @@ def apply_wording(draft: Any, item: Any, child: Any) -> bool:
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-01 20:00 [python-coder]: The wording request is SUPPORTING (it defaulted to REQUIRED),
+#   so an exhausted formulation repair no longer makes `integrate` block the human item with
+#   required_child_failed after a valid human answer. (#KernelBootstrapV0/FIXB)
 # - 2026-10-01 18:00 [python-coder]: Wording is applied by replacing the human request's payload
 #   rather than carrying a second request to the interaction node, so packet building, redaction
 #   and the answer protocol stay exactly as for an unworded question. (#KernelBootstrapV0/INT2)

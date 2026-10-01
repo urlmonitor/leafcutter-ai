@@ -147,14 +147,14 @@ async def _assess_chunk(jev: JevPort, chunk: list[RouteEntry], batch: JevBatch,
     except JevPayloadTooLarge:
         return {e.item_id: _failed("payload_too_large") for e in chunk}
     out: dict[str, RouteResult] = {}
-    for entry in chunk:
+    for position, entry in enumerate(chunk):
         try:
             routed = interpret_answer(result.choice(f"route.{entry.item_id}"),
                                       [d.id for d in entry.report.semantic_candidates], cfg)
         except (JevInvalidResponse, KeyError):
             routed = _failed("invalid_provider_response")
         routed.model_id = result.model_id
-        routed.usage = [result.usage]
+        routed.usage = [result.usage] if position == 0 else []  # one usage per Jev call
         out[entry.item_id] = routed
     return out
 
@@ -194,6 +194,10 @@ async def route_semantic(jev: JevPort, entries: list[RouteEntry], *, goal: str,
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-01 20:00 [python-coder]: A chunk's usage rides on its first entry only, so the
+#   flattened usage of a route pass holds exactly one record per Jev call; copying it onto every
+#   entry and truncating to the call count counted one call twice and lost another.
+#   (#KernelBootstrapV0/FIXB)
 # - 2026-09-30 22:30 [python-coder]: The routing state carries all batched requests under
 #   `requests.<work_item_id>` (design shows one request) because a JevBatch has a single state
 #   shared by its questions. (#KernelBootstrapV0/P4)

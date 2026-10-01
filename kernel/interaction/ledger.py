@@ -33,6 +33,7 @@ from kernel.interaction.submissions import (
     submission_hash,
 )
 from kernel.persistence.base import RunStorePort, SubmissionRecord
+from kernel.persistence.fsutil import UnsafePathComponent
 
 logger = logging.getLogger(__name__)
 
@@ -94,8 +95,12 @@ def _ledger_entry(run_store: RunStorePort, run_id: str, raw: object) -> Submissi
     if not isinstance(raw, Mapping) or raw.get("run_id") != run_id:
         return None
     interaction_id = raw.get("interaction_id")
-    return run_store.get_submission(run_id, interaction_id) \
-        if isinstance(interaction_id, str) else None
+    if not isinstance(interaction_id, str):
+        return None
+    try:
+        return run_store.get_submission(run_id, interaction_id)
+    except UnsafePathComponent:
+        return None  # an id that cannot name a ledger file was never issued: forged, not an error
 
 
 def _paused(snapshot: Any) -> bool:
@@ -144,17 +149,36 @@ async def _repair(graph: Any, config: dict[str, Any], context: Any, raw: Mapping
 async def _accept(run_store: RunStorePort, graph: Any, config: dict[str, Any], context: Any,
                   run_id: str, submission: InteractionSubmission, *, write: bool
                   ) -> SubmitResult:
-    """Write the ledger entry (unless it exists) and then resume the graph."""
+    """Write the ledger entry (unless it exists) and then resume the graph.
+
+    First write wins: when another submission created the entry first, a different hash is a
+    conflicting duplicate (rejected, graph untouched) and the same hash is a replay.
+    """
     if write:
         record = SubmissionRecord(run_id=run_id, interaction_id=submission.interaction_id,
                                   sha256=submission_hash(submission), submission=submission)
         try:
-            run_store.record_submission(record)
+            created = run_store.record_submission(record)
         except OSError:
             logger.exception("could not write the ledger entry of %s", submission.interaction_id)
             raise
+        if not created:
+            return await _lost_race(run_store, graph, config, context, run_id, record)
     out = await _invoke(graph, config, context, Command(resume=submission.model_dump(mode="json")))
     return _result(SubmitStatus.ACCEPTED, submission.interaction_id, out)
+
+
+async def _lost_race(run_store: RunStorePort, graph: Any, config: dict[str, Any], context: Any,
+                     run_id: str, mine: SubmissionRecord) -> SubmitResult:
+    """Settle a submission whose ledger write lost to an earlier entry for the interaction."""
+    winner = run_store.get_submission(run_id, mine.interaction_id)
+    if winner is not None and winner.sha256 != mine.sha256:
+        raise SubmissionRejected(RejectionCode.NOT_PENDING,
+                                 "this interaction was already answered differently",
+                                 {"reason": "conflicting_duplicate",
+                                  "interaction_id": mine.interaction_id})
+    snapshot = await graph.aget_state(config)
+    return await _replay(graph, config, context, snapshot, mine.interaction_id)
 
 
 async def submit_interaction(graph: Any, config: dict[str, Any], context: Any,
@@ -223,6 +247,10 @@ async def _submit(graph: Any, config: dict[str, Any], context: Any,
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-01 20:00 [python-coder]: `record_submission` reports whether it created the entry, so
+#   a submission that lost the write race is compared with the winner (conflicting duplicate or
+#   replay) instead of resuming the graph with a second answer; an unsafe interaction id counts
+#   as "no entry" so it is rejected as forged_id. (#KernelBootstrapV0/FIXB)
 # - 2026-09-30 23:55 [python-coder]: The ledger is keyed by interaction id with first-write-wins
 #   (P2), so "same hash" means idempotent and "different hash" means conflicting duplicate; the
 #   latter is reported as not_pending with details.reason=conflicting_duplicate.

@@ -8,15 +8,19 @@ BUSINESS CONTEXT: The local run record is authoritative for diagnosis, cancellat
 ARCHITECTURE: Layout <run_root>/runs/<run_id>/{run.json,events.jsonl,interactions/<id>.json,
     submissions/<id>.json}. Every path segment passes safe_component. run.json is written
     atomically; events are fsynced JSONL where a repeated seq is a no-op (first write wins);
-    submissions are first-write-wins so a replay cannot change the ledger. One process lock
-    serialises writers; cross-process writers are not supported in V0.
+    submissions are first-write-wins (atomic create) so a replay cannot change the ledger.
+    update_run and compare_and_update hold a thread lock plus an OS file lock (<run>/run.lock) so
+    the compare and the write are one step even when cancel and resume run in different
+    processes; the wait is bounded and a dead holder's lock is released by the OS.
 """
 
 from __future__ import annotations
 
+import contextlib
 import json
 import logging
 import threading
+from collections.abc import Iterator
 from pathlib import Path
 
 from pydantic import BaseModel, ValidationError
@@ -28,6 +32,7 @@ from kernel.persistence.fsutil import (
     append_line,
     atomic_write_bytes,
     create_exclusive,
+    file_lock,
     read_lines,
     read_text_or_none,
     safe_component,
@@ -77,6 +82,14 @@ class FileRunStore:
         """Return <run>/<folder>/<name>.json with both segments validated."""
         return self.run_dir(run_id) / folder / f"{safe_component(name)}.json"
 
+    @contextlib.contextmanager
+    def _run_locked(self, run_id: str) -> Iterator[None]:
+        """Serialise run.json writers across threads and processes (RunNotFound if absent)."""
+        if not self._run_file(run_id).is_file():
+            raise RunNotFound(run_id)
+        with self._lock, file_lock(self.run_dir(run_id) / "run.lock"):
+            yield
+
     # ---- run record --------------------------------------------------
     def create_run(self, record: RunRecord) -> None:
         """Create run.json exclusively (RunAlreadyExists if present)."""
@@ -97,7 +110,7 @@ class FileRunStore:
 
     def update_run(self, record: RunRecord) -> None:
         """Atomically replace run.json (RunNotFound if absent); identical content is a no-op."""
-        with self._lock:
+        with self._run_locked(record.run_id):
             current = self.get_run(record.run_id)
             if current == record:
                 return
@@ -109,7 +122,7 @@ class FileRunStore:
         Returns:
             bool: True if written, False if the stored revision differs (caller is stale).
         """
-        with self._lock:
+        with self._run_locked(record.run_id):
             if self.get_run(record.run_id).state_revision != expected_revision:
                 return False
             atomic_write_bytes(self._run_file(record.run_id), _dump(record))
@@ -174,13 +187,18 @@ class FileRunStore:
             raise RunStoreCorrupt(path, str(exc)) from exc
 
     # ---- submission ledger -------------------------------------------
-    def record_submission(self, record: SubmissionRecord) -> None:
-        """Write the ledger entry; an existing entry is never overwritten (first write wins)."""
+    def record_submission(self, record: SubmissionRecord) -> bool:
+        """Write the ledger entry unless one exists (first write wins, atomic across processes).
+
+        Returns:
+            bool: True if this call created the entry, False if one already existed.
+        """
         path = self._child(record.run_id, "submissions", record.interaction_id)
         with self._lock:
-            if not create_exclusive(path, _dump(record)):
-                logger.debug("submission ledger entry for %s already exists",
-                             record.interaction_id)
+            created = create_exclusive(path, _dump(record))
+        if not created:
+            logger.debug("submission ledger entry for %s already exists", record.interaction_id)
+        return created
 
     def get_submission(self, run_id: str, interaction_id: str) -> SubmissionRecord | None:
         """Return the ledger entry or None."""
@@ -197,6 +215,10 @@ class FileRunStore:
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-01 20:00 [python-coder]: run.json writers take an OS file lock besides the thread
+#   lock, because cancel and resume are separate processes and a thread lock cannot stop one
+#   overwriting the other's committed cancel. update_run is locked too so it cannot slip between
+#   a compare and its write. (#KernelBootstrapV0/FIXB)
 # - 2026-09-30 23:00 [python-coder]: update_run stays a plain atomic replace (the memory double
 #   and P4 rely on that); optimistic concurrency is an opt-in compare_and_update so a stale
 #   cancel write is never silently dropped. (#KernelBootstrapV0/P2)

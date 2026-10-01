@@ -40,7 +40,7 @@ class FileArtifactStore:
 
     def _path(self, run_id: str, name: str) -> Path:
         """Return the validated file path of an artifact."""
-        if not ARTIFACT_NAME_RE.match(name):
+        if not ARTIFACT_NAME_RE.fullmatch(name):
             raise InvalidArtifactName(name)
         folder = self.artifact_dir(run_id)
         try:
@@ -76,6 +76,8 @@ class FileArtifactStore:
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-01 20:00 [python-coder]: Names are checked with fullmatch so a trailing newline is
+#   rejected. (#KernelBootstrapV0/FIXB)
 # - 2026-09-30 23:00 [python-coder]: Invalid names always raise InvalidArtifactName (the memory
 #   double's error) so callers handle one exception type for both stores. (#KernelBootstrapV0/P2)
 # ====================================================================
