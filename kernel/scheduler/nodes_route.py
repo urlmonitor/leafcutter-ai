@@ -39,6 +39,12 @@ from kernel.contracts import (
 from kernel.contracts.work import Binding
 from kernel.observability.tracer import TraceState
 from kernel.registry.eligibility import filter_candidates
+from kernel.interaction.formulation import (
+    FORMULATE_CAPABILITY,
+    apply_wording,
+    formulation_child,
+    formulation_proposal,
+)
 from kernel.scheduler import guards
 from kernel.scheduler.context import (
     KernelRuntime,
@@ -170,8 +176,39 @@ class _Router:
             return
         self._dispatch(item, binding, None)
 
+    def _formulate(self, item: WorkItem) -> bool:
+        """Send the human question to `host.formulate_question` first; True while it is waiting.
+
+        Off by default (`host.formulate_questions`). Only the wording comes back: the converted
+        payload replaces the request payload and the kernel then creates the interaction itself.
+        A refused, failed or unavailable formulation leaves the original question as it is.
+        """
+        child = formulation_child(self.draft, item)
+        if child is not None:
+            if child.status in guards.TERMINAL_STATUSES:
+                apply_wording(self.draft, item, child)
+                self.draft.put_item(item, continuation=None)
+            return child.status not in guards.TERMINAL_STATUSES
+        descriptor = self.state["registry"].get(FORMULATE_CAPABILITY)
+        if descriptor is None or not self.ctx.bindings.has(descriptor.binding, descriptor.version):
+            return False
+        plan = plan_proposals(self.draft, item, [formulation_proposal(self.draft.request_of(item))],
+                              self.cfg.limits, self.scope_rev)
+        if not plan.accepted:
+            return False
+        children = create_children(self.draft, item, plan.accepted)
+        continuation = Continuation(capability_id=ROUTER_CAPABILITY,
+                                    capability_version=KERNEL_CAP_REV, state={},
+                                    resume_reason="children_done")
+        self.draft.put_item(item, status=WorkItemStatus.WAITING, continuation=continuation,
+                            child_ids=[*item.child_ids, *children])
+        return True
+
     def _dispatch_human(self, item: WorkItem) -> None:
         """Human requests are fixed control flow: no routing, straight to an interaction."""
+        if self.cfg.host.formulate_questions and self._formulate(item):
+            return
+        item = self.draft.items[item.id]
         binding = Binding(capability_id=HUMAN_CAPABILITY, version=KERNEL_CAP_REV,
                           execution_mode=ExecutionMode.HOST_HANDOFF)
         self._dispatch(item, binding, None)
@@ -331,6 +368,10 @@ def _packet(state: KernelState, invocation_id: str, shares: dict[str, int]) -> d
 # - 2026-09-30 22:30 [python-coder]: Every route branch (including "nothing dispatchable")
 #   leads to integrate, not schedule as in the design diagram: integrate is where parents of
 #   items blocked at routing are resumed. (#KernelBootstrapV0/P4)
+# - 2026-10-01 18:00 [python-coder]: With `host.formulate_questions` on, a human request first
+#   spawns a `host.formulate_question` child and waits (like a clarification); on resume the
+#   converted wording replaces the request payload and the kernel creates the human interaction.
+#   A formulation that did not complete is ignored. (#KernelBootstrapV0/INT2)
 # - 2026-09-30 22:30 [python-coder]: Insufficient context with policy `human` creates a human
 #   child request and parks the item with a `kernel.router` continuation, reusing the generic
 #   wait/resume machinery instead of a second pause mechanism. (#KernelBootstrapV0/P4)

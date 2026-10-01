@@ -64,6 +64,13 @@ class MemoryRunStore:
         self.get_run(record.run_id)
         self._runs[record.run_id] = record
 
+    def compare_and_update(self, record: RunRecord, expected_revision: int) -> bool:
+        """Replace the record only if the stored state_revision equals expected_revision."""
+        if self.get_run(record.run_id).state_revision != expected_revision:
+            return False
+        self._runs[record.run_id] = record
+        return True
+
     def list_run_ids(self) -> list[str]:
         """Return sorted run ids."""
         return sorted(self._runs)

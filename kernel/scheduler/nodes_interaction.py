@@ -22,7 +22,7 @@ from langgraph.runtime import Runtime
 from langgraph.types import interrupt
 
 from kernel.capabilities.host import emit_host_telemetry
-from kernel.contracts import HostWorkRequest, HumanQuestion, RunEvent
+from kernel.contracts import FallbackOutcome, HostWorkRequest, HumanQuestion, RunEvent
 from kernel.contracts.interaction import Rejection
 from kernel.interaction.packets import (
     build_host_request,
@@ -36,6 +36,7 @@ from kernel.interaction.submissions import Verdict, check_submission
 from kernel.observability.redaction import Redactor
 from kernel.scheduler.context import KernelRuntime, run_corr
 from kernel.scheduler.merge import Draft
+from kernel.scheduler.nodes_gaps import record_host_only
 from kernel.scheduler.nodes_route import HUMAN_CAPABILITY
 from kernel.scheduler.state import KernelState, new_event
 
@@ -154,8 +155,26 @@ async def await_interaction(state: KernelState, runtime: Runtime[KernelRuntime]
     events.append(new_event(state["run_id"], now, "interaction.answered",
                             verdict.submission.actor.kind.value, work_item_id=item.id,
                             interaction_id=packet.id))
-    return {"results": {result.invocation_id: result}, "interaction_queue": queue[1:],
-            "events": events}
+    update: dict[str, Any] = {"results": {result.invocation_id: result},
+                              "interaction_queue": queue[1:], "events": events}
+    _add_host_only(update, state, ctx, packet, item, FallbackOutcome.HOST_COMPLETED)
+    return update
+
+
+def _add_host_only(update: dict[str, Any], state: KernelState, ctx: KernelRuntime, packet: Any,
+                   item: Any, outcome: FallbackOutcome) -> None:
+    """Add the `host_only` gap observation of an executed host operation to the node update.
+
+    Runs only after the interrupt resumed (the node re-executes on resume) and only for host
+    packets; `settle_gap_outcomes` skips items that already have a `gap.recorded` event.
+    """
+    if not isinstance(packet, HostWorkRequest):
+        return
+    rec = record_host_only(state, ctx, item, outcome)
+    if rec:
+        gap, gap_events = rec
+        update["events"] = [*update["events"], *gap_events]
+        update["gaps"] = {gap.id: gap}
 
 
 def _exhausted(state: KernelState, ctx: KernelRuntime, packet: HostWorkRequest, code: str,
@@ -167,14 +186,21 @@ def _exhausted(state: KernelState, ctx: KernelRuntime, packet: HostWorkRequest, 
                         packet, None, result, now)
     events.append(new_event(state["run_id"], now, "interaction.repair_exhausted", code,
                             work_item_id=item.id, interaction_id=packet.id))
-    return {"results": {result.invocation_id: result}, "events": events,
-            "interactions": {packet.id: packet},
-            "interaction_queue": state["interaction_queue"][1:]}
+    update: dict[str, Any] = {"results": {result.invocation_id: result}, "events": events,
+                              "interactions": {packet.id: packet},
+                              "interaction_queue": state["interaction_queue"][1:]}
+    _add_host_only(update, state, ctx, packet, item, FallbackOutcome.HOST_FAILED)
+    return update
 
 
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-01 17:30 [python-coder]: The `host_only` gap observation is recorded when the host
+#   answer (or the exhausted repair budget) is turned into a result, after the interrupt has
+#   resumed, so it happens once per operation; `settle_gap_outcomes` skips items that already
+#   carry a `gap.recorded` event, which is what keeps a restart from counting twice.
+#   (#KernelBootstrapV0/INT2)
 # - 2026-10-01 11:10 [python-coder]: A host answer (and an exhausted repair budget) records a
 #   `host.<operation>` telemetry event with the packet fingerprint, time to answer and usage;
 #   conversion gets the ids of the run's evidence so it can drop citations of evidence that does

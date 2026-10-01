@@ -50,13 +50,10 @@ class CancelContended(RuntimeError):
 def compare_and_write(run_store: RunStorePort, record: RunRecord, expected_revision: int) -> bool:
     """Write the record if the stored revision still equals `expected_revision`.
 
-    Stores without `compare_and_update` (the in-memory double) fall back to a plain update.
+    Every RunStorePort implements `compare_and_update`; this stays as the named seam the
+    cancel and persist paths share.
     """
-    cas = getattr(run_store, "compare_and_update", None)
-    if cas is None:
-        run_store.update_run(record)
-        return True
-    return bool(cas(record, expected_revision))
+    return run_store.compare_and_update(record, expected_revision)
 
 
 def commit_cancel(run_store: RunStorePort, run_id: str, actor_id: str, now: datetime

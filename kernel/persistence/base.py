@@ -95,6 +95,12 @@ class RunStorePort(Protocol):
     def update_run(self, record: RunRecord) -> None:
         """Atomically replace the run record (RunNotFound if absent)."""
 
+    def compare_and_update(self, record: RunRecord, expected_revision: int) -> bool:
+        """Replace the record only if the stored state_revision equals `expected_revision`.
+
+        Returns False (nothing written) when the stored revision differs: the caller is stale.
+        """
+
     def list_run_ids(self) -> list[str]:
         """Return all run ids, sorted."""
 

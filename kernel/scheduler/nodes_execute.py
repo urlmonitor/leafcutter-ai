@@ -83,6 +83,15 @@ def _context(packet: dict[str, Any], ctx: KernelRuntime, budget: ShareBudget
         descriptor=packet["descriptor"], constraints=tuple(packet.get("constraints", ())))
 
 
+def cancelled_result(invocation: CapabilityInvocation) -> CapabilityResult:
+    """Build the blocked result of an invocation that was not started because the run is cancelled."""
+    return CapabilityResult(
+        invocation_id=invocation.id, work_item_id=invocation.work_item_id,
+        status=ResultStatus.BLOCKED,
+        error=ErrorInfo(code="cancelled", message="run cancelled before the capability started"),
+        limitations=["cancelled: the capability was not started"])
+
+
 async def _run_executor(packet: dict[str, Any], ctx: KernelRuntime, budget: ShareBudget
                         ) -> CapabilityResult:
     """Resolve and run the executor; every failure becomes a failed result."""
@@ -114,6 +123,9 @@ async def execute(packet: dict, runtime: Runtime[KernelRuntime]) -> dict[str, An
     """Send worker: run one invocation and return `{results: {invocation_id: result}}`."""
     ctx = runtime.context
     invocation: CapabilityInvocation = packet["invocation"]
+    if ctx.cancel_probe():
+        # Safe point: before each invocation (first attempts and retries both come through here).
+        return {"results": {invocation.id: cancelled_result(invocation)}}
     budget = ShareBudget(packet.get("shares", {}))
     started = ctx.monotonic()
     with ctx.tracer.span(f"capability.{invocation.capability_id}", "capability",
@@ -124,11 +136,15 @@ async def execute(packet: dict, runtime: Runtime[KernelRuntime]) -> dict[str, An
     return {"results": {invocation.id: result.model_copy(update={"diagnostics": diagnostics})}}
 
 
-__all__ = ["ELAPSED_KEY", "JEV_RESERVED_KEY", "ShareBudget", "execute", "failed_result"]
+__all__ = ["ELAPSED_KEY", "JEV_RESERVED_KEY", "ShareBudget", "cancelled_result", "execute", "failed_result"]
 
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-01 17:00 [python-coder]: A worker consults `cancel_probe` before it starts; a
+#   cancelled run gets a blocked `cancelled` result instead of a capability call. Retries are
+#   re-dispatched through this worker, so the same check covers "between retries".
+#   (#KernelBootstrapV0/INT2)
 # - 2026-09-30 22:30 [python-coder]: Workers get an even share of the remaining Jev budget
 #   instead of a shared counter: no mutable state crosses workers, the split is deterministic,
 #   and the sum of shares can never exceed the limit. (#KernelBootstrapV0/P4)
