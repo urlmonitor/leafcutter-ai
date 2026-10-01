@@ -1,61 +1,141 @@
 """
 MODULE: kernel.capabilities.retrieval.pool
-GOAL: Build the pool of candidates one need considers (explicit locators first, then the
-    strongest candidates of every source) and decide a need's coverage status from the evidence
-    that was kept.
-BUSINESS CONTEXT: Two live runs lost the evidence that answered the question before Jev ever saw
-    it: a fair share per source cut a design section ranked 21st in its source, and a need was
-    called satisfied by one weakly related item. The pool keeps the strongest content hits of every
-    source, reports what it cut, and a need is satisfied only by enough evidence above the bar
-    (Rev 3 section 10.3: what was cut is reported).
+GOAL: Build the pool of candidates one need considers (explicit locators first, then the best
+    candidates by one length-normalised score, with a fair share per source and a cap per file)
+    and decide a need's coverage status from the evidence that was kept.
+BUSINESS CONTEXT: Live runs lost the evidence that answered the question before Jev ever saw it:
+    a fair share per source cut a design section ranked 21st in its source, raw term hits let
+    registry JSON and AC yaml fill the single 20-candidate rerank batch while the files that
+    answer sat at pool positions 24 to 51, and a need was called satisfied by one weakly related
+    item. The pool orders by a BM25-style score over all sources, guarantees every source its best
+    candidates, never lets one file take the batch and reports what it cut (Rev 3 section 10.3:
+    what was cut is reported).
 ARCHITECTURE: Pure functions over Candidate, SearchReport, Evidence and RetrievalConfig. The pool
     is ordered by sending priority, so the rerank step can cut its batch from the front: explicit
-    locators, then each source's best candidates, then the rest by term hits.
+    locators, then the first batch (each source's best by score, then the best of the rest, sorted
+    by score), then everything else by score. The score only orders; Jev still judges relevance.
 """
 
 from __future__ import annotations
 
+from collections import Counter
 from collections.abc import Sequence
+from dataclasses import replace
 
 from kernel.capabilities.retrieval.candidates import Candidate, SearchReport
 from kernel.capabilities.retrieval.locators import STRATEGY as EXPLICIT_STRATEGY
+from kernel.capabilities.retrieval.scoring import CorpusStats, candidate_score
 from kernel.config import RetrievalConfig
 from kernel.contracts.enums import NeedStatus
 from kernel.contracts.evidence import Evidence, UnavailableSource
+
+
+def _lanes(reports: Sequence[SearchReport], cfg: RetrievalConfig) -> list[list[Candidate]]:
+    """Return each source's candidates scored on the shared corpus, best first."""
+    stats = CorpusStats()
+    for report in reports:
+        stats = stats.merged(report.stats)
+    lanes = [[replace(c, score=candidate_score(c, stats, r.stats.average_length, cfg))
+              for c in r.candidates] for r in reports if r.candidates]
+    return [sorted(lane, key=lambda c: (-c.score, c.locator)) for lane in lanes]
+
+
+def _fair_front(lanes: list[list[Candidate]], cfg: RetrievalConfig) -> list[Candidate]:
+    """Return the candidates every source is guaranteed in the first batch.
+
+    Each source's `pool_fair_share` best, round by round (every source's best before any source's
+    second), at most half the batch, and only those whose score reaches `pool_fair_min_ratio` of
+    the best score of all: a small, curated source cannot be crowded out by a big one, and a source
+    with nothing but weak matches does not spend places the strong ones need.
+    """
+    best = max((lane[0].score for lane in lanes), default=0.0)
+    floor = cfg.pool_fair_min_ratio * best
+    slots = max(1, cfg.rerank_max_per_need // 2)
+    front: list[Candidate] = []
+    for rank in range(cfg.pool_fair_share):
+        for lane in lanes:
+            if rank < len(lane) and lane[rank].score >= floor and len(front) < slots:
+                front.append(lane[rank])
+    return front
+
+
+class _Pool:
+    """The pool under construction: a size limit, a cap per file and the cap overflow."""
+
+    def __init__(self, cfg: RetrievalConfig, explicit: Sequence[Candidate]) -> None:
+        """Start with the explicit candidates (kept regardless, counted against the limit)."""
+        self.cfg = cfg
+        self.chosen: dict[str, Candidate] = {c.locator: c for c in explicit[:cfg.max_candidates]}
+        self.per_file = Counter(c.path for c in self.chosen.values())
+        self.overflow: list[Candidate] = []
+
+    def take(self, cand: Candidate, file_cap: int, front: bool = False) -> None:
+        """Add the candidate unless the pool is full, it is a duplicate or a cap holds it back.
+
+        A candidate held back by a cap waits in the overflow and fills a place left at the end. For
+        the first batch (`front`) a document that reviews a run of the asking goal is held back
+        too: it spends a place Jev would judge only to demote it.
+        """
+        if cand.locator in self.chosen or len(self.chosen) >= self.cfg.max_candidates:
+            return
+        if self.per_file[cand.path] >= file_cap or (front and cand.reviews_goal):
+            self.overflow.append(cand)
+            return
+        self.chosen[cand.locator] = cand
+        self.per_file[cand.path] += 1
+
+    def filled(self, size: int) -> bool:
+        """True once the pool holds `size` candidates (or is full)."""
+        return len(self.chosen) >= min(size, self.cfg.max_candidates)
+
+    def ordered(self) -> list[Candidate]:
+        """Return the explicit candidates, then the others best score first."""
+        named = [c for c in self.chosen.values() if c.explicit]
+        rest = sorted((c for c in self.chosen.values() if not c.explicit),
+                      key=lambda c: (-c.score, c.locator))
+        return [*named, *rest]
 
 
 def merge_pool(reports: Sequence[SearchReport], cfg: RetrievalConfig,
                explicit: Sequence[Candidate] = ()) -> list[Candidate]:
     """Return at most `max_candidates` candidates, in the order they should be sent to rerank.
 
-    Explicit-locator candidates come first (asked for by name). Then every source is guaranteed
-    its best few (an even share of the rerank batch, at least one), so a large source cannot crowd
-    a small, curated one out; the remaining places go to the strongest candidates by term hits
-    across all sources. Duplicate locators are dropped.
+    Explicit-locator candidates come first (asked for by name, never judged). The first batch of
+    `rerank_max_per_need` follows, ordered by score: every source's best candidates (a fair share,
+    see _fair_front) completed by the best of all the others, with at most
+    `pool_sections_per_file` sections of one file and at most `pool_source_share` of the batch from
+    one source (the batch spans documents and sources). The rest of the pool is ordered by score
+    with at most `sections_per_file` sections of a file; whatever those caps held back fills the
+    places left. Duplicate locators are dropped. The score is length-normalised and weighs rare
+    terms (BM25 style, see scoring.py); it orders the pool and decides nothing about relevance.
 
     Args:
-        reports: One search report per source.
+        reports: One search report per source (candidates and corpus statistics).
         cfg: Retrieval bounds (`max_candidates` is the pool, `rerank_max_per_need` the batch).
         explicit: Candidates fetched by explicit locator.
 
     Returns:
         list[Candidate]: The pool, sending priority first.
     """
-    lanes = [list(r.candidates) for r in reports if r.candidates]
-    limit = cfg.max_candidates
-    chosen: dict[str, Candidate] = {c.locator: c for c in explicit[:limit]}
-    floor = max(1, cfg.rerank_max_per_need // (2 * max(1, len(lanes))))
-    for rank in range(floor):
-        for lane in lanes:
-            if rank < len(lane) and len(chosen) < limit:
-                chosen.setdefault(lane[rank].locator, lane[rank])
-    rest = sorted(((c, lane_no, rank) for lane_no, lane in enumerate(lanes)
-                   for rank, c in enumerate(lane) if c.locator not in chosen),
-                  key=lambda t: (-t[0].hits, t[1], t[2]))
-    for cand, _, _ in rest:
-        if len(chosen) < limit:
-            chosen.setdefault(cand.locator, cand)
-    return list(chosen.values())
+    lanes = _lanes(reports, cfg)
+    everyone = sorted((c for lane in lanes for c in lane), key=lambda c: (-c.score, c.locator))
+    pool = _Pool(cfg, explicit)
+    batch = cfg.rerank_max_per_need
+    target = len(pool.chosen) + batch
+    guaranteed = {c.locator for c in _fair_front(lanes, cfg)}
+    for cand in (c for c in everyone if c.locator in guaranteed):
+        pool.take(cand, cfg.pool_sections_per_file, front=True)
+    for cand in everyone:
+        if not pool.filled(target):
+            pool.take(cand, cfg.pool_sections_per_file, front=True)
+    front = pool.ordered()
+    for cand in everyone:
+        pool.take(cand, cfg.sections_per_file)
+    for cand in everyone + pool.overflow:
+        if len(pool.chosen) < cfg.max_candidates:
+            pool.chosen.setdefault(cand.locator, cand)
+    kept = {c.locator for c in front}
+    return front + [c for c in pool.ordered() if c.locator not in kept]
 
 
 def pool_note(reports: Sequence[SearchReport], explicit: Sequence[Candidate], pool: list[Candidate],
@@ -106,13 +186,18 @@ def coverage(evidence: Sequence[Evidence], consulted: int,
     return NeedStatus.SATISFIED if enough or strong(evidence, cfg) else NeedStatus.PARTIAL
 
 
-def coverage_note(evidence: Sequence[Evidence], status: NeedStatus, cfg: RetrievalConfig
-                  ) -> str | None:
-    """Explain why a need with evidence stayed partial because the evidence is too thin."""
+def coverage_note(evidence: Sequence[Evidence], status: NeedStatus, cfg: RetrievalConfig,
+                  need_id: str | None = None) -> str | None:
+    """Explain why a need with evidence stayed partial because the evidence is too thin.
+
+    The note names the need (`need_id`): a bundle of several needs, or a run log, must say which
+    one is thin.
+    """
     if not evidence or status is not NeedStatus.PARTIAL:
         return None
     bar = cfg.coverage_relevance_threshold
-    return (f"coverage: {len(above_bar(evidence, bar))} item(s) reached the relevance bar {bar} "
+    head = f"coverage of need {need_id}: " if need_id else "coverage: "
+    return (f"{head}{len(above_bar(evidence, bar))} item(s) reached the relevance bar {bar} "
             f"and none the strong bar {cfg.satisfied_strong_threshold}; a need is satisfied by "
             f"{cfg.satisfied_min_items} such items or one strong item, so it stays partial "
             "(the items were kept as context, not as an answer)")
@@ -121,6 +206,12 @@ def coverage_note(evidence: Sequence[Evidence], status: NeedStatus, cfg: Retriev
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-01 [python-coder]: merge_pool orders by a BM25-style score on the corpus of all
+#   sources (not raw hits), guarantees every source `pool_fair_share` candidates whose score
+#   reaches `pool_fair_min_ratio` of the best (at most half the first batch; the old guarantee
+#   shrank to one place with six sources), holds a file to `pool_sections_per_file` places while
+#   the pool has room, and sorts the first batch by score. The thin-coverage note names its need.
+#   (#KernelV01/F)
 # - 2026-10-01 [python-coder]: The pool guarantees every source its best candidates and fills the
 #   rest by term hits across sources, instead of a strict round-robin: with six sources and a cap
 #   of 60 the round-robin cut a design section that ranked 21st in its source although it had far

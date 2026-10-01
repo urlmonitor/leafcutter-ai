@@ -1,7 +1,8 @@
 """
 MODULE: kernel.capabilities.retrieval.repository
-GOAL: The `repo_text` strategy: walk authorised roots, split files into sections, rank them by
-    query-term hits and path or identifier matches, and cut bounded excerpts with locators.
+GOAL: The `repo_text` strategy: walk authorised roots, split files into sections, order them by a
+    length-normalised, rarity-weighted score (path and identifier matches counted in), and cut
+    bounded excerpts with locators.
 BUSINESS CONTEXT: The one real native source of the MVP reads the project's own documents and
     code (ADRs, conventions, patterns) so a decision rests on inspectable evidence rather than an
     LLM-written answer (Rev 3 section 10.3). Live runs showed one window per file missing the
@@ -9,7 +10,9 @@ BUSINESS CONTEXT: The one real native source of the MVP reads the project's own 
 ARCHITECTURE: Synchronous and side-effect free apart from reads through ReadPolicy (which wraps
     every read in try/except OSError); the executor runs it in a worker thread. Each readable file
     yields up to `sections_per_file` section candidates (chunking.py; unstructured formats keep
-    the old densest window). Files named by the question (entities.py) are pinned ahead of body
+    the old densest window) and feeds every section it scans into the source's corpus statistics
+    (scoring.py), so the score is known once the source has been scanned. Files named by the
+    question (entities.py) and registries whose vocabulary it speaks are pinned ahead of body
     ranking. The per-source cap scales with the number of files scanned and is bounded by
     `max_candidates`; every file's best section is offered before any file's second one.
 """
@@ -19,8 +22,8 @@ from __future__ import annotations
 import math
 import os
 from collections import Counter
-from collections.abc import Iterable, Sequence
-from dataclasses import dataclass
+from collections.abc import Iterable, Mapping, Sequence
+from dataclasses import dataclass, replace
 from datetime import datetime
 from pathlib import Path
 
@@ -34,6 +37,14 @@ from kernel.capabilities.retrieval.chunking import (
     split_sections,
 )
 from kernel.capabilities.retrieval.entities import QueryEntities, entity_matches, path_terms
+from kernel.capabilities.retrieval.scoring import (
+    CorpusStats,
+    candidate_score,
+    count_terms,
+    registry_vocabulary,
+    reviews_run_of_goal,
+    stand_in_score,
+)
 from kernel.config import RetrievalConfig
 from kernel.contracts.enums import SourceKind
 
@@ -46,7 +57,7 @@ MIN_PROJECT_TERM = 4
 
 __all__ = ["STRATEGY", "common_terms", "cut_at_boundary", "search_repo_text", "source_cap"]
 
-_Key = tuple[bool, int, str, int]
+_Key = tuple[bool, float, str, int]
 _Prioritised = list[tuple[_Key, Candidate]]
 
 
@@ -56,10 +67,11 @@ class _FileRecord:
 
     rel: str
     candidates: list[Candidate]
-    file_hits: int
     exact: bool
     path_hit_terms: frozenset[str]
     head: Candidate | None = None
+    #: Query words that are names of this structured file's keys (its registry vocabulary).
+    vocabulary: frozenset[str] = frozenset()
 
 
 def _iter_files(root: Path) -> tuple[list[Path], list[Path]]:
@@ -96,58 +108,64 @@ def _locator(rel: str, start: int, end: int, label: str | None) -> str:
 
 
 def _candidate(rel: str, source_id: str, lines: list[str], terms: list[str],
-               cfg: RetrievalConfig, modified: datetime | None) -> Candidate | None:
+               cfg: RetrievalConfig, modified: datetime | None, stats: CorpusStats | None = None
+               ) -> Candidate | None:
     """Build a Candidate from the densest line window of one file (None if no term occurs).
 
-    This is the fallback for formats without sections.
+    This is the fallback for formats without sections: the file counts as one section.
     """
+    full = "\n".join(lines).lower()
+    counts = count_terms(full, "", terms)
+    if stats is not None:
+        stats.add_section(len(full), counts)
     start, end, hits = best_window(lines, terms, cfg.excerpt_context_lines)
     if hits == 0:
         return None
     excerpt = "\n".join(lines[start:end])
     truncated = len(excerpt) > cfg.max_excerpt_chars
     body = cut_at_boundary(excerpt, cfg.max_excerpt_chars)
-    full = "\n".join(lines).lower()
-    matched = tuple(t for t in terms if t in full)
     return Candidate(
         source_id=source_id, kind=SourceKind.REPOSITORY_FILE, strategy=STRATEGY, path=rel,
         title=rel, locator=_locator(rel, start, end, None), excerpt=body, hits=hits,
-        terms=matched, truncated=truncated, modified_at=modified)
+        terms=tuple(t for t in terms if t in counts), truncated=truncated, modified_at=modified,
+        length=len(full), term_counts=tuple(counts.items()))
 
 
-def _section_candidate(rel: str, source_id: str, lines: list[str], sec: Section, hits: int,
-                       terms: list[str], cfg: RetrievalConfig, modified: datetime | None
-                       ) -> Candidate:
+def _section_candidate(rel: str, source_id: str, lines: list[str], sec: Section,
+                       counts: Mapping[str, int], terms: list[str], cfg: RetrievalConfig,
+                       modified: datetime | None) -> Candidate:
     """Build the Candidate for one section: its heading path is part of the locator."""
     start, end, body, truncated = section_excerpt(lines, sec, terms, cfg)
-    low = f"{sec.label or ''}\n{body}".lower()
     return Candidate(
         source_id=source_id, kind=SourceKind.REPOSITORY_FILE, strategy=STRATEGY, path=rel,
-        title=rel, locator=_locator(rel, start, end, sec.label), excerpt=body, hits=hits,
-        terms=tuple(t for t in terms if t in low), truncated=truncated, modified_at=modified)
+        title=rel, locator=_locator(rel, start, end, sec.label), excerpt=body,
+        hits=sum(counts.values()), terms=tuple(t for t in terms if t in counts),
+        truncated=truncated, modified_at=modified,
+        length=len("\n".join(lines[sec.start:sec.end])), term_counts=tuple(counts.items()))
 
 
 def _sectioned(rel: str, source_id: str, text: str, lines: list[str], terms: list[str],
-               cfg: RetrievalConfig, modified: datetime | None
-               ) -> tuple[list[Candidate], int] | None:
-    """Return (best section candidates, file hits), or None when the format has no sections."""
-    sections = split_sections(rel, text, lines)
+               cfg: RetrievalConfig, modified: datetime | None, stats: CorpusStats
+               ) -> list[Candidate] | None:
+    """Return the file's best section candidates, or None when the format has no sections.
+
+    Every section is added to the corpus statistics; the best `sections_per_file` (by a stand-in
+    score) become candidates.
+    """
+    sections = split_sections(rel, text, lines, cfg.max_section_lines)
     if sections is None:
         return None
     lowered = [line.lower() for line in lines]
-    scored: list[tuple[int, Section]] = []
-    file_hits = 0
+    scored: list[tuple[float, Section, dict[str, int]]] = []
     for sec in sections:
         body = "\n".join(lowered[sec.start:sec.end])
-        in_body = sum(body.count(t) for t in terms)
-        file_hits += in_body
-        total = in_body + 3 * sum((sec.label or "").lower().count(t) for t in terms)
-        if total:
-            scored.append((total, sec))
+        counts = count_terms(body, (sec.label or "").lower(), terms)
+        stats.add_section(len(body), counts)
+        if counts:
+            scored.append((stand_in_score(counts, len(body), cfg), sec, counts))
     scored.sort(key=lambda item: (-item[0], item[1].start))
-    best = scored[:cfg.sections_per_file]
-    return [_section_candidate(rel, source_id, lines, sec, hits, terms, cfg, modified)
-            for hits, sec in best], file_hits
+    return [_section_candidate(rel, source_id, lines, sec, counts, terms, cfg, modified)
+            for _, sec, counts in scored[:cfg.sections_per_file]]
 
 
 def _head_candidate(rel: str, source_id: str, text: str, lines: list[str], terms: list[str],
@@ -158,23 +176,27 @@ def _head_candidate(rel: str, source_id: str, text: str, lines: list[str], terms
     sections = split_sections(rel, text, lines)
     window = Section(0, min(len(lines), 2 * cfg.excerpt_context_lines + 1))
     first = sections[0] if sections else window
-    return _section_candidate(rel, source_id, lines, first, 0, terms, cfg, modified)
+    return _section_candidate(rel, source_id, lines, first, {}, terms, cfg, modified)
 
 
 def _file_record(path: Path, rel: str, text: str, source_id: str, terms: list[str],
-                 entities: QueryEntities, cfg: RetrievalConfig) -> _FileRecord:
+                 entities: QueryEntities, cfg: RetrievalConfig, stats: CorpusStats,
+                 goal: str | None = None) -> _FileRecord:
     """Evaluate one readable file: section candidates plus how its path matched the question."""
     lines, modified = text.splitlines(), file_mtime(path)
-    built = _sectioned(rel, source_id, text, lines, terms, cfg, modified)
-    if built is None:
-        single = _candidate(rel, source_id, lines, terms, cfg, modified)
-        built = ([single] if single else []), (single.hits if single else 0)
-    cands, file_hits = built
+    cands = _sectioned(rel, source_id, text, lines, terms, cfg, modified, stats)
+    if cands is None:
+        single = _candidate(rel, source_id, lines, terms, cfg, modified, stats)
+        cands = [single] if single else []
     exact, matched = entity_matches(rel, entities), path_terms(rel, entities.words or terms)
     head = None
     if not cands and (exact or len(matched) >= PINNED_PATH_TERMS):
         head = _head_candidate(rel, source_id, text, lines, terms, cfg, modified)
-    return _FileRecord(rel, cands, file_hits, exact, matched, head)
+    if goal and reviews_run_of_goal(rel, text, goal, cfg.review_quote_ratio,
+                                    cfg.review_path_markers):
+        cands = [replace(c, reviews_goal=True) for c in cands]
+        head = replace(head, reviews_goal=True) if head is not None else None
+    return _FileRecord(rel, cands, exact, matched, head, registry_vocabulary(rel, text, terms))
 
 
 def common_terms(files_scanned: int, path_df: Counter[str], project: frozenset[str]
@@ -192,24 +214,39 @@ def common_terms(files_scanned: int, path_df: Counter[str], project: frozenset[s
     return frozenset(spread) | project
 
 
-def _prioritised(records: list[_FileRecord], common: frozenset[str], path_weight: int
-                 ) -> _Prioritised:
-    """Return (sort key, candidate) pairs: pinned files first, then by content and path weight.
+def _scored(cand: Candidate, path_hits: frozenset[str], stats: CorpusStats, cfg: RetrievalConfig
+            ) -> Candidate:
+    """Return the candidate with the query terms its path names and its source-level score.
 
-    A file is pinned when the question names it (an identifier) or its path carries two distinctive
-    question words. The rest are ordered by one number, the file's content hits plus
-    `path_weight` hits per distinctive path word, so a path that happens to share a word cannot
-    outrank a file with many content hits (a live run ranked schema files with 1 to 4 hits above
-    files with 20 to 36).
+    The score is the section's BM25-style score plus `path_match_weight` times the rarity of every
+    such term: a file named after the topic ranks well, while a path that merely shares a word
+    cannot outrank a section that says much more.
+    """
+    named = replace(cand, path_hits=tuple(sorted(path_hits)))
+    return replace(named, score=candidate_score(named, stats, stats.average_length, cfg))
+
+
+def _prioritised(records: list[_FileRecord], common: frozenset[str], stats: CorpusStats,
+                 terms: Sequence[str], cfg: RetrievalConfig) -> _Prioritised:
+    """Return (sort key, candidate) pairs: pinned files first, then by BM25-style score.
+
+    A file is pinned when the question names it (an identifier), its path carries two distinctive
+    question words, or it is a registry whose vocabulary the question speaks. The rest are ordered
+    by one number: the section's length-normalised, document-frequency-weighted score plus the
+    path boost (a live run ranked schema files with 1 to 4 hits above files with 20 to 36, and
+    later registry JSON with 200 hits above the files that answer).
     """
     out: _Prioritised = []
     for rec in records:
-        score = len(rec.path_hit_terms - common)
-        pinned = rec.exact or score >= PINNED_PATH_TERMS
+        bonus = rec.path_hit_terms - common
+        named = bonus & set(terms)
+        pinned = (rec.exact or len(bonus) >= PINNED_PATH_TERMS
+                  or len(rec.vocabulary) >= cfg.registry_pin_min_terms)
         cands = rec.candidates or ([rec.head] if rec.head is not None and pinned else [])
-        weight = rec.file_hits + path_weight * score
-        for index, cand in enumerate(cands):
-            out.append(((not pinned, -weight, rec.rel, index), cand))
+        scored = sorted((_scored(c, named, stats, cfg) for c in cands),
+                        key=lambda c: (-c.score, c.locator))
+        for index, cand in enumerate(scored):
+            out.append(((not pinned, -cand.score, rec.rel, index), cand))
     return sorted(out, key=lambda pair: pair[0])
 
 
@@ -229,7 +266,7 @@ def _select(ordered: _Prioritised, cap: int) -> list[Candidate]:
 
 def search_repo_text(policy: ReadPolicy, source_id: str, roots: list[Path], terms: list[str],
                      cfg: RetrievalConfig, entities: QueryEntities | None = None,
-                     project_names: Sequence[str] = ()) -> SearchReport:
+                     project_names: Sequence[str] = (), goal: str | None = None) -> SearchReport:
     """Search the given resolved roots for the terms.
 
     Args:
@@ -241,9 +278,11 @@ def search_repo_text(policy: ReadPolicy, source_id: str, roots: list[Path], term
         entities: Identifiers named in the question; files whose path carries one are pinned.
         project_names: Names of the project (the workspace id); their words say nothing about
             which file is meant, so a path match on them is not distinctive.
+        goal: The request's goal; a document that reviews a kernel run of it is flagged.
 
     Returns:
-        SearchReport: Ranked candidates (at most `source_cap`) and skip counters.
+        SearchReport: Ranked candidates (at most `source_cap`), corpus statistics for scoring and
+            skip counters.
     """
     report = SearchReport(source_id=source_id)
     wanted = QueryEntities() if entities is None else entities
@@ -257,16 +296,20 @@ def search_repo_text(policy: ReadPolicy, source_id: str, roots: list[Path], term
             outcome = policy.read_text(path)
             if outcome.text is None:
                 report.skip(outcome.reason or "unreadable")
+                if outcome.reason == "too_large":
+                    report.note_oversized(policy.relative(path) or path.name,
+                                          policy.max_file_bytes)
                 continue
             report.files_scanned += 1
             rel = policy.relative(path) or path.name
-            rec = _file_record(path, rel, outcome.text, source_id, terms, wanted, cfg)
+            rec = _file_record(path, rel, outcome.text, source_id, terms, wanted, cfg,
+                               report.stats, goal)
             path_df.update(rec.path_hit_terms)
             if rec.candidates or rec.head is not None:
                 records.append(rec)
     common = common_terms(report.files_scanned, path_df,
                           _project_terms((policy.root.name, *project_names), terms))
-    ordered = _prioritised(records, common, cfg.path_match_weight)
+    ordered = _prioritised(records, common, report.stats, terms, cfg)
     cap = source_cap(report.files_scanned, cfg)
     report.candidates = _select(ordered, cap)
     cut = len(ordered) - len(report.candidates)
@@ -284,13 +327,13 @@ def _project_terms(names: Iterable[str], terms: list[str]) -> frozenset[str]:
 
 def _cut_note(ordered: _Prioritised, offered: list[Candidate], cut: int, cap: int, scanned: int,
               cfg: RetrievalConfig) -> str:
-    """Describe what the source cap cut: sections, files with no section offered, and the best cut."""
+    """Describe what the source cap cut: sections, files with no section offered and the best cut."""
     kept = {c.locator for c in offered}
     left_out = [c for _, c in ordered if c.locator not in kept]
     whole = {c.path for _, c in ordered} - {c.path for c in offered}
-    strongest = max(left_out, key=lambda c: c.hits, default=None)
-    best = f"; strongest cut section had {strongest.hits} hit(s) ({strongest.locator})" \
-        if strongest else ""
+    strongest = max(left_out, key=lambda c: c.score, default=None)
+    best = (f"; strongest cut section scored {strongest.score:.1f} ({strongest.hits} hit(s), "
+            f"{strongest.locator})") if strongest else ""
     return (f"{cut} lower-ranked section(s) cut at the source cap of {cap} candidates "
             f"({scanned} files scanned, max_candidates={cfg.max_candidates}); "
             f"{len(whole)} matching file(s) had no section offered and "
@@ -300,6 +343,13 @@ def _cut_note(ordered: _Prioritised, offered: list[Candidate], cut: int, cap: in
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-01 [python-coder]: Candidates are ordered by a BM25-style score over the scanned
+#   sections (document frequency from the whole source, section length normalised, path words as
+#   extra occurrences) instead of raw hit counts: registry JSON with 191 to 263 hits filled the
+#   rerank batch while short documents with 10 to 30 hits that answer the question sat unjudged.
+#   A registry (one JSON object holding one collection) is split by entry and pinned when the
+#   goal speaks its vocabulary; a document that reviews a run of the asking goal is flagged.
+#   (#KernelV01/F)
 # - 2026-10-01 [python-coder]: Ranking is one weighted number (file content hits plus
 #   retrieval.path_match_weight per distinctive path word) after pinning; terms in the path of
 #   most files and the project's own names (workspace id, folder) are not distinctive. A live

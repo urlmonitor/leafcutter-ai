@@ -62,6 +62,16 @@ CAPABILITY_VERSION = "1.0.0"
 NATIVE_KINDS = ("repo_text", "knowledge_map")
 
 
+def source_policy(policy: ReadPolicy, source: SourceConfig) -> ReadPolicy:
+    """Return the read policy for one source: its extra deny globs and its own file size limit.
+
+    A source may read larger files than the global `retrieval.max_file_bytes` (the 812 KB
+    `docs/build-dataflow.json` of the registries source was skipped on every run).
+    """
+    return replace(policy, deny_globs=(*policy.deny_globs, *source.deny_globs),
+                   max_file_bytes=source.max_file_bytes or policy.max_file_bytes)
+
+
 def select_sources(ctx: ExecutionContext, request: RetrievalRequestPayload
                    ) -> tuple[list[SourceConfig], list[UnavailableSource]]:
     """Pick the native sources serving the need; report requested ids that cannot serve it."""
@@ -86,14 +96,14 @@ def select_sources(ctx: ExecutionContext, request: RetrievalRequestPayload
 
 
 async def _search_one(ctx: ExecutionContext, policy: ReadPolicy, source: SourceConfig,
-                      terms: list[str], entities: QueryEntities) -> SearchReport:
+                      terms: list[str], entities: QueryEntities, goal: str | None
+                      ) -> SearchReport:
     """Search one source inside a `retrieval.<source>` retriever observation."""
     meta = {"source_id": source.id, "strategy": source.kind, "term_count": len(terms)}
-    if source.deny_globs:
-        policy = replace(policy, deny_globs=(*policy.deny_globs, *source.deny_globs))
+    policy = source_policy(policy, source)
     with ctx.tracer.span(f"retrieval.{source.id}", "retriever", ctx.corr, input={"terms": terms},
                          metadata=meta) as span:
-        report = await _search_source(ctx, policy, source, terms, entities)
+        report = await _search_source(ctx, policy, source, terms, entities, goal)
         span.update(output={"files_scanned": report.files_scanned,
                             "candidates": len(report.candidates),
                             "skipped": dict(report.skipped),
@@ -103,7 +113,8 @@ async def _search_one(ctx: ExecutionContext, policy: ReadPolicy, source: SourceC
 
 
 async def _search_source(ctx: ExecutionContext, policy: ReadPolicy, source: SourceConfig,
-                         terms: list[str], entities: QueryEntities) -> SearchReport:
+                         terms: list[str], entities: QueryEntities, goal: str | None
+                         ) -> SearchReport:
     """Search one source in a worker thread; unreachable sources become unavailable reports."""
     cfg = ctx.config.retrieval
     if source.kind == "knowledge_map":
@@ -121,9 +132,14 @@ async def _search_source(ctx: ExecutionContext, policy: ReadPolicy, source: Sour
         report.unavailable_reason = "; ".join(resolved.rejected) or "no readable roots"
         return report
     report = await asyncio.to_thread(search_repo_text, policy, source.id, list(resolved.roots),
-                                     terms, cfg, entities, (ctx.scope.workspace_id,))
+                                     terms, cfg, entities, (ctx.scope.workspace_id,), goal)
     report.notes += [f"root not searched: {r}" for r in resolved.rejected]
     return report
+
+
+def _goal_of(request: RetrievalRequestPayload) -> str | None:
+    """Return the request's goal: the first query hint (hints lead with the goal)."""
+    return request.query_hints[0] if request.query_hints else None
 
 
 def _locator_sources(ctx: ExecutionContext, request: RetrievalRequestPayload
@@ -166,9 +182,9 @@ async def _collect(ctx: ExecutionContext, invocation: CapabilityInvocation,
     top_k = min(cfg.top_k, request.limits.top_k or cfg.top_k)
     candidates = merge_pool(reports, cfg, explicit)
     cited = {x.split("#")[0].split("::")[0] for x in request.explicit_locators}
-    goal = request.query_hints[0] if request.query_hints else None
-    outcome = await rerank(ctx, invocation, request.need, candidates, top_k, goal=goal,
-                           cited=cited)
+    outcome = await rerank(ctx, invocation, request.need, candidates, top_k,
+                           goal=_goal_of(request), cited=cited,
+                           max_batches=request.max_rerank_batches)
     version = await asyncio.to_thread(resolve_source_version, ctx.run_id, ctx.scope)
     limits = [*pool_note(reports, explicit, candidates, cfg), *outcome.limitations]
     if version is None:
@@ -202,7 +218,7 @@ def _result(invocation: CapabilityInvocation, request: RetrievalRequestPayload,
     served = len(consulted) + (1 if explicit_served else 0)
     status = coverage(evidence, served, unavailable, cfg)
     limits = [*limitations, *_limitations(reports, request.need)]
-    if note := coverage_note(evidence, status, cfg):
+    if note := coverage_note(evidence, status, cfg, request.need.id):
         limits.append(note)
     limits += [f"source {u.source_id} unavailable: {u.reason}" for u in unavailable]
     bundle = EvidenceBundlePayload(
@@ -255,7 +271,8 @@ class RepositoryRetrievalExecutor:
             fetch_explicit, policy, _locator_sources(ctx, request), request.explicit_locators,
             terms, ctx.config.retrieval)
         searched = sources if terms else []
-        reports = list(await asyncio.gather(*(_search_one(ctx, policy, s, terms, entities)
+        goal = _goal_of(request)
+        reports = list(await asyncio.gather(*(_search_one(ctx, policy, s, terms, entities, goal)
                                               for s in searched)))
         try:
             evidence, limits, cut, usage = await _collect(
@@ -269,6 +286,10 @@ class RepositoryRetrievalExecutor:
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-01 [python-coder]: The request's goal reaches the search (a document that reviews a
+#   kernel run of it is flagged), a source may carry its own `max_file_bytes` (one read policy per
+#   source, also for explicit locators), and a request may cap the rerank batches the requester's
+#   budget affords (`max_rerank_batches`). (#KernelV01/F)
 # - 2026-10-01 [python-coder]: Pooling, rerank batching and coverage moved to pool.py/rerank.py:
 #   one rerank batch per need, explicit locators unjudged, a need satisfied only by enough
 #   evidence above the bar, and every cut reported (the pool cap and the batch cap).

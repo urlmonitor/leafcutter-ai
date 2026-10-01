@@ -136,6 +136,9 @@ class RetrievalRequestPayload(KernelModel):
     explicit_locators: list[str] = Field(default_factory=list)
     #: Texts to search for before the need's own wording: the goal first, then criteria, options.
     query_hints: list[str] = Field(default_factory=list)
+    #: Most rerank batches this request may judge (the requester's Jev budget affords no more
+    #: than this beside its reserve); null means the configured `retrieval.rerank_max_batches`.
+    max_rerank_batches: int | None = Field(default=None, ge=1)
 
 
 class OptionsRequestPayload(KernelModel):

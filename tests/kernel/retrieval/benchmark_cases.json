@@ -69,6 +69,38 @@
      "test-angles": 1,
      "docs/acceptance-criteria/": 1,
      "tickets/": 0
+    },
+    "judged": {
+     "reached": [
+      "kernel/persistence/run_store.py"
+     ],
+     "calls": 2
+    }
+   },
+   "current": {
+    "round": "F",
+    "reached": [
+     "kernel/persistence/gap_store.py"
+    ],
+    "pool_position": {
+     "design-3 section Persistence layout": 38,
+     "kernel/persistence/run_store.py": 28,
+     "kernel/persistence/gap_store.py": 16
+    },
+    "crowding": {
+     "commit_guardian.json": 0,
+     "agent_registry": 0,
+     "test-angles": 0,
+     "docs/acceptance-criteria/": 1,
+     "tickets/": 0
+    },
+    "judged": {
+     "reached": [
+      "design-3 section Persistence layout",
+      "kernel/persistence/run_store.py",
+      "kernel/persistence/gap_store.py"
+     ],
+     "calls": 2
     }
    }
   },
@@ -142,6 +174,40 @@
      "test-angles": 1,
      "docs/acceptance-criteria/": 6,
      "tickets/": 0
+    },
+    "judged": {
+     "reached": [
+      "tests/README.md"
+     ],
+     "calls": 1
+    }
+   },
+   "current": {
+    "round": "F",
+    "reached": [
+     "tests/README.md",
+     "unit_tests/README.md",
+     "design-6 section Test layout"
+    ],
+    "pool_position": {
+     "tests/README.md": 5,
+     "unit_tests/README.md": 3,
+     "design-6 section Test layout": 2
+    },
+    "crowding": {
+     "commit_guardian.json": 0,
+     "agent_registry": 0,
+     "test-angles": 1,
+     "docs/acceptance-criteria/": 1,
+     "tickets/": 0
+    },
+    "judged": {
+     "reached": [
+      "tests/README.md",
+      "unit_tests/README.md",
+      "design-6 section Test layout"
+     ],
+     "calls": 1
     }
    }
   },
@@ -234,6 +300,40 @@
      "test-angles": 1,
      "docs/acceptance-criteria/": 1,
      "tickets/": 0
+    },
+    "judged": {
+     "reached": [
+      "kernel/contracts/decision.py (cited)",
+      "docs/components.json (filter terms)"
+     ],
+     "calls": 1
+    }
+   },
+   "current": {
+    "round": "F",
+    "reached": [
+     "kernel/contracts/decision.py (cited)",
+     "docs/components.json (filter terms)"
+    ],
+    "pool_position": {
+     "kernel/contracts/decision.py (cited)": 1,
+     "docs/components.json (filter terms)": 2,
+     "Stage-0 delta part 4": null,
+     "concept part 3 or 4 body": null
+    },
+    "crowding": {
+     "commit_guardian.json": 1,
+     "agent_registry": 0,
+     "test-angles": 0,
+     "docs/acceptance-criteria/": 1,
+     "tickets/": 0
+    },
+    "judged": {
+     "reached": [
+      "kernel/contracts/decision.py (cited)",
+      "docs/components.json (filter terms)"
+     ],
+     "calls": 1
     }
    }
   },
@@ -295,6 +395,35 @@
      "test-angles": 0,
      "docs/acceptance-criteria/": 1,
      "tickets/": 0
+    },
+    "judged": {
+     "reached": [
+      "kernel/config.py"
+     ],
+     "calls": 3
+    }
+   },
+   "current": {
+    "round": "F",
+    "reached": [
+     "kernel/config.py"
+    ],
+    "pool_position": {
+     "config/kernel_config.default.json": null,
+     "kernel/config.py": 12
+    },
+    "crowding": {
+     "commit_guardian.json": 0,
+     "agent_registry": 0,
+     "test-angles": 0,
+     "docs/acceptance-criteria/": 1,
+     "tickets/": 0
+    },
+    "judged": {
+     "reached": [
+      "kernel/config.py"
+     ],
+     "calls": 3
     }
    }
   },
@@ -359,6 +488,37 @@
      "test-angles": 1,
      "docs/acceptance-criteria/": 6,
      "tickets/": 0
+    },
+    "judged": {
+     "reached": [
+      "design-4 section Decision capability"
+     ],
+     "calls": 1
+    }
+   },
+   "current": {
+    "round": "F",
+    "reached": [
+     "kernel/capabilities/decision/approvals.py",
+     "design-4 section Decision capability"
+    ],
+    "pool_position": {
+     "kernel/capabilities/decision/approvals.py": 6,
+     "design-4 section Decision capability": 15
+    },
+    "crowding": {
+     "commit_guardian.json": 0,
+     "agent_registry": 0,
+     "test-angles": 0,
+     "docs/acceptance-criteria/": 2,
+     "tickets/": 0
+    },
+    "judged": {
+     "reached": [
+      "kernel/capabilities/decision/approvals.py",
+      "design-4 section Decision capability"
+     ],
+     "calls": 2
     }
    }
   }

@@ -159,41 +159,54 @@ class RetrievalConfig(_Section):
     max_excerpt_chars: int = Field(ge=1)
     max_file_bytes: int = Field(ge=1)
     deny_globs: list[str]
-    #: Relevance a kept item needs to count towards a need's coverage (items between
-    #: `relevance_threshold` and this stay as evidence but leave the need partial).
+    #: Relevance a kept item needs to count towards a need's coverage (lower ones stay context).
     coverage_relevance_threshold: Probability
     #: Sections (headings, top-level keys, top-level defs) returned per file, best first.
     sections_per_file: int = Field(ge=1)
+    #: Longest section (lines) scored whole; a longer one is cut into windows of this many lines.
+    max_section_lines: int = Field(ge=10)
     #: Fewest candidates a source may offer when it is small (capped by `max_candidates`).
     source_candidate_floor: int = Field(ge=1)
-    #: Candidates a source may offer per scanned file (the cap scales with source size, then is
-    #: bounded by `max_candidates`, which is also the overall rerank batch bound).
+    #: Candidates a source may offer per scanned file (bounded by `max_candidates`).
     source_candidate_ratio: float = Field(gt=0)
     #: Most explicit locators fetched per request (`retrieval_request.explicit_locators`).
     max_explicit_locators: int = Field(ge=0)
     #: Most search terms one retrieval query carries (goal first, then hints, then need filler).
     max_query_terms: int = Field(ge=1)
-    #: Most candidates one need sends to Jev for reranking (`max_candidates` stays the pre-filter
-    #: pool they are chosen from). With `jev.max_questions_per_call` at least this large a need
-    #: costs one rerank call.
+    #: Candidates one rerank batch sends to Jev (`max_candidates` is the pool); with
+    #: `jev.max_questions_per_call` at least this large a batch is one call.
     rerank_max_per_need: int = Field(ge=1)
-    #: Batches of `rerank_max_per_need` one need may judge: the first is normally all it costs, a
-    #: further one is judged only while nothing relevant has been found (a lexical pre-filter can
-    #: put the answer deeper than the first batch).
+    #: Batches one need may judge; further ones only until it has enough evidence (rerank_min_items).
     rerank_max_batches: int = Field(ge=1)
     #: A need is `satisfied` only with at least this many kept items at or above
     #: `coverage_relevance_threshold` ...
     satisfied_min_items: int = Field(ge=1)
     #: ... or with a single kept item whose relevance reaches this stronger bar.
     satisfied_strong_threshold: Probability
-    #: A candidate whose text repeats at least this share of the request's goal near-verbatim is a
-    #: review or analysis OF the run asking, not evidence for it, and is demoted (0 disables).
+    #: A candidate repeating this share of the goal near-verbatim reviews the run asking, not
+    #: evidence for it, and is demoted (0 disables this and the review test).
     self_reference_ratio: Probability
-    #: Factor applied to the relevance of a self-referencing candidate (explicitly cited ones are
-    #: exempt), so it falls below the keep bar unless Jev judged it overwhelmingly relevant.
+    #: Factor on the relevance of a self-referencing candidate (cited ones are exempt).
     self_reference_penalty: Probability
-    #: Hits one distinctive path-term match is worth when ranking files (content hits weigh in).
+    #: Score per rarity unit of each distinctive path word (a file NAMED after the topic).
     path_match_weight: int = Field(ge=0)
+    #: BM25 term-count saturation and length-normalisation strength (0 = none); orders only.
+    bm25_k1: float = Field(gt=0)
+    bm25_b: Probability
+    #: Sections of one file the FIRST rerank batch may hold (later pool places: sections_per_file).
+    pool_sections_per_file: int = Field(ge=1)
+    #: Candidates per source guaranteed in the first batch if they score this share of the best.
+    pool_fair_share: int = Field(ge=0)
+    pool_fair_min_ratio: Probability
+    #: A need judges more batches until this many items passed `relevance_threshold` ...
+    rerank_min_items: int = Field(ge=0)
+    #: ... and skips one when the best unjudged candidate scores below this share of the judged.
+    rerank_stop_ratio: Probability
+    #: Goal share a document quotes (beside a run or trace id), or file-name marker, to review its run.
+    review_quote_ratio: Probability
+    review_path_markers: list[str]
+    #: A JSON registry is pinned when this many query words are names in its vocabulary.
+    registry_pin_min_terms: int = Field(ge=1)
 
 
 class SourceConfig(_Section):
@@ -204,8 +217,8 @@ class SourceConfig(_Section):
     categories: list[EvidenceCategory] = Field(min_length=1)
     roots: list[str] = Field(default_factory=list)
     surfaces: list[str] = Field(default_factory=list)
-    #: Extra deny globs for this source only (added to `retrieval.deny_globs`).
-    deny_globs: list[str] = Field(default_factory=list)
+    deny_globs: list[str] = Field(default_factory=list)  # added to `retrieval.deny_globs`
+    max_file_bytes: int | None = Field(default=None, ge=1)  # null: `retrieval.max_file_bytes`
 
 
 class JevConfig(_Section):
@@ -362,6 +375,7 @@ def write_config_schema(path: Path) -> None:
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-01 [python-coder]: Round F: ordering, pool, rerank depth, review limits. (#KernelV01/F)
 # - 2026-10-01 [python-coder]: Round E: decision.reserve_* keep Jev budget for a final assessment,
 #   retrieval.rerank_max_per_need bounds the rerank batch per need, satisfied_* and self_reference_*
 #   tighten coverage and demote reviews of the asking run, path_match_weight weighs path matches

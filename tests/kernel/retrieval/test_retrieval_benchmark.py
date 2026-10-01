@@ -2,18 +2,24 @@
 MODULE: tests.kernel.retrieval.test_retrieval_benchmark
 GOAL: An offline regression benchmark of the lexical retrieval stage over the real repository
     checkout: for each named goal, the places that MUST reach the first Jev rerank batch and the
-    files that must NOT crowd it, with the round E results recorded as the ratchet no change may
-    fall below.
+    files that must NOT crowd it, with two recorded results as ratchets no change may fall below:
+    round E (the "before") and round F (the current best).
 BUSINESS CONTEXT: Round E made research cheap (one rerank batch of 20 per need) and the live
     regression on goals 5 and 2 showed what that cost: the batch filled with registry JSON,
     ticket comments and AC yaml while `kernel/persistence/run_store.py`, the tests READMEs and the
     design sections that answer the question sat at pool positions 24 to 51, never judged. Cost
     and quality now trade off in the open: a change that lowers cost must not drop a must-have
-    place, and one that raises quality must not regress a case.
-ARCHITECTURE: benchmark_cases.json holds the cases and, per case, the round E ("baseline")
-    results. The RATCHET asserts everything the baseline reached is still reached and no crowding
-    count rose above the baseline. The second-domain scenario ("Where should a cache live?") runs on a
-    throwaway repository with noise built to crowd the pool. No Jev, no network, no writes.
+    place, and one that raises quality must not regress a case (and records its gain here).
+ARCHITECTURE: benchmark_cases.json holds the cases and, per case, the round E ("baseline") and
+    round F ("current") results. RATCHETS: everything the baseline reached is still reached, and
+    everything "current" reached is too; no crowding count rose above its recorded value; the real
+    rerank loop, run with a scripted oracle, judges at least the recorded must-haves in at most
+    the recorded number of Jev calls (round E's loop is derived from its pool positions). CAPS:
+    no noisy file pattern exceeds its `max` in the first batch. Must-haves a lexical search does
+    not reach stay listed in the fixture (`current.pool_position`) as the gap that semantic
+    retrieval, not this score, has to close. The second-domain scenario ("Where should a cache
+    live?") runs on a throwaway repository with noise built to crowd the pool. No Jev, no
+    network, no writes.
 """
 
 from __future__ import annotations
@@ -26,7 +32,10 @@ from typing import Any
 from tests.kernel.retrieval.benchmark_support import (
     REPO_ROOT,
     BatchResult,
+    JudgedResult,
     crowding,
+    judged_names,
+    judged_with_oracle,
     load_cases,
     reached,
     run_case,
@@ -45,28 +54,45 @@ def write(root: Path, rel: str, text: str) -> None:
     target.write_text(text, encoding="utf-8")
 
 
+_RESULTS: dict[str, BatchResult] = {}
+
+
+def case_results() -> dict[str, BatchResult]:
+    """Run every case once for the whole module (they all scan the same several thousand files)."""
+    if not _RESULTS:
+        _RESULTS.update({c["id"]: run_case(c) for c in CASES})
+    return _RESULTS
+
+
 class RealCheckout(unittest.TestCase):
-    """Base: the cases run once per class over the checkout this file lives in."""
+    """Base: the cases run over the checkout this file lives in."""
 
     results: dict[str, BatchResult]
 
     @classmethod
     def setUpClass(cls) -> None:
-        """Run every case once (they all scan the same files)."""
+        """Share the one run of every case (skipped outside a full checkout)."""
         if not (REPO_ROOT / "docs" / "analysis").is_dir():
             raise unittest.SkipTest(NOT_A_CHECKOUT)
-        cls.results = {c["id"]: run_case(c) for c in CASES}
+        cls.results = case_results()
 
 
 class TestRatchet(RealCheckout):
-    """No case may fall below what round E reached (the recorded baseline)."""
+    """No case may fall below what round E reached, or below what round F reached."""
+
+    def lost(self, case: dict[str, Any], record: str) -> list[str]:
+        got = reached(self.results[case["id"]], case)
+        return [n for n in case[record]["reached"] if not got[n]]
 
     def test_every_case_still_reaches_what_the_baseline_reached(self) -> None:
         for case in CASES:
             with self.subTest(case["id"]):
-                got = reached(self.results[case["id"]], case)
-                lost = [n for n in case["baseline"]["reached"] if not got[n]]
-                self.assertEqual(lost, [], f"fell below the round E baseline: {lost}")
+                self.assertEqual(self.lost(case, "baseline"), [], "fell below the round E baseline")
+
+    def test_every_case_still_reaches_what_round_f_reached(self) -> None:
+        for case in CASES:
+            with self.subTest(case["id"]):
+                self.assertEqual(self.lost(case, "current"), [], "fell below round F")
 
     def test_no_case_is_more_crowded_than_the_baseline(self) -> None:
         for case in CASES:
@@ -75,6 +101,66 @@ class TestRatchet(RealCheckout):
                 worse = {k: (v, case["baseline"]["crowding"][k]) for k, v in now.items()
                          if v > case["baseline"]["crowding"][k]}
                 self.assertEqual(worse, {}, f"more crowded than the baseline (now, baseline): {worse}")
+
+    def test_no_case_is_more_crowded_than_round_f_recorded(self) -> None:
+        for case in CASES:
+            with self.subTest(case["id"]):
+                now = crowding(self.results[case["id"]], case)
+                worse = {k: (v, case["current"]["crowding"][k]) for k, v in now.items()
+                         if v > case["current"]["crowding"][k]}
+                self.assertEqual(worse, {}, f"more crowded than round F recorded: {worse}")
+
+    def test_round_f_reaches_more_than_round_e_in_total_and_loses_no_case(self) -> None:
+        before = sum(len(c["baseline"]["reached"]) for c in CASES)
+        after = sum(len(c["current"]["reached"]) for c in CASES)
+        self.assertGreater(after, before)
+        for case in CASES:
+            self.assertLessEqual(set(case["baseline"]["reached"]), set(case["current"]["reached"]),
+                                 case["id"])
+
+
+class TestJudged(RealCheckout):
+    """What the real rerank loop would judge (scripted oracle: must-haves 0.9, the rest 0.1)."""
+
+    judged: dict[str, JudgedResult]
+
+    @classmethod
+    def setUpClass(cls) -> None:
+        super().setUpClass()
+        cls.judged = {c["id"]: judged_with_oracle(c, cls.results[c["id"]]) for c in CASES}
+
+    def names(self, case: dict[str, Any]) -> list[str]:
+        return judged_names(case, self.judged[case["id"]], self.results[case["id"]])
+
+    def test_the_loop_judges_at_least_what_it_judged_in_round_e_and_round_f(self) -> None:
+        for case in CASES:
+            with self.subTest(case["id"]):
+                got = set(self.names(case))
+                self.assertLessEqual(set(case["baseline"]["judged"]["reached"]), got, "round E")
+                self.assertLessEqual(set(case["current"]["judged"]["reached"]), got, "round F")
+
+    def test_a_need_costs_no_more_jev_calls_than_recorded(self) -> None:
+        for case in CASES:
+            with self.subTest(case["id"]):
+                self.assertLessEqual(self.judged[case["id"]].calls,
+                                     case["current"]["judged"]["calls"])
+
+    def test_the_loop_judges_more_must_haves_than_round_e_did(self) -> None:
+        before = sum(len(c["baseline"]["judged"]["reached"]) for c in CASES)
+        after = sum(len(self.names(c)) for c in CASES)
+        self.assertGreater(after, before)
+
+
+class TestCaps(RealCheckout):
+    """No noisy file pattern (registry JSON, AC yaml, tickets) dominates the first batch."""
+
+    def test_no_noisy_pattern_exceeds_its_cap_in_the_first_batch(self) -> None:
+        for case in CASES:
+            with self.subTest(case["id"]):
+                caps = {f["pattern"]: f["max"] for f in case.get("must_not_dominate", [])}
+                over = {k: v for k, v in crowding(self.results[case["id"]], case).items()
+                        if v > caps[k]}
+                self.assertEqual(over, {}, f"first batch dominated (count in batch): {over}")
 
 
 class TestSecondDomain(unittest.TestCase):
@@ -90,7 +176,7 @@ class TestSecondDomain(unittest.TestCase):
             write(root, "docs/roadmap.json", "{\n" + registry + "\n}\n")
             for n in range(40):
                 write(root, f"docs/analysis/note-{n:02d}.md",
-                           f"# Note {n}\nWhere a cache could live is discussed, item {n}.\n")
+                      f"# Note {n}\nWhere a cache could live is discussed, item {n}.\n")
             case: dict[str, Any] = {"goal": "Where should a cache live?",
                                     "category": "prior_decisions"}
             result = run_case(case, root=root)
@@ -109,6 +195,17 @@ class TestHarness(unittest.TestCase):
                 self.assertEqual(set(case["baseline"]["crowding"]),
                                  {f["pattern"] for f in case.get("must_not_dominate", [])})
 
+    def test_every_case_records_round_f_and_what_the_loop_judged_in_both_rounds(self) -> None:
+        for case in CASES:
+            with self.subTest(case["id"]):
+                names = {m["name"] for m in case["must_include"]}
+                caps = {f["pattern"] for f in case.get("must_not_dominate", [])}
+                for record in ("baseline", "current"):
+                    self.assertLessEqual(set(case[record]["judged"]["reached"]), names)
+                self.assertLessEqual(set(case["current"]["reached"]), names)
+                self.assertEqual(set(case["current"]["crowding"]), caps)
+
+
 if __name__ == "__main__":
     unittest.main()
 
@@ -116,8 +213,11 @@ if __name__ == "__main__":
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-01 [python-coder]: Round F records its results next to round E's: both are ratchets,
+#   the caps are asserted, and the must-haves a lexical score cannot reach (design-3 section
+#   Persistence layout, Stage-0 delta part 4, concept parts 3 and 4, the default config JSON) stay
+#   listed with their pool position as the gap for semantic retrieval. (#KernelV01/F)
 # - 2026-10-01 [python-coder]: Benchmark of the lexical stage over the real checkout, with the
-#   round E results as the ratchet (TestRatchet) and the must-have places as the target
-#   (TestTarget); added before any ranking change so later fixes cannot trade quality for cost
-#   unnoticed. (#KernelV01/F)
+#   round E results as the ratchet; added before any ranking change so later fixes cannot trade
+#   quality for cost unnoticed. (#KernelV01/F)
 # ====================================================================

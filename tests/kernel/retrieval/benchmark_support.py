@@ -15,6 +15,7 @@ ARCHITECTURE: Deterministic and offline (no Jev, no knowledge-map bridge, no net
 
 from __future__ import annotations
 
+import asyncio
 import json
 from dataclasses import dataclass
 from pathlib import Path
@@ -27,7 +28,14 @@ from kernel.capabilities.retrieval.locators import fetch_explicit
 from kernel.capabilities.retrieval.pool import merge_pool
 from kernel.capabilities.retrieval.repository import search_repo_text
 from kernel.capabilities.retrieval.terms import build_query_terms
+from kernel.capabilities.retrieval.rerank import rerank
 from kernel.config import KernelConfig, SourceConfig, load_kernel_config
+from kernel.contracts import schema_ids
+from kernel.contracts.enums import EvidenceCategory
+from kernel.contracts.evidence import EvidenceNeed
+from kernel.providers.fakes import ScriptedJev, noul_answer
+from tests.kernel.capabilities.support import invocation
+from tests.kernel.helpers import as_json, make_context
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 CASES_FILE = Path(__file__).with_name("benchmark_cases.json")
@@ -91,10 +99,10 @@ def _search(cfg: KernelConfig, case: dict[str, Any], terms: list[str], root: Pat
     reports = []
     for source in _sources_for(cfg, case):
         policy = kind(base.root, base.read_roots, (*base.deny_globs, *source.deny_globs),
-                      base.max_file_bytes)
+                      source.max_file_bytes or base.max_file_bytes)
         roots = list(policy.resolve_roots(source.roots).roots)
         reports.append(search_repo_text(policy, source.id, roots, terms, cfg.retrieval, entities,
-                                        (PROJECT_NAME,)))
+                                        (PROJECT_NAME,), case["goal"]))
     return base, reports
 
 
@@ -143,9 +151,56 @@ def crowding(result: BatchResult, case: dict[str, Any]) -> dict[str, int]:
             for f in case.get("must_not_dominate", [])}
 
 
+@dataclass(frozen=True)
+class JudgedResult:
+    """What the real rerank loop judged under the oracle, and what it cost."""
+
+    locators: set[str]
+    calls: int
+
+
+def judged_with_oracle(case: dict[str, Any], result: BatchResult) -> JudgedResult:
+    """Run the real rerank loop over the pool with a scripted oracle (no real Jev).
+
+    The oracle rates a candidate 0.9 when it is one of the case's must-have places and 0.1
+    otherwise, so the loop stops exactly when it has found enough of them or the pool gives up:
+    this shows how many Jev calls the need would cost and which must-haves it would have judged.
+    """
+    wanted = [w for m in case["must_include"] for w in m["any_of"]]
+    jev = ScriptedJev()
+
+    def rate(question, batch):  # noqa: ANN001, ANN202 - ScriptedJev callback signature
+        found = as_json(batch.state)["candidates"][question.id.split(".")[1]]["locator"]
+        hit = any(w["path"] == found.split("#")[0] and w.get("label", "") in found for w in wanted)
+        return noul_answer(0.9 if hit else 0.1)
+
+    jev.script("retrieval.rerank", "relevant.*", rate)
+    config = load_kernel_config()
+    ctx = make_context(REPO_ROOT, jev=jev, config=config)
+    need = EvidenceNeed(id="need.bench", category=EvidenceCategory(case["category"]),
+                        question=case["goal"])
+    inv = invocation("retrieve.repository", schema_ids.RETRIEVAL_REQUEST, {})
+    asyncio.run(rerank(ctx, inv, need, result.pool, config.retrieval.top_k, goal=case["goal"]))
+    sent = {as_json(c)["locator"] for b in jev.batches
+            for c in as_json(b.state)["candidates"].values()}
+    return JudgedResult(sent, jev.call_count)
+
+
+def judged_names(case: dict[str, Any], judged: JudgedResult, result: BatchResult) -> list[str]:
+    """Return the must-have places the loop judged (named places are kept, not judged)."""
+    kept = [c for c in result.pool if c.explicit]
+    return [m["name"] for m in case["must_include"]
+            if any(matches(c, w) for c in kept for w in m["any_of"])
+            or any(w["path"] == loc.split("#")[0] and w.get("label", "") in loc
+                   for loc in judged.locators for w in m["any_of"])]
+
+
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-01 [python-coder]: judged_with_oracle runs the real rerank loop with a scripted oracle
+#   (must-have places 0.9, the rest 0.1) so the benchmark also shows what a need judges and what
+#   it costs in Jev calls, not only the first batch. (#KernelV01/F)
 # - 2026-10-01 [python-coder]: Benchmark harness over the real checkout: the lexical stage only
 #   (no Jev, no knowledge-map bridge), the same functions the retrieval executor calls.
 #   (#KernelV01/F)
