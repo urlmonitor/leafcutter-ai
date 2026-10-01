@@ -1,7 +1,7 @@
 """
 MODULE: kernel.adapters.cli
-GOAL: The `python -m kernel` command line: run, resume, status, cancel and install-skill, each
-    printing exactly one JSON document on stdout and returning a documented exit code.
+GOAL: The `python -m kernel` command line: run, resume, status, cancel, gaps and install-skill,
+    each printing exactly one JSON document on stdout and returning a documented exit code.
 BUSINESS CONTEXT: A cooperative client (the Claude Code skill) drives the kernel as a sequence of
     short processes (Rev 3 section 11.2). It must tell a normal workflow state from a protocol
     failure by exit code alone, and must never need to parse logs.
@@ -37,7 +37,9 @@ from kernel.adapters.cli_io import (
 )
 from kernel.bootstrap import KernelEnvironment, build_environment
 from kernel.config import ConfigError
+from kernel.contracts.run import CapabilityGap
 from kernel.contracts.task import TaskInput
+from kernel.persistence.gap_store import is_build_opportunity
 from kernel.registry.adapter import RegistryError
 from kernel.service import KernelService
 from kernel.service_errors import (
@@ -79,6 +81,8 @@ def build_parser() -> argparse.ArgumentParser:
     cancel = commands.add_parser("cancel", parents=[common], help="cancel a run")
     cancel.add_argument("--run-id", required=True)
     cancel.add_argument("--actor", required=True, help="human:<id>")
+    commands.add_parser("gaps", parents=[common],
+                        help="show the aggregated capability gaps (deduplicated)")
     install = commands.add_parser("install-skill", help="install the Claude Code skill")
     install.add_argument("--json", action="store_true")
     install.add_argument("--target-dir", required=True, type=Path,
@@ -99,8 +103,23 @@ def _internal(code: str, message: str) -> Result:
     return CLI_EXIT_CODES["internal"], error_payload(code, message)
 
 
+def gaps_document(gaps: list[CapabilityGap]) -> dict[str, Any]:
+    """Return the JSON document of the aggregated gaps.
+
+    Each gap is marked `build_opportunity` (only unsupported and host_only gaps are); the counts
+    let a client see demand without reading every entry.
+    """
+    rows = [{**gap.model_dump(mode="json"), "build_opportunity": is_build_opportunity(gap)}
+            for gap in gaps]
+    return {"gaps": rows, "total": len(rows),
+            "build_opportunities": sum(1 for row in rows if row["build_opportunity"]),
+            "occurrences": sum(gap.occurrence_count for gap in gaps)}
+
+
 async def _command(args: argparse.Namespace, service: KernelService) -> Result:
     """Run one service command and return (exit code, JSON document)."""
+    if args.command == "gaps":
+        return CLI_EXIT_CODES["ok"], gaps_document(service.list_gaps())
     if args.command == "run":
         raw = read_json_input(args.input_file)
         try:
@@ -195,6 +214,9 @@ def main(argv: list[str] | None = None, *, environment: EnvironmentFactory = bui
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-01 14:00 [python-coder]: `gaps` reads the aggregated gap store only (no Jev key, no
+#   run needed) and marks build opportunities, so a client never has to know which gap types may
+#   produce a backlog item. (#KernelBootstrapV0/P9)
 # - 2026-10-01 12:10 [python-coder]: --input-file accepts the design's --input/--response
 #   spellings as aliases, and reads stdin for "-" or no flag, so one flag shape serves run and
 #   resume. (#KernelBootstrapV0/P7)
