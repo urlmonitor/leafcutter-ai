@@ -101,6 +101,8 @@ class QueryCatalog:
 
 BUILTIN_PURPOSES = {
     "get_entities": "Look up exactly the supplied canonical entity IDs; no relationship expansion.",
+    "get_ac_descendants": "Enumerate acceptance criteria under the supplied root_id using declared or canonically derived structural parents. Requires answer_requirements.scope with matching root_id, explicit levels (empty means all levels), and inclusion policy; completeness is bounded and may be partial.",
+    "get_declared_dependents": "Return acceptance criteria whose canonical depends_on directly references the supplied entity_ids; this is declared incoming dependency impact only, not transitive or code impact.",
     "get_component_context": "Return a component and its directly linked neighbors; does not traverse from its acceptance criteria to their tests.",
     "get_acceptance_criteria": "Return acceptance criteria directly declaring membership in the supplied component; does not return their tests.",
     "get_related_tests": "Return tests directly referenced by covered_by on the supplied acceptance-criterion entity IDs; component IDs are not acceptance-criterion seeds and no component-to-AC traversal occurs.",

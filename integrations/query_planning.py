@@ -119,6 +119,36 @@ def build_request(invocation: CapabilityInvocation,state: dict[str, Any]) -> Req
         operation="missing_query."+attempt,payload_schema=schema_ids.QUERY_BUILD_REQUEST,
         payload=payload.model_dump(mode="json"),requested_output_schema=schema_ids.QUERY_CANDIDATE)
 
+def _answer_scope(state: dict, value: dict) -> dict | None:
+    """Recognize a pending answer-contract clarification.
+
+    Args:
+        state: Original checkpointed clarification.
+        value: Literal human JSON response.
+
+    Returns:
+        Updated scope continuation or None for ordinary component clarification.
+    """
+    if state.get("clarification_kind") != "answer_scope":
+        return None
+    from integrations.query_answer_scope import merge_scope
+    return merge_scope(state, value)
+
+def _validate_components(ids: list, ctx: ExecutionContext) -> None:
+    """Enforce established task component scope on literal human clarification.
+
+    Args:
+        ids: Proposed literal component IDs.
+        ctx: Trusted task scope.
+
+    Raises:
+        KnowledgeError: Missing, malformed or broadened scope.
+    """
+    if not isinstance(ids,list) or not 1<=len(ids)<=20 or any(not isinstance(x,str) or not x for x in ids):
+        raise KnowledgeError("invalid_request","Clarification requires one to twenty component IDs")
+    if ctx.scope.component_ids and not set(ids)<=set(ctx.scope.component_ids):
+        raise KnowledgeError("scope_mismatch","Clarification cannot broaden task component scope")
+
 def human_scope(answer: dict,ctx: ExecutionContext,state: dict[str, Any]) -> dict[str, Any]:
     """Decode literal human scope without treating supplied text as query syntax.
 
@@ -134,6 +164,9 @@ def human_scope(answer: dict,ctx: ExecutionContext,state: dict[str, Any]) -> dic
     text=answer.get("free_text","").strip()
     if text.startswith("{"):
         value=json.loads(text)
+        scoped = _answer_scope(state, value)
+        if scoped is not None:
+            return scoped
     elif state.get("clarification_kind")=="argument":
         field=state["awaiting_parameter"]
         spec=state["pending_descriptor"]["parameters"][field]
@@ -144,10 +177,7 @@ def human_scope(answer: dict,ctx: ExecutionContext,state: dict[str, Any]) -> dic
     else:
         value={"component_ids":text.replace(","," ").split()}
     ids=value.get("component_ids",state.get("component_ids"))
-    if not isinstance(ids,list) or not 1<=len(ids)<=20 or any(not isinstance(x,str) or not x for x in ids):
-        raise KnowledgeError("invalid_request","Clarification requires one to twenty component IDs")
-    if ctx.scope.component_ids and not set(ids)<=set(ctx.scope.component_ids):
-        raise KnowledgeError("scope_mismatch","Clarification cannot broaden task component scope")
+    _validate_components(ids, ctx)
     question=value.get("question",state["question"])
     if not isinstance(question,str) or not 1<=len(question)<=8000:
         raise KnowledgeError("invalid_request","Clarified question is invalid")

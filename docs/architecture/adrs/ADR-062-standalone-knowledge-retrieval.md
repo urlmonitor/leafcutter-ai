@@ -46,3 +46,7 @@ This decision replaces the conflicting proposals in the draft colony-memory delt
 ## Initial declared scope
 
 The independent projection audit measured 97 colliding raw IDs across the legacy producer's surfaces (for example, agent entries and documentation stems). Therefore the initial production projection explicitly selects the canonical acs, components and adrs surfaces plus their declared file/test targets. It reports excluded surfaces in diagnostics and capabilities. It does not silently deduplicate, rename canonical IDs or pretend every legacy surface is supported. Duplicate IDs inside the selected scope remain publication errors. Synthetic memory is a separate, visibly labeled fixture extension. Wider surface support requires an approved identity mapping first.
+
+## References
+
+- [Knowledge retrieval answer reference](../../reference/knowledge-retrieval-answers.md) - Implemented neutral answer contracts and explicit source limits.

@@ -11,9 +11,11 @@ ARCHITECTURE: Pure data contracts plus compute_gap_key. RunEnvelope validators e
 
 from __future__ import annotations
 
+from kernel.contracts.verbatim import VerbatimJson
+
 from datetime import datetime
 
-from pydantic import Field, JsonValue, model_validator
+from pydantic import Field, model_validator
 
 from kernel.contracts.base import (
     KernelModel,
@@ -114,7 +116,7 @@ class OutputRef(KernelModel):
     """The requested output: schema id plus payload."""
 
     schema_id: str
-    payload: dict[str, JsonValue]
+    payload: dict[str, VerbatimJson]
 
 
 class TraceRefs(KernelModel):

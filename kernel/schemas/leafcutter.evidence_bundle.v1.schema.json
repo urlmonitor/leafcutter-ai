@@ -540,6 +540,37 @@
       "title": "UnavailableSource",
       "type": "object"
     },
+    "VerbatimJson": {
+      "anyOf": [
+        {
+          "additionalProperties": {
+            "$ref": "#/$defs/VerbatimJson"
+          },
+          "type": "object"
+        },
+        {
+          "items": {
+            "$ref": "#/$defs/VerbatimJson"
+          },
+          "type": "array"
+        },
+        {
+          "type": "string"
+        },
+        {
+          "type": "integer"
+        },
+        {
+          "type": "number"
+        },
+        {
+          "type": "boolean"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
     "Verification": {
       "description": "Verification status of Evidence.",
       "enum": [
@@ -556,6 +587,16 @@
   "additionalProperties": false,
   "description": "leafcutter.evidence_bundle.v1: the bundle plus its inline evidence and findings.",
   "properties": {
+    "assessments": {
+      "additionalProperties": {
+        "additionalProperties": {
+          "$ref": "#/$defs/VerbatimJson"
+        },
+        "type": "object"
+      },
+      "title": "Assessments",
+      "type": "object"
+    },
     "attempted_sources": {
       "items": {
         "type": "string"

@@ -11,9 +11,11 @@ ARCHITECTURE: ResearchContinuation is the JSON-serialisable part (frozen Pydanti
 
 from __future__ import annotations
 
+from kernel.contracts.verbatim import VerbatimJson
+
 from dataclasses import dataclass, field
 
-from pydantic import Field
+from pydantic import Field, JsonValue
 
 from kernel.contracts.base import KernelModel
 from kernel.contracts.enums import NeedStatus
@@ -43,6 +45,7 @@ class ResearchContinuation(KernelModel):
     attempted: list[str] = Field(default_factory=list)
     evidence: list[Evidence] = Field(default_factory=list)
     coverage: dict[str, NeedStatus] = Field(default_factory=dict)
+    assessments: dict[str, dict[str, VerbatimJson]] = Field(default_factory=dict)
     contradictions: list[Contradiction] = Field(default_factory=list)
     limitations: list[str] = Field(default_factory=list)
     truncated: bool = False
@@ -68,6 +71,8 @@ class Plan:
     mandated: list[EvidenceNeed]
     source_restrictions: list[str]
     needs_only: bool = False
+    answer_requirements: dict[str, JsonValue] | None = None
+    assessment: dict[str, JsonValue] | None = None
     #: What the decision already knows: its options, approved criteria and named gaps.
     options: list[OptionContext] = field(default_factory=list)
     criteria: list[str] = field(default_factory=list)
@@ -80,6 +85,7 @@ class Collected:
 
     evidence: dict[str, Evidence] = field(default_factory=dict)
     coverage: dict[str, NeedStatus] = field(default_factory=dict)
+    assessments: dict[str, dict[str, VerbatimJson]] = field(default_factory=dict)
     attempted: list[str] = field(default_factory=list)
     unavailable: list[UnavailableSource] = field(default_factory=list)
     contradictions: list[Contradiction] = field(default_factory=list)
@@ -93,7 +99,11 @@ class Collected:
     unanswered: list[str] = field(default_factory=list)
 
     def add_contradictions(self, items: list[Contradiction]) -> None:
-        """Record contradictions once each (identity: the evidence pair, either order, and claim)."""
+        """Record contradictions once per evidence pair and claim.
+
+        Args:
+            items: Actual contradictory evidence to merge.
+        """
         seen = {contradiction_key(c) for c in self.contradictions}
         for item in items:
             key = contradiction_key(item)

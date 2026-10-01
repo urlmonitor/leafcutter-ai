@@ -1,0 +1,188 @@
+id: KM-500f-1
+title: Explain change impact using the relations that were actually inspected
+component: knowledge-management
+components:
+- knowledge_management
+level: L2
+status: active
+req_status: active
+work_status: in_progress
+readiness: approved
+priority: medium
+parent: KM-500f
+criteria: 'Given the reviewed source example declares five one-hop incoming dependencies on TQ-500f-2
+
+  When an agent asks which requirements directly depend on that AC at the pinned revision
+
+  Then the answer identifies TQ-500f-2-i, TQ-500f-2-ii, TQ-500f-3-i, TQ-500f-5 and TQ-500f-6 with each supporting
+  dependency declaration
+
+  And it states the relation direction, depth, source revision and inspected population
+
+  And hierarchy membership, declared dependency, implementation reference and inferred impact remain distinguishable
+  rather than being treated as interchangeable edges
+
+  And a result that omits one dependent and declares truncation reports only its known subset without asserting
+  a complete total
+
+  And any requested comparison between two revisions identifies both revisions and limits its claims to the source
+  changes and relationships actually inspected
+
+  And absent code-consumer or transitive dependency evidence is named as an impact-analysis limitation rather than
+  being filled by an exhaustive-consumer claim.
+
+  '
+depends_on:
+- KM-500f
+- KM-400a-3
+- KM-500e-3
+doc_links:
+- path: docs/analysis/2026-10-01-repository-query-catalog.md
+  relationship: context
+  status: exists
+  relevance: RQ3/RQ4/RQ5/RQ6 role questions and current source limitations.
+- path: docs/analysis/2026-10-01-repository-query-evaluation-cases.json
+  relationship: context
+  status: exists
+  relevance: RQE-03/RQE-04 are planned controls, not passing runtime proof.
+- path: docs/architecture/adrs/ADR-062-standalone-knowledge-retrieval.md
+  relationship: context
+  status: exists
+  relevance: Declared canonical relationships and approved source mappings remain authoritative.
+- path: docs/acceptance-criteria/knowledge-management/KM-500-research-capability-growth/KM-500e-5.yaml
+  relationship: context
+  status: exists
+  relevance: Shared reference-doc requirement for this feature; no duplicated vocabulary.
+- path: docs/architecture/components/knowledge-retrieval.md
+  relationship: context
+  status: exists
+  relevance: Existing public boundaries, canonical projection ownership and bounded research integration.
+- path: docs/testing/test-angles.md
+  relationship: context
+  status: exists
+  relevance: Public reachability, producer-consumer seams and discriminating proof expectations; these descriptors
+    are planned.
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to:
+- ac_id: KM-500e-5
+  agent: documentation-expert
+  contract: 'Declared-impact evidence: source_sha(s), root canonical ID, relation kind/direction/depth, attributable
+    edges and unique dependent IDs, complete flag/limitations, known subset and exact total only when complete;
+    declared links and inferred effects are distinct.'
+- ac_id: KM-500f-3
+  agent: python-coder
+  contract: 'Declared-impact evidence: source_sha(s), root canonical ID, relation kind/direction/depth, attributable
+    edges and unique dependent IDs, complete flag/limitations, known subset and exact total only when complete;
+    declared links and inferred effects are distinct.'
+- ac_id: KM-500f-4
+  agent: python-coder
+  contract: 'Declared-impact evidence: source_sha(s), root canonical ID, relation kind/direction/depth, attributable
+    edges and unique dependent IDs, complete flag/limitations, known subset and exact total only when complete;
+    declared links and inferred effects are distinct.'
+- ac_id: KM-500f-5
+  agent: python-coder
+  contract: 'Declared-impact evidence: source_sha(s), root canonical ID, relation kind/direction/depth, attributable
+    edges and unique dependent IDs, complete flag/limitations, known subset and exact total only when complete;
+    declared links and inferred effects are distinct.'
+- ac_id: KM-500d-3
+  agent: python-coder
+  contract: 'Declared-impact evidence: source_sha(s), root canonical ID, relation kind/direction/depth, attributable
+    edges and unique dependent IDs, complete flag/limitations, known subset and exact total only when complete;
+    declared links and inferred effects are distinct.'
+expects_from:
+- ac_id: KM-500e-2
+  contract: 'Attributed field evidence: canonical_id, repository_id, source_sha, source_locator, disclosed_values
+    keyed by canonical field, field_availability (present, source_absent, projection_absent, disclosure_omitted,
+    truncated, unknown), exact_clause completeness and limitations; lifecycle status, req_status, work_status and
+    readiness remain separate.'
+- ac_id: KM-500e-3
+  contract: 'Count evidence: resolved scope, source_sha/generation, unique canonical IDs, known_count, complete
+    flag and cause, exact_total only when complete, work_status breakdown with unknown bucket, continuation state
+    and limitations; no unproven global or execution count.'
+origin_agent: business-analyst
+created: '2026-10-01'
+created_by: docs/acceptance-criteria/knowledge-management/KM-500-research-capability-growth/KM-500f.yaml
+amended_by:
+- '2026-10-01: User explicitly approved the new ACs and directed implementation with agents and an independent evaluator. Approval records authorization, not implementation or execution proof.'
+superseded_by: null
+covered_by:
+- tests/knowledge/query_answer_contract_acceptance_neo4j.py
+- tests/knowledge/query_answer_contract_acceptance_impact.py
+implemented_by:
+- tickets/00_inbox/epics/EPIC-RepositoryResearchAnswers/TICKET-20261001-KM-500f-1.md
+change_target: code
+risk_surface: contract_boundary
+notes: RQ4; BA-03, PO-04, PO-05, ITPO-02, CODER-03; RQE-03. The five IDs are the independent pinned example, not
+  a universal graph constant. No complete code graph or unlimited traversal is promised. Draft behavioral specification
+  under the user-requested BA pass; technical enrichment and proof remain pending.
+it_requirements:
+- Retain immutable repository/source SHA provenance, bounded registered read-only queries and existing kernel authorization,
+  budgets and retries. This contract adds no arbitrary Cypher, new network endpoint, source-write permission or
+  automatic query activation.
+- The named fields below describe the planned observable semantic contract; preserve compatible existing envelope
+  fields and version any incompatible extension. Required unavailable values stay explicit and are never inferred
+  from an evaluation oracle.
+- Represent declared edge kind, direction, traversal depth and source pin explicitly. Separate depends_on, parent/covered_by
+  hierarchy and implemented_by references; do not treat one relation as another or claim undeclared code impact.
+- Retain the registered bounded traversal contract and deduplicated canonical identities. Incomplete or filtered
+  enumeration uses the e-3 completeness contract; a proposed longer traversal requires separately governed capability
+  support.
+- A revision comparison identifies both source SHAs and each side of the declared-link difference. Missing code
+  graph or second-revision evidence limits the answer; it does not establish an exhaustive unchanged impact set.
+- RQE-03 anchors five incoming depends_on records for TQ-500f-2. Those are fixture expectations, not production
+  constants or a complete call graph.
+test_required: true
+test_rationale: Planned criterion and public reachability proof includes real producer/consumer boundaries and named
+  plausible wrong outcomes. No descriptor is executed coverage; no provider, database or deployment result is asserted.
+test_spec:
+- name: test_public_declared_impact_returns_all_pinned_dependents
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: integration
+  angle: reachability
+  description: Invoke the registered retrieval path for RQE-03-P and assert the five expected incoming depends_on
+    identities with pinned SHA, relation direction, depth and complete enumeration.
+  must_catch:
+  - Returning outgoing prerequisites instead of incoming dependents or omitting one required identity.
+  covers:
+  - KM-500f-1
+  requires_db: false
+  surface_invoked: python -m knowledge retrieve
+- name: test_declared_impact_distinguishes_relationship_kinds
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: integration
+  angle: criterion
+  description: Provide hierarchy and implementation references alongside declared depends_on edges; assert each
+    is labeled by its actual relation and no code-consumer claim is derived from reference presence.
+  must_catch:
+  - Counting parent links or implemented_by references as declared dependencies.
+  covers:
+  - KM-500f-1
+  requires_db: false
+- name: test_truncated_impact_reaches_assessment_as_known_subset
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: integration
+  angle: seam
+  description: Pass RQE-03-N through the real query-result and answer consumer with TQ-500f-6 withheld and truncation
+    signaled; assert four known dependents, exact total unavailable and original impact question unresolved.
+  must_catch:
+  - Accepting four truncated dependents as the exact total of five.
+  covers:
+  - KM-500f-1
+  requires_db: false
+- name: test_revision_impact_does_not_mix_sources_or_invent_code_graph
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: integration
+  angle: discrimination
+  description: Compare two explicitly pinned declared-edge sets, then remove the second source or code-consumer
+    evidence; assert attributable differences only and an explicit limitation for the unavailable comparison.
+  must_catch:
+  - Using the current workspace as the missing historical revision or presenting declared links as exhaustive code
+    impact.
+  covers:
+  - KM-500f-1
+  requires_db: false

@@ -163,6 +163,8 @@ async def disclose_selected(
             disclosure_level=target_level,
             budget=bounds,
             correlation=initial.correlation,
+            answer_requirements=initial.answer_requirements,
+            assessment=initial.assessment,
         )
     return current, result, retrieval_ids
 

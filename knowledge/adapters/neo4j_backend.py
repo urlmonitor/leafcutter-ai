@@ -203,6 +203,8 @@ class Neo4jBackend:
             embedding_model=row.get("embedding_model"),
             embedding_dimensions=row.get("embedding_dimensions"),
             supported_kinds=row.get("supported_kinds", []),
+            supported_fields=json.loads(row.get("supported_fields", "{}")),
+            supported_relationships=row.get("supported_relationships", []),
         )
 
     async def publish(
@@ -359,3 +361,6 @@ class Neo4jBackend:
     async def close(self) -> None:
         """Close the configured driver's pool."""
         await asyncio.to_thread(self.driver.close)
+
+
+# - 2026-10-01 [python-coder]: Preserve question evidence and explicit source support through bounded research. (#KM-500/KM-500e-2)

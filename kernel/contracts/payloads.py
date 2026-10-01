@@ -10,6 +10,8 @@ ARCHITECTURE: One model per schema id; schema_catalog maps id -> model. Structur
 
 from __future__ import annotations
 
+from kernel.contracts.verbatim import VerbatimJson
+
 from typing import Literal
 
 from pydantic import Field, JsonValue, model_validator
@@ -101,6 +103,10 @@ class ResearchRequestPayload(KernelModel):
     """leafcutter.research_request.v1."""
 
     question: str = Field(min_length=1)
+    #: Original answer obligations; the neutral adapter validates their typed contract.
+    answer_requirements: dict[str, JsonValue] | None = None
+    #: Scoped supplied evidence interpreted conditionally by the neutral retrieval port.
+    assessment: dict[str, VerbatimJson] | None = None
     evidence_needs: list[EvidenceNeed] = Field(default_factory=list)
     source_restrictions: list[str] = Field(default_factory=list)
     existing_evidence_ids: list[str] = Field(default_factory=list)
@@ -126,7 +132,11 @@ class RetrievalRequestPayload(KernelModel):
     """leafcutter.retrieval_request.v1."""
 
     #: Neutral knowledge request fields, fully validated by the capability adapter.
-    knowledge: dict[str, JsonValue] | None = None
+    knowledge: dict[str, VerbatimJson] | None = None
+    #: Preserved across research, clarification and progressive source disclosure.
+    answer_requirements: dict[str, JsonValue] | None = None
+    #: Scoped supplied evidence interpreted conditionally by the neutral retrieval port.
+    assessment: dict[str, VerbatimJson] | None = None
     need: EvidenceNeed
     source_ids: list[str] = Field(default_factory=list)
     detail: Literal["excerpt", "summary", "locator"] = "excerpt"

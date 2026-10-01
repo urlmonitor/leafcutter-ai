@@ -25,10 +25,16 @@ import tempfile
 from knowledge.adapters.git_source import immutable_checkout, resolve_revision, safe_path
 from knowledge.contracts import Entity, ProjectionSnapshot, Relation, SourceReference
 from knowledge.projection.validation import validate_acs, validate_snapshot
+from knowledge.projection.answer_fields import (
+    projected_fields,
+    mapped_fields,
+    structural_parent,
+    mapped_relationships,
+)
 
 SUPPORTED_SURFACES = frozenset({"acs", "adrs", "components"})
 KINDS = {"acs": "AcceptanceCriterion", "adrs": "ADR", "components": "Component"}
-MAPPER_VERSION = "3"
+MAPPER_VERSION = "6"
 
 
 def load_snapshot(
@@ -88,7 +94,8 @@ def _load(
         meta = load_surfaces_with_meta(root, config_path)
         excluded_nodes = _validate_node_ids(meta, extract_nodes, canonical_node)
         graph = build_knowledge_map(root, config_path, node_filter=canonical_node)
-    nodes = [_entity(node, root, repository_id, sha, records) for node in graph.nodes]
+    parents = {structural_parent(value) for value in records.values()}
+    nodes = [_entity(node, root, repository_id, sha, records, parents) for node in graph.nodes]
     by_id = {n.canonical_id: n for n in nodes}
     edges = [
         Relation(
@@ -123,6 +130,8 @@ def _load(
         mapper_version=MAPPER_VERSION,
         diagnostics=diagnostics,
         supported_kinds=supported,
+        supported_fields=mapped_fields(supported),
+        supported_relationships=mapped_relationships(selected),
     )
     validate_snapshot(snapshot)
     return snapshot
@@ -206,7 +215,14 @@ def _validate_node_ids(
     return excluded
 
 
-def _entity(node: NodeRecord, root: Path, repository_id: str, sha: str, records: dict) -> Entity:
+def _entity(
+    node: NodeRecord,
+    root: Path,
+    repository_id: str,
+    sha: str,
+    records: dict,
+    parents: set | None = None,
+) -> Entity:
     """Preserve a canonical node identity and attach immutable source provenance.
 
     Args:
@@ -215,6 +231,7 @@ def _entity(node: NodeRecord, root: Path, repository_id: str, sha: str, records:
         repository_id: Trusted repository namespace that isolates all reads and writes.
         sha: Immutable source commit SHA.
         records: Schema-validated canonical AC records keyed by ID.
+        parents: Structural parent identities derived by the canonical shared rule.
 
     Returns:
         Canonical entity with its exact source path, hash, locator and identity flags.
@@ -253,7 +270,7 @@ def _entity(node: NodeRecord, root: Path, repository_id: str, sha: str, records:
         "registry_identity": registry_identity,
     }
     if node.id in records:
-        properties["status"] = records[node.id].get("status", "active")
+        properties.update(projected_fields(records[node.id], node.id in (parents or set())))
     return Entity(
         canonical_id=node.id,
         kind=kind,
@@ -262,3 +279,8 @@ def _entity(node: NodeRecord, root: Path, repository_id: str, sha: str, records:
         source=source,
         properties=properties,
     )
+
+
+# DECISION HISTORY
+# ================================================================================
+# - 2026-10-01 18:55 [python-coder]: Keep requested facts separate from execution success and preserve canonical field meaning. (#KM-500/KM-500e-2)

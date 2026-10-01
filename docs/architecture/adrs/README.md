@@ -3,7 +3,7 @@ title: "Architecture Decision Records"
 description: "Index of all Architecture Decision Records (ADRs) for the leafcutter-ai package, listing each decision's number, status, title, and date."
 type: "reference"
 created: '2026-08-13'
-last_updated: '2026-09-30'
+last_updated: '2026-10-01'
 status: active
 components:
 - documentation_system
@@ -81,3 +81,5 @@ python scripts/adr_refs.py --index --write
 | [ADR-054](ADR-054-process-representation-and-maturity-model.md) | Active | Process Representation and the Process-Maturity Model — Workflow vs Policy/Checklist vs LLM-Guided | 2026-09-30 |
 | [ADR-055](ADR-055-capability-registry-starts-empty.md) | Active | The Kernel's Capability Registry Starts Empty — Legacy Agents and Skills Enter Only by Recorded Decision | 2026-09-30 |
 | [ADR-056](ADR-056-colony-memory-evidence-reinforcement.md) | Active | Colony Memory — Evidence Reinforcement from Observed Outcomes | 2026-09-30 |
+| [ADR-062](ADR-062-standalone-knowledge-retrieval.md) | Active | Standalone Knowledge Retrieval over Immutable Git Projections | 2026-10-01 |
+| [ADR-064](ADR-064-persona-discovery-before-feature-planning.md) | Active | Persona Discovery Before Feature Planning | 2026-10-01 |

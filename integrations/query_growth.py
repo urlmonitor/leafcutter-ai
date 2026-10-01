@@ -62,9 +62,12 @@ async def _initial(port: KnowledgeRetriever,admission: QueryAdmission | None,inv
         raise KnowledgeError("unavailable","Graph retrieval is unavailable")
     revision=ctx.scope.revision.commit if ctx.scope.revision else "latest"
     pinned=await asyncio.wait_for(admission.pin(ctx.config.knowledge.repository_id,revision or "latest"),timeout=3)
+    from integrations.knowledge_assessment import bind_assessment
+    packet = bind_assessment(payload.assessment, None, pinned["repository_id"], pinned["source_sha"])
     return {**pinned,"phase":"ready","question":payload.need.question,"need_id":payload.need.id,
             "component_ids":list(ctx.scope.component_ids),"clarifications":0,"build_attempted":False,
-            "original_question":payload.need.question,"arguments":{},"planning_context":True}
+            "original_question":payload.need.question,"arguments":{},"planning_context":True,
+            "answer_requirements":payload.answer_requirements,"assessment":packet}
 
 async def _select(catalog: QueryCatalog,invocation: CapabilityInvocation,ctx: ExecutionContext,state: dict[str, Any]) -> tuple[str, dict, list[Usage]]:
     """Select among usable persisted descriptors or one explicit missing-query outcome.
@@ -83,14 +86,30 @@ async def _select(catalog: QueryCatalog,invocation: CapabilityInvocation,ctx: Ex
                  if "graph" in d.get("modes",["graph"])}
     state["available_queries"]=list(descriptors.values())
     options={key:d["description"] for key,d in descriptors.items()}
-    options.update(build="None of these queries can answer; build a bounded reusable query.",
-                   clarify="The question or required arguments remain unclear.",
+    if state.get("capability_fit", {}).get("query_build_eligible"):
+        options["build"] = "None of these queries can answer; build a bounded reusable query."
+    options.update(clarify="The question or required arguments remain unclear.",
                    skip="Existing evidence is sufficient; no retrieval needed.")
     picked,usage=await choose(ctx,invocation,"knowledge.query_select","query",
         {"question":state["question"],"component_ids":state["component_ids"],
-         "catalog":list(descriptors.values())},options)
+         "answer_requirements":state.get("answer_requirements"),
+         "capability_fit":state.get("capability_fit"),"catalog":list(descriptors.values())},options)
     state["selection_reason"]="Jev selected "+picked+" from the verified scoped query catalog"
     return picked,descriptors,usage
+
+def _root_argument(parameters: dict, state: dict, args: dict) -> None:
+    """Bind the already clarified population root without broadening it.
+
+    Args:
+        parameters: Selected registered query parameter contract.
+        state: Preserved original population.
+        args: Mutable query arguments.
+    """
+    root = (state.get("answer_requirements") or {}).get("scope", {}).get("root_id")
+    if "root_id" in parameters and root:
+        if args.get("root_id", root) != root:
+            raise KnowledgeError("scope_mismatch", "Query root differs from original answer scope")
+        args["root_id"] = root
 
 def _arguments(descriptor: dict[str, Any],state: dict[str, Any]) -> dict:
     """Bind known IDs only; missing scalar parameters remain an explicit limitation.
@@ -105,6 +124,7 @@ def _arguments(descriptor: dict[str, Any],state: dict[str, Any]) -> dict:
     """
     parameters=descriptor.get("parameters",{})
     args=dict(state.get("arguments",{}))
+    _root_argument(parameters, state, args)
     for name,spec in parameters.items():
         if name in args:
             continue
@@ -151,6 +171,8 @@ async def _execute(port: KnowledgeRetriever,catalog: QueryCatalog,invocation: Ca
          "operation_digest":descriptor["digest"],"mode":"graph", "arguments":arguments,
          "revision":state["source_sha"],"disclosure_level":{"locator":0,"summary":2,"excerpt":3}[payload.detail]}
     result=await invoke_knowledge(port,invocation,ctx,payload.model_copy(update={"knowledge":raw,
+        "answer_requirements": state.get("answer_requirements"),
+        "assessment": state.get("assessment"),
         "need":payload.need.model_copy(update={"question":state["question"]})}),
                                   source_ids,query_catalog=catalog)
     result=result.model_copy(update={"usage":[*usage,*result.usage]})
@@ -184,8 +206,8 @@ async def _continued(port: KnowledgeRetriever, catalog: QueryCatalog,
     if phase=="clarify":
         state=human_scope(child,ctx,state)
         if state.get("pending_descriptor"):
-            return await _execute(port,catalog,invocation,ctx,payload,source_ids,state,
-                                  state["pending_descriptor"],usage)
+            state["execution_descriptor"] = state.pop("pending_descriptor")
+            return state
     elif phase=="building":
         from knowledge.query_models import QueryCandidate
         from knowledge.query_compile import digest_data
@@ -209,40 +231,22 @@ async def _continued(port: KnowledgeRetriever, catalog: QueryCatalog,
         descriptor=catalog.get(receipt["operation"],receipt["version"],receipt["digest"])
         data=descriptor.model_dump(mode="json") if hasattr(descriptor,"model_dump") else dict(descriptor)
         data["digest"]=receipt["digest"]
-        return await _execute(port,catalog,invocation,ctx,payload,source_ids,state,data,usage)
+        state["execution_descriptor"] = data
+        return state
     return state
 
-async def _advance(port: KnowledgeRetriever,catalog: QueryCatalog,admission: QueryAdmission | None,invocation: CapabilityInvocation,ctx: ExecutionContext,payload: RetrievalRequestPayload,source_ids: set[str]) -> CapabilityResult:
-    """Advance exactly one phase, preserving state across all external interactions.
-
+async def _target(ctx: ExecutionContext, invocation: CapabilityInvocation, state: dict, usage: list) -> CapabilityResult | None:
+    """Check the requested entity mapping before selection or query construction.
 
     Args:
-        port: Application-owned neutral retrieval port.
-        catalog: Trusted persistent query catalog.
-        admission: Trusted independent query verification service.
-        invocation: Current registered invocation and persisted continuation.
-        ctx: Trusted runtime scope, budgets and services.
-        payload: Validated original evidence request.
-        source_ids: Authorized source identities for the evidence result.
+        ctx: Existing scoped runtime and Jev budget.
+        invocation: Current retrieval invocation.
+        state: Pinned research plan.
+        usage: Mutable measured usage accumulator.
 
     Returns:
-        CapabilityResult: A wait, bounded evidence result, or explicit stopping reason.
+        Stopping result for ambiguity or unavailable source mapping, otherwise None.
     """
-    state=dict(invocation.continuation.state) if invocation.continuation else await _initial(
-        port,admission,invocation,ctx,payload)
-    usage=[]
-    phase=state["phase"]
-    if phase in {"clarify","building","admitting"}:
-        resumed=await _continued(port,catalog,invocation,ctx,payload,source_ids,state,usage)
-        if isinstance(resumed,CapabilityResult):
-            return resumed
-        state=resumed
-    if phase=="ready":
-        picked,usage=await choose(ctx,invocation,"knowledge.query_readiness","readiness",
-            {"question":state["question"],"component_ids":state["component_ids"]},
-            {"ready":"The question and intended scope are clear.","clarify":"Ask for missing scope or intent."})
-        if picked=="clarify" or not state["component_ids"]:
-            return clarification(invocation,ctx,state,usage)
     if state.get("planning_context") and not state.get("target_kind"):
         from knowledge.query_models import KINDS
         target,target_usage=await choose(ctx,invocation,"knowledge.query_target","kind",
@@ -256,23 +260,61 @@ async def _advance(port: KnowledgeRetriever,catalog: QueryCatalog,admission: Que
         if target not in state.get("supported_kinds",[]):
             return blocked_result(invocation,"source_mapping_unsupported",
                 "The pinned source does not map requested "+target+" data; a query cannot create that data.",usage=usage)
-    picked,descriptors,selected_usage=await _select(catalog,invocation,ctx,state)
-    usage+=selected_usage
-    if picked=="clarify":
+    return None
+
+def _build_missing(catalog: QueryCatalog, invocation: CapabilityInvocation, ctx: ExecutionContext, state: dict, usage: list) -> CapabilityResult:
+    """Request construction only when the actual pinned source supports required data.
+
+    Args:
+        catalog: Verified operation descriptors.
+        invocation: Existing registered invocation.
+        ctx: Current budget and permission owner.
+        state: Pinned question and required data.
+        usage: Already consumed planning usage.
+
+    Returns:
+        Ordinary bounded construction wait or explicit unsupported-data result.
+    """
+    from knowledge.capability_fit import assess_capability_fit
+    fields = (state.get("answer_requirements") or {}).get("required_fields", [])
+    fit = assess_capability_fit(state, required_kinds=[state["target_kind"]],
+        required_relationships=state.get("required_relationships", []),
+        required_fields={state["target_kind"]: fields}, matching_operation=None,
+        catalog_complete=len(catalog.descriptors()) <= 50)
+    state["capability_fit"] = fit
+    if not fit["query_build_eligible"]:
+        return blocked_result(invocation, fit["status"],
+            "The requested answer needs unavailable or unestablished source fields/mappings; query construction cannot supply them.", usage=usage)
+    if state["build_attempted"]:
+        return blocked_result(invocation,"build_exhausted","One query construction attempt already completed")
+    from knowledge.contracts import RetrievalBudget
+    state.update(phase="building",build_attempted=True,remaining_budget={
+        "construction_attempts_remaining":0,
+        "clarifications_remaining":max(0,ctx.config.intent.max_clarifications-state["clarifications"]),
+        "retrieval":RetrievalBudget().model_dump(mode="json"),
+        "host_budget_remaining":None,"host_budget_policy":"Existing scheduler reserves before dispatch"})
+    return waiting(invocation,state,build_request(invocation,state),usage)
+
+async def _ready(ctx: ExecutionContext, invocation: CapabilityInvocation, state: dict, usage: list) -> CapabilityResult | None:
+    """Ask bounded readiness after deterministic answer-scope clarification.
+
+    Args:
+        ctx: Existing budget owner.
+        invocation: Registered retrieval invocation.
+        state: Original scoped question obligations.
+        usage: Mutable measured provider usage.
+
+    Returns:
+        Human clarification or None when the question is ready for selection.
+    """
+    picked,ready_usage=await choose(ctx,invocation,"knowledge.query_readiness","readiness",
+        {"question":state["question"],"component_ids":state["component_ids"]},
+        {"ready":"The question and intended scope are clear.","clarify":"Ask for missing scope or intent."})
+    usage += ready_usage
+    has_root = (state.get("answer_requirements") or {}).get("scope", {}).get("root_id")
+    if picked=="clarify" or (not state["component_ids"] and not has_root):
         return clarification(invocation,ctx,state,usage)
-    if picked=="build":
-        if state["build_attempted"]:
-            return blocked_result(invocation,"build_exhausted","One query construction attempt already completed")
-        from knowledge.contracts import RetrievalBudget
-        state.update(phase="building",build_attempted=True,remaining_budget={
-            "construction_attempts_remaining":0,
-            "clarifications_remaining":max(0,ctx.config.intent.max_clarifications-state["clarifications"]),
-            "retrieval":RetrievalBudget().model_dump(mode="json"),
-            "host_budget_remaining":None,"host_budget_policy":"Existing scheduler reserves before dispatch"})
-        return waiting(invocation,state,build_request(invocation,state),usage)
-    if picked=="skip":
-        return blocked_result(invocation,"retrieval_not_needed","No additional query selected",usage=usage)
-    return await _execute(port,catalog,invocation,ctx,payload,source_ids,state,descriptors[picked],usage)
+    return None
 
 async def invoke_query_growth(port: KnowledgeRetriever,catalog: QueryCatalog,admission: QueryAdmission | None,invocation: CapabilityInvocation,ctx: ExecutionContext,payload: RetrievalRequestPayload,source_ids: set[str]) -> CapabilityResult:
     """Contain typed query-growth failures without turning outages into construction.
@@ -291,7 +333,13 @@ async def invoke_query_growth(port: KnowledgeRetriever,catalog: QueryCatalog,adm
         CapabilityResult: Existing kernel lifecycle result.
     """
     try:
-        return await _advance(port,catalog,admission,invocation,ctx,payload,source_ids)
+        from integrations.query_graph import QUERY_GRAPH
+        final = await QUERY_GRAPH.ainvoke({}, config={"configurable": {
+            "port": port, "catalog": catalog, "admission": admission,
+            "invocation": invocation, "ctx": ctx, "payload": payload,
+            "source_ids": source_ids},
+            "recursion_limit": ctx.config.limits.langgraph_recursion_limit})
+        return final["result"]
     except StopCapability as exc:
         return exc.result
     except (KnowledgeError,ValueError,KeyError,TimeoutError) as exc:

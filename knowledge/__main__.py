@@ -18,7 +18,7 @@ from .config import KnowledgeConfig, build_retriever
 from .contracts import KnowledgeRetrievalRequest
 
 
-async def run(args: object) -> dict:
+async def run(args: object, *, observer: object | None = None) -> dict:
     """Execute one standalone JSON command and release owned resources.
 
     Args:
@@ -29,6 +29,20 @@ async def run(args: object) -> dict:
     """
     from .cli_catalog import COMMANDS, run as catalog_run
 
+    if args.command == "compare":
+        from .evaluation_comparison import compare_reports
+
+        baseline = json.loads(Path(args.baseline).read_text(encoding="utf-8"))
+        proposal = json.loads(Path(args.proposal).read_text(encoding="utf-8"))
+        gates = json.loads(Path(args.gates).read_text(encoding="utf-8")) if args.gates else None
+        return compare_reports(baseline, proposal, gates)
+    if args.command == "assess":
+        from .assessments import assess
+
+        payload = json.loads(Path(args.request).read_text(encoding="utf-8"))
+        if payload.get("repository_id") != args.repository_id:
+            invalid("assessment repository differs from configured scope")
+        return assess(payload)
     if args.command in COMMANDS:
         return await catalog_run(args)
     if args.command in {"capabilities", "retrieve", "evaluate"}:
@@ -41,7 +55,11 @@ async def run(args: object) -> dict:
             embedding_model=args.embedding_model,
             embedding_dimensions=args.embedding_dimensions,
         )
-        retriever = build_retriever(config)
+        retriever = (
+            build_retriever(config, observer=observer)
+            if observer is not None
+            else build_retriever(config)
+        )
         try:
             if args.command == "capabilities":
                 return await retriever.capabilities()
@@ -49,9 +67,18 @@ async def run(args: object) -> dict:
                 from .evaluation import evaluate
 
                 cases = json.loads(Path(args.cases).read_text(encoding="utf-8"))
-                if any(case["request"]["repository_id"] != args.repository_id for case in cases):
+                if any(
+                    case.get("request", case.get("assessment", {})).get(
+                        "repository_id", args.repository_id
+                    )
+                    != args.repository_id
+                    for case in (cases.get("cases", []) if isinstance(cases, dict) else cases)
+                ):
                     invalid("evaluation repository differs from configured scope")
-                return await evaluate(retriever, cases)
+                from .query_catalog import QueryCatalog
+
+                catalog = QueryCatalog(args.catalog_root) if args.catalog_root else None
+                return await evaluate(retriever, cases, query_catalog=catalog)
             text = (
                 Path(args.request).read_text(encoding="utf-8")
                 if args.request != "-"
@@ -74,7 +101,7 @@ async def run(args: object) -> dict:
     return await sync_run(args)
 
 
-def main() -> int:
+def main(*, observer: object | None = None) -> int:
     """Main.
 
     Returns:
@@ -95,6 +122,13 @@ def main() -> int:
             p.add_argument("--request", required=True)
         if name == "evaluate":
             p.add_argument("--cases", required=True)
+    comparison = sub.add_parser("compare")
+    comparison.add_argument("--baseline", required=True)
+    comparison.add_argument("--proposal", required=True)
+    comparison.add_argument("--gates")
+    assessment = sub.add_parser("assess")
+    assessment.add_argument("--repository-id", default="leafcutter")
+    assessment.add_argument("--request", required=True)
     from .cli_sync import add_parser
 
     add_parser(sub)
@@ -103,7 +137,7 @@ def main() -> int:
     add_catalog_parser(sub)
     args = parser.parse_args()
     try:
-        result = asyncio.run(run(args))
+        result = asyncio.run(run(args, observer=observer))
         print(json.dumps(result, ensure_ascii=False))
         if result.get("status") in {"unavailable", "unsupported", "error", "stale"}:
             return 2
@@ -137,3 +171,5 @@ if __name__ == "__main__":
 # DECISION HISTORY
 # ====================================================================
 # - 2026-10-01 15:46 [python-coder]: Bind verified reusable query versions through scoped retrieval. (#KM-500/TICKET-20261001-KM-500b-3)
+
+# - 2026-10-01 [python-coder]: Preserve question evidence and explicit source support through bounded research. (#KM-500/KM-500e-2)

@@ -50,6 +50,8 @@ async def publish(
         "mapper_version": snapshot.mapper_version,
         "projection_schema_version": "1",
         "supported_kinds": kinds,
+        "supported_fields": json.dumps(snapshot.supported_fields),
+        "supported_relationships": snapshot.supported_relationships,
         "diagnostics": json.dumps(snapshot.diagnostics),
         "node_count": len(snapshot.nodes),
         "edge_count": len(snapshot.edges),
@@ -100,6 +102,7 @@ async def _build(db: Neo4jBackend, snapshot: ProjectionSnapshot, key: str) -> No
             "payload": n.model_dump_json(),
             "content_hash": n.source.content_hash,
             "status": n.properties.get("status"),
+            "parent_id": n.properties.get("structural_parent"),
             "decision_type": n.properties.get("decision_type"),
         }
         for n in snapshot.nodes
@@ -265,3 +268,6 @@ async def cleanup(
 
         await db._run("DROP INDEX " + trusted_name(name) + " IF EXISTS", write=True)
     return True
+
+
+# - 2026-10-01 [python-coder]: Preserve question evidence and explicit source support through bounded research. (#KM-500/KM-500e-2)

@@ -11,6 +11,7 @@ components: [knowledge_management, decision_kernel]
 related_docs:
   - docs/architecture/adrs/ADR-062-standalone-knowledge-retrieval.md
   - docs/how-to/run-knowledge-retrieval.md
+  - docs/reference/knowledge-retrieval-answers.md
 ---
 # Knowledge Retrieval
 
@@ -55,3 +56,7 @@ flowchart LR
 ```
 
 The compiler supports new compositions of up to two directed declared relations and typed property filters; it is not an alias registry. Its generated Cypher and descriptor hash are stored together. Serving reads retain historical digest versions. Atomic catalog publication uses an exclusive writer lock and compare-and-swap pointer, while admission receipts report the actual current verification SHA even when a query was already present. Database query work remains read-only. Catalog mutation is a distinct governed filesystem effect.
+
+## Cross-links
+
+- [Research answer reference](../../reference/knowledge-retrieval-answers.md) - Shared field meanings, population rules, proof labels and evaluation contracts.

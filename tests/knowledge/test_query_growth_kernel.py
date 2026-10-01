@@ -74,12 +74,17 @@ class TestQueryGrowthRun(ScenarioCase):
         super().setUp()
         from kernel.config import SourceConfig
         from knowledge.config import KnowledgeConfig
-        from kernel.providers.fakes import choice_answer
+        from kernel.providers.fakes import choice_answer, noul_answer
         self.config = self.config.model_copy(update={
             "knowledge": KnowledgeConfig(backend="neo4j",repository_id="fixture",
                 repository_root=str(self.repo)),
             "sources": [SourceConfig(id="graph",kind="graph_query",categories=["task_context"])],
         })
+        self.jev.script("knowledge.answer_contract", "field.*", lambda q,b: noul_answer(0.99 if q.id == "field.canonical_id" else 0.01))
+        self.jev.script("knowledge.answer_contract", "population", choice_answer("returned_entities"))
+        self.jev.script("knowledge.answer_contract", "inclusion", choice_answer("clarify"))
+        self.jev.script("knowledge.answer_contract", "root", choice_answer("clarify"))
+        self.jev.script("knowledge.answer_contract", "level.*", noul_answer(0.01))
         self.jev.script("knowledge.query_readiness", "readiness", choice_answer("ready"))
         self.jev.script("knowledge.query_target", "kind", choice_answer("Test"))
         self.query_choice="build"
@@ -87,7 +92,7 @@ class TestQueryGrowthRun(ScenarioCase):
         self.route_choice = "research"
         self.catalog = SimpleNamespace(descriptors=lambda: [])
         async def pin(repository_id,source_sha="latest"):
-            return {"repository_id":repository_id,"source_sha":"a"*40,"generation_id":"generation","supported_kinds":["Component","AcceptanceCriterion","Test"]}
+            return {"repository_id":repository_id,"source_sha":"a"*40,"generation_id":"generation","supported_kinds":["Component","AcceptanceCriterion","Test"],"supported_fields":{"Test":["canonical_id"]},"supported_relationships":["covered_by","component_membership"]}
         self.admission = SimpleNamespace(pin=pin)
         async def capabilities():
             return {"graph":True}
@@ -151,6 +156,8 @@ class TestQueryGrowthRun(ScenarioCase):
         from tests.kernel.interaction.support import raw_submission
         self.catalog = QueryCatalog(self.run_root / "query-catalog")
         self.db = Database()
+        self.db.snapshot.supported_fields = {"Test": ["canonical_id"]}
+        self.db.snapshot.supported_relationships = ["covered_by", "component_membership"]
         self.admission = QueryAdmission(self.catalog,self.db,"repo")
         self.config=self.config.model_copy(update={"knowledge":self.config.knowledge.model_copy(
             update={"repository_id":"repo","query_catalog_root":str(self.catalog.root)})})
@@ -167,7 +174,7 @@ class TestQueryGrowthRun(ScenarioCase):
             requested_output_schema=schema_ids.EVIDENCE_BUNDLE)
         human=await self.service().start_run(task)
         coding=await self.service().resume_run(human.run_id,answer_human(human,{"free_text":"component"}))
-        assert coding.status==RunStatus.WAITING_HOST
+        assert coding.status==RunStatus.WAITING_HOST, [(r.status, r.error, r.limitations) for r in (await self.checkpoint_values(coding.run_id))["results"].values()]
         submission=raw_submission(coding.pending_interaction.model_dump(mode="json"),coding.run_id,
                                   response={"candidate":candidate()})
         result=await self.service().resume_run(coding.run_id,submission)

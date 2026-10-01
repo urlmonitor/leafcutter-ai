@@ -1,0 +1,175 @@
+id: KM-500f-3
+title: Explain readiness recommendations with an explicit policy and missing inputs
+component: knowledge-management
+components:
+- knowledge_management
+level: L2
+status: active
+req_status: active
+work_status: in_progress
+readiness: approved
+priority: medium
+parent: KM-500f
+criteria: 'Given a person asks which candidate requirement should be built next or whether a promised benefit is
+  ready
+
+  And the request identifies a decision policy and supplies some combination of recorded priority, readiness, work
+  status, dependencies and proof
+
+  When research provides its recommendation
+
+  Then it cites the available source facts and identifies the policy used to compare the candidates or assess the
+  benefit
+
+  And recommendation or interpretation is labeled separately from canonical priority and recorded status
+
+  And missing prerequisites, unresolved dependency evidence and absent execution or deployment proof remain visible
+  for each affected conclusion
+
+  And a requirement marked done is not described as available to users without evidence for the requested environment
+
+  And if the ranking policy or required source facts are unavailable, the response requests the missing decision
+  input or reports that the ranking cannot be established
+
+  And no recommendation silently changes canonical priorities, readiness or work status.
+
+  '
+depends_on:
+- KM-500f
+- KM-500f-1
+- KM-500f-2
+- KM-500e-1
+doc_links:
+- path: docs/analysis/2026-10-01-repository-query-catalog.md
+  relationship: context
+  status: exists
+  relevance: RQ3/RQ4/RQ5/RQ6 role questions and current source limitations.
+- path: docs/analysis/2026-10-01-repository-query-evaluation-cases.json
+  relationship: context
+  status: exists
+  relevance: RQE-03/RQE-04 are planned controls, not passing runtime proof.
+- path: docs/architecture/adrs/ADR-062-standalone-knowledge-retrieval.md
+  relationship: context
+  status: exists
+  relevance: Declared canonical relationships and approved source mappings remain authoritative.
+- path: docs/acceptance-criteria/knowledge-management/KM-500-research-capability-growth/KM-500e-5.yaml
+  relationship: context
+  status: exists
+  relevance: Shared reference-doc requirement for this feature; no duplicated vocabulary.
+- path: docs/architecture/components/knowledge-retrieval.md
+  relationship: context
+  status: exists
+  relevance: Existing public boundaries, canonical projection ownership and bounded research integration.
+- path: docs/testing/test-angles.md
+  relationship: context
+  status: exists
+  relevance: Public reachability, producer-consumer seams and discriminating proof expectations; these descriptors
+    are planned.
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to:
+- ac_id: KM-500e-5
+  agent: documentation-expert
+  contract: 'Readiness assessment: candidate facts with evidence IDs, supplied policy identity and clauses, fulfilled/unresolved
+    prerequisites, justified recommendation separately labeled from canonical status, deployment evidence state
+    and explicit missing inputs.'
+expects_from:
+- ac_id: KM-500e-1
+  contract: 'Answer requirements: original_question, required_fields with meanings, repository_id, requested_source_sha,
+    population/root_id, levels, root_excluded versus terminal_leaf_only inclusion rule, completeness_required, unresolved_scope
+    and clarification state, preserved across run/resume.'
+- ac_id: KM-500f-1
+  contract: 'Declared-impact evidence: source_sha(s), root canonical ID, relation kind/direction/depth, attributable
+    edges and unique dependent IDs, complete flag/limitations, known subset and exact total only when complete;
+    declared links and inferred effects are distinct.'
+- ac_id: KM-500f-2
+  contract: 'Verification evidence: canonical AC/test reference identity, reference/anchor/execution identity distinction,
+    source_sha versus tested_sha, run/artifact locator if present, environment, actor authenticity, execution status
+    and research fulfillment, proof kind and missing/unverified evidence.'
+origin_agent: business-analyst
+created: '2026-10-01'
+created_by: docs/acceptance-criteria/knowledge-management/KM-500-research-capability-growth/KM-500f.yaml
+amended_by:
+- '2026-10-01: User explicitly approved the new ACs and directed implementation with agents and an independent evaluator. Approval records authorization, not implementation or execution proof.'
+superseded_by: null
+covered_by:
+- tests/knowledge/test_query_answer_contract_acceptance.py
+- tests/knowledge/test_query_answer_contract_acceptance_assessment.py
+- tests/knowledge/test_query_answer_contract_acceptance_research_assessment.py
+implemented_by:
+- tickets/00_inbox/epics/EPIC-RepositoryResearchAnswers/TICKET-20261001-KM-500f-3.md
+change_target: code
+risk_surface: contract_boundary
+notes: RQ3; PO-01, PO-02, PO-03. Source and policy availability are prerequisites, not a promise to introduce autonomous
+  ranking, roadmap projection or new readiness semantics. Reuse KM-500d-2 for published/deployed readiness. Draft
+  behavioral specification under the user-requested BA pass; technical enrichment and proof remain pending.
+it_requirements:
+- Retain immutable repository/source SHA provenance, bounded registered read-only queries and existing kernel authorization,
+  budgets and retries. This contract adds no arbitrary Cypher, new network endpoint, source-write permission or
+  automatic query activation.
+- The named fields below describe the planned observable semantic contract; preserve compatible existing envelope
+  fields and version any incompatible extension. Required unavailable values stay explicit and are never inferred
+  from an evaluation oracle.
+- This is a conditional evidence-assessment contract for supplied candidate facts and explicit policy, not authorization
+  to create a roadmap projection or ranking platform. Unsupported policy/candidate sources remain an identified
+  gap.
+- Each recommendation references the applicable policy identity/clauses and supporting evidence IDs, separates canonical
+  status from inferred readiness, and exposes unfulfilled or unknown prerequisites.
+- Missing policy or a material interpretation choice routes to existing focused clarification or unresolved outcome.
+  A done AC with no deployment evidence cannot establish operational availability.
+- Recommendation generation is read-only with respect to canonical priorities, requirement lifecycle, work status
+  and roadmap. Human product authority is unchanged.
+test_required: true
+test_rationale: Planned criterion and public reachability proof includes real producer/consumer boundaries and named
+  plausible wrong outcomes. No descriptor is executed coverage; no provider, database or deployment result is asserted.
+test_spec:
+- name: test_public_readiness_assessment_uses_supplied_policy_and_evidence
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: integration
+  angle: reachability
+  description: Through public research provide attributable candidate facts and an explicit readiness policy; assert
+    a bounded recommendation citing its policy clauses, evidence and unresolved prerequisites separately from canonical
+    statuses.
+  must_catch:
+  - Producing a ranked recommendation with an invented policy or silently rewriting priorities.
+  covers:
+  - KM-500f-3
+  requires_db: false
+  surface_invoked: Existing kernel research run/resume entry point using retrieve.repository
+- name: test_missing_readiness_policy_requests_material_input
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: integration
+  angle: criterion
+  description: Omit the policy or a material condition and assert focused clarification or unresolved output rather
+    than a claimed ready ordering.
+  must_catch:
+  - Defaulting missing product policy to a fabricated readiness score.
+  covers:
+  - KM-500f-3
+  requires_db: false
+- name: test_readiness_consumer_keeps_done_separate_from_deployed
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: integration
+  angle: seam
+  description: Feed the real proof assessment result for a done AC with no deployment receipt to the readiness consumer
+    and assert deployment stays unverified and cannot satisfy a deployment prerequisite.
+  must_catch:
+  - Equating completed work with an available deployed capability.
+  covers:
+  - KM-500f-3
+  requires_db: false
+- name: test_readiness_recommendation_preserves_canonical_state
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: integration
+  angle: discrimination
+  description: Snapshot canonical requirement and policy inputs before a recommendation and assert they are unchanged
+    afterward, including when evidence conflicts or sources are unsupported.
+  must_catch:
+  - Mutating canonical work status, priorities or roadmap while computing a recommendation.
+  covers:
+  - KM-500f-3
+  requires_db: false

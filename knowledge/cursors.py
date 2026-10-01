@@ -1,4 +1,9 @@
-"""Authenticated continuations bind scope, operation, generation and cumulative work."""
+"""Authenticated continuations bind scope, operation, generation and cumulative work.
+MODULE: knowledge.cursors
+GOAL: Preserve bounded, attributable retrieval across optional execution paths.
+BUSINESS CONTEXT: Missing facts and disabled infrastructure must remain explicit.
+ARCHITECTURE: Neutral contracts and caller-owned ports without kernel dependencies.
+"""
 
 from __future__ import annotations
 
@@ -23,6 +28,10 @@ def request_hash(request: KnowledgeRetrievalRequest) -> str:
         str: SHA-256 binding of scope, operation, revision and budgets, excluding request identity.
     """
     data = request.model_dump(exclude={"continuation", "request_id", "correlation"})
+    if data.get("answer_requirements") is None:
+        data.pop("answer_requirements", None)
+    if data.get("assessment") is None:
+        data.pop("assessment", None)
     return hashlib.sha256(
         json.dumps(data, sort_keys=True, separators=(",", ":")).encode()
     ).hexdigest()
@@ -74,3 +83,8 @@ def decode(token: str, secret: bytes, request: KnowledgeRetrievalRequest) -> dic
         raise InvalidRequest() from exc
 
     return payload
+
+
+# DECISION HISTORY
+# ================================================================================
+# - 2026-10-01 18:55 [python-coder]: Keep requested facts separate from execution success and preserve canonical field meaning. (#KM-500/KM-500e-2)

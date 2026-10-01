@@ -63,6 +63,8 @@ class QueryAdmission:
             "source_sha": manifest.source_sha,
             "generation_id": manifest.generation_id,
             "supported_kinds": list(manifest.supported_kinds),
+            "supported_fields": dict(manifest.supported_fields),
+            "supported_relationships": list(manifest.supported_relationships),
         }
 
     async def verify(self, candidate: dict, *, repository_id: str, source_sha: str) -> dict:
@@ -244,3 +246,6 @@ def build_query_admission(config: object, retriever: object) -> QueryAdmission |
     if backend is None:
         invalid("query admission needs the configured serving backend")
     return QueryAdmission(QueryCatalog(root), backend, config.repository_id)
+
+
+# - 2026-10-01 [python-coder]: Preserve question evidence and explicit source support through bounded research. (#KM-500/KM-500e-2)

@@ -23,7 +23,15 @@ SYNTHESIS_OPERATION = "synthesize_evidence"
 
 
 def _synthesis_request(question: str, out: Collected) -> RequestProposal:
-    """Ask the host to synthesize the collected evidence (explain, never resolve conflicts)."""
+    """Ask the host to synthesize the collected evidence (explain, never resolve conflicts).
+
+    Args:
+        question: Original research question.
+        out: Collected evidence, per-need assessments and coverage.
+
+    Returns:
+        Existing synthesis request with evidence-only obligations.
+    """
     payload = SynthesisRequestPayload(
         operation=SYNTHESIS_OPERATION, question=question, evidence_ids=sorted(out.evidence),
         output_requirements=["answer only from the listed evidence",
@@ -37,13 +45,25 @@ def _synthesis_request(question: str, out: Collected) -> RequestProposal:
 def waiting_result(invocation: CapabilityInvocation, cont: ResearchContinuation,
                    requests: list[RequestProposal], usage: list[Usage], *,
                    synthesis: tuple[str, Collected] | None = None) -> CapabilityResult:
-    """Build `waiting` for child retrievals, or for a synthesis when `synthesis` is given."""
+    """Build `waiting` for child retrievals, or for a synthesis when `synthesis` is given.
+
+    Args:
+        invocation: Current registered capability invocation.
+        cont: Persisted research continuation.
+        requests: Child requests to dispatch.
+        usage: Measured provider usage.
+
+    Returns:
+        Waiting result with a durable continuation.
+
+    Keyword-only synthesis: Optional question and collected state for synthesis.
+    """
     if synthesis is not None:
         question, out = synthesis
         requests = [_synthesis_request(question, out)]
         cont = cont.model_copy(update={
             "phase": "synthesizing", "synthesized": True, "evidence": list(out.evidence.values()),
-            "coverage": dict(out.coverage), "contradictions": out.contradictions,
+            "coverage": dict(out.coverage), "assessments": dict(out.assessments), "contradictions": out.contradictions,
             "limitations": out.limitations, "truncated": out.truncated,
             "attempted": out.attempted, "unavailable": out.unavailable,
             "unanswered": out.unanswered})
@@ -55,7 +75,18 @@ def waiting_result(invocation: CapabilityInvocation, cont: ResearchContinuation,
 
 def bundle_result(invocation: CapabilityInvocation, plan: Plan, cont: ResearchContinuation,
                   out: Collected, usage: list[Usage]) -> CapabilityResult:
-    """Build the final bundle: partial if a required need is unsatisfied (all_required)."""
+    """Build the final bundle: partial if a required need is unsatisfied (all_required).
+
+    Args:
+        invocation: Current registered capability invocation.
+        plan: Original scoped research plan.
+        cont: Persisted research continuation.
+        out: Collected evidence, per-need assessments and coverage.
+        usage: Measured provider usage.
+
+    Returns:
+        Final bundle retaining explicit per-need coverage and assessments.
+    """
     limitations = list(dict.fromkeys(out.limitations))
     unsatisfied = [n.id for n in cont.needs if n.priority is Priority.REQUIRED
                    and out.coverage.get(n.id) is not NeedStatus.SATISFIED]
@@ -66,7 +97,7 @@ def bundle_result(invocation: CapabilityInvocation, plan: Plan, cont: ResearchCo
     unavailable = {(u.source_id, u.reason): u for u in [*cont.unavailable, *out.unavailable]}
     bundle = EvidenceBundlePayload(
         evidence_ids=list(out.evidence), finding_ids=[f.id for f in out.findings],
-        coverage=dict(out.coverage), attempted_sources=out.attempted,
+        coverage=dict(out.coverage), assessments=dict(out.assessments), attempted_sources=out.attempted,
         unavailable_sources=list(unavailable.values()), contradictions=out.contradictions,
         limitations=limitations, truncated=out.truncated, evidence=list(out.evidence.values()),
         findings=out.findings, unknowns=list(dict.fromkeys(out.unknowns)))

@@ -59,6 +59,7 @@ async def load_generation(
         invalid("backend generation crossed repository scope")
     out.source_sha = snapshot.source_sha
     out.generation_id = snapshot.generation_id
+    out.stats["mapper_version"] = snapshot.mapper_version
     if request.revision != "latest" and request.revision != snapshot.source_sha:
         out.status = "stale"
         out.warnings.append("requested revision is not published")
@@ -100,6 +101,12 @@ async def fetch_candidates(
     Returns:
         tuple[list[Entity], dict, int | None]: Candidates, semantic provenance, and semantic work count; graph work is counted after deduplication.
     """
+    if request.operation in {"get_ac_descendants", "get_declared_dependents"}:
+        from .populations import retrieve_population
+
+        return await retrieve_population(
+            service.backend, request, out, snapshot, remaining_candidates
+        )
     if request.operation_digest and request.operation_digest != "builtin:1":
         from .query_execution import execute_query
 
@@ -202,7 +209,7 @@ async def disclose_candidates(
         if item.limitations:
             out.status = "partial"
             out.truncated = True
-        if request.disclosure_level >= 1 and candidate_work < remaining_candidates:
+        if _include_context(request, candidate_work, remaining_candidates):
             neighbors, edges = await service.backend.neighbors(
                 request.repository_id,
                 snapshot.generation_id,
@@ -237,7 +244,18 @@ async def disclose_candidates(
     return candidate_work
 
 
+def _include_context(request, candidate_work, remaining_candidates):
+    """Reserve population work for enumeration rather than optional neighboring context."""
+    return (
+        request.disclosure_level >= 1
+        and candidate_work < remaining_candidates
+        and request.operation not in {"get_ac_descendants", "get_declared_dependents"}
+    )
+
+
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
 # - 2026-10-01 15:46 [python-coder]: Bind verified reusable query versions through scoped retrieval. (#KM-500/TICKET-20261001-KM-500b-3)
+
+# - 2026-10-01 [python-coder]: Preserve question evidence and explicit source support through bounded research. (#KM-500/KM-500e-2)

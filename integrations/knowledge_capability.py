@@ -133,6 +133,7 @@ def map_bounded_evidence(
         list[Evidence]: Canonical evidence within the caller's excerpt budget.
     """
     evidence = []
+    bounded_items = []
     remaining = payload.limits.max_chars
     for item in result.evidence[: request.budget.max_results]:
         text = item.content
@@ -152,6 +153,7 @@ def map_bounded_evidence(
                 result.truncated = True
             if remaining is not None:
                 remaining -= cap
+        bounded_items.append(item)
         evidence.append(
             to_kernel_evidence(
                 item,
@@ -162,6 +164,7 @@ def map_bounded_evidence(
             )
         )
     result.truncated = result.truncated or len(evidence) < len(result.evidence)
+    result.evidence = bounded_items
     return evidence
 
 

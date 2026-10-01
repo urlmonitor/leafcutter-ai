@@ -60,6 +60,8 @@ def _yaml_pointer(text: str, locator: str) -> str:
         if len(matches) != 1:
             raise ValueError("source locator not found or ambiguous")
         node = matches[0]
+    if isinstance(node, yaml.ScalarNode) and node.tag == "tag:yaml.org,2002:str":
+        return node.value
     return text[node.start_mark.index : node.end_mark.index]
 
 
@@ -88,3 +90,8 @@ def _heading(text: str, anchor: str) -> str:
     if start is None:
         raise ValueError("source locator not found")
     return "".join(lines[start:])
+
+
+# DECISION HISTORY
+# ================================================================================
+# - 2026-10-01 18:55 [python-coder]: Keep requested facts separate from execution success and preserve canonical field meaning. (#KM-500/KM-500e-2)

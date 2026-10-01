@@ -139,6 +139,37 @@
       ],
       "title": "SourceKind",
       "type": "string"
+    },
+    "VerbatimJson": {
+      "anyOf": [
+        {
+          "additionalProperties": {
+            "$ref": "#/$defs/VerbatimJson"
+          },
+          "type": "object"
+        },
+        {
+          "items": {
+            "$ref": "#/$defs/VerbatimJson"
+          },
+          "type": "array"
+        },
+        {
+          "type": "string"
+        },
+        {
+          "type": "integer"
+        },
+        {
+          "type": "number"
+        },
+        {
+          "type": "boolean"
+        },
+        {
+          "type": "null"
+        }
+      ]
     }
   },
   "$id": "leafcutter.retrieval_request.v1",
@@ -146,6 +177,36 @@
   "additionalProperties": false,
   "description": "leafcutter.retrieval_request.v1.",
   "properties": {
+    "answer_requirements": {
+      "anyOf": [
+        {
+          "additionalProperties": {
+            "$ref": "#/$defs/JsonValue"
+          },
+          "type": "object"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Answer Requirements"
+    },
+    "assessment": {
+      "anyOf": [
+        {
+          "additionalProperties": {
+            "$ref": "#/$defs/VerbatimJson"
+          },
+          "type": "object"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Assessment"
+    },
     "detail": {
       "default": "excerpt",
       "enum": [
@@ -167,7 +228,7 @@
       "anyOf": [
         {
           "additionalProperties": {
-            "$ref": "#/$defs/JsonValue"
+            "$ref": "#/$defs/VerbatimJson"
           },
           "type": "object"
         },

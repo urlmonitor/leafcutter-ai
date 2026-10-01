@@ -38,7 +38,10 @@ class KnowledgeConfig(Model):
 
 
 def build_retriever(
-    config: KnowledgeConfig | dict, *, embedding_provider: EmbeddingProvider | None = None
+    config: KnowledgeConfig | dict,
+    *,
+    embedding_provider: EmbeddingProvider | None = None,
+    observer: object | None = None,
 ) -> KnowledgeRetriever:
     """Compose an optional serving backend without starting the kernel.
 
@@ -83,7 +86,11 @@ def build_retriever(
 
     catalog = QueryCatalog(config.query_catalog_root) if config.query_catalog_root else None
     return KnowledgeService(
-        backend, source_resolver=resolver, embedding_provider=provider, query_catalog=catalog
+        backend,
+        source_resolver=resolver,
+        embedding_provider=provider,
+        query_catalog=catalog,
+        observer=observer,
     )
 
 
@@ -115,3 +122,5 @@ def build_embedding_provider(config: KnowledgeConfig | dict) -> EmbeddingProvide
 # DECISION HISTORY
 # ====================================================================
 # - 2026-10-01 15:46 [python-coder]: Bind verified reusable query versions through scoped retrieval. (#KM-500/TICKET-20261001-KM-500b-3)
+
+# - 2026-10-01 [python-coder]: Preserve question evidence and explicit source support through bounded research. (#KM-500/KM-500e-2)

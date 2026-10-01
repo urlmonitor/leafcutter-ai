@@ -11,7 +11,9 @@ ARCHITECTURE: Capabilities emit RequestProposal (no identity); the kernel assign
 
 from __future__ import annotations
 
-from pydantic import Field, JsonValue, model_validator
+from kernel.contracts.verbatim import VerbatimJson
+
+from pydantic import Field, model_validator
 
 from kernel.contracts.base import (
     KernelModel,
@@ -37,7 +39,7 @@ class RequestBody(KernelModel):
     goal: str | None = None
     question: str | None = None
     payload_schema: str
-    payload: dict[str, JsonValue]
+    payload: dict[str, VerbatimJson]
     requested_output_schema: str
     evidence_needs: list[EvidenceNeed] = Field(default_factory=list)
     priority: Priority = Priority.REQUIRED
@@ -84,7 +86,7 @@ class Continuation(KernelModel):
 
     capability_id: str
     capability_version: str
-    state: dict[str, JsonValue] = Field(default_factory=dict)
+    state: dict[str, VerbatimJson] = Field(default_factory=dict)
     resume_reason: str = Field(pattern="^(children_done|interaction_answered|retry)$")
     wait_child_ids: list[str] = Field(default_factory=list)
 
@@ -128,7 +130,7 @@ class CapabilityInvocation(PersistedModel):
     capability_id: StableId
     capability_version: str
     input_payload_schema: str
-    input_payload: dict[str, JsonValue]
+    input_payload: dict[str, VerbatimJson]
     context_refs: list[str] = Field(default_factory=list)
     continuation: Continuation | None = None
     child_outcomes: list[ChildOutcome] = Field(default_factory=list)

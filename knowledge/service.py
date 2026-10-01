@@ -40,6 +40,7 @@ class KnowledgeService:
         telemetry: object | None = None,
         cancel_probe: object | None = None,
         query_catalog: object | None = None,
+        observer: object | None = None,
     ) -> None:
         """Store injected dependencies without performing network operations.
 
@@ -51,9 +52,11 @@ class KnowledgeService:
             telemetry: Optional observer exposing record for bounded retrieval metadata.
             cancel_probe: Optional callable reporting caller cancellation.
             query_catalog: Optional trusted persistent operation registry.
+            observer: Optional caller-owned final-result observation boundary.
         """
         self.backend = backend
         self.query_catalog = query_catalog
+        self.observer = observer
         self.source_resolver = source_resolver
         self.embeddings = QueryEmbeddings(embedding_provider)
         self.cursor_secret = cursor_secret or secrets.token_bytes(32)
@@ -105,12 +108,17 @@ class KnowledgeService:
                 if request.continuation
                 else None
             )
+            page = {"state": state, "used": state.get("used_bytes", 0) if state else 0}
             remaining = request.budget.deadline_ms - (state.get("spent_ms", 0) if state else 0)
             if remaining <= 0:
                 invalid("cumulative retrieval deadline exhausted")
             token = deadline.set(time.monotonic() + remaining / 1000)
             try:
-                page = await asyncio.wait_for(self._retrieve(request, out, state), remaining / 1000)
+                retrieved_page = await asyncio.wait_for(
+                    self._retrieve(request, out, state), remaining / 1000
+                )
+                if retrieved_page is not None:
+                    page = retrieved_page
             finally:
                 deadline.reset(token)
         except TimeoutError:
@@ -134,6 +142,7 @@ class KnowledgeService:
             out.status = "error"
             out.errors.append({"code": "retrieval_failed", "message": str(exc), "retryable": False})
         out.stats["duration_ms"] = round((time.monotonic() - start) * 1000, 3)
+        finalize(request, out, page, self.cursor_secret, 128 if self.observer else 0)
         if self.telemetry:
             try:
                 self.telemetry.record(
@@ -153,7 +162,11 @@ class KnowledgeService:
             except (OSError, RuntimeError, ValueError):
                 logger.warning("Knowledge telemetry unavailable")
                 out.warnings.append("telemetry unavailable")
-        finalize(request, out, page, self.cursor_secret)
+        from .observation import observe, fit_observation
+
+        observation_limit = len(out.model_dump_json().encode()) + 128 if out.continuation else None
+        out.observation = await observe(self.observer, request, out)
+        fit_observation(request, out, (page or {}).get("used", 0), observation_limit)
         return out
 
     async def _retrieve(
@@ -207,12 +220,8 @@ class KnowledgeService:
             round=(state["round"] + 1 if state else 1),
         )
         selected = rows[offset : offset + request.budget.max_results]
-        candidate_work = (
-            semantic_work
-            if request.mode in {"semantic", "hybrid"}
-            or request.operation.startswith("find_similar")
-            else len(rows)
-        )
+        _mark_population_page(out, offset)
+        candidate_work = semantic_work if semantic_work is not None else len(rows)
         candidate_work = await disclose_candidates(
             self,
             request,
@@ -244,7 +253,16 @@ class KnowledgeService:
         }
 
 
+def _mark_population_page(out: KnowledgeRetrievalResult, offset: int) -> None:
+    """Prevent a final slice from masquerading as an entire declared population."""
+    if offset and "population" in out.stats:
+        out.stats["population"]["complete"] = False
+        out.stats["population"]["page_offset"] = offset
+
+
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
 # - 2026-10-01 15:46 [python-coder]: Bind verified reusable query versions through scoped retrieval. (#KM-500/TICKET-20261001-KM-500b-3)
+
+# - 2026-10-01 [python-coder]: Preserve question evidence and explicit source support through bounded research. (#KM-500/KM-500e-2)

@@ -22,6 +22,7 @@ from knowledge.errors import NotReady, KnowledgeError
 
 # Fixed direction and endpoint kinds are part of this versioned catalog.
 CATALOG = {
+    "get_declared_dependents": ("depends_on", "AcceptanceCriterion", "incoming"),
     "get_acceptance_criteria": ("component_membership", "AcceptanceCriterion", "incoming"),
     "get_relevant_adrs": ("component_membership", "ADR", "incoming"),
     "get_related_tests": ("covered_by", "Test", "outgoing"),
@@ -72,6 +73,14 @@ async def query(
     if operation == "get_entities":
         rows = await db._run(
             "MATCH (n:KREntity {generation_key:$key}) WHERE n.canonical_id IN $ids RETURN n.payload AS payload ORDER BY n.canonical_id LIMIT $limit",
+            params,
+        )
+        return [entity_from_row(row) for row in rows]
+    if operation == "_get_ac_children":
+        if "structural_parent" not in manifest.supported_fields.get("AcceptanceCriterion", []):
+            raise NotReady("generation does not establish the canonical parent mapping")
+        rows = await db._run(
+            "MATCH (n:KREntity {generation_key:$key,kind:'AcceptanceCriterion'}) WHERE n.parent_id IN $ids RETURN n.payload AS payload ORDER BY n.canonical_id LIMIT $limit",
             params,
         )
         return [entity_from_row(row) for row in rows]
@@ -148,3 +157,6 @@ async def neighbors(
     nodes = {row["payload"]: entity_from_row(row) for row in rows}
     relations = [Relation.model_validate_json(row["relation"]) for row in rows]
     return list(nodes.values()), relations
+
+
+# - 2026-10-01 [python-coder]: Preserve question evidence and explicit source support through bounded research. (#KM-500/KM-500e-2)

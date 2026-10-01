@@ -59,7 +59,14 @@ def _run(config: RunnableConfig) -> tuple[CapabilityInvocation, ExecutionContext
 
 
 def parse_plan(invocation: CapabilityInvocation) -> Plan:
-    """Parse goal_request.v1 or research_request.v1 into a Plan."""
+    """Parse goal_request.v1 or research_request.v1 into a Plan.
+
+    Args:
+        invocation: Current registered research invocation.
+
+    Returns:
+        Updated research state or the documented capability result.
+    """
     model = validate_payload(invocation.input_payload_schema, invocation.input_payload)
     if isinstance(model, GoalRequestPayload):
         return Plan(question=model.goal, expected_coverage="all_required", mandated=[],
@@ -70,11 +77,20 @@ def parse_plan(invocation: CapabilityInvocation) -> Plan:
                 source_restrictions=list(request.source_restrictions),
                 needs_only=request.evidence_needs_only and bool(request.evidence_needs),
                 options=list(request.option_context), criteria=list(request.criteria_context),
-                gaps=list(request.gaps))
+                gaps=list(request.gaps), answer_requirements=request.answer_requirements,
+                assessment=request.assessment)
 
 
 async def _plan(state: ResearchState, config: RunnableConfig) -> dict[str, Any]:
-    """plan_needs and resolve_sources: wait for children, or collect at once if none can run."""
+    """plan_needs and resolve_sources: wait for children, or collect at once if none can run.
+
+    Args:
+        state: Current research graph state.
+        config: Graph invocation and execution context.
+
+    Returns:
+        Updated research state or the documented capability result.
+    """
     invocation, ctx = _run(config)
     plan = parse_plan(invocation)
     needs, usage = await plan_needs(ctx, invocation, plan)
@@ -90,7 +106,15 @@ async def _plan(state: ResearchState, config: RunnableConfig) -> dict[str, Any]:
 
 
 async def _collect(state: ResearchState, config: RunnableConfig) -> dict[str, Any]:
-    """Merge the children's bundles (or findings) into the collected state."""
+    """Merge the children's bundles (or findings) into the collected state.
+
+    Args:
+        state: Current research graph state.
+        config: Graph invocation and execution context.
+
+    Returns:
+        Updated research state or the documented capability result.
+    """
     invocation, ctx = _run(config)
     cont = state.get("cont")
     if cont is None:
@@ -103,7 +127,15 @@ async def _collect(state: ResearchState, config: RunnableConfig) -> dict[str, An
 
 
 async def _evaluate(state: ResearchState, config: RunnableConfig) -> dict[str, Any]:
-    """Record contradictions and ask for synthesis only if the evidence cannot answer directly."""
+    """Record contradictions and ask for synthesis only if the evidence cannot answer directly.
+
+    Args:
+        state: Current research graph state.
+        config: Graph invocation and execution context.
+
+    Returns:
+        Updated research state or the documented capability result.
+    """
     invocation, ctx = _run(config)
     plan, cont, out = state["plan"], state["cont"], state["out"]
     ask = ctx.config.research.allow_synthesis and not cont.synthesized
@@ -135,7 +167,14 @@ def _source_ids(request: RequestProposal) -> list[str]:
 
 
 def _dispatched(cont: ResearchContinuation) -> ResearchContinuation:
-    """Return the continuation with the held-back host needs marked as dispatched."""
+    """Return the continuation with the held-back host needs marked as dispatched.
+
+    Args:
+        cont: Persisted research continuation.
+
+    Returns:
+        Updated research state or the documented capability result.
+    """
     child_map = dict(cont.child_map)
     for request in cont.deferred:
         child_map[request.evidence_needs[0].id] = _source_ids(request)
@@ -197,7 +236,15 @@ class ResearchExecutor:
 
     async def ainvoke(self, invocation: CapabilityInvocation, ctx: ExecutionContext
                       ) -> CapabilityResult:
-        """Run the graph; provider and budget problems come back as results."""
+        """Run the graph; provider and budget problems come back as results.
+
+        Args:
+            invocation: Current registered research invocation.
+            ctx: Trusted execution context and budget owner.
+
+        Returns:
+            Updated research state or the documented capability result.
+        """
         config: RunnableConfig = {
             "configurable": {"invocation": invocation, "ctx": ctx},
             "recursion_limit": ctx.config.limits.langgraph_recursion_limit}

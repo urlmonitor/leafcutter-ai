@@ -8,6 +8,7 @@ ARCHITECTURE: Dependencies point inward to neutral contracts; see docs/architect
 from __future__ import annotations
 
 from .errors import invalid
+from .answer_models import AnswerRequirements, AnswerAssessment
 
 from typing import Literal
 from pathlib import PurePosixPath
@@ -73,6 +74,8 @@ class ProjectionSnapshot(Model):
     node_count: int = 0
     edge_count: int = 0
     supported_kinds: list[str] = Field(default_factory=list)
+    supported_fields: dict[str, list[str]] = Field(default_factory=dict)
+    supported_relationships: list[str] = Field(default_factory=list)
     semantic_ready: bool = False
     embedding_model: str | None = None
     embedding_dimensions: int | None = None
@@ -93,6 +96,8 @@ class RetrievalBudget(Model):
 
 OPERATIONS = {
     "get_entities": ("exact", "entity_ids"),
+    "get_ac_descendants": ("graph", "root_id"),
+    "get_declared_dependents": ("graph", "entity_ids"),
     "get_component_context": ("graph", "component_id"),
     "get_acceptance_criteria": ("graph", "component_id"),
     "get_related_tests": ("graph", "entity_ids"),
@@ -124,6 +129,8 @@ class KnowledgeRetrievalRequest(Model):
     continuation: str | None = None
     allow_stale: bool = False
     correlation: dict[str, str] = Field(default_factory=dict)
+    answer_requirements: AnswerRequirements | None = None
+    assessment: dict | None = None
 
     @model_validator(mode="after")
     def registered_arguments(self, info: ValidationInfo) -> KnowledgeRetrievalRequest:
@@ -135,6 +142,12 @@ class KnowledgeRetrievalRequest(Model):
         Returns:
             This request after strict operation and revision validation.
         """
+        if self.assessment is not None:
+            from .assessment_evidence import prepare
+
+            prepare(self.assessment)
+            if self.assessment["repository_id"] != self.repository_id:
+                invalid("assessment repository differs from retrieval scope")
         if self.operation not in OPERATIONS:
             from .query_models import validate_arguments
 
@@ -184,6 +197,9 @@ class KnowledgeEvidence(Model):
     path: list[Relation] = Field(default_factory=list)
     limitations: list[str] = Field(default_factory=list)
     relationships: list[Relation] = Field(default_factory=list)
+    field_availability: dict[str, str] = Field(default_factory=dict)
+    field_locators: dict[str, str] = Field(default_factory=dict)
+    field_derivations: dict[str, str] = Field(default_factory=dict)
     related: list[dict[str, str]] = Field(default_factory=list)
 
 
@@ -206,6 +222,9 @@ class KnowledgeRetrievalResult(Model):
     continuation: str | None = None
     truncated: bool = False
     stats: dict = Field(default_factory=dict)
+    answer: AnswerAssessment | None = None
+    assessment: dict | None = None
+    observation: dict = Field(default_factory=lambda: {"state": "disabled"})
 
 
 def validate_operation_arguments(arguments: dict, required: str, operation: str) -> None:
@@ -258,3 +277,8 @@ def validate_required_value(value: object, required: str) -> None:
 # DECISION HISTORY
 # ====================================================================
 # - 2026-10-01 15:46 [python-coder]: Bind verified reusable query versions through scoped retrieval. (#KM-500/TICKET-20261001-KM-500b-3)
+
+
+# DECISION HISTORY
+# ================================================================================
+# - 2026-10-01 18:55 [python-coder]: Keep requested facts separate from execution success and preserve canonical field meaning. (#KM-500/KM-500e-2)

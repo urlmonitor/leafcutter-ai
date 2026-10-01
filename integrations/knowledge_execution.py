@@ -49,6 +49,11 @@ from kernel.contracts.evidence import EvidenceBundlePayload, UnavailableSource
 from kernel.providers.base import JevInvalidResponse
 from knowledge.contracts import KnowledgeRetrievalRequest, KnowledgeRetrievalResult
 from knowledge.errors import KnowledgeError
+from knowledge.answers import assess_answer
+from integrations.knowledge_diagnosis import attach_diagnosis
+from integrations.knowledge_assessment import (
+    bind_assessment, finalize_assessment, assessment_diagnostics, assessment_limits, assessment_bundle,
+)
 
 
 def _authorized(
@@ -179,6 +184,10 @@ async def _request(
         budget.get("deadline_ms", 10000), int(ctx.config.limits.capability_timeout_seconds * 1000)
     )
     raw["budget"] = budget
+    if payload.answer_requirements is not None:
+        raw["answer_requirements"] = payload.answer_requirements
+    raw["assessment"] = bind_assessment(payload.assessment, raw.get("assessment"),
+        config.repository_id, raw["revision"])
     return (query_catalog.request(raw) if query_catalog is not None
             else KnowledgeRetrievalRequest.model_validate(raw)), reason, usage
 
@@ -268,6 +277,40 @@ async def _observed_call(
     return result
 
 
+def _assess_final_answer(request, result):
+    """Recompute after kernel bounds without upgrading an unresolved provider result.
+
+    Args:
+        request: Preserved original answer contract.
+        result: Actual final bounded evidence.
+
+    Returns:
+        Whether original obligations remain unmet.
+    """
+    assessed = assess_answer(request, result)
+    if assessed is not None:
+        if result.answer is None or result.answer.status != "unresolved":
+            result.answer = assessed
+    return result.answer is not None and result.answer.status != "fulfilled"
+
+
+def _answer_diagnostics(result: KnowledgeRetrievalResult) -> dict:
+    """Preserve final answer and continuation facts in the public kernel result.
+
+    Args:
+        result: Bounded neutral execution and answer assessment.
+
+    Returns:
+        Additive caller-visible diagnostics.
+    """
+    values = assessment_diagnostics(result)
+    if result.answer is not None:
+        values["knowledge_answer"] = result.answer.model_dump_json()
+    if result.continuation:
+        values["knowledge_continuation"] = result.continuation
+    return values
+
+
 def _kernel_result(
     invocation: CapabilityInvocation,
     ctx: ExecutionContext,
@@ -295,14 +338,16 @@ def _kernel_result(
     """
     result = KnowledgeRetrievalResult.model_validate(result.model_dump())
     if not response_matches(request, result):
-        return failed_result(
+        return attach_diagnosis(failed_result(
             invocation, "knowledge_invalid_response", "knowledge response binding mismatch"
-        )
+        ), request, result, "knowledge response binding mismatch")
     if any(not _authorized(ctx, request, item) for item in result.evidence):
-        return failed_result(
+        return attach_diagnosis(failed_result(
             invocation, "knowledge_scope_violation", "knowledge evidence outside authorized scope"
-        )
+        ), request, result, "knowledge evidence outside authorized scope")
     evidence = map_bounded_evidence(ctx, payload, request, result, invocation)
+    unmet = _assess_final_answer(request, result)
+    assessment_unmet = finalize_assessment(request, result)
     unavailable = result.status not in {"ok", "partial"}
     coverage = (
         NeedStatus.UNAVAILABLE
@@ -314,6 +359,10 @@ def _kernel_result(
         f"knowledge status: {result.status}",
         f"retrieval choice: {reason}",
     ]
+    if unmet:
+        limitations.extend(result.answer.limitations)
+        limitations.append("Original answer requirements remain " + result.answer.status)
+    limitations.extend(assessment_limits(result))
     if evidence:
         limitations.append(
             "Retrieved evidence requires the existing research sufficiency assessment."
@@ -327,6 +376,7 @@ def _kernel_result(
         evidence=evidence,
         evidence_ids=[e.id for e in evidence],
         coverage={payload.need.id: coverage},
+        assessments=assessment_bundle(result, payload.need.id),
         attempted_sources=sorted(source_ids) or ["knowledge.retrieval"],
         unavailable_sources=[
             UnavailableSource(source_id="knowledge.retrieval", reason=result.status)
@@ -349,13 +399,12 @@ def _kernel_result(
         "knowledge_generation": result.generation_id or "",
         "knowledge_source_sha": result.source_sha or "",
     }
-    if result.continuation:
-        diagnostics["knowledge_continuation"] = result.continuation
-    return CapabilityResult(
+    diagnostics.update(_answer_diagnostics(result))
+    output = CapabilityResult(
         invocation_id=invocation.id,
         work_item_id=invocation.work_item_id,
         status=ResultStatus.PARTIAL
-        if unavailable or result.status == "partial" or result.truncated
+        if any((unavailable, result.status == "partial", result.truncated, unmet, assessment_unmet))
         else ResultStatus.COMPLETED,
         output_schema_id=schema_ids.EVIDENCE_BUNDLE,
         output_payload=bundle.model_dump(mode="json"),
@@ -364,6 +413,7 @@ def _kernel_result(
         diagnostics=diagnostics,
         usage=usage,
     )
+    return attach_diagnosis(output, request, result)
 
 
 async def invoke_knowledge(

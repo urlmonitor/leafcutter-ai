@@ -8,7 +8,7 @@ status: active
 req_status: active
 readiness: approved
 priority: medium
-work_status: todo
+work_status: in_progress
 criteria: 'Make the question clear before choosing how to answer it.
 
 
@@ -40,12 +40,15 @@ delivers_to: null
 expects_from: null
 origin_agent: product-owner
 created: '2026-10-01'
-amended_by: []
+amended_by:
+- '2026-10-01 PO coverage audit: reconcile aggregate implementation state and pending operational verification without
+  changing completed child behavior.'
 superseded_by: null
 covered_by:
 - KM-500a-1
 - KM-500a-2
 - KM-500a-3
+- KM-500a-4
 implemented_by: []
 change_target: code
 risk_surface: contract_boundary
@@ -68,5 +71,10 @@ notes: 'User-approved follow-on to KM-400: Jev research readiness and clarificat
   No roadmap changes, unrestricted dynamic query execution or autonomous canonical
 
   knowledge rewriting are introduced by this outcome.
+
+
+  Coverage audit: existing bounded behavior is supported by the acceptance report; real-provider judgment quality
+  and real coding-agent authorship were not exercised by scripted proofs. Pending added criteria record those obligations
+  separately. A parent status is an aggregate, not proof of real-provider or deployment readiness.
 
   '

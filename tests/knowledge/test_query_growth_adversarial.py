@@ -7,6 +7,14 @@ from kernel.contracts import CapabilityResult, ResultStatus, schema_ids
 from tests.knowledge.test_query_admission import admission, candidate
 
 
+def context():
+    """Supply real graph budget configuration at the controlled invocation boundary."""
+    return SimpleNamespace(config=SimpleNamespace(intent=SimpleNamespace(max_clarifications=2),
+        limits=SimpleNamespace(langgraph_recursion_limit=100)),
+        scope=SimpleNamespace(component_ids=["allowed"]))
+
+
+
 def test_resume_rejects_other_verified_version_of_same_operation(tmp_path, monkeypatch):
     # covers: KM-500c-1
     # covers: KM-500b-3
@@ -30,7 +38,7 @@ def test_resume_rejects_other_verified_version_of_same_operation(tmp_path, monke
     monkeypatch.setattr(query_growth, "load_output_payload", lambda *_: output)
     payload = SimpleNamespace(detail="locator")
     waiting = asyncio.run(query_growth.invoke_query_growth(None, catalog, verifier,
-        invocation, SimpleNamespace(), payload, []))
+        invocation, context(), payload, []))
     assert waiting.status == ResultStatus.WAITING
     invocation.continuation = SimpleNamespace(state=waiting.continuation_state)
     child.output_schema_id = schema_ids.QUERY_ACTIVATION_RECEIPT
@@ -44,7 +52,7 @@ def test_resume_rejects_other_verified_version_of_same_operation(tmp_path, monke
     monkeypatch.setattr(knowledge_execution, "invoke_knowledge", retrieval)
     payload = SimpleNamespace(detail="locator", model_copy=lambda **_: payload)
     result = asyncio.run(query_growth.invoke_query_growth(None, catalog, verifier,
-        invocation, SimpleNamespace(), payload, []))
+        invocation, context(), payload, []))
     assert executed == [], result.error
     assert result.error.code == "scope_mismatch"
     assert executed == []
@@ -70,8 +78,7 @@ def test_scalar_clarification_preserves_pins_and_cannot_override_scope(monkeypat
         "build_attempted": False, "arguments": {}}
     invocation = SimpleNamespace(id="invoke", work_item_id="work", child_outcomes=[],
                                  continuation=SimpleNamespace(state=state))
-    ctx = SimpleNamespace(config=SimpleNamespace(intent=SimpleNamespace(max_clarifications=2)),
-                          scope=SimpleNamespace(component_ids=["allowed"]))
+    ctx = context()
     payload = RetrievalRequestPayload(need=EvidenceNeed(id="need.tests",category="task_context",
                                                       question="Original test question"))
 
@@ -121,12 +128,13 @@ def test_no_progress_stops_without_new_children(monkeypatch, selection, attempte
     # angle: criterion
     # angle: failure
     from integrations import query_growth
-    state = {"phase": "select", "question": "Original unresolved question", "need_id": "need.tests",
+    state = {"phase": "select", "target_kind": "Test", "repository_id": "repo", "generation_id": "generation",
+        "supported_kinds": ["Test"], "supported_fields": {"Test": ["status"]}, "question": "Original unresolved question", "need_id": "need.tests",
         "component_ids": ["component"], "source_sha": "a" * 40,
         "build_attempted": attempted, "clarifications": clarifications}
     invocation = SimpleNamespace(id="invoke", work_item_id="work", child_outcomes=[],
                                  continuation=SimpleNamespace(state=state))
-    ctx = SimpleNamespace(config=SimpleNamespace(intent=SimpleNamespace(max_clarifications=2)))
+    ctx = context()
     async def choose(*args):
         return selection, []
     monkeypatch.setattr(query_growth, "choose", choose)
@@ -150,7 +158,7 @@ def test_repeated_failed_builder_delivery_never_becomes_activation():
     for _ in range(2):
         invocation = SimpleNamespace(id="invoke", work_item_id="work", child_outcomes=[child],
                                      continuation=SimpleNamespace(state=dict(state)))
-        result = asyncio.run(invoke_query_growth(None, None, None, invocation, None, None, []))
+        result = asyncio.run(invoke_query_growth(None, None, None, invocation, context(), None, []))
         assert result.status == ResultStatus.FAILED and result.error.code == "build_failed"
         assert not result.requests
 
@@ -165,10 +173,10 @@ def test_source_mapping_is_checked_before_build_packet(monkeypatch, target, buil
     state = {"phase": "select", "planning_context": True, "question": "Original question",
         "need_id": "need.tests", "repository_id": "repo", "source_sha": "a" * 40,
         "generation_id": "generation", "component_ids": ["component"], "clarifications": 0,
-        "supported_kinds": ["Component", "AcceptanceCriterion", "Test"], "build_attempted": False}
+        "supported_kinds": ["Component", "AcceptanceCriterion", "Test"], "supported_fields": {"Test": ["status"]}, "build_attempted": False}
     invocation = SimpleNamespace(id="invoke", work_item_id="work", child_outcomes=[],
                                  continuation=SimpleNamespace(state=state))
-    ctx = SimpleNamespace(config=SimpleNamespace(intent=SimpleNamespace(max_clarifications=2)))
+    ctx = context()
     choices = []
     async def choose(context, inv, purpose, *args):
         choices.append(purpose)

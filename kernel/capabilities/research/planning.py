@@ -161,7 +161,8 @@ def retrieval_operation(payload: dict, sources: list[SourceConfig]) -> str:
 
 
 def _child(need: EvidenceNeed, source_ids: list[str], sources: list[SourceConfig],
-           query: NeedQuery) -> RequestProposal:
+           query: NeedQuery, answer_requirements: dict[str, JsonValue] | None = None,
+           assessment: dict[str, JsonValue] | None = None) -> RequestProposal:
     """Build the retrieval child request for one need, naming the operation it needs.
 
     Query hints go to every child; exact locators only to a native one (a host reads no files).
@@ -171,6 +172,8 @@ def _child(need: EvidenceNeed, source_ids: list[str], sources: list[SourceConfig
         source_ids: Authorized source identifiers.
         sources: Configured available evidence sources.
         query: Focused source query.
+        answer_requirements: Original caller facts and population obligations.
+        assessment: Unmodified scoped supplied evidence packet.
 
     Returns:
         RequestProposal: Result of the documented operation.
@@ -179,7 +182,8 @@ def _child(need: EvidenceNeed, source_ids: list[str], sources: list[SourceConfig
     native = operation == "retrieve"
     holders = locator_sources(query.locators, sources) if native else []
     payload = RetrievalRequestPayload(
-        need=need, source_ids=list(dict.fromkeys([*source_ids, *holders])),
+        need=need, answer_requirements=answer_requirements, assessment=assessment,
+        source_ids=list(dict.fromkeys([*source_ids, *holders])),
         query_hints=query.hints, explicit_locators=query.locators if native else [])
     return RequestProposal(
         kind=RequestKind.EVIDENCE, question=need.question, evidence_needs=[need],
@@ -250,7 +254,7 @@ def resolve_sources(ctx: ExecutionContext, needs: list[EvidenceNeed], plan: Plan
                       [s.id for s in chosen if s.kind != "graph_query"]]
             for group in groups:
                 if group:
-                    out.requests.append(_child(need, group, ctx.config.sources, own.get(need.id, shared)))
+                    out.requests.append(_child(need, group, ctx.config.sources, own.get(need.id, shared), plan.answer_requirements, plan.assessment))
             out.child_map[need.id] = ids
             out.attempted += ids
             continue

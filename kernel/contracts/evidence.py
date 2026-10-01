@@ -9,6 +9,8 @@ ARCHITECTURE: Depends on contracts.base and contracts.enums only. Evidence ids a
 
 from __future__ import annotations
 
+from kernel.contracts.verbatim import VerbatimJson
+
 from datetime import datetime
 
 from typing import Any
@@ -122,7 +124,14 @@ class Evidence(PersistedModel):
     @model_validator(mode="before")
     @classmethod
     def _complete_hash_and_id(cls, data: Any) -> Any:
-        """Compute a missing content hash and id from the body and locator (never overwrite)."""
+        """Compute a missing content hash and id from the body and locator (never overwrite).
+
+        Args:
+            data: Incoming evidence fields before model validation.
+
+        Returns:
+            Input fields with missing content identity derived.
+        """
         if not isinstance(data, dict):
             return data
         body = data.get("excerpt")
@@ -224,6 +233,8 @@ class BundleBody(KernelModel):
     evidence_ids: list[str] = Field(default_factory=list)
     finding_ids: list[str] = Field(default_factory=list)
     coverage: dict[str, NeedStatus] = Field(default_factory=dict)
+    #: Attributed conditional assessments; never independently verified source facts.
+    assessments: dict[str, dict[str, VerbatimJson]] = Field(default_factory=dict)
     attempted_sources: list[str] = Field(default_factory=list)
     unavailable_sources: list[UnavailableSource] = Field(default_factory=list)
     contradictions: list[Contradiction] = Field(default_factory=list)

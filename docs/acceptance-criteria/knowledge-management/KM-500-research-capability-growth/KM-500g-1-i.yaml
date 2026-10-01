@@ -1,0 +1,140 @@
+id: KM-500g-1-i
+title: Observation loss preserves the result and stays visible to the caller
+component: knowledge-management
+components:
+- knowledge_management
+level: L3
+status: active
+req_status: active
+work_status: in_progress
+readiness: approved
+priority: medium
+parent: KM-500g-1
+criteria: 'Given the same bounded research request is executed once with observations disabled and once with the
+  configured observation destination unavailable
+
+  When each attempt completes
+
+  Then its retrieval evidence and original-question fulfillment outcome remain available independently of remote
+  observation delivery
+
+  And the response distinguishes observations disabled from attempted delivery unavailable
+
+  And neither attempt supplies a fabricated accessible trace or silently claims that the observation was recorded
+  remotely
+
+  And the unavailable observation cannot change missing evidence into a completed answer or an empty successful
+  search
+
+  And no observation failure causes the original retrieval or a capability build to repeat without the existing
+  retry and authorization rules.
+
+  '
+depends_on:
+- KM-500g-1
+- KM-400e-4
+doc_links:
+- path: docs/analysis/2026-10-01-repository-query-catalog.md
+  relationship: context
+  status: exists
+  relevance: RQ8 observability and diagnosis consumers; no historical trace is fabricated.
+- path: docs/analysis/2026-10-01-repository-query-evaluation-cases.json
+  relationship: context
+  status: exists
+  relevance: RQE-06 planned diagnosis and unavailable-evidence controls.
+- path: docs/architecture/adrs/ADR-062-standalone-knowledge-retrieval.md
+  relationship: context
+  status: exists
+  relevance: Use existing observability ownership and sanitized correlation, preserving optional operation.
+- path: docs/testing/test-angles.md
+  relationship: context
+  status: exists
+  relevance: Planned public reachability, producer-consumer and discriminating proof expectations.
+- path: docs/architecture/components/knowledge-retrieval.md
+  relationship: context
+  status: exists
+  relevance: Existing projection, observation and kernel ownership boundaries.
+- path: docs/how-to/run-knowledge-retrieval.md
+  relationship: context
+  status: exists
+  relevance: Current public retrieve/evaluate lifecycle surfaces; not execution proof of the new obligations.
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to:
+  agent: python-coder
+  contract: 'Observation-loss outcome: unchanged retrieval evidence and fulfillment, delivery disabled versus unavailable,
+    bounded sanitized warning and trace status; no fabricated remote ingestion or implicit retrieval/build retry.'
+expects_from:
+- ac_id: KM-500g-1
+  contract: 'Observation envelope: request/attempt IDs, original question and required fields, execution separately
+    from fulfillment and gaps, repository/source SHA/generation/query identity, evidence IDs, finalization state,
+    delivery state, trace ID and verified trace reference only when established.'
+origin_agent: business-analyst
+created: '2026-10-01'
+created_by: docs/acceptance-criteria/knowledge-management/KM-500-research-capability-growth/KM-500g-1.yaml
+amended_by:
+- '2026-10-01: User explicitly approved the new ACs and directed implementation with agents and an independent evaluator. Approval records authorization, not implementation or execution proof.'
+superseded_by: null
+covered_by:
+- tests/knowledge/test_query_answer_contract_acceptance_observation.py
+implemented_by:
+- tickets/00_inbox/epics/EPIC-RepositoryResearchAnswers/TICKET-20261001-KM-500g-1-i.md
+change_target: code
+risk_surface: contract_boundary
+notes: RQ8 negative case extending existing telemetry-loss behavior to caller-visible answerability and standalone
+  delivery. No new independent telemetry stack or retry policy. Draft authored from the user-requested BA template
+  pass; no real provider, database or tracing call was performed.
+it_requirements:
+- Preserve immutable source provenance, bounded registered read-only queries and existing authorization, budgets
+  and retries. No arbitrary Cypher, new network endpoint, source-write permission, independent telemetry store or
+  automatic activation is added.
+- 'Keep observation optional and failure-isolated: preserve retrieval evidence and fulfillment when disabled, initialization
+  fails, export is rejected or final flush fails.'
+- Return distinct disabled, attempted-but-unavailable and established delivery states. A correlation ID may exist
+  without an accessible trace; warnings remain sanitized and bounded.
+- An observation failure cannot repeat retrieval, capability construction, catalog activation or provider calls.
+  Existing retries remain attributable, bounded and subject to original authorization.
+- 'Late finalization errors are not research errors: successful retrieval with a required-field gap remains unresolved,
+  and unavailable retrieval is never a successful empty answer.'
+test_required: true
+test_rationale: Planned criterion and public-interface proof covers real producer/consumer and serialized boundaries
+  with named wrong outcomes. Offline/scripted checks cannot establish real-provider, remote-ingestion or deployment
+  readiness; unavailable live prerequisites remain not_run.
+test_spec:
+- name: test_public_research_survives_disabled_and_unavailable_observations
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: integration
+  angle: reachability
+  description: Run the same public request with observations disabled and then unavailable; compare identical retrieval
+    evidence/fulfillment and distinct caller-visible delivery states.
+  must_catch:
+  - Failing retrieval because tracing fails or hiding disabled versus unavailable.
+  covers:
+  - KM-500g-1-i
+  requires_db: false
+  surface_invoked: python -m knowledge retrieve with the authorized existing observation composition
+- name: test_observation_loss_cannot_fabricate_trace_or_answer
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: integration
+  angle: criterion
+  description: Exercise incomplete and unavailable retrieval under observation loss; assert no accessible trace
+    claim, false fulfilled answer or fabricated successful empty search.
+  must_catch:
+  - Converting missing work_status into completed research after observation loss.
+  covers:
+  - KM-500g-1-i
+  requires_db: false
+- name: test_late_observation_failure_does_not_reexecute_research
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: integration
+  angle: seam
+  description: Fail the real observation consumer during final flush and count calls at retrieval/build boundaries;
+    assert the existing result returns once with warning and no implicit second retrieval, build or registration.
+  must_catch:
+  - Repeating a capability build after a telemetry flush error.
+  covers:
+  - KM-500g-1-i
+  requires_db: false
