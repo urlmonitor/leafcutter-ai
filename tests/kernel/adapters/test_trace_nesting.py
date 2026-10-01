@@ -17,10 +17,11 @@ import unittest
 from pathlib import Path
 from typing import Any
 
-from kernel.contracts import CapabilityInvocation, schema_ids
+from kernel.contracts import CapabilityInvocation, HostWorkRequest, schema_ids
 from kernel.service import KernelService
 from kernel.service_session import open_session
 from tests.kernel.adapters.support import SegmentTracer, answer, rig_environment
+from tests.kernel.helpers import as_type, narrow
 from tests.kernel.scheduler.support import Rig, completed, descriptor, proposal, waiting
 
 SECOND_QUESTION = "Which queue does the cache use?"
@@ -70,11 +71,11 @@ class TestResumedWorkNestsUnderTheCurrentSegment(unittest.IsolatedAsyncioTestCas
         second = await self.process("p2").resume_run(first.run_id, answer(first))
         third = await self.process("p3").resume_run(second.run_id, answer(second))
         self.assertEqual(third.status.value, "completed")
-        self.assertEqual(first.pending_interaction.trace_context.parent_observation_id,
+        self.assertEqual(as_type(first.pending_interaction, HostWorkRequest).trace_context.parent_observation_id,
                          "p1-1-start")
-        self.assertEqual(second.pending_interaction.trace_context.parent_observation_id,
+        self.assertEqual(as_type(second.pending_interaction, HostWorkRequest).trace_context.parent_observation_id,
                          "p2-1-resume")
-        self.assertNotEqual(second.pending_interaction.id, first.pending_interaction.id)
+        self.assertNotEqual(narrow(second.pending_interaction).id, narrow(first.pending_interaction).id)
 
     async def test_root_invocations_name_the_segment_of_their_own_process(self) -> None:
         first = await self.process("p1").start_run(self.rig.task_input())

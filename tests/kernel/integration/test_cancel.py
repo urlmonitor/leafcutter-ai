@@ -36,6 +36,7 @@ from kernel.service_cancel import (
 )
 from kernel.service_session import open_session
 from tests.kernel.adapters.support import answer, rig_environment
+from tests.kernel.helpers import narrow
 from tests.kernel.interaction.support import host_rig, human_rig, human_submission
 from tests.kernel.scheduler.support import (
     Rig,
@@ -112,7 +113,7 @@ class TestCancelWhileWaiting(CancelCase):
         self.assertEqual(cancelled.status, RunStatus.CANCELLED)
         self.assertIsNone(cancelled.pending_interaction)
         record = self.env.run_store.get_run(paused.run_id)
-        self.assertEqual((record.status, record.cancel.by), (RunStatus.CANCELLED, HUMAN.id))
+        self.assertEqual((record.status, narrow(record.cancel).by), (RunStatus.CANCELLED, HUMAN.id))
         self.assert_event_log_is_collision_free(paused.run_id)
         snapshot, graph, config, runtime = await self.closed_thread(paused.run_id)
         self.assertEqual(snapshot.next, ())
@@ -151,7 +152,7 @@ class TestCancelWhileWaiting(CancelCase):
         self.assertEqual((cancelled.status, cancelled.pending_interaction),
                          (RunStatus.CANCELLED, None))
         self.assert_event_log_is_collision_free(paused.run_id)
-        raw = human_submission(question.model_dump(mode="json"), paused.run_id,
+        raw = human_submission(narrow(question).model_dump(mode="json"), paused.run_id,
                                {"choice_id": "sqlite"})
         with self.assertRaises(SubmissionRejected) as caught:
             await self.service().resume_run(paused.run_id, raw)
@@ -167,7 +168,7 @@ class TestCancelWhileWaiting(CancelCase):
         again = await self.service().cancel_run(paused.run_id, OTHER)
         self.assertEqual(again.status, RunStatus.CANCELLED)
         self.assertEqual(self.env.run_store.get_run(paused.run_id), first)
-        self.assertEqual(first.cancel.by, HUMAN.id)
+        self.assertEqual(narrow(first.cancel).by, HUMAN.id)
         self.assert_event_log_is_collision_free(paused.run_id)  # exactly one run.cancelled
 
 
@@ -188,7 +189,7 @@ class TestCancelWhileRunning(CancelCase):
         final = await asyncio.wait_for(running, 60)
         self.assertEqual(final.status, RunStatus.CANCELLED)
         record = FileRunStore(self.root).get_run("run-cancel-running-1")
-        self.assertEqual((record.status, record.cancel.by), (RunStatus.CANCELLED, HUMAN.id))
+        self.assertEqual((record.status, narrow(record.cancel).by), (RunStatus.CANCELLED, HUMAN.id))
         self.assertEqual(rig.executors["retrieve.test"].invocations, [])  # nothing ran on
         kinds = [e.kind for e in self.events("run-cancel-running-1")]
         self.assertIn("guard.tripped", kinds)
@@ -235,7 +236,7 @@ class TestCompareAndUpdate(unittest.TestCase):
         record, won = commit_cancel(store, "run-1", HUMAN.id, utc_now())
         self.assertTrue(won)
         self.assertEqual(store.compares, 2)
-        self.assertEqual(store.get_run("run-1").cancel.by, HUMAN.id)
+        self.assertEqual(narrow(store.get_run("run-1").cancel).by, HUMAN.id)
         self.assertEqual(record.state_revision, 2)  # the competing bump plus the cancel
 
     def test_a_stale_writer_cannot_overwrite_a_committed_cancel(self) -> None:
@@ -246,7 +247,7 @@ class TestCompareAndUpdate(unittest.TestCase):
         racing = stale.model_copy(update={"status": RunStatus.WAITING_HOST})
         self.assertFalse(compare_and_write(store, racing, stale.state_revision))
         kept = store.get_run("run-1")
-        self.assertEqual((kept.status, kept.cancel.by), (RunStatus.CANCELLED, HUMAN.id))
+        self.assertEqual((kept.status, narrow(kept.cancel).by), (RunStatus.CANCELLED, HUMAN.id))
 
     def test_the_second_actor_loses_and_a_finished_run_cannot_be_cancelled(self) -> None:
         store = FileRunStore(self.root)

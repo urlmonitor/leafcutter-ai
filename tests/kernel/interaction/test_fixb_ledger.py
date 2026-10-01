@@ -19,6 +19,7 @@ from kernel.contracts import ActorKind, InteractionSubmission
 from kernel.interaction import RejectionCode, SubmissionRejected, SubmitStatus, submission_hash
 from kernel.persistence import SubmissionRecord
 from kernel.persistence.run_store import FileRunStore
+from tests.kernel.helpers import narrow
 from tests.kernel.interaction.support import Started, human_rig, raw_submission, start
 
 
@@ -60,7 +61,7 @@ class TestFirstWriteWins(unittest.IsolatedAsyncioTestCase):
         paused = await run.graph.aget_state(run.config)
         self.assertTrue(paused.next, "the graph must not have been resumed by the loser")
         kept = run.rig.run_store.get_submission(run.run_id, run.packet["id"])
-        self.assertEqual(kept.submission.response, {"choice_id": "files"})
+        self.assertEqual(narrow(kept).submission.response, {"choice_id": "files"})
 
     async def test_an_identical_concurrent_submission_is_a_replay_not_a_second_resume(self) -> None:
         run = await start(human_rig())

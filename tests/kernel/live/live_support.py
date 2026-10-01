@@ -27,6 +27,7 @@ from typing import Any
 from kernel.config import repo_root
 from kernel.observability.correlation import deterministic_trace_id
 from kernel.secrets import SecretSettings, load_secrets
+from tests.kernel.helpers import narrow
 
 LIVE = os.environ.get("LEAFCUTTER_KERNEL_LIVE") == "1"
 SKIP_REASON = "live suite: set LEAFCUTTER_KERNEL_LIVE=1 (uses the real Jev and Langfuse)"
@@ -164,9 +165,9 @@ def observations_api(secrets: SecretSettings | None = None) -> Any:
 
     found = secrets or load_secrets()
     assert found.has_langfuse(), "Langfuse credentials are not available"
-    return LangfuseAPI(base_url=found.langfuse_base_url,
-                       username=found.langfuse_public_key.get_secret_value(),
-                       password=found.langfuse_secret_key.get_secret_value())
+    return LangfuseAPI(base_url=narrow(found.langfuse_base_url),
+                       username=narrow(found.langfuse_public_key).get_secret_value(),
+                       password=narrow(found.langfuse_secret_key).get_secret_value())
 
 
 def _field(obj: Any, *names: str) -> Any:

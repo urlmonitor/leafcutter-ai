@@ -17,7 +17,7 @@ from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 from kernel.capabilities import CapabilityExecutor, UnlimitedBudget
-from kernel.contracts import CapabilityGap, RunEvent
+from kernel.contracts import CapabilityGap, GapType, RequestKind, RunEvent
 from kernel.contracts.base import new_id
 from kernel.contracts.enums import RunStatus
 from kernel.persistence import (
@@ -152,8 +152,8 @@ class TestGapAggregation(unittest.TestCase):
 
     def _gap(self, key: str, run: str, when: datetime, count: int = 1) -> CapabilityGap:
         return CapabilityGap(
-            id=new_id("gap"), gap_key=key * 8, gap_type="unsupported", goal="g",
-            normalized_need="n", request_kind="capability", input_schema="i.v1",
+            id=new_id("gap"), gap_key=key * 8, gap_type=GapType("unsupported"), goal="g",
+            normalized_need="n", request_kind=RequestKind("capability"), input_schema="i.v1",
             output_schema="o.v1", occurrence_count=count, example_run_ids=[run],
             first_seen=when, last_seen=when)
 

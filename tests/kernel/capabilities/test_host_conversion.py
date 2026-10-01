@@ -15,6 +15,7 @@ from __future__ import annotations
 import unittest
 from datetime import datetime, timezone
 from types import SimpleNamespace
+from typing import Any
 
 from kernel.contracts import FindingKind, ResultStatus, Verification, schema_ids
 from kernel.contracts.enums import NeedStatus, SemanticType, SourceKind
@@ -31,6 +32,7 @@ from tests.kernel.capabilities.host_support import (
     finding_json,
     option,
 )
+from tests.kernel.helpers import narrow, payload_of
 
 
 class TestOptionsConversion(unittest.TestCase):
@@ -42,7 +44,7 @@ class TestOptionsConversion(unittest.TestCase):
                           "proposed_criteria": [criterion("crit-a")]})
         self.assertIs(result.status, ResultStatus.COMPLETED)
         self.assertEqual(result.output_schema_id, schema_ids.OPTIONS)
-        for item in (*result.output_payload["options"], *result.output_payload["proposed_criteria"]):
+        for item in (*payload_of(result)["options"], *payload_of(result)["proposed_criteria"]):
             self.assertEqual((item["proposal_status"], item["approval_status"],
                               item["approved_by"], item["proposed_by"]),
                              ("proposed", "proposed", None, "host.generate_options"))
@@ -53,7 +55,7 @@ class TestOptionsConversion(unittest.TestCase):
                           approved_by="host-1")
         result = convert("host.generate_options", OPTIONS_REQUEST, {"options": [approved]})
         self.assertIs(result.status, ResultStatus.FAILED)
-        self.assertEqual(result.error.code, "host_output_invalid")
+        self.assertEqual(narrow(result.error).code, "host_output_invalid")
         self.assertIsNone(result.output_payload)
 
     def test_surplus_options_unrequested_criteria_and_weights_are_dropped_with_limitations(
@@ -62,8 +64,8 @@ class TestOptionsConversion(unittest.TestCase):
         result = convert("host.generate_options", request,
                          {"options": [option("opt-a"), option("opt-b")],
                           "proposed_criteria": [criterion(weight_rule="double this one")]})
-        self.assertEqual([o["id"] for o in result.output_payload["options"]], ["opt-a"])
-        self.assertEqual(result.output_payload["proposed_criteria"], [])
+        self.assertEqual([o["id"] for o in payload_of(result)["options"]], ["opt-a"])
+        self.assertEqual(payload_of(result)["proposed_criteria"], [])
         text = " ".join(result.limitations)
         self.assertIn("beyond the requested maximum of 1", text)
         self.assertIn("did not ask for criteria", text)
@@ -71,7 +73,7 @@ class TestOptionsConversion(unittest.TestCase):
     def test_weights_the_host_sets_on_requested_criteria_are_removed(self) -> None:
         result = convert("host.generate_options", OPTIONS_REQUEST, {
             "options": [], "proposed_criteria": [criterion(weight_rule="x2", decision_basis="me")]})
-        (kept,) = result.output_payload["proposed_criteria"]
+        (kept,) = payload_of(result)["proposed_criteria"]
         self.assertEqual((kept["weight_rule"], kept["decision_basis"]), (None, None))
         self.assertIn("weight rules", " ".join(result.limitations))
 
@@ -79,7 +81,7 @@ class TestOptionsConversion(unittest.TestCase):
         request = {**OPTIONS_REQUEST, "existing_option_ids": ["opt-a"]}
         result = convert("host.generate_options", request,
                          {"options": [option("opt-a"), option("opt-b")]})
-        self.assertEqual([o["id"] for o in result.output_payload["options"]], ["opt-b"])
+        self.assertEqual([o["id"] for o in payload_of(result)["options"]], ["opt-b"])
 
 
 class TestSynthesisConversion(unittest.TestCase):
@@ -103,7 +105,7 @@ class TestSynthesisConversion(unittest.TestCase):
             self.assertIs(finding.kind, FindingKind.INFERENCE)
             self.assertEqual(finding.producer, "host.synthesize")
             self.assertTrue(any("not verified by the kernel" in x for x in finding.limitations))
-        self.assertEqual(result.output_payload["disagreements"], ["they differ on cost"])
+        self.assertEqual(payload_of(result)["disagreements"], ["they differ on cost"])
         self.assertIn("inferences by the host", " ".join(result.limitations))
 
     def test_ids_are_kernel_derived_and_repeatable(self) -> None:
@@ -145,7 +147,7 @@ class TestResearchConversion(unittest.TestCase):
         self.assertEqual(evidence.excerpt, "The cache lives in sqlite.")
         self.assertEqual(evidence.provenance.producer, "host.research")
         self.assertTrue(any("not verified" in x for x in evidence.limitations))
-        self.assertEqual(result.output_payload["evidence_ids"], [evidence.id])
+        self.assertEqual(payload_of(result)["evidence_ids"], [evidence.id])
         self.assertIn("replaced by the kernel's own", " ".join(result.limitations))
 
     def test_the_same_answer_converts_to_the_same_evidence(self) -> None:
@@ -162,16 +164,16 @@ class TestResearchConversion(unittest.TestCase):
     def test_coverage_is_clamped_to_the_asked_need_and_the_evidence_found(self) -> None:
         none = convert("host.research", RESEARCH_REQUEST, {
             "evidence": [], "coverage": {"need-1": "satisfied", "other": "satisfied"}})
-        self.assertEqual(none.output_payload["coverage"], {"need-1": NeedStatus.UNAVAILABLE.value})
+        self.assertEqual(payload_of(none)["coverage"], {"need-1": NeedStatus.UNAVAILABLE.value})
         self.assertIn("not asked for", " ".join(none.limitations))
         found = convert("host.research", RESEARCH_REQUEST, self.bundle(
             evidence_json(self.LOCATOR, "x"), coverage={"need-1": "open"}))
-        self.assertEqual(found.output_payload["coverage"], {"need-1": NeedStatus.PARTIAL.value})
+        self.assertEqual(payload_of(found)["coverage"], {"need-1": NeedStatus.PARTIAL.value})
 
     def test_a_reference_to_unknown_evidence_is_dropped_and_known_evidence_kept(self) -> None:
         bundle = {"evidence": [], "evidence_ids": ["ev-00000000000000aa", "ev-00000000000000bb"]}
         result = convert("host.research", RESEARCH_REQUEST, bundle, known={"ev-00000000000000aa"})
-        self.assertEqual(result.output_payload["evidence_ids"], ["ev-00000000000000aa"])
+        self.assertEqual(payload_of(result)["evidence_ids"], ["ev-00000000000000aa"])
 
     def test_inline_findings_become_host_reported_inferences_citing_the_new_ids(self) -> None:
         item = evidence_json(self.LOCATOR, "The cache lives in sqlite.")
@@ -180,7 +182,7 @@ class TestResearchConversion(unittest.TestCase):
         (finding,) = result.findings
         self.assertIs(finding.kind, FindingKind.INFERENCE)
         self.assertEqual(finding.supporting_evidence_ids, [result.evidence[0].id])
-        self.assertEqual(result.output_payload["finding_ids"], [finding.id])
+        self.assertEqual(payload_of(result)["finding_ids"], [finding.id])
 
     def test_new_evidence_of_the_submission_is_kept_beside_the_bundle(self) -> None:
         extra = {"title": "Note", "excerpt": "Also seen in the ADR.", "locator": "docs/adr.md#L1"}
@@ -200,7 +202,7 @@ class TestQuestionConversion(unittest.TestCase):
 
     def test_the_wording_is_adopted_and_the_choices_keep_their_ids(self) -> None:
         result = convert("host.formulate_question", QUESTION_REQUEST, self.reworded())
-        body = result.output_payload
+        body = payload_of(result)
         self.assertEqual(body["question"], "Where should the cache be stored?")
         self.assertEqual([c["id"] for c in body["choices"]], ["sqlite", "files"])
         self.assertEqual(body["choices"][0]["label"], "SQLite file")
@@ -209,7 +211,7 @@ class TestQuestionConversion(unittest.TestCase):
         offered = self.reworded(free_text_allowed=True, choices=[
             {"id": "sqlite", "label": "SQLite"}, {"id": "approve-all", "label": "Approve all"}])
         result = convert("host.formulate_question", QUESTION_REQUEST, offered)
-        body = result.output_payload
+        body = payload_of(result)
         self.assertEqual([c["id"] for c in body["choices"]], ["sqlite", "files"])
         self.assertFalse(body["free_text_allowed"])
         self.assertIn("added, removed or renamed choices", " ".join(result.limitations))
@@ -221,7 +223,7 @@ class TestQuestionConversion(unittest.TestCase):
             payload_schema=schema_ids.HUMAN_QUESTION_REQUEST, payload=result.output_payload,
             question=None, goal=None, context_refs=[])
         state = {"requests": {"req": request}, "evidence": {}}
-        item = SimpleNamespace(id="work-0000000000000001", request_id="req")
+        item: Any = SimpleNamespace(id="work-0000000000000001", request_id="req")
         question = build_human_question(state, item, 3, datetime.now(timezone.utc))
         self.assertEqual(question.required_actor_kind, "human")
         self.assertEqual(question.question, "Where should the cache be stored?")

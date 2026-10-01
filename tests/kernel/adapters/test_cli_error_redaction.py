@@ -17,6 +17,7 @@ import json
 import tempfile
 import unittest
 from pathlib import Path
+from typing import Any, cast
 
 from kernel.adapters.cli import main
 from kernel.observability.redaction import Redactor
@@ -39,7 +40,7 @@ def _environment(root: Path, rig: Rig):
     def explode(run_id: str):
         raise _Leaky(f"store failed with {SECRET} and {ENTROPY}")
 
-    env.run_store.get_run = explode
+    cast(Any, env.run_store).get_run = explode
     env.redactor = Redactor({"jev_api_key": SECRET}, rig.config.data_policy, [])
     return env
 

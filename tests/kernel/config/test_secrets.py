@@ -16,6 +16,7 @@ from pathlib import Path
 
 from kernel.config import ConfigError
 from kernel.secrets import find_env_file, load_secrets, parse_env_text
+from tests.kernel.helpers import narrow
 
 
 def _val(tag: str) -> str:
@@ -53,9 +54,9 @@ class TestLoad(unittest.TestCase):
         explicit = self._file("explicit.env", JEV_API_KEY=_val("file"))
         settings = load_secrets(explicit, env={"JEV_API_KEY": _val("env")},
                                 start_dir=self.dir / "repo" / "sub")
-        self.assertEqual(settings.jev_api_key.get_secret_value(), _val("env"))
+        self.assertEqual(narrow(settings.jev_api_key).get_secret_value(), _val("env"))
         self.assertEqual(settings.origins["jev_api_key"], "env")
-        self.assertEqual(settings.langfuse_public_key.get_secret_value(), _val("walkpub"))
+        self.assertEqual(narrow(settings.langfuse_public_key).get_secret_value(), _val("walkpub"))
         self.assertEqual(settings.origins["langfuse_public_key"],
                          str(self.dir / "repo" / ".env"))
 
@@ -63,17 +64,17 @@ class TestLoad(unittest.TestCase):
         self._file(".env", JEV_API_KEY=_val("walk"))
         explicit = self._file("e.env", JEV_API_KEY=_val("file"))
         settings = load_secrets(explicit, env={}, start_dir=self.dir)
-        self.assertEqual(settings.jev_api_key.get_secret_value(), _val("file"))
+        self.assertEqual(narrow(settings.jev_api_key).get_secret_value(), _val("file"))
 
     def test_leafcutter_env_file_var_is_used(self) -> None:
         explicit = self._file("e.env", JEV_API_KEY=_val("viavar"))
         settings = load_secrets(env={"LEAFCUTTER_ENV_FILE": str(explicit)}, start_dir=self.dir)
-        self.assertEqual(settings.jev_api_key.get_secret_value(), _val("viavar"))
+        self.assertEqual(narrow(settings.jev_api_key).get_secret_value(), _val("viavar"))
 
     def test_jev_alias_and_langfuse_host_fallback(self) -> None:
         settings = load_secrets(env={"TYPESAFE_API_KEY": _val("alias"),
                                      "LANGFUSE_HOST": "https://lf.example"}, start_dir=self.dir)
-        self.assertEqual(settings.jev_api_key.get_secret_value(), _val("alias"))
+        self.assertEqual(narrow(settings.jev_api_key).get_secret_value(), _val("alias"))
         self.assertEqual(settings.langfuse_base_url, "https://lf.example")
 
     def test_base_url_name_beats_host_within_one_source(self) -> None:

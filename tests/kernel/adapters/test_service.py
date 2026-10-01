@@ -15,7 +15,7 @@ import asyncio
 import tempfile
 import unittest
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 from kernel.contracts import Actor, ActorKind, RunStatus
 from kernel.contracts.enums import ObservabilityStatus
@@ -29,6 +29,7 @@ from kernel.service import (
     RunNotFound,
 )
 from tests.kernel.adapters.support import SegmentTracer, answer, rig_environment
+from tests.kernel.helpers import as_type, narrow
 from tests.kernel.interaction.support import host_rig, human_rig, human_submission
 
 HUMAN = Actor(id="human:tester", kind=ActorKind.HUMAN)
@@ -77,11 +78,12 @@ class TestStartAndResume(ServiceCase):
         self.assertEqual(record.state_revision, env.state_revision)
         self.assertEqual(record.root_task_id, env.root_task_id)
         self.assertNotEqual(record.root_task_id, "pending")
-        self.assertEqual(record.trace.root_observation_id, "seg-1-start")
-        self.assertEqual(env.trace_refs.trace_id, record.trace.trace_id)
-        self.assertTrue(env.trace_refs.trace_url.startswith("https://trace.example/"))
-        self.assertEqual(self.env.tracer.segments[0][2], "start")
-        self.assertEqual(self.env.tracer.closed_segments, 1)
+        self.assertEqual(narrow(record.trace).root_observation_id, "seg-1-start")
+        self.assertEqual(env.trace_refs.trace_id, narrow(record.trace).trace_id)
+        self.assertTrue(narrow(env.trace_refs.trace_url).startswith("https://trace.example/"))
+        tracer = as_type(self.env.tracer, SegmentTracer)
+        self.assertEqual(tracer.segments[0][2], "start")
+        self.assertEqual(tracer.closed_segments, 1)
 
     async def test_resume_completes_and_flushes_run_finished(self) -> None:
         paused = await self.paused()
@@ -95,7 +97,7 @@ class TestStartAndResume(ServiceCase):
         record = self.env.run_store.get_run(paused.run_id)
         self.assertEqual(record.status, RunStatus.COMPLETED)
         self.assertGreater(record.state_revision, paused.state_revision)
-        report = Path(final.report_ref)
+        report = Path(narrow(final.report_ref))
         self.assertTrue(report.is_absolute() and report.name == "report.md" and report.is_file())
 
     async def test_resume_accepts_a_raw_json_mapping(self) -> None:
@@ -109,8 +111,9 @@ class TestStartAndResume(ServiceCase):
         service = self.service()
         await service.get_run(paused.run_id)
         await service.resume_run(paused.run_id, answer(paused))
-        self.assertEqual([s[2] for s in self.env.tracer.segments], ["status", "resume"])
-        self.assertEqual(self.env.tracer.closed_segments, 2)
+        tracer = as_type(self.env.tracer, SegmentTracer)
+        self.assertEqual([s[2] for s in tracer.segments], ["status", "resume"])
+        self.assertEqual(tracer.closed_segments, 2)
 
     async def test_duplicate_run_id_is_refused_without_touching_the_first(self) -> None:
         env = await self.service().start_run(self.rig.task_input(), run_id="run-fixed-1")
@@ -135,7 +138,7 @@ class TestHumanQuestion(ServiceCase):
         final = await self.service().resume_run(paused.run_id, raw)
         self.assertEqual(final.status, RunStatus.COMPLETED)
         stored = self.env.run_store.get_submission(paused.run_id, question.id)
-        self.assertEqual(stored.submission.relayed_by, "claude_code")
+        self.assertEqual(narrow(stored).submission.relayed_by, "claude_code")
 
     async def test_a_host_cannot_answer_a_human_question(self) -> None:
         paused = await self.paused()
@@ -154,7 +157,7 @@ class TestGetAndCancel(ServiceCase):
         before = self.env.run_store.get_run(paused.run_id)
         seen = await self.service().get_run(paused.run_id)
         self.assertEqual(seen.status, RunStatus.WAITING_HOST)
-        self.assertEqual(seen.pending_interaction.id, paused.pending_interaction.id)
+        self.assertEqual(narrow(seen.pending_interaction).id, paused.pending_interaction.id)
         self.assertEqual(self.env.run_store.get_run(paused.run_id), before)
 
     async def test_unknown_run_raises_run_not_found(self) -> None:
@@ -172,7 +175,7 @@ class TestGetAndCancel(ServiceCase):
         self.assertEqual(cancelled.status, RunStatus.CANCELLED)
         self.assertIsNone(cancelled.pending_interaction)
         record = self.env.run_store.get_run(paused.run_id)
-        self.assertEqual(record.cancel.by, "human:tester")
+        self.assertEqual(narrow(record.cancel).by, "human:tester")
         with self.assertRaises(SubmissionRejected) as caught:
             await self.service().resume_run(paused.run_id, answer(paused))
         self.assertEqual(caught.exception.code, RejectionCode.CANCELLED_OR_SUPERSEDED)
@@ -257,7 +260,7 @@ class TestProviderAndObservability(ServiceCase):
         env = await self.service(tracer=BrokenTracer()).start_run(self.rig.task_input())
         self.assertEqual(env.status, RunStatus.WAITING_HOST)
         self.assertEqual(env.trace_refs.observability, ObservabilityStatus.DEGRADED)
-        self.assertEqual(len(env.trace_refs.trace_id), 32)
+        self.assertEqual(len(narrow(env.trace_refs.trace_id)), 32)
 
     async def test_jev_is_built_and_closed_in_the_running_loop_only_when_routing(self) -> None:
         events: list[tuple[str, Any]] = []
@@ -272,7 +275,7 @@ class TestProviderAndObservability(ServiceCase):
 
         loop = asyncio.get_running_loop()
         service = self.service()
-        self.env.jev_factory = factory
+        self.env.jev_factory = cast(Any, factory)
         paused = await service.start_run(self.rig.task_input())
         await service.get_run(paused.run_id)  # a status segment must not build an adapter
         self.assertEqual([name for name, _ in events], ["built", "closed"])

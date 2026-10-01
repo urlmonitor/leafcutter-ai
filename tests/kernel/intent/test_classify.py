@@ -26,6 +26,7 @@ from kernel.intent import (
 from kernel.intent.classify import INTENT_PURPOSE, INTENT_QUESTION_ID, NEEDS_CONTEXT_ID, interpret
 from kernel.providers.base import JevInvalidResponse, JevUnavailable
 from kernel.providers.fakes import ScriptedJev, choice_answer
+from tests.kernel.helpers import as_json, narrow
 
 CFG = load_kernel_config().intent
 CORR = CorrelationIds()
@@ -90,14 +91,14 @@ class TestQuestion(unittest.IsolatedAsyncioTestCase):
         (question,) = batch.questions
         self.assertEqual((batch.purpose, question.id, question.kind),
                          (INTENT_PURPOSE, INTENT_QUESTION_ID, "choice"))
-        self.assertEqual(sorted(question.criteria), sorted([*ANSWER_KINDS, NEEDS_CONTEXT_ID]))
-        self.assertEqual(batch.state["task"]["goal"], "Pick a cache")
+        self.assertEqual(sorted(narrow(question.criteria)), sorted([*ANSWER_KINDS, NEEDS_CONTEXT_ID]))
+        self.assertEqual(as_json(batch.state)["task"]["goal"], "Pick a cache")
 
     async def test_the_clarified_goal_is_what_jev_classifies(self) -> None:
         jev = ScriptedJev().script(INTENT_PURPOSE, "intent.*", choice_answer("decision"))
         answers = [ClarificationAnswer("Decide which criterion to implement next.")]
         await _assess(jev, goal="Implement a critical acceptance criterion.", answers=answers)
-        goal = jev.batches[0].state["task"]["goal"]
+        goal = as_json(jev.batches[0].state)["task"]["goal"]
         self.assertTrue(goal.startswith("Decide which criterion to implement next."))
         self.assertIn("Implement a critical acceptance criterion.", goal)
 

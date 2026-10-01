@@ -28,6 +28,7 @@ from kernel.contracts import (
     schema_ids,
     utc_now,
 )
+from kernel.contracts.evidence import EvidenceInput
 from kernel.interaction.packets import FORBIDDEN_HOST_OPERATIONS
 from kernel.interaction.results import evidence_from_submission
 from tests.kernel.capabilities.support import invocation
@@ -42,7 +43,7 @@ RESEARCH_REQUEST = {"need": NEED}
 QUESTION_REQUEST = {"question": "Which store?", "free_text_allowed": False,
                     "choices": [{"id": "sqlite", "label": "SQLite", "consequences": "One file."},
                                 {"id": "files", "label": "Plain files"}]}
-REQUESTS = {"host.generate_options": OPTIONS_REQUEST, "host.synthesize": SYNTHESIS_REQUEST,
+REQUESTS: dict[str, dict[str, Any]] = {"host.generate_options": OPTIONS_REQUEST, "host.synthesize": SYNTHESIS_REQUEST,
             "host.research": RESEARCH_REQUEST, "host.formulate_question": QUESTION_REQUEST}
 FAKE_HASH = "f" * 64
 ANSWER_AFTER = timedelta(milliseconds=1500)
@@ -112,7 +113,8 @@ def conversion(capability_id: str, request: dict[str, Any], response: dict[str, 
     submission = InteractionSubmission(
         run_id=new_id("run"), interaction_id=packet.id, expected_state_revision=1,
         actor=Actor(id="host-1", kind=ActorKind.HOST), response_schema_id=out_schema,
-        response=response, usage=usage or [], new_evidence=new_evidence or [])
+        response=response, usage=usage or [],
+        new_evidence=[EvidenceInput.model_validate(e) for e in new_evidence or []])
     return HostConversion(
         packet=packet, submission=submission, invocation=inv, now=created + ANSWER_AFTER,
         extra_evidence=tuple(evidence_from_submission(packet, submission, created + ANSWER_AFTER)),

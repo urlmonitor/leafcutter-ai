@@ -18,6 +18,7 @@ import unittest
 from kernel.contracts import GapType, RoutingOutcome, RunStatus
 from kernel.providers.base import JevUnavailable
 from kernel.providers.fakes import choice_answer
+from tests.kernel.helpers import narrow
 from tests.kernel.scheduler.support import Rig, descriptor, root_item, with_limits
 
 NONE = "__NONE__"
@@ -70,7 +71,7 @@ class TestSelection(unittest.IsolatedAsyncioTestCase):
         rig.jev.script("kernel.route", "route.*", choice_answer("decide.a"))
         await rig.start()
         question = rig.jev.batches[0].questions[0]
-        self.assertEqual(sorted(question.criteria), [CONTEXT, NONE, "decide.a", "decide.b"])
+        self.assertEqual(sorted(narrow(question.criteria)), [CONTEXT, NONE, "decide.a", "decide.b"])
         self.assertEqual(question.template_id, "kernel.route")
 
 

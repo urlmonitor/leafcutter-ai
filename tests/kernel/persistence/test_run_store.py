@@ -14,8 +14,16 @@ import tempfile
 import unittest
 from datetime import UTC, datetime
 from pathlib import Path
+from typing import TYPE_CHECKING
 
-from kernel.contracts import HostWorkRequest, HumanQuestion, InteractionSubmission, RunEvent
+from kernel.contracts import (
+    Actor,
+    ActorKind,
+    HostWorkRequest,
+    HumanQuestion,
+    InteractionSubmission,
+    RunEvent,
+)
 from kernel.contracts.base import new_id
 from kernel.contracts.enums import RunStatus
 from kernel.persistence import (
@@ -29,6 +37,7 @@ from kernel.persistence import (
 )
 from kernel.persistence.fsutil import UnsafePathComponent
 from kernel.persistence.run_store import FileRunStore, RunStoreCorrupt
+from tests.kernel.helpers import narrow
 
 RUN = "run-0123456789abcdef"
 
@@ -41,7 +50,13 @@ def _event(seq: int, run_id: str = RUN, detail: str = "") -> RunEvent:
     return RunEvent(seq=seq, run_id=run_id, kind="k", at=datetime.now(UTC), detail=detail)
 
 
-class RunStoreContract:
+if TYPE_CHECKING:  # the mixin uses TestCase assertions; at runtime it stays a plain mixin
+    _Base = unittest.TestCase
+else:
+    _Base = object
+
+
+class RunStoreContract(_Base):
     """Behaviour every RunStorePort must share (mixed into the concrete test cases)."""
 
     def make_store(self) -> RunStorePort:
@@ -174,13 +189,13 @@ class TestFileRunStore(RunStoreContract, unittest.TestCase):
         store.create_run(_record())
         submission = InteractionSubmission(
             run_id=RUN, interaction_id="int-1", expected_state_revision=1,
-            actor={"id": "a", "kind": "host"}, response_schema_id="leafcutter.options.v1",
+            actor=Actor(id="a", kind=ActorKind.HOST), response_schema_id="leafcutter.options.v1",
             response={"options": []})
         first = SubmissionRecord(run_id=RUN, interaction_id="int-1", sha256="a" * 64,
                                  submission=submission)
         store.record_submission(first)
         store.record_submission(first.model_copy(update={"sha256": "b" * 64}))
-        self.assertEqual(self.make_store().get_submission(RUN, "int-1").sha256, "a" * 64)
+        self.assertEqual(narrow(self.make_store().get_submission(RUN, "int-1")).sha256, "a" * 64)
         self.assertIsNone(store.get_submission(RUN, "int-2"))
 
     def test_hostile_ids_never_touch_the_filesystem(self) -> None:

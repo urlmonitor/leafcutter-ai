@@ -21,7 +21,7 @@ from kernel.contracts.run import RunEnvelope
 from kernel.intent.classify import NEEDS_CONTEXT_ID
 from kernel.providers.fakes import ScriptedJev, choice_answer, noul_answer
 from tests.kernel.capabilities.support import script_decision
-from tests.kernel.helpers import make_scope
+from tests.kernel.helpers import as_json, make_scope, narrow
 from tests.kernel.integration.scenario_support import ScenarioCase
 
 Answer = tuple[str, float, float]
@@ -67,11 +67,11 @@ class IntentCase(ScenarioCase):
 
     def classified(self) -> list[str]:
         """Return the goals the classification question was asked about, in order."""
-        return [b.state["task"]["goal"] for b in self.jev.batches if b.purpose == "kernel.intent"]
+        return [as_json(b.state)["task"]["goal"] for b in self.jev.batches if b.purpose == "kernel.intent"]
 
     def report_text(self, envelope: RunEnvelope) -> str:
         """Return the Markdown report the envelope points to."""
-        return Path(envelope.report_ref).read_text(encoding="utf-8")
+        return Path(narrow(envelope.report_ref)).read_text(encoding="utf-8")
 
 
 # ====================================================================

@@ -13,6 +13,7 @@ import unittest
 
 from kernel.contracts import RunStatus, WorkItemStatus
 from kernel.interaction import SubmissionRejected, SubmitStatus
+from tests.kernel.helpers import narrow
 from tests.kernel.integration.test_formulate_routing import rig_with_formulation
 from tests.kernel.interaction.support import QUESTION, human_submission, raw_submission, start
 
@@ -33,8 +34,7 @@ class TestFailedFormulation(unittest.IsolatedAsyncioTestCase):
         except SubmissionRejected as exc:
             self.fail(f"unexpected rejection {exc}")
         self.assertIs(result.status, SubmitStatus.REPAIR_EXHAUSTED)
-        human = result.pending
-        self.assertIsNotNone(human)
+        human = narrow(result.pending)
         self.assertEqual(human["question"], QUESTION)
         final = await run.submit(human_submission(human, run.run_id, {"choice_id": "sqlite"}))
         items = list(final.state["work_items"].values())

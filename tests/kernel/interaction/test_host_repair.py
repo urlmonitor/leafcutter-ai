@@ -12,11 +12,13 @@ ARCHITECTURE: Real graph and `submit_interaction`; the bound is set through the 
 from __future__ import annotations
 
 import unittest
+from typing import Any
 
 from langgraph.types import Command
 
-from kernel.contracts import RunStatus, WorkItemStatus
+from kernel.contracts import HostWorkRequest, RunStatus, WorkItemStatus
 from kernel.interaction import RejectionCode, SubmissionRejected, SubmitStatus
+from tests.kernel.helpers import as_type
 from tests.kernel.interaction.support import BUNDLE, Started, host_rig, raw_submission, start
 
 BAD = {"evidence_ids": "not-a-list"}
@@ -51,7 +53,7 @@ class TestRepairBound(unittest.IsolatedAsyncioTestCase):
         self.assertEqual([r["code"] for r in again["rejections"]], ["schema_invalid"])
         self.assertIn("evidence_ids", again["rejections"][0]["message"])
         stored = run.rig.run_store.load_interaction(run.run_id, run.packet["id"])
-        self.assertEqual(len(stored.rejections), 1)
+        self.assertEqual(len(as_type(stored, HostWorkRequest).rejections), 1)
 
     async def test_a_valid_correction_within_the_bound_completes_the_item(self) -> None:
         run = await started(1)
@@ -93,7 +95,7 @@ class TestRepairBound(unittest.IsolatedAsyncioTestCase):
                 await run.submit(raw_submission(run.packet, run.run_id, revision=99))
             self.assertEqual(caught.exception.code, RejectionCode.STALE_REVISION)
         stored = run.rig.run_store.load_interaction(run.run_id, run.packet["id"])
-        self.assertEqual(stored.rejections, [])
+        self.assertEqual(as_type(stored, HostWorkRequest).rejections, [])
 
     async def test_a_late_submission_for_the_failed_item_is_reported_as_superseded(self) -> None:
         run = await started(0)
@@ -106,7 +108,7 @@ class TestRepairBound(unittest.IsolatedAsyncioTestCase):
 class TestRejectionDoesNotForkTheGraph(unittest.IsolatedAsyncioTestCase):
     """Resuming the graph directly with a rejected value keeps it on one branch."""
 
-    async def resume(self, run: Started, raw: dict) -> object:
+    async def resume(self, run: Started, raw: dict) -> Any:
         """Resume the paused graph exactly as any LangGraph client could."""
         return await run.graph.ainvoke(Command(resume=raw), run.config, context=run.context,
                                        version="v2", durability="sync")

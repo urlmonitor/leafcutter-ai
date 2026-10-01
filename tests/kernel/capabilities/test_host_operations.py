@@ -17,6 +17,7 @@ import asyncio
 import unittest
 from datetime import timedelta
 from pathlib import Path
+from typing import Any, cast
 
 from kernel.bootstrap import NATIVE_VERSION, build_bindings
 from kernel.capabilities.host import (
@@ -33,18 +34,19 @@ from kernel.contracts import (
     Usage,
     schema_ids,
 )
-from kernel.registry.adapter import load_registry
 from kernel.interaction.packets import FORBIDDEN_HOST_OPERATIONS
+from kernel.registry.adapter import load_registry
 from tests.kernel.capabilities.host_support import (
+    ANSWER_AFTER,
     OPTIONS_REQUEST,
     QUESTION_REQUEST,
     REQUESTS,
     RESEARCH_REQUEST,
-    SYNTHESIS_REQUEST,
-    ANSWER_AFTER,
     SCHEMAS,
+    SYNTHESIS_REQUEST,
     convert,
 )
+from tests.kernel.helpers import as_type, narrow
 
 NEEDLE = "zq" + "-" + "Xk29" + "Lm81" + "Pv07"  # assembled so the secret scanner sees no literal
 def inputs(capability_id: str, payload: dict, goal: str = "goal") -> TaskInputs:
@@ -83,7 +85,7 @@ class TestCompiler(unittest.TestCase):
                 self.assertEqual(compiled.template_version, "1.0.0")
                 self.assertIn(compiled.template_id, compiled.statement)
                 ref = parse_compiled_by([*compiled.requirements, compiled.compiled_by_line])
-                self.assertEqual((ref.template_id, ref.fingerprint),
+                self.assertEqual((narrow(ref).template_id, narrow(ref).fingerprint),
                                  (compiled.template_id, compiled.fingerprint))
                 self.assertEqual(template_versions(capability_id),
                                  {"host_template": f"{capability_id}.task@1.0.0"})
@@ -152,13 +154,13 @@ class TestBootstrapBindings(unittest.TestCase):
         table = build_bindings(load_registry(config))
         for capability_id in SCHEMAS:
             with self.subTest(capability_id):
-                executor = table.resolve(capability_id, NATIVE_VERSION)
-                self.assertIsInstance(executor, HostOperationExecutor)
+                executor = as_type(table.resolve(capability_id, NATIVE_VERSION),
+                                   HostOperationExecutor)
                 self.assertIs(executor.operation, OPERATIONS[capability_id])
                 compiled = executor.prepare(inputs(capability_id, REQUESTS[capability_id]))
                 self.assertEqual(compiled.template_id, f"{capability_id}.task")
                 with self.assertRaises(HostBindingExecuted):
-                    asyncio.run(executor.ainvoke(None, None))
+                    asyncio.run(executor.ainvoke(cast(Any, None), cast(Any, None)))
 
 
 class TestUsageAndDiagnostics(unittest.TestCase):
@@ -187,15 +189,15 @@ class TestUsageAndDiagnostics(unittest.TestCase):
     def test_the_result_records_the_template_fingerprint_and_time_to_answer(self) -> None:
         result = convert("host.synthesize", SYNTHESIS_REQUEST, {"findings": []})
         self.assertEqual(result.diagnostics["host_template"], "host.synthesize.task@1.0.0")
-        self.assertRegex(result.diagnostics["prompt_fingerprint"], r"^[0-9a-f]{16}$")
+        self.assertRegex(str(result.diagnostics["prompt_fingerprint"]), r"^[0-9a-f]{16}$")
         self.assertEqual(result.diagnostics["host_elapsed_ms"], 1500)
 
     def test_an_unconvertible_output_fails_the_result_instead_of_raising(self) -> None:
         result = convert("host.formulate_question", {"not": "a question"}, {
             "question": "Which store?", "free_text_allowed": True})
         self.assertIs(result.status, ResultStatus.FAILED)
-        self.assertEqual(result.error.code, "host_output_invalid")
-        self.assertFalse(result.error.retryable)
+        self.assertEqual(narrow(result.error).code, "host_output_invalid")
+        self.assertFalse(narrow(result.error).retryable)
 
 
 if __name__ == "__main__":

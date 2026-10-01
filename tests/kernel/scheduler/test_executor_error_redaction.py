@@ -34,8 +34,7 @@ class TestExecutorExceptionIsMasked(unittest.IsolatedAsyncioTestCase):
         rig = Rig([descriptor("decide.root")])
         rig.bind("decide.root", factory=explode)
         if redactor is not None:
-            plain = rig.runtime
-            rig.runtime = lambda: replace(plain(), redactor=redactor)
+            rig.runtime_wrap = lambda runtime: replace(runtime, redactor=redactor)
         _, _, state = await rig.start()
         self.assertEqual(state["outcome"].status, RunStatus.FAILED)
         error = state["outcome"].errors[0]

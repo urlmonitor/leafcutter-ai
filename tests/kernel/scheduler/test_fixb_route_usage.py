@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import unittest
 
-from kernel.contracts import CorrelationIds, Usage, schema_ids
+from kernel.contracts import CapabilityDescriptor, CorrelationIds, RequestKind, Usage, schema_ids
 from kernel.contracts.work import RequestBody
 from kernel.providers.base import JevBatch, JevResult
 from kernel.providers.fakes import ScriptedJev, choice_answer
@@ -31,9 +31,9 @@ class CostedJev(ScriptedJev):
             provider="jev", calls=1, cost_usd=cost, cost_provenance="reported")})
 
 
-def _entry(index: int, cap: object) -> RouteEntry:
+def _entry(index: int, cap: CapabilityDescriptor) -> RouteEntry:
     """Return a routing entry for one semantic request."""
-    body = RequestBody(kind="capability", goal=f"decide {index}",
+    body = RequestBody(kind=RequestKind("capability"), goal=f"decide {index}",
                        payload_schema=schema_ids.GOAL_REQUEST, payload={"goal": f"decide {index}"},
                        requested_output_schema=schema_ids.DECISION_REPORT)
     report = EligibilityReport(eligible=[cap], excluded=[], matched_ids=[],

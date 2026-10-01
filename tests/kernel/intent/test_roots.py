@@ -25,6 +25,7 @@ from kernel.intent.roots import (
     write_denial_reason,
 )
 from kernel.persistence.gap_store import BUILD_OPPORTUNITY_TYPES, is_build_opportunity
+from tests.kernel.helpers import narrow
 
 
 def _root(goal: str = "Where are tests saved?") -> Request:
@@ -88,23 +89,23 @@ class TestDeclines(unittest.TestCase):
 
     def test_change_is_a_plain_permission_type_decline(self) -> None:
         decline = decline_for("change")
-        self.assertEqual((decline.code, decline.gap_type),
+        self.assertEqual((narrow(decline).code, narrow(decline).gap_type),
                          ("out_of_scope_write", GapType.PERMISSION))
         self.assertEqual(
-            decline_limitation(decline),
+            decline_limitation(narrow(decline)),
             "out_of_scope_write: The V0 kernel is read-only; implementing or editing is not "
             "supported. You can ask it to decide what to implement or to find relevant "
             "evidence.")
 
     def test_out_of_domain_has_its_own_gap_type_that_is_not_a_build_opportunity(self) -> None:
         decline = decline_for("out_of_domain")
-        self.assertEqual((decline.code, decline.gap_type),
+        self.assertEqual((narrow(decline).code, narrow(decline).gap_type),
                          ("out_of_domain", GapType.OUT_OF_DOMAIN))
         self.assertNotIn(GapType.OUT_OF_DOMAIN, BUILD_OPPORTUNITY_TYPES)
         self.assertNotIn(GapType.PERMISSION, BUILD_OPPORTUNITY_TYPES)
         gap = CapabilityGap(
-            id="gap-0000000000000001", gap_key="k" * 16, gap_type=decline.gap_type, goal="weather",
-            normalized_need="weather", request_kind="capability", input_schema="i.v1",
+            id="gap-0000000000000001", gap_key="k" * 16, gap_type=narrow(decline).gap_type, goal="weather",
+            normalized_need="weather", request_kind=RequestKind("capability"), input_schema="i.v1",
             output_schema="o.v1")
         self.assertFalse(is_build_opportunity(gap))
 

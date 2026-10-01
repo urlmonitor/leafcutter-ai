@@ -19,13 +19,21 @@ from dataclasses import replace
 from pathlib import Path
 from typing import Any
 
-from kernel.contracts import ActorKind, Option, RunStatus, schema_ids
+from kernel.contracts import (
+    ActorKind,
+    ApprovalStatus,
+    Option,
+    ProposalStatus,
+    RunStatus,
+    schema_ids,
+)
 from kernel.contracts.payloads import DecisionReportPayload, OptionsPayload
 from kernel.interaction import SubmissionRejected, SubmitResult, submit_interaction
 from kernel.observability.tracer import RecordingTracer
 from kernel.providers.fakes import choice_answer
 from kernel.scheduler import build_kernel_graph
 from tests.kernel.capabilities.support import proposed_criteria
+from tests.kernel.helpers import as_json, narrow
 from tests.kernel.integration import test_wiring as wiring
 from tests.kernel.interaction.support import human_submission, raw_submission
 
@@ -36,10 +44,10 @@ CLARIFICATION = "We run everything offline on one laptop."
 def proposals(cited: list[str] | None = None) -> dict:
     """Return an options.v1 payload: two proposed options (citing `cited`) and two criteria."""
     refs = list(cited or [])
-    options = [Option(id="A", title="Use sqlite", proposal_status="proposed",
-                      approval_status="proposed", proposed_by="host", source_refs=refs),
-               Option(id="B", title="Use files", proposal_status="proposed",
-                      approval_status="proposed", proposed_by="host", source_refs=refs)]
+    options = [Option(id="A", title="Use sqlite", proposal_status=ProposalStatus("proposed"),
+                      approval_status=ApprovalStatus("proposed"), proposed_by="host", source_refs=refs),
+               Option(id="B", title="Use files", proposal_status=ProposalStatus("proposed"),
+                      approval_status=ApprovalStatus("proposed"), proposed_by="host", source_refs=refs)]
     criteria = [c.model_copy(update={"id": f"c{i}"}) for i, c in
                 enumerate(proposed_criteria(), start=1)]
     return OptionsPayload(options=options, proposed_criteria=criteria).model_dump(mode="json")
@@ -53,7 +61,7 @@ class ApprovalCase(wiring.WiringCase):
         self.tracer = RecordingTracer()
         self.routes = 0
 
-        def route(question: object, batch: object) -> object:
+        def route(question: Any, batch: Any) -> Any:
             self.routes += 1
             return choice_answer("__NEEDS_CONTEXT__", 0.9, 0.9) if self.routes == 1 \
                 else choice_answer("decision")
@@ -69,13 +77,13 @@ class ApprovalCase(wiring.WiringCase):
         return await submit_interaction(build_kernel_graph(self.saver), self.config_,
                                         self.runtime(), self.run_store, self.run_id, raw)
 
-    async def until_approval_question(self) -> dict:
+    async def until_approval_question(self) -> dict[str, Any]:
         """Drive clarification and the host options round; return the approval packet."""
         first = (await self.start(self.task_input(GOAL))).interrupts[0].value
         self.assertIn("question", first)  # the router's clarification
         clarified = await self.step(human_submission(
             first, self.run_id, {"free_text": CLARIFICATION}))
-        host = clarified.pending
+        host = narrow(clarified.pending)
         self.assertEqual(host["operation"], "generate_options")
         self.assertIn("proposed", str(host["output_json_schema"]))
         self.assertTrue(host["output_requirements"])
@@ -85,7 +93,7 @@ class ApprovalCase(wiring.WiringCase):
         asked = await self.step(raw_submission(
             host, self.run_id, kind=ActorKind.HOST, schema=schema_ids.OPTIONS,
             response=proposals(host["input_evidence_ids"])))
-        return asked.pending
+        return narrow(asked.pending)
 
     def check_input_artifact(self, host: dict) -> None:
         """The host packet points at a real file holding the request payload."""
@@ -107,7 +115,7 @@ class ApprovalCase(wiring.WiringCase):
     def assessed_criteria(self) -> dict[str, str]:
         """Return the criteria of the last Jev assessment (id to question)."""
         batches = [b for b in self.jev.batches if b.purpose == "decision.assess"]
-        return dict(batches[-1].state["criteria"])
+        return dict(as_json(batches[-1].state)["criteria"])
 
 
 class TestStructuredApproval(ApprovalCase):
@@ -163,7 +171,8 @@ class TestStructuredApproval(ApprovalCase):
 
     async def test_a_host_cannot_approve_the_proposals_it_generated(self) -> None:
         first = (await self.start(self.task_input(GOAL))).interrupts[0].value
-        host = (await self.step(human_submission(first, self.run_id, {"free_text": "x"}))).pending
+        host = narrow(
+            (await self.step(human_submission(first, self.run_id, {"free_text": "x"}))).pending)
         preapproved = proposals()
         preapproved["proposed_criteria"][0].update(approval_status="approved", approved_by="host")
         with self.assertRaises(SubmissionRejected) as caught:

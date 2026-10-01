@@ -15,7 +15,7 @@ import logging
 import tempfile
 import unittest
 from pathlib import Path
-from typing import TypedDict
+from typing import Any, TypedDict
 
 from langgraph.graph import END, START, StateGraph
 from langgraph.types import Command, interrupt
@@ -28,7 +28,6 @@ from kernel.persistence.checkpointer import (
     open_checkpointer,
 )
 from tests.kernel.helpers import make_evidence
-
 
 _EVIDENCE = make_evidence()
 
@@ -49,7 +48,7 @@ def _ask(state: _State) -> _State:
     return {"answer": interrupt({"need": "answer"})}
 
 
-def _graph(saver: object) -> object:
+def _graph(saver: Any) -> Any:
     builder = StateGraph(_State)
     builder.add_node("seed", lambda state: {"evidence": _EVIDENCE})
     builder.add_node("ask", _ask)

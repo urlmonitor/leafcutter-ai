@@ -13,6 +13,7 @@ from __future__ import annotations
 import copy
 import json
 from pathlib import Path
+from typing import Any, Literal
 
 from kernel.providers.base import JevBatch, QuestionSpec
 from kernel.providers.jev import TypeSafeJevAdapter
@@ -26,9 +27,9 @@ def body() -> dict:
     return copy.deepcopy(json.loads(FIXTURE.read_text(encoding="utf-8")))
 
 
-def spec(kind: str, qid: str) -> QuestionSpec:
+def spec(kind: Literal["noul", "choice", "score"], qid: str) -> QuestionSpec:
     """Return a question of the given kind with fixed criteria."""
-    criteria: dict | list | None = None
+    criteria: dict[str, str] | list[str] | None = None
     if kind == "choice":
         criteria = {"alpha": "first", "beta": "second", "__NONE__": "neither"}
     elif kind == "score":
@@ -56,16 +57,16 @@ class Sleeper:
         self.delays.append(seconds)
 
 
-def make_adapter(transport: object, sleeper: Sleeper, **overrides: object) -> TypeSafeJevAdapter:
+def make_adapter(transport: Any, sleeper: Sleeper, **overrides: Any) -> TypeSafeJevAdapter:
     """Build an adapter with small, test-friendly limits."""
-    params = {"timeout_seconds": 5.0, "max_questions_per_call": 20, "max_state_chars": 10000,
+    params: dict[str, Any] = {"timeout_seconds": 5.0, "max_questions_per_call": 20, "max_state_chars": 10000,
               "max_retries": 2, "retry_backoff_seconds": 1.0,
               "price_per_input_token_usd": 4.2e-8, "sleep": sleeper}
     params.update(overrides)
     return TypeSafeJevAdapter(transport, **params)
 
 
-def http_transport(handler: object) -> tuple[object, object]:
+def http_transport(handler: Any) -> tuple[object, object]:
     """Return (HttpTransport over httpx MockTransport, the httpx module)."""
     import httpx  # noqa: PLC0415
 
@@ -76,7 +77,7 @@ def http_transport(handler: object) -> tuple[object, object]:
                          client=client), httpx
 
 
-def classifier_transport(handler: object) -> tuple[object, object]:
+def classifier_transport(handler: Any) -> tuple[object, object]:
     """Return (ClassifierTransport over httpx2 MockTransport, the httpx2 module)."""
     import httpx2  # noqa: PLC0415
 

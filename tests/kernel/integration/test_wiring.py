@@ -58,7 +58,7 @@ from kernel.scheduler import (
     run_config,
 )
 from tests.kernel.capabilities.support import decision_payload, no_git, script_decision
-from tests.kernel.helpers import ScriptedExecutor, make_scope
+from tests.kernel.helpers import ScriptedExecutor, as_json, make_scope
 
 CONFIG_DIR = Path(__file__).resolve().parents[3] / "config"
 HOST_IDS = ("host.formulate_question", "host.generate_options", "host.research",
@@ -188,7 +188,7 @@ class TestGoalRoutedToDecision(WiringCase):
         batches = [b for b in self.jev.batches if b.purpose == "decision.assess"]
         self.assertTrue(batches)
         # Seam 5: the task constraint reaches the decision's Jev state through the context.
-        self.assertIn(f"[must] policy: {CONSTRAINT}", batches[0].state["constraints"])
+        self.assertIn(f"[must] policy: {CONSTRAINT}", as_json(batches[0].state)["constraints"])
 
 
 class TestInsufficientEvidenceLoop(WiringCase):

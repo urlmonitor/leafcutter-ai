@@ -13,8 +13,10 @@ from __future__ import annotations
 
 import asyncio
 import os
+from typing import Literal
 
 import pytest
+from pydantic import JsonValue
 
 from kernel.config import load_kernel_config
 from kernel.providers import JevBatch, JevUnavailable, QuestionSpec
@@ -22,7 +24,7 @@ from kernel.providers.jev import TypeSafeJevAdapter
 from kernel.secrets import load_secrets
 
 LIVE = os.environ.get("LEAFCUTTER_KERNEL_LIVE") == "1"
-STATE = {
+STATE: dict[str, JsonValue] = {
     "request": {"goal": "Cache computed reports between runs.",
                 "question": "Should the cache live in SQLite or in flat JSON files?"},
     "facts": {"existing_storage": "The project already ships a SQLite file for run state."},
@@ -64,7 +66,7 @@ async def _assess_and_close(adapter: TypeSafeJevAdapter, batch: JevBatch):
         await adapter.aclose()
 
 
-def _run(transport: str) -> None:
+def _run(transport: Literal["classifier", "http"]) -> None:
     """Assess the batch live on one transport and check the normalised result."""
     adapter = TypeSafeJevAdapter.from_config(load_kernel_config(env={}), _api_key(),
                                              transport=transport)

@@ -14,6 +14,7 @@ from __future__ import annotations
 import asyncio
 import json
 import unittest
+from typing import Any, cast
 
 from kernel.observability.observation_map import observation_type
 from kernel.providers.jev import TypeSafeJevAdapter
@@ -63,7 +64,7 @@ class TestExportedTypes(_Harness):
         transport, lib = kit.http_transport(lambda req: holder[0].Response(200, json=kit.body()))
         holder.append(lib)
         adapter = TypeSafeJevAdapter(
-            transport, timeout_seconds=5.0, max_questions_per_call=20, max_state_chars=10000,
+            cast(Any, transport), timeout_seconds=5.0, max_questions_per_call=20, max_state_chars=10000,
             max_retries=0, retry_backoff_seconds=0.0, price_per_input_token_usd=4.2e-8,
             tracer=tracer, model_name="jev-cfg")
         batch = kit.mixed_batch("kernel.route").model_copy(update={"correlation": self.corr})

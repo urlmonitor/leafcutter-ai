@@ -19,6 +19,7 @@ from datetime import UTC, datetime
 from kernel.contracts import ActorKind, RunStatus, schema_ids
 from kernel.interaction import RejectionCode, SubmissionRejected, SubmitStatus, submission_hash
 from kernel.persistence import CancelInfo
+from tests.kernel.helpers import narrow
 from tests.kernel.interaction.support import (
     BUNDLE,
     Started,
@@ -196,8 +197,8 @@ class TestReplayAndLedger(RejectionCase):
         result = await run.submit(raw)
         self.assertEqual(result.status, SubmitStatus.ACCEPTED)
         entry = run.rig.run_store.get_submission(run.run_id, run.packet["id"])
-        self.assertEqual(entry.sha256, submission_hash(entry.submission))
-        self.assertEqual(entry.submission.actor.kind, ActorKind.HOST)
+        self.assertEqual(narrow(entry).sha256, submission_hash(narrow(entry).submission))
+        self.assertEqual(narrow(entry).submission.actor.kind, ActorKind.HOST)
 
     async def test_identical_replay_idempotent(self) -> None:
         run = await two_host_items()
@@ -236,13 +237,13 @@ class TestReplayAndLedger(RejectionCase):
         self.assertEqual(after["outcome"], before["outcome"])
         self.assertEqual(len(after["events"]), len(before["events"]))
         entry = run.rig.run_store.get_submission(run.run_id, run.packet["id"])
-        self.assertEqual(entry.submission.response, {"choice_id": "sqlite"})
+        self.assertEqual(narrow(entry).submission.response, {"choice_id": "sqlite"})
 
     async def test_stale_submission_for_a_repacketed_head_is_rejected(self) -> None:
         run = await two_host_items()
         first = await run.submit(raw_submission(run.packet, run.run_id))
         self.assertEqual(first.status, SubmitStatus.ACCEPTED)
-        second = first.pending
+        second = narrow(first.pending)
         self.assertNotEqual(second["id"], run.packet["id"])
         stale = raw_submission(second, run.run_id, revision=run.packet["state_revision"] - 1)
         await self.assertRejected(run, stale, RejectionCode.STALE_REVISION)

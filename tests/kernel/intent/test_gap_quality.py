@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import unittest
 from datetime import UTC, datetime, timedelta
+from typing import Any
 
 from kernel.contracts import CapabilityGap, GapType, compute_gap_key
 from kernel.contracts.decision import ExcludedCandidate
@@ -71,9 +72,9 @@ class TestReadableNeed(unittest.TestCase):
         self.assertEqual(one, two)
 
 
-def _gap(**changes) -> CapabilityGap:
+def _gap(**changes: Any) -> CapabilityGap:
     now = datetime(2026, 10, 1, 4, 23, tzinfo=UTC)
-    fields = dict(id="gap-0000000000000001", gap_key="k" * 16, gap_type=GapType.UNSUPPORTED, goal="Come up with ideas",
+    fields: dict[str, Any] = dict(id="gap-0000000000000001", gap_key="k" * 16, gap_type=GapType.UNSUPPORTED, goal="Come up with ideas",
                   normalized_need="come ideas up", need_title="Come up with ideas",
                   request_kind="capability", input_schema="i.v1", output_schema="o.v1",
                   candidates_considered=["research", "retrieve.repository"],

@@ -15,6 +15,7 @@ from __future__ import annotations
 import unittest
 from datetime import UTC, datetime, timedelta
 from types import SimpleNamespace
+from typing import Any, cast
 
 from kernel.contracts import CapabilityGap, GapType, RunStatus, Usage
 from kernel.intent.roots import write_denial_reason
@@ -24,15 +25,16 @@ from kernel.persistence.gap_store import publish_gap, render_gap_draft
 from kernel.persistence.memory import MemoryGapStore
 from kernel.scheduler import guards
 from kernel.scheduler.nodes_lifecycle import render_report_md
-from kernel.scheduler.state import Budgets, RunOutcome
+from kernel.scheduler.state import Budgets, KernelState, RunOutcome
 from kernel.service_envelope import _usage
+from tests.kernel.helpers import narrow
 from tests.kernel.intent.support import SURE, IntentCase
 
 NOW = datetime(2026, 10, 1, 4, 23, tzinfo=UTC)
 
 
-def _gap(**changes) -> CapabilityGap:
-    fields = dict(
+def _gap(**changes: Any) -> CapabilityGap:
+    fields: dict[str, Any] = dict(
         id="gap-0000000000000001", gap_key="k" * 16, gap_type=GapType.HOST_ONLY,
         goal="Where are tests saved in leafcutter?", normalized_need="synthesize_evidence",
         need_title="Where are tests saved in leafcutter?", request_kind="synthesis",
@@ -58,18 +60,18 @@ class TestGapRecords(unittest.TestCase):
     def test_a_draft_is_titled_from_the_need_not_the_root_goal(self) -> None:
         store = MemoryGapStore()
         stored = publish_gap(store, _gap())
-        self.assertIsNotNone(stored.proposal)
-        self.assertNotIn("Where are tests saved", stored.proposal.title)
-        self.assertIn("synthesis", stored.proposal.title)
-        draft = store.drafts[stored.proposal.draft_ref]
+        self.assertIsNotNone(narrow(stored).proposal)
+        self.assertNotIn("Where are tests saved", narrow(narrow(stored).proposal).title)
+        self.assertIn("synthesis", narrow(narrow(stored).proposal).title)
+        draft = store.drafts[narrow(narrow(narrow(stored).proposal).draft_ref)]
         self.assertNotIn("Where are tests saved", draft.split("\n")[0])
 
     def test_an_evidence_gap_is_titled_by_its_category(self) -> None:
         gap = _gap(request_kind="evidence", normalized_need="authoritative_guidance",
                    need_title="Official documentation ... Question: Where are tests saved?")
         stored = publish_gap(MemoryGapStore(), gap)
-        self.assertIn("authoritative_guidance", stored.proposal.title)
-        self.assertNotIn("Where are tests saved", stored.proposal.title)
+        self.assertIn("authoritative_guidance", narrow(narrow(stored).proposal).title)
+        self.assertNotIn("Where are tests saved", narrow(narrow(stored).proposal).title)
 
     def test_a_host_only_gap_with_a_native_twin_still_gets_a_draft(self) -> None:
         store = MemoryGapStore()
@@ -77,8 +79,8 @@ class TestGapRecords(unittest.TestCase):
                     why_insufficient="host-backed only; native alternatives for this request "
                                      "kind: research, retrieve.repository")
         stored = publish_gap(store, twin)
-        self.assertIsNotNone(stored.proposal)
-        self.assertIn("native alternatives", store.drafts[stored.proposal.draft_ref])
+        self.assertIsNotNone(narrow(stored).proposal)
+        self.assertIn("native alternatives", store.drafts[narrow(narrow(narrow(stored).proposal).draft_ref)])
 
     def test_a_declined_gap_does_not_claim_a_report_schema(self) -> None:
         text = render_gap_draft(_gap(gap_type=GapType.UNSUPPORTED, output_schema="none"))
@@ -112,12 +114,12 @@ class TestUsageRows(unittest.TestCase):
         return guards.account_usage(Budgets(jev_calls=1, host_operations=1), usages, None)
 
     def test_jev_rows_carry_the_model_id_and_the_summed_cost(self) -> None:
-        jev = dict(provider="jev", model_id="jev-1.13.0", input_tokens=100, output_tokens=10,
+        jev: dict[str, Any] = dict(provider="jev", model_id="jev-1.13.0", input_tokens=100, output_tokens=10,
                    cost_usd=0.001, cost_provenance="estimated", calls=1)
         summary = _usage({"budgets": self._budgets(Usage(**jev), Usage(**jev))})
         (row,) = summary.usage
         self.assertEqual((row.provider, row.model_id, row.calls), ("jev", "jev-1.13.0", 2))
-        self.assertAlmostEqual(row.cost_usd, 0.002)
+        self.assertAlmostEqual(narrow(row.cost_usd), 0.002)
         self.assertEqual(row.cost_provenance, "estimated")
         self.assertEqual((row.input_tokens, row.output_tokens), (200, 20))
 
@@ -151,10 +153,10 @@ class TestUsageRows(unittest.TestCase):
 class TestTraceLink(unittest.TestCase):
     """The report names the Langfuse trace so a reader can open it."""
 
-    def _state(self, trace: TraceState | None) -> dict:
-        return {"run_id": "run-0000000000000001", "work_items": {},
+    def _state(self, trace: TraceState | None) -> KernelState:
+        return cast(KernelState, {"run_id": "run-0000000000000001", "work_items": {},
                 "task": SimpleNamespace(original_goal="Where are tests saved?"),
-                **({"trace": trace} if trace else {})}
+                **({"trace": trace} if trace else {})})
 
     def test_report_md_links_the_trace_when_tracing_exported_one(self) -> None:
         url = "https://cloud.langfuse.com/project/p/traces/abc"

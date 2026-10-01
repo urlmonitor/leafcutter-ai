@@ -21,6 +21,7 @@ from kernel.contracts.base import new_id
 from kernel.persistence import RunRecord
 from kernel.persistence.fsutil import file_lock
 from kernel.persistence.run_store import FileRunStore
+from tests.kernel.helpers import narrow
 
 ROOT = Path(__file__).resolve().parents[3]
 
@@ -51,7 +52,7 @@ class TestCrossProcessCompareAndUpdate(unittest.TestCase):
             self.assertEqual(sorted(out.values()), [False, True], out)
             winner = next(label for label, won in out.items() if won)
             stored = store.get_run(record.run_id)
-            self.assertEqual(stored.cancel.by, winner)
+            self.assertEqual(narrow(stored.cancel).by, winner)
             self.assertEqual(stored.state_revision, 1)
 
 

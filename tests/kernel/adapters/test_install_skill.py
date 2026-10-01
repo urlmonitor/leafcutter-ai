@@ -19,13 +19,13 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from kernel.adapters.cli import main
 from kernel.adapters.claude_code.install import (
     MARKER,
     InstallRefused,
     install_skill,
     render_skill,
 )
+from kernel.adapters.cli import main
 
 HAND_WRITTEN = "---\nname: leafcutter\n---\nThe hub command.\n"
 

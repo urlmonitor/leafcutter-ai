@@ -17,6 +17,7 @@ import unittest
 
 from kernel.contracts import GapType, RunStatus, Usage, schema_ids
 from kernel.persistence.gap_store import is_build_opportunity
+from tests.kernel.helpers import narrow
 from tests.kernel.intent.support import SURE, IntentCase
 
 WEATHER = "How is the weather today?"
@@ -43,9 +44,10 @@ class TestTokenTotals(IntentCase):
                             calls=1))
         self.intents = [("evidence", *SURE)]
         envelope = await self.service().start_run(self.goal_task("Where is the capability shape?"))
-        self.assertGreater(envelope.usage_summary.jev_calls, 1)
+        calls = narrow(envelope.usage_summary.jev_calls)
+        self.assertGreater(calls, 1)
         self.assertEqual(envelope.usage_summary.input_tokens,
-                         100 * envelope.usage_summary.jev_calls)
+                         100 * calls)
         again = await self.service().get_run(envelope.run_id)
         self.assertEqual(again.usage_summary.input_tokens, envelope.usage_summary.input_tokens)
 
@@ -111,7 +113,7 @@ class TestDecisionDescription(IntentCase):
 
     def test_the_decision_capability_says_it_also_decides_what_to_do_and_generates_options(
             self) -> None:
-        text = self.snapshot.get("decision").description
+        text = narrow(self.snapshot.get("decision")).description
         self.assertIn("which option to pick", text)
         self.assertIn("what to do", text)
         self.assertIn("not known yet", text)

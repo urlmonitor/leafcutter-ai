@@ -20,7 +20,7 @@ from kernel.capabilities.retrieval import knowledge_map as km
 from kernel.capabilities.retrieval.access import ReadPolicy
 from kernel.capabilities.retrieval.candidates import SearchReport
 from kernel.config import SourceConfig, load_kernel_config
-from kernel.contracts import schema_ids
+from kernel.contracts import Priority, schema_ids
 from kernel.contracts.decision import Criterion, Option
 from kernel.contracts.enums import (
     DecisionStatus,
@@ -38,7 +38,7 @@ def _only_supporting_payload() -> dict:
     """A decision request whose only criterion is supporting, with one option."""
     return DecisionRequestPayload(
         question="Where should run state live?", options=[Option(id="A", title="Use sqlite")],
-        criteria=[Criterion(id="s1", question="Is it simple?", priority="supporting")],
+        criteria=[Criterion(id="s1", question="Is it simple?", priority=Priority("supporting"))],
     ).model_dump(mode="json")
 
 

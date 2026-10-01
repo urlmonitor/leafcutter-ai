@@ -15,10 +15,12 @@ from __future__ import annotations
 import json
 import unittest
 from collections.abc import Sequence
+from typing import Any
 from unittest import mock
 
 from kernel.capabilities.base import ExecutionContext
 from kernel.capabilities.retrieval import versioning
+from kernel.contracts import Priority
 from kernel.contracts.base import content_hash, evidence_id, new_id, utc_now
 from kernel.contracts.capability import CapabilityResult
 from kernel.contracts.decision import Criterion, Option
@@ -39,12 +41,12 @@ def evidence_item(locator: str, excerpt: str,
                   category: EvidenceCategory = EvidenceCategory.PRIOR_DECISIONS) -> Evidence:
     """Return a valid content-addressed Evidence item of the given category."""
     digest = content_hash(excerpt)
-    return Evidence(
-        id=evidence_id(locator, digest), category=category, semantic_type="repository_fact",
-        excerpt=excerpt, content_hash=digest,
-        source={"id": "repo.decisions", "kind": "repository_file", "locator": locator,
-                "source_version": {"commit": "abc1234567", "dirty": False}},
-        provenance={"producer": "test"})
+    return Evidence.model_validate({
+        "id": evidence_id(locator, digest), "category": category,
+        "semantic_type": "repository_fact", "excerpt": excerpt, "content_hash": digest,
+        "source": {"id": "repo.decisions", "kind": "repository_file", "locator": locator,
+                   "source_version": {"commit": "abc1234567", "dirty": False}},
+        "provenance": {"producer": "test"}})
 
 
 def invocation(capability_id: str, schema: str, payload: dict, *, work_item_id: str | None = None,
@@ -83,11 +85,11 @@ def child(ctx: ExecutionContext, kind: RequestKind, schema: str, payload: dict |
                         output_schema_id=schema, result_ref=ref)
 
 
-def decision_payload(options: bool = True, criteria: bool = True, **extra: object) -> dict:
+def decision_payload(options: bool = True, criteria: bool = True, **extra: Any) -> dict:
     """Return a decision_request.v1 payload (options A/B, criteria c1/c2 by default)."""
     opts = [Option(id="A", title="Use sqlite"), Option(id="B", title="Use files")]
     crit = [Criterion(id="c1", question="Is it safe for concurrent writers?"),
-            Criterion(id="c2", question="Is it simple to operate?", priority="supporting")]
+            Criterion(id="c2", question="Is it simple to operate?", priority=Priority("supporting"))]
     body = DecisionRequestPayload(
         question="Where should run state live?", options=opts if options else [],
         criteria=crit if criteria else [], criteria_missing=not criteria, **extra)
@@ -116,7 +118,7 @@ def script_decision(jev: ScriptedJev, params: dict | None = None) -> dict:
 
     Keys: sufficient, satisfies ({(crit, opt): p}), default_sat, missing, preference, conflict.
     """
-    p = {"sufficient": 0.95, "satisfies": {}, "default_sat": 0.05, "missing": "none",
+    p: dict[str, Any] = {"sufficient": 0.95, "satisfies": {}, "default_sat": 0.05, "missing": "none",
          "preference": 0.05, "conflict": 0.05}
     p.update(params or {})
 

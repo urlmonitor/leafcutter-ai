@@ -21,6 +21,7 @@ from kernel.capabilities.host import parse_compiled_by
 from kernel.contracts import ResultStatus, RunStatus, Verification, schema_ids
 from kernel.interaction import SubmitStatus
 from tests.kernel.capabilities.host_support import SCHEMAS
+from tests.kernel.helpers import narrow
 from tests.kernel.interaction.host_rigs import (
     OPERATIONS,
     RESPONSES,
@@ -60,7 +61,7 @@ class TestEveryOperationThroughTheGraph(unittest.IsolatedAsyncioTestCase):
                 run = await start(host_rig(capability_id))
                 packet = run.packet
                 ref = parse_compiled_by(packet["output_requirements"])
-                self.assertEqual(ref.template_id, f"{capability_id}.task")
+                self.assertEqual(narrow(ref).template_id, f"{capability_id}.task")
                 self.assertTrue(packet["goal"].startswith(f"[{capability_id}.task v1.0.0]"))
                 self.assertIn(packet["output_schema_id"], packet["goal"])
                 self.assertIn("edit_repository", packet["goal"])
@@ -120,7 +121,7 @@ class TestHostTelemetry(unittest.IsolatedAsyncioTestCase):
             with self.subTest(capability_id):
                 run, payload = await self.answered(capability_id)
                 ref = parse_compiled_by(run.packet["output_requirements"])
-                self.assertEqual(payload["prompt_fingerprint"], ref.fingerprint)
+                self.assertEqual(payload["prompt_fingerprint"], narrow(ref).fingerprint)
                 self.assertEqual(payload["template"], f"{capability_id}.task@1.0.0")
                 self.assertEqual(payload["prompt"], run.packet["goal"])
                 self.assertEqual(payload["result_status"], "completed")

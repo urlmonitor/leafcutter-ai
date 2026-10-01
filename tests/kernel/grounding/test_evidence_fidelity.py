@@ -29,6 +29,7 @@ from kernel.contracts.payloads import RetrievalRequestPayload
 from kernel.contracts.schema_catalog import validate_payload
 from kernel.interaction.packets import tightened_schema
 from tests.kernel.capabilities.host_support import conversion, evidence_json
+from tests.kernel.helpers import narrow
 
 INDENTED = "    def run(self):\n        return 1\n  \n"
 LOCATOR = "kernel/service.py#L10-L12"
@@ -36,10 +37,11 @@ LOCATOR = "kernel/service.py#L10-L12"
 
 def _evidence(excerpt: str) -> Evidence:
     digest = content_hash(excerpt)
-    return Evidence(id=evidence_id(LOCATOR, digest), category="task_context",
-                    semantic_type="repository_fact", excerpt=excerpt, content_hash=digest,
-                    source={"id": "s", "kind": "repository_file", "locator": LOCATOR},
-                    provenance={"producer": "test"})
+    return Evidence.model_validate({
+        "id": evidence_id(LOCATOR, digest), "category": "task_context",
+        "semantic_type": "repository_fact", "excerpt": excerpt, "content_hash": digest,
+        "source": {"id": "s", "kind": "repository_file", "locator": LOCATOR},
+        "provenance": {"producer": "test"}})
 
 
 class TestVerbatimExcerpts(unittest.TestCase):
@@ -54,7 +56,7 @@ class TestVerbatimExcerpts(unittest.TestCase):
                                                     "question": "q"}},
                          {"evidence_ids": [item["id"]], "evidence": [item],
                           "coverage": {"need-1": "satisfied"}})
-        result = host_operation("host.research").convert(ctx)
+        result = narrow(host_operation("host.research")).convert(ctx)
         kept = result.evidence[0]
         self.assertEqual(kept.excerpt, INDENTED)
         self.assertEqual(kept.content_hash, content_hash(INDENTED))
@@ -69,8 +71,8 @@ class TestVerbatimExcerpts(unittest.TestCase):
         built = build_evidence(Ranked(cand, 0.9, 0), RetrievalRequestPayload(need=need),
                                EvidenceCategory.EXISTING_PATTERNS, None, "inv-0",
                                datetime.now(UTC), None, ["run"])
-        self.assertEqual(built.excerpt, INDENTED)
-        self.assertEqual(built.content_hash, content_hash(built.excerpt))
+        self.assertEqual(narrow(built).excerpt, INDENTED)
+        self.assertEqual(narrow(built).content_hash, content_hash(narrow(narrow(built).excerpt)))
 
     def test_a_caller_supplied_excerpt_keeps_its_indentation(self) -> None:
         item = EvidenceInput(title="t", excerpt=INDENTED)
@@ -102,13 +104,13 @@ class TestHostSchemaConsistency(unittest.TestCase):
         validate_payload(schema_ids.EVIDENCE_BUNDLE, response)
         ctx = conversion("host.research", {"need": {"id": "need-1", "category": "task_context",
                                                     "question": "q"}}, response)
-        kept = host_operation("host.research").convert(ctx).evidence[0]
+        kept = narrow(host_operation("host.research")).convert(ctx).evidence[0]
         self.assertEqual(kept.content_hash, content_hash(INDENTED))
         self.assertEqual(kept.id, evidence_id(LOCATOR, kept.content_hash))
 
     def test_the_instructions_still_forbid_inventing_ids_and_hashes(self) -> None:
         op = host_operation("host.research")
-        text = " ".join(op.requirements(None))
+        text = " ".join(narrow(op).requirements(None))
         self.assertIn("Do not invent content hashes, ids", text)
 
 

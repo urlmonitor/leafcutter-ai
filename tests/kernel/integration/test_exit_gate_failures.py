@@ -16,8 +16,9 @@ from __future__ import annotations
 
 import unittest
 
-from kernel.contracts import RunStatus, schema_ids
+from kernel.contracts import HostWorkRequest, HumanQuestion, RunStatus, schema_ids
 from kernel.providers.base import JevUnavailable
+from tests.kernel.helpers import as_type, narrow, out_payload
 from tests.kernel.integration.scenario_support import (
     DOMAINS,
     FakeHostResponder,
@@ -55,11 +56,11 @@ class TestConflictingEvidence(ScenarioCase):
             "findings": [], "disagreements": ["ADR-900 and a newer note disagree"]}})
         paused = await self.service().start_run(self.task("primary", known_basis=True))
         self.assertEqual(paused.status, RunStatus.WAITING_HOST)
-        self.assertEqual(paused.pending_interaction.operation, "synthesize_evidence")
+        self.assertEqual(as_type(paused.pending_interaction, HostWorkRequest).operation, "synthesize_evidence")
         asked = await self.service().resume_run(paused.run_id, responder.answer(paused))
         self.assertEqual(asked.status, RunStatus.WAITING_HUMAN)  # blocking conflict escalates
         self.assertIsNone(asked.output)
-        self.assertTrue(asked.pending_interaction.question)
+        self.assertTrue(as_type(asked.pending_interaction, HumanQuestion).question)
         values = await self.checkpoint_values(asked.run_id)
         recorded = {d.status.value for d in values["decisions"].values()}
         self.assertIn("needs_human", recorded)
@@ -81,7 +82,7 @@ class TestUnknownBilling(ScenarioCase):
         envelope = await self.service().start_run(self.task("primary", known_basis=True))
         self.assertEqual(envelope.status, RunStatus.COMPLETED)
         usage = envelope.usage_summary
-        self.assertGreaterEqual(usage.jev_calls, 1)
+        self.assertGreaterEqual(narrow(usage.jev_calls), 1)
         self.assertIsNone(usage.input_tokens)
         self.assertIsNone(usage.output_tokens)
         self.assertIsNone(usage.cost_usd_known)
@@ -103,7 +104,7 @@ class TestMaliciousSourceInstructions(ScenarioCase):
         quoted = [e for e in values["evidence"].values() if "IGNORE ALL PREVIOUS" in e.excerpt]
         self.assertTrue(quoted)  # kept as inspectable evidence ...
         self.assertEqual(values["permissions"], task.permissions)  # ... but granted nothing
-        self.assertEqual(envelope.output.payload["selected_option_id"], "A")  # not "option B"
+        self.assertEqual(out_payload(envelope)["selected_option_id"], "A")  # not "option B"
         self.assertFalse([c for c in self.capabilities_used(values) if c.startswith("host.")])
         self.assertEqual(values["task"].scope, task.scope)  # scope unchanged
         for batch in self.jev.batches:

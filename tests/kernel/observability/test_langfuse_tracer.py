@@ -18,6 +18,7 @@ import tempfile
 import unittest
 import uuid
 from pathlib import Path
+from typing import Any
 from unittest import mock
 
 from langfuse import Langfuse
@@ -31,6 +32,8 @@ from kernel.contracts.enums import ObservabilityStatus
 from kernel.observability import Tracer, deterministic_trace_id
 from kernel.observability.langfuse_tracer import LangfuseTracer
 from kernel.secrets import SecretSettings
+from tests.kernel.helpers import narrow
+
 
 class _BoomError(ValueError):
     """Error raised inside a span body."""
@@ -76,11 +79,11 @@ class _Harness(unittest.TestCase):
         return by_name
 
     @staticmethod
-    def attrs(span: object) -> dict:
+    def attrs(span: Any) -> dict:
         return dict(span.attributes)
 
     @staticmethod
-    def meta(span: object) -> dict:
+    def meta(span: Any) -> dict:
         prefix = "langfuse.observation.metadata."
         return {k[len(prefix):]: v for k, v in dict(span.attributes).items()
                 if k.startswith(prefix)}
@@ -132,7 +135,7 @@ class TestTraceStructure(_Harness):
         route = spans["kernel.route"][0]
         cap = spans["capability.retrieve.repository"][0]
         event = spans["gap.recorded"][0]
-        root_id = int(state.root_observation_id, 16)
+        root_id = int(narrow(state.root_observation_id), 16)
         self.assertEqual(route.parent.span_id, root_id)
         self.assertEqual(cap.parent.span_id, route.context.span_id)
         self.assertEqual(event.parent.span_id, cap.context.span_id)
@@ -237,7 +240,8 @@ class TestRedactionBeforeExport(_Harness):
             tracer.event("e", self.corr, payload={"text": leaked})
         tracer.generation("jev.x", self.corr, model="m", input=leaked, output=leaked, usage=None)
         tracer.close_segment()
-        exported = json.dumps([dict(s.attributes) for s in self.exporter.get_finished_spans()])
+        exported = json.dumps([dict(narrow(s.attributes))
+                              for s in self.exporter.get_finished_spans()])
         self.assertNotIn(self.secret, exported)
         self.assertNotIn(self.public, exported)
         self.assertNotIn("DB=prod-creds", exported)
@@ -273,7 +277,7 @@ class TestDegradedMode(_Harness):
         tracer = self.make()
         tracer.open_segment(RUN, TASK, "start")
         ran: list[str] = []
-        with mock.patch.object(tracer._segment.obs, "start_observation",
+        with mock.patch.object(narrow(tracer._segment).obs, "start_observation",
                                side_effect=RuntimeError("otel exploded")):
             with tracer.span("kernel.route", "chain", self.corr, input={"q": 1}) as span:
                 ran.append("body")
@@ -281,7 +285,7 @@ class TestDegradedMode(_Harness):
             tracer.event("after", self.corr)
         self.assertEqual(ran, ["body"])
         self.assertEqual(tracer.close_segment(), ObservabilityStatus.DEGRADED)
-        self.assertIn("RuntimeError", tracer.degraded_reason)
+        self.assertIn("RuntimeError", narrow(tracer.degraded_reason))
         by_name = {r["name"]: r for r in tracer.spool.read()}
         self.assertEqual(by_name["kernel.route"]["data"]["output"], {"ok": True})
         self.assertIn("after", by_name)

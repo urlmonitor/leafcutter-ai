@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import asyncio
 import unittest
+from typing import TYPE_CHECKING, Any, cast
 
 from langchain_core.callbacks import BaseCallbackHandler
 from langchain_core.runnables import RunnableLambda
@@ -44,10 +45,16 @@ class _Chains(BaseCallbackHandler):
         self.names.append(kwargs.get("name") or "")
 
 
-class GenerationContract:
+if TYPE_CHECKING:  # the mixin uses TestCase assertions; at runtime it stays a plain mixin
+    _Base = unittest.TestCase
+else:
+    _Base = object
+
+
+class GenerationContract(_Base):
     """Behaviour shared by both transports; subclasses define make_transport."""
 
-    make_transport = None
+    make_transport: Any = None
 
     def adapter(self, handler, tracer, **overrides):
         transport, lib = type(self).make_transport(lambda req: handler(lib_holder[0], req))
@@ -161,8 +168,8 @@ class TestCallbackDeduplication(unittest.TestCase):
         with_tracer = TypeSafeJevAdapter.from_config(cfg, kit.FAKE_KEY, transport="classifier",
                                                      tracer=RecordingTracer())
         without = TypeSafeJevAdapter.from_config(cfg, kit.FAKE_KEY, transport="classifier")
-        self.assertTrue(with_tracer._transport._detach_callbacks)
-        self.assertFalse(without._transport._detach_callbacks)
+        self.assertTrue(cast(Any, with_tracer._transport)._detach_callbacks)
+        self.assertFalse(cast(Any, without._transport)._detach_callbacks)
 
 
 if __name__ == "__main__":

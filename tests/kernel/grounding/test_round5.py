@@ -27,7 +27,7 @@ from kernel.capabilities.retrieval import knowledge_map as km
 from kernel.capabilities.retrieval import versioning
 from kernel.capabilities.retrieval.access import ReadPolicy
 from kernel.config import SourceConfig, load_kernel_config, repo_root
-from kernel.contracts import ApprovalStatus, ProposalStatus, RunStatus, schema_ids
+from kernel.contracts import ApprovalStatus, HumanQuestion, ProposalStatus, RunStatus, schema_ids
 from kernel.contracts.enums import EvidenceCategory
 from kernel.contracts.enums import RequestKind as RK
 from kernel.contracts.payloads import HumanAnswerPayload, OptionsPayload
@@ -36,7 +36,7 @@ from kernel.contracts.task import Scope
 from tests.kernel.capabilities.host_support import conversion, criterion, option
 from tests.kernel.capabilities.support import child, invocation
 from tests.kernel.capabilities.test_decision_graph import DECISION, DecisionTestCase
-from tests.kernel.helpers import make_context
+from tests.kernel.helpers import as_json, as_type, make_context, narrow
 from tests.kernel.integration.scenario_support import (
     FakeHostResponder,
     ScenarioCase,
@@ -84,7 +84,7 @@ class TestKnowledgeMapNeverRunsScopeCode(unittest.TestCase):
 
     def test_the_loaded_bridge_is_the_kernels_own_script(self) -> None:
         self.search()
-        files = {Path(m.__file__).resolve() for m in km._MODULES.values()}
+        files = {Path(narrow(m.__file__)).resolve() for m in km._MODULES.values()}
         self.assertEqual(files, {(repo_root() / km.SCRIPT).resolve()})
 
     def test_without_a_trusted_script_the_source_is_unavailable_with_a_reason(self) -> None:
@@ -158,7 +158,7 @@ class TestNamedOptions(unittest.TestCase):
         body = {"problem": GOAL, "max_options": 5, "propose_criteria": True,
                 "evidence_ids": [EV], "require_grounding": True, **request}
         ctx = conversion("host.generate_options", body, {"options": options})
-        result = host_operation("host.generate_options").convert(ctx)
+        result = narrow(host_operation("host.generate_options")).convert(ctx)
         return result, OptionsPayload.model_validate(result.output_payload)
 
     def test_a_named_option_found_in_the_goal_is_supplied_and_needs_no_grounding(self) -> None:
@@ -231,7 +231,7 @@ class TestAddedOptionsEndToEnd(ScenarioCase):
         paused = await self.service().start_run(self.task("primary", request=False))
         approval = await self.service().resume_run(paused.run_id, responder.answer(paused))
         self.assertEqual(approval.status, RunStatus.WAITING_HUMAN)
-        self.assertIn("added_options", approval.pending_interaction.question)
+        self.assertIn("added_options", as_type(approval.pending_interaction, HumanQuestion).question)
         answer = {"approved_option_ids": ["A", "B"],
                   "approved_criterion_ids": ["c1", "c2"],
                   "added_options": [{"title": "Hybrid of both", "description": "Mix them"}]}
@@ -239,7 +239,7 @@ class TestAddedOptionsEndToEnd(ScenarioCase):
                                                 answer_human(approval, answer))
         self.assertEqual(final.status, RunStatus.COMPLETED)
         batch = next(b for b in self.jev.batches if b.purpose == "decision.assess")
-        self.assertIn("Hybrid of both. Mix them", batch.state["options"].values())
+        self.assertIn("Hybrid of both. Mix them", as_json(batch.state)["options"].values())
 
 
 if __name__ == "__main__":

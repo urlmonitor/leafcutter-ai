@@ -24,7 +24,14 @@ from langgraph.checkpoint.serde.jsonplus import JsonPlusSerializer
 from langgraph.checkpoint.sqlite.aio import AsyncSqliteSaver
 from pydantic import BaseModel
 
-from kernel.contracts import ALL_MODELS, Actor, ActorKind, InteractionSubmission, RunStatus, schema_ids
+from kernel.contracts import (
+    ALL_MODELS,
+    Actor,
+    ActorKind,
+    InteractionSubmission,
+    RunStatus,
+    schema_ids,
+)
 from kernel.scheduler import STATE_MODELS, build_kernel_graph, initial_state, run_config
 from tests.kernel.scheduler.test_interaction_basic import _host_rig
 

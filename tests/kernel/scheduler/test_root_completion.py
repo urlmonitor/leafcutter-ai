@@ -14,7 +14,7 @@ from __future__ import annotations
 import unittest
 
 from kernel.contracts import ResultStatus, RunStatus, schema_ids
-from tests.kernel.helpers import ScriptedExecutor
+from tests.kernel.helpers import ScriptedExecutor, narrow
 from tests.kernel.scheduler.support import (
     Rig,
     blocked,
@@ -49,8 +49,8 @@ class TestChildFinishesBeforeRoot(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(len(root.invocations), 2)
         self.assertEqual(len(child.invocations), 1)
         resumed = root.invocations[1]
-        self.assertEqual(resumed.continuation.resume_reason, "children_done")
-        self.assertEqual(resumed.continuation.state, {"phase": "asked"})
+        self.assertEqual(narrow(resumed.continuation).resume_reason, "children_done")
+        self.assertEqual(narrow(resumed.continuation).state, {"phase": "asked"})
         self.assertEqual([o.status for o in resumed.child_outcomes], [ResultStatus.COMPLETED])
         self.assertEqual(root_item(state).status.value, "completed")
 

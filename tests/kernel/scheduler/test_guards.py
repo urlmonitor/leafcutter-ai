@@ -16,6 +16,7 @@ from __future__ import annotations
 import itertools
 import types
 import unittest
+from typing import Any
 
 from kernel.config import load_kernel_config
 from kernel.contracts import RequestKind, RequestProposal, RunStatus, schema_ids
@@ -276,8 +277,10 @@ class TestRunLimits(unittest.IsolatedAsyncioTestCase):
             "status": "waiting", "continuation": {
                 "capability_id": "decide.root", "capability_version": "1.0.0", "state": {},
                 "resume_reason": "children_done"}, "child_ids": ["work-0000000000000099"]})
-        state = {**done, "work_items": {root_id: stuck}, "interaction_queue": [], "outcome": None}
-        update = await schedule(state, types.SimpleNamespace(context=rig.runtime()))
+        state: Any = {**done, "work_items": {root_id: stuck}, "interaction_queue": [],
+                      "outcome": None}
+        runtime: Any = types.SimpleNamespace(context=rig.runtime())
+        update: Any = await schedule(state, runtime)
         self.assertEqual(update["halt_reason"], "deadlock")
         self.assertEqual(after_schedule({**state, **update}), "finalize")
         outcome = decide_outcome({**state, **update})

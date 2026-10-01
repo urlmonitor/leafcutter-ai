@@ -27,10 +27,9 @@ from kernel.contracts import schema_ids
 from kernel.contracts.enums import EvidenceCategory, NeedStatus
 from kernel.contracts.evidence import EvidenceBundlePayload, EvidenceNeed
 from kernel.contracts.payloads import RetrievalRequestPayload
-from kernel.contracts.schema_catalog import validate_payload
 from kernel.providers.fakes import ScriptedJev, noul_answer
 from tests.kernel.capabilities.support import invocation, no_git
-from tests.kernel.helpers import make_context
+from tests.kernel.helpers import bundle_of, make_context
 
 SECRET_SAMPLES = ("config/service.env", "config/api_secret.json", "config/db_credentials.yaml",
                   "config/id_rsa", "config/github_token.txt", ".env.local", "keys/server.pem")
@@ -132,7 +131,7 @@ class CoverageCase(unittest.TestCase):
         inv = invocation("retrieve.repository", schema_ids.RETRIEVAL_REQUEST, payload)
         result = asyncio.run(RepositoryRetrievalExecutor().ainvoke(
             inv, make_context(self.root, jev=jev, config=cfg)))
-        bundle = validate_payload(schema_ids.EVIDENCE_BUNDLE, result.output_payload)
+        bundle = bundle_of(result)
         self.assertIsInstance(bundle, EvidenceBundlePayload)
         self.last = bundle
         return bundle.coverage[need.id]

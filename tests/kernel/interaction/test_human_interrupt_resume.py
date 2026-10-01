@@ -14,9 +14,10 @@ from __future__ import annotations
 import unittest
 
 from kernel.config import load_kernel_config
-from kernel.contracts import RunStatus, Verification
+from kernel.contracts import HumanQuestion, RunStatus, Verification
 from kernel.interaction import SubmissionRejected, SubmitStatus
 from kernel.observability.redaction import Redactor
+from tests.kernel.helpers import as_type, narrow
 from tests.kernel.interaction.support import (
     CHOICES,
     QUESTION,
@@ -57,7 +58,7 @@ class TestHumanPause(unittest.IsolatedAsyncioTestCase):
         self.assertNotIn(NEEDLE, run.packet["question"])
         self.assertIn("[REDACTED:cache_key]", run.packet["question"])
         stored = run.rig.run_store.load_interaction(run.run_id, run.packet["id"])
-        self.assertEqual(stored.question, run.packet["question"])
+        self.assertEqual(as_type(stored, HumanQuestion).question, run.packet["question"])
         self.assertNotIn(NEEDLE, str(run.state["interactions"]))
 
     async def test_the_pause_is_persisted_so_a_second_reader_sees_the_same_packet(self) -> None:
@@ -65,7 +66,7 @@ class TestHumanPause(unittest.IsolatedAsyncioTestCase):
         values = await run.values()
         self.assertEqual(values["interaction_queue"], [run.packet["id"]])
         stored = run.rig.run_store.load_interaction(run.run_id, run.packet["id"])
-        self.assertEqual(stored.model_dump(mode="json"), run.packet)
+        self.assertEqual(narrow(stored).model_dump(mode="json"), run.packet)
 
 
 class TestHumanAnswer(unittest.IsolatedAsyncioTestCase):

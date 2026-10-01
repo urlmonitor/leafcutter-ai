@@ -26,7 +26,7 @@ from kernel.contracts import (
 )
 from kernel.persistence.gap_store import is_build_opportunity
 from kernel.providers.fakes import choice_answer
-from tests.kernel.helpers import make_descriptor
+from tests.kernel.helpers import make_descriptor, narrow
 from tests.kernel.integration.test_gap_fallback import fallback_rig, host_research
 from tests.kernel.scheduler.support import (
     Rig,
@@ -95,7 +95,7 @@ class TestFallbackDisabled(unittest.IsolatedAsyncioTestCase):
         await self.assert_blocked_with_gap(rig, "host fallback is disabled")
         (gap,) = rig.gap_store.observations
         self.assertTrue(is_build_opportunity(gap))
-        self.assertIn("Author: template", rig.gap_store.drafts[gap.proposal.draft_ref])
+        self.assertIn("Author: template", rig.gap_store.drafts[narrow(narrow(gap.proposal).draft_ref)])
 
     async def test_host_disabled_blocks_too(self) -> None:
         rig = fallback_rig()

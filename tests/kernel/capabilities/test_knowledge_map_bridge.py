@@ -28,10 +28,9 @@ from kernel.contracts import schema_ids
 from kernel.contracts.enums import EvidenceCategory, NeedStatus, SourceKind
 from kernel.contracts.evidence import EvidenceBundlePayload, EvidenceNeed
 from kernel.contracts.payloads import RetrievalRequestPayload
-from kernel.contracts.schema_catalog import validate_payload
 from kernel.providers.fakes import ScriptedJev, noul_answer
 from tests.kernel.capabilities.support import invocation, no_git
-from tests.kernel.helpers import make_context
+from tests.kernel.helpers import bundle_of, make_context
 
 REAL_ROOT = Path(__file__).resolve().parents[3]
 SOURCE = SourceConfig(id="knowledge.decisions", kind="knowledge_map",
@@ -130,7 +129,7 @@ class TestRealArtifact(unittest.TestCase):
         ctx = make_context(REAL_ROOT, jev=jev, config=cfg)
         inv = invocation("retrieve.repository", schema_ids.RETRIEVAL_REQUEST, payload)
         result = asyncio.run(RepositoryRetrievalExecutor().ainvoke(inv, ctx))
-        bundle = validate_payload(schema_ids.EVIDENCE_BUNDLE, result.output_payload)
+        bundle = bundle_of(result)
         self.assertIsInstance(bundle, EvidenceBundlePayload)
         self.assertEqual(bundle.coverage["need.prior_decisions"], NeedStatus.SATISFIED)
         item = result.evidence[0]
@@ -186,7 +185,7 @@ class TestFailuresAreNotEmpty(BridgeCase):
         ctx = make_context(self.root, jev=ScriptedJev(), config=cfg)
         inv = invocation("retrieve.repository", schema_ids.RETRIEVAL_REQUEST, payload)
         result = asyncio.run(RepositoryRetrievalExecutor().ainvoke(inv, ctx))
-        bundle = validate_payload(schema_ids.EVIDENCE_BUNDLE, result.output_payload)
+        bundle = bundle_of(result)
         self.assertEqual(bundle.coverage["need.prior_decisions"], NeedStatus.UNAVAILABLE)
         self.assertEqual(bundle.unavailable_sources[0].source_id, "knowledge.decisions")
 
@@ -201,7 +200,7 @@ class TestFailuresAreNotEmpty(BridgeCase):
         ctx = make_context(self.root, jev=ScriptedJev(), config=cfg)
         inv = invocation("retrieve.repository", schema_ids.RETRIEVAL_REQUEST, payload)
         result = asyncio.run(RepositoryRetrievalExecutor().ainvoke(inv, ctx))
-        bundle = validate_payload(schema_ids.EVIDENCE_BUNDLE, result.output_payload)
+        bundle = bundle_of(result)
         self.assertIn("timed out", bundle.unavailable_sources[0].reason)
 
 

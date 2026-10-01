@@ -17,6 +17,7 @@ import json
 import tempfile
 import unittest
 from pathlib import Path
+from typing import Any, cast
 
 from pydantic import SecretStr
 
@@ -76,7 +77,7 @@ class TestBindings(BootstrapCase):
         executor = table.resolve("host.research", NATIVE_VERSION)
         self.assertIsInstance(executor, HostMarkerExecutor)
         with self.assertRaises(HostBindingExecuted):
-            asyncio.run(executor.ainvoke(None, None))
+            asyncio.run(executor.ainvoke(cast(Any, None), cast(Any, None)))
 
 
 class TestEnvironment(BootstrapCase):

@@ -19,6 +19,7 @@ from langgraph.checkpoint.memory import MemorySaver
 
 from kernel.contracts import (
     ActorKind,
+    RequestKind,
     RequestProposal,
     new_id,
     schema_ids,
@@ -57,11 +58,12 @@ def human_proposal(question: str = QUESTION, *, choices: list[dict] | None = Non
                    free_text: bool = True, structured: bool = False,
                    subjects: list[str] | None = None) -> RequestProposal:
     """Return a human question request proposal."""
-    payload = {"question": question, "choices": CHOICES if choices is None else choices,
+    payload: dict[str, Any] = {"question": question,
+               "choices": CHOICES if choices is None else choices,
                "free_text_allowed": free_text, "structured_allowed": structured,
                "why_research_cannot_settle": "Only the requester knows their preference.",
                "subject_ids": subjects or []}
-    return RequestProposal(kind="human", question=question,
+    return RequestProposal(kind=RequestKind("human"), question=question,
                            payload_schema=schema_ids.HUMAN_QUESTION_REQUEST, payload=payload,
                            requested_output_schema=schema_ids.HUMAN_ANSWER)
 

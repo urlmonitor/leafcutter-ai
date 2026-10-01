@@ -13,6 +13,7 @@ from __future__ import annotations
 import asyncio
 import types
 import unittest
+from typing import Any, cast
 
 from kernel.contracts import (
     EvidenceCategory,
@@ -23,9 +24,9 @@ from kernel.contracts import (
 )
 from kernel.persistence.memory import MemoryArtifactStore, MemoryGapStore
 from kernel.providers.fakes import choice_answer
-from kernel.service import new_envelope
 from kernel.scheduler.nodes_lifecycle import intake
-from tests.kernel.scheduler.test_interaction_basic import _host_rig
+from kernel.scheduler.state import KernelState
+from kernel.service import new_envelope
 from tests.kernel.scheduler.support import (
     Rig,
     completed,
@@ -38,6 +39,7 @@ from tests.kernel.scheduler.support import (
     waiting,
     with_limits,
 )
+from tests.kernel.scheduler.test_interaction_basic import _host_rig
 
 
 class _DiskFull(OSError):
@@ -107,8 +109,8 @@ class TestIntake(unittest.IsolatedAsyncioTestCase):
     async def test_intake_does_nothing_when_the_task_exists(self) -> None:
         rig = _simple()
         _, _, state = await rig.start()
-        runtime = types.SimpleNamespace(context=rig.runtime())
-        update = await intake(state, runtime)
+        runtime: Any = types.SimpleNamespace(context=rig.runtime())
+        update = await intake(cast(KernelState, state), runtime)
         self.assertEqual(set(update), {"budgets"})
         self.assertEqual(update["budgets"].work_items_created, 1)
 

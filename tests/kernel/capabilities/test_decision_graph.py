@@ -28,22 +28,24 @@ from kernel.contracts.enums import (
     RequestKind,
     ResultStatus,
 )
-from kernel.contracts.task import RevisionInfo
 from kernel.contracts.payloads import (
     DecisionReportPayload,
     HumanQuestionRequestPayload,
 )
+from kernel.contracts.task import RevisionInfo
 from kernel.providers.base import JevUnavailable
 from kernel.providers.fakes import ScriptedJev
 from tests.kernel.capabilities.support import (
     child,
-    decision_payload as _payload,
     evidence_item,
     invocation,
     resume,
     script_decision,
 )
-from tests.kernel.helpers import make_context
+from tests.kernel.capabilities.support import (
+    decision_payload as _payload,
+)
+from tests.kernel.helpers import as_json, make_context, narrow
 
 DECISION = "decision"
 
@@ -84,10 +86,10 @@ class TestResolvedGate(DecisionTestCase):
         report = DecisionReportPayload.model_validate(result.output_payload)
         self.assertEqual(report.status, DecisionStatus.RESOLVED)
         self.assertEqual(report.selected_option_id, "A")
-        self.assertEqual(report.rationale.origin, "template")
+        self.assertEqual(narrow(report.rationale).origin, "template")
         self.assertEqual(result.decisions[0].selected_option_id, "A")
         raw = [a for a in report.criterion_assessments if a.option_id == "A"]
-        self.assertTrue(all(a.provider_answer.probabilities for a in raw))
+        self.assertTrue(all(narrow(a.provider_answer).probabilities for a in raw))
 
     def test_one_jev_call_per_assessment_with_atomic_questions(self) -> None:
         self.params["satisfies"] = {("c1", "A"): 0.95}
@@ -174,7 +176,7 @@ class TestNeedsEvidence(DecisionTestCase):
         cats = [n.category for n in result.requests[0].evidence_needs]
         self.assertIn(EvidenceCategory.PRIOR_DECISIONS, cats)
         batch = self.jev.batches[0]
-        self.assertEqual(batch.state["evidence"][pattern.id]["role"], "pattern_only")
+        self.assertEqual(as_json(batch.state)["evidence"][pattern.id]["role"], "pattern_only")
 
     def test_same_request_at_same_revision_is_partial_no_progress(self) -> None:
         self.params.update(sufficient=0.2, missing="missing_internal_principle")
@@ -234,7 +236,7 @@ class TestConflict(DecisionTestCase):
                        {"free_text": "ADR 2 supersedes ADR 1."})
         done = self.run_decision(resume(inv, asked, [ruling]), ctx)
         self.assertEqual(done.status, ResultStatus.COMPLETED)
-        self.assertIn("ADR 2 supersedes ADR 1.", self.jev.batches[-1].state["constraints"])
+        self.assertIn("ADR 2 supersedes ADR 1.", as_json(self.jev.batches[-1].state)["constraints"])
 
 
 class TestProviderFailure(DecisionTestCase):

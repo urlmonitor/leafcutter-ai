@@ -16,6 +16,7 @@ import unittest
 
 from kernel.contracts import RunStatus, WorkItemStatus
 from tests.kernel.capabilities.host_support import SCHEMAS
+from tests.kernel.helpers import narrow
 from tests.kernel.interaction.host_rigs import OPERATIONS, RESPONSES
 from tests.kernel.interaction.support import (
     CHOICES,
@@ -53,8 +54,7 @@ class TestFormulateOn(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(run.packet["operation"], "formulate_question")
         accepted = await run.submit(raw_submission(
             run.packet, run.run_id, response=RESPONSES[CAP]))
-        human = accepted.pending
-        self.assertIsNotNone(human)
+        human = narrow(accepted.pending)
         self.assertEqual(human["required_actor_kind"], "human")
         self.assertEqual(human["question"], WORDED)
         self.assertEqual([c["id"] for c in human["choices"]], [c["id"] for c in CHOICES])
@@ -63,8 +63,8 @@ class TestFormulateOn(unittest.IsolatedAsyncioTestCase):
 
     async def test_only_a_human_answers_and_the_run_completes(self) -> None:
         run = await start(rig_with_formulation(True))
-        human = (await run.submit(raw_submission(
-            run.packet, run.run_id, response=RESPONSES[CAP]))).pending
+        human = narrow((await run.submit(raw_submission(
+            run.packet, run.run_id, response=RESPONSES[CAP]))).pending)
         final = await run.submit(human_submission(human, run.run_id, {"choice_id": "sqlite"}))
         self.assertIs(final.state["outcome"].status, RunStatus.COMPLETED)
         statuses = {i.status for i in final.state["work_items"].values()}
@@ -74,8 +74,8 @@ class TestFormulateOn(unittest.IsolatedAsyncioTestCase):
         tampered = {**RESPONSES[CAP], "free_text_allowed": True,
                     "choices": [{"id": "other", "label": "Something else"}]}
         run = await start(rig_with_formulation(True))
-        human = (await run.submit(raw_submission(run.packet, run.run_id, response=tampered))
-                 ).pending
+        human = narrow((await run.submit(raw_submission(
+            run.packet, run.run_id, response=tampered))).pending)
         self.assertEqual([c["id"] for c in human["choices"]], [c["id"] for c in CHOICES])
 
     async def test_without_the_capability_the_original_question_is_asked(self) -> None:

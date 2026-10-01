@@ -16,7 +16,8 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from kernel.contracts import ActorKind, RunStatus, schema_ids
+from kernel.contracts import ActorKind, HumanQuestion, RunStatus, schema_ids
+from tests.kernel.helpers import as_type
 from tests.kernel.integration.scenario_support import (
     FakeHostResponder,
     ScenarioCase,
@@ -56,8 +57,8 @@ class TestGroundedRun(ScenarioCase):
                              response=options_response("primary"), actor_id="host:fake")
         done = await self.service().resume_run(paused.run_id, raw)
         question = done.pending_interaction  # only the (ungrounded-agnostic) criteria remain
-        self.assertNotIn("Proposed options", question.question)
-        self.assertFalse({"A", "B"} & set(question.subject_ids))
+        self.assertNotIn("Proposed options", as_type(question, HumanQuestion).question)
+        self.assertFalse({"A", "B"} & set(as_type(question, HumanQuestion).subject_ids))
         self.assertEqual(self.jev.questions_asked("decision.assess"), [])
 
     async def test_the_approval_question_names_the_grounding_and_the_decision(self) -> None:
@@ -67,9 +68,9 @@ class TestGroundedRun(ScenarioCase):
         self.assertEqual(approval.status, RunStatus.WAITING_HUMAN)
         question = approval.pending_interaction
         cited = paused.pending_interaction.input_evidence_ids
-        self.assertIn(f"grounded in {', '.join(cited)}", question.question)
-        self.assertEqual(question.decision_id, approval.decision_ids[0])
-        self.assertEqual(question.relevant_evidence_ids, cited)  # the cited evidence
+        self.assertIn(f"grounded in {', '.join(cited)}", as_type(question, HumanQuestion).question)
+        self.assertEqual(as_type(question, HumanQuestion).decision_id, approval.decision_ids[0])
+        self.assertEqual(as_type(question, HumanQuestion).relevant_evidence_ids, cited)  # the cited evidence
         self.assertEqual(len(approval.decision_ids), 1)
 
     async def test_one_decision_is_one_record_through_to_the_end(self) -> None:

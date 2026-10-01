@@ -20,8 +20,8 @@ import jsonschema
 from kernel.config import load_kernel_config
 from kernel.contracts import content_hash, evidence_id, schema_ids
 from kernel.contracts.payloads import OptionsPayload
-from kernel.interaction.packets import MAX_TASK_STATEMENT_CHARS, bounded, tightened_schema
 from kernel.contracts.schema_catalog import json_schema_for
+from kernel.interaction.packets import MAX_TASK_STATEMENT_CHARS, bounded, tightened_schema
 from kernel.observability.redaction import Redactor
 from tests.kernel.interaction.support import host_rig, start
 from tests.kernel.scheduler.support import proposal, waiting

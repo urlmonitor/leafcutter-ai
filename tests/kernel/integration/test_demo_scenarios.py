@@ -17,7 +17,8 @@ from __future__ import annotations
 
 import unittest
 
-from kernel.contracts import RunStatus, schema_ids
+from kernel.contracts import HostWorkRequest, HumanQuestion, RunStatus, schema_ids
+from tests.kernel.helpers import as_json, as_type, narrow, out_payload
 from tests.kernel.integration.scenario_support import (
     DOMAINS,
     FakeHostResponder,
@@ -43,7 +44,7 @@ class TestExistingBasis(ScenarioCase):
         values = await self.checkpoint_values(envelope.run_id)
         self.assertEqual(self.capabilities_used(values), ["decision"])  # no research, no host
         self.assertEqual(self.jev.questions_asked("research.plan_needs"), [])
-        self.assertEqual(envelope.output.payload["selected_option_id"], "A")
+        self.assertEqual(out_payload(envelope)["selected_option_id"], "A")
         self.assertEqual(len(envelope.decision_ids), 1)
         self.assertEqual(values["interaction_queue"], [])
 
@@ -56,20 +57,20 @@ class TestUnknownOptions(ScenarioCase):
         responder = FakeHostResponder({schema_ids.OPTIONS: options_response("primary")})
         paused = await self.service().start_run(self.task("primary", request=False))
         self.assertEqual(paused.status, RunStatus.WAITING_HOST)
-        self.assertEqual(paused.pending_interaction.operation, "generate_options")
+        self.assertEqual(as_type(paused.pending_interaction, HostWorkRequest).operation, "generate_options")
         self.assertEqual(self.jev.questions_asked("decision.assess"), [])  # nothing invented yet
         approval = await self.service().resume_run(paused.run_id, responder.answer(paused))
         self.assertEqual(approval.status, RunStatus.WAITING_HUMAN)  # proposals need a human
-        self.assertTrue(approval.pending_interaction.structured_allowed)
+        self.assertTrue(as_type(approval.pending_interaction, HumanQuestion).structured_allowed)
         self.assertEqual(self.jev.questions_asked("decision.assess"), [])
         final = await self.service().resume_run(
             paused.run_id, answer_human(approval, {"choice_id": "approve"}))
         self.assertEqual(final.status, RunStatus.COMPLETED)
         batches = [b for b in self.jev.batches if b.purpose == "decision.assess"]
         self.assertTrue(batches)
-        offered = dict(batches[0].state["options"])
+        offered = dict(as_json(batches[0].state)["options"])
         self.assertEqual(sorted(offered), ["A", "B"])  # exactly the host's proposals
-        self.assertEqual(final.output.payload["selected_option_id"], "A")
+        self.assertEqual(out_payload(final)["selected_option_id"], "A")
         self.assertEqual(responder.answered, ["generate_options"])
 
 
@@ -83,17 +84,17 @@ class TestPreferencePause(ScenarioCase):
         paused = await self.service().start_run(task)
         self.assertEqual(paused.status, RunStatus.WAITING_HUMAN)
         question = paused.pending_interaction
-        self.assertTrue(question.question)
-        stored = self.env.run_store.get_run(paused.run_id)
+        self.assertTrue(as_type(question, HumanQuestion).question)
+        stored = narrow(self.env).run_store.get_run(paused.run_id)
         self.assertEqual(stored.status, RunStatus.WAITING_HUMAN)  # persisted; the process exits
         self.params["preference"] = 0.05  # once answered, the preference is no longer missing
         final = await self.service().resume_run(
             paused.run_id, answer_human(paused, self.first_choice(question)))
         self.assertEqual(final.status, RunStatus.COMPLETED)
-        ledger = self.env.run_store.get_submission(paused.run_id, question.id)
-        self.assertEqual(ledger.submission.actor.kind.value, "human")
-        self.assertEqual(ledger.submission.actor.id, "user")  # as the client declared it
-        self.assertEqual(ledger.submission.relayed_by, "fake-client")
+        ledger = narrow(self.env).run_store.get_submission(paused.run_id, narrow(question).id)
+        self.assertEqual(narrow(ledger).submission.actor.kind.value, "human")
+        self.assertEqual(narrow(ledger).submission.actor.id, "user")  # as the client declared it
+        self.assertEqual(narrow(ledger).submission.relayed_by, "fake-client")
 
     @staticmethod
     def first_choice(question: object) -> dict:
@@ -113,7 +114,7 @@ class TestDifferentDomain(ScenarioCase):
         first = await service.start_run(self.task("primary"))
         second = await self.service().start_run(self.task("cache"))
         self.assertEqual([first.status, second.status], [RunStatus.COMPLETED] * 2)
-        self.assertEqual(second.output.payload["selected_option_id"], "mem")
+        self.assertEqual(out_payload(second)["selected_option_id"], "mem")
         used = [sorted(self.capabilities_used(await self.checkpoint_values(e.run_id)))
                 for e in (first, second)]
         self.assertEqual(used[0], used[1])  # identical capability mix, no domain branch
@@ -121,7 +122,7 @@ class TestDifferentDomain(ScenarioCase):
         values = await self.checkpoint_values(second.run_id)
         locators = {e.source.locator for e in values["evidence"].values()}
         self.assertTrue(any(loc.startswith(DOMAINS["cache"]["adr"]) for loc in locators))
-        cited = set(second.output.payload["supporting_evidence_ids"])
+        cited = set(out_payload(second)["supporting_evidence_ids"])
         self.assertTrue(cited and cited <= set(values["evidence"]))  # the answer cites evidence
 
 

@@ -17,7 +17,7 @@ import unittest
 from kernel.capabilities.decision.requests import GROUNDING_CATEGORIES
 from kernel.capabilities.host import host_operation
 from kernel.config import load_kernel_config
-from kernel.contracts import schema_ids
+from kernel.contracts import ApprovalStatus, ProposalStatus, schema_ids
 from kernel.contracts.decision import Option
 from kernel.contracts.enums import EvidenceCategory, RequestKind, ResultStatus
 from kernel.contracts.evidence import EvidenceBundlePayload
@@ -31,7 +31,7 @@ from kernel.contracts.payloads import (
 from tests.kernel.capabilities.host_support import conversion, option
 from tests.kernel.capabilities.support import child, evidence_item, invocation, resume
 from tests.kernel.capabilities.test_decision_graph import DECISION, DecisionTestCase
-from tests.kernel.helpers import make_context
+from tests.kernel.helpers import make_context, narrow
 
 GOAL = "Decide which acceptance criterion is most critical to implement next."
 EV = "ev-aaaaaaaaaaaaaaaa"
@@ -126,7 +126,7 @@ class TestGroundedConversion(unittest.TestCase):
         body = {"problem": "Which AC?", "max_options": 5, "propose_criteria": False,
                 "evidence_ids": [EV], "require_grounding": False, **request}
         ctx = conversion("host.generate_options", body, {"options": options})
-        result = host_operation("host.generate_options").convert(ctx)
+        result = narrow(host_operation("host.generate_options")).convert(ctx)
         return result, OptionsPayload.model_validate(result.output_payload)
 
     def test_a_cited_option_keeps_its_reference(self) -> None:
@@ -152,7 +152,7 @@ class TestGroundedConversion(unittest.TestCase):
     def test_the_packet_says_to_cite_evidence_and_grants_no_repository_access(self) -> None:
         op = host_operation("host.generate_options")
         request = OptionsRequestPayload(problem="p", evidence_ids=[EV], require_grounding=True)
-        text = " ".join(op.requirements(request))
+        text = " ".join(narrow(op).requirements(request))
         self.assertIn("source_refs", text)
         self.assertIn("no repository access", text)
 
@@ -168,8 +168,8 @@ class TestDecisionIdentity(GroundingTestCase):
     def test_the_approval_question_carries_the_decision_id(self) -> None:
         inv, ctx, _, after = self.researched()
         proposed = OptionsPayload(
-            options=[Option(id="a", title="Audit trail", proposal_status="proposed",
-                            approval_status="proposed", source_refs=[self.ac.id])],
+            options=[Option(id="a", title="Audit trail", proposal_status=ProposalStatus("proposed"),
+                            approval_status=ApprovalStatus("proposed"), source_refs=[self.ac.id])],
             proposed_criteria=[]).model_dump(mode="json")
         opts = child(ctx, RequestKind.OPTIONS, schema_ids.OPTIONS, proposed)
         approval = self.run_decision(resume(inv, after, [opts]), ctx)

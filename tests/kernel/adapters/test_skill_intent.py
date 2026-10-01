@@ -17,6 +17,8 @@ import re
 import unittest
 from pathlib import Path
 
+from tests.kernel.helpers import narrow
+
 SKILL = Path(__file__).resolve().parents[3] / "kernel" / "adapters" / "claude_code" / "SKILL.md"
 
 
@@ -30,7 +32,7 @@ class TestSkillOutputContract(unittest.TestCase):
         match = re.search(r'`(\{"goal": .*?"repository_root": "<absolute project root>"\}\})`',
                           self.text, re.DOTALL)
         self.assertIsNotNone(match, "example TaskInput not found in the skill")
-        example = match.group(1).replace("<$ARGUMENTS>", "x").replace("\n", " ")
+        example = narrow(match).group(1).replace("<$ARGUMENTS>", "x").replace("\n", " ")
         example = re.sub(r"<[^>]*>", "x", example)
         self.assertNotIn("requested_output_schema", json.loads(example))
 

@@ -13,13 +13,17 @@ from __future__ import annotations
 import json
 from collections.abc import Callable, Sequence
 from pathlib import Path
+from typing import Any, TypeVar
 
 from kernel.capabilities.base import ExecutionContext, UnlimitedBudget
 from kernel.config import KernelConfig, load_kernel_config
+from kernel.contracts import schema_ids
 from kernel.contracts.base import CorrelationIds, content_hash, evidence_id, new_id, utc_now
 from kernel.contracts.capability import CapabilityDescriptor, CapabilityResult
 from kernel.contracts.enums import RequestKind, ResultStatus
-from kernel.contracts.evidence import Evidence
+from kernel.contracts.evidence import Evidence, EvidenceBundlePayload
+from kernel.contracts.run import RunEnvelope
+from kernel.contracts.schema_catalog import validate_payload
 from kernel.contracts.task import Scope
 from kernel.contracts.work import CapabilityInvocation, RequestBody
 from kernel.observability.tracer import RecordingTracer
@@ -27,6 +31,40 @@ from kernel.persistence.memory import MemoryArtifactStore
 from kernel.providers.fakes import ScriptedJev
 
 FIXTURES_DIR = Path(__file__).parent / "fixtures"
+_T = TypeVar("_T")
+
+
+def narrow(value: _T | None) -> _T:
+    """Return the value after asserting it is not None (an Optional narrowed for the checker)."""
+    assert value is not None, "expected a value, got None"
+    return value
+
+
+def as_type(value: object, kind: type[_T]) -> _T:
+    """Return the value after asserting it is an instance of `kind` (a union narrowed)."""
+    assert isinstance(value, kind), f"expected {kind.__name__}, got {type(value).__name__}"
+    return value
+
+
+def bundle_of(result: CapabilityResult) -> EvidenceBundlePayload:
+    """Return a result's output as an evidence bundle (asserting it validates as one)."""
+    payload = validate_payload(schema_ids.EVIDENCE_BUNDLE, narrow(result.output_payload))
+    return as_type(payload, EvidenceBundlePayload)
+
+
+def payload_of(result: CapabilityResult) -> Any:
+    """Return a result's output payload (asserted present) typed Any, so a test can index it."""
+    return narrow(result.output_payload)
+
+
+def out_payload(envelope: RunEnvelope) -> Any:
+    """Return a run envelope's output payload (asserted present) typed Any."""
+    return narrow(envelope.output).payload
+
+
+def as_json(value: object) -> Any:
+    """Return a JSON value typed Any, so a test can index into it (the test asserts its shape)."""
+    return value
 
 
 def load_json(relative: str) -> dict:
@@ -41,7 +79,7 @@ def make_descriptor(**overrides: object) -> CapabilityDescriptor:
     return CapabilityDescriptor.model_validate(data)
 
 
-def make_scope(root: Path, **overrides: object) -> Scope:
+def make_scope(root: Path, **overrides: Any) -> Scope:
     """Return a Scope rooted at `root`."""
     return Scope(workspace_id="ws", repository_root=str(root), **overrides)
 
@@ -49,12 +87,11 @@ def make_scope(root: Path, **overrides: object) -> Scope:
 def make_evidence(locator: str = "docs/a.md#L1-L2", excerpt: str = "Use sqlite.") -> Evidence:
     """Return a valid, content-addressed Evidence item."""
     digest = content_hash(excerpt)
-    return Evidence(
-        id=evidence_id(locator, digest), category="prior_decisions",
-        semantic_type="repository_fact", excerpt=excerpt, content_hash=digest,
-        source={"id": "repo.decisions", "kind": "repository_file", "locator": locator},
-        provenance={"producer": "test"},
-    )
+    return Evidence.model_validate({
+        "id": evidence_id(locator, digest), "category": "prior_decisions",
+        "semantic_type": "repository_fact", "excerpt": excerpt, "content_hash": digest,
+        "source": {"id": "repo.decisions", "kind": "repository_file", "locator": locator},
+        "provenance": {"producer": "test"}})
 
 
 def make_request_body(kind: RequestKind = RequestKind.EVIDENCE,

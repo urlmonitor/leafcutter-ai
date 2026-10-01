@@ -13,6 +13,7 @@ from __future__ import annotations
 import base64
 import hashlib
 import unittest
+from typing import Literal
 
 from kernel.config import DataPolicyConfig, load_kernel_config
 from kernel.observability.redaction import Redactor, matches_deny_glob, shannon_entropy
@@ -22,12 +23,12 @@ NEEDLE = "zq" + "-" + "Xk29" + "Lm81" + "Pv07"
 HIGH_ENTROPY = base64.b64encode(hashlib.sha256(b"entropy-sample").digest()).decode()
 
 
-def _policy(mode: str = "truncated", limit: int = 4000) -> DataPolicyConfig:
+def _policy(mode: Literal["truncated", "hash", "none"] = "truncated", limit: int = 4000) -> DataPolicyConfig:
     return DataPolicyConfig(send_repo_excerpts_to_jev=True, telemetry_excerpts=mode,
                             telemetry_max_field_chars=limit)
 
 
-def _redactor(mode: str = "truncated", limit: int = 4000) -> Redactor:
+def _redactor(mode: Literal["truncated", "hash", "none"] = "truncated", limit: int = 4000) -> Redactor:
     return Redactor({"langfuse_public_key": NEEDLE}, _policy(mode, limit), DENY)
 
 

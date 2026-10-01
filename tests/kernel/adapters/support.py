@@ -24,6 +24,7 @@ from kernel.observability.redaction import Redactor
 from kernel.observability.tracer import RecordingTracer, TraceState
 from kernel.persistence import FileArtifactStore, FileGapStore, FileRunStore
 from kernel.secrets import SecretSettings
+from tests.kernel.helpers import narrow
 from tests.kernel.interaction.restart_harness import CrashingRunStore
 from tests.kernel.interaction.support import BUNDLE, raw_submission
 from tests.kernel.scheduler.support import Rig, with_limits
@@ -78,7 +79,7 @@ def task_input_json(rig: Rig, goal: str = "Decide the cache store") -> dict[str,
 
 def answer(envelope: RunEnvelope, **overrides: Any) -> InteractionSubmission:
     """Return a valid host submission for the envelope's pending host packet."""
-    packet = envelope.pending_interaction.model_dump(mode="json")
+    packet = narrow(envelope.pending_interaction).model_dump(mode="json")
     raw = raw_submission(packet, envelope.run_id, **overrides)
     return InteractionSubmission.model_validate(raw)
 

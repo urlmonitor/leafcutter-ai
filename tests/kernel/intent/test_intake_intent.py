@@ -16,15 +16,16 @@ from __future__ import annotations
 
 import unittest
 
-from kernel.contracts import GapType, RunStatus, schema_ids
+from kernel.contracts import GapType, HostWorkRequest, HumanQuestion, RunStatus, schema_ids
 from kernel.persistence.gap_store import is_build_opportunity
 from kernel.providers.base import JevUnavailable
-from tests.kernel.intent.support import SURE, UNSURE, IntentCase
+from tests.kernel.helpers import as_type, narrow, out_payload
 from tests.kernel.integration.scenario_support import (
     FakeHostResponder,
     answer_human,
     options_response,
 )
+from tests.kernel.intent.support import SURE, UNSURE, IntentCase
 
 WEATHER = "How is the weather today?"
 TESTS = "Where is the capability shape decided?"
@@ -48,8 +49,8 @@ class TestEachKindRoutesCorrectly(IntentCase):
         self.intents = [("evidence", *SURE)]
         envelope = await self.service().start_run(self.goal_task(TESTS))
         self.assertEqual(envelope.status, RunStatus.COMPLETED, envelope.limitations)
-        self.assertEqual(envelope.output.schema_id, schema_ids.EVIDENCE_BUNDLE)
-        payload = envelope.output.payload
+        self.assertEqual(narrow(envelope.output).schema_id, schema_ids.EVIDENCE_BUNDLE)
+        payload = out_payload(envelope)
         self.assertTrue(payload["evidence"], "research found nothing in the fixture repository")
         locators = {e["source"]["locator"] for e in payload["evidence"]}
         self.assertTrue(any("ADR-900" in loc for loc in locators), locators)
@@ -71,11 +72,11 @@ class TestEachKindRoutesCorrectly(IntentCase):
         responder = FakeHostResponder({schema_ids.OPTIONS: options_response("primary")})
         paused = await self.service().start_run(self.goal_task(IDEAS))
         self.assertEqual(paused.status, RunStatus.WAITING_HOST)
-        self.assertEqual(paused.pending_interaction.operation, "generate_options")
+        self.assertEqual(as_type(paused.pending_interaction, HostWorkRequest).operation, "generate_options")
         final = await self.service().resume_run(paused.run_id, responder.answer(paused))
         self.assertEqual(final.status, RunStatus.COMPLETED, final.limitations)
-        self.assertEqual(final.output.schema_id, schema_ids.OPTIONS)
-        options = final.output.payload["options"]
+        self.assertEqual(narrow(final.output).schema_id, schema_ids.OPTIONS)
+        options = out_payload(final)["options"]
         self.assertTrue(options)
         self.assertEqual({o["proposal_status"] for o in options}, {"proposed"})
         self.assertEqual({o["approval_status"] for o in options}, {"proposed"})
@@ -212,11 +213,11 @@ class TestClarification(IntentCase):
         paused = await self.service().start_run(self.goal_task(IMPLEMENT))
         self.assertEqual(paused.status, RunStatus.WAITING_HUMAN)
         question = paused.pending_interaction
-        self.assertEqual([c.id for c in question.choices],
+        self.assertEqual([c.id for c in as_type(question, HumanQuestion).choices],
                          ["decision", "evidence", "ideas", "change"])
-        self.assertTrue(question.free_text_allowed)
-        self.assertNotIn(".?", question.question)
-        self.assertNotIn("routing", question.why_research_cannot_settle.lower())
+        self.assertTrue(as_type(question, HumanQuestion).free_text_allowed)
+        self.assertNotIn(".?", as_type(question, HumanQuestion).question)
+        self.assertNotIn("routing", as_type(question, HumanQuestion).why_research_cannot_settle.lower())
         self.assertEqual(self.service().list_gaps(), [])  # nothing recorded before the answer
         self.assertEqual(paused.gaps, [])
 
@@ -231,7 +232,7 @@ class TestClarification(IntentCase):
         final = await self.service().resume_run(
             paused.run_id, answer_human(paused, {"choice_id": "evidence"}))
         self.assertEqual(final.status, RunStatus.COMPLETED, final.limitations)
-        self.assertEqual(final.output.schema_id, schema_ids.EVIDENCE_BUNDLE)
+        self.assertEqual(narrow(final.output).schema_id, schema_ids.EVIDENCE_BUNDLE)
         self.assertEqual(len(self.classified()), 1)  # the human's pick needs no second call
 
     async def test_choosing_change_declines_plainly(self) -> None:
@@ -278,9 +279,10 @@ class TestClarification(IntentCase):
         follow = await self.service().resume_run(
             paused.run_id, answer_human(paused, {"free_text": "hmm, the usual thing"}))
         self.assertEqual(follow.status, RunStatus.WAITING_HUMAN)
-        self.assertNotEqual(follow.pending_interaction.id, paused.pending_interaction.id)
-        self.assertIn("hmm, the usual thing", follow.pending_interaction.question)
-        self.assertEqual([c.id for c in follow.pending_interaction.choices],
+        self.assertNotEqual(narrow(follow.pending_interaction).id,
+                            narrow(paused.pending_interaction).id)
+        self.assertIn("hmm, the usual thing", as_type(follow.pending_interaction, HumanQuestion).question)
+        self.assertEqual([c.id for c in as_type(follow.pending_interaction, HumanQuestion).choices],
                          ["decision", "evidence", "ideas", "change"])
         self.assertEqual(self.service().list_gaps(), [])  # still nothing recorded
 
@@ -317,7 +319,7 @@ class TestGapTimestampsMatchTheStore(IntentCase):
         self.assertEqual((shown.first_seen, shown.created_at, shown.last_seen),
                          (stored.first_seen, stored.created_at, stored.last_seen))
         self.assertEqual(shown.first_seen, first.gaps[0].first_seen)
-        self.assertLess(shown.first_seen, shown.last_seen)
+        self.assertLess(narrow(shown.first_seen), narrow(shown.last_seen))
         self.assertEqual(shown.occurrence_count, 2)
 
 

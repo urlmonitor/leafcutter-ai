@@ -18,12 +18,21 @@ from __future__ import annotations
 import unittest
 from datetime import UTC, datetime
 from types import SimpleNamespace
+from typing import Any
 
 from kernel.capabilities.decision.loading import load_working
 from kernel.capabilities.decision.requests import options_request
 from kernel.capabilities.retrieval.repository import _candidate
 from kernel.config import load_kernel_config
-from kernel.contracts import CapabilityGap, GapType, Request, schema_ids
+from kernel.contracts import (
+    ApprovalStatus,
+    CapabilityGap,
+    FindingKind,
+    GapType,
+    ProposalStatus,
+    Request,
+    schema_ids,
+)
 from kernel.contracts.enums import EvidenceCategory, NeedStatus, ResultStatus
 from kernel.contracts.enums import RequestKind as RK
 from kernel.contracts.evidence import EvidenceBundlePayload, Finding
@@ -38,6 +47,7 @@ from kernel.scheduler.nodes_gaps import build_gap
 from tests.kernel.capabilities.support import child, evidence_item, invocation, resume
 from tests.kernel.capabilities.test_decision_graph import DECISION, DecisionTestCase
 from tests.kernel.capabilities.test_research_graph import ResearchCase, _bundle
+from tests.kernel.helpers import narrow
 
 CATS = EvidenceCategory
 HOST_NOTE = "host-reported; not verified by the kernel"
@@ -45,7 +55,7 @@ NOW = datetime(2026, 10, 1, 4, 23, tzinfo=UTC)
 
 
 def _finding(claim: str = "Tests live under tests/kernel.") -> Finding:
-    return Finding(id="find-aaaaaaaaaaaaaaaa", claim=claim, kind="inference",
+    return Finding(id="find-aaaaaaaaaaaaaaaa", claim=claim, kind=FindingKind("inference"),
                    producer="host.research", limitations=[HOST_NOTE])
 
 
@@ -168,8 +178,8 @@ class TestApprovalEvidenceIds(DecisionTestCase):
         self.evidence = [ev]
         ctx = self.ctx()
         inv, _, waiting = self.first(options=False)
-        proposed = [Option(id=i, title=i, proposal_status="proposed",
-                           approval_status="proposed", source_refs=[ev.id]) for i in "ab"]
+        proposed = [Option(id=i, title=i, proposal_status=ProposalStatus("proposed"),
+                           approval_status=ApprovalStatus("proposed"), source_refs=[ev.id]) for i in "ab"]
         out = child(ctx, RK.OPTIONS, schema_ids.OPTIONS,
                     OptionsPayload(options=proposed).model_dump(mode="json"))
         asked = self.run_decision(resume(inv, waiting, [out]), ctx)
@@ -202,15 +212,15 @@ class TestLineAwareCuts(unittest.TestCase):
     def test_the_cut_falls_on_a_line_boundary(self) -> None:
         lines = [f"line {n:02d} mentions tests here" for n in range(30)]
         cand = _candidate("a.md", "s", lines, ["tests"], self.cfg(100), None)
-        self.assertTrue(cand.truncated)
-        self.assertLessEqual(len(cand.excerpt), 100)
-        self.assertTrue(all(line in lines for line in cand.excerpt.split("\n")))
+        self.assertTrue(narrow(cand).truncated)
+        self.assertLessEqual(len(narrow(cand).excerpt), 100)
+        self.assertTrue(all(line in lines for line in narrow(cand).excerpt.split("\n")))
 
     def test_a_single_long_line_is_cut_at_a_sentence_end(self) -> None:
         text = "Tests are saved here. " * 20
         cand = _candidate("a.md", "s", [text], ["tests"], self.cfg(100), None)
-        self.assertTrue(cand.truncated)
-        self.assertTrue(cand.excerpt.endswith("."), cand.excerpt)
+        self.assertTrue(narrow(cand).truncated)
+        self.assertTrue(narrow(cand).excerpt.endswith("."), narrow(cand).excerpt)
 
 
 class TestGapTraceLinks(unittest.TestCase):
@@ -218,8 +228,8 @@ class TestGapTraceLinks(unittest.TestCase):
 
     URL = "https://cloud.langfuse.com/project/p/traces/abc"
 
-    def _gap(self, **changes) -> CapabilityGap:
-        fields = dict(
+    def _gap(self, **changes: Any) -> CapabilityGap:
+        fields: dict[str, Any] = dict(
             id="gap-0000000000000001", gap_key="k" * 16, gap_type=GapType.HOST_ONLY,
             goal="g", normalized_need="options", request_kind="options",
             input_schema="i.v1", output_schema="o.v1", created_at=NOW, first_seen=NOW,
@@ -236,7 +246,7 @@ class TestGapTraceLinks(unittest.TestCase):
     def test_the_draft_lists_the_trace_links(self) -> None:
         store = MemoryGapStore()
         stored = publish_gap(store, self._gap())
-        self.assertIn(self.URL, store.drafts[stored.proposal.draft_ref])
+        self.assertIn(self.URL, store.drafts[narrow(narrow(narrow(stored).proposal).draft_ref)])
         self.assertIn(self.URL, render_gap_draft(self._gap()))
 
     def test_a_new_observation_takes_the_runs_trace_url(self) -> None:
@@ -244,11 +254,11 @@ class TestGapTraceLinks(unittest.TestCase):
                           payload_schema=schema_ids.OPTIONS_REQUEST,
                           payload={"problem": "g"},
                           requested_output_schema=schema_ids.OPTIONS)
-        state = {"run_id": "run-0000000000000001",
+        state: Any = {"run_id": "run-0000000000000001",
                  "task": SimpleNamespace(scope=SimpleNamespace(component_ids=[])),
                  "registry": SimpleNamespace(content_hash="h"),
                  "trace": TraceState(trace_id="abc", trace_url=self.URL)}
-        item = SimpleNamespace(id="work-0000000000000001", attempts=0)
+        item: Any = SimpleNamespace(id="work-0000000000000001", attempts=0)
         gap = build_gap(state, item, request, None, GapType.HOST_ONLY, NOW)
         self.assertEqual(gap.example_trace_urls, [self.URL])
 

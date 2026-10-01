@@ -12,25 +12,32 @@ from __future__ import annotations
 import enum
 import unittest
 from datetime import datetime
+from typing import Any
 
 from pydantic import ValidationError
 
 import kernel.contracts as contracts
 from kernel.contracts import (
     Actor,
+    ActorKind,
+    ApprovalStatus,
     Criterion,
     Decision,
+    DecisionStatus,
     Evidence,
     Finding,
+    FindingKind,
     Option,
+    ProposalStatus,
     RoutingAssessment,
+    RoutingOutcome,
     Scope,
     TaskInput,
     Usage,
 )
 from kernel.contracts.base import is_kernel_id, new_id
 from kernel.contracts.run import compute_gap_key
-from tests.kernel.helpers import make_evidence
+from tests.kernel.helpers import make_evidence, narrow
 
 
 class TestBaseRules(unittest.TestCase):
@@ -38,15 +45,15 @@ class TestBaseRules(unittest.TestCase):
 
     def test_unknown_fields_are_rejected(self) -> None:
         with self.assertRaises(ValidationError):
-            Actor(id="u1", kind="human", nickname="x")
+            Actor.model_validate({"id": "u1", "kind": "human", "nickname": "x"})
 
     def test_models_are_frozen(self) -> None:
-        actor = Actor(id="u1", kind="human")
+        actor = Actor(id="u1", kind=ActorKind("human"))
         with self.assertRaises(ValidationError):
             actor.id = "u2"
 
     def test_changes_use_model_copy(self) -> None:
-        actor = Actor(id="u1", kind="human")
+        actor = Actor(id="u1", kind=ActorKind("human"))
         self.assertEqual(actor.model_copy(update={"id": "u2"}).id, "u2")
         self.assertEqual(actor.id, "u1")
 
@@ -61,7 +68,7 @@ class TestBaseRules(unittest.TestCase):
         evidence = make_evidence()
         with self.assertRaises(ValidationError):
             Evidence.model_validate({**evidence.model_dump(), "created_at": datetime(2026, 1, 1)})
-        self.assertEqual(evidence.created_at.utcoffset().total_seconds(), 0)
+        self.assertEqual(narrow(evidence.created_at.utcoffset()).total_seconds(), 0)
 
     def test_malformed_id_rejected(self) -> None:
         data = make_evidence().model_dump()
@@ -85,8 +92,8 @@ class TestEvidence(unittest.TestCase):
 
     def test_source_fact_finding_needs_support(self) -> None:
         with self.assertRaises(ValidationError):
-            Finding(id=new_id("find"), claim="c", kind="source_fact", producer="p")
-        ok = Finding(id=new_id("find"), claim="c", kind="inference", producer="p")
+            Finding(id=new_id("find"), claim="c", kind=FindingKind("source_fact"), producer="p")
+        ok = Finding(id=new_id("find"), claim="c", kind=FindingKind("inference"), producer="p")
         self.assertEqual(ok.supporting_evidence_ids, [])
 
 
@@ -114,27 +121,27 @@ class TestDecision(unittest.TestCase):
     """Status invariants of Decision and RoutingAssessment."""
 
     def test_resolved_needs_a_supplied_option(self) -> None:
-        base = {"id": new_id("dec"), "question": "q", "option_ids": ["opt-a"]}
+        base: dict[str, Any] = {"id": new_id("dec"), "question": "q", "option_ids": ["opt-a"]}
         with self.assertRaises(ValidationError):
-            Decision(**base, status="resolved")
+            Decision(**base, status=DecisionStatus("resolved"))
         with self.assertRaises(ValidationError):
-            Decision(**base, status="resolved", selected_option_id="opt-zzz")
-        self.assertEqual(Decision(**base, status="resolved",
+            Decision(**base, status=DecisionStatus("resolved"), selected_option_id="opt-zzz")
+        self.assertEqual(Decision(**base, status=DecisionStatus("resolved"),
                                   selected_option_id="opt-a").status.value, "resolved")
 
     def test_unresolved_cannot_select(self) -> None:
         with self.assertRaises(ValidationError):
-            Decision(id=new_id("dec"), question="q", option_ids=["a"], status="needs_human",
+            Decision(id=new_id("dec"), question="q", option_ids=["a"], status=DecisionStatus("needs_human"),
                      selected_option_id="a")
 
     def test_routing_selected_must_be_eligible(self) -> None:
-        base = {"id": new_id("ra"), "work_item_id": new_id("work"),
+        base: dict[str, Any] = {"id": new_id("ra"), "work_item_id": new_id("work"),
                 "eligible_candidate_ids": ["decision"]}
         with self.assertRaises(ValidationError):
-            RoutingAssessment(**base, outcome="selected", selected="research")
+            RoutingAssessment(**base, outcome=RoutingOutcome("selected"), selected="research")
         with self.assertRaises(ValidationError):
-            RoutingAssessment(**base, outcome="no_match", selected="decision")
-        ok = RoutingAssessment(**base, outcome="selected", selected="decision")
+            RoutingAssessment(**base, outcome=RoutingOutcome("no_match"), selected="decision")
+        ok = RoutingAssessment(**base, outcome=RoutingOutcome("selected"), selected="decision")
         self.assertFalse(ok.jev_called)
 
 
@@ -148,22 +155,22 @@ class TestProposalApprovalTrack(unittest.TestCase):
 
     def test_llm_proposed_criterion_cannot_skip_approval(self) -> None:
         with self.assertRaises(ValidationError):
-            Criterion(id="c1", question="q", proposal_status="proposed")
-        ok = Criterion(id="c1", question="q", proposal_status="proposed",
-                       approval_status="proposed", proposed_by="host.generate_options")
+            Criterion(id="c1", question="q", proposal_status=ProposalStatus("proposed"))
+        ok = Criterion(id="c1", question="q", proposal_status=ProposalStatus("proposed"),
+                       approval_status=ApprovalStatus("proposed"), proposed_by="host.generate_options")
         self.assertEqual(ok.approval_status.value, "proposed")
 
     def test_human_approval_step_records_approver(self) -> None:
         with self.assertRaises(ValidationError):
-            Criterion(id="c1", question="q", proposal_status="proposed",
-                      approval_status="approved")
-        approved = Criterion(id="c1", question="q", proposal_status="proposed",
-                             approval_status="approved", approved_by="human:user")
+            Criterion(id="c1", question="q", proposal_status=ProposalStatus("proposed"),
+                      approval_status=ApprovalStatus("approved"))
+        approved = Criterion(id="c1", question="q", proposal_status=ProposalStatus("proposed"),
+                             approval_status=ApprovalStatus("approved"), approved_by="human:user")
         self.assertEqual(approved.approved_by, "human:user")
 
     def test_same_rules_for_options(self) -> None:
         with self.assertRaises(ValidationError):
-            Option(id="o1", title="t", proposal_status="proposed")
+            Option(id="o1", title="t", proposal_status=ProposalStatus("proposed"))
         self.assertEqual(Option(id="o1", title="t").approval_status.value, "not_required")
 
 

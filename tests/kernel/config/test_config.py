@@ -25,6 +25,7 @@ from kernel.config import (
     load_kernel_config,
 )
 from kernel.contracts.enums import EvidenceCategory
+from tests.kernel.helpers import narrow
 
 REPO = Path(__file__).resolve().parents[3]
 
@@ -53,7 +54,7 @@ class TestDefaults(unittest.TestCase):
             model = section.annotation
             if not hasattr(model, "model_fields") or name == "sources":
                 continue
-            for field, info in model.model_fields.items():
+            for field, info in narrow(model).model_fields.items():
                 with self.subTest(section=name, field=field):
                     self.assertTrue(info.is_required(), f"{name}.{field} has a code default")
 

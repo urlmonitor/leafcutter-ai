@@ -10,21 +10,26 @@ ARCHITECTURE: One accept and one reject case per rule, so each validator is show
 from __future__ import annotations
 
 import unittest
+from typing import Any
 
 from pydantic import ValidationError
 
 from kernel.contracts import (
+    Actor,
+    ActorKind,
     CapabilityInvocation,
     CapabilityResult,
     HostWorkRequest,
     HumanQuestion,
     InteractionSubmission,
+    ResultStatus,
     RunEnvelope,
+    RunStatus,
     WorkItem,
 )
 from kernel.contracts.base import new_id
 from kernel.contracts.work import RequestProposal
-from tests.kernel.helpers import make_invocation, make_request_body
+from tests.kernel.helpers import make_invocation, make_request_body, narrow
 
 
 def _proposal() -> RequestProposal:
@@ -32,9 +37,9 @@ def _proposal() -> RequestProposal:
     return RequestProposal.model_validate(body.model_dump())
 
 
-def _result(status: str, **fields: object) -> CapabilityResult:
+def _result(status: str, **fields: Any) -> CapabilityResult:
     return CapabilityResult(invocation_id=new_id("inv"), work_item_id=new_id("work"),
-                            status=status, **fields)
+                            status=ResultStatus(status), **fields)
 
 
 class TestResultLifecycle(unittest.TestCase):
@@ -80,7 +85,7 @@ class TestResultLifecycle(unittest.TestCase):
 
     def test_failed_needs_error_and_error_only_on_failed_or_blocked(self) -> None:
         failed = _result("failed", error={"code": "provider_unavailable", "retryable": True})
-        self.assertTrue(failed.error.retryable)
+        self.assertTrue(narrow(failed.error).retryable)
         with self.assertRaises(ValidationError):
             _result("failed")
         with self.assertRaises(ValidationError):
@@ -118,7 +123,7 @@ class TestRequestsAndWork(unittest.TestCase):
 def _submission(schema: str, kind: str, response: dict) -> InteractionSubmission:
     return InteractionSubmission(
         run_id=new_id("run"), interaction_id=new_id("int"), expected_state_revision=1,
-        actor={"id": "a", "kind": kind}, response_schema_id=schema, response=response)
+        actor=Actor(id="a", kind=ActorKind(kind)), response_schema_id=schema, response=response)
 
 
 class TestSubmissionIdentity(unittest.TestCase):
@@ -150,9 +155,9 @@ def _human_question() -> HumanQuestion:
                          free_text_allowed=True, state_revision=2)
 
 
-def _envelope(status: str, **fields: object) -> RunEnvelope:
+def _envelope(status: str, **fields: Any) -> RunEnvelope:
     return RunEnvelope(run_id=new_id("run"), root_task_id=new_id("task"), state_revision=3,
-                       status=status, **fields)
+                       status=RunStatus(status), **fields)
 
 
 class TestEnvelope(unittest.TestCase):

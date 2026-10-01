@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import unittest
 from dataclasses import replace
+from typing import Any, cast
 
 from kernel.contracts import (
     FallbackOutcome,
@@ -29,6 +30,8 @@ from kernel.contracts import (
 from kernel.interaction import SubmitStatus
 from kernel.persistence.memory import MemoryGapStore
 from kernel.scheduler.nodes_gaps import fallback_outcome_of, record_host_only
+from kernel.scheduler.state import KernelState
+from tests.kernel.helpers import narrow
 from tests.kernel.interaction.support import BUNDLE, Started, raw_submission, start
 from tests.kernel.scheduler.support import (
     Rig,
@@ -45,7 +48,7 @@ OTHER_WORDING = "Cache store: which does the cache use?"
 BAD = {"evidence_ids": "not-a-list"}
 
 
-def host_research(**extra: object):
+def host_research(**extra: Any):
     """Return the approved generic host research descriptor (bounded_research)."""
     return descriptor("host.research", kinds=("evidence",), mode="host_handoff",
                       accepts=schema_ids.RETRIEVAL_REQUEST, produces=schema_ids.EVIDENCE_BUNDLE,
@@ -104,8 +107,8 @@ class TestFallbackHappyPath(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(gap.normalized_need, "prior_decisions")
         self.assertEqual(gap.output_schema, schema_ids.EVIDENCE_BUNDLE)
         self.assertEqual(gap.missing_native_capability, "native implementation of host.research")
-        self.assertEqual(gap.proposal.author, "template")
-        draft = rig.gap_store.drafts[gap.proposal.draft_ref]
+        self.assertEqual(narrow(gap.proposal).author, "template")
+        draft = rig.gap_store.drafts[narrow(narrow(gap.proposal).draft_ref)]
         self.assertIn("Author: template", draft)
         self.assertIn("NOT a registry entry", draft)
         self.assertIn(gap.gap_key, draft)
@@ -126,7 +129,7 @@ class TestFallbackHappyPath(unittest.IsolatedAsyncioTestCase):
         (aggregated,) = rig.gap_store.load_gaps()
         self.assertEqual(aggregated.occurrence_count, 2)
         self.assertEqual(aggregated.example_run_ids, run_ids)
-        self.assertIn("Occurrences: 2", rig.gap_store.drafts[aggregated.proposal.draft_ref])
+        self.assertIn("Occurrences: 2", rig.gap_store.drafts[narrow(narrow(aggregated.proposal).draft_ref)])
 
     async def test_the_fallback_uses_the_host_operation_budget(self) -> None:
         rig = fallback_rig()
@@ -185,7 +188,7 @@ class TestHostOnly(unittest.IsolatedAsyncioTestCase):
         self.assertIn("native alternatives", gap.why_insufficient)
         self.assertIn("retrieve.test", gap.why_insufficient)
         self.assertIsNotNone(gap.proposal)  # every build opportunity gets a draft
-        draft = rig.gap_store.drafts[gap.proposal.draft_ref]
+        draft = rig.gap_store.drafts[narrow(narrow(gap.proposal).draft_ref)]
         self.assertIn("check whether one can already serve this need", draft)  # ... naming the twin
         self.assertIn("retrieve.test", draft)
 
@@ -193,7 +196,7 @@ class TestHostOnly(unittest.IsolatedAsyncioTestCase):
 class TestRecordHostOnly(unittest.IsolatedAsyncioTestCase):
     """The public `record_host_only` the interaction node calls for every executed host op."""
 
-    async def finished(self) -> tuple[Rig, Started, dict, object]:
+    async def finished(self) -> tuple[Rig, Started, Any, WorkItem]:
         rig = Rig([descriptor("decide.root"), host_research()])
         rig.bind("decide.root", factory=two_phase(
             lambda inv: waiting(inv, proposal(operation="bounded_research")), completed))
@@ -207,10 +210,11 @@ class TestRecordHostOnly(unittest.IsolatedAsyncioTestCase):
                                                                                           ) -> None:
         rig, run, state, item = await self.finished()
         (from_graph,) = rig.gap_store.observations
-        before = {**state, "events": [e for e in state["events"] if e.kind != "gap.recorded"]}
+        before = cast(KernelState, {**state, "events": [
+            e for e in state["events"] if e.kind != "gap.recorded"]})
         second_attempt = item.model_copy(update={"attempts": item.attempts + 1})
-        gap, events = record_host_only(before, run.context, second_attempt,
-                                       FallbackOutcome.HOST_COMPLETED)
+        gap, events = narrow(record_host_only(before, run.context, second_attempt,
+                                              FallbackOutcome.HOST_COMPLETED))
         self.assertEqual(gap.gap_key, from_graph.gap_key)
         self.assertEqual([e.kind for e in events], ["gap.recorded"])
         self.assertEqual(events[0].refs, {"work_item_id": item.id, "gap_id": gap.id})
@@ -221,10 +225,10 @@ class TestRecordHostOnly(unittest.IsolatedAsyncioTestCase):
     async def test_the_outcome_is_carried_and_a_draft_is_written_when_nothing_native_exists(self
                                                                                              ) -> None:
         rig, run, state, item = await self.finished()
-        gap, _ = record_host_only(state, run.context, item, FallbackOutcome.HOST_FAILED)
+        gap, _ = narrow(record_host_only(state, run.context, item, FallbackOutcome.HOST_FAILED))
         self.assertEqual(gap.fallback_outcome, FallbackOutcome.HOST_FAILED)
         self.assertEqual(gap.missing_native_capability, "native implementation of host.research")
-        self.assertIn(gap.proposal.draft_ref, rig.gap_store.drafts)
+        self.assertIn(narrow(narrow(gap.proposal).draft_ref), rig.gap_store.drafts)
 
     async def test_a_store_failure_is_reported_in_events_and_never_raised(self) -> None:
         rig, run, state, item = await self.finished()
@@ -234,7 +238,8 @@ class TestRecordHostOnly(unittest.IsolatedAsyncioTestCase):
                 raise OSError("disk full")
 
         context = replace(run.context, gap_store=Broken())
-        gap, events = record_host_only(state, context, item, FallbackOutcome.HOST_COMPLETED)
+        gap, events = narrow(record_host_only(
+            state, context, item, FallbackOutcome.HOST_COMPLETED))
         self.assertEqual([e.kind for e in events], ["gap.recorded", "gap.record_failed"])
         self.assertEqual(gap.gap_type, GapType.HOST_ONLY)  # the gap object is still returned
 
@@ -242,10 +247,10 @@ class TestRecordHostOnly(unittest.IsolatedAsyncioTestCase):
         rig, run, state, item = await self.finished()
         started = RunEvent(seq=0, run_id=run.run_id, kind="gap.fallback_started",
                            at=run.context.clock(), refs={"work_item_id": item.id})
-        fallback_state = {**state, "events": [*state["events"], started]}
+        fallback_state = cast(KernelState, {**state, "events": [*state["events"], started]})
         self.assertIsNone(record_host_only(fallback_state, run.context, item,
                                            FallbackOutcome.HOST_COMPLETED))
-        human = item.model_copy(update={"binding": item.binding.model_copy(update={
+        human = item.model_copy(update={"binding": narrow(item.binding).model_copy(update={
             "capability_id": "kernel.human"})})
         self.assertIsNone(record_host_only(state, run.context, human,
                                            FallbackOutcome.HOST_COMPLETED))

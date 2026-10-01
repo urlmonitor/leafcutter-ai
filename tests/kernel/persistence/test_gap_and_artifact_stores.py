@@ -16,7 +16,7 @@ import unittest
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
-from kernel.contracts import CapabilityGap
+from kernel.contracts import CapabilityGap, GapType, RequestKind
 from kernel.contracts.base import new_id
 from kernel.persistence import (
     ArtifactStorePort,
@@ -27,14 +27,15 @@ from kernel.persistence import (
 from kernel.persistence.artifacts import FileArtifactStore
 from kernel.persistence.fsutil import UnsafePathComponent
 from kernel.persistence.gap_store import FileGapStore
+from tests.kernel.helpers import narrow
 
 RUN = "run-0123456789abcdef"
 
 
 def _gap(key: str, run: str, when: datetime, count: int = 1) -> CapabilityGap:
     return CapabilityGap(
-        id=new_id("gap"), gap_key=key * 8, gap_type="unsupported", goal="g",
-        normalized_need="n", request_kind="capability", input_schema="i.v1",
+        id=new_id("gap"), gap_key=key * 8, gap_type=GapType("unsupported"), goal="g",
+        normalized_need="n", request_kind=RequestKind("capability"), input_schema="i.v1",
         output_schema="o.v1", occurrence_count=count, example_run_ids=[run],
         first_seen=when, last_seen=when)
 
@@ -115,7 +116,7 @@ class TestFileArtifactStore(_TempRoot):
         self.assertEqual(ref.ref, "report.md")
         self.assertEqual(ref.sha256, hashlib.sha256(b"hello").hexdigest())
         self.assertEqual(ref.size_bytes, 5)
-        self.assertTrue(Path(ref.path).is_absolute())
+        self.assertTrue(Path(narrow(ref.path)).is_absolute())
         self.assertEqual(store.absolute_path(RUN, "report.md"), ref.path)
         self.assertEqual(FileArtifactStore(self.root).read_artifact(RUN, "report.md"), b"hello")
 

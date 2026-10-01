@@ -19,6 +19,7 @@ import types
 import unittest
 from dataclasses import replace
 from datetime import UTC, datetime, timedelta
+from typing import Any
 
 from kernel.config import load_kernel_config
 from kernel.contracts import RunEvent, RunStatus, WorkItem, WorkItemStatus, schema_ids
@@ -36,6 +37,7 @@ from kernel.scheduler.guards import (
 )
 from kernel.scheduler.nodes_schedule import schedule
 from kernel.scheduler.state import Budgets
+from tests.kernel.helpers import narrow
 from tests.kernel.interaction.support import host_rig, raw_submission, start
 from tests.kernel.scheduler.support import (
     Rig,
@@ -139,7 +141,7 @@ class TestRunLevelCaps(unittest.TestCase):
     def test_cancellation_outranks_every_other_guard(self) -> None:
         trip = check_run_guards(Budgets(jev_calls=9), self.limits, max_iterations=99,
                                 queue_empty=True, cancelled=True)
-        self.assertEqual(trip.guard, "cancelled")
+        self.assertEqual(narrow(trip).guard, "cancelled")
 
 
 class TestWaitingTime(unittest.TestCase):
@@ -236,12 +238,13 @@ class TestTripsNameUnresolvedWork(unittest.IsolatedAsyncioTestCase):
             "status": WorkItemStatus.WAITING, "continuation": {
                 "capability_id": "decide.root", "capability_version": "1.0.0", "state": {},
                 "resume_reason": "children_done"}})
-        state = {**done, "work_items": {root_id: stuck_root, child.id: reopened},
+        state: Any = {**done, "work_items": {root_id: stuck_root, child.id: reopened},
                  "budgets": Budgets(jev_calls=99), "interaction_queue": [], "outcome": None,
                  "halt_reason": None}
-        update = await schedule(state, types.SimpleNamespace(context=rig.runtime()))
+        runtime: Any = types.SimpleNamespace(context=rig.runtime())
+        update: Any = await schedule(state, runtime)
         self.assertEqual(update["halt_reason"], "max_jev_calls")
-        merged = {**state, **update, "work_items": {**state["work_items"],
+        merged: Any = {**state, **update, "work_items": {**state["work_items"],
                                                     **update["work_items"]}}
         self.assertEqual(merged["work_items"][child.id].status, WorkItemStatus.BLOCKED)
         outcome = decide_outcome(merged)
@@ -275,8 +278,8 @@ class TestPerCallTimeoutAndActiveTime(unittest.IsolatedAsyncioTestCase):
     async def test_host_wait_is_measured_from_events_and_adds_no_active_time(self) -> None:
         rig = host_rig()
         rig.monotonic = lambda: 0.0  # nodes take no time; any charged wait would show up
-        base, ticks = rig.runtime, itertools.count()
-        rig.runtime = lambda: replace(base(), clock=lambda: T0 + timedelta(
+        ticks = itertools.count()
+        rig.runtime_wrap = lambda runtime: replace(runtime, clock=lambda: T0 + timedelta(
             minutes=next(ticks)))
         run = await start(rig)
         self.assertEqual(run.state["budgets"].active_seconds, 0.0)

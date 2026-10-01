@@ -13,7 +13,7 @@ from __future__ import annotations
 
 import unittest
 
-from kernel.contracts import RunStatus, WorkItem, schema_ids
+from kernel.contracts import RunStatus, WorkItem, WorkItemStatus, schema_ids
 from kernel.scheduler.state import append_events, merge_map, new_event, sum_counts
 from tests.kernel.helpers import make_evidence
 from tests.kernel.scheduler.support import (
@@ -45,7 +45,7 @@ def _rig(first, child_factory=None):
 
 def _item(seq: int, revision: int, status: str = "ready") -> WorkItem:
     return WorkItem(id="work-0000000000000001", root_task_id="task-0000000000000001",
-                    request_id="req-0000000000000001", created_seq=seq, status=status,
+                    request_id="req-0000000000000001", created_seq=seq, status=WorkItemStatus(status),
                     updated_revision=revision)
 
 

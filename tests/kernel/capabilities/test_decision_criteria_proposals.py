@@ -13,7 +13,7 @@ from __future__ import annotations
 import unittest
 
 from kernel.capabilities.decision.loading import load_working
-from kernel.contracts import schema_ids
+from kernel.contracts import ProposalStatus, schema_ids
 from kernel.contracts.decision import Option
 from kernel.contracts.enums import ApprovalStatus, RequestKind, ResultStatus
 from kernel.contracts.evidence import EvidenceBundlePayload
@@ -26,12 +26,17 @@ from kernel.contracts.payloads import (
 )
 from tests.kernel.capabilities.support import (
     child,
-    decision_payload as _payload,
     invocation,
-    proposed_criteria as _proposed_criteria,
     resume,
 )
+from tests.kernel.capabilities.support import (
+    decision_payload as _payload,
+)
+from tests.kernel.capabilities.support import (
+    proposed_criteria as _proposed_criteria,
+)
 from tests.kernel.capabilities.test_decision_graph import DECISION, DecisionTestCase
+from tests.kernel.helpers import as_json
 
 
 class TestOptionsAndCriteriaProposals(DecisionTestCase):
@@ -90,7 +95,7 @@ class TestOptionsAndCriteriaProposals(DecisionTestCase):
                         {"choice_id": "approve"})
         done = self.run_decision(resume(inv, asked, [approve]), ctx)
         self.assertEqual(done.status, ResultStatus.COMPLETED)
-        self.assertEqual(set(self.jev.batches[0].state["criteria"]), {"p1", "p2"})
+        self.assertEqual(set(as_json(self.jev.batches[0].state)["criteria"]), {"p1", "p2"})
         report = DecisionReportPayload.model_validate(done.output_payload)
         self.assertEqual(report.approval_status, ApprovalStatus.APPROVED)
 
@@ -109,7 +114,7 @@ class TestOptionsAndCriteriaProposals(DecisionTestCase):
         self.params["satisfies"] = {("crit.edit.1", "A"): 0.95, ("crit.edit.2", "A"): 0.95}
         done = self.run_decision(resume(inv, asked, [edit]), ctx)
         self.assertEqual(done.status, ResultStatus.COMPLETED)
-        state = self.jev.batches[0].state["criteria"]
+        state = as_json(self.jev.batches[0].state)["criteria"]
         self.assertEqual(sorted(state.values()), ["Must run offline", "Must survive a crash"])
         self.assertNotIn("p1", state)
 
@@ -120,7 +125,7 @@ class TestOptionsAndCriteriaProposals(DecisionTestCase):
         self.params["satisfies"] = {("p1", "A"): 0.95}
         done = self.run_decision(resume(inv, asked, [subset]), ctx)
         self.assertEqual(done.status, ResultStatus.COMPLETED)
-        self.assertEqual(set(self.jev.batches[0].state["criteria"]), {"p1"})
+        self.assertEqual(set(as_json(self.jev.batches[0].state)["criteria"]), {"p1"})
 
     def test_free_text_is_recorded_but_never_becomes_criteria(self) -> None:
         inv, ctx, asked = self._proposal_round()
@@ -158,8 +163,8 @@ class TestOptionsAndCriteriaProposals(DecisionTestCase):
                          GoalRequestPayload(goal="Where should state live?").model_dump())
         waiting = self.run_decision(inv, ctx)
         generated = OptionsPayload(
-            options=[Option(id="G1", title="Generated", proposal_status="proposed",
-                            approval_status="proposed", proposed_by="host")],
+            options=[Option(id="G1", title="Generated", proposal_status=ProposalStatus("proposed"),
+                            approval_status=ApprovalStatus("proposed"), proposed_by="host")],
             proposed_criteria=_proposed_criteria())
         out = child(ctx, RequestKind.OPTIONS, schema_ids.OPTIONS,
                     generated.model_dump(mode="json"))

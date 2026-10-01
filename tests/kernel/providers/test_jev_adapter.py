@@ -13,25 +13,31 @@ from __future__ import annotations
 import asyncio
 import json
 import unittest
+from typing import TYPE_CHECKING, Any
 
 from kernel.providers import JevBatch, JevInvalidResponse, JevPayloadTooLarge, JevUnavailable
 from kernel.providers.jev_errors import JevInvalidRequest
 from tests.kernel.providers import jevkit as kit
 
+if TYPE_CHECKING:  # the mixin uses TestCase assertions; at runtime it stays a plain mixin
+    _Base = unittest.TestCase
+else:
+    _Base = object
 
-class AdapterContract:
+
+class AdapterContract(_Base):
     """Behaviour every transport must show; subclasses define make_transport."""
 
-    make_transport = None
+    make_transport: Any = None
 
     def setUp(self) -> None:
         """Reset recorded requests and delays."""
         self.requests: list[dict] = []
         self.sleeper = kit.Sleeper()
 
-    def adapter(self, responder, **overrides):
+    def adapter(self, responder: Any, **overrides: Any) -> Any:
         """Return an adapter whose mocked server calls responder(lib, request, payload)."""
-        holder: dict = {}
+        holder: dict[str, Any] = {}
 
         def handler(request):
             payload = json.loads(request.content)

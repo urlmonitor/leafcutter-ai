@@ -16,9 +16,8 @@ from unittest import mock
 
 from kernel.config import HostConfig
 from kernel.contracts import FallbackOutcome, GapType, RunStatus
-from kernel.scheduler import nodes_gaps
 from kernel.interaction import SubmissionRejected, submit_interaction
-from kernel.scheduler import build_kernel_graph
+from kernel.scheduler import build_kernel_graph, nodes_gaps
 from tests.kernel.interaction.support import host_rig, raw_submission, start
 
 BAD = {"evidence_ids": "not-a-list"}

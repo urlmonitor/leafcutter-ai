@@ -12,7 +12,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from kernel.contracts import RequestProposal
+from kernel.contracts import RequestKind, RequestProposal
 from tests.kernel.capabilities.host_support import (
     NEED,
     SCHEMAS,
@@ -25,12 +25,12 @@ from tests.kernel.scheduler.support import Rig, completed, descriptor, two_phase
 
 __all__ = ["KINDS", "OPERATIONS", "PAYLOADS", "RESPONSES", "host_result", "host_rig"]
 
-KINDS = {"host.generate_options": "options", "host.synthesize": "synthesis",
-         "host.research": "evidence", "host.formulate_question": "capability"}
+KINDS = {"host.generate_options": RequestKind.OPTIONS, "host.synthesize": RequestKind.SYNTHESIS,
+         "host.research": RequestKind.EVIDENCE, "host.formulate_question": RequestKind.CAPABILITY}
 OPERATIONS = {"host.generate_options": "generate_options",
               "host.synthesize": "synthesize_evidence", "host.research": "bounded_research",
               "host.formulate_question": "formulate_question"}
-PAYLOADS = {
+PAYLOADS: dict[str, dict[str, Any]] = {
     "host.generate_options": {"problem": "Where should the cache live?", "max_options": 2,
                               "propose_criteria": True},
     "host.synthesize": {"operation": "synthesize_evidence", "question": "What must it do?"},
@@ -38,7 +38,7 @@ PAYLOADS = {
     "host.formulate_question": {"question": "Which store?", "free_text_allowed": False,
                                 "choices": [{"id": "sqlite", "label": "SQLite"},
                                             {"id": "files", "label": "Plain files"}]}}
-RESPONSES = {
+RESPONSES: dict[str, dict[str, Any]] = {
     "host.generate_options": {"options": [option("opt-a"), option("opt-b"), option("opt-c")],
                               "proposed_criteria": [criterion()]},
     "host.synthesize": {"findings": [finding_json(kind="inference")], "agreements": ["x"]},

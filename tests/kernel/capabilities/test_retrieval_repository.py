@@ -19,6 +19,7 @@ import tempfile
 import unittest
 from dataclasses import replace
 from pathlib import Path
+from typing import Any
 
 import pytest
 
@@ -32,12 +33,11 @@ from kernel.contracts.base import content_hash
 from kernel.contracts.enums import EvidenceCategory, NeedStatus, ResultStatus, SourceKind
 from kernel.contracts.evidence import EvidenceBundlePayload, EvidenceNeed
 from kernel.contracts.payloads import RetrievalLimits, RetrievalRequestPayload
-from kernel.contracts.schema_catalog import validate_payload
 from kernel.contracts.task import RevisionInfo
 from kernel.providers.base import JevUnavailable
 from kernel.providers.fakes import ScriptedJev, noul_answer
 from tests.kernel.capabilities.support import invocation, no_git
-from tests.kernel.helpers import make_context
+from tests.kernel.helpers import bundle_of, make_context, narrow
 
 ADR_DIR = "docs/architecture/adrs"
 QUESTION = "Where should run state be stored with sqlite?"
@@ -83,7 +83,7 @@ def _config(roots: list[str] | None = None, **retrieval: object):
     return cfg
 
 
-def _request(**extra: object) -> dict:
+def _request(**extra: Any) -> dict:
     """Return a retrieval_request.v1 payload for a prior_decisions need."""
     need = EvidenceNeed(id="need.prior_decisions", category=EvidenceCategory.PRIOR_DECISIONS,
                         question=QUESTION)
@@ -120,7 +120,7 @@ class RepoTestCase(unittest.TestCase):
         return asyncio.run(RepositoryRetrievalExecutor().ainvoke(inv, ctx))
 
     def bundle(self, result) -> EvidenceBundlePayload:
-        return validate_payload(schema_ids.EVIDENCE_BUNDLE, result.output_payload)
+        return bundle_of(result)
 
 
 class TestEvidenceShape(RepoTestCase):
@@ -175,7 +175,7 @@ class TestRealGit(unittest.TestCase):
     def test_git_revision_is_used_when_scope_has_none(self) -> None:
         version = resolve_source_version("run-git", make_context(Path(__file__).parents[3]).scope)
         self.assertIsNotNone(version)
-        self.assertGreaterEqual(len(version.commit), 7)
+        self.assertGreaterEqual(len(narrow(narrow(version).commit)), 7)
 
 
 class TestTruncation(RepoTestCase):

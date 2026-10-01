@@ -14,16 +14,19 @@ ARCHITECTURE: Runs with MemorySaver and the P1 memory stores; submissions are re
 from __future__ import annotations
 
 import unittest
+from typing import Any
 
 from kernel.contracts import (
     Actor,
     ActorKind,
+    HostWorkRequest,
     InteractionSubmission,
     RunStatus,
     Verification,
     schema_ids,
 )
 from kernel.providers.fakes import choice_answer
+from tests.kernel.helpers import as_json, as_type
 from tests.kernel.scheduler.support import (
     Rig,
     completed,
@@ -33,7 +36,7 @@ from tests.kernel.scheduler.support import (
     waiting,
 )
 
-BUNDLE = {"evidence": [], "findings": [], "evidence_ids": []}
+BUNDLE: dict[str, Any] = {"evidence": [], "findings": [], "evidence_ids": []}
 
 
 def _submission(packet: dict, run_id: str, *, kind: ActorKind, schema: str, response: dict,
@@ -67,7 +70,7 @@ class TestHostWork(unittest.IsolatedAsyncioTestCase):
         self.assertIn("edit_repository", packet["forbidden_operations"])
         self.assertEqual(packet["state_revision"], state["state_revision"])
         stored = rig.run_store.load_interaction(state["run_id"], packet["id"])
-        self.assertEqual(stored.state_revision, state["state_revision"])
+        self.assertEqual(as_type(stored, HostWorkRequest).state_revision, state["state_revision"])
         self.assertEqual(state["interaction_queue"], [packet["id"]])
         self.assertEqual(state["budgets"].host_operations, 1)
 
@@ -179,7 +182,7 @@ class TestHumanClarification(unittest.IsolatedAsyncioTestCase):
         final = (await rig.resume(graph, config, answer)).value
         self.assertEqual(final["outcome"].status, RunStatus.COMPLETED)
         self.assertEqual(rig.jev.call_count, 2)
-        second_state = rig.jev.batches[1].state["requests"]
+        second_state = as_json(rig.jev.batches[1].state)["requests"]
         self.assertEqual(list(second_state.values())[0]["clarifications"], ["Use sqlite"])
         human = [e for e in final["evidence"].values() if e.source.kind.value == "human"]
         self.assertEqual([e.excerpt for e in human], ["Use sqlite"])

@@ -20,6 +20,7 @@ import tempfile
 import unittest
 from dataclasses import replace
 from pathlib import Path
+from typing import Any
 
 from kernel.capabilities.research import ResearchExecutor
 from kernel.capabilities.research.planning import retrieval_operation
@@ -41,11 +42,10 @@ from kernel.contracts.payloads import (
     RetrievalRequestPayload,
     SynthesisRequestPayload,
 )
-from kernel.contracts.schema_catalog import validate_payload
 from kernel.providers.base import JevUnavailable
 from kernel.providers.fakes import ScriptedJev, noul_answer
 from tests.kernel.capabilities.support import child, evidence_item, invocation, no_git, resume
-from tests.kernel.helpers import make_context
+from tests.kernel.helpers import as_type, bundle_of, make_context
 
 QUESTION = "Where should run state be stored with sqlite?"
 CATS = EvidenceCategory
@@ -53,7 +53,7 @@ CATS = EvidenceCategory
 
 def _script(jev: ScriptedJev, params: dict | None = None) -> dict:
     """Script research answers from a mutable dict (need.<cat>, conflict, evaluable)."""
-    p = {"need": {}, "default_need": 0.05, "conflict": 0.05, "evaluable": 0.95}
+    p: dict[str, Any] = {"need": {}, "default_need": 0.05, "conflict": 0.05, "evaluable": 0.95}
     p.update(params or {})
     jev.script("research.plan_needs", "need.*",
                lambda q, b: noul_answer(p["need"].get(q.id.split(".", 1)[1], p["default_need"])))
@@ -62,7 +62,7 @@ def _script(jev: ScriptedJev, params: dict | None = None) -> dict:
     return p
 
 
-def _bundle(ev_items: list, coverage: dict, **extra: object) -> dict:
+def _bundle(ev_items: list, coverage: dict, **extra: Any) -> dict:
     """Return an evidence_bundle.v1 payload with the given evidence and coverage."""
     return EvidenceBundlePayload(
         evidence_ids=[e.id for e in ev_items], evidence=ev_items, coverage=coverage,
@@ -99,7 +99,8 @@ class ResearchCase(unittest.TestCase):
         return asyncio.run(ResearchExecutor().ainvoke(inv, ctx))
 
     def bundle(self, result) -> EvidenceBundlePayload:
-        return validate_payload(schema_ids.EVIDENCE_BUNDLE, result.output_payload)
+        return as_type(bundle_of(result),
+                       EvidenceBundlePayload)
 
 
 class TestPlanning(ResearchCase):

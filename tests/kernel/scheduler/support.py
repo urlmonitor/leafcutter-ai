@@ -14,8 +14,9 @@ from __future__ import annotations
 import tempfile
 from collections.abc import Callable
 from dataclasses import dataclass, field
+from functools import partial
 from pathlib import Path
-from typing import Any
+from typing import Any, TypeVar, overload
 
 from langgraph.checkpoint.memory import MemorySaver
 from langgraph.types import Command
@@ -27,7 +28,9 @@ from kernel.contracts import (
     CapabilityDescriptor,
     CapabilityInvocation,
     CapabilityResult,
+    ErrorInfo,
     RegistrySnapshot,
+    RequestKind,
     RequestProposal,
     ResultStatus,
     TaskInput,
@@ -42,7 +45,7 @@ from kernel.scheduler import KernelRuntime, build_kernel_graph, initial_state, r
 from tests.kernel.helpers import ScriptedExecutor, load_json, make_descriptor, make_scope
 
 REPORT = {"status": "resolved", "recommendation": "Use A", "selected_option_id": "opt-a"}
-EMPTY_BUNDLE = {"evidence": [], "findings": []}
+EMPTY_BUNDLE: dict[str, Any] = {"evidence": [], "findings": []}
 
 
 def descriptor(cap_id: str, *, kinds: tuple[str, ...] = ("capability",),
@@ -66,7 +69,7 @@ def retrieval_descriptor(cap_id: str = "retrieve.test", routing: str = "fixed"
 def completed(inv: CapabilityInvocation, schema: str = schema_ids.DECISION_REPORT,
               payload: dict | None = None, **extra: Any) -> CapabilityResult:
     """Return a completed result (a resolved decision report by default)."""
-    body = payload if payload is not None else (REPORT if schema == schema_ids.DECISION_REPORT
+    body: dict[str, Any] = payload if payload is not None else (REPORT if schema == schema_ids.DECISION_REPORT
                                                 else EMPTY_BUNDLE)
     return CapabilityResult(invocation_id=inv.id, work_item_id=inv.work_item_id,
                             status=ResultStatus.COMPLETED, output_schema_id=schema,
@@ -78,7 +81,7 @@ def proposal(category: str = "prior_decisions", question: str = "Which store doe
     """Return a retrieval request proposal for the given evidence category and question."""
     payload = load_json("valid/leafcutter.retrieval_request.v1/valid_basic.json")
     payload["need"].update(category=category, question=question)
-    return RequestProposal(kind="evidence", goal=question, payload_schema=schema_ids.RETRIEVAL_REQUEST,
+    return RequestProposal(kind=RequestKind("evidence"), goal=question, payload_schema=schema_ids.RETRIEVAL_REQUEST,
                            payload=payload, requested_output_schema=schema_ids.EVIDENCE_BUNDLE,
                            **extra)
 
@@ -96,7 +99,7 @@ def failed(inv: CapabilityInvocation, code: str = "boom", retryable: bool = Fals
     """Return a failed result."""
     return CapabilityResult(invocation_id=inv.id, work_item_id=inv.work_item_id,
                             status=ResultStatus.FAILED,
-                            error={"code": code, "message": "x", "retryable": retryable})
+                            error=ErrorInfo(code=code, message="x", retryable=retryable))
 
 
 def blocked(inv: CapabilityInvocation, text: str = "needs a human") -> CapabilityResult:
@@ -117,6 +120,9 @@ def with_limits(cfg: KernelConfig, **limits: Any) -> KernelConfig:
     return cfg.model_copy(update={"limits": cfg.limits.model_copy(update=limits)})
 
 
+_E = TypeVar("_E")
+
+
 @dataclass
 class Rig:
     """Test doubles, bindings and the pinned registry for one scheduler run."""
@@ -126,17 +132,27 @@ class Rig:
     config: KernelConfig = field(default_factory=load_kernel_config)
     jev: ScriptedJev = field(default_factory=ScriptedJev)
     tracer: RecordingTracer = field(default_factory=RecordingTracer)
-    run_store: MemoryRunStore = field(default_factory=MemoryRunStore)
-    gap_store: MemoryGapStore = field(default_factory=MemoryGapStore)
-    artifacts: MemoryArtifactStore = field(default_factory=MemoryArtifactStore)
+    run_store: Any = field(default_factory=MemoryRunStore)  # tests swap in file stores
+    gap_store: Any = field(default_factory=MemoryGapStore)
+    artifacts: Any = field(default_factory=MemoryArtifactStore)
     monotonic: Callable[[], float] | None = None
     cancel: Callable[[], bool] = lambda: False
     permissions: tuple[str, ...] = ("read_repo",)
     max_iterations: int | None = None
+    #: Wraps the runtime each call builds (tests swap the clock or the redactor).
+    runtime_wrap: Callable[[KernelRuntime], KernelRuntime] | None = None
+
+    @overload
+    def bind(self, cap_id: str, executor: _E, *,
+             factory: Callable[[CapabilityInvocation], CapabilityResult] = ...) -> _E: ...
+
+    @overload
+    def bind(self, cap_id: str, executor: None = None, *,
+             factory: Callable[[CapabilityInvocation], CapabilityResult] = ...
+             ) -> ScriptedExecutor: ...
 
     def bind(self, cap_id: str, executor: Any = None, *,
-             factory: Callable[[CapabilityInvocation], CapabilityResult] = completed
-             ) -> ScriptedExecutor:
+             factory: Callable[[CapabilityInvocation], CapabilityResult] = completed) -> Any:
         """Register an executor (default: a ScriptedExecutor using `factory`) for a binding."""
         self.executors[cap_id] = executor or ScriptedExecutor(factory=factory)
         return self.executors[cap_id]
@@ -146,14 +162,16 @@ class Rig:
         bindings = BindingTable()
         for d in self.descriptors:
             if d.binding in self.executors:
-                bindings.register(d.binding, d.version, lambda key=d.binding: self.executors[key])
+                bindings.register(d.binding, d.version,
+                                  partial(self.executors.__getitem__, d.binding))
         extra: dict[str, Any] = {"max_scheduler_iterations": self.max_iterations}
         if self.monotonic:
             extra["monotonic"] = self.monotonic
-        return KernelRuntime(config=self.config, bindings=bindings, jev=self.jev,
-                             tracer=self.tracer, run_store=self.run_store,
-                             gap_store=self.gap_store, artifacts=self.artifacts,
-                             cancel_probe=self.cancel, **extra)
+        runtime = KernelRuntime(config=self.config, bindings=bindings, jev=self.jev,
+                                tracer=self.tracer, run_store=self.run_store,
+                                gap_store=self.gap_store, artifacts=self.artifacts,
+                                cancel_probe=self.cancel, **extra)
+        return self.runtime_wrap(runtime) if self.runtime_wrap else runtime
 
     def snapshot(self) -> RegistrySnapshot:
         """Return the pinned registry snapshot of the rig's descriptors."""

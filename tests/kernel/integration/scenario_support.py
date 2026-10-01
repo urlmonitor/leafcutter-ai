@@ -28,8 +28,10 @@ from kernel.contracts import (
     ALL_MODELS,
     Actor,
     ActorKind,
+    ApprovalStatus,
     Criterion,
     Option,
+    ProposalStatus,
     TaskInput,
     content_hash,
     evidence_id,
@@ -46,7 +48,7 @@ from kernel.secrets import SecretSettings
 from kernel.service import KernelService
 from tests.kernel.adapters.support import SegmentTracer
 from tests.kernel.capabilities.support import no_git, script_decision
-from tests.kernel.helpers import make_scope
+from tests.kernel.helpers import make_scope, narrow
 from tests.kernel.interaction.support import human_submission, raw_submission
 
 CONFIG_DIR = Path(__file__).resolve().parents[3] / "config"
@@ -98,10 +100,10 @@ def decision_request(domain: str, *, with_options: bool = True,
 def options_response(domain: str) -> dict[str, Any]:
     """Return the options.v1 answer a host gives: the domain's options and criteria, proposed."""
     spec = DOMAINS[domain]
-    options = [Option(id=i, title=t, proposal_status="proposed", approval_status="proposed",
+    options = [Option(id=i, title=t, proposal_status=ProposalStatus("proposed"), approval_status=ApprovalStatus("proposed"),
                       proposed_by="host:fake") for i, t in spec["options"]]
-    criteria = [Criterion(id=i, question=q, proposal_status="proposed",
-                          approval_status="proposed", proposed_by="host:fake")
+    criteria = [Criterion(id=i, question=q, proposal_status=ProposalStatus("proposed"),
+                          approval_status=ApprovalStatus("proposed"), proposed_by="host:fake")
                 for i, q in spec["criteria"]]
     return OptionsPayload(options=options, proposed_criteria=criteria).model_dump(mode="json")
 
@@ -116,7 +118,7 @@ class FakeHostResponder:
 
     def answer(self, envelope: RunEnvelope) -> dict[str, Any]:
         """Return the raw submission answering the envelope's pending host packet."""
-        packet = envelope.pending_interaction.model_dump(mode="json")
+        packet = narrow(envelope.pending_interaction).model_dump(mode="json")
         self.answered.append(packet["operation"])
         response = self.responses[packet["output_schema_id"]]
         if packet["output_schema_id"] == schema_ids.OPTIONS:  # a cooperating host cites its input
@@ -130,7 +132,7 @@ class FakeHostResponder:
 
 def answer_human(envelope: RunEnvelope, response: dict[str, Any]) -> dict[str, Any]:
     """Return the raw human submission answering the envelope's pending question."""
-    packet = envelope.pending_interaction.model_dump(mode="json")
+    packet = narrow(envelope.pending_interaction).model_dump(mode="json")
     return human_submission(packet, envelope.run_id, response, relayed_by="fake-client")
 
 

@@ -14,6 +14,7 @@ import unittest
 from pathlib import Path
 
 from kernel.contracts import schema_ids
+from tests.kernel.helpers import as_json
 from tests.kernel.live import eval_runner as ev
 
 
@@ -46,7 +47,7 @@ class TestEvalSet(unittest.TestCase):
                 self.assertEqual(task.input_payload_schema, schema_ids.DECISION_REQUEST)
         contradictory = next(c for c in self.cases if c["category"] == "contradictory")
         task = ev.task_for(contradictory, Path.cwd())
-        self.assertEqual(len(task.input_payload["evidence_ids"]), 2)
+        self.assertEqual(len(as_json(task.input_payload)["evidence_ids"]), 2)
 
     def test_scoring_flags_a_fabricated_decision_and_a_blown_budget(self) -> None:
         unanswerable = next(c for c in self.cases if c["id"] == "unanswerable_future")

@@ -18,6 +18,7 @@ from pathlib import Path
 from kernel.contracts import FallbackOutcome, GapType
 from kernel.persistence.gap_store import FileGapStore
 from kernel.scheduler.nodes_gaps import record_host_only
+from tests.kernel.helpers import narrow
 from tests.kernel.interaction.support import host_rig, raw_submission, start
 
 
@@ -36,7 +37,8 @@ class TestReexecutedObservation(unittest.IsolatedAsyncioTestCase):
         store = run.rig.gap_store
         before = [g for g in store.observations if g.gap_type is GapType.HOST_ONLY]
         self.assertEqual(len(before), 1)
-        again = record_host_only(state, run.context, item, FallbackOutcome.HOST_COMPLETED)
+        again = narrow(
+            record_host_only(state, run.context, item, FallbackOutcome.HOST_COMPLETED))
         host_only = [g for g in store.observations if g.gap_type is GapType.HOST_ONLY]
         self.assertEqual(len(host_only), 1, "the re-executed node stored a second observation")
         self.assertEqual(again[0].id, before[0].id)
@@ -47,8 +49,8 @@ class TestReexecutedObservation(unittest.IsolatedAsyncioTestCase):
         with tempfile.TemporaryDirectory() as tmp:
             store = FileGapStore(Path(tmp))
             ctx = replace(run.context, gap_store=store)
-            first = record_host_only(state, ctx, item, FallbackOutcome.HOST_COMPLETED)
-            second = record_host_only(state, ctx, item, FallbackOutcome.HOST_COMPLETED)
+            first = narrow(record_host_only(state, ctx, item, FallbackOutcome.HOST_COMPLETED))
+            second = narrow(record_host_only(state, ctx, item, FallbackOutcome.HOST_COMPLETED))
             self.assertEqual(first[0].id, second[0].id)
             self.assertEqual(sum(g.occurrence_count for g in store.load_gaps()), 1)
 

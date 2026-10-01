@@ -22,7 +22,7 @@ from kernel.registry import (
     load_registry,
     verify_pinned,
 )
-from tests.kernel.helpers import load_json
+from tests.kernel.helpers import load_json, narrow
 
 REPO = Path(__file__).resolve().parents[3]
 CONFIG = REPO / "config"
@@ -68,8 +68,8 @@ class TestLoading(RegistryCase):
         snapshot = load_registry(path)
         self.assertEqual([d.id for d in snapshot.descriptors], ["retrieve.repository"])
         origin = snapshot.descriptors[0].registry_origin
-        self.assertEqual((origin.registry_id, origin.registry_version), ("t.caps", 1))
-        self.assertEqual(len(origin.entry_hash), 64)
+        self.assertEqual((narrow(origin).registry_id, narrow(origin).registry_version), ("t.caps", 1))
+        self.assertEqual(len(narrow(origin).entry_hash), 64)
 
     def test_entries_sorted_by_id(self) -> None:
         a, b = load_json("registry/descriptor_native.json"), load_json(
@@ -129,7 +129,7 @@ class TestAdmission(RegistryCase):
         snapshot = load_registry(self.write([load_json("registry/descriptor_legacy.json")]))
         admission = snapshot.descriptors[0].admission
         self.assertEqual((admission.kind, admission.decision_ref), ("legacy_admission", "ADR-999"))
-        self.assertEqual(admission.legacy_source.id, "test-writer")
+        self.assertEqual(narrow(admission.legacy_source).id, "test-writer")
 
     def test_legacy_admission_needs_source_and_adr_ref(self) -> None:
         for mutate in (lambda a: a.pop("legacy_source"),
@@ -174,7 +174,7 @@ class TestPinning(RegistryCase):
 
     def test_snapshot_get(self) -> None:
         snapshot = load_registry(self.write([load_json("registry/descriptor_native.json")]))
-        self.assertEqual(snapshot.get("retrieve.repository").version, "1.0.0")
+        self.assertEqual(narrow(snapshot.get("retrieve.repository")).version, "1.0.0")
         self.assertIsNone(snapshot.get("missing"))
 
 

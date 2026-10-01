@@ -16,13 +16,14 @@ import asyncio
 import unittest
 
 from kernel.contracts import ResultStatus, WorkItemStatus
+from tests.kernel.helpers import ScriptedExecutor
 from tests.kernel.scheduler.support import Rig, completed, descriptor, root_item
 
 
 class TestCancelSafePoint(unittest.TestCase):
     """A worker consults the cancel probe before it runs its capability."""
 
-    def _rig(self, probe) -> tuple[Rig, object]:
+    def _rig(self, probe) -> tuple[Rig, ScriptedExecutor]:
         rig = Rig([descriptor("decide.root")])
         executor = rig.bind("decide.root", factory=completed)
         rig.cancel = probe

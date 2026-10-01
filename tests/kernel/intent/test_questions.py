@@ -25,7 +25,7 @@ from kernel.intent.questions import (
     unclear_message,
 )
 from kernel.scheduler.guards import request_dedup_key
-from tests.kernel.helpers import make_descriptor
+from tests.kernel.helpers import make_descriptor, narrow
 
 JARGON = ("routing", "insufficient", "capability", "schema", "work item", "__", "decision_report",
           "evidence_bundle", "options.v1", "kernel.")
@@ -109,11 +109,11 @@ class TestAnswers(unittest.TestCase):
 
     def test_a_chosen_option_reads_as_its_label_and_keeps_the_id(self) -> None:
         answer = answer_of(self.asked, {"choice_id": "evidence"})
-        self.assertEqual((answer.choice_id, answer.text), ("evidence", "Find facts in this repository"))
+        self.assertEqual((narrow(answer).choice_id, narrow(answer).text), ("evidence", "Find facts in this repository"))
 
     def test_free_text_wins(self) -> None:
         answer = answer_of(self.asked, {"free_text": "Decide which one"})
-        self.assertEqual((answer.text, answer.choice_id), ("Decide which one", None))
+        self.assertEqual((narrow(answer).text, narrow(answer).choice_id), ("Decide which one", None))
 
     def test_unanswered_is_none(self) -> None:
         self.assertIsNone(answer_of(self.asked, None))
