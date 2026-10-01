@@ -36,6 +36,7 @@ from kernel.contracts.payloads import (
 from kernel.contracts.work import RequestProposal
 
 DEFAULT_MAX_OPTIONS = 5
+NAMED_BY = "caller_goal"
 SYNTHESIS_OPERATION = "synthesize_evidence"
 #: Categories researched to ground options for an unknown option set: what is in scope, how
 #: existing material treats the alternatives, and what was decided or prioritised before.
@@ -158,6 +159,9 @@ def approval_request(work: Working) -> RequestProposal:
     options = [o for o in work.options if is_pending(o)]
     criteria = [c for c in work.criteria if is_pending(c)]
     lines = []
+    named = [o for o in work.options if o.proposed_by == NAMED_BY and not is_pending(o)]
+    if named:
+        lines += ["Options taken from your request (usable as given):", *map(_describe, named)]
     if options:
         lines += ["Proposed options:", *map(_describe, options)]
     if criteria:
@@ -165,7 +169,8 @@ def approval_request(work: Working) -> RequestProposal:
     question = (f"For the decision '{work.question}', approve these generated proposals?\n"
                 + "\n".join(lines)
                 + "\nAnswer 'approve', approve a subset (approved_criterion_ids, "
-                "approved_option_ids) or supply edited_criteria; free text is only recorded.")
+                "approved_option_ids), supply edited_criteria or add options of your own "
+                "(added_options: title, description); free text is only recorded.")
     choice = Choice(id=APPROVE, label="Approve as proposed",
                     consequences="The proposals become usable for the decision.")
     return _human(work, question,

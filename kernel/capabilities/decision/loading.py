@@ -80,7 +80,7 @@ def _absorb_options(work: Working, payload: dict) -> None:
     model = cast(OptionsPayload, validate_payload(schema_ids.OPTIONS, payload))
     known_o = {o.id for o in work.options}
     known_c = {c.id for c in work.criteria}
-    work.options += [o for o in model.options if o.id not in known_o]
+    work.options += [o for o in [*model.named_options, *model.options] if o.id not in known_o]
     work.criteria += [c for c in model.proposed_criteria if c.id not in known_c]
     work.limitations += [f"unresolved feasibility: {u}" for u in model.unresolved_feasibility]
 
@@ -207,6 +207,8 @@ def load_working(invocation: CapabilityInvocation, ctx: ExecutionContext) -> Wor
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-02 [python-coder]: Kernel-verified named options join the decision as supplied
+#   (usable) options. (#KernelBootstrapV0/GROUND)
 # - 2026-10-02 [python-coder]: Accepted findings are kept with their ids for the options packet.
 #   (#KernelBootstrapV0/GROUND)
 # - 2026-10-01 23:00 [python-coder]: The decision id is derived from the work item id: it used

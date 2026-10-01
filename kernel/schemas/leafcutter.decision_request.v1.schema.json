@@ -148,6 +148,11 @@
           "title": "Id",
           "type": "string"
         },
+        "named_in_goal": {
+          "default": false,
+          "title": "Named In Goal",
+          "type": "boolean"
+        },
         "proposal_status": {
           "$ref": "#/$defs/ProposalStatus",
           "default": "supplied"

@@ -1,5 +1,32 @@
 {
   "$defs": {
+    "AddedOption": {
+      "additionalProperties": false,
+      "description": "One option the human adds inside a structured approval answer.",
+      "properties": {
+        "description": {
+          "default": "",
+          "title": "Description",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": "1.0",
+          "default": "1.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "title": {
+          "minLength": 1,
+          "title": "Title",
+          "type": "string"
+        }
+      },
+      "required": [
+        "title"
+      ],
+      "title": "AddedOption",
+      "type": "object"
+    },
     "CriterionEdit": {
       "additionalProperties": false,
       "description": "One criterion the human supplies or edits inside a structured approval answer.",
@@ -54,6 +81,22 @@
   "additionalProperties": false,
   "description": "leafcutter.human_answer.v1: exactly one of choice_id, free_text or a structured answer.\n\nThe structured answer answers an approve-or-edit question about proposed criteria and\noptions: `approved_*_ids` approve a subset (the listed ids are approved, every other pending\nproposal of that kind is declined) and `edited_criteria` replaces the pending criteria by the\nhuman's own (an entry with the id of a proposal edits it, an entry without an id is new).",
   "properties": {
+    "added_options": {
+      "anyOf": [
+        {
+          "items": {
+            "$ref": "#/$defs/AddedOption"
+          },
+          "minItems": 1,
+          "type": "array"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Added Options"
+    },
     "approved_criterion_ids": {
       "anyOf": [
         {

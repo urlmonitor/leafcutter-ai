@@ -54,11 +54,28 @@ def _edited_criteria(work: Working, answer: HumanAnswerPayload, actor: str) -> l
     return made
 
 
+def _added_options(work: Working, answer: HumanAnswerPayload, actor: str) -> list[Option]:
+    """Build the human-supplied, approved options of an answer (new ids never collide)."""
+    taken = {o.id for o in work.options}
+    made: list[Option] = []
+    for n, added in enumerate(answer.added_options or [], start=1):
+        oid = f"opt.added.{n}"
+        while oid in taken:
+            oid += "+"
+        taken.add(oid)
+        made.append(Option(id=oid, title=added.title, description=added.description,
+                           proposal_status=ProposalStatus.SUPPLIED,
+                           approval_status=ApprovalStatus.APPROVED, proposed_by=actor,
+                           approved_by=actor))
+    return made
+
+
 def _apply_structured(work: Working, answer: HumanAnswerPayload, actor: str) -> None:
-    """Apply a structured answer: a subset approval per kind, or edited criteria."""
+    """Apply a structured answer: a subset approval per kind, edited criteria, added options."""
     if answer.approved_option_ids is not None:
         chosen = set(answer.approved_option_ids)
         work.options = [_decide(o, chosen, actor) for o in work.options]
+    work.options = [*work.options, *_added_options(work, answer, actor)]
     if answer.edited_criteria is not None:
         edits = _edited_criteria(work, answer, actor)
         replaced = {c.id for c in edits}
@@ -146,6 +163,8 @@ def apply_human_answer(work: Working, answer: HumanAnswerPayload, actor: str | N
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-02 [python-coder]: A structured approval can add options; they are human-supplied and
+#   approved by that human. (#KernelBootstrapV0/GROUND)
 # - 2026-10-01 02:00 [python-coder]: A decision approval is stamped with the revision the human
 #   was shown (last_assessment_fp), so combine can void it when the basis moves.
 #   (#KernelBootstrapV0/FIXA)

@@ -49,6 +49,8 @@ class Option(KernelModel):
     approval_status: ApprovalStatus = ApprovalStatus.NOT_REQUIRED
     proposed_by: str | None = None
     approved_by: str | None = None
+    #: A host's claim that the caller's goal names this option; the kernel verifies the wording.
+    named_in_goal: bool = False
 
     @model_validator(mode="after")
     def _proposal_needs_approval_track(self) -> Option:
@@ -177,6 +179,8 @@ class RoutingAssessment(PersistedModel):
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-02 [python-coder]: Option.named_in_goal is a host claim the kernel verifies against the
+#   goal text before treating the option as caller-supplied. (#KernelBootstrapV0/GROUND)
 # - 2026-10-01 23:00 [python-coder]: Decision.differs_from lets the merge update one decision
 #   record in place instead of keeping a second record. (#KernelBootstrapV0/GROUND)
 # - 2026-09-30 22:00 [python-coder]: Criterion.approval_status defaults to not_required (a

@@ -14,6 +14,7 @@ ARCHITECTURE: Extends HostOperation. The request is options_request.v1; the answ
 
 from __future__ import annotations
 
+import re
 from typing import Any
 
 from kernel.capabilities.host.base import HostOperation
@@ -53,6 +54,47 @@ def _ground_options(options: list[Option], request: OptionsRequestPayload, notes
     return out
 
 
+def _norm(text: str) -> str:
+    """Return text lower-cased with every non-alphanumeric run collapsed to one space."""
+    return " ".join(re.sub(r"[^a-z0-9]+", " ", text.casefold()).split())
+
+
+def _in_goal(title: str, goal: str) -> bool:
+    """Deterministic check that a title is the caller's own wording: substring or all tokens."""
+    wanted, haystack = _norm(title), _norm(goal)
+    if not wanted:
+        return False
+    if wanted in haystack:
+        return True
+    tokens = [w for w in wanted.split() if len(w) > 2]
+    return bool(tokens) and set(tokens) <= set(haystack.split())
+
+
+def _split_named(options: list[Option], request: OptionsRequestPayload, notes: list[str]
+                 ) -> tuple[list[Option], list[Option]]:
+    """Split host-claimed named options: verified ones become supplied, the rest proposals.
+
+    Extracting the options from free text is generative work (ADR-053), so the host only claims
+    them; the kernel keeps a claim only when the title appears in the goal text. A verified option
+    keeps just the caller's title (no host description or assumptions).
+    """
+    named: list[Option] = []
+    rest: list[Option] = []
+    for item in options:
+        if not item.named_in_goal:
+            rest.append(item)
+        elif _in_goal(item.title, request.problem):
+            named.append(Option(
+                id=item.id, title=item.title.strip(), proposal_status=ProposalStatus.SUPPLIED,
+                approval_status=ApprovalStatus.NOT_REQUIRED, proposed_by="caller_goal",
+                named_in_goal=True, source_refs=item.source_refs))
+        else:
+            notes.append(f"option {item.id} was claimed as named in the goal but its title was "
+                         "not found in the goal; it stays a proposal")
+            rest.append(item.model_copy(update={"named_in_goal": False}))
+    return named, rest
+
+
 def _as_proposal(item: Option | Criterion, producer: str) -> Any:
     """Return the option or criterion as a pure proposal attributed to the producer."""
     return item.model_copy(update={
@@ -84,6 +126,10 @@ class GenerateOptions(HostOperation):
             return lines
         lines.append(f"Return at most {request.max_options} options.")
         lines += self._grounding_requirements(request)
+        lines.append("If the goal itself names the options to choose between, return each of them "
+                     "as an option with named_in_goal true and the caller's own words as its "
+                     "title; the kernel checks the wording against the goal and treats verified "
+                     "ones as the caller's options. Other options you generate must be grounded.")
         if request.findings:
             lines.append("The request lists accepted findings from an earlier synthesis: build on "
                          "them instead of re-reading the raw excerpts.")
@@ -121,6 +167,9 @@ class GenerateOptions(HostOperation):
         options = [o for o in payload.options if o.id not in taken]
         if len(options) != len(payload.options):
             notes.append("options reusing an existing option id were dropped")
+        named: list[Option] = []
+        if request is not None:
+            named, options = _split_named(options, request, notes)
         options = self._grounded(options, request, notes)
         if request is not None and len(options) > request.max_options:
             notes.append(f"{len(options) - request.max_options} options beyond the requested "
@@ -136,6 +185,7 @@ class GenerateOptions(HostOperation):
                     for c in criteria]
         body = OptionsPayload(
             options=[_as_proposal(o, self.capability_id) for o in options],
+            named_options=named,
             proposed_criteria=[_as_proposal(c, self.capability_id) for c in criteria],
             unresolved_feasibility=list(payload.unresolved_feasibility))
         return completed_result(ctx, schema_ids.OPTIONS, body, limitations=[
@@ -145,6 +195,10 @@ class GenerateOptions(HostOperation):
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-02 [python-coder]: Options named in the goal are extracted by the host (generative)
+#   and verified by the kernel (substring or token match against the goal) before they are
+#   supplied options; the alternative of asking at intake whenever the goal enumerates was not
+#   taken: it costs a host call on every goal. (#KernelBootstrapV0/GROUND)
 # - 2026-10-01 23:00 [python-coder]: generate_options stays read-only WITHOUT repository access
 #   (permissions_required remains empty): a host reading files itself would bypass the kernel's
 #   deny globs, size limits and revision stamps and produce unverifiable claims. Grounding comes

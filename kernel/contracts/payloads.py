@@ -132,6 +132,8 @@ class OptionsPayload(KernelModel):
     """leafcutter.options.v1: every option is a proposal, never pre-approved."""
 
     options: list[Option] = Field(default_factory=list)
+    #: Options the goal names, verified by the kernel (supplied, never proposals). Kernel-set only.
+    named_options: list[Option] = Field(default_factory=list)
     proposed_criteria: list[Criterion] = Field(default_factory=list)
     unresolved_feasibility: list[str] = Field(default_factory=list)
 
@@ -143,7 +145,7 @@ class OptionsPayload(KernelModel):
         if any(c.proposal_status is not ProposalStatus.PROPOSED
                for c in self.proposed_criteria):
             fail("every generated criterion must have proposal_status=proposed")
-        _unique([o.id for o in self.options], "option")
+        _unique([o.id for o in [*self.options, *self.named_options]], "option")
         _unique([c.id for c in self.proposed_criteria], "criterion")
         return self
 
@@ -206,6 +208,13 @@ class CriterionEdit(KernelModel):
     priority: Priority = Priority.REQUIRED
 
 
+class AddedOption(KernelModel):
+    """One option the human adds inside a structured approval answer."""
+
+    title: str = Field(min_length=1)
+    description: str = ""
+
+
 class HumanAnswerPayload(KernelModel):
     """leafcutter.human_answer.v1: exactly one of choice_id, free_text or a structured answer.
 
@@ -220,12 +229,14 @@ class HumanAnswerPayload(KernelModel):
     approved_option_ids: list[str] | None = None
     approved_criterion_ids: list[str] | None = None
     edited_criteria: list[CriterionEdit] | None = Field(default=None, min_length=1)
+    #: Options the human adds (they become human-supplied, approved options).
+    added_options: list[AddedOption] | None = Field(default=None, min_length=1)
 
     @property
     def is_structured(self) -> bool:
         """True if any structured approval field is set."""
-        return any(v is not None for v in (self.approved_option_ids,
-                                           self.approved_criterion_ids, self.edited_criteria))
+        return any(v is not None for v in (self.approved_option_ids, self.approved_criterion_ids,
+                                           self.edited_criteria, self.added_options))
 
     @model_validator(mode="after")
     def _exactly_one(self) -> HumanAnswerPayload:
@@ -243,8 +254,8 @@ class HumanAnswerPayload(KernelModel):
 
 
 __all__ = [
-    "CriterionEdit", "DecisionReportPayload", "DecisionRequestPayload", "EvidenceBundlePayload",
-    "FindingsPayload", "GoalRequestPayload", "HumanAnswerPayload",
+    "AddedOption", "CriterionEdit", "DecisionReportPayload", "DecisionRequestPayload",
+    "EvidenceBundlePayload", "FindingsPayload", "GoalRequestPayload", "HumanAnswerPayload",
     "HumanQuestionRequestPayload", "OptionsPayload", "OptionsRequestPayload",
     "ResearchRequestPayload", "RetrievalLimits", "RetrievalRequestPayload",
     "SynthesisLimits", "SynthesisRequestPayload",
@@ -253,6 +264,8 @@ __all__ = [
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-02 [python-coder]: OptionsPayload.named_options (kernel-verified, supplied) and
+#   HumanAnswerPayload.added_options (human-supplied at approval). (#KernelBootstrapV0/GROUND)
 # - 2026-10-02 [python-coder]: HumanQuestionRequestPayload.evidence_ids and
 #   OptionsRequestPayload.findings carry cited evidence to the approval question and accepted
 #   synthesis findings to the options packet. (#KernelBootstrapV0/GROUND)

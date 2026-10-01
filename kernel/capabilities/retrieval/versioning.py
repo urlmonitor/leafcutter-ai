@@ -12,6 +12,7 @@ ARCHITECTURE: Prefers the revision the run already pinned in Scope. Otherwise ru
 from __future__ import annotations
 
 import logging
+import os
 import subprocess
 from pathlib import Path
 
@@ -26,10 +27,14 @@ _CACHE: dict[tuple[str, str], SourceVersion | None] = {}
 
 
 def _git(root: Path, *args: str) -> str | None:
-    """Run git in root and return stdout, or None on any failure (logged at WARNING)."""
+    """Run a read-only git command in root and return stdout, or None on any failure.
+
+    No shell, and `GIT_OPTIONAL_LOCKS=0` so `git status` cannot refresh or write the scope's index.
+    """
     try:
         done = subprocess.run(["git", *args], cwd=root, capture_output=True, text=True,
-                              timeout=GIT_TIMEOUT_SECONDS, check=False)
+                              timeout=GIT_TIMEOUT_SECONDS, check=False,
+                              env={**os.environ, "GIT_OPTIONAL_LOCKS": "0"})
     except (OSError, subprocess.SubprocessError) as exc:
         logger.warning("git %s failed: %s", args[0], exc)
         return None
@@ -63,6 +68,9 @@ def resolve_source_version(run_id: str, scope: Scope) -> SourceVersion | None:
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-02 [python-coder]: Kernel git calls run with GIT_OPTIONAL_LOCKS=0: `git status` may
+#   otherwise refresh and write the index of the (read-only) scope repository.
+#   (#KernelBootstrapV0/GROUND)
 # - 2026-09-30 23:00 [python-coder]: The cache is module-level keyed by run id because executors
 #   are built per invocation; it is cleared when it grows past MAX_CACHED_RUNS.
 #   (#KernelBootstrapV0/P5)

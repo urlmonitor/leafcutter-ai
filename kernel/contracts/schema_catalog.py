@@ -158,6 +158,9 @@ def _answer_violations(p: HumanAnswerPayload, ctx: SemanticContext) -> list[str]
 
 def _options_violations(p: OptionsPayload) -> list[str]:
     """Generated options and criteria must stay proposals: a generator cannot approve itself."""
+    if p.named_options:
+        return ["named_options is set by the kernel only: return named options in `options` "
+                "with named_in_goal true"]
     items = [("option", i.id, i.approval_status, i.approved_by) for i in p.options]
     items += [("criterion", i.id, i.approval_status, i.approved_by) for i in p.proposed_criteria]
     return [f"generated {kind} {item_id} must have approval_status proposed and no approved_by"
@@ -244,6 +247,8 @@ def export_json_schemas(directory: Path) -> list[Path]:
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-02 [python-coder]: A host cannot return named_options itself; only the kernel creates
+#   them after verifying the wording against the goal. (#KernelBootstrapV0/GROUND)
 # - 2026-09-30 23:40 [python-coder]: A generated options payload that arrives pre-approved is a
 #   semantic violation, closing a self-approval path for host output. (#KernelBootstrapV0/P6)
 # - 2026-09-30 23:30 [python-coder]: SemanticContext.subject_ids bounds structured approval

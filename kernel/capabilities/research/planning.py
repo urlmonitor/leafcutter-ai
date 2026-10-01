@@ -21,7 +21,7 @@ from kernel.capabilities.base import ExecutionContext
 from kernel.capabilities.decision.jev_support import ask_jev, make_batch, noul_question
 from kernel.capabilities.research.state import Plan
 from kernel.capabilities.retrieval.access import ReadPolicy
-from kernel.capabilities.retrieval.knowledge_map import SCRIPT
+from kernel.capabilities.retrieval.knowledge_map import PATHS_JSON, SCRIPT, trusted_root
 from kernel.config import SourceConfig
 from kernel.contracts import schema_ids
 from kernel.contracts.capability import Usage
@@ -85,8 +85,11 @@ async def plan_needs(ctx: ExecutionContext, invocation: CapabilityInvocation, pl
 def _native_available(ctx: ExecutionContext, source: SourceConfig) -> str | None:
     """Return None if the native source can be read, else the reason it cannot."""
     if source.kind == "knowledge_map":
-        script = Path(ctx.scope.repository_root) / SCRIPT
-        return None if script.is_file() else "knowledge map script not found"
+        script = trusted_root() / SCRIPT  # the bridge never comes from the scope
+        if not script.is_file():
+            return "knowledge map script not found"
+        data = Path(ctx.scope.repository_root) / PATHS_JSON  # the scope is data the script reads
+        return None if data.is_file() else f"knowledge map needs {PATHS_JSON.as_posix()} in scope"
     policy = ReadPolicy(root=Path(ctx.scope.repository_root),
                         read_roots=tuple(ctx.scope.read_roots),
                         deny_globs=tuple(ctx.config.retrieval.deny_globs),

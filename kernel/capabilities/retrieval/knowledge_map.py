@@ -23,7 +23,7 @@ from types import ModuleType
 
 from kernel.capabilities.retrieval.access import ReadPolicy
 from kernel.capabilities.retrieval.candidates import Candidate, SearchReport
-from kernel.config import RetrievalConfig, SourceConfig
+from kernel.config import RetrievalConfig, SourceConfig, repo_root
 from kernel.contracts.enums import SourceKind
 
 logger = logging.getLogger(__name__)
@@ -52,6 +52,15 @@ class KnowledgeMapUnavailable(Exception):
         super().__init__(self.reason)
 
 
+def trusted_root() -> Path:
+    """Return the kernel's own installation root: the only place the bridge script may come from.
+
+    The scope repository is data. Executing a script from it would run whatever Python a scoped
+    (possibly untrusted) repository ships (Rev 3 section 13.3).
+    """
+    return repo_root()
+
+
 def clear_caches() -> None:
     """Drop the per-process module and map caches (tests)."""
     with _LOAD_LOCK:
@@ -59,24 +68,26 @@ def clear_caches() -> None:
         _NODES.clear()
 
 
-def _load_module(root: Path) -> ModuleType:
-    """Load scripts/knowledge_query.py below root (cached); raise KnowledgeMapUnavailable.
+def _load_module() -> ModuleType:
+    """Load the trusted scripts/knowledge_query.py (cached); raise KnowledgeMapUnavailable.
 
     Loading is serialised: the script registers its sibling modules in `sys.modules` before they
     finish executing, so a second worker thread must never start a load while one is running.
     """
-    key = str(root)
+    key = str(trusted_root())
     with _LOAD_LOCK:
         if key in _MODULES:
             return _MODULES[key]
-        module = _exec_script(root, key)
+        module = _exec_script(key)
         _MODULES[key] = module
         return module
 
 
-def _exec_script(root: Path, key: str) -> ModuleType:
-    """Execute the script as a uniquely named module (caller holds the load lock)."""
-    script = root / SCRIPT
+def _exec_script(key: str) -> ModuleType:
+    """Execute the trusted script as a uniquely named module (caller holds the load lock)."""
+    script = trusted_root() / SCRIPT
+    if not script.is_file():
+        raise KnowledgeMapUnavailable(STAGE_LOAD, f"trusted script not found ({SCRIPT.as_posix()})")
     name = "leafcutter_kernel_kq_" + hashlib.sha256(key.encode("utf-8")).hexdigest()[:8]
     spec = importlib.util.spec_from_file_location(name, script)
     if spec is None or spec.loader is None:
@@ -96,8 +107,8 @@ def _surface_nodes(root: Path, surface: str) -> list:
     """Return the nodes of one surface (cached); raise KnowledgeMapUnavailable on failure."""
     key = (str(root), surface)
     if key not in _NODES:
-        module = _load_module(root)
-        try:
+        module = _load_module()
+        try:  # the scope root is passed as data only
             built = module.build_knowledge_map(root, root / PATHS_JSON, surface_filter=surface)
         except _LOAD_ERRORS as exc:
             logger.warning("knowledge map build failed for %s: %s", surface, exc)
@@ -160,6 +171,11 @@ def search_knowledge_map(policy: ReadPolicy, source: SourceConfig, terms: list[s
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-02 [python-coder]: SECURITY: the bridge script is loaded only from the kernel's own
+#   installation (`trusted_root`), never from the scope repository, which is passed to it as data.
+#   A scoped untrusted repository could otherwise run its Python in the kernel process (Rev 3
+#   section 13.3). A missing trusted script makes the source unavailable with a reason.
+#   (#KernelBootstrapV0/GROUND)
 # - 2026-10-01 00:30 [python-coder]: Module loading holds an RLock because the shipped script's
 #   _load_sibling_module publishes half-loaded modules in sys.modules; parallel retrieval workers
 #   otherwise saw them (scripts/ is a package file and is not edited here). (#KernelBootstrapV0/OBS)

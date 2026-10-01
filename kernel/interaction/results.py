@@ -49,6 +49,9 @@ def _structured_text(response: dict[str, Any]) -> str:
     """Describe a structured approval answer in one readable evidence line."""
     parts = [_list_text("approved options", response.get("approved_option_ids")),
              _list_text("approved criteria", response.get("approved_criterion_ids"))]
+    added = response.get("added_options")
+    if added is not None:
+        parts.append("added options: " + "; ".join(a["title"] for a in added))
     edits = response.get("edited_criteria")
     if edits is not None:
         parts.append("edited criteria: " + "; ".join(e["question"] for e in edits))

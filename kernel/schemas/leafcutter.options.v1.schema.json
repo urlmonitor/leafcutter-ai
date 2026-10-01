@@ -148,6 +148,11 @@
           "title": "Id",
           "type": "string"
         },
+        "named_in_goal": {
+          "default": false,
+          "title": "Named In Goal",
+          "type": "boolean"
+        },
         "proposal_status": {
           "$ref": "#/$defs/ProposalStatus",
           "default": "supplied"
@@ -215,6 +220,13 @@
   "additionalProperties": false,
   "description": "leafcutter.options.v1: every option is a proposal, never pre-approved.",
   "properties": {
+    "named_options": {
+      "items": {
+        "$ref": "#/$defs/Option"
+      },
+      "title": "Named Options",
+      "type": "array"
+    },
     "options": {
       "items": {
         "$ref": "#/$defs/Option"
