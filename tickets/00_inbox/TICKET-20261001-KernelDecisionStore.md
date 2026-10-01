@@ -101,3 +101,21 @@ Deviations from the brief, both deliberate:
 Open: the `decision` capability's `side_effect_class` is now `run_artifacts` (it stages a record
 in the run root). `docs/decisions` is not a retrieval source: precedent comes through the memory
 port, so ordinary research does not see records as `prior_decisions` evidence.
+
+### 2026-10-01 19:11 — python-coder (status: ok)
+feedback-id: fb_2026-10-01_2c22157a
+
+The retrieval benchmark was re-measured on 19c2ba96 at CI's checkout path. The earlier re-baseline was discarded: it had been recorded in a folder named `decision-store`, where the folder-name defect suppressed "decision" and "store".
+
+- **Linux and Windows agree.** Before the change, 6 benchmark subtests failed identically on both, and the pools were identical.
+- **Displacement proven by ablation.** Ignoring the branch's added files restores `decision_records_existing_patterns`. Reverting only design-2's new "As built (decision store)" section restores `lessons_approval_provenance`. Goal 5 needs both the added and the modified files reverted.
+- **Fixed: `decision_records_existing_patterns` (genuine answer).** ADR-059, the file-and-reuse how-to, ADR-060 and `kernel/memory/models.py` answer the goal. "The decision record format" is now a must-have, and `current` was re-recorded at CI's path. Calls stay at 1; `docs/components.json` moves from 2 to 7 but stays in the first batch.
+- **Open: goal 5 (genuine answer, blocked by round E).** `kernel/memory/`, ADR-059 and the how-to now lead the first batch. Adding them as a must-have stops the loop after 1 call, so `run_store.py` (pool position 43) is never judged, and that breaks round E's `judged` ratchet. Re-recording without that must-have only loosens the case: calls go from 2 to 3 and `run_store.py` leaves the first batch.
+- **Open: `lessons_approval_provenance` (genuine but partial answer, blocked by round E).** Design-2's new section takes `repo.analysis`'s first fair-share slot. Design-4 §Decision capability then loses the second slot to its sibling §As built (grounding) by 0.001 (43.104 against 43.105) and falls from position 14 to 25. That breaks round E's `reached` ratchet, which no re-record can fix.
+
+Both open cases need the orchestrator's decision: change round E, or make a ranking fix as its own change. The benchmark stays at 5 failing subtests until then.
+
+Resolved: the user chose a pinned corpus (2026-10-01, TICKET-20261001-KernelBenchmarkPinnedCorpus).
+- The benchmark now scores the files of `corpus_commit` 2bb82cf9, #977's head, so the #977 values hold. It passes on Linux at CI's path and on Windows.
+- The `decision_records_existing_patterns` re-record and its new must-have were reverted.
+- Decision-store answers enter the benchmark with a later, deliberate re-pin.
