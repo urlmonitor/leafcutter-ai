@@ -21,6 +21,7 @@ from kernel.contracts.decision import Criterion, Option
 from kernel.contracts.enums import (
     ApprovalStatus,
     EvidenceCategory,
+    Priority,
     ProposalStatus,
 )
 from kernel.contracts.evidence import Evidence
@@ -48,6 +49,7 @@ class DecisionContinuation(KernelModel):
     conflict_resolved: bool = False
     decision_approved: bool = False
     approved_by: str | None = None
+    approved_revision: str | None = None
 
 
 def is_pending(item: Option | Criterion) -> bool:
@@ -109,6 +111,11 @@ class Working:
         return [e.id for e in self.evidence]
 
     @property
+    def has_required_criterion(self) -> bool:
+        """True if at least one usable criterion is required (only those can gate resolution)."""
+        return any(c.priority is Priority.REQUIRED for c in self.usable_criteria)
+
+    @property
     def has_decision_basis(self) -> bool:
         """True if at least one evidence item is more than an existing implementation pattern."""
         return any(e.category is not EvidenceCategory.EXISTING_PATTERNS for e in self.evidence)
@@ -124,6 +131,8 @@ class Working:
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-01 02:00 [python-coder]: A decision approval records the evidence revision the human
+#   saw (approved_revision); a changed revision or winner voids it. (#KernelBootstrapV0/FIXA)
 # - 2026-09-30 23:00 [python-coder]: The continuation stores the option and criterion lists
 #   (beyond the design's field list) because approval state changes between invocations and the
 #   kernel persists only continuation_state. (#KernelBootstrapV0/P5)

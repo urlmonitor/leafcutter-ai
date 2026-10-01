@@ -49,11 +49,11 @@ def validate_basis(work: Working) -> Followup | None:
             reason="unknown_options", request=options_request(work, DEFAULT_MAX_OPTIONS),
             open_question="No usable options are known.",
             missing=[MissingKnowledge.UNKNOWN_OPTIONS])
-    if not work.usable_criteria:
+    if not work.has_required_criterion:
         return Followup(
             status=DecisionStatus.NEEDS_OPTIONS, key=CRITERIA_KEY, phase="awaiting_options",
             reason="missing_criteria", request=options_request(work, 0),
-            open_question="Options are known but no approved criteria exist.",
+            open_question="Options are known but no approved required criterion exists.",
             missing=[MissingKnowledge.UNKNOWN_OPTIONS])
     return None
 
@@ -61,6 +61,9 @@ def validate_basis(work: Working) -> Followup | None:
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-01 02:00 [python-coder]: "No usable required criterion" counts as missing criteria:
+#   only required criteria gate resolution, so supporting-only sets must not reach the gate.
+#   (#KernelBootstrapV0/FIXA)
 # - 2026-09-30 23:00 [python-coder]: Options known but criteria missing no longer asks a human
 #   for free-text criteria (design part 4); it requests LLM-proposed criteria first and then a
 #   human approval, per the user decision. (#KernelBootstrapV0/P5)

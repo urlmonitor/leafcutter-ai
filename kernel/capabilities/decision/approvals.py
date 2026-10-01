@@ -91,8 +91,9 @@ def _apply_approval(work: Working, answer: HumanAnswerPayload, actor: str) -> No
 def _apply_decision_approval(work: Working, answer: HumanAnswerPayload, actor: str) -> None:
     """Record approval or rejection of the final recommendation."""
     if answer.choice_id == APPROVE:
-        work.cont = work.cont.model_copy(update={"decision_approved": True,
-                                                 "approved_by": actor})
+        work.cont = work.cont.model_copy(update={
+            "decision_approved": True, "approved_by": actor,
+            "approved_revision": work.cont.last_assessment_fp})
     elif answer.choice_id == REJECT:
         work.approval_rejected = True
     else:
@@ -145,6 +146,9 @@ def apply_human_answer(work: Working, answer: HumanAnswerPayload, actor: str | N
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-01 02:00 [python-coder]: A decision approval is stamped with the revision the human
+#   was shown (last_assessment_fp), so combine can void it when the basis moves.
+#   (#KernelBootstrapV0/FIXA)
 # - 2026-09-30 23:00 [python-coder]: Editing proposed criteria means the human replaces them
 #   with their own (supplied, approved); proposed options are approved by the same answer
 #   because the approval question covers both. (#KernelBootstrapV0/P5)

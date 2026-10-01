@@ -66,7 +66,7 @@ def _human_followup(work: Working, verdict: Verdict, reason: str) -> Followup:
     if reason == "decision_approval":
         option = next(o for o in work.options if o.id == verdict.candidate_option_id)
         return Followup(
-            status=DecisionStatus.NEEDS_HUMAN, key=f"decision_approval:{option.id}",
+            status=DecisionStatus.NEEDS_HUMAN, key=f"decision_approval:{option.id}:{rev}",
             phase="awaiting_decision_approval", reason=reason, missing=verdict.missing,
             request=decision_approval_request(work, option), candidate_option_id=option.id,
             open_question="The recommendation awaits human approval.")
@@ -203,6 +203,8 @@ def emit_followup(invocation: CapabilityInvocation, work: Working, followup: Fol
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-01 02:00 [python-coder]: The decision-approval request key carries the revision so a
+#   voided approval can be asked again instead of stalling. (#KernelBootstrapV0/FIXA)
 # - 2026-09-30 23:00 [python-coder]: Approval status of a resolved report is approved when the
 #   decision was approved or a used option or criterion started as a proposal (approved by a
 #   human before use); proposed-only items can never reach this point. (#KernelBootstrapV0/P5)

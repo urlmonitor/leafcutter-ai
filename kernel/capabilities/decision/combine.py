@@ -151,6 +151,13 @@ def _unsettled(work: Working, a: Assessment, cfg: DecisionConfig) -> Verdict | N
                    missing=[missing.CONFLICTING_EVIDENCE])
 
 
+def _approved_for(work: Working, winner: str) -> bool:
+    """True only if the human approved this very option at the current evidence revision."""
+    cont = work.cont
+    return (cont.decision_approved and cont.candidate_option_id == winner
+            and cont.approved_revision == work.revision())
+
+
 def _select(work: Working, a: Assessment, cfg: DecisionConfig) -> Verdict:
     """Pick the single passing option, or escalate a tie, a preference or a missing approval."""
     human = [MissingKnowledge.HUMAN_PREFERENCE_OR_AUTHORIZATION]
@@ -161,7 +168,7 @@ def _select(work: Working, a: Assessment, cfg: DecisionConfig) -> Verdict:
     if a.preference >= cfg.preference_threshold and not work.cont.preference_answered:
         return Verdict(DecisionStatus.NEEDS_HUMAN, reason="preference", tied=passing,
                        missing=human)
-    if work.approval_required and not work.cont.decision_approved:
+    if work.approval_required and not _approved_for(work, winners[0]):
         return Verdict(DecisionStatus.NEEDS_HUMAN, reason="decision_approval",
                        candidate_option_id=winners[0], missing=human)
     return Verdict(DecisionStatus.RESOLVED, selected_option_id=winners[0])
@@ -179,7 +186,10 @@ def combine(work: Working, a: Assessment, cfg: DecisionConfig) -> Verdict:
         Verdict: `resolved` with the selected option, or a needs_* status with reasons.
     """
     required = [c for c in work.usable_criteria if c.priority is Priority.REQUIRED]
-    if not work.has_decision_basis or any(
+    if not work.has_required_criterion:
+        verdict = Verdict(DecisionStatus.NEEDS_OPTIONS, reason="missing_criteria",
+                          missing=[MissingKnowledge.UNKNOWN_OPTIONS])
+    elif not work.has_decision_basis or any(
             a.sufficient[c.id] < cfg.sufficiency_threshold for c in required):
         verdict = classify_missing(a, cfg, work)
     else:
@@ -190,6 +200,9 @@ def combine(work: Working, a: Assessment, cfg: DecisionConfig) -> Verdict:
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-01 02:00 [python-coder]: The gate refuses to open with no required criterion
+#   (all([]) is True), and a decision approval counts only for the option and evidence revision
+#   the human saw. (#KernelBootstrapV0/FIXA)
 # - 2026-09-30 23:00 [python-coder]: Evidence made only of existing-implementation patterns
 #   never opens the gate: it forces a prior_decisions need, because a pattern is not proof.
 #   (#KernelBootstrapV0/P5)

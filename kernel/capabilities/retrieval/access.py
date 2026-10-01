@@ -15,12 +15,20 @@ from __future__ import annotations
 
 import fnmatch
 import logging
+import os
 from dataclasses import dataclass
 from pathlib import Path, PurePosixPath, PureWindowsPath
 
 logger = logging.getLogger(__name__)
 
 BINARY_SNIFF_BYTES = 2048
+
+
+def _fold(posix: str) -> str:
+    """Normalise a relative POSIX path for comparison: no leading ./ or trailing /, case-folded
+    on case-insensitive platforms (Windows)."""
+    cleaned = PurePosixPath(posix).as_posix()
+    return cleaned.casefold() if os.name == "nt" else cleaned
 
 
 @dataclass(frozen=True)
@@ -49,16 +57,34 @@ class ReadPolicy:
     max_file_bytes: int
 
     def relative(self, path: Path) -> str | None:
-        """Return the POSIX path of `path` relative to the root, or None if it escapes."""
+        """Return the POSIX path relative to the root, or None if the real path escapes it.
+
+        The real (symlink-resolved) path must also lie inside one of the scope's read roots, so a
+        link inside an allowed root cannot reach elsewhere in the repository.
+        """
         try:
-            return path.resolve().relative_to(self.root).as_posix()
+            rel = path.resolve().relative_to(self.root).as_posix()
         except (ValueError, OSError):
             return None
+        return rel if self._in_read_roots(rel) else None
+
+    def _in_read_roots(self, rel_posix: str) -> bool:
+        """True if no scope read roots are set or the path lies inside one of them."""
+        if not self.read_roots:
+            return True
+        source = PurePosixPath(_fold(rel_posix))
+        for allowed in self.read_roots:
+            allowed_path = PurePosixPath(_fold(allowed))
+            if source == allowed_path or allowed_path in source.parents:
+                return True
+        return False
 
     def is_denied(self, rel_posix: str) -> bool:
         """True if the relative POSIX path matches any deny glob (by path or path component)."""
+        rel_posix = rel_posix.casefold()
         parts = rel_posix.split("/")
-        for glob in self.deny_globs:
+        for raw in self.deny_globs:
+            glob = raw.casefold()
             stripped = glob[3:] if glob.startswith("**/") else glob
             if fnmatch.fnmatchcase(rel_posix, glob) or fnmatch.fnmatchcase(rel_posix, stripped):
                 return True
@@ -126,6 +152,10 @@ class ReadPolicy:
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-01 02:00 [python-coder]: read_roots are enforced on the resolved real path inside
+#   relative() (so read_text and knowledge-map nodes share it) and deny globs match
+#   case-insensitively, closing .ENV / server.PEM bypasses on Windows and macOS.
+#   (#KernelBootstrapV0/FIXA)
 # - 2026-09-30 23:00 [python-coder]: A scope read root narrower than a configured source root
 #   replaces that root; a source root outside every scope read root is dropped, so the scope can
 #   only restrict, never widen, what config allows. (#KernelBootstrapV0/P5)
