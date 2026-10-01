@@ -1,0 +1,440 @@
+schema_version: '1.0'
+kind: decision
+id: dec-ef8ddcb79d668a67
+repository_id: leafcutter-ai
+title: Kernel-contract YAML per decision
+description: 'How decision records are filed under docs/: fields, filters, layout, approval, corrections'
+decision_type: design
+question: 'Decide how Leafcutter should file decision records as JSON or YAML files under docs/ so later kernel runs can find
+  and reuse them as precedent: which fields a record needs, which classification filters it carries (component, file type
+  or language, repository-wide, roadmap phase), the folder layout and file naming, and how human approval and later corrections
+  are recorded.'
+components:
+  - decision_kernel
+  - knowledge_management
+change_target:
+  - schema
+  - docs
+risk_surface:
+  - internal
+roadmap_phase:
+  - phase_kernel_1_founding
+file_globs: []
+repository_wide: false
+selected_option_id: opt.added.1
+supersedes: []
+superseded_by: []
+related: []
+task_context:
+  goal: 'Decide how Leafcutter should file decision records as JSON or YAML files under docs/ so later kernel runs can find
+    and reuse them as precedent: which fields a record needs, which classification filters it carries (component, file type
+    or language, repository-wide, roadmap phase), the folder layout and file naming, and how human approval and later corrections
+    are recorded.'
+  component_ids:
+    - decision_kernel
+  technologies: []
+  constraints: []
+rationale:
+  text: 'Design decision settled by a human. Kernel ranking (Jev''s per-criterion judgement, evidence not authority; stopped
+    researching because design_judgement after 1 research round(s)): 1. [opt.yaml_files_plus_generated_index] One YAML file
+    per decision plus a generated, never hand-edited filter index (required mean 0.58, 1/4 passed); 2. [opt.added.1] Kernel-contract
+    YAML per decision (required mean 0.57, 0/4 passed); 3. [opt.reuse_ac_store_conventions] Reuse the AC store''s YAML conventions
+    and id minting (required mean 0.56, 0/4 passed); 4. [opt.yaml_per_decision_component_folders] One YAML file per decision
+    in component-scoped folders, with a schema in config/ (required mean 0.47, 0/4 passed). human:user chose option [opt.added.1]
+    Kernel-contract YAML per decision (kernel rank 2 of 4).'
+  origin: template
+assumptions: []
+unresolved_risks: []
+assessment:
+  basis: kernel_ranking
+  design_reason: design_judgement
+  confidence: 0.57
+  selected_rank: 2
+  ranking:
+    - option_id: opt.yaml_files_plus_generated_index
+      rank: 1
+      required_passed: 1
+      required_total: 4
+      required_mean: 0.58
+      scores:
+        crit.enforced_ids_and_links: 0.2
+        crit.findable_by_filters: 0.88
+        crit.knowledge_map_readable: 0.53
+        crit.provenance_complete: 0.9
+        crit.reuses_conventions: 0.25
+        crit.reviewable_diffs: 0.73
+    - option_id: opt.added.1
+      rank: 2
+      required_passed: 0
+      required_total: 4
+      required_mean: 0.57
+      scores:
+        crit.enforced_ids_and_links: 0.26
+        crit.findable_by_filters: 0.74
+        crit.knowledge_map_readable: 0.58
+        crit.provenance_complete: 0.76
+        crit.reuses_conventions: 0.37
+        crit.reviewable_diffs: 0.72
+    - option_id: opt.reuse_ac_store_conventions
+      rank: 3
+      required_passed: 0
+      required_total: 4
+      required_mean: 0.56
+      scores:
+        crit.enforced_ids_and_links: 0.67
+        crit.findable_by_filters: 0.59
+        crit.knowledge_map_readable: 0.4
+        crit.provenance_complete: 0.64
+        crit.reuses_conventions: 0.78
+        crit.reviewable_diffs: 0.59
+    - option_id: opt.yaml_per_decision_component_folders
+      rank: 4
+      required_passed: 0
+      required_total: 4
+      required_mean: 0.47
+      scores:
+        crit.enforced_ids_and_links: 0.18
+        crit.findable_by_filters: 0.6
+        crit.knowledge_map_readable: 0.35
+        crit.provenance_complete: 0.88
+        crit.reuses_conventions: 0.23
+        crit.reviewable_diffs: 0.73
+final_outcome:
+  status: pending
+  observed_at: null
+  note: ''
+options:
+  - id: opt.yaml_per_decision_component_folders
+    title: One YAML file per decision in component-scoped folders, with a schema in config/
+    description: 'Layout: docs/decisions/<component_id>/<record_id>.yaml, with docs/decisions/_repository/ for repository-wide
+      decisions. Id: the kernel''s dec-<16 hex>, so a filed record maps 1:1 to the run''s Decision. Fields: id, question,
+      decision_type, options[] (id, title, description), criteria[] (id, question, priority, kind), selected_option_id, rationale,
+      assessments[] in the kernel''s CriterionAssessment shape (criterion_id, option_id, outcome pass|fail|uncertain, evidence_ids),
+      evidence[] (locator path#Lx-Ly, content_hash sha256, source_version {commit, dirty}), approval_status using the kernel''s
+      ApprovalStatus (not_required|proposed|approved|rejected), approved_by, approved_at, scope filters {components[], languages_or_frameworks[],
+      folders[], repository_wide, roadmap_phase}, versions {policy, template, model}, trace {run_id, trace_url}, outcome {status,
+      observed_at, evidence[]}, corrections[] (date, by, change, reason; append-only), supersedes / superseded_by. Validation:
+      a record schema under config/ checked at commit. Findability: docs/decisions/ must be added as a retrieval source root
+      (or knowledge-map surface), otherwise later runs never read it.'
+    assumptions:
+      - Approval fields and assessment outcomes reuse shapes the kernel already exports (decision request and report schemas);
+        the correction log, supersession and file-type filter have no precedent in this run's evidence.
+      - Scope levels follow spec 18.4 (repository, language/framework, component, folder); roadmap_phase uses the roadmap's
+        phase ids, which 18.4 does not list as a scope.
+      - Round 5's evidence on the knowledge-map parser's plain-YAML limits is not in this run's evidence; nested YAML readability
+        is unverified here.
+      - 'This run''s evidence: the Stage 0 delta''s learned Decision node (question, decision_type, options_json, selected_option,
+        approval_status, approver, langfuse_trace_id, repository_revision, created_at; id dec-<16 hex>; ABOUT a component,
+        SUPERSEDES another decision) and its provenance fields support the record fields; component ids are the 45 snake ids
+        of docs/components.json.'
+    evidence_ids:
+      - ev-27c8e6023c8b1d02
+      - ev-9b13e430034dcba6
+      - ev-1d195ec5c4c771bb
+    proposed_by: host.generate_options
+    approved_by: human:user
+  - id: opt.reuse_ac_store_conventions
+    title: Reuse the AC store's YAML conventions and id minting
+    description: 'Layout: one YAML per decision under docs/decisions/<namespace>/<PREFIX>-NNN.yaml, with a prefix per namespace
+      and ids minted the way AC ids are, enforced by extending the AC store''s schema and identifier-uniqueness checks. Reuses
+      AC-style fields: components, roadmap_phase, scope, parent, doc_links extended with content_hash and source_version for
+      evidence, and superseded_by with an existence check. Decision-specific fields: question, decision_type, options, criteria
+      with kind, selected_option_id, CriterionAssessment-shaped assessments, approval_status (ApprovalStatus), approved_by,
+      approved_at, kernel_decision_id (dec-<16 hex>), versions, trace_url, outcome, corrections[]. The AC store is already
+      a configured retrieval source (repo.acceptance_criteria).'
+    assumptions:
+      - This run's evidence shows only that docs/acceptance-criteria is a retrieval source; the AC id format, minting, schema
+        checks and superseded_by behaviour that this option reuses were evidenced in round 5 but are not in this run's evidence.
+      - AC semantics (work_status, depends_on) do not apply to decisions.
+      - 'This run''s evidence: AC records already expose title, level, status, work_status, priority, readiness and roadmap_phase
+        through the fingerprint-cached get_ac_index, keyed by existing ids such as ACS-100.'
+    evidence_ids:
+      - ev-9b13e430034dcba6
+      - ev-27c8e6023c8b1d02
+    proposed_by: host.generate_options
+    approved_by: human:user
+  - id: opt.yaml_files_plus_generated_index
+    title: One YAML file per decision plus a generated, never hand-edited filter index
+    description: 'Layout: docs/decisions/<record_id>.yaml (flat, id dec-<16 hex>) holding the full record (question, decision_type,
+      options, criteria with kind, selected_option_id, rationale, CriterionAssessment-shaped assessments, evidence with locator,
+      sha256 and source_version, ApprovalStatus approval_status/approved_by/approved_at, versions, trace link, outcome, append-only
+      corrections, supersedes/superseded_by), plus a generated index listing each record''s scope filters (components[], languages_or_frameworks[],
+      folders[], repository_wide, roadmap_phase) and provenance (git SHA, dirty flag, path), rebuilt and never edited, so
+      a run filters without opening every file. docs/decisions/ is added as a retrieval source root.'
+    assumptions:
+      - The index must be kept in sync (rebuilt at commit or on read); no indexer for decisions exists in this run's evidence.
+      - Round 5's evidence for the projection key (repository_id, kind, id) and the cached AC index precedent is not in this
+        run's evidence.
+      - 'This run''s evidence: a planned structured-store source kind would read one record per file with filterable fields
+        declared in configuration and return a bounded, ordered sample, and the delta''s projection keys records by (repository_id,
+        kind, id) with git SHA and dirty flag.'
+    evidence_ids:
+      - ev-88966751b3cbceef
+      - ev-9b13e430034dcba6
+      - ev-27c8e6023c8b1d02
+    proposed_by: host.generate_options
+    approved_by: human:user
+  - id: opt.added.1
+    title: Kernel-contract YAML per decision
+    description: 'Flat docs/decisions/<dec-id>.yaml, one file per decision, kernel-minted dec-<16hex> ids. Fields mirror the
+      kernel''s Decision contract (kernel/contracts/decision.py) and the colony concept §15 decision fields: question, decision_type,
+      task_context, options, criteria, evidence, selected option, assessment/confidence, final outcome, corrections with correction
+      reason. Concept §12 provenance: origin, root task id, Langfuse trace id, repository revision, policy/template/model
+      versions. Filters drawn only from existing vocabularies: component ids from docs/components.json, change_target, risk_surface,
+      roadmap_phase, file-type rule globs from templates/rules, plus a repository_wide flag. An approval-provenance block
+      (approval_status, approved_by human actor, approved_at); records never self-authorize. Append-only corrections that
+      preserve the original evidence and assumptions. JSON Schema in config/ validated at commit. A generated, never hand-edited
+      filter index. A decisions surface in config/paths.json. Plain-YAML subset compatible with the stdlib knowledge-map parser.'
+    assumptions: []
+    evidence_ids: []
+    proposed_by: human:user
+    approved_by: human:user
+criteria:
+  - id: crit.findable_by_filters
+    question: Can a later run select precedent by component, roadmap phase, repository-wide flag and file type or language
+      without opening every record?
+    priority: required
+    kind: design_judgement
+    evidence_ids: []
+  - id: crit.knowledge_map_readable
+    question: Can the existing knowledge-map ingestion (stdlib parser, paths.json surfaces) read each record's id and filter
+      fields without a new parser?
+    priority: required
+    kind: design_judgement
+    evidence_ids: []
+  - id: crit.reviewable_diffs
+    question: Does a new decision, an approval or a correction show up as a small, reviewable diff in one file?
+    priority: required
+    kind: design_judgement
+    evidence_ids: []
+  - id: crit.enforced_ids_and_links
+    question: Are record ids unique and supersedes or superseded_by links checked at commit, as check-identifier-uniqueness
+      and check-adr-collision do today?
+    priority: required
+    kind: design_judgement
+    evidence_ids: []
+  - id: crit.provenance_complete
+    question: Does a record carry evidence locators with content hashes, source_version (commit, dirty), policy/template/model
+      versions and a trace link, as the active roadmap phase requires?
+    priority: supporting
+    kind: design_judgement
+    evidence_ids: []
+  - id: crit.reuses_conventions
+    question: Does it reuse existing schemas, id minting and validators rather than adding new ones?
+    priority: supporting
+    kind: design_judgement
+    evidence_ids: []
+evidence:
+  - id: ev-27c8e6023c8b1d02
+    locator: docs/analysis/2026-10-01-colony-memory-stage0-delta-2-reuse-and-mvp.md#L43-L74 (§(c) Minimal Neo4j MVP > c.1
+      Node and edge set)
+    category: prior_decisions
+    content_hash: 06845bf5bd25c6e571dc24b27e0b41b474274dcc130da8c0868ab25ec12f9536
+    verification: source_verified
+    relevance: 0.87
+    source_version:
+      commit: a4b9a94f5b266503993e65a97727b5059717f6c4
+      dirty: true
+  - id: ev-c682e3aed7a3d61d
+    locator: tickets/00_inbox/TICKET-20261001-KernelCompoundGoalSplit.md#L28-L32 (§Context)
+    category: prior_decisions
+    content_hash: e6e798974885fb10aaa523d40bad23972f716c76cb7323eb360f19db5eb65633
+    verification: source_verified
+    relevance: 0.8
+    source_version:
+      commit: a4b9a94f5b266503993e65a97727b5059717f6c4
+      dirty: true
+  - id: ev-9b13e430034dcba6
+    locator: docs/analysis/2026-10-01-colony-memory-stage0-delta-2-reuse-and-mvp.md#L17-L27 (§(b) Reuse / adapt / replace
+      / add)
+    category: prior_decisions
+    content_hash: 13e1261524214aa7c90960abea825e8f95189a272f7f44adedf09b88107f4754
+    verification: source_verified
+    relevance: 0.77
+    source_version:
+      commit: a4b9a94f5b266503993e65a97727b5059717f6c4
+      dirty: true
+  - id: ev-1d195ec5c4c771bb
+    locator: docs/roadmap.json#L126-L152 (phases)
+    category: task_context
+    content_hash: 12aba4b3470ae33bc3f96349bd1316d9eefaaa28d873ddb41c62408a33d5dbc9
+    verification: source_verified
+    relevance: 0.72
+    source_version:
+      commit: a4b9a94f5b266503993e65a97727b5059717f6c4
+      dirty: true
+  - id: ev-063eb814db4cb414
+    locator: tickets/00_inbox/TICKET-20261001-KernelTargetedResearchQueries.md#L29-L37 (§Context)
+    category: prior_decisions
+    content_hash: 9a8040756d7b951f8f1caeedc0003837b6964389fdf8e1a9858bd64e5f3d9a27
+    verification: source_verified
+    relevance: 0.7
+    source_version:
+      commit: a4b9a94f5b266503993e65a97727b5059717f6c4
+      dirty: true
+  - id: ev-591abf9deb88606d
+    locator: docs/roadmap.json#L6-L28 (phases)
+    category: task_context
+    content_hash: ddd8f4a752ba10b6bb15220e3d028acf006d1bbba431bfbb67843e754bfd0ac6
+    verification: source_verified
+    relevance: 0.63
+    source_version:
+      commit: a4b9a94f5b266503993e65a97727b5059717f6c4
+      dirty: true
+  - id: ev-dec0aa32a14392ad
+    locator: docs/INDEX.md#L143-L167 (§How-To Guides)
+    category: existing_patterns
+    content_hash: 23d9a12a372522850bb2b3aae75ea5eba5a10ca7e4724fd6ae7493fb2c021f33
+    verification: source_verified
+    relevance: 0.55
+    source_version:
+      commit: a4b9a94f5b266503993e65a97727b5059717f6c4
+      dirty: true
+  - id: ev-88966751b3cbceef
+    locator: tickets/00_inbox/TICKET-20261001-KernelStructuredStoreQuery.md#L47-L58 (§Scope (no acceptance criteria by user
+      decision; later stage))
+    category: prior_decisions
+    content_hash: f603492a8df8d6d34948c9de1af57933bfae687b8b51cadadc905ce8c6f8ed66
+    verification: source_verified
+    relevance: 0.79
+    source_version:
+      commit: a4b9a94f5b266503993e65a97727b5059717f6c4
+      dirty: true
+  - id: ev-2a5b96a5d4b66790
+    locator: docs/analysis/2026-10-01-colony-memory-stage0-delta.md#L136-L152 (§(a) Answers to the ten questions (concept
+      §38) > Q7. What conflicts with the current design?)
+    category: prior_decisions
+    content_hash: d6a57d1241196b40414f955207991d3ad7c924c89ceade19dc8fa07b4c16b3c3
+    verification: source_verified
+    relevance: 0.76
+    source_version:
+      commit: a4b9a94f5b266503993e65a97727b5059717f6c4
+      dirty: true
+  - id: ev-fdd2af1c9390c516
+    locator: kernel/contracts/decision.py#L206-L230
+    category: existing_patterns
+    content_hash: 3a4ee8f390bf879bd44952cea32069a7527b109ddf03c32df0dd82819297e14d
+    verification: source_verified
+    relevance: null
+    source_version:
+      commit: a4b9a94f5b266503993e65a97727b5059717f6c4
+      dirty: true
+  - id: ev-7f8e5dd6dd088a40
+    locator: docs/components.json#L134-L158
+    category: existing_patterns
+    content_hash: af475917c4bf0b2819276a9d87902b6083eacba5af68fe71cf5aa0bc3f736629
+    verification: source_verified
+    relevance: null
+    source_version:
+      commit: a4b9a94f5b266503993e65a97727b5059717f6c4
+      dirty: true
+  - id: ev-eb8ec95cb3030bb5
+    locator: config/paths.json#L1-L56
+    category: existing_patterns
+    content_hash: 5663370269e5fd960d2e11d06e7b7a9bec7a8d1c285b7689afaec9c1c6a76290
+    verification: source_verified
+    relevance: null
+    source_version:
+      commit: a4b9a94f5b266503993e65a97727b5059717f6c4
+      dirty: true
+  - id: ev-11610d16ed6c35b8
+    locator: docs/architecture/adrs/ADR-043-journey-record-carries-its-own-behind-mark.md#L40-L70 (§Context)
+    category: existing_patterns
+    content_hash: 0ec7fc30959da2791d43bcd55e5a8dae9bab53e7fac6c8ad69523ff334a5153c
+    verification: source_verified
+    relevance: 0.54
+    source_version:
+      commit: a4b9a94f5b266503993e65a97727b5059717f6c4
+      dirty: true
+  - id: ev-0ea3b25df48c740d
+    locator: kernel/contracts/decision.py#L186-L210
+    category: existing_patterns
+    content_hash: 5e871acd01d662c54194359ea90ca429bac5445a991fa15ca1cb5ced7c9431b6
+    verification: source_verified
+    relevance: null
+    source_version:
+      commit: a4b9a94f5b266503993e65a97727b5059717f6c4
+      dirty: true
+  - id: ev-9b98e1c4095659ed
+    locator: docs/components.json#L133-L157
+    category: existing_patterns
+    content_hash: 9565a13cc050f05009e6bd0bd7ad117eab909cfb023a2246ea92c771e55b99e0
+    verification: source_verified
+    relevance: null
+    source_version:
+      commit: a4b9a94f5b266503993e65a97727b5059717f6c4
+      dirty: true
+  - id: ev-d9a4bc930c81099f
+    locator: docs/analysis/2026-10-01-neo4j-colony-memory-concept-3-graph-model-ids-provenance.md#L207-L242 (§12. Provenance
+      and versioning)
+    category: existing_patterns
+    content_hash: 2beca167277489320744da9bd0b8d39b33673e65a788eb930a4f216307c59d03
+    verification: source_verified
+    relevance: 0.92
+    source_version:
+      commit: a4b9a94f5b266503993e65a97727b5059717f6c4
+      dirty: true
+  - id: ev-5a9817bc11ed3072
+    locator: kernel/contracts/decision.py#L1-L27 (module level)
+    category: existing_patterns
+    content_hash: d616361831a6afe9eeccd28db169f61aeff96e20c5f8397be286a784bcfca13d
+    verification: source_verified
+    relevance: 0.74
+    source_version:
+      commit: a4b9a94f5b266503993e65a97727b5059717f6c4
+      dirty: true
+  - id: ev-1f1a3e8d235cebde
+    locator: docs/analysis/2026-09-30-leafcutter-kernel-spec-rev3-3-contracts.md#L151-L186 (§7. Canonical input/output contracts
+      [MVP] > 7.7 Options, criteria, decisions, and routing assessments)
+    category: existing_patterns
+    content_hash: a28728fa6d66647a6f5bd60a80a181f3ae7f2c0a9b843abfeea81f15f89ee2ec
+    verification: source_verified
+    relevance: 0.91
+    source_version:
+      commit: a4b9a94f5b266503993e65a97727b5059717f6c4
+      dirty: true
+  - id: ev-bfc498da5709f897
+    locator: kernel/contracts/decision.py#L1-L53
+    category: existing_patterns
+    content_hash: 2691188cb005c1158578a2374ad299a5464fdccdd3676d3fa1eb11426aa03809
+    verification: source_verified
+    relevance: null
+    source_version:
+      commit: a4b9a94f5b266503993e65a97727b5059717f6c4
+      dirty: true
+  - id: ev-b6b3a0715fda1c3b
+    locator: kernel/contracts/capability.py#L1-L37 (module level)
+    category: existing_patterns
+    content_hash: 9c80fb35d0f48057b121b792baa57f350be516f7c711b6b8369af9ebb57e38b8
+    verification: source_verified
+    relevance: 0.58
+    source_version:
+      commit: a4b9a94f5b266503993e65a97727b5059717f6c4
+      dirty: true
+precedents_considered: []
+approval:
+  approval_status: approved
+  approved_by: human:user
+  approved_at: '2026-10-01T14:48:31Z'
+  note: 'approved_at is the decision''s updated_at: the kernel Decision had no approved_at field when this decision was approved
+    (added by #KernelDecisionStore).'
+provenance:
+  origin: learned
+  created_by_capability: decision
+  created_at: '2026-10-01T14:48:31Z'
+  run_id: run-2fbb4ef43b1345f6
+  root_task_id: null
+  langfuse_trace_id: c93592ca1a813365b7d48d5a8363c66d
+  langfuse_trace_url: null
+  repository_revision:
+    commit: a4b9a94f5b266503993e65a97727b5059717f6c4
+    dirty: true
+  policy_version: null
+  template_version: decision.assess@1
+  model_version: jev-latest
+  kernel_version: 0.1.0.dev0
+  decision_versions:
+    options: 321d7f928ca5
+    criteria: d48c93d77eca
+    templates: decision.assess@1
+corrections: []
