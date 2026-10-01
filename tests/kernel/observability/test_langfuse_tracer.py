@@ -67,10 +67,14 @@ class _Harness(unittest.TestCase):
             fields["langfuse_public_key"] = SecretStr(public or self.public)
             fields["langfuse_secret_key"] = SecretStr(self.secret)
         config = CONFIG.langfuse.model_copy(update={"enabled": enabled})
-        return LangfuseTracer(
+        tracer = LangfuseTracer(
             secrets=SecretSettings(**fields), config=config, policy=CONFIG.data_policy,
             deny_globs=CONFIG.retrieval.deny_globs, spool_path=self.dir / "spool.jsonl",
             span_exporter=self.exporter, verify_auth=verify_auth, resolve_url=False)
+        # The SDK client starts consumer threads; stop them so they cannot outlive the test
+        # and call time.monotonic under another test's patch. (#KernelBootstrapV0/CI)
+        self.addCleanup(tracer.shutdown)
+        return tracer
 
     def spans(self) -> dict[str, list]:
         by_name: dict[str, list] = {}

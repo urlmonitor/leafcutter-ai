@@ -125,6 +125,7 @@ class LangfuseTracer:
         self.redactor = Redactor(secrets.secret_values(), policy, deny_globs)
         self.spool = TelemetrySpool(spool_path, self.redactor)
         self.client: Langfuse | None = None
+        self._shut_down = False
         self.degraded_reason: str | None = None
         self._segment: _Handle | None = None
         self._trace_id: str | None = None
@@ -340,14 +341,20 @@ class LangfuseTracer:
         return ObservabilityStatus.DEGRADED if self.degraded else ObservabilityStatus.OK
 
     def shutdown(self) -> None:
-        """Flush and stop the SDK background workers (call once in the CLI's finally)."""
-        if self.client is not None:
+        """Flush and stop the SDK background workers; repeat calls are no-ops.
+
+        A second SDK shutdown would block forever flushing queues whose consumers already exited.
+        """
+        if self.client is not None and not self._shut_down:
+            self._shut_down = True
             self.guard("shutdown", self.client.shutdown)
 
 
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-02 [python-coder]: shutdown() is idempotent: a second SDK shutdown hangs in
+#   queue.join() once the consumers have exited. (#KernelBootstrapV0/CI)
 # - 2026-10-02 [python-coder]: mypy: credentials are revealed through a None-safe helper and the trace context is the Langfuse TypedDict (#KernelBootstrapV0/GROUND)
 # - 2026-10-01 16:00 [python-coder]: `status_message` is masked by hand: langfuse 4.16 applies
 #   `mask` to input, output and metadata only. (#KernelBootstrapV0/FIXC)
