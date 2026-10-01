@@ -99,6 +99,11 @@ class DecisionConfig(_Section):
     preference_threshold: Probability
     conflict_threshold: Probability
     missing_min_probability: Probability
+    #: Options generated for an unknown option set must cite the evidence they rest on; an
+    #: ungrounded option is refused (True) or only flagged as a limitation (False).
+    require_option_grounding: bool
+    #: Most evidence items attached to one options request (bounds the host input).
+    max_grounding_evidence: int = Field(ge=1)
 
 
 class ResearchConfig(_Section):
@@ -131,6 +136,9 @@ class RetrievalConfig(_Section):
     max_excerpt_chars: int = Field(ge=1)
     max_file_bytes: int = Field(ge=1)
     deny_globs: list[str]
+    #: Relevance a kept item needs to count towards a need's coverage (items between
+    #: `relevance_threshold` and this stay as evidence but leave the need partial).
+    coverage_relevance_threshold: Probability
 
 
 class SourceConfig(_Section):
@@ -141,6 +149,8 @@ class SourceConfig(_Section):
     categories: list[EvidenceCategory] = Field(min_length=1)
     roots: list[str] = Field(default_factory=list)
     surfaces: list[str] = Field(default_factory=list)
+    #: Extra deny globs for this source only (added to `retrieval.deny_globs`).
+    deny_globs: list[str] = Field(default_factory=list)
 
 
 class JevConfig(_Section):
@@ -297,6 +307,10 @@ def write_config_schema(path: Path) -> None:
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-01 23:00 [python-coder]: Added decision.require_option_grounding and
+#   max_grounding_evidence, retrieval.coverage_relevance_threshold and a per-source deny_globs
+#   so grounding, coverage and secret exclusion are configuration, not code.
+#   (#KernelBootstrapV0/GROUND)
 # - 2026-10-01 22:00 [python-coder]: Added the `intent` section (answer-kind classification
 #   thresholds and the cap on clarification questions per request) so no threshold is hard-coded
 #   in the intake logic. (#KernelBootstrapV0/INTENT)

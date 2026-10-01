@@ -12,9 +12,9 @@ ARCHITECTURE: Every value is a contract model or a scalar (nothing runtime-only 
 
 from __future__ import annotations
 
-from collections.abc import Mapping
+from collections.abc import Iterable, Mapping
 from datetime import datetime
-from typing import Annotated, Any, TypedDict
+from typing import Annotated, Any, Literal, TypedDict
 
 from pydantic import Field
 
@@ -37,9 +37,72 @@ from kernel.contracts import (
     RunStatus,
     Task,
     TaskInput,
+    Usage,
     WorkItem,
 )
 from kernel.observability.tracer import TraceState
+
+
+def _sum_known(current: int | None, reported: int | None) -> int | None:
+    """Add a reported count to a running total that stays None while nothing was reported."""
+    if reported is None:
+        return current
+    return (current or 0) + reported
+
+
+class UsageRow(KernelModel):
+    """Running usage of one provider and model (the envelope shows one row per pair).
+
+    Unknown stays unknown: a token, duration or cost total is None until a call reported it, and
+    the cost is only shown when every folded call had a (reported or estimated) cost.
+    """
+
+    provider: Literal["jev", "host", "native"]
+    model_id: str | None = None
+    records: int = Field(default=0, ge=0)
+    calls: int = Field(default=0, ge=0)
+    input_tokens: int | None = Field(default=None, ge=0)
+    output_tokens: int | None = Field(default=None, ge=0)
+    duration_ms: int | None = Field(default=None, ge=0)
+    cost_usd: float = Field(default=0.0, ge=0.0)
+    cost_records: int = Field(default=0, ge=0)
+    estimated: bool = False
+
+    def folded(self, usage: Usage, price_per_input_token: float | None) -> UsageRow:
+        """Return the row with one more provider usage folded in."""
+        cost, estimated = usage.cost_usd, usage.cost_provenance == "estimated"
+        if cost is None and price_per_input_token is not None and usage.input_tokens is not None:
+            cost, estimated = usage.input_tokens * price_per_input_token, True
+        return self.model_copy(update={
+            "records": self.records + 1,
+            "calls": self.calls + (usage.calls if usage.calls is not None else 1),
+            "input_tokens": _sum_known(self.input_tokens, usage.input_tokens),
+            "output_tokens": _sum_known(self.output_tokens, usage.output_tokens),
+            "duration_ms": _sum_known(self.duration_ms, usage.duration_ms),
+            "cost_usd": self.cost_usd + (cost or 0.0),
+            "cost_records": self.cost_records + (1 if cost is not None else 0),
+            "estimated": self.estimated or (cost is not None and estimated)})
+
+    def as_usage(self) -> Usage:
+        """Return the row as a Usage (cost null and unavailable unless every call had one)."""
+        known = self.records > 0 and self.cost_records == self.records
+        return Usage(
+            provider=self.provider, model_id=self.model_id, input_tokens=self.input_tokens,
+            output_tokens=self.output_tokens, duration_ms=self.duration_ms,
+            cost_usd=self.cost_usd if known else None,
+            cost_provenance=("estimated" if self.estimated else "reported") if known
+            else "unavailable", calls=self.calls)
+
+
+def fold_usage_rows(rows: Iterable[UsageRow], usages: Iterable[Usage],
+                    price_per_input_token: float | None) -> list[UsageRow]:
+    """Fold provider usages into per-(provider, model) rows, sorted for determinism."""
+    by_key = {(r.provider, r.model_id): r for r in rows}
+    for usage in usages:
+        key = (usage.provider, usage.model_id)
+        row = by_key.get(key) or UsageRow(provider=usage.provider, model_id=usage.model_id)
+        by_key[key] = row.folded(usage, price_per_input_token)
+    return [by_key[k] for k in sorted(by_key, key=lambda k: (k[0], k[1] or ""))]
 
 
 class Budgets(KernelModel):
@@ -55,6 +118,8 @@ class Budgets(KernelModel):
     #: Token totals over the provider calls that reported them; None while none has (never 0).
     input_tokens: int | None = Field(default=None, ge=0)
     output_tokens: int | None = Field(default=None, ge=0)
+    #: Per-provider and model usage for the envelope (never a guess: unknown stays None).
+    usage_rows: list[UsageRow] = Field(default_factory=list)
     retries: dict[str, int] = Field(default_factory=dict)
     no_progress_streak: int = Field(default=0, ge=0)
 
@@ -72,7 +137,7 @@ class RunOutcome(KernelModel):
 
 
 #: Models kept in state that contracts.ALL_MODELS does not cover (checkpoint serde allowlist, P2).
-STATE_MODELS: tuple[type, ...] = (Budgets, RunOutcome, TraceState)
+STATE_MODELS: tuple[type, ...] = (Budgets, RunOutcome, TraceState, UsageRow)
 
 
 def result_artifact_name(invocation_id: str) -> str:
@@ -184,6 +249,9 @@ def new_event(run_id: str, at: datetime, kind: str, detail: str = "", **refs: st
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-01 23:00 [python-coder]: Budgets keeps one UsageRow per (provider, model) so the
+#   envelope shows the model id and the known cost of each provider instead of one synthesised
+#   Jev row with both null. (#KernelBootstrapV0/GROUND)
 # - 2026-10-01 22:00 [python-coder]: Budgets carries the known token totals (None until a call
 #   reports them) so the envelope can show usage without guessing 0 for an unknown count.
 #   (#KernelBootstrapV0/INTENT)

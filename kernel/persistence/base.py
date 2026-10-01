@@ -164,7 +164,9 @@ def aggregate_gaps(observations: list[CapabilityGap]) -> list[CapabilityGap]:
 
     occurrence_count sums, created_at/first_seen/last_seen take the min/min/max (so the aggregate
     never claims a later first sighting than its earliest observation), example_run_ids keeps at most
-    five distinct run ids in first-seen order, and the newest observation supplies the rest.
+    five distinct run ids in first-seen order, `goal` and `need_title` stay those of the first
+    observation (a stable readable title per gap key), and the newest observation supplies the
+    rest.
 
     Args:
         observations: Raw gap observations.
@@ -186,7 +188,9 @@ def aggregate_gaps(observations: list[CapabilityGap]) -> list[CapabilityGap]:
                     examples.append(run_id)
         firsts = [g.first_seen for g in group if g.first_seen]
         lasts = [g.last_seen for g in group if g.last_seen]
+        oldest = group[0]
         merged.append(newest.model_copy(update={
+            "goal": oldest.goal, "need_title": oldest.need_title or newest.need_title,
             "occurrence_count": sum(g.occurrence_count for g in group),
             "created_at": min(g.created_at for g in group),
             "example_run_ids": examples,
@@ -199,6 +203,9 @@ def aggregate_gaps(observations: list[CapabilityGap]) -> list[CapabilityGap]:
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-01 23:00 [python-coder]: A merged gap keeps the first-seen goal and need_title: the
+#   key aggregates different goals of one need, and the title used to jump to whichever run came
+#   last. (#KernelBootstrapV0/GROUND)
 # - 2026-10-01 22:00 [python-coder]: The aggregate's created_at is the earliest observation's, not
 #   the newest one's, so the envelope and the store agree on when a gap was first seen.
 #   (#KernelBootstrapV0/INTENT)

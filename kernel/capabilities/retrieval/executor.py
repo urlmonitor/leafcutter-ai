@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+from dataclasses import replace
 from pathlib import Path
 
 from kernel.capabilities.base import ExecutionContext
@@ -80,6 +81,8 @@ async def _search_one(ctx: ExecutionContext, policy: ReadPolicy, source: SourceC
                       terms: list[str]) -> SearchReport:
     """Search one source inside a `retrieval.<source>` retriever observation."""
     meta = {"source_id": source.id, "strategy": source.kind, "term_count": len(terms)}
+    if source.deny_globs:
+        policy = replace(policy, deny_globs=(*policy.deny_globs, *source.deny_globs))
     with ctx.tracer.span(f"retrieval.{source.id}", "retriever", ctx.corr, input={"terms": terms},
                          metadata=meta) as span:
         report = await _search_source(ctx, policy, source, terms)
@@ -116,12 +119,20 @@ async def _search_source(ctx: ExecutionContext, policy: ReadPolicy, source: Sour
 
 
 def _merge(reports: list[SearchReport], limit: int) -> list[Candidate]:
-    """Merge candidates across sources, dropping duplicate locators, best hits first."""
+    """Merge candidates across sources into at most `limit`, every source getting a turn.
+
+    Each source's list is already ranked by hits. Taking the globally densest files instead would
+    let one large source (hundreds of files that all mention a common word) crowd out a small,
+    curated one (a README that answers the question), so the sources are served round-robin, best
+    first within each; duplicate locators are dropped.
+    """
+    lanes = [list(report.candidates) for report in reports if report.candidates]
     seen: dict[str, Candidate] = {}
-    for report in reports:
-        for cand in report.candidates:
-            seen.setdefault(cand.locator, cand)
-    return sorted(seen.values(), key=lambda c: (-c.hits, c.path, c.locator))[:limit]
+    for rank in range(max((len(lane) for lane in lanes), default=0)):
+        for lane in lanes:
+            if rank < len(lane) and len(seen) < limit:
+                seen.setdefault(lane[rank].locator, lane[rank])
+    return list(seen.values())
 
 
 def _limitations(reports: list[SearchReport], need: EvidenceNeed) -> list[str]:
@@ -139,14 +150,26 @@ def _limitations(reports: list[SearchReport], need: EvidenceNeed) -> list[str]:
     return out
 
 
-def _coverage(need: EvidenceNeed, evidence: list[Evidence], consulted: int,
-              unavailable: list[UnavailableSource]) -> NeedStatus:
-    """Return the need status: unavailable, open (searched, nothing), partial or satisfied."""
+def _relevant(evidence: list[Evidence], bar: float) -> list[Evidence]:
+    """Return the evidence whose judged relevance reaches the coverage bar (unjudged: never)."""
+    return [e for e in evidence
+            if e.provenance.relevance is not None and e.provenance.relevance >= bar]
+
+
+def _coverage(evidence: list[Evidence], consulted: int, unavailable: list[UnavailableSource],
+              bar: float) -> NeedStatus:
+    """Return the need status: unavailable, open (searched, nothing), partial or satisfied.
+
+    Only evidence that passed relevance at the coverage bar can satisfy the need; anything weaker
+    (or never judged) leaves it partial, and a bundle with an unavailable source stays partial.
+    """
     if consulted == 0:
         return NeedStatus.UNAVAILABLE
     if not evidence:
         return NeedStatus.OPEN
-    return NeedStatus.PARTIAL if unavailable else NeedStatus.SATISFIED
+    if unavailable or not _relevant(evidence, bar):
+        return NeedStatus.PARTIAL
+    return NeedStatus.SATISFIED
 
 
 async def _collect(ctx: ExecutionContext, invocation: CapabilityInvocation,
@@ -184,14 +207,17 @@ async def _collect(ctx: ExecutionContext, invocation: CapabilityInvocation,
 def _result(invocation: CapabilityInvocation, request: RetrievalRequestPayload,
             evidence: list[Evidence], reports: list[SearchReport],
             unavailable: list[UnavailableSource], limitations: list[str], cut: bool,
-            usage: list[Usage]) -> CapabilityResult:
+            usage: list[Usage], bar: float) -> CapabilityResult:
     """Assemble the evidence bundle result (partial when no source could be consulted)."""
     consulted = [r for r in reports if not r.unavailable_reason]
     unavailable = unavailable + [UnavailableSource(source_id=r.source_id,
                                                    reason=r.unavailable_reason)
                                  for r in reports if r.unavailable_reason]
-    status = _coverage(request.need, evidence, len(consulted), unavailable)
+    status = _coverage(evidence, len(consulted), unavailable, bar)
     limits = [*limitations, *_limitations(reports, request.need)]
+    if evidence and not _relevant(evidence, bar):
+        limits.append(f"coverage: no item reached the relevance bar {bar}; the need stays "
+                      "partial (items were kept as context, not as an answer)")
     limits += [f"source {u.source_id} unavailable: {u.reason}" for u in unavailable]
     bundle = EvidenceBundlePayload(
         evidence_ids=[e.id for e in evidence], coverage={request.need.id: status},
@@ -235,7 +261,8 @@ class RepositoryRetrievalExecutor:
         sources, unavailable = select_sources(ctx, request)
         if not terms:
             return _result(invocation, request, [], [], unavailable,
-                           ["no query terms could be extracted from the need"], False, [])
+                           ["no query terms could be extracted from the need"], False, [],
+                           ctx.config.retrieval.coverage_relevance_threshold)
         reports = list(await asyncio.gather(*(_search_one(ctx, policy, s, terms)
                                               for s in sources)))
         try:
@@ -243,12 +270,20 @@ class RepositoryRetrievalExecutor:
                                                           terms)
         except StopCapability as stop:
             return stop.result
-        return _result(invocation, request, evidence, reports, unavailable, limits, cut, usage)
+        return _result(invocation, request, evidence, reports, unavailable, limits, cut, usage,
+                       ctx.config.retrieval.coverage_relevance_threshold)
 
 
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-01 23:00 [python-coder]: Candidates are merged round-robin across sources instead of
+#   by raw hit count: with the project-metadata sources the 4468-file acceptance-criteria store
+#   crowded tests/README.md out of the bounded list in a live run. (#KernelBootstrapV0/GROUND)
+# - 2026-10-01 23:00 [python-coder]: A need is `satisfied` only by evidence whose judged relevance
+#   reaches retrieval.coverage_relevance_threshold; a weaker or unjudged hit stays in the bundle
+#   as context but leaves the need `partial`, so one irrelevant excerpt cannot close a need.
+#   Per-source deny globs extend the global ones. (#KernelBootstrapV0/GROUND)
 # - 2026-10-01 00:30 [python-coder]: Each source search is a `retrieval.<source>` retriever span
 #   under the capability span (design observation map); output carries counts only, never
 #   excerpts. (#KernelBootstrapV0/OBS)

@@ -33,6 +33,26 @@ OPTIONS_REQUIREMENT = ("Every option and every proposed criterion must set propo
                        "set 'approved' or approved_by.")
 
 
+def _ground_options(options: list[Option], request: OptionsRequestPayload, notes: list[str]
+                    ) -> list[Option]:
+    """Keep only references to supplied evidence; flag or refuse options citing none of it."""
+    allowed = set(request.evidence_ids)
+    out: list[Option] = []
+    for option in options:
+        refs = [r for r in dict.fromkeys(option.source_refs) if r in allowed]
+        option = option.model_copy(update={"source_refs": refs})
+        if refs:
+            out.append(option)
+        elif request.require_grounding:
+            notes.append(f"option {option.id} was refused: it cites none of the supplied "
+                         "evidence (not grounded)")
+        else:
+            notes.append(f"option {option.id} is not grounded: it cites none of the supplied "
+                         "evidence")
+            out.append(option)
+    return out
+
+
 def _as_proposal(item: Option | Criterion, producer: str) -> Any:
     """Return the option or criterion as a pure proposal attributed to the producer."""
     return item.model_copy(update={
@@ -63,6 +83,7 @@ class GenerateOptions(HostOperation):
         if request is None:
             return lines
         lines.append(f"Return at most {request.max_options} options.")
+        lines += self._grounding_requirements(request)
         if not request.propose_criteria:
             lines.append("Leave proposed_criteria empty: criteria were not requested.")
         lines.append("Do not set weight_rule or decision_basis on a criterion; weights belong "
@@ -70,6 +91,24 @@ class GenerateOptions(HostOperation):
         if request.existing_option_ids:
             lines.append("Do not reuse these option ids: " + ", ".join(request.existing_option_ids))
         return lines
+
+    @staticmethod
+    def _grounded(options: list[Option], request: Any, notes: list[str]) -> list[Option]:
+        """Apply the grounding rules of the request (a request that did not parse is skipped)."""
+        return options if request is None else _ground_options(options, request, notes)
+
+    @staticmethod
+    def _grounding_requirements(request: Any) -> list[str]:
+        """Return the grounding rules: cite supplied evidence, no repository access."""
+        if not request.evidence_ids:
+            return ["No evidence was supplied and this operation has no repository access: "
+                    "leave source_refs empty; the options will be flagged as ungrounded."]
+        rule = ("This operation has no repository access: use only the cited evidence in the "
+                "input artifact. Cite the evidence ids each option rests on in its source_refs "
+                "(only ids from: " + ", ".join(request.evidence_ids) + ").")
+        if request.require_grounding:
+            rule += " An option that cites none of them is refused."
+        return [rule]
 
     def convert_payload(self, ctx: HostConversion, payload: OptionsPayload) -> CapabilityResult:
         """Return options and criteria as proposals, within what the request asked for."""
@@ -79,6 +118,7 @@ class GenerateOptions(HostOperation):
         options = [o for o in payload.options if o.id not in taken]
         if len(options) != len(payload.options):
             notes.append("options reusing an existing option id were dropped")
+        options = self._grounded(options, request, notes)
         if request is not None and len(options) > request.max_options:
             notes.append(f"{len(options) - request.max_options} options beyond the requested "
                          f"maximum of {request.max_options} were dropped")
@@ -102,6 +142,11 @@ class GenerateOptions(HostOperation):
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-01 23:00 [python-coder]: generate_options stays read-only WITHOUT repository access
+#   (permissions_required remains empty): a host reading files itself would bypass the kernel's
+#   deny globs, size limits and revision stamps and produce unverifiable claims. Grounding comes
+#   from kernel-retrieved evidence in the packet; options cite it in source_refs and are flagged
+#   or refused otherwise. (#KernelBootstrapV0/GROUND)
 # - 2026-10-01 11:20 [python-coder]: A criterion's weight_rule and decision_basis are cleared:
 #   weighting is the approver's choice (spec 10.4), and a host that supplied one would be
 #   resolving a missing preference on the human's behalf. (#KernelBootstrapV0/P8)

@@ -41,6 +41,11 @@
       "title": "Propose Criteria",
       "type": "boolean"
     },
+    "require_grounding": {
+      "default": false,
+      "title": "Require Grounding",
+      "type": "boolean"
+    },
     "schema_version": {
       "const": "1.0",
       "default": "1.0",

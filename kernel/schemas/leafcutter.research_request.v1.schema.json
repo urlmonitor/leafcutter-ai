@@ -112,6 +112,11 @@
       "title": "Evidence Needs",
       "type": "array"
     },
+    "evidence_needs_only": {
+      "default": false,
+      "title": "Evidence Needs Only",
+      "type": "boolean"
+    },
     "existing_evidence_ids": {
       "items": {
         "type": "string"

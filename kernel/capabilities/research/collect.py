@@ -23,11 +23,11 @@ from kernel.capabilities.decision.jev_support import (
     make_batch,
     noul_question,
 )
-from kernel.capabilities.research.state import Collected, ResearchContinuation
+from kernel.capabilities.research.state import UNLOCALISED, Collected, ResearchContinuation
 from kernel.contracts import schema_ids
 from kernel.contracts.capability import Usage
 from kernel.contracts.enums import NeedStatus, RequestKind, ResultStatus
-from kernel.contracts.evidence import Contradiction, EvidenceBundlePayload
+from kernel.contracts.evidence import Contradiction, EvidenceBundlePayload, stronger_category
 from kernel.contracts.payloads import FindingsPayload
 from kernel.contracts.schema_catalog import validate_payload
 from kernel.contracts.work import CapabilityInvocation, ChildOutcome
@@ -49,12 +49,13 @@ class Judgement:
 def _absorb_bundle(out: Collected, payload: dict) -> None:
     """Merge one evidence_bundle.v1 payload into the collected state."""
     bundle = cast(EvidenceBundlePayload, validate_payload(schema_ids.EVIDENCE_BUNDLE, payload))
-    out.evidence.update({e.id: e for e in bundle.evidence})
+    for item in bundle.evidence:
+        out.evidence[item.id] = stronger_category(out.evidence.get(item.id), item)
     for need_id, status in bundle.coverage.items():
         out.merge_coverage(need_id, status)
     out.attempted += [s for s in bundle.attempted_sources if s not in out.attempted]
     out.unavailable += bundle.unavailable_sources
-    out.contradictions += bundle.contradictions
+    out.add_contradictions(bundle.contradictions)
     out.limitations += bundle.limitations
     out.truncated = out.truncated or bundle.truncated
 
@@ -64,8 +65,8 @@ def collect_outcomes(ctx: ExecutionContext, cont: ResearchContinuation,
     """Merge the continuation's earlier evidence with the outcomes of the finished children."""
     out = Collected(evidence={e.id: e for e in cont.evidence}, coverage=dict(cont.coverage),
                     attempted=list(cont.attempted), unavailable=list(cont.unavailable),
-                    contradictions=list(cont.contradictions), limitations=list(cont.limitations),
-                    truncated=cont.truncated)
+                    limitations=list(cont.limitations), truncated=cont.truncated)
+    out.add_contradictions(cont.contradictions)
     for outcome in outcomes:
         if outcome.request_kind is RequestKind.SYNTHESIS:
             _absorb_findings(ctx, out, outcome)
@@ -137,18 +138,27 @@ async def judge(ctx: ExecutionContext, invocation: CapabilityInvocation, questio
 
 
 def record_contradiction(ctx: ExecutionContext, out: Collected, probability: float) -> None:
-    """Record a bundle-wide contradiction (preserved, never averaged) when above threshold."""
+    """Record a bundle-wide contradiction (preserved, never averaged) when above threshold.
+
+    The conflicting pair is not known, so it is recorded once, flagged as unlocalised, and not at
+    all when a localised contradiction already says where the disagreement is.
+    """
     if probability < ctx.config.decision.conflict_threshold:
         return
+    if out.has_localised_contradiction or out.has_unlocalised_contradiction:
+        return
     ids = sorted(out.evidence)
-    note = (f"Jev flagged a contradiction within the bundle (p={probability:.2f}); "
+    note = (f"{UNLOCALISED}Jev flagged a contradiction within the bundle (p={probability:.2f}); "
             "the conflicting pair is not localised")
-    out.contradictions.append(Contradiction(a=ids[0], b=ids[-1], note=note))
+    out.add_contradictions([Contradiction(a=ids[0], b=ids[-1], note=note)])
 
 
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-01 23:00 [python-coder]: A bundle-level conflict from Jev is flagged `unlocalised`
+#   and recorded once; it is skipped when a localised contradiction exists, because the
+#   first/last-id pair it would name is a guess that duplicated real ones. (#KernelBootstrapV0/GROUND)
 # - 2026-09-30 23:00 [python-coder]: The bundle-wide conflict noul cannot name the pair, so the
 #   Contradiction uses the first and last evidence ids and says the pair is not localised; the
 #   design asks for one conflict question over the whole bundle. (#KernelBootstrapV0/P5)

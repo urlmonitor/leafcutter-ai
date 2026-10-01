@@ -52,6 +52,11 @@ class DecisionContinuation(KernelModel):
     approved_revision: str | None = None
 
 
+def derive_decision_id(work_item_id: str) -> str:
+    """Return the stable decision id (`dec-<16 hex>`) of the work item that owns the decision."""
+    return f"dec-{sha256_hex(work_item_id)[:16]}"
+
+
 def is_pending(item: Option | Criterion) -> bool:
     """True if an option or criterion still awaits approval (and so may not be used)."""
     if item.approval_status is ApprovalStatus.PROPOSED:
@@ -88,6 +93,11 @@ class Working:
     usage: list[Usage] = field(default_factory=list)
     approval_rejected: bool = False
     revision_commit: str | None = None
+    #: Stable id of the decision record (derived from the work item, so every pause shares it).
+    decision_id: str = ""
+    #: Whether generated options must cite evidence, and how much evidence one request carries.
+    require_grounding: bool = True
+    evidence_cap: int = 12
 
     @property
     def usable_options(self) -> list[Option]:
@@ -131,6 +141,8 @@ class Working:
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-01 23:00 [python-coder]: Working carries the stable decision id and the grounding
+#   policy (from config) so request builders need no context argument. (#KernelBootstrapV0/GROUND)
 # - 2026-10-01 02:00 [python-coder]: A decision approval records the evidence revision the human
 #   saw (approved_revision); a changed revision or winner voids it. (#KernelBootstrapV0/FIXA)
 # - 2026-09-30 23:00 [python-coder]: The continuation stores the option and criterion lists

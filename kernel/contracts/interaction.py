@@ -9,7 +9,7 @@ ARCHITECTURE: Packets are persisted exactly as delivered to the client. Submissi
 
 from __future__ import annotations
 
-from pydantic import Field, JsonValue, model_validator
+from pydantic import ConfigDict, Field, JsonValue, field_validator, model_validator
 
 from kernel.contracts import schema_ids
 from kernel.contracts.base import (
@@ -98,7 +98,14 @@ class HumanQuestion(PersistedModel):
 
 
 class InteractionSubmission(KernelModel):
-    """Client response to a pending interaction (unknown fields rejected)."""
+    """Client response to a pending interaction (unknown fields rejected).
+
+    String values inside `response` are kept verbatim: stripping them would change a host's
+    verbatim evidence excerpts (and the hash it computed) before the kernel ever reads them.
+    The identifying string fields are still stripped.
+    """
+
+    model_config = ConfigDict(str_strip_whitespace=False)
 
     run_id: str
     interaction_id: str
@@ -109,6 +116,12 @@ class InteractionSubmission(KernelModel):
     response: dict[str, JsonValue]
     new_evidence: list[EvidenceInput] = Field(default_factory=list)
     usage: list[Usage] = Field(default_factory=list)
+
+    @field_validator("run_id", "interaction_id", "response_schema_id", "relayed_by")
+    @classmethod
+    def _strip_identifiers(cls, value: str | None) -> str | None:
+        """Strip the identifying fields (only `response` content is verbatim)."""
+        return value.strip() if value is not None else None
 
     @model_validator(mode="after")
     def _actor_matches_schema(self) -> InteractionSubmission:
@@ -125,6 +138,8 @@ class InteractionSubmission(KernelModel):
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-01 23:00 [python-coder]: InteractionSubmission keeps `response` strings verbatim; the
+#   base model's whitespace stripping had silently re-written host excerpts. (#KernelBootstrapV0/GROUND)
 # - 2026-09-30 23:40 [python-coder]: HostWorkRequest.output_requirements states rules JSON Schema
 #   cannot express (generated options are proposals a human approves). (#KernelBootstrapV0/P6)
 # - 2026-09-30 23:30 [python-coder]: HumanQuestion.structured_allowed marks approve-or-edit

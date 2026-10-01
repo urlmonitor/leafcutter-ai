@@ -214,7 +214,11 @@ def decide_outcome(state: KernelState) -> RunOutcome:
 def render_report_md(state: KernelState, outcome: RunOutcome) -> str:
     """Render the human-readable report from a template (no model-written text)."""
     lines = [f"# Run report {state['run_id']}", "", f"- Status: {outcome.status.value}",
-             f"- Task: {state['task'].original_goal}", ""]
+             f"- Task: {state['task'].original_goal}"]
+    trace = state.get("trace")
+    if trace is not None and trace.trace_url:
+        lines.append(f"- Trace: {trace.trace_url}")
+    lines.append("")
     lines += stop_explanation(outcome.status.value, outcome.limitations)
     if outcome.output is not None:
         lines += output_sections(outcome.output.schema_id, outcome.output.payload)
@@ -275,6 +279,9 @@ __all__ = ["IntakeError", "decide_outcome", "finalize", "intake", "render_report
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-01 23:00 [python-coder]: report.md names the Langfuse trace URL when tracing exported
+#   one (the envelope already carried it in trace_refs), so a reader of the report can open the
+#   trace. (#KernelBootstrapV0/GROUND)
 # - 2026-10-01 22:00 [python-coder]: A blocked run without a plain limitation gets a `can_do`
 #   hint, and report.md explains blocked and partial stops and renders evidence and idea outputs
 #   readably (ideas as proposals) before the unchanged JSON block. (#KernelBootstrapV0/INTENT)

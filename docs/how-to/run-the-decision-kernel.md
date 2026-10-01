@@ -75,6 +75,27 @@ confident about, which suits a repository-only run with no host research source:
 A relative `paths.run_root` resolves against the checkout (default `.leafcutter/kernel`, which is
 git-ignored). An invalid override exits 5 with `config_invalid`.
 
+#### What native retrieval reads (sources and grounding)
+
+`sources` in the config is the catalog of where evidence may come from; a need is searched only
+in the sources whose `categories` include it. The defaults cover the repository's own project
+metadata: principles and ADRs, code patterns, `repo.docs` (README, how-tos, reference, testing),
+`repo.acceptance_criteria`, `repo.roadmap` (roadmap and vision), `repo.tickets` (read-only),
+`repo.config` (secrets denied by `deny_globs`) and `repo.tests` (test READMEs, `pytest.ini`).
+Override or extend them with a `sources` list in your override file (a list replaces the default
+list, so copy the entries you keep). Every source is bounded by `retrieval.max_candidates`,
+`max_excerpt_chars` and `max_file_bytes`; add secret-like paths to `retrieval.deny_globs` or to a
+source's own `deny_globs`.
+
+A decision whose options are unknown first researches the option space (task context, existing
+patterns, prior decisions) and then asks the host for options with that evidence attached. The
+host has no repository access: it may only use the evidence in the packet's input artifact, and
+each option must cite the evidence ids it rests on. `decision.require_option_grounding`
+(default `true`) refuses options that cite nothing; set it to `false` to keep them flagged as
+limitations instead. `decision.max_grounding_evidence` bounds how much evidence one options
+request carries. A need counts as covered only by evidence at or above
+`retrieval.coverage_relevance_threshold`.
+
 ### Step 3 — Write the task and start the run
 
 The goal travels as data, never on a command line. Write a `TaskInput` JSON file and pass it with
@@ -159,7 +180,8 @@ once (`host.max_repair_attempts`); the packet comes back in `error.details.pendi
 
 `report_ref` is the absolute path of the run's `report.md` (open it directly), under
 `<run_root>/runs/<run_id>/artifacts/`. `evidence_ids`, `decision_ids`, `usage_summary` and
-`trace_refs.trace_url` are in the envelope. `gaps` lists capability gaps the run recorded;
+`trace_refs.trace_url` are in the envelope (`usage_summary.usage` has one row per provider and
+model; `report.md` repeats the trace link). `gaps` lists capability gaps the run recorded;
 `gaps` as a command aggregates them across runs, one row per deduplicated need:
 
 ```bash

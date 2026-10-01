@@ -195,3 +195,9 @@ P10 writes `docs/how-to/inspect-kernel-traces-with-langfuse-mcp.md` from the cur
 - **Report.** `report.md` explains blocked and partial stops in plain words, names what the kernel can do (decide between options, find evidence in this repository, generate ideas) with a rephrasing example, and renders evidence bundles (findings, sources) and idea sets (under "proposals, not decisions") before the unchanged JSON block. A blocked run with no plain limitation gets a `can_do` limitation line.
 - **Gap records.** `CapabilityGap.candidate_exclusions` maps each considered capability to its exclusion reason; `candidates_considered` is ranked (eligible first, then the closest reason) and capped at five; `need_title` is the readable goal used for titles while `normalized_need` stays the dedup identity.
 - **Skill.** `/leafcutter` no longer sets `requested_output_schema` unless the user explicitly asks for a decision, an evidence lookup or ideas.
+
+## As built (grounding)
+
+- **Packet for options.** The options packet's `input_evidence_ids` are the cited research evidence, so the input artifact carries their excerpts; its requirements tell the host it has no repository access, to use only that evidence and to cite ids in `source_refs`. The host evidence schema (`tightened_schema`) drops `id` and `content_hash` (and finding `id`) from `required`.
+- **Envelope usage.** `usage_summary.usage` lists one row per provider and model (Jev with its model id and estimated or reported cost; host with the model and tokens it reported, or only calls and time to answer when it reported nothing). Unknown values and costs are `null`.
+- **Report.** `report.md` links the Langfuse trace (`- Trace: <url>`) when tracing is enabled and a URL was resolved.

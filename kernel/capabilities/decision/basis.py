@@ -15,11 +15,13 @@ from kernel.capabilities.decision.requests import (
     DEFAULT_MAX_OPTIONS,
     Followup,
     approval_request,
+    grounding_request,
     options_request,
 )
 from kernel.capabilities.decision.state import Working
 from kernel.contracts.enums import DecisionStatus, MissingKnowledge
 
+GROUND_KEY = "ground:options"
 OPTIONS_KEY = "options:full"
 CRITERIA_KEY = "options:criteria-only"
 
@@ -35,14 +37,39 @@ def _approval_followup(work: Working) -> Followup:
         missing=[MissingKnowledge.HUMAN_PREFERENCE_OR_AUTHORIZATION])
 
 
+def _grounding_followup(work: Working) -> Followup:
+    """Build the research step that gathers evidence about the option space."""
+    return Followup(
+        status=DecisionStatus.NEEDS_EVIDENCE, key=GROUND_KEY, phase="awaiting_grounding",
+        reason="options_need_grounding", request=grounding_request(work),
+        open_question="Evidence about the option space is needed before options are proposed.",
+        missing=[MissingKnowledge.UNKNOWN_OPTIONS])
+
+
+def needs_grounding(work: Working) -> bool:
+    """True if options are unknown, nothing is known about the option space and no research ran."""
+    return (not work.usable_options and not work.evidence
+            and GROUND_KEY not in work.cont.requested)
+
+
+def grounding_gap(work: Working) -> bool:
+    """True if grounding research already ran yet no evidence exists to ground options in."""
+    return (not work.usable_options and not work.pending_ids and not work.evidence
+            and GROUND_KEY in work.cont.requested)
+
+
 def validate_basis(work: Working) -> Followup | None:
     """Return the follow-up that must happen before assessment, or None when the basis is ready.
 
-    Order: pending approvals first (proposals are never used unapproved), then missing options
-    (request options plus proposed criteria), then missing criteria (request criteria only).
+    Order: pending approvals first (proposals are never used unapproved), then grounding research
+    when options are unknown and nothing is known about the option space, then missing options
+    (request options plus proposed criteria, with the evidence attached), then missing criteria
+    (request criteria only).
     """
     if work.pending_ids:
         return _approval_followup(work)
+    if needs_grounding(work):
+        return _grounding_followup(work)
     if not work.usable_options:
         return Followup(
             status=DecisionStatus.NEEDS_OPTIONS, key=OPTIONS_KEY, phase="awaiting_options",
@@ -61,6 +88,9 @@ def validate_basis(work: Working) -> Followup | None:
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-01 23:00 [python-coder]: Unknown options with no evidence are grounded first: the
+#   host that proposes options has no repository access, so without evidence in the packet it
+#   could only invent them. (#KernelBootstrapV0/GROUND)
 # - 2026-10-01 02:00 [python-coder]: "No usable required criterion" counts as missing criteria:
 #   only required criteria gate resolution, so supporting-only sets must not reach the gate.
 #   (#KernelBootstrapV0/FIXA)

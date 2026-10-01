@@ -34,7 +34,9 @@
     "satisfies_threshold": 0.8,
     "preference_threshold": 0.7,
     "conflict_threshold": 0.7,
-    "missing_min_probability": 0.4
+    "missing_min_probability": 0.4,
+    "require_option_grounding": true,
+    "max_grounding_evidence": 12
   },
   "research": {
     "need_required_threshold": 0.8,
@@ -57,7 +59,8 @@
     "excerpt_context_lines": 12,
     "max_excerpt_chars": 2000,
     "max_file_bytes": 400000,
-    "deny_globs": [".env*", "**/*.pem", "**/*.key", ".security-allowlist", "**/.git/**"]
+    "deny_globs": [".env*", "**/*.pem", "**/*.key", ".security-allowlist", "**/.git/**"],
+    "coverage_relevance_threshold": 0.7
   },
   "sources": [
     {"id": "repo.principles", "kind": "repo_text", "categories": ["internal_principles"],
@@ -68,6 +71,25 @@
      "surfaces": ["adrs"]},
     {"id": "repo.patterns", "kind": "repo_text", "categories": ["existing_patterns"],
      "roots": ["kernel", "scripts", "docs/architecture"]},
+    {"id": "repo.docs", "kind": "repo_text",
+     "categories": ["internal_principles", "task_context", "existing_patterns"],
+     "roots": ["README.md", "docs/how-to", "docs/explanation", "docs/reference", "docs/testing",
+               "docs/workflows", "docs/known-issues", "docs/INDEX.md", "docs/glossary.md",
+               "docs/ticket-lifecycle.md", "docs/build-pipeline.md"]},
+    {"id": "repo.acceptance_criteria", "kind": "repo_text",
+     "categories": ["task_context", "existing_patterns"],
+     "roots": ["docs/acceptance-criteria"]},
+    {"id": "repo.roadmap", "kind": "repo_text", "categories": ["task_context", "prior_decisions"],
+     "roots": ["docs/roadmap.json", "docs/roadmap.md", "docs/vision.md"]},
+    {"id": "repo.tickets", "kind": "repo_text", "categories": ["task_context", "prior_decisions"],
+     "roots": ["tickets"]},
+    {"id": "repo.config", "kind": "repo_text", "categories": ["task_context", "existing_patterns"],
+     "roots": ["config"],
+     "deny_globs": ["config/*.env", "config/*secret*", "config/*credential*", "config/*token*",
+                    "config/*password*", "config/*id_rsa*", "config/*.p12", "config/*.pfx"]},
+    {"id": "repo.tests", "kind": "repo_text",
+     "categories": ["task_context", "existing_patterns", "internal_principles"],
+     "roots": ["tests/README.md", "unit_tests/README.md", "pytest.ini"]},
     {"id": "knowledge.components", "kind": "knowledge_map",
      "categories": ["existing_patterns", "task_context"],
      "surfaces": ["components", "skills", "agents"]},

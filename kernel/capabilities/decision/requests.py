@@ -37,6 +37,17 @@ from kernel.contracts.work import RequestProposal
 
 DEFAULT_MAX_OPTIONS = 5
 SYNTHESIS_OPERATION = "synthesize_evidence"
+#: Categories researched to ground options for an unknown option set: what is in scope, how
+#: existing material treats the alternatives, and what was decided or prioritised before.
+GROUNDING_CATEGORIES = (EvidenceCategory.TASK_CONTEXT, EvidenceCategory.EXISTING_PATTERNS,
+                        EvidenceCategory.PRIOR_DECISIONS)
+_GROUNDING_QUESTIONS = {
+    EvidenceCategory.TASK_CONTEXT: "Which concrete candidates, items and facts in this project "
+                                   "are in scope for: ",
+    EvidenceCategory.EXISTING_PATTERNS: "How do existing code or documents already describe or "
+                                        "rank the alternatives for: ",
+    EvidenceCategory.PRIOR_DECISIONS: "Which earlier decisions, priorities or criteria bear on: ",
+}
 _NEED_QUESTIONS = {
     EvidenceCategory.AUTHORITATIVE_GUIDANCE: "What do the authoritative sources establish about: ",
     EvidenceCategory.INTERNAL_PRINCIPLES: "Which project rules and principles govern: ",
@@ -63,14 +74,30 @@ class Followup:
 
 def options_request(work: Working, max_options: int) -> RequestProposal:
     """Ask the host for options and (always) proposed criteria; 0 options means criteria only."""
+    cited = work.evidence_ids[:work.evidence_cap]
     payload = OptionsRequestPayload(
         problem=work.question, constraint_ids=work.constraint_ids,
         existing_option_ids=[o.id for o in work.usable_options],
-        evidence_ids=work.evidence_ids, max_options=max_options, propose_criteria=True)
+        evidence_ids=cited, max_options=max_options, propose_criteria=True,
+        require_grounding=work.require_grounding and max_options > 0 and bool(cited))
     return RequestProposal(
         kind=RequestKind.OPTIONS, question=work.question,
         payload_schema=schema_ids.OPTIONS_REQUEST, payload=payload.model_dump(mode="json"),
         requested_output_schema=schema_ids.OPTIONS)
+
+
+def grounding_request(work: Working) -> RequestProposal:
+    """Ask research for evidence about the option space (exactly the grounding categories)."""
+    needs = [EvidenceNeed(id=f"need.{c.value}", category=c, priority=Priority.REQUIRED,
+                          question=_GROUNDING_QUESTIONS[c] + work.question)
+             for c in GROUNDING_CATEGORIES]
+    payload = ResearchRequestPayload(
+        question=work.question, evidence_needs=needs, existing_evidence_ids=work.evidence_ids,
+        expected_coverage="best_effort", evidence_needs_only=True)
+    return RequestProposal(
+        kind=RequestKind.EVIDENCE, question=work.question, evidence_needs=needs,
+        payload_schema=schema_ids.RESEARCH_REQUEST, payload=payload.model_dump(mode="json"),
+        requested_output_schema=schema_ids.EVIDENCE_BUNDLE)
 
 
 def research_request(work: Working, categories: list[EvidenceCategory]) -> RequestProposal:
@@ -101,7 +128,8 @@ def _human(work: Working, question: str, why: str, choices: list[Choice], free_t
     """Build a human_question_request proposal."""
     payload = HumanQuestionRequestPayload(
         question=question, choices=choices, free_text_allowed=free_text,
-        structured_allowed=structured, why_research_cannot_settle=why, subject_ids=subjects)
+        structured_allowed=structured, why_research_cannot_settle=why, subject_ids=subjects,
+        decision_id=work.decision_id or None)
     return RequestProposal(
         kind=RequestKind.HUMAN, question=question,
         payload_schema=schema_ids.HUMAN_QUESTION_REQUEST,
@@ -111,8 +139,11 @@ def _human(work: Working, question: str, why: str, choices: list[Choice], free_t
 
 def _describe(item: Option | Criterion) -> str:
     """One line describing an option or criterion for a human reader."""
-    text = item.title if isinstance(item, Option) else item.question
-    return f"- [{item.id}] {text}"
+    if not isinstance(item, Option):
+        return f"- [{item.id}] {item.question}"
+    grounding = (f"grounded in {', '.join(item.source_refs)}" if item.source_refs
+                 else "no cited evidence")
+    return f"- [{item.id}] {item.title} ({grounding})"
 
 
 def approval_request(work: Working) -> RequestProposal:
@@ -157,6 +188,10 @@ def escalation_request(work: Working, reason: str, text: str, tied: list[Option]
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-01 23:00 [python-coder]: An unknown option set is first grounded by a bounded research
+#   request (task_context, existing_patterns, prior_decisions), options are then requested WITH
+#   that evidence, and the approval question shows what each option cites; every human question
+#   carries the decision id. (#KernelBootstrapV0/GROUND)
 # - 2026-09-30 23:30 [python-coder]: The approval question accepts a structured answer (subset
 #   or edited criteria); free text stays as a recorded fallback. (#KernelBootstrapV0/P6)
 # - 2026-09-30 23:00 [python-coder]: The approval question lists option ids after criterion ids

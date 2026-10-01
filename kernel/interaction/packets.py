@@ -88,12 +88,32 @@ _PROPOSED_ONLY = {"type": "object", "required": ["proposal_status", "approval_st
                                  "approval_status": {"const": "proposed"}}}
 
 
+#: Fields the kernel computes for host evidence and findings, so a host schema must not require
+#: them (the packet tells the host not to invent them).
+_KERNEL_COMPUTED = {"Evidence": ("id", "content_hash"), "Finding": ("id",)}
+
+
+def _without_required(schema: dict[str, Any], fields: dict[str, tuple[str, ...]]
+                      ) -> dict[str, Any]:
+    """Return a copy of the schema whose named definitions no longer require the given fields."""
+    relaxed = json.loads(json.dumps(schema))
+    for name, omitted in fields.items():
+        definition = relaxed.get("$defs", {}).get(name)
+        if definition and "required" in definition:
+            definition["required"] = [r for r in definition["required"] if r not in omitted]
+    return relaxed
+
+
 def tightened_schema(schema_id: str, schema: dict[str, Any]) -> dict[str, Any]:
     """Return the output JSON Schema with rules pydantic cannot express written into it.
 
     Generated options and criteria (options.v1) are proposals: the schema pins both status
-    fields to `proposed` so an honest host can comply without reading kernel code.
+    fields to `proposed` so an honest host can comply without reading kernel code. A host
+    evidence bundle (evidence_bundle.v1) need not carry the ids and content hashes the kernel
+    computes itself, matching the packet's instruction not to invent them.
     """
+    if schema_id == schema_ids.EVIDENCE_BUNDLE:
+        return _without_required(schema, _KERNEL_COMPUTED)
     if schema_id != schema_ids.OPTIONS:
         return schema
     tight = json.loads(json.dumps(schema))
@@ -187,6 +207,9 @@ def redact_packet(packet: HostWorkRequest | HumanQuestion, redactor: Redactor
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-01 23:00 [python-coder]: The host evidence schema no longer requires `id` and
+#   `content_hash`: the instructions say not to invent them and the kernel computes both, so the
+#   schema and the instructions must agree. (#KernelBootstrapV0/GROUND)
 # - 2026-09-30 23:40 [python-coder]: Host input travels as a redacted artifact referenced by
 #   absolute path (design part 5), because a packet carrying only evidence ids gives the host
 #   nothing to read. (#KernelBootstrapV0/P6)

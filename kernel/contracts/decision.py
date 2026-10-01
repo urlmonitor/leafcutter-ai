@@ -119,6 +119,10 @@ class Decision(PersistedModel):
     versions: dict[str, str] = Field(default_factory=dict)
     unresolved_risks: list[str] = Field(default_factory=list)
 
+    def differs_from(self, other: Decision) -> bool:
+        """True if the two records differ in anything but the clock (one decision, two statuses)."""
+        return self.model_dump(exclude={"updated_at"}) != other.model_dump(exclude={"updated_at"})
+
     @model_validator(mode="after")
     def _status_invariants(self) -> Decision:
         """Only a resolved decision selects an option, and it must be one that was supplied."""
@@ -173,6 +177,8 @@ class RoutingAssessment(PersistedModel):
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-01 23:00 [python-coder]: Decision.differs_from lets the merge update one decision
+#   record in place instead of keeping a second record. (#KernelBootstrapV0/GROUND)
 # - 2026-09-30 22:00 [python-coder]: Criterion.approval_status defaults to not_required (a
 #   caller-supplied criterion); a generated one must carry proposal_status proposed plus an
 #   approval_status of proposed, approved or rejected, enforced by _check_proposal.

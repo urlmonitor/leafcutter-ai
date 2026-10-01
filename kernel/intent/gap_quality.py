@@ -19,6 +19,10 @@ from kernel.contracts.decision import ExcludedCandidate
 #: How many "closest capabilities" a gap record and its draft list.
 MAX_CLOSEST = 5
 MAX_TITLE_CHARS = 80
+#: Output schema recorded for a decline: the kernel produces no output for it.
+NO_OUTPUT_SCHEMA = "none"
+_NEED_PHRASES = {"evidence": "evidence retrieval", "options": "option generation",
+                 "synthesis": "evidence synthesis"}
 #: Reasons ordered from "nearly fits" to "far away" (first failing check order, reversed).
 _CLOSENESS = ("permission_denied", "side_effect_forbidden", "budget_exhausted", "scope_mismatch",
               "output_schema_mismatch", "payload_schema_mismatch", "kind_mismatch",
@@ -60,6 +64,21 @@ def readable_need(goal: str, limit: int = MAX_TITLE_CHARS) -> str:
     return flat if len(flat) <= limit else flat[:limit - 3].rstrip() + "..."
 
 
+def need_phrase(request_kind: str, normalized_need: str, need_title: str) -> str:
+    """Return the need as a phrase for titles: the capability asked for, not the root goal.
+
+    A gap about a typed child request (evidence, options, synthesis) names that operation and its
+    category; the goal that caused it is unrelated to what to build. Free-form capability gaps
+    keep their readable need.
+    """
+    kind = str(getattr(request_kind, "value", request_kind))
+    label = _NEED_PHRASES.get(kind)
+    if label is None:
+        return need_title or normalized_need
+    detail = normalized_need if normalized_need and normalized_need != kind else ""
+    return f"{label} ({detail})" if detail else label
+
+
 def describe_candidate(capability_id: str, exclusions: dict[str, str]) -> str:
     """Return one bullet text: the capability and, when known, why it was excluded."""
     reason = exclusions.get(capability_id)
@@ -69,6 +88,9 @@ def describe_candidate(capability_id: str, exclusions: dict[str, str]) -> str:
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-01 23:00 [python-coder]: Gap draft titles come from the need (`need_phrase`): a
+#   synthesis or evidence child gap was titled with the root goal that happened to trigger it.
+#   (#KernelBootstrapV0/GROUND)
 # - 2026-10-01 22:00 [python-coder]: The dedup key keeps the normalised (sorted token) need while
 #   titles use a separate readable field, so aggregation across runs is unchanged and a title
 #   reads like the goal. (#KernelBootstrapV0/INTENT)

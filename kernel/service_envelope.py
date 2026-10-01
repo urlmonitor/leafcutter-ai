@@ -39,17 +39,23 @@ def effective_status(record: RunRecord, values: Mapping[str, Any]) -> RunStatus:
 
 
 def _usage(values: Mapping[str, Any]) -> UsageSummary:
-    """Summarise the budget counters; token totals are the known ones (None while unknown)."""
+    """Summarise the budget counters; token totals are the known ones (None while unknown).
+
+    `usage` has one row per provider and model with its known cost; a cost that is not known for
+    every call of a row stays null.
+    """
     budgets = values.get("budgets")
     if budgets is None:
         return UsageSummary()
     nothing_known = budgets.cost_unknown_calls > 0 and budgets.cost_usd_known == 0.0
-    jev = [Usage(provider="jev", calls=budgets.jev_calls, input_tokens=budgets.input_tokens,
-                 output_tokens=budgets.output_tokens)] if budgets.jev_calls else []
+    rows = [row.as_usage() for row in budgets.usage_rows]
+    if not rows and budgets.jev_calls:  # state from before per-provider rows were kept
+        rows = [Usage(provider="jev", calls=budgets.jev_calls, input_tokens=budgets.input_tokens,
+                      output_tokens=budgets.output_tokens)]
     return UsageSummary(jev_calls=budgets.jev_calls, host_operations=budgets.host_operations,
                         input_tokens=budgets.input_tokens, output_tokens=budgets.output_tokens,
                         cost_usd_known=None if nothing_known else budgets.cost_usd_known,
-                        cost_unknown_calls=budgets.cost_unknown_calls, usage=jev)
+                        cost_unknown_calls=budgets.cost_unknown_calls, usage=rows)
 
 
 def reconcile_gaps(run_gaps: list[CapabilityGap], stored: list[CapabilityGap]
@@ -121,6 +127,9 @@ def _failure_errors(diagnostics: list[str] | None) -> list[ErrorInfo]:
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-01 23:00 [python-coder]: The usage rows come from the per-provider rows the budgets
+#   keep (model id, tokens, known cost, host rows), not from one synthesised Jev row with null
+#   model and cost. (#KernelBootstrapV0/GROUND)
 # - 2026-10-01 22:00 [python-coder]: The envelope shows the gap store's aggregate for each gap key
 #   of the run instead of the in-run observation: a repeated need reported this run's resume time
 #   as its first sighting while the store kept the original. (#KernelBootstrapV0/INTENT)

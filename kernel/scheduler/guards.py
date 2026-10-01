@@ -34,7 +34,7 @@ from kernel.contracts import (
     sha256_hex,
 )
 from kernel.contracts.work import RequestBody
-from kernel.scheduler.state import Budgets
+from kernel.scheduler.state import Budgets, fold_usage_rows
 
 TERMINAL_STATUSES = frozenset({WorkItemStatus.COMPLETED, WorkItemStatus.PARTIAL,
                                WorkItemStatus.BLOCKED, WorkItemStatus.FAILED,
@@ -267,8 +267,10 @@ def account_usage(budgets: Budgets, usages: Iterable[Usage],
         Budgets: Updated copy (`cost_usd_known` grows by reported or estimated costs only; the
             token totals grow by the counts that were reported and stay None while none was).
     """
+    usages = list(usages)
     known, unknown = budgets.cost_usd_known, budgets.cost_unknown_calls
     tokens = {"input_tokens": budgets.input_tokens, "output_tokens": budgets.output_tokens}
+    rows = fold_usage_rows(budgets.usage_rows, usages, price_per_input_token)
     for usage in usages:
         if usage.cost_usd is not None:
             known += usage.cost_usd
@@ -281,12 +283,15 @@ def account_usage(budgets: Budgets, usages: Iterable[Usage],
             if reported is not None:
                 tokens[name] = (tokens[name] or 0) + reported
     return budgets.model_copy(update={"cost_usd_known": known, "cost_unknown_calls": unknown,
-                                      **tokens})
+                                      "usage_rows": rows, **tokens})
 
 
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-01 23:00 [python-coder]: account_usage also folds each usage into a per-(provider,
+#   model) row, so host-reported usage and the Jev model id reach the envelope.
+#   (#KernelBootstrapV0/GROUND)
 # - 2026-10-01 22:00 [python-coder]: account_usage also sums the reported token counts; a call
 #   that did not report them adds nothing, so an unknown count stays None. (#KernelBootstrapV0/INTENT)
 # - 2026-10-01 14:00 [python-coder]: The Jev-call and host-operation caps are also run-level

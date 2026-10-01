@@ -298,7 +298,7 @@ def record_host_only(state: KernelState, ctx: KernelRuntime, item: WorkItem,
     reason = (f"host-backed only; native alternatives for this request kind: {', '.join(twins)}"
               if twins else "host-backed only; no native implementation exists")
     gap = gap.model_copy(update={"why_insufficient": reason})
-    return _record_with_events(ctx, state, item, gap, now, with_draft=not twins)
+    return _record_with_events(ctx, state, item, gap, now)
 
 
 def _settle_host_only(state: KernelState, ctx: KernelRuntime, draft: Draft,
@@ -348,6 +348,9 @@ def settle_gap_outcomes(state: KernelState, ctx: KernelRuntime, draft: Draft, *,
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-01 23:00 [python-coder]: A host_only gap with a native twin gets a draft as well: a
+#   build opportunity without a draft was lost to the backlog; the draft text asks the reader to
+#   check the twin first. (#KernelBootstrapV0/GROUND)
 # - 2026-10-01 22:00 [python-coder]: build_gap records ranked closest capabilities with a reason
 #   each and a readable need title; `record_observation` lets the route node record a decline's
 #   observation; the bounded fallback rules moved to kernel.registry.fallback to keep this module

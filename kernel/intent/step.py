@@ -39,6 +39,7 @@ from kernel.intent.classify import (
     chosen_kind,
     effective_goal,
 )
+from kernel.intent.gap_quality import NO_OUTPUT_SCHEMA
 from kernel.intent.questions import answer_of, intent_question
 from kernel.intent.roots import (
     decline_for,
@@ -162,7 +163,8 @@ class IntentStep:
         request = self.draft.request_of(item)
         gap = build_gap(self.state, item, request, None, decline.gap_type, self.draft.now,
                         FallbackOutcome.BLOCKED).model_copy(update={
-                            "why_insufficient": f"{decline.code}: {reason}"})
+                            "why_insufficient": f"{decline.code}: {reason}",
+                            "output_schema": NO_OUTPUT_SCHEMA})
         stored, events = record_observation(self.ctx, self.state, item, gap, self.draft.now)
         self.draft.events.extend(events)
         self.gaps[stored.id] = stored
@@ -172,6 +174,8 @@ class IntentStep:
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-01 23:00 [python-coder]: A decline gap records output schema `none`: the kernel
+#   produces no report for it, and the classified kind is on the task. (#KernelBootstrapV0/GROUND)
 # - 2026-10-01 22:00 [python-coder]: The step lives in the route node (not intake) so a human
 #   clarification can reuse the router's park-and-resume machinery; the provisional root contract
 #   from intake is replaced here, once, and `Task.intent` records that it was resolved.

@@ -93,8 +93,9 @@ def write_denial_reason(permissions: list[str]) -> str:
     a permissive fallback, whichever of the two reasons applies.
     """
     if WRITE_PERMISSION not in permissions:
-        return "the caller's permissions do not allow writes"
-    return "no registered capability writes to the repository"
+        return ("the kernel is read-only by design: no capability writes to the repository, "
+                "whatever permissions the caller holds")
+    return "the kernel is read-only by design: no registered capability writes to the repository"
 
 
 def shape_root(request: Request, kind: str, goal: str) -> Request:
@@ -124,6 +125,9 @@ def shape_root(request: Request, kind: str, goal: str) -> Request:
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-01 23:00 [python-coder]: The write denial says the kernel is read-only by design: it
+#   blamed the caller permissions although granting write_repo changes nothing.
+#   (#KernelBootstrapV0/GROUND)
 # - 2026-10-01 22:00 [python-coder]: `ideas` becomes an `options` root request (a direct root
 #   binding to host.generate_options through ordinary eligibility) instead of a thin parent that
 #   spawns it: nothing would decide afterwards, and the options stay `proposed` in the report.

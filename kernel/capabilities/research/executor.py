@@ -66,7 +66,8 @@ def parse_plan(invocation: CapabilityInvocation) -> Plan:
     request = cast(ResearchRequestPayload, model)
     return Plan(question=request.question, expected_coverage=request.expected_coverage,
                 mandated=list(request.evidence_needs),
-                source_restrictions=list(request.source_restrictions))
+                source_restrictions=list(request.source_restrictions),
+                needs_only=request.evidence_needs_only and bool(request.evidence_needs))
 
 
 async def _plan(state: ResearchState, config: RunnableConfig) -> dict[str, Any]:
@@ -179,6 +180,8 @@ class ResearchExecutor:
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-01 23:00 [python-coder]: parse_plan passes `evidence_needs_only` so grounding
+#   research plans exactly the needs it was given. (#KernelBootstrapV0/GROUND)
 # - 2026-09-30 23:00 [python-coder]: A synthesis resume goes straight to finish: research never
 #   re-plans or re-judges after new findings, so it cannot loop to raise a confidence score
 #   (Rev 3 section 10.5). (#KernelBootstrapV0/P5)

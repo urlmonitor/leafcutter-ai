@@ -41,6 +41,11 @@
           "title": "Conflict Threshold",
           "type": "number"
         },
+        "max_grounding_evidence": {
+          "minimum": 1,
+          "title": "Max Grounding Evidence",
+          "type": "integer"
+        },
         "missing_min_probability": {
           "maximum": 1.0,
           "minimum": 0.0,
@@ -52,6 +57,10 @@
           "minimum": 0.0,
           "title": "Preference Threshold",
           "type": "number"
+        },
+        "require_option_grounding": {
+          "title": "Require Option Grounding",
+          "type": "boolean"
         },
         "satisfies_threshold": {
           "maximum": 1.0,
@@ -71,7 +80,9 @@
         "satisfies_threshold",
         "preference_threshold",
         "conflict_threshold",
-        "missing_min_probability"
+        "missing_min_probability",
+        "require_option_grounding",
+        "max_grounding_evidence"
       ],
       "title": "DecisionConfig",
       "type": "object"
@@ -420,6 +431,12 @@
       "additionalProperties": false,
       "description": "Repository retrieval bounds.",
       "properties": {
+        "coverage_relevance_threshold": {
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "Coverage Relevance Threshold",
+          "type": "number"
+        },
         "deny_globs": {
           "items": {
             "type": "string"
@@ -466,7 +483,8 @@
         "excerpt_context_lines",
         "max_excerpt_chars",
         "max_file_bytes",
-        "deny_globs"
+        "deny_globs",
+        "coverage_relevance_threshold"
       ],
       "title": "RetrievalConfig",
       "type": "object"
@@ -514,6 +532,13 @@
           },
           "minItems": 1,
           "title": "Categories",
+          "type": "array"
+        },
+        "deny_globs": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Deny Globs",
           "type": "array"
         },
         "id": {

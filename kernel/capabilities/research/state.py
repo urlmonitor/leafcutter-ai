@@ -25,6 +25,8 @@ from kernel.contracts.evidence import (
     UnavailableSource,
 )
 
+#: Prefix of the note of a bundle-level contradiction that names no evidence pair.
+UNLOCALISED = "unlocalised: "
 STATUS_RANK = {NeedStatus.UNAVAILABLE: 0, NeedStatus.OPEN: 1, NeedStatus.PARTIAL: 2,
                NeedStatus.SATISFIED: 3}
 
@@ -45,6 +47,11 @@ class ResearchContinuation(KernelModel):
     synthesized: bool = False
 
 
+def contradiction_key(item: Contradiction) -> tuple[frozenset[str], str]:
+    """Return the identity of a contradiction: its evidence pair (unordered) and its claim."""
+    return frozenset((item.a, item.b)), item.note.strip()
+
+
 @dataclass
 class Plan:
     """The parsed research request."""
@@ -53,6 +60,7 @@ class Plan:
     expected_coverage: str
     mandated: list[EvidenceNeed]
     source_restrictions: list[str]
+    needs_only: bool = False
 
 
 @dataclass
@@ -68,6 +76,25 @@ class Collected:
     findings: list[Finding] = field(default_factory=list)
     truncated: bool = False
 
+    def add_contradictions(self, items: list[Contradiction]) -> None:
+        """Record contradictions once each (identity: the evidence pair, either order, and claim)."""
+        seen = {contradiction_key(c) for c in self.contradictions}
+        for item in items:
+            key = contradiction_key(item)
+            if key not in seen:
+                seen.add(key)
+                self.contradictions.append(item)
+
+    @property
+    def has_localised_contradiction(self) -> bool:
+        """True if any recorded contradiction names the evidence pair it is about."""
+        return any(not c.note.startswith(UNLOCALISED) for c in self.contradictions)
+
+    @property
+    def has_unlocalised_contradiction(self) -> bool:
+        """True if a bundle-level contradiction without a localised pair was recorded."""
+        return any(c.note.startswith(UNLOCALISED) for c in self.contradictions)
+
     def merge_coverage(self, need_id: str, status: NeedStatus) -> None:
         """Keep the best status reported for a need across bundles."""
         current = self.coverage.get(need_id)
@@ -78,6 +105,9 @@ class Collected:
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-01 23:00 [python-coder]: Contradictions are deduplicated by evidence pair and claim at
+#   the single point where they are added: a resumed collect re-reads every child bundle, so the
+#   same disagreement used to arrive again and again. (#KernelBootstrapV0/GROUND)
 # - 2026-09-30 23:00 [python-coder]: The collected evidence is stored in the continuation
 #   (beyond the design's field list) so the synthesis resume can rebuild the bundle even if the
 #   kernel's evidence lookup misses an item. (#KernelBootstrapV0/P5)

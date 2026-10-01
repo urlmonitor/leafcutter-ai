@@ -35,7 +35,7 @@ from kernel.contracts import (
     new_id,
 )
 from kernel.contracts import WorkItemStatus as WS
-from kernel.contracts.evidence import EvidenceBundlePayload
+from kernel.contracts.evidence import EvidenceBundlePayload, stronger_category
 from kernel.contracts.work import ChildOutcome
 from kernel.scheduler import guards
 from kernel.scheduler.state import Budgets, KernelState, new_event, result_artifact_name
@@ -239,16 +239,19 @@ def merge_payload_items(draft: Draft, result: CapabilityResult) -> None:
         if bundle is not None:
             inline_evidence, inline_findings = bundle.evidence, bundle.findings
     for evidence in [*result.evidence, *inline_evidence]:
-        if evidence.id not in draft.evidence:
-            draft.evidence[evidence.id] = evidence
-            draft.note_new("evidence", evidence.id, evidence)
+        kept = stronger_category(draft.evidence.get(evidence.id), evidence)
+        if kept is not draft.evidence.get(evidence.id):
+            draft.evidence[evidence.id] = kept
+            draft.note_new("evidence", evidence.id, kept)
     for finding in [*result.findings, *inline_findings]:
         if finding.id not in draft.findings:
             draft.findings[finding.id] = finding
             draft.note_new("findings", finding.id, finding)
     for decision in result.decisions:
         known = draft.decisions.get(decision.id)
-        if known is None or known.status != decision.status:
+        if known is not None:  # one record per decision: it keeps its first created_at
+            decision = decision.model_copy(update={"created_at": known.created_at})
+        if known is None or decision.differs_from(known):
             draft.decisions[decision.id] = decision
             draft.note_new("decisions", decision.id, decision)
 
@@ -381,6 +384,8 @@ __all__ = ["Draft", "ProposalPlan", "child_outcomes", "create_children",
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-01 23:00 [python-coder]: A decision updates in place on any change but the clock.
+#   (#KernelBootstrapV0/GROUND)
 # - 2026-09-30 23:30 [python-coder]: A resumed parent still sees every finished child, but each
 #   ChildOutcome says whether the child belongs to the parent's latest wait; a capability that
 #   applies answers (decision) must apply only current ones, because the child list also holds

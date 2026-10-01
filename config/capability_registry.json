@@ -116,7 +116,7 @@
     {
       "id": "host.generate_options",
       "name": "Host option generation",
-      "description": "Host handoff: proposes candidate options and, when asked, candidate criteria. Every output is a proposal until approved.",
+      "description": "Host handoff: proposes candidate options and, when asked, candidate criteria from the evidence cited in the request. It has no repository access: each option cites the evidence it rests on. Every output is a proposal until approved.",
       "version": "1.0.0",
       "request_kinds": [
         "options"

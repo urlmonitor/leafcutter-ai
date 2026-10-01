@@ -53,6 +53,8 @@ async def plan_needs(ctx: ExecutionContext, invocation: CapabilityInvocation, pl
         StopCapability: Jev was unavailable or over budget.
     """
     needs = list(plan.mandated)
+    if plan.needs_only:
+        return needs, []
     covered = {n.category for n in needs}
     remaining = [c for c in EvidenceCategory if c not in covered]
     if not remaining:
@@ -159,6 +161,9 @@ def resolve_sources(ctx: ExecutionContext, needs: list[EvidenceNeed], plan: Plan
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-01 23:00 [python-coder]: A request that says `evidence_needs_only` plans exactly its
+#   mandated needs with no Jev call: grounding research for a decision is bounded to the three
+#   categories about the option space. (#KernelBootstrapV0/GROUND)
 # - 2026-09-30 23:59 [python-coder]: Retrieval children carry `operation` (set here from
 #   retrieval_operation) instead of the scheduler deriving it. (#KernelBootstrapV0/INT)
 # - 2026-09-30 23:00 [python-coder]: Source filtering by `technologies` is not applied because a

@@ -33,7 +33,7 @@
     },
     "Evidence": {
       "additionalProperties": false,
-      "description": "One excerpt (or artifact reference) with source, hash and verification status.",
+      "description": "One excerpt (or artifact reference) with source, hash and verification status.\n\nThe excerpt is the source text verbatim: whitespace is never stripped, so a hash computed over\nthe excerpt as read matches the stored one. `id` and `content_hash` may be omitted on input\n(a host must not invent them): they are then computed from the locator and the body.",
       "properties": {
         "access": {
           "default": "internal",

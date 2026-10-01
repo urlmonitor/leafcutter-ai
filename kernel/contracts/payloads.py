@@ -93,6 +93,8 @@ class ResearchRequestPayload(KernelModel):
     source_restrictions: list[str] = Field(default_factory=list)
     existing_evidence_ids: list[str] = Field(default_factory=list)
     expected_coverage: Literal["all_required", "best_effort"] = "all_required"
+    #: Research exactly the given needs: Jev adds no further evidence categories.
+    evidence_needs_only: bool = False
 
 
 class RetrievalLimits(KernelModel):
@@ -120,6 +122,8 @@ class OptionsRequestPayload(KernelModel):
     evidence_ids: list[str] = Field(default_factory=list)
     max_options: int = Field(default=5, ge=0)
     propose_criteria: bool = False
+    #: Every proposed option must cite, in `source_refs`, evidence ids from `evidence_ids`.
+    require_grounding: bool = False
 
 
 class OptionsPayload(KernelModel):
@@ -245,6 +249,10 @@ __all__ = [
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-01 23:00 [python-coder]: OptionsRequestPayload.require_grounding and
+#   ResearchRequestPayload.evidence_needs_only support grounded option generation: the first says
+#   options must cite the supplied evidence, the second keeps the grounding research to the
+#   categories the decision asked for. (#KernelBootstrapV0/GROUND)
 # - 2026-09-30 23:30 [python-coder]: human_answer.v1 gains a structured approval answer
 #   (approved ids, edited criteria) and the question gains `structured_allowed`; both additive,
 #   free text stays as a recorded fallback. (#KernelBootstrapV0/P6)

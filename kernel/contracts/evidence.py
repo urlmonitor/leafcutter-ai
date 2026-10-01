@@ -11,14 +11,18 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from pydantic import Field, model_validator
+from typing import Any
+
+from pydantic import ConfigDict, Field, field_validator, model_validator
 
 from kernel.contracts.base import (
     KernelModel,
     PersistedModel,
     StableId,
+    content_hash,
     evidence_id,
     fail,
+    sha256_hex,
 )
 from kernel.contracts.enums import (
     EvidenceCategory,
@@ -32,12 +36,31 @@ from kernel.contracts.enums import (
 
 
 class EvidenceInput(KernelModel):
-    """Caller-supplied initial evidence; the kernel converts it to Evidence at intake."""
+    """Caller-supplied initial evidence; the kernel converts it to Evidence at intake.
+
+    The excerpt is kept verbatim (indentation included); only title and locator are stripped.
+    """
+
+    model_config = ConfigDict(str_strip_whitespace=False)
 
     title: str = Field(min_length=1, max_length=300)
     excerpt: str = Field(min_length=1)
     locator: str | None = None
     category: EvidenceCategory = EvidenceCategory.TASK_CONTEXT
+
+    @field_validator("title", "locator")
+    @classmethod
+    def _strip_labels(cls, value: str | None) -> str | None:
+        """Strip the label fields (the excerpt is the only verbatim field)."""
+        return value.strip() if value is not None else None
+
+    @field_validator("excerpt")
+    @classmethod
+    def _excerpt_not_blank(cls, value: str) -> str:
+        """Keep the excerpt verbatim but refuse one that is only whitespace."""
+        if not value.strip():
+            fail("an evidence excerpt must contain text")
+        return value
 
 
 class SourceVersion(KernelModel):
@@ -75,7 +98,14 @@ class Provenance(KernelModel):
 
 
 class Evidence(PersistedModel):
-    """One excerpt (or artifact reference) with source, hash and verification status."""
+    """One excerpt (or artifact reference) with source, hash and verification status.
+
+    The excerpt is the source text verbatim: whitespace is never stripped, so a hash computed over
+    the excerpt as read matches the stored one. `id` and `content_hash` may be omitted on input
+    (a host must not invent them): they are then computed from the locator and the body.
+    """
+
+    model_config = ConfigDict(str_strip_whitespace=False)
 
     category: EvidenceCategory
     semantic_type: SemanticType
@@ -89,6 +119,24 @@ class Evidence(PersistedModel):
     limitations: list[str] = Field(default_factory=list)
     truncated: bool = False
 
+    @model_validator(mode="before")
+    @classmethod
+    def _complete_hash_and_id(cls, data: Any) -> Any:
+        """Compute a missing content hash and id from the body and locator (never overwrite)."""
+        if not isinstance(data, dict):
+            return data
+        body = data.get("excerpt")
+        if body is None:
+            body = data.get("artifact_ref")
+        source = data.get("source")
+        locator = source.get("locator") if isinstance(source, dict) else None
+        if not isinstance(body, str) or not isinstance(locator, str):
+            return data
+        filled = dict(data)
+        filled.setdefault("content_hash", content_hash(body))
+        filled.setdefault("id", evidence_id(locator.strip(), str(filled["content_hash"])))
+        return filled
+
     @model_validator(mode="after")
     def _check_body_and_id(self) -> Evidence:
         """Require an excerpt or artifact ref and a content-addressed id."""
@@ -98,6 +146,21 @@ class Evidence(PersistedModel):
         if self.id != expected:
             fail(f"evidence id must be content-addressed ({expected})")
         return self
+
+
+def stronger_category(known: Evidence | None, new: Evidence) -> Evidence:
+    """Return the evidence to keep when `new` arrives and `known` may hold the same content.
+
+    Evidence ids are content-addressed (locator and hash), so one excerpt fetched for two needs
+    is one item. It must not stay an `existing_patterns` item because that need happened to
+    finish first when another need found the same text to be a decision basis, an internal
+    principle or task context: a pattern shows how something is done, not that it is required.
+    """
+    if known is None:
+        return new
+    if known.category is EvidenceCategory.EXISTING_PATTERNS             and new.category is not EvidenceCategory.EXISTING_PATTERNS:
+        return known.model_copy(update={"category": new.category})
+    return known
 
 
 class Finding(PersistedModel):
@@ -110,6 +173,14 @@ class Finding(PersistedModel):
     limitations: list[str] = Field(default_factory=list)
     producer: str
     producer_version: str | None = None
+
+    @model_validator(mode="before")
+    @classmethod
+    def _complete_id(cls, data: Any) -> Any:
+        """Derive a missing id from the claim (a host must not invent ids)."""
+        if isinstance(data, dict) and "id" not in data and isinstance(data.get("claim"), str):
+            return {**data, "id": "find-" + sha256_hex(data["claim"].strip())[:16]}
+        return data
 
     @model_validator(mode="after")
     def _facts_need_support(self) -> Finding:
@@ -174,6 +245,13 @@ class EvidenceBundlePayload(BundleBody):
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-01 23:00 [python-coder]: One excerpt fetched for several needs keeps the non-pattern
+#   category (stronger_category): first-wins merging let an existing_patterns need that finished
+#   first hide the decision basis the same ADR provided for prior_decisions.
+#   (#KernelBootstrapV0/GROUND)
+# - 2026-10-01 23:00 [python-coder]: Evidence excerpts are verbatim (no whitespace stripping):
+#   stripping changed the text after its hash was computed and broke a host's own hash. A missing
+#   id or content_hash is computed, so the host schema may leave them out. (#KernelBootstrapV0/GROUND)
 # - 2026-09-30 22:00 [python-coder]: Evidence id integrity is enforced in the model so a forged
 #   id cannot enter state; bundle fields are shared through BundleBody. (#KernelBootstrapV0/P1)
 # ====================================================================

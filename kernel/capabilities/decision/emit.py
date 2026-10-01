@@ -130,7 +130,7 @@ def _decision_record(work: Working, status: DecisionStatus, missing: list[Missin
                      approval: ApprovalStatus = ApprovalStatus.NOT_REQUIRED) -> Decision:
     """Build the Decision record carried in the result."""
     return Decision(
-        id=new_id("dec"), question=work.question, status=status, selected_option_id=selected,
+        id=work.decision_id or new_id("dec"), question=work.question, status=status, selected_option_id=selected,
         option_ids=[o.id for o in work.usable_options],
         criterion_ids=[c.id for c in work.usable_criteria], evidence_ids=work.evidence_ids,
         missing=missing, rationale=rationale, approval_status=approval,
@@ -203,6 +203,8 @@ def emit_followup(invocation: CapabilityInvocation, work: Working, followup: Fol
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-01 23:00 [python-coder]: The decision record uses the stable decision id, so the
+#   scheduler merges every status of one decision into a single record. (#KernelBootstrapV0/GROUND)
 # - 2026-10-01 02:00 [python-coder]: The decision-approval request key carries the revision so a
 #   voided approval can be asked again instead of stalling. (#KernelBootstrapV0/FIXA)
 # - 2026-09-30 23:00 [python-coder]: Approval status of a resolved report is approved when the

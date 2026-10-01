@@ -20,7 +20,7 @@ from langgraph.graph import END, StateGraph
 
 from kernel.capabilities.base import ExecutionContext
 from kernel.capabilities.decision.assess import Assessment, assess
-from kernel.capabilities.decision.basis import validate_basis
+from kernel.capabilities.decision.basis import grounding_gap, validate_basis
 from kernel.capabilities.decision.combine import Verdict, combine
 from kernel.capabilities.decision.emit import (
     emit_followup,
@@ -66,8 +66,22 @@ async def _load(state: DecisionState, config: RunnableConfig) -> dict[str, Any]:
 
 
 async def _validate_basis(state: DecisionState, config: RunnableConfig) -> dict[str, Any]:
-    """Deterministic basis checks; a missing basis becomes a follow-up."""
-    followup = validate_basis(state["work"])
+    """Deterministic basis checks; a missing basis becomes a follow-up.
+
+    Raises:
+        StopCapability: Grounding research found nothing and grounding is required.
+    """
+    invocation, ctx = _run(config)
+    work = state["work"]
+    if grounding_gap(work):
+        if ctx.config.decision.require_option_grounding:
+            raise StopCapability(blocked_result(
+                invocation, "options_ungrounded",
+                "research found no evidence about the option space, so options cannot be "
+                "grounded", usage=work.usage))
+        work.limitations.append("options are requested without grounding evidence: research "
+                                "found nothing about the option space")
+    followup = validate_basis(work)
     return {"followup": followup} if followup else {}
 
 
@@ -161,6 +175,9 @@ class DecisionExecutor:
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-01 23:00 [python-coder]: When grounding research found nothing the decision blocks
+#   (options_ungrounded) if grounding is required, else asks for options with a limitation.
+#   (#KernelBootstrapV0/GROUND)
 # - 2026-09-30 23:50 [python-coder]: `decision.status` is emitted beside `decision.combine`
 #   with ids and counts only, so the observation map shows status and approval per assessment.
 #   (#KernelBootstrapV0/P6)

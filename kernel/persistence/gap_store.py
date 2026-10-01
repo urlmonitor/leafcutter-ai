@@ -22,7 +22,7 @@ from pydantic import ValidationError
 
 from kernel.contracts.enums import GapType
 from kernel.contracts.run import CapabilityGap, GapProposal
-from kernel.intent.gap_quality import describe_candidate
+from kernel.intent.gap_quality import NO_OUTPUT_SCHEMA, describe_candidate, need_phrase
 from kernel.persistence.base import GapStorePort, aggregate_gaps
 from kernel.persistence.fsutil import append_line, atomic_write_bytes, read_lines, safe_component
 
@@ -34,8 +34,11 @@ BUILD_OPPORTUNITY_TYPES = frozenset({GapType.UNSUPPORTED, GapType.HOST_ONLY})
 DRAFT_AUTHOR = "template"
 _DRAFT_PURPOSE = {
     GapType.UNSUPPORTED: "No registered capability can serve this need; the request was {outcome}.",
-    GapType.HOST_ONLY: "Only a host-backed implementation exists; a native one could replace it.",
+    GapType.HOST_ONLY: "Only a host-backed implementation served this request; a native one "
+                       "could replace it.",
 }
+_TWIN_NOTE = ("Native capabilities exist for this request kind: check whether one can already "
+              "serve this need before building anything.")
 
 
 def observation_id(run_id: str, work_item_id: str, attempt: int, gap_type: GapType) -> str:
@@ -59,6 +62,16 @@ def gap_title(gap: CapabilityGap) -> str:
     return gap.need_title or gap.normalized_need or gap.goal[:60]
 
 
+def draft_title(gap: CapabilityGap) -> str:
+    """Return the title of a backlog draft: the need itself, not the goal that triggered it."""
+    return need_phrase(gap.request_kind, gap.normalized_need, gap_title(gap))
+
+
+def _schema_text(schema: str) -> str:
+    """Return a schema id in code style, or the plain word `none` for a decline."""
+    return schema if schema == NO_OUTPUT_SCHEMA else f"`{schema}`"
+
+
 def _bullets(values: list[str], empty: str = "none recorded") -> str:
     """Render a list as Markdown bullets (or the `empty` text)."""
     return chr(10).join(f"- {v}" for v in values) if values else f"- {empty}"
@@ -79,14 +92,17 @@ def render_gap_draft(gap: CapabilityGap) -> str:
     """
     purpose = _DRAFT_PURPOSE.get(gap.gap_type, "Not a build opportunity.").format(
         outcome=gap.fallback_outcome.value)
+    if gap.gap_type is GapType.HOST_ONLY and "native alternatives" in gap.why_insufficient:
+        purpose = f"{purpose} {_TWIN_NOTE}"
     lines = [
-        f"# Capability gap draft: {gap_title(gap)}", "",
+        f"# Capability gap draft: {draft_title(gap)}", "",
         f"- Author: {DRAFT_AUTHOR} (kernel gap draft template v1; no model wrote this text)",
         "- Status: proposal only - NOT a registry entry, never installed or routed automatically",
         f"- Gap key: `{gap.gap_key}`", f"- Gap type: {gap.gap_type.value}", "",
         "## Proposed purpose", "", purpose, "", f"Unmet need (first goal seen): {gap.goal}", "",
         "## Contracts", "", f"- Request kind: {gap.request_kind.value}",
-        f"- Input schema: `{gap.input_schema}`", f"- Output schema: `{gap.output_schema}`",
+        f"- Input schema: {_schema_text(gap.input_schema)}",
+        f"- Output schema: {_schema_text(gap.output_schema)}",
         f"- Scope components: {', '.join(gap.scope_component_ids) or 'any'}", "",
         "## Evidence of need", "", f"- Occurrences: {gap.occurrence_count}",
         f"- First seen: {gap.first_seen.isoformat() if gap.first_seen else 'unknown'}",
@@ -130,7 +146,7 @@ def publish_gap(store: GapStorePort, gap: CapabilityGap, *, with_draft: bool = T
             preview = aggregate_gaps([*known, gap])[0]
             ref = store.write_draft(preview, render_gap_draft(preview))
             gap = gap.model_copy(update={"proposal": GapProposal(
-                title=f"Capability for: {gap_title(gap)}",
+                title=f"Capability for: {draft_title(gap)}",
                 purpose=f"{gap.gap_type.value} need", draft_ref=ref)})
     except (OSError, ValueError):
         logger.warning("could not write the draft of gap %s", gap.gap_key, exc_info=True)
@@ -189,6 +205,9 @@ class FileGapStore:
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-01 23:00 [python-coder]: Drafts are titled from the need (draft_title), a host_only gap
+#   with a native twin gets a draft too (its text says to check the twin first), and a decline
+#   output schema reads `none`. (#KernelBootstrapV0/GROUND)
 # - 2026-10-01 22:00 [python-coder]: Titles use the readable `need_title` (the goal, shortened)
 #   instead of the sorted-token dedup key, and the draft lists the closest capabilities with the
 #   reason each was excluded. (#KernelBootstrapV0/INTENT)

@@ -21,7 +21,11 @@ from kernel.capabilities.decision.jev_support import (
     blocked_result,
     load_output_payload,
 )
-from kernel.capabilities.decision.state import DecisionContinuation, Working
+from kernel.capabilities.decision.state import (
+    DecisionContinuation,
+    Working,
+    derive_decision_id,
+)
 from kernel.contracts import schema_ids
 from kernel.contracts.decision import Criterion, Option
 from kernel.contracts.enums import EvidenceCategory, RequestKind, ResultStatus
@@ -67,7 +71,8 @@ def _payload_inputs(invocation: CapabilityInvocation, cont: DecisionContinuation
                    options=_merge_by_id(options, cont.options),
                    criteria=_merge_by_id(criteria, cont.criteria),
                    approval_required=base["approval_required"],
-                   constraint_ids=base["constraint_ids"])
+                   constraint_ids=base["constraint_ids"],
+                   decision_id=derive_decision_id(invocation.work_item_id))
 
 
 def _absorb_options(work: Working, payload: dict) -> None:
@@ -184,6 +189,8 @@ def load_working(invocation: CapabilityInvocation, ctx: ExecutionContext) -> Wor
             if invocation.continuation else DecisionContinuation())
     cont = cont.model_copy(update={"attempt": cont.attempt + 1})
     work = _payload_inputs(invocation, cont)
+    work.require_grounding = ctx.config.decision.require_option_grounding
+    work.evidence_cap = ctx.config.decision.max_grounding_evidence
     _check_failures(invocation, invocation.child_outcomes, work)
     inline: dict[str, Evidence] = {}
     actor = _answering_actor(ctx, invocation)
@@ -198,6 +205,9 @@ def load_working(invocation: CapabilityInvocation, ctx: ExecutionContext) -> Wor
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-01 23:00 [python-coder]: The decision id is derived from the work item id: it used
+#   to be a fresh random id per invocation, so one decision produced several records.
+#   (#KernelBootstrapV0/GROUND)
 # - 2026-09-30 23:30 [python-coder]: Only human answers of the latest wait are applied; every
 #   finished child is handed to a resumed parent, and the router's clarification answer once
 #   became an approved criterion of a later phase. (#KernelBootstrapV0/P6)
