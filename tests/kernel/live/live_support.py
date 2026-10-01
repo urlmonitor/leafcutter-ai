@@ -127,18 +127,22 @@ def synthetic_submission(envelope: dict[str, Any]) -> dict[str, Any]:
                 "response_schema_id": "leafcutter.human_answer.v1", "response": response}
     schema = packet["output_schema_id"]
     return {**base, "actor": {"id": "host:live-test-synthetic", "kind": "host"},
-            "response_schema_id": schema, "response": _host_response(schema)}
+            "response_schema_id": schema, "response": _host_response(schema, packet)}
 
 
-def _host_response(schema: str) -> dict[str, Any]:
-    """Return a synthetic host response valid for the output schema."""
+def _host_response(schema: str, packet: dict[str, Any]) -> dict[str, Any]:
+    """Return a synthetic host response valid for the output schema.
+
+    Options cite the evidence the packet carries, as a cooperating host must (grounding).
+    """
+    cited = list(packet.get("input_evidence_ids") or [])
     proposed = {"proposal_status": "proposed", "approval_status": "proposed",
                 "proposed_by": "host:live-test-synthetic"}
     if schema == "leafcutter.options.v1":
         options = [{"id": "opt.csv", "title": "Write CSV", "description":
-                    f"One row per record. [{SYNTHETIC}]", **proposed},
+                    f"One row per record. [{SYNTHETIC}]", "source_refs": cited, **proposed},
                    {"id": "opt.jsonl", "title": "Write JSON Lines", "description":
-                    f"One JSON object per line. [{SYNTHETIC}]", **proposed}]
+                    f"One JSON object per line. [{SYNTHETIC}]", "source_refs": cited, **proposed}]
         criteria = [{"id": "crit.typed", "question": "Does the option preserve nested and typed "
                      "values without lossy flattening?", "priority": "required", **proposed},
                     {"id": "crit.simple", "question": "Is the option simple to produce and read "

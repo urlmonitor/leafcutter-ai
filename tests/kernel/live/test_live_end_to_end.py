@@ -117,9 +117,15 @@ class TestLiveEndToEnd(unittest.TestCase):
         _show("pause", envelope)
         self.assertEqual(code, 0)
         self.assertEqual(envelope["status"], "waiting_host")
-        self.assertEqual(envelope["pending_interaction"]["operation"], "generate_options")
+        # Unknown options are grounded first: research may need host work (synthesis or
+        # research) before the options packet, which must then carry the evidence.
+        self.assertIn(envelope["pending_interaction"]["operation"],
+                      {"generate_options", "synthesize_evidence", "bounded_research"})
         run_id, steps = envelope["run_id"], 0
         while envelope["status"] in WAITING and steps < MAX_STEPS:
+            packet = envelope["pending_interaction"]
+            if packet.get("operation") == "generate_options":
+                self.assertTrue(packet["input_evidence_ids"], "options packet carries no evidence")
             submission = synthetic_submission(envelope)
             self.assertIn("synthetic", submission["actor"]["id"])  # labelled, never passed off
             code, envelope = self.cli(["resume", "--run-id", run_id], submission)
@@ -140,6 +146,9 @@ if __name__ == "__main__":
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-02 [python-coder]: The first pause may be a grounding-research host step (synthesis or
+#   research) because unknown options are researched before options are requested; an options
+#   packet must carry evidence and the synthetic host cites it. (#KernelBootstrapV0/GROUND)
 # - 2026-10-01 17:20 [python-coder]: The settled goal supplies options and criteria itself so it
 #   can reach `completed` with no host work; the repository's ADR-055 is the evidence Jev must
 #   find. The pause goal asserts only the protocol (pause, accepted resumes, trace), not the
