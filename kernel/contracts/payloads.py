@@ -93,6 +93,8 @@ class OptionContext(KernelModel):
     description: str | None = None
     #: Evidence ids plus any file paths or symbol names the option's text mentions.
     cited_refs: list[str] = Field(default_factory=list)
+    #: True for an option a human added: its claims are unverified and research checks them.
+    human_added: bool = False
 
 
 class ResearchRequestPayload(KernelModel):
@@ -105,8 +107,12 @@ class ResearchRequestPayload(KernelModel):
     expected_coverage: Literal["all_required", "best_effort"] = "all_required"
     #: Research exactly the given needs: Jev adds no further evidence categories.
     evidence_needs_only: bool = False
-    #: The options the decision has so far (empty before options exist); Wave 2 research reads it.
+    #: The options the decision has so far (empty before options exist); research reads it.
     option_context: list[OptionContext] = Field(default_factory=list)
+    #: The approved criteria's questions, used as query text beside the goal.
+    criteria_context: list[str] = Field(default_factory=list)
+    #: What an earlier synthesis said it could not find; each becomes a targeted need.
+    gaps: list[str] = Field(default_factory=list)
 
 
 class RetrievalLimits(KernelModel):
@@ -125,6 +131,8 @@ class RetrievalRequestPayload(KernelModel):
     limits: RetrievalLimits = Field(default_factory=RetrievalLimits)
     #: Exact places to fetch before ranking: `path`, `path#Lx-Ly`, `path#heading`, `path::Symbol`.
     explicit_locators: list[str] = Field(default_factory=list)
+    #: Texts to search for before the need's own wording: the goal first, then criteria, options.
+    query_hints: list[str] = Field(default_factory=list)
 
 
 class OptionsRequestPayload(KernelModel):
@@ -278,6 +286,10 @@ __all__ = [
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-01 [python-coder]: Research now reads option_context; the request also carries
+#   criteria_context and gaps (what a synthesis could not find), OptionContext.human_added marks
+#   unverified claims, and retrieval_request.query_hints lets queries lead with the goal.
+#   (#KernelV01/D)
 # - 2026-10-01 [python-coder]: ResearchRequestPayload.option_context (OptionContext) tells research
 #   which options the decision weighs and what they cite; not consumed yet. (#KernelV01/A)
 # - 2026-10-02 [python-coder]: OptionsPayload.named_options (kernel-verified, supplied) and

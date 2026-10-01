@@ -49,6 +49,7 @@ class IntentCase(ScenarioCase):
             self.needs.get(q.id.removeprefix("need."), 0.05)))
         self.jev.script("research.assess", "conflict", noul_answer(0.05))
         self.jev.script("research.assess", "evaluable", noul_answer(0.95))
+        self.jev.script("research.assess", "answers.*", noul_answer(0.95))
         self.jev.script("retrieval.rerank", "relevant.*", noul_answer(0.9))
         self.jev.script("kernel.intent", "intent.*", lambda q, b: self._next(self.intents))
         self.jev.script("kernel.route", "route.*", lambda q, b: self._next(self.routes))

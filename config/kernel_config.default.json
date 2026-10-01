@@ -46,6 +46,9 @@
     "need_supporting_threshold": 0.5,
     "evaluable_threshold": 0.7,
     "allow_synthesis": true,
+    "answer_aware_coverage": true,
+    "answer_threshold": 0.7,
+    "max_targeted_needs": 4,
     "category_descriptions": {
       "authoritative_guidance": "Official documentation or specifications that define how a technology is meant to be used.",
       "internal_principles": "The project's own stated rules, conventions and principles.",
@@ -67,7 +70,8 @@
     "sections_per_file": 3,
     "source_candidate_floor": 20,
     "source_candidate_ratio": 1.5,
-    "max_explicit_locators": 12
+    "max_explicit_locators": 12,
+    "max_query_terms": 48
   },
   "sources": [
     {"id": "repo.principles", "kind": "repo_text",

@@ -45,7 +45,8 @@ def waiting_result(invocation: CapabilityInvocation, cont: ResearchContinuation,
             "phase": "synthesizing", "synthesized": True, "evidence": list(out.evidence.values()),
             "coverage": dict(out.coverage), "contradictions": out.contradictions,
             "limitations": out.limitations, "truncated": out.truncated,
-            "attempted": out.attempted, "unavailable": out.unavailable})
+            "attempted": out.attempted, "unavailable": out.unavailable,
+            "unanswered": out.unanswered})
     return CapabilityResult(
         invocation_id=invocation.id, work_item_id=invocation.work_item_id,
         status=ResultStatus.WAITING, requests=requests, usage=usage,
@@ -68,7 +69,7 @@ def bundle_result(invocation: CapabilityInvocation, plan: Plan, cont: ResearchCo
         coverage=dict(out.coverage), attempted_sources=out.attempted,
         unavailable_sources=list(unavailable.values()), contradictions=out.contradictions,
         limitations=limitations, truncated=out.truncated, evidence=list(out.evidence.values()),
-        findings=out.findings)
+        findings=out.findings, unknowns=list(dict.fromkeys(out.unknowns)))
     partial = bool(unsatisfied) and plan.expected_coverage == "all_required"
     return CapabilityResult(
         invocation_id=invocation.id, work_item_id=invocation.work_item_id,
@@ -81,6 +82,9 @@ def bundle_result(invocation: CapabilityInvocation, plan: Plan, cont: ResearchCo
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-01 [python-coder]: The bundle carries the synthesis unknowns, and a synthesis request
+#   keeps the needs judged unanswered so a resume does not restore their `satisfied` status.
+#   (#KernelV01/D)
 # - 2026-09-30 23:00 [python-coder]: best_effort coverage completes even with unsatisfied
 #   required needs, but the bundle still lists each one in limitations. (#KernelBootstrapV0/P5)
 # ====================================================================

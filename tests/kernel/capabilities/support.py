@@ -140,9 +140,25 @@ def script_decision(jev: ScriptedJev, params: dict | None = None) -> dict:
     return p
 
 
+def script_research(jev: ScriptedJev, params: dict | None = None) -> dict:
+    """Script research answers from a mutable dict (need, conflict, evaluable, answer)."""
+    p: dict[str, Any] = {"need": {}, "default_need": 0.05, "conflict": 0.05, "evaluable": 0.95,
+                         "answer": 0.95, "answer_by_need": {}}
+    p.update(params or {})
+    jev.script("research.plan_needs", "need.*",
+               lambda q, b: noul_answer(p["need"].get(q.id.split(".", 1)[1], p["default_need"])))
+    jev.script("research.assess", "conflict", lambda q, b: noul_answer(p["conflict"]))
+    jev.script("research.assess", "evaluable", lambda q, b: noul_answer(p["evaluable"]))
+    jev.script("research.assess", "answers.*", lambda q, b: noul_answer(
+        p["answer_by_need"].get(q.id.removeprefix("answers."), p["answer"])))
+    return p
+
+
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-01 [python-coder]: script_research (moved from test_research_graph) answers the
+#   research.assess `answers.*` questions of answer-aware coverage. (#KernelV01/D)
 # - 2026-10-01 [python-coder]: script_decision answers the criterion-kind question (`kind.*`):
 #   evidence-answerable unless the id is in params["design"]. (#KernelV01/A)
 # - 2026-09-30 23:00 [python-coder]: Satisfies answers are matched against the ids in the batch

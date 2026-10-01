@@ -641,6 +641,13 @@
       },
       "title": "Unavailable Sources",
       "type": "array"
+    },
+    "unknowns": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Unknowns",
+      "type": "array"
     }
   },
   "title": "EvidenceBundlePayload",

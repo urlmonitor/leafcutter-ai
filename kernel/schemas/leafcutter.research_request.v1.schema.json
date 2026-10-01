@@ -101,6 +101,11 @@
           "default": null,
           "title": "Description"
         },
+        "human_added": {
+          "default": false,
+          "title": "Human Added",
+          "type": "boolean"
+        },
         "option_id": {
           "minLength": 1,
           "title": "Option Id",
@@ -152,6 +157,13 @@
   "additionalProperties": false,
   "description": "leafcutter.research_request.v1.",
   "properties": {
+    "criteria_context": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Criteria Context",
+      "type": "array"
+    },
     "evidence_needs": {
       "items": {
         "$ref": "#/$defs/EvidenceNeed"
@@ -179,6 +191,13 @@
       ],
       "title": "Expected Coverage",
       "type": "string"
+    },
+    "gaps": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Gaps",
+      "type": "array"
     },
     "option_context": {
       "items": {

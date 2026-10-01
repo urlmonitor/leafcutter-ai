@@ -14,7 +14,7 @@ from __future__ import annotations
 
 import re
 
-from kernel.capabilities.decision.state import Working
+from kernel.capabilities.decision.state import ADDED_OPTION_PREFIX, Working
 from kernel.contracts.decision import Option
 from kernel.contracts.payloads import OptionContext
 
@@ -54,7 +54,8 @@ def cited_refs(option: Option) -> list[str]:
 def option_context(work: Working) -> list[OptionContext]:
     """Return the research context of every usable option (empty while no option exists)."""
     return [OptionContext(option_id=o.id, title=o.title,
-                          description=o.description or None, cited_refs=cited_refs(o))
+                          description=o.description or None, cited_refs=cited_refs(o),
+                          human_added=o.id.startswith(ADDED_OPTION_PREFIX))
             for o in work.usable_options]
 
 
@@ -62,6 +63,7 @@ def option_context(work: Working) -> list[OptionContext]:
 # DECISION HISTORY
 # ====================================================================
 # - 2026-10-01 [python-coder]: option_context is built from the decision's usable options with
-#   pattern-based extraction of paths and symbols; research does not consume it yet (Wave 2).
-#   (#KernelV01/A)
+#   pattern-based extraction of paths and symbols. (#KernelV01/A)
+# - 2026-10-01 [python-coder]: Research consumes it; an option a human added is flagged
+#   `human_added` so its claims are checked. (#KernelV01/D)
 # ====================================================================

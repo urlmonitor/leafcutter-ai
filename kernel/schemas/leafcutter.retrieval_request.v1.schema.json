@@ -168,6 +168,13 @@
     "need": {
       "$ref": "#/$defs/EvidenceNeed"
     },
+    "query_hints": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Query Hints",
+      "type": "array"
+    },
     "schema_version": {
       "const": "1.0",
       "default": "1.0",

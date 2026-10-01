@@ -107,9 +107,10 @@ def research_request(work: Working, categories: list[EvidenceCategory]) -> Reque
     """Ask research for the given evidence categories (needs are pre-filled and required)."""
     needs = [EvidenceNeed(id=f"need.{c.value}", category=c, priority=Priority.REQUIRED,
                           question=_NEED_QUESTIONS[c] + work.question) for c in categories]
-    payload = ResearchRequestPayload(question=work.question, evidence_needs=needs,
-                                     existing_evidence_ids=work.evidence_ids,
-                                     option_context=option_context(work))
+    payload = ResearchRequestPayload(
+        question=work.question, evidence_needs=needs, existing_evidence_ids=work.evidence_ids,
+        option_context=option_context(work),
+        criteria_context=[c.question for c in work.usable_criteria], gaps=list(work.cont.gaps))
     return RequestProposal(
         kind=RequestKind.EVIDENCE, question=work.question, evidence_needs=needs,
         payload_schema=schema_ids.RESEARCH_REQUEST, payload=payload.model_dump(mode="json"),
@@ -209,6 +210,8 @@ def escalation_request(work: Working, reason: str, text: str, tied: list[Option]
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-01 [python-coder]: A research request also carries the approved criteria's questions
+#   and the gaps the last synthesis named, so research can aim its queries. (#KernelV01/D)
 # - 2026-10-01 [python-coder]: A research request made after options exist carries
 #   option_context (titles, descriptions, cited refs); the grounding request cannot, no options
 #   exist yet. (#KernelV01/A)

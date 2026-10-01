@@ -41,6 +41,8 @@ class DecisionContinuation(KernelModel):
     evidence_ids: list[str] = Field(default_factory=list)
     findings: list[str] = Field(default_factory=list)
     finding_refs: list[str] = Field(default_factory=list)
+    #: What the latest synthesis said it could not find; the next research round aims at it.
+    gaps: list[str] = Field(default_factory=list)
     human_inputs: list[str] = Field(default_factory=list)
     pending_subjects: list[str] = Field(default_factory=list)
     pending_reason: str = ""
@@ -59,6 +61,10 @@ class DecisionContinuation(KernelModel):
     design_ranking: list[OptionRanking] = Field(default_factory=list)
     design_reason: str = ""
     design_choice_id: str | None = None
+
+
+#: Prefix of the ids of options a human added at approval (their claims are unverified).
+ADDED_OPTION_PREFIX = "opt.added."
 
 
 def derive_decision_id(work_item_id: str) -> str:

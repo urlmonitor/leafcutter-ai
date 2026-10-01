@@ -33,7 +33,7 @@ from kernel.capabilities.retrieval.knowledge_map import search_knowledge_map
 from kernel.capabilities.retrieval.locators import fetch_explicit
 from kernel.capabilities.retrieval.repository import search_repo_text
 from kernel.capabilities.retrieval.rerank import rerank
-from kernel.capabilities.retrieval.terms import extract_terms
+from kernel.capabilities.retrieval.terms import build_query_terms
 from kernel.capabilities.retrieval.versioning import resolve_source_version
 from kernel.config import SourceConfig
 from kernel.contracts import schema_ids
@@ -276,8 +276,9 @@ class RepositoryRetrievalExecutor:
             root=Path(ctx.scope.repository_root), read_roots=tuple(ctx.scope.read_roots),
             deny_globs=tuple(ctx.config.retrieval.deny_globs),
             max_file_bytes=ctx.config.retrieval.max_file_bytes)
-        terms = extract_terms(request.need.question, ctx.scope.technologies)
-        entities = extract_entities(request.need.question)
+        terms = build_query_terms(request.need.question, request.query_hints,
+                                  ctx.scope.technologies, ctx.config.retrieval.max_query_terms)
+        entities = extract_entities(" ".join([*request.query_hints, request.need.question]))
         sources, unavailable = select_sources(ctx, request)
         bar = ctx.config.retrieval.coverage_relevance_threshold
         if not terms and not request.explicit_locators:
@@ -301,6 +302,9 @@ class RepositoryRetrievalExecutor:
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-01 [python-coder]: Query terms come from build_query_terms (request.query_hints
+#   first, then the need's wording, bounded by retrieval.max_query_terms) and the named
+#   identifiers are read from the hints too. (#KernelV01/D)
 # - 2026-10-01 [python-coder]: Explicit locators are fetched first and merged ahead of the search
 #   candidates; the search also gets the question's identifiers so named files are pinned, and
 #   `max_candidates` is the overall rerank batch bound (default raised 20 to 60) while each

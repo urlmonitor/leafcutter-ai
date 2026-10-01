@@ -22,6 +22,12 @@ from pydantic import JsonValue
 from kernel.capabilities.base import ExecutionContext
 from kernel.capabilities.decision.jev_support import ask_jev, make_batch, noul_question
 from kernel.capabilities.research.state import Plan
+from kernel.capabilities.research.targeting import (
+    NeedQuery,
+    default_query,
+    locator_sources,
+    targeted,
+)
 from kernel.capabilities.retrieval.access import ReadPolicy
 from kernel.capabilities.retrieval.knowledge_map import PATHS_JSON, SCRIPT, trusted_root
 from kernel.config import SourceConfig
@@ -48,13 +54,31 @@ class Resolution:
     deferred: list[RequestProposal] = field(default_factory=list)
 
 
+def _targeted(ctx: ExecutionContext, plan: Plan) -> list[tuple[EvidenceNeed, NeedQuery]]:
+    """Return the gap and claim needs of the plan with their queries (bounded by config)."""
+    return targeted(plan, ctx.config.research.max_targeted_needs,
+                    ctx.config.retrieval.max_explicit_locators)
+
+
+def need_queries(ctx: ExecutionContext, plan: Plan) -> dict[str, NeedQuery]:
+    """Return the query of every targeted need, keyed by need id."""
+    return {need.id: query for need, query in _targeted(ctx, plan)}
+
+
 async def plan_needs(ctx: ExecutionContext, invocation: CapabilityInvocation, plan: Plan
                      ) -> tuple[list[EvidenceNeed], list[Usage]]:
-    """Return the evidence needs: caller-mandated ones kept required plus Jev-selected ones.
+    """Return the needs: mandated ones, Jev-selected ones, then gap and claim needs.
 
     Raises:
         StopCapability: Jev was unavailable or over budget.
     """
+    needs, usage = await _select_needs(ctx, invocation, plan)
+    return [*needs, *(need for need, _ in _targeted(ctx, plan))], usage
+
+
+async def _select_needs(ctx: ExecutionContext, invocation: CapabilityInvocation, plan: Plan
+                        ) -> tuple[list[EvidenceNeed], list[Usage]]:
+    """Return the caller-mandated needs (kept required) plus the Jev-selected ones."""
     needs = list(plan.mandated)
     if plan.needs_only:
         return needs, []
@@ -112,11 +136,18 @@ def retrieval_operation(payload: dict, sources: list[SourceConfig]) -> str:
     return "bounded_research" if asked and asked <= host_ids else "retrieve"
 
 
-def _child(need: EvidenceNeed, source_ids: list[str], sources: list[SourceConfig]
-           ) -> RequestProposal:
-    """Build the retrieval child request for one need, naming the operation it needs."""
-    payload = RetrievalRequestPayload(need=need, source_ids=source_ids)
+def _child(need: EvidenceNeed, source_ids: list[str], sources: list[SourceConfig],
+           query: NeedQuery) -> RequestProposal:
+    """Build the retrieval child request for one need, naming the operation it needs.
+
+    Query hints go to every child; exact locators only to a native one (a host reads no files).
+    """
     operation = retrieval_operation({"source_ids": source_ids}, sources)
+    native = operation == "retrieve"
+    holders = locator_sources(query.locators, sources) if native else []
+    payload = RetrievalRequestPayload(
+        need=need, source_ids=list(dict.fromkeys([*source_ids, *holders])),
+        query_hints=query.hints, explicit_locators=query.locators if native else [])
     return RequestProposal(
         kind=RequestKind.EVIDENCE, question=need.question, evidence_needs=[need],
         operation=operation,
@@ -153,6 +184,8 @@ def _defer_host_only(out: Resolution) -> None:
 def resolve_sources(ctx: ExecutionContext, needs: list[EvidenceNeed], plan: Plan) -> Resolution:
     """Map each need to a native retrieval child, a host.research child, or unavailable."""
     out = Resolution()
+    own = need_queries(ctx, plan)
+    shared = default_query(plan, ctx.config.retrieval.max_explicit_locators)
     for need in needs:
         candidates = _candidates(ctx, need, plan)
         native, unavailable_reasons = [], []
@@ -168,7 +201,7 @@ def resolve_sources(ctx: ExecutionContext, needs: list[EvidenceNeed], plan: Plan
         if chosen:
             ids = [s.id for s in chosen]
             out.needs.append(need)
-            out.requests.append(_child(need, ids, ctx.config.sources))
+            out.requests.append(_child(need, ids, ctx.config.sources, own.get(need.id, shared)))
             out.child_map[need.id] = ids
             out.attempted += ids
             continue
@@ -187,6 +220,9 @@ def resolve_sources(ctx: ExecutionContext, needs: list[EvidenceNeed], plan: Plan
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-01 [python-coder]: Needs from named gaps and human-added option claims are appended
+#   after the planned ones, and every child carries query hints (goal first) and, when native, the
+#   paths the options cite as explicit locators. (#KernelV01/D)
 # - 2026-10-02 [python-coder]: Supporting needs only a host can serve are deferred behind the
 #   native children (a live run paused for host work with its answer already found).
 #   (#KernelBootstrapV0/GROUND)

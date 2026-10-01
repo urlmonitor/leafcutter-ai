@@ -122,6 +122,12 @@ class ResearchConfig(_Section):
     evaluable_threshold: Probability
     allow_synthesis: bool
     category_descriptions: dict[EvidenceCategory, str]
+    #: A need counts as satisfied only when Jev judges the kept evidence answers its question.
+    answer_aware_coverage: bool
+    #: Probability the answer judgement must reach for a relevance-satisfied need to stay so.
+    answer_threshold: Probability
+    #: Most extra needs built from named gaps and human-added option claims in one research run.
+    max_targeted_needs: int = Field(ge=0)
 
     @model_validator(mode="after")
     def _all_categories(self) -> ResearchConfig:
@@ -156,6 +162,8 @@ class RetrievalConfig(_Section):
     source_candidate_ratio: float = Field(gt=0)
     #: Most explicit locators fetched per request (`retrieval_request.explicit_locators`).
     max_explicit_locators: int = Field(ge=0)
+    #: Most search terms one retrieval query carries (goal first, then hints, then need filler).
+    max_query_terms: int = Field(ge=1)
 
 
 class SourceConfig(_Section):

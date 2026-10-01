@@ -14,7 +14,7 @@ from __future__ import annotations
 
 from typing import TypeVar
 
-from kernel.capabilities.decision.state import Working, is_pending
+from kernel.capabilities.decision.state import ADDED_OPTION_PREFIX, Working, is_pending
 from kernel.contracts.decision import Criterion, Option
 from kernel.contracts.enums import ApprovalStatus, ProposalStatus
 from kernel.contracts.payloads import HumanAnswerPayload
@@ -62,7 +62,7 @@ def _added_options(work: Working, answer: HumanAnswerPayload, actor: str) -> lis
     taken = {o.id for o in work.options}
     made: list[Option] = []
     for n, added in enumerate(answer.added_options or [], start=1):
-        oid = f"opt.added.{n}"
+        oid = f"{ADDED_OPTION_PREFIX}{n}"
         while oid in taken:
             oid += "+"
         taken.add(oid)

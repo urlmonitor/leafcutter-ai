@@ -23,6 +23,7 @@ from kernel.capabilities.base import ExecutionContext
 from kernel.capabilities.decision.jev_support import StopCapability
 from kernel.capabilities.research.collect import (
     Judgement,
+    apply_answers,
     close_coverage,
     collect_outcomes,
     judge,
@@ -67,7 +68,9 @@ def parse_plan(invocation: CapabilityInvocation) -> Plan:
     return Plan(question=request.question, expected_coverage=request.expected_coverage,
                 mandated=list(request.evidence_needs),
                 source_restrictions=list(request.source_restrictions),
-                needs_only=request.evidence_needs_only and bool(request.evidence_needs))
+                needs_only=request.evidence_needs_only and bool(request.evidence_needs),
+                options=list(request.option_context), criteria=list(request.criteria_context),
+                gaps=list(request.gaps))
 
 
 async def _plan(state: ResearchState, config: RunnableConfig) -> dict[str, Any]:
@@ -104,10 +107,11 @@ async def _evaluate(state: ResearchState, config: RunnableConfig) -> dict[str, A
     invocation, ctx = _run(config)
     plan, cont, out = state["plan"], state["cont"], state["out"]
     ask = ctx.config.research.allow_synthesis and not cont.synthesized
-    judgement: Judgement = await judge(ctx, invocation, plan.question, out, ask)
+    judgement: Judgement = await judge(ctx, invocation, plan.question, out, ask, cont.needs)
     usage = [*state.get("usage", []), *judgement.usage]
     if judgement.conflict is not None:
         record_contradiction(ctx, out, judgement.conflict)
+    apply_answers(ctx, cont, out, judgement.answers)
     threshold = ctx.config.research.evaluable_threshold
     enough = judgement.evaluable is not None and judgement.evaluable >= threshold
     if cont.deferred and not cont.deferred_dispatched:
@@ -207,6 +211,9 @@ class ResearchExecutor:
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-01 [python-coder]: The plan carries option_context, criteria and gaps; after the one
+#   assess batch a need the evidence does not answer is downgraded to partial before the bundle
+#   (and any synthesis request) is built. (#KernelV01/D)
 # - 2026-10-02 [python-coder]: After the native evidence is judged, held-back host needs are
 #   skipped with a limitation when it is evaluable and dispatched as a second wave when it is not.
 #   (#KernelBootstrapV0/GROUND)

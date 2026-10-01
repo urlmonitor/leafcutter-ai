@@ -408,6 +408,16 @@
           "title": "Allow Synthesis",
           "type": "boolean"
         },
+        "answer_aware_coverage": {
+          "title": "Answer Aware Coverage",
+          "type": "boolean"
+        },
+        "answer_threshold": {
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "Answer Threshold",
+          "type": "number"
+        },
         "category_descriptions": {
           "additionalProperties": {
             "type": "string"
@@ -423,6 +433,11 @@
           "minimum": 0.0,
           "title": "Evaluable Threshold",
           "type": "number"
+        },
+        "max_targeted_needs": {
+          "minimum": 0,
+          "title": "Max Targeted Needs",
+          "type": "integer"
         },
         "need_required_threshold": {
           "maximum": 1.0,
@@ -442,7 +457,10 @@
         "need_supporting_threshold",
         "evaluable_threshold",
         "allow_synthesis",
-        "category_descriptions"
+        "category_descriptions",
+        "answer_aware_coverage",
+        "answer_threshold",
+        "max_targeted_needs"
       ],
       "title": "ResearchConfig",
       "type": "object"
@@ -489,6 +507,11 @@
           "title": "Max File Bytes",
           "type": "integer"
         },
+        "max_query_terms": {
+          "minimum": 1,
+          "title": "Max Query Terms",
+          "type": "integer"
+        },
         "relevance_threshold": {
           "maximum": 1.0,
           "minimum": 0.0,
@@ -528,7 +551,8 @@
         "sections_per_file",
         "source_candidate_floor",
         "source_candidate_ratio",
-        "max_explicit_locators"
+        "max_explicit_locators",
+        "max_query_terms"
       ],
       "title": "RetrievalConfig",
       "type": "object"

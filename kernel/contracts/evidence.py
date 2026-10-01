@@ -240,11 +240,15 @@ class EvidenceBundlePayload(BundleBody):
 
     evidence: list[Evidence] = Field(default_factory=list)
     findings: list[Finding] = Field(default_factory=list)
+    #: What a synthesis said it could not find (gaps the next round can aim a query at).
+    unknowns: list[str] = Field(default_factory=list)
 
 
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-01 [python-coder]: The bundle payload carries the unknowns a synthesis named, so the
+#   decision can turn them into targeted research. (#KernelV01/D)
 # - 2026-10-01 23:00 [python-coder]: One excerpt fetched for several needs keeps the non-pattern
 #   category (stronger_category): first-wins merging let an existing_patterns need that finished
 #   first hide the decision basis the same ADR provided for prior_decisions.

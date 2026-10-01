@@ -44,22 +44,18 @@ from kernel.contracts.payloads import (
 )
 from kernel.providers.base import JevUnavailable
 from kernel.providers.fakes import ScriptedJev, noul_answer
-from tests.kernel.capabilities.support import child, evidence_item, invocation, no_git, resume
+from tests.kernel.capabilities.support import (
+    child,
+    evidence_item,
+    invocation,
+    no_git,
+    resume,
+    script_research,
+)
 from tests.kernel.helpers import as_type, bundle_of, make_context
 
 QUESTION = "Where should run state be stored with sqlite?"
 CATS = EvidenceCategory
-
-
-def _script(jev: ScriptedJev, params: dict | None = None) -> dict:
-    """Script research answers from a mutable dict (need.<cat>, conflict, evaluable)."""
-    p: dict[str, Any] = {"need": {}, "default_need": 0.05, "conflict": 0.05, "evaluable": 0.95}
-    p.update(params or {})
-    jev.script("research.plan_needs", "need.*",
-               lambda q, b: noul_answer(p["need"].get(q.id.split(".", 1)[1], p["default_need"])))
-    jev.script("research.assess", "conflict", lambda q, b: noul_answer(p["conflict"]))
-    jev.script("research.assess", "evaluable", lambda q, b: noul_answer(p["evaluable"]))
-    return p
 
 
 def _bundle(ev_items: list, coverage: dict, **extra: Any) -> dict:
@@ -85,7 +81,7 @@ class ResearchCase(unittest.TestCase):
         (self.root / "docs/architecture/adrs/ADR-001.md").write_text(
             "Decision: use sqlite for run state.\n", encoding="utf-8")
         self.jev = ScriptedJev()
-        self.params = _script(self.jev, {"need": {"prior_decisions": 0.9,
+        self.params = script_research(self.jev, {"need": {"prior_decisions": 0.9,
                                                   "internal_principles": 0.9}})
 
     def ctx(self, config=None):
@@ -392,6 +388,8 @@ if __name__ == "__main__":
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-01 [python-coder]: The research Jev script moved to support.script_research, which
+#   now also answers `answers.*`. (#KernelV01/D)
 # - 2026-10-02 [python-coder]: the host-only examples use external_practices: authoritative_guidance now has native project sources.
 #   (#KernelBootstrapV0/GROUND)
 # - 2026-09-30 23:00 [python-coder]: The end-to-end test expects the knowledge-map sources to be
