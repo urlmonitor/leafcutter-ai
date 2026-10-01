@@ -74,3 +74,30 @@ live check of the decision-records goal against this worktree.
 Authoritative list is the commit; see `git log` for `#KernelDecisionStore`.
 
 ## Comments
+
+### 2026-10-01 16:40 — python-coder (status: ok)
+feedback-id: fb_2026-10-01_b8d1b96d
+
+Built in two commits. Part 1 (the store): ADR-059, ADR-060, ADR-061, the record schema, the
+`kernel/memory/` package, the `decisions validate|index|publish` CLI, record
+`dec-ef8ddcb79d668a67` (staged through the real builder and published through the real CLI, then
+validated) and the how-to. Part 2 and 3 (the learning loop and the proof): staging, precedent,
+the confirm question, the six round-8 fixes, the offline three-run test and the live check.
+
+Deviations from the brief, both deliberate:
+- **No `decisions` surface in `config/paths.json`.** The commit-msg hook
+  `check-package-surface-declaration` refuses a new `config/paths.json` entry unless a cited
+  acceptance criterion carries `package_surface: true`, and this ticket has no ACs by user
+  decision. The knowledge map already reads `docs/decisions/*.yaml` through the existing `docs`
+  surface (id, title, component edges; a test asserts it). The dedicated surface would add the
+  `supersedes`, `superseded_by` and `related` edges. To add it later, author the AC, then add to
+  `surfaces` in `config/paths.json`: `"decisions": {"path": "docs/decisions/", "edge_fields":
+  ["components", "supersedes", "superseded_by", "related"], "_optional": true}`.
+- **Retrieval benchmark re-baselined for three cases.** The benchmark measures the lexical stage
+  over the real checkout, and the checkout now holds the decision store (ADR-059..061, the
+  how-to, `kernel/memory/`), which answers exactly what those goals ask. No ranking code changed;
+  the fixture notes say which results moved and why.
+
+Open: the `decision` capability's `side_effect_class` is now `run_artifacts` (it stages a record
+in the run root). `docs/decisions` is not a retrieval source: precedent comes through the memory
+port, so ordinary research does not see records as `prior_decisions` evidence.

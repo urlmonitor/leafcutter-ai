@@ -92,6 +92,8 @@ class Collected:
     unknowns: list[str] = field(default_factory=list)
     #: Per need, the ids of its kept evidence that passed relevance (what an answer is judged on).
     need_evidence: dict[str, list[str]] = field(default_factory=dict)
+    #: Per need, the retrieval cut notes its child reported (summarised by the decision).
+    need_notes: dict[str, list[str]] = field(default_factory=dict)
     unanswered: list[str] = field(default_factory=list)
 
     def add_contradictions(self, items: list[Contradiction]) -> None:

@@ -70,18 +70,18 @@ def _outcome(p: float, cfg: DecisionConfig) -> Literal["pass", "fail", "uncertai
 def build_assessments(work: Working, a: Assessment, cfg: DecisionConfig
                       ) -> list[CriterionAssessment]:
     """Return the explicit per-criterion assessments (sufficiency and per-option), with raw p."""
-    ids = work.evidence_ids
     out: list[CriterionAssessment] = []
     for c in work.usable_criteria:
         p = a.sufficient[c.id]
         out.append(CriterionAssessment(
             criterion_id=c.id, outcome="pass" if p >= cfg.sufficiency_threshold else "uncertain",
-            evidence_ids=ids, provider_answer=ProviderAnswer(
+            evidence_ids=work.evidence_for(c), provider_answer=ProviderAnswer(
                 probabilities={"sufficient": p}, confidence=a.sufficient_confidence[c.id])))
         for o in work.usable_options:
             q = a.satisfies[(c.id, o.id)]
             out.append(CriterionAssessment(
-                criterion_id=c.id, option_id=o.id, outcome=_outcome(q, cfg), evidence_ids=ids,
+                criterion_id=c.id, option_id=o.id, outcome=_outcome(q, cfg),
+                evidence_ids=work.evidence_for(c, o),
                 provider_answer=ProviderAnswer(
                     probabilities={"satisfies": q},
                     confidence=a.satisfies_confidence[(c.id, o.id)])))
@@ -232,6 +232,8 @@ def combine(work: Working, a: Assessment, cfg: DecisionConfig) -> Verdict:
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-01 [python-coder]: A criterion assessment cites the evidence relevant to that
+#   criterion (and option), not every evidence id (round 8 defect e). (#KernelDecisionStore)
 # - 2026-10-01 [python-coder]: A design judgement no longer ranks at once: while a targeted
 #   research round is due (ranking.design_round_due) combine asks for it (needs_evidence, reason
 #   design_round), and the budget gate may still turn that into the ranked question.

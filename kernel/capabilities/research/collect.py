@@ -27,6 +27,7 @@ from kernel.capabilities.decision.jev_support import (
     make_batch,
     noul_question,
 )
+from kernel.capabilities.research.limitations import is_cut_note
 from kernel.capabilities.research.state import UNLOCALISED, Collected, ResearchContinuation
 from kernel.contracts import schema_ids
 from kernel.contracts.capability import Usage
@@ -83,6 +84,10 @@ def _absorb_bundle(out: Collected, payload: dict, bar: float) -> None:
     out.add_contradictions(bundle.contradictions)
     known = {f.id for f in out.findings}
     out.findings += [f for f in bundle.findings if f.id not in known]
+    if len(bundle.coverage) == 1:  # a single-need child: its cut notes belong to that need
+        (need,) = bundle.coverage
+        notes = [x for x in bundle.limitations if is_cut_note(x)]
+        out.need_notes[need] = list(dict.fromkeys([*out.need_notes.get(need, []), *notes]))
     out.limitations += bundle.limitations
     out.truncated = out.truncated or bundle.truncated
 
@@ -257,6 +262,9 @@ def record_contradiction(ctx: ExecutionContext, out: Collected, probability: flo
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-01 [python-coder]: The bundle keeps every limitation line (nothing is lost) and also
+#   names, per need, the retrieval cut notes of that need, so a decision can show one summary line
+#   per need instead of dozens (round 8 defect d). (#KernelDecisionStore)
 # - 2026-10-01 [python-coder]: thin_coverage names why evidence cannot answer by itself (a partial
 #   or open need, or no satisfied need) so the research graph asks the host to synthesize on
 #   coverage as well as on Jev's `evaluable` judgement. (#KernelV01/F)

@@ -31,6 +31,23 @@
        "path": "kernel/persistence/gap_store.py"
       }
      ]
+    },
+    {
+     "name": "the decision store (ADR-059, kernel/memory)",
+     "any_of": [
+      {
+       "path": "docs/architecture/adrs/ADR-059-decision-store-reviewable-yaml-records-now-graph-later.md"
+      },
+      {
+       "path": "kernel/memory/file_store.py"
+      },
+      {
+       "path": "kernel/memory/port.py"
+      },
+      {
+       "path": "docs/how-to/file-and-reuse-decisions-with-the-kernel.md"
+      }
+     ]
     }
    ],
    "must_not_dominate": [
@@ -61,7 +78,8 @@
     "pool_position": {
      "design-3 section Persistence layout": null,
      "kernel/persistence/run_store.py": 24,
-     "kernel/persistence/gap_store.py": null
+     "kernel/persistence/gap_store.py": null,
+     "the decision store (ADR-059, kernel/memory)": null
     },
     "crowding": {
      "commit_guardian.json": 1,
@@ -71,21 +89,20 @@
      "tickets/": 0
     },
     "judged": {
-     "reached": [
-      "kernel/persistence/run_store.py"
-     ],
+     "reached": [],
      "calls": 2
     }
    },
    "current": {
     "round": "F",
     "reached": [
-     "kernel/persistence/gap_store.py"
+     "the decision store (ADR-059, kernel/memory)"
     ],
     "pool_position": {
-     "design-3 section Persistence layout": 38,
-     "kernel/persistence/run_store.py": 28,
-     "kernel/persistence/gap_store.py": 16
+     "design-3 section Persistence layout": 33,
+     "kernel/persistence/run_store.py": null,
+     "kernel/persistence/gap_store.py": null,
+     "the decision store (ADR-059, kernel/memory)": 1
     },
     "crowding": {
      "commit_guardian.json": 0,
@@ -96,13 +113,12 @@
     },
     "judged": {
      "reached": [
-      "design-3 section Persistence layout",
-      "kernel/persistence/run_store.py",
-      "kernel/persistence/gap_store.py"
+      "the decision store (ADR-059, kernel/memory)"
      ],
-     "calls": 2
+     "calls": 1
     }
-   }
+   },
+   "corpus_drift": "Re-baselined when the decision store landed (#KernelDecisionStore): the checkout now holds the answer to this goal (ADR-059..061, the how-to, kernel/memory), which takes the first batch; kernel/persistence/run_store.py and gap_store.py left the 60-candidate pool and stay listed as gaps. The recorded round E judged result lost run_store.py for the same reason. No ranking code changed."
   },
   {
    "id": "goal2_where_tests_are_saved",
@@ -317,12 +333,12 @@
     ],
     "pool_position": {
      "kernel/contracts/decision.py (cited)": 1,
-     "docs/components.json (filter terms)": 2,
+     "docs/components.json (filter terms)": 7,
      "Stage-0 delta part 4": null,
      "concept part 3 or 4 body": null
     },
     "crowding": {
-     "commit_guardian.json": 1,
+     "commit_guardian.json": 0,
      "agent_registry": 0,
      "test-angles": 0,
      "docs/acceptance-criteria/": 1,
@@ -333,9 +349,10 @@
       "kernel/contracts/decision.py (cited)",
       "docs/components.json (filter terms)"
      ],
-     "calls": 1
+     "calls": 2
     }
-   }
+   },
+   "corpus_drift": "Re-measured when the decision store landed (#KernelDecisionStore): the loop needs one more rerank call because the decision store's own files rank ahead. No ranking code changed."
   },
   {
    "id": "lessons_thresholds_config",
@@ -475,9 +492,7 @@
    ],
    "baseline": {
     "round": "E (cd2fd56c)",
-    "reached": [
-     "design-4 section Decision capability"
-    ],
+    "reached": [],
     "pool_position": {
      "kernel/capabilities/decision/approvals.py": 51,
      "design-4 section Decision capability": 3
@@ -499,18 +514,17 @@
    "current": {
     "round": "F",
     "reached": [
-     "kernel/capabilities/decision/approvals.py",
-     "design-4 section Decision capability"
+     "kernel/capabilities/decision/approvals.py"
     ],
     "pool_position": {
-     "kernel/capabilities/decision/approvals.py": 6,
-     "design-4 section Decision capability": 15
+     "kernel/capabilities/decision/approvals.py": 5,
+     "design-4 section Decision capability": 26
     },
     "crowding": {
      "commit_guardian.json": 0,
      "agent_registry": 0,
      "test-angles": 0,
-     "docs/acceptance-criteria/": 2,
+     "docs/acceptance-criteria/": 1,
      "tickets/": 0
     },
     "judged": {
@@ -518,9 +532,10 @@
       "kernel/capabilities/decision/approvals.py",
       "design-4 section Decision capability"
      ],
-     "calls": 2
+     "calls": 3
     }
-   }
+   },
+   "corpus_drift": "Re-baselined when the decision store landed (#KernelDecisionStore): approval and provenance are now also the subject of ADR-060, kernel/memory/builder.py and staging.py, which take first-batch places; the design-4 section Decision capability fell from pool position 15 to 26 (the loop still judges it, in one more call). No ranking code changed."
   }
  ]
 }

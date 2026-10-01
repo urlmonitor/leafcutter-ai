@@ -17,7 +17,13 @@ from typing import Any
 
 from kernel.contracts.capability import ErrorInfo, Usage
 from kernel.contracts.enums import ObservabilityStatus, RunStatus
-from kernel.contracts.run import CapabilityGap, RunEnvelope, TraceRefs, UsageSummary
+from kernel.contracts.run import (
+    CapabilityGap,
+    RunEnvelope,
+    TraceRefs,
+    UsageSummary,
+    with_trace_refs,
+)
 from kernel.interaction import pending_packet
 from kernel.observability.tracer import TraceState
 from kernel.persistence.base import RunRecord
@@ -106,10 +112,13 @@ def build_envelope(record: RunRecord, values: Mapping[str, Any], *,
     if status is RunStatus.FAILED and not errors:
         errors = _failure_errors(diagnostics)
     shown = trace or record.trace
+    refs = TraceRefs(trace_id=shown.trace_id if shown else None,
+                     trace_url=shown.trace_url if shown else None, observability=observability)
+    output = outcome.output if outcome and status is RunStatus.COMPLETED else None
     return RunEnvelope(
         run_id=record.run_id, root_task_id=values.get("root_task_id") or record.root_task_id,
         state_revision=values.get("state_revision", record.state_revision), status=status,
-        output=outcome.output if outcome and status is RunStatus.COMPLETED else None,
+        output=with_trace_refs(output, refs),
         report_ref=(report_path or outcome.report_ref) if outcome else None,
         decision_ids=sorted(values.get("decisions", {})),
         evidence_ids=sorted(values.get("evidence", {})),
@@ -118,9 +127,7 @@ def build_envelope(record: RunRecord, values: Mapping[str, Any], *,
         limitations=limitations,
         gaps=reconcile_gaps(list(values.get("gaps", {}).values()), stored_gaps or []),
         usage_summary=_usage(values), errors=errors,
-        trace_refs=TraceRefs(trace_id=shown.trace_id if shown else None,
-                             trace_url=shown.trace_url if shown else None,
-                             observability=observability))
+        trace_refs=refs)
 
 
 def _failure_errors(diagnostics: list[str] | None) -> list[ErrorInfo]:
@@ -132,6 +139,8 @@ def _failure_errors(diagnostics: list[str] | None) -> list[ErrorInfo]:
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-01 [python-coder]: A decision report's output carries the envelope's trace_refs, so the
+#   payload says where its trace is (round 8 defect b). (#KernelDecisionStore)
 # - 2026-10-01 [python-coder]: A degraded export adds an `observability_degraded: <reason>` limitation
 #   so the envelope says why telemetry was not delivered. (#KernelV01/C)
 # - 2026-10-01 23:00 [python-coder]: The usage rows come from the per-provider rows the budgets

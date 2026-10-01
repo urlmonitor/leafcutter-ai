@@ -34,6 +34,7 @@ from kernel.contracts import (
     SemanticType,
     SourceKind,
     Task,
+    TraceRefs,
     UnknownSchemaError,
     WorkItem,
     WorkItemStatus,
@@ -43,8 +44,10 @@ from kernel.contracts import (
     schema_ids,
     validate_payload,
     validate_semantics,
+    with_trace_refs,
 )
 from kernel.contracts.evidence import EvidenceInput
+from kernel.intent.decision_text import ReportContext
 from kernel.intent.report_text import (
     can_do_hint,
     has_plain_reason,
@@ -222,7 +225,9 @@ def render_report_md(state: KernelState, outcome: RunOutcome) -> str:
     lines.append("")
     lines += stop_explanation(outcome.status.value, outcome.limitations, outcome.diagnostics)
     if outcome.output is not None:
-        lines += output_sections(outcome.output.schema_id, outcome.output.payload)
+        context = ReportContext(decisions=list(state.get("decisions", {}).values()),
+                                evidence=state.get("evidence", {}))
+        lines += output_sections(outcome.output.schema_id, outcome.output.payload, context)
         lines += ["## Output", "", f"Schema: `{outcome.output.schema_id}`", "", "```json",
                   json.dumps(outcome.output.payload, indent=2, sort_keys=True), "```", ""]
     for title, entries in (("Limitations", outcome.limitations),
@@ -262,7 +267,12 @@ def _write_report(runtime: KernelRuntime, state: KernelState, outcome: RunOutcom
 async def finalize(state: KernelState, runtime: Runtime[KernelRuntime]) -> dict[str, Any]:
     """Decide and record the terminal outcome of the run."""
     ctx = runtime.context
-    outcome = _write_report(ctx, state, decide_outcome(state))
+    decided = decide_outcome(state)
+    trace = ctx.trace or state.get("trace")
+    if decided.output is not None and trace is not None:
+        refs = TraceRefs(trace_id=trace.trace_id, trace_url=trace.trace_url)
+        decided = decided.model_copy(update={"output": with_trace_refs(decided.output, refs)})
+    outcome = _write_report(ctx, state, decided)
     event = new_event(state["run_id"], ctx.clock(), "run.finished", outcome.status.value)
     ctx.tracer.event("run.finalized", run_corr(state), payload={
         "status": outcome.status.value, "limitation_count": len(outcome.limitations),
@@ -280,6 +290,9 @@ __all__ = ["IntakeError", "decide_outcome", "finalize", "intake", "render_report
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-01 [python-coder]: finalize fills the decision report's trace_refs from the segment's
+#   trace (round 8 defect b) and report.md renders a Decision section (defect c).
+#   (#KernelDecisionStore)
 # - 2026-10-01 [python-coder]: A budget or guard stop is a plain reason: no `can_do` rephrasing
 #   hint, and the report names the budget and what the user can do. (#KernelV01/E)
 # - 2026-10-02 [python-coder]: mypy: intake narrows the optional payload once; open questions are read as a list (#KernelBootstrapV0/GROUND)

@@ -12,9 +12,15 @@ ARCHITECTURE: DecisionContinuation is the JSON-serialisable part (frozen Pydanti
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from datetime import datetime
 
 from pydantic import Field
 
+from kernel.capabilities.criterion_evidence import (
+    criterion_text,
+    option_text,
+    relevant_evidence_ids,
+)
 from kernel.contracts.base import KernelModel, canonical_json, sha256_hex
 from kernel.contracts.capability import Usage
 from kernel.contracts.decision import Criterion, Option, OptionRanking
@@ -25,6 +31,8 @@ from kernel.contracts.enums import (
     ProposalStatus,
 )
 from kernel.contracts.evidence import Evidence
+from kernel.memory.models import PrecedentNote
+from kernel.memory.port import DecisionHit
 
 
 class DecisionContinuation(KernelModel):
@@ -61,6 +69,17 @@ class DecisionContinuation(KernelModel):
     design_ranking: list[OptionRanking] = Field(default_factory=list)
     design_reason: str = ""
     design_choice_id: str | None = None
+    #: Precedent (earlier approved decisions): looked up once, judged by Jev, never authority.
+    precedent_checked: bool = False
+    precedents: list[PrecedentNote] = Field(default_factory=list)
+    #: The precedent offered for reuse, the title of the option it chose, and the human's answer
+    #: (`reuse` or `decide_anew`).
+    precedent_offer_id: str | None = None
+    precedent_offer_option: str | None = None
+    precedent_offer_evidence: str | None = None
+    precedent_choice: str | None = None
+    #: When the human last approved something in this decision (ISO, UTC); the record's approved_at.
+    approved_at: str | None = None
 
 
 #: Prefix of the ids of options a human added at approval (their claims are unverified).
@@ -113,7 +132,15 @@ class Working:
     #: Whether generated options must cite evidence, and how much evidence one request carries.
     require_grounding: bool = True
     evidence_cap: int = 12
-
+    #: The invocation's clock reading (human answers are stamped with it).
+    now: datetime | None = None
+    #: Precedent candidates found at the start of this invocation and not judged yet, and the
+    #: evidence items this invocation created (the result hands them to the kernel).
+    precedent_hits: list[DecisionHit] = field(default_factory=list)
+    new_evidence: list[Evidence] = field(default_factory=list)
+    #: How many evidence ids a criterion assessment cites, and the words it must share (config).
+    cite_max: int = 5
+    cite_overlap: int = 2
     @property
     def usable_options(self) -> list[Option]:
         """Options that may be selected."""
@@ -145,6 +172,13 @@ class Working:
         """True if at least one evidence item is more than an existing implementation pattern."""
         return any(e.category is not EvidenceCategory.EXISTING_PATTERNS for e in self.evidence)
 
+    def evidence_for(self, criterion: Criterion, option: Option | None = None) -> list[str]:
+        """Return the evidence ids that bear on a criterion (and an option), not all of them."""
+        text = criterion_text(criterion) + (f" {option_text(option)}" if option else "")
+        return relevant_evidence_ids(self.evidence, text, limit=self.cite_max,
+                                     min_overlap=self.cite_overlap,
+                                     cited=option.source_refs if option else ())
+
     def revision(self) -> str:
         """Return the evidence revision: changes whenever any input to Jev changes."""
         c = self.cont
@@ -156,6 +190,9 @@ class Working:
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-01 [python-coder]: The continuation keeps what precedent said (judgements, the reuse
+#   offer and the human's answer) and when the human approved, so a record can be staged with
+#   full provenance after any number of pauses. (#KernelDecisionStore)
 # - 2026-10-01 [python-coder]: The continuation keeps the last assessment's scores, the ranking
 #   shown to the human and the human's choice, so the design-decision ending needs no new Jev
 #   call after the human answers. (#KernelV01/A)

@@ -14,6 +14,7 @@ ARCHITECTURE: Reads the real repository files; writes nothing. The knowledge-map
 from __future__ import annotations
 
 import json
+import os
 import subprocess
 import sys
 import unittest
@@ -57,7 +58,8 @@ class TestCommittedStore(unittest.TestCase):
         done = subprocess.run(  # noqa: S603 - fixed argv, repo script
             [sys.executable, str(CHECKOUT / "scripts" / "knowledge_query.py"), "--format", "json",
              "--edges", "--project-root", str(CHECKOUT)],
-            capture_output=True, text=True, encoding="utf-8", check=False, timeout=120)
+            capture_output=True, text=True, encoding="utf-8", errors="replace", check=False,
+            timeout=120, env={**os.environ, "PYTHONUTF8": "1"})
         self.assertEqual(done.returncode, 0, done.stderr)
         document = json.loads(done.stdout)
         nodes = {n["id"]: n for n in document["nodes"] if n["id"].startswith("dec-")}

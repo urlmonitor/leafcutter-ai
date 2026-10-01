@@ -190,6 +190,10 @@ class Finding(PersistedModel):
         return self
 
 
+#: Id prefix of a need that checks the claims of one option (`need.claim.<option id>`).
+CLAIM_NEED_PREFIX = "need.claim."
+
+
 class EvidenceNeed(KernelModel):
     """A piece of evidence the run still needs, with its resolution status."""
 
@@ -242,11 +246,18 @@ class EvidenceBundlePayload(BundleBody):
     findings: list[Finding] = Field(default_factory=list)
     #: What a synthesis said it could not find (gaps the next round can aim a query at).
     unknowns: list[str] = Field(default_factory=list)
+    #: Per need id, the ids of its evidence that passed relevance (a claim need names its option).
+    need_evidence: dict[str, list[str]] = Field(default_factory=dict)
+    #: Per need id, the retrieval cut notes of that need (a decision summarises them per need).
+    need_limitations: dict[str, list[str]] = Field(default_factory=dict)
 
 
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-01 [python-coder]: EvidenceBundlePayload.need_evidence maps a need to the evidence that
+#   passed relevance for it, so a decision can cite a claim need's evidence on its option.
+#   (#KernelDecisionStore)
 # - 2026-10-01 [python-coder]: The bundle payload carries the unknowns a synthesis named, so the
 #   decision can turn them into targeted research. (#KernelV01/D)
 # - 2026-10-01 23:00 [python-coder]: One excerpt fetched for several needs keeps the non-pattern
