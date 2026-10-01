@@ -147,7 +147,7 @@ class TestPlanning(ResearchCase):
                           else "repo.principles", payload.source_ids)
 
     def test_need_without_native_source_becomes_host_research_child(self) -> None:
-        self.params["need"] = {"authoritative_guidance": 0.9}
+        self.params["need"] = {"external_practices": 0.9}
         cfg = load_kernel_config()
         result = self.run_research(self.goal(), self.ctx(cfg))
         request = result.requests[0]
@@ -162,13 +162,13 @@ class TestPlanning(ResearchCase):
         self.assertEqual(ops, {"retrieve"})
 
     def test_host_disabled_makes_the_need_unavailable_and_ends_without_children(self) -> None:
-        self.params["need"] = {"authoritative_guidance": 0.9}
+        self.params["need"] = {"external_practices": 0.9}
         base = load_kernel_config()
         cfg = base.model_copy(update={"host": base.host.model_copy(update={"enabled": False})})
         result = self.run_research(self.goal(), self.ctx(cfg))
         bundle = self.bundle(result)
         self.assertEqual(result.status, ResultStatus.PARTIAL)
-        self.assertEqual(bundle.coverage["need.authoritative_guidance"], NeedStatus.UNAVAILABLE)
+        self.assertEqual(bundle.coverage["need.external_practices"], NeedStatus.UNAVAILABLE)
         reasons = [u.reason for u in bundle.unavailable_sources]
         self.assertIn("host research is disabled", reasons)
 
@@ -391,6 +391,8 @@ if __name__ == "__main__":
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-02 [python-coder]: the host-only examples use external_practices: authoritative_guidance now has native project sources.
+#   (#KernelBootstrapV0/GROUND)
 # - 2026-09-30 23:00 [python-coder]: The end-to-end test expects the knowledge-map sources to be
 #   listed as unavailable (the temp repository has no scripts/) while the needs are still
 #   satisfied by the reachable sources. (#KernelBootstrapV0/P5)

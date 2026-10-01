@@ -62,7 +62,7 @@ class TestEachKindRoutesCorrectly(IntentCase):
         self.intents = [("evidence", *SURE)]
         envelope = await self.service().start_run(self.goal_task(TESTS))
         text = self.report_text(envelope)
-        self.assertIn("## Findings", text)
+        self.assertTrue("## Findings" in text or "## Key evidence" in text, text)
         self.assertIn("## Sources", text)
         self.assertIn("ADR-900", text)
 
@@ -328,6 +328,8 @@ if __name__ == "__main__":
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-02 [python-coder]: a findings-less evidence report shows a Key evidence section instead of Findings.
+#   (#KernelBootstrapV0/GROUND)
 # - 2026-10-01 23:00 [python-coder]: The fixture repository gets an acceptance-criteria document:
 #   a decision with unknown options is grounded in repository evidence now, and a repository
 #   without any blocks it as ungrounded. (#KernelBootstrapV0/GROUND)
