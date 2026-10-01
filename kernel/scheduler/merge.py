@@ -154,7 +154,8 @@ def child_outcomes(item: WorkItem, items: Mapping[str, WorkItem],
         out.append(ChildOutcome(
             work_item_id=ref, request_kind=request.kind, status=_AS_RESULT[child.status],
             output_schema_id=result.output_schema_id if result else None,
-            result_ref=result_artifact_name(child.result_ref) if result else None,
+            result_ref=result_artifact_name(child.result_ref) if result and child.result_ref
+            else None,
             priority=request.priority, current_wait=not current or ref in current,
             actor_id=next((e.provenance.actor for e in result.evidence
                            if e.provenance.actor), None) if result else None))
@@ -200,7 +201,7 @@ def create_children(draft: Draft, parent: WorkItem,
     created: list[str] = []
     for proposal, key in accepted:
         seq = len(draft.requests)
-        stamps = {"created_at": draft.now, "updated_at": draft.now, "created_seq": seq}
+        stamps: dict[str, Any] = {"created_at": draft.now, "updated_at": draft.now, "created_seq": seq}
         request = Request(id=new_id("req"), origin_work_item_id=parent.id, dedup_key=key,
                           **stamps, **proposal.model_dump(exclude={"schema_version"}))
         item = WorkItem(id=new_id("work"), root_task_id=parent.root_task_id,

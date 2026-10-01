@@ -27,7 +27,7 @@ from kernel.capabilities.decision.state import Working, version_of
 from kernel.contracts import schema_ids
 from kernel.contracts.base import new_id
 from kernel.contracts.capability import CapabilityResult
-from kernel.contracts.decision import Decision, Rationale
+from kernel.contracts.decision import Criterion, Decision, Option, Rationale
 from kernel.contracts.enums import (
     ApprovalStatus,
     DecisionStatus,
@@ -175,7 +175,7 @@ def resolved_result(invocation: CapabilityInvocation, work: Working, verdict: Ve
     text = (f"Option [{option.id}] {option.title} satisfies the required criteria "
             f"{required} according to evidence {work.evidence_ids}.")
     rationale = Rationale(text=text, origin="template")
-    used = [*work.usable_options, *work.usable_criteria]
+    used: list[Option | Criterion] = [*work.usable_options, *work.usable_criteria]
     approved = (work.cont.decision_approved or any(
         i.proposal_status is ProposalStatus.PROPOSED for i in used))
     approval = ApprovalStatus.APPROVED if approved else ApprovalStatus.NOT_REQUIRED
@@ -203,6 +203,7 @@ def emit_followup(invocation: CapabilityInvocation, work: Working, followup: Fol
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-02 [python-coder]: mypy: the used items are typed as options or criteria (#KernelBootstrapV0/GROUND)
 # - 2026-10-01 23:00 [python-coder]: The decision record uses the stable decision id, so the
 #   scheduler merges every status of one decision into a single record. (#KernelBootstrapV0/GROUND)
 # - 2026-10-01 02:00 [python-coder]: The decision-approval request key carries the revision so a

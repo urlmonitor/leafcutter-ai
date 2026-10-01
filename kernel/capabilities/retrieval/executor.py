@@ -68,10 +68,10 @@ def select_sources(ctx: ExecutionContext, request: RetrievalRequestPayload
         if eligible:
             chosen.append(source)
     for source_id in sorted(asked):
-        source = catalog.get(source_id)
-        if source is None:
+        declared = catalog.get(source_id)
+        if declared is None:
             unavailable.append(UnavailableSource(source_id=source_id, reason="unknown source"))
-        elif source.kind not in NATIVE_KINDS:
+        elif declared.kind not in NATIVE_KINDS:
             unavailable.append(UnavailableSource(source_id=source_id,
                                                  reason="not a native repository source"))
     return chosen, unavailable
@@ -277,6 +277,7 @@ class RepositoryRetrievalExecutor:
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-02 [python-coder]: mypy: the requested-source loop variable no longer reuses the catalog loop's name (#KernelBootstrapV0/GROUND)
 # - 2026-10-01 23:00 [python-coder]: Candidates are merged round-robin across sources instead of
 #   by raw hit count: with the project-metadata sources the 4468-file acceptance-criteria store
 #   crowded tests/README.md out of the bounded list in a live run. (#KernelBootstrapV0/GROUND)

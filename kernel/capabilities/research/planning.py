@@ -17,6 +17,8 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from pydantic import JsonValue
+
 from kernel.capabilities.base import ExecutionContext
 from kernel.capabilities.decision.jev_support import ask_jev, make_batch, noul_question
 from kernel.capabilities.research.state import Plan
@@ -61,7 +63,7 @@ async def plan_needs(ctx: ExecutionContext, invocation: CapabilityInvocation, pl
     if not remaining:
         return needs, []
     described = ctx.config.research.category_descriptions
-    state = {"question": plan.question,
+    state: dict[str, JsonValue] = {"question": plan.question,
              "categories": {c.value: described[c] for c in remaining}}
     questions = [noul_question(
         f"need.{c.value}", "research.need",

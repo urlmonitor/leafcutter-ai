@@ -28,7 +28,7 @@ from kernel.capabilities.host.spec import (
     Mask,
     TaskInputs,
 )
-from kernel.contracts import CapabilityResult, ResultStatus
+from kernel.contracts import CapabilityResult, ErrorInfo, ResultStatus
 from kernel.contracts.base import KernelModel
 
 logger = logging.getLogger(__name__)
@@ -39,7 +39,7 @@ def invalid_output(ctx: HostConversion, message: str) -> CapabilityResult:
     return CapabilityResult(
         invocation_id=ctx.invocation.id, work_item_id=ctx.packet.work_item_id,
         status=ResultStatus.FAILED,
-        error={"code": INVALID_OUTPUT_CODE, "retryable": False, "message": message})
+        error=ErrorInfo(code=INVALID_OUTPUT_CODE, retryable=False, message=message))
 
 
 class HostOperation:
@@ -109,6 +109,7 @@ class GenericHostOperation(HostOperation):
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-02 [python-coder]: mypy: failed results carry an ErrorInfo, not a dict (#KernelBootstrapV0/GROUND)
 # - 2026-10-01 11:10 [python-coder]: `convert` is total by construction (validation failure
 #   returns a failed result with retryable=false): it runs inside `await_interaction` after the
 #   submission was accepted, where a raise would crash the graph run. (#KernelBootstrapV0/P8)

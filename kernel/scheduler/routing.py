@@ -12,6 +12,9 @@ ARCHITECTURE: Pure helpers plus one async function that calls the JevPort. Thres
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from typing import TypedDict
+
+from pydantic import JsonValue
 
 from kernel.config import KernelConfig, RoutingConfig
 from kernel.contracts import CorrelationIds, RoutingOutcome, Usage
@@ -24,6 +27,7 @@ from kernel.providers.base import (
     JevPort,
     JevUnavailable,
     QuestionSpec,
+    json_strings,
 )
 from kernel.registry.eligibility import EligibilityReport
 
@@ -46,6 +50,14 @@ class RouteEntry:
     clarifications: list[str] = field(default_factory=list)
     #: True for a root whose answer kind was classified: one eligible candidate is then enough.
     intent_bound: bool = False
+
+
+class _Answered(TypedDict):
+    """The answer fields every interpreted outcome carries."""
+
+    probabilities: dict[str, float]
+    confidence: float | None
+    jev_called: bool
 
 
 @dataclass
@@ -87,19 +99,21 @@ def deterministic_result(report: EligibilityReport, intent_bound: bool = False
     return None
 
 
-def _request_state(entry: RouteEntry) -> dict:
+def _request_state(entry: RouteEntry) -> dict[str, JsonValue]:
     """Return the JSON state describing one request for the routing question."""
     body = entry.request
     return {"kind": body.kind.value, "goal": body.goal or "", "question": body.question or "",
-            "payload_schema": body.payload_schema, "payload_keys": sorted(body.payload),
-            "clarifications": list(entry.clarifications)}
+            "payload_schema": body.payload_schema,
+            "payload_keys": json_strings(sorted(body.payload)),
+            "clarifications": json_strings(entry.clarifications)}
 
 
 def build_batch(entries: list[RouteEntry], goal: str, component_ids: list[str],
                 corr: CorrelationIds) -> JevBatch:
     """Build one JevBatch with a choice question per entry (`route.<work_item_id>`)."""
-    state = {"task": {"goal": goal, "component_ids": sorted(component_ids)},
-             "requests": {e.item_id: _request_state(e) for e in entries}}
+    state: dict[str, JsonValue] = {
+        "task": {"goal": goal, "component_ids": json_strings(sorted(component_ids))},
+        "requests": {e.item_id: _request_state(e) for e in entries}}
     questions = []
     for entry in entries:
         criteria = {d.id: d.description for d in entry.report.semantic_candidates}
@@ -122,8 +136,8 @@ def interpret_answer(answer: ChoiceAnswer, candidate_ids: list[str], cfg: Routin
     Raises:
         JevInvalidResponse: The answer names an id outside the offered candidates.
     """
-    base = {"probabilities": dict(answer.probabilities), "confidence": answer.confidence,
-            "jev_called": True}
+    base: _Answered = {"probabilities": dict(answer.probabilities),
+                       "confidence": answer.confidence, "jev_called": True}
     if answer.choice == NONE_ID:
         return RouteResult(RoutingOutcome.NO_MATCH, reason_codes=["jev_none"], **base)
     if answer.choice == NEEDS_CONTEXT_ID:
@@ -205,6 +219,7 @@ async def route_semantic(jev: JevPort, entries: list[RouteEntry], *, goal: str,
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-02 [python-coder]: mypy: the shared answer fields are a TypedDict so **base is checked. (#KernelBootstrapV0/GROUND)
 # - 2026-10-01 22:00 [python-coder]: A classified root with exactly one eligible candidate is
 #   selected deterministically (reason `intent_bound`); the answer-kind classification already
 #   was the bounded semantic choice (ADR-053: deterministic first). (#KernelBootstrapV0/INTENT)

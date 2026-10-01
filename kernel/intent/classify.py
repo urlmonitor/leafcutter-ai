@@ -15,6 +15,9 @@ ARCHITECTURE: Pure helpers plus one async function over the JevPort. No schedule
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from typing import TypedDict
+
+from pydantic import JsonValue
 
 from kernel.config import IntentConfig
 from kernel.contracts import CorrelationIds, RoutingOutcome, Usage, schema_ids
@@ -26,6 +29,7 @@ from kernel.providers.base import (
     JevPort,
     JevUnavailable,
     QuestionSpec,
+    json_strings,
 )
 
 INTENT_PURPOSE = "kernel.intent"
@@ -61,6 +65,14 @@ class ClarificationAnswer:
 
     text: str
     choice_id: str | None = None
+
+
+class _Answered(TypedDict):
+    """The answer fields every interpreted outcome carries."""
+
+    probabilities: dict[str, float]
+    confidence: float | None
+    jev_called: bool
 
 
 @dataclass
@@ -101,9 +113,10 @@ def chosen_kind(answers: list[ClarificationAnswer]) -> str | None:
 def build_batch(goal: str, answers: list[ClarificationAnswer], component_ids: list[str],
                 corr: CorrelationIds) -> JevBatch:
     """Build the single-question batch for the goal (as clarified, when answers exist)."""
-    state = {"task": {"goal": effective_goal(goal, answers),
-                      "component_ids": sorted(component_ids)},
-             "clarifications": [a.text for a in answers]}
+    state: dict[str, JsonValue] = {
+        "task": {"goal": effective_goal(goal, answers),
+                 "component_ids": json_strings(sorted(component_ids))},
+        "clarifications": json_strings(a.text for a in answers)}
     question = QuestionSpec(
         id=INTENT_QUESTION_ID, kind="choice", template_id=INTENT_TEMPLATE_ID,
         template_version=INTENT_TEMPLATE_REV, instructions=_INSTRUCTIONS, criteria=dict(_CRITERIA))
@@ -116,8 +129,8 @@ def interpret(answer: ChoiceAnswer, cfg: IntentConfig) -> IntentAssessment:
     Raises:
         JevInvalidResponse: The answer names something outside the offered kinds.
     """
-    base = {"probabilities": dict(answer.probabilities), "confidence": answer.confidence,
-            "jev_called": True}
+    base: _Answered = {"probabilities": dict(answer.probabilities),
+                       "confidence": answer.confidence, "jev_called": True}
     if answer.choice == NEEDS_CONTEXT_ID:
         return IntentAssessment(RoutingOutcome.INSUFFICIENT_CONTEXT,
                                 reason_codes=["jev_needs_context"], **base)
@@ -177,6 +190,7 @@ async def assess_intent(jev: JevPort, goal: str, answers: list[ClarificationAnsw
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-02 [python-coder]: mypy: the shared answer fields are a TypedDict so **base is checked. (#KernelBootstrapV0/GROUND)
 # - 2026-10-01 22:00 [python-coder]: A failed or invalid classification is `unavailable` and keeps
 #   the default decision contract rather than failing the run: the caller did not choose a
 #   contract, so classification is help, not a gate. (#KernelBootstrapV0/INTENT)

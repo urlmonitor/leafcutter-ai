@@ -23,7 +23,7 @@ from kernel.scheduler import guards
 from kernel.scheduler.context import KernelRuntime, flush_events, run_corr, sequential_node
 from kernel.scheduler.merge import Draft
 from kernel.scheduler.nodes_gaps import settle_gap_outcomes
-from kernel.scheduler.state import KernelState
+from kernel.scheduler.state import KernelState, root_item_id
 
 logger = logging.getLogger(__name__)
 
@@ -120,7 +120,7 @@ async def schedule(state: KernelState, runtime: Runtime[KernelRuntime]) -> dict[
     draft.budgets = draft.budgets.model_copy(update={
         "scheduler_iterations": draft.budgets.scheduler_iterations + 1})
     block_failed_dependencies(draft)
-    root = draft.items[state["task"].root_work_item_id]
+    root = draft.items[root_item_id(state)]
     root_done = root.status in guards.TERMINAL_STATUSES
     agenda = [] if root_done else ready_agenda(draft, limits.max_concurrent_native)
     trip = guards.check_run_guards(
@@ -137,7 +137,7 @@ async def schedule(state: KernelState, runtime: Runtime[KernelRuntime]) -> dict[
         draft.emit("guard.tripped", f"{trip.detail if trip else halt}{note}", guard=halt)
         ctx.tracer.event("guard.tripped", run_corr(state), level="WARNING",
                          payload={"guard": halt})
-        stop_unresolved(draft, state["task"].root_work_item_id, halt)
+        stop_unresolved(draft, root_item_id(state), halt)
     update = draft.update()
     if gaps:
         update["gaps"] = gaps
@@ -153,7 +153,7 @@ async def schedule(state: KernelState, runtime: Runtime[KernelRuntime]) -> dict[
 
 def after_schedule(state: KernelState) -> str:
     """Edge: finalize on halt or a terminal root, else route, else await, else finalize."""
-    root = state["work_items"][state["task"].root_work_item_id]
+    root = state["work_items"][root_item_id(state)]
     if state.get("halt_reason") or root.status in guards.TERMINAL_STATUSES:
         return "finalize"
     if state.get("agenda"):

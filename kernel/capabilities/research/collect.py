@@ -15,6 +15,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import cast
 
+from pydantic import JsonValue
+
 from kernel.capabilities.base import ExecutionContext
 from kernel.capabilities.decision.jev_support import (
     ask_jev,
@@ -129,7 +131,7 @@ async def judge(ctx: ExecutionContext, invocation: CapabilityInvocation, questio
             "Can `question` be answered directly from `evidence` without further analysis?"))
     if not questions:
         return Judgement(None, None, [])
-    state = {"question": question, "evidence": evidence_state(ctx, items),
+    state: dict[str, JsonValue] = {"question": question, "evidence": evidence_state(ctx, items),
              "findings": [f.claim for f in out.findings]}
     result = await ask_jev(ctx, invocation, make_batch(ctx, PURPOSE, state, questions))
     asked = {q.id for q in questions}
@@ -158,6 +160,7 @@ def record_contradiction(ctx: ExecutionContext, out: Collected, probability: flo
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-02 [python-coder]: Jev state dicts are typed as JSON values (#KernelBootstrapV0/GROUND)
 # - 2026-10-02 [python-coder]: Findings a host reported inside a child evidence bundle are merged
 #   into the final bundle (host-reported labels intact); only synthesis findings were before.
 #   (#KernelBootstrapV0/GROUND)

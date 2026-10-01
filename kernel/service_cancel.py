@@ -20,13 +20,14 @@ from __future__ import annotations
 
 import logging
 from datetime import datetime
-from typing import Any
+from typing import Any, cast
 
 from kernel.contracts.enums import RunStatus, WorkItemStatus
 from kernel.contracts.run import RunEvent
 from kernel.persistence.base import CancelInfo, RunRecord, RunStorePort
 from kernel.scheduler import guards
 from kernel.scheduler.nodes_lifecycle import decide_outcome
+from kernel.scheduler.state import KernelState
 
 logger = logging.getLogger(__name__)
 
@@ -132,7 +133,7 @@ async def close_paused_graph(session: Any, actor_id: str, now: datetime) -> dict
               "halt_reason": "cancelled"}
     update = {"work_items": changed,
               "status": RunStatus.CANCELLED, "halt_reason": "cancelled", "interaction_queue": [],
-              "outcome": decide_outcome(closed),
+              "outcome": decide_outcome(cast(KernelState, closed)),
               "state_revision": int(values.get("state_revision", 0)) + 1}
     await session.graph.aupdate_state(session.config, update, as_node="finalize")
     return dict((await session.graph.aget_state(session.config)).values)

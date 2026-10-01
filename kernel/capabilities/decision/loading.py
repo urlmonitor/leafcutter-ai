@@ -12,7 +12,7 @@ ARCHITECTURE: Child outputs are read through the artifact store (jev_support.loa
 
 from __future__ import annotations
 
-from typing import cast
+from typing import Any, cast
 
 from kernel.capabilities.base import ExecutionContext
 from kernel.capabilities.decision.approvals import apply_human_answer
@@ -58,8 +58,8 @@ def _payload_inputs(invocation: CapabilityInvocation, cont: DecisionContinuation
     if isinstance(model, GoalRequestPayload):
         options: list[Option] = []
         criteria: list[Criterion] = []
-        base = {"question": model.goal, "approval_required": False, "constraint_ids": [],
-                "evidence_ids": []}
+        base: dict[str, Any] = {"question": model.goal, "approval_required": False,
+                                "constraint_ids": [], "evidence_ids": []}
     else:
         model = cast(DecisionRequestPayload, model)
         options, criteria = list(model.options), list(model.criteria)
@@ -207,6 +207,7 @@ def load_working(invocation: CapabilityInvocation, ctx: ExecutionContext) -> Wor
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-02 [python-coder]: mypy: the payload base values are dict[str, Any] (#KernelBootstrapV0/GROUND)
 # - 2026-10-02 [python-coder]: Kernel-verified named options join the decision as supplied
 #   (usable) options. (#KernelBootstrapV0/GROUND)
 # - 2026-10-02 [python-coder]: Accepted findings are kept with their ids for the options packet.

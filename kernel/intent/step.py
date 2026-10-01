@@ -14,7 +14,7 @@ ARCHITECTURE: A mixin for the route node's `_Router`: it uses the router's draft
 
 from __future__ import annotations
 
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from kernel.contracts import (
     FallbackOutcome,
@@ -49,8 +49,34 @@ from kernel.intent.roots import (
 )
 
 
+if TYPE_CHECKING:  # the scheduler imports this package, so these are for the type checker only
+    from kernel.config import KernelConfig
+    from kernel.contracts import RequestProposal
+    from kernel.scheduler.context import KernelRuntime
+    from kernel.scheduler.merge import Draft
+    from kernel.scheduler.state import KernelState
+
+
 class IntentStep:
-    """Mixin: resolve the root's answer kind before the root is routed."""
+    """Mixin: resolve the root's answer kind before the root is routed.
+
+    It is mixed into the route node's router, which supplies the attributes declared below.
+    """
+
+    state: KernelState
+    ctx: KernelRuntime
+    cfg: KernelConfig
+    draft: Draft
+    assessments: dict[str, RoutingAssessment]
+    scope_rev: Any
+    task_update: Any
+    gaps: dict[str, Any]
+
+    if TYPE_CHECKING:
+        def _set(self, item: WorkItem, status: WorkItemStatus, *limits: str, **changes: Any
+                 ) -> None: ...
+
+        def _park(self, item: WorkItem, proposal: RequestProposal) -> bool: ...
 
     def answers_of(self, item: WorkItem) -> list[ClarificationAnswer]:
         """Return the human clarification answers given to an item, oldest first."""
@@ -174,6 +200,8 @@ class IntentStep:
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-02 [python-coder]: The mixin declares the attributes and methods the router supplies
+#   (type-checker only), so its use of them is checked. (#KernelBootstrapV0/GROUND)
 # - 2026-10-01 23:00 [python-coder]: A decline gap records output schema `none`: the kernel
 #   produces no report for it, and the classified kind is on the task. (#KernelBootstrapV0/GROUND)
 # - 2026-10-01 22:00 [python-coder]: The step lives in the route node (not intake) so a human

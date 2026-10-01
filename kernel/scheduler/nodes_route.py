@@ -35,6 +35,7 @@ from kernel.contracts import (
     new_id,
     sha256_hex,
 )
+from kernel.contracts.base import fail
 from kernel.contracts.work import Binding
 from kernel.observability.tracer import TraceState
 from kernel.registry.eligibility import filter_candidates
@@ -268,7 +269,7 @@ class _Router(IntentStep):
         outcome = result.outcome
         if outcome is RoutingOutcome.SELECTED:
             descriptor = self.state["registry"].get(str(result.selected))
-            self._bind_descriptor(item, descriptor, ref)
+            self._bind_descriptor(item, descriptor or fail("selected capability not in the registry"), ref)
         elif outcome is RoutingOutcome.NO_MATCH:
             self.draft.put_item(item, status=WorkItemStatus.DISPATCHED, routing_ref=ref)
             self.plan["gap"].append(item.id)
@@ -307,8 +308,8 @@ class _Router(IntentStep):
                 entries.append(RouteEntry(item.id, request, report,
                                           [a.text for a in self.answers_of(item)],
                                           intent_bound=bound and item.id == root_id))
-        results = {e.item_id: deterministic_result(e.report, e.intent_bound)
-                   for e in entries}
+        results: dict[str, RouteResult | None] = {
+            e.item_id: deterministic_result(e.report, e.intent_bound) for e in entries}
         semantic = [e for e in entries if results[e.item_id] is None]
         if semantic:
             routed, calls = await route_semantic(
@@ -323,6 +324,8 @@ class _Router(IntentStep):
                 usage, self.cfg.jev.price_per_input_token_usd)
         for entry in entries:
             result = results[entry.item_id]
+            if result is None:
+                fail("a semantic routing entry came back without a result")
             self._apply(entry, result, self._record(entry, result).id)
         native = len(self.plan["native"])
         if native:
@@ -369,6 +372,7 @@ def _packet(state: KernelState, invocation_id: str, shares: dict[str, int]) -> d
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-02 [python-coder]: mypy: impossible-state branches fail clearly instead of passing None on (#KernelBootstrapV0/GROUND)
 # - 2026-10-01 22:00 [python-coder]: The root's answer kind is resolved before routing (IntentStep
 #   mixin), clarification is `_park` + `_unclear` (choices, one follow-up, a gap only when the
 #   request ends unresolved), and the router continuation is built in one place. It is dropped

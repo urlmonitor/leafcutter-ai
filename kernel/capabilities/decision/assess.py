@@ -26,7 +26,7 @@ from kernel.capabilities.decision.jev_support import (
 from kernel.capabilities.decision.state import Working
 from kernel.contracts.enums import EvidenceCategory, MissingKnowledge
 from kernel.contracts.work import CapabilityInvocation
-from kernel.providers.base import ChoiceAnswer, JevResult, QuestionSpec
+from kernel.providers.base import ChoiceAnswer, JevResult, QuestionSpec, json_strings
 
 PURPOSE = "decision.assess"
 NONE_CHOICE = "none"
@@ -66,13 +66,16 @@ def _state(ctx: ExecutionContext, work: Working) -> dict[str, JsonValue]:
     evidence = evidence_state(ctx, work.evidence)
     for item in work.evidence:
         role = "pattern_only" if item.category in _PATTERN_CATEGORIES else "decision_basis"
-        evidence[item.id]["role"] = role  # type: ignore[index]
-        evidence[item.id]["category"] = item.category.value  # type: ignore[index]
+        entry = evidence[item.id]
+        if isinstance(entry, dict):
+            entry["role"] = role
+            entry["category"] = item.category.value
     return {
         "question": work.question,
         "options": {o.id: f"{o.title}. {o.description}".strip() for o in work.usable_options},
         "criteria": {c.id: c.question for c in work.usable_criteria},
-        "evidence": evidence, "constraints": constraints, "findings": work.cont.findings,
+        "evidence": evidence, "constraints": json_strings(constraints),
+        "findings": json_strings(work.cont.findings),
     }
 
 
@@ -128,6 +131,7 @@ async def assess(ctx: ExecutionContext, invocation: CapabilityInvocation, work: 
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-02 [python-coder]: mypy: the quoted Jev state is built with JSON-typed values (#KernelBootstrapV0/GROUND)
 # - 2026-09-30 23:00 [python-coder]: Evidence carries a `role` (decision_basis or pattern_only)
 #   in the quoted state so Jev sees that an existing implementation is a pattern, not proof.
 #   (#KernelBootstrapV0/P5)

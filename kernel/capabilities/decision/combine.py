@@ -12,6 +12,8 @@ ARCHITECTURE: Pure function of (Working, Assessment, DecisionConfig). Thresholds
 
 from __future__ import annotations
 
+from typing import Literal
+
 from dataclasses import dataclass, field, replace
 
 from kernel.capabilities.decision.assess import NONE_CHOICE, Assessment
@@ -48,7 +50,7 @@ class Verdict:
     assessments: list[CriterionAssessment] = field(default_factory=list)
 
 
-def _outcome(p: float, cfg: DecisionConfig) -> str:
+def _outcome(p: float, cfg: DecisionConfig) -> Literal["pass", "fail", "uncertain"]:
     """Map a satisfies probability to pass, fail or uncertain using the configured threshold."""
     if p >= cfg.satisfies_threshold:
         return "pass"
@@ -200,6 +202,7 @@ def combine(work: Working, a: Assessment, cfg: DecisionConfig) -> Verdict:
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-02 [python-coder]: mypy: _outcome returns the Literal the assessment model requires (#KernelBootstrapV0/GROUND)
 # - 2026-10-01 02:00 [python-coder]: The gate refuses to open with no required criterion
 #   (all([]) is True), and a decision approval counts only for the option and evidence revision
 #   the human saw. (#KernelBootstrapV0/FIXA)

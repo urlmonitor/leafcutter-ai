@@ -56,7 +56,7 @@ from kernel.observability.correlation import deterministic_trace_id
 from kernel.observability.tracer import TraceState
 from kernel.scheduler import guards
 from kernel.scheduler.context import KernelRuntime, flush_events, run_corr, sequential_node
-from kernel.scheduler.state import Budgets, KernelState, RunOutcome, new_event
+from kernel.scheduler.state import Budgets, KernelState, RunOutcome, new_event, root_item_id
 
 logger = logging.getLogger(__name__)
 
@@ -99,15 +99,15 @@ async def intake(state: KernelState, runtime: Runtime[KernelRuntime]) -> dict[st
     now = ctx.clock()
     evidence = _input_evidence(task_input.initial_evidence, now)
     root_task_id = new_id("task")
-    stamps = {"created_at": now, "updated_at": now, "created_seq": 0}
-    has_payload = task_input.input_payload is not None
+    stamps: dict[str, Any] = {"created_at": now, "updated_at": now, "created_seq": 0}
+    payload = task_input.input_payload
     output_schema, intent = initial_contract(task_input.requested_output_schema,
                                              task_input.input_payload_schema)
     request = Request(
         id=new_id("req"), kind=RequestKind.CAPABILITY, goal=task_input.goal,
-        payload_schema=task_input.input_payload_schema if has_payload
-        else schema_ids.GOAL_REQUEST,
-        payload=dict(task_input.input_payload) if has_payload else {"goal": task_input.goal},
+        payload_schema=(task_input.input_payload_schema or schema_ids.GOAL_REQUEST)
+        if payload is not None else schema_ids.GOAL_REQUEST,
+        payload=dict(payload) if payload is not None else {"goal": task_input.goal},
         requested_output_schema=output_schema, context_refs=sorted(evidence), **stamps)
     revision = task_input.scope.revision
     request = request.model_copy(update={"dedup_key": guards.request_dedup_key(
@@ -172,7 +172,7 @@ def _child_diagnostics(state: KernelState, root: WorkItem) -> list[str]:
 def decide_outcome(state: KernelState) -> RunOutcome:
     """Decide the terminal RunOutcome from the root item, guards and completion contract."""
     task, items = state["task"], state["work_items"]
-    root = items[task.root_work_item_id]
+    root = items[root_item_id(state)]
     result = state.get("results", {}).get(root.result_ref) if root.result_ref else None
     schema_id = result.output_schema_id if result else None
     payload = dict(result.output_payload) if result and result.output_payload else None
@@ -206,7 +206,8 @@ def decide_outcome(state: KernelState) -> RunOutcome:
         limitations = list(dict.fromkeys([*limitations, *_child_diagnostics(state, root)]))
     if status is RunStatus.BLOCKED and not has_plain_reason(limitations):
         limitations.append(can_do_hint())  # a bare "blocked" says nothing; name what works
-    questions = [str(q) for q in (payload or {}).get("open_questions", [])]
+    asked = (payload or {}).get("open_questions")
+    questions = [str(q) for q in asked] if isinstance(asked, list) else []
     return RunOutcome(status=status, output=output, limitations=limitations, errors=errors,
                       open_questions=questions, diagnostics=diagnostics)
 
@@ -279,6 +280,7 @@ __all__ = ["IntakeError", "decide_outcome", "finalize", "intake", "render_report
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-02 [python-coder]: mypy: intake narrows the optional payload once; open questions are read as a list (#KernelBootstrapV0/GROUND)
 # - 2026-10-01 23:00 [python-coder]: report.md names the Langfuse trace URL when tracing exported
 #   one (the envelope already carried it in trace_refs), so a reader of the report can open the
 #   trace. (#KernelBootstrapV0/GROUND)

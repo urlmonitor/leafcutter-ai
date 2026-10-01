@@ -40,15 +40,15 @@ def build_kernel_graph(checkpointer: Any = None) -> Any:
             the run id.
     """
     graph = StateGraph(KernelState, context_schema=KernelRuntime)
-    graph.add_node("intake", intake)
-    graph.add_node("schedule", schedule)
-    graph.add_node("route", route)
-    graph.add_node("execute", execute)
-    graph.add_node("integrate", integrate)
-    graph.add_node("record_gaps", record_gaps)
-    graph.add_node("open_interactions", open_interactions)
-    graph.add_node("await_interaction", await_interaction)
-    graph.add_node("finalize", finalize)
+    # langgraph's add_node generics cannot infer a TypedDict state plus a Runtime parameter, so
+    # the nodes are listed as Any (every node has the (state, runtime) signature).
+    nodes: tuple[tuple[str, Any], ...] = (
+        ("intake", intake), ("schedule", schedule), ("route", route), ("execute", execute),
+        ("integrate", integrate), ("record_gaps", record_gaps),
+        ("open_interactions", open_interactions), ("await_interaction", await_interaction),
+        ("finalize", finalize))
+    for name, node in nodes:
+        graph.add_node(name, node)
     graph.add_edge(START, "intake")
     graph.add_edge("intake", "schedule")
     graph.add_conditional_edges("schedule", after_schedule,

@@ -40,7 +40,8 @@ from kernel.persistence.fsutil import (
 
 logger = logging.getLogger(__name__)
 
-_PACKET_TYPES = {"host_work": HostWorkRequest, "human_question": HumanQuestion}
+_PACKET_TYPES: dict[str, type[HostWorkRequest] | type[HumanQuestion]] = {
+    "host_work": HostWorkRequest, "human_question": HumanQuestion}
 
 
 class RunStoreCorrupt(ValueError):
@@ -215,6 +216,7 @@ class FileRunStore:
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-02 [python-coder]: mypy: the packet type table is annotated (#KernelBootstrapV0/GROUND)
 # - 2026-10-01 20:00 [python-coder]: run.json writers take an OS file lock besides the thread
 #   lock, because cancel and resume are separate processes and a thread lock cannot stop one
 #   overwriting the other's committed cancel. update_run is locked too so it cannot slip between

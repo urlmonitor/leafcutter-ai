@@ -13,7 +13,7 @@ ARCHITECTURE: No I/O and no vendor imports. Transports return a RawResponse of p
 from __future__ import annotations
 
 import math
-from collections.abc import Mapping, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
 from typing import Any
 
@@ -138,11 +138,12 @@ def _count(value: object) -> int | None:
 
 def _number(value: object, where: str, low: float, high: float) -> float:
     """Return a finite float within [low, high] or raise JevInvalidResponse."""
-    ok = isinstance(value, (int, float)) and not isinstance(value, bool)
-    if not ok or not math.isfinite(value) or not low <= value <= high:
+    number = float(value) if isinstance(value, (int, float)) and not isinstance(value, bool) \
+        else math.nan
+    if not math.isfinite(number) or not low <= number <= high:
         reason = f"{where} is not a number in [{low}, {high}]: {value!r}"
         raise JevInvalidResponse(reason)
-    return float(value)
+    return number
 
 
 def _confidence(raw: dict[str, Any], qid: str) -> float | None:
@@ -197,11 +198,14 @@ def _map_score(spec: QuestionSpec, raw: dict[str, Any]) -> ScoreAnswer:
                        confidence=_confidence(raw, spec.id))
 
 
-_MAPPERS = {"noul": _map_noul, "choice": _map_choice, "score": _map_score}
+_MAPPERS: dict[str, Callable[[QuestionSpec, dict[str, Any]],
+                             NoulAnswer | ChoiceAnswer | ScoreAnswer]] = {
+    "noul": _map_noul, "choice": _map_choice, "score": _map_score}
 
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-02 [python-coder]: mypy: the wire mappers are typed and the number check narrows before comparing (#KernelBootstrapV0/GROUND)
 # - 2026-09-30 23:00 [python-coder]: One wire mapper for both transports; probabilities must sum
 #   to 1 +- 0.02 (design part 4); a missing provider confidence stays None, never 0.
 #   (#KernelBootstrapV0/P3)

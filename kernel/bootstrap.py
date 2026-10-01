@@ -29,6 +29,7 @@ from kernel.capabilities.host import HostOperationExecutor
 from kernel.capabilities.research import ResearchExecutor
 from kernel.capabilities.retrieval import RepositoryRetrievalExecutor
 from kernel.config import KernelConfig, load_kernel_config, repo_root
+from kernel.capabilities.base import CapabilityExecutor
 from kernel.contracts import ExecutionMode, RegistrySnapshot
 from kernel.observability.langfuse_tracer import LangfuseTracer
 from kernel.observability.redaction import Redactor
@@ -43,7 +44,7 @@ from kernel.secrets import SecretSettings, load_secrets
 logger = logging.getLogger(__name__)
 
 #: Native bindings and the version each executor implements (registry `binding` -> factory).
-NATIVE_BINDINGS: dict[str, Callable[[], object]] = {
+NATIVE_BINDINGS: dict[str, Callable[[], CapabilityExecutor]] = {
     "decision": DecisionExecutor,
     "research": ResearchExecutor,
     "retrieve.repository": RepositoryRetrievalExecutor,

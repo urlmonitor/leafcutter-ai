@@ -92,7 +92,7 @@ class ReadPolicy:
                 return True
         return False
 
-    def _within_read_roots(self, rel: Path) -> list[str]:
+    def _within_read_roots(self, rel: PurePosixPath) -> list[str]:
         """Return the effective relative roots after intersecting with the scope read roots."""
         if not self.read_roots:
             return [rel.as_posix()]
@@ -152,6 +152,7 @@ class ReadPolicy:
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-02 [python-coder]: mypy: _within_read_roots is typed for the POSIX path it is given. (#KernelBootstrapV0/GROUND)
 # - 2026-10-01 02:00 [python-coder]: read_roots are enforced on the resolved real path inside
 #   relative() (so read_text and knowledge-map nodes share it) and deny globs match
 #   case-insensitively, closing .ENV / server.PEM bypasses on Windows and macOS.

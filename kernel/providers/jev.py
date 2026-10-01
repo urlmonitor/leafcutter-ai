@@ -105,14 +105,16 @@ class ClassifierTransport:
         """Invoke the classifier and normalise its response or translate its errors."""
         from langchain_typesafe import client as lts_client  # noqa: PLC0415
 
-        adapter = TypeAdapter(self._lts.Question)
+        adapter: TypeAdapter[Any] = TypeAdapter(self._lts.Question)
         request = {"state": state,
                    "questions": {k: adapter.validate_python(v) for k, v in questions.items()}}
         try:
             config: dict[str, Any] = {"run_name": f"jev.{purpose}" if purpose else "jev"}
             if self._detach_callbacks:
                 config["callbacks"] = []
-            response = await self._classifier.ainvoke(request, config=config)
+            # langchain_typesafe types the request as a TypedDict built at runtime
+            response = await self._classifier.ainvoke(
+                request, config=config)  # type: ignore[arg-type]
         except lts_client.TypeSafeAPIResponseValidationError as exc:
             reason = f"jev response failed validation at {exc.field_path}"
             raise JevInvalidResponse(reason) from exc
@@ -126,8 +128,10 @@ class ClassifierTransport:
     async def aclose(self) -> None:
         """Close the clients the classifier created."""
         if self._owns_clients:
-            await self._classifier.async_client.aclose()
-            self._classifier.client.close()
+            if self._classifier.async_client is not None:
+                await self._classifier.async_client.aclose()
+            if self._classifier.client is not None:
+                self._classifier.client.close()
 
 
 def _translate_api_error(exc: Any) -> Exception:
@@ -298,7 +302,7 @@ class TypeSafeJevAdapter:
                 logger.warning("jev transient failure (%s), retry %d/%d", last.reason,
                                attempt + 1, self._max_retries)
                 await self._sleep(min(delay, MAX_BACKOFF_SECONDS))
-        reason = f"jev unavailable after {self._max_retries + 1} attempts: {last.reason}"
+        reason = f"jev unavailable after {self._max_retries + 1} attempts: {last.reason if last else "no attempt"}"
         raise JevUnavailable(reason) from last
 
     def _result(self, batch: JevBatch, raws: list[RawResponse], answers: dict[str, Any],
@@ -326,6 +330,7 @@ class TypeSafeJevAdapter:
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-02 [python-coder]: mypy: optional clients are guarded and the retry reason is None-safe (#KernelBootstrapV0/GROUND)
 # - 2026-10-01 00:30 [python-coder]: With a tracer the adapter emits the GENERATION and the
 #   classifier runs with callbacks=[] (an explicit empty list overrides the inherited graph-level
 #   handler), so the usage-less LangChain CHAIN is not duplicated. Without a tracer behaviour is

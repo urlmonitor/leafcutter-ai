@@ -26,7 +26,7 @@ from kernel.contracts.enums import ObservabilityStatus
 from kernel.observability.correlation import deterministic_trace_id, run_correlation
 from kernel.observability.tracer import TraceState
 from kernel.persistence import open_checkpointer
-from kernel.providers.base import JevPort
+from kernel.providers.base import JevBatch, JevPort, JevResult, JevUnavailable
 from kernel.scheduler import (
     STATE_MODELS,
     KernelRuntime,
@@ -91,16 +91,25 @@ def _close_trace(env: KernelEnvironment) -> ObservabilityStatus:
         return ObservabilityStatus.DEGRADED
 
 
-def _make_jev(env: KernelEnvironment, kind: str) -> JevPort | None:
+class _NoJev:
+    """The Jev port of a segment that routes no work: asking it anything is a provider failure."""
+
+    async def assess(self, batch: JevBatch) -> JevResult:
+        """Refuse every batch (status and cancel segments never ask Jev)."""
+        reason = "this run segment has no Jev port"
+        raise JevUnavailable(reason)
+
+
+def _make_jev(env: KernelEnvironment, kind: str) -> JevPort:
     """Build the Jev adapter for segments that route work (inside the running loop)."""
     if kind not in NEEDS_JEV:
-        return None
+        return _NoJev()
     if env.jev_factory is None:
         raise ProviderUnavailable("jev", "no Jev API key is configured")
     return env.jev_factory()
 
 
-async def _close_jev(jev: JevPort | None) -> None:
+async def _close_jev(jev: JevPort) -> None:
     """Close the adapter in the loop that created it; a failure is logged, not raised."""
     closer = getattr(jev, "aclose", None)
     if closer is None:
@@ -155,6 +164,8 @@ async def open_session(env: KernelEnvironment, kind: str, run_id: str,
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-02 [python-coder]: A segment that routes no work gets a Jev port that refuses every
+#   batch instead of None: KernelRuntime.jev is a required port. (#KernelBootstrapV0/GROUND)
 # - 2026-10-01 10:50 [python-coder]: Status and cancel segments build no Jev adapter (they never
 #   route work), so they work without a credential. (#KernelBootstrapV0/P7)
 # - 2026-10-01 10:50 [python-coder]: The Jev adapter is closed before the segment so its last

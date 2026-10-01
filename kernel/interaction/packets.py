@@ -17,7 +17,7 @@ import json
 import logging
 from collections.abc import Callable, Mapping
 from datetime import datetime
-from typing import Any
+from typing import Any, overload
 
 from kernel.capabilities.host import TaskInputs, compiler_for, parse_compiled_by
 from kernel.capabilities.host.spec import MAX_TASK_STATEMENT_CHARS, bounded
@@ -30,6 +30,7 @@ from kernel.contracts import (
     new_id,
     schema_ids,
 )
+from kernel.contracts.base import fail
 from kernel.contracts.interaction import ContextLimits, Rejection
 from kernel.contracts.payloads import HumanQuestionRequestPayload
 from kernel.contracts.schema_catalog import json_schema_for
@@ -135,14 +136,17 @@ def build_host_request(state: Mapping[str, Any], item: WorkItem, revision: int, 
     and fingerprint.
     """
     request = state["requests"][item.request_id]
-    descriptor = state["registry"].get(item.binding.capability_id)
+    if item.binding is None:
+        fail("a host packet needs a work item with a binding")
+    capability_id = item.binding.capability_id
+    descriptor = state["registry"].get(capability_id)
     invocation = current_invocation(state, item)
     operations = list(descriptor.operations) if descriptor else []
     evidence_ids = input_evidence_ids(state, request)
-    operation = operations[0] if operations else item.binding.capability_id
-    compiled = compiler_for(item.binding.capability_id).compile(TaskInputs(
-        capability_id=item.binding.capability_id, operation=operation,
-        goal=request.goal or request.question or item.binding.capability_id,
+    operation = operations[0] if operations else capability_id
+    compiled = compiler_for(capability_id).compile(TaskInputs(
+        capability_id=capability_id, operation=operation,
+        goal=request.goal or request.question or capability_id,
         payload=request.payload if isinstance(request.payload, Mapping) else {},
         allowed_operations=tuple(operations),
         forbidden_operations=tuple(FORBIDDEN_HOST_OPERATIONS),
@@ -181,12 +185,20 @@ def write_input_artifact(artifacts: ArtifactStorePort, redactor: Redactor, run_i
         "request_schema": invocation.input_payload_schema if invocation else None,
         "request": dict(invocation.input_payload) if invocation else {}, "evidence": evidence})
     try:
-        ref = artifacts.write_artifact(run_id, f"input-{packet.id}.json",
-                                       json.dumps(body, indent=2, sort_keys=True) + "\n")
+        written = artifacts.write_artifact(run_id, f"input-{packet.id}.json",
+                                           json.dumps(body, indent=2, sort_keys=True) + "\n")
     except OSError:
         logger.exception("could not write the input artifact of %s", packet.id)
         raise
-    return packet.model_copy(update={"input_artifact_refs": [ref.path or ref.ref]})
+    return packet.model_copy(update={"input_artifact_refs": [written.path or written.ref]})
+
+
+@overload
+def redact_packet(packet: HostWorkRequest, redactor: Redactor) -> HostWorkRequest: ...
+
+
+@overload
+def redact_packet(packet: HumanQuestion, redactor: Redactor) -> HumanQuestion: ...
 
 
 def redact_packet(packet: HostWorkRequest | HumanQuestion, redactor: Redactor
@@ -207,6 +219,7 @@ def redact_packet(packet: HostWorkRequest | HumanQuestion, redactor: Redactor
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-02 [python-coder]: mypy: redact_packet is overloaded so a host packet stays a host packet; a binding-less item fails clearly (#KernelBootstrapV0/GROUND)
 # - 2026-10-01 23:00 [python-coder]: The host evidence schema no longer requires `id` and
 #   `content_hash`: the instructions say not to invent them and the kernel computes both, so the
 #   schema and the instructions must agree. (#KernelBootstrapV0/GROUND)

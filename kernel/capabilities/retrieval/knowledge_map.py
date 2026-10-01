@@ -20,6 +20,7 @@ import sys
 import threading
 from pathlib import Path
 from types import ModuleType
+from typing import Protocol
 
 from kernel.capabilities.retrieval.access import ReadPolicy
 from kernel.capabilities.retrieval.candidates import Candidate, SearchReport
@@ -34,13 +35,23 @@ PATHS_JSON = Path("config") / "paths.json"
 _LOAD_ERRORS = (ImportError, OSError, SyntaxError, AttributeError, SystemExit, ValueError,
                 KeyError, TypeError)
 _MODULES: dict[str, ModuleType] = {}
-_NODES: dict[tuple[str, str], list] = {}
+_NODES: dict[tuple[str, str], list[MapNode]] = {}
 _LOAD_LOCK = threading.RLock()
 
 
 STAGE_NO_SPEC = "script cannot be loaded"
 STAGE_LOAD = "script failed to load"
 STAGE_BUILD = "build failed"
+
+
+class MapNode(Protocol):
+    """The part of a knowledge-map node the bridge reads (the script returns richer objects)."""
+
+    id: str
+    title: str
+    description: str
+    path: Path
+    missing: bool
 
 
 class KnowledgeMapUnavailable(Exception):
@@ -103,7 +114,7 @@ def _exec_script(key: str) -> ModuleType:
     return module
 
 
-def _surface_nodes(root: Path, surface: str) -> list:
+def _surface_nodes(root: Path, surface: str) -> list[MapNode]:
     """Return the nodes of one surface (cached); raise KnowledgeMapUnavailable on failure."""
     key = (str(root), surface)
     if key not in _NODES:
@@ -117,7 +128,7 @@ def _surface_nodes(root: Path, surface: str) -> list:
     return _NODES[key]
 
 
-def _node_candidate(policy: ReadPolicy, source: SourceConfig, node: object, terms: list[str],
+def _node_candidate(policy: ReadPolicy, source: SourceConfig, node: MapNode, terms: list[str],
                     report: SearchReport) -> Candidate | None:
     """Build a Candidate for a node whose title or description contains a term."""
     excerpt = f"{node.title}: {node.description}".strip()
@@ -171,6 +182,7 @@ def search_knowledge_map(policy: ReadPolicy, source: SourceConfig, terms: list[s
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-02 [python-coder]: the bridge nodes are typed by a Protocol instead of object (#KernelBootstrapV0/GROUND)
 # - 2026-10-02 [python-coder]: SECURITY: the bridge script is loaded only from the kernel's own
 #   installation (`trusted_root`), never from the scope repository, which is passed to it as data.
 #   A scoped untrusted repository could otherwise run its Python in the kernel process (Rev 3

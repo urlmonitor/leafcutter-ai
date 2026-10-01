@@ -148,7 +148,7 @@ def load_secrets(env_file: Path | None = None, *, env: Mapping[str, str] | None 
     walked = find_env_file(start_dir or repo_root())
     if walked is not None and walked != explicit:
         sources.append((str(walked), _read_env_file(walked)))
-    values: dict[str, object] = {}
+    values: dict[str, str] = {}
     origins: dict[str, str] = {}
     for field_name, names in _FIELD_NAMES:
         for origin, mapping in sources:
@@ -157,12 +157,13 @@ def load_secrets(env_file: Path | None = None, *, env: Mapping[str, str] | None 
                 values[field_name] = hit
                 origins[field_name] = origin
                 break
-    return SecretSettings(origins=origins, **values)
+    return SecretSettings.model_validate({**values, "origins": origins})
 
 
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-02 [python-coder]: mypy: SecretSettings is built through model_validate instead of a **dict[str, object] splat. (#KernelBootstrapV0/GROUND)
 # - 2026-10-01 16:45 [python-coder]: A NAMED env file that is missing or unreadable is a
 #   ConfigError (exit 5 `config_invalid`); only the implicit walk-up stays best-effort.
 #   (#KernelBootstrapV0/FIXC)

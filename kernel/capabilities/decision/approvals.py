@@ -12,23 +12,26 @@ ARCHITECTURE: Pure functions over Working. The answer arrives as a completed hum
 
 from __future__ import annotations
 
+from typing import TypeVar
+
 from kernel.capabilities.decision.state import Working, is_pending
 from kernel.contracts.decision import Criterion, Option
 from kernel.contracts.enums import ApprovalStatus, ProposalStatus
 from kernel.contracts.payloads import HumanAnswerPayload
 
+_Item = TypeVar("_Item", Option, Criterion)
 APPROVE = "approve"
 REJECT = "reject"
 DEFAULT_APPROVER = "human"
 
 
-def _approve(item: Option | Criterion, actor: str) -> Option | Criterion:
+def _approve(item: _Item, actor: str) -> _Item:
     """Return the item marked approved by actor (proposal status stays as generated)."""
     return item.model_copy(update={"approval_status": ApprovalStatus.APPROVED,
                                    "approved_by": actor})
 
 
-def _decide(item: Option | Criterion, approved: set[str], actor: str) -> Option | Criterion:
+def _decide(item: _Item, approved: set[str], actor: str) -> _Item:
     """Approve a pending item the human listed, decline one they did not."""
     if not is_pending(item):
         return item
@@ -163,6 +166,7 @@ def apply_human_answer(work: Working, answer: HumanAnswerPayload, actor: str | N
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-02 [python-coder]: approval helpers are generic over option and criterion so the two lists keep their types (#KernelBootstrapV0/GROUND)
 # - 2026-10-02 [python-coder]: A structured approval can add options; they are human-supplied and
 #   approved by that human. (#KernelBootstrapV0/GROUND)
 # - 2026-10-01 02:00 [python-coder]: A decision approval is stamped with the revision the human

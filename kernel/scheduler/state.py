@@ -40,6 +40,7 @@ from kernel.contracts import (
     Usage,
     WorkItem,
 )
+from kernel.contracts.base import fail
 from kernel.observability.tracer import TraceState
 
 
@@ -140,6 +141,14 @@ class RunOutcome(KernelModel):
 STATE_MODELS: tuple[type, ...] = (Budgets, RunOutcome, TraceState, UsageRow)
 
 
+def root_item_id(state: KernelState) -> str:
+    """Return the root work item id of the run (set by intake; a run without one is broken)."""
+    root = state["task"].root_work_item_id
+    if root is None:
+        fail("the task has no root work item")
+    return root
+
+
 def result_artifact_name(invocation_id: str) -> str:
     """Return the artifact name under which an invocation's CapabilityResult JSON is stored.
 
@@ -167,8 +176,9 @@ def merge_map(left: Mapping[str, Any] | None, right: Mapping[str, Any] | None
             current one unless the current one carries a higher `updated_revision`.
     """
     merged = dict(left or {})
-    for key in sorted(right or {}):
-        incoming, current = right[key], merged.get(key)
+    updates = right or {}
+    for key in sorted(updates):
+        incoming, current = updates[key], merged.get(key)
         if current is not None and _revision(incoming) < _revision(current):
             continue
         merged[key] = incoming
@@ -179,8 +189,9 @@ def sum_counts(left: Mapping[str, int] | None, right: Mapping[str, int] | None
                ) -> dict[str, int]:
     """Add two counter maps key by key (used for attempt fingerprints)."""
     merged = dict(left or {})
-    for key in sorted(right or {}):
-        merged[key] = merged.get(key, 0) + right[key]
+    added = right or {}
+    for key in sorted(added):
+        merged[key] = merged.get(key, 0) + added[key]
     return {key: merged[key] for key in sorted(merged)}
 
 
@@ -229,7 +240,8 @@ class KernelState(TypedDict, total=False):
     trace: TraceState
 
 
-def new_event(run_id: str, at: datetime, kind: str, detail: str = "", **refs: str) -> RunEvent:
+def new_event(run_id: str, at: datetime, kind: str, detail: str = "", **refs: str | None
+              ) -> RunEvent:
     """Build a RunEvent with a placeholder seq (the reducer assigns the real one).
 
     Args:
@@ -249,6 +261,8 @@ def new_event(run_id: str, at: datetime, kind: str, detail: str = "", **refs: st
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-02 [python-coder]: new_event takes optional refs (it drops None, as its docstring says); root_item_id narrows the root id (#KernelBootstrapV0/GROUND)
+# - 2026-10-02 [python-coder]: mypy: the optional reducer inputs are bound once so they are narrowed (#KernelBootstrapV0/GROUND)
 # - 2026-10-01 23:00 [python-coder]: Budgets keeps one UsageRow per (provider, model) so the
 #   envelope shows the model id and the known cost of each provider instead of one synthesised
 #   Jev row with both null. (#KernelBootstrapV0/GROUND)

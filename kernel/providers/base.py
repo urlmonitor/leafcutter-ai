@@ -10,12 +10,20 @@ ARCHITECTURE: Only providers/jev.py (P3) imports the vendor SDK. Errors live her
 
 from __future__ import annotations
 
+from collections.abc import Iterable
 from typing import Annotated, Literal, Protocol, runtime_checkable
 
 from pydantic import Field, JsonValue
 
 from kernel.contracts.base import CorrelationIds, KernelModel, canonical_json, sha256_hex
 from kernel.contracts.capability import Usage
+
+
+def json_strings(values: Iterable[str]) -> list[JsonValue]:
+    """Return the strings as a JSON list (a plain list[str] is not a list[JsonValue] to mypy)."""
+    out: list[JsonValue] = []
+    out.extend(values)
+    return out
 
 
 class JevError(Exception):

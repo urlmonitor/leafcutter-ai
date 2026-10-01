@@ -140,7 +140,7 @@ async def _repair(graph: Any, config: dict[str, Any], context: Any, raw: Mapping
     if packet is None or packet.get("id") != interaction_id:
         return _result(SubmitStatus.REPAIR_EXHAUSTED, interaction_id, out)
     allowed = context.config.host.max_repair_attempts
-    raise SubmissionRejected(verdict.code, verdict.message,
+    raise SubmissionRejected(verdict.code or RejectionCode.SCHEMA_INVALID, verdict.message,
                              {**verdict.details, "interaction_id": interaction_id,
                               "repairs_remaining": max(0, allowed - len(packet["rejections"])),
                               "pending_interaction": packet})
@@ -247,6 +247,7 @@ async def _submit(graph: Any, config: dict[str, Any], context: Any,
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-02 [python-coder]: mypy: a rejected verdict always has a code; the fallback only satisfies the type (#KernelBootstrapV0/GROUND)
 # - 2026-10-01 20:00 [python-coder]: `record_submission` reports whether it created the entry, so
 #   a submission that lost the write race is compared with the winner (conflicting duplicate or
 #   replay) instead of resuming the graph with a second answer; an unsafe interaction id counts

@@ -166,12 +166,13 @@ def _answer_problem(packet: HumanQuestion, payload: HumanAnswerPayload) -> list[
 def _semantic_context(packet: HostWorkRequest | HumanQuestion, state: Mapping[str, Any]
                       ) -> SemanticContext:
     """Return the ids this run knows, plus what the human question offered."""
-    human = isinstance(packet, HumanQuestion)
-    return SemanticContext(
-        known_evidence_ids=frozenset(state.get("evidence", {})),
-        known_finding_ids=frozenset(state.get("findings", {})),
-        offered_choice_ids=frozenset(c.id for c in packet.choices) if human else None,
-        subject_ids=frozenset(packet.subject_ids) if human else None)
+    known = {"known_evidence_ids": frozenset(state.get("evidence", {})),
+             "known_finding_ids": frozenset(state.get("findings", {}))}
+    if isinstance(packet, HumanQuestion):
+        return SemanticContext(
+            **known, offered_choice_ids=frozenset(c.id for c in packet.choices),
+            subject_ids=frozenset(packet.subject_ids))
+    return SemanticContext(**known)
 
 
 def _content_problem(submission: InteractionSubmission, packet: HostWorkRequest | HumanQuestion,
@@ -229,6 +230,7 @@ def check_submission(raw: object, state: Mapping[str, Any]) -> Verdict:
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-02 [python-coder]: mypy: the human-only fields are read after narrowing the packet to HumanQuestion. (#KernelBootstrapV0/GROUND)
 # - 2026-09-30 23:45 [python-coder]: Schema mismatch is `wrong_kind` and actor-kind mismatch is
 #   `actor_mismatch`; the schema is checked first, so a host sending findings to a human question
 #   is wrong_kind and a host sending human_answer.v1 is actor_mismatch. The prompt's code list

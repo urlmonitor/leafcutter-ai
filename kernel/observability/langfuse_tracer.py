@@ -23,7 +23,9 @@ from pathlib import Path
 from typing import Any
 
 from langfuse import Langfuse, propagate_attributes
+from langfuse.types import TraceContext as LangfuseTraceContext
 from opentelemetry.sdk.trace.export import SpanExporter
+from pydantic import SecretStr
 
 from kernel.config import DataPolicyConfig, LangfuseConfig
 from kernel.contracts.base import CorrelationIds, TraceContext
@@ -35,6 +37,11 @@ from kernel.observability.redaction import Redactor
 from kernel.observability.spool import TelemetrySpool
 from kernel.observability.tracer import SpanHandle, TraceState
 from kernel.secrets import SecretSettings
+
+
+def _reveal(secret: SecretStr | None) -> str:
+    """Return a credential's value; callers check `has_langfuse()` first, so None is empty."""
+    return secret.get_secret_value() if secret is not None else ""
 
 logger = logging.getLogger(__name__)
 
@@ -186,6 +193,8 @@ class LangfuseTracer:
             if self._verify_auth and not self.client.auth_check():
                 self.degrade("auth_check_failed")
                 return None
+            if self._trace_id is None:
+                return None
             with self._propagate(corr):
                 return self.client.start_observation(
                     trace_context={"trace_id": self._trace_id}, name=name, as_type="agent",
@@ -199,8 +208,8 @@ class LangfuseTracer:
         """Construct the Langfuse client with the redactor as mask."""
         secrets = self._secrets
         return Langfuse(
-            public_key=secrets.langfuse_public_key.get_secret_value(),
-            secret_key=secrets.langfuse_secret_key.get_secret_value(),
+            public_key=_reveal(secrets.langfuse_public_key),
+            secret_key=_reveal(secrets.langfuse_secret_key),
             base_url=secrets.langfuse_base_url, environment=self._config.environment,
             release=self._release, mask=self.redactor, span_exporter=self._span_exporter)
 
@@ -310,8 +319,10 @@ class LangfuseTracer:
             return []
         try:
             from langfuse.langchain import CallbackHandler
-            context = {"trace_id": self._trace_id, "parent_span_id": parent.observation_id}
-            public = self._secrets.langfuse_public_key.get_secret_value()
+            context: LangfuseTraceContext = {"trace_id": self._trace_id}
+            if parent.observation_id:
+                context["parent_span_id"] = parent.observation_id
+            public = _reveal(self._secrets.langfuse_public_key)
             return [CallbackHandler(public_key=public, trace_context=context)]
         except Exception as exc:
             self.degrade(f"langchain callback failed: {type(exc).__name__}")
@@ -337,6 +348,7 @@ class LangfuseTracer:
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-02 [python-coder]: mypy: credentials are revealed through a None-safe helper and the trace context is the Langfuse TypedDict (#KernelBootstrapV0/GROUND)
 # - 2026-10-01 16:00 [python-coder]: `status_message` is masked by hand: langfuse 4.16 applies
 #   `mask` to input, output and metadata only. (#KernelBootstrapV0/FIXC)
 # - 2026-09-30 23:00 [python-coder]: propagate_attributes wraps each observation creation (not the

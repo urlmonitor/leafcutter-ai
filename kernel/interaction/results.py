@@ -21,6 +21,7 @@ from kernel.capabilities.host import HostConversion, host_operation
 from kernel.contracts import (
     CapabilityInvocation,
     CapabilityResult,
+    ErrorInfo,
     Evidence,
     EvidenceCategory,
     EvidenceSource,
@@ -75,7 +76,7 @@ def evidence_from_submission(packet: HostWorkRequest | HumanQuestion,
     """Turn the answer and any new evidence of a submission into Evidence items."""
     human = isinstance(packet, HumanQuestion)
     texts = [(f"human:{packet.id}", answer_text(packet, dict(submission.response)))] \
-        if human else []
+        if isinstance(packet, HumanQuestion) else []
     texts += [(e.locator or f"{submission.actor.kind.value}:{packet.id}#{i}", e.excerpt)
               for i, e in enumerate(submission.new_evidence)]
     out: list[Evidence] = []
@@ -128,14 +129,15 @@ def repair_exhausted_result(packet: HostWorkRequest, invocation: CapabilityInvoc
     return CapabilityResult(
         invocation_id=invocation.id if invocation else packet.id,
         work_item_id=packet.work_item_id, status=ResultStatus.FAILED,
-        error={"code": REPAIR_EXHAUSTED_CODE, "retryable": False,
-               "message": f"host output stayed invalid after {len(packet.rejections)} "
-                          f"submissions (last: {last_code})"})
+        error=ErrorInfo(code=REPAIR_EXHAUSTED_CODE, retryable=False,
+                        message=f"host output stayed invalid after {len(packet.rejections)} "
+                                f"submissions (last: {last_code})"))
 
 
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-02 [python-coder]: mypy: the human answer text is read after narrowing the packet; errors are ErrorInfo (#KernelBootstrapV0/GROUND)
 # - 2026-10-01 11:05 [python-coder]: Host submissions for a capability with a host operation are
 #   converted by that operation (kernel.capabilities.host); the pass-through stays for human
 #   answers and unknown host capabilities. (#KernelBootstrapV0/P8)

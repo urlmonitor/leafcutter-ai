@@ -18,7 +18,7 @@ from __future__ import annotations
 
 import logging
 from collections.abc import Awaitable, Callable, Mapping
-from typing import Any, Protocol, runtime_checkable
+from typing import Any, Protocol, cast, runtime_checkable
 
 from langgraph.errors import GraphRecursionError
 
@@ -33,6 +33,7 @@ from kernel.interaction import SubmissionRejected, submit_interaction
 from kernel.persistence.base import RunAlreadyExists, RunRecord
 from kernel.registry.adapter import RegistryCompatibilityError, verify_pinned
 from kernel.scheduler import flush_events, initial_state
+from kernel.scheduler.state import KernelState
 from kernel.service_cancel import (
     append_service_event,
     close_paused_graph,
@@ -103,7 +104,7 @@ class RunService(Protocol):
 
 
 def new_envelope(run_id: str, root_task_id: str, state_revision: int, status: RunStatus,
-                 **fields: object) -> RunEnvelope:
+                 **fields: Any) -> RunEnvelope:
     """Build a validated RunEnvelope (status/interaction invariants are enforced).
 
     Args:
@@ -279,7 +280,7 @@ class KernelService:
         env = self._env
         record = env.run_store.get_run(session.run_id)
         if persist and values:
-            flush_events(env.run_store, values)
+            flush_events(env.run_store, cast(KernelState, values))
             record = self._persist(session, values, bool(diagnostics))
         return build_envelope(record, values, trace=session.trace,
                               observability=session.observability, diagnostics=diagnostics,

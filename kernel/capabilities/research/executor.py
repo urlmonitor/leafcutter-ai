@@ -34,7 +34,7 @@ from kernel.capabilities.research.state import Collected, Plan, ResearchContinua
 from kernel.contracts.capability import CapabilityResult, Usage
 from kernel.contracts.payloads import GoalRequestPayload, ResearchRequestPayload
 from kernel.contracts.schema_catalog import validate_payload
-from kernel.contracts.work import CapabilityInvocation
+from kernel.contracts.work import CapabilityInvocation, RequestProposal
 
 CAPABILITY_ID = "research"
 CAPABILITY_VERSION = "1.0.0"
@@ -91,7 +91,8 @@ async def _collect(state: ResearchState, config: RunnableConfig) -> dict[str, An
     invocation, ctx = _run(config)
     cont = state.get("cont")
     if cont is None:
-        cont = ResearchContinuation.model_validate(invocation.continuation.state)
+        resumed = invocation.continuation  # a resumption always carries one (see _entry)
+        cont = ResearchContinuation.model_validate(resumed.state if resumed else {})
     out = collect_outcomes(ctx, cont, invocation.child_outcomes)
     close_coverage(cont, out)
     return {"plan": state.get("plan") or parse_plan(invocation), "cont": cont, "out": out,
@@ -123,13 +124,18 @@ async def _evaluate(state: ResearchState, config: RunnableConfig) -> dict[str, A
     return {"usage": usage}
 
 
+def _source_ids(request: RequestProposal) -> list[str]:
+    """Return the source ids a retrieval request names (empty when it names none)."""
+    named = request.payload.get("source_ids")
+    return [str(i) for i in named] if isinstance(named, list) else []
+
+
 def _dispatched(cont: ResearchContinuation) -> ResearchContinuation:
     """Return the continuation with the held-back host needs marked as dispatched."""
     child_map = dict(cont.child_map)
     for request in cont.deferred:
-        child_map[request.evidence_needs[0].id] = request.payload.get("source_ids", [])
-    attempted = [*cont.attempted, *(s for r in cont.deferred
-                                    for s in r.payload.get("source_ids", []))]
+        child_map[request.evidence_needs[0].id] = _source_ids(request)
+    attempted = [*cont.attempted, *(s for r in cont.deferred for s in _source_ids(r))]
     return cont.model_copy(update={"deferred_dispatched": True, "child_map": child_map,
                                    "attempted": list(dict.fromkeys(attempted))})
 
