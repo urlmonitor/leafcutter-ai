@@ -65,6 +65,16 @@ amended_by:
       original instruction-sourced obligation is unchanged and AR-200b-1 is
       unaffected. Handed to the IT PO / user for re-approval, since this L1 was
       at readiness approved before the amendment.
+  - reason: >-
+      2026-10-01, BrainCandy: RE-APPROVED. The user read the amendment above
+      and accepted it, confirming the widening to a declaration-sourced
+      obligation. readiness remains approved deliberately -- it was reviewed in
+      place rather than reset and re-granted. This entry exists so the approval
+      on this record provably covers the AMENDED wording, not the
+      pre-amendment wording it was originally granted against. Without it, the
+      readiness field alone cannot distinguish "approved, then quietly changed"
+      from "approved as it now reads" -- which is this record's own promise
+      applied to itself.
 created: 2026-08-26
 superseded_by: null
 covered_by:

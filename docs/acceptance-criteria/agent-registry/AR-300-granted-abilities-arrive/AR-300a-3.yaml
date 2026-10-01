@@ -10,7 +10,7 @@ status: active
 req_status: draft
 work_status: todo
 readiness: approved
-priority: medium
+priority: high
 roadmap_phase: phase_1
 criteria: |
   Given an agent whose declaration grants no abilities -- either the declaration

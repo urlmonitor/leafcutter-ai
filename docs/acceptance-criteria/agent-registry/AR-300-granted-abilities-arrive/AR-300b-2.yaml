@@ -10,7 +10,7 @@ status: active
 req_status: draft
 work_status: todo
 readiness: approved
-priority: medium
+priority: high
 roadmap_phase: phase_1
 criteria: |
   Given a third kind of per-agent preparation, introduced after the delivery

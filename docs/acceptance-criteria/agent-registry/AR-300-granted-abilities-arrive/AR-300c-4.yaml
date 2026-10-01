@@ -9,7 +9,7 @@ status: active
 req_status: draft
 work_status: todo
 readiness: approved
-priority: medium
+priority: high
 roadmap_phase: phase_1
 criteria: |
   Given an author with no prior knowledge of this change, consulting the project
