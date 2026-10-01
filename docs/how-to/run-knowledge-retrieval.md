@@ -104,3 +104,24 @@ Serving accepts `NEO4J_URI`, `NEO4J_USERNAME`, and `NEO4J_PASSWORD` as aliases f
 Enabled serving and writer composition resolve each setting from the process environment, then the file named by `LEAFCUTTER_ENV_FILE`, then the nearest `.env` walking upward from the configured repository root (or current directory). Within a source, the legacy `LEAFCUTTER_*` name wins over its alias. Empty values count as absent, matching kernel credential loading. Custom configured variable names are exact: they do not fall back to conventional aliases. Named unreadable files fail; unreadable discovered files emit a generic warning. Loading never mutates the process environment and disabled serving never reads credential files.
 
 Keep the actual `.env` outside Git and set `LEAFCUTTER_ENV_FILE` to its existing path when a worktree cannot discover it. Do not copy credentials into the worktree. Writer operations accept the shared URI but still require `LEAFCUTTER_NEO4J_WRITER_USERNAME` and `LEAFCUTTER_NEO4J_WRITER_PASSWORD`; serving credentials do not silently authorize writes. Merely configuring Aura does not run migrations or index a corpus.
+
+## Reusable authored query catalog
+
+Set `knowledge.query_catalog_root` to an application-controlled directory outside prompt text. The catalog retains immutable descriptor and generated-Cypher versions plus their verification provenance. Existing operations keep their original contracts. New operations require a trusted catalog context and a pinned digest; an unknown ordinary retrieval operation is still rejected.
+
+```text
+python -m knowledge catalog-list --catalog-root <directory>
+python -m knowledge query-verify --catalog-root <directory> --repository-id <repository> --source-sha <exact-SHA> --candidate <candidate.json>
+python -m knowledge query-register --catalog-root <directory> --repository-id <repository> --source-sha <exact-SHA> --candidate <candidate.json> --allow-catalog-write
+python -m knowledge retrieve --backend neo4j --repository-id <repository> --catalog-root <directory> --request <request.json>
+```
+
+`query-verify` reads the configured Neo4j service and produces the reviewable compiled query and measured checks without activating it. `query-register` reruns those checks; it does not trust a supplied success receipt. Replacing an active operation requires a new version and `--expected-active-digest <previous-digest>`. Interrupted publication or conflicting writers leave the old catalog intact. A surviving `.activation.lock` after process termination requires an operator to establish that its writer is gone before removing that lock; the library does not guess that an active writer is stale.
+
+The coding agent authors typed parameters, purpose, supported questions and a recipe with zero to two allowlisted directed relationship steps and optional property filters. The trusted compiler creates actual parameterized Cypher. It never executes caller-supplied Cypher or Python. Twenty input seeds, ten neighbors per step and bounded result limits keep expansion finite; transaction deadlines still apply. A one-item lookahead reports expansion saturation, including branches that later produce no evidence. Completed empty queries return `ok` with no evidence; saturated results return `partial` and identify the bound. Wider searches must refine their seeds or request an ordinary reviewed code extension.
+
+The candidate includes positive and empty expected-result cases. The verifier executes those judgments against the exact pinned source and independently tests invalid input, bound injection and foreign scope. Passing these checks establishes declared-case conformance, not general semantic usefulness. The example [component test query](../../knowledge/examples/component_tests_candidate.json) joins component membership to acceptance-criterion test references in one new two-hop operation. Its expected IDs were independently reviewed against the commit named in [source judgments](../../reports/knowledge-query-growth-source-judgments.json).
+
+The kernel's separate activation capability requires explicit `write_query_catalog` permission and the catalog-write effect. Read-only retrieval cannot acquire this permission through fallback. New research can discover admitted entries after restart; already pinned requests retain their selected descriptor. The original research still evaluates whether returned evidence answers its question. A successful build or admission is not an answer, and outage, denied access, unapproved source mapping and empty results remain distinct.
+
+For a catalog intended to survive replacing or later merging an implementation worktree, configure a durable user/application data directory outside that worktree. The catalog contains query metadata and measured provenance rather than Neo4j credentials. Keep write access restricted to the activation owner; copying an untrusted catalog is not an authorization mechanism.

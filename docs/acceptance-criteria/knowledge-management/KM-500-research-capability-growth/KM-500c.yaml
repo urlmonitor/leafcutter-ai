@@ -1,0 +1,72 @@
+id: KM-500c
+title: Continue the original research with evidence you can assess
+component: knowledge-management
+components:
+- knowledge_management
+level: L1
+status: active
+req_status: active
+readiness: approved
+priority: medium
+work_status: todo
+criteria: 'Return to your question after an interruption and assess the answer.
+
+
+  Clarification and capability development preserve the original question, evidence needs and permitted project
+  scope so research resumes where it stopped. The outcome explains whether the evidence answers the question, what
+  remains uncertain and why further work stopped.
+
+  '
+parent: KM-500
+depends_on:
+- KM-500
+doc_links:
+- path: docs/acceptance-criteria/knowledge-management/KM-400-trustworthy-project-knowledge/KM-400.yaml
+  relationship: context
+  status: exists
+  relevance: Reuse completed retrieval contracts, pinned provenance, optionality and honest outcomes.
+- path: docs/architecture/adrs/ADR-062-standalone-knowledge-retrieval.md
+  relationship: context
+  status: exists
+  relevance: Preserve registered bounded execution and standalone ownership; never execute unchecked model-authored
+    queries.
+documentation_triggers:
+- how-to
+- sequence-diagram
+- reference-doc
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: product-owner
+created: '2026-10-01'
+amended_by: []
+superseded_by: null
+covered_by:
+- KM-500c-1
+- KM-500c-2
+- KM-500c-3
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: 'User-approved follow-on to KM-400: Jev research readiness and clarification,
+
+  selection by registered query descriptions, typed inputs and supported questions,
+
+  proven missing-capability development, verified reusable admission and resumption
+
+  of the original research. Approval authorizes implementation, not a done claim.
+
+  Existing Decision, Evidence, capability-gap and continuation ownership remain
+
+  authoritative. KM-400 rejection of unknown executable operations is preserved.
+
+  A successful build is not an answered research question. Empty results, provider
+
+  outages, denied access and ambiguous requests remain distinct from a buildable gap.
+
+  No roadmap changes, unrestricted dynamic query execution or autonomous canonical
+
+  knowledge rewriting are introduced by this outcome.
+
+  '

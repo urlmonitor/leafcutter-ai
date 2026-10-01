@@ -1,0 +1,128 @@
+id: KM-500b-2
+title: Prove a new bounded query before it can answer research
+component: knowledge-management
+components:
+- knowledge_management
+level: L2
+status: active
+req_status: active
+readiness: approved
+priority: medium
+work_status: done
+parent: KM-500b
+criteria: 'Given the coding agent receives a query-gap build request within the supported recipe language
+
+  When it supplies a new relationship-path or filter recipe with a proposed catalog description
+
+  Then the trusted query compiler produces repository- and generation-scoped parameterized Neo4j execution with
+  enforced limits
+
+  And the candidate can express a new supported query, not only rename an existing operation
+
+  And supplied text and bound values cannot add executable clauses or escape scope
+
+  And independent validation executes positive expected-result, empty-result, foreign-scope and invalid-input cases
+  plus a recorded evaluation against the requested result meaning
+
+  And the build produces a reviewable candidate, compiled query and matching test/evaluation evidence before any
+  activation
+
+  And the agent claiming success, an unrelated passing test or an unverified receipt cannot activate the candidate
+
+  And requests outside the compiler language remain explicit code-build gaps rather than executing arbitrary proposed
+  Cypher.
+
+  '
+depends_on:
+- KM-500b
+doc_links:
+- path: docs/acceptance-criteria/knowledge-management/KM-400-trustworthy-project-knowledge/KM-400.yaml
+  relationship: context
+  status: exists
+  relevance: Reuse standalone retrieval, canonical provenance, budget limits and honest result statuses; this extension
+    does not replace completed KM-400 behavior.
+- path: docs/architecture/adrs/ADR-053-intelligence-selection-deterministic-jev-llm-human.md
+  relationship: context
+  status: exists
+  relevance: Deterministic eligibility before bounded semantic judgment; clarification and no-progress remain existing
+    mechanisms.
+- path: docs/architecture/adrs/ADR-056-colony-memory-evidence-reinforcement.md
+  relationship: context
+  status: exists
+  relevance: Reuse canonical capability gaps and verified registration; provider failures and ambiguity are not
+    capability-growth evidence.
+origin_agent: business-analyst
+created: '2026-10-01'
+amended_by: []
+superseded_by: null
+covered_by:
+- tests/knowledge/test_query_admission.py::test_catalog_compiles_novel_two_hop_query_with_bound_values
+- tests/knowledge/test_query_admission.py::test_unsafe_or_unverified_candidate_is_rejected_before_database_work
+- tests/knowledge/test_query_admission.py::test_false_expectations_never_activate_and_previous_catalog_survives
+- tests/knowledge_live/query_catalog_checks.py::test_real_generated_query_admission_and_restarted_public_retrieval
+- tests/knowledge_live/query_catalog_checks.py::test_real_high_fanout_and_completed_empty_are_distinct
+- tests/knowledge/test_query_admission.py::test_verification_timeout_and_cancellation_never_activate
+- tests/knowledge_live/query_growth_checks.py::test_aura_query_growth_public_proof
+implemented_by:
+- tickets/00_inbox/TICKET-20261001-KM-500b-2.md
+- knowledge/query_models.py
+- knowledge/query_compile.py
+- knowledge/query_store.py
+- knowledge/query_catalog.py
+- knowledge/query_execution.py
+- knowledge/query_admission.py
+- knowledge/cli_catalog.py
+- knowledge/contracts.py
+- knowledge/retrieval_steps.py
+change_target: code
+risk_surface: contract_boundary
+notes: 'User explicitly authorized implementation of this research/query capability-growth loop. PO reviewed the
+  separate KM-500 product boundary. Approval records scope authorization, not completed work. IT PO supplies technical
+  constraints and test contracts; canonical tickets precede implementation. 2026-10-01 independent BA reconciliation:
+  actual public tests linked; local Neo4j proof is synthetic graph execution, scheduler proof uses scripted Jev/Cypher.
+  This checkpoint was superseded by the final acceptance below. Final independent acceptance:
+  bounded implemented behavior passes linked criterion tests and actual Neo4j/Aura artifacts where promised; live
+  external Jev remains not run pending explicit provider approval. See docs/analysis/2026-10-01-query-growth-acceptance.md.
+  Commit/release status is separate.'
+assigned_agent: python-coder
+estimated_complexity: L
+it_requirements:
+- Neutral trusted compiler accepts only strict typed declarative recipes with zero to two bounded traversals, canonical
+  edge/kind/filter vocabulary and parameter values separate from syntax.
+- Compiler injects repository/generation on every endpoint and relationship; fixed seed, fanout, candidate, result
+  and deadline caps apply before activation.
+- Persist generated Cypher and content digest beside descriptor and measured test/evaluation provenance; no raw
+  host Cypher or arbitrary Python imports execute.
+- Expectations are declared candidate checks, not semantic truth; verifier independently executes them and mandatory
+  isolation/boundary checks. Unsupported recipe language yields an explicit code-build gap.
+test_required: true
+test_rationale: Prove observable behavior at the public service/kernel or trusted real-backend admission boundary.
+  Provider and host doubles are labeled; no helper-only proof substitutes for the persisted end-to-end flow.
+test_spec:
+- name: test_km500_b_2_behavior
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: integration
+  angle: criterion
+  description: Execute generated parameterized Cypher on a real-format projection with positive and negative expectations
+    plus isolation and bounded-read tests; reject unsafe recipes, false expectations and modified content.
+  covers:
+  - KM-500b-2
+  requires_db: false
+- name: test_km500_b_2_real_query
+  target_dir: tests/knowledge_live/
+  framework: pytest
+  type: integration
+  angle: real_artifact
+  description: Run compiled query admission and scoped execution against the actual Neo4j test backend; record immutable
+    generation, query digest and measured checks. Never substitute a simulated Cypher engine.
+  covers:
+  - KM-500b-2
+  requires_db: true
+expects_from:
+  ac_id: KM-400e-3
+  contract: Existing scoped retrieval, canonical evidence, optional bootstrap and checkpoint lifecycle remain compatible.
+delivers_to:
+  agent: python-coder
+  contract: Implement KM-500b-2 at tests/knowledge/test_query_admission.py public test seam; neutral query catalog/admission
+    and kernel integration share versioned descriptors and digest-bound activation receipts.

@@ -1,4 +1,9 @@
-"""Composition configuration. Enabled configuration errors fail before network access."""
+"""Composition configuration. Enabled configuration errors fail before network access.
+MODULE: knowledge.config
+GOAL: Provide the scoped knowledge retrieval config responsibility.
+BUSINESS CONTEXT: Make attributable research capabilities reusable and explicitly governed.
+ARCHITECTURE: Dependencies point inward to neutral contracts; see docs/architecture/components/knowledge-retrieval.md.
+"""
 
 from __future__ import annotations
 
@@ -19,6 +24,7 @@ class KnowledgeConfig(Model):
     backend: str = "none"
     repository_id: str = "leafcutter"
     repository_root: str | None = None
+    query_catalog_root: str | None = None
     neo4j_uri_env: str = "LEAFCUTTER_NEO4J_URI"
     neo4j_username_env: str = "LEAFCUTTER_NEO4J_USERNAME"
     neo4j_password_env: str = "LEAFCUTTER_NEO4J_PASSWORD"
@@ -73,7 +79,12 @@ def build_retriever(
         else None
     )
     provider = embedding_provider or build_embedding_provider(config)
-    return KnowledgeService(backend, source_resolver=resolver, embedding_provider=provider)
+    from .query_catalog import QueryCatalog
+
+    catalog = QueryCatalog(config.query_catalog_root) if config.query_catalog_root else None
+    return KnowledgeService(
+        backend, source_resolver=resolver, embedding_provider=provider, query_catalog=catalog
+    )
 
 
 def build_embedding_provider(config: KnowledgeConfig | dict) -> EmbeddingProvider | None:
@@ -98,3 +109,9 @@ def build_embedding_provider(config: KnowledgeConfig | dict) -> EmbeddingProvide
         config.embedding_dimensions,
         token=os.environ.get(config.embedding_token_env),
     )
+
+
+# ====================================================================
+# DECISION HISTORY
+# ====================================================================
+# - 2026-10-01 15:46 [python-coder]: Bind verified reusable query versions through scoped retrieval. (#KM-500/TICKET-20261001-KM-500b-3)

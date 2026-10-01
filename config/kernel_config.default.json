@@ -4,6 +4,7 @@
     "backend": "none",
     "repository_id": "leafcutter",
     "repository_root": null,
+    "query_catalog_root": null,
     "neo4j_uri_env": "LEAFCUTTER_NEO4J_URI",
     "neo4j_username_env": "LEAFCUTTER_NEO4J_USERNAME",
     "neo4j_password_env": "LEAFCUTTER_NEO4J_PASSWORD",

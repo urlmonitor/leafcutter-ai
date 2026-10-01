@@ -1,0 +1,104 @@
+id: KM-500c-2
+title: Judge the original question against the evidence actually retrieved
+component: knowledge-management
+components:
+- knowledge_management
+level: L2
+status: active
+req_status: active
+readiness: approved
+priority: medium
+work_status: done
+parent: KM-500c
+criteria: 'Given the original research has obtained results from an existing or newly verified query
+
+  When its existing evidence evaluation decides whether the question can be answered
+
+  Then the answer or evidence bundle cites the actual source revision and retrieved items and states which required
+  needs remain unsatisfied
+
+  And a successful build, successful query execution and successful answer assessment remain separate recorded outcomes
+
+  And zero matches, contradictory evidence and insufficient evidence remain distinguishable with their limitations
+  intact
+
+  And any bounded synthesis or follow-up uses the existing research policy rather than silently treating query availability
+  as answer quality.
+
+  '
+depends_on:
+- KM-500c
+doc_links:
+- path: docs/acceptance-criteria/knowledge-management/KM-400-trustworthy-project-knowledge/KM-400.yaml
+  relationship: context
+  status: exists
+  relevance: Reuse standalone retrieval, canonical provenance, budget limits and honest result statuses; this extension
+    does not replace completed KM-400 behavior.
+- path: docs/architecture/adrs/ADR-053-intelligence-selection-deterministic-jev-llm-human.md
+  relationship: context
+  status: exists
+  relevance: Deterministic eligibility before bounded semantic judgment; clarification and no-progress remain existing
+    mechanisms.
+- path: docs/architecture/adrs/ADR-056-colony-memory-evidence-reinforcement.md
+  relationship: context
+  status: exists
+  relevance: Reuse canonical capability gaps and verified registration; provider failures and ambiguity are not
+    capability-growth evidence.
+origin_agent: business-analyst
+created: '2026-10-01'
+amended_by: []
+superseded_by: null
+covered_by:
+- tests/knowledge/test_query_growth_kernel.py::TestQueryGrowthRun::test_verified_build_resumes_same_research_and_fresh_run_reuses_catalog
+- tests/knowledge_live/query_catalog_checks.py::test_real_high_fanout_and_completed_empty_are_distinct
+- tests/kernel/capabilities/test_research_graph.py::TestCollect::test_conflict_recorded
+- tests/kernel/capabilities/test_research_graph.py::TestCollect::test_unsatisfied_required_need_makes_the_bundle_partial
+- tests/kernel/capabilities/test_research_graph.py::TestCollect::test_failed_child_is_a_limitation_never_an_empty_result
+- tests/kernel/capabilities/test_research_graph.py::TestSynthesisAndStop::test_synthesis_resume_finishes_without_replanning_or_more_jev_calls
+- tests/knowledge_live/query_growth_checks.py::test_aura_query_growth_public_proof
+implemented_by:
+- tickets/00_inbox/TICKET-20261001-KM-500c-2.md
+- integrations/query_growth.py
+- integrations/query_planning.py
+- integrations/query_activation.py
+- integrations/query_contracts.py
+- kernel/contracts/query.py
+- kernel/capabilities/host/query_build.py
+change_target: code
+risk_surface: contract_boundary
+notes: 'User explicitly authorized implementation of this research/query capability-growth loop. PO reviewed the
+  separate KM-500 product boundary. Approval records scope authorization, not completed work. IT PO supplies technical
+  constraints and test contracts; canonical tickets precede implementation. 2026-10-01 independent BA reconciliation:
+  actual public tests linked; local Neo4j proof is synthetic graph execution, scheduler proof uses scripted Jev/Cypher.
+  This checkpoint was superseded by the final acceptance below. Final independent acceptance:
+  bounded implemented behavior passes linked criterion tests and actual Neo4j/Aura artifacts where promised; live
+  external Jev remains not run pending explicit provider approval. See docs/analysis/2026-10-01-query-growth-acceptance.md.
+  Commit/release status is separate.'
+assigned_agent: python-coder
+estimated_complexity: L
+it_requirements:
+- Reuse research.collect.judge/apply_answers and existing synthesis path; query registration does not satisfy an
+  evidence need by itself.
+- Preserve typed unavailable/truncated limitations and content-addressed evidence with selected query provenance
+  across completed checkpoint.
+test_required: true
+test_rationale: Prove observable behavior at the public service/kernel or trusted real-backend admission boundary.
+  Provider and host doubles are labeled; no helper-only proof substitutes for the persisted end-to-end flow.
+test_spec:
+- name: test_km500_c_2_behavior
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: integration
+  angle: criterion
+  description: Use actual research answer assessment to show relevant but insufficient evidence remains partial,
+    contradictions persist, and newly retrieved evidence answers the original question without false certainty.
+  covers:
+  - KM-500c-2
+  requires_db: false
+expects_from:
+  ac_id: KM-400e-3
+  contract: Existing scoped retrieval, canonical evidence, optional bootstrap and checkpoint lifecycle remain compatible.
+delivers_to:
+  agent: python-coder
+  contract: Implement KM-500c-2 at tests/knowledge/test_query_growth_kernel.py public test seam; neutral query catalog/admission
+    and kernel integration share versioned descriptors and digest-bound activation receipts.

@@ -6,6 +6,16 @@ ARCHITECTURE: Adapter between neutral knowledge transport and existing kernel co
 """
 
 from __future__ import annotations
+
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from typing import Any
+    from kernel.capabilities.base import ExecutionContext
+    from kernel.contracts import CapabilityInvocation, CapabilityResult, Usage
+    from kernel.contracts.payloads import RetrievalRequestPayload
+    from knowledge.ports import KnowledgeRetriever
+    from knowledge.query_catalog import QueryCatalog
+
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -115,10 +125,12 @@ async def _request(
     invocation: CapabilityInvocation,
     payload: RetrievalRequestPayload,
     capabilities: dict[str, Any],
+    query_catalog: QueryCatalog | None=None,
 ) -> tuple[KnowledgeRetrievalRequest, str, list[Usage]]:
     """Bind repository and revision from trusted configuration, never prompt text.
 
     Args:
+        query_catalog: Optional trusted persistent query catalog.
         ctx: Trusted execution scope, budgets and telemetry owner.
         invocation: Existing registered capability invocation.
         payload: Existing kernel retrieval payload and content limits.
@@ -167,7 +179,8 @@ async def _request(
         budget.get("deadline_ms", 10000), int(ctx.config.limits.capability_timeout_seconds * 1000)
     )
     raw["budget"] = budget
-    return KnowledgeRetrievalRequest.model_validate(raw), reason, usage
+    return (query_catalog.request(raw) if query_catalog is not None
+            else KnowledgeRetrievalRequest.model_validate(raw)), reason, usage
 
 
 async def _bounded_call(
@@ -359,6 +372,7 @@ async def invoke_knowledge(
     ctx: ExecutionContext,
     payload: RetrievalRequestPayload,
     source_ids: set[str],
+    *, query_catalog: QueryCatalog | None=None,
 ) -> CapabilityResult:
     """Validate, execute and map one bounded call through the existing capability boundary.
 
@@ -374,7 +388,7 @@ async def invoke_knowledge(
     """
     try:
         capabilities = await asyncio.wait_for(port.capabilities(), timeout=3)
-        request, reason, usage = await _request(ctx, invocation, payload, capabilities)
+        request, reason, usage = await _request(ctx, invocation, payload, capabilities, query_catalog)
         original_mode = request.mode
         target = (
             request.disclosure_level

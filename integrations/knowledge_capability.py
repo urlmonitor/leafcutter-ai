@@ -6,6 +6,16 @@ ARCHITECTURE: Adapter between neutral knowledge transport and existing kernel co
 """
 
 from __future__ import annotations
+
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from kernel.capabilities.base import ExecutionContext
+    from kernel.contracts import CapabilityInvocation, CapabilityResult
+    from kernel.contracts.payloads import RetrievalRequestPayload
+    from knowledge.ports import KnowledgeRetriever
+    from knowledge.query_catalog import QueryCatalog
+    from knowledge.query_admission import QueryAdmission
+
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -159,7 +169,8 @@ class KnowledgeRetrievalExecutor:
     """Registered retrieve.repository facade; ordinary file retrieval stays available."""
 
     def __init__(
-        self, retriever: KnowledgeRetriever, fallback: CapabilityExecutor | None = None
+        self, retriever: KnowledgeRetriever, fallback: CapabilityExecutor | None = None,
+        *, query_catalog: QueryCatalog | None=None, query_admission: QueryAdmission | None=None
     ) -> None:
         """Inject an application-owned port, never a database session.
 
@@ -169,6 +180,8 @@ class KnowledgeRetrievalExecutor:
         """
         self.retriever = retriever
         self.fallback = fallback
+        self.query_catalog = query_catalog
+        self.query_admission = query_admission
 
     async def ainvoke(
         self, invocation: CapabilityInvocation, ctx: ExecutionContext
@@ -200,6 +213,10 @@ class KnowledgeRetrievalExecutor:
             eligible.intersection_update(ctx.scope.source_ids)
         if request.knowledge is None and not eligible:
             return await (self.fallback or RepositoryRetrievalExecutor()).ainvoke(invocation, ctx)
+        if self.query_catalog is not None and self.query_admission is not None and request.knowledge is None:
+            from integrations.query_growth import invoke_query_growth
+            return await invoke_query_growth(self.retriever,self.query_catalog,self.query_admission,
+                                             invocation,ctx,request,eligible)
         return await invoke_knowledge(self.retriever, invocation, ctx, request, eligible)
 
 

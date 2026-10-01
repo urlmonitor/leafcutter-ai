@@ -1,4 +1,9 @@
-"""Scoped generation selection, candidate fetching and evidence assembly steps."""
+"""Scoped generation selection, candidate fetching and evidence assembly steps.
+MODULE: knowledge.retrieval_steps
+GOAL: Provide the scoped knowledge retrieval retrieval_steps responsibility.
+BUSINESS CONTEXT: Make attributable research capabilities reusable and explicitly governed.
+ARCHITECTURE: Dependencies point inward to neutral contracts; see docs/architecture/components/knowledge-retrieval.md.
+"""
 
 from __future__ import annotations
 from typing import TYPE_CHECKING
@@ -95,6 +100,27 @@ async def fetch_candidates(
     Returns:
         tuple[list[Entity], dict, int | None]: Candidates, semantic provenance, and semantic work count; graph work is counted after deduplication.
     """
+    if request.operation_digest and request.operation_digest != "builtin:1":
+        from .query_execution import execute_query
+
+        descriptor = service.query_catalog.get(
+            request.operation, request.operation_version, request.operation_digest
+        )
+        rows = await execute_query(
+            service.backend,
+            descriptor,
+            request.repository_id,
+            snapshot.generation_id,
+            request.arguments,
+            min(remaining_candidates, offset + request.budget.max_results + 1),
+            request.budget.max_neighbors_per_seed,
+        )
+        if rows.truncated:
+            out.warnings.append("query expansion or result bound reached; omitted total unknown")
+            out.truncated = True
+            out.status = "partial"
+        out.stats["recipe_expansion_truncated"] = rows.truncated
+        return rows, {}, None
     if request.mode in {"semantic", "hybrid"} or request.operation.startswith("find_similar"):
         rows, provenance, semantic_work = await SemanticSearch(
             service.backend, service.embeddings
@@ -209,3 +235,9 @@ async def disclose_candidates(
                 item.limitations.append("correction reference unresolved in retrieved scope")
         out.evidence.append(item)
     return candidate_work
+
+
+# ====================================================================
+# DECISION HISTORY
+# ====================================================================
+# - 2026-10-01 15:46 [python-coder]: Bind verified reusable query versions through scoped retrieval. (#KM-500/TICKET-20261001-KM-500b-3)

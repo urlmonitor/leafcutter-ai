@@ -1,4 +1,9 @@
-"""Versioned transport and projection records, independent of kernel domain models."""
+"""Versioned transport and projection records, independent of kernel domain models.
+MODULE: knowledge.contracts
+GOAL: Provide the scoped knowledge retrieval contracts responsibility.
+BUSINESS CONTEXT: Make attributable research capabilities reusable and explicitly governed.
+ARCHITECTURE: Dependencies point inward to neutral contracts; see docs/architecture/components/knowledge-retrieval.md.
+"""
 
 from __future__ import annotations
 
@@ -6,7 +11,7 @@ from .errors import invalid
 
 from typing import Literal
 from pathlib import PurePosixPath
-from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+from pydantic import BaseModel, ConfigDict, Field, ValidationInfo, field_validator, model_validator
 
 
 class Model(BaseModel):
@@ -109,7 +114,8 @@ class KnowledgeRetrievalRequest(Model):
     request_id: str = Field(min_length=1, max_length=200)
     repository_id: str = Field(min_length=1, max_length=200)
     operation: str = "get_entities"
-    operation_version: Literal["1"] = "1"
+    operation_version: str = Field(default="1", pattern=r"^[1-9][0-9]{0,4}$")
+    operation_digest: str | None = None
     mode: Literal["exact", "graph", "semantic", "hybrid", "precedent"] = "exact"
     arguments: dict = Field(default_factory=dict)
     revision: str = "latest"
@@ -120,9 +126,32 @@ class KnowledgeRetrievalRequest(Model):
     correlation: dict[str, str] = Field(default_factory=dict)
 
     @model_validator(mode="after")
-    def registered_arguments(self):
+    def registered_arguments(self, info: ValidationInfo) -> KnowledgeRetrievalRequest:
+        """Validate a registered operation using optional trusted catalog context.
+
+        Args:
+            info: Pydantic validation context supplied by application composition.
+
+        Returns:
+            This request after strict operation and revision validation.
+        """
         if self.operation not in OPERATIONS:
-            invalid("unknown registered operation")
+            from .query_models import validate_arguments
+
+            catalog = (info.context or {}).get("query_catalog")
+            if catalog is None or not self.operation_digest:
+                invalid("unknown registered operation")
+            descriptor = catalog.get(self.operation, self.operation_version, self.operation_digest)
+            validate_arguments(descriptor, self.arguments)
+            if (
+                self.mode not in {"graph", "precedent"}
+                or len(descriptor.recipe.steps) > self.budget.max_hops
+            ):
+                invalid("catalog mode or depth exceeds request budget")
+            self.validate_revision()
+            return self
+        if self.operation_version != "1" or self.operation_digest not in {None, "builtin:1"}:
+            invalid("unsupported built-in operation version or digest")
         expected, required = OPERATIONS[self.operation]
         modes = {expected}
         if expected == "semantic":
@@ -132,11 +161,15 @@ class KnowledgeRetrievalRequest(Model):
         if self.mode not in modes:
             invalid("mode conflicts with registered operation")
         validate_operation_arguments(self.arguments, required, self.operation)
+        self.validate_revision()
+        return self
+
+    def validate_revision(self) -> None:
+        """Reject any revision other than an immutable SHA or explicit latest."""
         if self.revision != "latest" and (
             len(self.revision) != 40 or any(x not in "0123456789abcdef" for x in self.revision)
         ):
             invalid("revision must be exact SHA or latest")
-        return self
 
 
 class KnowledgeEvidence(Model):
@@ -219,3 +252,9 @@ def validate_required_value(value: object, required: str) -> None:
             invalid("entity_ids requires 1..200 canonical IDs")
     elif not isinstance(value, str) or not value.strip() or len(value) > 4000:
         invalid("missing or invalid required argument")
+
+
+# ====================================================================
+# DECISION HISTORY
+# ====================================================================
+# - 2026-10-01 15:46 [python-coder]: Bind verified reusable query versions through scoped retrieval. (#KM-500/TICKET-20261001-KM-500b-3)

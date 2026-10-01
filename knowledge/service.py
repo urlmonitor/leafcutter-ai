@@ -1,4 +1,9 @@
-"""Budgeted retrieval orchestration over registered backend operations."""
+"""Budgeted retrieval orchestration over registered backend operations.
+MODULE: knowledge.service
+GOAL: Provide the scoped knowledge retrieval service responsibility.
+BUSINESS CONTEXT: Make attributable research capabilities reusable and explicitly governed.
+ARCHITECTURE: Dependencies point inward to neutral contracts; see docs/architecture/components/knowledge-retrieval.md.
+"""
 
 from __future__ import annotations
 
@@ -34,6 +39,7 @@ class KnowledgeService:
         cursor_secret: bytes | None = None,
         telemetry: object | None = None,
         cancel_probe: object | None = None,
+        query_catalog: object | None = None,
     ) -> None:
         """Store injected dependencies without performing network operations.
 
@@ -44,8 +50,10 @@ class KnowledgeService:
             cursor_secret: Process-local continuation signing key.
             telemetry: Optional observer exposing record for bounded retrieval metadata.
             cancel_probe: Optional callable reporting caller cancellation.
+            query_catalog: Optional trusted persistent operation registry.
         """
         self.backend = backend
+        self.query_catalog = query_catalog
         self.source_resolver = source_resolver
         self.embeddings = QueryEmbeddings(embedding_provider)
         self.cursor_secret = cursor_secret or secrets.token_bytes(32)
@@ -75,7 +83,9 @@ class KnowledgeService:
         Returns:
             KnowledgeRetrievalResult: Scoped disclosed evidence with typed status, provenance and optional continuation.
         """
-        request = KnowledgeRetrievalRequest.model_validate(request.model_dump())
+        request = KnowledgeRetrievalRequest.model_validate(
+            request.model_dump(), context={"query_catalog": self.query_catalog}
+        )
         out = KnowledgeRetrievalResult(
             request_id=request.request_id,
             retrieval_id=str(uuid4()),
@@ -83,7 +93,10 @@ class KnowledgeService:
             requested_mode=request.mode,
             executed_mode=request.mode,
             operation=request.operation,
+            operation_version=request.operation_version,
         )
+        if request.operation_digest:
+            out.stats["operation_digest"] = request.operation_digest
         start = time.monotonic()
         page = {}
         try:
@@ -229,3 +242,9 @@ class KnowledgeService:
             "candidates": candidate_work,
             "generation": snapshot.generation_id,
         }
+
+
+# ====================================================================
+# DECISION HISTORY
+# ====================================================================
+# - 2026-10-01 15:46 [python-coder]: Bind verified reusable query versions through scoped retrieval. (#KM-500/TICKET-20261001-KM-500b-3)

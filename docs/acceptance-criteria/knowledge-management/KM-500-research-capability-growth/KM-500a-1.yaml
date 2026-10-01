@@ -1,0 +1,101 @@
+id: KM-500a-1
+title: Ask only for missing research inputs and continue from the answer
+component: knowledge-management
+components:
+- knowledge_management
+level: L2
+status: active
+req_status: active
+readiness: approved
+priority: medium
+work_status: done
+parent: KM-500a
+criteria: 'Given a research question lacks a required target, scope or disambiguating input
+
+  When deterministic input checks and the bounded readiness judgment assess it
+
+  Then the original research item pauses with a focused question naming the missing input
+
+  And no graph query or capability-build child starts while that input is unresolved
+
+  When the answer supplies the input through the existing interaction continuation
+
+  Then the same research question and need resume with the answer attached
+
+  And readiness is not asked again for unchanged sufficient inputs
+
+  And provider failure or an invalid answer remains an explicit failure or unresolved input, never a ready judgment.
+
+  '
+depends_on:
+- KM-500a
+doc_links:
+- path: docs/acceptance-criteria/knowledge-management/KM-400-trustworthy-project-knowledge/KM-400.yaml
+  relationship: context
+  status: exists
+  relevance: Reuse standalone retrieval, canonical provenance, budget limits and honest result statuses; this extension
+    does not replace completed KM-400 behavior.
+- path: docs/architecture/adrs/ADR-053-intelligence-selection-deterministic-jev-llm-human.md
+  relationship: context
+  status: exists
+  relevance: Deterministic eligibility before bounded semantic judgment; clarification and no-progress remain existing
+    mechanisms.
+- path: docs/architecture/adrs/ADR-056-colony-memory-evidence-reinforcement.md
+  relationship: context
+  status: exists
+  relevance: Reuse canonical capability gaps and verified registration; provider failures and ambiguity are not
+    capability-growth evidence.
+origin_agent: business-analyst
+created: '2026-10-01'
+amended_by: []
+superseded_by: null
+covered_by:
+- tests/knowledge/test_query_growth_kernel.py::TestQueryGrowthRun::test_clarification_restarts_then_emits_real_coding_handoff
+- tests/knowledge/test_query_growth_adversarial.py::test_scalar_clarification_preserves_pins_and_cannot_override_scope
+- tests/kernel/capabilities/test_research_graph.py::TestSynthesisAndStop::test_jev_unavailable_fails_with_provider_code
+implemented_by:
+- tickets/00_inbox/TICKET-20261001-KM-500a-1.md
+- integrations/query_growth.py
+- integrations/query_planning.py
+- integrations/query_activation.py
+- integrations/query_contracts.py
+- kernel/contracts/query.py
+- kernel/capabilities/host/query_build.py
+change_target: code
+risk_surface: contract_boundary
+notes: 'User explicitly authorized implementation of this research/query capability-growth loop. PO reviewed the
+  separate KM-500 product boundary. Approval records scope authorization, not completed work. IT PO supplies technical
+  constraints and test contracts; canonical tickets precede implementation. 2026-10-01 independent BA reconciliation:
+  actual public tests linked; local Neo4j proof is synthetic graph execution, scheduler proof uses scripted Jev/Cypher.
+  This checkpoint was superseded by the final acceptance below. Final independent acceptance:
+  bounded implemented behavior passes linked criterion tests and actual Neo4j/Aura artifacts where promised; live
+  external Jev remains not run pending explicit provider approval. See docs/analysis/2026-10-01-query-growth-acceptance.md.
+  Commit/release status is separate.'
+assigned_agent: python-coder
+estimated_complexity: L
+it_requirements:
+- Reuse HumanQuestionRequestPayload/RequestKind.HUMAN, current-wait child outcome and checkpointed retrieval continuation;
+  no parallel pause protocol.
+- Jev assesses readiness and selects only offered options through existing ask_jev reserve-before-use; uncertainty
+  asks bounded clarification and never authors database syntax.
+test_required: true
+test_rationale: Prove observable behavior at the public service/kernel or trusted real-backend admission boundary.
+  Provider and host doubles are labeled; no helper-only proof substitutes for the persisted end-to-end flow.
+test_spec:
+- name: test_km500_a_1_behavior
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: integration
+  angle: criterion
+  description: Exercise actual KernelService research readiness, human clarification and restart; keep original
+    goal/need and consume the answer once without repeating completed planning.
+  covers:
+  - KM-500a-1
+  requires_db: false
+expects_from:
+  ac_id: KM-400e-3
+  contract: Existing scoped retrieval, canonical evidence, optional bootstrap and checkpoint lifecycle remain compatible.
+delivers_to:
+  agent: python-coder
+  contract: Implement KM-500a-1 at tests/knowledge/test_query_growth_kernel.py public test seam; neutral query catalog/admission
+    and kernel integration share versioned descriptors and digest-bound activation receipts.

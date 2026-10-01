@@ -20,10 +20,16 @@ FINDINGS = "leafcutter.findings.v1"
 HUMAN_QUESTION_REQUEST = "leafcutter.human_question_request.v1"
 HUMAN_ANSWER = "leafcutter.human_answer.v1"
 
+QUERY_BUILD_REQUEST = "leafcutter.query_build_request.v1"
+QUERY_CANDIDATE = "leafcutter.query_candidate.v1"
+QUERY_ACTIVATION_REQUEST = "leafcutter.query_activation_request.v1"
+QUERY_ACTIVATION_RECEIPT = "leafcutter.query_activation_receipt.v1"
+
 KNOWN_SCHEMA_IDS: frozenset[str] = frozenset({
     GOAL_REQUEST, DECISION_REQUEST, DECISION_REPORT, RESEARCH_REQUEST, RETRIEVAL_REQUEST,
     EVIDENCE_BUNDLE, OPTIONS_REQUEST, OPTIONS, SYNTHESIS_REQUEST, FINDINGS,
     HUMAN_QUESTION_REQUEST, HUMAN_ANSWER,
+    QUERY_BUILD_REQUEST, QUERY_CANDIDATE, QUERY_ACTIVATION_REQUEST, QUERY_ACTIVATION_RECEIPT,
 })
 
 # ====================================================================

@@ -312,6 +312,17 @@
           "title": "Neo4J Username Env",
           "type": "string"
         },
+        "query_catalog_root": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Query Catalog Root"
+        },
         "query_timeout": {
           "exclusiveMinimum": 0,
           "maximum": 30,
@@ -338,6 +349,7 @@
         "backend",
         "repository_id",
         "repository_root",
+        "query_catalog_root",
         "neo4j_uri_env",
         "neo4j_username_env",
         "neo4j_password_env",
