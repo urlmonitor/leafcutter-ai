@@ -74,7 +74,10 @@ def host_result(state: dict[str, Any], capability_id: str) -> Any:
 # DECISION HISTORY
 # ====================================================================
 # - 2026-10-01 12:30 [python-coder]: `host.formulate_question` is driven as a `capability` request
-#   carrying a human_question_request payload: the graph routes kind `human` to the kernel human
-#   interaction unconditionally, so this is the only way to exercise the operation end to end
-#   until `host.formulate_questions` is wired into routing. (#KernelBootstrapV0/P8)
+#   carrying a human_question_request payload, so the operation itself (packet, conversion,
+#   security) is exercised end to end. (#KernelBootstrapV0/P8)
+# - 2026-10-01 17:50 [python-coder]: Routing now wires the operation: with
+#   `host.formulate_questions` on, a human request first spawns a `host.formulate_question` child
+#   (integration/test_formulate_routing.py, INT2). This rig still drives the operation directly
+#   because it tests the operation, not the routing. (#KernelBootstrapV0/P10)
 # ====================================================================
