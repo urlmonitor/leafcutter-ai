@@ -15,6 +15,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 
 from kernel.capabilities.decision.approvals import APPROVE, REJECT
+from kernel.capabilities.decision.option_context import option_context
 from kernel.capabilities.decision.state import Working, is_pending
 from kernel.contracts import schema_ids
 from kernel.contracts.decision import Criterion, Option
@@ -107,7 +108,8 @@ def research_request(work: Working, categories: list[EvidenceCategory]) -> Reque
     needs = [EvidenceNeed(id=f"need.{c.value}", category=c, priority=Priority.REQUIRED,
                           question=_NEED_QUESTIONS[c] + work.question) for c in categories]
     payload = ResearchRequestPayload(question=work.question, evidence_needs=needs,
-                                     existing_evidence_ids=work.evidence_ids)
+                                     existing_evidence_ids=work.evidence_ids,
+                                     option_context=option_context(work))
     return RequestProposal(
         kind=RequestKind.EVIDENCE, question=work.question, evidence_needs=needs,
         payload_schema=schema_ids.RESEARCH_REQUEST, payload=payload.model_dump(mode="json"),
@@ -189,6 +191,13 @@ def decision_approval_request(work: Working, option: Option) -> RequestProposal:
                   False, [option.id], evidence=_cited([option]))
 
 
+def design_choice_request(work: Working, question: str, why: str, choices: list[Choice],
+                          evidence: list[str]) -> RequestProposal:
+    """Ask a human to choose among the kernel-ranked options (or add one, or answer in words)."""
+    return _human(work, question, why, choices, True, [c.id for c in choices],
+                  structured=True, evidence=evidence)
+
+
 def escalation_request(work: Working, reason: str, text: str, tied: list[Option]
                        ) -> RequestProposal:
     """Ask a human about a tie, preference, conflict or unidentified gap."""
@@ -200,6 +209,9 @@ def escalation_request(work: Working, reason: str, text: str, tied: list[Option]
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-01 [python-coder]: A research request made after options exist carries
+#   option_context (titles, descriptions, cited refs); the grounding request cannot, no options
+#   exist yet. (#KernelV01/A)
 # - 2026-10-02 [python-coder]: Approval questions list the evidence the options cite, and the
 #   options request carries the accepted findings. (#KernelBootstrapV0/GROUND)
 # - 2026-10-01 23:00 [python-coder]: An unknown option set is first grounded by a bounded research

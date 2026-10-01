@@ -36,7 +36,10 @@
     "conflict_threshold": 0.7,
     "missing_min_probability": 0.4,
     "require_option_grounding": true,
-    "max_grounding_evidence": 12
+    "max_grounding_evidence": 12,
+    "design_judgement_threshold": 0.7,
+    "progress_epsilon": 0.05,
+    "max_research_rounds": 2
   },
   "research": {
     "need_required_threshold": 0.8,

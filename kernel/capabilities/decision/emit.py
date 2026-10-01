@@ -13,6 +13,7 @@ ARCHITECTURE: followup_for maps a Verdict to a Followup; result builders read an
 from __future__ import annotations
 
 from kernel.capabilities.decision.combine import Verdict
+from kernel.capabilities.decision.design_ending import choice_rationale, ranking_assessments
 from kernel.capabilities.decision.jev_support import blocked_result
 from kernel.capabilities.decision.requests import (
     DEFAULT_MAX_OPTIONS,
@@ -24,6 +25,7 @@ from kernel.capabilities.decision.requests import (
     synthesis_request,
 )
 from kernel.capabilities.decision.state import Working, version_of
+from kernel.config import DecisionConfig
 from kernel.contracts import schema_ids
 from kernel.contracts.base import new_id
 from kernel.contracts.capability import CapabilityResult
@@ -127,13 +129,14 @@ def _ver(items: list) -> str:
 
 def _decision_record(work: Working, status: DecisionStatus, missing: list[MissingKnowledge],
                      selected: str | None = None, rationale: Rationale | None = None,
-                     approval: ApprovalStatus = ApprovalStatus.NOT_REQUIRED) -> Decision:
+                     approval: ApprovalStatus = ApprovalStatus.NOT_REQUIRED,
+                     approved_by: str | None = None) -> Decision:
     """Build the Decision record carried in the result."""
     return Decision(
         id=work.decision_id or new_id("dec"), question=work.question, status=status, selected_option_id=selected,
         option_ids=[o.id for o in work.usable_options],
         criterion_ids=[c.id for c in work.usable_criteria], evidence_ids=work.evidence_ids,
-        missing=missing, rationale=rationale, approval_status=approval,
+        missing=missing, rationale=rationale, approval_status=approval, approved_by=approved_by,
         versions={"options": _ver(work.options), "criteria": _ver(work.criteria),
                   "templates": "decision.assess@1"})
 
@@ -192,6 +195,31 @@ def resolved_result(invocation: CapabilityInvocation, work: Working, verdict: Ve
         limitations=work.limitations)
 
 
+def design_resolved_result(invocation: CapabilityInvocation, work: Working, cfg: DecisionConfig
+                           ) -> CapabilityResult:
+    """Resolve a design decision with the option the human chose (approved by that human).
+
+    The kernel ranking the human saw is recorded in the rationale and the assessments; it is
+    evidence for the choice, never the authority for it.
+    """
+    option = next(o for o in work.options if o.id == work.cont.design_choice_id)
+    rationale = Rationale(text=choice_rationale(work), origin="template")
+    note = ("design decision: the options were ranked by the kernel and a human chose "
+            f"[{option.id}]")
+    report = DecisionReportPayload(
+        status=DecisionStatus.RESOLVED, recommendation=option.title,
+        selected_option_id=option.id, criterion_assessments=ranking_assessments(work, cfg),
+        supporting_evidence_ids=work.evidence_ids, approval_status=ApprovalStatus.APPROVED,
+        limitations=[*work.limitations, note], rationale=rationale)
+    decision = _decision_record(work, DecisionStatus.RESOLVED, [], option.id, rationale,
+                                ApprovalStatus.APPROVED, approved_by=work.cont.approved_by)
+    return CapabilityResult(
+        invocation_id=invocation.id, work_item_id=invocation.work_item_id,
+        status=ResultStatus.COMPLETED, output_schema_id=schema_ids.DECISION_REPORT,
+        output_payload=report.model_dump(mode="json"), decisions=[decision], usage=work.usage,
+        limitations=[*work.limitations, note])
+
+
 def emit_followup(invocation: CapabilityInvocation, work: Working, followup: Followup
                   ) -> CapabilityResult:
     """Emit `waiting` for a fresh follow-up, or the stalled outcome if it was already made."""
@@ -203,6 +231,9 @@ def emit_followup(invocation: CapabilityInvocation, work: Working, followup: Fol
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-01 [python-coder]: design_resolved_result completes a design decision with the human's
+#   choice: approval approved, approved_by the human, rationale recording ranking and choice.
+#   (#KernelV01/A)
 # - 2026-10-02 [python-coder]: mypy: the used items are typed as options or criteria (#KernelBootstrapV0/GROUND)
 # - 2026-10-01 23:00 [python-coder]: The decision record uses the stable decision id, so the
 #   scheduler merges every status of one decision into a single record. (#KernelBootstrapV0/GROUND)

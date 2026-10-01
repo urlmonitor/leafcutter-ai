@@ -85,6 +85,16 @@ class DecisionReportPayload(KernelModel):
         return self
 
 
+class OptionContext(KernelModel):
+    """One option the decision researches for: what it is and what it already cites."""
+
+    option_id: str = Field(min_length=1)
+    title: str = Field(min_length=1)
+    description: str | None = None
+    #: Evidence ids plus any file paths or symbol names the option's text mentions.
+    cited_refs: list[str] = Field(default_factory=list)
+
+
 class ResearchRequestPayload(KernelModel):
     """leafcutter.research_request.v1."""
 
@@ -95,6 +105,8 @@ class ResearchRequestPayload(KernelModel):
     expected_coverage: Literal["all_required", "best_effort"] = "all_required"
     #: Research exactly the given needs: Jev adds no further evidence categories.
     evidence_needs_only: bool = False
+    #: The options the decision has so far (empty before options exist); Wave 2 research reads it.
+    option_context: list[OptionContext] = Field(default_factory=list)
 
 
 class RetrievalLimits(KernelModel):
@@ -256,7 +268,7 @@ class HumanAnswerPayload(KernelModel):
 __all__ = [
     "AddedOption", "CriterionEdit", "DecisionReportPayload", "DecisionRequestPayload",
     "EvidenceBundlePayload", "FindingsPayload", "GoalRequestPayload", "HumanAnswerPayload",
-    "HumanQuestionRequestPayload", "OptionsPayload", "OptionsRequestPayload",
+    "HumanQuestionRequestPayload", "OptionContext", "OptionsPayload", "OptionsRequestPayload",
     "ResearchRequestPayload", "RetrievalLimits", "RetrievalRequestPayload",
     "SynthesisLimits", "SynthesisRequestPayload",
 ]
@@ -264,6 +276,8 @@ __all__ = [
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-01 [python-coder]: ResearchRequestPayload.option_context (OptionContext) tells research
+#   which options the decision weighs and what they cite; not consumed yet. (#KernelV01/A)
 # - 2026-10-02 [python-coder]: OptionsPayload.named_options (kernel-verified, supplied) and
 #   HumanAnswerPayload.added_options (human-supplied at approval). (#KernelBootstrapV0/GROUND)
 # - 2026-10-02 [python-coder]: HumanQuestionRequestPayload.evidence_ids and
