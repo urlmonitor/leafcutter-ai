@@ -1,0 +1,160 @@
+{
+  "$defs": {
+    "EvidenceCategory": {
+      "description": "Generic evidence categories (no vendor names).",
+      "enum": [
+        "authoritative_guidance",
+        "internal_principles",
+        "prior_decisions",
+        "existing_patterns",
+        "task_context",
+        "external_practices"
+      ],
+      "title": "EvidenceCategory",
+      "type": "string"
+    },
+    "EvidenceNeed": {
+      "additionalProperties": false,
+      "description": "A piece of evidence the run still needs, with its resolution status.",
+      "properties": {
+        "acceptable_source_kinds": {
+          "items": {
+            "$ref": "#/$defs/SourceKind"
+          },
+          "title": "Acceptable Source Kinds",
+          "type": "array"
+        },
+        "category": {
+          "$ref": "#/$defs/EvidenceCategory"
+        },
+        "id": {
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+          "title": "Id",
+          "type": "string"
+        },
+        "priority": {
+          "$ref": "#/$defs/Priority",
+          "default": "required"
+        },
+        "question": {
+          "minLength": 1,
+          "title": "Question",
+          "type": "string"
+        },
+        "resolution": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Resolution",
+          "type": "array"
+        },
+        "schema_version": {
+          "const": "1.0",
+          "default": "1.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "status": {
+          "$ref": "#/$defs/NeedStatus",
+          "default": "open"
+        }
+      },
+      "required": [
+        "id",
+        "category",
+        "question"
+      ],
+      "title": "EvidenceNeed",
+      "type": "object"
+    },
+    "NeedStatus": {
+      "description": "Completion status of an EvidenceNeed.",
+      "enum": [
+        "open",
+        "satisfied",
+        "partial",
+        "unavailable"
+      ],
+      "title": "NeedStatus",
+      "type": "string"
+    },
+    "Priority": {
+      "description": "Required (blocking) versus supporting work.",
+      "enum": [
+        "required",
+        "supporting"
+      ],
+      "title": "Priority",
+      "type": "string"
+    },
+    "SourceKind": {
+      "description": "Kind of evidence source.",
+      "enum": [
+        "repository_file",
+        "knowledge_node",
+        "host_research",
+        "human",
+        "task_input"
+      ],
+      "title": "SourceKind",
+      "type": "string"
+    }
+  },
+  "$id": "leafcutter.research_request.v1",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "leafcutter.research_request.v1.",
+  "properties": {
+    "evidence_needs": {
+      "items": {
+        "$ref": "#/$defs/EvidenceNeed"
+      },
+      "title": "Evidence Needs",
+      "type": "array"
+    },
+    "evidence_needs_only": {
+      "default": false,
+      "title": "Evidence Needs Only",
+      "type": "boolean"
+    },
+    "existing_evidence_ids": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Existing Evidence Ids",
+      "type": "array"
+    },
+    "expected_coverage": {
+      "default": "all_required",
+      "enum": [
+        "all_required",
+        "best_effort"
+      ],
+      "title": "Expected Coverage",
+      "type": "string"
+    },
+    "question": {
+      "minLength": 1,
+      "title": "Question",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": "1.0",
+      "default": "1.0",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "source_restrictions": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Source Restrictions",
+      "type": "array"
+    }
+  },
+  "required": [
+    "question"
+  ],
+  "title": "ResearchRequestPayload",
+  "type": "object"
+}

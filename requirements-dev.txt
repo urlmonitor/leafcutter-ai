@@ -30,3 +30,20 @@ pytest-xdist>=3.5
 # cannot drift (ACS-200i); those hooks are language: system, so pre-commit
 # provisions no environments and only dispatches the commands.
 pre-commit>=3.5
+
+# Decision kernel runtime (kernel/ — leafcutter-ai only, NOT shipped
+# to adopter projects by build.py). Pinned exactly (==), unlike the loose pins
+# above: the kernel's checkpoint serialization, interrupt/resume semantics and
+# provider response shapes are version-sensitive, and langchain-typesafe is a
+# pre-release. Verified together on Python 3.14.2 (local) — all declare
+# Requires-Python >=3.10, so CI's 3.13 is covered. Design and rationale:
+# docs/analysis/2026-09-30-decision-kernel-design.md
+# (TICKET-20260930-KernelBootstrapV0).
+langgraph==1.2.12
+langgraph-checkpoint-sqlite==3.1.1
+# langfuse.langchain.CallbackHandler imports the `langchain` package itself
+# (langchain-core alone raises ModuleNotFoundError), so it is a direct pin.
+langchain==1.4.3
+langchain-typesafe==0.0.1a3
+langfuse==4.16.0
+pydantic==2.13.5

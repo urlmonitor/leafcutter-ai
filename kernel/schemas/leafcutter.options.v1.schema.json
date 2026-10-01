@@ -1,0 +1,260 @@
+{
+  "$defs": {
+    "ApprovalStatus": {
+      "description": "Approval state of a decision, criterion or constraint.",
+      "enum": [
+        "not_required",
+        "proposed",
+        "approved",
+        "rejected"
+      ],
+      "title": "ApprovalStatus",
+      "type": "string"
+    },
+    "Criterion": {
+      "additionalProperties": false,
+      "description": "A question an option must satisfy; required criteria gate resolution.",
+      "properties": {
+        "approval_status": {
+          "$ref": "#/$defs/ApprovalStatus",
+          "default": "not_required"
+        },
+        "approved_by": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Approved By"
+        },
+        "decision_basis": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Decision Basis"
+        },
+        "id": {
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+          "title": "Id",
+          "type": "string"
+        },
+        "priority": {
+          "$ref": "#/$defs/Priority",
+          "default": "required"
+        },
+        "proposal_status": {
+          "$ref": "#/$defs/ProposalStatus",
+          "default": "supplied"
+        },
+        "proposed_by": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Proposed By"
+        },
+        "question": {
+          "minLength": 1,
+          "title": "Question",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": "1.0",
+          "default": "1.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "scope": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Scope"
+        },
+        "weight_rule": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Weight Rule"
+        }
+      },
+      "required": [
+        "id",
+        "question"
+      ],
+      "title": "Criterion",
+      "type": "object"
+    },
+    "Option": {
+      "additionalProperties": false,
+      "description": "A candidate answer to a decision question.",
+      "properties": {
+        "approval_status": {
+          "$ref": "#/$defs/ApprovalStatus",
+          "default": "not_required"
+        },
+        "approved_by": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Approved By"
+        },
+        "assumptions": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Assumptions",
+          "type": "array"
+        },
+        "description": {
+          "default": "",
+          "title": "Description",
+          "type": "string"
+        },
+        "id": {
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+          "title": "Id",
+          "type": "string"
+        },
+        "named_in_goal": {
+          "default": false,
+          "title": "Named In Goal",
+          "type": "boolean"
+        },
+        "proposal_status": {
+          "$ref": "#/$defs/ProposalStatus",
+          "default": "supplied"
+        },
+        "proposed_by": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Proposed By"
+        },
+        "schema_version": {
+          "const": "1.0",
+          "default": "1.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "source_refs": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Source Refs",
+          "type": "array"
+        },
+        "title": {
+          "minLength": 1,
+          "title": "Title",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "title"
+      ],
+      "title": "Option",
+      "type": "object"
+    },
+    "Priority": {
+      "description": "Required (blocking) versus supporting work.",
+      "enum": [
+        "required",
+        "supporting"
+      ],
+      "title": "Priority",
+      "type": "string"
+    },
+    "ProposalStatus": {
+      "description": "Whether an option was supplied, proposed by a generator, or approved.",
+      "enum": [
+        "supplied",
+        "proposed",
+        "approved"
+      ],
+      "title": "ProposalStatus",
+      "type": "string"
+    }
+  },
+  "$id": "leafcutter.options.v1",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "leafcutter.options.v1: every option is a proposal, never pre-approved.",
+  "properties": {
+    "named_options": {
+      "items": {
+        "$ref": "#/$defs/Option"
+      },
+      "title": "Named Options",
+      "type": "array"
+    },
+    "options": {
+      "items": {
+        "$ref": "#/$defs/Option"
+      },
+      "title": "Options",
+      "type": "array"
+    },
+    "proposed_criteria": {
+      "items": {
+        "$ref": "#/$defs/Criterion"
+      },
+      "title": "Proposed Criteria",
+      "type": "array"
+    },
+    "schema_version": {
+      "const": "1.0",
+      "default": "1.0",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "unresolved_feasibility": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Unresolved Feasibility",
+      "type": "array"
+    }
+  },
+  "title": "OptionsPayload",
+  "type": "object"
+}

@@ -2,15 +2,15 @@
 title: Project Roadmap
 type: reference
 status: active
-created: 2026-09-08
-last_updated: 2026-09-08
+created: 2026-09-30
+last_updated: 2026-09-30
 components:
 - infrastructure
 description: Overview of Project Roadmap.
 ---
 <!-- AUTO-GENERATED — do not edit by hand. Source: docs/roadmap.json -->
 <!-- Regenerate manually: python portable-dev-workflow/scripts/commit_guardian/regenerate_roadmap_mirror.py --manual -->
-<!-- Generated: 2026-09-08T14:04:16Z -->
+<!-- Generated: 2026-09-30T22:13:44Z -->
 
 # Project Roadmap
 
@@ -34,6 +34,11 @@ description: Overview of Project Roadmap.
 | `phase_store_record_health` | Store-Record Health — the store's own claims are true | Planned |
 | `phase_2` | Ecosystem Hardening | Planned |
 | `phase_3` | Distribution and Community | Planned |
+| `phase_kernel_1_founding` | Decision Kernel — Founding (kernel Stages 0–1, V0 MVP) | **ACTIVE** |
+| `phase_kernel_2_knowledge` | Decision Kernel — First Workers: Knowledge and Context Compiler (kernel Stage 2) | Planned |
+| `phase_kernel_3_workflows` | Decision Kernel — First Workers: Engineering Workflows and Executable Policies (kernel Stage 3) | Planned |
+| `phase_kernel_4_trails` | Decision Kernel — Trails: Colony Memory and Controlled Learning (kernel Stage 4) | Planned |
+| `phase_kernel_5_specialists` | Decision Kernel — Specialists: Independent Engineering Runtime (kernel Stage 5) | Planned |
 
 ## Phase Details
 
@@ -145,6 +150,67 @@ Installable via a standard package manager with versioned releases, changelogs, 
 - Versioned releases with auto-generated changelogs
 - Extension mechanism documented and tested with at least one community-contributed agent
 
+### phase_kernel_1_founding: Decision Kernel — Founding (kernel Stages 0–1, V0 MVP)
+
+**Status**: **ACTIVE**
+
+The colony is founded. A native LangGraph kernel with an empty capability registry (ADR-055) routes and decides with Jev, runs a generic research loop over read-only retrieval, hands generative and human work to Claude Code, resumes persistently, records capability gaps and traces every run in Langfuse. The human and Claude still do most of the work; the kernel records everything needed to count it later. Driven by TICKET-20260930-KernelBootstrapV0. Lives in leafcutter-ai only; not shipped to adopters.
+
+**Exit Criteria**:
+
+- A real question is researched when necessary, returned with evidence, and traceable end to end without hidden host-side orchestration (kernel spec §3 Stage 1 exit, §16)
+- Capability-gap records are countable (occurrence_count, example_run_ids) and host_only fallback reliance is recorded (spec §14)
+- The colony-memory recording prerequisites are decided: policy/template/model versions beside CorrelationIds and an outcome event keyed to decision_id are either implemented or explicitly deferred by a recorded decision (ADR-056 §9)
+- A colony-health baseline is captured from the first real runs, so later stages can show they made the colony stronger (ADR-056 §9)
+
+### phase_kernel_2_knowledge: Decision Kernel — First Workers: Knowledge and Context Compiler (kernel Stage 2)
+
+**Status**: Planned
+
+Glossary- and component-aware search, progressive disclosure, graph-backed retrieval, hybrid code search and reusable retrieval memory, so evidence is assembled before a specialist model is called (spec §17).
+
+**Exit Criteria**:
+
+- The same kernel supplies a compact evidence package before a reasoning or coding model is called, using structural and semantic retrieval where justified (spec §17 Stage 2 exit)
+- At least one colony-health measure improves on the previous stage's baseline (share of requests resolved by specialized capabilities rather than fallback; decision accuracy and calibration per type; cost and time per resolved task; rework rate; gap recurrence after a capability ships). A stage is not reported as strengthening the colony without such a measure (ADR-056 §9)
+
+### phase_kernel_3_workflows: Decision Kernel — First Workers: Engineering Workflows and Executable Policies (kernel Stage 3)
+
+**Status**: Planned
+
+Discovery before acceptance criteria, AC-specific context, inherited component policies, role-specific contracts and post-change verification (spec §18). Policies and workflows must exist before decision-rule or path reinforcement can apply to them (ADR-056 §9).
+
+**Exit Criteria**:
+
+- A real feature follows discovery, approved decisions, role-specific contracts, implementation, tests, and documentation/architecture impact review with a complete evidence trail (spec §18 Stage 3 exit)
+- At least one colony-health measure improves on the previous stage's baseline (share of requests resolved by specialized capabilities rather than fallback; decision accuracy and calibration per type; cost and time per resolved task; rework rate; gap recurrence after a capability ships). A stage is not reported as strengthening the colony without such a measure (ADR-056 §9)
+
+### phase_kernel_4_trails: Decision Kernel — Trails: Colony Memory and Controlled Learning (kernel Stage 4)
+
+**Status**: Planned
+
+Traces become colony memory (ADR-056): an analytics job feeds a performance store; decisions carry outcomes and per-type calibration; wrong decisions produce reviewed policy-gap and promotion proposals; capability gaps are ranked to propose what to build next. Reinforcement-informed routing and exploration come only after the performance store exists and passes evaluation (spec §19).
+
+**Exit Criteria**:
+
+- A reviewed lesson demonstrably changes future work while retaining its evidence, evaluation, version, and rollback controls (spec §19 Stage 4 exit)
+- An analytics job produces a performance store of compact routing statistics; the kernel reads those statistics and never queries Langfuse directly (ADR-056 §8)
+- Calibration is measured per decision type from observed outcomes, and capability-gap statistics produce prioritization proposals on which a human sets the priority (ADR-056 §4, §6)
+- Usage alone never raises a path's standing; reinforcement-informed routing and exploration are activated only after passing held-out evaluation (spec §19.4, ADR-056 §3)
+- At least one colony-health measure improves on the previous stage's baseline (share of requests resolved by specialized capabilities rather than fallback; decision accuracy and calibration per type; cost and time per resolved task; rework rate; gap recurrence after a capability ships). A stage is not reported as strengthening the colony without such a measure (ADR-056 §9)
+
+### phase_kernel_5_specialists: Decision Kernel — Specialists: Independent Engineering Runtime (kernel Stage 5)
+
+**Status**: Planned
+
+Direct model and agent executors, additional clients, stronger isolation and production operational controls (spec §20). Native executors replace host work where scout evidence shows the colony still relies on the host.
+
+**Exit Criteria**:
+
+- The backend works without Claude Code as its host and can use specialist providers without changing the engineering process (spec §3 Stage 5 exit)
+- Each native executor that replaces host.* work is justified by recorded host_only scout evidence (spec §21, ADR-056 §9)
+- At least one colony-health measure improves on the previous stage's baseline (share of requests resolved by specialized capabilities rather than fallback; decision accuracy and calibration per type; cost and time per resolved task; rework rate; gap recurrence after a capability ships). A stage is not reported as strengthening the colony without such a measure (ADR-056 §9)
+
 ---
 
-*Last regenerated: 2026-09-08T14:04:16Z. Do not edit this file directly — edit `docs/roadmap.json` instead.*
+*Last regenerated: 2026-09-30T22:13:44Z. Do not edit this file directly — edit `docs/roadmap.json` instead.*

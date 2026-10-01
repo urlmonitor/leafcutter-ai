@@ -1,7 +1,8 @@
 # Ruff configuration for leafcutter-ai.
 #
 # Scope: the package's own Python sources and test suites
-# (scripts/, tests/, unit_tests/). The templates/ tree is the package
+# (scripts/, tests/, unit_tests/, kernel/). kernel/ is additionally linted in CI with
+# --select E722,BLE001,TRY (Error Handling Policy). The templates/ tree is the package
 # *source* that build.py compiles into scripts/; it carries ~900 pre-existing
 # E501 line-length findings and is excluded here to keep CI focused. Linting
 # templates/ to green is tracked as a follow-up. Parity between templates/ and

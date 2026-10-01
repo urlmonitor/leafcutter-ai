@@ -1,0 +1,134 @@
+{
+  "$schema": "./kernel_config.schema.json",
+  "paths": {
+    "run_root": ".leafcutter/kernel",
+    "registry": "config/capability_registry.json"
+  },
+  "limits": {
+    "max_work_items": 32,
+    "max_depth": 4,
+    "max_concurrent_native": 4,
+    "max_concurrent_host": 1,
+    "max_retries": 2,
+    "no_progress_limit": 2,
+    "max_jev_calls": 40,
+    "max_host_operations": 8,
+    "max_active_seconds": 300,
+    "max_cost_usd": null,
+    "capability_timeout_seconds": 120,
+    "langgraph_recursion_limit": 500,
+    "max_scheduler_iterations": null
+  },
+  "routing": {
+    "min_selected_probability": 0.8,
+    "min_confidence": 0.5,
+    "on_insufficient_context": "human"
+  },
+  "intent": {
+    "min_selected_probability": 0.7,
+    "min_confidence": 0.5,
+    "max_clarifications": 2
+  },
+  "decision": {
+    "sufficiency_threshold": 0.8,
+    "satisfies_threshold": 0.8,
+    "preference_threshold": 0.7,
+    "conflict_threshold": 0.7,
+    "missing_min_probability": 0.4,
+    "require_option_grounding": true,
+    "max_grounding_evidence": 12
+  },
+  "research": {
+    "need_required_threshold": 0.8,
+    "need_supporting_threshold": 0.5,
+    "evaluable_threshold": 0.7,
+    "allow_synthesis": true,
+    "category_descriptions": {
+      "authoritative_guidance": "Official documentation or specifications that define how a technology is meant to be used.",
+      "internal_principles": "The project's own stated rules, conventions and principles.",
+      "prior_decisions": "Earlier recorded decisions and their rationale, such as architecture decision records.",
+      "existing_patterns": "How the existing code or documents already solve a similar problem.",
+      "task_context": "Facts about the task itself that the requester supplied or that the workspace shows.",
+      "external_practices": "Widely used practices and experience reports from outside the project."
+    }
+  },
+  "retrieval": {
+    "relevance_threshold": 0.5,
+    "top_k": 6,
+    "max_candidates": 20,
+    "excerpt_context_lines": 12,
+    "max_excerpt_chars": 2000,
+    "max_file_bytes": 400000,
+    "deny_globs": [".env*", "**/*.pem", "**/*.key", ".security-allowlist", "**/.git/**"],
+    "coverage_relevance_threshold": 0.7
+  },
+  "sources": [
+    {"id": "repo.principles", "kind": "repo_text",
+     "categories": ["internal_principles", "authoritative_guidance"],
+     "roots": ["CLAUDE.md", "docs/conventions", "docs/vision.md"]},
+    {"id": "repo.decisions", "kind": "repo_text", "categories": ["prior_decisions"],
+     "roots": ["docs/architecture/adrs"]},
+    {"id": "knowledge.decisions", "kind": "knowledge_map", "categories": ["prior_decisions"],
+     "surfaces": ["adrs"]},
+    {"id": "repo.patterns", "kind": "repo_text", "categories": ["existing_patterns"],
+     "roots": ["kernel", "scripts", "docs/architecture"]},
+    {"id": "repo.docs", "kind": "repo_text",
+     "categories": ["internal_principles", "task_context", "existing_patterns",
+                    "authoritative_guidance"],
+     "roots": ["README.md", "docs/how-to", "docs/explanation", "docs/reference", "docs/testing",
+               "docs/workflows", "docs/known-issues", "docs/INDEX.md", "docs/glossary.md",
+               "docs/ticket-lifecycle.md", "docs/build-pipeline.md"]},
+    {"id": "repo.analysis", "kind": "repo_text",
+     "categories": ["task_context", "prior_decisions", "existing_patterns"],
+     "roots": ["docs/analysis"]},
+    {"id": "repo.components", "kind": "repo_text",
+     "categories": ["task_context", "existing_patterns", "prior_decisions"],
+     "roots": ["docs/architecture/components"]},
+    {"id": "repo.acceptance_criteria", "kind": "repo_text",
+     "categories": ["task_context", "existing_patterns"],
+     "roots": ["docs/acceptance-criteria"]},
+    {"id": "repo.roadmap", "kind": "repo_text", "categories": ["task_context", "prior_decisions"],
+     "roots": ["docs/roadmap.json", "docs/roadmap.md", "docs/vision.md"]},
+    {"id": "repo.tickets", "kind": "repo_text", "categories": ["task_context", "prior_decisions"],
+     "roots": ["tickets"]},
+    {"id": "repo.config", "kind": "repo_text", "categories": ["task_context", "existing_patterns"],
+     "roots": ["config"],
+     "deny_globs": ["config/*.env", "config/*secret*", "config/*credential*", "config/*token*",
+                    "config/*password*", "config/*id_rsa*", "config/*.p12", "config/*.pfx"]},
+    {"id": "repo.tests", "kind": "repo_text",
+     "categories": ["task_context", "existing_patterns", "internal_principles"],
+     "roots": ["tests/README.md", "unit_tests/README.md", "pytest.ini"]},
+    {"id": "knowledge.components", "kind": "knowledge_map",
+     "categories": ["existing_patterns", "task_context"],
+     "surfaces": ["components", "skills", "agents"]},
+    {"id": "host.research", "kind": "host_research",
+     "categories": ["authoritative_guidance", "external_practices"]}
+  ],
+  "jev": {
+    "model": "jev-latest",
+    "transport": "classifier",
+    "timeout_seconds": 30,
+    "max_questions_per_call": 20,
+    "max_state_chars": 60000,
+    "retry_backoff_seconds": 1.0,
+    "price_per_input_token_usd": 4.2e-8
+  },
+  "host": {
+    "enabled": true,
+    "fallback_on_no_match": true,
+    "max_repair_attempts": 1,
+    "formulate_questions": false,
+    "max_input_chars": 60000
+  },
+  "data_policy": {
+    "send_repo_excerpts_to_jev": true,
+    "telemetry_excerpts": "truncated",
+    "telemetry_max_field_chars": 4000
+  },
+  "langfuse": {
+    "enabled": true,
+    "environment": "development",
+    "trace_name": "leafcutter-run",
+    "flush_on_exit": true
+  }
+}
