@@ -97,9 +97,13 @@ class MemoryRunStore:
         """Return a saved packet or None."""
         return self._interactions.get((run_id, interaction_id))
 
-    def record_submission(self, record: SubmissionRecord) -> None:
-        """Write the ledger entry."""
-        self._ledger[(record.run_id, record.interaction_id)] = record
+    def record_submission(self, record: SubmissionRecord) -> bool:
+        """Write the ledger entry unless one exists (first write wins); True if this call wrote."""
+        key = (record.run_id, record.interaction_id)
+        if key in self._ledger:
+            return False
+        self._ledger[key] = record
+        return True
 
     def get_submission(self, run_id: str, interaction_id: str) -> SubmissionRecord | None:
         """Return the ledger entry or None."""
@@ -115,7 +119,9 @@ class MemoryGapStore:
         self.drafts: dict[str, str] = {}
 
     def record(self, gap: CapabilityGap) -> None:
-        """Append an observation."""
+        """Append an observation; an observation id that is already stored is ignored."""
+        if any(obs.id == gap.id for obs in self.observations):
+            return
         self.observations.append(gap)
 
     def load_gaps(self) -> list[CapabilityGap]:
@@ -138,7 +144,7 @@ class MemoryArtifactStore:
 
     def write_artifact(self, run_id: str, name: str, content: bytes | str) -> ArtifactRef:
         """Store content under a validated name."""
-        if not ARTIFACT_NAME_RE.match(name):
+        if not ARTIFACT_NAME_RE.fullmatch(name):
             raise InvalidArtifactName(name)
         data = content.encode("utf-8") if isinstance(content, str) else content
         self._blobs[(run_id, name)] = data
@@ -157,6 +163,9 @@ class MemoryArtifactStore:
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-01 20:00 [python-coder]: record_submission reports whether it created the entry and
+#   gap observations dedupe by id, so the double behaves like the file stores.
+#   (#KernelBootstrapV0/FIXB)
 # - 2026-09-30 22:00 [python-coder]: ARTIFACT_NAME_RE and InvalidArtifactName are exported so the
 #   file store (P2) enforces the identical rule. (#KernelBootstrapV0/P1)
 # ====================================================================

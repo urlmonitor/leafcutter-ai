@@ -13,6 +13,7 @@ ARCHITECTURE: <run_root>/gaps/observations.jsonl holds raw observations (fsynced
 
 from __future__ import annotations
 
+import hashlib
 import logging
 import threading
 from pathlib import Path
@@ -34,6 +35,17 @@ _DRAFT_PURPOSE = {
     GapType.UNSUPPORTED: "No registered capability can serve this need; the request was {outcome}.",
     GapType.HOST_ONLY: "Only a host-backed implementation exists; a native one could replace it.",
 }
+
+
+def observation_id(run_id: str, work_item_id: str, attempt: int, gap_type: GapType) -> str:
+    """Return the deterministic id of one work item attempt's observation of a gap type.
+
+    A node that re-executes after it published the observation but before its checkpoint
+    committed derives the same id, so the stores (first write wins on the id) cannot count the
+    occurrence twice.
+    """
+    seed = f"{run_id}|{work_item_id}|{attempt}|{gap_type.value}"
+    return f"gap-{hashlib.sha256(seed.encode('utf-8')).hexdigest()[:16]}"
 
 
 def is_build_opportunity(gap: CapabilityGap) -> bool:
@@ -169,6 +181,11 @@ class FileGapStore:
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-01 20:00 [python-coder]: Observation ids are deterministic (run, work item, attempt,
+#   gap type) instead of random, because the stores dedupe on the id: a node that re-executes
+#   after publishing but before its checkpoint committed must not double-count an occurrence.
+#   The helper lives here because nodes_gaps.py is at the file-size limit.
+#   (#KernelBootstrapV0/FIXB)
 # - 2026-10-01 14:00 [python-coder]: The draft template lives next to the store so memory and
 #   file stores share it; it is built only from recorded fields, names its author "template" and
 #   states it is not a registry entry (spec section 14, ADR-056). (#KernelBootstrapV0/P9)

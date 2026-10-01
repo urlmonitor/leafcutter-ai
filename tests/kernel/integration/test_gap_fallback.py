@@ -205,7 +205,9 @@ class TestRecordHostOnly(unittest.IsolatedAsyncioTestCase):
         rig, run, state, item = await self.finished()
         (from_graph,) = rig.gap_store.observations
         before = {**state, "events": [e for e in state["events"] if e.kind != "gap.recorded"]}
-        gap, events = record_host_only(before, run.context, item, FallbackOutcome.HOST_COMPLETED)
+        second_attempt = item.model_copy(update={"attempts": item.attempts + 1})
+        gap, events = record_host_only(before, run.context, second_attempt,
+                                       FallbackOutcome.HOST_COMPLETED)
         self.assertEqual(gap.gap_key, from_graph.gap_key)
         self.assertEqual([e.kind for e in events], ["gap.recorded"])
         self.assertEqual(events[0].refs, {"work_item_id": item.id, "gap_id": gap.id})
@@ -277,6 +279,9 @@ if __name__ == "__main__":
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-01 20:00 [python-coder]: The aggregation test records a second attempt of the item:
+#   observation ids are now deterministic per attempt, so re-recording the same attempt is a
+#   re-execution and counts once. (#KernelBootstrapV0/FIXB)
 # - 2026-10-01 14:30 [python-coder]: The fallback child names operation `retrieve` so routing
 #   finds no match while `host.research` stays reachable as a fallback by kind and output
 #   schema; this is the smallest registry that reproduces a true gap with an approved host

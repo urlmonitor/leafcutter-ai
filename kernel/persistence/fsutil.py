@@ -11,11 +11,14 @@ ARCHITECTURE: Pure helpers over pathlib/os. safe_component validates one path se
 
 from __future__ import annotations
 
+import contextlib
 import logging
 import os
 import re
+import sys
 import time
 import uuid
+from collections.abc import Iterator
 from pathlib import Path
 
 logger = logging.getLogger(__name__)
@@ -24,6 +27,9 @@ COMPONENT_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$")
 _WINDOWS_RESERVED = frozenset({"con", "prn", "aux", "nul", *(f"com{i}" for i in range(1, 10)),
                                *(f"lpt{i}" for i in range(1, 10))})
 _REPLACE_ATTEMPTS = 6
+#: Bounded wait for a cross-process lock, and how often it is retried.
+LOCK_TIMEOUT_S = 10.0
+_LOCK_POLL_S = 0.01
 
 
 class UnsafePathComponent(ValueError):
@@ -48,10 +54,77 @@ def safe_component(value: str) -> str:
         UnsafePathComponent: Separators, dots-only, trailing dot, reserved device names,
             over-long or non-portable characters.
     """
-    if (not COMPONENT_RE.match(value) or value.endswith(".")
+    if (not COMPONENT_RE.fullmatch(value) or value.endswith(".")
             or value.split(".")[0].lower() in _WINDOWS_RESERVED):
         raise UnsafePathComponent(value)
     return value
+
+
+def _try_lock(handle: object, fileno: int) -> bool:
+    """Take the exclusive OS lock on one byte of the open file; False if another holder has it."""
+    try:
+        if sys.platform == "win32":
+            import msvcrt
+
+            handle.seek(0)  # type: ignore[attr-defined]
+            msvcrt.locking(fileno, msvcrt.LK_NBLCK, 1)
+        else:
+            import fcntl
+
+            fcntl.flock(fileno, fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except OSError:
+        return False
+    return True
+
+
+def _unlock(handle: object, fileno: int) -> None:
+    """Release the OS lock taken by `_try_lock` (closing the file also releases it)."""
+    try:
+        if sys.platform == "win32":
+            import msvcrt
+
+            handle.seek(0)  # type: ignore[attr-defined]
+            msvcrt.locking(fileno, msvcrt.LK_UNLCK, 1)
+        else:
+            import fcntl
+
+            fcntl.flock(fileno, fcntl.LOCK_UN)
+    except OSError:
+        logger.warning("could not release the lock explicitly; closing the file releases it")
+
+
+@contextlib.contextmanager
+def file_lock(path: Path, timeout: float = LOCK_TIMEOUT_S) -> Iterator[None]:
+    """Hold an exclusive cross-process lock on `path` (created if missing) for the block.
+
+    The lock is the operating system's own (`msvcrt.locking` on Windows, `flock` elsewhere), so a
+    process that dies releases it and no stale-lock handling is needed. Waiting is bounded.
+
+    Args:
+        path: The lock file; its parent directory must exist.
+        timeout: Seconds to wait for the lock.
+
+    Raises:
+        TimeoutError: The lock could not be taken within `timeout` seconds.
+    """
+    deadline = time.monotonic() + timeout
+    try:
+        handle = open(path, "a+b")  # noqa: SIM115 - closed in the finally below
+    except OSError:
+        logger.exception("cannot open lock file %s", path)
+        raise
+    try:
+        while not _try_lock(handle, handle.fileno()):
+            if time.monotonic() >= deadline:
+                reason = f"could not lock {path} within {timeout} seconds"
+                raise TimeoutError(reason)
+            time.sleep(_LOCK_POLL_S)
+        try:
+            yield
+        finally:
+            _unlock(handle, handle.fileno())
+    finally:
+        handle.close()
 
 
 def ensure_within(root: Path, candidate: Path) -> Path:
@@ -165,6 +238,10 @@ def read_lines(path: Path) -> list[str]:
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-01 20:00 [python-coder]: `file_lock` uses the OS file lock (msvcrt / flock) rather
+#   than an O_EXCL lock file: the OS drops it when its holder dies, so there is no stale-lock
+#   breaking race, and the wait is bounded by polling a non-blocking lock.
+#   (#KernelBootstrapV0/FIXB)
 # - 2026-09-30 23:00 [python-coder]: create_exclusive uses tmp + os.link so a crash can never
 #   leave a half-written run.json that blocks the id. (#KernelBootstrapV0/P2)
 # ====================================================================

@@ -317,7 +317,7 @@ class _Router:
                 calls_available=guards.jev_calls_available(draft.budgets, self.cfg.limits),
                 corr=run_corr(state))
             results.update(routed)
-            usage = [u for r in routed.values() for u in r.usage][:calls]
+            usage = [u for r in routed.values() for u in r.usage]
             draft.budgets = guards.account_usage(
                 draft.budgets.model_copy(update={"jev_calls": draft.budgets.jev_calls + calls}),
                 usage, self.cfg.jev.price_per_input_token_usd)
@@ -365,6 +365,8 @@ def _packet(state: KernelState, invocation_id: str, shares: dict[str, int]) -> d
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-01 20:00 [python-coder]: Routing usage is no longer truncated to the call count: each
+#   Jev call contributes exactly one usage record (see routing.py). (#KernelBootstrapV0/FIXB)
 # - 2026-09-30 22:30 [python-coder]: Every route branch (including "nothing dispatchable")
 #   leads to integrate, not schedule as in the design diagram: integrate is where parents of
 #   items blocked at routing are resumed. (#KernelBootstrapV0/P4)
