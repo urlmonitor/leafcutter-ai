@@ -1,0 +1,13 @@
+---
+title: "Prove the shared layout stays untouched (TQ-600a-3)"
+date: "2026-10-01"
+time: "08:15"
+type: manual
+components: 
+  - testing_quality
+  - build_pipeline
+summary: The shared reference layout is now recorded after its single deploy and compared again once every consuming test has run; a difference names both the altered file and the test that caused it.
+description: "TQ-600a-3 lands the integrity guard for the shared reference layout. A SHA-256 content record is captured immediately after the first reader's fixture setup returns, and compared again at session finish; the added-file check walks the union of current and recorded paths so it is never one-directional, and __pycache__ and .pyc are excluded. Per-test setup and teardown hookwrappers attribute the first offending test by node id, which a session-only hook could not do. The implementation is split across shared_layout_integrity.py and _shared_layout_integrity_compare.py to respect the file-size limit, mirroring the existing producer and coordination modules. Two properties were verified at source because each is the difference between a guard and a decoration: the session failure is unconditional, since the exitstatus assignment sits outside the environment-variable guard and only the JSON report write is gated, so the guard is not inert in runs where no diagnostic variable is set; and a vacuous comparison cannot pass, since files_ok requires compared_count greater than zero, which is what the AC demanded so that a comparison inspecting nothing is distinguishable from one that found nothing. Zero consumers never fails the run on its own, preserving the laziness contract. The AC declared only the new module as its edit surface, so registering the plugin in pytest.ini addopts was a deliberate scope addition: without it the guard would run only inside its own test suite and be dead against the real population of reader-marked tests. documentation-verifier blocked the drive once and was right to, having found that the ticket's documentation contract named a Python file as its target so the placeholder scan ran against production code and matched ordinary f-string interpolations; it diagnosed that as a ticket-authoring defect, warned against the wrong remediation, and also found its own instrument blind to untracked files. A new how-to teaches invoking and reading the guard including a runnable deliberately-dirtied proof, and test-angles.md gains a failure-angle elaboration paid for by compressing adjacent prose at net zero growth against a file already grandfathered over the line limit. Eleven tests green."
+---
+
+## Entry
