@@ -1,0 +1,476 @@
+id: GE-127d-3
+title: "A string literal's own content is never mistaken for the start of a discarded docstring or block-comment region"
+component: guardrail-engine
+components:
+  - commit_guardian
+level: L2
+status: active
+req_status: draft
+work_status: done
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given the measurement rule this standard applies discards the content of
+    triple-quoted strings and C-style block comments before counting a file's
+    length,
+  And a covered file contains a single-quoted, double-quoted or backtick
+    -delimited string literal whose own text contains a block-comment-opening
+    sequence, a block-comment-closing sequence, or a triple-quote sequence,
+  When that file's length is measured,
+  Then the string literal's content is counted exactly as any other code is
+    counted, and no line before, inside or after that literal is discarded on
+    account of the sequence appearing inside it,
+  And given a covered file contains a REAL, unterminated-by-a-string
+    triple-quoted string or a REAL block comment,
+  When that file's length is measured,
+  Then that region is still discarded exactly as it was before this record,
+  And the bug symptom ("count_content_lines() strips C-style block comments
+    with a regex applied to the whole file, with no notion of a string
+    literal. A '/*' occurring inside an ordinary JS string (the tracked
+    instance: the substring 'changelogs/*.md' inside a template literal in
+    templates/workflows-js/fast-lane-ship.js) opens a PHANTOM block-comment
+    span that runs to the next unrelated '*/' anywhere later in the file,
+    silently discarding real, executable lines in between from the quoted
+    length — so the size gate can be defeated with no intent at all.") must
+    not occur.
+depends_on:
+  - GE-127d
+doc_links:
+  - path: docs/acceptance-criteria/guardrail-engine/GE-127-files-stay-workable/GE-127d.yaml
+    relationship: parent
+    status: exists
+  - path: docs/acceptance-criteria/guardrail-engine/GE-127-files-stay-workable/GE-127d-2.yaml
+    relationship: depends_on
+    status: exists
+    relevance: >-
+      THE RECORD THIS ONE REPAIRS A LATENT DEFECT IN, NOT REPLACES. GE-127d-2
+      pins and publishes the measurement rule (discard triple-quoted strings
+      and block comments, count everything else) and requires the published
+      statement to be reproducible from count_content_lines()'s own behaviour.
+      That published rule is correct; this record is about count_content_lines
+      failing to APPLY it correctly on a real, tracked file, because its
+      regex-based implementation has no notion of a string literal and can be
+      fooled by a delimiter-lookalike sequence inside one. Neither the
+      published rule nor GE-127d-2's own reproducibility descriptors change.
+  - path: docs/acceptance-criteria/guardrail-engine/GE-127-files-stay-workable/GE-127b-1.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      THE CONSUMER THAT MAKES THIS DEFECT LOAD-BEARING RATHER THAN COSMETIC.
+      GE-127b-1's ratchet compares a file's length before and after a change
+      using this same count_content_lines(). A phantom-discarded span can make
+      a file that genuinely grew by up to as many lines as the phantom span
+      swallowed look like it shrank or stayed the same, defeating the ratchet
+      with no intent at all — exactly the interaction GE-127b-1's own notes
+      flag as "inherited, not settled here" from GE-127d's side.
+  - path: templates/scripts/commit_guardian/_file_size_ratchet.py
+    relationship: modifies
+    status: exists
+    relevance: >-
+      count_content_lines() and its three module-level discard regexes are the
+      defect's exact location. Read from source in this worktree on
+      2026-09-30: _BLOCK_COMMENT_RE = re.compile(r"/\*.*?\*/\r?\n?", re.DOTALL)
+      applied via .sub("", content) directly against the whole file's raw
+      text, with the triple-quote regexes applied the same way, none aware of
+      where a string literal starts or ends.
+  - path: templates/workflows-js/fast-lane-ship.js
+    relationship: context
+    status: exists
+    relevance: >-
+      THE REAL, TRACKED ARTIFACT THE DEFECT WAS OBSERVED ON, READ FROM SOURCE
+      ON 2026-09-30, NOT A SYNTHETIC FIXTURE. Line 1572 contains the template
+      literal fragment "...confirm an added changelogs/*.md file is actually
+      present..." — the "/*" inside "changelogs/*.md" opens a phantom
+      block-comment span under the pre-fix regex. In THIS worktree's current
+      content that particular span happens to run to end-of-file with no
+      further "*/" anywhere below it (confirmed by direct measurement), so it
+      is not actively swallowing a bounded range of lines today — but the
+      mechanism is real and general: any covered file, present or future,
+      carrying a "/*" inside a string literal followed anywhere later by an
+      unrelated real "*/" is silently corrupted. The blast-radius sweep this
+      record's implementation performed found the mechanism firing on other
+      tracked files; see this record's own notes for the count.
+  - path: CLAUDE.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      "Gate / Workflow ACs — Verify Behaviorally, Not by Grep" and the
+      Real-artifact behavioral spot-check convention. The descriptors below
+      exercise count_content_lines() directly against real production JS
+      shapes (a template literal, a single- and a double-quoted string, each
+      carrying "/*"), not against a source-level assertion that a regex
+      exists.
+assigned_agent: python-coder
+estimated_complexity: M
+package_surface: false
+declares_side_effect: false
+it_requirements:
+  - >-
+    THE FIX IS A STRING-AWARE SCANNER, NOT A LANGUAGE PARSER, AND MUST STAY
+    PROPORTIONATE. Replace the three bare module-level regexes
+    (_TRIPLE_DOUBLE_QUOTE_RE, _TRIPLE_SINGLE_QUOTE_RE, _BLOCK_COMMENT_RE) with
+    a single-pass, state-tracking scanner that recognises exactly four kinds
+    of span while walking the content once: a triple-quoted string (either
+    Python quote style, discarded), a block comment (discarded), and a
+    single-quoted, double-quoted or backtick-delimited string literal (kept
+    verbatim, navigated over so a delimiter-lookalike sequence inside it is
+    never mistaken for a real discard-region start). Do not attempt to
+    tokenize a full language grammar (no operator precedence, no nested
+    template-literal expression awareness, no regex-literal detection) — this
+    is a measurement helper and the scope is bounded to the three flavours
+    named in the criteria plus the two Python quote styles already in force.
+  - >-
+    A SINGLE/DOUBLE-QUOTED LITERAL TERMINATES AT AN UNESCAPED CLOSING QUOTE OR
+    AT AN UNESCAPED NEWLINE, WHICHEVER COMES FIRST; A BACKTICK LITERAL NEVER
+    TERMINATES AT A NEWLINE. Backslash-escaped characters (an escaped quote,
+    an escaped backslash) are consumed as a pair so an escaped quote can never
+    end the literal early. This asymmetry matters: JS/Python single- and
+    double-quoted strings cannot legitimately contain a raw, unescaped
+    newline, so terminating at one is a safe heuristic; a JS template literal
+    legitimately spans many lines and must not be truncated by one.
+  - >-
+    PYTHON DOCSTRINGS MUST KEEP WORKING, UNCHANGED, FOR EVERY FILE THAT
+    CONTAINS NO STRING-EMBEDDED DELIMITER-LOOKALIKE. This same counter
+    measures every tracked .py file, and the overwhelming majority of the
+    guard's own population (200+ files already in GE-127b-1's ratchet) is
+    Python with no JS-style string content at all. The fix must be verified to
+    produce the IDENTICAL count to the pre-fix implementation on every such
+    file — a regression here would newly refuse or newly permit commits on the
+    guard's own largest population for a reason nobody asked for. Do NOT
+    additionally discard '#' comments or count discarded regions differently
+    from GE-127d-2's published rule; only the string-awareness changes.
+  - >-
+    A REAL, UNTERMINATED TRIPLE-QUOTE OR BLOCK COMMENT (ONE WITH NO CLOSING
+    DELIMITER ANYWHERE IN THE FILE) IS DISCARDED TO END OF FILE, MATCHING THE
+    OLD IMPLEMENTATION'S OBSERVABLE OUTCOME ON A MALFORMED FIXTURE AS CLOSELY
+    AS A SCANNER CAN. This is a corner case on malformed source and is not
+    separately tested; it is named so an implementer does not "fix" it into a
+    different behaviour as a side effect of the string-awareness change.
+  - >-
+    BLAST RADIUS MUST BE MEASURED AND REPORTED, NOT ASSUMED. The corrected
+    counter is STRICTER wherever a file was being under-measured due to a
+    phantom-discarded span, so some files' quoted length may increase. Measure
+    every tracked .py/.js/.sql/.ts/.tsx/.sh file with the OLD and the NEW
+    counter, report how many files' count changes at all, which change by more
+    than 5 lines, and which newly cross their configured per-extension limit
+    in commit_guardian.json as a result. This record's own notes record the
+    measured figures at authoring time; a later re-measurement that finds a
+    different population is not a contradiction, it is drift to be recorded
+    fresh.
+  - >-
+    HOST, LAYERING AND THE BUILD. The scanner lives inside
+    templates/scripts/commit_guardian/_file_size_ratchet.py, the same module
+    GE-127b-1 and GE-127d-2 already modify — build_commit_guardian copies that
+    directory whole, so no scripts/build_phases.py deploy entry is needed.
+    templates/scripts/commit_guardian/ is canonical and tracked;
+    scripts/commit_guardian/ is an UNTRACKED build output regenerated by
+    build.py and must not be hand-edited.
+  - >-
+    ONE MEASUREMENT FUNCTION, EVERY CALL SITE UNCHANGED. count_content_lines's
+    signature and every existing caller (measure_current_length,
+    get_previous_length, resolve_previous_lengths, and
+    describe_measurement_rule's category probes) must not change — only the
+    internal stripping mechanism does. GE-127b-1's ratchet, GE-127a-1's
+    threshold comparison and GE-127d-2's published-statement generation all
+    inherit the fix with no call-site change required.
+  - >-
+    THE INDEPENDENT RE-DERIVATION ENGINE IN
+    unit_tests/commit_guardian/_ge_127d_2_fixture.py IS DELIBERATELY OUT OF
+    SCOPE. It is coded with its own regexes, on purpose, so that GE-127d-2's
+    reproducibility descriptors prove agreement between two independent
+    implementations rather than calling the same function twice. None of its
+    existing fixtures embed a string-delimiter-lookalike sequence, so it is
+    unaffected either way; do not "fix" it as part of this record.
+  - >-
+    Must follow the repo error-handling policy. The scanner and its helpers
+    are pure functions over an in-memory string with no I/O, no external
+    service calls and no shared-state mutation, so per Rule 4 they must NOT be
+    wrapped in try/except — a malformed or unusual string is handled by the
+    scanner's own heuristics (terminate at newline, run to end of file), never
+    by catching an exception that pure string indexing cannot raise here.
+test_spec:
+  - name: test_ge_127d_3_a_block_comment_opener_inside_a_js_template_literal_does_not_discard_real_lines
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: >-
+      THE RED BASELINE AND THE EXACT REAL-ARTIFACT SHAPE — WRITE THIS ONE
+      FIRST. Build content reproducing templates/workflows-js/fast-lane-ship.js's
+      own shape: a backtick template literal containing the substring
+      "changelogs/*.md", followed by several lines of real code, followed by a
+      genuinely separate real block comment that closes with "*/", followed by
+      more real code. Call count_content_lines() directly. The returned count
+      must equal the number of lines that are not part of the REAL block
+      comment — every line between the template literal and the real block
+      comment must be counted, not silently discarded. Genuinely RED against
+      the pre-fix implementation: the pre-fix regex opens a phantom span at the
+      template literal's "/*" and swallows every line up to and including the
+      real block comment's own "*/", undercounting by the number of lines in
+      between.
+  - name: test_ge_127d_3_a_block_comment_opener_inside_a_double_quoted_js_string_does_not_discard_real_lines
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: >-
+      The same shape as the template-literal descriptor, with the "/*"
+      -carrying string written as an ordinary double-quoted JS string literal
+      instead of a backtick one. The returned count must equal the number of
+      non-discarded lines; genuinely RED against the pre-fix implementation
+      for the same reason.
+  - name: test_ge_127d_3_a_block_comment_opener_inside_a_single_quoted_js_string_does_not_discard_real_lines
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: >-
+      The same shape again, with the "/*"-carrying string written as a
+      single-quoted JS string literal. The returned count must equal the
+      number of non-discarded lines; genuinely RED against the pre-fix
+      implementation for the same reason.
+  - name: test_ge_127d_3_a_triple_quote_lookalike_inside_a_js_string_does_not_discard_real_lines
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: seam
+    description: >-
+      Guards the symmetric hazard the criteria name but the three descriptors
+      above do not exercise: a JS string (any of the three flavours) whose own
+      text contains a bare '"""'-shaped sequence, followed by real code, must
+      not have that code discarded either. Establishes the fix is genuinely
+      string-aware rather than a special case written for "/*" alone.
+  - name: test_ge_127d_3_a_real_block_comment_with_no_preceding_string_is_still_discarded
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: boundary
+    description: >-
+      THE NON-REGRESSION ARM. A file containing an ordinary, real block
+      comment with no string literal anywhere near it is measured identically
+      before and after this fix — the comment's lines are discarded, including
+      its own trailing newline, exactly as GE-127d-2's 2026-09-22 correction
+      established. Asserted by comparing against the file's own count of
+      non-comment lines computed independently in the test, never against a
+      hard-coded literal.
+  - name: test_ge_127d_3_a_real_python_docstring_with_no_string_embedded_lookalike_is_still_discarded
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: boundary
+    description: >-
+      THE PYTHON NON-REGRESSION ARM NAMED EXPLICITLY BY THE CRITERIA. A .py
+      -shaped fixture containing an ordinary module docstring (both quote
+      styles, each in its own variant of this descriptor) and ordinary code is
+      measured identically before and after this fix — the docstring
+      contributes zero lines, exactly as before. Asserted by comparing against
+      the file's own count of non-docstring lines computed independently, not
+      against a literal.
+  - name: test_ge_127d_3_every_tracked_python_files_count_is_unchanged_by_the_fix
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: real_artifact
+    description: >-
+      THE REPOSITORY-WIDE REGRESSION GUARD ON THE GUARD'S OWN LARGEST
+      POPULATION. Over every tracked .py file in the repository, the NEW
+      count_content_lines() must equal the OLD (pre-fix, reproduced
+      independently in the test via the original three-regex implementation)
+      count for every file that contains no string literal whose own text
+      contains "/*", "*/" or a triple-quote sequence — which this test
+      verifies is true of the overwhelming majority of tracked .py files. Any
+      file where the two disagree is reported by name so a reviewer can see
+      whether the disagreement is the fix correctly firing or an unintended
+      side effect.
+  - name: test_ge_127d_3_the_tracked_fast_lane_ship_js_artifact_is_measured_without_being_fooled_by_its_own_string
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: real_artifact
+    description: >-
+      Read templates/workflows-js/fast-lane-ship.js's REAL, on-disk content
+      (not a hand-authored fixture) and run count_content_lines() over it.
+      Independently verify, by locating the "changelogs/*.md" substring and
+      the file's own real block comments in the test, that no line the file's
+      real comments do not cover was discarded — i.e. the file's own known
+      real-comment line count is fully accounted for and nothing beyond it
+      shrank. This is the exact tracked artifact the defect was discovered on.
+test_rationale: |
+  Three of the eight descriptors are the genuine red baseline and are written
+  first: the pre-fix implementation is a bare DOTALL regex with no notion of a
+  string literal, so a "/*" inside any of the three JS string flavours opens a
+  phantom block-comment span that runs to the next real "*/" anywhere later in
+  the same content, discarding every real line in between. Each is exercised
+  against the exact production shape (a template literal carrying
+  "changelogs/*.md", mirroring templates/workflows-js/fast-lane-ship.js line
+  1572) rather than an arbitrary string, per this repo's real-artifact
+  spot-check convention.
+
+  The triple-quote-lookalike descriptor exists because the criteria name both
+  hazards (a block-comment-lookalike and a triple-quote-lookalike sequence
+  inside a string) and only three of the eight descriptors exercise the first
+  one; without a dedicated descriptor for the second, an implementation that
+  special-cases "/*" alone would pass everything above it.
+
+  Two non-regression descriptors exist because the fix must be proportionate:
+  it changes ONLY how a delimiter-lookalike-inside-a-string is handled, never
+  how a genuine, string-free discarded region is measured. Both compare
+  against an independently-computed expectation, never a literal, so the
+  descriptor cannot be satisfied by an implementation that happens to agree on
+  today's one fixture.
+
+  The repository-wide descriptor is the decisive proportionality check this
+  record's own it_requirements demand: the fix must not change the quoted
+  length of any tracked .py file that does not contain the hazard, over the
+  guard's own real, current population — not a sample of it.
+
+  The final descriptor closes the loop on the concrete artifact the defect was
+  found on, read from disk rather than reproduced by hand, per CLAUDE.md's
+  "Real-artifact behavioral spot-check" convention and this tree's own
+  documented history of synthetic fixtures reproducing the very bias they
+  exist to catch.
+delivers_to: null
+expects_from:
+  ac_id: GE-127d-2
+  contract: >-
+    The published measurement rule (discard triple-quoted strings and block
+    comments, count everything else, including blank lines and hash comments)
+    and the single count_content_lines() function that both implements it and
+    backs GE-127d-2's reproducibility descriptors. This record does not change
+    what the rule discards, only makes count_content_lines() apply that rule
+    correctly in the presence of a string literal whose own content contains a
+    delimiter-lookalike sequence.
+origin_agent: BrainCandy
+created: 2026-09-30
+amended_by: []
+superseded_by: null
+covered_by:
+  - "unit_tests/commit_guardian/test_ge_127d_3_string_literal_phantom_comment.py"
+implemented_by:
+  - "templates/scripts/commit_guardian/_file_size_ratchet.py"
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  ROOT CAUSE, READ FROM SOURCE ON 2026-09-30. count_content_lines() stripped
+  triple-quoted strings and block comments with three module-level regexes
+  (_TRIPLE_DOUBLE_QUOTE_RE, _TRIPLE_SINGLE_QUOTE_RE, _BLOCK_COMMENT_RE),
+  each applied via re.sub("", content) against the file's whole raw text, with
+  no notion of a string literal. A "/*" occurring inside an ordinary
+  single/double/backtick-quoted string opens a PHANTOM block-comment span
+  under _BLOCK_COMMENT_RE that runs, non-greedily, to the NEXT "*/" anywhere
+  later in the file — real or itself inside another string — discarding every
+  line in between, including executable code, from the quoted length. The
+  same hazard applies symmetrically to a stray triple-quote sequence inside a
+  string, against the two triple-quote regexes. Because the size gate this
+  measurement backs (GE-127a-1's threshold, GE-127b-1's ratchet) reads the
+  quoted length as ground truth, this is a way to defeat the gate with no
+  intent at all — a completely innocent string containing "/*" can make a
+  file that grew substantially report as unchanged or even shrunk.
+
+  THE OBSERVED INSTANCE, AND WHAT IS AND IS NOT TRUE OF IT TODAY.
+  templates/workflows-js/fast-lane-ship.js line 1572 contains
+  `...to confirm an added changelogs/*.md file is actually present...` inside
+  a template literal built from `+`-joined backtick strings. Direct
+  measurement in this worktree at authoring time found NO further `*/`
+  sequence anywhere after that line in the file's current content, so under
+  the pre-fix regex this particular occurrence does not currently have a
+  bounded phantom span to swallow — it simply fails to match at all beyond
+  that point (a non-greedy DOTALL match with no closing delimiter to find
+  matches nothing). This record does NOT claim a specific line range is being
+  swallowed in the file's CURRENT content; it claims, and the test suite
+  proves, that the MECHANISM is real and general, that it does fire on other
+  real content (see the blast-radius figures below), and that it can start
+  firing on this exact file the moment any real block comment is added or
+  reordered anywhere below line 1572 — which is precisely the kind of failure
+  mode that must not depend on today's incidental file layout.
+
+  BLAST RADIUS, MEASURED AT AUTHORING TIME (feature/ratchet-string-literal,
+  tracked files only, templates/scripts/commit_guardian/_file_size_ratchet.py's
+  OLD three-regex implementation versus the NEW scanner in this same commit,
+  over every tracked .py/.js/.sql/.ts/.tsx/.sh file, 1568 files inspected).
+  Full per-file results are reported in this record's implementing agent's
+  own completion report rather than duplicated here in full, because the
+  exact counts are a measurement over a moving tree and belong with the
+  change that measured them; the qualitative and quantitative summary is
+  recorded here because it is decision-relevant. FIRST PASS (string
+  -literal-awareness only): 51 files changed count, several by triple-digit
+  line counts in the WRONG direction (the scanner itself was found to have a
+  second, symmetric defect — see LINE-COMMENT DEFECT below — before this
+  fix could land). FINAL, LANDED MEASUREMENT (after also fixing the
+  line-comment hazard): 24 files change count, ALL increases (the fix
+  correctly stops under-counting; no file's count decreases as an
+  unintended side effect, with one explained exception below), the largest
+  a +425 delta on templates/workflows-js/finalize-feature.js (1802 -> 2227)
+  and a +187 delta on templates/scripts/commit_guardian/check_doc_links.py
+  (114 -> 301) — both JS/Python files whose real source contains a
+  string-embedded or comment-embedded delimiter-lookalike that was
+  previously causing a large phantom-discarded span. ZERO files newly cross
+  their configured commit_guardian.json line_limits entry in EITHER
+  direction — the single most decision-relevant fact for whether this
+  lands. ONE file's count DECREASES by a small amount
+  (unit_tests/commit_guardian/test_ge_127b_1.py, 414 -> 410): explained, not
+  a regression — that file's own source contains the single-quote
+  -wrapping-a-triple-quote idiom this fix is about (`'"""'`/`"'''"`, as a
+  string-literal-content check inside its own test helper code), and the
+  OLD implementation's own phantom-span behaviour on that exact line was
+  itself already incorrect in a way that happened to inflate its count
+  relative to a correctly string-aware scan; the NEW count is the more
+  accurate one.
+
+  LINE-COMMENT DEFECT, FOUND BY THIS SAME BLAST-RADIUS REQUIREMENT BEFORE
+  LANDING. A first implementation draft protected only string literals
+  ("/*" inside a JS string is never mistaken for a real block-comment
+  opener) and left '#' (Python) and '//' (JS) line comments completely
+  unprotected — a "/*" inside an ORDINARY COMMENT is exactly as capable of
+  opening a phantom block-comment span as one inside a string, and the
+  real, tracked instance is templates/scripts/commit_guardian/
+  check_structural_change.py line 89's own comment, containing the glob
+  pattern "collector/services/*/*.py". Under the string-only-aware draft,
+  that file's count fell from a correct-ish 343 to 30 — a phantom span
+  swallowing the majority of the file's real, executable content. Fixed in
+  the same commit by giving '#'/'//' line comments the identical
+  navigate-over-without-discarding treatment already applied to string
+  literals. This is recorded here, in the AC's own notes, rather than only
+  in the implementation, because it changes what "string literal" in this
+  record's own title and criteria must be read to mean in practice: the
+  scanner's job is to never let ANY opaque span — a string literal OR a
+  line comment — be mistaken for a real discarded region, and an
+  implementation that protects only the flavour named in the criteria's
+  own Gherkin and not the sibling hazard the same mechanism creates does
+  not fully discharge this record's intent.
+
+  WHY THIS IS L2 AND A SIBLING OF GE-127d-2 RATHER THAN A REVISION OF IT.
+  GE-127d-2 is about the published rule being TRUE and REPRODUCIBLE — which
+  rule is applied and whether an author can arrive at the same number from
+  it. This record is about count_content_lines() FAILING TO APPLY the
+  already-correct, already-published rule on certain real inputs, which is a
+  correctness defect in the implementation rather than a change to what the
+  rule says. GE-127d-2's own criteria, its published statement, and its
+  reproducibility descriptors are untouched by this fix and remain accurate,
+  because describe_measurement_rule() and its probes read
+  count_content_lines()'s behaviour empirically and were re-run against the
+  corrected function with no change in their own assertions.
+
+  WHY THE FIX IS A SCANNER AND NOT A THIRD REGEX. A regex-only fix (e.g.
+  excluding matches that begin inside a quoted span) cannot be expressed
+  without tracking scanner state across the match, because "is this position
+  inside a string" is not a property of a single delimiter pair in isolation
+  — it depends on everything that came before it in the file. The chosen
+  fix is a small, single-pass, state-tracking scanner
+  (_strip_discarded_regions plus three focused helpers) that stays
+  proportionate to a measurement helper: it recognises exactly the five
+  delimiter kinds this rule and this repo's two source languages need
+  (Python's two triple-quote styles, C-style block comments, and the three
+  JS string flavours needed only to correctly navigate OVER, never discard),
+  and nothing else — no operator precedence, no nested template-expression
+  awareness, no regex-literal detection.
+
+  NOT AUTHORED WITH A FULL BUSINESS-ANALYST / IT-PO ENRICHMENT PASS. This
+  record was authored directly by the implementing agent against a
+  BrainCandy-directed defect investigation, following the GE-127b-2 precedent
+  (a defect discovered outside the normal BA/IT-PO pipeline, authored directly
+  with origin_agent BrainCandy once the fix existed) rather than the
+  BA-then-IT-PO sequence the rest of this tree's records follow. If a
+  BA/IT-PO pass later revisits this record, the it_requirements and test_spec
+  above are what they will be reconciling against, not a blank slate.

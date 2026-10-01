@@ -56,7 +56,6 @@ ARCHITECTURE: Sibling module to check_file_size.py, inside
 
 from __future__ import annotations
 
-import re
 import subprocess
 from collections.abc import Callable
 from pathlib import Path
@@ -72,9 +71,14 @@ _SUBPROCESS_TIMEOUT_SECONDS = 15
 # than by each caller reimplementing the git plumbing around its own counter.
 Measure = Callable[[str], int]
 
-_TRIPLE_DOUBLE_QUOTE_RE = re.compile(r'""".*?"""\r?\n?', re.DOTALL)
-_TRIPLE_SINGLE_QUOTE_RE = re.compile(r"'''.*?'''\r?\n?", re.DOTALL)
-_BLOCK_COMMENT_RE = re.compile(r"/\*.*?\*/\r?\n?", re.DOTALL)
+# Delimiters the scanner below recognises. A triple-quote check is always
+# attempted before a single-quote check (see _strip_discarded_regions), since
+# '"""' begins with the same character as '"'.
+_TRIPLE_DOUBLE = '"""'
+_TRIPLE_SINGLE = "'''"
+_BLOCK_COMMENT_OPEN = "/*"
+_BLOCK_COMMENT_CLOSE = "*/"
+_LINE_STRING_QUOTES = ('"', "'", "`")
 
 
 class PreviousLengthSourceError(Exception):
@@ -128,6 +132,194 @@ EMPTY_HISTORY_REASON = (
 )
 
 
+def _consume_trailing_newline(content: str, index: int) -> int:
+    """Advance *index* past one ``\\r?\\n`` immediately at *index*, if present.
+
+    A discarded region (triple-quoted string or block comment) contributes
+    ZERO lines to the count, INCLUDING the newline that terminates its own
+    closing delimiter (see this module's 2026-09-22 GE-127d-2 DECISION
+    HISTORY entry) -- without this, the line the delimiter occupied would
+    survive as a phantom blank line in the stripped text.
+
+    Args:
+        content: The file's full text content.
+        index: Position immediately after a discarded region's closing
+            delimiter.
+
+    Returns:
+        *index* advanced past a ``\\r\\n`` or ``\\n`` found there, or *index*
+        unchanged when neither is present.
+    """
+    if content[index : index + 2] == "\r\n":
+        return index + 2
+    if content[index : index + 1] == "\n":
+        return index + 1
+    return index
+
+
+def _skip_discarded_region(content: str, start: int, closing: str) -> int:
+    """Advance past a triple-quoted string or block comment body.
+
+    Args:
+        content: The file's full text content.
+        start: Index immediately after the region's OPENING delimiter.
+        closing: The literal closing delimiter to search for (three double
+            quotes, three single quotes, or ``"*/"``).
+
+    Returns:
+        The index immediately after the region's closing delimiter and its
+        own consumed trailing ``\\r?\\n``, if any. When *closing* is never
+        found, returns ``len(content)`` -- an unterminated region runs to
+        end of file, discarded in full, the same as a non-greedy DOTALL
+        regex with no match would leave unprocessed (this scanner discards
+        it instead; see this module's 2026-09-30 DECISION HISTORY entry for
+        why an unterminated region is out of this measurement helper's
+        proportionate scope).
+    """
+    end = content.find(closing, start)
+    if end == -1:
+        return len(content)
+    return _consume_trailing_newline(content, end + len(closing))
+
+
+def _skip_string_literal(content: str, start: int, quote: str) -> int:
+    """Advance past a single/double-quoted or backtick string literal's body.
+
+    Locates only where the literal ENDS, so a delimiter-lookalike sequence
+    inside it (a "/*", a triple-double-quote, another quote character) is
+    never mistaken by the caller for a real discard-region delimiter -- the
+    literal's own content is left completely untouched by ``_strip_discarded_regions``,
+    which keeps it verbatim rather than discarding it. Backslash-escaped
+    characters are skipped as a pair so an escaped quote can never end the
+    literal early. A single- or double-quoted literal (never a backtick,
+    which legitimately spans lines) that reaches an unescaped newline before
+    its closing quote is treated as ending there -- a measurement heuristic
+    for a malformed or unusual literal, not a language parser.
+
+    Args:
+        content: The file's full text content.
+        start: Index immediately after the literal's OPENING quote
+            character.
+        quote: The quote character that opened the literal (``'"'``,
+            ``"'"`` or ``"`"``).
+
+    Returns:
+        The index immediately after the literal's closing quote character,
+        or the index of the line-ending newline for an unterminated
+        single/double-quoted literal, or ``len(content)`` if neither is
+        ever found.
+    """
+    index = start
+    length = len(content)
+    while index < length:
+        char = content[index]
+        if char == "\\" and index + 1 < length:
+            index += 2
+            continue
+        if char == quote:
+            return index + 1
+        if char == "\n" and quote != "`":
+            return index
+        index += 1
+    return length
+
+
+def _skip_line_comment(content: str, start: int) -> int:
+    """Advance past a '#' or '//' line comment's body, up to (not including)
+    the terminating newline, WITHOUT interpreting anything inside it.
+
+    A line comment's own content is counted, not discarded (GE-127d-2's
+    published rule counts "'#' comments"), so the caller keeps this span
+    verbatim -- this only locates where it ends, exactly the same navigation
+    role ``_skip_string_literal`` plays for a string literal. Without this,
+    a "/*", a triple-quote sequence or a quote character occurring inside an
+    ordinary line comment (a path-glob pattern in a comment, e.g.
+    "collector/services/*/*.py", is the real, tracked instance this fix
+    addresses -- see the 2026-09-30 DECISION HISTORY entry below) would be
+    misread by the caller as opening a REAL discarded region or string
+    literal, exactly the class of defect this whole record exists to close,
+    one delimiter-carrier lower.
+
+    Args:
+        content: The file's full text content.
+        start: Index of the comment's own opening character(s) (the '#',
+            or the first '/' of a '//').
+
+    Returns:
+        The index of the terminating newline itself (not past it -- the
+        newline is left for the caller's normal dispatch to append), or
+        ``len(content)`` when the comment runs to end of file.
+    """
+    end = content.find("\n", start)
+    return end if end != -1 else len(content)
+
+
+def _strip_discarded_regions(content: str) -> str:
+    """Return *content* with triple-quoted strings and block comments removed.
+
+    A small state-tracking scanner, not a language parser: it recognises
+    exactly the delimiters this measurement rule cares about (Python
+    triple-quoted strings in both quote styles, C-style block comments, and
+    -- purely so a comment- or triple-quote-delimiter-lookalike sequence
+    inside one does not get misread as starting a REAL discarded region --
+    single-quoted, double-quoted and backtick-delimited string literals, and
+    '#'/'//' line comments). Content inside a single/double-quoted or
+    backtick literal, or inside a line comment, is kept completely
+    untouched: all four are navigated over, never discarded.
+
+    See this module's 2026-09-30 DECISION HISTORY entries: the previous
+    implementation matched triple-quote and block-comment spans with a bare
+    regex applied to the whole file, so a "/*" occurring inside an ordinary
+    string literal (e.g. the substring "changelogs/*.md" inside a JS
+    template literal) OR inside an ordinary '#' line comment (e.g. a
+    path-glob pattern like "collector/services/*/*.py" inside a Python
+    comment) opened a PHANTOM block-comment span that silently discarded
+    every real line up to the next unrelated "*/" -- including executable
+    code. That is a correctness defect in the measurement this gate's
+    ratchet depends on, not a hypothetical: the line-comment hazard was
+    found by this fix's own required blast-radius measurement, over real
+    tracked files, discarding hundreds of real lines on more than one of
+    them under a string-only-aware first draft of this same function.
+
+    Args:
+        content: The file's full text content.
+
+    Returns:
+        *content* with every triple-quoted string and block comment region
+        replaced by nothing, each also consuming its own trailing
+        ``\\r?\\n`` (see ``_consume_trailing_newline``). Single/double
+        -quoted and backtick string content, and '#'/'//' line-comment
+        content, is left byte-for-byte as it appeared -- all are ordinary
+        counted code, not a discard category.
+    """
+    kept: list[str] = []
+    index = 0
+    length = len(content)
+    while index < length:
+        three = content[index : index + 3]
+        if three in (_TRIPLE_DOUBLE, _TRIPLE_SINGLE):
+            index = _skip_discarded_region(content, index + 3, three)
+            continue
+        char = content[index]
+        two = content[index : index + 2]
+        if char == "#" or two == "//":
+            end = _skip_line_comment(content, index)
+            kept.append(content[index:end])
+            index = end
+            continue
+        if two == _BLOCK_COMMENT_OPEN:
+            index = _skip_discarded_region(content, index + 2, _BLOCK_COMMENT_CLOSE)
+            continue
+        if char in _LINE_STRING_QUOTES:
+            end = _skip_string_literal(content, index + 1, char)
+            kept.append(content[index:end])
+            index = end
+            continue
+        kept.append(char)
+        index += 1
+    return "".join(kept)
+
+
 def count_content_lines(content: str) -> int:
     """Count *content*'s lines after stripping docstrings and block comments.
 
@@ -142,17 +334,17 @@ def count_content_lines(content: str) -> int:
 
     Returns:
         The number of lines remaining after stripping docstring and
-        block-comment regions. A discarded region contributes ZERO lines,
-        including the newline that terminated its own closing delimiter
-        (see this module's 2026-09-22 GE-127d-2 DECISION HISTORY entry) --
-        every one of the three patterns below consumes that trailing
-        newline as part of the matched, discarded span, so a stripped
-        region never leaves a phantom blank line behind.
+        block-comment regions (see ``_strip_discarded_regions``). A
+        discarded region contributes ZERO lines, including the newline that
+        terminated its own closing delimiter (see this module's 2026-09-22
+        GE-127d-2 DECISION HISTORY entry) -- a stripped region never leaves
+        a phantom blank line behind. A "/*", a triple-double-quote or a
+        quote character occurring inside an ordinary single/double-quoted or backtick string
+        literal is never mistaken for the start of a discarded region (see
+        the 2026-09-30 entry) -- the literal's own content is counted like
+        any other code.
     """
-    stripped = _TRIPLE_DOUBLE_QUOTE_RE.sub("", content)
-    stripped = _TRIPLE_SINGLE_QUOTE_RE.sub("", stripped)
-    stripped = _BLOCK_COMMENT_RE.sub("", stripped)
-    return len(stripped.splitlines())
+    return len(_strip_discarded_regions(content).splitlines())
 
 
 # ---------------------------------------------------------------------------
@@ -654,6 +846,75 @@ def resolve_previous_lengths(
 ====================================================================
 DECISION HISTORY
 ====================================================================
+- 2026-09-30 [python-coder/GE-127d-3]: Fixed a correctness defect found by
+  direct measurement, not by any test in this tree: count_content_lines()
+  stripped triple-quoted strings and block comments with a bare
+  DOTALL regex against the whole file, with no notion of a string literal.
+  A "/*" occurring inside an ordinary JS single/double/backtick string (the
+  real, tracked instance: the substring "changelogs/*.md" inside a template
+  literal in templates/workflows-js/fast-lane-ship.js) opened a PHANTOM
+  block-comment span that ran to the next UNRELATED "*/" anywhere later in
+  the file, silently discarding every real line in between -- including
+  executable code -- from the count. The same bare-regex hazard applied
+  symmetrically to a stray triple-quote sequence inside a string. Replaced
+  the three module-level regexes with a small state-tracking scanner
+  (_strip_discarded_regions, _skip_discarded_region, _skip_string_literal,
+  _consume_trailing_newline) that recognises single/double-quoted and
+  backtick string literals as OPAQUE spans to navigate over -- never
+  discarded, their content stays byte-for-byte and counts like any other
+  code -- so a delimiter-lookalike sequence inside one can never be
+  misread as opening a real discarded region. Python docstrings (triple
+  -quoted, both quote styles) and C-style block comments are still
+  discarded exactly as before, including the trailing-newline consumption
+  the 2026-09-22 GE-127d-2 correction above established, for every file
+  that contains no string-embedded delimiter-lookalike -- verified by
+  running this module's own DECISION HISTORY-referenced descriptor sets
+  before and after and confirming no count changed for any fixture that
+  does not exercise the new scanner's string-awareness. count_content_lines
+  itself is unchanged in signature and in every call site (measure_current_
+  length, get_previous_length, resolve_previous_lengths, describe_measurement
+  _rule's probes) -- only its internal stripping mechanism changed, so
+  GE-127b-1's ratchet, GE-127a-1's threshold and GE-127d-2's published
+  -statement generation all inherit the fix with no call-site change. The
+  independent re-derivation engine in
+  unit_tests/commit_guardian/_ge_127d_2_fixture.py is deliberately NOT
+  touched: it is coded with its own regexes so agreement with production is
+  a genuine reproducibility proof rather than a tautology, and none of its
+  existing fixtures embed a string-delimiter-lookalike, so no existing
+  GE-127d-2 descriptor is affected by this change either way.
+
+  A SECOND DEFECT WAS FOUND BY THIS SAME FIX'S OWN REQUIRED BLAST-RADIUS
+  MEASUREMENT, BEFORE LANDING, NOT AFTER. A first draft of the scanner above
+  was string-literal-aware only and, measured over every tracked
+  .py/.js/.sql/.ts/.tsx/.sh file against the pre-fix implementation, changed
+  51 files' counts -- several by triple-digit line counts in the WRONG
+  direction (e.g. templates/scripts/commit_guardian/check_structural_change.py
+  343 -> 30, unit_tests/commit_guardian/test_scan_secrets_suppression.py 518
+  -> 15). Root cause: a "/*" occurring inside an ordinary '#' (Python) or
+  '//' (JS) LINE comment -- the real, tracked instance:
+  "collector/services/*/*.py" inside a '#' comment in
+  check_structural_change.py -- is just as unprotected by a string-only
+  -aware scanner as one inside a string literal, and opens the identical
+  class of phantom block-comment span, this time swallowing everything up to
+  the next unrelated "*/" including, in the worst measured cases, most of
+  the rest of the file. Fixed by adding _skip_line_comment and a dispatch
+  branch in _strip_discarded_regions that treats a '#' or '//' as opening an
+  opaque, KEPT (never discarded) span running to end of line -- the same
+  navigate-over-without-discarding treatment already applied to string
+  literals -- checked before the block-comment-open and quote-character
+  checks so a delimiter-lookalike inside a line comment can never reach
+  them. Re-measured after this second fix: 24 files change count (all now
+  either explainable individual-line corrections or the intended fix firing
+  on a real tracked instance), zero newly cross their configured
+  commit_guardian.json line_limits entry in either direction, and every
+  descriptor in this module's own DECISION HISTORY-referenced test suites
+  (GE-127b-1, GE-127b-1-i, GE-127b-2, GE-127d-1, GE-127d-2, GE-127d-3, and
+  the merge-aware KI-CG-20260908 suite) remains green. This is exactly the
+  reason a fix to a measurement helper must be blast-radius-measured over
+  the real, current population before it lands, never assumed correct from
+  hand-built fixtures alone -- the hand-built fixtures for the string-only
+  fix all passed while the line-comment class of the same defect sat
+  undetected in the guard's own real, tracked source.
 - 2026-09-23 [python-coder/GE-127d-2 rework, M-1]: pr-reviewer found the
   trailing `\n?` on all three discard regexes matches a bare LF only, so a
   CRLF-terminated file's discarded region leaves its own `\r` behind as a

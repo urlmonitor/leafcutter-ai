@@ -63,6 +63,7 @@ superseded_by: null
 covered_by:
   - GE-127d-1
   - GE-127d-2
+  - GE-127d-3
 implemented_by: []
 change_target:
   - code
