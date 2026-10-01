@@ -10,7 +10,8 @@ ARCHITECTURE: `build_environment` is synchronous and does no network IO. The Jev
     pooled HTTP client bound to an event loop, so the environment stores a *factory*: the service
     calls it inside the run's loop and closes the adapter in the same loop. The tracer is ONE
     instance shared by the scheduler runtime and the Jev adapter, so generations nest under the
-    same segment. Host bindings are eligibility placeholders until P8 supplies host operations.
+    same segment. Host bindings are HostOperationExecutors: they compile packets and convert results
+    but never run work (the scheduler opens an interaction instead).
 """
 
 from __future__ import annotations
@@ -18,10 +19,13 @@ from __future__ import annotations
 import logging
 from collections.abc import Callable
 from dataclasses import dataclass
+from functools import partial
 from pathlib import Path
 
 import kernel
 from kernel.capabilities.decision import DecisionExecutor
+from kernel.capabilities.host import HostBindingExecuted as HostBindingExecuted
+from kernel.capabilities.host import HostOperationExecutor
 from kernel.capabilities.research import ResearchExecutor
 from kernel.capabilities.retrieval import RepositoryRetrievalExecutor
 from kernel.config import KernelConfig, load_kernel_config, repo_root
@@ -48,20 +52,8 @@ NATIVE_VERSION = "1.0.0"
 TELEMETRY_SPOOL = "telemetry_spool.jsonl"
 
 
-class HostBindingExecuted(RuntimeError):
-    """A host_handoff binding was executed in-process, which the scheduler must never do."""
-
-    def __init__(self) -> None:
-        """Build the fixed message."""
-        super().__init__("a host_handoff binding must never execute in-process")
-
-
-class HostMarkerExecutor:
-    """Stands in for a host_handoff binding so eligibility finds it; the graph pauses instead."""
-
-    async def ainvoke(self, invocation: object, ctx: object) -> object:
-        """Never called: host items open an interaction and wait for the client (P8 replaces)."""
-        raise HostBindingExecuted
+#: Kept under its P7 name: every host_handoff binding is a HostOperationExecutor since P8.
+HostMarkerExecutor = HostOperationExecutor
 
 
 @dataclass
@@ -122,13 +114,14 @@ def resolve_run_root(config: KernelConfig, root: Path) -> Path:
 
 
 def build_bindings(snapshot: RegistrySnapshot) -> BindingTable:
-    """Return the trusted table: native executors plus host placeholders for host descriptors."""
+    """Return the trusted table: native executors plus one host operation per host descriptor."""
     table = BindingTable()
     for key, factory in NATIVE_BINDINGS.items():
         table.register(key, NATIVE_VERSION, factory)
     for descriptor in snapshot.descriptors:
         if descriptor.execution_mode is ExecutionMode.HOST_HANDOFF:
-            table.register(descriptor.binding, descriptor.version, HostMarkerExecutor)
+            table.register(descriptor.binding, descriptor.version,
+                           partial(HostOperationExecutor, descriptor.id))
     return table
 
 
@@ -191,6 +184,9 @@ def build_environment(*, config_path: Path | None = None, env_file: Path | None 
 # - 2026-10-01 10:40 [python-coder]: The environment holds a Jev *factory*, not an adapter: the
 #   adapter's pooled client is bound to one event loop and must be created and closed in the
 #   loop that runs the graph. (#KernelBootstrapV0/P7)
+# - 2026-10-01 11:50 [python-coder]: Host bindings are HostOperationExecutors keyed by the
+#   descriptor id (an unknown id gets the generic operation); `HostMarkerExecutor` stays as an
+#   alias of the P7 name and `HostBindingExecuted` is re-exported. (#KernelBootstrapV0/P8)
 # - 2026-10-01 10:40 [python-coder]: Host placeholders are derived from the registry's
 #   host_handoff descriptors (not a hard-coded id list), so a new host capability needs only a
 #   registry entry until P8 gives it an operation. (#KernelBootstrapV0/P7)

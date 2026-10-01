@@ -18,6 +18,7 @@ from typing import Any
 from langgraph.runtime import Runtime
 from langgraph.types import Send
 
+from kernel.capabilities.host import template_versions
 from kernel.contracts import (
     CapabilityDescriptor,
     CapabilityInvocation,
@@ -97,7 +98,7 @@ def build_invocation(draft: Draft, state: KernelState, item: WorkItem, binding: 
         input_payload=dict(request.payload), context_refs=list(request.context_refs),
         continuation=item.continuation, child_outcomes=outcomes, input_fingerprint=fingerprint,
         versions={"registry_hash": state["registry"].content_hash,
-                  "capability": binding.version},
+                  "capability": binding.version, **template_versions(binding.capability_id)},
         attempt=item.attempts + 1,
         trace=TraceContext(trace_id=trace.trace_id if trace else None,
                            parent_observation_id=trace.root_observation_id if trace else None,
@@ -333,6 +334,9 @@ def _packet(state: KernelState, invocation_id: str, shares: dict[str, int]) -> d
 # - 2026-09-30 22:30 [python-coder]: Insufficient context with policy `human` creates a human
 #   child request and parks the item with a `kernel.router` continuation, reusing the generic
 #   wait/resume machinery instead of a second pause mechanism. (#KernelBootstrapV0/P4)
+# - 2026-10-01 11:10 [python-coder]: A host invocation records its packet template in `versions`
+#   (host_template), so the template identity is part of the invocation record.
+#   (#KernelBootstrapV0/P8)
 # - 2026-10-01 10:00 [python-coder]: build_invocation prefers the runtime's current segment trace
 #   over state["trace"], so invocations and host packets created after a resume nest under the
 #   resuming segment (bug D). (#KernelBootstrapV0/P7)

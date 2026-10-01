@@ -264,7 +264,9 @@ class TestReplayAndLedger(RejectionCase):
         while result.pending:
             goals.append(result.pending["goal"])
             result = await run.submit(raw_submission(result.pending, run.run_id))
-        self.assertEqual(goals, ["Which store does the cache use?", "Which principles apply?"])
+        for goal, question in zip(goals, ["Which store does the cache use?",
+                                          "Which principles apply?"], strict=True):
+            self.assertIn(question, goal)  # the compiled statement ends with the task text
         self.assertEqual(result.state["outcome"].status, RunStatus.COMPLETED)
 
 

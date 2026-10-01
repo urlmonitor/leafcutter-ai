@@ -21,6 +21,7 @@ from typing import Any
 from langgraph.runtime import Runtime
 from langgraph.types import interrupt
 
+from kernel.capabilities.host import emit_host_telemetry
 from kernel.contracts import HostWorkRequest, HumanQuestion, RunEvent
 from kernel.contracts.interaction import Rejection
 from kernel.interaction.packets import (
@@ -63,7 +64,8 @@ def _packet_for(state: KernelState, ctx: KernelRuntime, item: Any, revision: int
     if human:
         return redact_packet(build_human_question(state, item, revision, now), redactor)
     packet = build_host_request(state, item, revision, now,
-                                max_input_chars=ctx.config.host.max_input_chars)
+                                max_input_chars=ctx.config.host.max_input_chars,
+                                mask=redactor.mask_text)
     packet = write_input_artifact(ctx.artifacts, redactor, state["run_id"], state, packet)
     return redact_packet(packet, redactor)
 
@@ -137,12 +139,15 @@ async def await_interaction(state: KernelState, runtime: Runtime[KernelRuntime]
             continue
         packet = _counted(ctx, state["run_id"], packet, verdict)
         if len(packet.rejections) > ctx.config.host.max_repair_attempts:
-            return _exhausted(state, packet, code, events, now)
+            return _exhausted(state, ctx, packet, code, events, now)
     item = state["work_items"][packet.work_item_id]
     result = result_from_submission(packet, verdict.submission,
-                                    current_invocation(state, item), now)
-    ctx.tracer.event("submission.accepted", run_corr(
-        state, work_item_id=item.id, interaction_id=packet.id),
+                                    current_invocation(state, item), now,
+                                    known_evidence_ids=state.get("evidence", {}).keys())
+    corr = run_corr(state, work_item_id=item.id, interaction_id=packet.id)
+    if isinstance(packet, HostWorkRequest):
+        emit_host_telemetry(ctx.tracer, corr, packet, verdict.submission, result, now)
+    ctx.tracer.event("submission.accepted", corr,
         payload={"actor_kind": verdict.submission.actor.kind.value,
                  "rejections_before": len(packet.rejections) if isinstance(
                      packet, HostWorkRequest) else 0})
@@ -153,11 +158,13 @@ async def await_interaction(state: KernelState, runtime: Runtime[KernelRuntime]
             "events": events}
 
 
-def _exhausted(state: KernelState, packet: HostWorkRequest, code: str, events: list[RunEvent],
-               now: Any) -> dict[str, Any]:
+def _exhausted(state: KernelState, ctx: KernelRuntime, packet: HostWorkRequest, code: str,
+               events: list[RunEvent], now: Any) -> dict[str, Any]:
     """Fail the host item whose repair attempts ran out and dequeue its interaction."""
     item = state["work_items"][packet.work_item_id]
     result = repair_exhausted_result(packet, current_invocation(state, item), code)
+    emit_host_telemetry(ctx.tracer, run_corr(state, work_item_id=item.id, interaction_id=packet.id),
+                        packet, None, result, now)
     events.append(new_event(state["run_id"], now, "interaction.repair_exhausted", code,
                             work_item_id=item.id, interaction_id=packet.id))
     return {"results": {result.invocation_id: result}, "events": events,
@@ -168,6 +175,10 @@ def _exhausted(state: KernelState, packet: HostWorkRequest, code: str, events: l
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-01 11:10 [python-coder]: A host answer (and an exhausted repair budget) records a
+#   `host.<operation>` telemetry event with the packet fingerprint, time to answer and usage;
+#   conversion gets the ids of the run's evidence so it can drop citations of evidence that does
+#   not exist. (#KernelBootstrapV0/P8)
 # - 2026-09-30 22:30 [python-coder]: `await_interaction` is not wrapped by sequential_node: its
 #   tracer span must open only after resume (nothing before interrupt, design risk 6).
 #   (#KernelBootstrapV0/P4)

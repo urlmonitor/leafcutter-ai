@@ -13,9 +13,11 @@ ARCHITECTURE: Pure functions over contract models. Evidence ids are content addr
 
 from __future__ import annotations
 
+from collections.abc import Collection
 from datetime import datetime
 from typing import Any
 
+from kernel.capabilities.host import HostConversion, host_operation
 from kernel.contracts import (
     CapabilityInvocation,
     CapabilityResult,
@@ -92,15 +94,28 @@ def evidence_from_submission(packet: HostWorkRequest | HumanQuestion,
 
 def result_from_submission(packet: HostWorkRequest | HumanQuestion,
                            submission: InteractionSubmission,
-                           invocation: CapabilityInvocation | None, now: datetime
-                           ) -> CapabilityResult:
-    """Return the completed CapabilityResult an accepted submission produces."""
+                           invocation: CapabilityInvocation | None, now: datetime, *,
+                           known_evidence_ids: Collection[str] | None = None) -> CapabilityResult:
+    """Return the completed CapabilityResult an accepted submission produces.
+
+    A host submission for a capability with a host operation is converted by that operation
+    (proposals stay proposals, evidence is host-reported, ids are kernel-derived); any other
+    submission is passed through with the evidence it carried. `known_evidence_ids` lets the
+    conversion drop citations of evidence the run does not have.
+    """
+    evidence = evidence_from_submission(packet, submission, now)
+    operation = host_operation(invocation.capability_id) if invocation else None
+    if operation is not None and invocation is not None and isinstance(packet, HostWorkRequest):
+        return operation.convert(HostConversion(
+            packet=packet, submission=submission, invocation=invocation, now=now,
+            extra_evidence=tuple(evidence),
+            known_evidence_ids=None if known_evidence_ids is None
+            else frozenset(known_evidence_ids)))
     return CapabilityResult(
         invocation_id=invocation.id if invocation else packet.id,
         work_item_id=packet.work_item_id, status=ResultStatus.COMPLETED,
         output_schema_id=submission.response_schema_id,
-        output_payload=dict(submission.response),
-        evidence=evidence_from_submission(packet, submission, now),
+        output_payload=dict(submission.response), evidence=evidence,
         usage=list(submission.usage))
 
 
@@ -118,6 +133,9 @@ def repair_exhausted_result(packet: HostWorkRequest, invocation: CapabilityInvoc
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-01 11:05 [python-coder]: Host submissions for a capability with a host operation are
+#   converted by that operation (kernel.capabilities.host); the pass-through stays for human
+#   answers and unknown host capabilities. (#KernelBootstrapV0/P8)
 # - 2026-09-30 23:50 [python-coder]: Moved out of nodes_interaction and extended with structured
 #   answers; an exhausted repair budget fails the item with retryable=false so the scheduler
 #   never retries invalid host output silently. (#KernelBootstrapV0/P6)

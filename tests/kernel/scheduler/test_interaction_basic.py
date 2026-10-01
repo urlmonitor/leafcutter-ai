@@ -145,7 +145,9 @@ class TestSequentialHost(unittest.IsolatedAsyncioTestCase):
             answer = _submission(packet, run_id, kind=ActorKind.HOST,
                                  schema=schema_ids.EVIDENCE_BUNDLE, response=BUNDLE)
             out = await rig.resume(graph, config, answer)
-        self.assertEqual(seen, ["Which store does the cache use?", "Which principles apply?"])
+        for goal, question in zip(seen, ["Which store does the cache use?",
+                                         "Which principles apply?"], strict=True):
+            self.assertIn(question, goal)  # the compiled statement ends with the task text
         self.assertEqual(out.value["outcome"].status, RunStatus.COMPLETED)
         self.assertEqual(out.value["budgets"].host_operations, 2)
 

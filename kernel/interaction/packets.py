@@ -15,10 +15,12 @@ from __future__ import annotations
 
 import json
 import logging
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 from datetime import datetime
 from typing import Any
 
+from kernel.capabilities.host import TaskInputs, compiler_for, parse_compiled_by
+from kernel.capabilities.host.spec import MAX_TASK_STATEMENT_CHARS, bounded
 from kernel.contracts import (
     CapabilityInvocation,
     HostWorkRequest,
@@ -39,16 +41,10 @@ logger = logging.getLogger(__name__)
 #: Operations a host may never perform, whatever the capability allows (spec 11.3 and 13.3).
 FORBIDDEN_HOST_OPERATIONS = ("edit_repository", "approve_policy", "change_permissions",
                              "choose_next_step", "run_other_leafcutter_commands")
-MAX_TASK_STATEMENT_CHARS = 2000
 DEFAULT_WHY_HUMAN = "The available evidence and routing could not settle this question."
-_TRUNCATED = " ...[truncated]"
-
-
-def bounded(text: str, limit: int = MAX_TASK_STATEMENT_CHARS) -> str:
-    """Return text cut to limit characters, with a marker when it was cut."""
-    if len(text) <= limit:
-        return text
-    return text[:max(0, limit - len(_TRUNCATED))] + _TRUNCATED
+__all__ = ["DEFAULT_WHY_HUMAN", "FORBIDDEN_HOST_OPERATIONS", "MAX_TASK_STATEMENT_CHARS",
+           "bounded", "build_host_request", "build_human_question", "current_invocation",
+           "input_evidence_ids", "redact_packet", "tightened_schema", "write_input_artifact"]
 
 
 def current_invocation(state: Mapping[str, Any], item: WorkItem) -> CapabilityInvocation | None:
@@ -90,9 +86,6 @@ def build_human_question(state: Mapping[str, Any], item: WorkItem, revision: int
 _PROPOSED_ONLY = {"type": "object", "required": ["proposal_status", "approval_status"],
                   "properties": {"proposal_status": {"const": "proposed"},
                                  "approval_status": {"const": "proposed"}}}
-OPTIONS_REQUIREMENT = ("Every option and every proposed criterion must set proposal_status and "
-                       "approval_status to 'proposed'; a human approves them later, so never "
-                       "set 'approved' or approved_by.")
 
 
 def tightened_schema(schema_id: str, schema: dict[str, Any]) -> dict[str, Any]:
@@ -112,24 +105,38 @@ def tightened_schema(schema_id: str, schema: dict[str, Any]) -> dict[str, Any]:
 
 
 def build_host_request(state: Mapping[str, Any], item: WorkItem, revision: int, now: datetime,
-                       *, max_input_chars: int | None = None) -> HostWorkRequest:
-    """Build the HostWorkRequest for a host_handoff binding (exactly one operation)."""
+                       *, max_input_chars: int | None = None,
+                       mask: Callable[[str], str] | None = None) -> HostWorkRequest:
+    """Build the HostWorkRequest for a host_handoff binding (exactly one operation).
+
+    The task statement and output requirements are compiled by the capability's host operation
+    (ADR-052): deterministic text from the request payload, schema, operations, cited evidence
+    and limits, redacted with `mask` and fingerprinted; the last requirement records template
+    and fingerprint.
+    """
     request = state["requests"][item.request_id]
     descriptor = state["registry"].get(item.binding.capability_id)
     invocation = current_invocation(state, item)
     operations = list(descriptor.operations) if descriptor else []
+    evidence_ids = input_evidence_ids(state, request)
+    operation = operations[0] if operations else item.binding.capability_id
+    compiled = compiler_for(item.binding.capability_id).compile(TaskInputs(
+        capability_id=item.binding.capability_id, operation=operation,
+        goal=request.goal or request.question or item.binding.capability_id,
+        payload=request.payload if isinstance(request.payload, Mapping) else {},
+        allowed_operations=tuple(operations),
+        forbidden_operations=tuple(FORBIDDEN_HOST_OPERATIONS),
+        output_schema_id=request.requested_output_schema, evidence_ids=tuple(evidence_ids),
+        max_input_chars=max_input_chars), mask)
     return HostWorkRequest(
         id=new_id("int"), created_at=now, updated_at=now, work_item_id=item.id,
-        invocation_id=invocation.id if invocation else None,
-        operation=operations[0] if operations else item.binding.capability_id,
-        goal=bounded(request.goal or request.question or item.binding.capability_id),
-        input_evidence_ids=input_evidence_ids(state, request),
+        invocation_id=invocation.id if invocation else None, operation=operation,
+        goal=compiled.statement, input_evidence_ids=evidence_ids,
         allowed_operations=operations, forbidden_operations=list(FORBIDDEN_HOST_OPERATIONS),
         output_schema_id=request.requested_output_schema,
         output_json_schema=tightened_schema(request.requested_output_schema,
                                             json_schema_for(request.requested_output_schema)),
-        output_requirements=([OPTIONS_REQUIREMENT]
-                             if request.requested_output_schema == schema_ids.OPTIONS else []),
+        output_requirements=[*compiled.requirements, compiled.compiled_by_line],
         context_limits=ContextLimits(max_input_chars=max_input_chars),
         trace_context=invocation.trace if invocation else TraceContext(),
         state_revision=revision, attempt=item.attempts)
@@ -146,8 +153,11 @@ def write_input_artifact(artifacts: ArtifactStorePort, redactor: Redactor, run_i
     evidence = [{"id": e.id, "category": e.category.value, "locator": e.source.locator,
                  "source": e.source.id, "excerpt": e.excerpt}
                 for i in packet.input_evidence_ids if (e := state["evidence"].get(i))]
+    ref = parse_compiled_by(packet.output_requirements)
     body = redactor.mask({
         "interaction_id": packet.id, "operation": packet.operation,
+        "task_template": f"{ref.template_id}@{ref.template_version}" if ref else None,
+        "prompt_fingerprint": ref.fingerprint if ref else None,
         "request_schema": invocation.input_payload_schema if invocation else None,
         "request": dict(invocation.input_payload) if invocation else {}, "evidence": evidence})
     try:
@@ -180,6 +190,10 @@ def redact_packet(packet: HostWorkRequest | HumanQuestion, redactor: Redactor
 # - 2026-09-30 23:40 [python-coder]: Host input travels as a redacted artifact referenced by
 #   absolute path (design part 5), because a packet carrying only evidence ids gives the host
 #   nothing to read. (#KernelBootstrapV0/P6)
+# - 2026-10-01 11:00 [python-coder]: The packet goal and requirements are now compiled by the
+#   capability's host operation (kernel.capabilities.host) instead of being copied from the
+#   request; `bounded` and the statement cap moved there and are re-exported here.
+#   (#KernelBootstrapV0/P8)
 # - 2026-09-30 23:40 [python-coder]: Only free-text fields are masked: masking ids, the JSON
 #   schema or patterns would corrupt them, and the entropy rule would hit the schema patterns.
 #   (#KernelBootstrapV0/P6)
