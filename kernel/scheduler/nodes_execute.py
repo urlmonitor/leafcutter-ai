@@ -27,6 +27,7 @@ from kernel.contracts import (
     ResultStatus,
 )
 from kernel.observability.correlation import correlation_for_invocation
+from kernel.observability.redaction import Redactor
 from kernel.providers.base import JevUnavailable
 from kernel.registry.bindings import BindingUnavailable
 from kernel.scheduler.context import KernelRuntime
@@ -92,6 +93,12 @@ def cancelled_result(invocation: CapabilityInvocation) -> CapabilityResult:
         limitations=["cancelled: the capability was not started"])
 
 
+def _mask(ctx: KernelRuntime, text: str) -> str:
+    """Mask secrets in exception text before it becomes a client-visible error message."""
+    redactor = ctx.redactor or Redactor({}, ctx.config.data_policy)
+    return redactor.mask_text(text)
+
+
 async def _run_executor(packet: dict[str, Any], ctx: KernelRuntime, budget: ShareBudget
                         ) -> CapabilityResult:
     """Resolve and run the executor; every failure becomes a failed result."""
@@ -102,7 +109,7 @@ async def _run_executor(packet: dict[str, Any], ctx: KernelRuntime, budget: Shar
     try:
         executor = ctx.bindings.resolve(descriptor.binding, invocation.capability_version)
     except BindingUnavailable as exc:
-        return failed_result(invocation, "binding_unavailable", str(exc))
+        return failed_result(invocation, "binding_unavailable", _mask(ctx, str(exc)))
     timeout = ctx.config.limits.capability_timeout_seconds
     exec_ctx = _context(packet, ctx, budget)
     try:
@@ -113,10 +120,11 @@ async def _run_executor(packet: dict[str, Any], ctx: KernelRuntime, budget: Shar
                              retryable=True)
     except JevUnavailable as exc:
         logger.warning("capability %s: jev unavailable", invocation.capability_id)
-        return failed_result(invocation, "provider_unavailable", exc.reason)
+        return failed_result(invocation, "provider_unavailable", _mask(ctx, exc.reason))
     except Exception as exc:  # noqa: BLE001  (a capability must never crash the graph)
         logger.exception("capability %s raised", invocation.capability_id)
-        return failed_result(invocation, "executor_exception", f"{type(exc).__name__}: {exc}")
+        return failed_result(invocation, "executor_exception",
+                             _mask(ctx, f"{type(exc).__name__}: {exc}"))
 
 
 async def execute(packet: dict, runtime: Runtime[KernelRuntime]) -> dict[str, Any]:
@@ -141,6 +149,9 @@ __all__ = ["ELAPSED_KEY", "JEV_RESERVED_KEY", "ShareBudget", "cancelled_result",
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-01 16:30 [python-coder]: Exception text is masked here, where it becomes an
+#   ErrorInfo, because that message reaches the stdout envelope, run.json and events, which the
+#   Langfuse mask never covers. (#KernelBootstrapV0/FIXC)
 # - 2026-10-01 17:00 [python-coder]: A worker consults `cancel_probe` before it starts; a
 #   cancelled run gets a blocked `cancelled` result instead of a capability call. Retries are
 #   re-dispatched through this worker, so the same check covers "between retries".

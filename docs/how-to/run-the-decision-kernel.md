@@ -39,6 +39,12 @@ Lookup order per value: process environment, then `--env-file` (or `LEAFCUTTER_E
 the first `.env` found walking up from the checkout. Git worktrees under the main checkout find
 the main checkout's `.env` this way. Never commit the file.
 
+A file you name explicitly (`--env-file` or `LEAFCUTTER_ENV_FILE`) must exist and be readable: if
+it does not, the command fails with exit 5 and `error.code` `config_invalid` instead of falling
+back to another `.env`, so a run never goes out with credentials you did not intend. Only the
+implicit walk-up is best-effort. A `--config` or registry file that is not valid UTF-8 also
+fails with exit 5 (`config_invalid` / `registry_invalid`).
+
 ```bash
 JEV_API_KEY=<your Jev key>
 LANGFUSE_PUBLIC_KEY=<pk-lf-...>
@@ -157,6 +163,19 @@ python -m kernel install-skill --target-dir <workspace>/.claude/skills --name le
 The skill runs `python -m kernel` from the checkout, so install it where that command works.
 If a project command named `/leafcutter` already exists, remove it first or choose another
 `--name`.
+
+What the skill may do without asking you (its `allowed-tools`, rendered for this checkout):
+
+| Pre-approved | Scope |
+|---|---|
+| `Bash` | Only `python -m kernel run`, `resume` and `status`. `cancel`, `gaps` and `install-skill` (including `--force`) are never pre-approved: you run them yourself. |
+| `Edit` (covers Write) | Only `<run_root>/client/**`, the scratch directory for the TaskInput and submission JSON files. Any other file write prompts you. |
+| `Read` | Only `<run_root>/**`, where the host input artifacts and reports live. Repository files inside the working directory are read-only for Claude Code by default and need no pre-approval. |
+| `AskUserQuestion` | Human questions from the kernel. |
+
+`<run_root>` is `paths.run_root` of the config in effect when you run `install-skill`; reinstall
+after you change it. Claude Code consults only `Edit` and `Read` path rules (a `Write(path)` rule is
+accepted but ignored), and absolute paths start with `//` (`//c/Users/...` on Windows).
 
 ## Exit codes
 

@@ -58,6 +58,8 @@ def _read_json(path: Path) -> dict:
         data = json.loads(text)
     except OSError as exc:
         raise RegistryError(path, [f"cannot read file: {exc}"]) from exc
+    except UnicodeDecodeError as exc:
+        raise RegistryError(path, [f"not valid UTF-8 text: {exc.reason}"]) from exc
     except json.JSONDecodeError as exc:
         raise RegistryError(path, [f"not valid JSON: {exc}"]) from exc
     if not isinstance(data, dict):
@@ -168,6 +170,8 @@ def verify_pinned(pinned: RegistrySnapshot, current: RegistrySnapshot) -> None:
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-01 16:45 [python-coder]: A non-UTF-8 registry file is a RegistryError (exit 5
+#   `registry_invalid`), not an escaping UnicodeDecodeError. (#KernelBootstrapV0/FIXC)
 # - 2026-09-30 22:00 [python-coder]: content_hash ignores $schema and _comment so documentation
 #   edits never invalidate pinned runs. (#KernelBootstrapV0/P1)
 # ====================================================================
