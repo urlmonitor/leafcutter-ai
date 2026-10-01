@@ -133,10 +133,9 @@ assumption it exists to falsify, so the obligation is not "does the error path e
 state via a **named mutation** and asserting the check catches it **by name**, not just
 that something failed (the same discipline as the zero-file incident under "Existing
 machinery" below). [TQ-600a-3](../acceptance-criteria/testing-quality/TQ-600-suite-feedback-latency/TQ-600a-3.yaml)
-is the worked example: it dirties the TQ-600a-1 shared layout inside one consuming test
-and requires the comparison to name both the altered file and the offending test by node
-id. This is what separates `failure` coverage from a `criterion` test that merely asserts
-an error message exists.
+is the worked example: it dirties the TQ-600a-1 shared layout inside one consuming test and
+requires the comparison to name both the altered file and the offending test by node id —
+which separates `failure` coverage from a `criterion` test asserting an error message exists.
 
 ## Failure catalogue — the evidence base
 
@@ -276,6 +275,9 @@ verified on 2026-09-21 (TQ-600a-1), and extended on 2026-09-28 (TQ-600a-1-i).
   `EXECUTION_LOG_ENV_VAR` (`scripts/suite_performance/_shared_layout_coordination.py`);
   the reported-deploy-count half is deferred to TQ-600a-6, which has no reporting
   surface yet.
+  **TQ-600a-5 (PR #957) made the route a declaration: THREE cases, not two — reader, mutator,
+  and UNDECLARED, whose two-branch default corrupts by routing it to the shared layout. The
+  marker decides, nothing else; CLAUDE.md carries the rule and the exact spellings.**
 
 ## Relationship to BO-2900
 

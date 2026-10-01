@@ -19,11 +19,27 @@ ARCHITECTURE: Standalone script (no leafcutter-internal imports). Reads the
     Also checks card<->registry mirror: parses the mermaid spawn diagram in
     each docs/agents/cards/<id>.card.md and compares against the registry
     spawn_allowlist and spawned_by for that agent (both directions).
-    Skips __ticket_phase_agents__ special token and "user"/"finalize-feature.js"
-    external callers. Emits structured errors to stderr naming both agents
-    involved in any asymmetry or mismatch per AC INF-600g-1 and INF-600l-1.
-    Triggers when config/agent_registry.json OR any docs/agents/cards/*.card.md
-    is staged.
+    Skips __ticket_phase_agents__ special token and the _EXTERNAL_CALLERS —
+    "user" plus the workflow scripts that dispatch agents directly
+    ("finalize-feature.js", "fast-lane-ship.js"). Emits structured errors to
+    stderr naming both agents involved in any asymmetry or mismatch per AC
+    INF-600g-1 and INF-600l-1. Triggers when config/agent_registry.json OR any
+    docs/agents/cards/*.card.md is staged.
+NODE IDS MAY CONTAIN A DOT (BO-2400a-1-v, 2026-09-30): a spawner is not always
+    an agent. A workflow script named in an agent's `spawned_by` is emitted by
+    generate_agent_cards with only the `-`→`_` swap, so `fast-lane-ship.js`
+    becomes the node id `fast_lane_ship.js`. The two _MERMAID_*_PATTERN regexes
+    below therefore accept `[\\w.]+` and NOT `\\w+`.
+    `\\w` does not match `.`, and the effect was not a truncated capture but NO
+    MATCH AT ALL: once `(\\w+)` stopped at the dot, the next expected token was
+    whitespace or `-->`. The edge vanished from the parsed set, and the mirror
+    check then reported the registry as claiming an edge "the card does not
+    show" while the card showed it plainly under "Spawned By".
+    It stayed latent because the mirror check only reads STAGED cards, and cards
+    are build output nobody normally stages — five cards carrying a
+    `finalize-feature.js` edge were mismatched without ever failing a commit.
+    Before the fix, parsing test-failure-triage.card.md returned an EMPTY
+    spawned_by set despite that card carrying the edge in plain text.
 """
 
 from __future__ import annotations
@@ -37,10 +53,10 @@ from pathlib import Path
 _REGISTRY_PATH = "config/agent_registry.json"
 _CARDS_DIR_PATH = "docs/agents/cards"
 _SPECIAL_TOKEN = "__ticket_phase_agents__"
-_EXTERNAL_CALLERS = {"user", "finalize-feature.js"}
+_EXTERNAL_CALLERS = {"user", "finalize-feature.js", "fast-lane-ship.js"}
 
-_MERMAID_SPAWNS_PATTERN = re.compile(r"^\s*(\w+)\s*-->\|spawns\|\s*(\w+)")
-_MERMAID_DISPATCHES_PATTERN = re.compile(r"^\s*(\w+)\s*-->\|dispatches\|\s*(\w+)")
+_MERMAID_SPAWNS_PATTERN = re.compile(r"^\s*([\w.]+)\s*-->\|spawns\|\s*([\w.]+)")
+_MERMAID_DISPATCHES_PATTERN = re.compile(r"^\s*([\w.]+)\s*-->\|dispatches\|\s*([\w.]+)")
 
 
 def _get_staged_files() -> list[str]:

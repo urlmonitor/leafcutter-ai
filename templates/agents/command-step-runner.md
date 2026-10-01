@@ -21,11 +21,25 @@ adopter_notes: |
   Utility agent (registry: tier utility, is_ticket_phase false, permits_shell
   true, spawn_allowlist empty). Never appears in a ticket's agents: map and
   never counts toward a test-writer/coder invocation total. The registry's
-  spawned_by currently lists only "user" — the fast lane's own dispatcher
-  (fast-lane-ship.js) is not yet listed there because
-  scripts/registry_validator.py's _EXTERNAL_CALLERS set does not yet include
-  it; adding it is a Python change (python-coder's area, routed separately),
-  not a template change.
+  spawned_by lists "user" and "fast-lane-ship.js"; the latter was added on
+  2026-09-30 together with fast-lane-ship.js in
+  scripts/registry_validator.py's _EXTERNAL_CALLERS set, which is what makes
+  a non-agent dispatcher nameable there at all.
+
+  First adopted for the fast lane's claim command step, replacing
+  worktree-agent, which was standing in only because it was the sole
+  permits_shell: true entry and could decline the claim on charter grounds.
+  Adopters must send the full request shape — step, command, and a target
+  naming workspace, branch and ac_id — because a request with no workspace
+  named is a decline, not a run. Adopters must also parse the command's own
+  output themselves: this agent returns stdout verbatim and never interprets
+  it, so a caller that previously asked its performer to reshape a result
+  needs that logic moved caller-side.
+
+  Remaining candidates are the roughly forty other shell dispatches
+  enumerated in
+  docs/known-issues/build-orchestration/open-high-ki-bo-20260927-status-checker-runs-workflow-shell-commands.md,
+  whose Suggested fix names this agent as the durable answer.
 pre_flight_reads:
 - required: false
   source: request payload (step, command, target)
