@@ -11,7 +11,7 @@ ARCHITECTURE: Templates carry an id and version. Evidence, options and criteria 
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from pydantic import JsonValue
 
@@ -27,6 +27,11 @@ from kernel.capabilities.decision.state import Working
 from kernel.contracts.decision import Criterion
 from kernel.contracts.enums import EvidenceCategory, MissingKnowledge
 from kernel.contracts.work import CapabilityInvocation
+from kernel.memory.precedent import (
+    precedent_questions,
+    precedent_state,
+    read_scores,
+)
 from kernel.providers.base import ChoiceAnswer, JevResult, QuestionSpec, json_strings
 
 PURPOSE = "decision.assess"
@@ -74,6 +79,8 @@ class Assessment:
     preference: float
     conflict: float
     result: JevResult
+    #: Jev's probability that each precedent (by record id) applies; empty when none was judged.
+    precedents: dict[str, float] = field(default_factory=dict)
 
 
 def _state(ctx: ExecutionContext, work: Working) -> dict[str, JsonValue]:
@@ -87,13 +94,16 @@ def _state(ctx: ExecutionContext, work: Working) -> dict[str, JsonValue]:
         if isinstance(entry, dict):
             entry["role"] = role
             entry["category"] = item.category.value
-    return {
+    state: dict[str, JsonValue] = {
         "question": work.question,
         "options": {o.id: f"{o.title}. {o.description}".strip() for o in work.usable_options},
         "criteria": {c.id: c.question for c in work.usable_criteria},
         "evidence": evidence, "constraints": json_strings(constraints),
         "findings": json_strings(work.cont.findings),
     }
+    if work.precedent_hits:  # earlier approved decisions to judge in this same batch
+        state["precedents"] = precedent_state(work.precedent_hits)
+    return state
 
 
 def unclassified(work: Working) -> list[Criterion]:
@@ -137,7 +147,7 @@ def _questions(work: Working) -> list[QuestionSpec]:
     qs.append(noul_question(
         "conflict", "decision.conflict",
         "Do items in `evidence` contradict each other on a point that affects `question`?"))
-    return qs
+    return [*qs, *precedent_questions(work.precedent_hits)]
 
 
 async def assess(ctx: ExecutionContext, invocation: CapabilityInvocation, work: Working
@@ -160,12 +170,16 @@ async def assess(ctx: ExecutionContext, invocation: CapabilityInvocation, work: 
         sufficient_confidence={k: v.confidence for k, v in suff.items()},
         satisfies_confidence={k: v.confidence for k, v in sat.items()},
         missing=result.choice("missing"), preference=result.noul("preference").probability,
-        conflict=result.noul("conflict").probability, result=result)
+        conflict=result.noul("conflict").probability, result=result,
+        precedents=read_scores(result, work.precedent_hits))
 
 
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-01 [python-coder]: One `precedent.<decision id>` noul per precedent candidate rides the
+#   assessment batch (no extra Jev call) while the decision has an assessment to send; Jev only
+#   judges whether the earlier decision applies. (#KernelDecisionStore)
 # - 2026-10-01 [python-coder]: The criterion-kind question is rewritten literally (template v2):
 #   round 6 gave P(design_judgement) 0.12 to 0.54 for criteria that plainly describe the proposed
 #   designs, because the old wording asked for a vague weighing ("simplicity, fit"). It now names

@@ -88,6 +88,7 @@ from kernel.contracts.run import (  # noqa: F401
     TraceRefs,
     UsageSummary,
     compute_gap_key,
+    with_trace_refs,
 )
 from kernel.contracts.schema_catalog import (  # noqa: F401
     SCHEMA_CATALOG,

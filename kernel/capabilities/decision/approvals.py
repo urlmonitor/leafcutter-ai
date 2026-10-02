@@ -18,6 +18,7 @@ from kernel.capabilities.decision.state import ADDED_OPTION_PREFIX, Working, is_
 from kernel.contracts.decision import Criterion, Option
 from kernel.contracts.enums import ApprovalStatus, ProposalStatus
 from kernel.contracts.payloads import HumanAnswerPayload
+from kernel.memory.precedent import DECIDE_ANEW, REUSE
 
 _Item = TypeVar("_Item", Option, Criterion)
 APPROVE = "approve"
@@ -89,11 +90,19 @@ def _apply_structured(work: Working, answer: HumanAnswerPayload, actor: str) -> 
         work.criteria = [_decide(c, chosen, actor) for c in work.criteria]
 
 
+def _stamp(work: Working, actor: str) -> None:
+    """Record who approved last and when (the decision record's approved_by and approved_at)."""
+    stamp = work.now.isoformat() if work.now else None
+    work.cont = work.cont.model_copy(update={"approved_by": actor, "approved_at": stamp})
+
+
 def _apply_approval(work: Working, answer: HumanAnswerPayload, actor: str) -> None:
     """Approve all pending proposals, apply a structured answer, or record a free-text fallback.
 
     Free text is kept as a human input and a limitation; it is never turned into criteria.
     """
+    if answer.choice_id == APPROVE or answer.is_structured:
+        _stamp(work, actor)
     if answer.choice_id == APPROVE:
         work.options = [_approve(o, actor) if is_pending(o) else o for o in work.options]
         work.criteria = [_approve(c, actor) if is_pending(c) else c for c in work.criteria]
@@ -111,9 +120,9 @@ def _apply_approval(work: Working, answer: HumanAnswerPayload, actor: str) -> No
 def _apply_decision_approval(work: Working, answer: HumanAnswerPayload, actor: str) -> None:
     """Record approval or rejection of the final recommendation."""
     if answer.choice_id == APPROVE:
+        _stamp(work, actor)
         work.cont = work.cont.model_copy(update={
-            "decision_approved": True, "approved_by": actor,
-            "approved_revision": work.cont.last_assessment_fp})
+            "decision_approved": True, "approved_revision": work.cont.last_assessment_fp})
     elif answer.choice_id == REJECT:
         work.approval_rejected = True
     else:
@@ -158,10 +167,24 @@ def _apply_design_choice(work: Working, answer: HumanAnswerPayload, actor: str) 
     if answer.choice_id is None:
         return
     if answer.choice_id in {o.id for o in work.usable_options}:
-        work.cont = cont.model_copy(update={
-            "design_choice_id": answer.choice_id, "approved_by": actor})
+        _stamp(work, actor)
+        work.cont = work.cont.model_copy(update={"design_choice_id": answer.choice_id})
     else:
         work.limitations.append(f"answer {answer.choice_id!r} is not a usable option")
+
+
+def _apply_precedent_choice(work: Working, answer: HumanAnswerPayload, actor: str) -> None:
+    """Record the human's answer to the reuse question: reuse the precedent or decide anew.
+
+    Reusing is an approval by this human (the precedent is evidence; it resolves nothing alone).
+    """
+    if answer.choice_id == REUSE:
+        _stamp(work, actor)
+        work.cont = work.cont.model_copy(update={"precedent_choice": REUSE})
+    elif answer.choice_id == DECIDE_ANEW:
+        work.cont = work.cont.model_copy(update={"precedent_choice": DECIDE_ANEW})
+    else:
+        work.limitations.append(f"unrecognised precedent answer {answer.choice_id!r}")
 
 
 def apply_human_answer(work: Working, answer: HumanAnswerPayload, actor: str | None) -> None:
@@ -182,6 +205,8 @@ def apply_human_answer(work: Working, answer: HumanAnswerPayload, actor: str | N
         _apply_escalation(work, answer)
     elif phase == "awaiting_design_choice":
         _apply_design_choice(work, answer, who)
+    elif phase == "awaiting_precedent":
+        _apply_precedent_choice(work, answer, who)
     else:
         work.limitations.append(f"human answer ignored: decision was in phase {phase!r}")
 
@@ -189,6 +214,9 @@ def apply_human_answer(work: Working, answer: HumanAnswerPayload, actor: str | N
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-01 [python-coder]: Every human approval stamps who and when (cont.approved_by and
+#   approved_at) so a staged record carries the approver and the approval time; the human's reuse
+#   or decide-anew answer to a precedent offer is recorded the same way. (#KernelDecisionStore)
 # - 2026-10-01 [python-coder]: A human's choice among the kernel-ranked options settles a design
 #   decision (approver recorded); added options or free text send it back to be ranked again.
 #   (#KernelV01/A)

@@ -138,6 +138,7 @@ class SemanticContext:
     supplied_option_ids: frozenset[str] | None = None
     offered_choice_ids: frozenset[str] | None = None
     subject_ids: frozenset[str] | None = None
+    kernel_built: bool = False  # True when the kernel itself built the payload (not a submission)
 
 
 def _missing(cited: Iterable[str], known: Iterable[str], what: str) -> list[str]:
@@ -210,16 +211,20 @@ def _answer_violations(p: HumanAnswerPayload, ctx: SemanticContext) -> list[str]
     return _missing(cited, ctx.subject_ids, "subject")
 
 
-def _options_violations(p: OptionsPayload) -> list[str]:
+def _options_violations(p: OptionsPayload, ctx: SemanticContext) -> list[str]:
     """Generated options and criteria must stay proposals: a generator cannot approve itself.
+
+    `named_options` is refused only on a host submission: the kernel creates it after verifying
+    the host's claims against the goal, so a kernel-built payload may carry it.
 
     Args:
         p: Validated payload whose references are checked.
+        ctx: Trusted provenance identifying a kernel-built payload.
 
     Returns:
-        list[str]: Result of the documented contract operation.
+        Detected option and criterion approval violations.
     """
-    if p.named_options:
+    if p.named_options and not ctx.kernel_built:
         return ["named_options is set by the kernel only: return named options in `options` "
                 "with named_in_goal true"]
     items = [("option", i.id, i.approval_status, i.approved_by) for i in p.options]
@@ -248,7 +253,7 @@ def semantic_violations(schema_id: str, payload: KernelModel, ctx: SemanticConte
             return _missing([payload.choice_id], ctx.offered_choice_ids, "choice")
         return _answer_violations(payload, ctx)
     if isinstance(payload, OptionsPayload):
-        return _options_violations(payload)
+        return _options_violations(payload, ctx)
     if isinstance(payload, DecisionRequestPayload):
         return _missing(payload.evidence_ids, ctx.known_evidence_ids, "evidence")
     if isinstance(payload, (OptionsRequestPayload, SynthesisRequestPayload)):
@@ -322,6 +327,9 @@ def export_json_schemas(directory: Path) -> list[Path]:
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-01 [python-coder]: The named_options refusal applies to host submissions only;
+#   SemanticContext.kernel_built lets result validation accept the kernel's own converted payload
+#   (it had refused it, blocking every goal that names its options). (#KernelNamedOptionsBlocked)
 # - 2026-10-02 [python-coder]: A host cannot return named_options itself; only the kernel creates
 #   them after verifying the wording against the goal. (#KernelBootstrapV0/GROUND)
 # - 2026-09-30 23:40 [python-coder]: A generated options payload that arrives pre-approved is a

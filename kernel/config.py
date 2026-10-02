@@ -21,7 +21,7 @@ from typing import Annotated, Literal
 from pydantic import BaseModel, ConfigDict, Field, ValidationError, model_validator
 
 from integrations.knowledge_config import KnowledgeBindingConfig
-
+from kernel.config_memory import MemoryConfig
 from kernel.contracts.base import fail
 from kernel.contracts.enums import EvidenceCategory
 
@@ -114,16 +114,13 @@ class DecisionConfig(_Section):
     #: A criterion counts as a design judgement (a property of the proposed options that research
     #: cannot settle) when Jev's probability for that reading reaches this value.
     design_judgement_threshold: Probability
-    #: Two assessments after new evidence show no material progress when every score moved by no
-    #: more than this; the decision then stops researching and asks a human to choose.
+    #: No material progress: every score moved by at most this between assessments after new evidence.
     progress_epsilon: float = Field(ge=0.0, le=1.0)
     #: Most research rounds one decision may request before it hands the ranked options to a human.
     max_research_rounds: int = Field(ge=1)
-    #: Final decision assessments whose Jev calls stay reserved: research (and any other follow-up
-    #: that ends in another assessment) must leave this many assessments' worth of calls.
+    #: Final decision assessments whose Jev calls stay reserved (research must leave them).
     reserve_assessments: int = Field(ge=0)
-    #: Options added to the size of the reserved assessment (a human may add one when shown the
-    #: ranked options, and that option is scored by a fresh assessment).
+    #: Options added to the size of the reserved assessment (a human may add one when ranked).
     reserve_extra_options: int = Field(ge=0)
     #: Calls kept beyond the reserved assessments for routing a child request and other overhead.
     reserve_margin_calls: int = Field(ge=0)
@@ -283,6 +280,7 @@ class KernelConfig(_Section):
     host: HostConfig
     data_policy: DataPolicyConfig
     langfuse: LangfuseConfig
+    memory: MemoryConfig
 
     @model_validator(mode="after")
     def _unique_sources(self) -> KernelConfig:
@@ -399,6 +397,8 @@ def write_config_schema(path: Path) -> None:
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-01 [python-coder]: The `memory` section (backend, precedent thresholds) lives in
+#   kernel/config_memory.py because this file is at the size limit. (#KernelDecisionStore)
 # - 2026-10-01 [python-coder]: Round F: ordering, pool, rerank depth, review limits. (#KernelV01/F)
 # - 2026-10-01 [python-coder]: Round E: decision.reserve_* keep Jev budget for a final assessment,
 #   retrieval.rerank_max_per_need bounds the rerank batch per need, satisfied_* and self_reference_*

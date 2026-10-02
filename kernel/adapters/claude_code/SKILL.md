@@ -41,6 +41,9 @@ stderr) and ends with `--json`. `KERNEL` means `{{COMMAND}}`.
 - `completed`, `partial`, `blocked`, `failed`, `cancelled`: stop. Present `report_ref` (read the
   file), `limitations`, `open_questions`, `gaps`, `evidence_ids` and `trace_refs.trace_url` if
   present. Do not call a `partial` or `blocked` run complete.
+  - If a limitation says `decision record staged: <path>; publish it ... with: <command>`, tell
+    the user the record is ready and show that command. Do NOT run it: publishing writes into the
+    repository and is the user's to run.
 - `running`: run `KERNEL status --run-id <run_id> --json`.
 
 ## 3. Resume
@@ -69,5 +72,5 @@ Write a submission file inside `{{CLIENT_DIR}}/` and run `KERNEL resume --run-id
 
 Choose the next capability or step, change policy or permissions, approve anything on the user's
 behalf, edit repository files or write anywhere but `{{CLIENT_DIR}}/`, run other Leafcutter
-commands (`cancel` and `install-skill` are the user's to run, never yours), invent evidence, or continue a run
+commands (`cancel`, `install-skill` and `decisions publish` are the user's to run, never yours), invent evidence, or continue a run
 after `cancelled`. Keep run ids, interaction ids and state revisions exactly as received.
