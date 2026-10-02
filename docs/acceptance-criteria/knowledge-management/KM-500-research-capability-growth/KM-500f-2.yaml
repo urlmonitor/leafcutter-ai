@@ -105,6 +105,7 @@ covered_by:
 - tests/knowledge/test_query_answer_contract_acceptance_assessment.py
 - tests/knowledge/test_query_answer_contract_acceptance_research_assessment.py
 - tests/knowledge/query_answer_contract_acceptance_corpus.py
+- tests/kernel/grounding/test_claim_evidence_below_bar.py::TestClaimEvidenceBelowBar::test_claim_evidence_retains_its_conditional_assessment
 implemented_by:
 - tickets/00_inbox/epics/EPIC-RepositoryResearchAnswers/TICKET-20261001-KM-500f-2.md
 change_target: code
