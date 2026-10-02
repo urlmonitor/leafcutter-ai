@@ -1,0 +1,219 @@
+id: BO-4000g
+title: "A repository reference that names a file is answered from the folder holding it, so a single-ticket build finds its repository as surely as an epic build does"
+component: build-orchestration
+components:
+  - build_orchestration
+  - worktree_manager
+level: L3
+status: active
+req_status: draft
+work_status: done
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+change_target:
+  - code
+  - pipeline
+risk_surface: contract_boundary
+package_surface: false
+criteria: |
+  Given a repository with a linked worktree that is on its own branch
+  And a ticket `.md` file tracked inside that linked worktree
+  And the repository-facts mechanism (`worktree_repo_facts.py`) is run from a working
+    directory that is not inside any git checkout — as a phase agent runs it in the dev
+    self-hosting layout
+  When the ticket FILE is handed to the mechanism as its repository reference — as
+    `base`'s starting reference, as `facts`' `--reference` while asking about the linked
+    worktree, and as `branch-standing`'s `--repo` while asking about the worktree's branch
+  Then each answer is the same answer the mechanism gives when the reference is the folder
+    that holds that ticket file
+  And `base` names the repository's real main checkout and worktree base, not null
+  And `facts` reports `same_repository: true` for the linked worktree
+  And `branch-standing` reports the existing branch as existing
+  And the bug symptom ("/build-feature on a single ticket always aborts with worktree-base-unavailable: build-feature.js anchors its repo-facts calls on the ticket FILE path (repoAnchor = absolute target), and `worktree_repo_facts.py base <ticket .md file>` returns {main_checkout: null, worktree_base: null}; `facts --reference <file>` yields same_repository null (so an existing ticket worktree is never reused) and `branch-standing --repo <file>` silently reports the branch absent (skipping BO-4000b's stale-branch refusals). Verified live 2026-10-02: base with the ticket's folder works, with the file it returns all nulls.") must not occur.
+
+  Given the same repository and the same working directory
+  When `facts` is asked about the ticket file ITSELF as its candidate path
+  Then it still reports that path as existing and as not the top-level directory of a
+    checkout, with `same_repository` and `branch` null
+  And it never answers about the folder holding the file in the file's place.
+
+  Given a reference that is a directory, or a path that does not exist at all
+  When any of the three subcommands is asked with it
+  Then the answer is exactly the answer it gave before this record
+  And a path that does not exist is never replaced by its nearest existing parent, so a
+    location that is not there yet is not answered for as if it were whichever
+    repository contains its parent
+  And a file that lies outside every repository still yields the null answers, so no
+    location that is genuinely not a checkout is reported as one.
+
+  Given /build-feature is started for a single ticket whose resolved target is the
+    absolute path of the ticket's `.md` file
+  And a linked worktree for that ticket already exists, belongs to this repository, sits
+    at the location the workflow names, and is on the ticket's own branch
+  When the worktree step runs from a working directory that is not inside any git checkout
+  Then that worktree is recognised as this repository's own and reused
+  And the run proceeds to dispatch phase agents
+  And it does not stop with `worktree-base-unavailable`
+  And the absent, foreign, occupied and stale-branch refusals of BO-4000b and BO-4000c
+    still fire on their own terms, evaluated against answers that are now correct.
+depends_on:
+  - BO-4000
+  - BO-4000f
+doc_links:
+  - path: templates/scripts/worktree_repo_facts.py
+    relationship: implements
+    status: exists
+    relevance: "Canonical source. Every subcommand runs git with cwd set to the reference it was handed; a FILE there makes subprocess raise NotADirectoryError (an OSError), _git_output returns None, and the subcommand answers null. The three reference arguments (base's start, facts' --reference, branch-standing's --repo) are the fix site."
+  - path: templates/workflows-js/build-feature.js
+    relationship: related
+    status: exists
+    relevance: "repoAnchor = the resolved target when it is absolute (BO-4000f). For a single ticket that is the ticket's .md FILE, which is how the file reaches the mechanism. Unchanged by this record."
+  - path: unit_tests/workflows/test_bo4000f_repository_reference_anchor.py
+    relationship: specifies
+    status: exists
+    relevance: "Real temporary repository with a linked worktree, run from a genuinely non-git cwd. It only ever anchors on an epic FOLDER, which is why the file case stayed untested; its fixture already tracks a ticket file (01_TICKET-x.md) inside the epic folder."
+  - path: unit_tests/_workflow_engine_harness.py
+    relationship: specifies
+    status: exists
+    relevance: "Runs build-feature.js's own top-level body so the single-ticket reuse is observed as a real dispatch fact."
+  - path: docs/known-issues/build-orchestration/resolved/resolved-high-ki-bo-20260921-worktree-base-resolver-defaults-to-cwd.md
+    relationship: describes
+    status: exists
+    relevance: "The same worktree-base-unavailable outage resolved by BO-4000f for epic (folder) targets; this record closes the single-ticket (file) shape of it."
+  - path: docs/architecture/components/worktree-manager.md
+    relationship: describes
+    status: exists
+    relevance: "Worktree lifecycle component whose repository-facts surface this record constrains."
+  - path: docs/architecture/adrs/ADR-001-self-hosting-boundary.md
+    relationship: describes
+    status: exists
+    relevance: "Canonical template source versus build-generated deployed copies of the script."
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "The change lands in templates/scripts/worktree_repo_facts.py only. Deployed copies (scripts/, .leafcutter/scripts/) are regenerated by 'python scripts/build.py' and never hand-edited (ADR-001)."
+  - "A reference is resolved to the folder holding it ONLY when it names an existing file — one small helper (e.g. `_anchor_dir(p)`: `p.parent if p.is_file() else p`) applied to exactly three arguments: base's `start`, facts' `--reference`, and branch-standing's `--repo`. Directories and paths that do not exist pass through unchanged."
+  - "facts' own candidate `path` is never re-anchored. Classifying what a path IS is that subcommand's whole job, and a ticket file is not a checkout's top-level directory."
+  - "No answer shape changes: same subcommands, same single-line JSON object, same keys. null still means 'could not be determined', and nothing that was null for a location genuinely outside every repository becomes non-null."
+  - "build-feature.js is not changed. Its repoAnchor keeps deriving from the resolved target exactly as BO-4000f requires; the mechanism is made to accept the reference the driver already passes, rather than one caller being taught to pre-digest it."
+  - "This narrowly amends BO-4000f's it_requirement that worktree_repo_facts.py is not modified: only the handling of these three reference arguments changes. The cwd default stays, and no refusal in BO-4000a/b/c is weakened or widened."
+  - "Pure stdlib; no new CLI flag, configuration key or subcommand."
+delivers_to: null
+expects_from:
+  ac_id: BO-4000f
+  contract: "build-feature.js passes the run's resolved target as the repository reference of every worktree_repo_facts.py call (base's positional start, facts' --reference, branch-standing's --repo). For a single ticket that target is the absolute path of the ticket's .md file."
+test_required: true
+test_spec:
+  - name: test_base_anchored_on_a_ticket_file_resolves_the_worktree_base
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "From a genuinely non-git cwd, `base <ticket .md file inside the linked worktree>` answers the real main checkout and worktree base (layout dev), identical to the answer for the ticket's folder and never null."
+  - name: test_facts_referenced_by_a_ticket_file_reports_the_same_repository
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "From the same cwd, `facts <linked worktree> --reference <ticket file>` answers same_repository true, with every other field identical to the folder-referenced answer, so the reuse predicate holds."
+  - name: test_branch_standing_anchored_on_a_ticket_file_sees_the_existing_branch
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "From the same cwd, `branch-standing <worktree branch> --repo <ticket file>` answers exists true, and the whole answer equals the folder-anchored one, so BO-4000b's stale-branch refusal is evaluated rather than skipped."
+  - name: test_facts_on_the_ticket_file_itself_is_still_not_a_checkout
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    angle: boundary
+    description: "`facts <ticket file>` still answers exists true, is_git_toplevel false, is_linked_worktree false, same_repository null and branch null — the inspected path is classified as itself, not as its folder."
+  - name: test_directory_missing_and_out_of_repo_references_answer_as_before
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    angle: boundary
+    description: "A folder reference answers exactly as it did; a non-existent reference (e.g. a not-yet-created file under the linked worktree) and a real file outside every repository both still yield the null answers for base and same_repository null for facts."
+  - name: test_file_anchored_answers_let_a_single_ticket_run_reuse_its_worktree
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    angle: real_artifact
+    surface_invoked: templates/workflows-js/build-feature.js
+    description: "The real script answers obtained with a ticket-FILE anchor from the non-git cwd, fed to build-feature.js's own top-level body for a single-ticket target, reuse the existing worktree and dispatch phase agents; the run does not abort worktree-base-unavailable."
+  - name: test_file_anchoring_is_applied_to_every_reference_argument_and_only_there
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    angle: discrimination
+    must_catch:
+      - "the file is resolved to its folder for base's start only, leaving facts --reference answering same_repository null or branch-standing --repo reporting the branch absent"
+      - "the folder resolution is also applied to facts' own candidate path, so the ticket file is classified as (or compared through) its folder"
+      - "a path is replaced by its parent unconditionally (Path.parent without an is_file test), so a missing location or a directory reference starts answering about a different directory"
+      - "the fix is made only in build-feature.js by passing the ticket's folder, leaving worktree_repo_facts.py answering null whenever it is handed a file"
+    description: "Every assertion runs the real script as a subprocess with real argv from the non-git cwd, so each named half-fix leaves at least one of the per-subcommand or boundary assertions red; no assertion inspects the source text."
+test_rationale: |
+  BO-4000f's suite already runs the real script, from a real non-git directory, against a
+  real linked worktree — and it is green while every single-ticket build aborts, because
+  its only anchor is an epic FOLDER. The defect lives exclusively on the one input shape no
+  fixture supplied: a reference that names a file, which is exactly the shape the driver
+  passes for a single ticket. So the coverage must hand the real script a real tracked
+  ticket file, from a cwd that is genuinely not a checkout (otherwise git's own cwd answers
+  and the file is never consulted), and compare each answer against the folder-anchored
+  answer that BO-4000f already proves correct.
+
+  The three subcommands are covered separately because the fix site is three arguments,
+  and a fix to `base` alone would turn the abort into a quieter failure — the worktree
+  never reused, or the stale-branch refusal silently skipped. The boundary entries are
+  paired with them deliberately: the cheapest passing implementation is an unconditional
+  `.parent`, which would also re-anchor directories and not-yet-existing locations, and
+  would misclassify the file when applied to facts' own candidate path. The real_artifact
+  entry then closes the loop on the reported symptom: the per-subcommand answers are right,
+  AND the driver given those answers for a single ticket reuses its worktree instead of
+  aborting — a dispatch fact visible only through the workflow harness.
+covered_by:
+  - unit_tests/workflows/test_bo4000f_repository_reference_anchor.py
+implemented_by: []
+origin_agent: BrainCandy
+created: 2026-10-02
+amended_by: []
+superseded_by: null
+notes: |
+  Authored by /quick-fix. Root cause: Every subcommand runs git with cwd=<given path>; for a FILE, subprocess raises NotADirectoryError (OSError), _git_output turns it into None, and the subcommand answers null. Fix: resolve the reference/start/repo arguments to their parent directory when they name an existing file (e.g. a small _anchor_dir helper: p.parent if p.is_file() else p) for base's start, facts' --reference and branch-standing's --repo (NOT for facts' own inspected path); directories and non-existent paths are unchanged. This amends BO-4000f, whose it_requirement (BO-4000f.yaml:71) says the script is not modified; the new AC should be a constraint under BO-4000f (build-orchestration). Tests: unit_tests/workflows/test_bo4000f_repository_reference_anchor.py builds a real temp repo with a linked worktree and only uses an epic-folder anchor; add ticket-.md-file cases for base, facts --reference and branch-standing --repo, run from a non-git cwd..
+
+  WHY BO-4000g AND NOT A CHILD OF BO-4000f. BO-4000f is already L3, the deepest level the
+  store has, and the id schema admits no child id under an alpha-suffixed L3 that would
+  still be L3 (BO-4000f-i does not match the id pattern). The constraint therefore sits
+  as a sibling L3 under the L2 BO-4000 — the same family the other five worktree-step
+  constraints (BO-4000a..f) use — and records its relationship to BO-4000f through
+  depends_on and expects_from. BO-4000 is L2, so no L0/L1 child cap applies, and no
+  child_limit_override was added.
+
+  AMENDMENT TO BO-4000f, STATED PLAINLY. BO-4000f's it_requirement "worktree_repo_facts.py
+  itself is not modified" was right for the defect it fixed: the driver was not passing a
+  reference at all. It did not anticipate that the reference the driver passes for a
+  single ticket is a FILE. This record changes only how the script handles its three
+  reference arguments; BO-4000f's own guarantees (every call carries a reference derived
+  from the resolved target; the cwd fallback for a non-absolute target; no refusal
+  weakened) are unchanged and still hold.
+
+  NAMED MUTATIONS (each must turn at least one test red):
+    M1 — leave the script unchanged (the incident). Caught by all three criterion tests.
+    M2 — anchor base's start only. Caught by
+         test_facts_referenced_by_a_ticket_file_reports_the_same_repository and
+         test_branch_standing_anchored_on_a_ticket_file_sees_the_existing_branch.
+    M3 — also re-anchor facts' own candidate path. Caught by
+         test_facts_on_the_ticket_file_itself_is_still_not_a_checkout.
+    M4 — use p.parent unconditionally. Caught by
+         test_directory_missing_and_out_of_repo_references_answer_as_before.
+    M5 — make the reuse guard or the base guard tolerate null instead of fixing the
+         answers. Caught by BO-4000f's
+         test_unanchored_answers_abort_the_run_and_anchored_answers_do_not, which requires
+         the degenerate answers to STILL abort, together with
+         test_file_anchored_answers_let_a_single_ticket_run_reuse_its_worktree here, which
+         requires the reuse to come from correct answers.
+
+  The guard's fail-closed posture is not what broke, here or in BO-4000f. The question
+  was asked with a reference the mechanism could not use; the refusal to guess at the
+  answer was correct.
