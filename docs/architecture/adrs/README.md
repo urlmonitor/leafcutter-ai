@@ -3,7 +3,7 @@ title: "Architecture Decision Records"
 description: "Index of all Architecture Decision Records (ADRs) for the leafcutter-ai package, listing each decision's number, status, title, and date."
 type: "reference"
 created: '2026-08-13'
-last_updated: '2026-10-01'
+last_updated: '2026-10-02'
 status: active
 components:
 - documentation_system
@@ -12,8 +12,8 @@ components:
 # Architecture Decision Records
 
 This directory contains Architecture Decision Records (ADRs) for the leafcutter-ai
-package. ADRs document significant architectural decisions â€” the context, the choice
-made, and the consequences â€” so that future contributors can understand *why* things
+package. ADRs document significant architectural decisions — the context, the choice
+made, and the consequences — so that future contributors can understand *why* things
 are the way they are.
 
 Every ADR owns exactly one integer. Regenerate this index after adding or
@@ -27,43 +27,43 @@ python scripts/adr_refs.py --index --write
 
 | # | Status | Title | Date |
 |---|--------|-------|------|
-| [ADR-001](ADR-001-self-hosting-boundary.md) | Active | Self-Hosting Boundary â€” Config-Driven Path Resolution | 2026-08-13 |
+| [ADR-001](ADR-001-self-hosting-boundary.md) | Active | Self-Hosting Boundary — Config-Driven Path Resolution | 2026-08-13 |
 | [ADR-002](ADR-002-dual-platform-compilation.md) | Active | Dual Platform Compilation for AI Agents | 2026-05-22 |
-| [ADR-003](ADR-003-test-source-of-truth-discipline.md) | Accepted | Tests Are Mirrors of Production Contracts â€” Contract Shrinkage During Test Repair Requires Explicit Authorization | 2026-05-22 |
-| [ADR-004](ADR-004-consolidated-output-root.md) | Active | Consolidated Output Root â€” All build.py Artifacts Under .leafcutter/ | 2026-05-27 |
+| [ADR-003](ADR-003-test-source-of-truth-discipline.md) | Accepted | Tests Are Mirrors of Production Contracts — Contract Shrinkage During Test Repair Requires Explicit Authorization | 2026-05-22 |
+| [ADR-004](ADR-004-consolidated-output-root.md) | Active | Consolidated Output Root — All build.py Artifacts Under .leafcutter/ | 2026-05-27 |
 | [ADR-005](ADR-005-frontend-coder-agent.md) | Active | frontend-coder as a First-Class Sibling Implementation Agent | 2026-05-28 |
-| [ADR-006](ADR-006-flatten-supervisor-chain.md) | Accepted | Flatten the Supervisor Chain â€” ticket-supervisor at Depth 0 | 2026-05-29 |
+| [ADR-006](ADR-006-flatten-supervisor-chain.md) | Accepted | Flatten the Supervisor Chain — ticket-supervisor at Depth 0 | 2026-05-29 |
 | [ADR-007](ADR-007-contract-driven-acs.md) | Accepted | Contract-Driven Acceptance Criteria | 2026-06-04 |
-| [ADR-008](ADR-008-ac-store-schema-id-format-enforcement.md) | Accepted | AC Store â€” YAML Schema, ID Format, and Bidirectional Enforcement Model | 2026-06-04 |
-| [ADR-009](ADR-009-itpo-no-source-code-access.md) | Accepted | IT Product Owner v3 â€” Source Code Access Restriction | 2026-06-05 |
-| [ADR-010](ADR-010-ac-store-as-authoritative-backlog.md) | Accepted | AC Store as Authoritative Backlog â€” Source-of-Truth Inversion | 2026-06-05 |
-| [ADR-011](ADR-011-learning-emission-sink.md) | Active | Learning Emission Sink â€” Separate knowledge_emissions.jsonl vs Reuse | 2026-06-05 |
-| [ADR-012](ADR-012-retire-create-ticket-js.md) | Accepted | Retire create-ticket.js â€” /plan-feature + /build-ac as Canonical Ticket-Creation Path | 2026-06-16 |
-| [ADR-013](ADR-013-portable-skill-script-deployment-boundary.md) | Accepted | Portable Skill Script Deployment Boundary â€” Consumer-Facing vs Package-Internal | 2026-06-17 |
+| [ADR-008](ADR-008-ac-store-schema-id-format-enforcement.md) | Accepted | AC Store — YAML Schema, ID Format, and Bidirectional Enforcement Model | 2026-06-04 |
+| [ADR-009](ADR-009-itpo-no-source-code-access.md) | Accepted | IT Product Owner v3 — Source Code Access Restriction | 2026-06-05 |
+| [ADR-010](ADR-010-ac-store-as-authoritative-backlog.md) | Accepted | AC Store as Authoritative Backlog — Source-of-Truth Inversion | 2026-06-05 |
+| [ADR-011](ADR-011-learning-emission-sink.md) | Active | Learning Emission Sink — Separate knowledge_emissions.jsonl vs Reuse | 2026-06-05 |
+| [ADR-012](ADR-012-retire-create-ticket-js.md) | Accepted | Retire create-ticket.js — /plan-feature + /build-ac as Canonical Ticket-Creation Path | 2026-06-16 |
+| [ADR-013](ADR-013-portable-skill-script-deployment-boundary.md) | Accepted | Portable Skill Script Deployment Boundary — Consumer-Facing vs Package-Internal | 2026-06-17 |
 | [ADR-014](ADR-014-exception-guard-enforcement-scope.md) | Accepted | Exception-Handling Guard Enforcement Scope | 2026-06-17 |
 | [ADR-015](ADR-015-guard-honors-noqa-ble001.md) | Active | Exception-Handling Guard Honors Inline `# noqa: BLE001` Suppression | 2026-06-18 |
-| [ADR-016](ADR-016-ci-fresh-clone-test-dependencies.md) | Active | CI Fresh-Clone Test Dependencies â€” Build Step Required Before Test Suite | 2026-06-24 |
+| [ADR-016](ADR-016-ci-fresh-clone-test-dependencies.md) | Active | CI Fresh-Clone Test Dependencies — Build Step Required Before Test Suite | 2026-06-24 |
 | [ADR-017](ADR-017-computed-quality-gates.md) | Active | Computed Quality Gates | 2026-07-01 |
-| [ADR-018](ADR-018-agent-isolation-topology.md) | Active | Agent Isolation Topology â€” Per-Feature Clones + Hub Branch-Protection, Retire Shared-Worktree Drives | 2026-07-06 |
+| [ADR-018](ADR-018-agent-isolation-topology.md) | Active | Agent Isolation Topology — Per-Feature Clones + Hub Branch-Protection, Retire Shared-Worktree Drives | 2026-07-06 |
 | [ADR-019](ADR-019-build-feature-inline-phase-dispatch.md) | Accepted | build-feature.js Inlines the Phase-Dispatch Loop | 2026-07-09 |
-| [ADR-020](ADR-020-live-surface-tester.md) | Accepted | Live Surface Tester â€” Port Registry, Read-Only Constraint, and Conditional | 2026-06-03 |
+| [ADR-020](ADR-020-live-surface-tester.md) | Accepted | Live Surface Tester — Port Registry, Read-Only Constraint, and Conditional | 2026-06-03 |
 | [ADR-021](ADR-021-plan-feature-product-truth-phase.md) | Accepted | Always-On Product-Truth Authoring Phase in /plan-feature | 2026-07-14 |
 | [ADR-022](ADR-022-mockups-are-the-real-app-in-mock-mode.md) | Proposed | Mockups Are the Real Application in Mock Mode (Data-Layer Mock Provider or Throwaway Real-DB Seed) | 2026-07-15 |
 | [ADR-023](ADR-023-product-truth-flow-first-upstream-layer.md) | Accepted | Product-Truth Store as the Flow-First Upstream Layer Beside the AC Store | 2026-07-14 |
 | [ADR-024](ADR-024-interactive-pause-resume.md) | Active | Interactive Gates Pause and Persist Instead of Cancelling When Headless | 2026-07-20 |
 | [ADR-025](ADR-025-first-class-flow-decisions.md) | Active | Decisions Are First-Class Flow Entities, Rendered as Chained Diamonds | 2026-08-10 |
-| [ADR-026](ADR-026-ac-driven-build-v2-phased-migration.md) | Active | AC-Driven Build v2 â€” Phased, Dogfooded, Backward-Compatible Migration | 2026-08-12 |
+| [ADR-026](ADR-026-ac-driven-build-v2-phased-migration.md) | Active | AC-Driven Build v2 — Phased, Dogfooded, Backward-Compatible Migration | 2026-08-12 |
 | [ADR-027](ADR-027-tdd-workflow-enforcement.md) | Active | Test-First Workflow Enforcement in the Agentic Build Pipeline | 2026-05-27 |
 | [ADR-028](ADR-028-test-fixture-convention.md) | Proposed | Test Fixture Convention: load_fixture() Helper and tests/fixtures/ Directory Layout | 2026-06-04 |
-| [ADR-029](ADR-029-adr-number-collision-prevention.md) | Active | ADR Number Collision Prevention â€” Pre-Commit Guard Over the Integer Sequence | 2026-08-13 |
-| [ADR-030](ADR-030-dual-engine-workflow-support.md) | Active | Dual-Engine Workflow Support â€” Canonical E2 Authoring + Build-Time E1 Shim | 2026-07-01 |
-| [ADR-031](ADR-031-worktree-quality-gate-guard.md) | Active | Worktree Quality Gate Guard â€” Execution-Proof Fail-Closed Design | 2026-07-06 |
+| [ADR-029](ADR-029-adr-number-collision-prevention.md) | Active | ADR Number Collision Prevention — Pre-Commit Guard Over the Integer Sequence | 2026-08-13 |
+| [ADR-030](ADR-030-dual-engine-workflow-support.md) | Active | Dual-Engine Workflow Support — Canonical E2 Authoring + Build-Time E1 Shim | 2026-07-01 |
+| [ADR-031](ADR-031-worktree-quality-gate-guard.md) | Active | Worktree Quality Gate Guard — Execution-Proof Fail-Closed Design | 2026-07-06 |
 | [ADR-032](ADR-032-tiered-parallel-code-smell-review.md) | Active | Tiered Parallel Code-Smell Review (Modern-12 Bucket Split + Depth-1 Orchestration) | 2026-08-11 |
 | [ADR-033](ADR-033-agent-model-tiers.md) | Active | Agent Model Tiers and Gatekeeper Escalation | 2026-08-13 |
-| [ADR-034](ADR-034-knowledge-write-ownership.md) | Active | Knowledge Write Ownership â€” the Harvester Writes, Agents Only Emit | 2026-08-25 |
+| [ADR-034](ADR-034-knowledge-write-ownership.md) | Active | Knowledge Write Ownership — the Harvester Writes, Agents Only Emit | 2026-08-25 |
 | [ADR-035](ADR-035-fast-lane-closed-producer-roster.md) | Active | The Fast Lane's Producer Roster Becomes Data, But Stays Closed | 2026-08-25 |
-| [ADR-036](ADR-036-documentation-dispatch-caller-boundary.md) | Active | Documentation Dispatch Is Caller-Dependent â€” documentation-expert Is a Human Entry Point, Never an AC's assigned_agent | 2026-08-26 |
-| [ADR-037](ADR-037-whole-collection-uniqueness-pass.md) | Active | Whole-Collection Uniqueness Pass â€” Verdict-Object Contract and Decision-Namespace Guard Registration | 2026-08-18 |
+| [ADR-036](ADR-036-documentation-dispatch-caller-boundary.md) | Active | Documentation Dispatch Is Caller-Dependent — documentation-expert Is a Human Entry Point, Never an AC's assigned_agent | 2026-08-26 |
+| [ADR-037](ADR-037-whole-collection-uniqueness-pass.md) | Active | Whole-Collection Uniqueness Pass — Verdict-Object Contract and Decision-Namespace Guard Registration | 2026-08-18 |
 | [ADR-038](ADR-038-commit-guardian-shared-change-set-derivation.md) | Active | Commit Guardian Shared Change-Set Derivation | 2026-08-31 |
 | [ADR-039](ADR-039-fast-lane-occupied-workspace-refusal.md) | Active | Fast-Lane Occupied-Workspace Refusal | 2026-09-07 |
 | [ADR-040](ADR-040-knowledge-write-publication-rides-completion-commit.md) | Active | Knowledge-Write Publication Rides the Completion Path's Own Commit | 2026-09-07 |
@@ -73,16 +73,19 @@ python scripts/adr_refs.py --index --write
 | [ADR-044](ADR-044-example-content-self-declares-its-product.md) | Active | Example Content Declares Its Example Product in One `example_product` Key, Cross-Checked Against Its Product Root | 2026-09-16 |
 | [ADR-046](ADR-046-completion-demanded-set-is-record-only.md) | Active | The Completion Decision's Demanded-Step Set Is Derived Solely From the Ticket's Own Record | 2026-09-14 |
 | [ADR-047](ADR-047-single-writer-ticket-close-path.md) | Active | The Finished State Is Written Only by the Mechanism That Checks It | 2026-09-21 |
-| [ADR-048](ADR-048-order-independent-per-ticket-completion.md) | Active | One Run Gives One Answer Per Condition â€” Completion Is Order-Independent | 2026-09-22 |
+| [ADR-048](ADR-048-order-independent-per-ticket-completion.md) | Active | One Run Gives One Answer Per Condition — Completion Is Order-Independent | 2026-09-22 |
 | [ADR-049](ADR-049-record-checker-trigger-scope.md) | Active | The Record's Checker Triggers on a Scope Derived From Its Own Resolvable-Pointer Surface | 2026-09-25 |
 | [ADR-050](ADR-050-runtime-reachability-guard-refuses-not-warns.md) | Active | The Runtime Reachability Guard Inventories the Built Surface and Refuses, Never Warns | 2026-09-25 |
-| [ADR-052](ADR-052-capabilities-replace-agents-prompts-are-compiled.md) | Active | Capabilities Replace Agents â€” Prompts Are Compiled Outputs, Not the Source of Truth | 2026-09-30 |
-| [ADR-053](ADR-053-intelligence-selection-deterministic-jev-llm-human.md) | Active | Intelligence Selection â€” Deterministic vs Jev vs LLM vs Human | 2026-09-30 |
-| [ADR-054](ADR-054-process-representation-and-maturity-model.md) | Active | Process Representation and the Process-Maturity Model â€” Workflow vs Policy/Checklist vs LLM-Guided | 2026-09-30 |
-| [ADR-055](ADR-055-capability-registry-starts-empty.md) | Active | The Kernel's Capability Registry Starts Empty â€” Legacy Agents and Skills Enter Only by Recorded Decision | 2026-09-30 |
-| [ADR-056](ADR-056-colony-memory-evidence-reinforcement.md) | Active | Colony Memory â€” Evidence Reinforcement from Observed Outcomes | 2026-09-30 |
-| [ADR-059](ADR-059-decision-store-reviewable-yaml-records-now-graph-later.md) | Active | Decision Store â€” Reviewable YAML Records Now, a Graph Later | 2026-10-01 |
-| [ADR-060](ADR-060-source-of-truth-and-approval-authority.md) | Active | Source of Truth and Approval Authority â€” Git Is Canonical, a Human Approves, Precedent Is Evidence | 2026-10-01 |
-| [ADR-061](ADR-061-identity-of-declared-and-learned-records.md) | Active | Identity â€” Existing Ids Stay, Decisions Get a Kernel-Minted Id, Records Are Keyed by Repository, Kind and Id | 2026-10-01 |
+| [ADR-052](ADR-052-capabilities-replace-agents-prompts-are-compiled.md) | Active | Capabilities Replace Agents — Prompts Are Compiled Outputs, Not the Source of Truth | 2026-09-30 |
+| [ADR-053](ADR-053-intelligence-selection-deterministic-jev-llm-human.md) | Active | Intelligence Selection — Deterministic vs Jev vs LLM vs Human | 2026-09-30 |
+| [ADR-054](ADR-054-process-representation-and-maturity-model.md) | Active | Process Representation and the Process-Maturity Model — Workflow vs Policy/Checklist vs LLM-Guided | 2026-09-30 |
+| [ADR-055](ADR-055-capability-registry-starts-empty.md) | Active | The Kernel's Capability Registry Starts Empty — Legacy Agents and Skills Enter Only by Recorded Decision | 2026-09-30 |
+| [ADR-056](ADR-056-colony-memory-evidence-reinforcement.md) | Active | Colony Memory — Evidence Reinforcement from Observed Outcomes | 2026-09-30 |
+| [ADR-057](ADR-057-colony-memory-store-optional-postgres.md) | Active | Colony Memory Store — Optional PostgreSQL Behind a ColonyMemory Port | 2026-09-30 |
+| [ADR-058](ADR-058-langfuse-colony-history-scores-datasets.md) | Active | Langfuse Is the Colony History — Every Node Traced, Decisions Scored, Datasets as Regression Memory | 2026-09-30 |
+| [ADR-059](ADR-059-decision-store-reviewable-yaml-records-now-graph-later.md) | Active | Decision Store — Reviewable YAML Records Now, a Graph Later | 2026-10-01 |
+| [ADR-060](ADR-060-source-of-truth-and-approval-authority.md) | Active | Source of Truth and Approval Authority — Git Is Canonical, a Human Approves, Precedent Is Evidence | 2026-10-01 |
+| [ADR-061](ADR-061-identity-of-declared-and-learned-records.md) | Active | Identity — Existing Ids Stay, Decisions Get a Kernel-Minted Id, Records Are Keyed by Repository, Kind and Id | 2026-10-01 |
 | [ADR-062](ADR-062-standalone-knowledge-retrieval.md) | Active | Standalone Knowledge Retrieval over Immutable Git Projections | 2026-10-01 |
 | [ADR-064](ADR-064-persona-discovery-before-feature-planning.md) | Active | Persona Discovery Before Feature Planning | 2026-10-01 |
+| [ADR-065](ADR-065-colony-learned-statistics-neo4j-aggregates.md) | Active | Colony Learned Statistics Live in Neo4j as Derived Aggregates — Supersedes ADR-057 in Part | 2026-10-02 |

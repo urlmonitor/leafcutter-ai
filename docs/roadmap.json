@@ -2,7 +2,7 @@
   "_comment": "Machine-readable project delivery plan. Edit current_phase, current_outcome, and phases to match your project. See docs/architecture/adrs/ for the decision rationale.",
   "current_phase": "phase_1",
   "current_outcome": "Stable MVP that installs into any project and helps the user build good software — portable, self-onboarding, and reliable enough to use across multiple repos.",
-  "last_updated": "2026-09-30",
+  "last_updated": "2026-10-02",
   "phases": [
     {
       "id": "phase_1",
@@ -145,7 +145,7 @@
       "id": "phase_kernel_1_founding",
       "title": "Decision Kernel — Founding (kernel Stages 0–1, V0 MVP)",
       "status": "active",
-      "description": "The colony is founded. A native LangGraph kernel with an empty capability registry (ADR-055) routes and decides with Jev, runs a generic research loop over read-only retrieval, hands generative and human work to Claude Code, resumes persistently, records capability gaps and traces every run in Langfuse. The human and Claude still do most of the work; the kernel records everything needed to count it later. Driven by TICKET-20260930-KernelBootstrapV0. Lives in leafcutter-ai only; not shipped to adopters.",
+      "description": "The colony is founded. A native LangGraph kernel with an empty capability registry (ADR-055) routes and decides with Jev, runs a generic research loop over read-only retrieval, hands generative and human work to Claude Code, resumes persistently, records capability gaps and traces every run in Langfuse. The human and Claude still do most of the work; the kernel records everything needed to count it later. Driven by TICKET-20260930-KernelBootstrapV0. Lives in leafcutter-ai only; not shipped to adopters. The colony-memory COLLECT step (phase_colony_1_collect) can start right after this phase (ADR-057 §10).",
       "exit_criteria": [
         "A real question is researched when necessary, returned with evidence, and traceable end to end without hidden host-side orchestration (kernel spec §3 Stage 1 exit, §16)",
         "Capability-gap records are countable (occurrence_count, example_run_ids) and host_only fallback reliance is recorded (spec §14)",
@@ -192,7 +192,7 @@
       "id": "phase_kernel_4_trails",
       "title": "Decision Kernel — Trails: Colony Memory and Controlled Learning (kernel Stage 4)",
       "status": "planned",
-      "description": "Traces become colony memory (ADR-056): an analytics job feeds a performance store; decisions carry outcomes and per-type calibration; wrong decisions produce reviewed policy-gap and promotion proposals; capability gaps are ranked to propose what to build next. Reinforcement-informed routing and exploration come only after the performance store exists and passes evaluation (spec §19).",
+      "description": "Traces become colony memory (ADR-056): an analytics job feeds a performance store; decisions carry outcomes and per-type calibration; wrong decisions produce reviewed policy-gap and promotion proposals; capability gaps are ranked to propose what to build next. Reinforcement-informed routing and exploration come only after the performance store exists and passes evaluation (spec §19). Delivered through the colony-memory track phase_colony_2_analyze to phase_colony_5_evolve on the optional Neo4j colony memory store (ADR-065, ADR-058).",
       "exit_criteria": [
         "A reviewed lesson demonstrably changes future work while retaining its evidence, evaluation, version, and rollback controls (spec §19 Stage 4 exit)",
         "An analytics job produces a performance store of compact routing statistics; the kernel reads those statistics and never queries Langfuse directly (ADR-056 §8)",
@@ -220,6 +220,96 @@
       "components": [
         "roadmap",
         "decision_kernel"
+      ]
+    },
+    {
+      "id": "phase_colony_1_collect",
+      "title": "Colony Memory — COLLECT (optional Neo4j store, write-only)",
+      "status": "planned",
+      "description": "The optional colony memory store starts recording learned statistics (ADR-057 as amended by ADR-065). A Neo4j backend attaches to the ColonyMemory port (ADR-059) next to its file and null backends; Learned statistics are off when no Neo4j store is configured (LEAFCUTTER_NEO4J_* settings) or when LEAFCUTTER_SELF_LEARNING=false; decision records and precedent keep following memory.backend (ADR-059). Statistics are derived aggregates updated after specific actions. Records graph usage, decisions, outcomes, capability gaps and fallback usage with context dimensions. No behavioural influence. Earliest start: right after phase_kernel_1_founding (inside V0 only if the V0 build decides so).",
+      "exit_criteria": [
+        "Without a configured Neo4j store (or with LEAFCUTTER_SELF_LEARNING=false) learned statistics are off and the kernel, Jev, LangGraph, Claude handoff, Langfuse tracing and ADR-059 precedent work unchanged; no code outside the port's startup choice branches on the setting (ADR-057 §3, ADR-065 §4)",
+        "With a configured Neo4j store, completed runs update derived statistic aggregates (graph usage, decision outcomes, capability gaps, fallback usage) after the defined trigger actions; the aggregates are rebuildable and never canonical (ADR-065, ADR-060)",
+        "Every recorded statistic carries the mandatory context dimensions (capability, task_type, component, repository/project, policy_version); nothing is recorded as a global rate (ADR-057 §7)",
+        "Recording changes no routing or decision behaviour (ADR-057 §10)",
+        "Every important kernel node is traced in Langfuse, including non-LLM steps, via the v4/OpenTelemetry SDK (ADR-058)"
+      ],
+      "tickets_advancing_outcome": [],
+      "components": [
+        "roadmap",
+        "decision_kernel",
+        "colony_memory"
+      ]
+    },
+    {
+      "id": "phase_colony_2_analyze",
+      "title": "Colony Memory — ANALYZE (learning evaluator, statistics, calibration)",
+      "status": "planned",
+      "description": "A learning evaluator distils completed-run outcomes from Langfuse traces and scores into the store; statistics are derived and shown: success rates, common paths, wrong decisions, confidence calibration per decision type (ADR-056 §4, ADR-057 §10, ADR-058). Kernel stage 4.",
+      "exit_criteria": [
+        "Decisions and routing choices carry Langfuse scores from later outcomes (human review, application code, deterministic evaluators) (ADR-058)",
+        "The learning evaluator writes compact statistics to the colony memory store; the routing hot path never queries Langfuse (ADR-057 §5)",
+        "Calibration per decision type is measured from observed outcomes and visible to the team (ADR-056 §4)",
+        "Every confirmed wrong decision becomes a Langfuse dataset case (ADR-058)",
+        "At least one colony-health measure improves on the previous step's baseline before this step is reported as strengthening the colony (ADR-056 §9, ADR-057 §10)"
+      ],
+      "tickets_advancing_outcome": [],
+      "components": [
+        "roadmap",
+        "decision_kernel",
+        "colony_memory"
+      ]
+    },
+    {
+      "id": "phase_colony_3_suggest",
+      "title": "Colony Memory — SUGGEST (evidence shown, routing unchanged)",
+      "status": "planned",
+      "description": "Historical evidence is surfaced as suggestions, for example \"historically this path performs better\", and capability-gap statistics rank what to build next; routing does not change and a human sets priorities (ADR-056 §6, ADR-057 §10). Kernel stage 4.",
+      "exit_criteria": [
+        "Suggestions are shown alongside routing and gap reports without changing any routing decision (ADR-057 §10)",
+        "Capability-gap statistics (frequency, fallback cost, failure rate) produce prioritization proposals; a human sets the priority (ADR-056 §6)",
+        "At least one colony-health measure improves on the previous step's baseline before this step is reported as strengthening the colony (ADR-056 §9, ADR-057 §10)"
+      ],
+      "tickets_advancing_outcome": [],
+      "components": [
+        "roadmap",
+        "decision_kernel",
+        "colony_memory"
+      ]
+    },
+    {
+      "id": "phase_colony_4_influence",
+      "title": "Colony Memory — INFLUENCE ROUTING (historical evidence in Jev routing)",
+      "status": "planned",
+      "description": "Historical success, failures, calibration, cost and latency for similar requests are fed into Jev routing next to semantic fit, with exploration of alternatives (ADR-056 §3, ADR-057 §10). Kernel stage 4 or later.",
+      "exit_criteria": [
+        "Routing influence is activated only after calibration and after passing the held-out evaluation of spec §19.4, including the Langfuse dataset regression cases (ADR-057 §10, ADR-058)",
+        "Usage alone never raises a path's standing; evidence is version-scoped and decays (ADR-056 §3)",
+        "A share of runs explores eligible alternatives within existing permission and budget rules (ADR-056 §3)",
+        "At least one colony-health measure improves on the previous step's baseline before this step is reported as strengthening the colony (ADR-056 §9, ADR-057 §10)"
+      ],
+      "tickets_advancing_outcome": [],
+      "components": [
+        "roadmap",
+        "decision_kernel",
+        "colony_memory"
+      ]
+    },
+    {
+      "id": "phase_colony_5_evolve",
+      "title": "Colony Memory — EVOLVE (gaps, weak policies and candidate workflows become reviewed proposals)",
+      "status": "planned",
+      "description": "The colony detects recurring capability gaps, weak policies (POLICY GAP), candidate workflows and repeated LLM reasoning, and turns them into reviewed proposals under the promotion rule (ADR-054, ADR-056 §5–§7, ADR-057 §10).",
+      "exit_criteria": [
+        "EVOLVE produces proposals only; turning one into a policy, workflow or registry entry remains a reviewed step with versions and rollback (ADR-056 §3 rule 5)",
+        "At least one reviewed lesson demonstrably changes future work (spec §19 Stage 4 exit)",
+        "At least one colony-health measure improves on the previous step's baseline before this step is reported as strengthening the colony (ADR-056 §9, ADR-057 §10)"
+      ],
+      "tickets_advancing_outcome": [],
+      "components": [
+        "roadmap",
+        "decision_kernel",
+        "colony_memory"
       ]
     }
   ]
