@@ -52,6 +52,7 @@
     "answer_aware_coverage": true,
     "answer_threshold": 0.7,
     "max_targeted_needs": 2,
+    "max_claim_needs": 25,
     "category_descriptions": {
       "authoritative_guidance": "Official documentation or specifications that define how a technology is meant to be used.",
       "internal_principles": "The project's own stated rules, conventions and principles.",

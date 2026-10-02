@@ -100,8 +100,9 @@ def batch_allowance(left: int | None, reserve: int, needs: int, cfg: KernelConfi
 
 
 def targeted_need_count(human_added: int, gaps: int, cfg: KernelConfig) -> int:
-    """Return how many targeted needs a research round builds (claims and gaps, capped)."""
-    return min(cfg.research.max_targeted_needs, human_added + gaps)
+    """Return how many targeted needs a research round builds (claims and gaps, each capped)."""
+    return (min(cfg.research.max_claim_needs, human_added)
+            + min(cfg.research.max_targeted_needs, gaps))
 
 
 def assessment_questions(criteria: int, options: int, unclassified: int) -> int:
