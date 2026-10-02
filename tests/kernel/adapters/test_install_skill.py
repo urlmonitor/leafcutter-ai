@@ -50,7 +50,7 @@ class TestRenderedSkill(InstallCase):
         text = render_skill("leafcutter", Path("/repo/leafcutter"), "/usr/bin/python3", Path("/runs"))
         self.assertTrue(text.startswith("---\nname: leafcutter\n"))
         self.assertIn(MARKER, text)
-        command = "PYTHONPATH=/repo/leafcutter /usr/bin/python3 -m kernel"
+        command = "PYTHONPATH=/repo/leafcutter /usr/bin/python3 -P -m kernel"
         self.assertIn(f"Bash({command} run *) Bash({command} resume *) Bash({command} status *)",
                       text)  # scope itself is asserted in test_skill_scope
         self.assertIn("disable-model-invocation: true", text)
@@ -58,7 +58,7 @@ class TestRenderedSkill(InstallCase):
 
     def test_paths_with_spaces_are_quoted(self) -> None:
         text = render_skill("leafcutter", Path("/my repo"), "/usr/bin/python3")
-        self.assertIn('PYTHONPATH="/my repo" /usr/bin/python3 -m kernel', text)
+        self.assertIn('PYTHONPATH="/my repo" /usr/bin/python3 -P -m kernel', text)
 
     def test_skill_routes_every_status_and_forbids_deciding(self) -> None:
         text = render_skill("leafcutter", Path("/r"), "python")
