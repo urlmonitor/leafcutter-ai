@@ -245,9 +245,9 @@ def test_changelog_real_corpus_accounts_for_all_fields_and_three_recoveries():
         for path in store.glob("*.md")
         if path.is_file() and path.name.lower() not in {"readme.md", "index.md"}
     }
-    assert len(records) == len(paths) == 550
+    assert len(records) == len(paths) == 551
     assert {record.source_path for record in records} == paths
-    assert len({r.native_id for r in records}) == 550
+    assert len({r.native_id for r in records}) == 551
     recovered = []
     for record in records:
         raw = record.derived["frontmatter_raw"]
@@ -275,3 +275,4 @@ def test_changelog_real_corpus_accounts_for_all_fields_and_three_recoveries():
 # DECISION HISTORY
 # ========================================
 # - 2026-10-02 17:00 [test-writer]: Account for the two incoming main changelogs with the exact independent source census. (#TICKETLESS reason=main-integration-oracle-refresh)
+# - 2026-10-02 17:12 [test-writer]: Include the one new routing-fix changelog in the independent 551-file census. (#TICKETLESS reason=typed-routing-changelog-census)

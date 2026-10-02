@@ -15,7 +15,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from kernel.contracts import GapType, Request, RequestKind, schema_ids
+from kernel.contracts import GapType, Request, RequestKind, Task, schema_ids
 from kernel.contracts.payloads import OptionsRequestPayload
 from kernel.intent.classify import (
     CHANGE,
@@ -74,6 +74,25 @@ def initial_contract(requested: str | None, payload_schema: str | None) -> tuple
     if payload_schema is not None:
         return schema_ids.DECISION_REPORT, INTENT_DEFAULT
     return schema_ids.DECISION_REPORT, None
+
+
+def root_contract_bound(task: Task, request: Request, item_id: str) -> bool:
+    """Whether the root contract already resolves its answer kind.
+
+    Args:
+        task: The current task, including any classified intent and the root identity.
+        request: The validated request currently being routed.
+        item_id: The work item owning this request; children never inherit this binding.
+
+    Returns:
+        bool: Classified root intents or the exact research-to-evidence pair are bound.
+            Eligibility and the single-candidate check remain the router's responsibility.
+    """
+    typed_research = (request.kind is RequestKind.CAPABILITY
+                      and request.payload_schema == schema_ids.RESEARCH_REQUEST
+                      and request.requested_output_schema == schema_ids.EVIDENCE_BUNDLE)
+    return (item_id == task.root_work_item_id
+            and (task.intent in KIND_SCHEMA or typed_research))
 
 
 def decline_for(kind: str) -> Decline | None:
@@ -135,4 +154,6 @@ def shape_root(request: Request, kind: str, goal: str) -> Request:
 # - 2026-10-01 22:00 [python-coder]: A write request is declined with the same text whether the
 #   permissions forbid writes or no write capability exists; the reason is recorded in the event
 #   detail, never offered as a fallback. (#KernelBootstrapV0/INTENT)
+# - 2026-10-02 16:54 [python-coder]: Recognize only the validated research pair at the root;
+#   eligibility and semantic alternatives still govern dispatch. (#KM-500a/2)
 # ====================================================================
