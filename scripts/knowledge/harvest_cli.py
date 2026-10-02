@@ -1,8 +1,9 @@
 """
 MODULE: harvest_cli
 GOAL: Define the ``harvest_learnings`` command-line argument surface --
-    ``--sink``, ``--state``, ``--print-sink``, ``--dry-run``, ``--verbose``
-    -- as a concern separate from parsing them into a run.
+    ``--sink``, ``--state``, ``--print-sink``, ``--status``, ``--marker``,
+    ``--dry-run``, ``--verbose`` -- as a concern separate from parsing them
+    into a run.
 BUSINESS CONTEXT: The CLI surface is stable and independently documented
     (see ``harvest_learnings.py``'s own module docstring, which mirrors each
     of these flags' help text for `--help`-free reference). Isolating the
@@ -26,6 +27,16 @@ ARCHITECTURE: Helper module for the Knowledge System component
 #   real subprocess invocations of the deployed script), so the rename and
 #   the move are both invisible to every existing test. (#INF-400c-5,
 #   GE-127b-1)
+# - 2026-09-23 [python-coder/INF-700a-2]: Added ``--status`` and ``--marker``
+#   for the run-recency signal INF-700a-2 requires now that
+#   ``HarvestResult.outstanding`` reads zero for both a healthy loop and a
+#   loop that has never run. The ``--status`` help text is this flag's
+#   discharge of the AC's "names no figure that is also produced by the
+#   capture-health report ... and says which of the two a reader should
+#   consult" clause -- the capture-health report is not covered by any
+#   automated test asserting on help text, per this AC's own test_rationale
+#   (a string match on help text is brittle), so it is satisfied here
+#   directly rather than via a sibling test.
 """
 
 from __future__ import annotations
@@ -71,6 +82,29 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         help=(
             "Print the resolved absolute sink path and exit 0. Side-effect "
             "free: reads the declaration only (AC INF-400c-4-v)."
+        ),
+    )
+    parser.add_argument(
+        "--status",
+        action="store_true",
+        help=(
+            "Print JSON {last_run, sink, sink_exists} for the routing step "
+            "in THIS tree and exit 0 -- always, even if it has never run. "
+            "Side-effect free: never creates the marker or any sink "
+            "directory. For agent-run / capture-attempt counts, see the "
+            "capture-health report instead; this flag only answers whether "
+            "the routing step has completed here, and over which sink."
+        ),
+    )
+    parser.add_argument(
+        "--marker",
+        type=Path,
+        default=Path("debugging/logs/harvest_last_run.json"),
+        metavar="PATH",
+        help=(
+            "Path to the last-completed-run marker (default: "
+            "debugging/logs/harvest_last_run.json). An ordinary run writes "
+            "this on completion; --status reads it."
         ),
     )
     parser.add_argument(
