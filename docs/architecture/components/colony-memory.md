@@ -253,7 +253,7 @@ corrections are the nearest form. Whether this meets the founding exit criterion
 
 | | Run root `.leafcutter/kernel/` | Decision records | Learned statistics |
 |---|---|---|---|
-| Scope | One checkout, per run | One repository, shared through Git | Across runs; later possibly a team |
+| Scope | One checkout, per run | One repository, shared through Git | Across runs, per installation: its own Neo4j from its `.env`, never team-shared (ADR-065 Amendment 1) |
 | Holds | Checkpoints, run records, `events.jsonl`, artifacts, interaction ledger, gap observations, telemetry spool, staged decision records | Published, human-approved decisions | Derived aggregates |
 | Authority | Authoritative for workflow state | Canonical for decisions (ADR-060 §1) | Derived; never workflow state |
 | Required | Always | Optional (`memory.backend: null`) | Optional |
@@ -264,10 +264,12 @@ that reads only Langfuse undercounts those runs (OP-19).
 
 ## Open questions
 
-The store questions moved to ADR-065's open questions: (1) trigger actions, (2) the aggregate
-model, (3) incremental update or rebuild, (4) sharing the database and credentials of the planned
-knowledge-retrieval projections (ADR-062, not yet on main), (5) an unreachable store, (6) privacy
-of a shared store, (7) hosting. Still open here:
+The store questions moved to ADR-065, and its Amendment 1 (2026-10-02) answers most of them:
+aggregates are rebuilt whenever an item that feeds them is added; statistics use the same Neo4j
+and `LEAFCUTTER_NEO4J_*` settings as the planned knowledge-retrieval projections (ADR-062, not yet
+on main); an unreachable store is retried and statistics never block a run; and each installation
+has its own store, so there is no shared-store privacy question. Still open in ADR-065: the
+aggregate model, separation from ADR-062's projection generations, and hosting. Still open here:
 
 1. **Retention and decay** of statistics: ADR-056 open question 1.
 2. **Repository identity for statistics.** ADR-061 §3 keys records by

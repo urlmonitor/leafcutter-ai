@@ -142,7 +142,7 @@ Parent: none (`root: true`). The kernel's own container view is
 | 6 | Process maturity and resolution order | Workflow, policy or LLM-guided; levels 0–4; resolution order workflow → policy → LLM-guided → gap | [ADR-054](../adrs/ADR-054-process-representation-and-maturity-model.md) | Accepted. V0 has level 3 (native graphs) and level 1 (`host_handoff`). Level 2 policies are Later (Stage 3) |
 | 7 | Empty registry and admission | The kernel routes only over the new registry; legacy assets only via `legacy_admission` plus an ADR | [ADR-055](../adrs/ADR-055-capability-registry-starts-empty.md) | Accepted; V0 |
 | 8 | Colony memory loop | Reinforce on verified outcomes; evaporation; negative evidence; exploration; trails rank and propose, never legislate | [ADR-056](../adrs/ADR-056-colony-memory-evidence-reinforcement.md) | Accepted. Recording prerequisites only partly on main (OP-26). Influence on routing: Stage 4 or later |
-| 9 | Optional colony memory store | Port with a Null implementation, context dimensions, shared memory, run-root authority, staging ladder; a PostgreSQL store with `LEAFCUTTER_COLONY_DB_URL` | [ADR-057](../adrs/ADR-057-colony-memory-store-optional-postgres.md) | Accepted; **superseded in part by ADR-065** (store technology, Postgres implementation, the URL, relational tables) |
+| 9 | Optional colony memory store | Port with a Null implementation, context dimensions, shared memory, run-root authority, staging ladder; a PostgreSQL store with `LEAFCUTTER_COLONY_DB_URL` | [ADR-057](../adrs/ADR-057-colony-memory-store-optional-postgres.md) | Accepted; **superseded in part by ADR-065** (store technology, Postgres implementation, the URL, relational tables; §8 shared memory by ADR-065 Amendment 1) |
 | 10 | Langfuse as colony history | Every important node traced; decisions and routing choices scored; datasets as regression memory | [ADR-058](../adrs/ADR-058-langfuse-colony-history-scores-datasets.md) | Accepted. Node tracing is on main. Scores, datasets and the regression gate are listed under `phase_colony_2_analyze` (Stage 4) |
 | 11 | Decision store | Approved decisions as YAML records in `docs/decisions/` with a generated `index.json`, behind the `ColonyMemory` port (`file` or `null`); precedent is evidence from day one | [ADR-059](../adrs/ADR-059-decision-store-reviewable-yaml-records-now-graph-later.md), [colony-memory](../components/colony-memory.md) | Accepted; V0, on main (PR #978) |
 | 12 | Source of truth and approval authority | Git is canonical; only a human approval creates a record; the kernel never writes the repository during a run; publication is `python -m kernel decisions publish` | [ADR-060](../adrs/ADR-060-source-of-truth-and-approval-authority.md) | Accepted; V0, on main |
@@ -172,8 +172,9 @@ flowchart LR
   PostgreSQL implementation, §4's `LEAFCUTTER_COLONY_DB_URL`, §6's relational tables and the
   PostgreSQL and Supabase side of its Alternatives.
 - **Carried over from ADR-057:** optional with a Null default, the hot path reads the store and
-  never Langfuse (§5), mandatory context dimensions (§7), shared colony memory (§8), the run root
-  stays authoritative (§9), and the staging ladder (§10).
+  never Langfuse (§5), mandatory context dimensions (§7), the run root stays authoritative (§9),
+  and the staging ladder (§10). §8 (shared colony memory) is superseded by ADR-065 Amendment 1:
+  each installation has its own store.
 - **Not touched by ADR-057 at all:** decision records. ADR-059 was decided without amending
   ADR-057, and its "no Neo4j yet" stands for decision records (ADR-065 §6).
 - **Left to the build by ADR-065 §3:** the statistics operations on the port and how one startup
