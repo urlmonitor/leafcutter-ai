@@ -20,6 +20,7 @@ from kernel.capabilities.decision.ranking import (
     BUDGET_RESERVE,
     DESIGN_JUDGEMENT,
     NO_PROGRESS,
+    NO_RESEARCH_TARGETS,
     RESEARCH_CAP,
     research_rounds,
 )
@@ -49,6 +50,8 @@ _WHY = {
                  "is not converging, so a human decides.",
     RESEARCH_CAP: "The research-round limit for this decision was reached without a settled "
                   "answer, so a human decides.",
+    NO_RESEARCH_TARGETS: "No research round is due: the options name no open question, cited "
+                         "file or added claim left to look up, so a human decides.",
     BUDGET_RESERVE: "The Jev call budget (limits.max_jev_calls) cannot fund another research "
                     "round beside the assessment kept in reserve, so this ranking rests on the "
                     "evidence gathered so far and a human decides.",

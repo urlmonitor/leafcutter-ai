@@ -29,9 +29,12 @@ from kernel.contracts.enums import Priority
 DESIGN_JUDGEMENT = "design_judgement"
 NO_PROGRESS = "no_progress"
 RESEARCH_CAP = "research_cap"
+#: No research round is due because there is nothing targeted to look for (cap not reached).
+NO_RESEARCH_TARGETS = "no_research_targets"
 #: The Jev budget cannot fund another research round plus the reserved final assessment.
 BUDGET_RESERVE = "budget_reserve"
-DESIGN_REASONS = (DESIGN_JUDGEMENT, NO_PROGRESS, RESEARCH_CAP, BUDGET_RESERVE)
+DESIGN_REASONS = (DESIGN_JUDGEMENT, NO_PROGRESS, RESEARCH_CAP, NO_RESEARCH_TARGETS,
+                  BUDGET_RESERVE)
 #: Reason (and request key suffix) of the one targeted research round a design decision runs
 #: before it ranks its options.
 DESIGN_ROUND = "design_round"
@@ -189,6 +192,9 @@ def loop_reason(work: Working, a: Assessment, cfg: DecisionConfig) -> str | None
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-02 [python-coder]: NO_RESEARCH_TARGETS names why research stopped when no round is due
+#   because nothing is targeted to research; RESEARCH_CAP stays for a cap really reached.
+#   (#KernelResearchFirst)
 # - 2026-10-01 [python-coder]: A design decision runs ONE targeted research round (option claims,
 #   synthesis gaps, cited files not yet evidence) before it ranks: round 7 reached the ranked
 #   question in 7 calls on 3 evidence items, and the user's own option showed "no evidence cited"

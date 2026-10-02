@@ -130,3 +130,7 @@ completion_manifest:
   pre_commit_hooks_pass: true
   commit_message_valid: true
   ticket_staged: true
+
+### 2026-10-02 20:00 — python-coder (status: ok)
+feedback-id: fb_2026-10-02_2f6d1112
+Follow-up fix to 87228a8e: when no research round was due because there were no research targets (no gaps, no added options, no uncited files), combine labelled the ranked question `research_cap` although zero rounds ran. It now uses the new `NO_RESEARCH_TARGETS` ("no_research_targets") reason, defined next to `RESEARCH_CAP` in ranking.py and added to `DESIGN_REASONS`. `loop_reason` still yields `research_cap` when the cap was really reached. The ranked question text (`design_ending._WHY`) and the rationale ("stopped researching because no_research_targets after 0 research round(s)") now say so. Two regression tests added to test_no_blind_escalation.py; no existing assertion changed. Kernel capabilities/contracts/interaction/decision_research/memory suites: 532 passed; ruff and ast.parse clean.
