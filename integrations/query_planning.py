@@ -170,8 +170,8 @@ def human_scope(answer: dict,ctx: ExecutionContext,state: dict[str, Any]) -> dic
     elif state.get("clarification_kind")=="argument":
         field=state["awaiting_parameter"]
         spec=state["pending_descriptor"]["parameters"][field]
-        answer=[x.strip() for x in text.split(",") if x.strip()] if spec["type"]=="string_list" else text
-        value={"arguments":{**state.get("arguments",{}),field:answer}}
+        argument=[x.strip() for x in text.split(",") if x.strip()] if spec["type"]=="string_list" else text
+        value={"arguments":{**state.get("arguments",{}),field:argument}}
     elif state.get("clarification_kind")=="question":
         value={"question":text}
     else:

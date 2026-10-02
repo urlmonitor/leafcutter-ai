@@ -350,3 +350,25 @@ def test_verification_timeout_and_cancellation_never_activate(tmp_path):
 
     asyncio.run(scenario())
     assert all(row["operation"] != "get_component_tests" for row in catalog.descriptors())
+
+
+def test_catalog_query_without_compiled_backend_reports_unsupported(tmp_path):
+    catalog, port, _ = admission(tmp_path)
+    asyncio.run(port.verify_and_activate(candidate(), repository_id="repo", source_sha="a" * 40))
+    contracts = importlib.import_module("knowledge.contracts")
+    service = importlib.import_module("knowledge.service").KnowledgeService(
+        Backend(contracts), query_catalog=catalog
+    )
+    request = catalog.request(
+        {
+            "request_id": "unsupported-catalog-backend",
+            "repository_id": "repo",
+            "operation": "get_component_tests",
+            "mode": "graph",
+            "arguments": {"component_ids": ["component"]},
+        }
+    )
+    result = asyncio.run(service.retrieve(request))
+    assert result.status == "unsupported"
+    assert result.evidence == []
+    assert result.errors[0]["code"] == "unsupported"

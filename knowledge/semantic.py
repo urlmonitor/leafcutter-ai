@@ -47,7 +47,7 @@ class QueryEmbeddings:
             provider: Embedding provider with a declared model and dimensions.
         """
         self.provider = provider
-        self.cache = {}
+        self.cache: dict[tuple[str, str, int, str], list[float]] = {}
 
     async def vector(self, text: str, snapshot: ProjectionSnapshot) -> list[float]:
         """Vector.

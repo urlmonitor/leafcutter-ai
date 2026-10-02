@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+from .ports import KnowledgeBackend
+from typing import NotRequired, TypedDict
+
 from .contracts import Entity, Relation, KnowledgeRetrievalRequest, ProjectionSnapshot
 from .semantic import QueryEmbeddings
 
@@ -24,10 +27,18 @@ def validate_edges(edges: list[Relation], repository_id: str, source_sha: str) -
             invalid("foreign relationship provenance rejected")
 
 
+class SearchProvenance(TypedDict):
+    """Measured similarity and optional expansion path for one semantic hit."""
+
+    signals: dict[str, float]
+    seed_id: str
+    path: NotRequired[list[Relation]]
+
+
 class SemanticSearch:
     """Expand model-matched semantic seeds through registered graph relations."""
 
-    def __init__(self, backend: object, embeddings: QueryEmbeddings) -> None:
+    def __init__(self, backend: KnowledgeBackend, embeddings: QueryEmbeddings) -> None:
         """Store injected dependencies without performing network operations.
 
         Args:
@@ -62,6 +73,8 @@ class SemanticSearch:
                     1, request.budget.max_candidates // (request.budget.max_neighbors_per_seed + 1)
                 ),
             )
+        if snapshot.embedding_model is None:
+            not_ready("generation embedding model is unavailable")
         hits = await self.backend.semantic(
             request.repository_id,
             snapshot.generation_id,
@@ -72,7 +85,7 @@ class SemanticSearch:
         )
         nodes = []
         candidate_work = len(hits[: request.budget.max_candidates])
-        provenance = {}
+        provenance: dict[str, SearchProvenance] = {}
         for node, score in hits[: request.budget.max_candidates]:
             if (
                 node.source.repository_id != request.repository_id
@@ -110,7 +123,7 @@ class SemanticSearch:
         request: KnowledgeRetrievalRequest,
         snapshot: ProjectionSnapshot,
         nodes: list[Entity],
-        provenance: dict,
+        provenance: dict[str, SearchProvenance],
         candidate_work: int,
     ) -> int:
         """Expand approved correction and lesson links within remaining candidate work.

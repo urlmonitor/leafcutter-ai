@@ -146,7 +146,7 @@ async def _request(
     """
     config = ctx.config.knowledge
     raw = _scoped_request(ctx, payload, capabilities)
-    usage = []
+    usage: list[Usage] = []
     if not raw:
         choice, usage = await assess_retrieval_mode(
             ctx, invocation, known_ids=[], intent=payload.need.question, capabilities=capabilities
@@ -277,7 +277,9 @@ async def _observed_call(
     return result
 
 
-def _assess_final_answer(request, result):
+def _assess_final_answer(
+    request: KnowledgeRetrievalRequest, result: KnowledgeRetrievalResult
+) -> bool:
     """Recompute after kernel bounds without upgrading an unresolved provider result.
 
     Args:
@@ -294,7 +296,7 @@ def _assess_final_answer(request, result):
     return result.answer is not None and result.answer.status != "fulfilled"
 
 
-def _answer_diagnostics(result: KnowledgeRetrievalResult) -> dict:
+def _answer_diagnostics(result: KnowledgeRetrievalResult) -> dict[str, str]:
     """Preserve final answer and continuation facts in the public kernel result.
 
     Args:
@@ -359,7 +361,7 @@ def _kernel_result(
         f"knowledge status: {result.status}",
         f"retrieval choice: {reason}",
     ]
-    if unmet:
+    if unmet and result.answer is not None:
         limitations.extend(result.answer.limitations)
         limitations.append("Original answer requirements remain " + result.answer.status)
     limitations.extend(assessment_limits(result))
@@ -386,7 +388,7 @@ def _kernel_result(
         limitations=limitations,
         truncated=result.truncated,
     )
-    diagnostics = {
+    diagnostics: dict[str, str | int | float | bool] = {
         "knowledge_status": result.status,
         "knowledge_retrieval_id": result.retrieval_id,
         "knowledge_requested_mode": result.requested_mode,

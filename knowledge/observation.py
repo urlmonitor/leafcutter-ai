@@ -7,13 +7,17 @@ ARCHITECTURE: Neutral caller-owned callback; no kernel or provider dependency.
 
 from __future__ import annotations
 
+from .contracts import KnowledgeRetrievalRequest, KnowledgeRetrievalResult
+
 import inspect
 import logging
 
 logger = logging.getLogger(__name__)
 
 
-async def observe(observer: object | None, request: object, result: object) -> dict:
+async def observe(
+    observer: object | None, request: KnowledgeRetrievalRequest, result: KnowledgeRetrievalResult
+) -> dict:
     """Call an optional sink once; isolate delivery failure from retrieval evidence.
 
     Args:
@@ -28,6 +32,8 @@ async def observe(observer: object | None, request: object, result: object) -> d
         return {"state": "disabled"}
     try:
         callback = getattr(observer, "observe", observer)
+        if not callable(callback):
+            raise ValueError("invalid observer callback")
         observed = callback(request, result.model_copy(deep=True))
         if inspect.isawaitable(observed):
             observed = await observed
@@ -53,7 +59,10 @@ async def observe(observer: object | None, request: object, result: object) -> d
 
 
 def fit_observation(
-    request: object, result: object, used_bytes: int = 0, page_limit: int | None = None
+    request: KnowledgeRetrievalRequest,
+    result: KnowledgeRetrievalResult,
+    used_bytes: int = 0,
+    page_limit: int | None = None,
 ) -> None:
     """Keep optional delivery metadata inside the same whole-response allowance.
 

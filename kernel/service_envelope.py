@@ -158,7 +158,7 @@ def _visible_output(status: RunStatus, outcome: Any, values: Mapping[str, Any]) 
         return outcome.output
     task = values.get("task")
     root = values.get("work_items", {}).get(task.root_work_item_id) if task else None
-    if (status is not RunStatus.PARTIAL or root is None
+    if (status is not RunStatus.PARTIAL or task is None or root is None
         or root.status is not WorkItemStatus.PARTIAL
         or task.requested_output_schema != schema_ids.EVIDENCE_BUNDLE
         or outcome.output.schema_id != schema_ids.EVIDENCE_BUNDLE):

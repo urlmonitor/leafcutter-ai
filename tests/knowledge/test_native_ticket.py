@@ -22,7 +22,7 @@ def _write(root, path, metadata, body="# Ticket\n\nKeep this body.\n"):
 def test_ticket_preserves_full_metadata_nested_shapes_dates_and_body(tmp_path):
     # covers: KM-400a-1-vi
     # covers: KM-400a-3-i
-    # type: unit
+    # test type: unit
     # angle: criterion
     metadata = {
         "title": "Authored title",
@@ -63,7 +63,7 @@ def test_ticket_preserves_full_metadata_nested_shapes_dates_and_body(tmp_path):
 def test_ticket_distinct_paths_and_epic_subtype_provenance(tmp_path):
     # covers: KM-400a-1-vi
     # covers: KM-400a-3-i
-    # type: unit
+    # test type: unit
     # angle: boundary
     sources = {
         "tickets/00_inbox/EPIC-One/Master_Plan.md": {"epic_name": "One"},
@@ -89,7 +89,7 @@ def test_ticket_distinct_paths_and_epic_subtype_provenance(tmp_path):
 def test_ticket_excludes_readme_generic_notes_and_missing_frontmatter(tmp_path):
     # covers: KM-400a-1-vi
     # covers: KM-400a-3-i
-    # type: unit
+    # test type: unit
     # angle: boundary
     _write(tmp_path, "tickets/README.md", {"type": "reference", "status": "active"})
     _write(tmp_path, "tickets/EPIC-One/readME.md", {"type": "epic", "source_ac": "A"})
@@ -109,7 +109,7 @@ def test_ticket_excludes_readme_generic_notes_and_missing_frontmatter(tmp_path):
 def test_ticket_never_defaults_missing_fields_or_normalizes_historical_values(tmp_path):
     # covers: KM-400a-1-vi
     # covers: KM-400a-3-i
-    # type: unit
+    # test type: unit
     # angle: boundary
     source = {"status": "open", "requires_adr": None, "type": "bugfix", "test_required": False}
     _write(tmp_path, "tickets/99_done/TICKET-old.md", source, "# Legacy heading\n")
@@ -126,7 +126,7 @@ def test_ticket_never_defaults_missing_fields_or_normalizes_historical_values(tm
 def test_ticket_invalid_frontmatter_is_explicit_failure(tmp_path, text):
     # covers: KM-400a-1-vi
     # covers: KM-400a-3-i
-    # type: unit
+    # test type: unit
     # angle: failure
     path = tmp_path / "tickets/TICKET-bad.md"
     path.parent.mkdir()
@@ -138,7 +138,7 @@ def test_ticket_invalid_frontmatter_is_explicit_failure(tmp_path, text):
 def test_ticket_absent_store_returns_no_records(tmp_path):
     # covers: KM-400a-1-vi
     # covers: KM-400a-3-i
-    # type: unit
+    # test type: unit
     # angle: boundary
     assert _extract(tmp_path) == []
 
@@ -146,7 +146,7 @@ def test_ticket_absent_store_returns_no_records(tmp_path):
 def test_ticket_real_store_preserves_every_frontmatter_field():
     # covers: KM-400a-1-vi
     # covers: KM-400a-3-i
-    # type: integration
+    # test type: integration
     # angle: real_artifact
     root = Path(__file__).resolve().parents[2]
     candidates = sorted(

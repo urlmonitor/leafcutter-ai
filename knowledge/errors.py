@@ -7,6 +7,8 @@ ARCHITECTURE: Dependencies point inward to neutral contracts; see docs/architect
 
 from __future__ import annotations
 
+from typing import NoReturn
+
 
 class KnowledgeError(Exception):
     """Typed infrastructure failure safe to report at transport boundaries."""
@@ -52,7 +54,7 @@ class InvalidRequest(ValueError):
     """A transport, scope or budget input failed validation."""
 
 
-def invalid(message: str) -> None:
+def invalid(message: str) -> NoReturn:
     """Raise one named validation failure from pure policy checks.
 
     Args:
@@ -61,7 +63,7 @@ def invalid(message: str) -> None:
     raise InvalidRequest(message)
 
 
-def not_ready(message: str) -> None:
+def not_ready(message: str) -> NoReturn:
     """Raise an explicit unsupported/readiness response with diagnostic context.
 
     Args:

@@ -7,9 +7,11 @@ ARCHITECTURE: Pure assessment of explicit pinned manifest metadata.
 
 from __future__ import annotations
 
+from .contracts import ProjectionSnapshot
+
 
 def assess_capability_fit(
-    manifest: object,
+    manifest: ProjectionSnapshot | dict,
     *,
     required_kinds: list[str],
     required_relationships: list[str],
@@ -31,7 +33,7 @@ def assess_capability_fit(
     Keyword-only matching_operation: Established compatible registered operation.
     Keyword-only catalog_complete: Whether the authorized catalog search completed.
     """
-    data = manifest.model_dump() if hasattr(manifest, "model_dump") else manifest
+    data = manifest if isinstance(manifest, dict) else manifest.model_dump()
     kinds = data.get("supported_kinds", [])
     fields = data.get("supported_fields", {})
     relationships = data.get("supported_relationships", [])

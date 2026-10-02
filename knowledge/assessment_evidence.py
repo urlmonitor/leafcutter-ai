@@ -7,6 +7,7 @@ ARCHITECTURE: Pure input validation; this module performs no source or network r
 
 from __future__ import annotations
 import json
+from typing import TypeGuard
 from .contracts import SourceReference
 from .errors import invalid
 
@@ -31,7 +32,8 @@ def prepare(payload: dict) -> tuple[list[dict], list[str]]:
     evidence = payload.get("evidence", [])
     if not isinstance(evidence, list) or len(evidence) > 100:
         invalid("assessment needs at most 100 supplied evidence items")
-    accepted, limitations, seen = [], [], set()
+    accepted, limitations = [], []
+    seen: set[str] = set()
     for item in evidence:
         issue = _issue(item, payload, seen)
         if issue:
@@ -86,7 +88,7 @@ def structured(item: dict) -> dict | None:
     return value if isinstance(value, dict) else None
 
 
-def quoted(item: dict | None, quote: object) -> bool:
+def quoted(item: dict | None, quote: object) -> TypeGuard[dict]:
     """Require a nonempty literal quote in the actual supplied excerpt."""
     return bool(item and isinstance(quote, str) and quote.strip() and quote in item["content"])
 

@@ -63,11 +63,14 @@ def writer_backend(root: str | Path | None = None) -> Neo4jBackend:
     sources = environment_sources(root)
     values = [select_value(sources, names[0], "NEO4J_URI")]
     values.extend(select_value(sources, name) for name in names[1:])
-    missing = [name for name, value in zip(names, values) if not value]
-    if missing:
+    uri, username, password = values
+    if not uri or not username or not password:
+        missing = [name for name, value in zip(names, values) if not value]
         raise ValueError("writer configuration missing: " + ", ".join(missing))
     return Neo4jBackend(
-        *values,
+        uri,
+        username,
+        password,
         database=select_value(sources, "LEAFCUTTER_NEO4J_DATABASE", "NEO4J_DATABASE") or "neo4j",
     )
 

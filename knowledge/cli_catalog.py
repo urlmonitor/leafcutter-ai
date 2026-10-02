@@ -11,6 +11,7 @@ ARCHITECTURE: Dependencies point inward to neutral contracts; see docs/architect
 
 from __future__ import annotations
 
+import argparse
 import json
 from pathlib import Path
 from .errors import invalid, CatalogIOError
@@ -21,7 +22,7 @@ from .config import KnowledgeConfig, build_retriever
 COMMANDS = {"catalog-list", "query-verify", "query-register"}
 
 
-def add_parser(sub: object) -> None:
+def add_parser(sub: argparse._SubParsersAction) -> None:
     """Register standalone catalog commands.
 
     Args:
@@ -42,7 +43,7 @@ def add_parser(sub: object) -> None:
             parser.add_argument("--expected-active-digest")
 
 
-async def run(args: object) -> dict:
+async def run(args: argparse.Namespace) -> dict:
     """Verify actual queries and activate only when the caller explicitly selects writes.
 
     Args:
@@ -67,8 +68,10 @@ async def run(args: object) -> dict:
         query_catalog_root=args.catalog_root,
     )
     retriever = build_retriever(config)
-    port = build_query_admission(config, retriever)
     try:
+        port = build_query_admission(config, retriever)
+        if port is None:
+            invalid("query verification requires an enabled backend and catalog root")
         if args.command == "query-register":
             return await port.verify_and_activate(
                 candidate,

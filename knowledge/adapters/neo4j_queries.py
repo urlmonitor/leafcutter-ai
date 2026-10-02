@@ -10,7 +10,7 @@ DECISION HISTORY
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 if TYPE_CHECKING:
     from knowledge.contracts import Entity
@@ -65,7 +65,7 @@ async def query(
     if manifest is None:
         raise KnowledgeError("stale", "generation no longer available")
     key = scope_key(repository_id, generation_id)
-    params = {
+    params: dict[str, object] = {
         "key": key,
         "limit": bounded_limit(limit),
         "ids": arguments.get("entity_ids", [arguments.get("component_id")]),
@@ -89,7 +89,8 @@ async def query(
             db,
             repository_id,
             generation_id,
-            params["ids"],
+            # Public request validation establishes component IDs as strings.
+            cast(list[str], params["ids"]),
             ["component_membership", "depends_on", "covered_by", "implemented_by", "related_docs"],
             limit,
         )

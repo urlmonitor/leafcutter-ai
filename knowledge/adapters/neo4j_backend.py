@@ -10,10 +10,13 @@ DECISION HISTORY
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, TypeVar
+
+TransactionResult = TypeVar("TransactionResult")
 
 if TYPE_CHECKING:
     from collections.abc import Callable
+    from neo4j import ManagedTransaction
 
 import asyncio
 import hashlib
@@ -79,7 +82,7 @@ class Neo4jBackend:
             lambda tx: self._rows(tx, statement, parameters or {}), write
         )
 
-    def _rows(self, tx: object, statement: str, parameters: dict) -> list[dict]:
+    def _rows(self, tx: ManagedTransaction, statement: str, parameters: dict) -> list[dict]:
         """Perform the scoped rows operation.
 
         Args:
@@ -95,8 +98,8 @@ class Neo4jBackend:
         return [record.data() for record in tx.run(storage_statement(statement), parameters)]
 
     async def _transaction(
-        self, callback: Callable[[object], object], write: bool = False
-    ) -> object:
+        self, callback: Callable[[ManagedTransaction], TransactionResult], write: bool = False
+    ) -> TransactionResult:
         """Run idempotent database work in a worker and normalize infrastructure faults.
 
         Args:
@@ -112,7 +115,7 @@ class Neo4jBackend:
 
         timeout = remaining_seconds(self.query_timeout)
 
-        def execute():
+        def execute() -> TransactionResult:
             """Own the synchronous session within its worker-thread lifetime."""
             with self.driver.session(database=self.database) as session:
                 runner = session.execute_write if write else session.execute_read
@@ -338,7 +341,7 @@ class Neo4jBackend:
         return await semantic(self, repository_id, generation_id, vector, kinds, limit, model)
 
     async def rollback(
-        self, repository_id: str, generation_id: str, expected_generation: str
+        self, repository_id: str, generation_id: str, expected_generation: str | None
     ) -> bool:
         """Explicitly select a retained generation using the same atomic pointer guard.
 

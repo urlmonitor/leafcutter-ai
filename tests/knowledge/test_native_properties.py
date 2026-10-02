@@ -55,18 +55,19 @@ def test_authored_reserved_names_cannot_replace_graph_bookkeeping():
     assert decode(props) == source
 
 
-def test_missing_null_empty_and_scalar_union_stay_distinct():
+def test_missing_null_empty_and_scalar_union_stay_distinct() -> None:
     # covers: KM-400a-3-i
     # angle: criterion
     from knowledge.native_properties import encode, decode
 
-    for source in (
+    cases: list[dict[str, object]] = [
         {},
         {"superseded_by": None},
         {"superseded_by": []},
         {"superseded_by": "AC-1"},
         {"superseded_by": ["AC-1"]},
-    ):
+    ]
+    for source in cases:
         assert decode(encode(source)) == source
 
 

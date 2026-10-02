@@ -9,7 +9,13 @@ from __future__ import annotations
 
 from .retrieval_steps import load_generation, fetch_candidates, disclose_candidates
 
-from .ports import SourceResolver, EmbeddingProvider
+from collections.abc import Callable
+from typing import TYPE_CHECKING
+
+from .ports import SourceResolver, EmbeddingProvider, KnowledgeBackend, RetrievalTelemetry
+
+if TYPE_CHECKING:
+    from .query_catalog import QueryCatalog
 
 from .errors import invalid
 
@@ -21,7 +27,7 @@ import secrets
 import time
 from .disclosure import finalize
 from uuid import uuid4
-from .contracts import KnowledgeRetrievalRequest, KnowledgeRetrievalResult
+from .contracts import Entity, KnowledgeRetrievalRequest, KnowledgeRetrievalResult
 from .errors import KnowledgeError
 from . import cursors
 from .deadlines import deadline
@@ -33,13 +39,13 @@ class KnowledgeService:
 
     def __init__(
         self,
-        backend: object,
+        backend: KnowledgeBackend,
         source_resolver: SourceResolver | None = None,
         embedding_provider: EmbeddingProvider | None = None,
         cursor_secret: bytes | None = None,
-        telemetry: object | None = None,
-        cancel_probe: object | None = None,
-        query_catalog: object | None = None,
+        telemetry: RetrievalTelemetry | None = None,
+        cancel_probe: Callable[[], bool] | None = None,
+        query_catalog: QueryCatalog | None = None,
         observer: object | None = None,
     ) -> None:
         """Store injected dependencies without performing network operations.
@@ -101,7 +107,7 @@ class KnowledgeService:
         if request.operation_digest:
             out.stats["operation_digest"] = request.operation_digest
         start = time.monotonic()
-        page = {}
+        page: dict = {}
         try:
             state = (
                 cursors.decode(request.continuation, self.cursor_secret, request)
@@ -127,15 +133,16 @@ class KnowledgeService:
             out.warnings.append("retrieval deadline reached")
         except KnowledgeError as exc:
             logger.warning("Knowledge retrieval unavailable: %s", exc.code)
-            out.status = (
-                "partial"
-                if out.evidence
-                else (
-                    exc.code
-                    if exc.code in {"unavailable", "unsupported", "stale", "error"}
-                    else "error"
-                )
-            )
+            if out.evidence:
+                out.status = "partial"
+            elif exc.code == "unavailable":
+                out.status = "unavailable"
+            elif exc.code == "unsupported":
+                out.status = "unsupported"
+            elif exc.code == "stale":
+                out.status = "stale"
+            else:
+                out.status = "error"
             out.errors.append({"code": exc.code, "message": str(exc), "retryable": exc.retryable})
         except (ValueError, OSError) as exc:
             logger.warning("Knowledge retrieval rejected: %s", type(exc).__name__)
@@ -187,7 +194,7 @@ class KnowledgeService:
         """
         snapshot = await load_generation(self, request, out, state)
         if snapshot is None:
-            return
+            return None
         offset = state["offset"] if state else 0
         remaining_candidates = request.budget.max_candidates - (
             state.get("used_candidates", 0) if state else 0
@@ -203,7 +210,7 @@ class KnowledgeService:
         if len(rows) > request.budget.max_candidates:
             rows = rows[: request.budget.max_candidates]
             out.truncated = True
-        unique = {}
+        unique: dict[str, Entity] = {}
         for row in rows:
             if (
                 row.source.repository_id != request.repository_id

@@ -30,7 +30,7 @@ def _template(root, metadata, body="Keep these instructions as source text.\n"):
 def test_skill_preserves_all_registry_fields_and_independent_template_fields(tmp_path):
     # covers: KM-400a-1-v
     # covers: KM-400a-3-i
-    # type: unit
+    # test type: unit
     # angle: criterion
     entry = {
         "id": "example",
@@ -91,7 +91,7 @@ def test_skill_preserves_all_registry_fields_and_independent_template_fields(tmp
 def test_skill_real_registry_retains_all_42_skills_and_legacy_frontmatter():
     # covers: KM-400a-1-v
     # covers: KM-400a-3-i
-    # type: integration
+    # test type: integration
     # angle: real_artifact
     root = Path(__file__).resolve().parents[2]
     entries = json.loads((root / "config/skill_registry.json").read_text(encoding="utf-8"))[
@@ -128,7 +128,7 @@ def test_skill_real_registry_retains_all_42_skills_and_legacy_frontmatter():
 def test_skill_absent_registry_does_not_admit_unregistered_templates(tmp_path):
     # covers: KM-400a-1-v
     # covers: KM-400a-3-i
-    # type: unit
+    # test type: unit
     # angle: boundary
     _template(tmp_path, {"name": "unregistered"})
     assert _extract(tmp_path) == []
@@ -149,7 +149,7 @@ def test_skill_absent_registry_does_not_admit_unregistered_templates(tmp_path):
 def test_skill_malformed_registry_or_identity_fails(tmp_path, value):
     # covers: KM-400a-1-v
     # covers: KM-400a-3-i
-    # type: unit
+    # test type: unit
     # angle: failure
     source = _registry(tmp_path, [])
     source.write_text(json.dumps(value), encoding="utf-8")
@@ -173,7 +173,7 @@ def test_skill_malformed_registry_or_identity_fails(tmp_path, value):
 def test_skill_template_path_cannot_escape_snapshot(tmp_path, reference):
     # covers: KM-400a-1-v
     # covers: KM-400a-3-i
-    # type: unit
+    # test type: unit
     # angle: boundary
     _registry(tmp_path, [{"id": "example", "template_path": reference}])
     with pytest.raises(ValueError, match="template_path"):
@@ -183,7 +183,7 @@ def test_skill_template_path_cannot_escape_snapshot(tmp_path, reference):
 def test_skill_missing_referenced_template_fails_explicitly(tmp_path):
     # covers: KM-400a-1-v
     # covers: KM-400a-3-i
-    # type: unit
+    # test type: unit
     # angle: failure
     _registry(
         tmp_path, [{"id": "example", "template_path": "leafcutter/templates/skills/missing/"}]
@@ -195,7 +195,7 @@ def test_skill_missing_referenced_template_fails_explicitly(tmp_path):
 def test_skill_missing_null_and_empty_optional_fields_remain_distinct(tmp_path):
     # covers: KM-400a-1-v
     # covers: KM-400a-3-i
-    # type: unit
+    # test type: unit
     # angle: boundary
     entries = [
         {"id": "absent"},
@@ -212,7 +212,7 @@ def test_skill_missing_null_and_empty_optional_fields_remain_distinct(tmp_path):
 def test_skill_template_description_fallback_does_not_create_registry_field(tmp_path):
     # covers: KM-400a-1-v
     # covers: KM-400a-3-i
-    # type: unit
+    # test type: unit
     # angle: boundary
     entry = {"id": "example", "template_path": "templates/skills/example/"}
     _registry(tmp_path, [entry])
@@ -225,7 +225,7 @@ def test_skill_template_description_fallback_does_not_create_registry_field(tmp_
 def test_skill_unclosed_template_frontmatter_fails(tmp_path):
     # covers: KM-400a-1-v
     # covers: KM-400a-3-i
-    # type: unit
+    # test type: unit
     # angle: failure
     _registry(tmp_path, [{"id": "example", "template_path": "templates/skills/example/"}])
     source = _template(tmp_path, {})

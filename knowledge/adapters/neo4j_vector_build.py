@@ -13,6 +13,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
+    from neo4j import ManagedTransaction
     from knowledge.adapters.neo4j_backend import Neo4jBackend
 
 import hashlib
@@ -51,7 +52,7 @@ async def reserve(
         json.dumps([model, dimensions, hashes, embeddings], sort_keys=True).encode()
     ).hexdigest()
 
-    def transaction(tx: object) -> object:
+    def transaction(tx: ManagedTransaction) -> bool:
         """Reserve one vector digest while holding the generation write lock.
 
         Args:

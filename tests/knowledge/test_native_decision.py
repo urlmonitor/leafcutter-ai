@@ -185,7 +185,7 @@ def _store(root, raw=None, name=None):
 def test_decision_complete_source_is_lossless_and_schema_pinned(tmp_path):
     # covers: KM-400a-1-xv
     # covers: KM-400a-3-i
-    # type: integration
+    # test type: integration
     # angle: criterion
     module = _module()
     raw = _complete()
@@ -212,7 +212,7 @@ def test_decision_complete_source_is_lossless_and_schema_pinned(tmp_path):
 def test_decision_minimal_retains_omission_null_and_empty(tmp_path):
     # covers: KM-400a-1-xv
     # covers: KM-400a-3-i
-    # type: unit
+    # test type: unit
     # angle: boundary
     raw = _minimal()
     raw["provenance"]["model_version"] = None
@@ -234,7 +234,7 @@ def test_decision_minimal_retains_omission_null_and_empty(tmp_path):
 def test_decision_absent_or_empty_store_needs_no_schema_or_kernel(tmp_path):
     # covers: KM-400a-1-xv
     # covers: KM-400a-3-i
-    # type: unit
+    # test type: unit
     # angle: boundary
     module = _module()
     assert module.extract(tmp_path) == []
@@ -295,7 +295,7 @@ def _assign(raw, path, value):
 def test_decision_invalid_authored_fields_rejected_without_mutating(path, value):
     # covers: KM-400a-1-xv
     # covers: KM-400a-3-i
-    # type: unit
+    # test type: unit
     # angle: failure
     raw = _complete()
     _assign(raw, path, value)
@@ -309,7 +309,7 @@ def test_decision_invalid_authored_fields_rejected_without_mutating(path, value)
 def test_decision_duplicate_local_ids_rejected(field):
     # covers: KM-400a-1-xv
     # covers: KM-400a-3-i
-    # type: unit
+    # test type: unit
     # angle: failure
     raw = _complete()
     raw[field].append(deepcopy(raw[field][0]))
@@ -320,7 +320,7 @@ def test_decision_duplicate_local_ids_rejected(field):
 def test_decision_missing_approval_or_classification_rejected():
     # covers: KM-400a-1-xv
     # covers: KM-400a-3-i
-    # type: unit
+    # test type: unit
     # angle: failure
     raw = _minimal()
     raw.pop("approval")
@@ -336,7 +336,7 @@ def test_decision_missing_approval_or_classification_rejected():
 def test_decision_filename_must_match_canonical_identity(tmp_path, name):
     # covers: KM-400a-1-xv
     # covers: KM-400a-3-i
-    # type: unit
+    # test type: unit
     # angle: failure
     _store(tmp_path, name=name)
     with pytest.raises(ValueError, match="filename"):
@@ -349,7 +349,7 @@ def test_decision_filename_must_match_canonical_identity(tmp_path, name):
 def test_decision_unknown_filter_value_rejected(tmp_path, field):
     # covers: KM-400a-1-xv
     # covers: KM-400a-3-i
-    # type: unit
+    # test type: unit
     # angle: failure
     raw = _minimal()
     raw[field] = ["unknown"]
@@ -362,7 +362,7 @@ def test_decision_unknown_filter_value_rejected(tmp_path, field):
 def test_decision_unresolved_store_links_rejected(tmp_path, field):
     # covers: KM-400a-1-xv
     # covers: KM-400a-3-i
-    # type: unit
+    # test type: unit
     # angle: failure
     raw = _complete()
     if field == "corrections":
@@ -377,7 +377,7 @@ def test_decision_unresolved_store_links_rejected(tmp_path, field):
 def test_decision_supersession_requires_reciprocal_source_and_preserves_original(tmp_path):
     # covers: KM-400a-1-xv
     # covers: KM-400a-3-i
-    # type: integration
+    # test type: integration
     # angle: boundary
     old, new = _complete(), _minimal()
     new["id"] = "dec-fedcba9876543210"
@@ -408,7 +408,7 @@ def test_decision_supersession_requires_reciprocal_source_and_preserves_original
 def test_decision_plain_yaml_and_size_bound_enforced(tmp_path, bad):
     # covers: KM-400a-1-xv
     # covers: KM-400a-3-i
-    # type: unit
+    # test type: unit
     # angle: failure
     source = _store(tmp_path)
     source.write_text(source.read_text(encoding="utf-8") + bad, encoding="utf-8")
@@ -419,7 +419,7 @@ def test_decision_plain_yaml_and_size_bound_enforced(tmp_path, bad):
 def test_decision_changed_source_schema_cannot_weaken_trusted_validator(tmp_path):
     # covers: KM-400a-1-xv
     # covers: KM-400a-3-i
-    # type: unit
+    # test type: unit
     # angle: failure
     _store(tmp_path)
     _put(tmp_path, "config/decision_record.schema.json", '{"type":"object"}')
@@ -434,7 +434,7 @@ def test_decision_changed_source_schema_cannot_weaken_trusted_validator(tmp_path
 def test_decision_malformed_source_fails_explicitly(tmp_path, bad):
     # covers: KM-400a-1-xv
     # covers: KM-400a-3-i
-    # type: unit
+    # test type: unit
     # angle: failure
     source = _store(tmp_path)
     source.write_bytes(source.read_bytes() + bad if bad.startswith(b"title:") else bad)
@@ -445,7 +445,7 @@ def test_decision_malformed_source_fails_explicitly(tmp_path, bad):
 def test_decision_source_resolution_cannot_escape_snapshot(tmp_path, monkeypatch):
     # covers: KM-400a-1-xv
     # covers: KM-400a-3-i
-    # type: unit
+    # test type: unit
     # angle: boundary
     source = _store(tmp_path)
     original = Path.resolve

@@ -41,7 +41,7 @@ async def _resume(invocation: CapabilityInvocation,ctx: ExecutionContext,state: 
         raise KnowledgeError("build_failed","Query child output is unavailable")
     return payload
 
-async def _initial(port: KnowledgeRetriever,admission: QueryAdmission | None,invocation: CapabilityInvocation,ctx: ExecutionContext,payload: RetrievalRequestPayload) -> dict[str, Any]:
+async def _initial(port: KnowledgeRetriever,admission: QueryAdmission,invocation: CapabilityInvocation,ctx: ExecutionContext,payload: RetrievalRequestPayload) -> dict[str, Any]:
     """Pin source revision before any human or coding pause.
 
 

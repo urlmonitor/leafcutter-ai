@@ -44,7 +44,7 @@ def finalize(
     request: KnowledgeRetrievalRequest,
     out: KnowledgeRetrievalResult,
     page: dict | None,
-    cursor_secret: bytes | None,
+    cursor_secret: bytes,
     observer_bytes: int = 0,
 ) -> None:
     """Fit evidence and authenticated continuation into cumulative response budgets.
@@ -121,7 +121,7 @@ def _account_continuation(
     request: KnowledgeRetrievalRequest,
     out: KnowledgeRetrievalResult,
     used: int,
-    secret: bytes | None,
+    secret: bytes,
     observer_bytes: int,
 ) -> None:
     """Charge the complete assessed envelope before its observation is delivered.

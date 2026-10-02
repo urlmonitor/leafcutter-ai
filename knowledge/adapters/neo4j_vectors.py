@@ -90,7 +90,9 @@ async def put_embeddings(
         raise ValueError("embedding content hash mismatch or unknown entity")
     if not await reserve(db, key, embeddings, model, dimensions, content_hashes):
         return
-    rows = [{"id": identifier, "vector": vector} for identifier, vector in embeddings.items()]
+    rows: list[dict[str, object]] = [
+        {"id": identifier, "vector": vector} for identifier, vector in embeddings.items()
+    ]
     names = await build_indexes(db, key, rows, model, dimensions)
     ready = bool(embeddings)
     await db._run(
@@ -126,7 +128,7 @@ async def semantic(
     manifest = await db.get_generation(repository_id, generation_id)
     if manifest is None:
         raise KnowledgeError("stale", "generation no longer available")
-    if not manifest.semantic_ready:
+    if not manifest.semantic_ready or manifest.embedding_dimensions is None:
         raise NotReady("semantic index is not ready")
     if model != manifest.embedding_model:
         raise ValueError("embedding model mismatch")

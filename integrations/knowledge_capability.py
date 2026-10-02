@@ -64,7 +64,7 @@ def to_kernel_evidence(
     )
     body = item.content
     artifact = None if body is not None else locator
-    digest = content_hash(body if body is not None else artifact)
+    digest = content_hash(body if body is not None else locator)
     stamp = now or utc_now()
     limitations = list(item.limitations)
     graph = {

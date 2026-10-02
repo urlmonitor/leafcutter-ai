@@ -4,15 +4,15 @@ GOAL: Preserve exact nested source quotations while retaining JSON-only validati
 BUSINESS CONTEXT: Trimming supplied source content changes its quoted evidence identity.
 ARCHITECTURE: Recursive JSON type used only at opaque transport boundaries; labels retain normal validation.
 """
-from typing import Annotated, Union
+from typing import Annotated
 from typing_extensions import TypeAliasType
 from pydantic import Field, StrictBool, StrictInt, StringConstraints
 
 VerbatimString = Annotated[str, StringConstraints(strict=True, strip_whitespace=False)]
 VerbatimJson = TypeAliasType(
     "VerbatimJson",
-    Union[dict[VerbatimString, "VerbatimJson"], list["VerbatimJson"], VerbatimString,
-          StrictInt, Annotated[float, Field(strict=True, allow_inf_nan=False)], StrictBool, None],
+    "dict[VerbatimString, VerbatimJson] | list[VerbatimJson] | VerbatimString | "
+    "StrictInt | Annotated[float, Field(strict=True, allow_inf_nan=False)] | StrictBool | None",
 )
 
 # DECISION HISTORY

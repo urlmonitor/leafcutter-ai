@@ -7,7 +7,7 @@ ARCHITECTURE: Dependencies point inward to neutral contracts; see docs/architect
 
 from __future__ import annotations
 
-from .ports import EmbeddingProvider, KnowledgeRetriever
+from .ports import EmbeddingProvider, ManagedKnowledgeRetriever
 
 from .errors import invalid
 
@@ -42,7 +42,7 @@ def build_retriever(
     *,
     embedding_provider: EmbeddingProvider | None = None,
     observer: object | None = None,
-) -> KnowledgeRetriever:
+) -> ManagedKnowledgeRetriever:
     """Compose an optional serving backend without starting the kernel.
 
     Args:
@@ -50,7 +50,7 @@ def build_retriever(
 
 
     Returns:
-        KnowledgeRetriever: Disabled retriever or configured service owning its selected database adapter.
+        ManagedKnowledgeRetriever: Disabled retriever or configured service owning its selected database adapter.
 
     Keyword-only embedding_provider: Optional caller-owned embedding provider.
     """
@@ -94,7 +94,7 @@ def build_retriever(
     )
 
 
-def build_embedding_provider(config: KnowledgeConfig | dict) -> EmbeddingProvider | None:
+def build_embedding_provider(config: KnowledgeConfig) -> EmbeddingProvider | None:
     """Select an explicit gateway only when enabled; credentials remain environment-owned.
 
     Args:

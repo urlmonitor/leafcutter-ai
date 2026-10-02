@@ -11,16 +11,19 @@ ARCHITECTURE: Dependencies point inward to neutral contracts; see docs/architect
 
 from __future__ import annotations
 
+from .contracts import Entity, ProjectionSnapshot
+from .ports import CompiledQueryBackend
+
 from .query_compile import compile_query
 from .query_models import QueryDescriptor, validate_arguments
 from .adapters.neo4j_backend import scope_key, entity_from_row
 from .errors import invalid, KnowledgeError
 
 
-class QueryRows(list):
+class QueryRows(list[Entity]):
     """Bounded entities with measured expansion-saturation metadata."""
 
-    def __init__(self, entities: list, truncated: bool) -> None:
+    def __init__(self, entities: list[Entity], truncated: bool) -> None:
         """Store query results and the lookahead outcome.
 
         Args:
@@ -32,14 +35,14 @@ class QueryRows(list):
 
 
 async def execute_query(
-    backend: object,
+    backend: CompiledQueryBackend,
     descriptor: QueryDescriptor,
     repository_id: str,
     generation_id: str,
     arguments: dict,
     limit: int = 200,
     fanout: int = 10,
-) -> list:
+) -> QueryRows:
     """Execute only compiled parameterized reads of a ready scoped generation.
 
     Args:
@@ -85,7 +88,7 @@ async def execute_query(
     return QueryRows(entities, truncated)
 
 
-def validate_mapping(descriptor: QueryDescriptor, manifest: object) -> None:
+def validate_mapping(descriptor: QueryDescriptor, manifest: ProjectionSnapshot) -> None:
     """Reject absent canonical memory mapping before issuing a query.
 
     Args:

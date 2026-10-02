@@ -72,7 +72,7 @@ def _entry(**changes):
 def test_mock_data_all_native_fields_and_nested_sample_values_are_preserved(tmp_path):
     # covers: KM-400a-1-xii
     # covers: KM-400a-3-i
-    # type: integration
+    # test type: integration
     # angle: criterion
     metadata = _metadata()
     metadata["future"] = {"unknown": [False, None, {}]}
@@ -89,7 +89,7 @@ def test_mock_data_all_native_fields_and_nested_sample_values_are_preserved(tmp_
 def test_mock_data_manifest_is_separate_and_unregistered_files_are_discovered(tmp_path):
     # covers: KM-400a-1-xii
     # covers: KM-400a-3-i
-    # type: integration
+    # test type: integration
     # angle: seam
     metadata = _metadata()
     _source(tmp_path, metadata)
@@ -123,15 +123,19 @@ def test_mock_data_manifest_is_separate_and_unregistered_files_are_discovered(tm
 def test_mock_data_real_corpus_preserves_all_records_and_unregistered_dataset():
     # covers: KM-400a-1-xii
     # covers: KM-400a-3-i
-    # type: integration
+    # test type: integration
     # angle: real_artifact
     root = Path(__file__).resolve().parents[2]
     records = _extract(root)
     paths = list((root / "docs/product-truth/mock-data").rglob("*.mock.json"))
     assert len(records) == len(paths) == 3
-    assert {record.source_path for record in records} == {p.relative_to(root).as_posix() for p in paths}
+    assert {record.source_path for record in records} == {
+        p.relative_to(root).as_posix() for p in paths
+    }
     manifest = json.loads((root / "docs/product-truth/index.json").read_text(encoding="utf-8-sig"))
-    registered = {entry["id"]: entry for entry in manifest["artifacts"] if entry["type"] == "mock_data"}
+    registered = {
+        entry["id"]: entry for entry in manifest["artifacts"] if entry["type"] == "mock_data"
+    }
     assert sum(record.derived["manifest_registered"] for record in records) == 2
     assert sum(len(record.metadata["entities"]) for record in records) == 9
     assert (
@@ -160,7 +164,7 @@ def test_mock_data_real_corpus_preserves_all_records_and_unregistered_dataset():
 def test_mock_data_missing_store_and_absent_values_are_not_defaulted(tmp_path):
     # covers: KM-400a-1-xii
     # covers: KM-400a-3-i
-    # type: unit
+    # test type: unit
     # angle: boundary
     assert _extract(tmp_path) == []
     metadata = {
@@ -181,7 +185,7 @@ def test_mock_data_missing_store_and_absent_values_are_not_defaulted(tmp_path):
 def test_mock_data_bad_source_fails_with_path(tmp_path, text):
     # covers: KM-400a-1-xii
     # covers: KM-400a-3-i
-    # type: unit
+    # test type: unit
     # angle: failure
     _source(tmp_path, text=text)
     with pytest.raises(ValueError, match="sample.mock.json"):
@@ -191,7 +195,7 @@ def test_mock_data_bad_source_fails_with_path(tmp_path, text):
 def test_mock_data_duplicate_native_ids_are_rejected(tmp_path):
     # covers: KM-400a-1-xii
     # covers: KM-400a-3-i
-    # type: unit
+    # test type: unit
     # angle: failure
     _source(tmp_path)
     _source(tmp_path, name="product/other")
@@ -211,7 +215,7 @@ def test_mock_data_duplicate_native_ids_are_rejected(tmp_path):
 def test_mock_data_manifest_escape_is_rejected(tmp_path, unsafe):
     # covers: KM-400a-1-xii
     # covers: KM-400a-3-i
-    # type: unit
+    # test type: unit
     # angle: boundary
     _source(tmp_path)
     _manifest(tmp_path, [_entry(path=unsafe)])
@@ -222,7 +226,7 @@ def test_mock_data_manifest_escape_is_rejected(tmp_path, unsafe):
 def test_mock_data_manifest_duplicate_and_mismatched_source_fail(tmp_path):
     # covers: KM-400a-1-xii
     # covers: KM-400a-3-i
-    # type: unit
+    # test type: unit
     # angle: failure
     _source(tmp_path)
     _manifest(tmp_path, [_entry(), _entry()])
@@ -236,7 +240,7 @@ def test_mock_data_manifest_duplicate_and_mismatched_source_fail(tmp_path):
 def test_mock_data_resolved_symlink_escape_fails_before_read(tmp_path, monkeypatch):
     # covers: KM-400a-1-xii
     # covers: KM-400a-3-i
-    # type: unit
+    # test type: unit
     # angle: boundary
     source = _source(tmp_path)
     original = Path.resolve
@@ -256,7 +260,7 @@ def test_mock_data_resolved_symlink_escape_fails_before_read(tmp_path, monkeypat
 def test_mock_data_unreadable_source_is_explicit(tmp_path, monkeypatch):
     # covers: KM-400a-1-xii
     # covers: KM-400a-3-i
-    # type: unit
+    # test type: unit
     # angle: failure
     source = _source(tmp_path)
     original = Path.read_text

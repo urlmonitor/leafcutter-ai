@@ -11,7 +11,8 @@ from typing import Any
 
 import re
 from kernel.capabilities.decision.jev_support import ask_jev, choice_question, make_batch, noul_question
-from knowledge.answer_models import AnswerRequirements
+from pydantic import JsonValue
+from knowledge.answer_models import AnswerRequirements, AnswerScope
 
 FIELDS = {
     "canonical_id": "The stable identities of the requested entities, such as which tests or ACs.",
@@ -83,8 +84,9 @@ async def plan_answer(ctx: Any, invocation: Any, state: dict) -> tuple[dict, lis
         choice_question("root", "knowledge.answer_contract.v1", "Which literal supplied ID is the intended population root?", roots)]
     questions += [noul_question("level." + level, "knowledge.answer_contract.v1",
         "Does the caller explicitly include hierarchy level " + level + "?") for level in ("L0", "L1", "L2", "L3")]
+    field_meanings: dict[str, JsonValue] = dict(FIELDS)
     answer = await ask_jev(ctx, invocation, make_batch(ctx, "knowledge.answer_contract",
-        {"original_question": question, "source_sha": state["source_sha"], "field_meanings": FIELDS}, questions))
+        {"original_question": question, "source_sha": state["source_sha"], "field_meanings": field_meanings}, questions))
     fields = [name for name in FIELDS if answer.noul("field." + name).probability >= ctx.config.research.need_required_threshold]
     population = _certain_choice(answer.choice("population"), POPULATIONS, ctx)
     scope = {"population": population or "returned_entities",
@@ -92,7 +94,7 @@ async def plan_answer(ctx: Any, invocation: Any, state: dict) -> tuple[dict, lis
         "inclusion": _certain_choice(answer.choice("inclusion"), INCLUSIONS, ctx),
         "levels": [level for level in ("L0", "L1", "L2", "L3")
             if answer.noul("level." + level).probability >= ctx.config.research.need_required_threshold] or None}
-    need = AnswerRequirements(original_question=question, required_fields=fields, scope=scope)
+    need = AnswerRequirements(original_question=question, required_fields=fields, scope=AnswerScope.model_validate(scope))
     requirements = need.model_dump(mode="json")
     if population is None:
         requirements["scope"]["population"] = None

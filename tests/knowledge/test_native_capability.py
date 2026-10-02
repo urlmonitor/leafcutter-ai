@@ -53,7 +53,7 @@ def _registry(root, entries, **context):
 def test_capability_all_fields_and_nested_extensions_round_trip(tmp_path):
     # covers: KM-400a-1-xiv
     # covers: KM-400a-3-i
-    # type: unit
+    # test type: unit
     # angle: criterion
     entry = _entry()
     entry.update(
@@ -92,7 +92,7 @@ def test_capability_all_fields_and_nested_extensions_round_trip(tmp_path):
 def test_capability_real_registry_exact_fields_and_no_defaults():
     # covers: KM-400a-1-xiv
     # covers: KM-400a-3-i
-    # type: integration
+    # test type: integration
     # angle: real_artifact
     root = Path(__file__).resolve().parents[2]
     raw = json.loads((root / "config/capability_registry.json").read_text(encoding="utf-8"))
@@ -122,7 +122,7 @@ def test_capability_real_registry_exact_fields_and_no_defaults():
 def test_capability_legacy_admission_does_not_read_references(tmp_path):
     # covers: KM-400a-1-xiv
     # covers: KM-400a-3-i
-    # type: unit
+    # test type: unit
     # angle: boundary
     entry = _entry()
     entry["admission"].update(
@@ -140,7 +140,7 @@ def test_capability_legacy_admission_does_not_read_references(tmp_path):
 def test_capability_source_order_and_changed_values_are_visible(tmp_path):
     # covers: KM-400a-1-xiv
     # covers: KM-400a-3-i
-    # type: unit
+    # test type: unit
     # angle: criterion
     first, second = _entry(), _entry()
     first["id"], second["id"] = "z.first", "a.second"
@@ -159,7 +159,7 @@ def test_capability_source_order_and_changed_values_are_visible(tmp_path):
 def test_capability_absent_and_empty_registry_do_not_invent_records(tmp_path):
     # covers: KM-400a-1-xiv
     # covers: KM-400a-3-i
-    # type: unit
+    # test type: unit
     # angle: boundary
     config = tmp_path / "config"
     config.mkdir()
@@ -179,7 +179,7 @@ def test_capability_absent_and_empty_registry_do_not_invent_records(tmp_path):
 def test_capability_malformed_envelope_fails_explicitly(tmp_path, contents):
     # covers: KM-400a-1-xiv
     # covers: KM-400a-3-i
-    # type: unit
+    # test type: unit
     # angle: failure
     path, _ = _registry(tmp_path, [])
     path.write_text(contents, encoding="utf-8")
@@ -193,7 +193,7 @@ def test_capability_malformed_envelope_fails_explicitly(tmp_path, contents):
 def test_capability_invalid_registry_identity_fails(tmp_path, field, value):
     # covers: KM-400a-1-xiv
     # covers: KM-400a-3-i
-    # type: unit
+    # test type: unit
     # angle: failure
     _registry(tmp_path, [_entry()], **{field: value})
     with pytest.raises(ValueError, match="capability"):
@@ -231,7 +231,7 @@ def test_capability_invalid_registry_identity_fails(tmp_path, field, value):
 def test_capability_malformed_entry_fails_explicitly(tmp_path, field, value):
     # covers: KM-400a-1-xiv
     # covers: KM-400a-3-i
-    # type: unit
+    # test type: unit
     # angle: failure
     entry = _entry()
     entry[field] = value
@@ -243,7 +243,7 @@ def test_capability_malformed_entry_fails_explicitly(tmp_path, field, value):
 def test_capability_duplicate_ids_fail_without_source_changes(tmp_path):
     # covers: KM-400a-1-xiv
     # covers: KM-400a-3-i
-    # type: unit
+    # test type: unit
     # angle: failure
     path, _ = _registry(tmp_path, [_entry(), _entry()])
     before = path.read_bytes()
@@ -255,7 +255,7 @@ def test_capability_duplicate_ids_fail_without_source_changes(tmp_path):
 def test_capability_resolved_source_cannot_escape_snapshot(tmp_path, monkeypatch):
     # covers: KM-400a-1-xiv
     # covers: KM-400a-3-i
-    # type: unit
+    # test type: unit
     # angle: boundary
     path, _ = _registry(tmp_path, [_entry()])
     original = Path.resolve
@@ -270,7 +270,7 @@ def test_capability_resolved_source_cannot_escape_snapshot(tmp_path, monkeypatch
 def test_capability_metadata_and_context_are_independent_copies(tmp_path, monkeypatch):
     # covers: KM-400a-1-xiv
     # covers: KM-400a-3-i
-    # type: unit
+    # test type: unit
     # angle: boundary
     _, raw = _registry(tmp_path, [_entry(), {**_entry(), "id": "second"}], extension={"nested": []})
     module = importlib.import_module("knowledge.native_types.capability")

@@ -6,11 +6,13 @@ ARCHITECTURE: Pure supplied-policy interpretation; actual retrieval overrides ca
 """
 
 from __future__ import annotations
+from typing import TypeGuard
+from .contracts import KnowledgeRetrievalResult
 from .assessment_evidence import structured
 from .assessment_proof import verification
 
 
-def readiness(payload: dict, evidence: list[dict], retrieval: object | None) -> dict:
+def readiness(payload: dict, evidence: list[dict], retrieval: KnowledgeRetrievalResult | None) -> dict:
     """Evaluate explicit equality clauses without inventing priority or readiness policy.
 
     Args:
@@ -21,8 +23,8 @@ def readiness(payload: dict, evidence: list[dict], retrieval: object | None) -> 
     Returns:
         Per-candidate clause interpretation and unresolved deployment/dependency limits.
     """
-    policies = [(item, structured(item)) for item in evidence if item.get("kind") == "policy"]
-    policies = [(item, value) for item, value in policies if _valid_policy(value)]
+    decoded = [(item, structured(item)) for item in evidence if item.get("kind") == "policy"]
+    policies = [(item, value) for item, value in decoded if _valid_policy(value)]
     if len(policies) != 1:
         return {
             "kind": "readiness",
@@ -50,7 +52,7 @@ def readiness(payload: dict, evidence: list[dict], retrieval: object | None) -> 
     }
 
 
-def _valid_policy(value: dict | None) -> bool:
+def _valid_policy(value: dict | None) -> TypeGuard[dict]:
     """Support only a declared nonempty set of exact field-equality clauses.
 
     Args:
@@ -74,7 +76,7 @@ def _valid_policy(value: dict | None) -> bool:
     )
 
 
-def _candidates(evidence: list[dict], retrieval: object | None) -> list[dict]:
+def _candidates(evidence: list[dict], retrieval: KnowledgeRetrievalResult | None) -> list[dict]:
     """Prefer actual canonical retrieval facts; never copy packet facts over them.
 
     Args:
