@@ -44,6 +44,6 @@ In order to give a live run the same corpus on every operating system and keep b
 
 ## Out of Scope
 - Changing deny globs or source definitions in `config/kernel_config.default.json`.
-- Re-recording the retrieval benchmark: its harness already reads the git file list.
+- Re-recording the retrieval benchmark. It scores a pinned commit's files (`TICKET-20261001-KernelBenchmarkPinnedCorpus`), so the production file policy does not change what it measures.
 
 ## Comments

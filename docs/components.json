@@ -145,7 +145,7 @@
           "name": "kernel-cli",
           "type": "cli_command",
           "path": "kernel/adapters/cli.py",
-          "shape": "python -m kernel <run|resume|status|cancel|gaps|install-skill> [--config FILE] [--env-file FILE] [--input-file FILE|-] --json. Prints exactly one JSON document on stdout (a RunEnvelope, a gaps document or an error payload). Exit codes: 0 envelope produced, 2 usage error, 3 input or submission rejected with state unchanged, 4 unknown run, 5 internal or environment error."
+          "shape": "python -m kernel <run|resume|status|cancel|gaps|decisions|install-skill> [--config FILE] [--env-file FILE] [--input-file FILE|-] --json. Prints exactly one JSON document on stdout (a RunEnvelope, a gaps document, a decisions result or an error payload). `decisions validate|index|publish --run-id R [--correct OLD_ID]` validates, indexes or explicitly publishes staged decision records into docs/decisions/ (no Jev key needed). Exit codes: 0 envelope produced, 2 usage error, 3 input or submission rejected with state unchanged, 4 unknown run, 5 internal or environment error."
         },
         {
           "name": "run-service-api",

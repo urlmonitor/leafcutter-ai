@@ -86,7 +86,8 @@ def _context(packet: dict[str, Any], ctx: KernelRuntime, budget: ShareBudget
         run_id=corr.run_id or "", scope=packet["scope"], config=ctx.config, jev=ctx.jev,
         tracer=ctx.tracer, corr=corr, artifacts=ctx.artifacts, budget=budget,
         evidence_lookup=lookup, clock=ctx.clock, cancel_probe=ctx.cancel_probe,
-        descriptor=packet["descriptor"], constraints=tuple(packet.get("constraints", ())))
+        descriptor=packet["descriptor"], constraints=tuple(packet.get("constraints", ())),
+        memory=ctx.memory)
 
 
 def cancelled_result(invocation: CapabilityInvocation) -> CapabilityResult:
@@ -154,6 +155,8 @@ __all__ = ["ELAPSED_KEY", "JEV_RESERVED_KEY", "ShareBudget", "cancelled_result",
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-01 [python-coder]: The worker's ExecutionContext carries the run's ColonyMemory.
+#   (#KernelDecisionStore)
 # - 2026-10-01 [python-coder]: ShareBudget reports what is left of its share, so the decision can
 #   reserve a final assessment and research can trim its plan to what is affordable.
 #   (#KernelV01/E)

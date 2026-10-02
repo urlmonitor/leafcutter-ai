@@ -35,6 +35,8 @@ from kernel.contracts.payloads import (
     SynthesisRequestPayload,
 )
 from kernel.contracts.work import RequestProposal
+from kernel.memory.models import DecisionRecord
+from kernel.memory.precedent import confirm_choices, confirm_text
 
 DEFAULT_MAX_OPTIONS = 5
 NAMED_BY = "caller_goal"
@@ -206,6 +208,15 @@ def design_choice_request(work: Working, question: str, why: str, choices: list[
                   structured=True, evidence=evidence)
 
 
+def precedent_request(work: Working, record: DecisionRecord, evidence_id: str) -> RequestProposal:
+    """Ask the human to reuse an applicable precedent or to decide anew (one short question)."""
+    return _human(
+        work, confirm_text(record),
+        "An earlier human-approved decision applies; only a human may reuse it. Precedent is "
+        "evidence, not authority.", confirm_choices(record), False, [record.id],
+        evidence=[evidence_id])
+
+
 def escalation_request(work: Working, reason: str, text: str, tied: list[Option]
                        ) -> RequestProposal:
     """Ask a human about a tie, preference, conflict or unidentified gap."""
@@ -217,6 +228,8 @@ def escalation_request(work: Working, reason: str, text: str, tied: list[Option]
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-01 [python-coder]: precedent_request is the short reuse-or-decide-anew question; it
+#   cites the precedent's evidence item and offers exactly two choices. (#KernelDecisionStore)
 # - 2026-10-01 [python-coder]: Decision-driven research plans exactly the categories the decision
 #   named and carries the Jev calls the decision reserves, so a round is affordable and bounded
 #   before it starts. (#KernelV01/E)

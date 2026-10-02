@@ -9,10 +9,11 @@ ARCHITECTURE: Pure data contracts. Decision and RoutingAssessment carry status i
 
 from __future__ import annotations
 
+from datetime import UTC, datetime
 from enum import StrEnum
 from typing import Literal
 
-from pydantic import Field, model_validator
+from pydantic import Field, field_validator, model_validator
 
 from kernel.contracts.base import KernelModel, PersistedModel, StableId, fail
 from kernel.contracts.enums import (
@@ -156,6 +157,18 @@ class Decision(PersistedModel):
     #: Why the kernel stopped researching and ranked the options for a human (design_judgement,
     #: no_progress, research_cap, budget_reserve); null while the decision is not a design one.
     design_reason: str | None = None
+    #: When the human approved (UTC); set by the kernel at the human answer, never by a model.
+    approved_at: datetime | None = None
+    #: Earlier approved decisions (`dec-<16hex>`) the kernel judged to apply and used as evidence.
+    precedent_ids: list[str] = Field(default_factory=list)
+
+    @field_validator("approved_at")
+    @classmethod
+    def _approved_at_is_utc(cls, value: datetime | None) -> datetime | None:
+        """Reject a naive approval time and normalise to UTC."""
+        if value is not None and (value.tzinfo is None or value.utcoffset() is None):
+            fail("approved_at must be timezone-aware (UTC)")
+        return value.astimezone(UTC) if value is not None else None
 
     def differs_from(self, other: Decision) -> bool:
         """True if the two records differ in anything but the clock (one decision, two statuses)."""
@@ -215,6 +228,9 @@ class RoutingAssessment(PersistedModel):
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-01 [python-coder]: Decision.approved_at (when the human approved) and precedent_ids
+#   (earlier decisions used as evidence) back the decision store: a record is filed only from a
+#   decision a human approved, and says which precedents it used. (#KernelDecisionStore)
 # - 2026-10-01 [python-coder]: Decision.design_reason records why the options were ranked for a
 #   human; it was only in the continuation state (the record showed null). (#KernelV01/F)
 # - 2026-10-01 [python-coder]: Criterion.kind (evidence_answerable by default) with kind_source,

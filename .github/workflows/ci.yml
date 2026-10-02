@@ -35,7 +35,9 @@
 #                scripts/commit_guardian/, scripts/doc_compliance/, and
 #                scripts/feedback/ pointing into .leafcutter/scripts/. Tests
 #                import from those paths at startup; without the build step they
-#                fail at import on a fresh clone (ADR-016). The suite runs under
+#                fail at import on a fresh clone (ADR-016). A step before pytest
+#                fetches the retrieval benchmark's pinned corpus commit (depth 1),
+#                read from tests/kernel/retrieval/benchmark_cases.json. The suite runs under
 #                AC_ENFORCE_STRICT=1 so AC-enforcement xfail-masking is off and
 #                genuinely-failing tests surface as real failures. Promoting this
 #                job to blocking WAS the BP-1200b deliverable; it is done, and the
@@ -220,6 +222,15 @@ jobs:
         # scripts/feedback/ pointing into .leafcutter/scripts/. Tests
         # add those paths to sys.path at import time (ADR-016).
         run: python scripts/build.py --target-dir .
+
+      - name: Fetch the retrieval benchmark's pinned corpus commit
+        # tests/kernel/retrieval scores the files of one recorded commit (`corpus_commit` in
+        # benchmark_cases.json), not this checkout, so docs-only changes cannot move its
+        # ratchets. The checkout above is depth 1, so fetch just that commit; without it the
+        # benchmark FAILS under CI (it only skips locally).
+        run: |
+          PIN=$(python -c "import json; print(json.load(open('tests/kernel/retrieval/benchmark_cases.json'))['corpus_commit'])")
+          git fetch --no-tags --depth=1 origin "$PIN"
 
       - name: Run test suite
         env:

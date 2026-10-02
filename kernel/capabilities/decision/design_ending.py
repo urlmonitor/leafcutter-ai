@@ -182,6 +182,8 @@ def choice_rationale(work: Working) -> str:
 def ranking_assessments(work: Working, cfg: DecisionConfig) -> list[CriterionAssessment]:
     """Return the per-option assessments recorded in the ranking the human was shown."""
     out: list[CriterionAssessment] = []
+    criteria = {c.id: c for c in work.criteria}
+    options = {o.id: o for o in work.options}
     for row in work.cont.design_ranking:
         for criterion_id, p in row.scores.items():
             outcome: Literal["pass", "fail", "uncertain"] = "uncertain"
@@ -191,7 +193,7 @@ def ranking_assessments(work: Working, cfg: DecisionConfig) -> list[CriterionAss
                 outcome = "fail"
             out.append(CriterionAssessment(
                 criterion_id=criterion_id, option_id=row.option_id, outcome=outcome,
-                evidence_ids=work.evidence_ids,
+                evidence_ids=work.evidence_for(criteria[criterion_id], options.get(row.option_id)),
                 provider_answer=ProviderAnswer(probabilities={"satisfies": p})))
     return out
 
@@ -199,6 +201,8 @@ def ranking_assessments(work: Working, cfg: DecisionConfig) -> list[CriterionAss
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-01 [python-coder]: The recorded per-option assessments cite the evidence relevant to
+#   each criterion and option instead of all evidence (round 8 defect e). (#KernelDecisionStore)
 # - 2026-10-01 [python-coder]: Criteria are classified only once the decision has evidence beyond
 #   patterns, and the kind question points at `evidence` as well as the repository: the live
 #   ADR-settled goal was ranked for a human at its first assessment (no evidence yet), before the

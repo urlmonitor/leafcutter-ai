@@ -115,8 +115,13 @@ class TestOutputSections(unittest.TestCase):
     def test_an_empty_bundle_says_no_findings_and_other_schemas_add_nothing(self) -> None:
         text = "\n".join(output_sections(schema_ids.EVIDENCE_BUNDLE, {"evidence": []}))
         self.assertIn("No findings", text)
-        self.assertEqual(output_sections(schema_ids.DECISION_REPORT, {"status": "resolved"}), [])
+        self.assertEqual(output_sections(schema_ids.HUMAN_ANSWER, {"choice_id": "x"}), [])
         self.assertEqual(output_sections(schema_ids.OPTIONS, None), [])
+
+    def test_a_decision_report_now_has_a_decision_section(self) -> None:
+        """The old expectation (nothing for a decision report) was stale: round 8 defect c."""
+        text = "\n".join(output_sections(schema_ids.DECISION_REPORT, {"status": "resolved"}))
+        self.assertIn("## Decision", text)
 
 
 if __name__ == "__main__":

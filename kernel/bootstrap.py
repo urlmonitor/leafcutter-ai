@@ -18,7 +18,7 @@ from __future__ import annotations
 
 import logging
 from collections.abc import Callable
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from functools import partial
 from pathlib import Path
 
@@ -31,6 +31,8 @@ from kernel.capabilities.retrieval import RepositoryRetrievalExecutor
 from kernel.config import KernelConfig, load_kernel_config, repo_root
 from kernel.capabilities.base import CapabilityExecutor
 from kernel.contracts import ExecutionMode, RegistrySnapshot
+from kernel.memory.backend import build_memory
+from kernel.memory.port import ColonyMemory, NullColonyMemory
 from kernel.observability.langfuse_tracer import LangfuseTracer
 from kernel.observability.redaction import Redactor
 from kernel.observability.tracer import Tracer
@@ -75,6 +77,7 @@ class KernelEnvironment:
         redactor: Masks secrets in packets before they leave the kernel.
         jev_factory: Builds the Jev port inside the running event loop; None when no credential
             is configured (runs that need Jev then report provider_unavailable).
+        memory: The approved-decision memory (file store or null, from `memory.backend`).
     """
 
     config: KernelConfig
@@ -89,6 +92,7 @@ class KernelEnvironment:
     tracer: Tracer
     redactor: Redactor
     jev_factory: Callable[[], JevPort] | None
+    memory: ColonyMemory = field(default_factory=NullColonyMemory)
 
     def shutdown(self) -> None:
         """Stop the tracer's background workers (once, at the end of the process)."""
@@ -106,6 +110,7 @@ class EnvironmentOverrides:
     bindings: BindingTable | None = None
     snapshot: RegistrySnapshot | None = None
     secrets: SecretSettings | None = None
+    memory: ColonyMemory | None = None
 
 
 def resolve_run_root(config: KernelConfig, root: Path) -> Path:
@@ -176,12 +181,15 @@ def build_environment(*, config_path: Path | None = None, env_file: Path | None 
         bindings=seams.bindings or build_bindings(snapshot), repo_root=root, run_root=run_root,
         run_store=FileRunStore(run_root), gap_store=FileGapStore(run_root),
         artifacts=FileArtifactStore(run_root), tracer=tracer,
-        redactor=Redactor(secrets.secret_values(), config.data_policy, deny), jev_factory=factory)
+        redactor=Redactor(secrets.secret_values(), config.data_policy, deny), jev_factory=factory,
+        memory=seams.memory or build_memory(config.memory, root, run_root))
 
 
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-01 [python-coder]: The memory backend is chosen here from `memory.backend` (file or
+#   null), so the kernel stays unaware of the store. (#KernelDecisionStore)
 # - 2026-10-01 10:40 [python-coder]: The environment holds a Jev *factory*, not an adapter: the
 #   adapter's pooled client is bound to one event loop and must be created and closed in the
 #   loop that runs the graph. (#KernelBootstrapV0/P7)

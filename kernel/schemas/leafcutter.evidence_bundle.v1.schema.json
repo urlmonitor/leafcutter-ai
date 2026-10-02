@@ -612,6 +612,26 @@
       "title": "Limitations",
       "type": "array"
     },
+    "need_evidence": {
+      "additionalProperties": {
+        "items": {
+          "type": "string"
+        },
+        "type": "array"
+      },
+      "title": "Need Evidence",
+      "type": "object"
+    },
+    "need_limitations": {
+      "additionalProperties": {
+        "items": {
+          "type": "string"
+        },
+        "type": "array"
+      },
+      "title": "Need Limitations",
+      "type": "object"
+    },
     "request_id": {
       "anyOf": [
         {

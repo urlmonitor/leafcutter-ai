@@ -19,6 +19,9 @@ related_docs:
   - docs/architecture/adrs/ADR-054-process-representation-and-maturity-model.md
   - docs/architecture/adrs/ADR-055-capability-registry-starts-empty.md
   - docs/architecture/adrs/ADR-056-colony-memory-evidence-reinforcement.md
+  - docs/architecture/adrs/ADR-059-decision-store-reviewable-yaml-records-now-graph-later.md
+  - docs/architecture/adrs/ADR-060-source-of-truth-and-approval-authority.md
+  - docs/architecture/adrs/ADR-061-identity-of-declared-and-learned-records.md
   - docs/how-to/run-the-decision-kernel.md
   - docs/how-to/inspect-kernel-traces-with-langfuse-mcp.md
   - docs/analysis/2026-10-01-decision-kernel-v0-demo-report.md
@@ -79,7 +82,7 @@ Registered in `docs/components.json` under `decision_kernel.exposed_interfaces`:
 
 | Interface | Where | Contract |
 |---|---|---|
-| CLI | `python -m kernel <run\|resume\|status\|cancel\|gaps\|install-skill>` | One JSON document on stdout; exit 0 envelope, 2 usage, 3 rejected, 4 unknown run, 5 internal |
+| CLI | `python -m kernel <run\|resume\|status\|cancel\|gaps\|decisions\|install-skill>` | One JSON document on stdout; exit 0 envelope, 2 usage, 3 rejected, 4 unknown run, 5 internal |
 | RunService API | `kernel/service.py` | `start_run`, `resume_run`, `get_run`, `cancel_run`, `list_gaps` |
 | `/leafcutter` skill | `kernel/adapters/claude_code/SKILL.md` | Transport-only Claude Code skill installed by `install-skill` |
 
@@ -93,6 +96,7 @@ Registered in `docs/components.json` under `decision_kernel.exposed_interfaces`:
 | Capability registry | New `config/capability_registry.json`, empty at start. Legacy agent and skill registries are never routed ([ADR-055](../adrs/ADR-055-capability-registry-starts-empty.md)). | [part 2](../../analysis/2026-09-30-decision-kernel-design-2-contracts-registry-config.md) |
 | Jev port | Bounded, batched classification through `langchain-typesafe`. Uncertainty is treated as data. | [part 4](../../analysis/2026-09-30-decision-kernel-design-4-jev-and-capabilities.md) |
 | Capabilities | Native `decision` and `research` graphs, the `retrieve.repository` adapter, and `host.*` handoffs. | [part 4](../../analysis/2026-09-30-decision-kernel-design-4-jev-and-capabilities.md) |
+| Decision store | `kernel/memory/`: the `ColonyMemory` port, file and null backends, the decision record, validation, the generated index and `decisions publish`. Approved decisions are filed under `docs/decisions/` and reused as precedent. | [ADR-059](../adrs/ADR-059-decision-store-reviewable-yaml-records-now-graph-later.md) |
 | Run root | `.leafcutter/kernel/`: checkpoints, run records, artifacts, interaction ledger, capability gaps. | [part 3](../../analysis/2026-09-30-decision-kernel-design-3-kernel-scheduler.md) |
 | Observability | Langfuse v4 traces that stay continuous across process restarts, correlation IDs on every observation, and redaction. | [part 5](../../analysis/2026-09-30-decision-kernel-design-5-client-observability.md) |
 
@@ -105,6 +109,9 @@ Registered in `docs/components.json` under `decision_kernel.exposed_interfaces`:
 | [ADR-054](../adrs/ADR-054-process-representation-and-maturity-model.md) | How process knowledge is held (workflow, policy/checklist or LLM-guided) and how it matures. |
 | [ADR-055](../adrs/ADR-055-capability-registry-starts-empty.md) | The capability registry starts empty. Legacy agents and skills enter only by recorded decision. |
 | [ADR-056](../adrs/ADR-056-colony-memory-evidence-reinforcement.md) | Colony memory: paths gain evidence from verified outcomes, never from usage alone. Decisions carry outcomes, and capability gaps drive what gets built next. V0 records the prerequisites only. |
+| [ADR-059](../adrs/ADR-059-decision-store-reviewable-yaml-records-now-graph-later.md) | Decision store: human-approved decisions are filed as YAML records under `docs/decisions/` behind a `ColonyMemory` port and reused as precedent; a graph backend can replace the files later. |
+| [ADR-060](../adrs/ADR-060-source-of-truth-and-approval-authority.md) | Git is canonical for published records; only a human approval creates a record; the kernel never writes the repository during a run; precedent is evidence, not authority. |
+| [ADR-061](../adrs/ADR-061-identity-of-declared-and-learned-records.md) | Existing ids stay; decisions get a kernel-minted `dec-<16hex>` id; a record is keyed by (repository_id, kind, id). |
 
 ## Specification
 

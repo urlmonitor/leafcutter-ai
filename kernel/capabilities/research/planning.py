@@ -34,6 +34,7 @@ from kernel.capabilities.research.targeting import (
     existing_locators,
     locator_sources,
     targeted,
+    with_symbol_locators,
 )
 from kernel.capabilities.retrieval.access import ReadPolicy
 from kernel.capabilities.retrieval.knowledge_map import PATHS_JSON, SCRIPT, trusted_root
@@ -203,7 +204,7 @@ def _candidates(ctx: ExecutionContext, need: EvidenceNeed, plan: Plan) -> list[S
 
 def _checked(root: Path, query: NeedQuery) -> NeedQuery:
     """Return the query with only the explicit locators that name a file that exists."""
-    kept = existing_locators(root, query.locators)
+    kept = with_symbol_locators(root, existing_locators(root, query.locators), query.hints)
     return query if kept == query.locators else NeedQuery(query.hints, kept)
 
 
@@ -268,6 +269,8 @@ def resolve_sources(ctx: ExecutionContext, needs: list[EvidenceNeed], plan: Plan
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-01 [python-coder]: Checked locators also gain `path::Symbol` for a contract or class
+#   the need's text names (round 8 defect f). (#KernelDecisionStore)
 # - 2026-10-01 [python-coder]: Every retrieval child carries `max_rerank_batches` (what the Jev
 #   calls beyond the plan and the requester's reserve afford per need), so deeper reranking stays
 #   within the decision's reserve. (#KernelV01/F)

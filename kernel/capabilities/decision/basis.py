@@ -48,13 +48,13 @@ def _grounding_followup(work: Working) -> Followup:
 
 def needs_grounding(work: Working) -> bool:
     """True if options are unknown, nothing is known about the option space and no research ran."""
-    return (not work.usable_options and not work.evidence
+    return (not work.usable_options and not work.grounding_evidence
             and GROUND_KEY not in work.cont.requested)
 
 
 def grounding_gap(work: Working) -> bool:
     """True if grounding research already ran yet no evidence exists to ground options in."""
-    return (not work.usable_options and not work.pending_ids and not work.evidence
+    return (not work.usable_options and not work.pending_ids and not work.grounding_evidence
             and GROUND_KEY in work.cont.requested)
 
 
@@ -88,6 +88,11 @@ def validate_basis(work: Working) -> Followup | None:
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-01 [python-coder]: Precedent evidence (added by the kernel from the memory port) no
+#   longer counts as caller-supplied evidence: it neither skips the grounding research nor
+#   satisfies the "research found something" check, and it stays in the options packet beside the
+#   researched evidence. Before, an applicable precedent left the host without any repository
+#   evidence to propose options from. (#KernelPrecedentSkipsGrounding)
 # - 2026-10-01 23:00 [python-coder]: Unknown options with no evidence are grounded first: the
 #   host that proposes options has no repository access, so without evidence in the packet it
 #   could only invent them. (#KernelBootstrapV0/GROUND)

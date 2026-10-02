@@ -12,7 +12,7 @@ ARCHITECTURE: ExecutionContext is a frozen dataclass of runtime dependencies tha
 from __future__ import annotations
 
 from collections.abc import Callable, Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Literal, Protocol, runtime_checkable
 
@@ -22,6 +22,7 @@ from kernel.contracts.capability import CapabilityDescriptor, CapabilityResult
 from kernel.contracts.evidence import Evidence
 from kernel.contracts.task import Scope
 from kernel.contracts.work import CapabilityInvocation
+from kernel.memory.port import ColonyMemory, NullColonyMemory
 from kernel.observability.tracer import Tracer
 from kernel.persistence.base import ArtifactStorePort
 from kernel.providers.base import JevPort
@@ -80,6 +81,8 @@ class ExecutionContext:
     cancel_probe: Callable[[], bool]
     descriptor: CapabilityDescriptor | None = None
     constraints: tuple[str, ...] = ()
+    #: Approved-decision memory: read precedent, stage a record (never written to the repository).
+    memory: ColonyMemory = field(default_factory=NullColonyMemory)
 
     def evidence(self, ids: Sequence[str]) -> list[Evidence]:
         """Return the evidence items for ids (unknown ids are omitted), in the given order."""
@@ -102,6 +105,9 @@ class CapabilityExecutor(Protocol):
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-01 [python-coder]: ExecutionContext carries the ColonyMemory port (null by default), so
+#   the decision capability reads precedent and stages records without knowing the backend.
+#   (#KernelDecisionStore)
 # - 2026-10-01 [python-coder]: A budget may also expose `available(resource)` (units left, None for
 #   unbounded); it is an optional capability read through call_costs.jev_available, so the
 #   BudgetPort protocol and its test doubles are unchanged. (#KernelV01/E)

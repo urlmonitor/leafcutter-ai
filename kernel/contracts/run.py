@@ -15,6 +15,7 @@ from datetime import datetime
 
 from pydantic import Field, JsonValue, model_validator
 
+from kernel.contracts import schema_ids
 from kernel.contracts.base import (
     KernelModel,
     PersistedModel,
@@ -125,6 +126,18 @@ class TraceRefs(KernelModel):
     observability: ObservabilityStatus = ObservabilityStatus.OK
 
 
+def with_trace_refs(output: OutputRef | None, refs: TraceRefs) -> OutputRef | None:
+    """Return a decision_report output with its `trace_refs` filled (other outputs unchanged).
+
+    The report payload used to carry `trace_refs: null`; the run knows its trace, so the payload
+    says where to inspect it (round 8 defect b).
+    """
+    if output is None or output.schema_id != schema_ids.DECISION_REPORT:
+        return output
+    payload = {**output.payload, "trace_refs": refs.model_dump(mode="json")}
+    return output.model_copy(update={"payload": payload})
+
+
 class UsageSummary(KernelModel):
     """Aggregated usage; None means unknown (never 0)."""
 
@@ -176,6 +189,8 @@ class RunEnvelope(KernelModel):
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-01 [python-coder]: with_trace_refs fills the decision report's trace_refs (finalize and
+#   the envelope both use it). (#KernelDecisionStore)
 # - 2026-10-01 22:00 [python-coder]: CapabilityGap gains `candidate_exclusions` (reason per
 #   considered capability) and `need_title` (readable text for titles); both are additive with
 #   defaults so stored observations still load, and neither enters the gap key.
