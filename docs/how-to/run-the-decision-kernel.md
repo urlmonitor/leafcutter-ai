@@ -77,6 +77,11 @@ The run root resolves independently of the shell's current directory, in this or
 (absolute as given), (3) a relative `paths.run_root` resolved against the kernel's own checkout,
 never the caller's cwd. A run started from one directory can be resumed from any other.
 
+When you run the kernel from a host, put `-P` after the interpreter (`PYTHONPATH=<repo> python -P -m kernel ...`).
+Without it `python -m kernel` puts the current directory first on `sys.path`, so a shell sitting in
+another checkout of this repository imports that checkout's `kernel/` package, whose empty run store
+answers `run_not_found`. The installed `/leafcutter` skill already includes `-P`.
+
 A relative `paths.run_root` resolves against the checkout (default `.leafcutter/kernel`, which is
 git-ignored). An invalid override exits 5 with `config_invalid`.
 

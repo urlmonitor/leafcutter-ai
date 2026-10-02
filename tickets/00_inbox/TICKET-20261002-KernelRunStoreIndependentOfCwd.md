@@ -28,13 +28,17 @@ agents:
 In order that a host can resume a run from wherever its shell happens to be, we need the kernel to find its run store the same way regardless of the current directory.
 
 ## Context
+- **CORRECTION (2026-10-02, supersedes the diagnosis below):** `repo_root()` already derives the root from the kernel package's own location, not from cwd. The real root cause: `python -m kernel` and `python -c` put the current directory first on `sys.path`. When the shell sits in another checkout of this repository (e.g. `worktrees/atlas-findability`), that checkout's `kernel/` package shadows the one on PYTHONPATH; its run store is empty, so `resume` exits 4 `run_not_found`. Verified: `PYTHONPATH=<runtime> python -c "import kernel; print(kernel.__file__)"` printed the atlas-findability kernel; the same with `python -P` printed the runtime kernel. Fix: every printed or installed command uses `-P` (`PYTHONPATH=<repo> <python> -P -m kernel`). The `LEAFCUTTER_KERNEL_RUN_ROOT` override from 54ff236e stays but does not fix this failure.
+- **SUPERSEDED diagnosis:** the original text follows.
 - **Live reproduction (2026-10-02):** `python -m kernel resume --run-id run-57d16125a4a94de0 …` with `PYTHONPATH` pointing at the runtime worktree failed with exit 4 `run_not_found` when the shell's current directory was another git worktree (`worktrees/atlas-findability`). The same command succeeded from the runtime worktree.
 - `kernel/bootstrap.py` `resolve_run_root(config, root)` takes `root` from `repo_root()` ("this checkout"), which follows the current directory's git repository, not the kernel package's own location.
 
 ## Scope (no acceptance criteria by user decision)
 - The default run root resolves from the kernel's own checkout (or an explicit config/env value), not from the caller's cwd. A run started from one directory can be resumed from any other.
 - Keep `--repo-root` and config overrides working, and document the resolution order in the run-the-kernel how-to.
-- Tests: start in directory A, resume from an unrelated git directory B: the run is found; an explicit override still wins.
+- Corrected scope: render `-P` into the `/leafcutter` skill command (`kernel/adapters/claude_code/install.py`) and document it in the run-the-kernel how-to; the Codex skill runs from the kernel checkout and is unaffected; `publish_command.py` is out of scope (another branch).
+- Test: `tests/kernel/adapters/test_safe_path_command.py` runs `python -P -m kernel gaps --json` from a dir holding a shadow `kernel/` package and asserts the real kernel ran.
+- (Superseded) Tests: start in directory A, resume from an unrelated git directory B: the run is found; an explicit override still wins.
 
 ## Comments
 
@@ -88,3 +92,7 @@ completion_manifest:
   pre_commit_hooks_pass: true
   commit_message_valid: true
   ticket_staged: true
+
+### 2026-10-02 16:00 — python-coder (status: ok)
+feedback-id: fb_2026-10-02_9ebe017a
+Corrected the diagnosis (cwd-first sys.path lets another checkout's kernel/ shadow PYTHONPATH). `command_line` in kernel/adapters/claude_code/install.py now renders `PYTHONPATH=<repo> <python> -P -m kernel`; how-to documents `-P`; new test tests/kernel/adapters/test_safe_path_command.py reproduces the shadowing via subprocess. Codex skill unaffected (runs from the kernel checkout); publish_command.py untouched.
