@@ -129,7 +129,10 @@ Research uses what the decision already knows. An option that cites `kernel/cont
 evidence ids it cites stay context. Queries lead with the goal, then the approved criteria and
 the option titles; `retrieval.max_query_terms` (48) bounds them. Gaps a synthesis named
 (`unknowns`) and the claims of options a human added become supporting needs with their own
-queries (`research.max_targeted_needs`, 2; the budget reserve: design docs, "As built round E").
+queries. Each option a human added gets its own claim need up to `research.max_claim_needs`
+(25); gap needs are capped separately by `research.max_targeted_needs` (2). An option the claim
+cap leaves out is named in the limitations, and the Jev-call budget may still trim needs (the
+budget reserve: design docs, "As built round E").
 
 A need is `satisfied` only if Jev also judges that the kept evidence **answers** the need's
 question (one `answers.<need>` question per satisfied need, inside the existing assess call,
