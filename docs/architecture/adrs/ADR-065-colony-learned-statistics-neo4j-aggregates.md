@@ -1,6 +1,6 @@
 ---
 title: "ADR-065: Colony Learned Statistics Live in Neo4j as Derived Aggregates — Supersedes ADR-057 in Part"
-description: "The colony memory store for learned statistics is Neo4j, not PostgreSQL. Statistics are precomputed aggregates that the application maintains in the graph after specific actions: derived, rebuildable, never canonical and never workflow state, reached through ADR-059's ColonyMemory port. One optional learning store instead of PostgreSQL beside a graph; ADR-057's optionality, hot-path, context, sharing, run-root and staging rules stay in force."
+description: "The colony memory store for learned statistics is Neo4j, not PostgreSQL. Statistics are precomputed aggregates that the application maintains in the graph after specific actions: derived, rebuildable, never canonical and never workflow state, reached through ADR-059's ColonyMemory port. One optional learning store instead of PostgreSQL beside a graph; ADR-057's optionality, hot-path, context, run-root and staging rules stay in force. Amendment 1 (2026-10-02): every added item that feeds an aggregate triggers a full rebuild, statistics use ADR-062's Neo4j settings from the project .env, an unavailable store is retried, and each client has its own store, superseding ADR-057 §8's shared colony memory."
 type: "adr"
 status: "active"
 created: "2026-10-02"
@@ -33,11 +33,18 @@ related_code:
 
 | Field | Value |
 |---|---|
-| Status | Accepted |
+| Status | Accepted, amended |
 | Date | 2026-10-02 |
+| Amended | 2026-10-02 — [Amendment 1](#amendment-1--2026-10-02--open-questions-answered-each-client-has-its-own-store): Open Questions 1, 3, 5 and 6 answered, 4 narrowed; ADR-057 §8 superseded. |
 | Deciders | BrainCandy |
 | Author | `adr-author`, recording BrainCandy's binding decision of 2026-10-02 |
-| Supersedes | [ADR-057](ADR-057-colony-memory-store-optional-postgres.md) in part: §1's store technology, §2, the §3 PostgreSQL implementation, §4's `LEAFCUTTER_COLONY_DB_URL`, §6, and the PostgreSQL and Supabase side of its Alternatives. §5 below lists what stays in force. |
+| Supersedes | [ADR-057](ADR-057-colony-memory-store-optional-postgres.md) in part: §1's store technology, §2, the §3 PostgreSQL implementation, §4's `LEAFCUTTER_COLONY_DB_URL`, §6, and the PostgreSQL and Supabase side of its Alternatives; by Amendment 1, also §8 (shared colony memory). §5 below lists what stays in force. |
+
+> **Read the Decision section together with
+> [Amendment 1](#amendment-1--2026-10-02--open-questions-answered-each-client-has-its-own-store).**
+> It records BrainCandy's answers of 2026-10-02: an added item that feeds an aggregate triggers a
+> full rebuild, statistics use ADR-062's Neo4j and settings, an unavailable store is retried, and
+> each client has its own store. There is no shared colony memory. ADR-057 §8 is superseded.
 
 ## Context
 
@@ -101,7 +108,8 @@ part 4, decision 4):
 - Use `NullColonyMemory` when no `LEAFCUTTER_NEO4J_URI` is set or the opt-out is set. This is
   ADR-057 §4's rule with the new settings, and §4 below carries it over.
 - Let a configured but unreachable store behave like Mode 0 for that run, with one warning and a
-  run limitation. This stays a recommendation (Open Question 5).
+  run limitation. This stayed a recommendation (Open Question 5). Amendment 1 (A1.4) answers it
+  with retry.
 - Keep statistics derived, rebuildable from Langfuse and run records, and never workflow state.
   The user's words cover this: statistics that are updated after actions are derived (§2).
 
@@ -123,9 +131,8 @@ part 4, decision 4):
   database feature.
 - The application MUST update the affected aggregates after specific actions. Routing MUST read
   the stored aggregates and MUST NOT compute statistics from raw records at read time.
-- Which actions trigger an update is open (Open Question 1). So are the aggregate model (Open
-  Question 2) and the choice between incremental updates and periodic rebuilds (Open
-  Question 3).
+- Amendment 1 settles which actions trigger an update (A1.1) and that each trigger runs a full
+  rebuild (A1.2). The aggregate model is open (Open Question 2).
 - Aggregates MUST be rebuildable from the records they are derived from: Langfuse traces and
   scores, and the run records the learning evaluator reads (ADR-057 §5). Losing the store MUST NOT
   lose canonical data.
@@ -151,8 +158,8 @@ part 4, decision 4):
 ### 4. Configuration: the Neo4j settings replace `LEAFCUTTER_COLONY_DB_URL`
 
 - Leafcutter MUST NOT read `LEAFCUTTER_COLONY_DB_URL` (ADR-057 §4). The `LEAFCUTTER_NEO4J_*`
-  settings that ADR-062 introduces, listed in Context, replace it. Whether the statistics share
-  ADR-062's database and credentials is open (Open Question 4).
+  settings that ADR-062 introduces, listed in Context, replace it. The statistics use the same
+  Neo4j and the same settings as ADR-062 (Amendment 1, A1.3).
 - `LEAFCUTTER_SELF_LEARNING=false` stays the explicit opt-out (ADR-057 §4).
 - The statistics store stays optional. Without a configured Neo4j store, or with the opt-out set,
   learned statistics MUST be off: nothing is recorded and no statistics are read. This MUST NOT
@@ -173,11 +180,11 @@ part 4, decision 4):
 | §5 The hot path reads the store, never Langfuse | In force. The store it reads is Neo4j |
 | §6 Conventional relational tables | Superseded by §2 here |
 | §7 Mandatory context dimensions | In force. Their encoding in the graph is part of Open Question 2 |
-| §8 Shared colony memory | In force. Its privacy stays open (Open Question 6) |
+| §8 Shared colony memory | Superseded by Amendment 1 (A1.5): each client has its own store, and there is no shared colony memory |
 | §9 The run root stays authoritative | In force |
 | §10 Staged adoption and its gates | In force |
-| Alternatives | Superseded: the PostgreSQL and Supabase side. Still rejected: Langfuse as the live store, SQLite or local files only, a mandatory store, a custom tracing backend |
-| Open Questions | 1 and 6 are restated here as Open Questions 6 and 5. The others stay open and now apply to the Neo4j store |
+| Alternatives | Superseded: the PostgreSQL and Supabase side. Still rejected: Langfuse as the live store, SQLite or local files only, a mandatory store, a custom tracing backend. The SQLite rejection's ADR-057 reason (no sharing, §8) fell with Amendment 1; it stays rejected because the store is Neo4j (§1 here) |
+| Open Questions | 1 and 6 were restated here as Open Questions 6 and 5, and Amendment 1 closes both. The others stay open and now apply to the Neo4j store. For 4, Amendment 1 (A1.1) settles when the aggregates are updated; placement stays open |
 
 ADR-058 is unchanged, except that its three-layer table (§6) now points at Neo4j through this ADR.
 
@@ -220,8 +227,9 @@ ADR-058 is unchanged, except that its three-layer table (§6) now points at Neo4
   from the graph. Two startup inputs meet: ADR-059's `memory.backend` and the Neo4j settings with
   the opt-out.
 - Carried from ADR-057: full learning still needs Langfuse, the store and an evaluator between
-  them. Learning is off by default, so early statistics are sparse and noisy. A shared store sends
-  context off the machine, and a database driver joins the kernel's dependencies.
+  them. Learning is off by default, so early statistics are sparse and noisy, and a database
+  driver joins the kernel's dependencies. ADR-057's shared-store privacy cost no longer applies,
+  because there is no shared store (Amendment 1, A1.5).
 
 ### Operational
 
@@ -246,8 +254,8 @@ ADR-058 is unchanged, except that its three-layer table (§6) now points at Neo4
   retrieval (ADR-062), a PostgreSQL store would be a second database technology for an optional
   feature.
 - **PostgreSQL for counters, Neo4j for the graph** (the review's part 4, decision 2, option b).
-  Rejected. Two stores double the setup, the secrets, the migrations and the shared-store privacy
-  question (ADR-057 Open Question 1) for every adopter who turns learning on.
+  Rejected. Two stores double the setup, the secrets and the migrations for every adopter who
+  turns learning on.
 - **Compute statistics on demand from Langfuse.** Rejected. Every routing decision would wait on a
   remote query over raw traces, and routing would depend on a service that is allowed to be
   unavailable. ADR-057 §5 and ADR-056 §8 forbid the hot path to query Langfuse.
@@ -257,29 +265,110 @@ ADR-058 is unchanged, except that its three-layer table (§6) now points at Neo4
 
 ## Open Questions
 
-This ADR explicitly does not decide:
+This ADR explicitly did not decide the questions below. Amendment 1 answers 1, 3, 5 and 6 and
+narrows 4. The numbers are kept so that citations stay stable.
 
-1. **Trigger actions.** Which actions update the aggregates. Candidates, none of them decided: a
-   run is finalized; an outcome score is attached to a decision or routing choice (ADR-058 §3); a
-   decision is approved or corrected (ADR-060 §2 and §5).
+1. **Trigger actions.** *Answered by Amendment 1 (A1.1).* Which actions update the aggregates.
+   Candidates were: a run is finalized; an outcome score is attached to a decision or routing
+   choice (ADR-058 §3); a decision is approved or corrected (ADR-060 §2 and §5).
 2. **The aggregate model.** Whether aggregates are nodes, properties or both, how they are keyed,
    how ADR-057 §7's context dimensions are encoded, and how the model is versioned (ADR-057 Open
    Question 2, applied to the graph).
-3. **Incremental update or periodic rebuild.** Whether each trigger updates aggregates
-   incrementally, whether a periodic or on-demand rebuild runs alongside, and how a missed update
-   is detected. This meets ADR-057 Open Question 4 (evaluator cadence and placement).
-4. **Sharing with ADR-062.** Whether the statistics use the same database and credentials as
-   ADR-062's projections, and how mutable aggregates stay outside its immutable generations.
-5. **An unreachable configured store.** ADR-057 Open Question 6 with the Neo4j settings. The
-   review recommends treating it like Mode 0 for that run, with one warning and a run limitation.
-6. **Privacy of a shared store.** ADR-057 Open Question 1, carried over: which fields may leave the
-   machine, and in what form. It must be settled before shared use.
+3. **Incremental update or periodic rebuild.** *Answered by Amendment 1 (A1.2): a full rebuild on
+   each trigger, and a missed update is repaired by the next rebuild (A1.4).* The question was
+   whether each trigger updates aggregates incrementally, whether a periodic or on-demand rebuild
+   runs alongside, and how a missed update is detected. It meets ADR-057 Open Question 4
+   (evaluator cadence and placement), whose placement half stays open.
+4. **Separation from ADR-062's generations.** *Narrowed by Amendment 1 (A1.3):* the statistics use
+   the same database and settings as ADR-062. Still open, and left to the build: how the mutable
+   aggregates stay apart from ADR-062's immutable projection generations, for example by labels
+   or by database name.
+5. **An unreachable configured store.** *Answered by Amendment 1 (A1.4): retry.* ADR-057 Open
+   Question 6 with the Neo4j settings. The review had recommended treating it like Mode 0 for that
+   run, with one warning and a run limitation.
+6. **Privacy of a shared store.** *Closed by Amendment 1 (A1.5): there is no shared store.* This
+   was ADR-057 Open Question 1: which fields may leave the machine for a shared store, and in what
+   form.
 7. **Hosting.** Whether adopters run Neo4j themselves or use a hosted service, whether a managed
    Leafcutter service follows later, and what an adopter must run to turn learning on.
 
+## Amendment 1 — 2026-10-02 — Open questions answered; each client has its own store
+
+| Field | Value |
+|---|---|
+| Amends | Decision §2, §4 and the §5 table; Open Questions 1, 3, 4, 5 and 6 |
+| Status | Accepted |
+| Deciders | BrainCandy |
+| Driven by | BrainCandy's answers of 2026-10-02 to this ADR's Open Questions |
+| Supersedes | [ADR-057](ADR-057-colony-memory-store-optional-postgres.md) §8 (shared colony memory), which §5 had carried over |
+
+BrainCandy answered the open questions on 2026-10-02:
+
+> "any time an item that aggregates is added. I would start with rebuild as it is probably fast?
+> yes same neo. retry if not available. statistics are build on other data, so should be fine
+> anyways. shared store? ah... no each client needs their own. so it uses the neo from .env"
+
+### A1.1 Trigger: every added item that feeds an aggregate
+
+- The aggregates MUST be updated whenever an item that feeds an aggregate is added, for example
+  a new outcome, decision or capability-gap record. This answers Open Question 1.
+- This settles when the aggregates are updated, the cadence half of ADR-057 Open Question 4.
+  Where the update runs, in-process or as a separate job, stays open.
+
+### A1.2 Update strategy: a full rebuild first
+
+- Each trigger MUST rebuild the aggregates in full. This answers Open Question 3.
+- The choice rests on BrainCandy's expectation that a rebuild is fast. That expectation has not
+  been measured.
+- Incremental maintenance is a later optimisation. It MUST be introduced only if rebuilds prove
+  too slow.
+
+### A1.3 The same Neo4j as ADR-062
+
+- The statistics MUST use the same Neo4j as ADR-062's knowledge retrieval, configured by the same
+  `LEAFCUTTER_NEO4J_*` settings in the project `.env` (§4). Leafcutter MUST NOT add a separate
+  set of Neo4j settings for statistics. This answers the database and credentials part of Open
+  Question 4.
+- How the mutable aggregates stay apart from ADR-062's immutable projection generations, for
+  example by labels or by database name, is left to the build. Open Question 4 keeps only this
+  part. Which of ADR-062's two credential pairs the statistics writes use is also left to the
+  build.
+
+### A1.4 An unavailable store: retry, and the next rebuild repairs
+
+- When Neo4j is not available, Leafcutter MUST retry the update. The number of retries and the
+  backoff are left to the build. This answers Open Question 5.
+- Statistics are derived from other data: Langfuse, run records and decision records (§2). A
+  missed or failed update is therefore repaired by the next rebuild (A1.2), and nothing is lost.
+- Statistics MUST NOT block a run.
+
+### A1.5 Each client has its own store
+
+- Each client, meaning each Leafcutter installation or project, MUST have its own statistics
+  store: the Neo4j configured in its own `.env`.
+- There MUST NOT be a cross-client or team-shared colony memory. This supersedes ADR-057 §8,
+  which §5 had carried over.
+- With no shared store, the shared-store privacy question (Open Question 6, ADR-057 Open
+  Question 1) falls away.
+
+### Consequences of this amendment
+
+- **Positive.** The first implementation needs one trigger rule and one update path, and a
+  missed update needs no repair procedure of its own. Retrieval and statistics share one Neo4j
+  and one set of settings. No context is pooled across clients.
+- **Negative.** A full rebuild on every added item costs more as the history grows, and its speed
+  is an expectation, not a measurement. ADR-057's team benefit is given up: evidence one client
+  gathers does not reach another client's routing or calibration, so each store fills more
+  slowly. Statistics and ADR-062's projections share one database, so keeping them apart rests on
+  the build (Open Question 4).
+- **Operational.** While Neo4j is unavailable, statistics lag until the next successful rebuild.
+  Beyond retrying and never blocking a run, this amendment decides no behaviour for an
+  unavailable store.
+
 ## References
 
-- Source: BrainCandy's decision of 2026-10-02, quoted in Context.
+- Source: BrainCandy's decision of 2026-10-02, quoted in Context, and BrainCandy's answers of the
+  same day, quoted in Amendment 1.
 - [ADR-057: Colony memory store, optional PostgreSQL](ADR-057-colony-memory-store-optional-postgres.md)
   (superseded in part by this ADR)
 - [ADR-056: Colony memory, evidence reinforcement](ADR-056-colony-memory-evidence-reinforcement.md)

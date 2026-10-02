@@ -1,6 +1,6 @@
 ---
 title: "ADR-057: Colony Memory Store — Optional PostgreSQL Behind a ColonyMemory Port"
-description: "ADR-056's performance store becomes the colony memory store: compact, context-dimensioned learned statistics in plain PostgreSQL, reached through a standard connection URL from the project-root .env and hidden behind one ColonyMemory port whose Null implementation keeps the rest of the kernel working. Cross-run learning is optional, the hot path never queries Langfuse, and any Postgres host works, a Supabase project included. Superseded in part by ADR-065 (2026-10-02): learned statistics live in Neo4j as derived aggregates behind ADR-059's ColonyMemory port; optionality with a Null default, the hot-path rule, context dimensions, shared memory, the run root and the staging ladder stay in force."
+description: "ADR-056's performance store becomes the colony memory store: compact, context-dimensioned learned statistics in plain PostgreSQL, reached through a standard connection URL from the project-root .env and hidden behind one ColonyMemory port whose Null implementation keeps the rest of the kernel working. Cross-run learning is optional, the hot path never queries Langfuse, and any Postgres host works, a Supabase project included. Superseded in part by ADR-065 (2026-10-02): learned statistics live in Neo4j as derived aggregates behind ADR-059's ColonyMemory port; optionality with a Null default, the hot-path rule, context dimensions, the run root and the staging ladder stay in force. ADR-065 Amendment 1 (2026-10-02) also supersedes §8: each client has its own store, and there is no shared colony memory."
 type: "adr"
 status: "active"
 created: "2026-09-30"
@@ -37,7 +37,7 @@ related_code:
 |---|---|
 | Status | Accepted, superseded in part |
 | Date | 2026-09-30 |
-| Superseded in part by | [ADR-065](ADR-065-colony-learned-statistics-neo4j-aggregates.md), 2026-10-02. See the note below. |
+| Superseded in part by | [ADR-065](ADR-065-colony-learned-statistics-neo4j-aggregates.md), 2026-10-02; §8 by [ADR-065 Amendment 1](ADR-065-colony-learned-statistics-neo4j-aggregates.md#amendment-1--2026-10-02--open-questions-answered-each-client-has-its-own-store), 2026-10-02. See the note below. |
 | Deciders | BrainCandy |
 | Author | `adr-author`, recording BrainCandy's binding decisions from the 2026-09-30 Langfuse and colony-memory-store discussion |
 | Supersedes | None. Names and places the "performance store" of [ADR-056](ADR-056-colony-memory-evidence-reinforcement.md) §8, and answers the first half of ADR-056 Open Question 5 (where the store lives and its format). |
@@ -47,12 +47,17 @@ related_code:
 > PostgreSQL. **Superseded:** §1's store technology, §2, the §3 PostgreSQL implementation, §4's
 > `LEAFCUTTER_COLONY_DB_URL` (replaced by the `LEAFCUTTER_NEO4J_*` settings), §6 (relational tables
 > become derived aggregates in the graph), and the PostgreSQL and Supabase side of the
-> Alternatives. **Still in force:** the store is optional with `NullColonyMemory` as the default and
-> is chosen once at startup (§3), the `LEAFCUTTER_SELF_LEARNING=false` opt-out (§4), and §5, §7,
-> §8, §9 and §10. The `ColonyMemory` port itself is now defined by
+> Alternatives. **Also superseded, by
+> [ADR-065 Amendment 1](ADR-065-colony-learned-statistics-neo4j-aggregates.md#amendment-1--2026-10-02--open-questions-answered-each-client-has-its-own-store)
+> (2026-10-02):** §8. Each client has its own store, the Neo4j configured in its own `.env`, and
+> there is no shared colony memory. The same amendment closes Open Questions 1 (shared-store
+> privacy) and 6 (an unreachable store is retried). **Still in force:** the store is optional with
+> `NullColonyMemory` as the default and is chosen once at startup (§3), the
+> `LEAFCUTTER_SELF_LEARNING=false` opt-out (§4), and §5, §7, §9 and §10. The `ColonyMemory` port
+> itself is now defined by
 > [ADR-059](ADR-059-decision-store-reviewable-yaml-records-now-graph-later.md)
-> (`kernel/memory/port.py`). The text below is unchanged; where it names PostgreSQL, Supabase or
-> `LEAFCUTTER_COLONY_DB_URL`, it describes the superseded store.
+> (`kernel/memory/port.py`). The text below is unchanged; where it names PostgreSQL, Supabase,
+> `LEAFCUTTER_COLONY_DB_URL` or a shared store, it describes the superseded design.
 
 ## Context
 

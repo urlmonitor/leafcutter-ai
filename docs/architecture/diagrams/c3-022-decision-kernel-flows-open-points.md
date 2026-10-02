@@ -46,7 +46,7 @@ keeps its number. None is resolved here.
 | Settled | OP-02 (as-built note), OP-15 (implemented in PR #972), OP-17 (ADR-065 §6) |
 | Partly settled | OP-04 and OP-08 (by the code), OP-05 (glossary read as text), OP-22 (record fields, ADR-061) |
 | Narrowed by ADR-059 to ADR-061 | OP-03 (precedent never enters routing), OP-06 (Git is canonical) |
-| Moved to ADR-065's open questions | OP-23, and the store parts of OP-19 and OP-25 |
+| Moved to ADR-065, then answered by its Amendment 1 (2026-10-02) | OP-23 (settled: retry), the trigger and rebuild parts of OP-19, and the shared-store privacy part of OP-25 (moot: one store per installation) |
 | New | OP-26 to OP-33 |
 
 ## A. Context and capabilities
@@ -132,8 +132,8 @@ keeps its number. None is resolved here.
 - **OP-18 Two roadmap tracks describe one store. Open.** `phase_kernel_4_trails` still says an
   analytics job "feeds a performance store". `phase_colony_1_collect` now names an optional Neo4j
   store. How the two tracks' exit criteria relate is not stated.
-- **OP-19 The learning evaluator. Open; partly moved.** Which actions trigger an update, and
-  incremental update versus rebuild, are ADR-065 open questions 1 and 3. Still open here: placement and
+- **OP-19 The learning evaluator. Open; partly settled.** ADR-065 Amendment 1 settles the trigger
+  (every added item that feeds an aggregate) and the strategy (full rebuild). Still open here: placement and
   inputs, including whether it reads the local `events.jsonl` (ADR-056 open question 5, ADR-057
   open question 4). Degraded runs are never re-exported, so an evaluator that reads only Langfuse
   undercounts them.
@@ -150,7 +150,9 @@ keeps its number. None is resolved here.
   `decision_type` and policy, template, model and kernel versions. Still missing: `task_type`
   anywhere and a decision type on observations (ADR-056 open question 4). Whether statistics
   reuse the records' `repository_id` is not stated.
-- **OP-23 A configured store that cannot be reached. Moved to ADR-065** (open question 5). For
+- **OP-23 A configured store that cannot be reached. Settled by ADR-065 Amendment 1:** retry
+  (count and backoff left to the build); statistics are derived, so the next rebuild repairs a
+  missed update, and they never block a run. For
   decision records the code decides: a missing or invalid index, or a read error, gives no precedent and a warning,
   and `decisions validate` is what fails.
 - **OP-24 Held-out cases. Open.** Spec §19.4 requires held-out evaluation, and ADR-058 notes that
@@ -159,8 +161,9 @@ keeps its number. None is resolved here.
 - **OP-25 Further open questions carried from the ADRs. Open; partly moved.** Ground truth for
   "correct", the decay function, the exploration rate and automatic threshold changes (ADR-056
   open questions 3, 1, 2, 6); retention and the calibration bar for INFLUENCE ROUTING (ADR-057
-  open questions 3, 7). Privacy of a shared store and schema versioning (ADR-057 open questions
-  1, 2) now sit with ADR-065 (open questions 6 and 2).
+  open questions 3, 7). Privacy of a shared store (ADR-057 open question 1) is moot: ADR-065
+  Amendment 1 gives each installation its own store. Schema versioning (ADR-057 open question 2)
+  sits with ADR-065 open question 2.
 
 ## D. Found on 2026-10-02
 
