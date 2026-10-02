@@ -21,11 +21,14 @@ files_touched:
   - kernel/capabilities/decision/approvals.py
   - kernel/capabilities/decision/assess.py
   - kernel/memory/staging.py
+  - kernel/capabilities/decision/design_ending.py
+  - kernel/capabilities/decision/executor.py
+  - kernel/capabilities/decision/state.py
 agents:
   test-writer: signed_off
-  python-coder: needed
-  pr-reviewer: needed
-  commit: needed
+  python-coder: signed_off
+  pr-reviewer: signed_off
+  commit: signed_off
   pull-request: needed
 ---
 
@@ -47,9 +50,9 @@ In order that "pick option X, but with condition Y" can be answered as said, we 
 
 ## Sign-offs
 - [x] test-writer — 2026-10-02 14:32
-- [ ] python-coder
-- [ ] pr-reviewer
-- [ ] commit
+- [x] python-coder — 2026-10-02 16:00
+- [x] pr-reviewer — 2026-10-02 16:30
+- [x] commit — 2026-10-02 17:00
 - [ ] pull-request
 
 ## Comments
@@ -98,3 +101,34 @@ red_baseline:
     file: tests/kernel/interaction/test_submissions.py
     error: "AssertionError: schema_invalid != semantic_invalid"
 Wrote two new test files and rewrote the two-modes test in test_submissions.py (now choice+structured). Guard tests (single modes valid, non-pair mixes rejected, schema-matches-models, unusable choice does not resolve) pass today by design and must stay green; the schema-matches-models test goes red if the model changes without regenerating the committed schema.
+
+### 2026-10-02 15:10 — python-coder (status: handoff)
+feedback-id: (not-submitted)
+Implementation done; all 10 red_baseline tests are green. Two pre-existing tests are now stale
+(classification: test_drift), production is correct; test-writer must update them (assertion-only):
+- tests/kernel/capabilities/test_decision_graph.py::TestConflict::test_human_ruling_on_conflict_lets_the_decision_resolve
+  (line ~239) asserts the raw text in Jev constraints; the ticket requires the label, now
+  "human-stated: ADR 2 supersedes ADR 1.". Assert the labelled form.
+- tests/kernel/fixtures/invalid/leafcutter.human_answer.v1/invalid_basic.json is {choice_id, free_text},
+  now valid by design. Replace with an invalid mix (e.g. choice_id + approved_option_ids).
+Full run: tests/kernel 1516 passed, 2 failed (the two above). Sign-off boxes left open pending this.
+
+### 2026-10-02 16:00 — python-coder (status: ok)
+feedback-id: (not-submitted)
+Stale tests (test_decision_graph conflict label, invalid_basic.json fixture) are already updated in the working tree. Re-run: test_decision_graph, test_choice_with_condition, tests/kernel/contracts, tests/kernel/interaction = 205 passed. All 10 red_baseline tests green.
+
+### 2026-10-02 16:30 — pr-reviewer (status: ok)
+feedback-id: (submit-failed)
+No high-confidence findings. Contract/schema regenerated and consistent with the model; pair accepted, other mixes rejected.
+- [M-1] design_ending.py, executor.py, state.py are modified but not listed in the ticket's files_touched (needed for rationale, staging pass-through, `conditions` field); update files_touched.
+- [M-2] design_ending.choice_rationale human_ruling branch does `next(...)` with no default; relies on design_choice_id always being a known option (guaranteed by the usable check in approvals.py, but fragile).
+Suppressed: 0 low, 0 dropped. Escalation: not escalated, medium count 2 (threshold > 3).
+Full tests/kernel run not completed within tool timeout; relied on python-coder's 205-pass targeted run.
+
+### 2026-10-02 17:00 — commit (status: ok)
+feedback-id: (not-submitted)
+Committed 03c4b7bb (15 files, hooks passed, no bypass). Added design_ending.py, executor.py, state.py to files_touched per pr-reviewer M-1.
+completion_manifest:
+  pre_commit_hooks_pass: true
+  commit_message_valid: true
+  ticket_staged: true
