@@ -51,8 +51,24 @@ class TestGoalFirstTerms(unittest.TestCase):
         self.assertTrue(TAIL <= set(terms), sorted(TAIL - set(terms)))
 
     def test_template_filler_ranks_after_the_goal(self) -> None:
+        """Kept from V0.1: filler never precedes the goal (round E went further: see below)."""
         terms = build_query_terms(TEMPLATE + GOAL, hints=[GOAL], max_terms=48)
-        self.assertGreater(terms.index("concrete"), terms.index("recorded"))
+        for filler in ("concrete", "candidates", "items", "facts"):
+            self.assertTrue(filler not in terms or terms.index(filler) > terms.index("recorded"))
+
+    def test_template_filler_is_not_searched_at_all(self) -> None:
+        """Round E (D5): category-template words are not content terms when hints exist."""
+        terms = build_query_terms(TEMPLATE + GOAL, hints=[GOAL], max_terms=48)
+        for filler in ("concrete", "candidates", "items", "facts", "scope"):
+            self.assertNotIn(filler, terms)
+
+    def test_a_category_description_does_not_leak_into_the_query(self) -> None:
+        question = ("Official documentation or specifications that define how a technology is "
+                    "meant to be used. Question: " + GOAL)
+        terms = build_query_terms(question, hints=[GOAL], max_terms=48)
+        for filler in ("official", "specifications", "technology", "meant"):
+            self.assertNotIn(filler, terms)
+        self.assertTrue(TAIL <= set(terms))
 
     def test_criteria_text_reaches_the_query_beside_a_long_goal(self) -> None:
         terms = build_query_terms(TEMPLATE + GOAL, hints=[GOAL, CRITERIA], max_terms=48)

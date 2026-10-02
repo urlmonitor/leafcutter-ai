@@ -9,6 +9,10 @@ ENTROPY_HIGH:docs/agents/README.md:430
 ENTROPY_HIGH:docs/agents/README.md:431
 ENTROPY_HIGH:docs/agents/README.md:432
 ENTROPY_HIGH:docs/how-to/working-with-leafcutter.md:63
+# False positive: shell example in a how-to doc setting a long SCREAMING_SNAKE env-var
+# name (LEAFCUTTER_SHARED_LAYOUT_INTEGRITY_REPORT) to a file path -- not a secret.
+# Glob, not per-line, per CLAUDE.md: line numbers in how-to prose shift.
+ENTROPY_HIGH:docs/how-to/verify-shared-layout-stays-read-only.md:*
 ENTROPY_HIGH:templates/skills/ticket-authoring/SKILL.md:42
 ENTROPY_HIGH:templates/agents/llm-expert.md:39
 ENTROPY_HIGH:templates/agents/llm-expert.md:104

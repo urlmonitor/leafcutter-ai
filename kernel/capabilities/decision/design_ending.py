@@ -12,10 +12,12 @@ ARCHITECTURE: Pure functions over Working and the ranking. Followup building liv
 
 from __future__ import annotations
 
+import re
 from typing import Literal
 
 from kernel.capabilities.decision.assess import Assessment
 from kernel.capabilities.decision.ranking import (
+    BUDGET_RESERVE,
     DESIGN_JUDGEMENT,
     NO_PROGRESS,
     RESEARCH_CAP,
@@ -34,6 +36,11 @@ from kernel.contracts.enums import DecisionStatus, MissingKnowledge
 from kernel.contracts.interaction import Choice
 
 KIND_SOURCE_JEV = "jev"
+KIND_SOURCE_RULE = "rule"
+#: A criterion phrased as a yes/no question about how something behaves once built ("Does it ...",
+#: "Can the ... ", "Is ..."): the grammar of a criterion that evaluates an option.
+_EVALUATES_OPTION = re.compile(
+    r"^\W*(?:does|do|can|could|is|are|will|would|should|must|has|have)\b", re.IGNORECASE)
 DESIGN_PHASE = "awaiting_design_choice"
 _WHY = {
     DESIGN_JUDGEMENT: "The required criteria are properties of the proposed options themselves; "
@@ -42,23 +49,57 @@ _WHY = {
                  "is not converging, so a human decides.",
     RESEARCH_CAP: "The research-round limit for this decision was reached without a settled "
                   "answer, so a human decides.",
+    BUDGET_RESERVE: "The Jev call budget (limits.max_jev_calls) cannot fund another research "
+                    "round beside the assessment kept in reserve, so this ranking rests on the "
+                    "evidence gathered so far and a human decides.",
 }
 
 
-def apply_kinds(work: Working, a: Assessment, cfg: DecisionConfig) -> None:
-    """Record Jev's classification on every criterion that had none (mutates work.criteria).
+def options_are_proposals(work: Working) -> bool:
+    """True if every usable option is a proposal (generated, human-added or named in the goal).
 
-    A criterion is a design judgement when Jev's probability reaches design_judgement_threshold;
-    an uncertain classification stays evidence_answerable (the behaviour before this ending).
+    Such options do not exist yet, so a criterion about them is judged on how each would behave
+    once built. Options a caller supplied as structured input may be existing artifacts (two
+    database engines already in use) and do not count.
     """
+    options = work.usable_options
+    return bool(options) and all(o.proposed_by is not None for o in options)
+
+
+def evaluates_option(question: str) -> bool:
+    """True if the criterion text is a yes/no question about how something would behave."""
+    return bool(_EVALUATES_OPTION.match(question))
+
+
+def apply_kinds(work: Working, a: Assessment, cfg: DecisionConfig) -> None:
+    """Record the kind of every criterion that had none (mutates work.criteria).
+
+    A criterion is a design judgement when Jev's probability reaches design_judgement_threshold.
+    Backstop (rule): while the options are proposals, a criterion phrased as a question about the
+    option ("Does it ...", "Can ... ?", "Is ... ?") is also a design judgement unless Jev is
+    confident it is evidence-answerable, that is its probability is below 1 - threshold. Round 6
+    classified six such criteria as evidence-answerable with probabilities between 0.12 and 0.54,
+    so the ending never fired. Anything else stays evidence_answerable.
+
+    Nothing is classified while the decision has no basis beyond existing-implementation patterns:
+    a criterion is a design judgement because evidence cannot settle it, which cannot be said
+    before any evidence was looked at (a decision an ADR settles was ranked for a human live,
+    because Jev classified its criteria before the ADR had been retrieved).
+    """
+    if not work.has_decision_basis:
+        return  # nothing has been shown to be unsettled by evidence: classify once evidence exists
+    proposals = options_are_proposals(work)
     for index, criterion in enumerate(work.criteria):
         probability = a.design.get(criterion.id)
         if probability is None or criterion.kind_source is not None:
             continue
-        kind = (CriterionKind.DESIGN_JUDGEMENT if probability >= cfg.design_judgement_threshold
-                else CriterionKind.EVIDENCE_ANSWERABLE)
-        work.criteria[index] = criterion.model_copy(update={
-            "kind": kind, "kind_source": KIND_SOURCE_JEV})
+        source = KIND_SOURCE_JEV
+        design = probability >= cfg.design_judgement_threshold
+        if (not design and proposals and evaluates_option(criterion.question)
+                and probability >= 1.0 - cfg.design_judgement_threshold):
+            design, source = True, KIND_SOURCE_RULE
+        kind = CriterionKind.DESIGN_JUDGEMENT if design else CriterionKind.EVIDENCE_ANSWERABLE
+        work.criteria[index] = criterion.model_copy(update={"kind": kind, "kind_source": source})
 
 
 def band(probability: float, cfg: DecisionConfig) -> str:
@@ -158,6 +199,15 @@ def ranking_assessments(work: Working, cfg: DecisionConfig) -> list[CriterionAss
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-01 [python-coder]: Criteria are classified only once the decision has evidence beyond
+#   patterns, and the kind question points at `evidence` as well as the repository: the live
+#   ADR-settled goal was ranked for a human at its first assessment (no evidence yet), before the
+#   ADR that settles it was retrieved. (#KernelV01/E)
+# - 2026-10-01 [python-coder]: Deterministic backstop for the kind (source "rule"): with proposed
+#   options, a criterion worded as a yes/no question about the option is a design judgement
+#   unless Jev is confident (P below 1 - design_judgement_threshold) that facts settle it. The
+#   wording test is code because it is grammar, the confidence escape keeps Jev's say on
+#   criteria about existing facts. (#KernelV01/E)
 # - 2026-10-01 [python-coder]: Criterion kind is classified by Jev (a bounded semantic reading, so
 #   ADR-053 gives it to Jev, not to code; a code rule such as "generated options mean design
 #   criteria" would misfile criteria that quote a repository fact). The human question's choices

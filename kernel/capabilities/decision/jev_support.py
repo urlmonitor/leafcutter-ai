@@ -18,18 +18,21 @@ import logging
 from pydantic import JsonValue
 
 from kernel.capabilities.base import ExecutionContext
+from kernel.capabilities.call_costs import jev_available, provider_calls
 from kernel.contracts.capability import CapabilityResult, ErrorInfo, Usage
 from kernel.contracts.enums import ResultStatus
 from kernel.contracts.evidence import Evidence
 from kernel.contracts.work import CapabilityInvocation, ChildOutcome
 from kernel.providers.base import (
     JevBatch,
+    JevError,
     JevInvalidResponse,
     JevPayloadTooLarge,
     JevResult,
     JevUnavailable,
     QuestionSpec,
 )
+from kernel.providers.jev_errors import JevBudgetExhausted
 
 logger = logging.getLogger(__name__)
 
@@ -65,11 +68,12 @@ def blocked_result(invocation: CapabilityInvocation, code: str, message: str, *,
         error=ErrorInfo(code=code, message=message), limitations=[message])
 
 
-def noul_question(question_id: str, template_id: str, instructions: str) -> QuestionSpec:
-    """Build a versioned noul question spec."""
+def noul_question(question_id: str, template_id: str, instructions: str, *,
+                  criteria: dict[str, str] | None = None, version: str = QUESTION_REV
+                  ) -> QuestionSpec:
+    """Build a versioned noul question spec (optionally with explicit true/false criteria)."""
     return QuestionSpec(id=question_id, kind="noul", template_id=template_id,
-                        template_version=QUESTION_REV,
-                        instructions=instructions)
+                        template_version=version, instructions=instructions, criteria=criteria)
 
 
 def choice_question(question_id: str, template_id: str, instructions: str,
@@ -86,14 +90,25 @@ def make_batch(ctx: ExecutionContext, purpose: str, state: dict[str, JsonValue],
     return JevBatch(purpose=purpose, state=state, questions=questions, correlation=ctx.corr)
 
 
-async def ask_jev(ctx: ExecutionContext, invocation: CapabilityInvocation, batch: JevBatch
-                  ) -> JevResult:
+def _completed(exc: JevError) -> list[Usage]:
+    """Return the usage of the provider calls that finished before the error (maybe none)."""
+    return [exc.completed_usage] if exc.completed_usage is not None else []
+
+
+async def ask_jev(ctx: ExecutionContext, invocation: CapabilityInvocation, batch: JevBatch,
+                  *, prior_usage: list[Usage] | None = None) -> JevResult:
     """Reserve budget, call Jev and map provider errors to a stopped invocation.
+
+    The whole batch must fit the budget before the first call is made: a chunked assessment is
+    refused up front instead of being aborted half scored. Any result built on a stop carries the
+    usage of calls already made (`prior_usage` of this invocation and the finished chunks of this
+    batch), so usage, cost and the budget agree even when a stop happens.
 
     Args:
         ctx: Execution context (budget and provider).
         invocation: The running invocation (for result ids).
         batch: The batch to send.
+        prior_usage: Usage of Jev calls this invocation already made.
 
     Returns:
         JevResult: The provider answers.
@@ -101,22 +116,34 @@ async def ask_jev(ctx: ExecutionContext, invocation: CapabilityInvocation, batch
     Raises:
         StopCapability: Cancelled, budget refused, or the provider failed or answered badly.
     """
+    spent = list(prior_usage or [])
     if ctx.cancelled():
-        raise StopCapability(blocked_result(invocation, "cancelled", "run cancelled"))
+        raise StopCapability(blocked_result(invocation, "cancelled", "run cancelled", usage=spent))
+    needed, left = provider_calls(len(batch.questions), ctx.config), jev_available(ctx.budget)
+    if left is not None and left < needed:
+        raise StopCapability(blocked_result(
+            invocation, "budget_exhausted",
+            f"jev call budget exhausted: this batch needs {needed} provider call(s), {left} left",
+            usage=spent))
     if not ctx.budget.reserve("jev"):
         raise StopCapability(blocked_result(invocation, "budget_exhausted",
-                                            "jev call budget exhausted"))
+                                            "jev call budget exhausted", usage=spent))
     try:
         return await ctx.jev.assess(batch)
+    except JevBudgetExhausted as exc:  # not retryable: the budget will not grow by retrying
+        raise StopCapability(blocked_result(
+            invocation, "budget_exhausted", f"jev call budget exhausted: {exc.reason}",
+            usage=[*spent, *_completed(exc)])) from exc
     except JevUnavailable as exc:
         raise StopCapability(failed_result(invocation, "provider_unavailable", exc.reason,
-                                           retryable=True)) from exc
+                                           retryable=True,
+                                           usage=[*spent, *_completed(exc)])) from exc
     except JevInvalidResponse as exc:
         raise StopCapability(failed_result(invocation, "invalid_provider_response",
-                                           exc.reason)) from exc
+                                           exc.reason, usage=[*spent, *_completed(exc)])) from exc
     except JevPayloadTooLarge as exc:
         raise StopCapability(failed_result(invocation, "payload_too_large",
-                                           str(exc))) from exc
+                                           str(exc), usage=[*spent, *_completed(exc)])) from exc
 
 
 def excerpt_limit(ctx: ExecutionContext, count: int) -> int:
@@ -165,6 +192,10 @@ def load_output_payload(ctx: ExecutionContext, outcome: ChildOutcome
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-01 [python-coder]: ask_jev refuses a batch that does not fit the budget before the
+#   first call (no half-scored assessment), treats a mid-assessment budget refusal as a
+#   non-retryable `budget_exhausted` (it was retried and blocked before) and keeps the usage of
+#   calls that finished. (#KernelV01/E)
 # - 2026-09-30 23:00 [python-coder]: Child payloads are read via ctx.artifacts because
 #   ChildOutcome carries only result_ref; P4 must make result_ref resolvable there.
 #   (#KernelBootstrapV0/P5)

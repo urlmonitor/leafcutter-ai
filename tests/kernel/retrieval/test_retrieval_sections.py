@@ -233,7 +233,7 @@ class TestAFolderOfFortySixFiles(SearchCase):
             self.write(f"big/f{n:03d}.md", "# T\n" + "decision record\n" * 5)
         report = _search(self.root, ["big"], self.question)
         self.assertEqual(len(report.candidates), CFG.max_candidates)
-        self.assertTrue(any("source cap" in note and "not offered" in note
+        self.assertTrue(any("source cap" in note and "had no section offered" in note
                             for note in report.notes), report.notes)
 
     def test_the_cap_scales_with_source_size_under_max_candidates(self) -> None:
@@ -246,7 +246,10 @@ class TestAFolderOfFortySixFiles(SearchCase):
         source = SourceConfig(id="repo.analysis", kind="repo_text",
                               categories=[EvidenceCategory.TASK_CONTEXT],
                               roots=["docs/analysis"])
-        cfg = cfg.model_copy(update={"sources": [source]})
+        # the whole pool goes to rerank here: with the default batch of 20 the concept file, which
+        # has few term hits, is a pool member but not in the first 20 by strength (round E)
+        cfg = cfg.model_copy(update={"sources": [source], "retrieval": cfg.retrieval.model_copy(
+            update={"rerank_max_per_need": cfg.retrieval.max_candidates})})
         jev = ScriptedJev().script("retrieval.rerank", "relevant.*", noul_answer(0.9))
         need = EvidenceNeed(id="need.task_context", category=EvidenceCategory.TASK_CONTEXT,
                             question=self.question)

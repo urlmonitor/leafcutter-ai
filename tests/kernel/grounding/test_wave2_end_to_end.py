@@ -36,6 +36,7 @@ from kernel.providers.jev import TypeSafeJevAdapter
 from kernel.providers.jev_wire import RawResponse
 from tests.kernel.helpers import as_type, make_scope, narrow
 from tests.kernel.integration.scenario_support import ScenarioCase
+from tests.kernel.interaction.support import raw_submission
 
 GOAL = "Where should decision records live so later runs can find them as precedent?"
 CONTRACT = "kernel/contracts/decision.py"
@@ -119,9 +120,23 @@ class TestDesignDecisionEndToEnd(ScenarioCase):
                          input_payload_schema=schema_ids.DECISION_REQUEST,
                          input_payload=payload.model_dump(mode="json"))
 
+    def synthesis_answer(self, envelope):
+        """Answer the host synthesis packet: the colony document is only a proposal."""
+        packet = narrow(envelope.pending_interaction).model_dump(mode="json")
+        response = {"findings": [{
+            "kind": "inference", "producer": "host.synthesize",
+            "claim": "Decision records are stored nowhere today; the colony document proposes it.",
+            "supporting_evidence_ids": packet["input_evidence_ids"][:1]}], "unknowns": []}
+        return raw_submission(packet, envelope.run_id, kind=ActorKind.HOST, response=response,
+                              actor_id="host:fake", relayed_by="fake-host-responder")
+
     async def run_it(self):
-        """Start the run; it must end by asking a human."""
+        """Start the run; the colony need stays partial, so the host synthesizes first (round F);
+        the run must end by asking a human."""
         envelope = await self.service().start_run(self.task_with_cited_option())
+        while envelope.status == RunStatus.WAITING_HOST:
+            envelope = await self.service().resume_run(envelope.run_id,
+                                                       self.synthesis_answer(envelope))
         self.assertEqual(envelope.status, RunStatus.WAITING_HUMAN, envelope.status)
         return envelope
 
@@ -179,9 +194,12 @@ class TestDesignDecisionEndToEnd(ScenarioCase):
         provider_calls = self.transport.requests
         self.assertGreater(provider_calls, 1)
         self.assertEqual(budgets.jev_calls, provider_calls)
-        self.assertEqual(sum(row.calls for row in budgets.usage_rows), provider_calls)
+        # the host synthesis is a second provider; only Jev's rows are provider calls
+        self.assertEqual(sum(r.calls for r in budgets.usage_rows if r.provider == "jev"),
+                         provider_calls)
         self.assertEqual(envelope.usage_summary.jev_calls, provider_calls)
-        self.assertEqual(sum(u.calls for u in envelope.usage_summary.usage), provider_calls)
+        self.assertEqual(sum(u.calls for u in envelope.usage_summary.usage
+                             if u.provider == "jev"), provider_calls)
         self.assertEqual(len(generations), provider_calls)
         self.assertLessEqual(provider_calls, self.config.limits.max_jev_calls)
 

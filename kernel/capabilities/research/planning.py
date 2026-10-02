@@ -20,11 +20,18 @@ from pathlib import Path
 from pydantic import JsonValue
 
 from kernel.capabilities.base import ExecutionContext
+from kernel.capabilities.call_costs import (
+    batch_allowance,
+    jev_available,
+    judgement_calls,
+    rerank_calls,
+)
 from kernel.capabilities.decision.jev_support import ask_jev, make_batch, noul_question
 from kernel.capabilities.research.state import Plan
 from kernel.capabilities.research.targeting import (
     NeedQuery,
     default_query,
+    existing_locators,
     locator_sources,
     targeted,
 )
@@ -74,6 +81,41 @@ async def plan_needs(ctx: ExecutionContext, invocation: CapabilityInvocation, pl
     """
     needs, usage = await _select_needs(ctx, invocation, plan)
     return [*needs, *(need for need, _ in _targeted(ctx, plan))], usage
+
+
+def afford_needs(ctx: ExecutionContext, plan: Plan, needs: list[EvidenceNeed]
+                 ) -> tuple[list[EvidenceNeed], list[str]]:
+    """Trim the planned needs to the number the budget affords beside the requester's reserve.
+
+    Each need is one retrieval child (one rerank batch) and the round ends with one judgement.
+    Needs are kept in planning order (mandated, then Jev-selected, then claim and gap needs), so
+    the targeted extras are the first to go; each dropped need is named in a limitation.
+
+    Args:
+        ctx: Existing execution context and available budget.
+        plan: Research plan carrying the requester's reserve.
+        needs: Ordered evidence needs considered for retrieval.
+
+    Returns:
+        tuple: (the needs to run, one limitation per dropped need).
+    """
+    left = jev_available(ctx.budget)
+    if left is None:
+        return needs, []
+    spare, per_need = left - plan.jev_reserve, rerank_calls(ctx.config)
+    keep = len(needs)
+    while keep > 0 and keep * per_need + judgement_calls(keep, ctx.config) > spare:
+        keep -= 1
+    return needs[:keep], [
+        f"need {n.id} not researched: {spare} Jev call(s) are left for research after the "
+        f"{plan.jev_reserve} kept in reserve for the requester's final assessment"
+        for n in needs[keep:]]
+
+
+def affordable_judgement(ctx: ExecutionContext, plan: Plan, needs: list[EvidenceNeed]) -> bool:
+    """True if the round's judgement fits in the budget without touching the requester's reserve."""
+    left = jev_available(ctx.budget)
+    return left is None or left - plan.jev_reserve >= judgement_calls(len(needs), ctx.config)
 
 
 async def _select_needs(ctx: ExecutionContext, invocation: CapabilityInvocation, plan: Plan
@@ -162,8 +204,9 @@ def retrieval_operation(payload: dict, sources: list[SourceConfig]) -> str:
 
 def _child(need: EvidenceNeed, source_ids: list[str], sources: list[SourceConfig],
            query: NeedQuery, answer_requirements: dict[str, JsonValue] | None = None,
-           assessment: dict[str, JsonValue] | None = None) -> RequestProposal:
-    """Build the retrieval child request for one need, naming the operation it needs.
+           assessment: dict[str, JsonValue] | None = None, *,
+           batches: int | None = None, jev_reserve: int = 0) -> RequestProposal:
+    """Build one retrieval child with original answer obligations and its rerank allowance.
 
     Query hints go to every child; exact locators only to a native one (a host reads no files).
 
@@ -176,7 +219,10 @@ def _child(need: EvidenceNeed, source_ids: list[str], sources: list[SourceConfig
         assessment: Unmodified scoped supplied evidence packet.
 
     Returns:
-        RequestProposal: Result of the documented operation.
+        RequestProposal: Scoped retrieval child preserving both branches' contracts.
+
+    Keyword-only batches: Maximum rerank batches the requester's budget affords.
+    Keyword-only jev_reserve: Calls retained for the requester after child retrieval.
     """
     operation = retrieval_operation({"source_ids": source_ids}, sources)
     native = operation == "retrieve"
@@ -184,7 +230,8 @@ def _child(need: EvidenceNeed, source_ids: list[str], sources: list[SourceConfig
     payload = RetrievalRequestPayload(
         need=need, answer_requirements=answer_requirements, assessment=assessment,
         source_ids=list(dict.fromkeys([*source_ids, *holders])),
-        query_hints=query.hints, explicit_locators=query.locators if native else [])
+        query_hints=query.hints, explicit_locators=query.locators if native else [],
+        max_rerank_batches=batches, jev_reserve=jev_reserve)
     return RequestProposal(
         kind=RequestKind.EVIDENCE, question=need.question, evidence_needs=[need],
         operation=operation,
@@ -192,11 +239,40 @@ def _child(need: EvidenceNeed, source_ids: list[str], sources: list[SourceConfig
         requested_output_schema=schema_ids.EVIDENCE_BUNDLE, priority=need.priority)
 
 
+def _children(need: EvidenceNeed, chosen: list[SourceConfig], sources: list[SourceConfig],
+              query: NeedQuery, plan: Plan, batches: int | None) -> list[RequestProposal]:
+    """Keep graph and native children distinct while carrying the same caller obligations.
+
+    Args:
+        need: Original evidence need served by both source groups.
+        chosen: Sources selected for this need.
+        sources: Complete configured source catalog for locator ownership.
+        query: Checked hints and locators for this need.
+        plan: Original answer, assessment and reserve obligations.
+        batches: Native rerank allowance computed by research planning.
+
+    Returns:
+        One scoped request per nonempty graph or native source group.
+    """
+    groups = [[s.id for s in chosen if s.kind == "graph_query"],
+              [s.id for s in chosen if s.kind != "graph_query"]]
+    return [_child(need, group, sources, query,
+                   answer_requirements=plan.answer_requirements, assessment=plan.assessment,
+                   batches=batches, jev_reserve=plan.jev_reserve)
+            for group in groups if group]
+
+
 def _candidates(ctx: ExecutionContext, need: EvidenceNeed, plan: Plan) -> list[SourceConfig]:
     """Catalog sources covering the need, narrowed by scope source ids and caller restrictions."""
     scope_ids, restricted = set(ctx.scope.source_ids), set(plan.source_restrictions)
     return [s for s in ctx.config.sources if need.category in s.categories
             and (not scope_ids or s.id in scope_ids) and (not restricted or s.id in restricted)]
+
+
+def _checked(root: Path, query: NeedQuery) -> NeedQuery:
+    """Return the query with only the explicit locators that name a file that exists."""
+    kept = existing_locators(root, query.locators)
+    return query if kept == query.locators else NeedQuery(query.hints, kept)
 
 
 def _defer_host_only(out: Resolution) -> None:
@@ -233,8 +309,10 @@ def resolve_sources(ctx: ExecutionContext, needs: list[EvidenceNeed], plan: Plan
         Resolution: Result of the documented operation.
     """
     out = Resolution()
-    own = need_queries(ctx, plan)
-    shared = default_query(plan, ctx.config.retrieval.max_explicit_locators)
+    root = Path(ctx.scope.repository_root)
+    own = {i: _checked(root, q) for i, q in need_queries(ctx, plan).items()}
+    shared = _checked(root, default_query(plan, ctx.config.retrieval.max_explicit_locators))
+    batches = batch_allowance(jev_available(ctx.budget), plan.jev_reserve, len(needs), ctx.config)
     for need in needs:
         candidates = _candidates(ctx, need, plan)
         native, unavailable_reasons = [], []
@@ -250,11 +328,8 @@ def resolve_sources(ctx: ExecutionContext, needs: list[EvidenceNeed], plan: Plan
         if chosen:
             ids = [s.id for s in chosen]
             out.needs.append(need)
-            groups = [[s.id for s in chosen if s.kind == "graph_query"],
-                      [s.id for s in chosen if s.kind != "graph_query"]]
-            for group in groups:
-                if group:
-                    out.requests.append(_child(need, group, ctx.config.sources, own.get(need.id, shared), plan.answer_requirements, plan.assessment))
+            out.requests.extend(_children(need, chosen, ctx.config.sources,
+                                           own.get(need.id, shared), plan, batches))
             out.child_map[need.id] = ids
             out.attempted += ids
             continue
@@ -273,6 +348,12 @@ def resolve_sources(ctx: ExecutionContext, needs: list[EvidenceNeed], plan: Plan
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-01 [python-coder]: Every retrieval child carries `max_rerank_batches` (what the Jev
+#   calls beyond the plan and the requester's reserve afford per need), so deeper reranking stays
+#   within the decision's reserve. (#KernelV01/F)
+# - 2026-10-01 [python-coder]: afford_needs trims the plan to what the budget affords beside the
+#   requester's reserve; explicit locators are checked against the repository before a child
+#   asks for them (a placeholder such as `-NNN.yaml` was requested live). (#KernelV01/E)
 # - 2026-10-01 [python-coder]: Needs from named gaps and human-added option claims are appended
 #   after the planned ones, and every child carries query hints (goal first) and, when native, the
 #   paths the options cite as explicit locators. (#KernelV01/D)
@@ -290,3 +371,5 @@ def resolve_sources(ctx: ExecutionContext, needs: list[EvidenceNeed], plan: Plan
 # ====================================================================
 
 # - 2026-10-01 20:00 [python-coder]: Bind optional knowledge through existing scoped retrieval contracts. (#TICKET-20261001-KM-400e-3)
+
+# - 2026-10-02 04:36 [conflict-resolver]: Preserve split graph sources and evidence packets alongside rerank limits. (#TICKETLESS reason=kernel-v01-integration)

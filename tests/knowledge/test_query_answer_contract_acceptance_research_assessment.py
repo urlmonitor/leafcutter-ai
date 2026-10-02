@@ -317,7 +317,11 @@ def _resume_assessment_in_child(path):
         case.config = KernelConfig.model_validate(raw['config'])
         pending = RunEnvelope.model_validate(raw['pending'])
         answer = answer_human(pending, {'free_text': json.dumps({'scope': {'inclusion': 'root_excluded'}})})
-        result = asyncio.run(case.service().resume_run(pending.run_id, answer))
+        async def finish():
+            from tests.knowledge.query_answer_contract_acceptance_research_support import complete_requested_synthesis
+            result = await case.service().resume_run(pending.run_id, answer)
+            return await complete_requested_synthesis(case, result)
+        result = asyncio.run(finish())
         print(json.dumps({'pid': os.getpid(), 'envelope': result.model_dump(mode='json'),
                           'requests': [request.model_dump(mode='json') for request in case.requests]}))
     finally:

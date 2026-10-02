@@ -18,7 +18,9 @@ from dataclasses import dataclass, field, replace
 
 from kernel.capabilities.decision.assess import NONE_CHOICE, Assessment
 from kernel.capabilities.decision.ranking import (
+    DESIGN_ROUND,
     design_reason,
+    design_round_due,
     loop_reason,
     rank_options,
     required_by_kind,
@@ -191,6 +193,13 @@ def _hand_to_human(work: Working, a: Assessment, cfg: DecisionConfig, reason: st
                    ranking=rank_options(work, a, cfg))
 
 
+def _design_research() -> Verdict:
+    """Ask for the one targeted research round on the options' claims before they are ranked."""
+    return Verdict(DecisionStatus.NEEDS_EVIDENCE, reason=DESIGN_ROUND,
+                   missing=[MissingKnowledge.MISSING_IMPLEMENTATION_FACT],
+                   categories=[EvidenceCategory.EXISTING_PATTERNS])
+
+
 def combine(work: Working, a: Assessment, cfg: DecisionConfig) -> Verdict:
     """Apply the resolved-gate; otherwise classify what is missing.
 
@@ -207,7 +216,8 @@ def combine(work: Working, a: Assessment, cfg: DecisionConfig) -> Verdict:
         verdict = Verdict(DecisionStatus.NEEDS_OPTIONS, reason="missing_criteria",
                           missing=[MissingKnowledge.UNKNOWN_OPTIONS])
     elif reason := design_reason(work, a, cfg):
-        verdict = _hand_to_human(work, a, cfg, reason)
+        verdict = (_design_research() if design_round_due(work, cfg)
+                   else _hand_to_human(work, a, cfg, reason))
     elif not work.has_decision_basis or any(
             a.sufficient[c.id] < cfg.sufficiency_threshold for c in answerable):
         verdict = classify_missing(a, cfg, work)
@@ -222,6 +232,10 @@ def combine(work: Working, a: Assessment, cfg: DecisionConfig) -> Verdict:
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-01 [python-coder]: A design judgement no longer ranks at once: while a targeted
+#   research round is due (ranking.design_round_due) combine asks for it (needs_evidence, reason
+#   design_round), and the budget gate may still turn that into the ranked question.
+#   (#KernelV01/F)
 # - 2026-10-01 [python-coder]: Design judgements, a flat no-progress pair of assessments and the
 #   research-round cap end in a ranked human choice (needs_human with a ranking) instead of more
 #   research; only evidence-answerable required criteria gate sufficiency. (#KernelV01/A)

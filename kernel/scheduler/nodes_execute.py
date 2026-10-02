@@ -57,6 +57,10 @@ class ShareBudget:
         self.reserved[resource] += 1
         return True
 
+    def available(self, resource: BudgetResource) -> int | None:
+        """Return the units this worker's share still holds."""
+        return max(0, self._left[resource])
+
 
 def failed_result(invocation: CapabilityInvocation, code: str, message: str, *,
                   retryable: bool = False) -> CapabilityResult:
@@ -150,6 +154,9 @@ __all__ = ["ELAPSED_KEY", "JEV_RESERVED_KEY", "ShareBudget", "cancelled_result",
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-01 [python-coder]: ShareBudget reports what is left of its share, so the decision can
+#   reserve a final assessment and research can trim its plan to what is affordable.
+#   (#KernelV01/E)
 # - 2026-10-01 [python-coder]: The worker's budget share is bound for the executor's task so the
 #   Jev adapter reserves the extra provider calls of a chunked assessment from it.
 #   (#KernelV01/C)

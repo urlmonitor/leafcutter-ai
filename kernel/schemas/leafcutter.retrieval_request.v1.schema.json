@@ -224,6 +224,12 @@
       "title": "Explicit Locators",
       "type": "array"
     },
+    "jev_reserve": {
+      "default": 0,
+      "minimum": 0,
+      "title": "Jev Reserve",
+      "type": "integer"
+    },
     "knowledge": {
       "anyOf": [
         {
@@ -241,6 +247,19 @@
     },
     "limits": {
       "$ref": "#/$defs/RetrievalLimits"
+    },
+    "max_rerank_batches": {
+      "anyOf": [
+        {
+          "minimum": 1,
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Max Rerank Batches"
     },
     "need": {
       "$ref": "#/$defs/EvidenceNeed"

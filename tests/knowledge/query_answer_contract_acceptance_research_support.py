@@ -65,6 +65,22 @@ class CanonicalSelection(ProjectionStorage):
         return self.nodes[:limit]
 
 
+async def complete_requested_synthesis(case, result):
+    """Answer the actual v01 host-synthesis wait without inventing missing facts."""
+    from kernel.contracts import RunStatus
+    from tests.kernel.integration.scenario_support import FakeHostResponder
+    if result.status != RunStatus.WAITING_HOST:
+        return result
+    assert result.pending_interaction.operation == "synthesize_evidence"
+    host = FakeHostResponder({schema_ids.FINDINGS: {
+        "findings": [], "unknowns": ["The supplied evidence does not settle missing required facts."],
+    }})
+    answer = host.answer(result)
+    final = await case.service().resume_run(result.run_id, answer)
+    assert final.status != RunStatus.WAITING_HOST, "Synthesis must not repeat or manufacture coverage."
+    return final
+
+
 class ResearchAssessmentCase(ScenarioCase):
     """Shared actual source, configured kernel and registered retrieval test support."""
 
@@ -134,6 +150,7 @@ class ResearchAssessmentCase(ScenarioCase):
 
 
     async def assessment_output(self, result):
+        result = await complete_requested_synthesis(self, result)
         assert result.output is not None, result.model_dump_json()
         bundle = result.output.payload
         assert 'assessments' in bundle, bundle

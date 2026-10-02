@@ -119,6 +119,9 @@ class ResearchRequestPayload(KernelModel):
     criteria_context: list[str] = Field(default_factory=list)
     #: What an earlier synthesis said it could not find; each becomes a targeted need.
     gaps: list[str] = Field(default_factory=list)
+    #: Jev calls the requester keeps for itself afterwards (its final assessment); research plans
+    #: no more needs than the rest of its budget affords and never spends into this reserve.
+    jev_reserve: int = Field(default=0, ge=0)
 
 
 class RetrievalLimits(KernelModel):
@@ -145,6 +148,11 @@ class RetrievalRequestPayload(KernelModel):
     explicit_locators: list[str] = Field(default_factory=list)
     #: Texts to search for before the need's own wording: the goal first, then criteria, options.
     query_hints: list[str] = Field(default_factory=list)
+    #: Most rerank batches this request may judge (the requester's Jev budget affords no more
+    #: than this beside its reserve); null means the configured `retrieval.rerank_max_batches`.
+    max_rerank_batches: int | None = Field(default=None, ge=1)
+    #: Jev calls retained for the requester; graph planning must not spend this reserve.
+    jev_reserve: int = Field(default=0, ge=0)
 
 
 class OptionsRequestPayload(KernelModel):

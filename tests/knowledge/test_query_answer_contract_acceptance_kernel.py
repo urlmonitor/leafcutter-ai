@@ -126,6 +126,8 @@ class TestPublicKernelAnswerContract(ScenarioCase):
         """High scripted sufficiency confidence remains subordinate to missing required facts."""
         self.params["answer"] = 1.0
         result = await self.service().start_run(self.research_task())
+        from tests.knowledge.query_answer_contract_acceptance_research_support import complete_requested_synthesis
+        result = await complete_requested_synthesis(self, result)
         assert self.calls, result.model_dump_json()
         assert result.status == RunStatus.PARTIAL, result.model_dump_json()
         values = await self.checkpoint_values(result.run_id)

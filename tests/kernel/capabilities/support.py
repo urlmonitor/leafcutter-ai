@@ -20,6 +20,7 @@ from unittest import mock
 
 from kernel.capabilities.base import ExecutionContext
 from kernel.capabilities.retrieval import versioning
+from kernel.config import KernelConfig, load_kernel_config
 from kernel.contracts import Priority
 from kernel.contracts.base import content_hash, evidence_id, new_id, utc_now
 from kernel.contracts.capability import CapabilityResult
@@ -111,6 +112,17 @@ def no_git(testcase: unittest.TestCase) -> None:
     patcher.start()
     testcase.addCleanup(patcher.stop)
     testcase.addCleanup(versioning._CACHE.clear)
+
+
+def no_synthesis_config() -> KernelConfig:
+    """Return the default config with `research.allow_synthesis` off.
+
+    For tests about the coverage and status a research bundle reports: since round F a thin need
+    asks the host for a synthesis (tests/kernel/decision_research), which they do not answer.
+    """
+    base = load_kernel_config()
+    return base.model_copy(update={"research": base.research.model_copy(
+        update={"allow_synthesis": False})})
 
 
 def script_decision(jev: ScriptedJev, params: dict | None = None) -> dict:

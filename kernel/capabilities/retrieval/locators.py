@@ -67,7 +67,8 @@ def _owning_policy(policy: ReadPolicy, sources: list[SourceConfig], target: Path
                    ) -> tuple[ReadPolicy, str] | None:
     """Return (policy with the source's deny globs, source id) for the first source holding it."""
     for source in sources:
-        narrowed = replace(policy, deny_globs=(*policy.deny_globs, *source.deny_globs))
+        narrowed = replace(policy, deny_globs=(*policy.deny_globs, *source.deny_globs),
+                           max_file_bytes=source.max_file_bytes or policy.max_file_bytes)
         for root in narrowed.resolve_roots(source.roots).roots:
             if target == root or root in target.parents:
                 return narrowed, source.id

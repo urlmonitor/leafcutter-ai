@@ -216,13 +216,17 @@ class KnowledgeRetrievalExecutor:
             eligible.intersection_update(ctx.scope.source_ids)
         if request.knowledge is None and not eligible:
             return await (self.fallback or RepositoryRetrievalExecutor()).ainvoke(invocation, ctx)
-        if self.query_catalog is not None and self.query_admission is not None and request.knowledge is None:
-            from integrations.query_growth import invoke_query_growth
-            return await invoke_query_growth(self.retriever,self.query_catalog,self.query_admission,
-                                             invocation,ctx,request,eligible)
-        return await invoke_knowledge(self.retriever, invocation, ctx, request, eligible)
+        from integrations.knowledge_budget import preserve_jev_reserve
+        with preserve_jev_reserve(ctx, request.jev_reserve) as bounded_ctx:
+            if self.query_catalog is not None and self.query_admission is not None and request.knowledge is None:
+                from integrations.query_growth import invoke_query_growth
+                return await invoke_query_growth(self.retriever,self.query_catalog,self.query_admission,
+                                                 invocation,bounded_ctx,request,eligible)
+            return await invoke_knowledge(self.retriever, invocation, bounded_ctx, request, eligible)
 
 
 # DECISION HISTORY
 # ================================================================================
 # - 2026-10-01 20:00 [python-coder]: Preserve canonical evidence and optional bounded retrieval. (#TICKET-20261001-KM-400e-3)
+
+# - 2026-10-02 04:42 [python-coder]: Carry the requester reserve through graph planning on the real worker budget. (#TICKETLESS reason=kernel-v01-integration)

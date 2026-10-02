@@ -67,7 +67,8 @@ async def _initial(port: KnowledgeRetriever,admission: QueryAdmission | None,inv
     return {**pinned,"phase":"ready","question":payload.need.question,"need_id":payload.need.id,
             "component_ids":list(ctx.scope.component_ids),"clarifications":0,"build_attempted":False,
             "original_question":payload.need.question,"arguments":{},"planning_context":True,
-            "answer_requirements":payload.answer_requirements,"assessment":packet}
+            "answer_requirements":payload.answer_requirements,"assessment":packet,
+            "jev_reserve":payload.jev_reserve}
 
 async def _select(catalog: QueryCatalog,invocation: CapabilityInvocation,ctx: ExecutionContext,state: dict[str, Any]) -> tuple[str, dict, list[Usage]]:
     """Select among usable persisted descriptors or one explicit missing-query outcome.

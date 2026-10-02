@@ -7,16 +7,19 @@ BUSINESS CONTEXT: A live run searched the goal text again every round: an option
     `kernel/contracts/decision.py` never had it retrieved, a synthesis said it was missing and
     nothing looked for it, and a human's added option was scored on evidence nobody searched for
     (trace review findings 4 and 5). Domain knowledge stays in the request, not in this code.
-ARCHITECTURE: Pure functions over the parsed Plan. Locators are recognised by shape (a repository
-    path with a known extension, optionally `#anchor` or `::Symbol`); evidence ids and bare
-    symbols stay context. Every output is bounded by configuration.
+ARCHITECTURE: Functions over the parsed Plan, pure apart from one existence check. Locators are
+    recognised by shape (a repository path with a known extension, optionally `#anchor` or
+    `::Symbol`) and requested only when that file exists; evidence ids and bare symbols stay
+    context. Every output is bounded by configuration.
 """
 
 from __future__ import annotations
 
+import logging
 import re
 from collections.abc import Iterable
 from dataclasses import dataclass, field
+from pathlib import Path, PurePosixPath, PureWindowsPath
 
 from kernel.capabilities.decision.option_context import extract_refs
 from kernel.capabilities.research.state import Plan
@@ -25,10 +28,14 @@ from kernel.contracts.enums import EvidenceCategory, Priority
 from kernel.contracts.evidence import EvidenceNeed
 from kernel.contracts.payloads import OptionContext
 
+logger = logging.getLogger(__name__)
+
 GAP_PREFIX = "need.gap."
 CLAIM_PREFIX = "need.claim."
 _EXTENSIONS = "py|md|json|yaml|yml|toml|sql|ts|js|txt|cfg|ini|sh"
-_LOCATOR = re.compile(rf"[\w.\-]+(?:/[\w.\-]+)*\.(?:{_EXTENSIONS})(?:#\S+|::[\w.]+)?")
+#: A repository path: it starts with a letter, digit or underscore (so `-NNN.yaml`, a fragment of
+#: a placeholder name, is not one), has a known extension, then an optional anchor or symbol.
+_LOCATOR = re.compile(rf"\.?\w[\w.\-]*(?:/[\w.\-]+)*\.(?:{_EXTENSIONS})(?:#\S+|::[\w.]+)?")
 
 
 @dataclass(frozen=True)
@@ -42,6 +49,30 @@ class NeedQuery:
 def locators_of(refs: Iterable[str]) -> list[str]:
     """Return the refs that look like a repository path, `path#anchor` or `path::Symbol`."""
     return list(dict.fromkeys(r.strip() for r in refs if _LOCATOR.fullmatch(r.strip())))
+
+
+def existing_locators(root: Path, locators: Iterable[str]) -> list[str]:
+    """Return the locators whose file exists under `root` (a refused one is logged at debug).
+
+    A locator is requested only if it looks like a repository path (see `locators_of`), stays
+    inside the repository and names an existing file; anything else is a fragment of prose.
+    """
+    kept: list[str] = []
+    for raw in locators:
+        path = _location(raw)
+        posix, win = PurePosixPath(path), PureWindowsPath(path)
+        inside = not (posix.is_absolute() or win.is_absolute() or win.drive
+                      or ".." in (*posix.parts, *win.parts))
+        try:
+            found = inside and (root / path).is_file()
+        except OSError:
+            logger.debug("explicit locator %r dropped: cannot be checked", raw, exc_info=True)
+            continue
+        if found:
+            kept.append(raw)
+        else:
+            logger.debug("explicit locator %r dropped: no such file in the repository", raw)
+    return kept
 
 
 def _location(locator: str) -> str:
@@ -105,6 +136,9 @@ def targeted(plan: Plan, limit: int, max_locators: int
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-01 [python-coder]: A locator must start with a word character and name an existing
+#   file inside the repository before it is requested (live: option text produced `-NNN.yaml`).
+#   (#KernelV01/E)
 # - 2026-10-01 [python-coder]: locator_sources names the sources holding a cited file, because
 #   the live-style end-to-end run showed an option's path refused as "not under any configured
 #   source root": the child's source_ids (the need's own sources) also bound locator lookups.

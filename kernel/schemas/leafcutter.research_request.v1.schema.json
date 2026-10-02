@@ -261,6 +261,12 @@
       "title": "Gaps",
       "type": "array"
     },
+    "jev_reserve": {
+      "default": 0,
+      "minimum": 0,
+      "title": "Jev Reserve",
+      "type": "integer"
+    },
     "option_context": {
       "items": {
         "$ref": "#/$defs/OptionContext"

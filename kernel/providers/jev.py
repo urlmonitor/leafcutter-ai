@@ -282,13 +282,20 @@ class TypeSafeJevAdapter:
         answers: dict[str, Any] = {}
         part: JevResult | None = None
         for index, chunk in enumerate(chunks):
-            if index > 0 and not reserve_extra_call():
-                reason = (f"jev call budget exhausted after {index} of {len(chunks)} provider "
-                          f"calls of one assessment")
-                logger.warning("%s (purpose=%s)", reason, batch.purpose)
-                raise JevBudgetExhausted(reason)
-            sub = batch.model_copy(update={"questions": chunk})
-            raw, part = await self._call_chunk(sub, wires, index, len(chunks))
+            try:
+                if index > 0 and not reserve_extra_call():
+                    reason = (f"jev call budget exhausted after {index} of {len(chunks)} provider "
+                              f"calls of one assessment")
+                    logger.warning("%s (purpose=%s)", reason, batch.purpose)
+                    raise JevBudgetExhausted(reason)
+                sub = batch.model_copy(update={"questions": chunk})
+                raw, part = await self._call_chunk(sub, wires, index, len(chunks))
+            except JevError as exc:
+                if raws:  # the earlier chunks were made and paid for: keep their usage
+                    done = self._result(batch, raws, answers, len(raws), int(
+                        (time.perf_counter() - started) * 1000))
+                    exc.completed_usage = done.usage
+                raise
             raws.append(raw)
             answers.update(part.answers)
         latency_ms = int((time.perf_counter() - started) * 1000)
@@ -367,6 +374,9 @@ class TypeSafeJevAdapter:
 #   (retries of a chunk are not calls; they are bounded by max_retries and reported as
 #   `attempts` in the generation). Budget (chunks 2..N reserved here), usage.calls, envelope
 #   jev_calls and the generations (one per chunk) therefore agree. (#KernelV01/C)
+# - 2026-10-01 [python-coder]: An error after the first chunk of a chunked assessment carries the
+#   usage of the chunks that finished (`completed_usage`), so usage rows, cost and budget agree
+#   even when the assessment is aborted. (#KernelV01/E)
 # - 2026-10-02 [python-coder]: mypy: optional clients are guarded and the retry reason is None-safe (#KernelBootstrapV0/GROUND)
 # - 2026-10-01 00:30 [python-coder]: With a tracer the adapter emits the GENERATION and the
 #   classifier runs with callbacks=[] (an explicit empty list overrides the inherited graph-level

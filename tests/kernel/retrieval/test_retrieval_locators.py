@@ -27,7 +27,7 @@ from kernel.contracts.evidence import EvidenceNeed
 from kernel.contracts.payloads import RetrievalRequestPayload
 from kernel.providers.fakes import ScriptedJev, noul_answer
 from tests.kernel.capabilities.support import invocation, no_git
-from tests.kernel.helpers import bundle_of, make_context
+from tests.kernel.helpers import as_json, bundle_of, make_context
 
 CODE = ("class Decision:\n    status: str\n\n    def close(self):\n        return 1\n\n\n"
         "def helper():\n    return 2\n")
@@ -121,10 +121,20 @@ class TestEachForm(LocatorCase):
         self.assertEqual(item.provenance.strategy, "explicit_locator")
 
     def test_an_explicit_hit_survives_a_low_relevance_judgement(self) -> None:
+        """Kept from V0.1: a low Jev score cannot drop a named place (round E: none is asked)."""
         self.jev = ScriptedJev().script("retrieval.rerank", "relevant.*", noul_answer(0.05))
         result, _ = self.fetch("kernel/contracts/decision.py::helper")
         self.assertEqual(len(self.explicit(result)), 1)
-        self.assertEqual(self.explicit(result)[0].provenance.relevance, 0.05)
+
+    def test_an_explicit_hit_is_kept_without_being_judged(self) -> None:
+        """Round E: a named place is kept regardless, so it is not sent to Jev (no judgement)."""
+        self.jev = ScriptedJev().script("retrieval.rerank", "relevant.*", noul_answer(0.05))
+        result, _ = self.fetch("kernel/contracts/decision.py::helper")
+        self.assertEqual(len(self.explicit(result)), 1)
+        self.assertIsNone(self.explicit(result)[0].provenance.relevance)
+        sent = " ".join(c["locator"] for b in self.jev.batches
+                        for c in as_json(b.state)["candidates"].values())
+        self.assertNotIn("decision.py", sent)
 
     def test_explicit_hits_come_before_search_hits(self) -> None:
         result, _ = self.fetch("docs/adr.md#Consequences", question="alternatives postgres")

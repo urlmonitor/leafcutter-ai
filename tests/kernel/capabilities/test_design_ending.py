@@ -162,10 +162,16 @@ class TestHumanChoiceResolves(DesignCase):
 
     def test_an_added_option_is_ranked_again(self) -> None:
         again = self.answer({"added_options": [{"title": "Hybrid", "description": "Both"}]})
-        question = self.question(again)
+        self.assertEqual(again.requests[0].kind, RequestKind.EVIDENCE)  # round F: claims first
+        request = ResearchRequestPayload.model_validate(again.requests[0].payload)
+        self.assertEqual([o.option_id for o in request.option_context if o.human_added],
+                         ["opt.added.1"])
+        self.assertEqual(self.jev.call_count, 2)
+        _, ranked = self.research_round(self.inv, self.ctx_, again)
+        question = self.question(ranked)
         self.assertEqual(len(question.choices), 4)
         self.assertIn("opt.added.1", [c.id for c in question.choices])
-        self.assertEqual(self.jev.call_count, 2)
+        self.assertEqual(self.jev.call_count, 3)
 
     def test_an_unknown_choice_does_not_resolve(self) -> None:
         self.assertEqual(self.answer({"choice_id": "ZZ"}).status, ResultStatus.PARTIAL)

@@ -7,7 +7,8 @@ BUSINESS CONTEXT: One densest window per file hid the parts of long documents th
     mid-table. A section is the unit a reader would cite, so its heading path becomes part of the
     locator (Rev 3 section 10.3: every result carries its location and truncation).
 ARCHITECTURE: Pure functions over text and lines; no IO. `split_sections` returns None for formats
-    without structure so the caller falls back to the old line window. Section ends are exclusive
+    without structure so the caller falls back to the old line window; a JSON registry (one
+    collection) is split by entry and a section longer than `max_lines` becomes windows. Section ends are exclusive
     0-based line indexes. `cut_at_boundary` lives here so every excerpt (section, window,
     explicit locator, request budget) is cut the same way.
 """
@@ -110,14 +111,34 @@ def _heading_path(stack: list[tuple[int, str]]) -> str:
                             for _, t in shown)
 
 
+def front_matter_end(lines: list[str]) -> int:
+    """Return the line index after a leading YAML front matter block (0 when there is none).
+
+    A block opens with a `---` line at the very top and closes at the next `---` or `...` line.
+    """
+    if not lines or lines[0].strip() != "---":
+        return 0
+    for index in range(1, len(lines)):
+        if lines[index].strip() in ("---", "..."):
+            return index + 1
+    return 0
+
+
 def _markdown_sections(lines: list[str]) -> list[Section] | None:
-    """Split on headings; the label is the heading path (`§Parent > Child`)."""
+    """Split on headings; the label is the heading path (`§Parent > Child`).
+
+    A leading YAML front matter block is metadata (title, tags, status), not content: it is never
+    a section of its own, because its dense metadata words out-scored the body (a live run was
+    offered only L1-L14 of a concept document). Prose between the front matter and the first
+    heading stays a section.
+    """
     heads = markdown_headings(lines)
     if not heads:
         return None
     sections: list[Section] = []
-    if heads[0][0] > 0 and any(x.strip() for x in lines[:heads[0][0]]):
-        sections.append(Section(0, heads[0][0]))
+    first = front_matter_end(lines)
+    if heads[0][0] > first and any(x.strip() for x in lines[first:heads[0][0]]):
+        sections.append(Section(first, heads[0][0]))
     stack: list[tuple[int, str]] = []
     for position, (index, level, title) in enumerate(heads):
         end = heads[position + 1][0] if position + 1 < len(heads) else len(lines)
@@ -146,24 +167,62 @@ def _yaml_sections(lines: list[str]) -> list[Section] | None:
     return _keyed(starts, len(lines))
 
 
+def _json_starts(lines: list[str], indent: int | None = None, floor: int = -1
+                 ) -> list[tuple[int, str]]:
+    """Return (line, key) of the JSON object keys at one indent (the first one deeper than floor)."""
+    starts: list[tuple[int, str]] = []
+    for index, line in enumerate(lines):
+        match = _JSON_KEY.match(line)
+        if match is None or len(match.group(1)) <= floor:
+            continue
+        indent = len(match.group(1)) if indent is None else indent
+        if len(match.group(1)) == indent:
+            starts.append((index, match.group(2)))
+    return starts
+
+
+def registry_collection(text: str) -> tuple[str, dict] | None:
+    """Return (name, entries) when the JSON text is one object holding one collection of entries.
+
+    That is the shape of a registry (`{"components": {"id": {...}, ...}}`): the collection's name
+    and its entries' field names are the registry's vocabulary.
+    """
+    try:
+        data = json.loads(text)
+    except ValueError:
+        return None
+    if not isinstance(data, dict) or len(data) != 1:
+        return None
+    ((name, entries),) = data.items()
+    if not isinstance(entries, dict) or len(entries) < 2:
+        return None
+    return name, entries
+
+
 def _json_sections(text: str, lines: list[str]) -> list[Section] | None:
-    """Split a pretty-printed JSON object on its top-level keys (else None)."""
+    """Split a pretty-printed JSON object on its top-level keys (else None).
+
+    An object with a single top-level key that holds a collection (a registry) is split on that
+    collection's entries instead, labelled `collection > entry`, so one entry is not buried in the
+    whole registry.
+    """
     try:
         data = json.loads(text)
     except ValueError:
         return None
     if not isinstance(data, dict):
         return None
-    indent: int | None = None
-    starts: list[tuple[int, str]] = []
-    for index, line in enumerate(lines):
-        match = _JSON_KEY.match(line)
-        if match is None:
-            continue
-        indent = len(match.group(1)) if indent is None else indent
-        if len(match.group(1)) == indent:
-            starts.append((index, match.group(2)))
-    return _keyed(starts, len(lines)) if len(starts) == len(data) else None
+    starts = _json_starts(lines)
+    if len(starts) == len(data) >= 2:
+        return _keyed(starts, len(lines))
+    found = registry_collection(text)
+    if found is None or len(starts) != 1:
+        return None
+    name, entries = found
+    inner = _json_starts(lines, None, len(lines[starts[0][0]]) - len(lines[starts[0][0]].lstrip()))
+    if len(inner) != len(entries):
+        return None
+    return _keyed([(line, f"{name} > {key}") for line, key in inner], len(lines))
 
 
 def _def_span(node: ast.stmt) -> tuple[int, int, str] | None:
@@ -195,18 +254,46 @@ def _python_sections(text: str, lines: list[str]) -> list[Section] | None:
     return sections
 
 
-def split_sections(rel: str, text: str, lines: list[str]) -> list[Section] | None:
-    """Return the file's sections, or None when its format has no structure to split on."""
+def _windowed(sections: list[Section] | None, max_lines: int | None) -> list[Section] | None:
+    """Cut every section longer than `max_lines` into consecutive windows of that many lines.
+
+    A section of hundreds of kilobytes (the `nodes` of a build-dataflow registry, the `agents` of
+    an agent registry) is not a unit anyone cites: it matches nearly every query term somewhere,
+    and scored as one it outranked the short documents that answer. Each window keeps the section's
+    label and is scored, and cited, on its own lines.
+    """
+    if sections is None or not max_lines:
+        return sections
+    out: list[Section] = []
+    for sec in sections:
+        start = sec.start
+        while sec.end - start > max_lines:
+            out.append(Section(start, start + max_lines, sec.label, sec.level))
+            start += max_lines
+        out.append(Section(start, sec.end, sec.label, sec.level))
+    return out
+
+
+def split_sections(rel: str, text: str, lines: list[str], max_lines: int | None = None
+                   ) -> list[Section] | None:
+    """Return the file's sections, or None when its format has no structure to split on.
+
+    Args:
+        rel: The file's path (its suffix picks the splitter).
+        text: The whole text.
+        lines: The text split into lines.
+        max_lines: Longest section kept whole; longer ones become windows (None: never cut).
+    """
     suffix = rel.lower().rsplit(".", 1)[-1] if "." in rel else ""
     dotted = f".{suffix}"
     if dotted in MARKDOWN_SUFFIXES:
-        return _markdown_sections(lines)
+        return _windowed(_markdown_sections(lines), max_lines)
     if dotted in YAML_SUFFIXES:
-        return _yaml_sections(lines)
+        return _windowed(_yaml_sections(lines), max_lines)
     if dotted == ".json":
-        return _json_sections(text, lines)
+        return _windowed(_json_sections(text, lines), max_lines)
     if dotted == ".py":
-        return _python_sections(text, lines)
+        return _windowed(_python_sections(text, lines), max_lines)
     return None
 
 
@@ -271,6 +358,14 @@ def section_excerpt(lines: list[str], sec: Section, terms: list[str], cfg: Retri
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-01 [python-coder]: A JSON object holding one collection is split by entry, and a
+#   section longer than `retrieval.max_section_lines` becomes windows of that many lines: a
+#   786 KB `nodes` section matched almost every query term and, however its length was
+#   normalised, outranked the short documents that answer (saturated term counts reach the same
+#   ceiling in a huge section as in a small one). (#KernelV01/F)
+# - 2026-10-01 [python-coder]: YAML front matter is not a section of its own: a document with
+#   headings is offered only through its body sections (round 6 and the regression pass both
+#   showed front matter winning on term density and crowding the body out). (#KernelV01/E)
 # - 2026-10-01 [python-coder]: Sections replace the one-window-per-file read: Markdown by heading
 #   path, YAML/JSON by top-level key, Python by top-level def or class; other formats keep the
 #   old window. A heading with no body of its own is folded into the next section so a parent

@@ -103,12 +103,19 @@ def grounding_request(work: Working) -> RequestProposal:
         requested_output_schema=schema_ids.EVIDENCE_BUNDLE)
 
 
-def research_request(work: Working, categories: list[EvidenceCategory]) -> RequestProposal:
-    """Ask research for the given evidence categories (needs are pre-filled and required)."""
+def research_request(work: Working, categories: list[EvidenceCategory], reserve: int = 0
+                     ) -> RequestProposal:
+    """Ask research for exactly the given evidence categories (needs are pre-filled and required).
+
+    The decision already named the categories it misses, so research plans no further ones (no
+    Jev planning call, and the cost of the round is known before it starts); `reserve` is the Jev
+    calls the decision keeps for its own final assessment, which research must leave untouched.
+    """
     needs = [EvidenceNeed(id=f"need.{c.value}", category=c, priority=Priority.REQUIRED,
                           question=_NEED_QUESTIONS[c] + work.question) for c in categories]
     payload = ResearchRequestPayload(
         question=work.question, evidence_needs=needs, existing_evidence_ids=work.evidence_ids,
+        evidence_needs_only=True, jev_reserve=reserve,
         option_context=option_context(work),
         criteria_context=[c.question for c in work.usable_criteria], gaps=list(work.cont.gaps))
     return RequestProposal(
@@ -210,6 +217,9 @@ def escalation_request(work: Working, reason: str, text: str, tied: list[Option]
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-01 [python-coder]: Decision-driven research plans exactly the categories the decision
+#   named and carries the Jev calls the decision reserves, so a round is affordable and bounded
+#   before it starts. (#KernelV01/E)
 # - 2026-10-01 [python-coder]: A research request also carries the approved criteria's questions
 #   and the gaps the last synthesis named, so research can aim its queries. (#KernelV01/D)
 # - 2026-10-01 [python-coder]: A research request made after options exist carries
