@@ -35,7 +35,10 @@
         "caller context"
       ],
       "impl_asof": "2026-10-02",
-      "impl_status": "not_started"
+      "impl_status": "done",
+      "implements": [
+        "DK-300a-1"
+      ]
     },
     {
       "id": "enrich-context",
@@ -93,7 +96,10 @@
         "intent: decision"
       ],
       "impl_asof": "2026-10-02",
-      "impl_status": "not_started"
+      "impl_status": "done",
+      "implements": [
+        "DK-300a-1"
+      ]
     },
     {
       "id": "precedent",
@@ -114,7 +120,10 @@
         "leafcutter/decision-retrieval"
       ],
       "impl_asof": "2026-10-02",
-      "impl_status": "not_started"
+      "impl_status": "in_progress",
+      "implements": [
+        "DK-300e-1"
+      ]
     },
     {
       "id": "ground",
@@ -130,7 +139,11 @@
         "grounding evidence"
       ],
       "impl_asof": "2026-10-02",
-      "impl_status": "not_started"
+      "impl_status": "done",
+      "implements": [
+        "DK-300a-2-i",
+        "DK-300a-2"
+      ]
     },
     {
       "id": "synthesize",
@@ -147,7 +160,10 @@
         "findings"
       ],
       "impl_asof": "2026-10-02",
-      "impl_status": "not_started"
+      "impl_status": "in_progress",
+      "implements": [
+        "DK-300a-3"
+      ]
     },
     {
       "id": "propose",
@@ -164,7 +180,10 @@
         "proposed options and criteria"
       ],
       "impl_asof": "2026-10-02",
-      "impl_status": "not_started"
+      "impl_status": "in_progress",
+      "implements": [
+        "DK-300a-3"
+      ]
     },
     {
       "id": "approve-proposals",
@@ -180,7 +199,10 @@
         "approved options and criteria"
       ],
       "impl_asof": "2026-10-02",
-      "impl_status": "not_started"
+      "impl_status": "in_progress",
+      "implements": [
+        "DK-300b-1"
+      ]
     },
     {
       "id": "research-options",
@@ -196,7 +218,10 @@
         "option evidence"
       ],
       "impl_asof": "2026-10-02",
-      "impl_status": "not_started"
+      "impl_status": "done",
+      "implements": [
+        "DK-300a-4"
+      ]
     },
     {
       "id": "assess",
@@ -214,7 +239,10 @@
         "ranked options"
       ],
       "impl_asof": "2026-10-02",
-      "impl_status": "not_started"
+      "impl_status": "done",
+      "implements": [
+        "DK-300a-4"
+      ]
     },
     {
       "id": "choose",
@@ -230,7 +258,10 @@
         "human choice"
       ],
       "impl_asof": "2026-10-02",
-      "impl_status": "not_started"
+      "impl_status": "in_progress",
+      "implements": [
+        "DK-300b-2"
+      ]
     },
     {
       "id": "resolve",
@@ -249,7 +280,10 @@
         "Decision"
       ],
       "impl_asof": "2026-10-02",
-      "impl_status": "not_started"
+      "impl_status": "done",
+      "implements": [
+        "DK-300b-3"
+      ]
     }
   ],
   "branches": [
@@ -293,7 +327,11 @@
       ],
       "outcome_kind": "alternative",
       "impl_asof": "2026-10-02",
-      "impl_status": "not_started"
+      "impl_status": "in_progress",
+      "implements": [
+        "DK-300b-1-i",
+        "DK-300b-1-ii"
+      ]
     },
     {
       "id": "budget-reserve",
@@ -310,7 +348,10 @@
       ],
       "outcome_kind": "alternative",
       "impl_asof": "2026-10-02",
-      "impl_status": "not_started"
+      "impl_status": "done",
+      "implements": [
+        "DK-300a-4-i"
+      ]
     },
     {
       "id": "rerank",
@@ -327,7 +368,11 @@
       ],
       "outcome_kind": "alternative",
       "impl_asof": "2026-10-02",
-      "impl_status": "not_started"
+      "impl_status": "in_progress",
+      "implements": [
+        "DK-300b-2-i",
+        "DK-300b-2-ii"
+      ]
     },
     {
       "id": "no-answer",
@@ -341,7 +386,10 @@
       ],
       "outcome_kind": "exit",
       "impl_asof": "2026-10-02",
-      "impl_status": "not_started"
+      "impl_status": "in_progress",
+      "implements": [
+        "DK-300b-2-iii"
+      ]
     }
   ],
   "acceptance_scenarios": [
@@ -505,9 +553,9 @@
     }
   ],
   "impl_summary": {
-    "done": 2,
-    "in_progress": 0,
-    "not_started": 15,
+    "done": 9,
+    "in_progress": 8,
+    "not_started": 0,
     "total": 17,
     "asof": "2026-10-02"
   }

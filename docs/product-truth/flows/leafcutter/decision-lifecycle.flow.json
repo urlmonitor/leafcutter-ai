@@ -41,7 +41,10 @@
         "leafcutter/decision-forming"
       ],
       "impl_asof": "2026-10-02",
-      "impl_status": "in_progress"
+      "impl_status": "in_progress",
+      "implements": [
+        "DK-300b-3"
+      ]
     },
     {
       "id": "stage",
@@ -65,7 +68,10 @@
         "leafcutter/decision-staging"
       ],
       "impl_asof": "2026-10-02",
-      "impl_status": "not_started"
+      "impl_status": "in_progress",
+      "implements": [
+        "DK-300c-3"
+      ]
     },
     {
       "id": "publish",
@@ -90,7 +96,10 @@
         "leafcutter/decision-publishing"
       ],
       "impl_asof": "2026-10-02",
-      "impl_status": "not_started"
+      "impl_status": "in_progress",
+      "implements": [
+        "DK-300d-3"
+      ]
     },
     {
       "id": "reuse",
@@ -116,7 +125,11 @@
         "leafcutter/decision-retrieval"
       ],
       "impl_asof": "2026-10-02",
-      "impl_status": "not_started"
+      "impl_status": "in_progress",
+      "implements": [
+        "DK-300e-1",
+        "DK-300e-3"
+      ]
     }
   ],
   "acceptance_scenarios": [
@@ -161,8 +174,8 @@
   ],
   "impl_summary": {
     "done": 0,
-    "in_progress": 1,
-    "not_started": 3,
+    "in_progress": 4,
+    "not_started": 0,
     "total": 4,
     "asof": "2026-10-02"
   }

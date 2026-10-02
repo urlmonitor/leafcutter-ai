@@ -1,0 +1,131 @@
+id: DK-300d-2-i
+title: "Publishing a run with no staged record stops with exit code 3 and writes nothing"
+component: decision-kernel
+components:
+  - decision_kernel
+level: L3
+status: active
+req_status: draft
+work_status: done
+readiness: reviewed
+priority: medium
+roadmap_phase: phase_kernel_1_founding
+criteria: |
+  Given a run R that has no staged decision record, for example a run whose decision no human
+    approved, or a run id that names another run,
+  When python -m kernel decisions publish --run-id R runs,
+  Then it exits with code 3 and the message "no staged decision record for this run",
+  And no file under docs/decisions/ is created or changed.
+depends_on:
+  - DK-300d-2
+doc_links:
+  - path: docs/product-truth/flows/leafcutter/decision-publishing.flow.json
+    relationship: implemented-by-step
+    status: exists
+    relevance: >-
+      Derived from leafcutter/decision-publishing branch no-staged-record (from check-record).
+      Add this AC id to each named node's implements list.
+  - path: docs/how-to/file-and-reuse-decisions-with-the-kernel.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/components/decision-kernel.md
+    relationship: describes
+    status: exists
+  - path: docs/analysis/2026-09-30-decision-kernel-design-5-client-observability.md
+    relationship: describes
+    status: exists
+    relevance: RunService, CLI exit codes, the /leafcutter skill.
+assigned_agent: python-coder
+estimated_complexity: XS
+it_requirements:
+  - '`python -m kernel decisions publish` is the only writer of docs/decisions/ (ADR-060): it runs
+    only when a person invokes it, validates everything before writing, writes atomically, and exits
+    0 ok, 3 refused (problems listed, nothing written), 5 environment error.'
+  - The run id is validated as a plain identifier before any path is built.
+  - 'Done-marking evidence (KI-ACS-004, done_proof): implemented_by names an existing kernel/... file
+    plus symbol, and every covering test under tests/kernel/ carries a `# covers: <this AC id>` tag
+    and passes under pytest. No kernel test carries a DK covers tag yet, so tagging comes before any
+    done-marking.'
+test_spec:
+  - name: test_a_run_with_nothing_staged_is_refused
+    target_dir: tests/kernel/memory/
+    framework: unittest
+    type: unit
+    angle: failure
+    description: 'EXISTS (tests/kernel/memory/test_publish_cli.py::TestPublish::test_a_run_with_nothing_staged_is_refused):
+      the message is ''no staged decision record for this run'''
+    covers:
+      - DK-300d-2-i
+  - name: test_publish_exits_3_when_nothing_is_staged
+    target_dir: tests/kernel/memory/
+    framework: unittest
+    type: unit
+    angle: failure
+    description: 'EXISTS (tests/kernel/memory/test_publish_cli.py::TestCli::test_publish_exits_3_when_nothing_is_staged):
+      through the CLI: exit 3, ok false'
+    covers:
+      - DK-300d-2-i
+  - name: test_an_unsafe_run_id_is_refused
+    target_dir: tests/kernel/memory/
+    framework: unittest
+    type: unit
+    angle: failure
+    description: 'EXISTS (tests/kernel/memory/test_publish_cli.py::TestPublish::test_an_unsafe_run_id_is_refused):
+      an id naming no plain run is refused'
+    covers:
+      - DK-300d-2-i
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst
+created: 2026-10-02
+created_by_ticket: tickets/00_inbox/TICKET-20261002-DecisionLifecycleACs.md
+amended_by:
+  - reason: it-po-technical-enrichment
+    by: it-po
+    date: '2026-10-02'
+    ticket: tickets/00_inbox/TICKET-20261002-DecisionLifecycleACs.md
+    build_status: built_and_tested
+    implementation_pointers:
+      - kernel/memory/publish.py#publish
+      - kernel/memory/file_store.py#staged_files
+      - kernel/memory/cli.py#_doc
+    test_pointers:
+      - tests/kernel/memory/test_publish_cli.py::TestPublish::test_a_run_with_nothing_staged_is_refused
+      - tests/kernel/memory/test_publish_cli.py::TestCli::test_publish_exits_3_when_nothing_is_staged
+      - tests/kernel/memory/test_publish_cli.py::TestPublish::test_an_unsafe_run_id_is_refused
+    gaps:
+      - Message and exit code are asserted in two tests; neither checks docs/decisions/ is unchanged
+        (the fixture store is absent).
+    pointer_note: Unverified candidates for implemented_by / covered_by, read from the worktree at
+      e89f0f74 (kernel/ and tests/kernel/ identical to origin/main). The evidence phase verifies each
+      and adds the `# covers:` tags before anything is marked done.
+    complexity_basis: remaining work only (evidence, covers tags, gap closure)
+superseded_by: null
+covered_by:
+  - tests/kernel/memory/test_publish_cli.py::TestPublish::test_a_run_with_nothing_staged_is_refused
+  - tests/kernel/memory/test_publish_cli.py::TestCli::test_publish_exits_3_when_nothing_is_staged
+  - tests/kernel/memory/test_publish_cli.py::TestPublish::test_an_unsafe_run_id_is_refused
+implemented_by:
+  - kernel/memory/publish.py#publish
+  - kernel/memory/file_store.py#staged_files
+  - kernel/memory/cli.py#_doc
+change_target: code
+risk_surface: internal
+notes: |
+  FLOW BACK-LINKS (add this AC id to each node's implements list):
+    leafcutter/decision-publishing branch  no-staged-record
+
+  DERIVATION. Branch no-staged-record (failure). Exit code 3 is the kernel CLI's
+  documented "rejected" code (docs/architecture/components/decision-kernel.md).
+
+  IT-PO BUILD STATUS (2026-10-02, unverified): built and tested. Pointers: amended_by.
+product_truth:
+  - flow: leafcutter/decision-publishing
+    node: no-staged-record
+    node_kind: branch
+    flow_kind: data
+    screen: null
+    mock_data: leafcutter/decisions
+    entities: []
+    source: real
+    asof: '2026-10-02'

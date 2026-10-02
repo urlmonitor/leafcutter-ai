@@ -29,6 +29,9 @@
       "label": "Look up matching records",
       "human": "A new decision's precedent step asks the memory port for matching records through docs/decisions/index.json: filters (components, roadmap phase), a text score, and a sha256 check against the index.",
       "order": 1,
+      "implements": [
+        "DK-300e-1"
+      ],
       "agent": "kernel memory port",
       "consumes": [
         "published record (docs/decisions/<id>.yaml)",
@@ -41,13 +44,16 @@
         "Decision"
       ],
       "impl_asof": "2026-10-02",
-      "impl_status": "not_started"
+      "impl_status": "done"
     },
     {
       "id": "judge",
       "label": "Ask Jev whether each applies",
       "human": "Up to memory.max_precedents (3) candidates go to Jev, each with one literal question: \"does this earlier decision apply here?\". That is one call before options exist; after that the questions ride the assessment batch.",
       "order": 2,
+      "implements": [
+        "DK-300e-2"
+      ],
       "agent": "jev",
       "consumes": [
         "precedent candidates"
@@ -56,13 +62,16 @@
         "applicability score"
       ],
       "impl_asof": "2026-10-02",
-      "impl_status": "not_started"
+      "impl_status": "in_progress"
     },
     {
       "id": "cite",
       "label": "Cite it as evidence",
       "human": "A precedent scoring 0.5 or more becomes prior_decisions evidence that cites its record path and who approved it.",
       "order": 3,
+      "implements": [
+        "DK-300e-2"
+      ],
       "agent": "kernel precedent step",
       "consumes": [
         "precedent candidates",
@@ -75,13 +84,16 @@
         "Decision"
       ],
       "impl_asof": "2026-10-02",
-      "impl_status": "not_started"
+      "impl_status": "in_progress"
     },
     {
       "id": "offer-reuse",
       "label": "Reuse it, or decide anew?",
       "human": "Decision point: for a score of 0.8 or more, on a decision with no options of its own and a precedent that is not superseded, you are asked: reuse it, or decide anew?",
       "order": 4,
+      "implements": [
+        "DK-300e-3"
+      ],
       "screen": "decision-reuse-or-decide-anew",
       "agent": "human (asked through claude_code)",
       "consumes": [
@@ -94,13 +106,16 @@
         "Decision"
       ],
       "impl_asof": "2026-10-02",
-      "impl_status": "not_started"
+      "impl_status": "in_progress"
     },
     {
       "id": "reuse",
       "label": "Reuse the earlier choice",
       "human": "The decision resolves with the precedent's choice, approved by you, the current human, and a new record that cites the precedent under related is staged (for example dec-7cdc61ea41a206e0).",
       "order": 5,
+      "implements": [
+        "DK-300e-4"
+      ],
       "agent": "kernel decision executor",
       "consumes": [
         "reuse answer"
@@ -119,7 +134,7 @@
         "leafcutter/decision-staging"
       ],
       "impl_asof": "2026-10-02",
-      "impl_status": "not_started"
+      "impl_status": "in_progress"
     }
   ],
   "branches": [
@@ -134,8 +149,11 @@
         "applicability score"
       ],
       "outcome_kind": "exit",
+      "implements": [
+        "DK-300e-2-i"
+      ],
       "impl_asof": "2026-10-02",
-      "impl_status": "not_started"
+      "impl_status": "done"
     },
     {
       "id": "evidence-only",
@@ -151,8 +169,13 @@
         "prior_decisions evidence"
       ],
       "outcome_kind": "alternative",
+      "implements": [
+        "DK-300e-3-ii",
+        "DK-300e-3-iii",
+        "DK-300e-3-iv"
+      ],
       "impl_asof": "2026-10-02",
-      "impl_status": "not_started"
+      "impl_status": "in_progress"
     },
     {
       "id": "decide-anew",
@@ -172,8 +195,11 @@
         "Decision"
       ],
       "outcome_kind": "alternative",
+      "implements": [
+        "DK-300e-3-i"
+      ],
       "impl_asof": "2026-10-02",
-      "impl_status": "not_started"
+      "impl_status": "in_progress"
     }
   ],
   "acceptance_scenarios": [
@@ -235,9 +261,9 @@
     }
   ],
   "impl_summary": {
-    "done": 0,
-    "in_progress": 0,
-    "not_started": 8,
+    "done": 2,
+    "in_progress": 6,
+    "not_started": 0,
     "total": 8,
     "asof": "2026-10-02"
   }

@@ -59,6 +59,7 @@ class TestClassificationRecord(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(state["task"].intent, "decision")
 
     async def test_it_counts_against_the_jev_budget_and_replaces_the_routing_question(self) -> None:
+        # covers: DK-300a-1
         rig = _rig()
         rig.jev.script("kernel.intent", "intent.*", choice_answer("decision", 0.9, 0.8))
         _, _, state = await rig.start(requested_output_schema=None)

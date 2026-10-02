@@ -98,6 +98,8 @@ class TestLiveLoopReproduction(DesignCase):
         self.assertEqual(result.decisions[0].status, DecisionStatus.NEEDS_EVIDENCE)
 
     def test_design_criteria_end_in_a_ranked_human_question(self) -> None:
+        # covers: DK-300a-4
+        # covers: DK-300b-2
         self.params["design"] = {"c1"}
         _, _, result = self.start()
         question = self.question(result)
@@ -115,6 +117,7 @@ class TestLiveLoopReproduction(DesignCase):
         self.assertIn("kind.c1", self.jev.questions_asked("decision.assess"))
 
     def test_a_cited_option_names_its_evidence_in_words(self) -> None:
+        # covers: DK-300b-2
         self.params["design"] = {"c1"}
         cited = Option(id="A", title="Use the ADR format", source_refs=[self.evidence[0].id])
         question = self.question(self.start(options=[cited, Option(id="B", title="Other")])[2])
@@ -122,6 +125,7 @@ class TestLiveLoopReproduction(DesignCase):
         self.assertEqual(question.evidence_ids, [self.evidence[0].id])
 
     def test_the_kind_is_recorded_on_the_criterion_and_asked_once(self) -> None:
+        # covers: DK-300a-4
         self.params["design"] = {"c1"}
         _, _, result = self.start()
         kinds = {c["id"]: (c["kind"], c["kind_source"])
@@ -144,6 +148,8 @@ class TestHumanChoiceResolves(DesignCase):
                                         [out.model_copy(update={"actor_id": actor})]), self.ctx_)
 
     def test_choosing_an_option_resolves_it_with_the_human_as_approver(self) -> None:
+        # covers: DK-300b-2
+        # covers: DK-300b-3
         done = self.answer({"choice_id": "C"})  # the kernel ranked C second; the human decides
         self.assertEqual(done.status, ResultStatus.COMPLETED)
         report = DecisionReportPayload.model_validate(done.output_payload)
@@ -161,6 +167,7 @@ class TestHumanChoiceResolves(DesignCase):
         self.assertTrue(report.criterion_assessments)
 
     def test_an_added_option_is_ranked_again(self) -> None:
+        # covers: DK-300b-2-i
         again = self.answer({"added_options": [{"title": "Hybrid", "description": "Both"}]})
         self.assertEqual(again.requests[0].kind, RequestKind.EVIDENCE)  # round F: claims first
         request = ResearchRequestPayload.model_validate(again.requests[0].payload)
@@ -174,6 +181,7 @@ class TestHumanChoiceResolves(DesignCase):
         self.assertEqual(self.jev.call_count, 3)
 
     def test_an_unknown_choice_does_not_resolve(self) -> None:
+        # covers: DK-300b-3
         self.assertEqual(self.answer({"choice_id": "ZZ"}).status, ResultStatus.PARTIAL)
 
 

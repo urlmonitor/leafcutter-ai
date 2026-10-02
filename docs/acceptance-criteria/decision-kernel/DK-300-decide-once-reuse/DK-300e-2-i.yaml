@@ -1,0 +1,154 @@
+id: DK-300e-2-i
+title: "An earlier decision scored below the applies threshold is left out"
+component: decision-kernel
+components:
+  - decision_kernel
+level: L3
+status: active
+req_status: draft
+work_status: done
+readiness: reviewed
+priority: medium
+roadmap_phase: phase_kernel_1_founding
+criteria: |
+  Given a precedent Jev scored 0.49, with memory.applies_threshold at 0.5,
+  When the precedent step records the judgement,
+  Then the precedent is not part of the prior_decisions evidence,
+  And it is noted among the precedents considered with action not_applicable and is not listed
+    under related,
+  And the decision continues without it.
+depends_on:
+  - DK-300e-2
+doc_links:
+  - path: docs/product-truth/flows/leafcutter/decision-retrieval.flow.json
+    relationship: implemented-by-step
+    status: exists
+    relevance: >-
+      Derived from leafcutter/decision-retrieval branch not-applicable (from judge). Add this
+      AC id to each named node's implements list.
+  - path: docs/product-truth/mock-data/leafcutter/decisions.mock.json
+    relationship: related
+    status: exists
+    relevance: >-
+      Source of the concrete ids and values in the criteria (dec-... records, options,
+      criteria, applicability scores, run ids).
+  - path: docs/architecture/components/decision-kernel.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-060-source-of-truth-and-approval-authority.md
+    relationship: describes
+    status: exists
+    relevance: Git canonical; only a human approval creates a record; read-only runs; precedent never
+      authority; append-only corrections.
+  - path: docs/analysis/2026-09-30-decision-kernel-design-4-jev-and-capabilities.md
+    relationship: describes
+    status: exists
+    relevance: Decision, research and retrieval capabilities, host operations, human interaction;
+      'As built' sections.
+assigned_agent: python-coder
+estimated_complexity: XS
+it_requirements:
+  - 'Precedent is evidence, never authority (ADR-060): no score, however high, resolves a decision,
+    changes routing or changes a threshold.'
+  - Thresholds, caps and limits are read from the kernel configuration by key (config/kernel_config.default.json);
+    no number quoted in the criteria is hard-coded, and a test that pins a default also shows the
+    behaviour follows an overridden value.
+  - 'Done-marking evidence (KI-ACS-004, done_proof): implemented_by names an existing kernel/... file
+    plus symbol, and every covering test under tests/kernel/ carries a `# covers: <this AC id>` tag
+    and passes under pytest. No kernel test carries a DK covers tag yet, so tagging comes before any
+    done-marking.'
+test_spec:
+  - name: test_below_the_applies_threshold_is_not_applicable
+    target_dir: tests/kernel/memory/
+    framework: unittest
+    type: unit
+    angle: boundary
+    description: 'EXISTS (tests/kernel/memory/test_precedent_units.py::TestVerdict::test_below_the_applies_threshold_is_not_applicable):
+      0.49: action not_applicable, no evidence'
+    covers:
+      - DK-300e-2-i
+  - name: test_a_precedent_judged_not_applicable_is_not_related
+    target_dir: tests/kernel/memory/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: 'EXISTS (tests/kernel/memory/test_precedent_units.py::TestFinalLinks::test_a_precedent_judged_not_applicable_is_not_related):
+      not listed under related'
+    covers:
+      - DK-300e-2-i
+  - name: test_a_precedent_judged_not_to_apply_is_ignored
+    target_dir: tests/kernel/memory/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: 'EXISTS (tests/kernel/memory/test_decision_precedent.py::TestAMatchingPrecedentBeforeAnyBasis::test_a_precedent_judged_not_to_apply_is_ignored):
+      the decision continues without it'
+    covers:
+      - DK-300e-2-i
+  - name: test_a_lookalike_goal_is_judged_not_applicable_and_the_normal_flow_runs
+    target_dir: tests/kernel/memory/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: 'EXISTS (tests/kernel/memory/test_learning_loop_e2e.py::TestRunThreeIsUnrelated::test_a_lookalike_goal_is_judged_not_applicable_and_the_normal_flow_runs):
+      end to end: no precedent evidence, normal flow'
+    covers:
+      - DK-300e-2-i
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst
+created: 2026-10-02
+created_by_ticket: tickets/00_inbox/TICKET-20261002-DecisionLifecycleACs.md
+amended_by:
+  - reason: it-po-technical-enrichment
+    by: it-po
+    date: '2026-10-02'
+    ticket: tickets/00_inbox/TICKET-20261002-DecisionLifecycleACs.md
+    build_status: built_and_tested
+    implementation_pointers:
+      - kernel/memory/precedent.py#judge
+      - kernel/memory/precedent.py#final_links
+      - kernel/capabilities/decision/executor.py#_apply_precedents
+    test_pointers:
+      - tests/kernel/memory/test_precedent_units.py::TestVerdict::test_below_the_applies_threshold_is_not_applicable
+      - tests/kernel/memory/test_precedent_units.py::TestFinalLinks::test_a_precedent_judged_not_applicable_is_not_related
+      - tests/kernel/memory/test_decision_precedent.py::TestAMatchingPrecedentBeforeAnyBasis::test_a_precedent_judged_not_to_apply_is_ignored
+      - tests/kernel/memory/test_learning_loop_e2e.py::TestRunThreeIsUnrelated::test_a_lookalike_goal_is_judged_not_applicable_and_the_normal_flow_runs
+    gaps:
+      - None found.
+    pointer_note: Unverified candidates for implemented_by / covered_by, read from the worktree at
+      e89f0f74 (kernel/ and tests/kernel/ identical to origin/main). The evidence phase verifies each
+      and adds the `# covers:` tags before anything is marked done.
+    complexity_basis: remaining work only (evidence, covers tags, gap closure)
+superseded_by: null
+covered_by:
+  - tests/kernel/memory/test_precedent_units.py::TestVerdict::test_below_the_applies_threshold_is_not_applicable
+  - tests/kernel/memory/test_precedent_units.py::TestFinalLinks::test_a_precedent_judged_not_applicable_is_not_related
+  - tests/kernel/memory/test_decision_precedent.py::TestAMatchingPrecedentBeforeAnyBasis::test_a_precedent_judged_not_to_apply_is_ignored
+  - tests/kernel/memory/test_learning_loop_e2e.py::TestRunThreeIsUnrelated::test_a_lookalike_goal_is_judged_not_applicable_and_the_normal_flow_runs
+implemented_by:
+  - kernel/memory/precedent.py#judge
+  - kernel/memory/precedent.py#final_links
+  - kernel/capabilities/decision/executor.py#_apply_precedents
+change_target: code
+risk_surface: internal
+notes: |
+  FLOW BACK-LINKS (add this AC id to each node's implements list):
+    leafcutter/decision-retrieval  branch  not-applicable
+
+  DERIVATION. Branch not-applicable (exit), "Jev scores the precedent below 0.5".
+  0.49 is the boundary partner of DK-300e-2's exact-0.5 clause. The action name
+  and the related rule come from the mock data's invariants (below 0.5 ->
+  not_applicable; related == precedents whose action is not not_applicable).
+
+  IT-PO BUILD STATUS (2026-10-02, unverified): built and tested. Pointers: amended_by.
+product_truth:
+  - flow: leafcutter/decision-retrieval
+    node: not-applicable
+    node_kind: branch
+    flow_kind: data
+    screen: null
+    mock_data: leafcutter/decisions
+    entities: []
+    source: real
+    asof: '2026-10-02'

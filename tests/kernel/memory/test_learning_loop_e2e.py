@@ -118,6 +118,7 @@ class TestRunOneStagesARecordThatPublishFiles(LoopCase):
 
     async def test_a_human_choice_stages_a_record_and_nothing_is_written_to_the_repository(
             self) -> None:
+        # covers: DK-300c-1
         _, done = await self.run_one()
         self.assertEqual(done.status, RunStatus.COMPLETED, done.limitations)
         self.assertFalse((self.repo / "docs" / "decisions").exists())  # the kernel wrote no repo file
@@ -133,6 +134,7 @@ class TestRunOneStagesARecordThatPublishFiles(LoopCase):
         self.assertEqual(record.id, narrow(done.decision_ids)[0])
 
     async def test_publish_files_a_valid_record_and_the_index(self) -> None:
+        # covers: DK-300d-3
         done, record_id = await self.published()
         folder = self.repo / "docs" / "decisions"
         self.assertTrue((folder / f"{record_id}.yaml").is_file())
@@ -143,6 +145,7 @@ class TestRunOneStagesARecordThatPublishFiles(LoopCase):
         self.assertEqual(again[1]["already_present"], [record_id])  # idempotent
 
     async def test_the_report_and_the_envelope_carry_the_round_eight_fixes(self) -> None:
+        # covers: DK-300b-3
         done, _ = await self.published()
         payload = narrow(done.output).payload
         self.assertEqual(payload["trace_refs"]["trace_id"], done.trace_refs.trace_id)  # defect b
@@ -206,6 +209,7 @@ class TestRunTwoReusesThePrecedent(LoopCase):
         self.assertIn(record_id, narrow(decision.rationale).text)
 
     async def test_nothing_resolves_until_the_human_answers(self) -> None:
+        # covers: DK-300e-3
         _, record_id = await self.published()
         envelope = await self.service().start_run(self.goal(GOAL))
         self.assertEqual(envelope.status, RunStatus.WAITING_HUMAN)
@@ -219,6 +223,7 @@ class TestRunTwoReusesThePrecedent(LoopCase):
             [f"docs/decisions/{record_id}.yaml"])
 
     async def test_reuse_stages_a_new_record_that_cites_the_precedent_and_publishes(self) -> None:
+        # covers: DK-300e-4
         _, record_id = await self.published()
         envelope = await self.service().start_run(self.goal(GOAL))
         done = await self.service().resume_run(
@@ -259,6 +264,7 @@ class TestRunThreeIsUnrelated(LoopCase):
         self.assertFalse(getattr(pending, "question", "").startswith(CONFIRM_START))
 
     async def test_a_lookalike_goal_is_judged_not_applicable_and_the_normal_flow_runs(self) -> None:
+        # covers: DK-300e-2-i
         await self.published()
         self.applies = 0.1
         before = len(self.scripted.batches)

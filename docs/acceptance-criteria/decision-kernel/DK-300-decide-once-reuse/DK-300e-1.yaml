@@ -1,0 +1,293 @@
+id: DK-300e-1
+title: "A new decision looks up earlier published decisions through the index"
+component: decision-kernel
+components:
+  - decision_kernel
+level: L2
+status: active
+req_status: draft
+work_status: done
+readiness: reviewed
+priority: medium
+roadmap_phase: phase_kernel_1_founding
+criteria: |
+  Given a new decision run whose task names the component decision_kernel and the roadmap phase
+    phase_kernel_1_founding,
+  And published records listed in docs/decisions/index.json,
+  When the decision's precedent step asks the decision store for matches,
+  Then candidates are chosen through the index by the component and roadmap-phase filters and by a
+    text score against the question,
+  And when the task names no component and no roadmap phase, candidates are chosen by the text
+    score alone,
+  And each candidate record's sha256 is checked against its index entry before the record is used,
+  And only records listed in the index are candidates.
+depends_on:
+  - DK-300e
+doc_links:
+  - path: docs/product-truth/flows/leafcutter/decision-retrieval.flow.json
+    relationship: implemented-by-step
+    status: exists
+    relevance: >-
+      Derived from leafcutter/decision-retrieval step lookup. Add this AC id to each named
+      node's implements list.
+  - path: docs/product-truth/flows/leafcutter/decision-forming.flow.json
+    relationship: implemented-by-step
+    status: exists
+    relevance: >-
+      Derived from leafcutter/decision-forming step precedent. Add this AC id to each named
+      node's implements list.
+  - path: docs/product-truth/flows/leafcutter/decision-lifecycle.flow.json
+    relationship: implemented-by-step
+    status: exists
+    relevance: >-
+      Derived from leafcutter/decision-lifecycle step reuse. Add this AC id to each named
+      node's implements list.
+  - path: docs/how-to/file-and-reuse-decisions-with-the-kernel.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-060-source-of-truth-and-approval-authority.md
+    relationship: related
+    status: exists
+    relevance: >-
+      Standing rules: only a human approval creates a record, nothing is written into the
+      repository during a run, precedent is evidence and never authority, corrections are
+      append-only.
+  - path: docs/product-truth/mock-data/leafcutter/decisions.mock.json
+    relationship: related
+    status: exists
+    relevance: >-
+      Source of the concrete ids and values in the criteria (dec-... records, options,
+      criteria, applicability scores, run ids).
+  - path: docs/architecture/components/decision-kernel.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-059-decision-store-reviewable-yaml-records-now-graph-later.md
+    relationship: describes
+    status: exists
+    relevance: One YAML record per approved decision behind the ColonyMemory port; generated index;
+      precedent is evidence.
+  - path: docs/analysis/2026-09-30-decision-kernel-design-4-jev-and-capabilities.md
+    relationship: describes
+    status: exists
+    relevance: Decision, research and retrieval capabilities, host operations, human interaction;
+      'As built' sections.
+assigned_agent: python-coder
+estimated_complexity: XS
+it_requirements:
+  - Lookup reads only docs/decisions/index.json and the files it lists; a file whose sha256 no longer
+    matches its index entry is skipped with a warning, never served.
+  - A missing or unreadable index or store yields no precedent and a warning; the decision continues
+    without it.
+  - Thresholds, caps and limits are read from the kernel configuration by key (config/kernel_config.default.json);
+    no number quoted in the criteria is hard-coded, and a test that pins a default also shows the
+    behaviour follows an overridden value.
+  - 'During a run the kernel only reads the repository (ADR-060): no file under the repository root
+    may change; the configured run root is the only place a run writes.'
+  - 'Done-marking evidence (KI-ACS-004, done_proof): implemented_by names an existing kernel/... file
+    plus symbol, and every covering test under tests/kernel/ carries a `# covers: <this AC id>` tag
+    and passes under pytest. No kernel test carries a DK covers tag yet, so tagging comes before any
+    done-marking.'
+test_spec:
+  - name: test_the_same_question_is_found_first
+    target_dir: tests/kernel/memory/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: 'EXISTS (tests/kernel/memory/test_store.py::TestFind::test_the_same_question_is_found_first):
+      the text score ranks the matching record first'
+    covers:
+      - DK-300e-1
+  - name: test_a_facet_the_query_names_filters_out_a_record_without_overlap
+    target_dir: tests/kernel/memory/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: 'EXISTS (tests/kernel/memory/test_store.py::TestFind::test_a_facet_the_query_names_filters_out_a_record_without_overlap):
+      component and phase filters apply'
+    covers:
+      - DK-300e-1
+  - name: test_a_repository_wide_record_passes_every_facet
+    target_dir: tests/kernel/memory/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: 'EXISTS (tests/kernel/memory/test_store.py::TestFind::test_a_repository_wide_record_passes_every_facet):
+      repository-wide records pass the filters'
+    covers:
+      - DK-300e-1
+  - name: test_a_record_edited_after_the_index_is_skipped
+    target_dir: tests/kernel/memory/
+    framework: unittest
+    type: unit
+    angle: failure
+    description: 'EXISTS (tests/kernel/memory/test_store.py::TestFind::test_a_record_edited_after_the_index_is_skipped):
+      a sha256 mismatch is skipped'
+    covers:
+      - DK-300e-1
+  - name: test_a_missing_index_gives_no_precedent
+    target_dir: tests/kernel/memory/
+    framework: unittest
+    type: unit
+    angle: failure
+    description: 'EXISTS (tests/kernel/memory/test_store.py::TestFind::test_a_missing_index_gives_no_precedent):
+      only indexed records are candidates'
+    covers:
+      - DK-300e-1
+  - name: test_the_query_carries_components_phase_limit_and_minimum_score
+    target_dir: tests/kernel/memory/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: 'EXISTS (tests/kernel/memory/test_precedent_units.py::TestQueryAndQuestions::test_the_query_carries_components_phase_limit_and_minimum_score):
+      the query takes components and phase from the task'
+    covers:
+      - DK-300e-1
+  - name: test_filters_match_ignores_a_facet_the_record_does_not_set
+    target_dir: tests/kernel/memory/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: 'EXISTS (tests/kernel/memory/test_store.py::TestNullAndHelpers::test_filters_match_ignores_a_facet_the_record_does_not_set):
+      with no component or phase named, the text score alone decides'
+    covers:
+      - DK-300e-1
+delivers_to:
+  agent: python-coder
+  ac_id: DK-300e-2
+  contract: 'list[kernel.memory.port.DecisionHit], best text score first, at most memory.max_precedents
+    entries: {record: DecisionRecord (sha256 already checked against its index entry), score: float
+    0..1 (overlap coefficient of content words, 4 places, >= memory.min_candidate_score), path: repo-relative
+    POSIX ''docs/decisions/<id>.yaml'', superseded_by: tuple[str] derived from the index}; approver
+    and approval date are record.approval.approved_by / approved_at; hit.superseded is true when any
+    later record supersedes it. Empty list when memory is off, the index is missing or nothing matches.'
+expects_from:
+  ac_id: DK-300d-3
+  contract: docs/decisions/<id>.yaml (the staged record's exact text) plus a regenerated docs/decisions/index.json
+    entry {id, file, sha256 of the LF-normalised file, title, question, decision_type, selected_option_id,
+    selected_option_title, approved_by, approved_at, components, change_target, risk_surface, roadmap_phase,
+    file_globs, repository_wide, supersedes, superseded_by}; visible to later runs only after the
+    change is merged.
+origin_agent: business-analyst
+created: 2026-10-02
+created_by_ticket: tickets/00_inbox/TICKET-20261002-DecisionLifecycleACs.md
+amended_by:
+  - reason: it-po-technical-enrichment
+    by: it-po
+    date: '2026-10-02'
+    ticket: tickets/00_inbox/TICKET-20261002-DecisionLifecycleACs.md
+    build_status: built_and_tested
+    implementation_pointers:
+      - kernel/memory/precedent.py#precedent_query
+      - kernel/memory/precedent.py#find_precedents
+      - kernel/memory/precedent.py#phases_from_constraints
+      - kernel/memory/file_store.py#FileColonyMemory.find_decisions
+      - kernel/memory/file_store.py#FileColonyMemory._load_checked
+      - kernel/memory/file_store.py#filters_match
+      - kernel/memory/file_store.py#text_score
+      - kernel/capabilities/decision/executor.py#_precedent
+    test_pointers:
+      - tests/kernel/memory/test_store.py::TestFind::test_the_same_question_is_found_first
+      - tests/kernel/memory/test_store.py::TestFind::test_a_facet_the_query_names_filters_out_a_record_without_overlap
+      - tests/kernel/memory/test_store.py::TestFind::test_a_repository_wide_record_passes_every_facet
+      - tests/kernel/memory/test_store.py::TestFind::test_a_record_edited_after_the_index_is_skipped
+      - tests/kernel/memory/test_store.py::TestFind::test_a_missing_index_gives_no_precedent
+      - tests/kernel/memory/test_precedent_units.py::TestQueryAndQuestions::test_the_query_carries_components_phase_limit_and_minimum_score
+      - tests/kernel/memory/test_store.py::TestNullAndHelpers::test_filters_match_ignores_a_facet_the_record_does_not_set
+      - tests/kernel/memory/test_store.py::TestFind::test_an_unrelated_question_finds_nothing
+      - tests/kernel/memory/test_store.py::TestFind::test_a_minimum_score_and_a_limit_bound_the_result
+    gaps:
+      - 'BA''s open question, answered from the code: a sha256 mismatch skips that record with a warning,
+        the run continues, and `decisions validate` is what fails on it. The roadmap phase is read
+        from a ''[severity] roadmap_phase: <id>'' constraint, not from a scope field; a record that
+        sets no facet is not filtered by it.'
+    pointer_note: Unverified candidates for implemented_by / covered_by, read from the worktree at
+      e89f0f74 (kernel/ and tests/kernel/ identical to origin/main). The evidence phase verifies each
+      and adds the `# covers:` tags before anything is marked done.
+    complexity_basis: remaining work only (evidence, covers tags, gap closure)
+superseded_by: null
+covered_by:
+  - tests/kernel/memory/test_store.py::TestFind::test_the_same_question_is_found_first
+  - tests/kernel/memory/test_store.py::TestFind::test_a_facet_the_query_names_filters_out_a_record_without_overlap
+  - tests/kernel/memory/test_store.py::TestFind::test_a_repository_wide_record_passes_every_facet
+  - tests/kernel/memory/test_store.py::TestFind::test_a_record_edited_after_the_index_is_skipped
+  - tests/kernel/memory/test_store.py::TestFind::test_a_missing_index_gives_no_precedent
+  - tests/kernel/memory/test_precedent_units.py::TestQueryAndQuestions::test_the_query_carries_components_phase_limit_and_minimum_score
+  - tests/kernel/memory/test_store.py::TestNullAndHelpers::test_filters_match_ignores_a_facet_the_record_does_not_set
+  - tests/kernel/memory/test_store.py::TestFind::test_an_unrelated_question_finds_nothing
+  - tests/kernel/memory/test_store.py::TestFind::test_a_minimum_score_and_a_limit_bound_the_result
+implemented_by:
+  - kernel/memory/precedent.py#precedent_query
+  - kernel/memory/precedent.py#find_precedents
+  - kernel/memory/precedent.py#phases_from_constraints
+  - kernel/memory/file_store.py#FileColonyMemory.find_decisions
+  - kernel/memory/file_store.py#FileColonyMemory._load_checked
+  - kernel/memory/file_store.py#filters_match
+  - kernel/memory/file_store.py#text_score
+  - kernel/capabilities/decision/executor.py#_precedent
+change_target: code
+risk_surface: internal
+notes: |
+  FLOW BACK-LINKS (add this AC id to each node's implements list):
+    leafcutter/decision-retrieval  step    lookup
+    leafcutter/decision-forming    step    precedent
+    leafcutter/decision-lifecycle  step    reuse
+
+  DERIVATION. Scenario lookup, plus decision-forming/precedent (the entry point
+  that expands into this sub-flow: "matching earlier records are looked up and
+  judged, and any that apply are carried forward") and the journey scenario
+  decision-lifecycle/reuse ("found through docs/decisions/index.json"). The two
+  umbrella scenarios are also satisfied, in their later clauses, by DK-300e-2
+  (judged, carried forward) and DK-300e-3 (offered for reuse, never resolves on
+  its own). The "text score alone" clause comes from
+  docs/how-to/file-and-reuse-decisions-with-the-kernel.md Step 5 ("where the task
+  names them").
+
+  STANDING RULE carried from DK-300e: only published records are found
+  (DK-300d-1-i is the same rule from the publishing side).
+
+  GAP, NOT SPECIFIED. The flow does not say what happens when a record's sha256
+  does not match its index entry (skipped, error, run fails). Raised as a question
+  in the BA sign-off; add an L3 once answered.
+
+  JOURNEY NODE NOTE. decision-lifecycle/reuse expands into the whole retrieval
+  sub-flow; listing DK-300e (the composite) in its implements may suit it better.
+
+  IT-PO BUILD STATUS (2026-10-02, unverified): built and tested. The sha256-mismatch
+  question is answered by the code: the record is skipped with a warning and the run
+  continues. Pointers: amended_by.
+
+  BA QUESTION 1, ANSWERED (2026-10-02): a record whose sha256 does not match its index entry
+    is skipped with a warning, and the run continues. No L3 for this behaviour exists in the
+    tree and none is added (no new ACs by user decision). The behaviour is built and tested:
+    tests/kernel/memory/test_store.py, a sha256 mismatch is skipped.
+product_truth:
+  - flow: leafcutter/decision-forming
+    node: precedent
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: leafcutter/decisions
+    entities:
+      - Decision
+    source: real
+    asof: '2026-10-02'
+  - flow: leafcutter/decision-lifecycle
+    node: reuse
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: leafcutter/decisions
+    entities:
+      - Decision
+    source: real
+    asof: '2026-10-02'
+  - flow: leafcutter/decision-retrieval
+    node: lookup
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: leafcutter/decisions
+    entities:
+      - Decision
+    source: real
+    asof: '2026-10-02'

@@ -81,6 +81,7 @@ class TestGroundingFlow(GroundingTestCase):
     """Unknown options: research first, then options with the evidence attached."""
 
     def test_unknown_options_first_ask_for_research_not_for_options(self) -> None:
+        # covers: DK-300a-2
         ctx = make_context(self.root, jev=self.jev)
         asked = self.run_decision(self.goal_invocation(), ctx)
         self.assertEqual(asked.status, ResultStatus.WAITING)
@@ -90,6 +91,7 @@ class TestGroundingFlow(GroundingTestCase):
         self.assertEqual(self.jev.call_count, 0)
 
     def test_the_options_request_carries_the_researched_evidence(self) -> None:
+        # covers: DK-300a-2
         _, _, _, after = self.researched()
         self.assertEqual(after.status, ResultStatus.WAITING)
         request = after.requests[0]

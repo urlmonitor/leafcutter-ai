@@ -106,6 +106,7 @@ class TestTheReservedAssessment(BudgetCase):
     jev_left = 5  # the first assessment (1 call) leaves 4; a round (2) plus the reserve (3) needs 5
 
     def test_a_round_that_does_not_fit_beside_the_reserve_ends_in_the_ranked_question(self) -> None:
+        # covers: DK-300a-4-i
         _, _, result = self.start()
         question = self.question(result)
         self.assertEqual([c.id for c in question.choices], ["B", "C", "A"])
@@ -115,6 +116,7 @@ class TestTheReservedAssessment(BudgetCase):
         self.assertEqual(self.jev.call_count, 1)  # it never started the research it could not fund
 
     def test_with_one_more_call_the_round_is_requested_as_before(self) -> None:
+        # covers: DK-300a-4-i
         self.jev_left = 6
         _, _, result = self.start()
         self.assertEqual(result.requests[0].kind, RequestKind.EVIDENCE)
@@ -128,6 +130,7 @@ class TestTheReservedAssessment(BudgetCase):
 
     def test_the_humans_choice_resolves_and_the_final_report_says_the_evidence_was_limited(
             self) -> None:
+        # covers: DK-300a-4-i
         inv, ctx, waiting = self.start()
         answer = child(ctx, RequestKind.HUMAN, schema_ids.HUMAN_ANSWER, {"choice_id": "C"})
         done = self.run_decision(resume(inv, waiting, [answer.model_copy(
@@ -157,6 +160,7 @@ class TestFallbackToTheLastCompleteAssessment(BudgetCase):
         return self.run_decision(again, self.ctx(self.evidence))
 
     def test_no_budget_for_a_new_assessment_ranks_the_last_complete_one(self) -> None:
+        # covers: DK-300a-4-i
         result = self.research_then(0)
         question = self.question(result)
         self.assertEqual([c.id for c in question.choices], ["B", "C", "A"])
@@ -393,6 +397,7 @@ class TestTheCostModelMatchesTheRealBatch(KindCase):
     """The reserve is only as good as its question count: it must be the batch the code sends."""
 
     def test_the_assessment_question_count_is_what_the_batch_carries(self) -> None:
+        # covers: DK-300a-4
         self.kinds()  # one assessment: 6 criteria, 3 options, 6 criteria still unclassified
         (batch,) = [b for b in self.jev.batches if b.purpose == "decision.assess"]
         self.assertEqual(len(batch.questions), assessment_questions(6, 3, 6))

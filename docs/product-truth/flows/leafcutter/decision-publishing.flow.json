@@ -29,6 +29,9 @@
       "label": "Decide to publish",
       "human": "Decision point: you run python -m kernel decisions publish --run-id R yourself, or ask Claude Code to run it and open a PR.",
       "order": 1,
+      "implements": [
+        "DK-300d-1"
+      ],
       "agent": "human (or claude_code on request)",
       "consumes": [
         "staged record (<run_root>/runs/<run_id>/staged/decisions/<id>.yaml)",
@@ -41,13 +44,16 @@
         "Decision"
       ],
       "impl_asof": "2026-10-02",
-      "impl_status": "not_started"
+      "impl_status": "in_progress"
     },
     {
       "id": "check-record",
       "label": "Validate the staged record",
       "human": "The command checks the record's schema, its links, and its filter values against docs/components.json and docs/roadmap.json.",
       "order": 2,
+      "implements": [
+        "DK-300d-2"
+      ],
       "agent": "python -m kernel decisions publish",
       "consumes": [
         "publish request (--run-id R)",
@@ -60,13 +66,16 @@
         "Decision"
       ],
       "impl_asof": "2026-10-02",
-      "impl_status": "not_started"
+      "impl_status": "in_progress"
     },
     {
       "id": "write-published",
       "label": "Write the record and the index",
       "human": "The command writes docs/decisions/<id>.yaml and regenerates docs/decisions/index.json.",
       "order": 3,
+      "implements": [
+        "DK-300d-3"
+      ],
       "agent": "python -m kernel decisions publish",
       "consumes": [
         "validated record"
@@ -79,13 +88,16 @@
         "Decision"
       ],
       "impl_asof": "2026-10-02",
-      "impl_status": "not_started"
+      "impl_status": "done"
     },
     {
       "id": "check-store",
       "label": "Validate the store",
       "human": "python -m kernel decisions validate passes over the whole decision store.",
       "order": 4,
+      "implements": [
+        "DK-300d-3"
+      ],
       "agent": "python -m kernel decisions validate",
       "consumes": [
         "published record (docs/decisions/<id>.yaml)",
@@ -98,13 +110,16 @@
         "Decision"
       ],
       "impl_asof": "2026-10-02",
-      "impl_status": "not_started"
+      "impl_status": "done"
     },
     {
       "id": "review",
       "label": "Commit and review in git",
       "human": "The new record and index are committed, and a PR is opened and reviewed like any other change; git is the canonical store.",
       "order": 5,
+      "implements": [
+        "DK-300d-4"
+      ],
       "screen": "decision-record-published",
       "agent": "git review (commit and PR)",
       "consumes": [
@@ -119,13 +134,16 @@
         "Decision"
       ],
       "impl_asof": "2026-10-02",
-      "impl_status": "not_started"
+      "impl_status": "in_progress"
     },
     {
       "id": "merge",
       "label": "Merge to main",
       "human": "The PR merges to main, and from then on every later run can find the record (for example dec-ef8ddcb79d668a67).",
       "order": 6,
+      "implements": [
+        "DK-300d-4"
+      ],
       "agent": "git (merge to main)",
       "consumes": [
         "decision record PR"
@@ -137,7 +155,7 @@
         "Decision"
       ],
       "impl_asof": "2026-10-02",
-      "impl_status": "not_started"
+      "impl_status": "in_progress"
     }
   ],
   "branches": [
@@ -152,8 +170,11 @@
         "staged record (<run_root>/runs/<run_id>/staged/decisions/<id>.yaml)"
       ],
       "outcome_kind": "exit",
+      "implements": [
+        "DK-300d-1-i"
+      ],
       "impl_asof": "2026-10-02",
-      "impl_status": "not_started"
+      "impl_status": "in_progress"
     },
     {
       "id": "no-staged-record",
@@ -166,8 +187,11 @@
         "publish request (--run-id R)"
       ],
       "outcome_kind": "failure",
+      "implements": [
+        "DK-300d-2-i"
+      ],
       "impl_asof": "2026-10-02",
-      "impl_status": "not_started"
+      "impl_status": "done"
     },
     {
       "id": "unknown-filter",
@@ -180,8 +204,11 @@
         "staged record (<run_root>/runs/<run_id>/staged/decisions/<id>.yaml)"
       ],
       "outcome_kind": "failure",
+      "implements": [
+        "DK-300d-2-ii"
+      ],
       "impl_asof": "2026-10-02",
-      "impl_status": "not_started"
+      "impl_status": "in_progress"
     },
     {
       "id": "correct-older",
@@ -203,8 +230,11 @@
         "Decision"
       ],
       "outcome_kind": "alternative",
+      "implements": [
+        "DK-300d-3-i"
+      ],
       "impl_asof": "2026-10-02",
-      "impl_status": "not_started"
+      "impl_status": "done"
     }
   ],
   "acceptance_scenarios": [
@@ -278,9 +308,9 @@
     }
   ],
   "impl_summary": {
-    "done": 0,
-    "in_progress": 0,
-    "not_started": 10,
+    "done": 4,
+    "in_progress": 6,
+    "not_started": 0,
     "total": 10,
     "asof": "2026-10-02"
   }
