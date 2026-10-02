@@ -15,6 +15,7 @@ from typing import Any
 
 from kernel.config import KernelConfig, SourceConfig, load_kernel_config
 from kernel.contracts import TaskInput, content_hash
+from kernel.contracts.enums import EvidenceCategory
 from kernel.context_enrichment import gather_context
 
 EVAL_SET = Path(__file__).resolve().parents[1] / "fixtures" / "eval" / "context_enrichment.json"
@@ -30,7 +31,7 @@ def config_for(case: dict[str, Any], **limits: Any) -> KernelConfig:
     """Use production defaults and a single explicit fixture repository source."""
     config = load_kernel_config()
     source = SourceConfig(id=SOURCE_ID, kind="repo_text", roots=["."],
-                          categories=["task_context"],
+                          categories=[EvidenceCategory.TASK_CONTEXT],
                           deny_globs=case.get("source_deny_globs", []))
     enrichment = config.context_enrichment.model_copy(update={
         "source_ids": [SOURCE_ID], "max_files": 24, "max_sources": 1,

@@ -18,7 +18,7 @@ from kernel.contracts.base import canonical_json
 from kernel.contracts.context import CallerContext, ContextExcerpt, EnrichedContext
 from kernel.enrichment_projection import attach_context, context_payload
 from kernel.intent.classify import build_batch
-from tests.kernel.helpers import make_context
+from tests.kernel.helpers import as_type, make_context
 
 
 def snapshot(text: str = "x" * 4000) -> EnrichedContext:
@@ -35,7 +35,7 @@ def snapshot(text: str = "x" * 4000) -> EnrichedContext:
 
 def base_request(size: int = 30404) -> dict:
     """Make a request whose real JSON size is precisely the reviewer's counterexample size."""
-    state = {"task": {"goal": "Can you check the kernel?", "input": ""},
+    state: dict = {"task": {"goal": "Can you check the kernel?", "input": ""},
              "criteria": ["Use the supplied evidence"]}
     state["task"]["input"] = "a" * (size - len(canonical_json(state)))
     return state
@@ -59,9 +59,10 @@ class TestContextProjection(unittest.TestCase):
                 self.assertEqual(base, saved_base)
                 self.assertEqual(context.model_dump(), saved_context)
                 self.assertEqual({key: projected[key] for key in base}, saved_base)
-                self.assertTrue(projected["context_enrichment"]["truncated"])
+                enriched = as_type(projected["context_enrichment"], dict)
+                self.assertTrue(enriched["truncated"])
                 self.assertTrue(any("budget" in note for note in
-                                    projected["context_enrichment"]["limitations"]))
+                                    enriched["limitations"]))
 
     # covers: DK-200b-4-i
     # covers: DK-102
@@ -83,13 +84,14 @@ class TestContextProjection(unittest.TestCase):
         saved = context.model_dump()
         projected = attach_context({"goal": context.original_goal}, context, 60000,
                                    send_repo_excerpts=False)
-        self.assertEqual(projected["context_enrichment"]["evidence"], [])
+        enriched = as_type(projected["context_enrichment"], dict)
+        self.assertEqual(enriched["evidence"], [])
         self.assertTrue(any("withheld" in note for note in
-                            projected["context_enrichment"]["limitations"]))
+                            enriched["limitations"]))
         self.assertTrue(context.evidence)
         self.assertEqual(context.model_dump(), saved)
         allowed = attach_context({"goal": context.original_goal}, context, 60000)
-        self.assertEqual(len(allowed["context_enrichment"]["evidence"]), 5)
+        self.assertEqual(len(as_type(allowed["context_enrichment"], dict)["evidence"]), 5)
 
     # covers: DK-200b-4
     # covers: DK-102
@@ -103,7 +105,7 @@ class TestContextProjection(unittest.TestCase):
         batch = make_batch(execution, "eval.projection", base, [question])
         self.assertLessEqual(len(canonical_json(batch.state)), 36000)
         self.assertEqual(batch.state["task"], base["task"])
-        self.assertTrue(batch.state["context_enrichment"]["truncated"])
+        self.assertTrue(as_type(batch.state["context_enrichment"], dict)["truncated"])
 
     # covers: DK-200b-4
     # covers: DK-102
@@ -116,7 +118,7 @@ class TestContextProjection(unittest.TestCase):
         self.assertEqual(batch.questions, baseline.questions)
         self.assertEqual(batch.state["task"], baseline.state["task"])
         self.assertLessEqual(len(canonical_json(batch.state)), 8000)
-        self.assertTrue(batch.state["context_enrichment"]["truncated"])
+        self.assertTrue(as_type(batch.state["context_enrichment"], dict)["truncated"])
 
 
 if __name__ == "__main__":

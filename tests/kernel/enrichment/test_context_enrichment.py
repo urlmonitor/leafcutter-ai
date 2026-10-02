@@ -20,6 +20,7 @@ from kernel.capabilities.retrieval.access import ReadPolicy
 from kernel.config import SourceConfig
 from kernel.context_enrichment import gather_context
 from kernel.contracts import content_hash
+from kernel.contracts.enums import EvidenceCategory
 from kernel.observability.redaction import Redactor
 from tests.kernel.enrichment.eval_runner import (
     config_for,
@@ -250,7 +251,7 @@ class TestContextEnrichmentBoundaries(ContextCase):
                          for i in range(3)}
         write_repo(case, self.root)
         sources = [SourceConfig(id=f"eval.source-{i}", kind="repo_text",
-                                categories=["task_context"], roots=[f"docs/source-{i}"])
+                                categories=[EvidenceCategory.TASK_CONTEXT], roots=[f"docs/source-{i}"])
                    for i in range(3)]
         config = config_for(case, source_ids=[source.id for source in sources], max_sources=1)
         config = config.model_copy(update={"sources": sources})

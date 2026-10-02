@@ -7,7 +7,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 from kernel.contracts import CallerContext, RunStatus
-from tests.kernel.helpers import out_payload
+from tests.kernel.helpers import as_type, out_payload
 from tests.kernel.intent.support import IntentCase, NEEDS_CONTEXT_ID
 
 
@@ -85,7 +85,7 @@ class TestContextEnrichmentWiring(IntentCase):
         values = await self.checkpoint_values(envelope.run_id)
         self.assertTrue(values["context_enrichment"].evidence)
         batch = next(b for b in self.jev.batches if b.purpose == "kernel.intent")
-        sent = batch.state["context_enrichment"]
+        sent = as_type(batch.state["context_enrichment"], dict)
         self.assertEqual(sent["evidence"], [])
         self.assertNotIn("encapsulated subgraph", str(sent))
 
@@ -105,7 +105,8 @@ class TestContextEnrichmentWiring(IntentCase):
         evidence = out_payload(envelope)["evidence"]
         self.assertTrue(any("Zephyr exports manifests" in item["excerpt"] for item in evidence))
         batch = next(b for b in self.jev.batches if b.purpose == "research.plan_needs")
-        self.assertIn("Zephyr manifest", str(batch.state["context_enrichment"]["caller_context"]))
+        sent = as_type(batch.state["context_enrichment"], dict)
+        self.assertIn("Zephyr manifest", str(sent["caller_context"]))
         values = await self.checkpoint_values(envelope.run_id)
         retrievals = [i for i in values["invocations"].values()
                       if i.capability_id == "retrieve.repository"]
@@ -165,7 +166,7 @@ class TestContextEnrichmentWiring(IntentCase):
         batches = [b for b in self.jev.batches if b.purpose == "decision.assess"]
         self.assertTrue(batches)
         for batch in batches:
-            context = batch.state["context_enrichment"]
+            context = as_type(batch.state["context_enrichment"], dict)
             self.assertEqual(context["caller_context"], caller.model_dump(mode="json"))
             self.assertEqual(context["original_goal"], task.goal)
             self.assertEqual(context["evidence"], [e.model_dump(mode="json") for e in saved.evidence])

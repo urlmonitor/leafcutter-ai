@@ -71,3 +71,8 @@ with one existing LangChain `TypeSafeClassifier` beta warning. Repository-wide R
 kernel error-handling rules passed. This affected-suite result is separate from the earlier
 1,478-test full kernel run. Coverage comments use one AC id per line for the repository's
 proof parser; the comment-only normalization preserved all three test modules' parsed ASTs.
+
+PR type checking additionally covers the new test modules. Their source categories now use
+`EvidenceCategory`, and JSON assertions validate object shapes with the existing `as_type`
+helper before indexing. The exact CI mypy scope passes; the affected 32 tests and 36 subtests
+pass again, as does Ruff. This repair changes test typing and assertions, not production code.
