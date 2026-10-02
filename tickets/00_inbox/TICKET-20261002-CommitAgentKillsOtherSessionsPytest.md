@@ -1,6 +1,6 @@
 ---
 title: "Commit agent: the Step 0 pytest kill terminates every session's tests, not just this worktree's"
-status: todo
+status: done
 components:
   - git_vcs_operations
   - supervisor_system
