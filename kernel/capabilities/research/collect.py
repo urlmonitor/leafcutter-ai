@@ -209,7 +209,7 @@ async def judge(ctx: ExecutionContext, invocation: CapabilityInvocation, questio
         "question": question, "evidence": evidence_state(ctx, items),
         "findings": [f.claim for f in out.findings],
         "answer_checks": {i: {"question": n.question, "evidence_ids":
-                           _passing_ids(ctx, out, i)} for i, n in checks.items()}}
+                           [*_passing_ids(ctx, out, i)]} for i, n in checks.items()}}
     result = await ask_jev(ctx, invocation, make_batch(ctx, PURPOSE, state, questions),
                            prior_usage=prior_usage)
     asked = {q.id for q in questions}

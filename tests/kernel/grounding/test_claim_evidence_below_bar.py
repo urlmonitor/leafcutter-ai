@@ -79,6 +79,7 @@ class TestClaimEvidenceBelowBar(unittest.TestCase):
         inv = invocation("research", schema_ids.RESEARCH_REQUEST, {})
         result = bundle_result(inv, plan, cont, out, [])
         payload = result.output_payload
+        assert payload is not None
         option = Option(id="opt.added.1", title="Hybrid", proposal_status=ProposalStatus.SUPPLIED)
         work = Working(question="Q?", cont=DecisionContinuation(), options=[option], criteria=[],
                        approval_required=False, constraint_ids=[])
