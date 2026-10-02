@@ -236,8 +236,15 @@ def test_changelog_real_corpus_accounts_for_all_fields_and_three_recoveries():
     # angle: real_artifact
     root = Path(__file__).resolve().parents[2]
     records = _extract(root)
-    assert len(records) == 531
-    assert len({r.native_id for r in records}) == 531
+    paths = {
+        path.relative_to(root).as_posix()
+        for folder in ("changelogs", "docs/changelog")
+        for path in (root / folder).glob("*.md")
+        if path.name.lower() not in {"readme.md", "index.md"}
+    }
+    assert len(records) == len(paths) == 548
+    assert {record.source_path for record in records} == paths
+    assert len({r.native_id for r in records}) == 548
     recovered = []
     for record in records:
         raw = record.derived["frontmatter_raw"]

@@ -77,6 +77,16 @@ def _git_output(args: list[str], cwd: Path) -> str | None:
     return proc.stdout.strip() or None
 
 
+def _anchor_dir(path: Path) -> Path:
+    """Resolve *path* to a directory usable as a git cwd.
+
+    An existing file (e.g. a ticket ``.md``) maps to its parent directory,
+    since git cannot run with a file as cwd. Directories and non-existent
+    paths are returned unchanged.
+    """
+    return path.parent if path.is_file() else path
+
+
 def repo_facts(path: Path, reference: Path) -> dict:
     """Repository facts for *path*, compared against the repo containing *reference*.
 
@@ -128,7 +138,7 @@ def repo_facts(path: Path, reference: Path) -> dict:
     facts["branch"] = branch if branch and branch != "HEAD" else None
 
     ref_common = _git_output(
-        ["rev-parse", "--path-format=absolute", "--git-common-dir"], reference
+        ["rev-parse", "--path-format=absolute", "--git-common-dir"], _anchor_dir(reference)
     )
     if common_dir is not None and ref_common is not None:
         facts["same_repository"] = Path(common_dir).resolve() == Path(ref_common).resolve()
@@ -159,7 +169,7 @@ def worktree_base(start: Path) -> dict:
         *start* is not inside a git repository at all.
     """
     common_dir = _git_output(
-        ["rev-parse", "--path-format=absolute", "--git-common-dir"], start
+        ["rev-parse", "--path-format=absolute", "--git-common-dir"], _anchor_dir(start)
     )
     if common_dir is None:
         return {"main_checkout": None, "worktree_base": None, "layout": None}
@@ -194,6 +204,7 @@ def branch_standing(branch: str, repo: Path) -> dict:
         fetch failed) — never coerced to 0 (BO-4000b: an unfetchable origin
         is "unverifiable", not "0 behind").
     """
+    repo = _anchor_dir(repo)
     exists = _git_output(["branch", "--list", branch], repo) is not None
 
     fetch_ok = False

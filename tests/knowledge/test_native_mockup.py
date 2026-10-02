@@ -121,14 +121,17 @@ def test_mockup_real_canonical_population_includes_unregistered_and_null_renders
     root = Path(__file__).resolve().parents[2]
     records = _extract(root)
     paths = list((root / "docs/product-truth/mockups").rglob("*.mockup.json"))
-    assert len(records) == len(paths) == 10
-    assert sum(record.derived["manifest_registered"] for record in records) == 9
-    assert sum("render_body" in record.derived for record in records) == 5
+    assert len(records) == len(paths) == 15
+    assert sum(record.derived["manifest_registered"] for record in records) == 14
+    assert sum("render_body" in record.derived for record in records) == 10
+    assert sum("shape_version" in record.metadata for record in records) == 5
+    assert sum("realization" in record.metadata for record in records) == 5
     for record in records:
         original = json.loads((root / record.source_path).read_text(encoding="utf-8-sig"))
         assert record.metadata == original
         assert decode(encode(record.metadata)) == original
-        assert "realization" not in record.metadata and "shape_version" not in record.metadata
+        for field in ("realization", "shape_version"):
+            assert (field in record.metadata) == (field in original)
         if original["renders"] is None:
             assert not any(key.startswith("render_") for key in record.derived)
     sign_in = next(record for record in records if record.native_id == "fern-and-fig/sign-in")
