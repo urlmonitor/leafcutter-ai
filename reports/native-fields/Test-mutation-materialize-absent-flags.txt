@@ -1,0 +1,38 @@
+AC-ENFORCEMENT [STRICT]: tests/knowledge/test_native_test.py::test_test_reference_absent_empty_null_and_false_remain_distinct[properties0] covers not-done AC KM-400a-3-i — NOT masked (AC_ENFORCE_STRICT=1); reported as a real failure.
+FAC-ENFORCEMENT [STRICT]: tests/knowledge/test_native_test.py::test_test_reference_absent_empty_null_and_false_remain_distinct[properties1] covers not-done AC KM-400a-3-i — NOT masked (AC_ENFORCE_STRICT=1); reported as a real failure.
+FAC-ENFORCEMENT [STRICT]: tests/knowledge/test_native_test.py::test_test_reference_absent_empty_null_and_false_remain_distinct[properties2] covers not-done AC KM-400a-3-i — NOT masked (AC_ENFORCE_STRICT=1); reported as a real failure.
+F                                                                        [100%]
+================================== FAILURES ===================================
+_ test_test_reference_absent_empty_null_and_false_remain_distinct[properties0] _
+tests\knowledge\test_native_test.py:147: in test_test_reference_absent_empty_null_and_false_remain_distinct
+    assert record.metadata == expected
+E   AssertionError: assert {'canonical_i...ary': '', ...} == {'canonical_i...ary': '', ...}
+E     
+E     Omitting 5 identical items, use -vv to show
+E     Differing items:
+E     {'properties': {'canonical': False}} != {'properties': {}}
+E     Use -v to get more diff
+_ test_test_reference_absent_empty_null_and_false_remain_distinct[properties1] _
+tests\knowledge\test_native_test.py:147: in test_test_reference_absent_empty_null_and_false_remain_distinct
+    assert record.metadata == expected
+E   AssertionError: assert {'canonical_i...ary': '', ...} == {'canonical_i...ary': '', ...}
+E     
+E     Omitting 5 identical items, use -vv to show
+E     Differing items:
+E     {'properties': {'missing': False, 'canonical': False}} != {'properties': {'missing': False}}
+E     Use -v to get more diff
+_ test_test_reference_absent_empty_null_and_false_remain_distinct[properties2] _
+tests\knowledge\test_native_test.py:147: in test_test_reference_absent_empty_null_and_false_remain_distinct
+    assert record.metadata == expected
+E   AssertionError: assert {'canonical_i...ary': '', ...} == {'canonical_i...ary': '', ...}
+E     
+E     Omitting 5 identical items, use -vv to show
+E     Differing items:
+E     {'properties': {'missing': None, 'canonical': False}} != {'properties': {'missing': None}}
+E     Use -v to get more diff
+shared-layout-routing: declared_mutators=0 undeclared=0
+=========================== short test summary info ===========================
+FAILED tests/knowledge/test_native_test.py::test_test_reference_absent_empty_null_and_false_remain_distinct[properties0]
+FAILED tests/knowledge/test_native_test.py::test_test_reference_absent_empty_null_and_false_remain_distinct[properties1]
+FAILED tests/knowledge/test_native_test.py::test_test_reference_absent_empty_null_and_false_remain_distinct[properties2]
+3 failed in 21.17s

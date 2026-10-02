@@ -1,0 +1,120 @@
+id: KM-500d-1
+title: Let agents discover and use the right knowledge entry point
+component: knowledge-management
+components:
+- knowledge_management
+level: L2
+status: active
+req_status: active
+readiness: approved
+priority: medium
+work_status: todo
+parent: KM-500d
+criteria: 'Given an agent has an information need and may know either an exact operation or only a research
+  question
+
+  When it discovers the supported knowledge interfaces from the normal agent-facing entry point
+
+  Then it can distinguish canonical source scanning, standalone typed retrieval and the governed research run
+  and resume path
+
+  And the available route describes its accepted inputs, supported operations, scope, permissions and expected
+  outcomes
+
+  And a known valid operation can be invoked directly while an unresolved question can enter the existing clarification
+  and capability-growth flow
+
+  And the documented examples reach those public interfaces and produce attributable results or explicit disabled,
+  unsupported or unavailable outcomes
+
+  And a disabled backend does not prevent ordinary agent startup or create an implicit network dependency
+
+  And the legacy source scanner is not advertised as automatically performing the research or query-build loop.'
+depends_on:
+- KM-500d
+doc_links:
+- path: docs/acceptance-criteria/knowledge-management/KM-400-trustworthy-project-knowledge/KM-400e-1.yaml
+  relationship: context
+  status: exists
+  relevance: Reuse the existing bounded behavior; this pending criterion adds validation, operation or lifecycle
+    scope without replacing completed proof.
+- path: docs/acceptance-criteria/knowledge-management/KM-400-trustworthy-project-knowledge/KM-400e-3.yaml
+  relationship: context
+  status: exists
+  relevance: Reuse the existing bounded behavior; this pending criterion adds validation, operation or lifecycle
+    scope without replacing completed proof.
+- path: docs/acceptance-criteria/knowledge-management/KM-500-research-capability-growth/KM-500a-2.yaml
+  relationship: context
+  status: exists
+  relevance: Reuse the existing bounded behavior; this pending criterion adds validation, operation or lifecycle
+    scope without replacing completed proof.
+- path: docs/acceptance-criteria/knowledge-management/KM-500-research-capability-growth/KM-500c-1.yaml
+  relationship: context
+  status: exists
+  relevance: Reuse the existing bounded behavior; this pending criterion adds validation, operation or lifecycle
+    scope without replacing completed proof.
+- path: docs/architecture/components/knowledge-retrieval.md
+  relationship: context
+  status: exists
+  relevance: Neutral projection/catalog ownership and existing kernel integration boundaries.
+origin_agent: business-analyst
+created: '2026-10-01'
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: 'PO/BA/IT PO coverage audit at user request. This is a pending behavioral obligation, not an implementation
+  or execution claim. Existing KM-400 and KM-500 completed mechanics retain their evidence. Authoring this
+  criterion does not authorize external provider data transfer, merge, deployment or implementation during
+  the AC-only audit. IT PO supplies technical constraints and test contracts. IT PO 2026-10-01: technical constraints
+  and planned public proof supplied; todo and empty covered_by/implemented_by are intentional. No implementation,
+  provider call or deployment was performed during this acceptance audit.'
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+- 'Expose discovery through the existing agent guidance/registered entry surfaces. Describe three distinct
+  routes: trusted source scanner, standalone typed knowledge CLI and kernel research run/resume; do not advertise
+  scanner as a growth orchestrator.'
+- Use installed agent-facing discovery and actual public CLI examples with validated configuration and payload
+  schemas. Known operations retain deterministic validation; unknown research enters existing human/host continuation.
+- Reuse existing component and agent identities and disabled-backend semantics. Do not add speculative HTTP/MCP
+  services, parallel registries or automatic network startup.
+- If implementation adds a package-distributed command/skill registry entry, declare that package surface and
+  its structured implementation spec before changing it; current criterion does not mandate such a new entry.
+test_required: true
+test_rationale: Planned public-interface and separately labeled real-artifact proof covers the full observable
+  obligation. Existing mechanism tests are reusable but do not establish real-agent, provider or deployment
+  readiness. No planned test is represented as existing coverage.
+expects_from:
+  ac_id: KM-500a-1
+  contract: Reuse the existing bounded implementation and canonical contracts; add only this explicit lifecycle
+    or readiness obligation.
+delivers_to:
+  agent: python-coder
+  contract: Implement and prove KM-500d-1 through the existing knowledge/kernel or operational interface; return
+    measured evidence and preserve explicit not-run prerequisites.
+test_spec:
+- name: test_agent_knowledge_entrypoint_discovery
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: integration
+  angle: reachability
+  description: Start from the normal installed agent discovery surface, locate each route and execute its documented
+    public example with a local port. Verify exact lookup versus research clarification and explicit disabled/unsupported
+    outcomes, not merely documentation text matching.
+  covers:
+  - KM-500d-1
+  requires_db: false
+- name: test_agent_entrypoint_disabled_is_offline
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: integration
+  angle: failure
+  description: Exercise ordinary startup/discovery with optional SDKs and credentials absent, instrumenting
+    network creation; disabled knowledge must make no connection and legacy scanner must not invoke research
+    or host build.
+  covers:
+  - KM-500d-1
+  requires_db: false

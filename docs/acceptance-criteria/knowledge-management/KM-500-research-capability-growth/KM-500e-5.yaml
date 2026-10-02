@@ -1,0 +1,152 @@
+id: KM-500e-5
+title: Describe answer meanings limitations and proof in one shared reference
+component: knowledge-management
+components:
+- knowledge_management
+level: L2
+status: active
+req_status: active
+work_status: in_progress
+readiness: approved
+priority: medium
+parent: KM-500e
+criteria: 'Given the answer contracts cover required facts, scope, counts, declared relations, verification evidence,
+  query fitness and observable failures
+
+  When a person or agent consults the shared research-answer reference
+
+  Then it defines the separate meanings of lifecycle status, requirement status, work status, readiness, execution
+  result and question fulfillment
+
+  And it explains root-only versus terminal-leaf counting, known totals versus incomplete enumeration, source revision
+  versus tested revision, and declared tests versus execution and deployment evidence
+
+  And it describes missing-field, missing-source, unsupported-mapping, missing-query and unavailable-trace outcomes
+  with examples that cannot be mistaken for completed answers
+
+  And it maps all eight query families and all twenty-five role questions to supported evidence contracts or explicit
+  source limitations
+
+  And the same reference serves the field, impact and diagnosis features without creating competing definitions
+
+  And planned evaluation cases and unavailable real-provider or deployment proof are identified as pending.
+
+  '
+depends_on:
+- KM-500e
+- KM-500e-1
+- KM-500e-2
+- KM-500e-3
+- KM-500e-4
+doc_links:
+- path: docs/reference/knowledge-retrieval-answers.md
+  relationship: implements
+  status: exists
+  relevance: Canonical documentation deliverable for this leaf; related catalog and evaluations remain context.
+- path: docs/analysis/2026-10-01-repository-query-catalog.md
+  relationship: context
+  status: exists
+  relevance: Twenty-five role questions consolidated into eight answer families; desired answers are not current
+    tool guarantees.
+- path: docs/analysis/2026-10-01-repository-query-evaluation-cases.json
+  relationship: context
+  status: exists
+  relevance: Twelve planned source-anchored cases and controls; not executed acceptance proof.
+- path: docs/architecture/adrs/ADR-062-standalone-knowledge-retrieval.md
+  relationship: context
+  status: exists
+  relevance: Retain immutable source provenance, registered bounded execution and existing ownership.
+- path: docs/acceptance-criteria/ac-store/ACS-1100-honest-coverage-answers/ACS-1100.yaml
+  relationship: context
+  status: exists
+  relevance: Inherited coverage and denominator contract; no duplicate enforcement rule.
+- path: docs/architecture/components/knowledge-retrieval.md
+  relationship: context
+  status: exists
+  relevance: Existing public boundaries, canonical projection ownership and bounded research integration.
+- path: docs/testing/test-angles.md
+  relationship: context
+  status: exists
+  relevance: Public reachability, producer-consumer seams and discriminating proof expectations; these descriptors
+    are planned.
+assigned_agent: documentation-expert
+estimated_complexity: M
+delivers_to:
+- agent: documentation-expert
+  contract: One shared answer-reference document with separate status/proof meanings, eight query families and twenty-five
+    origin IDs, supported versus pending contracts, source limitations, revision/completeness examples and explicit
+    verification labels.
+- ac_id: KM-500g-3
+  agent: documentation-expert
+  contract: One shared answer-reference document with separate status/proof meanings, eight query families and twenty-five
+    origin IDs, supported versus pending contracts, source limitations, revision/completeness examples and explicit
+    verification labels.
+expects_from:
+- ac_id: KM-500e-1
+  contract: 'Answer requirements: original_question, required_fields with meanings, repository_id, requested_source_sha,
+    population/root_id, levels, root_excluded versus terminal_leaf_only inclusion rule, completeness_required, unresolved_scope
+    and clarification state, preserved across run/resume.'
+- ac_id: KM-500e-2
+  contract: 'Attributed field evidence: canonical_id, repository_id, source_sha, source_locator, disclosed_values
+    keyed by canonical field, field_availability (present, source_absent, projection_absent, disclosure_omitted,
+    truncated, unknown), exact_clause completeness and limitations; lifecycle status, req_status, work_status and
+    readiness remain separate.'
+- ac_id: KM-500e-3
+  contract: 'Count evidence: resolved scope, source_sha/generation, unique canonical IDs, known_count, complete
+    flag and cause, exact_total only when complete, work_status breakdown with unknown bucket, continuation state
+    and limitations; no unproven global or execution count.'
+- ac_id: KM-500e-4
+  contract: 'Capability assessment: answer_requirements, operation identity/version, generation-supported kinds/relations/fields,
+    availability evidence, classified gap, query_build_eligible with reason, unresolved facts and existing authorization
+    prerequisites; no side effect in classification.'
+- ac_id: KM-500f-1
+  contract: 'Declared-impact evidence: source_sha(s), root canonical ID, relation kind/direction/depth, attributable
+    edges and unique dependent IDs, complete flag/limitations, known subset and exact total only when complete;
+    declared links and inferred effects are distinct.'
+- ac_id: KM-500f-2
+  contract: 'Verification evidence: canonical AC/test reference identity, reference/anchor/execution identity distinction,
+    source_sha versus tested_sha, run/artifact locator if present, environment, actor authenticity, execution status
+    and research fulfillment, proof kind and missing/unverified evidence.'
+- ac_id: KM-500f-3
+  contract: 'Readiness assessment: candidate facts with evidence IDs, supplied policy identity and clauses, fulfilled/unresolved
+    prerequisites, justified recommendation separately labeled from canonical status, deployment evidence state
+    and explicit missing inputs.'
+- ac_id: KM-500f-4
+  contract: 'Implementation explanation: inspected source evidence and locators/revision, bounded field-flow stages
+    when supported, declared implementation references, runtime-attempt evidence if supplied, inference label, unsupported
+    scope and missing inspection authorization.'
+- ac_id: KM-500f-5
+  contract: 'Regression recommendation: changed scope and revision, guarded behavior, attributable inspected fixture
+    facts and expected outcomes, real/simulated labeling, inspected test or execution evidence, negative-case gaps,
+    bounded recommendation rationale and unverified completeness.'
+origin_agent: business-analyst
+created: '2026-10-01'
+created_by: docs/acceptance-criteria/knowledge-management/KM-500-research-capability-growth/KM-500e.yaml
+amended_by:
+- '2026-10-01: User explicitly approved the new ACs and directed implementation with agents and an independent evaluator.
+  Approval records authorization, not implementation or execution proof.'
+- '2026-10-01: Scoped documentation target repair; actual deliverable precedes contextual links. Approved behavior
+  unchanged; specialist work remains subject to independent verification.'
+superseded_by: null
+covered_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-RepositoryResearchAnswers/TICKET-20261001-KM-500e-5.md
+change_target: docs
+risk_surface: internal
+notes: Shared reference-doc deliverable for KM-500e, KM-500f and KM-500g. Documentation only; it cannot close behavioral
+  ACs or establish runtime support. The shared how-to will be KM-500g-3. Authored using the business-analyst template
+  under explicit user authorization to draft ACs; not approval or implementation proof.
+test_required: false
+test_rationale: Documentation deliverable only. Review the definitions and examples against the behavioral ACs;
+  prose presence cannot substitute for their execution proof.
+it_requirements:
+- Maintain one shared reference for the answer contracts, reusing the existing knowledge retrieval documentation
+  structure. Document supported, partial, pending and unavailable behavior separately without implying a new API.
+- Use the canonical field names and definitions delivered by e-1 through e-4 and the impact/proof/diagnosis contracts;
+  show source scope, exact versus known subset counts, source/tested revision distinctions and explicit unknown
+  values.
+- Retain all twenty-five origin IDs and eight query families from the catalog. Link the twelve initial RQE cases
+  as planned specifications and their separately reported actual execution status; documentation presence is not
+  coverage proof.
+- Review examples against the released behavioral ACs and keep this reference as the definition source for KM-500g-3.
+  Resolve conflicting terminology rather than adding a second meaning in a how-to.

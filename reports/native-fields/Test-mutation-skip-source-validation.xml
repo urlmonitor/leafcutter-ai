@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="5" skipped="0" tests="5" time="0.219" timestamp="2026-10-02T09:30:21.324390+00:00" hostname="BrainDesk"><testcase classname="tests.knowledge.test_native_test" name="test_test_reference_revalidates_source_paths_without_repair[../outside.py]" time="0.007"><failure message="Failed: DID NOT RAISE ValueError">tests\knowledge\test_native_test.py:213: in test_test_reference_revalidates_source_paths_without_repair
+    with pytest.raises(ValueError, match="repository-relative"):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE ValueError</failure></testcase><testcase classname="tests.knowledge.test_native_test" name="test_test_reference_revalidates_source_paths_without_repair[tests/../../outside.py]" time="0.003"><failure message="Failed: DID NOT RAISE ValueError">tests\knowledge\test_native_test.py:213: in test_test_reference_revalidates_source_paths_without_repair
+    with pytest.raises(ValueError, match="repository-relative"):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE ValueError</failure></testcase><testcase classname="tests.knowledge.test_native_test" name="test_test_reference_revalidates_source_paths_without_repair[/outside.py]" time="0.003"><failure message="Failed: DID NOT RAISE ValueError">tests\knowledge\test_native_test.py:213: in test_test_reference_revalidates_source_paths_without_repair
+    with pytest.raises(ValueError, match="repository-relative"):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE ValueError</failure></testcase><testcase classname="tests.knowledge.test_native_test" name="test_test_reference_revalidates_source_paths_without_repair[C:/outside.py]" time="0.003"><failure message="Failed: DID NOT RAISE ValueError">tests\knowledge\test_native_test.py:213: in test_test_reference_revalidates_source_paths_without_repair
+    with pytest.raises(ValueError, match="repository-relative"):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE ValueError</failure></testcase><testcase classname="tests.knowledge.test_native_test" name="test_test_reference_revalidates_source_paths_without_repair[tests\\case.py]" time="0.003"><failure message="Failed: DID NOT RAISE ValueError">tests\knowledge\test_native_test.py:213: in test_test_reference_revalidates_source_paths_without_repair
+    with pytest.raises(ValueError, match="repository-relative"):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE ValueError</failure></testcase></testsuite></testsuites>

@@ -1,0 +1,187 @@
+id: KM-500e-3
+title: Count the declared population only when enumeration is complete
+component: knowledge-management
+components:
+- knowledge_management
+level: L2
+status: active
+req_status: active
+work_status: in_progress
+readiness: approved
+priority: medium
+parent: KM-500e
+criteria: 'Given the reviewed TQ-500f example has fifteen distinct L2 and L3 descendants excluding only its root,
+  comprising five done and ten todo records
+
+  When an agent requests that explicit population grouped by implementation work status at the example''s pinned
+  revision
+
+  Then the answer reports fifteen records, five done and ten todo with the selected root, included levels, relation,
+  revision and declared counting method
+
+  And records that themselves have children remain included under that root-only exclusion, while the distinct terminal-leaf
+  request identifies its own eleven-record population
+
+  And repeated paths to the same canonical AC do not increase the population
+
+  And any unknown work status remains visible as unknown rather than being dropped, interpreted as todo or substituted
+  from lifecycle status
+
+  When enumeration ends with an unresolved child, omitted result or exhausted continuation before completeness is
+  established
+
+  Then the answer reports the known distinct records and states that the exact total and any complete status breakdown
+  remain unresolved
+
+  And a family count is never presented as a repository-wide count or as proof that the listed work passed tests.
+
+  '
+depends_on:
+- KM-500e
+- KM-500e-1
+- KM-500e-2
+- KM-400d-3
+- KM-400d-4
+doc_links:
+- path: docs/analysis/2026-10-01-repository-query-catalog.md
+  relationship: context
+  status: exists
+  relevance: Twenty-five role questions consolidated into eight answer families; desired answers are not current
+    tool guarantees.
+- path: docs/analysis/2026-10-01-repository-query-evaluation-cases.json
+  relationship: context
+  status: exists
+  relevance: Twelve planned source-anchored cases and controls; not executed acceptance proof.
+- path: docs/architecture/adrs/ADR-062-standalone-knowledge-retrieval.md
+  relationship: context
+  status: exists
+  relevance: Retain immutable source provenance, registered bounded execution and existing ownership.
+- path: docs/acceptance-criteria/ac-store/ACS-1100-honest-coverage-answers/ACS-1100.yaml
+  relationship: context
+  status: exists
+  relevance: Inherited coverage and denominator contract; no duplicate enforcement rule.
+- path: docs/architecture/components/knowledge-retrieval.md
+  relationship: context
+  status: exists
+  relevance: Existing public boundaries, canonical projection ownership and bounded research integration.
+- path: docs/testing/test-angles.md
+  relationship: context
+  status: exists
+  relevance: Public reachability, producer-consumer seams and discriminating proof expectations; these descriptors
+    are planned.
+assigned_agent: python-coder
+estimated_complexity: L
+delivers_to:
+- ac_id: KM-500e-5
+  agent: documentation-expert
+  contract: 'Count evidence: resolved scope, source_sha/generation, unique canonical IDs, known_count, complete
+    flag and cause, exact_total only when complete, work_status breakdown with unknown bucket, continuation state
+    and limitations; no unproven global or execution count.'
+- ac_id: KM-500f-1
+  agent: python-coder
+  contract: 'Count evidence: resolved scope, source_sha/generation, unique canonical IDs, known_count, complete
+    flag and cause, exact_total only when complete, work_status breakdown with unknown bucket, continuation state
+    and limitations; no unproven global or execution count.'
+- ac_id: KM-500d-3
+  agent: python-coder
+  contract: 'Count evidence: resolved scope, source_sha/generation, unique canonical IDs, known_count, complete
+    flag and cause, exact_total only when complete, work_status breakdown with unknown bucket, continuation state
+    and limitations; no unproven global or execution count.'
+expects_from:
+- ac_id: KM-500e-1
+  contract: 'Answer requirements: original_question, required_fields with meanings, repository_id, requested_source_sha,
+    population/root_id, levels, root_excluded versus terminal_leaf_only inclusion rule, completeness_required, unresolved_scope
+    and clarification state, preserved across run/resume.'
+- ac_id: KM-500e-2
+  contract: 'Attributed field evidence: canonical_id, repository_id, source_sha, source_locator, disclosed_values
+    keyed by canonical field, field_availability (present, source_absent, projection_absent, disclosure_omitted,
+    truncated, unknown), exact_clause completeness and limitations; lifecycle status, req_status, work_status and
+    readiness remain separate.'
+origin_agent: business-analyst
+created: '2026-10-01'
+created_by: docs/acceptance-criteria/knowledge-management/KM-500-research-capability-growth/KM-500e.yaml
+amended_by:
+- '2026-10-01: User explicitly approved the new ACs and directed implementation with agents and an independent evaluator.
+  Approval records authorization, not implementation or execution proof.'
+superseded_by: null
+covered_by:
+- tests/knowledge/test_query_answer_contract_acceptance_clauses.py
+- tests/knowledge/query_answer_contract_acceptance_neo4j.py
+implemented_by:
+- tickets/00_inbox/epics/EPIC-RepositoryResearchAnswers/TICKET-20261001-KM-500e-3.md
+change_target: code
+risk_surface: contract_boundary
+notes: RQ1; RQE-01 and RQE-03 completeness controls. Inherit ACS-1100 denominator/method honesty; the 15/5/10 and
+  terminal-leaf 11 values belong only to the independently reviewed pinned example, not hard-coded production totals.
+  Authored using the business-analyst template under explicit user authorization to draft ACs; not approval or implementation
+  proof.
+it_requirements:
+- Retain immutable repository/source SHA provenance, bounded registered read-only queries and existing kernel authorization,
+  budgets and retries. This contract adds no arbitrary Cypher, new network endpoint, source-write permission or
+  automatic query activation.
+- The named fields below describe the planned observable semantic contract; preserve compatible existing envelope
+  fields and version any incompatible extension. Required unavailable values stay explicit and are never inferred
+  from an evaluation oracle.
+- Use canonical IDs for deduplication and the resolved source-pinned hierarchy policy for membership. Declare repository/family/level
+  filters with every count; a bounded family query cannot establish a project-wide count.
+- Exact totals require attributable enumeration completeness at one source SHA/generation. Exhausted fanout, paging,
+  byte or item budgets, unresolved children and expired continuation produce a known subset with exact_total unavailable;
+  retain existing resource limits.
+- Include missing work_status in an explicit unknown bucket without relabeling it done or active. Counted implementation
+  status is not test execution, delivery readiness or deployment proof.
+- The RQE-01 fixture establishes 15 descendants (5 done, 10 todo) versus 11 terminal leaves only at its pinned oracle.
+  Production behavior derives membership and values from returned evidence, not fixture constants.
+test_required: true
+test_rationale: Planned criterion and public reachability proof includes real producer/consumer boundaries and named
+  plausible wrong outcomes. No descriptor is executed coverage; no provider, database or deployment result is asserted.
+test_spec:
+- name: test_public_count_matches_explicit_pinned_population
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: integration
+  angle: reachability
+  description: Through the public research entry point consume actual RQE-01-P evidence and assert 15 distinct root-excluded
+    L2/L3 descendants with 5 done and 10 todo, source provenance and complete enumeration.
+  must_catch:
+  - Counting the selected root, counting only leaves without disclosure or labeling active as done.
+  covers:
+  - KM-500e-3
+  requires_db: false
+  surface_invoked: Existing kernel research run/resume entry point using retrieve.repository
+- name: test_count_deduplicates_identity_and_preserves_unknown_work_status
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: integration
+  angle: criterion
+  description: Provide repeated paths to the same canonical AC and one missing work_status; assert deduplicated
+    membership and a visible unknown bucket without asserting a fully known status breakdown.
+  must_catch:
+  - Counting graph paths as separate ACs or dropping records that lack work_status.
+  covers:
+  - KM-500e-3
+  requires_db: false
+- name: test_count_reports_partial_when_real_enumeration_is_bounded
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: integration
+  angle: seam
+  description: Run the real enumeration consumer with truncated, unresolved-child and expired-continuation responses;
+    assert known_count and limitations survive while exact_total is unavailable and no extra query bypasses budget
+    limits.
+  must_catch:
+  - Returning a bounded first page as an exact population total.
+  covers:
+  - KM-500e-3
+  requires_db: false
+- name: test_count_scope_changes_do_not_reuse_wrong_population
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: integration
+  angle: discrimination
+  description: Ask for terminal leaves after the 15-descendant fixture and verify the independently anchored 11-leaf
+    scope; then change repository/source scope and assert no cached 15 or global claim leaks across contexts.
+  must_catch:
+  - Reusing a count from another hierarchy inclusion rule, repository or source revision.
+  covers:
+  - KM-500e-3
+  requires_db: false

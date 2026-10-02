@@ -1,0 +1,163 @@
+{
+  "inventory_version": 1,
+  "observed_on": "2026-10-02",
+  "repository_root": "C:/Users/Hendrik/Code/leafcutter/worktrees/aura-domain-graph",
+  "scope": "Canonical repository knowledge and source references, with one mapping contract per distinct record kind. Counts describe the working tree, not the currently published immutable Aura snapshot.",
+  "complete_single_catalog_found": false,
+  "existing_catalogs": [
+    {"path": "config/paths.json", "role": "Nine knowledge surfaces: agents, skills, tickets, docs, adrs, components, roadmap, glossary, acs. Folder/surface catalog, not a complete entity schema registry."},
+    {"path": "config/doc_types.json", "role": "Ten document type values including two deprecated aliases; describes document subtypes and author routing, not all native records."},
+    {"path": "docs/components.json", "role": "46 registered component owners; components identify responsibility, not record types."},
+    {"path": "docs/product-truth/index.json", "role": "Authoritative artifacts manifest: 14 flows, 9 mockups, 1 mock-data record; its entity_registry also includes example-domain concepts, so it is not a Leafcutter-wide type catalog."},
+    {"path": "config/entry_kind_vocabulary.json", "role": "Knowledge capture destination taxonomy, including aliases and file fragments; not a set of independent record types."},
+    {"path": "kernel/contracts/schema_catalog.py", "role": "Kernel transport schema catalog. Request/response types are execution contracts rather than canonical Git knowledge records."}
+  ],
+  "implementation_scope": [
+    {
+      "kind": "AcceptanceCriterion", "neo4j_label": "AC", "owner": "ac_store",
+      "classification": "canonical_structured_record",
+      "canonical_paths": ["docs/acceptance-criteria/**/*.yaml"],
+      "schema_sources": ["config/ac_store_schema.json", "scripts/ac_store/validate_ac_schema.py", "scripts/ac_store/_ac_schema_test_spec_validators.py"],
+      "count": 4535, "count_basis": "YAML mappings containing id and criteria; 4536 YAML files including index/scaffolding. This is not a full validation receipt.",
+      "current_mapping": "Mapped, but source properties are limited to AC_FIELDS in knowledge/projection/answer_fields.py; display_properties exposes only five of those fields plus identity/provenance.",
+      "notes": ["config/ac_schema.json is the ac-triage routing response schema, NOT the AC record schema.", "Nested test_spec, pattern bindings, product_truth, document links and other schema properties are currently dropped before the Neo4j payload is built."]
+    },
+    {
+      "kind": "ADR", "owner": "documentation_system", "classification": "canonical_document_specialization",
+      "canonical_paths": ["docs/architecture/adrs/ADR-*.md"],
+      "schema_sources": ["templates/docs/architecture/adrs/ADR-template.md", "templates/scripts/commit_guardian/frontmatter_validators.py", "templates/scripts/commit_guardian/config.py", "templates/scripts/commit_guardian/commit_guardian.json", "config/doc_types.json"],
+      "count": 56, "count_basis": "ADR-prefixed Markdown files in isolated working tree.",
+      "current_mapping": "Mapped identity, title, summary and selected edges; ordinary frontmatter is not preserved as entity properties."
+    },
+    {
+      "kind": "Component", "owner": "knowledge_management", "classification": "canonical_registry_entry_with_document_reference",
+      "canonical_paths": ["docs/components.json#/components", "docs/architecture/components/*.md"],
+      "schema_sources": ["templates/scripts/commit_guardian/check_components_integrity.py"],
+      "count": 46, "count_basis": "Registry entries; does not include synthetic component hubs or distinct component documents.",
+      "current_mapping": "Mapped registry identities and document/hub nodes, but registry fields other than identity/provenance are not copied. Current published graph had 71 Component nodes because registry entries and component-document stems can differ.",
+      "notes": ["Registry snake_case id and hyphenated document stem can yield two nodes for one owner; any deduplication must preserve canonical identity and incoming references.", "Validator fully checks newly added entries only; old entries may lack fields now required."]
+    },
+    {
+      "kind": "Agent", "owner": "agent_registry", "classification": "canonical_registry_entry",
+      "canonical_paths": ["config/agent_registry.json#/agents", "templates/agents/*.md"],
+      "schema_sources": ["config/agent_registry.schema.json#/definitions/agent", "scripts/registry_validator.py", "scripts/step_kinds_validator.py", "docs/reference/agent-template-frontmatter.md"],
+      "count": 61, "count_basis": "Registry entries.", "current_mapping": "Declared knowledge surface, explicitly excluded by current Neo4j canonical_loader."
+    },
+    {
+      "kind": "Skill", "owner": "skill_registry", "classification": "canonical_registry_entry",
+      "canonical_paths": ["config/skill_registry.json#/skills", "templates/skills/*/SKILL.md"],
+      "schema_sources": ["config/skill_registry.schema.json#/definitions/skill", "docs/reference/skill-frontmatter.md"],
+      "count": 42, "count_basis": "Registry entries.", "current_mapping": "Declared knowledge surface, explicitly excluded by current Neo4j canonical_loader."
+    },
+    {
+      "kind": "Ticket", "owner": "ticket_lifecycle", "classification": "canonical_document_record",
+      "canonical_paths": ["tickets/**/*.md"],
+      "schema_sources": ["templates/scripts/commit_guardian/frontmatter_validators.py", "templates/scripts/commit_guardian/config.py", "templates/scripts/commit_guardian/commit_guardian.json", "templates/hooks/ticket_frontmatter_guard.py", "templates/rules/tickets.md", "scripts/ac_store/generate_ticket_from_ac.py"],
+      "candidate_file_count": 1533, "count_basis": "All Markdown files under tickets, including readmes/plans; reviewer must distinguish real ticket records.",
+      "current_mapping": "Declared surface excluded; a ticket referenced by an AC can appear only as SourceFile, losing ticket fields.",
+      "subtypes": ["epic", "ticket"],
+      "notes": ["Epics share ticket frontmatter and lifecycle and are kept as a subtype rather than a duplicate kind. Filename stems are not globally unique across epic folders."]
+    },
+    {
+      "kind": "Document", "owner": "documentation_system", "classification": "canonical_document_record",
+      "canonical_paths": ["docs/**/*.md", "memory/*.md"],
+      "schema_sources": ["config/doc_types.json", "templates/scripts/commit_guardian/frontmatter_validators.py", "templates/scripts/commit_guardian/commit_guardian.json", "config/entry_kind_vocabulary.json"],
+      "candidate_file_count": 819, "count_basis": "docs Markdown files before excluding ADRs, component docs, generated product-truth views and specialized stores. Also 23 memory Markdown files outside docs.",
+      "current_mapping": "Declared docs surface excluded; referenced documents may exist only as SourceFile.",
+      "subtypes": ["how_to", "reference", "explanation", "tutorial", "architecture", "retro", "how-to (legacy)", "cross-cutting (legacy)", "known_issue (path convention)", "memory (path convention)"],
+      "notes": ["Known issues: 385 Markdown files under docs/known-issues; fields vary and some files are aggregate documents.", "Memory records have no independent structured schema found and can be prose with no frontmatter; never manufacture required attributes.", "Generated Agent cards and generated flow Markdown are views, not duplicate canonical documents.", "Do not separately ingest ADR/component/glossary specializations again through recursive docs traversal."]
+    },
+    {
+      "kind": "RoadmapPhase", "owner": "roadmap", "classification": "canonical_structured_record",
+      "canonical_paths": ["docs/roadmap.json#/phases"],
+      "schema_sources": ["config/roadmap.schema.json", "templates/scripts/commit_guardian/check_roadmap_schema.py"],
+      "count": 13, "count_basis": "Phase entries.", "current_mapping": "Declared knowledge surface, excluded by Neo4j.",
+      "notes": ["Root current_phase/current_outcome/last_updated are roadmap context, not independent duplicated phase records."]
+    },
+    {
+      "kind": "GlossaryTerm", "owner": "glossary", "classification": "canonical_document_section",
+      "canonical_paths": ["docs/glossary.md#term-headings"],
+      "schema_sources": ["docs/glossary.md (authoring guide)", "scripts/build_glossary.py", "templates/scripts/commit_guardian/check_glossary_coverage.py"],
+      "count": 41, "count_basis": "Unindented level-three term headings.", "current_mapping": "Declared glossary surface currently produces one file node in legacy knowledge_query; Neo4j excludes it. Per-term mapping is new.",
+      "notes": ["Term heading and definition are the native record; there is no JSON schema. The blacklist is a validation/control artifact, not a second term source."]
+    },
+    {
+      "kind": "Flow", "owner": "ux_prototyping", "classification": "canonical_structured_record",
+      "canonical_paths": ["docs/product-truth/flows/**/*.flow.json", "docs/product-truth/index.json#/artifacts"],
+      "schema_sources": ["docs/product-truth/schemas/flow.schema.json", "docs/product-truth/scripts/validate_product_truth.py", "docs/how-to/product-truth-schema-reference.md"],
+      "count": 14, "count_basis": "Authoritative manifest flow entries.", "current_mapping": "Not in declared paths surfaces; not projected.",
+      "notes": ["Flow steps/branches are nested source records with owner-relative IDs. Keep as structured fields or owned subnodes; do not create competing top-level FlowNode identities.", "Stored impl_summary/impl_status are derived and must be identified as such; confirmed/behind preserve source meanings."]
+    },
+    {
+      "kind": "Mockup", "owner": "ux_prototyping", "classification": "canonical_structured_record",
+      "canonical_paths": ["docs/product-truth/mockups/**", "docs/product-truth/index.json#/artifacts"],
+      "schema_sources": ["docs/product-truth/schemas/mockup.schema.json", "docs/product-truth/scripts/validate_product_truth.py"],
+      "count": 9, "count_basis": "Manifest mockup entries; reviewer must resolve actual metadata file shape, not treat rendered HTML as the metadata record.",
+      "current_mapping": "Not projected."
+    },
+    {
+      "kind": "MockData", "owner": "ux_prototyping", "classification": "canonical_structured_record",
+      "canonical_paths": ["docs/product-truth/mock-data/**/*.mock.json", "docs/product-truth/index.json#/artifacts"],
+      "schema_sources": ["docs/product-truth/schemas/mock-data.schema.json", "docs/product-truth/scripts/validate_product_truth.py"],
+      "count": 1, "count_basis": "Manifest mock_data entries.", "current_mapping": "Not projected.",
+      "notes": ["Its entities/records describe products including explicit examples (Plant, Customer, Order), not Leafcutter native type declarations."]
+    },
+    {
+      "kind": "ChangelogEntry", "owner": "changelog", "classification": "canonical_document_record",
+      "canonical_paths": ["changelogs/*.md", "docs/changelog/*.md (legacy)"],
+      "schema_sources": ["scripts/changelog/emit_entry.py#validate_payload", "scripts/changelog/README.md", "templates/scripts/commit_guardian/commit_guardian.json"],
+      "count": 526, "count_basis": "Current changelogs Markdown files; legacy docs/changelog count not included.",
+      "current_mapping": "Not projected. Existing component documentation describes YAML documents, but real writer emits Markdown with YAML frontmatter; writer is the field authority."
+    },
+    {
+      "kind": "Capability", "owner": "decision_kernel", "classification": "canonical_registry_entry",
+      "canonical_paths": ["config/capability_registry.json#/capabilities"],
+      "schema_sources": ["config/capability_registry.schema.json#/definitions/capability", "kernel/contracts/capability.py", "kernel/registry/adapter.py"],
+      "count": 9, "count_basis": "Registered kernel capabilities.", "current_mapping": "Not in paths surfaces and not projected.",
+      "notes": ["Kernel capabilities are distinct from legacy agents/skills; do not merge records merely because names resemble one another."]
+    },
+    {
+      "kind": "Decision", "owner": "decision_kernel", "classification": "canonical_structured_record_pending_merge",
+      "canonical_paths": ["docs/decisions/dec-*.yaml"],
+      "schema_sources": ["config/decision_record.schema.json", "kernel/memory/models.py", "kernel/memory/validate.py", "docs/architecture/adrs/ADR-059-decision-store-reviewable-yaml-records-now-graph-later.md"],
+      "count": 1, "count_basis": "Active knowledge-retrieval-v01 checkout contains one canonical decision record; absent in isolated aura-domain-graph checkout.",
+      "schema_checkout": "C:/Users/Hendrik/Code/leafcutter/worktrees/knowledge-retrieval-v01",
+      "current_mapping": "Neo4j label/operations exist for synthetic demos, but no Git decision projection exists. Real DecisionRecord schema comes from the active checkout's pending decision-store merge.",
+      "notes": ["docs/decisions/index.json is generated, not a second source record.", "Kernel Decision request/report contracts and approved DecisionRecord have different lifecycle/authority. Only canonical approved records should project as Decision.", "Do not modify or resolve the unrelated pending merge merely to gain these files."]
+    },
+    {
+      "kind": "SourceFile", "owner": "knowledge_management", "classification": "source_reference",
+      "canonical_paths": ["Repository-relative paths explicitly referenced by canonical records"],
+      "schema_sources": ["knowledge/contracts.py#SourceReference", "knowledge/contracts.py#Entity", "scripts/knowledge_file_nodes.py", "knowledge/projection/canonical_loader.py"],
+      "current_mapping": "Mapped referenced paths only; missing and canonical flags exist in payload but are not exposed as ordinary native properties.",
+      "notes": ["Whole repository file enumeration is outside existing mapping scope. Preserve explicit missing-path references and immutable source hashes."]
+    },
+    {
+      "kind": "Test", "owner": "testing_quality", "classification": "source_reference_specialization",
+      "canonical_paths": ["tests/**", "unit_tests/** (when explicitly referenced)"],
+      "schema_sources": ["scripts/knowledge_file_nodes.py", "knowledge/projection/canonical_loader.py", "knowledge/contracts.py#SourceReference"],
+      "current_mapping": "Mapped referenced files under these directory prefixes. Function/line anchors belong to relations; this is not a runtime test-result record.",
+      "notes": ["A path-based Test classification has no independent schema of execution outcomes. Do not invent status, results or indirect component membership."]
+    }
+  ],
+  "not_separate_canonical_record_kinds": [
+    {"name": "Epic", "handling": "Ticket subtype; same file/lifecycle contract."},
+    {"name": "KnownIssue, Retrospective, Memory, Architecture, HowTo, Reference, Explanation, Tutorial", "handling": "Document subtypes or path families; retain source subtype/fields, do not duplicate same file under an extra canonical identity."},
+    {"name": "FlowNode / FlowStep / Branch", "handling": "Nested Flow schema members with source-relative identities. Their detailed metadata may use owned subnodes if necessary, not independent top-level source artifacts."},
+    {"name": "Pattern", "handling": "AC schema declares implements_pattern, pattern_bindings and pattern_slots, but no separate canonical Pattern store/schema was found in the scanned registries/components. Preserve declared fields and references without synthesizing a separate authority."},
+    {"name": "Lesson, Mistake, Observation, Policy", "handling": "Concept proposal and/or synthetic example types exist, but no independently validated canonical store was found. Do not turn proposed concepts or arbitrary prose into records with invented fields."},
+    {"name": "Flow Markdown, AgentCard, product-truth derived indexes, decision index, roadmap renderings", "handling": "Generated views of canonical records; avoid duplicate nodes."},
+    {"name": "FeedbackRecord", "handling": "Runtime JSONL under debugging/logs/feedback.jsonl. Shape owned by templates/scripts/feedback/submit_feedback.py and resolve_feedback.py. Not an immutable Git snapshot source; inventory as a separately governed future runtime ingestion surface."},
+    {"name": "AgentTelemetry, KnowledgeEmission, RunEnvelope, EvidenceBundle, HumanInteraction, CapabilityGap, query activation receipts", "handling": "Runtime events/transport/checkpoint contracts, not canonical repository record types. Their schema catalog must not be mistaken for Git record inventory."},
+    {"name": "Repository, Snapshot, query catalog indexes, vector labels", "handling": "Projection/storage metadata, not user-domain canonical record kinds."},
+    {"name": "Configuration/schema definitions, hooks, workflow implementations", "handling": "SourceFile or Document when referenced, unless a distinct registry record above supplies a native entity contract."}
+  ],
+  "cross_cutting_findings": [
+    "Current canonical_loader SUPPORTED_SURFACES is exactly acs/adrs/components; expanding display_properties alone cannot recover fields discarded before payload construction or produce missing kinds.",
+    "Current Neo4j key derives from repository/generation/canonical_id; future kind expansion needs collision-safe identity because markdown stems, agent ids, skill ids and component ids can overlap. Preserve existing public IDs and make ambiguity explicit rather than silently overwriting.",
+    "The docs surface recursively overlaps ADRs, component docs, AC directories, generated flow views and decisions. Specialized source routing/exclusions are necessary before admitting this surface.",
+    "Nested maps/lists cannot be assigned as arbitrary Neo4j properties. Per-kind reviewers should identify queryable scalar/list fields and nested flattening or owned-subnode rules, retaining the canonical lossless payload.",
+    "Preserve absent versus null versus empty, native booleans/numbers, arrays, source timestamps, source meaning and explicit memberships. Do not infer defaults or component ownership into declared source values.",
+    "No exhaustive one-schema-per-type native catalog exists today. This inventory consolidates real schema/validator ownership without claiming schema authority for proposed or transient types."
+  ]
+}

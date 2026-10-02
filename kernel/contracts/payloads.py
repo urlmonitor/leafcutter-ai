@@ -10,9 +10,11 @@ ARCHITECTURE: One model per schema id; schema_catalog maps id -> model. Structur
 
 from __future__ import annotations
 
+from kernel.contracts.verbatim import VerbatimJson
+
 from typing import Literal
 
-from pydantic import Field, model_validator
+from pydantic import Field, JsonValue, model_validator
 
 from kernel.contracts.base import KernelModel, StableId, fail
 from kernel.contracts.decision import CriterionAssessment, Criterion, Option, Rationale
@@ -101,6 +103,10 @@ class ResearchRequestPayload(KernelModel):
     """leafcutter.research_request.v1."""
 
     question: str = Field(min_length=1)
+    #: Original answer obligations; the neutral adapter validates their typed contract.
+    answer_requirements: dict[str, JsonValue] | None = None
+    #: Scoped supplied evidence interpreted conditionally by the neutral retrieval port.
+    assessment: dict[str, VerbatimJson] | None = None
     evidence_needs: list[EvidenceNeed] = Field(default_factory=list)
     source_restrictions: list[str] = Field(default_factory=list)
     existing_evidence_ids: list[str] = Field(default_factory=list)
@@ -128,6 +134,12 @@ class RetrievalLimits(KernelModel):
 class RetrievalRequestPayload(KernelModel):
     """leafcutter.retrieval_request.v1."""
 
+    #: Neutral knowledge request fields, fully validated by the capability adapter.
+    knowledge: dict[str, VerbatimJson] | None = None
+    #: Preserved across research, clarification and progressive source disclosure.
+    answer_requirements: dict[str, JsonValue] | None = None
+    #: Scoped supplied evidence interpreted conditionally by the neutral retrieval port.
+    assessment: dict[str, VerbatimJson] | None = None
     need: EvidenceNeed
     source_ids: list[str] = Field(default_factory=list)
     detail: Literal["excerpt", "summary", "locator"] = "excerpt"
@@ -139,6 +151,8 @@ class RetrievalRequestPayload(KernelModel):
     #: Most rerank batches this request may judge (the requester's Jev budget affords no more
     #: than this beside its reserve); null means the configured `retrieval.rerank_max_batches`.
     max_rerank_batches: int | None = Field(default=None, ge=1)
+    #: Jev calls retained for the requester; graph planning must not spend this reserve.
+    jev_reserve: int = Field(default=0, ge=0)
 
 
 class OptionsRequestPayload(KernelModel):
@@ -314,3 +328,5 @@ __all__ = [
 #   added to the nine Rev 3 section 7.11 schemas because the root request, human interaction
 #   and human answer need registered payloads (design part 2). (#KernelBootstrapV0/P1)
 # ====================================================================
+
+# - 2026-10-01 20:00 [python-coder]: Bind optional knowledge through existing scoped retrieval contracts. (#TICKET-20261001-KM-400e-3)

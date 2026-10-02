@@ -1,0 +1,61 @@
+id: KM-500f
+title: Judge change and readiness from evidence you can inspect
+component: knowledge-management
+components:
+- knowledge_management
+level: L1
+status: active
+req_status: active
+readiness: approved
+priority: medium
+work_status: todo
+criteria: 'See what a change affects and what the evidence actually proves.
+
+
+  People can relate promised benefits, dependencies and verification evidence to the decision they need to
+  make. Recommendations distinguish recorded facts from interpretation, and make absent support visible rather
+  than inventing priorities, implementation relationships or proof.
+
+  '
+parent: KM-500
+depends_on:
+- KM-500
+doc_links:
+- path: docs/analysis/2026-10-01-repository-query-catalog.md
+  relationship: context
+  status: exists
+  relevance: Preserves all 25 persona questions, eight shared families and explicit current capability limits.
+- path: docs/analysis/2026-10-01-repository-query-evaluation-cases.json
+  relationship: context
+  status: exists
+  relevance: Twelve planned positive/control cases, not executed acceptance proof.
+- path: docs/acceptance-criteria/ac-store/ACS-1100-honest-coverage-answers/ACS-1100.yaml
+  relationship: context
+  status: exists
+  relevance: Inherited standing coverage and denominator honesty; not duplicated.
+documentation_triggers:
+- reference-doc
+- how-to
+origin_agent: product-owner
+created: '2026-10-01'
+amended_by:
+- '2026-10-01: User explicitly approved the new ACs and directed implementation with agents and an independent evaluator. Approval records authorization, not implementation or execution proof.'
+superseded_by: null
+covered_by:
+- KM-500f-1
+- KM-500f-2
+- KM-500f-3
+- KM-500f-4
+- KM-500f-5
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: RQ3, RQ4, RQ5, RQ6; PO-01, PO-02, PO-03, PO-04, PO-05, BA-03, BA-04, ITPO-02, CODER-01, CODER-03, CODER-04,
+  CODER-05, QA-02, QA-03, QA-04. First batch RQE-03 and RQE-04 covers bounded declared dependency and proof
+  contracts. Later RQ3 priority/readiness and RQ5 code/field-flow questions must state unavailable evidence
+  or a separately authorized inspection route; this is not authorization for a complete code graph, automatic
+  test-run ingestion or autonomous product ranking. Reuse declared links, KM-500d-2 deployment readiness, TQ-400
+  proof durability and TQ-500 discriminating controls; do not re-author their enforcement. Draft authored under
+  explicit user request to put planning agents to work. Existing parent approval does not approve these new
+  children. Reuse KM-500d-3 for evaluation extensions; no roadmap edit, provider call, deployment or implementation
+  is authorized by this authoring pass.

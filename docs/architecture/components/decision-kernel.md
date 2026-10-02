@@ -11,6 +11,7 @@ last_updated: 2026-10-02
 components:
   - decision_kernel
 related_docs:
+  - docs/architecture/adrs/ADR-064-persona-discovery-before-feature-planning.md
   - docs/analysis/2026-09-30-decision-kernel-design.md
   - docs/analysis/2026-09-30-decision-kernel-design-3-kernel-scheduler.md
   - docs/analysis/2026-09-30-leafcutter-kernel-spec-rev3.md

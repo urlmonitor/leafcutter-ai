@@ -1,0 +1,56 @@
+id: KM-500d
+title: Know when research is ready for everyday use
+component: knowledge-management
+components:
+- knowledge_management
+level: L1
+status: active
+req_status: active
+readiness: approved
+priority: medium
+work_status: todo
+criteria: 'Use research confidently in the project you are actually working on.
+
+
+  People and agents can find the right way to ask for evidence, see which project version and abilities are available,
+  and understand what has been proved in their configured environment. Proposed improvements are compared with reviewed
+  examples before they are trusted for repeated use.
+
+  '
+parent: KM-500
+depends_on:
+- KM-500
+doc_links:
+- path: docs/acceptance-criteria/knowledge-management/KM-400-trustworthy-project-knowledge/KM-400.yaml
+  relationship: context
+  status: exists
+  relevance: Reuse completed retrieval contracts, pinned provenance, optionality and honest outcomes.
+- path: docs/architecture/adrs/ADR-062-standalone-knowledge-retrieval.md
+  relationship: context
+  status: exists
+  relevance: Preserve registered bounded execution and standalone ownership; never execute unchecked model-authored
+    queries.
+documentation_triggers:
+- how-to
+- sequence-diagram
+- reference-doc
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: product-owner
+created: '2026-10-01'
+amended_by: []
+superseded_by: null
+covered_by:
+- KM-500d-1
+- KM-500d-2
+- KM-500d-3
+- KM-500d-4
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: Product coverage audit requested by the user on 2026-10-01. Reuse KM-400 retrieval and update guarantees
+  and KM-500 research controls. This benefit adds explicit operational and evaluation obligations without claiming
+  they are implemented. It does not require a new HTTP/MCP service, model training, unrestricted queries or autonomous
+  changes to canonical knowledge.

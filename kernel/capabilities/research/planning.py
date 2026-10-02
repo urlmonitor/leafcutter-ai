@@ -48,7 +48,7 @@ from kernel.contracts.payloads import RetrievalRequestPayload
 from kernel.contracts.work import CapabilityInvocation, RequestProposal
 
 PURPOSE = "research.plan_needs"
-NATIVE_KINDS = ("repo_text", "knowledge_map")
+NATIVE_KINDS = ("repo_text", "knowledge_map", "graph_query")
 
 
 @dataclass
@@ -99,6 +99,11 @@ def afford_needs(ctx: ExecutionContext, plan: Plan, needs: list[EvidenceNeed]
     Needs are kept in planning order (mandated, then Jev-selected, then claim and gap needs), so
     the targeted extras are the first to go; each dropped need is named in a limitation.
 
+    Args:
+        ctx: Existing execution context and available budget.
+        plan: Research plan carrying the requester's reserve.
+        needs: Ordered evidence needs considered for retrieval.
+
     Returns:
         tuple: (the needs to run, one limitation per dropped need).
     """
@@ -123,7 +128,16 @@ def affordable_judgement(ctx: ExecutionContext, plan: Plan, needs: list[Evidence
 
 async def _select_needs(ctx: ExecutionContext, invocation: CapabilityInvocation, plan: Plan
                         ) -> tuple[list[EvidenceNeed], list[Usage]]:
-    """Return the caller-mandated needs (kept required) plus the Jev-selected ones."""
+    """Return the caller-mandated needs (kept required) plus the Jev-selected ones.
+
+    Args:
+        ctx: Trusted execution context.
+        invocation: Current registered capability invocation.
+        plan: Existing research plan.
+
+    Returns:
+        tuple[list[EvidenceNeed], list[Usage]]: Result of the documented operation.
+    """
     needs = list(plan.mandated)
     if plan.needs_only:
         return needs, []
@@ -154,7 +168,22 @@ async def _select_needs(ctx: ExecutionContext, invocation: CapabilityInvocation,
 
 
 def _native_available(ctx: ExecutionContext, source: SourceConfig) -> str | None:
-    """Return None if the native source can be read, else the reason it cannot."""
+    """Return None if the native source can be read, else the reason it cannot.
+
+    Args:
+        ctx: Trusted execution context.
+        source: Configured evidence source or failing configuration path.
+
+    Returns:
+        str | None: Result of the documented operation.
+    """
+    if source.kind == "graph_query":
+        if ctx.config.knowledge.backend == "none":
+            return "knowledge backend is disabled"
+        configured = ctx.config.knowledge.repository_root
+        if not configured or Path(configured).resolve() != Path(ctx.scope.repository_root).resolve():
+            return "knowledge repository binding does not match task scope"
+        return None
     if source.kind == "knowledge_map":
         script = trusted_root() / SCRIPT  # the bridge never comes from the scope
         if not script.is_file():
@@ -182,24 +211,63 @@ def retrieval_operation(payload: dict, sources: list[SourceConfig]) -> str:
 
 
 def _child(need: EvidenceNeed, source_ids: list[str], sources: list[SourceConfig],
-           query: NeedQuery, batches: int | None = None) -> RequestProposal:
-    """Build the retrieval child request for one need, naming the operation it needs.
+           query: NeedQuery, answer_requirements: dict[str, JsonValue] | None = None,
+           assessment: dict[str, JsonValue] | None = None, *,
+           batches: int | None = None, jev_reserve: int = 0) -> RequestProposal:
+    """Build one retrieval child with original answer obligations and its rerank allowance.
 
-    Query hints go to every child; exact locators only to a native one (a host reads no files);
-    `batches` caps the rerank batches the child may judge (what the budget affords).
+    Query hints go to every child; exact locators only to a native one (a host reads no files).
+
+    Args:
+        need: Evidence need to address.
+        source_ids: Authorized source identifiers.
+        sources: Configured available evidence sources.
+        query: Focused source query.
+        answer_requirements: Original caller facts and population obligations.
+        assessment: Unmodified scoped supplied evidence packet.
+
+    Returns:
+        RequestProposal: Scoped retrieval child preserving both branches' contracts.
+
+    Keyword-only batches: Maximum rerank batches the requester's budget affords.
+    Keyword-only jev_reserve: Calls retained for the requester after child retrieval.
     """
     operation = retrieval_operation({"source_ids": source_ids}, sources)
     native = operation == "retrieve"
     holders = locator_sources(query.locators, sources) if native else []
     payload = RetrievalRequestPayload(
-        need=need, source_ids=list(dict.fromkeys([*source_ids, *holders])),
+        need=need, answer_requirements=answer_requirements, assessment=assessment,
+        source_ids=list(dict.fromkeys([*source_ids, *holders])),
         query_hints=query.hints, explicit_locators=query.locators if native else [],
-        max_rerank_batches=batches)
+        max_rerank_batches=batches, jev_reserve=jev_reserve)
     return RequestProposal(
         kind=RequestKind.EVIDENCE, question=need.question, evidence_needs=[need],
         operation=operation,
         payload_schema=schema_ids.RETRIEVAL_REQUEST, payload=payload.model_dump(mode="json"),
         requested_output_schema=schema_ids.EVIDENCE_BUNDLE, priority=need.priority)
+
+
+def _children(need: EvidenceNeed, chosen: list[SourceConfig], sources: list[SourceConfig],
+              query: NeedQuery, plan: Plan, batches: int | None) -> list[RequestProposal]:
+    """Keep graph and native children distinct while carrying the same caller obligations.
+
+    Args:
+        need: Original evidence need served by both source groups.
+        chosen: Sources selected for this need.
+        sources: Complete configured source catalog for locator ownership.
+        query: Checked hints and locators for this need.
+        plan: Original answer, assessment and reserve obligations.
+        batches: Native rerank allowance computed by research planning.
+
+    Returns:
+        One scoped request per nonempty graph or native source group.
+    """
+    groups = [[s.id for s in chosen if s.kind == "graph_query"],
+              [s.id for s in chosen if s.kind != "graph_query"]]
+    return [_child(need, group, sources, query,
+                   answer_requirements=plan.answer_requirements, assessment=plan.assessment,
+                   batches=batches, jev_reserve=plan.jev_reserve)
+            for group in groups if group]
 
 
 def _candidates(ctx: ExecutionContext, need: EvidenceNeed, plan: Plan) -> list[SourceConfig]:
@@ -221,6 +289,9 @@ def _defer_host_only(out: Resolution) -> None:
     A host pause is the costliest step of a run: a supporting need that only a host can serve
     waits until the native evidence has been judged, and is dispatched only if it proves thin.
     Required needs are never deferred, and neither is a run whose only children are host ones.
+
+    Args:
+        out: Mutable source resolution accumulator.
     """
     held = [r for r in out.requests if r.operation == "bounded_research"
             and r.evidence_needs[0].priority is Priority.SUPPORTING]
@@ -235,7 +306,16 @@ def _defer_host_only(out: Resolution) -> None:
 
 
 def resolve_sources(ctx: ExecutionContext, needs: list[EvidenceNeed], plan: Plan) -> Resolution:
-    """Map each need to a native retrieval child, a host.research child, or unavailable."""
+    """Map each need to a native retrieval child, a host.research child, or unavailable.
+
+    Args:
+        ctx: Trusted execution context.
+        needs: Selected evidence needs.
+        plan: Existing research plan.
+
+    Returns:
+        Resolution: Result of the documented operation.
+    """
     out = Resolution()
     root = Path(ctx.scope.repository_root)
     own = {i: _checked(root, q) for i, q in need_queries(ctx, plan).items()}
@@ -263,8 +343,8 @@ def resolve_sources(ctx: ExecutionContext, needs: list[EvidenceNeed], plan: Plan
         if chosen:
             ids = [s.id for s in chosen]
             out.needs.append(need)
-            out.requests.append(_child(need, ids, ctx.config.sources, own.get(need.id, shared),
-                                       batches))
+            out.requests.extend(_children(need, chosen, ctx.config.sources,
+                                           own.get(need.id, shared), plan, batches))
             out.child_map[need.id] = ids
             out.attempted += ids
             continue
@@ -308,3 +388,7 @@ def resolve_sources(ctx: ExecutionContext, needs: list[EvidenceNeed], plan: Plan
 #   SourceConfig carries no technology field; technologies only feed retrieval query terms.
 #   (#KernelBootstrapV0/P5)
 # ====================================================================
+
+# - 2026-10-01 20:00 [python-coder]: Bind optional knowledge through existing scoped retrieval contracts. (#TICKET-20261001-KM-400e-3)
+
+# - 2026-10-02 04:36 [conflict-resolver]: Preserve split graph sources and evidence packets alongside rerank limits. (#TICKETLESS reason=kernel-v01-integration)

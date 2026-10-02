@@ -1,0 +1,59 @@
+id: KM-500e
+title: Answer the question with the right facts and scope
+component: knowledge-management
+components:
+- knowledge_management
+level: L1
+status: active
+req_status: active
+readiness: approved
+priority: medium
+work_status: todo
+criteria: 'Get the facts you asked for, with clear limits on what they mean.
+
+
+  People can ask about requirements, governing rules and available evidence using their own task context. Answers
+  preserve the requested meaning and scope, and explain missing facts or incomplete results instead of presenting
+  a successful search as a complete answer.
+
+  '
+parent: KM-500
+depends_on:
+- KM-500
+doc_links:
+- path: docs/analysis/2026-10-01-repository-query-catalog.md
+  relationship: context
+  status: exists
+  relevance: Preserves all 25 persona questions, eight shared families and explicit current capability limits.
+- path: docs/analysis/2026-10-01-repository-query-evaluation-cases.json
+  relationship: context
+  status: exists
+  relevance: Twelve planned positive/control cases, not executed acceptance proof.
+- path: docs/acceptance-criteria/ac-store/ACS-1100-honest-coverage-answers/ACS-1100.yaml
+  relationship: context
+  status: exists
+  relevance: Inherited standing coverage and denominator honesty; not duplicated.
+documentation_triggers:
+- reference-doc
+- how-to
+origin_agent: product-owner
+created: '2026-10-01'
+amended_by:
+- '2026-10-01: User explicitly approved the new ACs and directed implementation with agents and an independent evaluator. Approval records authorization, not implementation or execution proof.'
+superseded_by: null
+covered_by:
+- KM-500e-1
+- KM-500e-2
+- KM-500e-3
+- KM-500e-4
+- KM-500e-5
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: RQ1, RQ2, RQ7; BA-01, BA-02, BA-05, ITPO-01, ITPO-03, CODER-02, QA-01. First batch RQE-01, RQE-02, RQE-05.
+  Reuse KM-400a/d evidence and bounded retrieval contracts, KM-500a-1/a-3 clarification and gap classification,
+  and KM-500c-2 sufficiency; new leaves cover requested-field availability and meaning, count inclusion rules,
+  source-attributed clauses and explicit answerability. Inherit ACS-1100 coverage disclosure, do not duplicate
+  its standing rules. Draft authored under explicit user request to put planning agents to work. Existing parent
+  approval does not approve these new children. Reuse KM-500d-3 for evaluation extensions; no roadmap edit,
+  provider call, deployment or implementation is authorized by this authoring pass.

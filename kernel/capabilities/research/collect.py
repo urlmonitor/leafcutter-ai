@@ -29,6 +29,7 @@ from kernel.capabilities.decision.jev_support import (
 )
 from kernel.capabilities.research.limitations import is_cut_note
 from kernel.capabilities.research.state import UNLOCALISED, Collected, ResearchContinuation
+from kernel.capabilities.research.assessments import merge_assessments, guard_assessments
 from kernel.contracts import schema_ids
 from kernel.contracts.capability import Usage
 from kernel.contracts.enums import NeedStatus, RequestKind, ResultStatus
@@ -82,6 +83,11 @@ def _absorb_bundle(out: Collected, payload: dict, bar: float) -> None:
     reads exactly those items. A claim need (`need.claim.<option id>`) records every item its
     child returned, even below the bar, so the decision can link that evidence to the human-added
     option; each item keeps its relevance, and `_passing_ids` still gates the answer judgement.
+
+    Args:
+        out: Collected evidence, per-need assessments and coverage.
+        payload: Actual child evidence-bundle payload.
+        bar: Configured minimum relevance threshold.
     """
     bundle = cast(EvidenceBundlePayload, validate_payload(schema_ids.EVIDENCE_BUNDLE, payload))
     if len(bundle.coverage) == 1:
@@ -90,6 +96,7 @@ def _absorb_bundle(out: Collected, payload: dict, bar: float) -> None:
                 if need_id.startswith(CLAIM_NEED_PREFIX) or _passes(e, bar)]
         out.need_evidence[need_id] = list(dict.fromkeys([*out.need_evidence.get(need_id, []),
                                                          *kept]))
+    merge_assessments(out, bundle.assessments)
     out.unknowns += bundle.unknowns
     for item in bundle.evidence:
         out.evidence[item.id] = stronger_category(out.evidence.get(item.id), item)
@@ -110,11 +117,20 @@ def _absorb_bundle(out: Collected, payload: dict, bar: float) -> None:
 
 def collect_outcomes(ctx: ExecutionContext, cont: ResearchContinuation,
                      outcomes: list[ChildOutcome]) -> Collected:
-    """Merge the continuation's earlier evidence with the outcomes of the finished children."""
+    """Merge the continuation's earlier evidence with the outcomes of the finished children.
+
+    Args:
+        ctx: Trusted runtime scope, services and budgets.
+        cont: Persisted research continuation.
+        outcomes: Completed child outcomes to merge.
+
+    Returns:
+        Merged research state with conditional assessment guards.
+    """
     out = Collected(evidence={e.id: e for e in cont.evidence}, coverage=dict(cont.coverage),
                     attempted=list(cont.attempted), unavailable=list(cont.unavailable),
                     limitations=list(cont.limitations), truncated=cont.truncated,
-                    unanswered=list(cont.unanswered))
+                    unanswered=list(cont.unanswered), assessments=dict(cont.assessments))
     out.add_contradictions(cont.contradictions)
     for outcome in outcomes:
         if outcome.request_kind is RequestKind.SYNTHESIS:
@@ -124,11 +140,18 @@ def collect_outcomes(ctx: ExecutionContext, cont: ResearchContinuation,
     for need_id in out.unanswered:  # re-reading the children must not restore `satisfied`
         if out.coverage.get(need_id) is NeedStatus.SATISFIED:
             out.coverage[need_id] = NeedStatus.PARTIAL
+    guard_assessments(out)
     return out
 
 
 def _absorb_child(ctx: ExecutionContext, out: Collected, outcome: ChildOutcome) -> None:
-    """Merge a retrieval child, recording failures as limitations (never as empty results)."""
+    """Merge a retrieval child, recording failures as limitations (never as empty results).
+
+    Args:
+        ctx: Trusted runtime scope, services and budgets.
+        out: Collected evidence, per-need assessments and coverage.
+        outcome: One completed child outcome.
+    """
     if outcome.status in (ResultStatus.FAILED, ResultStatus.BLOCKED):
         out.limitations.append(f"retrieval child {outcome.work_item_id} {outcome.status.value}")
         return
@@ -140,7 +163,13 @@ def _absorb_child(ctx: ExecutionContext, out: Collected, outcome: ChildOutcome) 
 
 
 def _absorb_findings(ctx: ExecutionContext, out: Collected, outcome: ChildOutcome) -> None:
-    """Merge a synthesis child's findings; disagreements become limitations."""
+    """Merge a synthesis child's findings; disagreements become limitations.
+
+    Args:
+        ctx: Trusted runtime scope, services and budgets.
+        out: Collected evidence, per-need assessments and coverage.
+        outcome: One completed child outcome.
+    """
     payload = load_output_payload(ctx, outcome)
     if payload is None or outcome.status in (ResultStatus.FAILED, ResultStatus.BLOCKED):
         out.limitations.append(f"synthesis child {outcome.work_item_id} produced no findings")
@@ -152,7 +181,12 @@ def _absorb_findings(ctx: ExecutionContext, out: Collected, outcome: ChildOutcom
 
 
 def close_coverage(cont: ResearchContinuation, out: Collected) -> None:
-    """Give every planned need a status: needs no child reported on are unavailable."""
+    """Give every planned need a status: needs no child reported on are unavailable.
+
+    Args:
+        cont: Persisted research continuation.
+        out: Collected evidence, per-need assessments and coverage.
+    """
     for need in cont.needs:
         if need.id in out.coverage:
             continue
@@ -171,7 +205,14 @@ def _answer_checks(ctx: ExecutionContext, out: Collected, needs: list[EvidenceNe
 
 
 def _answer_question(need_id: str) -> QuestionSpec:
-    """Return the literal question: does the need's evidence answer the need's question?"""
+    """Return the literal question: does the need's evidence answer the need's question?
+
+    Args:
+        need_id: Original evidence-need identity.
+
+    Returns:
+        Bounded question for the original evidence need.
+    """
     return noul_question(
         f"{ANSWERS}{need_id}", "research.answer",
         f"Do the evidence items listed in `answer_checks.{need_id}.evidence_ids` (quoted under "
@@ -190,6 +231,17 @@ async def judge(ctx: ExecutionContext, invocation: CapabilityInvocation, questio
 
     Raises:
         StopCapability: Jev was unavailable or over budget.
+
+    Args:
+        ctx: Trusted runtime scope, services and budgets.
+        invocation: Current registered capability invocation.
+        question: Original research question.
+        out: Collected evidence, per-need assessments and coverage.
+        ask_evaluable: Whether direct answerability should be judged.
+        needs: Original planned evidence needs.
+
+    Returns:
+        Measured judgments without upgrading conditional evidence.
     """
     items = list(out.evidence.values())
     questions = []
@@ -207,6 +259,8 @@ async def judge(ctx: ExecutionContext, invocation: CapabilityInvocation, questio
         return Judgement(None, None, [])
     state: dict[str, JsonValue] = {
         "question": question, "evidence": evidence_state(ctx, items),
+        "conditional_assessment_status": {key: report.get("status", "unresolved")
+                                          for key, report in out.assessments.items()},
         "findings": [f.claim for f in out.findings],
         "answer_checks": {i: {"question": n.question, "evidence_ids":
                            [*_passing_ids(ctx, out, i)]} for i, n in checks.items()}}
@@ -226,6 +280,12 @@ def apply_answers(ctx: ExecutionContext, cont: ResearchContinuation, out: Collec
 
     The topic matched (retrieval's relevance), the question was not answered: the evidence stays
     in the bundle as context and a limitation says so.
+
+    Args:
+        ctx: Trusted runtime scope, services and budgets.
+        cont: Persisted research continuation.
+        out: Collected evidence, per-need assessments and coverage.
+        answers: Bounded answerability probabilities by need.
     """
     bar = ctx.config.research.answer_threshold
     for need in cont.needs:
@@ -264,6 +324,11 @@ def record_contradiction(ctx: ExecutionContext, out: Collected, probability: flo
 
     The conflicting pair is not known, so it is recorded once, flagged as unlocalised, and not at
     all when a localised contradiction already says where the disagreement is.
+
+    Args:
+        ctx: Trusted runtime scope, services and budgets.
+        out: Collected evidence, per-need assessments and coverage.
+        probability: Observed contradiction probability.
     """
     if probability < ctx.config.decision.conflict_threshold:
         return

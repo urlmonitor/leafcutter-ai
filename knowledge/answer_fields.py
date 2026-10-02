@@ -1,0 +1,114 @@
+"""MODULE: answer_fields
+GOAL: Describe required-field availability using actual disclosed evidence only.
+BUSINESS CONTEXT: Distinguish source absence from projection and disclosure limits.
+ARCHITECTURE: Neutral pure disclosure helpers, never a hidden source reader.
+"""
+
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from .contracts import Entity, KnowledgeEvidence
+
+BASE_FIELDS = {"canonical_id", "kind", "title", "source_sha", "source_locator"}
+
+
+def field_value(item: KnowledgeEvidence, name: str) -> object:
+    """Return one actual disclosed value without consulting a source oracle.
+
+    Args:
+        item: Disclosed evidence item.
+        name: Required canonical field name.
+
+    Returns:
+        The actual value, or None when unavailable.
+    """
+    if name == "criteria":
+        return (
+            item.content
+            if item.entity.source.locator == "/criteria" and item.disclosure_level == 3
+            else None
+        )
+    if name in {"canonical_id", "kind", "title"}:
+        return getattr(item.entity, name)
+    if name == "source_sha":
+        return item.entity.source.source_sha
+    if name == "source_locator":
+        return item.entity.source.locator
+    value = item.entity.properties.get(name)
+    if name in {
+        "status",
+        "req_status",
+        "work_status",
+        "readiness",
+        "level",
+        "parent",
+        "structural_parent",
+    }:
+        return value if isinstance(value, str) else None
+    if name in {"covered_by", "implemented_by", "depends_on"}:
+        return (
+            value
+            if isinstance(value, list) and all(isinstance(entry, str) for entry in value)
+            else None
+        )
+    return value
+
+
+def availability(
+    node: Entity, visible: Entity, fields: list[str], level: int, limitations: list[str]
+) -> dict[str, str]:
+    """Classify availability at the actual projection-to-disclosure boundary.
+
+    Args:
+        node: Actual projected candidate, not an oracle record.
+        visible: Sanitized candidate that the caller will receive.
+        fields: Caller-required canonical field names.
+        level: Actual requested disclosure level.
+        limitations: Actual source excerpt limitations.
+
+    Returns:
+        Availability per requested field, with unknown used when attribution is absent.
+    """
+    return {name: _availability(node, visible, name, level, limitations) for name in fields}
+
+
+def _availability(
+    node: Entity, visible: Entity, name: str, level: int, limitations: list[str]
+) -> str:
+    """Resolve one field without guessing whether the canonical source contains it.
+
+    Args:
+        node: Actual projected entity.
+        visible: Sanitized entity to disclose.
+        name: Requested field name.
+        level: Actual disclosure level.
+        limitations: Actual excerpt limitations.
+
+    Returns:
+        Attributable availability classification.
+    """
+    if name in BASE_FIELDS:
+        return "present"
+    origin = node.properties.get("source_fields", {}).get(name)
+    if origin == "canonical_absent":
+        return "canonical_absent"
+    if name == "criteria":
+        if level != 3:
+            return "disclosure_omitted"
+        if any("truncated" in value for value in limitations):
+            return "truncated"
+        if limitations or node.source.locator != "/criteria":
+            return "unknown"
+        return "present"
+    if name in visible.properties and visible.properties[name] is not None:
+        return "present"
+    if name in node.properties and node.properties[name] is not None:
+        return "disclosure_omitted"
+    return "projection_missing" if origin == "present" else "unknown"
+
+
+# DECISION HISTORY
+# ================================================================================
+# - 2026-10-01 18:55 [python-coder]: Keep requested facts separate from execution success and preserve canonical field meaning. (#KM-500/KM-500e-2)

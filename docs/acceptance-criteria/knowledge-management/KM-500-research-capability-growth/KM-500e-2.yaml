@@ -1,0 +1,214 @@
+id: KM-500e-2
+title: Return canonical fields and clauses without changing their meaning
+component: knowledge-management
+components:
+- knowledge_management
+level: L2
+status: active
+req_status: active
+work_status: in_progress
+readiness: approved
+priority: medium
+parent: KM-500e
+criteria: 'Given the selected project revision records an AC with lifecycle status active, implementation work status
+  todo and a canonical criterion distinguishing query execution from answering the question
+
+  When research requests that AC''s work status and exact governing criterion
+
+  Then the evidence exposes each requested available field under its own declared meaning with the AC identity,
+  source revision and supporting locator
+
+  And the work-status answer is todo rather than active, and a source quotation preserves the canonical clause rather
+  than presenting a generated paraphrase as exact text
+
+  And lifecycle status, requirement status, implementation work status and readiness remain distinct even when their
+  names or values resemble one another
+
+  And an absent, undisclosed or truncated required field is named in a structured unresolved-answer outcome instead
+  of being filled from a similarly named field or hidden source inspection
+
+  And an available partial answer identifies which requested facts are supported and which remain unresolved
+
+  And a suggested duplicate or conflicting requirement cites the compared canonical clauses and labels interpretation
+  separately from the recorded facts
+
+  And similarity alone neither makes two requirements equivalent nor chooses authority between contradictory sources.
+
+  '
+depends_on:
+- KM-500e
+- KM-400d-2
+- KM-500c-2
+doc_links:
+- path: docs/analysis/2026-10-01-repository-query-catalog.md
+  relationship: context
+  status: exists
+  relevance: Twenty-five role questions consolidated into eight answer families; desired answers are not current
+    tool guarantees.
+- path: docs/analysis/2026-10-01-repository-query-evaluation-cases.json
+  relationship: context
+  status: exists
+  relevance: Twelve planned source-anchored cases and controls; not executed acceptance proof.
+- path: docs/architecture/adrs/ADR-062-standalone-knowledge-retrieval.md
+  relationship: context
+  status: exists
+  relevance: Retain immutable source provenance, registered bounded execution and existing ownership.
+- path: docs/acceptance-criteria/ac-store/ACS-1100-honest-coverage-answers/ACS-1100.yaml
+  relationship: context
+  status: exists
+  relevance: Inherited coverage and denominator contract; no duplicate enforcement rule.
+- path: docs/architecture/components/knowledge-retrieval.md
+  relationship: context
+  status: exists
+  relevance: Existing public boundaries, canonical projection ownership and bounded research integration.
+- path: docs/testing/test-angles.md
+  relationship: context
+  status: exists
+  relevance: Public reachability, producer-consumer seams and discriminating proof expectations; these descriptors
+    are planned.
+assigned_agent: python-coder
+estimated_complexity: L
+delivers_to:
+- ac_id: KM-500e-3
+  agent: python-coder
+  contract: 'Attributed field evidence: canonical_id, repository_id, source_sha, source_locator, disclosed_values
+    keyed by canonical field, field_availability (present, source_absent, projection_absent, disclosure_omitted,
+    truncated, unknown), exact_clause completeness and limitations; lifecycle status, req_status, work_status and
+    readiness remain separate.'
+- ac_id: KM-500e-4
+  agent: python-coder
+  contract: 'Attributed field evidence: canonical_id, repository_id, source_sha, source_locator, disclosed_values
+    keyed by canonical field, field_availability (present, source_absent, projection_absent, disclosure_omitted,
+    truncated, unknown), exact_clause completeness and limitations; lifecycle status, req_status, work_status and
+    readiness remain separate.'
+- ac_id: KM-500e-5
+  agent: documentation-expert
+  contract: 'Attributed field evidence: canonical_id, repository_id, source_sha, source_locator, disclosed_values
+    keyed by canonical field, field_availability (present, source_absent, projection_absent, disclosure_omitted,
+    truncated, unknown), exact_clause completeness and limitations; lifecycle status, req_status, work_status and
+    readiness remain separate.'
+- ac_id: KM-500f-1
+  agent: python-coder
+  contract: 'Attributed field evidence: canonical_id, repository_id, source_sha, source_locator, disclosed_values
+    keyed by canonical field, field_availability (present, source_absent, projection_absent, disclosure_omitted,
+    truncated, unknown), exact_clause completeness and limitations; lifecycle status, req_status, work_status and
+    readiness remain separate.'
+- ac_id: KM-500f-2
+  agent: python-coder
+  contract: 'Attributed field evidence: canonical_id, repository_id, source_sha, source_locator, disclosed_values
+    keyed by canonical field, field_availability (present, source_absent, projection_absent, disclosure_omitted,
+    truncated, unknown), exact_clause completeness and limitations; lifecycle status, req_status, work_status and
+    readiness remain separate.'
+- ac_id: KM-500f-4
+  agent: python-coder
+  contract: 'Attributed field evidence: canonical_id, repository_id, source_sha, source_locator, disclosed_values
+    keyed by canonical field, field_availability (present, source_absent, projection_absent, disclosure_omitted,
+    truncated, unknown), exact_clause completeness and limitations; lifecycle status, req_status, work_status and
+    readiness remain separate.'
+- ac_id: KM-500g-1
+  agent: python-coder
+  contract: 'Attributed field evidence: canonical_id, repository_id, source_sha, source_locator, disclosed_values
+    keyed by canonical field, field_availability (present, source_absent, projection_absent, disclosure_omitted,
+    truncated, unknown), exact_clause completeness and limitations; lifecycle status, req_status, work_status and
+    readiness remain separate.'
+- ac_id: KM-500d-3
+  agent: python-coder
+  contract: 'Attributed field evidence: canonical_id, repository_id, source_sha, source_locator, disclosed_values
+    keyed by canonical field, field_availability (present, source_absent, projection_absent, disclosure_omitted,
+    truncated, unknown), exact_clause completeness and limitations; lifecycle status, req_status, work_status and
+    readiness remain separate.'
+expects_from:
+- ac_id: KM-500e-1
+  contract: 'Answer requirements: original_question, required_fields with meanings, repository_id, requested_source_sha,
+    population/root_id, levels, root_excluded versus terminal_leaf_only inclusion rule, completeness_required, unresolved_scope
+    and clarification state, preserved across run/resume.'
+origin_agent: business-analyst
+created: '2026-10-01'
+created_by: docs/acceptance-criteria/knowledge-management/KM-500-research-capability-growth/KM-500e.yaml
+amended_by:
+- '2026-10-01: User explicitly approved the new ACs and directed implementation with agents and an independent evaluator.
+  Approval records authorization, not implementation or execution proof.'
+superseded_by: null
+covered_by:
+- tests/knowledge/test_query_answer_contract_acceptance.py
+- tests/knowledge/test_query_answer_contract_acceptance_comparison.py
+- tests/knowledge/test_query_answer_contract_acceptance_research_assessment.py
+implemented_by:
+- tickets/00_inbox/epics/EPIC-RepositoryResearchAnswers/TICKET-20261001-KM-500e-2.md
+change_target: code
+risk_surface: contract_boundary
+notes: RQ1/RQ2; RQE-01 and RQE-02 controls. New requested-field and exact-clause guarantee; source values are retrieved
+  evidence, never a substituted evaluation oracle. Authored using the business-analyst template under explicit user
+  authorization to draft ACs; not approval or implementation proof.
+it_requirements:
+- Retain immutable repository/source SHA provenance, bounded registered read-only queries and existing kernel authorization,
+  budgets and retries. This contract adds no arbitrary Cypher, new network endpoint, source-write permission or
+  automatic query activation.
+- The named fields below describe the planned observable semantic contract; preserve compatible existing envelope
+  fields and version any incompatible extension. Required unavailable values stay explicit and are never inferred
+  from an evaluation oracle.
+- Carry canonical field names and their availability separately through projection and disclosure. Existing generations
+  lacking a newly required field remain incompatible for that answer unless republished; do not silently fill from
+  an unrelated workspace or lifecycle status.
+- An exact criterion answer includes the complete requested canonical clause at its pinned source locator. Truncation
+  or byte budgets must mark the clause incomplete and prevent an exact-complete claim; the source oracle is assessment-only.
+- Preserve distinct graph lifecycle status, requirement status, work status and readiness even where literal values
+  coincide. Absence in canonical source, absence in projection and withheld disclosure require attributable diagnostics;
+  otherwise classify availability as unknown.
+- Similarity or duplicate/conflict interpretation cites the exact compared clauses and is labeled inference. It
+  cannot rewrite canonical requirements or silently select one as authoritative.
+test_required: true
+test_rationale: Planned criterion and public reachability proof includes real producer/consumer boundaries and named
+  plausible wrong outcomes. No descriptor is executed coverage; no provider, database or deployment result is asserted.
+test_spec:
+- name: test_public_retrieval_discloses_canonical_fields_and_exact_criteria
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: integration
+  angle: reachability
+  description: Invoke public retrieval against controlled immutable source evidence for RQE-01-P and RQE-02-P; assert
+    canonical status fields remain distinct and the entire requested KM-500c-2 criterion, ID, SHA and locator are
+    returned.
+  must_catch:
+  - Returning graph status=active as the work-status answer or a shortened clause as complete.
+  covers:
+  - KM-500e-2
+  requires_db: false
+  surface_invoked: python -m knowledge retrieve
+- name: test_field_availability_does_not_use_source_oracle_to_fill_response
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: integration
+  angle: criterion
+  description: Assess RQE-01-N with work_status omitted while status remains active and separately exercise source-absent,
+    projection-absent and unknown diagnostics; assert missing required values remain unresolved with only evidenced
+    classifications.
+  must_catch:
+  - An assessor secretly filling omitted work_status from the golden source data.
+  covers:
+  - KM-500e-2
+  requires_db: false
+- name: test_disclosure_budget_preserves_incomplete_clause_signal
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: integration
+  angle: seam
+  description: Exercise the real projection-to-disclosure boundary with RQE-02-N and a byte-limited criterion whose
+    trailing And clauses are omitted; assert partial evidence and unavailable exact-complete proof reach the caller.
+  must_catch:
+  - Accepting only the first Then clause as the complete acceptance criterion.
+  covers:
+  - KM-500e-2
+  requires_db: false
+- name: test_conflicting_clauses_remain_cited_interpretations
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: integration
+  angle: discrimination
+  description: Supply two source-attributed clauses that disagree and assert the answer retains each locator and
+    distinguishes the inferred conflict from authoritative source content.
+  must_catch:
+  - Resolving a conflict by silently rewriting one canonical clause or treating similarity as authority.
+  covers:
+  - KM-500e-2
+  requires_db: false

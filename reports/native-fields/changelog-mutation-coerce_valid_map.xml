@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="1" skipped="0" tests="1" time="18.345" timestamp="2026-10-02T09:14:23.510461+00:00" hostname="BrainDesk"><testcase classname="tests.knowledge.test_native_changelog_entry" name="test_changelog_recovers_failing_literal_list_but_retains_valid_maps" time="0.015"><failure message="assert [&quot;{'Before status': 'done'}&quot;] == [{'Before status': 'done'}]&#10;  &#10;  At index 0 diff: &quot;{'Before status': 'done'}&quot; != {'Before status': 'done'}&#10;  Use -v to get more diff">tmp_path = WindowsPath('C:/Users/Hendrik/AppData/Local/Temp/pytest-of-Hendrik/pytest-3069/test_changelog_recovers_failin0')
+
+    def test_changelog_recovers_failing_literal_list_but_retains_valid_maps(tmp_path):
+        # covers: KM-400a-3-i
+        # angle: boundary
+        items = [
+            "Run the build.",
+            "Set `output_root: .leafcutter` and `shim_strategy: symlink`.",
+            "Then verify.",
+        ]
+        fragment = "migration_steps: \n" + "".join("  - " + item + "\n" for item in items)
+        _write(
+            tmp_path,
+            "changelogs/broken-list.md",
+            "title: Recovered\nbreaking: false\n" + fragment + "pr: null\n",
+        )
+        _write(
+            tmp_path,
+            "changelogs/valid-map.md",
+            "title: Map\nmigration_steps:\n  - Before status: done\n",
+        )
+        records = {r.title: r for r in _extract(tmp_path)}
+        recovered = records["Recovered"]
+        assert recovered.metadata == {
+            "title": "Recovered",
+            "breaking": False,
+            "migration_steps": items,
+            "pr": None,
+        }
+        assert recovered.derived["parsing"]["raw_fragment"] == fragment
+        assert recovered.derived["parsing"]["rule"] == "emitter_literal_migration_list"
+        assert recovered.derived["parsing"]["field"] == "migration_steps"
+        assert "mapping values are not allowed here" in recovered.derived["parsing"]["original_error"]
+&gt;       assert records["Map"].metadata["migration_steps"] == [{"Before status": "done"}]
+E       assert ["{'Before status': 'done'}"] == [{'Before status': 'done'}]
+E         
+E         At index 0 diff: "{'Before status': 'done'}" != {'Before status': 'done'}
+E         Use -v to get more diff
+
+tests\knowledge\test_native_changelog_entry.py:191: AssertionError</failure></testcase></testsuite></testsuites>

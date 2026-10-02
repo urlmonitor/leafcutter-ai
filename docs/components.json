@@ -301,13 +301,35 @@
       "id": "knowledge_management",
       "name": "Knowledge Management",
       "type": "analysis",
-      "description": "Cross-surface knowledge graph: surface ingestion from paths.json, node/edge derivation, AC-to-code traceability, the query layer, and graph visualisation.",
+      "description": "Cross-surface canonical graph assembly and traceability, plus optional immutable Git-to-Neo4j projection and bounded exact/graph/semantic retrieval. Knowledge owns infrastructure; the thin integrations adapter consumes existing kernel evidence/capability contracts.",
       "detail_ref": "docs/architecture/components/knowledge-management.md",
       "status": "active",
       "primary_code": [
         "scripts/knowledge_query.py",
         "scripts/visualise_knowledge_graph.py",
-        "templates/skills/knowledge-query/"
+        "templates/skills/knowledge-query/",
+        "knowledge/",
+        "integrations/"
+      ],
+      "exposed_interfaces": [
+        {
+          "name": "knowledge-cli",
+          "type": "cli_command",
+          "path": "knowledge/__main__.py",
+          "shape": "python -m knowledge <capabilities|retrieve|evaluate|validate|plan|sync|status|rollback|cleanup>. Versioned JSON requests/results, explicit immutable source SHA and repository scope; disabled by default, separate writer credentials for publication."
+        },
+        {
+          "name": "knowledge-retriever-port",
+          "type": "function_signature",
+          "path": "knowledge/ports.py",
+          "shape": "KnowledgeRetriever: async capabilities() -> dict; async retrieve(KnowledgeRetrievalRequest) -> KnowledgeRetrievalResult; async close(). Neutral versioned transport with bounded disclosure, generation/source provenance and typed readiness/failure status."
+        },
+        {
+          "name": "kernel-knowledge-adapter",
+          "type": "function_signature",
+          "path": "integrations/knowledge_capability.py",
+          "shape": "KnowledgeRetrievalExecutor.ainvoke(invocation, ctx) -> CapabilityResult via existing retrieve.repository binding. Canonical Evidence conversion and trusted scope checks; database resources remain outside kernel state."
+        }
       ]
     },
     "knowledge_system": {

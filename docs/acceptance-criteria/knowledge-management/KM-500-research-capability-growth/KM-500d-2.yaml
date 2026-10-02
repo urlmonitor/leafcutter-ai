@@ -1,0 +1,148 @@
+id: KM-500d-2
+title: Show when published knowledge will reflect a branch or source change
+component: knowledge-management
+components:
+- knowledge_management
+level: L2
+status: active
+req_status: active
+readiness: approved
+priority: medium
+work_status: todo
+parent: KM-500d
+criteria: 'Given an installation has a configured canonical indexing branch, a current workspace revision and
+  a published graph revision
+
+  When an operator asks whether a source change is available for research
+
+  Then the response identifies the configured branch, requested revision, published revision, readiness and
+  any pending, failed or missing synchronization
+
+  And it distinguishes a local edit, a feature or v01 merge, a canonical-branch merge and an explicitly requested
+  immutable-revision sync
+
+  And it does not imply that a feature merge triggers a differently configured canonical-branch job or that
+  deploying query code automatically indexes its source
+
+  And a manual synchronization is identified as manual rather than evidence that the merge-triggered workflow
+  ran
+
+  When the configured canonical event is exercised in an authorized deployment
+
+  Then the observed validation, publication and separate graph and semantic readiness agree with the existing
+  publication guarantees
+
+  And the operational proof records the actual trigger and safe status information, including unmet credentials
+  or provider prerequisites without revealing secret values
+
+  And retrieval, ingestion and trace correlation are demonstrated through their existing owners without putting
+  writer credentials into a research request.'
+depends_on:
+- KM-500d
+doc_links:
+- path: docs/acceptance-criteria/knowledge-management/KM-400-trustworthy-project-knowledge/KM-400b-1.yaml
+  relationship: context
+  status: exists
+  relevance: Reuse the existing bounded behavior; this pending criterion adds validation, operation or lifecycle
+    scope without replacing completed proof.
+- path: docs/acceptance-criteria/knowledge-management/KM-400-trustworthy-project-knowledge/KM-400b-3.yaml
+  relationship: context
+  status: exists
+  relevance: Reuse the existing bounded behavior; this pending criterion adds validation, operation or lifecycle
+    scope without replacing completed proof.
+- path: docs/acceptance-criteria/knowledge-management/KM-400-trustworthy-project-knowledge/KM-400e-5.yaml
+  relationship: context
+  status: exists
+  relevance: Reuse the existing bounded behavior; this pending criterion adds validation, operation or lifecycle
+    scope without replacing completed proof.
+- path: docs/acceptance-criteria/knowledge-management/KM-400-trustworthy-project-knowledge/KM-400d-5.yaml
+  relationship: context
+  status: exists
+  relevance: Reuse the existing bounded behavior; this pending criterion adds validation, operation or lifecycle
+    scope without replacing completed proof.
+- path: docs/architecture/components/knowledge-retrieval.md
+  relationship: context
+  status: exists
+  relevance: Neutral projection/catalog ownership and existing kernel integration boundaries.
+origin_agent: business-analyst
+created: '2026-10-01'
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: 'PO/BA/IT PO coverage audit at user request. This is a pending behavioral obligation, not an implementation
+  or execution claim. Existing KM-400 and KM-500 completed mechanics retain their evidence. Authoring this
+  criterion does not authorize external provider data transfer, merge, deployment or implementation during
+  the AC-only audit. IT PO supplies technical constraints and test contracts. IT PO 2026-10-01: technical constraints
+  and planned public proof supplied; todo and empty covered_by/implemented_by are intentional. No implementation,
+  provider call or deployment was performed during this acceptance audit.'
+assigned_agent: python-coder
+estimated_complexity: L
+it_requirements:
+- Reuse immutable sync/status/publication protocols and canonical workflow configuration as the source of branch
+  truth. Current workflow targets main; a feature/kernel-v01 merge or deployment is not evidence that main-triggered
+  indexing ran.
+- Readiness report binds working/requested revision, configured canonical branch, published SHA/generation,
+  lag, graph readiness and separate vector/model readiness. Identify manual sync and actual event-triggered
+  publication separately.
+- Keep serving and writer credentials separate through existing secret loaders; graph research requests and
+  traces must never carry writer secrets. Report missing setting names only.
+- Publicly test dirty worktree, feature merge, canonical merge, explicit immutable manual sync, out-of-order
+  events and failure against existing guarantees. Actual remote workflow proof requires authorized deployment
+  and records event/run identity; no merge or remote dispatch is authorized by this AC-only task.
+- Trace correlation remains owned by the existing tracer, with request/decision/repository/generation/evidence
+  references; telemetry loss must not falsify retrieval readiness.
+- Include source validation before merge separately from post-merge publication; derive canonical-branch behavior
+  from declared deployment configuration rather than treating the current hardcoded main workflow as universally
+  configured.
+- Changed-content/model embedding scheduling is separate from graph publication and semantic readiness. Record
+  its trigger, pending or failed state and immutable generation instead of implying graph sync populated vectors.
+- Measure total deployment capacity across simultaneously retained/building generations, nodes, edges, chunks
+  and vectors against configured limits; a single-generation projection count is not complete capacity proof.
+- Verify actual backend privileges for serving versus ingestion principals, including an attempted forbidden
+  write under the serving identity in an isolated authorized target. Distinct environment-variable names or
+  the same privileged Aura principal do not prove least privilege.
+- 'Persist merge-job correlation independently of a later retrieval trace lifecycle: include actual event/job
+  identifier and immutable source/generation, so an expired retrieval trace cannot be mistaken for ingestion
+  observability.'
+test_required: true
+test_rationale: Planned public-interface and separately labeled real-artifact proof covers the full observable
+  obligation. Existing mechanism tests are reusable but do not establish real-agent, provider or deployment
+  readiness. No planned test is represented as existing coverage.
+expects_from:
+  ac_id: KM-400e-5
+  contract: Reuse the existing bounded implementation and canonical contracts; add only this explicit lifecycle
+    or readiness obligation.
+delivers_to:
+  agent: python-coder
+  contract: Implement and prove KM-500d-2 through the existing knowledge/kernel or operational interface; return
+    measured evidence and preserve explicit not-run prerequisites.
+test_spec:
+- name: test_operational_readiness_branch_and_lag
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: integration
+  angle: reachability
+  description: Invoke supported status/readiness interfaces and workflow harness for local edit, feature merge,
+    canonical event and manual sync. Assert explicit SHA/branch/trigger distinctions, graph versus semantic
+    readiness, writer separation and safe failure output. Include pre-merge validation rejection, separately
+    scheduled changed embeddings and total overlapping-generation/chunk/vector capacity limits; safe configuration
+    output must not imply distinct principals are enforced.
+  covers:
+  - KM-500d-2
+  requires_db: false
+- name: test_authorized_canonical_sync_observation
+  target_dir: tests/knowledge_live/
+  framework: pytest
+  type: integration
+  angle: deployed
+  description: In an authorized configured deployment observe a real canonical event through validation/publication
+    and correlated retrieval. Record trigger/run/source/generation and safe readiness evidence; manual Aura
+    sync cannot satisfy this event-triggered proof. Verify deployed serving/writer privileges, total measured
+    capacity and durable merge-job correlation; record any unexercised prerequisite rather than marking it
+    passed.
+  covers:
+  - KM-500d-2
+  requires_db: true
