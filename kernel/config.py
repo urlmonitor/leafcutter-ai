@@ -138,9 +138,9 @@ class ResearchConfig(_Section):
     answer_aware_coverage: bool
     #: Probability the answer judgement must reach for a relevance-satisfied need to stay so.
     answer_threshold: Probability
-    #: Most extra needs built from named gaps and human-added option claims in one research run
-    #: (claims first, then gaps). Every need costs about one rerank call, so this bounds a round.
+    #: Most gap needs / most human-added option claim needs per research run (rest are named).
     max_targeted_needs: int = Field(ge=0)
+    max_claim_needs: int = Field(ge=0)
 
     @model_validator(mode="after")
     def _all_categories(self) -> ResearchConfig:
@@ -397,6 +397,8 @@ def write_config_schema(path: Path) -> None:
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-02 [python-coder]: research.max_claim_needs (25); max_targeted_needs caps gaps only.
+#   (#KernelResearchEveryAddedOption)
 # - 2026-10-01 [python-coder]: The `memory` section (backend, precedent thresholds) lives in
 #   kernel/config_memory.py because this file is at the size limit. (#KernelDecisionStore)
 # - 2026-10-01 [python-coder]: Round F: ordering, pool, rerank depth, review limits. (#KernelV01/F)
@@ -406,10 +408,8 @@ def write_config_schema(path: Path) -> None:
 #   against content hits; research.max_targeted_needs is 2. (#KernelV01/E)
 # - 2026-10-01 [python-coder]: Added decision.design_judgement_threshold, progress_epsilon and
 #   max_research_rounds so the design-decision ending is configuration. (#KernelV01/A)
-# - 2026-10-01 23:00 [python-coder]: Added decision.require_option_grounding and
-#   max_grounding_evidence, retrieval.coverage_relevance_threshold and a per-source deny_globs
-#   so grounding, coverage and secret exclusion are configuration, not code.
-#   (#KernelBootstrapV0/GROUND)
+# - 2026-10-01 23:00 [python-coder]: Added decision.require_option_grounding, max_grounding_evidence,
+#   retrieval.coverage_relevance_threshold and per-source deny_globs. (#KernelBootstrapV0/GROUND)
 # - 2026-10-01 22:00 [python-coder]: Added the `intent` section (answer-kind classification
 #   thresholds and the cap on clarification questions per request) so no threshold is hard-coded
 #   in the intake logic. (#KernelBootstrapV0/INTENT)

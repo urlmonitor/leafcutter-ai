@@ -192,7 +192,8 @@ class TestTargetedNeeds(TargetingCase):
         added = OptionContext(option_id="opt.added.1", title="Added", human_added=True)
         kids = self.children(gaps=gaps, option_context=[added])
         targeted = sorted(k for k in kids if k.startswith(("need.gap", "need.claim")))
-        self.assertEqual(targeted, ["need.claim.opt.added.1", "need.gap.1"])  # claims first
+        # claims have their own cap (max_claim_needs); max_targeted_needs (2) caps gaps only
+        self.assertEqual(targeted, ["need.claim.opt.added.1", "need.gap.1", "need.gap.2"])
 
     def test_a_decision_without_gaps_or_added_options_gets_no_extra_need(self) -> None:
         self.assertEqual(sorted(self.children(option_context=OPTIONS)),

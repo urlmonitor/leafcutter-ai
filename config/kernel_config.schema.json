@@ -643,6 +643,11 @@
           "title": "Evaluable Threshold",
           "type": "number"
         },
+        "max_claim_needs": {
+          "minimum": 0,
+          "title": "Max Claim Needs",
+          "type": "integer"
+        },
         "max_targeted_needs": {
           "minimum": 0,
           "title": "Max Targeted Needs",
@@ -669,7 +674,8 @@
         "category_descriptions",
         "answer_aware_coverage",
         "answer_threshold",
-        "max_targeted_needs"
+        "max_targeted_needs",
+        "max_claim_needs"
       ],
       "title": "ResearchConfig",
       "type": "object"

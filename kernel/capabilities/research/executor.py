@@ -34,6 +34,7 @@ from kernel.capabilities.research.collect import (
 from kernel.capabilities.research.planning import (
     affordable_judgement,
     afford_needs,
+    claim_limitations,
     plan_needs,
     resolve_sources,
 )
@@ -102,6 +103,7 @@ async def _plan(state: ResearchState, config: RunnableConfig) -> dict[str, Any]:
     plan = parse_plan(invocation)
     needs, usage = await plan_needs(ctx, invocation, plan)
     needs, trimmed = afford_needs(ctx, plan, needs)
+    trimmed = [*claim_limitations(ctx, plan), *trimmed]
     resolution = resolve_sources(ctx, needs, plan)
     cont = ResearchContinuation(
         phase="planned", needs=resolution.needs, child_map=resolution.child_map,
@@ -307,6 +309,8 @@ class ResearchExecutor:
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-02 [python-coder]: Added options the claim cap leaves out are named in the planning
+#   limitations beside the budget-trimmed needs. (#KernelResearchEveryAddedOption)
 # - 2026-10-01 [python-coder]: Synthesis is requested on coverage as well as on `evaluable`: when
 #   a planned need is partial, open or unanswered, or no need is satisfied, the host synthesizes
 #   (work-item budget permitting); the same goal flipped between nine findings (evaluable 0.68)

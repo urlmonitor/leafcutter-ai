@@ -2,7 +2,8 @@
 MODULE: kernel.capabilities.research.targeting
 GOAL: Turn what a decision already knows into targeted queries: the paths its options cite become
     explicit locators, the goal, criteria and option text become query hints, and the gaps a
-    synthesis named and the claims of human-added options become evidence needs of their own.
+    synthesis named and the claims of human-added options become evidence needs of their own
+    (claims and gaps under separate caps; options the claim cap drops are named).
 BUSINESS CONTEXT: A live run searched the goal text again every round: an option citing
     `kernel/contracts/decision.py` never had it retrieved, a synthesis said it was missing and
     nothing looked for it, and a human's added option was scored on evidence nobody searched for
@@ -150,32 +151,42 @@ def default_query(plan: Plan, max_locators: int) -> NeedQuery:
     return NeedQuery(hints=hints, locators=cited[:max_locators])
 
 
-def targeted(plan: Plan, limit: int, max_locators: int
-             ) -> list[tuple[EvidenceNeed, NeedQuery]]:
-    """Return the extra needs (human-added option claims first, then named gaps), at most `limit`.
+def claims_left_out(plan: Plan, claim_limit: int) -> list[str]:
+    """Return one limitation per human-added option the claim cap leaves without a claim need."""
+    added = [o for o in plan.options if o.human_added]
+    return [f"option {o.option_id} was not researched: claim cap {claim_limit} reached"
+            for o in added[claim_limit:]]
 
-    Each is supporting and aimed at what the repository says (existing patterns), with its own
-    hints and the locators its own text names.
+
+def targeted(plan: Plan, claim_limit: int, gap_limit: int, max_locators: int
+             ) -> list[tuple[EvidenceNeed, NeedQuery]]:
+    """Return the extra needs: human-added option claims (at most `claim_limit`), then gaps.
+
+    Gaps are capped separately at `gap_limit`. Each need is supporting and aimed at what the
+    repository says (existing patterns), with its own hints and the locators its own text names.
     """
     made: list[tuple[EvidenceNeed, NeedQuery]] = []
-    for option in (o for o in plan.options if o.human_added):
+    for option in [o for o in plan.options if o.human_added][:claim_limit]:
         text = _option_text(option)
         need = EvidenceNeed(
             id=f"{CLAIM_PREFIX}{option.option_id}", category=EvidenceCategory.EXISTING_PATTERNS,
             priority=Priority.SUPPORTING,
             question=f"Find evidence for or against this proposed option: {text}")
         made.append((need, NeedQuery([text], locators_of(option.cited_refs)[:max_locators])))
-    for number, gap in enumerate(plan.gaps, start=1):
+    for number, gap in enumerate(plan.gaps[:gap_limit], start=1):
         need = EvidenceNeed(
             id=f"{GAP_PREFIX}{number}", category=EvidenceCategory.EXISTING_PATTERNS,
             priority=Priority.SUPPORTING, question=f"Find evidence for this named gap: {gap}")
         made.append((need, NeedQuery([gap], locators_of(extract_refs(gap))[:max_locators])))
-    return made[:limit]
+    return made
 
 
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-02 [python-coder]: Claims and gaps no longer share one cap: `targeted` takes a claim
+#   limit and a gap limit, and `claims_left_out` names each added option the claim cap drops
+#   (live run: 19 of 21 added options were never searched). (#KernelResearchEveryAddedOption)
 # - 2026-10-01 [python-coder]: A class or contract named in an option or gap text ("Decision
 #   contract", `Decision`) also becomes a `path::Symbol` locator for each cited Python file that
 #   defines it; a file locator alone returned header slices, not the class body. (#KernelDecisionStore)
