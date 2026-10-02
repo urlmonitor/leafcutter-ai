@@ -1,0 +1,244 @@
+{
+  "id": "leafcutter/decision-retrieval",
+  "component": "decision_kernel",
+  "product": "Leafcutter",
+  "name": "Retrieving a decision as precedent",
+  "level": "pipeline",
+  "summary": "A later run finds earlier records via the index; Jev judges if each applies, and a strong match asks you to reuse it.",
+  "kind": "data",
+  "source": "real",
+  "realization": "built",
+  "status": "active",
+  "readiness": "draft",
+  "superseded_by": null,
+  "version": 1,
+  "shape_version": 2,
+  "tags": [
+    "decision-kernel",
+    "decision-lifecycle",
+    "precedent",
+    "pipeline"
+  ],
+  "entities": [
+    "Decision"
+  ],
+  "mock_data_ref": "leafcutter/decisions",
+  "steps": [
+    {
+      "id": "lookup",
+      "label": "Look up matching records",
+      "human": "A new decision's precedent step asks the memory port for matching records through docs/decisions/index.json: filters (components, roadmap phase), a text score, and a sha256 check against the index.",
+      "order": 1,
+      "agent": "kernel memory port",
+      "consumes": [
+        "published record (docs/decisions/<id>.yaml)",
+        "docs/decisions/index.json"
+      ],
+      "produces": [
+        "precedent candidates"
+      ],
+      "reads": [
+        "Decision"
+      ],
+      "impl_asof": "2026-10-02",
+      "impl_status": "not_started"
+    },
+    {
+      "id": "judge",
+      "label": "Ask Jev whether each applies",
+      "human": "Up to memory.max_precedents (3) candidates go to Jev, each with one literal question: \"does this earlier decision apply here?\". That is one call before options exist; after that the questions ride the assessment batch.",
+      "order": 2,
+      "agent": "jev",
+      "consumes": [
+        "precedent candidates"
+      ],
+      "produces": [
+        "applicability score"
+      ],
+      "impl_asof": "2026-10-02",
+      "impl_status": "not_started"
+    },
+    {
+      "id": "cite",
+      "label": "Cite it as evidence",
+      "human": "A precedent scoring 0.5 or more becomes prior_decisions evidence that cites its record path and who approved it.",
+      "order": 3,
+      "agent": "kernel precedent step",
+      "consumes": [
+        "precedent candidates",
+        "applicability score"
+      ],
+      "produces": [
+        "prior_decisions evidence"
+      ],
+      "reads": [
+        "Decision"
+      ],
+      "impl_asof": "2026-10-02",
+      "impl_status": "not_started"
+    },
+    {
+      "id": "offer-reuse",
+      "label": "Reuse it, or decide anew?",
+      "human": "Decision point: for a score of 0.8 or more, on a decision with no options of its own and a precedent that is not superseded, you are asked: reuse it, or decide anew?",
+      "order": 4,
+      "screen": "decision-reuse-or-decide-anew",
+      "agent": "human (asked through claude_code)",
+      "consumes": [
+        "prior_decisions evidence"
+      ],
+      "produces": [
+        "reuse answer"
+      ],
+      "reads": [
+        "Decision"
+      ],
+      "impl_asof": "2026-10-02",
+      "impl_status": "not_started"
+    },
+    {
+      "id": "reuse",
+      "label": "Reuse the earlier choice",
+      "human": "The decision resolves with the precedent's choice, approved by you, the current human, and a new record that cites the precedent under related is staged (for example dec-7cdc61ea41a206e0).",
+      "order": 5,
+      "agent": "kernel decision executor",
+      "consumes": [
+        "reuse answer"
+      ],
+      "produces": [
+        "reused decision (approved by the current human)",
+        "resolved decision (approved_by: human)"
+      ],
+      "reads": [
+        "Decision"
+      ],
+      "writes": [
+        "Decision"
+      ],
+      "expands_to": [
+        "leafcutter/decision-staging"
+      ],
+      "impl_asof": "2026-10-02",
+      "impl_status": "not_started"
+    }
+  ],
+  "branches": [
+    {
+      "id": "not-applicable",
+      "from": "judge",
+      "condition": "Jev scores the precedent below 0.5",
+      "label": "Does not apply",
+      "human": "The earlier decision is left out; the new decision carries on without it.",
+      "agent": "kernel precedent step",
+      "consumes": [
+        "applicability score"
+      ],
+      "outcome_kind": "exit",
+      "impl_asof": "2026-10-02",
+      "impl_status": "not_started"
+    },
+    {
+      "id": "evidence-only",
+      "from": "cite",
+      "condition": "the score is below 0.8, the new decision already has options, or the precedent is superseded",
+      "label": "Evidence only, no reuse question",
+      "human": "The precedent stays as cited evidence and the normal forming flow continues; you are not interrupted.",
+      "agent": "kernel precedent step",
+      "consumes": [
+        "prior_decisions evidence"
+      ],
+      "produces": [
+        "prior_decisions evidence"
+      ],
+      "outcome_kind": "alternative",
+      "impl_asof": "2026-10-02",
+      "impl_status": "not_started"
+    },
+    {
+      "id": "decide-anew",
+      "from": "offer-reuse",
+      "condition": "you choose to decide anew",
+      "label": "Decide anew",
+      "human": "The normal forming flow continues with the precedent kept as evidence and grounding research still running. If you end up choosing differently, the staged record supersedes the old one. A precedent never resolves anything on its own.",
+      "agent": "human (asked through claude_code)",
+      "consumes": [
+        "reuse answer"
+      ],
+      "produces": [
+        "prior_decisions evidence",
+        "supersedes link (when the final choice differs)"
+      ],
+      "reads": [
+        "Decision"
+      ],
+      "outcome_kind": "alternative",
+      "impl_asof": "2026-10-02",
+      "impl_status": "not_started"
+    }
+  ],
+  "acceptance_scenarios": [
+    {
+      "for": "lookup",
+      "given": "a new decision run and published records indexed in docs/decisions/index.json",
+      "when": "the precedent step asks the memory port for matches",
+      "then": "candidates are chosen through the index by component and roadmap-phase filters and a text score, and each record's sha256 is checked against the index"
+    },
+    {
+      "for": "judge",
+      "given": "precedent candidates",
+      "when": "they are sent to Jev",
+      "then": "at most memory.max_precedents (3) are judged, each with the literal question \"does this earlier decision apply here?\", in one call before options exist or within the assessment batch after"
+    },
+    {
+      "for": "cite",
+      "given": "a precedent Jev scored 0.5 or more",
+      "when": "the precedent step records it",
+      "then": "it becomes prior_decisions evidence citing its record path and approver"
+    },
+    {
+      "for": "offer-reuse",
+      "given": "a precedent scored 0.8 or more that is not superseded, on a decision with no options of its own",
+      "when": "the precedent step finishes",
+      "then": "you are asked \"Reuse it, or decide anew?\" and the decision waits for your answer"
+    },
+    {
+      "for": "reuse",
+      "given": "your answer to reuse the precedent",
+      "when": "the decision resolves",
+      "then": "it takes the precedent's choice, is approved by you as the current human, and stages a new record that cites the precedent under related"
+    },
+    {
+      "for": "not-applicable",
+      "given": "a precedent Jev scored below 0.5",
+      "when": "the precedent step records the judgement",
+      "then": "the precedent is not used as evidence and the decision continues without it"
+    },
+    {
+      "for": "evidence-only",
+      "given": "an applicable precedent scored below 0.8, or a decision that already has options, or a superseded precedent",
+      "when": "the precedent step finishes",
+      "then": "the precedent is kept as evidence and you are not asked whether to reuse it"
+    },
+    {
+      "for": "decide-anew",
+      "given": "the reuse question",
+      "when": "you choose to decide anew",
+      "then": "the forming flow continues with grounding research and the precedent as evidence, and a different final choice stages a record that supersedes the old one"
+    }
+  ],
+  "provenance": [
+    {
+      "action": "authored",
+      "by": "flow-author (decision-lifecycle product-truth session)",
+      "date": "2026-10-02",
+      "note": "Sub-flow 4 of leafcutter/decision-lifecycle (kernel decision dec-5e7445182eaec1f2): precedent retrieval inside a later decision run. Thresholds (0.5 applies, 0.8 reuse, max 3) checked against config/kernel_config.default.json on main."
+    }
+  ],
+  "impl_summary": {
+    "done": 0,
+    "in_progress": 0,
+    "not_started": 8,
+    "total": 8,
+    "asof": "2026-10-02"
+  }
+}

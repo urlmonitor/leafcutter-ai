@@ -1,0 +1,287 @@
+{
+  "id": "leafcutter/decision-publishing",
+  "component": "decision_kernel",
+  "product": "Leafcutter",
+  "name": "Publishing the decision record",
+  "level": "pipeline",
+  "summary": "You run the publish command; the record is validated, written to docs/decisions/, indexed, and merged via git review.",
+  "kind": "data",
+  "source": "real",
+  "realization": "built",
+  "status": "active",
+  "readiness": "draft",
+  "superseded_by": null,
+  "version": 1,
+  "shape_version": 2,
+  "tags": [
+    "decision-kernel",
+    "decision-lifecycle",
+    "decision-publishing",
+    "pipeline"
+  ],
+  "entities": [
+    "Decision"
+  ],
+  "mock_data_ref": "leafcutter/decisions",
+  "steps": [
+    {
+      "id": "decide-to-publish",
+      "label": "Decide to publish",
+      "human": "Decision point: you run python -m kernel decisions publish --run-id R yourself, or ask Claude Code to run it and open a PR.",
+      "order": 1,
+      "agent": "human (or claude_code on request)",
+      "consumes": [
+        "staged record (<run_root>/runs/<run_id>/staged/decisions/<id>.yaml)",
+        "publish instruction"
+      ],
+      "produces": [
+        "publish request (--run-id R)"
+      ],
+      "reads": [
+        "Decision"
+      ],
+      "impl_asof": "2026-10-02",
+      "impl_status": "not_started"
+    },
+    {
+      "id": "check-record",
+      "label": "Validate the staged record",
+      "human": "The command checks the record's schema, its links, and its filter values against docs/components.json and docs/roadmap.json.",
+      "order": 2,
+      "agent": "python -m kernel decisions publish",
+      "consumes": [
+        "publish request (--run-id R)",
+        "staged record (<run_root>/runs/<run_id>/staged/decisions/<id>.yaml)"
+      ],
+      "produces": [
+        "validated record"
+      ],
+      "reads": [
+        "Decision"
+      ],
+      "impl_asof": "2026-10-02",
+      "impl_status": "not_started"
+    },
+    {
+      "id": "write-published",
+      "label": "Write the record and the index",
+      "human": "The command writes docs/decisions/<id>.yaml and regenerates docs/decisions/index.json.",
+      "order": 3,
+      "agent": "python -m kernel decisions publish",
+      "consumes": [
+        "validated record"
+      ],
+      "produces": [
+        "published record (docs/decisions/<id>.yaml)",
+        "docs/decisions/index.json"
+      ],
+      "writes": [
+        "Decision"
+      ],
+      "impl_asof": "2026-10-02",
+      "impl_status": "not_started"
+    },
+    {
+      "id": "check-store",
+      "label": "Validate the store",
+      "human": "python -m kernel decisions validate passes over the whole decision store.",
+      "order": 4,
+      "agent": "python -m kernel decisions validate",
+      "consumes": [
+        "published record (docs/decisions/<id>.yaml)",
+        "docs/decisions/index.json"
+      ],
+      "produces": [
+        "store validation pass"
+      ],
+      "reads": [
+        "Decision"
+      ],
+      "impl_asof": "2026-10-02",
+      "impl_status": "not_started"
+    },
+    {
+      "id": "review",
+      "label": "Commit and review in git",
+      "human": "The new record and index are committed, and a PR is opened and reviewed like any other change; git is the canonical store.",
+      "order": 5,
+      "screen": "decision-record-published",
+      "agent": "git review (commit and PR)",
+      "consumes": [
+        "store validation pass",
+        "published record (docs/decisions/<id>.yaml)",
+        "docs/decisions/index.json"
+      ],
+      "produces": [
+        "decision record PR"
+      ],
+      "reads": [
+        "Decision"
+      ],
+      "impl_asof": "2026-10-02",
+      "impl_status": "not_started"
+    },
+    {
+      "id": "merge",
+      "label": "Merge to main",
+      "human": "The PR merges to main, and from then on every later run can find the record (for example dec-ef8ddcb79d668a67).",
+      "order": 6,
+      "agent": "git (merge to main)",
+      "consumes": [
+        "decision record PR"
+      ],
+      "produces": [
+        "published record on main"
+      ],
+      "writes": [
+        "Decision"
+      ],
+      "impl_asof": "2026-10-02",
+      "impl_status": "not_started"
+    }
+  ],
+  "branches": [
+    {
+      "id": "keep-staged",
+      "from": "decide-to-publish",
+      "condition": "you choose not to publish",
+      "label": "Keep it staged",
+      "human": "The record stays only in the run folder; later runs look up precedent through docs/decisions/index.json, so they will not find it.",
+      "agent": "human",
+      "consumes": [
+        "staged record (<run_root>/runs/<run_id>/staged/decisions/<id>.yaml)"
+      ],
+      "outcome_kind": "exit",
+      "impl_asof": "2026-10-02",
+      "impl_status": "not_started"
+    },
+    {
+      "id": "no-staged-record",
+      "from": "check-record",
+      "condition": "the run has no staged decision record",
+      "label": "Exit 3: no staged record",
+      "human": "The command stops with exit code 3 and the message \"no staged decision record for this run\"; nothing is written.",
+      "agent": "python -m kernel decisions publish",
+      "consumes": [
+        "publish request (--run-id R)"
+      ],
+      "outcome_kind": "failure",
+      "impl_asof": "2026-10-02",
+      "impl_status": "not_started"
+    },
+    {
+      "id": "unknown-filter",
+      "from": "check-record",
+      "condition": "a component or roadmap phase on the record is not in docs/components.json or docs/roadmap.json",
+      "label": "Exit 3: unknown filter value",
+      "human": "The command stops with exit code 3 and names the unknown value; nothing is written until the record uses known values.",
+      "agent": "python -m kernel decisions publish",
+      "consumes": [
+        "staged record (<run_root>/runs/<run_id>/staged/decisions/<id>.yaml)"
+      ],
+      "outcome_kind": "failure",
+      "impl_asof": "2026-10-02",
+      "impl_status": "not_started"
+    },
+    {
+      "id": "correct-older",
+      "from": "write-published",
+      "condition": "you pass --correct OLD_ID for an older record that the new record supersedes",
+      "label": "Correct an older record",
+      "human": "The older record gets a correction and superseded_by appended; nothing in it is rewritten, because the store is append-only.",
+      "agent": "python -m kernel decisions publish --correct OLD_ID",
+      "consumes": [
+        "validated record"
+      ],
+      "produces": [
+        "correction and superseded_by on the older record"
+      ],
+      "reads": [
+        "Decision"
+      ],
+      "writes": [
+        "Decision"
+      ],
+      "outcome_kind": "alternative",
+      "impl_asof": "2026-10-02",
+      "impl_status": "not_started"
+    }
+  ],
+  "acceptance_scenarios": [
+    {
+      "for": "decide-to-publish",
+      "given": "a staged decision record and the publish instruction",
+      "when": "you decide to publish",
+      "then": "you run python -m kernel decisions publish --run-id R, or Claude Code runs it at your request and opens a PR"
+    },
+    {
+      "for": "check-record",
+      "given": "a staged record for run R",
+      "when": "the publish command validates it",
+      "then": "its schema, links, and component and roadmap filter values are checked against docs/components.json and docs/roadmap.json before anything is written"
+    },
+    {
+      "for": "write-published",
+      "given": "a staged record that passed validation",
+      "when": "the publish command writes it",
+      "then": "docs/decisions/<id>.yaml exists and docs/decisions/index.json is regenerated to include it"
+    },
+    {
+      "for": "check-store",
+      "given": "a newly written record and index",
+      "when": "python -m kernel decisions validate runs",
+      "then": "it passes"
+    },
+    {
+      "for": "review",
+      "given": "a validated record and index",
+      "when": "the change is committed",
+      "then": "a PR is opened and reviewed in git like any other change"
+    },
+    {
+      "for": "merge",
+      "given": "an approved decision-record PR",
+      "when": "it merges to main",
+      "then": "the record is on main and every later run can find it through the index"
+    },
+    {
+      "for": "keep-staged",
+      "given": "a staged decision record",
+      "when": "you choose not to publish it",
+      "then": "it stays in the run folder only and no later run finds it as precedent"
+    },
+    {
+      "for": "no-staged-record",
+      "given": "a run with no staged decision record",
+      "when": "python -m kernel decisions publish --run-id R runs",
+      "then": "it exits 3 with \"no staged decision record for this run\" and writes nothing"
+    },
+    {
+      "for": "unknown-filter",
+      "given": "a staged record whose component or roadmap phase is not in the vocabularies",
+      "when": "the publish command validates it",
+      "then": "it exits 3 naming the unknown value and writes nothing"
+    },
+    {
+      "for": "correct-older",
+      "given": "a staged record that supersedes an older published record",
+      "when": "publish runs with --correct OLD_ID",
+      "then": "the older record gets a correction and superseded_by appended, and none of its existing content is changed"
+    }
+  ],
+  "provenance": [
+    {
+      "action": "authored",
+      "by": "flow-author (decision-lifecycle product-truth session)",
+      "date": "2026-10-02",
+      "note": "Sub-flow 3 of leafcutter/decision-lifecycle (kernel decision dec-5e7445182eaec1f2): a human-run publish command, then git review. Exit codes and --correct checked against kernel/memory/cli.py and publish.py on main."
+    }
+  ],
+  "impl_summary": {
+    "done": 0,
+    "in_progress": 0,
+    "not_started": 10,
+    "total": 10,
+    "asof": "2026-10-02"
+  }
+}
