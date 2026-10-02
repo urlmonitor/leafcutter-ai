@@ -217,6 +217,7 @@ task, then pull only those files.
 |------|------|-------------|
 | consolidated output root | [docs/explanation/consolidated-output-root.md](explanation/consolidated-output-root.md) | The Consolidated Output Root |
 | documentation coverage flow | [docs/explanation/documentation-coverage-flow.md](explanation/documentation-coverage-flow.md) | End-to-end trace of the documentation-coverage mechanism — which agent writes which field, which component reads it, and the four places where the writing side and the reading side disagree. |
+| kernel feature planning and knowledge resolution | [docs/explanation/kernel-feature-planning-and-knowledge-resolution.md](explanation/kernel-feature-planning-and-knowledge-resolution.md) | Draft design discussion: persona prerequisites, context selection at scale, and uncertainty resolution for kernel-native feature planning. |
 | tdd workflow | [docs/explanation/tdd-workflow.md](explanation/tdd-workflow.md) | This explanation describes how Test-Driven Development works inside leafcutter's |
 | traceability guardrails | [docs/explanation/traceability-guardrails.md](explanation/traceability-guardrails.md) | Which mechanical guardrails currently enforce the links between acceptance criteria, code, tests, documentation and product-truth flows; which layer each one runs in; where the holes are; and which AC families are planned to close them. |
 
