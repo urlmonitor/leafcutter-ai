@@ -19,6 +19,7 @@ from langchain_core.runnables import RunnableConfig
 from langgraph.graph import END, StateGraph
 
 from kernel.capabilities.base import ExecutionContext
+from kernel.capabilities.decision.publish_command import publish_command, publish_folder
 from kernel.capabilities.decision.assess import Assessment, assess
 from kernel.capabilities.decision.basis import grounding_gap, validate_basis
 from kernel.capabilities.decision.budget_gate import fallback_followup, handover, reserve_for
@@ -133,8 +134,9 @@ def _stage(ctx: ExecutionContext, work: Working, result: CapabilityResult, *, ba
         supersedes=supersedes, related=related)
     if staged is None:
         return result
-    note = (f"decision record staged: {staged.path}; publish it for review with: "
-            f"python -m kernel decisions publish --run-id {ctx.run_id}")
+    note = (f"decision record staged: {staged.path}; publish writes it into "
+            f"{publish_folder()} (the kernel checkout); "
+            f"publish it for review with: {publish_command(ctx.run_id)}")
     payload = dict(result.output_payload or {})
     payload["limitations"] = [*result.limitations, note]
     return result.model_copy(update={"limitations": [*result.limitations, note],
