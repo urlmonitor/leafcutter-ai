@@ -31,6 +31,7 @@ from kernel.contracts.enums import DecisionStatus
 from kernel.contracts.payloads import OptionsPayload
 from kernel.providers.base import ChoiceAnswer
 from tests.kernel.capabilities.support import evidence_item
+from tests.kernel.helpers import narrow
 
 CFG = load_kernel_config().decision
 OPTS = [Option(id="A", title="Alpha"), Option(id="B", title="Beta")]
@@ -94,7 +95,7 @@ class TestNoBlindEscalation(unittest.TestCase):
         self.assertEqual(v.status, DecisionStatus.NEEDS_HUMAN)
         self.assertEqual(v.reason, NO_RESEARCH_TARGETS)
         self.assertNotEqual(v.reason, RESEARCH_CAP)
-        question = design_followup(work, v.reason, v.ranking, CFG).request.question
+        question = narrow(design_followup(work, v.reason, v.ranking, CFG).request.question)
         self.assertIn("No research round is due", question)
         self.assertNotIn("limit", question)
         work.cont = work.cont.model_copy(update={
