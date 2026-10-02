@@ -4,14 +4,14 @@
   "product": "Leafcutter",
   "name": "How a decision is formed, saved, stored and reused",
   "level": "journey",
-  "summary": "How a decision is formed in a kernel run, staged as a record, published to docs/decisions/, and reused as precedent.",
+  "summary": "A request is enriched, formed into a human-approved decision, staged, published and later reused as precedent.",
   "kind": "data",
   "source": "real",
   "realization": "built",
   "status": "active",
   "readiness": "draft",
   "superseded_by": null,
-  "version": 1,
+  "version": 2,
   "shape_version": 2,
   "tags": [
     "decision-kernel",
@@ -28,7 +28,7 @@
     {
       "id": "form",
       "label": "Form the decision",
-      "human": "You ask a question; the kernel researches it, Jev assesses the options, and you approve the criteria and make the ranked choice.",
+      "human": "You ask a question; the kernel enriches its context before intent, then researches the decision, assesses options and asks you to approve and choose.",
       "order": 1,
       "agent": "kernel",
       "produces": [
@@ -41,7 +41,7 @@
         "leafcutter/decision-forming"
       ],
       "impl_asof": "2026-10-02",
-      "impl_status": "not_started"
+      "impl_status": "in_progress"
     },
     {
       "id": "stage",
@@ -124,7 +124,7 @@
       "for": "form",
       "given": "a question asked through Claude Code",
       "when": "the kernel runs it as a decision",
-      "then": "the decision resolves only after a human approves the criteria and makes the ranked choice, and it carries approved_by: human:<id> and approved_at"
+      "then": "bounded context enrichment precedes intent, and a decision resolves only after a human approves criteria and makes the ranked choice, carrying approved_by: human:<id> and approved_at"
     },
     {
       "for": "stage",
@@ -151,12 +151,18 @@
       "by": "flow-author (decision-lifecycle product-truth session)",
       "date": "2026-10-02",
       "note": "Parent journey of the decision lifecycle, per kernel decision dec-5e7445182eaec1f2 (one parent flow whose steps expand into four sub-flows). Describes the decision store merged in PR #978. Screens are not wired yet; mockups come later."
+    },
+    {
+      "action": "extended",
+      "by": "Codex (user-requested context enrichment)",
+      "date": "2026-10-02",
+      "note": "Extended the canonical flow with the implemented initial context pass before intent. DK-100 through DK-104 link implementation and evaluation. The isolated report records 10/10 cases; the separate paired live intent report records 5/5 expected enriched labels with ten Jev calls, without claiming general improvement. Readiness stays draft; no persona approval is claimed."
     }
   ],
   "impl_summary": {
     "done": 0,
-    "in_progress": 0,
-    "not_started": 4,
+    "in_progress": 1,
+    "not_started": 3,
     "total": 4,
     "asof": "2026-10-02"
   }

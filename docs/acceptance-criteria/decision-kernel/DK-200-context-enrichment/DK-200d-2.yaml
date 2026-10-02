@@ -1,0 +1,92 @@
+id: DK-200d-2
+title: "A violated enrichment label makes the isolated evaluation fail"
+component: decision-kernel
+components: [decision_kernel]
+level: L2
+status: active
+readiness: draft
+req_status: draft
+priority: high
+work_status: done
+criteria: |
+  Given an evaluation case requires denied secret material to stay out of gathered context,
+  And the evaluated gathering behavior admits that material,
+  When the isolated evaluation runs,
+  Then that case is reported as failed with the violated expectation,
+  And the overall evaluation outcome is unsuccessful.
+depends_on: [DK-200d]
+covered_by:
+  - "DK-200d-2-i"
+  - "tests/kernel/enrichment/test_context_enrichment.py::TestEvaluationFalsifiability::test_disabling_the_real_deny_policy_causes_the_secret_case_to_fail"
+  - "tests/kernel/enrichment/test_context_enrichment.py::TestEvaluationFalsifiability::test_every_absence_label_rejects_an_injected_output_leak"
+  - "tests/kernel/enrichment/test_context_enrichment.py::TestEvaluationFalsifiability::test_goal_and_claims_labels_reject_repository_instruction_promotion"
+  - "tests/kernel/enrichment/test_context_enrichment.py::TestEvaluationFalsifiability::test_cli_exits_nonzero_for_a_failed_case"
+implemented_by:
+  - "tests/kernel/enrichment/eval_runner.py"
+  - "tests/kernel/fixtures/eval/context_enrichment.json"
+assigned_agent: test-writer
+estimated_complexity: M
+it_requirements:
+  - "A named violation of a case label must survive both case scoring and aggregate reporting as an unsuccessful outcome."
+  - "Absence assertions must be falsifiable by injected output leaks and input-claim mutations."
+  - "The evaluation command must signal an unsuccessful report to its caller."
+delivers_to: null
+expects_from:
+  ac_id: DK-200d-1
+  contract: "Evaluation report: {step:string, rows:{id:string, category:string, status:string, evidence_count:integer, files_scanned:integer, sources:string[], failures:string[], passed:boolean}[], total:integer, passed:integer, jev_calls:integer}. A successful isolated report has total>0, passed=total and jev_calls=0. Fixture source: tests/kernel/fixtures/eval/context_enrichment.json; executable entry: python -m tests.kernel.enrichment.eval_runner."
+test_required: true
+test_spec:
+  - name: test_disabling_the_real_deny_policy_causes_the_secret_case_to_fail
+    target_dir: tests/kernel/enrichment/
+    framework: pytest
+    type: unit
+    angle: failure
+    description: "Bypassing the actual deny policy yields forbidden labelled material and a failed case with reported violations."
+  - name: test_every_absence_label_rejects_an_injected_output_leak
+    target_dir: tests/kernel/enrichment/
+    framework: pytest
+    type: unit
+    angle: failure
+    description: "Each forbidden-text label independently rejects an injected leak in the resulting context."
+  - name: test_goal_and_claims_labels_reject_repository_instruction_promotion
+    target_dir: tests/kernel/enrichment/
+    framework: pytest
+    type: unit
+    angle: failure
+    description: "The scorer rejects promoted repository instructions that alter the goal, caller capabilities or registry claims."
+  - name: test_cli_exits_nonzero_for_a_failed_case
+    target_dir: tests/kernel/enrichment/
+    framework: pytest
+    type: unit
+    angle: reachability
+    description: "The evaluation command reports failure for a failed aggregate and success for a passing aggregate."
+test_rationale: "The production mutation demonstrates a real failure; independent scorer mutations and command-result checks prevent case or aggregate false-green behavior."
+doc_links:
+  - path: docs/product-truth/flows/leafcutter/decision-forming.flow.json
+    relationship: implements
+    status: exists
+  - path: docs/architecture/components/decision-kernel.md
+    relationship: describes
+    status: exists
+  - path: docs/how-to/run-the-decision-kernel.md
+    relationship: context
+    status: exists
+origin_agent: business-analyst
+created: 2026-10-02
+amended_by:
+  - reason: "IT PO technical enrichment and verified test mapping on 2026-10-02; BA criteria and draft readiness preserved."
+superseded_by: null
+notes: |
+  Decomposed from the user-authorized context-enrichment scope and existing
+  DK-100 through DK-104. IT PO technical constraints and exact behavioral test
+  links are recorded. Readiness remains draft; no product approval is implied.
+product_truth:
+  - flow: leafcutter/decision-forming
+    node: enrich-context
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: leafcutter/decisions
+    entities: []
+    source: real
+    asof: '2026-10-02'

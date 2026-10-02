@@ -21,6 +21,7 @@ from typing import Annotated, Literal
 from pydantic import BaseModel, ConfigDict, Field, ValidationError, model_validator
 
 from kernel.config_memory import MemoryConfig
+from kernel.config_context import ContextEnrichmentConfig
 from kernel.contracts.base import fail
 from kernel.contracts.enums import EvidenceCategory
 
@@ -265,6 +266,7 @@ class KernelConfig(_Section):
     limits: LimitsConfig
     routing: RoutingConfig
     intent: IntentConfig
+    context_enrichment: ContextEnrichmentConfig
     decision: DecisionConfig
     research: ResearchConfig
     retrieval: RetrievalConfig

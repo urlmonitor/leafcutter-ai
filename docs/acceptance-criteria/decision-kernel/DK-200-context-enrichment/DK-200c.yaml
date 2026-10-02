@@ -1,0 +1,33 @@
+id: DK-200c
+title: "Expose missing facts without inventing availability, authority or preferences"
+component: decision-kernel
+components: [decision_kernel]
+level: L1
+status: active
+readiness: draft
+req_status: draft
+priority: high
+work_status: done
+criteria: |
+  Given incomplete evidence, unverified caller claims or instructions embedded in source text,
+  When initial context is handed to intent classification,
+  Then the enrichment outcome distinguishes what was established from what remains unknown,
+  And source text or registered capabilities do not become user approval or proof of runtime availability,
+  And a missing personal preference remains a question for the user.
+depends_on: [DK-200]
+covered_by:
+  - DK-200c-1
+  - DK-200c-2
+doc_links:
+  - path: docs/product-truth/flows/leafcutter/decision-forming.flow.json
+    relationship: specified-by
+    status: exists
+  - path: docs/architecture/components/decision-kernel.md
+    relationship: specified-by
+    status: exists
+  - path: docs/how-to/run-the-decision-kernel.md
+    relationship: specified-by
+    status: exists
+origin_agent: Codex orchestrator (user-authorized BA and IT PO review)
+created: 2026-10-02
+notes: "Parent scope records the existing authorized feature; readiness is not an approval claim."

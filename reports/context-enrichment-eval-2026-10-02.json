@@ -1,0 +1,122 @@
+{
+  "step": "context_enrichment",
+  "rows": [
+    {
+      "id": "original_capability_question",
+      "category": "capability_grounding",
+      "status": "gathered",
+      "evidence_count": 1,
+      "files_scanned": 2,
+      "sources": [
+        "README.md"
+      ],
+      "failures": [],
+      "passed": true
+    },
+    {
+      "id": "conversation_resolves_referent",
+      "category": "conversation_grounding",
+      "status": "gathered",
+      "evidence_count": 1,
+      "files_scanned": 2,
+      "sources": [
+        "docs/reference/zephyr.md"
+      ],
+      "failures": [],
+      "passed": true
+    },
+    {
+      "id": "project_acronym",
+      "category": "terminology_grounding",
+      "status": "gathered",
+      "evidence_count": 1,
+      "files_scanned": 1,
+      "sources": [
+        "docs/glossary.md"
+      ],
+      "failures": [],
+      "passed": true
+    },
+    {
+      "id": "unrelated_repository",
+      "category": "no_discoverable_evidence",
+      "status": "no_evidence",
+      "evidence_count": 0,
+      "files_scanned": 1,
+      "sources": [],
+      "failures": [],
+      "passed": true
+    },
+    {
+      "id": "private_preference_stays_unknown",
+      "category": "user_preference",
+      "status": "gathered",
+      "evidence_count": 1,
+      "files_scanned": 1,
+      "sources": [
+        "docs/cache.md"
+      ],
+      "failures": [],
+      "passed": true
+    },
+    {
+      "id": "secret_and_source_denials",
+      "category": "deny_globs",
+      "status": "gathered",
+      "evidence_count": 1,
+      "files_scanned": 1,
+      "sources": [
+        "docs/connection.md"
+      ],
+      "failures": [],
+      "passed": true
+    },
+    {
+      "id": "read_scope_is_narrowed",
+      "category": "scope_boundary",
+      "status": "gathered",
+      "evidence_count": 1,
+      "files_scanned": 1,
+      "sources": [
+        "docs/allowed/deployment.md"
+      ],
+      "failures": [],
+      "passed": true
+    },
+    {
+      "id": "repository_instruction_is_evidence",
+      "category": "untrusted_evidence",
+      "status": "gathered",
+      "evidence_count": 1,
+      "files_scanned": 1,
+      "sources": [
+        "docs/agent.md"
+      ],
+      "failures": [],
+      "passed": true
+    },
+    {
+      "id": "read_permission_missing",
+      "category": "permission_boundary",
+      "status": "unavailable",
+      "evidence_count": 0,
+      "files_scanned": 0,
+      "sources": [],
+      "failures": [],
+      "passed": true
+    },
+    {
+      "id": "source_allowlist_excludes_repository",
+      "category": "source_boundary",
+      "status": "unavailable",
+      "evidence_count": 0,
+      "files_scanned": 0,
+      "sources": [],
+      "failures": [],
+      "passed": true
+    }
+  ],
+  "total": 10,
+  "passed": 10,
+  "jev_calls": 0
+}

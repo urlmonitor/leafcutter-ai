@@ -240,6 +240,13 @@ def resolve_sources(ctx: ExecutionContext, needs: list[EvidenceNeed], plan: Plan
     root = Path(ctx.scope.repository_root)
     own = {i: _checked(root, q) for i, q in need_queries(ctx, plan).items()}
     shared = _checked(root, default_query(plan, ctx.config.retrieval.max_explicit_locators))
+    context = ctx.context_enrichment
+    if context is not None:
+        hints = [*reversed(context.caller_context.conversation), *context.caller_context.observations]
+        # These are bounded context hints, never a replacement for the question or criteria.
+        shared = NeedQuery([*shared.hints, *hints], shared.locators)
+        own = {key: NeedQuery([*query.hints, *hints], query.locators)
+               for key, query in own.items()}
     batches = batch_allowance(jev_available(ctx.budget), plan.jev_reserve, len(needs), ctx.config)
     for need in needs:
         candidates = _candidates(ctx, need, plan)
