@@ -239,3 +239,10 @@ recorded in traces.
   - `describe()` returns presence booleans only.
   - Missing Jev credentials make the run fail with `provider_unavailable`, never with a gap.
   - Missing Langfuse credentials mark observability as `degraded`.
+
+## As built (decision store)
+
+- **Contracts.** `Decision` gains `approved_at` (UTC, set when the human approves; null otherwise) and `precedent_ids` (earlier decisions used as evidence). `EvidenceBundlePayload` gains `need_evidence` (per need, the evidence that passed relevance) and `need_limitations` (per need, the retrieval cut notes); both default empty, and the committed JSON Schema is regenerated.
+- **Config.** A `memory` section (`kernel/config_memory.py`, held by `KernelConfig.memory`): `backend` (`file` default, or `null`), `repository_id`, `decisions_dir`, `max_precedents`, `min_candidate_score`, `applies_threshold` (0.5), `reuse_threshold` (0.8, never below the first) and `criterion_evidence_max` / `criterion_evidence_min_overlap` (evidence cited per criterion). `config/decision_record.schema.json` is generated from `kernel/memory/models.py` like the config schema, and a test keeps it in sync.
+- **Registry.** The `decision` capability's `side_effect_class` is `run_artifacts` (it stages a record in the run root); it still never writes the repository.
+- **Record.** One YAML file per approved decision in `docs/decisions/`, id `dec-<16hex>`, flat filter fields (so the stdlib knowledge-map parser reads id, title and component edges), nested options, criteria, evidence references, assessment, approval, provenance and append-only corrections. See ADR-059, ADR-060 and ADR-061.

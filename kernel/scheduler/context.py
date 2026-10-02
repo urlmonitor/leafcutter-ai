@@ -24,6 +24,7 @@ from langgraph.runtime import Runtime
 
 from kernel.config import KernelConfig
 from kernel.contracts import CorrelationIds, canonical_json, utc_now
+from kernel.memory.port import ColonyMemory, NullColonyMemory
 from kernel.persistence.base import ArtifactStorePort, GapStorePort, RunStorePort
 from kernel.providers.base import JevPort
 from kernel.registry.bindings import BindingTable
@@ -59,6 +60,7 @@ class KernelRuntime:
             pattern-only redactor built from `config.data_policy`.
         trace: The CURRENT process segment's trace identity. New invocations (and so host packets)
             nest under it; None falls back to the `trace` the run was started with.
+        memory: Approved-decision memory handed to every capability's ExecutionContext.
     """
 
     config: KernelConfig
@@ -75,6 +77,7 @@ class KernelRuntime:
     max_scheduler_iterations: int | None = None
     redactor: Redactor | None = None
     trace: TraceState | None = None
+    memory: ColonyMemory = field(default_factory=NullColonyMemory)
 
 
 def constraint_texts(state: KernelState) -> tuple[str, ...]:
@@ -151,6 +154,8 @@ def flush_events(run_store: RunStorePort, state: KernelState) -> int:
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-01 [python-coder]: KernelRuntime carries the ColonyMemory port (null by default) and
+#   the execute worker hands it to each ExecutionContext. (#KernelDecisionStore)
 # - 2026-10-01 10:00 [python-coder]: `trace` carries the current segment so work created after a
 #   resume nests under it, not under the start segment (bug D). (#KernelBootstrapV0/P7)
 # - 2026-09-30 23:58 [python-coder]: Optional `redactor` so host packets are masked with the

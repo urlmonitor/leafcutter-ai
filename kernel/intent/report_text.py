@@ -16,6 +16,7 @@ from collections.abc import Mapping
 from typing import Any
 
 from kernel.contracts import schema_ids
+from kernel.intent.decision_text import ReportContext, decision_lines
 
 CAN_DO = ("decide between options or approaches, find evidence in this repository, or "
           "generate ideas (as proposals, not decisions)")
@@ -181,10 +182,13 @@ def _coverage_lines(payload: Mapping[str, Any]) -> list[str]:
     return lines
 
 
-def output_sections(schema_id: str | None, payload: Mapping[str, Any] | None) -> list[str]:
-    """Return the readable sections for an evidence or options root output (else nothing)."""
+def output_sections(schema_id: str | None, payload: Mapping[str, Any] | None,
+                    context: ReportContext | None = None) -> list[str]:
+    """Return the readable sections for a decision, evidence or options root output."""
     if not payload:
         return []
+    if schema_id == schema_ids.DECISION_REPORT:
+        return decision_lines(payload, context or ReportContext())
     if schema_id == schema_ids.OPTIONS:
         return _options_lines(payload)
     if schema_id == schema_ids.EVIDENCE_BUNDLE:
@@ -195,6 +199,8 @@ def output_sections(schema_id: str | None, payload: Mapping[str, Any] | None) ->
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-01 [python-coder]: A decision_report output gets a readable Decision section (choice,
+#   approver, rationale, precedent used, key evidence). (#KernelDecisionStore)
 # - 2026-10-01 [python-coder]: A budget or guard stop names what was hit and the config key that
 #   raises it and offers raise-the-budget, narrow-the-question or decide-from-the-ranked-options;
 #   "try rephrasing" stays for requests the kernel could not serve (round 6 told a budget stop to

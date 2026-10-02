@@ -150,7 +150,7 @@ async def open_session(env: KernelEnvironment, kind: str, run_id: str,
                 config=env.config, bindings=env.bindings, jev=jev, tracer=env.tracer,
                 run_store=env.run_store, gap_store=env.gap_store, artifacts=env.artifacts,
                 secrets=env.secrets, cancel_probe=lambda: env.run_store.is_cancelled(run_id),
-                redactor=env.redactor, trace=trace)
+                redactor=env.redactor, trace=trace, memory=env.memory)
             session = Session(
                 run_id, kind, trace, build_kernel_graph(saver),
                 run_config(run_id, env.config.limits.langgraph_recursion_limit, callbacks),
@@ -168,6 +168,8 @@ async def open_session(env: KernelEnvironment, kind: str, run_id: str,
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-01 [python-coder]: Every segment's runtime gets the environment's ColonyMemory.
+#   (#KernelDecisionStore)
 # - 2026-10-01 [python-coder]: The session keeps the tracer's degraded reason (read with getattr:
 #   it is not part of the Tracer port) so the envelope can say why export failed. (#KernelV01/C)
 # - 2026-10-02 [python-coder]: A segment that routes no work gets a Jev port that refuses every

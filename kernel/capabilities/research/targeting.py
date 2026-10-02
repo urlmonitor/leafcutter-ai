@@ -25,17 +25,21 @@ from kernel.capabilities.decision.option_context import extract_refs
 from kernel.capabilities.research.state import Plan
 from kernel.config import SourceConfig
 from kernel.contracts.enums import EvidenceCategory, Priority
-from kernel.contracts.evidence import EvidenceNeed
+from kernel.contracts.evidence import CLAIM_NEED_PREFIX, EvidenceNeed
 from kernel.contracts.payloads import OptionContext
 
 logger = logging.getLogger(__name__)
 
 GAP_PREFIX = "need.gap."
-CLAIM_PREFIX = "need.claim."
+CLAIM_PREFIX = CLAIM_NEED_PREFIX
 _EXTENSIONS = "py|md|json|yaml|yml|toml|sql|ts|js|txt|cfg|ini|sh"
 #: A repository path: it starts with a letter, digit or underscore (so `-NNN.yaml`, a fragment of
 #: a placeholder name, is not one), has a known extension, then an optional anchor or symbol.
 _LOCATOR = re.compile(rf"\.?\w[\w.\-]*(?:/[\w.\-]+)*\.(?:{_EXTENSIONS})(?:#\S+|::[\w.]+)?")
+#: A class or contract named in prose: "Decision contract", "the Decision class", a `Decision` span.
+_NAMED_SYMBOL = re.compile(
+    r"\b([A-Z][A-Za-z0-9_]*)\s+(?:contract|class|model|dataclass|schema|type)\b|`([A-Z][A-Za-z0-9_]*)`")
+MAX_SYMBOLS = 4
 
 
 @dataclass(frozen=True)
@@ -73,6 +77,42 @@ def existing_locators(root: Path, locators: Iterable[str]) -> list[str]:
         else:
             logger.debug("explicit locator %r dropped: no such file in the repository", raw)
     return kept
+
+
+def symbols_named(texts: Iterable[str]) -> list[str]:
+    """Return the class or contract names the texts mention (`Decision contract`, `Decision`)."""
+    found: list[str] = []
+    for text in texts:
+        found += [a or b for a, b in _NAMED_SYMBOL.findall(text)]
+    return list(dict.fromkeys(found))[:MAX_SYMBOLS]
+
+
+def _defines(text: str, symbol: str) -> bool:
+    """True if the Python source defines a top-level class or function with this name."""
+    return re.search(rf"^(?:class|def|async def)\s+{re.escape(symbol)}\b", text, re.MULTILINE) is not None
+
+
+def with_symbol_locators(root: Path, locators: list[str], texts: Iterable[str]) -> list[str]:
+    """Return the locators with `path::Symbol` added after each Python file that defines a named one.
+
+    When an option or gap names a contract or class ("Decision contract") and cites the file that
+    holds it, fetching only the file returned the module header, not the class body (round 8
+    defect f). A symbol is added only for a file that really defines it.
+    """
+    symbols = symbols_named(texts)
+    out: list[str] = []
+    for locator in locators:
+        out.append(locator)
+        path = _location(locator)
+        if "::" in locator or "#" in locator or not path.endswith(".py") or not symbols:
+            continue
+        try:
+            source = (root / path).read_text(encoding="utf-8")
+        except (OSError, UnicodeDecodeError):
+            logger.debug("symbol locators for %r skipped: cannot read it", locator, exc_info=True)
+            continue
+        out += [f"{path}::{s}" for s in symbols if _defines(source, s)]
+    return list(dict.fromkeys(out))
 
 
 def _location(locator: str) -> str:
@@ -136,6 +176,9 @@ def targeted(plan: Plan, limit: int, max_locators: int
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-01 [python-coder]: A class or contract named in an option or gap text ("Decision
+#   contract", `Decision`) also becomes a `path::Symbol` locator for each cited Python file that
+#   defines it; a file locator alone returned header slices, not the class body. (#KernelDecisionStore)
 # - 2026-10-01 [python-coder]: A locator must start with a word character and name an existing
 #   file inside the repository before it is requested (live: option text produced `-NNN.yaml`).
 #   (#KernelV01/E)

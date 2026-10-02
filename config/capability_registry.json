@@ -24,7 +24,7 @@
       ],
       "execution_mode": "native",
       "binding": "decision",
-      "side_effect_class": "none",
+      "side_effect_class": "run_artifacts",
       "permissions_required": [],
       "routing": "semantic",
       "cost_hints": {

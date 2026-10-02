@@ -12,6 +12,8 @@ ARCHITECTURE: followup_for maps a Verdict to a Followup; result builders read an
 
 from __future__ import annotations
 
+from datetime import datetime
+
 from kernel.capabilities.decision.budget_gate import LIMITATION
 from kernel.capabilities.decision.combine import Verdict
 from kernel.capabilities.decision.design_ending import choice_rationale, ranking_assessments
@@ -42,6 +44,8 @@ from kernel.contracts.enums import (
 )
 from kernel.contracts.payloads import DecisionReportPayload
 from kernel.contracts.work import CapabilityInvocation
+from kernel.memory.models import DecisionRecord
+from kernel.memory.precedent import reuse_option, reuse_rationale
 
 _HUMAN_TEXT = {
     "tie": "Several options satisfy every required criterion. Which do you prefer?",
@@ -134,12 +138,21 @@ def _ver(items: list) -> str:
     return version_of(items)
 
 
+def _approved_at(work: Working) -> datetime | None:
+    """Return when the human last approved something in this decision (None if no one did)."""
+    stamp = work.cont.approved_at
+    return datetime.fromisoformat(stamp) if stamp else None
+
+
 def _decision_record(work: Working, status: DecisionStatus, missing: list[MissingKnowledge],
                      selected: str | None = None, rationale: Rationale | None = None,
                      approval: ApprovalStatus = ApprovalStatus.NOT_REQUIRED,
-                     approved_by: str | None = None) -> Decision:
+                     approved_by: str | None = None, approved_at: datetime | None = None
+                     ) -> Decision:
     """Build the Decision record carried in the result."""
     return Decision(
+        approved_at=approved_at,
+        precedent_ids=[n.id for n in work.cont.precedents if n.action != "not_applicable"],
         id=work.decision_id or new_id("dec"), question=work.question, status=status,
         selected_option_id=selected, design_reason=work.cont.design_reason or None,
         option_ids=[o.id for o in work.usable_options],
@@ -154,7 +167,7 @@ def waiting_result(invocation: CapabilityInvocation, work: Working, followup: Fo
     """Build `waiting` carrying the typed child request and the continuation."""
     return CapabilityResult(
         invocation_id=invocation.id, work_item_id=invocation.work_item_id,
-        status=ResultStatus.WAITING, requests=[followup.request],
+        status=ResultStatus.WAITING, requests=[followup.request], evidence=work.new_evidence,
         continuation_state=_continuation_state(work, followup), usage=work.usage,
         decisions=[_decision_record(work, followup.status, followup.missing)],
         limitations=work.limitations)
@@ -175,7 +188,7 @@ def stalled_result(invocation: CapabilityInvocation, work: Working, followup: Fo
         status=ResultStatus.PARTIAL, output_schema_id=schema_ids.DECISION_REPORT,
         output_payload=report.model_dump(mode="json"), usage=work.usage,
         decisions=[_decision_record(work, followup.status, followup.missing)],
-        limitations=[*work.limitations, note])
+        evidence=work.new_evidence, limitations=[*work.limitations, note])
 
 
 def resolved_result(invocation: CapabilityInvocation, work: Working, verdict: Verdict
@@ -195,12 +208,15 @@ def resolved_result(invocation: CapabilityInvocation, work: Working, verdict: Ve
         selected_option_id=option.id, criterion_assessments=verdict.assessments,
         supporting_evidence_ids=work.evidence_ids, approval_status=approval,
         limitations=work.limitations, rationale=rationale)
-    decision = _decision_record(work, DecisionStatus.RESOLVED, [], option.id, rationale, approval)
+    approver = work.cont.approved_by if approved else None
+    decision = _decision_record(work, DecisionStatus.RESOLVED, [], option.id, rationale, approval,
+                                approved_by=approver,
+                                approved_at=_approved_at(work) if approved else None)
     return CapabilityResult(
         invocation_id=invocation.id, work_item_id=invocation.work_item_id,
         status=ResultStatus.COMPLETED, output_schema_id=schema_ids.DECISION_REPORT,
         output_payload=report.model_dump(mode="json"), decisions=[decision], usage=work.usage,
-        limitations=work.limitations)
+        evidence=work.new_evidence, limitations=work.limitations)
 
 
 def design_resolved_result(invocation: CapabilityInvocation, work: Working, cfg: DecisionConfig
@@ -221,12 +237,40 @@ def design_resolved_result(invocation: CapabilityInvocation, work: Working, cfg:
         supporting_evidence_ids=work.evidence_ids, approval_status=ApprovalStatus.APPROVED,
         limitations=[*work.limitations, *limited, note], rationale=rationale)
     decision = _decision_record(work, DecisionStatus.RESOLVED, [], option.id, rationale,
-                                ApprovalStatus.APPROVED, approved_by=work.cont.approved_by)
+                                ApprovalStatus.APPROVED, approved_by=work.cont.approved_by,
+                                approved_at=_approved_at(work))
     return CapabilityResult(
         invocation_id=invocation.id, work_item_id=invocation.work_item_id,
         status=ResultStatus.COMPLETED, output_schema_id=schema_ids.DECISION_REPORT,
         output_payload=report.model_dump(mode="json"), decisions=[decision], usage=work.usage,
-        limitations=[*work.limitations, *limited, note])
+        evidence=work.new_evidence, limitations=[*work.limitations, *limited, note])
+
+
+def precedent_resolved_result(invocation: CapabilityInvocation, work: Working,
+                              record: DecisionRecord, evidence_id: str) -> CapabilityResult:
+    """Resolve the decision with an earlier decision's choice the human agreed to reuse.
+
+    The approver is the CURRENT human (who confirmed the reuse); the rationale cites the
+    precedent. The precedent is evidence for the choice, never its authority: this result exists
+    only because a human answered `reuse`.
+    """
+    actor = work.cont.approved_by or "human"
+    option = reuse_option(record, actor, [evidence_id])
+    work.options, work.criteria = [option], []
+    rationale = Rationale(text=reuse_rationale(record, actor), origin="template")
+    note = f"reused the human-approved precedent {record.id} after {actor} confirmed it applies"
+    report = DecisionReportPayload(
+        status=DecisionStatus.RESOLVED, recommendation=option.title, selected_option_id=option.id,
+        supporting_evidence_ids=[evidence_id], approval_status=ApprovalStatus.APPROVED,
+        limitations=[*work.limitations, note], rationale=rationale)
+    decision = _decision_record(work, DecisionStatus.RESOLVED, [], option.id, rationale,
+                                ApprovalStatus.APPROVED, approved_by=actor,
+                                approved_at=_approved_at(work))
+    return CapabilityResult(
+        invocation_id=invocation.id, work_item_id=invocation.work_item_id,
+        status=ResultStatus.COMPLETED, output_schema_id=schema_ids.DECISION_REPORT,
+        output_payload=report.model_dump(mode="json"), decisions=[decision], usage=work.usage,
+        evidence=work.new_evidence, limitations=[*work.limitations, note])
 
 
 def emit_followup(invocation: CapabilityInvocation, work: Working, followup: Followup
@@ -240,6 +284,10 @@ def emit_followup(invocation: CapabilityInvocation, work: Working, followup: Fol
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-01 [python-coder]: A human-approved resolution records approved_by and approved_at and
+#   the precedents used; a reuse resolves with the precedent's choice approved by the current
+#   human, and results hand the kernel the evidence the decision created (precedent items).
+#   (#KernelDecisionStore)
 # - 2026-10-01 [python-coder]: The decision record carries `design_reason` (from the
 #   continuation) so a reader of the record, not only of the state, sees why the options were
 #   ranked for a human; the design round's research request key ends in `:design_round` so it

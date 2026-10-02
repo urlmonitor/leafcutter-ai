@@ -514,6 +514,81 @@
       "title": "LimitsConfig",
       "type": "object"
     },
+    "MemoryConfig": {
+      "additionalProperties": false,
+      "description": "Decision store backend and precedent lookup settings.",
+      "properties": {
+        "applies_threshold": {
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "Applies Threshold",
+          "type": "number"
+        },
+        "backend": {
+          "enum": [
+            "file",
+            "null"
+          ],
+          "title": "Backend",
+          "type": "string"
+        },
+        "criterion_evidence_max": {
+          "minimum": 1,
+          "title": "Criterion Evidence Max",
+          "type": "integer"
+        },
+        "criterion_evidence_min_overlap": {
+          "minimum": 1,
+          "title": "Criterion Evidence Min Overlap",
+          "type": "integer"
+        },
+        "decisions_dir": {
+          "title": "Decisions Dir",
+          "type": "string"
+        },
+        "max_precedents": {
+          "minimum": 0,
+          "title": "Max Precedents",
+          "type": "integer"
+        },
+        "min_candidate_score": {
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "Min Candidate Score",
+          "type": "number"
+        },
+        "repository_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Repository Id"
+        },
+        "reuse_threshold": {
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "Reuse Threshold",
+          "type": "number"
+        }
+      },
+      "required": [
+        "backend",
+        "repository_id",
+        "decisions_dir",
+        "max_precedents",
+        "min_candidate_score",
+        "applies_threshold",
+        "reuse_threshold",
+        "criterion_evidence_max",
+        "criterion_evidence_min_overlap"
+      ],
+      "title": "MemoryConfig",
+      "type": "object"
+    },
     "PathsConfig": {
       "additionalProperties": false,
       "description": "File-system locations (relative to the repository root unless absolute).",
@@ -940,6 +1015,9 @@
     "limits": {
       "$ref": "#/$defs/LimitsConfig"
     },
+    "memory": {
+      "$ref": "#/$defs/MemoryConfig"
+    },
     "paths": {
       "$ref": "#/$defs/PathsConfig"
     },
@@ -973,7 +1051,8 @@
     "jev",
     "host",
     "data_policy",
-    "langfuse"
+    "langfuse",
+    "memory"
   ],
   "title": "KernelConfig",
   "type": "object"

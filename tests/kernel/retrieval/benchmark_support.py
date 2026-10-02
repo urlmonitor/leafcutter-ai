@@ -1,17 +1,24 @@
 """
 MODULE: tests.kernel.retrieval.benchmark_support
 GOAL: Run the lexical stage of one retrieval need (source searches, explicit locators, pool) over
-    the REAL repository checkout and report what the first Jev rerank batch would contain.
+    a PINNED corpus, the files of one recorded commit, and report what the first Jev rerank batch
+    would contain.
 BUSINESS CONTEXT: Round E made research cheap, but a live regression showed the first rerank batch
     filled with registry JSON while the files that answer the question sat unjudged at pool
     positions 24 to 34. A benchmark of named goals and the places that must reach the first batch
-    lets a later change trade neither quality for cost nor cost for quality unnoticed.
+    lets a later change trade neither quality for cost nor cost for quality unnoticed. Scored over
+    the live checkout, any docs-only change (a branch's new ADRs and modules) moved its ratchets.
 ARCHITECTURE: Deterministic and offline (no Jev, no knowledge-map bridge, no network): the same
     functions the retrieval executor calls (build_query_terms, extract_entities, search_repo_text,
-    fetch_explicit, merge_pool) over the repository this file lives in, with the default config
-    sources of the need's category. A case is data (benchmark_cases.json); this module only
-    runs it and matches the must-have places against the first batch. In a git checkout only the
-    files git does not ignore are read, so a local build's outputs never enter the corpus.
+    fetch_explicit, merge_pool), with the code and default config of the checkout this file lives
+    in, over the files of `corpus_commit` (benchmark_cases.json) under the configured sources'
+    roots. The corpus is extracted once per process with `git archive` into `<temp>/corpus`, so
+    only ranking code and parameters move the ratchets. A case is data; this module only runs it
+    and matches the must-have places against the first batch.
+RE-PIN (a deliberate change, never a side effect): set `corpus_commit` to a full SHA reachable from
+    main, print the measured values with `python -m tests.kernel.retrieval.benchmark_support` at
+    CI's checkout path, write them into each case's `current` with a note on what moved, and treat
+    any round E (`baseline`) break as an explicit decision recorded on the case and its ticket.
 """
 
 from __future__ import annotations
@@ -20,6 +27,10 @@ import asyncio
 import json
 import os
 import subprocess
+import tarfile
+import tempfile
+import unittest
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from functools import cache
 from pathlib import Path
@@ -42,48 +53,89 @@ from tests.kernel.capabilities.support import invocation
 from tests.kernel.helpers import as_json, make_context
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
-#: Record its `current` values from CI's checkout path or with this harness, never a dev folder.
+#: Cases and recorded values; re-pin and re-record only as the module docstring's RE-PIN says.
 CASES_FILE = Path(__file__).with_name("benchmark_cases.json")
+#: The commit whose files the benchmark scores (full SHA).
+CORPUS_COMMIT: str = json.loads(CASES_FILE.read_text(encoding="utf-8"))["corpus_commit"]
 PROJECT_NAME = "leafcutter"
-#: Skip reason of a file in the checkout that git ignores (a build output, a local file).
-GIT_IGNORED = "git_ignored"
+#: Environment flags that mark a CI run, where a missing corpus fails instead of skipping.
+CI_FLAGS = ("CI", "GITHUB_ACTIONS")
 
 
 _TEXTS: dict[tuple[Path, tuple[str, ...], int], ReadOutcome] = {}
 _RELATIVE: dict[tuple[Path, Path], str | None] = {}
+#: Materialised corpora, kept until the process exits (then their temp folders are removed).
+_CORPORA: list[tempfile.TemporaryDirectory[str]] = []
 
 
-def is_git_checkout(root: Path) -> bool:
-    """True if the root is the top of a git work tree (`.git` is a folder, or a file in a worktree)."""
-    return (root / ".git").exists()
+class CorpusUnavailable(RuntimeError):
+    """The pinned corpus commit is missing under CI, where the ratchet must not go silent."""
 
 
-def _fold(rel: str) -> str:
-    """Case-fold a path on Windows, whose file system may spell a name unlike git's index."""
-    return rel.casefold() if os.name == "nt" else rel
+def in_ci(env: Mapping[str, str]) -> bool:
+    """True when the environment marks a CI run (`CI` or `GITHUB_ACTIONS` is true)."""
+    return any(env.get(flag, "").lower() in ("true", "1") for flag in CI_FLAGS)
+
+
+def _has_commit(sha: str, repo: Path) -> bool:
+    """True if the repository holds the commit (a depth-1 fetch of it is enough)."""
+    try:
+        found = subprocess.run(["git", "cat-file", "-e", f"{sha}^{{commit}}"], cwd=repo,
+                               capture_output=True, check=False)
+    except OSError:  # git is not installed
+        return False
+    return found.returncode == 0
+
+
+def _under(name: str, roots: Sequence[str]) -> bool:
+    """True if the archive member is one of the roots or lies below one."""
+    return any(name == root or name.startswith(f"{root.rstrip('/')}/") for root in roots)
+
+
+def materialise(sha: str, roots: Sequence[str], repo: Path = REPO_ROOT,
+                env: Mapping[str, str] | None = None) -> Path:
+    """Extract the commit's files under `roots` into a fresh `<temp>/corpus` and return it.
+
+    Only what a source can read is extracted, which also keeps paths short on Windows. The folder
+    is removed when the process exits.
+
+    Raises:
+        unittest.SkipTest: the commit is not in the repository (the message says how to fetch it).
+        CorpusUnavailable: the same under CI, where a skipped benchmark would hide a regression.
+        subprocess.CalledProcessError: git could not archive the commit.
+    """
+    if not _has_commit(sha, repo):
+        hint = (f"the retrieval benchmark's corpus commit {sha} is not in this repository; fetch "
+                f"it with: git fetch --no-tags --depth=1 origin {sha}")
+        if in_ci(os.environ if env is None else env):
+            raise CorpusUnavailable(hint)
+        raise unittest.SkipTest(hint)
+    holder = tempfile.TemporaryDirectory(prefix="benchmark-", ignore_cleanup_errors=True)
+    _CORPORA.append(holder)
+    target = Path(holder.name).resolve() / "corpus"
+    with subprocess.Popen(["git", "archive", "--format=tar", sha], cwd=repo,
+                          stdout=subprocess.PIPE) as proc:
+        assert proc.stdout is not None
+        with tarfile.open(fileobj=proc.stdout, mode="r|") as tar:
+            for member in tar:
+                if _under(member.name, roots):
+                    tar.extract(member, target, filter="data")
+    if proc.returncode:
+        raise subprocess.CalledProcessError(proc.returncode, ["git", "archive", sha])
+    return target
 
 
 @cache
-def git_visible_files(root: Path) -> frozenset[str]:
-    """Return the paths in the checkout that git does not ignore: tracked, or new and not ignored.
-
-    This is what CI scores once the work is committed. Ignored build outputs are not: build.py
-    installs `scripts/commit_guardian/` and its siblings as symlinks on Linux (never walked) but
-    as copies on Windows without symlink rights (walked: 152 more files in one source's corpus).
-    Read once per process.
-
-    Raises:
-        subprocess.CalledProcessError: git refused to list the files (the benchmark must not fall
-            back to scanning everything, which is what made it disagree with CI).
-    """
-    listed = subprocess.run(["git", "ls-files", "-z", "--cached", "--others", "--exclude-standard"],
-                            cwd=root, capture_output=True, check=True).stdout
-    return frozenset(_fold(p) for p in listed.decode("utf-8").split("\0") if p)
+def pinned_corpus() -> Path:
+    """Return the corpus of `corpus_commit` under the default config's source roots (built once)."""
+    cfg = load_kernel_config()
+    return materialise(CORPUS_COMMIT, sorted({root for s in cfg.sources if s.kind == "repo_text"
+                                              for root in s.roots}))
 
 
 @dataclass(frozen=True)
-class _CheckoutPolicy(ReadPolicy):
-    """A ReadPolicy over a git checkout: reads only what git does not ignore, and remembers reads.
+class _CachedPolicy(ReadPolicy):
+    """A ReadPolicy that remembers reads for the life of the process (the pinned corpus is fixed).
 
     Every case scans the same several thousand files; the cache keeps the whole benchmark to a few
     seconds without changing what a read returns.
@@ -97,12 +149,10 @@ class _CheckoutPolicy(ReadPolicy):
         return _RELATIVE[key]
 
     def read_text(self, path: Path) -> ReadOutcome:
-        """Return the cached read outcome of the file; a file git ignores is skipped as such."""
+        """Return the cached read outcome of the file under this policy's limits."""
         key = (path, self.deny_globs, self.max_file_bytes)
         if key not in _TEXTS:
-            rel = self.relative(path)
-            ignored = rel is not None and _fold(rel) not in git_visible_files(self.root)
-            _TEXTS[key] = ReadOutcome(None, GIT_IGNORED) if ignored else super().read_text(path)
+            _TEXTS[key] = super().read_text(path)
         return _TEXTS[key]
 
 
@@ -127,10 +177,10 @@ def _sources_for(cfg: KernelConfig, case: dict[str, Any]) -> list[SourceConfig]:
         s.id in named if named else case["category"] in [c.value for c in s.categories])]
 
 
-def _search(cfg: KernelConfig, case: dict[str, Any], terms: list[str], root: Path
+def _search(cfg: KernelConfig, case: dict[str, Any], terms: list[str], root: Path, cached: bool
             ) -> tuple[ReadPolicy, list[SearchReport]]:
-    """Search every source of the case in the repository checkout."""
-    kind = _CheckoutPolicy if is_git_checkout(root) else ReadPolicy
+    """Search every source of the case under the root (reads cached for the pinned corpus)."""
+    kind = _CachedPolicy if cached else ReadPolicy
     base = kind(root=root.resolve(), read_roots=(), deny_globs=tuple(cfg.retrieval.deny_globs),
                 max_file_bytes=cfg.retrieval.max_file_bytes)
     entities = extract_entities(" ".join(case.get("hints") or [case["goal"]]))
@@ -144,15 +194,17 @@ def _search(cfg: KernelConfig, case: dict[str, Any], terms: list[str], root: Pat
     return base, reports
 
 
-def run_case(case: dict[str, Any], cfg: KernelConfig | None = None, root: Path = REPO_ROOT
+def run_case(case: dict[str, Any], cfg: KernelConfig | None = None, root: Path | None = None
              ) -> BatchResult:
     """Build the pool of one case and cut the first rerank batch (explicit candidates are kept
-    unjudged, so they are not part of the batch)."""
+    unjudged, so they are not part of the batch). The corpus is the pinned one unless `root` names
+    a throwaway repository."""
     config = cfg or load_kernel_config()
     hints = case.get("hints") or [case["goal"]]
     terms = build_query_terms(case.get("question", case["goal"]), hints, (),
                               config.retrieval.max_query_terms)
-    policy, reports = _search(config, case, terms, root)
+    corpus = pinned_corpus() if root is None else root
+    policy, reports = _search(config, case, terms, corpus, cached=root is None)
     explicit = fetch_explicit(policy, _sources_for(config, case), case.get("explicit_locators", []),
                               terms, config.retrieval).candidates
     pool = merge_pool(reports, config.retrieval, explicit)
@@ -233,9 +285,31 @@ def judged_names(case: dict[str, Any], judged: JudgedResult, result: BatchResult
                    for loc in judged.locators for w in m["any_of"])]
 
 
+def measured_current(case: dict[str, Any]) -> dict[str, Any]:
+    """Return what the case measures now, in the shape of its recorded `current` (see RE-PIN)."""
+    result = run_case(case)
+    judged = judged_with_oracle(case, result)
+    got = reached(result, case)
+    return {"reached": [m["name"] for m in case["must_include"] if got[m["name"]]],
+            "pool_position": positions(result, case), "crowding": crowding(result, case),
+            "judged": {"reached": judged_names(case, judged, result), "calls": judged.calls}}
+
+
+if __name__ == "__main__":
+    print(json.dumps({c["id"]: measured_current(c) for c in load_cases()}, indent=1,
+                     ensure_ascii=False))
+
+
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-01 [python-coder]: The benchmark scores a pinned corpus: the files of `corpus_commit`
+#   (benchmark_cases.json) under the configured sources' roots, extracted once per process with
+#   `git archive`; code and config still come from the checkout. A missing pin skips locally and
+#   fails under CI. Docs-only changes on the decision-store branch (ADR-059..061, `kernel/memory/`)
+#   had moved three cases' ratchets. This replaces the git-ignored filter on the live checkout,
+#   which no longer has a user. `measured_current` prints the values a re-pin records.
+#   (#KernelBenchmarkPinnedCorpus)
 # - 2026-10-01 [python-coder]: A git checkout is scored as git sees it: files git ignores are
 #   skipped (`git_ignored`). On Windows the build's `scripts/` shims are copies, on Linux symlinks
 #   that are never walked, so the same commit had 731 files in `repo.patterns` on one and 579 on

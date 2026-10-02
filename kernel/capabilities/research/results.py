@@ -117,7 +117,10 @@ def bundle_result(invocation: CapabilityInvocation, plan: Plan, cont: ResearchCo
         coverage=dict(out.coverage), assessments=dict(out.assessments), attempted_sources=out.attempted,
         unavailable_sources=list(unavailable.values()), contradictions=out.contradictions,
         limitations=limitations, truncated=out.truncated, evidence=list(out.evidence.values()),
-        findings=out.findings, unknowns=list(dict.fromkeys(out.unknowns)))
+        findings=out.findings, unknowns=list(dict.fromkeys(out.unknowns)),
+        need_evidence={n: [i for i in ids if i in out.evidence]
+                       for n, ids in out.need_evidence.items() if ids},
+        need_limitations={n: notes for n, notes in out.need_notes.items() if notes})
     partial = bool(unsatisfied) and plan.expected_coverage == "all_required"
     return CapabilityResult(
         invocation_id=invocation.id, work_item_id=invocation.work_item_id,
@@ -130,6 +133,9 @@ def bundle_result(invocation: CapabilityInvocation, plan: Plan, cont: ResearchCo
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-01 [python-coder]: The bundle names, per need, the evidence that passed relevance, so
+#   the decision can link a human-added option's claim evidence to that option (round 8 defect
+#   a). (#KernelDecisionStore)
 # - 2026-10-01 [python-coder]: A completed bundle reports partial coverage, the answer-aware
 #   notes and the synthesis unknowns in its result limitations (so the envelope shows them); they
 #   used to be kept only when a REQUIRED need was unsatisfied, and evidence plans never reach the

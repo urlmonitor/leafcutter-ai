@@ -1,0 +1,86 @@
+{
+  "schema_version": "1.0",
+  "generated_by": "python -m kernel decisions index",
+  "_comment": "Generated; never edit by hand. Regenerate with the command in generated_by.",
+  "count": 3,
+  "records": [
+    {
+      "id": "dec-5e7445182eaec1f2",
+      "file": "dec-5e7445182eaec1f2.yaml",
+      "sha256": "421a0224815d3ae92c8918e44be6963c01297d1ab72c03c4ecbf4825a7723b52",
+      "title": "one decision-lifecycle flow whose steps expand to four sub-flows",
+      "question": "Decide how to model the Leafcutter decision lifecycle in the product-truth store (docs/product-truth/flows/leafcutter/) so it shows end to end how a decision is formed, staged as a record, published into docs/decisions, and retrieved as precedent by a later run. Options: four separate flows, one per stage; one decision-lifecycle flow whose steps expand to four sub-flows; or another option grounded in the repository.",
+      "decision_type": "design",
+      "selected_option_id": "opt.parent_with_subflows",
+      "selected_option_title": "one decision-lifecycle flow whose steps expand to four sub-flows",
+      "approved_by": "human:user",
+      "approved_at": "2026-10-02T05:56:54Z",
+      "components": [],
+      "change_target": [],
+      "risk_surface": [],
+      "roadmap_phase": [],
+      "file_globs": [],
+      "repository_wide": true,
+      "supersedes": [],
+      "superseded_by": [],
+      "related": [],
+      "corrections": 0
+    },
+    {
+      "id": "dec-d53e1c52cd47c832",
+      "file": "dec-d53e1c52cd47c832.yaml",
+      "sha256": "847aa2813b6114042f4d790d304c17c24a99b82644a3aa2925529d66a48c5925",
+      "title": "Make the kernel the default entry for design, planning and lookup questions in Claude ...",
+      "question": "Decide what to build next for the Leafcutter decision kernel so that it is wired into the real development workflow and has direct impact. Today nothing outside kernel/ and the /leafcutter skill calls the kernel, and docs/decisions holds one record, while design decisions answered by the user in Claude Code sessions are not recorded anywhere the kernel can reuse. Options: run trace analyzers over the recent kernel traces; file human decisions made in Claude Code sessions as decision records; have agents consult the kernel for precedent before asking the user a design question, applying standing policies such as POL-GIT-001 directly; or another option grounded in the repository.",
+      "decision_type": "design",
+      "selected_option_id": "opt.kernel_entry_point",
+      "selected_option_title": "Make the kernel the default entry for design, planning and lookup questions in Claude Code sessions",
+      "approved_by": "human:user",
+      "approved_at": "2026-10-02T05:39:33Z",
+      "components": [],
+      "change_target": [],
+      "risk_surface": [],
+      "roadmap_phase": [],
+      "file_globs": [],
+      "repository_wide": true,
+      "supersedes": [],
+      "superseded_by": [],
+      "related": [
+        "dec-ef8ddcb79d668a67"
+      ],
+      "corrections": 0
+    },
+    {
+      "id": "dec-ef8ddcb79d668a67",
+      "file": "dec-ef8ddcb79d668a67.yaml",
+      "sha256": "d4426542cc89f863b3795b69e1caf182607980c8b642190318fc7c608c3ea819",
+      "title": "Kernel-contract YAML per decision",
+      "question": "Decide how Leafcutter should file decision records as JSON or YAML files under docs/ so later kernel runs can find and reuse them as precedent: which fields a record needs, which classification filters it carries (component, file type or language, repository-wide, roadmap phase), the folder layout and file naming, and how human approval and later corrections are recorded.",
+      "decision_type": "design",
+      "selected_option_id": "opt.added.1",
+      "selected_option_title": "Kernel-contract YAML per decision",
+      "approved_by": "human:user",
+      "approved_at": "2026-10-01T14:48:31Z",
+      "components": [
+        "decision_kernel",
+        "knowledge_management"
+      ],
+      "change_target": [
+        "schema",
+        "docs"
+      ],
+      "risk_surface": [
+        "internal"
+      ],
+      "roadmap_phase": [
+        "phase_kernel_1_founding"
+      ],
+      "file_globs": [],
+      "repository_wide": false,
+      "supersedes": [],
+      "superseded_by": [],
+      "related": [],
+      "corrections": 0
+    }
+  ]
+}
