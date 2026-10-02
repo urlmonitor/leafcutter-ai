@@ -1,0 +1,179 @@
+id: DK-300c-2-i
+title: "The record builder refuses an approver who is not human, or a missing approval time"
+component: decision-kernel
+components:
+  - decision_kernel
+level: L3
+status: active
+req_status: draft
+work_status: in_progress
+readiness: reviewed
+priority: medium
+roadmap_phase: phase_kernel_1_founding
+criteria: |
+  Given a completed decision whose approver is jev, or host, or whose approval has no approved_at,
+  When the record builder is asked to build its record,
+  Then no decision record is built,
+  And the refusal states which condition failed: a non-human approver or a missing approval time,
+  And, as the paired accepted inputs, a decision approved by human:user with approved_at set, and
+    one approved by the bare actor human with approved_at set, are both built.
+depends_on:
+  - DK-300c-2
+doc_links:
+  - path: docs/product-truth/flows/leafcutter/decision-staging.flow.json
+    relationship: implemented-by-step
+    status: exists
+    relevance: >-
+      Derived from leafcutter/decision-staging step build-record (its refusal clause). Add
+      this AC id to each named node's implements list.
+  - path: docs/architecture/adrs/ADR-060-source-of-truth-and-approval-authority.md
+    relationship: related
+    status: exists
+    relevance: >-
+      Standing rules: only a human approval creates a record, nothing is written into the
+      repository during a run, precedent is evidence and never authority, corrections are
+      append-only.
+  - path: docs/architecture/components/decision-kernel.md
+    relationship: describes
+    status: exists
+  - path: docs/analysis/2026-09-30-decision-kernel-design-4-jev-and-capabilities.md
+    relationship: describes
+    status: exists
+    relevance: Decision, research and retrieval capabilities, host operations, human interaction;
+      'As built' sections.
+assigned_agent: python-coder
+estimated_complexity: XS
+it_requirements:
+  - 'Only a human answer may approve, choose or reuse (ADR-053, ADR-060): no path may let Jev, a host
+    or the kernel resolve or approve on a person''s behalf.'
+  - The builder is the single gate that refuses an unapproved decision, and the record model is a
+    second, independent gate (approver pattern human or human:<id>).
+  - A refusal names the failed condition and is logged; it never raises out of staging.
+  - 'Done-marking evidence (KI-ACS-004, done_proof): implemented_by names an existing kernel/... file
+    plus symbol, and every covering test under tests/kernel/ carries a `# covers: <this AC id>` tag
+    and passes under pytest. No kernel test carries a DK covers tag yet, so tagging comes before any
+    done-marking.'
+test_spec:
+  - name: test_a_host_or_model_approver_is_refused
+    target_dir: tests/kernel/memory/
+    framework: unittest
+    type: unit
+    angle: failure
+    description: 'EXISTS (tests/kernel/memory/test_builder.py::TestRefusesWhatAHumanDidNotApprove::test_a_host_or_model_approver_is_refused):
+      jev, host and other machine approvers refused'
+    covers:
+      - DK-300c-2-i
+  - name: test_a_missing_approval_time_is_refused
+    target_dir: tests/kernel/memory/
+    framework: unittest
+    type: unit
+    angle: failure
+    description: 'EXISTS (tests/kernel/memory/test_builder.py::TestRefusesWhatAHumanDidNotApprove::test_a_missing_approval_time_is_refused):
+      no approved_at is refused'
+    covers:
+      - DK-300c-2-i
+  - name: test_the_record_is_valid_by_the_schema_and_carries_the_approval
+    target_dir: tests/kernel/memory/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: 'EXISTS (tests/kernel/memory/test_builder.py::TestBuildsFromAHumanApprovedDecision::test_the_record_is_valid_by_the_schema_and_carries_the_approval):
+      human:<id> with approved_at is built'
+    covers:
+      - DK-300c-2-i
+  - name: test_a_bare_actor_id_becomes_a_human_actor
+    target_dir: tests/kernel/memory/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: 'EXISTS (tests/kernel/memory/test_builder.py::TestHelpers::test_a_bare_actor_id_becomes_a_human_actor):
+      the bare actor ''human'' is accepted as an approver'
+    covers:
+      - DK-300c-2-i
+  - name: test_a_non_human_approver_is_refused
+    target_dir: tests/kernel/memory/
+    framework: unittest
+    type: unit
+    angle: failure
+    description: 'EXISTS (tests/kernel/memory/test_record_model.py::TestRecordConsistency::test_a_non_human_approver_is_refused):
+      the record model refuses a non-human approver'
+    covers:
+      - DK-300c-2-i
+  - name: test_the_refusal_names_the_failed_condition
+    target_dir: tests/kernel/memory/
+    framework: unittest
+    type: unit
+    angle: failure
+    description: 'TO WRITE (in tests/kernel/memory/test_builder.py): the NotApproved reason distinguishes
+      ''no human approver'' from ''no approved_at time'''
+    covers:
+      - DK-300c-2-i
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst
+created: 2026-10-02
+created_by_ticket: tickets/00_inbox/TICKET-20261002-DecisionLifecycleACs.md
+amended_by:
+  - reason: it-po-technical-enrichment
+    by: it-po
+    date: '2026-10-02'
+    ticket: tickets/00_inbox/TICKET-20261002-DecisionLifecycleACs.md
+    build_status: built_partly_tested
+    implementation_pointers:
+      - kernel/memory/builder.py#_approval
+      - kernel/memory/builder.py#NotApproved
+      - kernel/memory/builder.py#human_actor
+      - kernel/memory/models.py#Approval
+    test_pointers:
+      - tests/kernel/memory/test_builder.py::TestRefusesWhatAHumanDidNotApprove::test_a_host_or_model_approver_is_refused
+      - tests/kernel/memory/test_builder.py::TestRefusesWhatAHumanDidNotApprove::test_a_missing_approval_time_is_refused
+      - tests/kernel/memory/test_builder.py::TestBuildsFromAHumanApprovedDecision::test_the_record_is_valid_by_the_schema_and_carries_the_approval
+      - tests/kernel/memory/test_builder.py::TestHelpers::test_a_bare_actor_id_becomes_a_human_actor
+      - tests/kernel/memory/test_record_model.py::TestRecordConsistency::test_a_non_human_approver_is_refused
+    gaps:
+      - Reasons are distinct strings in builder._approval, but tests assert only the exception type,
+        not which condition the message names. The bare 'human' actor is tested at human_actor() level,
+        not through build_decision_record.
+    pointer_note: Unverified candidates for implemented_by / covered_by, read from the worktree at
+      e89f0f74 (kernel/ and tests/kernel/ identical to origin/main). The evidence phase verifies each
+      and adds the `# covers:` tags before anything is marked done.
+    complexity_basis: remaining work only (evidence, covers tags, gap closure)
+superseded_by: null
+covered_by: []
+implemented_by:
+  - kernel/memory/builder.py#_approval
+  - kernel/memory/builder.py#NotApproved
+  - kernel/memory/builder.py#human_actor
+  - kernel/memory/models.py#Approval
+change_target: code
+risk_surface: internal
+notes: |
+  FLOW BACK-LINKS (add this AC id to each node's implements list):
+    leafcutter/decision-staging    step    build-record
+
+  DERIVATION. Refusal clause of scenario build-record. The builder is the single
+  gate that refuses an unapproved decision (ADR-060, Operational), so this holds
+  even if a decision slips past DK-300c-1. The accepted forms human and human:<id>
+  are ADR-060 section 2's.
+
+  IT-PO BUILD STATUS (2026-10-02, unverified): built; tested except that the refusal
+  names which condition failed. Pointers: amended_by.
+
+  TRUE STATUS (2026-10-02): work_status in_progress; the it-po verified build status is
+    built_partly_tested.
+    - Reasons are distinct strings in builder._approval, but tests assert only the exception
+      type, not which condition the message names. The bare 'human' actor is tested at
+      human_actor() level, not through build_decision_record.
+  Missing tests are listed in TICKET-20261002-DecisionKernelACTestGaps; once they pass, mark
+    done through scripts/ac_store/mark_ac_done.py.
+product_truth:
+  - flow: leafcutter/decision-staging
+    node: build-record
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: leafcutter/decisions
+    entities:
+      - Decision
+    source: real
+    asof: '2026-10-02'

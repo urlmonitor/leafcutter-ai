@@ -30,7 +30,7 @@
       "human": "A new decision's precedent step asks the memory port for matching records through docs/decisions/index.json: filters (components, roadmap phase), a text score, and a sha256 check against the index.",
       "order": 1,
       "implements": [
-        "DK-100e-1"
+        "DK-300e-1"
       ],
       "agent": "kernel memory port",
       "consumes": [
@@ -52,7 +52,7 @@
       "human": "Up to memory.max_precedents (3) candidates go to Jev, each with one literal question: \"does this earlier decision apply here?\". That is one call before options exist; after that the questions ride the assessment batch.",
       "order": 2,
       "implements": [
-        "DK-100e-2"
+        "DK-300e-2"
       ],
       "agent": "jev",
       "consumes": [
@@ -70,7 +70,7 @@
       "human": "A precedent scoring 0.5 or more becomes prior_decisions evidence that cites its record path and who approved it.",
       "order": 3,
       "implements": [
-        "DK-100e-2"
+        "DK-300e-2"
       ],
       "agent": "kernel precedent step",
       "consumes": [
@@ -92,7 +92,7 @@
       "human": "Decision point: for a score of 0.8 or more, on a decision with no options of its own and a precedent that is not superseded, you are asked: reuse it, or decide anew?",
       "order": 4,
       "implements": [
-        "DK-100e-3"
+        "DK-300e-3"
       ],
       "screen": "decision-reuse-or-decide-anew",
       "agent": "human (asked through claude_code)",
@@ -114,7 +114,7 @@
       "human": "The decision resolves with the precedent's choice, approved by you, the current human, and a new record that cites the precedent under related is staged (for example dec-7cdc61ea41a206e0).",
       "order": 5,
       "implements": [
-        "DK-100e-4"
+        "DK-300e-4"
       ],
       "agent": "kernel decision executor",
       "consumes": [
@@ -150,7 +150,7 @@
       ],
       "outcome_kind": "exit",
       "implements": [
-        "DK-100e-2-i"
+        "DK-300e-2-i"
       ],
       "impl_asof": "2026-10-02",
       "impl_status": "done"
@@ -170,9 +170,9 @@
       ],
       "outcome_kind": "alternative",
       "implements": [
-        "DK-100e-3-ii",
-        "DK-100e-3-iii",
-        "DK-100e-3-iv"
+        "DK-300e-3-ii",
+        "DK-300e-3-iii",
+        "DK-300e-3-iv"
       ],
       "impl_asof": "2026-10-02",
       "impl_status": "in_progress"
@@ -196,7 +196,7 @@
       ],
       "outcome_kind": "alternative",
       "implements": [
-        "DK-100e-3-i"
+        "DK-300e-3-i"
       ],
       "impl_asof": "2026-10-02",
       "impl_status": "in_progress"

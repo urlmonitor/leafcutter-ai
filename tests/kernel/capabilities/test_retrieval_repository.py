@@ -128,7 +128,7 @@ class TestEvidenceShape(RepoTestCase):
     """Every result carries source, locator, revision, hash and truncation."""
 
     def test_evidence_has_locator_hash_revision_and_provenance(self) -> None:
-        # covers: DK-100a-2
+        # covers: DK-300a-2
         rev = RevisionInfo(commit="abc1234567", dirty=True)
         result = self.run_retrieval(scope_update={"revision": rev})
         self.assertEqual(result.status, ResultStatus.COMPLETED)

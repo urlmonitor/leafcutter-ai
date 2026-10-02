@@ -141,7 +141,7 @@ class TestDesignDecisionEndToEnd(ScenarioCase):
         return envelope
 
     async def test_the_cited_path_is_fetched_exactly(self) -> None:
-        # covers: DK-100a-4
+        # covers: DK-300a-4
         envelope = await self.run_it()
         values = await self.checkpoint_values(envelope.run_id)
         locators = [e.source.locator.split("#")[0] for e in values["evidence"].values()]

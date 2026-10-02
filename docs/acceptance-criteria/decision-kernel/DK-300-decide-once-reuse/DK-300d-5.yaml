@@ -1,0 +1,90 @@
+id: DK-300d-5
+title: "Publishing is documented: how to publish and correct, and how a record moves"
+component: decision-kernel
+components:
+  - decision_kernel
+level: L2
+status: active
+req_status: draft
+work_status: in_progress
+readiness: reviewed
+priority: medium
+roadmap_phase: phase_kernel_1_founding
+criteria: |
+  Given the publishing behaviours DK-300d-1 to DK-300d-4,
+  When the publishing documentation is complete,
+  Then a how-to for publishing and correcting (DK-300d-5-i), a sequence diagram from the publish
+    request through review and merge (DK-300d-5-ii) and a state diagram of a record's lifecycle
+    (DK-300d-5-iii) all exist,
+  And the how-to links to both diagrams.
+depends_on:
+  - DK-300d
+  - DK-300d-1
+  - DK-300d-2
+  - DK-300d-3
+  - DK-300d-4
+doc_links:
+  - path: docs/how-to/file-and-reuse-decisions-with-the-kernel.md
+    relationship: describes
+    status: exists
+  - path: docs/product-truth/flows/leafcutter/decision-publishing.flow.json
+    relationship: describes
+    status: exists
+    relevance: >-
+      The sub-flow the three documents describe.
+  - path: docs/architecture/components/decision-kernel.md
+    relationship: describes
+    status: exists
+assigned_agent: documentation-expert
+estimated_complexity: S
+it_requirements:
+  - Documentation states only behaviour that a test proves on main; where the code and an existing
+    doc disagree, the doc is corrected, never the other way round.
+  - The how-to links both diagrams; no second publishing how-to is written.
+test_required: false
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst
+created: 2026-10-02
+created_by_ticket: tickets/00_inbox/TICKET-20261002-DecisionLifecycleACs.md
+amended_by:
+  - reason: it-po-technical-enrichment
+    by: it-po
+    date: '2026-10-02'
+    ticket: tickets/00_inbox/TICKET-20261002-DecisionLifecycleACs.md
+    build_status: docs_partly_exist
+    implementation_pointers: []
+    test_pointers: []
+    gaps:
+      - docs/how-to/file-and-reuse-decisions-with-the-kernel.md exists and covers publishing and correcting;
+        the two diagrams do not exist and are not linked.
+    pointer_note: Unverified candidates for implemented_by / covered_by, read from the worktree at
+      e89f0f74 (kernel/ and tests/kernel/ identical to origin/main). The evidence phase verifies each
+      and adds the `# covers:` tags before anything is marked done.
+    complexity_basis: linking the how-to and two diagrams
+superseded_by: null
+covered_by:
+  - DK-300d-5-i
+  - DK-300d-5-ii
+  - DK-300d-5-iii
+implemented_by: []
+change_target: docs
+risk_surface: internal
+notes: |
+  FLOW BACK-LINKS: none. This is a documentation AC; it implements no flow step
+  and belongs in no flow node's implements list, so a step's built status never
+  waits on documentation.
+
+  Produced because DK-300d declares documentation_triggers: [how-to,
+  sequence-diagram, state-diagram]. Six publishing steps plus three documents
+  exceed the five-L2 cap; the documents sit as L3s under this documentation L2 so
+  no publishing behaviour becomes a composite waiting on documentation (see the
+  note on DK-300c-5; precedent ACD-2000b-3-i).
+
+  IT-PO BUILD STATUS (2026-10-02): how-to partly exists; diagrams missing. Documentation
+  AC: test_required false.
+
+  TRUE STATUS (2026-10-02): work_status in_progress; the it-po verified build status is
+    docs_partly_exist.
+    - docs/how-to/file-and-reuse-decisions-with-the-kernel.md exists and covers publishing
+      and correcting; the two diagrams do not exist and are not linked.

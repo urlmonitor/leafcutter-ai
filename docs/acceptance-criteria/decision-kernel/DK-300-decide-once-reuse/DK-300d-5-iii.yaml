@@ -1,0 +1,96 @@
+id: DK-300d-5-iii
+title: "State diagram: a decision record from staged to published, kept staged, or superseded"
+component: decision-kernel
+components:
+  - decision_kernel
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: medium
+roadmap_phase: phase_kernel_1_founding
+criteria: |
+  Given the publishing flow and its corrections,
+  When the state diagram is drawn,
+  Then it shows the states staged, published (in review, then merged) and superseded,
+  And its transitions are: publish, from staged to published; keep staged, an end state that is
+    never found as precedent; merge; and correct, from published to superseded when a later
+    decision is published with --correct,
+  And superseded is drawn as an end state with no way out of it, labelled "kept on record,
+    corrections appended only".
+depends_on:
+  - DK-300d-5
+  - DK-300d-1
+  - DK-300d-3
+  - DK-300d-4
+doc_links:
+  - path: docs/product-truth/flows/leafcutter/decision-publishing.flow.json
+    relationship: describes
+    status: exists
+    relevance: >-
+      Branches keep-staged and correct-older are the state machine's side exits.
+  - path: docs/product-truth/mock-data/leafcutter/decisions.mock.json
+    relationship: describes
+    status: exists
+    relevance: >-
+      lifecycle_stage (staged | published | superseded) and review_state (not-published |
+      in-review | merged) are the states to draw.
+  - path: docs/architecture/diagrams/c3-020-decision-kernel-flows-learning-loop.md
+    relationship: related
+    status: exists
+    relevance: 'Exists on origin/main since PR #981 (docs-only; this worktree branch is behind main
+      by those commits). Starting material, not the deliverable.'
+  - path: docs/architecture/adrs/ADR-060-source-of-truth-and-approval-authority.md
+    relationship: describes
+    status: exists
+    relevance: Git canonical; only a human approval creates a record; read-only runs; precedent never
+      authority; append-only corrections.
+assigned_agent: architecture-diagram-author
+estimated_complexity: S
+it_requirements:
+  - 'Follow the write-c4-diagram skill: frontmatter with a parent diagram, a Mermaid diagram, the
+    next free c3-NNN number in docs/architecture/diagrams/, and a link from docs/architecture/components/decision-kernel.md.'
+  - Participants and message names match the built code (graph node and symbol names in the amended_by
+    it-po pointers); a branch the code does not have is drawn only if marked as not built.
+  - 'Do not imply that a superseded record is never found: as built it is still found and cited as
+    evidence, only never offered for reuse (DK-300e-3-iii).'
+test_required: false
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst
+created: 2026-10-02
+created_by_ticket: tickets/00_inbox/TICKET-20261002-DecisionLifecycleACs.md
+amended_by:
+  - reason: it-po-technical-enrichment
+    by: it-po
+    date: '2026-10-02'
+    ticket: tickets/00_inbox/TICKET-20261002-DecisionLifecycleACs.md
+    build_status: docs_not_written
+    implementation_pointers: []
+    test_pointers: []
+    gaps:
+      - No record-lifecycle state diagram exists.
+    pointer_note: Unverified candidates for implemented_by / covered_by, read from the worktree at
+      e89f0f74 (kernel/ and tests/kernel/ identical to origin/main). The evidence phase verifies each
+      and adds the `# covers:` tags before anything is marked done.
+    complexity_basis: one state diagram
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: docs
+risk_surface: internal
+notes: |
+  FLOW BACK-LINKS: none. This is a documentation AC; it implements no flow step
+  and belongs in no flow node's implements list, so a step's built status never
+  waits on documentation.
+
+  State-diagram half of DK-300d's documentation_triggers.
+
+  IT-PO BUILD STATUS (2026-10-02): not written. Caveat: a superseded record stays
+  findable as evidence; draw 'superseded' accordingly. Documentation AC: test_required
+  false.
+
+  TRUE STATUS (2026-10-02): work_status todo; the it-po verified build status is
+    docs_not_written.
+    - No record-lifecycle state diagram exists.

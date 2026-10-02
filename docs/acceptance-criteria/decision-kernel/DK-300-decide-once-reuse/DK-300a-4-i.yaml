@@ -1,0 +1,172 @@
+id: DK-300a-4-i
+title: "When the Jev budget runs short you are asked early, on limited evidence"
+component: decision-kernel
+components:
+  - decision_kernel
+level: L3
+status: active
+req_status: draft
+work_status: done
+readiness: reviewed
+priority: medium
+roadmap_phase: phase_kernel_1_founding
+criteria: |
+  Given a run with a Jev call budget of 20 (limits.max_jev_calls),
+  And a completed assessment after which the calls left cannot fund another research round plus a
+    final assessment,
+  When the budget gate checks the next round,
+  Then no further research round starts,
+  And you are asked the ranked-choice question from the last complete assessment,
+  And the question and the run's limitations state that the ranking was made on limited evidence.
+depends_on:
+  - DK-300a-4
+doc_links:
+  - path: docs/product-truth/flows/leafcutter/decision-forming.flow.json
+    relationship: implemented-by-step
+    status: exists
+    relevance: >-
+      Derived from leafcutter/decision-forming branch budget-reserve (from assess). Add this
+      AC id to each named node's implements list.
+  - path: docs/how-to/run-the-decision-kernel.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/components/decision-kernel.md
+    relationship: describes
+    status: exists
+  - path: docs/analysis/2026-09-30-decision-kernel-design-4-jev-and-capabilities.md
+    relationship: describes
+    status: exists
+    relevance: Decision, research and retrieval capabilities, host operations, human interaction;
+      'As built' sections.
+  - path: docs/analysis/2026-09-30-decision-kernel-design-3-kernel-scheduler.md
+    relationship: describes
+    status: exists
+    relevance: Scheduler, intake intent, cancellation, report writing.
+assigned_agent: python-coder
+estimated_complexity: XS
+it_requirements:
+  - The reserve and the cost of a research round are computed from configuration and the budget the
+    context reports (limits.max_jev_calls); nothing is hard-coded.
+  - A decision with a complete earlier assessment never ends blocked on the budget, and a ranking
+    is never built from a partially scored assessment.
+  - Usage of calls made before a budget stop is kept, so budget, envelope usage and trace agree.
+  - 'Done-marking evidence (KI-ACS-004, done_proof): implemented_by names an existing kernel/... file
+    plus symbol, and every covering test under tests/kernel/ carries a `# covers: <this AC id>` tag
+    and passes under pytest. No kernel test carries a DK covers tag yet, so tagging comes before any
+    done-marking.'
+test_spec:
+  - name: test_a_round_that_does_not_fit_beside_the_reserve_ends_in_the_ranked_question
+    target_dir: tests/kernel/grounding/
+    framework: unittest
+    type: unit
+    angle: boundary
+    description: 'EXISTS (tests/kernel/grounding/test_round6_budget.py::TestTheReservedAssessment::test_a_round_that_does_not_fit_beside_the_reserve_ends_in_the_ranked_question):
+      no research round starts; the ranked question names the Jev call budget; limitation says limited
+      evidence'
+    covers:
+      - DK-300a-4-i
+  - name: test_with_one_more_call_the_round_is_requested_as_before
+    target_dir: tests/kernel/grounding/
+    framework: unittest
+    type: unit
+    angle: boundary
+    description: 'EXISTS (tests/kernel/grounding/test_round6_budget.py::TestTheReservedAssessment::test_with_one_more_call_the_round_is_requested_as_before):
+      one more call left: the research round is requested'
+    covers:
+      - DK-300a-4-i
+  - name: test_the_humans_choice_resolves_and_the_final_report_says_the_evidence_was_limited
+    target_dir: tests/kernel/grounding/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: 'EXISTS (tests/kernel/grounding/test_round6_budget.py::TestTheReservedAssessment::test_the_humans_choice_resolves_and_the_final_report_says_the_evidence_was_limited):
+      the resolved report carries the limited-evidence limitation'
+    covers:
+      - DK-300a-4-i
+  - name: test_no_budget_for_a_new_assessment_ranks_the_last_complete_one
+    target_dir: tests/kernel/grounding/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: 'EXISTS (tests/kernel/grounding/test_round6_budget.py::TestFallbackToTheLastCompleteAssessment::test_no_budget_for_a_new_assessment_ranks_the_last_complete_one):
+      the ranked question uses the last complete assessment'
+    covers:
+      - DK-300a-4-i
+  - name: test_the_run_asks_the_ranked_question_instead_of_blocking
+    target_dir: tests/kernel/grounding/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: 'EXISTS (tests/kernel/grounding/test_round6_end_to_end.py::TestTheBudgetIsReserved::test_the_run_asks_the_ranked_question_instead_of_blocking):
+      through the service, the run asks instead of blocking'
+    covers:
+      - DK-300a-4-i
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst
+created: 2026-10-02
+created_by_ticket: tickets/00_inbox/TICKET-20261002-DecisionLifecycleACs.md
+amended_by:
+  - reason: it-po-technical-enrichment
+    by: it-po
+    date: '2026-10-02'
+    ticket: tickets/00_inbox/TICKET-20261002-DecisionLifecycleACs.md
+    build_status: built_and_tested
+    implementation_pointers:
+      - kernel/capabilities/decision/budget_gate.py#handover
+      - kernel/capabilities/decision/budget_gate.py#fallback_followup
+      - kernel/capabilities/decision/budget_gate.py#reserve_for
+      - kernel/capabilities/call_costs.py#assessment_reserve
+      - kernel/capabilities/decision/design_ending.py#design_followup
+      - kernel/capabilities/decision/emit.py#design_resolved_result
+    test_pointers:
+      - tests/kernel/grounding/test_round6_budget.py::TestTheReservedAssessment::test_a_round_that_does_not_fit_beside_the_reserve_ends_in_the_ranked_question
+      - tests/kernel/grounding/test_round6_budget.py::TestTheReservedAssessment::test_with_one_more_call_the_round_is_requested_as_before
+      - tests/kernel/grounding/test_round6_budget.py::TestTheReservedAssessment::test_the_humans_choice_resolves_and_the_final_report_says_the_evidence_was_limited
+      - tests/kernel/grounding/test_round6_budget.py::TestFallbackToTheLastCompleteAssessment::test_no_budget_for_a_new_assessment_ranks_the_last_complete_one
+      - tests/kernel/grounding/test_round6_end_to_end.py::TestTheBudgetIsReserved::test_the_run_asks_the_ranked_question_instead_of_blocking
+    gaps:
+      - Tests use a remaining-call fixture (5 or 6 calls left) rather than limits.max_jev_calls 20;
+        the gate is budget-relative, so this is equivalent.
+    pointer_note: Unverified candidates for implemented_by / covered_by, read from the worktree at
+      e89f0f74 (kernel/ and tests/kernel/ identical to origin/main). The evidence phase verifies each
+      and adds the `# covers:` tags before anything is marked done.
+    complexity_basis: remaining work only (evidence, covers tags, gap closure)
+superseded_by: null
+covered_by:
+  - tests/kernel/grounding/test_round6_budget.py::TestTheReservedAssessment::test_a_round_that_does_not_fit_beside_the_reserve_ends_in_the_ranked_question
+  - tests/kernel/grounding/test_round6_budget.py::TestTheReservedAssessment::test_with_one_more_call_the_round_is_requested_as_before
+  - tests/kernel/grounding/test_round6_budget.py::TestTheReservedAssessment::test_the_humans_choice_resolves_and_the_final_report_says_the_evidence_was_limited
+  - tests/kernel/grounding/test_round6_budget.py::TestFallbackToTheLastCompleteAssessment::test_no_budget_for_a_new_assessment_ranks_the_last_complete_one
+  - tests/kernel/grounding/test_round6_end_to_end.py::TestTheBudgetIsReserved::test_the_run_asks_the_ranked_question_instead_of_blocking
+implemented_by:
+  - kernel/capabilities/decision/budget_gate.py#handover
+  - kernel/capabilities/decision/budget_gate.py#fallback_followup
+  - kernel/capabilities/decision/budget_gate.py#reserve_for
+  - kernel/capabilities/call_costs.py#assessment_reserve
+  - kernel/capabilities/decision/design_ending.py#design_followup
+  - kernel/capabilities/decision/emit.py#design_resolved_result
+change_target: code
+risk_surface: internal
+notes: |
+  FLOW BACK-LINKS (add this AC id to each node's implements list):
+    leafcutter/decision-forming    branch  budget-reserve
+
+  DERIVATION. Branch budget-reserve, condition "another research round and a final
+  assessment no longer fit in the Jev call budget". The budget figure 20 is the
+  limits.max_jev_calls example from docs/how-to/run-the-decision-kernel.md.
+
+  IT-PO BUILD STATUS (2026-10-02, unverified): built and tested. budget_gate.handover
+  turns a round that would eat the reserved final assessment into the ranked question
+  with the limited-evidence limitation; fallback_followup ranks the last complete
+  assessment. Pointers: amended_by it-po entry.
+product_truth:
+  - flow: leafcutter/decision-forming
+    node: budget-reserve
+    node_kind: branch
+    flow_kind: data
+    screen: null
+    mock_data: leafcutter/decisions
+    entities: []
+    source: real
+    asof: '2026-10-02'

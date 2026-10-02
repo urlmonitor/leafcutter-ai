@@ -30,7 +30,7 @@
       "human": "You ask Claude Code a question; it hands the goal to the kernel through the /leafcutter skill or python -m kernel run.",
       "order": 1,
       "implements": [
-        "DK-100a-1"
+        "DK-300a-1"
       ],
       "agent": "claude_code",
       "produces": [
@@ -45,7 +45,7 @@
       "human": "The kernel asks Jev one question to tell whether the goal is a decision, a request for evidence, for ideas, for a change, or out of its domain.",
       "order": 2,
       "implements": [
-        "DK-100a-1"
+        "DK-300a-1"
       ],
       "agent": "kernel.intent",
       "consumes": [
@@ -63,7 +63,7 @@
       "human": "Earlier published decisions that might apply are looked up and judged; how that works is shown in the precedent sub-flow.",
       "order": 3,
       "implements": [
-        "DK-100e-1"
+        "DK-300e-1"
       ],
       "agent": "kernel precedent step",
       "consumes": [
@@ -87,8 +87,8 @@
       "human": "The research capability retrieves repository evidence with exact, section-aware locators and Jev reranks it; a precedent alone never counts as grounding.",
       "order": 4,
       "implements": [
-        "DK-100a-2-i",
-        "DK-100a-2"
+        "DK-300a-2-i",
+        "DK-300a-2"
       ],
       "agent": "kernel research capability",
       "consumes": [
@@ -106,7 +106,7 @@
       "human": "Claude Code, as host, writes findings that cite only the retrieved evidence (synthesize_evidence).",
       "order": 5,
       "implements": [
-        "DK-100a-3"
+        "DK-300a-3"
       ],
       "agent": "claude_code",
       "consumes": [
@@ -125,7 +125,7 @@
       "human": "Claude Code, as host, proposes options and criteria (generate_options); options you named in your question are checked against your words and kept as yours.",
       "order": 6,
       "implements": [
-        "DK-100a-3"
+        "DK-300a-3"
       ],
       "agent": "claude_code",
       "consumes": [
@@ -144,7 +144,7 @@
       "human": "Decision point: you see the proposed options and criteria and approve them, approve only some, edit the criteria, or add options. Nothing proposed is used until you approve it.",
       "order": 7,
       "implements": [
-        "DK-100b-1"
+        "DK-300b-1"
       ],
       "screen": "decision-approve-proposals",
       "agent": "human (asked through claude_code)",
@@ -163,7 +163,7 @@
       "human": "A targeted research round checks the claims the approved options make and reads the files they cite.",
       "order": 8,
       "implements": [
-        "DK-100a-4"
+        "DK-300a-4"
       ],
       "agent": "kernel research capability",
       "consumes": [
@@ -181,7 +181,7 @@
       "human": "Jev judges every option against every criterion (does it satisfy it, is the evidence sufficient) and marks each criterion as evidence-answerable or a design judgement.",
       "order": 9,
       "implements": [
-        "DK-100a-4"
+        "DK-300a-4"
       ],
       "agent": "jev",
       "consumes": [
@@ -201,7 +201,7 @@
       "human": "Decision point: you see the options ranked by Jev's per-criterion scores. The ranking is evidence, not a decision; you choose an option, add one, or answer in your own words.",
       "order": 10,
       "implements": [
-        "DK-100b-2"
+        "DK-300b-2"
       ],
       "screen": "decision-ranked-choice",
       "agent": "human (asked through claude_code)",
@@ -220,7 +220,7 @@
       "human": "The decision resolves with approved_by: human:<id> and approved_at, and report.md is written to the run folder.",
       "order": 11,
       "implements": [
-        "DK-100b-3"
+        "DK-300b-3"
       ],
       "agent": "kernel decision executor",
       "consumes": [
@@ -253,8 +253,8 @@
       ],
       "outcome_kind": "alternative",
       "implements": [
-        "DK-100b-1-i",
-        "DK-100b-1-ii"
+        "DK-300b-1-i",
+        "DK-300b-1-ii"
       ],
       "impl_asof": "2026-10-02",
       "impl_status": "in_progress"
@@ -274,7 +274,7 @@
       ],
       "outcome_kind": "alternative",
       "implements": [
-        "DK-100a-4-i"
+        "DK-300a-4-i"
       ],
       "impl_asof": "2026-10-02",
       "impl_status": "done"
@@ -294,8 +294,8 @@
       ],
       "outcome_kind": "alternative",
       "implements": [
-        "DK-100b-2-i",
-        "DK-100b-2-ii"
+        "DK-300b-2-i",
+        "DK-300b-2-ii"
       ],
       "impl_asof": "2026-10-02",
       "impl_status": "in_progress"
@@ -312,7 +312,7 @@
       ],
       "outcome_kind": "exit",
       "implements": [
-        "DK-100b-2-iii"
+        "DK-300b-2-iii"
       ],
       "impl_asof": "2026-10-02",
       "impl_status": "in_progress"

@@ -37,7 +37,7 @@ class TestEachKindRoutesCorrectly(IntentCase):
     """decision, evidence and ideas reach their capability; change and out_of_domain decline."""
 
     async def test_decision_routes_to_the_decision_capability_without_a_routing_call(self) -> None:
-        # covers: DK-100a-1
+        # covers: DK-300a-1
         self.intents = [("decision", *SURE)]
         envelope = await self.service().start_run(self.goal_task("Should we use a cache?"))
         values = await self.checkpoint_values(envelope.run_id)
@@ -47,7 +47,7 @@ class TestEachKindRoutesCorrectly(IntentCase):
         self.assertEqual(self.jev.questions_asked("kernel.intent"), ["intent.answer_kind"])
 
     async def test_evidence_routes_to_research_and_completes_with_an_evidence_bundle(self) -> None:
-        # covers: DK-100a-1
+        # covers: DK-300a-1
         self.intents = [("evidence", *SURE)]
         envelope = await self.service().start_run(self.goal_task(TESTS))
         self.assertEqual(envelope.status, RunStatus.COMPLETED, envelope.limitations)
@@ -70,7 +70,7 @@ class TestEachKindRoutesCorrectly(IntentCase):
         self.assertIn("ADR-900", text)
 
     async def test_ideas_route_to_option_generation_and_stay_proposals(self) -> None:
-        # covers: DK-100a-1
+        # covers: DK-300a-1
         self.intents = [("ideas", *SURE)]
         responder = FakeHostResponder({schema_ids.OPTIONS: options_response("primary")})
         paused = await self.service().start_run(self.goal_task(IDEAS))
@@ -100,7 +100,7 @@ class TestEachKindRoutesCorrectly(IntentCase):
         self.assertFalse(invocation.input_payload["propose_criteria"])
 
     async def test_change_is_declined_plainly_without_a_question_or_a_build_opportunity(self) -> None:
-        # covers: DK-100a-1
+        # covers: DK-300a-1
         self.intents = [("change", *SURE)]
         envelope = await self.service().start_run(self.goal_task(IMPLEMENT))
         self.assertEqual(envelope.status, RunStatus.BLOCKED)
@@ -129,7 +129,7 @@ class TestEachKindRoutesCorrectly(IntentCase):
         self.assertEqual(envelope.usage_summary.host_operations, 0)  # no permissive fallback
 
     async def test_out_of_domain_is_declined_and_never_a_build_opportunity(self) -> None:
-        # covers: DK-100a-1
+        # covers: DK-300a-1
         self.intents = [("out_of_domain", *SURE)]
         envelope = await self.service().start_run(self.goal_task(WEATHER))
         self.assertEqual(envelope.status, RunStatus.BLOCKED)

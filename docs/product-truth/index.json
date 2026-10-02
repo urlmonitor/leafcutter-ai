@@ -2303,7 +2303,7 @@
         "asof": "2026-07-20"
       }
     ],
-    "DK-100a-1": [
+    "DK-300a-1": [
       {
         "flow": "leafcutter/decision-forming",
         "node": "ask",
@@ -2327,7 +2327,7 @@
         "asof": "2026-10-02"
       }
     ],
-    "DK-100a-2": [
+    "DK-300a-2": [
       {
         "flow": "leafcutter/decision-forming",
         "node": "ground",
@@ -2340,7 +2340,7 @@
         "asof": "2026-10-02"
       }
     ],
-    "DK-100a-2-i": [
+    "DK-300a-2-i": [
       {
         "flow": "leafcutter/decision-forming",
         "node": "ground",
@@ -2353,7 +2353,7 @@
         "asof": "2026-10-02"
       }
     ],
-    "DK-100a-3": [
+    "DK-300a-3": [
       {
         "flow": "leafcutter/decision-forming",
         "node": "propose",
@@ -2377,7 +2377,7 @@
         "asof": "2026-10-02"
       }
     ],
-    "DK-100a-4": [
+    "DK-300a-4": [
       {
         "flow": "leafcutter/decision-forming",
         "node": "assess",
@@ -2401,7 +2401,7 @@
         "asof": "2026-10-02"
       }
     ],
-    "DK-100a-4-i": [
+    "DK-300a-4-i": [
       {
         "flow": "leafcutter/decision-forming",
         "node": "budget-reserve",
@@ -2414,7 +2414,7 @@
         "asof": "2026-10-02"
       }
     ],
-    "DK-100b-1": [
+    "DK-300b-1": [
       {
         "flow": "leafcutter/decision-forming",
         "node": "approve-proposals",
@@ -2427,7 +2427,7 @@
         "asof": "2026-10-02"
       }
     ],
-    "DK-100b-1-i": [
+    "DK-300b-1-i": [
       {
         "flow": "leafcutter/decision-forming",
         "node": "revise-proposals",
@@ -2440,7 +2440,7 @@
         "asof": "2026-10-02"
       }
     ],
-    "DK-100b-1-ii": [
+    "DK-300b-1-ii": [
       {
         "flow": "leafcutter/decision-forming",
         "node": "revise-proposals",
@@ -2453,7 +2453,7 @@
         "asof": "2026-10-02"
       }
     ],
-    "DK-100b-2": [
+    "DK-300b-2": [
       {
         "flow": "leafcutter/decision-forming",
         "node": "choose",
@@ -2466,7 +2466,7 @@
         "asof": "2026-10-02"
       }
     ],
-    "DK-100b-2-i": [
+    "DK-300b-2-i": [
       {
         "flow": "leafcutter/decision-forming",
         "node": "rerank",
@@ -2479,7 +2479,7 @@
         "asof": "2026-10-02"
       }
     ],
-    "DK-100b-2-ii": [
+    "DK-300b-2-ii": [
       {
         "flow": "leafcutter/decision-forming",
         "node": "rerank",
@@ -2492,7 +2492,7 @@
         "asof": "2026-10-02"
       }
     ],
-    "DK-100b-2-iii": [
+    "DK-300b-2-iii": [
       {
         "flow": "leafcutter/decision-forming",
         "node": "no-answer",
@@ -2505,7 +2505,7 @@
         "asof": "2026-10-02"
       }
     ],
-    "DK-100b-3": [
+    "DK-300b-3": [
       {
         "flow": "leafcutter/decision-forming",
         "node": "resolve",
@@ -2533,7 +2533,7 @@
         "asof": "2026-10-02"
       }
     ],
-    "DK-100c-1": [
+    "DK-300c-1": [
       {
         "flow": "leafcutter/decision-staging",
         "node": "detect",
@@ -2548,7 +2548,7 @@
         "asof": "2026-10-02"
       }
     ],
-    "DK-100c-1-i": [
+    "DK-300c-1-i": [
       {
         "flow": "leafcutter/decision-staging",
         "node": "not-stageable",
@@ -2561,7 +2561,7 @@
         "asof": "2026-10-02"
       }
     ],
-    "DK-100c-2": [
+    "DK-300c-2": [
       {
         "flow": "leafcutter/decision-staging",
         "node": "build-record",
@@ -2576,7 +2576,7 @@
         "asof": "2026-10-02"
       }
     ],
-    "DK-100c-2-i": [
+    "DK-300c-2-i": [
       {
         "flow": "leafcutter/decision-staging",
         "node": "build-record",
@@ -2591,7 +2591,7 @@
         "asof": "2026-10-02"
       }
     ],
-    "DK-100c-3": [
+    "DK-300c-3": [
       {
         "flow": "leafcutter/decision-lifecycle",
         "node": "stage",
@@ -2619,7 +2619,7 @@
         "asof": "2026-10-02"
       }
     ],
-    "DK-100c-4": [
+    "DK-300c-4": [
       {
         "flow": "leafcutter/decision-staging",
         "node": "announce",
@@ -2634,7 +2634,7 @@
         "asof": "2026-10-02"
       }
     ],
-    "DK-100d-1": [
+    "DK-300d-1": [
       {
         "flow": "leafcutter/decision-publishing",
         "node": "decide-to-publish",
@@ -2649,7 +2649,7 @@
         "asof": "2026-10-02"
       }
     ],
-    "DK-100d-1-i": [
+    "DK-300d-1-i": [
       {
         "flow": "leafcutter/decision-publishing",
         "node": "keep-staged",
@@ -2662,7 +2662,7 @@
         "asof": "2026-10-02"
       }
     ],
-    "DK-100d-2": [
+    "DK-300d-2": [
       {
         "flow": "leafcutter/decision-publishing",
         "node": "check-record",
@@ -2677,7 +2677,7 @@
         "asof": "2026-10-02"
       }
     ],
-    "DK-100d-2-i": [
+    "DK-300d-2-i": [
       {
         "flow": "leafcutter/decision-publishing",
         "node": "no-staged-record",
@@ -2690,7 +2690,7 @@
         "asof": "2026-10-02"
       }
     ],
-    "DK-100d-2-ii": [
+    "DK-300d-2-ii": [
       {
         "flow": "leafcutter/decision-publishing",
         "node": "unknown-filter",
@@ -2703,7 +2703,7 @@
         "asof": "2026-10-02"
       }
     ],
-    "DK-100d-3": [
+    "DK-300d-3": [
       {
         "flow": "leafcutter/decision-lifecycle",
         "node": "publish",
@@ -2744,7 +2744,7 @@
         "asof": "2026-10-02"
       }
     ],
-    "DK-100d-3-i": [
+    "DK-300d-3-i": [
       {
         "flow": "leafcutter/decision-publishing",
         "node": "correct-older",
@@ -2759,7 +2759,7 @@
         "asof": "2026-10-02"
       }
     ],
-    "DK-100d-4": [
+    "DK-300d-4": [
       {
         "flow": "leafcutter/decision-publishing",
         "node": "merge",
@@ -2787,7 +2787,7 @@
         "asof": "2026-10-02"
       }
     ],
-    "DK-100e-1": [
+    "DK-300e-1": [
       {
         "flow": "leafcutter/decision-forming",
         "node": "precedent",
@@ -2828,7 +2828,7 @@
         "asof": "2026-10-02"
       }
     ],
-    "DK-100e-2": [
+    "DK-300e-2": [
       {
         "flow": "leafcutter/decision-retrieval",
         "node": "cite",
@@ -2854,7 +2854,7 @@
         "asof": "2026-10-02"
       }
     ],
-    "DK-100e-2-i": [
+    "DK-300e-2-i": [
       {
         "flow": "leafcutter/decision-retrieval",
         "node": "not-applicable",
@@ -2867,7 +2867,7 @@
         "asof": "2026-10-02"
       }
     ],
-    "DK-100e-3": [
+    "DK-300e-3": [
       {
         "flow": "leafcutter/decision-lifecycle",
         "node": "reuse",
@@ -2895,7 +2895,7 @@
         "asof": "2026-10-02"
       }
     ],
-    "DK-100e-3-i": [
+    "DK-300e-3-i": [
       {
         "flow": "leafcutter/decision-retrieval",
         "node": "decide-anew",
@@ -2910,7 +2910,7 @@
         "asof": "2026-10-02"
       }
     ],
-    "DK-100e-3-ii": [
+    "DK-300e-3-ii": [
       {
         "flow": "leafcutter/decision-retrieval",
         "node": "evidence-only",
@@ -2923,7 +2923,7 @@
         "asof": "2026-10-02"
       }
     ],
-    "DK-100e-3-iii": [
+    "DK-300e-3-iii": [
       {
         "flow": "leafcutter/decision-retrieval",
         "node": "evidence-only",
@@ -2936,7 +2936,7 @@
         "asof": "2026-10-02"
       }
     ],
-    "DK-100e-3-iv": [
+    "DK-300e-3-iv": [
       {
         "flow": "leafcutter/decision-retrieval",
         "node": "evidence-only",
@@ -2949,7 +2949,7 @@
         "asof": "2026-10-02"
       }
     ],
-    "DK-100e-4": [
+    "DK-300e-4": [
       {
         "flow": "leafcutter/decision-retrieval",
         "node": "reuse",

@@ -31,7 +31,7 @@
       "human": "You ask a question; the kernel researches it, Jev assesses the options, and you approve the criteria and make the ranked choice.",
       "order": 1,
       "implements": [
-        "DK-100b-3"
+        "DK-300b-3"
       ],
       "agent": "kernel",
       "produces": [
@@ -52,7 +52,7 @@
       "human": "When the run ends, the approved decision is saved as a record in the run folder (never in the repository), and you are told how to publish it.",
       "order": 2,
       "implements": [
-        "DK-100c-3"
+        "DK-300c-3"
       ],
       "agent": "kernel decision executor",
       "consumes": [
@@ -79,7 +79,7 @@
       "human": "You run the publish command; the record is validated, written to docs/decisions/, the index is regenerated, and the change goes through a normal git review.",
       "order": 3,
       "implements": [
-        "DK-100d-3"
+        "DK-300d-3"
       ],
       "agent": "python -m kernel decisions publish",
       "consumes": [
@@ -107,8 +107,8 @@
       "human": "A later decision run finds the record through the index; Jev judges whether it applies, and a strong match asks you to reuse it or decide anew.",
       "order": 4,
       "implements": [
-        "DK-100e-1",
-        "DK-100e-3"
+        "DK-300e-1",
+        "DK-300e-3"
       ],
       "agent": "kernel precedent step",
       "consumes": [

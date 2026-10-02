@@ -40,7 +40,7 @@ class TestThresholds(unittest.IsolatedAsyncioTestCase):
     """The configured thresholds decide between a kind and a clarification."""
 
     async def test_confident_answer_selects_the_kind(self) -> None:
-        # covers: DK-100a-1
+        # covers: DK-300a-1
         jev = ScriptedJev().script(INTENT_PURPOSE, "intent.*", choice_answer("evidence", 0.9, 0.8))
         result = await _assess(jev)
         self.assertEqual((result.outcome, result.kind), (RoutingOutcome.SELECTED, "evidence"))
@@ -71,7 +71,7 @@ class TestThresholds(unittest.IsolatedAsyncioTestCase):
                          (RoutingOutcome.INSUFFICIENT_CONTEXT, ["jev_needs_context"]))
 
     async def test_thresholds_come_from_the_configuration(self) -> None:
-        # covers: DK-100a-1
+        # covers: DK-300a-1
         strict = CFG.model_copy(update={"min_selected_probability": 0.99})
         jev = ScriptedJev().script(INTENT_PURPOSE, "intent.*", choice_answer("decision", 0.95, 0.9))
         self.assertEqual((await _assess(jev, cfg=CFG)).outcome, RoutingOutcome.SELECTED)
@@ -87,7 +87,7 @@ class TestQuestion(unittest.IsolatedAsyncioTestCase):
     """One literal choice question over exactly the supplied kinds."""
 
     async def test_the_batch_offers_the_five_kinds_and_needs_context(self) -> None:
-        # covers: DK-100a-1
+        # covers: DK-300a-1
         jev = ScriptedJev().script(INTENT_PURPOSE, "intent.*", choice_answer("decision"))
         await _assess(jev, goal="Pick a cache")
         (batch,) = jev.batches

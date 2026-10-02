@@ -24,7 +24,7 @@ class TestPrecedentDoesNotSkipGrounding(LoopCase):
     """The precedent stays evidence; research still runs and both reach the options packet."""
 
     async def test_a_precedent_only_decision_still_researches_and_cites_both_kinds(self) -> None:
-        # covers: DK-100a-2-i
+        # covers: DK-300a-2-i
         await self.published()
         self.applies = 0.6  # applicable (>= 0.5), but no reuse question (< 0.8)
         envelope = await self.service().start_run(self.goal(GOAL))

@@ -54,7 +54,7 @@ class TestPublish(PublishCase):
         self.assertFalse(self.folder.exists())
 
     def test_a_staged_record_is_published_with_an_index(self) -> None:
-        # covers: DK-100d-3
+        # covers: DK-300d-3
         self.stage()
         result = self.publish()
         self.assertTrue(result.ok, result.problems)
@@ -66,7 +66,7 @@ class TestPublish(PublishCase):
         self.assertTrue(report.ok, report.problems)
 
     def test_publishing_twice_is_idempotent(self) -> None:
-        # covers: DK-100d-3
+        # covers: DK-300d-3
         self.stage()
         self.publish()
         before = (self.folder / INDEX_NAME).read_bytes()
@@ -77,20 +77,20 @@ class TestPublish(PublishCase):
         self.assertEqual((self.folder / INDEX_NAME).read_bytes(), before)
 
     def test_a_run_with_nothing_staged_is_refused(self) -> None:
-        # covers: DK-100d-2-i
+        # covers: DK-300d-2-i
         result = self.publish()
         self.assertFalse(result.ok)
         self.assertIn("no staged decision record", result.problems[0].message)
 
     def test_an_invalid_staged_record_writes_nothing(self) -> None:
-        # covers: DK-100d-2
+        # covers: DK-300d-2
         self.stage(make_record(components=["not_a_component"]))
         result = self.publish()
         self.assertFalse(result.ok)
         self.assertFalse(self.folder.exists())
 
     def test_a_different_record_with_a_published_id_is_refused(self) -> None:
-        # covers: DK-100d-2
+        # covers: DK-300d-2
         self.stage()
         self.publish()
         (self.run_root / "runs" / RUN / "staged" / "decisions" / f"{FIRST_ID}.yaml").write_text(
@@ -99,7 +99,7 @@ class TestPublish(PublishCase):
         self.assertIn("already published", " ".join(p.message for p in result.problems))
 
     def test_a_broken_store_is_not_published_into(self) -> None:
-        # covers: DK-100d-2
+        # covers: DK-300d-2
         self.write_record(make_record(related=["dec-9999999999999999"]))
         self.stage(make_record(id=NEWER_ID))
         result = self.publish()
@@ -107,7 +107,7 @@ class TestPublish(PublishCase):
         self.assertFalse((self.folder / f"{NEWER_ID}.yaml").exists())
 
     def test_an_unsafe_run_id_is_refused(self) -> None:
-        # covers: DK-100d-2-i
+        # covers: DK-300d-2-i
         result = publish("../x", folder=self.folder, run_root=self.run_root, schema=schema(),
                          vocab=vocabulary())
         self.assertFalse(result.ok)
@@ -122,7 +122,7 @@ class TestCorrection(PublishCase):
         self.stage(self.newer())
 
     def test_publishing_a_superseding_record_leaves_the_older_one_untouched(self) -> None:
-        # covers: DK-100d-3-i
+        # covers: DK-300d-3-i
         old_text = (self.folder / f"{FIRST_ID}.yaml").read_text(encoding="utf-8")
         result = self.publish()
         self.assertTrue(result.ok, result.problems)
@@ -130,7 +130,7 @@ class TestCorrection(PublishCase):
         self.assertEqual(result.corrected, [])
 
     def test_correct_appends_one_entry_and_a_link_and_changes_nothing_else(self) -> None:
-        # covers: DK-100d-3-i
+        # covers: DK-300d-3-i
         before = load_record_file(self.folder / f"{FIRST_ID}.yaml")
         result = self.publish(correct=[FIRST_ID], reason="the human decided anew")
         self.assertTrue(result.ok, result.problems)
@@ -149,7 +149,7 @@ class TestCorrection(PublishCase):
         self.assertTrue(validate_store(self.folder, schema=schema(), vocab=vocabulary()).ok)
 
     def test_a_second_correction_appends_to_the_first(self) -> None:
-        # covers: DK-100d-3-i
+        # covers: DK-300d-3-i
         old = load_record_file(self.folder / f"{FIRST_ID}.yaml")
         newer = self.newer()
         once = apply_correction(old, newer, "first")
@@ -159,18 +159,18 @@ class TestCorrection(PublishCase):
         self.assertEqual(twice.superseded_by, [NEWER_ID, "dec-5555555555555555"])
 
     def test_correct_without_a_superseding_staged_record_is_refused(self) -> None:
-        # covers: DK-100d-3-i
+        # covers: DK-300d-3-i
         self.write_record(make_record(id="dec-6666666666666666"))
         result = self.publish(correct=["dec-6666666666666666"])
         self.assertFalse(result.ok)
         self.assertFalse((self.folder / f"{NEWER_ID}.yaml").exists())  # nothing was written
 
     def test_correct_naming_an_unknown_record_is_refused(self) -> None:
-        # covers: DK-100d-3-i
+        # covers: DK-300d-3-i
         self.assertFalse(self.publish(correct=["dec-7777777777777777"]).ok)
 
     def test_the_default_reason_names_the_decider_and_the_run(self) -> None:
-        # covers: DK-100d-3-i
+        # covers: DK-300d-3-i
         self.publish(correct=[FIRST_ID])
         (entry,) = load_record_file(self.folder / f"{FIRST_ID}.yaml").corrections
         self.assertIn(RUN, entry.reason)
@@ -197,7 +197,7 @@ class TestCli(PublishCase):
         self.assertEqual((code, doc["ok"], doc["records"]), (0, True, 0))
 
     def test_publish_then_validate_through_the_cli(self) -> None:
-        # covers: DK-100d-3
+        # covers: DK-300d-3
         self.stage()
         code, doc = self.run_cli("decisions", "publish", "--run-id", RUN)
         self.assertEqual((code, doc["published"]), (0, [FIRST_ID]))
@@ -220,7 +220,7 @@ class TestCli(PublishCase):
         self.assertEqual(code, 3)
 
     def test_publish_exits_3_when_nothing_is_staged(self) -> None:
-        # covers: DK-100d-2-i
+        # covers: DK-300d-2-i
         code, doc = self.run_cli("decisions", "publish", "--run-id", RUN)
         self.assertEqual(code, 3)
         self.assertFalse(doc["ok"])
