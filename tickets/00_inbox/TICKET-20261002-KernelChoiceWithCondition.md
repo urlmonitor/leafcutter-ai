@@ -137,3 +137,8 @@ completion_manifest:
 ### 2026-10-02 18:00 — python-coder (status: ok)
 feedback-id: fb_2026-10-02_0f324846
 Skill reachability: Claude Code and Codex SKILL.md now tell the host it may send {choice_id, free_text} (condition relayed verbatim) where free_text_allowed. Test added in tests/kernel/adapters/test_install_skill.py; tests/kernel/adapters 128 passed, ruff clean.
+
+### 2026-10-02 19:00 — python-coder (status: ok)
+feedback-id: fb_2026-10-02_48ad6bb8
+Tests retargeted after merging #1001 (research-before-blind-escalation). An unidentified_gap with usable options now ends in the ranked design-choice question (phase awaiting_design_choice, pending_reason research_cap), not awaiting_human. Condition and ranked-choice tests (RankedGapCase) renamed and re-described honestly; the human-ruling coverage of approvals._apply_escalation moved to a tie (TieCase: awaiting_human, reason tie): choice completes with the human as approver, rationale says "Human ruling" not "Kernel ranking", choice plus condition is staged. Non-usable choice does not resolve in both. Only the test file changed; capabilities/contracts/interaction/decision_research/memory 552 passed, ruff clean.
+Observed, not fixed: the ranked rationale reads "stopped researching because research_cap after 0 research round(s)". The count is true, but the reason is the fallback label: loop_reason was None (0 rounds < max_research_rounds 2) and design_round_due was false because has_targets() found nothing to aim at, so research was skipped, not capped.
