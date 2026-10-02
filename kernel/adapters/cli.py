@@ -1,6 +1,7 @@
 """
 MODULE: kernel.adapters.cli
-GOAL: The `python -m kernel` command line: run, resume, status, cancel, gaps, decisions and install-skill,
+GOAL: The `python -m kernel` command line: run, resume, status, cancel, gaps, decisions and install-skill
+    (Claude Code or Codex),
     each printing exactly one JSON document on stdout and returning a documented exit code.
 BUSINESS CONTEXT: A cooperative client (the Claude Code skill) drives the kernel as a sequence of
     short processes (Rev 3 section 11.2). It must tell a normal workflow state from a protocol
@@ -26,7 +27,8 @@ from typing import Any
 
 from pydantic import ValidationError
 
-from kernel.adapters.claude_code.install import InstallRefused, install_skill
+from kernel.adapters.claude_code.install import install_skill
+from kernel.adapters.codex.install import install_codex_skill
 from kernel.adapters.cli_io import (
     CliInputError,
     emit,
@@ -35,6 +37,7 @@ from kernel.adapters.cli_io import (
     safe_run_id,
     validation_details,
 )
+from kernel.adapters.skill_common import InstallRefused
 from kernel.bootstrap import KernelEnvironment, build_environment
 from kernel.config import ConfigError
 from kernel.contracts.run import CapabilityGap
@@ -58,6 +61,7 @@ logger = logging.getLogger(__name__)
 
 EnvironmentFactory = Callable[..., KernelEnvironment]
 Result = tuple[int, dict[str, Any]]
+HOSTS = ("claude_code", "codex")
 INPUT_FLAGS = ("--input-file", "--input", "--response", "--response-file")
 
 
@@ -86,11 +90,18 @@ def build_parser() -> argparse.ArgumentParser:
     commands.add_parser("gaps", parents=[common],
                         help="show the aggregated capability gaps (deduplicated)")
     decisions_cli.add_parser(commands, common)
-    install = commands.add_parser("install-skill", help="install the Claude Code skill")
+    install = commands.add_parser("install-skill", help="install the Claude Code or Codex skill")
     install.add_argument("--json", action="store_true")
+    install.add_argument("--host", choices=HOSTS, default="claude_code",
+                         help="client to install for (default: claude_code)")
     install.add_argument("--target-dir", required=True, type=Path,
-                         help="a skills directory such as <project>/.claude/skills")
+                         help="claude_code: a skills directory such as <project>/.claude/skills; "
+                              "codex: the workspace root where sessions start")
     install.add_argument("--name", required=True)
+    install.add_argument("--repository-root", type=Path,
+                         help="repository the kernel scopes to (default: this checkout)")
+    install.add_argument("--workspace-id",
+                         help="workspace id in the scope (default: the repository folder name)")
     install.add_argument("--force", action="store_true")
     return parser
 
@@ -185,14 +196,24 @@ def _run_with_environment(args: argparse.Namespace, factory: EnvironmentFactory)
 
 
 def _install(args: argparse.Namespace) -> Result:
-    """Install the skill and report where it went."""
+    """Install the skill for the chosen host and report every file written."""
+    scope: dict[str, Any] = {"workspace_id": args.workspace_id}
+    if args.repository_root is not None:
+        root = args.repository_root.resolve()
+        if not root.is_dir():
+            return _rejected("repository_root_missing", f"not a directory: {root}")
+        scope["repository_root"] = root
     try:
-        path = install_skill(args.target_dir, args.name, force=args.force)
+        if args.host == "codex":
+            files = install_codex_skill(args.target_dir, args.name, force=args.force, **scope)
+        else:
+            files = [install_skill(args.target_dir, args.name, force=args.force, **scope)]
     except InstallRefused as exc:
         return _rejected(exc.code, exc.message)
     except OSError as exc:
         return _internal("install_failed", f"{type(exc).__name__}: {exc.strerror or exc}")
-    return CLI_EXIT_CODES["ok"], {"installed": str(path), "name": args.name}
+    return CLI_EXIT_CODES["ok"], {"installed": str(files[0]), "name": args.name,
+                                  "host": args.host, "files": [str(path) for path in files]}
 
 
 def main(argv: list[str] | None = None, *, environment: EnvironmentFactory = build_environment
@@ -227,6 +248,10 @@ def main(argv: list[str] | None = None, *, environment: EnvironmentFactory = bui
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-02 [python-coder]: `install-skill --host codex|claude_code` with
+#   `--repository-root` / `--workspace-id`; the scope is validated here (a missing directory is
+#   exit 3) because the installers accept any path so tests can use fake roots.
+#   (#KernelCodexSkill)
 # - 2026-10-01 [python-coder]: `decisions validate|index|publish` is registered here and run
 #   without an environment (no Jev key needed); publication is explicit, never part of a run.
 #   (#KernelDecisionStore)

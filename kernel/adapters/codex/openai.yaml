@@ -1,0 +1,7 @@
+# <!-- leafcutter-kernel-skill -->
+# Installed by `python -m kernel install-skill --host codex`; edit the template, not this copy.
+interface:
+  display_name: "Leafcutter"
+  short_description: "Run the Leafcutter decision kernel for a goal"
+policy:
+  allow_implicit_invocation: false
