@@ -159,7 +159,14 @@ jobs:
       - name: Check component vocabulary (PR — changed files only)
         if: github.event_name == 'pull_request'
         run: |
-          git fetch --no-tags --depth=1 origin "${{ github.base_ref }}"
+          # No --depth on this fetch, on purpose (same as changelog-presence).
+          # The checkout above has full history; --depth=1 would make the clone
+          # shallow again at the base branch's tip. Once the base has moved past
+          # this PR's merge base, the script's `git diff base...HEAD` then fails
+          # with "no merge base", and the script silently falls back to a
+          # full-tree scan, so pre-existing drift can fail a clean PR.
+          # Fixed 2026-10-02, together with the typecheck job (PR #985 failure).
+          git fetch --no-tags origin "${{ github.base_ref }}"
           python scripts/check_component_vocab.py --changed "origin/${{ github.base_ref }}"
 
       - name: Check component vocabulary (push — full tree)
@@ -631,7 +638,13 @@ jobs:
         # On push events github.base_ref is empty and this becomes a no-op.
         if: github.event_name == 'pull_request'
         run: |
-          git fetch --no-tags --depth=1 origin "${{ github.base_ref }}"
+          # No --depth on this fetch, on purpose (same as changelog-presence).
+          # The checkout above has full history; --depth=1 would make the clone
+          # shallow again at the base branch's tip. Once the base has moved past
+          # this PR's merge base, the three-dot diff below then fails with
+          # "fatal: origin/main...HEAD: no merge base" (exit 128) and mypy never
+          # runs. Seen on PR #985 (run 37006254096); fixed 2026-10-02.
+          git fetch --no-tags origin "${{ github.base_ref }}"
           # KI-BP-20260831-0620: git pathspec '**/*.py' does NOT match files directly
           # inside the named directory (e.g. scripts/build.py) -- only files at least
           # one level deeper. The 'dir/*.py' forms alongside the existing 'dir/**/*.py'
