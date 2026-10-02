@@ -1,0 +1,67 @@
+id: DK-200d-2-i
+title: "An empty case selection cannot be reported as a passing evaluation"
+component: decision-kernel
+components: [decision_kernel]
+level: L3
+status: active
+readiness: draft
+req_status: draft
+priority: high
+work_status: done
+criteria: |
+  Given the selected evaluation cases contain no cases,
+  When the isolated evaluation is invoked,
+  Then it reports that no cases were evaluated,
+  And the overall evaluation outcome is unsuccessful.
+depends_on: [DK-200d-2]
+covered_by:
+  - "tests/kernel/enrichment/test_context_enrichment.py::TestEvaluationFalsifiability::test_empty_case_selection_fails_instead_of_reporting_green"
+implemented_by:
+  - "tests/kernel/enrichment/eval_runner.py"
+assigned_agent: test-writer
+estimated_complexity: S
+it_requirements:
+  - "An empty selected corpus must fail explicitly rather than produce a vacuous all-passed aggregate."
+  - "The failure must identify that no evaluation cases were selected."
+delivers_to: null
+expects_from:
+  ac_id: DK-200d-1
+  contract: "Evaluation report: {step:string, rows:{id:string, category:string, status:string, evidence_count:integer, files_scanned:integer, sources:string[], failures:string[], passed:boolean}[], total:integer, passed:integer, jev_calls:integer}. A successful isolated report has total>0, passed=total and jev_calls=0. Fixture source: tests/kernel/fixtures/eval/context_enrichment.json; executable entry: python -m tests.kernel.enrichment.eval_runner."
+test_required: true
+test_spec:
+  - name: test_empty_case_selection_fails_instead_of_reporting_green
+    target_dir: tests/kernel/enrichment/
+    framework: pytest
+    type: unit
+    angle: failure
+    description: "An empty case selection raises the evaluator's explicit failure instead of returning a passing zero-case report."
+test_rationale: "Zero selected cases is a separate failure mode from a case with a failed expectation and requires its own negative control."
+doc_links:
+  - path: docs/product-truth/flows/leafcutter/decision-forming.flow.json
+    relationship: implements
+    status: exists
+  - path: docs/architecture/components/decision-kernel.md
+    relationship: describes
+    status: exists
+  - path: docs/how-to/run-the-decision-kernel.md
+    relationship: context
+    status: exists
+origin_agent: business-analyst
+created: 2026-10-02
+amended_by:
+  - reason: "IT PO technical enrichment and verified test mapping on 2026-10-02; BA criteria and draft readiness preserved."
+superseded_by: null
+notes: |
+  Decomposed from the user-authorized context-enrichment scope and existing
+  DK-100 through DK-104. IT PO technical constraints and exact behavioral test
+  links are recorded. Readiness remains draft; no product approval is implied.
+product_truth:
+  - flow: leafcutter/decision-forming
+    node: enrich-context
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: leafcutter/decisions
+    entities: []
+    source: real
+    asof: '2026-10-02'

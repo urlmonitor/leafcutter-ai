@@ -366,6 +366,7 @@ def _packet(state: KernelState, invocation_id: str, shares: dict[str, int]) -> d
     return {"invocation": invocation,
             "descriptor": state["registry"].get(invocation.capability_id),
             "evidence": dict(state.get("evidence", {})), "scope": state["task"].scope,
+            "context_enrichment": state.get("context_enrichment"),
             "constraints": constraint_texts(state), "shares": dict(shares)}
 
 

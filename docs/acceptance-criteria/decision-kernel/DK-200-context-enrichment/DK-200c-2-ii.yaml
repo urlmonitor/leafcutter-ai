@@ -1,0 +1,76 @@
+id: DK-200c-2-ii
+title: "Missing user preferences remain unresolved after factual enrichment"
+component: decision-kernel
+components: [decision_kernel]
+level: L3
+status: active
+readiness: draft
+req_status: draft
+priority: high
+work_status: done
+criteria: |
+  Given a request asks which deployment approach the user prefers,
+  And repository sources describe available approaches but contain no preference supplied by that user,
+  When enrichment provides the available facts,
+  Then the user's preference remains unknown,
+  And later intent handling may ask for that preference after consuming the available context.
+depends_on: [DK-200c-2]
+covered_by:
+  - "tests/kernel/enrichment/test_context_enrichment.py::TestContextEnrichmentEvaluation::test_each_labelled_case_meets_the_context_contract"
+  - "tests/kernel/intent/test_context_enrichment_wiring.py::TestContextEnrichmentWiring::test_host_artifact_and_host_resume_retain_the_saved_context"
+implemented_by:
+  - "kernel/context_enrichment.py"
+  - "kernel/enrichment_projection.py"
+  - "kernel/intent/classify.py"
+  - "kernel/intent/questions.py"
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "Factual enrichment must not synthesize a user's personal preference from repository content or from capability registration."
+  - "Trust limits supplied to intent and handoffs must leave preference and authority questions available for later human handling."
+delivers_to: null
+expects_from: null
+test_required: true
+test_spec:
+  - name: test_each_labelled_case_meets_the_context_contract
+    target_dir: tests/kernel/enrichment/
+    framework: pytest
+    type: behavioral
+    angle: real_artifact
+    description: "The missing-personal-preference fixture gathers available facts without introducing a preference or altering the supplied claims."
+  - name: test_host_artifact_and_host_resume_retain_the_saved_context
+    target_dir: tests/kernel/intent/
+    framework: pytest
+    type: integration
+    angle: seam
+    description: "The host artifact preserves the prohibition on inferring preferences, and the valid host continuation can still reach a human question."
+test_rationale: "The criterion permits later clarification rather than requiring a particular preference question; linked tests prove unknowns are preserved, not that a model's inferred preference is correct."
+doc_links:
+  - path: docs/product-truth/flows/leafcutter/decision-forming.flow.json
+    relationship: implements
+    status: exists
+  - path: docs/architecture/components/decision-kernel.md
+    relationship: describes
+    status: exists
+  - path: docs/how-to/run-the-decision-kernel.md
+    relationship: context
+    status: exists
+origin_agent: business-analyst
+created: 2026-10-02
+amended_by:
+  - reason: "IT PO technical enrichment and verified test mapping on 2026-10-02; BA criteria and draft readiness preserved."
+superseded_by: null
+notes: |
+  Decomposed from the user-authorized context-enrichment scope and existing
+  DK-100 through DK-104. IT PO technical constraints and exact behavioral test
+  links are recorded. Readiness remains draft; no product approval is implied.
+product_truth:
+  - flow: leafcutter/decision-forming
+    node: enrich-context
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: leafcutter/decisions
+    entities: []
+    source: real
+    asof: '2026-10-02'

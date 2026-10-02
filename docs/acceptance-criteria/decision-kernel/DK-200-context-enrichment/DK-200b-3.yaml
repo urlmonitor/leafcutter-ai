@@ -1,0 +1,66 @@
+id: DK-200b-3
+title: "Known secrets are removed from retained caller context and excerpts"
+component: decision-kernel
+components: [decision_kernel]
+level: L2
+status: active
+readiness: draft
+req_status: draft
+priority: high
+work_status: done
+criteria: |
+  Given the same known secret occurs in caller-supplied observations and a permitted matching document,
+  When initial context is prepared for use,
+  Then neither retained caller text nor retained excerpts expose the secret,
+  And the redacted text remains distinguishable from a claim that the secret was absent at source.
+depends_on: [DK-200b]
+covered_by:
+  - "DK-200b-3-i"
+  - "tests/kernel/enrichment/test_context_enrichment.py::TestContextEnrichmentBoundaries::test_known_secrets_are_redacted_in_caller_context_and_excerpts"
+implemented_by:
+  - "kernel/context_enrichment.py"
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "Known secrets must be redacted from both caller context and repository excerpts before those values are retained or transmitted."
+  - "Redaction must not mutate the task input and must leave excerpt hashes consistent with the retained redacted text."
+delivers_to: null
+expects_from: null
+test_required: true
+test_spec:
+  - name: test_known_secrets_are_redacted_in_caller_context_and_excerpts
+    target_dir: tests/kernel/enrichment/
+    framework: pytest
+    type: unit
+    angle: criterion
+    description: "The supplied secret is absent from retained caller text and excerpts, a REDACTED marker is present, input remains unchanged and hashes match retained text."
+test_rationale: "Using the same known secret on both input surfaces verifies content handling rather than relying only on filename denial."
+doc_links:
+  - path: docs/product-truth/flows/leafcutter/decision-forming.flow.json
+    relationship: implements
+    status: exists
+  - path: docs/architecture/components/decision-kernel.md
+    relationship: describes
+    status: exists
+  - path: docs/how-to/run-the-decision-kernel.md
+    relationship: context
+    status: exists
+origin_agent: business-analyst
+created: 2026-10-02
+amended_by:
+  - reason: "IT PO technical enrichment and verified test mapping on 2026-10-02; BA criteria and draft readiness preserved."
+superseded_by: null
+notes: |
+  Decomposed from the user-authorized context-enrichment scope and existing
+  DK-100 through DK-104. IT PO technical constraints and exact behavioral test
+  links are recorded. Readiness remains draft; no product approval is implied.
+product_truth:
+  - flow: leafcutter/decision-forming
+    node: enrich-context
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: leafcutter/decisions
+    entities: []
+    source: real
+    asof: '2026-10-02'
