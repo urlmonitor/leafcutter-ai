@@ -21,7 +21,7 @@ agents:
   test-writer: signed_off
   python-coder: signed_off
   pr-reviewer: signed_off
-  commit: failed
+  commit: signed_off
   pull-request: needed
 ---
 
@@ -122,3 +122,11 @@ Third attempt failed identically: check-output-drift exits 2 with gaps=2 (.claud
 ### 2026-10-02 18:00 — commit (status: blocker)
 feedback-id: (submit-failed)
 Fourth attempt failed identically: check-output-drift exits 2 (gaps=2: .claude/commands/leafcutter.md, .gemini/workflows/leafcutter.md "run build.py to register it"; drifted=0 missing=0). Probe passes; HEAD unchanged (fb022dbe). Unrelated to the kernel change; not fixable by precommit-autofix. --no-verify not used. Remedy: run build.py in the worktree or fix hook GAP handling, then re-run commit.
+
+### 2026-10-02 19:00 — commit (status: ok)
+feedback-id: (submit-failed)
+Commit 87228a8e created: "fix(kernel): research or ranked question before blind unidentified_gap escalation" (4 files). The earlier check-output-drift failure did not recur; hooks passed. No --no-verify used. Unrelated drift in docs/agents/cards/* left unstaged.
+completion_manifest:
+  pre_commit_hooks_pass: true
+  commit_message_valid: true
+  ticket_staged: true
