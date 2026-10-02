@@ -127,6 +127,10 @@ components:
       - "templates/agents/find-structural-smells.md"
       - "templates/agents/find-design-smells.md"
       - "templates/commands/code-smell-review.md"
+  - id: decision-kernel
+    prefix: DK
+    description: "ACs for the decision kernel"
+    owner: null
 
 # Composite Pattern AC Example (AC ACS-500e-1)
 #

@@ -1,0 +1,120 @@
+id: DK-100b-4
+title: "How-to: answer the approval and ranked-choice questions"
+component: decision-kernel
+components:
+  - decision_kernel
+level: L2
+status: active
+req_status: draft
+work_status: in_progress
+readiness: reviewed
+priority: medium
+roadmap_phase: phase_kernel_1_founding
+criteria: |
+  Given a person running a decision through Claude Code,
+  When they read the how-to for the two questions a decision asks them,
+  Then it shows how to approve all proposals, approve a subset, reword a criterion and add an
+    option at the approval question,
+  And it shows how to choose an option, add an option, or answer in their own words at the
+    ranked-choice question, and that adding an option leads to a new ranking,
+  And it states that the ranking is advice, that the decision waits for their choice, and that
+    leaving or cancelling the run keeps no record,
+  And every answer it shows is accepted by the kernel when given exactly as written.
+depends_on:
+  - DK-100b
+  - DK-100b-1
+  - DK-100b-2
+  - DK-100b-3
+doc_links:
+  - path: docs/how-to/run-the-decision-kernel.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      Existing how-to that already documents the ranked question's answer forms; the natural
+      home or neighbour for this how-to.
+  - path: docs/product-truth/flows/leafcutter/decision-forming.flow.json
+    relationship: describes
+    status: exists
+    relevance: >-
+      Steps approve-proposals and choose, branches revise-proposals, rerank and no-answer.
+  - path: docs/analysis/2026-09-30-decision-kernel-design-5-client-observability.md
+    relationship: describes
+    status: exists
+    relevance: RunService, CLI exit codes, the /leafcutter skill.
+  - path: docs/architecture/adrs/ADR-053-intelligence-selection-deterministic-jev-llm-human.md
+    relationship: describes
+    status: exists
+    relevance: 'Which mechanism answers each check: code, Jev, an LLM host or a human.'
+assigned_agent: documentation-expert
+estimated_complexity: M
+it_requirements:
+  - Documentation states only behaviour that a test proves on main; where the code and an existing
+    doc disagree, the doc is corrected, never the other way round.
+  - Every answer example is a literal leafcutter.human_answer.v1 payload the kernel accepts as written
+    (schema plus the decision's semantic checks), verified by a test rather than written from memory.
+  - 'A words answer at the ranked question is re-assessed with the words as constraints and ranked
+    again (shown by an IT PO probe, not yet by a repository test): state it only once DK-100b-2-ii''s
+    test passes, and correct the ''recorded only'' sentence in run-the-decision-kernel.md at the same
+    time.'
+  - State that edited_criteria replaces the whole proposed criteria set (unlisted pending criteria
+    are declined) and that approved_criterion_ids is ignored when edited_criteria is present.
+  - How-to genre (Diataxis); link to run-the-decision-kernel.md for reference detail rather than copying
+    it.
+test_spec:
+  - name: test_every_answer_example_in_the_howto_is_accepted_as_written
+    target_dir: tests/kernel/interaction/
+    framework: unittest
+    type: unit
+    angle: real_artifact
+    description: 'TO WRITE (in tests/kernel/interaction/test_submissions.py): each JSON answer example
+      in the how-to validates as leafcutter.human_answer.v1 and is accepted at the question it is
+      shown for'
+    covers:
+      - DK-100b-4
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst
+created: 2026-10-02
+created_by_ticket: tickets/00_inbox/TICKET-20261002-DecisionLifecycleACs.md
+amended_by:
+  - reason: it-po-technical-enrichment
+    by: it-po
+    date: '2026-10-02'
+    ticket: tickets/00_inbox/TICKET-20261002-DecisionLifecycleACs.md
+    build_status: docs_partly_exist
+    implementation_pointers: []
+    test_pointers: []
+    gaps:
+      - docs/how-to/run-the-decision-kernel.md covers the approve-or-edit fields and the ranked question
+        in reference style (Steps 2 and 5) but has no task-oriented how-to for the two questions,
+        says 'recorded only' for words, and does not explain that edited_criteria replaces the whole
+        set.
+    pointer_note: Unverified candidates for implemented_by / covered_by, read from the worktree at
+      e89f0f74 (kernel/ and tests/kernel/ identical to origin/main). The evidence phase verifies each
+      and adds the `# covers:` tags before anything is marked done.
+    complexity_basis: a new how-to (or how-to section) plus verified answer examples
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: docs
+risk_surface: internal
+notes: |
+  FLOW BACK-LINKS: none. This is a documentation AC; it implements no flow step
+  and belongs in no flow node's implements list, so a step's built status never
+  waits on documentation.
+
+  Produced because DK-100b declares documentation_triggers: [how-to, state-diagram].
+  This is the how-to half. The how-to must not promise a re-rank for a words answer
+  until DK-100b-2-ii is built; the criteria name only the added-option re-rank for
+  that reason.
+
+  IT-PO BUILD STATUS (2026-10-02): partly exists inside run-the-decision-kernel.md; the
+  how-to itself is not written. One test_spec entry makes 'every answer it shows is
+  accepted' checkable.
+
+  TRUE STATUS (2026-10-02): work_status in_progress; the it-po verified build status is
+    docs_partly_exist.
+    - docs/how-to/run-the-decision-kernel.md covers the approve-or-edit fields and the
+      ranked question in reference style (Steps 2 and 5) but has no task-oriented how-to for
+      the two questions, says 'recorded only' for words, and does not explain that
+      edited_criteria replaces the whole set.

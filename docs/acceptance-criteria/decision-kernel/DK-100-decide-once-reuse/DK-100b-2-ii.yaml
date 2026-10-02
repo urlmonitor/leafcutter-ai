@@ -1,0 +1,168 @@
+id: DK-100b-2-ii
+title: "Answering the ranked choice in your own words leads to a new ranking before you choose"
+component: decision-kernel
+components:
+  - decision_kernel
+level: L3
+status: active
+req_status: draft
+work_status: in_progress
+readiness: reviewed
+priority: medium
+roadmap_phase: phase_kernel_1_founding
+criteria: |
+  Given the ranked-choice question showing 3 ranked options,
+  When you answer in your own words instead of picking an option, for example "pick the first one,
+    but only if it keeps the record diffs reviewable",
+  Then the options are assessed and ranked again before you are asked to choose,
+  And the decision does not resolve on your words alone.
+depends_on:
+  - DK-100b-2
+doc_links:
+  - path: docs/product-truth/flows/leafcutter/decision-forming.flow.json
+    relationship: implemented-by-step
+    status: exists
+    relevance: >-
+      Derived from leafcutter/decision-forming branch rerank (from choose), free-text case.
+      Add this AC id to each named node's implements list.
+  - path: docs/how-to/run-the-decision-kernel.md
+    relationship: describes
+    status: exists
+  - path: tickets/00_inbox/TICKET-20261002-KernelInterpretFreeText.md
+    relationship: related
+    status: exists
+    relevance: >-
+      Not built (todo on 2026-10-02). Describes words at the ranked question as 'only
+      recorded' today; it is the change that would make this branch real.
+  - path: docs/architecture/components/decision-kernel.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-053-intelligence-selection-deterministic-jev-llm-human.md
+    relationship: describes
+    status: exists
+    relevance: 'Which mechanism answers each check: code, Jev, an LLM host or a human.'
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - 'Only a human answer may approve, choose or reuse (ADR-053, ADR-060): no path may let Jev, a host
+    or the kernel resolve or approve on a person''s behalf.'
+  - A words answer at the ranked question never resolves the decision and is never parsed into a choice,
+    a condition or a criterion (interpretation is TICKET-20261002-KernelInterpretFreeText).
+  - Done is decided by a test through the decision graph, not by reading the code.
+  - 'No kernel code change is in scope of TICKET-20261002-DecisionLifecycleACs: a behaviour gap that
+    needs kernel code is closed through its own ticket. Adding covers tags or a missing test does
+    not change kernel code.'
+  - 'Done-marking evidence (KI-ACS-004, done_proof): implemented_by names an existing kernel/... file
+    plus symbol, and every covering test under tests/kernel/ carries a `# covers: <this AC id>` tag
+    and passes under pytest. No kernel test carries a DK covers tag yet, so tagging comes before any
+    done-marking.'
+test_spec:
+  - name: test_a_words_answer_at_the_ranked_question_is_reassessed_and_ranked_again
+    target_dir: tests/kernel/capabilities/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: 'TO WRITE (in tests/kernel/capabilities/test_design_ending.py): a free_text answer
+      to the ranked question leads to a new decision.assess call with the words among Jev''s constraints
+      and a new ranked question (phase awaiting_design_choice)'
+    covers:
+      - DK-100b-2-ii
+  - name: test_a_words_answer_never_resolves_the_decision
+    target_dir: tests/kernel/capabilities/
+    framework: unittest
+    type: unit
+    angle: failure
+    description: 'TO WRITE (in tests/kernel/capabilities/test_design_ending.py): ''pick the first
+      one, but only if ...'' leaves the decision unresolved and stages nothing'
+    covers:
+      - DK-100b-2-ii
+test_rationale: The behaviour is a property of the whole decision graph (revision change, re-assessment,
+  new follow-up key), so the test drives the graph like TestHumanChoiceResolves does; a unit test
+  of approvals.py alone would only show the text is stored.
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst
+created: 2026-10-02
+created_by_ticket: tickets/00_inbox/TICKET-20261002-DecisionLifecycleACs.md
+amended_by:
+  - reason: it-po-technical-enrichment
+    by: it-po
+    date: '2026-10-02'
+    ticket: tickets/00_inbox/TICKET-20261002-DecisionLifecycleACs.md
+    build_status: built_not_tested
+    implementation_pointers:
+      - kernel/capabilities/decision/approvals.py#_apply_design_choice
+      - kernel/capabilities/decision/state.py#Working.revision
+      - kernel/capabilities/decision/assess.py#_state
+    test_pointers: []
+    gaps:
+      - 'NOT TESTED in the repository. A throwaway probe (IT PO scratchpad, not committed; DesignCase
+        rig, scripted Jev) answered the ranked question with the criteria''s example words: result
+        waiting, a second decision.assess Jev call (1 -> 2) whose constraints held the words, phase
+        awaiting_design_choice with a new ranked question, decision needs_human, nothing selected.
+        So the behaviour exists: the words join cont.human_inputs, change the revision and are quoted
+        to Jev as constraints, as approvals.py says (''added options or free text send it back to
+        be ranked again'', #KernelV01/A).'
+      - docs/how-to/run-the-decision-kernel.md says a words answer is 'recorded only'; that is inaccurate
+        (the words are recorded AND trigger a re-assessment as constraints) and needs correcting once
+        the test lands.
+      - 'The words are never interpreted: no choice or condition is applied (TICKET-20261002-KernelInterpretFreeText).'
+    pointer_note: Unverified candidates for implemented_by / covered_by, read from the worktree at
+      e89f0f74 (kernel/ and tests/kernel/ identical to origin/main). The evidence phase verifies each
+      and adds the `# covers:` tags before anything is marked done.
+    complexity_basis: 'remaining work: one graph-level test; a kernel change only if the test fails'
+superseded_by: null
+covered_by: []
+implemented_by:
+  - kernel/capabilities/decision/approvals.py#_apply_design_choice
+  - kernel/capabilities/decision/state.py#Working.revision
+  - kernel/capabilities/decision/assess.py#_state
+change_target: code
+risk_surface: internal
+notes: |
+  FLOW BACK-LINKS (add this AC id to each node's implements list):
+    leafcutter/decision-forming    branch  rerank
+
+  DERIVATION. Branch rerank, condition "you ... answer in your own words instead
+  of choosing".
+
+  CONTRADICTION TO RESOLVE (not resolved here). docs/how-to/run-the-decision-kernel.md
+  says a words answer at the ranked question is "recorded only", and
+  TICKET-20261002-KernelInterpretFreeText (todo) describes the same. The flow says
+  it leads to a re-rank. This AC follows the flow, as instructed. Expect the
+  evidence phase to find it not built until the free-text interpretation lands.
+
+  IT-PO BUILD STATUS (2026-10-02): built, NOT TESTED. Contrary to the expectation above,
+  a throwaway probe (not committed) showed the re-rank happens: the words join
+  cont.human_inputs, change the revision, reach Jev as constraints in a new assessment,
+  and a new ranked question is asked; nothing resolves. The words are not interpreted.
+  Write the two tests in test_spec before marking done, then correct 'recorded only' in
+  run-the-decision-kernel.md.
+
+  TRUE STATUS (2026-10-02): work_status in_progress; the it-po verified build status is
+    built_not_tested.
+    - NOT TESTED in the repository. A throwaway probe (IT PO scratchpad, not committed;
+      DesignCase rig, scripted Jev) answered the ranked question with the criteria's example
+      words: result waiting, a second decision.assess Jev call (1 -> 2) whose constraints
+      held the words, phase awaiting_design_choice with a new ranked question, decision
+      needs_human, nothing selected. So the behaviour exists: the words join
+      cont.human_inputs, change the revision and are quoted to Jev as constraints, as
+      approvals.py says ('added options or free text send it back to be ranked again',
+      #KernelV01/A).
+    - docs/how-to/run-the-decision-kernel.md says a words answer is 'recorded only'; that is
+      inaccurate (the words are recorded AND trigger a re-assessment as constraints) and
+      needs correcting once the test lands.
+    - The words are never interpreted: no choice or condition is applied
+      (TICKET-20261002-KernelInterpretFreeText).
+  Missing tests are listed in TICKET-20261002-DecisionKernelACTestGaps; once they pass, mark
+    done through scripts/ac_store/mark_ac_done.py.
+product_truth:
+  - flow: leafcutter/decision-forming
+    node: rerank
+    node_kind: branch
+    flow_kind: data
+    screen: null
+    mock_data: leafcutter/decisions
+    entities: []
+    source: real
+    asof: '2026-10-02'

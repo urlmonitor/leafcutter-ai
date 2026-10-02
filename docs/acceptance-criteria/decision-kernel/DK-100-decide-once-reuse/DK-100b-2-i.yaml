@@ -1,0 +1,145 @@
+id: DK-100b-2-i
+title: "An option you add at the ranked choice is assessed and ranked before you are asked again"
+component: decision-kernel
+components:
+  - decision_kernel
+level: L3
+status: active
+req_status: draft
+work_status: done
+readiness: reviewed
+priority: medium
+roadmap_phase: phase_kernel_1_founding
+criteria: |
+  Given the ranked-choice question showing 3 ranked options,
+  When you add an option of your own instead of choosing,
+  Then all 4 options, yours included, are assessed and ranked again,
+  And you are asked to choose again from the new ranking,
+  And the decision does not resolve on the earlier ranking.
+depends_on:
+  - DK-100b-2
+doc_links:
+  - path: docs/product-truth/flows/leafcutter/decision-forming.flow.json
+    relationship: implemented-by-step
+    status: exists
+    relevance: >-
+      Derived from leafcutter/decision-forming branch rerank (from choose), added-option case.
+      Add this AC id to each named node's implements list.
+  - path: docs/how-to/run-the-decision-kernel.md
+    relationship: describes
+    status: exists
+  - path: docs/product-truth/mock-data/leafcutter/decisions.mock.json
+    relationship: related
+    status: exists
+    relevance: >-
+      Source of the concrete ids and values in the criteria (dec-... records, options,
+      criteria, applicability scores, run ids).
+  - path: docs/architecture/components/decision-kernel.md
+    relationship: describes
+    status: exists
+  - path: docs/analysis/2026-09-30-decision-kernel-design-4-jev-and-capabilities.md
+    relationship: describes
+    status: exists
+    relevance: Decision, research and retrieval capabilities, host operations, human interaction;
+      'As built' sections.
+assigned_agent: python-coder
+estimated_complexity: XS
+it_requirements:
+  - 'Only a human answer may approve, choose or reuse (ADR-053, ADR-060): no path may let Jev, a host
+    or the kernel resolve or approve on a person''s behalf.'
+  - An option a human adds is researched for its claims before it is assessed, within the research
+    caps in configuration, and is ranked with the others.
+  - 'Done-marking evidence (KI-ACS-004, done_proof): implemented_by names an existing kernel/... file
+    plus symbol, and every covering test under tests/kernel/ carries a `# covers: <this AC id>` tag
+    and passes under pytest. No kernel test carries a DK covers tag yet, so tagging comes before any
+    done-marking.'
+test_spec:
+  - name: test_an_added_option_is_ranked_again
+    target_dir: tests/kernel/capabilities/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: 'EXISTS (tests/kernel/capabilities/test_design_ending.py::TestHumanChoiceResolves::test_an_added_option_is_ranked_again):
+      after an added option the decision researches its claims, re-assesses and asks again with 4
+      choices'
+    covers:
+      - DK-100b-2-i
+  - name: test_a_human_added_option_has_its_claims_researched
+    target_dir: tests/kernel/grounding/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: 'EXISTS (tests/kernel/grounding/test_research_targeting.py::TestTargetedNeeds::test_a_human_added_option_has_its_claims_researched):
+      the added option''s claims become a research need'
+    covers:
+      - DK-100b-2-i
+  - name: test_the_ranked_packet_cites_the_evidence_the_claims_were_researched_against
+    target_dir: tests/kernel/memory/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: 'EXISTS (tests/kernel/memory/test_round8_defects.py::TestA_AHumanAddedOptionCitesItsClaimEvidence::test_the_ranked_packet_cites_the_evidence_the_claims_were_researched_against):
+      the new ranking cites the added option''s evidence'
+    covers:
+      - DK-100b-2-i
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst
+created: 2026-10-02
+created_by_ticket: tickets/00_inbox/TICKET-20261002-DecisionLifecycleACs.md
+amended_by:
+  - reason: it-po-technical-enrichment
+    by: it-po
+    date: '2026-10-02'
+    ticket: tickets/00_inbox/TICKET-20261002-DecisionLifecycleACs.md
+    build_status: built_and_tested
+    implementation_pointers:
+      - kernel/capabilities/decision/approvals.py#_apply_design_choice
+      - kernel/capabilities/decision/approvals.py#_added_options
+      - kernel/capabilities/research/targeting.py#targeted
+      - kernel/capabilities/decision/loading.py#_link_claim_evidence
+    test_pointers:
+      - tests/kernel/capabilities/test_design_ending.py::TestHumanChoiceResolves::test_an_added_option_is_ranked_again
+      - tests/kernel/grounding/test_research_targeting.py::TestTargetedNeeds::test_a_human_added_option_has_its_claims_researched
+      - tests/kernel/memory/test_round8_defects.py::TestA_AHumanAddedOptionCitesItsClaimEvidence::test_the_ranked_packet_cites_the_evidence_the_claims_were_researched_against
+    gaps:
+      - 'Note: an added option first triggers a claims research round, then the re-assessment; the
+        criteria do not mention the research round.'
+    pointer_note: Unverified candidates for implemented_by / covered_by, read from the worktree at
+      e89f0f74 (kernel/ and tests/kernel/ identical to origin/main). The evidence phase verifies each
+      and adds the `# covers:` tags before anything is marked done.
+    complexity_basis: remaining work only (evidence, covers tags, gap closure)
+superseded_by: null
+covered_by:
+  - tests/kernel/capabilities/test_design_ending.py::TestHumanChoiceResolves::test_an_added_option_is_ranked_again
+  - tests/kernel/grounding/test_research_targeting.py::TestTargetedNeeds::test_a_human_added_option_has_its_claims_researched
+  - tests/kernel/memory/test_round8_defects.py::TestA_AHumanAddedOptionCitesItsClaimEvidence::test_the_ranked_packet_cites_the_evidence_the_claims_were_researched_against
+implemented_by:
+  - kernel/capabilities/decision/approvals.py#_apply_design_choice
+  - kernel/capabilities/decision/approvals.py#_added_options
+  - kernel/capabilities/research/targeting.py#targeted
+  - kernel/capabilities/decision/loading.py#_link_claim_evidence
+change_target: code
+risk_surface: internal
+notes: |
+  FLOW BACK-LINKS (add this AC id to each node's implements list):
+    leafcutter/decision-forming    branch  rerank
+
+  DERIVATION. Branch rerank, condition "you add an option". Real example:
+  dec-ef8ddcb79d668a67, where the human's added option opt.added.1 was ranked 2nd
+  and then chosen. The free-text case of the same branch is DK-100b-2-ii, split
+  so each can be judged built on its own evidence.
+
+  IT-PO BUILD STATUS (2026-10-02, unverified): built and tested. As built, an added
+  option is researched for its claims before the re-assessment and the new ranked
+  question.
+product_truth:
+  - flow: leafcutter/decision-forming
+    node: rerank
+    node_kind: branch
+    flow_kind: data
+    screen: null
+    mock_data: leafcutter/decisions
+    entities: []
+    source: real
+    asof: '2026-10-02'

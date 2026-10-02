@@ -29,18 +29,24 @@
       "label": "Ask the question",
       "human": "You ask Claude Code a question; it hands the goal to the kernel through the /leafcutter skill or python -m kernel run.",
       "order": 1,
+      "implements": [
+        "DK-100a-1"
+      ],
       "agent": "claude_code",
       "produces": [
         "goal"
       ],
       "impl_asof": "2026-10-02",
-      "impl_status": "not_started"
+      "impl_status": "done"
     },
     {
       "id": "classify",
       "label": "Classify the intent",
       "human": "The kernel asks Jev one question to tell whether the goal is a decision, a request for evidence, for ideas, for a change, or out of its domain.",
       "order": 2,
+      "implements": [
+        "DK-100a-1"
+      ],
       "agent": "kernel.intent",
       "consumes": [
         "goal"
@@ -49,13 +55,16 @@
         "intent: decision"
       ],
       "impl_asof": "2026-10-02",
-      "impl_status": "not_started"
+      "impl_status": "done"
     },
     {
       "id": "precedent",
       "label": "Check for precedent",
       "human": "Earlier published decisions that might apply are looked up and judged; how that works is shown in the precedent sub-flow.",
       "order": 3,
+      "implements": [
+        "DK-100e-1"
+      ],
       "agent": "kernel precedent step",
       "consumes": [
         "intent: decision"
@@ -70,13 +79,17 @@
         "leafcutter/decision-retrieval"
       ],
       "impl_asof": "2026-10-02",
-      "impl_status": "not_started"
+      "impl_status": "in_progress"
     },
     {
       "id": "ground",
       "label": "Ground it in the repository",
       "human": "The research capability retrieves repository evidence with exact, section-aware locators and Jev reranks it; a precedent alone never counts as grounding.",
       "order": 4,
+      "implements": [
+        "DK-100a-2-i",
+        "DK-100a-2"
+      ],
       "agent": "kernel research capability",
       "consumes": [
         "intent: decision"
@@ -85,13 +98,16 @@
         "grounding evidence"
       ],
       "impl_asof": "2026-10-02",
-      "impl_status": "not_started"
+      "impl_status": "done"
     },
     {
       "id": "synthesize",
       "label": "Synthesize the findings",
       "human": "Claude Code, as host, writes findings that cite only the retrieved evidence (synthesize_evidence).",
       "order": 5,
+      "implements": [
+        "DK-100a-3"
+      ],
       "agent": "claude_code",
       "consumes": [
         "grounding evidence",
@@ -101,13 +117,16 @@
         "findings"
       ],
       "impl_asof": "2026-10-02",
-      "impl_status": "not_started"
+      "impl_status": "in_progress"
     },
     {
       "id": "propose",
       "label": "Propose options and criteria",
       "human": "Claude Code, as host, proposes options and criteria (generate_options); options you named in your question are checked against your words and kept as yours.",
       "order": 6,
+      "implements": [
+        "DK-100a-3"
+      ],
       "agent": "claude_code",
       "consumes": [
         "goal",
@@ -117,13 +136,16 @@
         "proposed options and criteria"
       ],
       "impl_asof": "2026-10-02",
-      "impl_status": "not_started"
+      "impl_status": "in_progress"
     },
     {
       "id": "approve-proposals",
       "label": "Approve the proposals",
       "human": "Decision point: you see the proposed options and criteria and approve them, approve only some, edit the criteria, or add options. Nothing proposed is used until you approve it.",
       "order": 7,
+      "implements": [
+        "DK-100b-1"
+      ],
       "screen": "decision-approve-proposals",
       "agent": "human (asked through claude_code)",
       "consumes": [
@@ -133,13 +155,16 @@
         "approved options and criteria"
       ],
       "impl_asof": "2026-10-02",
-      "impl_status": "not_started"
+      "impl_status": "in_progress"
     },
     {
       "id": "research-options",
       "label": "Research the options' claims",
       "human": "A targeted research round checks the claims the approved options make and reads the files they cite.",
       "order": 8,
+      "implements": [
+        "DK-100a-4"
+      ],
       "agent": "kernel research capability",
       "consumes": [
         "approved options and criteria"
@@ -148,13 +173,16 @@
         "option evidence"
       ],
       "impl_asof": "2026-10-02",
-      "impl_status": "not_started"
+      "impl_status": "done"
     },
     {
       "id": "assess",
       "label": "Assess every option",
       "human": "Jev judges every option against every criterion (does it satisfy it, is the evidence sufficient) and marks each criterion as evidence-answerable or a design judgement.",
       "order": 9,
+      "implements": [
+        "DK-100a-4"
+      ],
       "agent": "jev",
       "consumes": [
         "approved options and criteria",
@@ -165,13 +193,16 @@
         "ranked options"
       ],
       "impl_asof": "2026-10-02",
-      "impl_status": "not_started"
+      "impl_status": "done"
     },
     {
       "id": "choose",
       "label": "Make the ranked choice",
       "human": "Decision point: you see the options ranked by Jev's per-criterion scores. The ranking is evidence, not a decision; you choose an option, add one, or answer in your own words.",
       "order": 10,
+      "implements": [
+        "DK-100b-2"
+      ],
       "screen": "decision-ranked-choice",
       "agent": "human (asked through claude_code)",
       "consumes": [
@@ -181,13 +212,16 @@
         "human choice"
       ],
       "impl_asof": "2026-10-02",
-      "impl_status": "not_started"
+      "impl_status": "in_progress"
     },
     {
       "id": "resolve",
       "label": "Resolve the decision",
       "human": "The decision resolves with approved_by: human:<id> and approved_at, and report.md is written to the run folder.",
       "order": 11,
+      "implements": [
+        "DK-100b-3"
+      ],
       "agent": "kernel decision executor",
       "consumes": [
         "human choice"
@@ -200,7 +234,7 @@
         "Decision"
       ],
       "impl_asof": "2026-10-02",
-      "impl_status": "not_started"
+      "impl_status": "done"
     }
   ],
   "branches": [
@@ -218,8 +252,12 @@
         "approved options and criteria"
       ],
       "outcome_kind": "alternative",
+      "implements": [
+        "DK-100b-1-i",
+        "DK-100b-1-ii"
+      ],
       "impl_asof": "2026-10-02",
-      "impl_status": "not_started"
+      "impl_status": "in_progress"
     },
     {
       "id": "budget-reserve",
@@ -235,8 +273,11 @@
         "ranked options (limited evidence)"
       ],
       "outcome_kind": "alternative",
+      "implements": [
+        "DK-100a-4-i"
+      ],
       "impl_asof": "2026-10-02",
-      "impl_status": "not_started"
+      "impl_status": "done"
     },
     {
       "id": "rerank",
@@ -252,8 +293,12 @@
         "approved options and criteria"
       ],
       "outcome_kind": "alternative",
+      "implements": [
+        "DK-100b-2-i",
+        "DK-100b-2-ii"
+      ],
       "impl_asof": "2026-10-02",
-      "impl_status": "not_started"
+      "impl_status": "in_progress"
     },
     {
       "id": "no-answer",
@@ -266,8 +311,11 @@
         "ranked options"
       ],
       "outcome_kind": "exit",
+      "implements": [
+        "DK-100b-2-iii"
+      ],
       "impl_asof": "2026-10-02",
-      "impl_status": "not_started"
+      "impl_status": "in_progress"
     }
   ],
   "acceptance_scenarios": [
@@ -371,9 +419,9 @@
     }
   ],
   "impl_summary": {
-    "done": 0,
-    "in_progress": 0,
-    "not_started": 15,
+    "done": 7,
+    "in_progress": 8,
+    "not_started": 0,
     "total": 15,
     "asof": "2026-10-02"
   }

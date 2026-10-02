@@ -1,0 +1,156 @@
+id: DK-100d-1-i
+title: "A record you keep staged is never found as precedent"
+component: decision-kernel
+components:
+  - decision_kernel
+level: L3
+status: active
+req_status: draft
+work_status: in_progress
+readiness: reviewed
+priority: medium
+roadmap_phase: phase_kernel_1_founding
+criteria: |
+  Given the staged record dec-7cdc61ea41a206e0 from run run-0fdfb09bbcd34231,
+  When you choose not to publish it,
+  Then it stays only at
+    <run_root>/runs/run-0fdfb09bbcd34231/staged/decisions/dec-7cdc61ea41a206e0.yaml,
+  And neither docs/decisions/ nor docs/decisions/index.json holds an entry for
+    dec-7cdc61ea41a206e0,
+  And a later decision run's precedent lookup never returns dec-7cdc61ea41a206e0.
+depends_on:
+  - DK-100d-1
+doc_links:
+  - path: docs/product-truth/flows/leafcutter/decision-publishing.flow.json
+    relationship: implemented-by-step
+    status: exists
+    relevance: >-
+      Derived from leafcutter/decision-publishing branch keep-staged (from decide-to-publish).
+      Add this AC id to each named node's implements list.
+  - path: docs/how-to/file-and-reuse-decisions-with-the-kernel.md
+    relationship: describes
+    status: exists
+  - path: docs/product-truth/mock-data/leafcutter/decisions.mock.json
+    relationship: related
+    status: exists
+    relevance: >-
+      Source of the concrete ids and values in the criteria (dec-... records, options,
+      criteria, applicability scores, run ids).
+  - path: docs/architecture/components/decision-kernel.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-059-decision-store-reviewable-yaml-records-now-graph-later.md
+    relationship: describes
+    status: exists
+    relevance: One YAML record per approved decision behind the ColonyMemory port; generated index;
+      precedent is evidence.
+  - path: docs/architecture/adrs/ADR-060-source-of-truth-and-approval-authority.md
+    relationship: describes
+    status: exists
+    relevance: Git canonical; only a human approval creates a record; read-only runs; precedent never
+      authority; append-only corrections.
+  - path: docs/analysis/2026-09-30-decision-kernel-design-4-jev-and-capabilities.md
+    relationship: describes
+    status: exists
+    relevance: Decision, research and retrieval capabilities, host operations, human interaction;
+      'As built' sections.
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - Precedent candidates come only from records listed in docs/decisions/index.json; staged files
+    under the run root are never indexed or read as precedent.
+  - 'Done-marking evidence (KI-ACS-004, done_proof): implemented_by names an existing kernel/... file
+    plus symbol, and every covering test under tests/kernel/ carries a `# covers: <this AC id>` tag
+    and passes under pytest. No kernel test carries a DK covers tag yet, so tagging comes before any
+    done-marking.'
+test_spec:
+  - name: test_a_missing_index_gives_no_precedent
+    target_dir: tests/kernel/memory/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: 'EXISTS (tests/kernel/memory/test_store.py::TestFind::test_a_missing_index_gives_no_precedent):
+      only the index yields candidates'
+    covers:
+      - DK-100d-1-i
+  - name: test_nothing_is_written_until_publish_runs
+    target_dir: tests/kernel/memory/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: 'EXISTS (tests/kernel/memory/test_publish_cli.py::TestPublish::test_nothing_is_written_until_publish_runs):
+      a staged record stays out of docs/decisions/'
+    covers:
+      - DK-100d-1-i
+  - name: test_a_record_kept_staged_is_never_found_as_precedent
+    target_dir: tests/kernel/memory/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: 'TO WRITE (in tests/kernel/memory/test_learning_loop_e2e.py): run 1 stages and does
+      not publish; run 2 with the same goal asks no reuse question and its evidence has no locator
+      under the run root'
+    covers:
+      - DK-100d-1-i
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst
+created: 2026-10-02
+created_by_ticket: tickets/00_inbox/TICKET-20261002-DecisionLifecycleACs.md
+amended_by:
+  - reason: it-po-technical-enrichment
+    by: it-po
+    date: '2026-10-02'
+    ticket: tickets/00_inbox/TICKET-20261002-DecisionLifecycleACs.md
+    build_status: built_partly_tested
+    implementation_pointers:
+      - kernel/memory/file_store.py#FileColonyMemory.find_decisions
+      - kernel/memory/file_store.py#staged_dir
+      - kernel/memory/index.py#read_index
+    test_pointers:
+      - tests/kernel/memory/test_store.py::TestFind::test_a_missing_index_gives_no_precedent
+      - tests/kernel/memory/test_publish_cli.py::TestPublish::test_nothing_is_written_until_publish_runs
+      - tests/kernel/memory/test_committed_store.py::TestCommittedStore::test_the_index_lists_every_record_file
+    gaps:
+      - 'No test stages a record, skips publish and shows a later run does not find it. The live example
+        holds: dec-7cdc61ea41a206e0 is not in docs/decisions/index.json (checked 2026-10-02).'
+    pointer_note: Unverified candidates for implemented_by / covered_by, read from the worktree at
+      e89f0f74 (kernel/ and tests/kernel/ identical to origin/main). The evidence phase verifies each
+      and adds the `# covers:` tags before anything is marked done.
+    complexity_basis: remaining work only (evidence, covers tags, gap closure)
+superseded_by: null
+covered_by: []
+implemented_by:
+  - kernel/memory/file_store.py#FileColonyMemory.find_decisions
+  - kernel/memory/file_store.py#staged_dir
+  - kernel/memory/index.py#read_index
+change_target: code
+risk_surface: internal
+notes: |
+  FLOW BACK-LINKS (add this AC id to each node's implements list):
+    leafcutter/decision-publishing branch  keep-staged
+
+  DERIVATION. Branch keep-staged (exit). dec-7cdc61ea41a206e0 is a real record that
+  was staged and never published. DK-100e-1 states the same rule from the
+  retrieval side (only indexed records are candidates).
+
+  IT-PO BUILD STATUS (2026-10-02, unverified): built (lookup reads only the index); the
+  end-to-end keep-staged test is missing.
+
+  TRUE STATUS (2026-10-02): work_status in_progress; the it-po verified build status is
+    built_partly_tested.
+    - No test stages a record, skips publish and shows a later run does not find it. The
+      live example holds: dec-7cdc61ea41a206e0 is not in docs/decisions/index.json (checked
+      2026-10-02).
+  Missing tests are listed in TICKET-20261002-DecisionKernelACTestGaps; once they pass, mark
+    done through scripts/ac_store/mark_ac_done.py.
+product_truth:
+  - flow: leafcutter/decision-publishing
+    node: keep-staged
+    node_kind: branch
+    flow_kind: data
+    screen: null
+    mock_data: leafcutter/decisions
+    entities: []
+    source: real
+    asof: '2026-10-02'

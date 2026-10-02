@@ -1,0 +1,95 @@
+id: DK-100d-5-i
+title: "How-to: publish a staged decision and correct an older one"
+component: decision-kernel
+components:
+  - decision_kernel
+level: L3
+status: active
+req_status: draft
+work_status: in_progress
+readiness: reviewed
+priority: medium
+roadmap_phase: phase_kernel_1_founding
+criteria: |
+  Given a run that staged a decision record,
+  When a person follows the how-to,
+  Then it shows the publish command with --run-id, what is checked before anything is written, the
+    two files a publish changes (the record and the index), and the commit and PR that follow,
+  And it shows how to correct an older record with --correct and a reason, and that the older
+    record is appended to, never rewritten,
+  And it gives the fix for each exit-code-3 stop: no staged record, and an unknown component or
+    roadmap phase,
+  And it states that a record left unpublished is never found as precedent.
+depends_on:
+  - DK-100d-5
+  - DK-100d-1
+  - DK-100d-2
+  - DK-100d-3
+doc_links:
+  - path: docs/how-to/file-and-reuse-decisions-with-the-kernel.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      Existing how-to that already covers most of this; it may only need checking and filling,
+      not rewriting.
+  - path: docs/architecture/adrs/ADR-060-source-of-truth-and-approval-authority.md
+    relationship: describes
+    status: exists
+    relevance: Git canonical; only a human approval creates a record; read-only runs; precedent never
+      authority; append-only corrections.
+  - path: docs/analysis/2026-09-30-decision-kernel-design-5-client-observability.md
+    relationship: describes
+    status: exists
+    relevance: RunService, CLI exit codes, the /leafcutter skill.
+assigned_agent: documentation-expert
+estimated_complexity: S
+it_requirements:
+  - Documentation states only behaviour that a test proves on main; where the code and an existing
+    doc disagree, the doc is corrected, never the other way round.
+  - Extend docs/how-to/file-and-reuse-decisions-with-the-kernel.md rather than writing a second publishing
+    how-to.
+  - Commands and messages are copied from the code (kernel/memory/cli.py, publish.py), including the
+    exact exit-3 messages.
+test_required: false
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst
+created: 2026-10-02
+created_by_ticket: tickets/00_inbox/TICKET-20261002-DecisionLifecycleACs.md
+amended_by:
+  - reason: it-po-technical-enrichment
+    by: it-po
+    date: '2026-10-02'
+    ticket: tickets/00_inbox/TICKET-20261002-DecisionLifecycleACs.md
+    build_status: docs_partly_exist
+    implementation_pointers: []
+    test_pointers: []
+    gaps:
+      - The how-to covers publish (Step 2), review and commit (Step 3), correct (Step 6) and troubleshooting;
+        check it states that an unpublished record is never found as precedent, gives the fix for
+        each exit-3 stop, and links the diagrams.
+    pointer_note: Unverified candidates for implemented_by / covered_by, read from the worktree at
+      e89f0f74 (kernel/ and tests/kernel/ identical to origin/main). The evidence phase verifies each
+      and adds the `# covers:` tags before anything is marked done.
+    complexity_basis: completing the existing how-to
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: docs
+risk_surface: internal
+notes: |
+  FLOW BACK-LINKS: none. This is a documentation AC; it implements no flow step
+  and belongs in no flow node's implements list, so a step's built status never
+  waits on documentation.
+
+  How-to half of DK-100d's documentation_triggers.
+
+  IT-PO BUILD STATUS (2026-10-02): largely exists in
+  file-and-reuse-decisions-with-the-kernel.md; verify the four clauses and link the
+  diagrams. Documentation AC: test_required false.
+
+  TRUE STATUS (2026-10-02): work_status in_progress; the it-po verified build status is
+    docs_partly_exist.
+    - The how-to covers publish (Step 2), review and commit (Step 3), correct (Step 6) and
+      troubleshooting; check it states that an unpublished record is never found as
+      precedent, gives the fix for each exit-3 stop, and links the diagrams.

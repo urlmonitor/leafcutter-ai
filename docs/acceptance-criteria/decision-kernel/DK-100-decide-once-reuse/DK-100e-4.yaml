@@ -1,0 +1,180 @@
+id: DK-100e-4
+title: "Reusing an earlier decision is your fresh approval, staged as a new record"
+component: decision-kernel
+components:
+  - decision_kernel
+level: L2
+status: active
+req_status: draft
+work_status: done
+readiness: reviewed
+priority: medium
+roadmap_phase: phase_kernel_1_founding
+criteria: |
+  Given you answer reuse to the reuse question for the precedent dec-ef8ddcb79d668a67, which chose
+    opt.added.1,
+  When the decision resolves,
+  Then it takes the precedent's choice opt.added.1,
+  And it is approved by you, the current human (approved_by human:user), at the time of your
+    answer,
+  And a new record, for example dec-7cdc61ea41a206e0, is written to the run's staged decisions
+    folder with assessment_basis precedent_reuse, dec-ef8ddcb79d668a67 under related, and the
+    precedent noted with action reused,
+  And the run changes nothing in dec-ef8ddcb79d668a67.
+depends_on:
+  - DK-100e
+doc_links:
+  - path: docs/product-truth/flows/leafcutter/decision-retrieval.flow.json
+    relationship: implemented-by-step
+    status: exists
+    relevance: >-
+      Derived from leafcutter/decision-retrieval step reuse. Add this AC id to each named
+      node's implements list.
+  - path: docs/how-to/file-and-reuse-decisions-with-the-kernel.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-060-source-of-truth-and-approval-authority.md
+    relationship: related
+    status: exists
+    relevance: >-
+      Standing rules: only a human approval creates a record, nothing is written into the
+      repository during a run, precedent is evidence and never authority, corrections are
+      append-only.
+  - path: docs/product-truth/mock-data/leafcutter/decisions.mock.json
+    relationship: related
+    status: exists
+    relevance: >-
+      Source of the concrete ids and values in the criteria (dec-... records, options,
+      criteria, applicability scores, run ids).
+  - path: docs/architecture/components/decision-kernel.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-059-decision-store-reviewable-yaml-records-now-graph-later.md
+    relationship: describes
+    status: exists
+    relevance: One YAML record per approved decision behind the ColonyMemory port; generated index;
+      precedent is evidence.
+assigned_agent: python-coder
+estimated_complexity: XS
+it_requirements:
+  - 'Precedent is evidence, never authority (ADR-060): no score, however high, resolves a decision,
+    changes routing or changes a threshold.'
+  - 'Only a human answer may approve, choose or reuse (ADR-053, ADR-060): no path may let Jev, a host
+    or the kernel resolve or approve on a person''s behalf.'
+  - 'During a run the kernel only reads the repository (ADR-060): no file under the repository root
+    may change; the configured run root is the only place a run writes.'
+  - A reuse is a fresh approval by the current human and stages a new record; the old record is never
+    edited. If the precedent vanished before the answer, the decision continues as decide-anew with
+    a limitation.
+  - 'Done-marking evidence (KI-ACS-004, done_proof): implemented_by names an existing kernel/... file
+    plus symbol, and every covering test under tests/kernel/ carries a `# covers: <this AC id>` tag
+    and passes under pytest. No kernel test carries a DK covers tag yet, so tagging comes before any
+    done-marking.'
+test_spec:
+  - name: test_reuse_resolves_with_the_precedents_choice_approved_by_the_current_human
+    target_dir: tests/kernel/memory/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: 'EXISTS (tests/kernel/memory/test_decision_precedent.py::TestAMatchingPrecedentBeforeAnyBasis::test_reuse_resolves_with_the_precedents_choice_approved_by_the_current_human):
+      resolves on the precedent''s option, approved by the answering human'
+    covers:
+      - DK-100e-4
+  - name: test_reuse_stages_a_new_record_citing_the_precedent
+    target_dir: tests/kernel/memory/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: 'EXISTS (tests/kernel/memory/test_decision_precedent.py::TestAMatchingPrecedentBeforeAnyBasis::test_reuse_stages_a_new_record_citing_the_precedent):
+      basis precedent_reuse, related [precedent], action reused'
+    covers:
+      - DK-100e-4
+  - name: test_staging_never_touches_the_repository_store
+    target_dir: tests/kernel/memory/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: 'EXISTS (tests/kernel/memory/test_decision_precedent.py::TestAMatchingPrecedentBeforeAnyBasis::test_staging_never_touches_the_repository_store):
+      the precedent file is unchanged'
+    covers:
+      - DK-100e-4
+  - name: test_reuse_stages_a_new_record_that_cites_the_precedent_and_publishes
+    target_dir: tests/kernel/memory/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: 'EXISTS (tests/kernel/memory/test_learning_loop_e2e.py::TestRunTwoReusesThePrecedent::test_reuse_stages_a_new_record_that_cites_the_precedent_and_publishes):
+      end to end, approved_by human:user'
+    covers:
+      - DK-100e-4
+delivers_to: null
+expects_from: null
+declares_side_effect: true
+origin_agent: business-analyst
+created: 2026-10-02
+created_by_ticket: tickets/00_inbox/TICKET-20261002-DecisionLifecycleACs.md
+amended_by:
+  - reason: it-po-technical-enrichment
+    by: it-po
+    date: '2026-10-02'
+    ticket: tickets/00_inbox/TICKET-20261002-DecisionLifecycleACs.md
+    build_status: built_and_tested
+    implementation_pointers:
+      - kernel/capabilities/decision/executor.py#_reuse_precedent
+      - kernel/capabilities/decision/emit.py#precedent_resolved_result
+      - kernel/capabilities/decision/approvals.py#_apply_precedent_choice
+      - kernel/memory/precedent.py#reuse_option
+      - kernel/memory/precedent.py#reuse_rationale
+      - kernel/memory/precedent.py#final_links
+    test_pointers:
+      - tests/kernel/memory/test_decision_precedent.py::TestAMatchingPrecedentBeforeAnyBasis::test_reuse_resolves_with_the_precedents_choice_approved_by_the_current_human
+      - tests/kernel/memory/test_decision_precedent.py::TestAMatchingPrecedentBeforeAnyBasis::test_reuse_stages_a_new_record_citing_the_precedent
+      - tests/kernel/memory/test_decision_precedent.py::TestAMatchingPrecedentBeforeAnyBasis::test_staging_never_touches_the_repository_store
+      - tests/kernel/memory/test_learning_loop_e2e.py::TestRunTwoReusesThePrecedent::test_reuse_stages_a_new_record_that_cites_the_precedent_and_publishes
+      - tests/kernel/memory/test_decision_precedent.py::TestAMatchingPrecedentBeforeAnyBasis::test_a_precedent_deleted_before_the_answer_falls_back_to_deciding_anew
+    gaps:
+      - None found. The reused record holds one option (the precedent's) and no criteria or ranking.
+    pointer_note: Unverified candidates for implemented_by / covered_by, read from the worktree at
+      e89f0f74 (kernel/ and tests/kernel/ identical to origin/main). The evidence phase verifies each
+      and adds the `# covers:` tags before anything is marked done.
+    complexity_basis: remaining work only (evidence, covers tags, gap closure)
+superseded_by: null
+covered_by:
+  - tests/kernel/memory/test_decision_precedent.py::TestAMatchingPrecedentBeforeAnyBasis::test_reuse_resolves_with_the_precedents_choice_approved_by_the_current_human
+  - tests/kernel/memory/test_decision_precedent.py::TestAMatchingPrecedentBeforeAnyBasis::test_reuse_stages_a_new_record_citing_the_precedent
+  - tests/kernel/memory/test_decision_precedent.py::TestAMatchingPrecedentBeforeAnyBasis::test_staging_never_touches_the_repository_store
+  - tests/kernel/memory/test_learning_loop_e2e.py::TestRunTwoReusesThePrecedent::test_reuse_stages_a_new_record_that_cites_the_precedent_and_publishes
+  - tests/kernel/memory/test_decision_precedent.py::TestAMatchingPrecedentBeforeAnyBasis::test_a_precedent_deleted_before_the_answer_falls_back_to_deciding_anew
+implemented_by:
+  - kernel/capabilities/decision/executor.py#_reuse_precedent
+  - kernel/capabilities/decision/emit.py#precedent_resolved_result
+  - kernel/capabilities/decision/approvals.py#_apply_precedent_choice
+  - kernel/memory/precedent.py#reuse_option
+  - kernel/memory/precedent.py#reuse_rationale
+  - kernel/memory/precedent.py#final_links
+change_target: code
+risk_surface: internal
+notes: |
+  FLOW BACK-LINKS (add this AC id to each node's implements list):
+    leafcutter/decision-retrieval  step    reuse
+
+  DERIVATION. Scenario reuse. dec-7cdc61ea41a206e0 is the real record staged by
+  run-0fdfb09bbcd34231 when the human confirmed reuse of dec-ef8ddcb79d668a67.
+  The step expands back into the staging sub-flow, so how the record is staged
+  is DK-100c's and is not restated here.
+
+  STANDING RULE carried from DK-100e (ADR-060 section 5): reuse is a fresh
+  approval and never edits the old record.
+
+  IT-PO BUILD STATUS (2026-10-02, unverified): built and tested. Pointers: amended_by.
+product_truth:
+  - flow: leafcutter/decision-retrieval
+    node: reuse
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: leafcutter/decisions
+    entities:
+      - Decision
+    source: real
+    asof: '2026-10-02'

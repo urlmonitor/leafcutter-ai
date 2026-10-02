@@ -29,6 +29,9 @@
       "label": "Spot an approved decision",
       "human": "At the end of the run, the decision executor sees a completed decision that a human approved.",
       "order": 1,
+      "implements": [
+        "DK-100c-1"
+      ],
       "agent": "kernel decision executor",
       "consumes": [
         "resolved decision (approved_by: human)"
@@ -40,13 +43,17 @@
         "Decision"
       ],
       "impl_asof": "2026-10-02",
-      "impl_status": "not_started"
+      "impl_status": "done"
     },
     {
       "id": "build-record",
       "label": "Build the record",
       "human": "The record builder collects the question, options, criteria, evidence references (locators and hashes, no text), the ranking you saw, the precedents considered, and provenance: run id, Langfuse trace id, repository revision and versions. It refuses an approver who is not human or a missing approved_at.",
       "order": 2,
+      "implements": [
+        "DK-100c-2-i",
+        "DK-100c-2"
+      ],
       "agent": "kernel record builder",
       "consumes": [
         "decision to stage"
@@ -61,13 +68,16 @@
         "Decision"
       ],
       "impl_asof": "2026-10-02",
-      "impl_status": "not_started"
+      "impl_status": "in_progress"
     },
     {
       "id": "write-staged",
       "label": "Write it under the run folder",
       "human": "The file backend writes the YAML to <run_root>/runs/<run_id>/staged/decisions/<id>.yaml, never into the repository: during a run the kernel only reads the repository (ADR-060).",
       "order": 3,
+      "implements": [
+        "DK-100c-3"
+      ],
       "agent": "kernel memory file backend",
       "consumes": [
         "DecisionRecord"
@@ -79,13 +89,16 @@
         "Decision"
       ],
       "impl_asof": "2026-10-02",
-      "impl_status": "not_started"
+      "impl_status": "in_progress"
     },
     {
       "id": "announce",
       "label": "Tell you how to publish",
       "human": "The run's result says \"decision record staged: <path>\" and gives the command python -m kernel decisions publish --run-id R. The /leafcutter skill shows you this and never publishes by itself.",
       "order": 4,
+      "implements": [
+        "DK-100c-4"
+      ],
       "screen": "decision-record-staged",
       "agent": "/leafcutter skill (claude_code)",
       "consumes": [
@@ -98,7 +111,7 @@
         "Decision"
       ],
       "impl_asof": "2026-10-02",
-      "impl_status": "not_started"
+      "impl_status": "in_progress"
     }
   ],
   "branches": [
@@ -113,8 +126,11 @@
         "resolved decision (approved_by: human)"
       ],
       "outcome_kind": "exit",
+      "implements": [
+        "DK-100c-1-i"
+      ],
       "impl_asof": "2026-10-02",
-      "impl_status": "not_started"
+      "impl_status": "done"
     }
   ],
   "acceptance_scenarios": [
@@ -158,9 +174,9 @@
     }
   ],
   "impl_summary": {
-    "done": 0,
-    "in_progress": 0,
-    "not_started": 5,
+    "done": 2,
+    "in_progress": 3,
+    "not_started": 0,
     "total": 5,
     "asof": "2026-10-02"
   }

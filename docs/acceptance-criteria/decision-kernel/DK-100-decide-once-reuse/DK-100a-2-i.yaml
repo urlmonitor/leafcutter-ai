@@ -1,0 +1,157 @@
+id: DK-100a-2-i
+title: "A precedent alone never counts as grounding"
+component: decision-kernel
+components:
+  - decision_kernel
+level: L3
+status: active
+req_status: draft
+work_status: done
+readiness: reviewed
+priority: medium
+roadmap_phase: phase_kernel_1_founding
+criteria: |
+  Given a decision goal whose precedent step has already added the published record
+    dec-ef8ddcb79d668a67 as prior_decisions evidence (applicability 0.62),
+  And no repository evidence has been retrieved for the goal yet,
+  When the kernel decides whether grounding research is needed,
+  Then grounding research runs against the repository,
+  And the precedent is not counted as grounding evidence,
+  And the evidence handed to Claude Code for proposing options includes repository items, not only
+    the precedent.
+depends_on:
+  - DK-100a-2
+doc_links:
+  - path: docs/product-truth/flows/leafcutter/decision-forming.flow.json
+    relationship: implemented-by-step
+    status: exists
+    relevance: >-
+      Derived from leafcutter/decision-forming step ground (its 'a precedent alone is not
+      accepted as grounding' clause). Add this AC id to each named node's implements list.
+  - path: docs/architecture/adrs/ADR-060-source-of-truth-and-approval-authority.md
+    relationship: related
+    status: exists
+    relevance: >-
+      Standing rules: only a human approval creates a record, nothing is written into the
+      repository during a run, precedent is evidence and never authority, corrections are
+      append-only.
+  - path: docs/product-truth/mock-data/leafcutter/decisions.mock.json
+    relationship: related
+    status: exists
+    relevance: >-
+      Source of the concrete ids and values in the criteria (dec-... records, options,
+      criteria, applicability scores, run ids).
+  - path: tickets/00_inbox/TICKET-20261001-KernelPrecedentSkipsGrounding.md
+    relationship: related
+    status: exists
+    relevance: >-
+      Live reproduction of the failure this edge case guards against (run
+      run-12741427fdf8450d: an applicable precedent skipped option grounding).
+  - path: docs/architecture/components/decision-kernel.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-059-decision-store-reviewable-yaml-records-now-graph-later.md
+    relationship: describes
+    status: exists
+    relevance: One YAML record per approved decision behind the ColonyMemory port; generated index;
+      precedent is evidence.
+  - path: docs/analysis/2026-09-30-decision-kernel-design-4-jev-and-capabilities.md
+    relationship: describes
+    status: exists
+    relevance: Decision, research and retrieval capabilities, host operations, human interaction;
+      'As built' sections.
+assigned_agent: python-coder
+estimated_complexity: XS
+it_requirements:
+  - Evidence the kernel adds from the memory port is told apart from caller-supplied and researched
+    evidence by its source identity, not by its category alone.
+  - A precedent may never skip, satisfy or stand in for the option-grounding research.
+  - 'Done-marking evidence (KI-ACS-004, done_proof): implemented_by names an existing kernel/... file
+    plus symbol, and every covering test under tests/kernel/ carries a `# covers: <this AC id>` tag
+    and passes under pytest. No kernel test carries a DK covers tag yet, so tagging comes before any
+    done-marking.'
+test_spec:
+  - name: test_a_precedent_only_decision_still_researches_and_cites_both_kinds
+    target_dir: tests/kernel/memory/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: 'EXISTS (tests/kernel/memory/test_precedent_grounding.py::TestPrecedentDoesNotSkipGrounding::test_a_precedent_only_decision_still_researches_and_cites_both_kinds):
+      with an applicable precedent (0.6) and no repository evidence, research runs and the options
+      packet cites precedent and repository evidence'
+    covers:
+      - DK-100a-2-i
+  - name: test_an_applicable_precedent_below_the_reuse_threshold_is_evidence_only
+    target_dir: tests/kernel/memory/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: 'EXISTS (tests/kernel/memory/test_decision_precedent.py::TestAMatchingPrecedentBeforeAnyBasis::test_an_applicable_precedent_below_the_reuse_threshold_is_evidence_only):
+      the first request after an evidence-only precedent is the grounding research'
+    covers:
+      - DK-100a-2-i
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst
+created: 2026-10-02
+created_by_ticket: tickets/00_inbox/TICKET-20261002-DecisionLifecycleACs.md
+amended_by:
+  - reason: it-po-technical-enrichment
+    by: it-po
+    date: '2026-10-02'
+    ticket: tickets/00_inbox/TICKET-20261002-DecisionLifecycleACs.md
+    build_status: built_and_tested
+    implementation_pointers:
+      - kernel/capabilities/decision/state.py#Working.grounding_evidence
+      - kernel/capabilities/decision/basis.py#needs_grounding
+      - kernel/capabilities/decision/basis.py#grounding_gap
+      - kernel/memory/precedent.py#is_precedent_evidence
+    test_pointers:
+      - tests/kernel/memory/test_precedent_grounding.py::TestPrecedentDoesNotSkipGrounding::test_a_precedent_only_decision_still_researches_and_cites_both_kinds
+      - tests/kernel/memory/test_decision_precedent.py::TestAMatchingPrecedentBeforeAnyBasis::test_an_applicable_precedent_below_the_reuse_threshold_is_evidence_only
+    gaps:
+      - 'Verified: the fix is commit 9f43a086 (#KernelPrecedentSkipsGrounding), an ancestor of origin/main
+        via PR #978. TICKET-20261001-KernelPrecedentSkipsGrounding still reads status todo; its status
+        is stale, not evidence.'
+      - The test uses applicability 0.6 rather than 0.62; both sit in the evidence-only band.
+    pointer_note: Unverified candidates for implemented_by / covered_by, read from the worktree at
+      e89f0f74 (kernel/ and tests/kernel/ identical to origin/main). The evidence phase verifies each
+      and adds the `# covers:` tags before anything is marked done.
+    complexity_basis: remaining work only (evidence, covers tags, gap closure)
+superseded_by: null
+covered_by:
+  - tests/kernel/memory/test_precedent_grounding.py::TestPrecedentDoesNotSkipGrounding::test_a_precedent_only_decision_still_researches_and_cites_both_kinds
+  - tests/kernel/memory/test_decision_precedent.py::TestAMatchingPrecedentBeforeAnyBasis::test_an_applicable_precedent_below_the_reuse_threshold_is_evidence_only
+implemented_by:
+  - kernel/capabilities/decision/state.py#Working.grounding_evidence
+  - kernel/capabilities/decision/basis.py#needs_grounding
+  - kernel/capabilities/decision/basis.py#grounding_gap
+  - kernel/memory/precedent.py#is_precedent_evidence
+change_target: code
+risk_surface: internal
+notes: |
+  FLOW BACK-LINKS (add this AC id to each node's implements list):
+    leafcutter/decision-forming    step    ground
+
+  DERIVATION. Edge case of scenario ground, and a standing rule of DK-100a
+  ("a precedent alone never counts as grounding"). The live failure is recorded
+  in TICKET-20261001-KernelPrecedentSkipsGrounding (status todo on 2026-10-02):
+  evidence the memory port added counted as caller-supplied evidence and skipped
+  the option grounding. The ticket's own status is not evidence either way; the
+  evidence phase decides done-ness from code and tests.
+
+  IT-PO BUILD STATUS (2026-10-02): built and tested; the BA's flagged gap is closed.
+  Verified the #978 fix: Working.grounding_evidence excludes kernel-added precedent
+  evidence (source id memory.decisions), so needs_grounding and grounding_gap ignore it,
+  and tests/kernel/memory/test_precedent_grounding.py proves research still runs and the
+  options packet cites both kinds. The originating ticket's status (todo) is stale.
+product_truth:
+  - flow: leafcutter/decision-forming
+    node: ground
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: leafcutter/decisions
+    entities: []
+    source: real
+    asof: '2026-10-02'
