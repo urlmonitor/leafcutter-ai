@@ -169,6 +169,12 @@ def choice_rationale(work: Working) -> str:
     """Return the rationale that records the kernel ranking and the human's choice."""
     cont = work.cont
     ranking = cont.design_ranking
+    condition = "".join(f" Condition stated by the human: {c}" for c in cont.conditions)
+    if cont.design_reason == "human_ruling":
+        title = next(o.title for o in work.options if o.id == cont.design_choice_id)
+        return (f"Human ruling: {cont.approved_by or 'human'} chose option "
+                f"[{cont.design_choice_id}] {title} when the kernel could not settle the "
+                f"decision itself.{condition}")
     rank = next((r.rank for r in ranking if r.option_id == cont.design_choice_id), None)
     title = next(o.title for o in work.options if o.id == cont.design_choice_id)
     where = f"kernel rank {rank} of {len(ranking)}" if rank else "not in the kernel ranking"
@@ -176,7 +182,7 @@ def choice_rationale(work: Working) -> str:
             f"judgement, evidence not authority; stopped researching because "
             f"{cont.design_reason or DESIGN_JUDGEMENT} after {research_rounds(work)} research "
             f"round(s)): {ranking_text(work, ranking)}. {cont.approved_by or 'human'} chose "
-            f"option [{cont.design_choice_id}] {title} ({where}).")
+            f"option [{cont.design_choice_id}] {title} ({where}).{condition}")
 
 
 def ranking_assessments(work: Working, cfg: DecisionConfig) -> list[CriterionAssessment]:
