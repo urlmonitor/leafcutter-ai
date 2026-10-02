@@ -6,8 +6,8 @@ BUSINESS CONTEXT: The kernel skill is developer tooling that must never ship to 
     projects, so it lives in the package and is installed by an explicit, user-approved command
     (design part 5). It must not clobber a hand-written or build-managed skill of the same name.
 ARCHITECTURE: `render_skill` substitutes the skill name, the exact command line
-    (`PYTHONPATH=<repo> <python> -m kernel`) and the client scratch directory
-    (`<run_root>/client`) into SKILL.md; `allowed-tools` pre-approves only the kernel's run,
+    (`PYTHONPATH=<repo> <python> -m kernel`), the client scratch directory
+    (`<run_root>/client`) and the fixed scope (`repository_root`, `workspace_id`) into SKILL.md; `allowed-tools` pre-approves only the kernel's run,
     resume and status subcommands, edits inside the scratch directory and reads under the run
     root. The marker comment
     `<!-- leafcutter-kernel-skill -->` identifies an installed copy; `install_skill` overwrites
@@ -18,43 +18,35 @@ ARCHITECTURE: `render_skill` substitutes the skill name, the exact command line
 from __future__ import annotations
 
 import logging
-import os
 import re
 import sys
-import tempfile
 from pathlib import Path
 
+from kernel.adapters.skill_common import (
+    MARKER,
+    InstallRefused,
+    check_name,
+    fill,
+    owned,
+    render_scope,
+    shell_path,
+    write_atomic,
+)
 from kernel.bootstrap import resolve_run_root
 from kernel.config import load_kernel_config, repo_root
 
 logger = logging.getLogger(__name__)
 
-MARKER = "<!-- leafcutter-kernel-skill -->"
+__all__ = ["MARKER", "InstallRefused", "install_skill", "render_skill", "command_line"]
+
 SKILL_FILE = "SKILL.md"
 TEMPLATE = Path(__file__).with_name(SKILL_FILE)
-NAME_RE = re.compile(r"^[a-z0-9][a-z0-9-]{0,62}$")
 CLIENT_SUBDIR = "client"
-
-
-class InstallRefused(Exception):
-    """The install was refused; nothing was written."""
-
-    def __init__(self, code: str, message: str) -> None:
-        """Keep the stable code and the message."""
-        super().__init__(f"{code}: {message}")
-        self.code = code
-        self.message = message
-
-
-def _shell_path(path: Path | str) -> str:
-    """Return a forward-slash path, double-quoted when it contains whitespace."""
-    text = Path(path).as_posix()
-    return f'"{text}"' if " " in text else text
 
 
 def command_line(repo: Path, python: str) -> str:
     """Return the exact command prefix the skill uses to run the kernel."""
-    return f"PYTHONPATH={_shell_path(repo)} {_shell_path(python)} -m kernel"
+    return f"PYTHONPATH={shell_path(repo)} {shell_path(python)} -m kernel"
 
 
 def _rule_path(path: Path) -> str:
@@ -72,22 +64,23 @@ def client_dir(run_root: Path) -> Path:
 
 
 def render_skill(name: str, repo: Path | None = None, python: str | None = None,
-                 run_root: Path | None = None) -> str:
+                 run_root: Path | None = None, *, repository_root: Path | None = None,
+                 workspace_id: str | None = None) -> str:
     """Return the skill text for `name`, bound to this checkout, interpreter and run root.
 
     Args:
         name: Skill name.
-        repo: Repository root (default: this checkout).
+        repo: Kernel checkout (default: this checkout).
         python: Interpreter (default: the running one).
         run_root: Kernel run root (default: the configured `paths.run_root`).
+        repository_root: Repository the kernel scopes to (default: the kernel checkout).
+        workspace_id: Workspace id for the scope (default: the repository folder name).
 
     Raises:
         InstallRefused: The name is not a plain lowercase skill name.
         OSError: The template cannot be read.
     """
-    if not NAME_RE.match(name):
-        raise InstallRefused("invalid_name",
-                             "the skill name must match [a-z0-9][a-z0-9-]* (max 63 characters)")
+    check_name(name)
     try:
         text = TEMPLATE.read_text(encoding="utf-8")
     except OSError:
@@ -98,19 +91,9 @@ def render_skill(name: str, repo: Path | None = None, python: str | None = None,
     runs = Path(run_root) if run_root is not None else resolve_run_root(load_kernel_config(), root)
     scratch = client_dir(runs)
     values = {"NAME": name, "COMMAND": command, "CLIENT_DIR": scratch.as_posix(),
-              "CLIENT_RULE": _rule_path(scratch), "RUN_ROOT_RULE": _rule_path(runs)}
-    for key, value in values.items():
-        text = text.replace("{{" + key + "}}", value)
-    return text
-
-
-def _owned(skill_file: Path) -> bool:
-    """True if an existing SKILL.md carries the kernel marker."""
-    try:
-        return MARKER in skill_file.read_text(encoding="utf-8", errors="replace")
-    except OSError:
-        logger.warning("could not read %s", skill_file, exc_info=True)
-        return False
+              "CLIENT_RULE": _rule_path(scratch), "RUN_ROOT_RULE": _rule_path(runs),
+              **render_scope(repository_root or root, workspace_id)}
+    return fill(text, values)
 
 
 def _check_destination(target: Path, dest: Path, force: bool) -> None:
@@ -120,7 +103,7 @@ def _check_destination(target: Path, dest: Path, force: bool) -> None:
                                             "target directory")
     if not dest.exists() or force:
         return
-    if not dest.is_dir() or not _owned(dest / SKILL_FILE):
+    if not dest.is_dir() or not owned(dest / SKILL_FILE):
         raise InstallRefused(
             "not_a_leafcutter_skill",
             f"{dest.name} exists and does not carry {MARKER}; use --force to overwrite SKILL.md")
@@ -128,7 +111,8 @@ def _check_destination(target: Path, dest: Path, force: bool) -> None:
 
 def install_skill(target_dir: Path, name: str, *, force: bool = False,
                   repo: Path | None = None, python: str | None = None,
-                  run_root: Path | None = None) -> Path:
+                  run_root: Path | None = None, repository_root: Path | None = None,
+                  workspace_id: str | None = None) -> Path:
     """Install the rendered skill and return the path of the written SKILL.md.
 
     The rendered `allowed-tools` pre-approve only run, resume and status; `cancel`, `gaps` and
@@ -138,9 +122,11 @@ def install_skill(target_dir: Path, name: str, *, force: bool = False,
         target_dir: A skills directory, for example `<project>/.claude/skills`.
         name: Skill (and directory) name.
         force: Overwrite SKILL.md of an existing directory that lacks the marker.
-        repo: Repository root to bind the command to (default: this checkout).
+        repo: Kernel checkout to bind the command to (default: this checkout).
         python: Interpreter to bind the command to (default: the running one).
         run_root: Run root whose `client/` directory the skill may write (default: configured).
+        repository_root: Repository the kernel scopes to (default: the kernel checkout).
+        workspace_id: Workspace id for the scope (default: the repository folder name).
 
     Returns:
         Path: The installed SKILL.md.
@@ -149,26 +135,22 @@ def install_skill(target_dir: Path, name: str, *, force: bool = False,
         InstallRefused: Bad name, unsafe path, or an existing skill that is not ours.
         OSError: The destination cannot be written.
     """
-    text = render_skill(name, repo, python, run_root)
+    text = render_skill(name, repo, python, run_root, repository_root=repository_root,
+                        workspace_id=workspace_id)
     target = Path(target_dir)
     dest = target / name
     _check_destination(target, dest, force)
     skill_file = dest / SKILL_FILE
-    try:
-        dest.mkdir(parents=True, exist_ok=True)
-        fd, tmp = tempfile.mkstemp(dir=dest, prefix=".skill-", suffix=".tmp")
-        with os.fdopen(fd, "w", encoding="utf-8", newline="\n") as handle:
-            handle.write(text)
-        os.replace(tmp, skill_file)
-    except OSError:
-        logger.exception("could not install the skill into %s", dest)
-        raise
+    write_atomic(skill_file, text)
     return skill_file
 
 
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-02 [python-coder]: `repository_root` and `workspace_id` are rendered into the
+#   TaskInput example instead of being guessed by the host; the root defaults to the kernel
+#   checkout and is separate from `repo`, which only binds the command. (#KernelCodexSkill)
 # - 2026-10-01 16:10 [python-coder]: `Read` is scoped to the run root (where input artifacts and
 #   reports live, usually outside the project); repository files inside the working directory
 #   are readable by default, so no broad Read grant is needed. Writes go through an `Edit(...)`

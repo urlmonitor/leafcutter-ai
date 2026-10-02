@@ -29,11 +29,11 @@ class TestSkillOutputContract(unittest.TestCase):
         self.text = SKILL.read_text(encoding="utf-8")
 
     def test_the_example_input_does_not_set_the_output_schema(self) -> None:
-        match = re.search(r'`(\{"goal": .*?"repository_root": "<absolute project root>"\}\})`',
+        match = re.search(r'`(\{"goal": .*?"repository_root": "\{\{REPOSITORY_ROOT\}\}"\}\})`',
                           self.text, re.DOTALL)
         self.assertIsNotNone(match, "example TaskInput not found in the skill")
         example = narrow(match).group(1).replace("<$ARGUMENTS>", "x").replace("\n", " ")
-        example = re.sub(r"<[^>]*>", "x", example)
+        example = re.sub(r"<[^>]*>|\{\{[A-Z_]+\}\}", "x", example)
         self.assertNotIn("requested_output_schema", json.loads(example))
 
     def test_the_instruction_forbids_setting_it_unless_the_user_asks(self) -> None:
