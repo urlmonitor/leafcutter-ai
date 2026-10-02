@@ -45,6 +45,13 @@ those decisions in order, so that the user doesn't have to rephrase the goal by 
   - The orchestrator drafted three bounded sub-questions (format, clustering, mining source).
   - The user picked "format first", and run `run-aa2831ba7f0e4ec9` then proceeded normally.
   - That split was done by hand outside the kernel; this ticket brings it inside.
+- **Overlap:** `TICKET-20261001-KernelCompoundGoalSplit.md` (2026-10-01) asks for the same split
+  at decision level (one record per sub-decision, linked to the goal). This ticket adds the
+  routing-level fallback.
+  - On 2026-10-02 the user asked for product truth plus PO/BA/IT PO ACs for splitting goals
+    "(and other things)", authored on branch `ac-authoring/split-compound-goals`.
+  - Once those ACs merge, build from them with `/build-ac`, and retire both tickets as
+    superseded.
 - ADR-053: generation (proposing sub-questions) is LLM work; the human approves; Jev only selects
   among supplied candidates. ADR-055: a new capability enters the registry only by a recorded
   decision.

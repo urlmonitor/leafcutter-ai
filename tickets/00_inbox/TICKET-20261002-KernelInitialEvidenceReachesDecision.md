@@ -39,12 +39,35 @@ a reviewer counts in Jev's assessment.
 - **The workaround proves the path:** run `run-3bba494c7c9b48ce` used the same input, with the 11
   ids also listed in `input_payload.evidence_ids`. They were cited 33 times in its assessments, and
   option f's Neo4j-projection score moved from 0.54 to 0.34.
-- **Cause:** the two halves don't meet.
-  - Intake (`kernel/scheduler/nodes_lifecycle.py` `intake`) converts the items and puts their ids
-    in `Request.context_refs` and `Task.evidence_refs`.
-  - The decision's `_payload_inputs` (`kernel/capabilities/decision/loading.py:55-72`) uses only
-    `DecisionRequestPayload.evidence_ids` plus the continuation's ids, and a goal-only request
-    starts from `[]`. So `context_refs` never reach the decision.
+- **Root cause (confirmed 2026-10-02 by reproduction with Jev mocked and by decoding the failing
+  run's checkpoint): never wired, not a regression.**
+  - Intake (`nodes_lifecycle.py:103-121`) puts the ids in `Request.context_refs`.
+  - Routing copies them into every `CapabilityInvocation.context_refs` (`nodes_route.py:97`), and
+    `ExecutionContext.evidence_lookup` can resolve them (`nodes_execute.py:78-83`).
+  - **Loss point:** `kernel/capabilities/decision/loading.py:70`. `_payload_inputs` merges only the
+    payload `evidence_ids` and the continuation's ids, never `invocation.context_refs`. A goal-only
+    request starts from `[]` (L63-64).
+  - Children inherit nothing (`merge.py:205-206`), so research, options and synthesis requests
+    carry no caller ids, and `assess` (`assess.py:86-90`) quotes only `work.evidence`.
+  - The decision load (3a16a121) and the intake that fills `context_refs` (b37c03fe) landed 26 s
+    apart on 2026-09-30, and no test ever joined them.
+- **Why the tests missed it:**
+  - `tests/kernel/scheduler/test_lifecycle.py:83-97` stops at intake.
+  - `tests/kernel/integration/test_wiring.py:179-191` passes for the wrong reason: the fixture
+    repo holds the same ADR, so research re-finds a copy.
+  - `scenario_support.py:189-196` and `tests/kernel/live/eval_runner.py:62-66` hand-wire the ids
+    into `payload.evidence_ids`, which hides the gap.
+  - The c3-017 row was wrong from its first version (5a7b9761). `docs/how-to/run-the-decision-kernel.md:164`
+    tells callers to use `initial_evidence` and never mentions `evidence_ids`.
+- **The failure is silent, and the output misleads:**
+  - Nobody checks that supplied ids were used. The envelope's `evidence_ids` lists them anyway
+    (`service_envelope.py:124`).
+  - The run then reports `prior_decisions` as missing although 11 such items were supplied.
+- **Other silent drops found:**
+  - Unresolvable `decision_request.v1.constraint_ids` are dropped with no limitation (`assess.py:88`).
+  - Host and human packets filter out unknown cited ids silently (`packets.py:64-65`).
+  - Native research ignores supplied evidence: see
+    `TICKET-20261002-KernelResearchUsesSuppliedEvidence.md`.
 - **The docs promise otherwise:** `docs/architecture/diagrams/c3-017-decision-kernel-context-jev.md`
   ("Decision Jev calls") lists `TaskInput.initial_evidence` among the evidence the decision
   resolves.
@@ -52,15 +75,28 @@ a reviewer counts in Jev's assessment.
   supplied evidence actually being used.
 
 ## Scope (no acceptance criteria by user decision)
-- The root decision merges the request's `context_refs`, i.e. the initial evidence, into its
-  evidence ids for both goal and decision-request payloads. Order and dedup follow the existing
-  merge. Child requests keep today's behaviour unless the parent passes refs.
-- If a caller-listed evidence id cannot be resolved, the run gets a limitation (as
-  `missing_evidence_ids` does today), never silence.
-- Tests:
-  - goal-only and decision-request inputs with `initial_evidence` and no `evidence_ids` both reach
-    the assess batch and are cited;
-  - with no `initial_evidence`, behaviour is unchanged.
+- **The fix belongs in the decision capability**, because the scheduler already delivers the
+  refs. At `loading.py:70`, merge
+  `[*payload evidence_ids, *invocation.context_refs, *cont.evidence_ids]` with dedup. This covers
+  goal and decision requests, first runs and resumes. The fingerprint is unchanged, since
+  `context_refs` is already hashed (`nodes_route.py:90`).
+- **Unresolvable ids** (caller evidence or `constraint_ids`) each give a limitation, never silence.
+- **Side effects to verify in tests:**
+  - caller evidence may make grounding research unnecessary (`basis.py:49-52`);
+  - `task_context` caller items count as decision basis (`state.py:181-183`);
+  - the options request's `evidence_cap` (12) is shared, with caller ids first;
+  - each caller `prior_decisions` item without a revision gets a limitation.
+- **Optional guard:** a limitation when `task.evidence_refs` were supplied but none entered the
+  root's working evidence.
+- **Tests:**
+  - unit: `load_working` with `invocation(context_refs=[id])` gives `work.evidence_ids == [id]`
+    for goal and decision requests, with dedup, and an unresolvable ref gives a limitation;
+  - integration: rework `test_wiring.py:179-191` so it asserts that the caller's id (not a
+    re-retrieved copy) is in the first `decision.assess` batch and in `decision.evidence_ids`;
+  - integration: in a goal-only run, `initial_evidence` reaches the options request and the
+    `host.generate_options` packet;
+  - scenario: a `known_basis` variant with no payload `evidence_ids`.
+- Fix `docs/how-to/run-the-decision-kernel.md:164` and the c3-017 row if anything still differs.
 
 ## Out of Scope
 - Revision stamping of caller evidence (the "decision basis ... has no recorded revision"
