@@ -30,6 +30,7 @@ related_code:
   - kernel/service.py
   - kernel/adapters/cli.py
   - kernel/adapters/claude_code/SKILL.md
+  - kernel/adapters/codex/SKILL.md
 tags:
   - decision-kernel
   - langgraph
@@ -61,7 +62,7 @@ its traces with
 
 ```mermaid
 flowchart LR
-  CC[Claude Code skill] -->|run, resume, status, cancel JSON| CLI[CLI adapter]
+  CC[Claude Code or Codex skill] -->|run, resume, status, cancel JSON| CLI[CLI adapter]
   CLI --> SVC[RunService]
   SVC --> K[LangGraph kernel scheduler]
   K --> REG[(capability_registry.json)]
@@ -85,12 +86,13 @@ Registered in `docs/components.json` under `decision_kernel.exposed_interfaces`:
 | CLI | `python -m kernel <run\|resume\|status\|cancel\|gaps\|decisions\|install-skill>` | One JSON document on stdout; exit 0 envelope, 2 usage, 3 rejected, 4 unknown run, 5 internal |
 | RunService API | `kernel/service.py` | `start_run`, `resume_run`, `get_run`, `cancel_run`, `list_gaps` |
 | `/leafcutter` skill | `kernel/adapters/claude_code/SKILL.md` | Transport-only Claude Code skill installed by `install-skill` |
+| `$leafcutter` skill | `kernel/adapters/codex/` | Transport-only Codex skill, explicit-only policy and prefix rules installed by `install-skill --host codex` ([how-to](../../how-to/run-the-decision-kernel-from-codex.md)) |
 
 ## Containers
 
 | Container | Responsibility | Design |
 |---|---|---|
-| Claude Code skill + CLI | Transport only. It forwards the goal, presents questions and results, and does exactly the host work requested. | [part 5](../../analysis/2026-09-30-decision-kernel-design-5-client-observability.md) |
+| Claude Code or Codex skill + CLI | Transport only. It forwards the goal, presents questions and results, and does exactly the host work requested. | [part 5](../../analysis/2026-09-30-decision-kernel-design-5-client-observability.md) |
 | RunService | Client-independent API: `start_run`, `resume_run`, `get_run`, `cancel_run`. Validates submissions and keeps resume idempotent. | [part 5](../../analysis/2026-09-30-decision-kernel-design-5-client-observability.md) |
 | Kernel scheduler | A fixed LangGraph with dynamic work items: routing, dispatch, validation, continuation, guards, finalization. | [part 3](../../analysis/2026-09-30-decision-kernel-design-3-kernel-scheduler.md) |
 | Capability registry | New `config/capability_registry.json`, empty at start. Legacy agent and skill registries are never routed ([ADR-055](../adrs/ADR-055-capability-registry-starts-empty.md)). | [part 2](../../analysis/2026-09-30-decision-kernel-design-2-contracts-registry-config.md) |

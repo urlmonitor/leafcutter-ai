@@ -245,9 +245,9 @@ work requested. Install it into a workspace's skills directory (the command writ
 python -m kernel install-skill --target-dir <workspace>/.claude/skills --name leafcutter --json
 ```
 
-The skill runs `python -m kernel` from the checkout, so install it where that command works.
-If a project command named `/leafcutter` already exists, remove it first or choose another
-`--name`.
+`--repository-root <repo>` (default: this checkout) and `--workspace-id` are written into the skill,
+so a session started in another folder still scopes the kernel to that repository. For Codex add
+`--host codex`: [how to run the kernel from Codex](run-the-decision-kernel-from-codex.md).
 
 What the skill may do without asking you (its `allowed-tools`, rendered for this checkout):
 
