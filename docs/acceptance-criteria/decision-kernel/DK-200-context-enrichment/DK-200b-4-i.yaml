@@ -1,0 +1,66 @@
+id: DK-200b-4-i
+title: "A request with no room for context remains valid without a context marker"
+component: decision-kernel
+components: [decision_kernel]
+level: L3
+status: active
+readiness: draft
+req_status: draft
+priority: high
+work_status: done
+criteria: |
+  Given a valid judgment request has insufficient space even for a context truncation marker,
+  When the kernel prepares that judgment,
+  Then the base request is sent without added context or an oversized marker,
+  And omission is reported,
+  And the saved context remains unchanged.
+depends_on: [DK-200b-4]
+covered_by:
+  - "tests/kernel/enrichment/test_projection.py::TestContextProjection::test_no_room_omits_context_without_altering_or_oversizing_the_request"
+implemented_by:
+  - "kernel/enrichment_projection.py"
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "When the base request leaves no room even for a minimal context marker, the provider request must remain exactly the base request."
+  - "Context omission must emit an observable warning without enlarging the payload or changing the saved context."
+delivers_to: null
+expects_from: null
+test_required: true
+test_spec:
+  - name: test_no_room_omits_context_without_altering_or_oversizing_the_request
+    target_dir: tests/kernel/enrichment/
+    framework: pytest
+    type: unit
+    angle: boundary
+    description: "At a budget equal to the serialized base request, projection returns the unchanged base and snapshot and reports context omission."
+test_rationale: "A zero-headroom case proves the marker itself cannot cause an oversized request; warning observation distinguishes honest omission from silent loss."
+doc_links:
+  - path: docs/product-truth/flows/leafcutter/decision-forming.flow.json
+    relationship: implements
+    status: exists
+  - path: docs/architecture/components/decision-kernel.md
+    relationship: describes
+    status: exists
+  - path: docs/how-to/run-the-decision-kernel.md
+    relationship: context
+    status: exists
+origin_agent: business-analyst
+created: 2026-10-02
+amended_by:
+  - reason: "IT PO technical enrichment and verified test mapping on 2026-10-02; BA criteria and draft readiness preserved."
+superseded_by: null
+notes: |
+  Decomposed from the user-authorized context-enrichment scope and existing
+  DK-100 through DK-104. IT PO technical constraints and exact behavioral test
+  links are recorded. Readiness remains draft; no product approval is implied.
+product_truth:
+  - flow: leafcutter/decision-forming
+    node: enrich-context
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: leafcutter/decisions
+    entities: []
+    source: real
+    asof: '2026-10-02'

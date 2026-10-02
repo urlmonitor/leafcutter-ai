@@ -1,0 +1,75 @@
+id: DK-200a-1
+title: "Initial context reaches intent before the first clarification decision"
+component: decision-kernel
+components: [decision_kernel]
+level: L2
+status: active
+readiness: draft
+req_status: draft
+priority: high
+work_status: done
+criteria: |
+  Given a new request "Can you use leafcutter now? I mean run the kernel and know about it?"
+  And permitted repository documentation describes Leafcutter,
+  When the kernel determines what kind of answer the request needs,
+  Then one initial enrichment outcome is recorded before the intent assessment,
+  And the intent assessment receives the original request and the gathered documentation,
+  And no clarification decision precedes that enrichment outcome.
+depends_on: [DK-200a]
+covered_by:
+  - "DK-200a-1-i"
+  - "tests/kernel/intent/test_context_enrichment_wiring.py::TestContextEnrichmentWiring::test_repository_context_reaches_intent_before_any_human_question"
+implemented_by:
+  - "kernel/scheduler/nodes_enrichment.py"
+  - "kernel/scheduler/graph.py"
+  - "kernel/scheduler/state.py"
+  - "kernel/intent/classify.py"
+  - "kernel/intent/step.py"
+assigned_agent: python-coder
+estimated_complexity: L
+it_requirements:
+  - "Context enrichment must complete before the first intent assessment or clarification decision and must emit exactly one context.enriched outcome for the initial pass."
+  - "Run tracing must report context status, counts and limitations without including raw repository excerpts."
+  - "The context supplied to intent must preserve the original task and identify supplied claims and retrieved evidence separately."
+delivers_to: null
+expects_from:
+  ac_id: DK-200a-3
+  contract: "EnrichedContext checkpoint value: original_goal:string; caller_context:{host:string|null, capabilities:string[], conversation:string[], observations:string[]}; workspace_id:string; repository_root:string; registered_capabilities:string[]; evidence:{source_id:string, locator:string, excerpt:string, content_hash:string, truncated:boolean}[]; sources_consulted:string[]; files_scanned:integer; limitations:string[]; truncated:boolean; status:gathered|no_evidence|partial|unavailable|disabled. Caller claims and source evidence remain distinct; the saved value is unchanged by provider projection."
+test_required: true
+test_spec:
+  - name: test_repository_context_reaches_intent_before_any_human_question
+    target_dir: tests/kernel/intent/
+    framework: pytest
+    type: integration
+    angle: reachability
+    description: "Through RunService, actual retrieved documentation changes the controlled intent provider's answer; context.enriched precedes intent.assessed, the run completes without interaction.opened, and the original goal and workspace/registry context are retained."
+test_rationale: "A real service run proves enrichment is consumed in control flow; importing the classifier or checking graph strings cannot prove that."
+doc_links:
+  - path: docs/product-truth/flows/leafcutter/decision-forming.flow.json
+    relationship: implements
+    status: exists
+  - path: docs/architecture/components/decision-kernel.md
+    relationship: describes
+    status: exists
+  - path: docs/how-to/run-the-decision-kernel.md
+    relationship: context
+    status: exists
+origin_agent: business-analyst
+created: 2026-10-02
+amended_by:
+  - reason: "IT PO technical enrichment and verified test mapping on 2026-10-02; BA criteria and draft readiness preserved."
+superseded_by: null
+notes: |
+  Decomposed from the user-authorized context-enrichment scope and existing
+  DK-100 through DK-104. IT PO technical constraints and exact behavioral test
+  links are recorded. Readiness remains draft; no product approval is implied.
+product_truth:
+  - flow: leafcutter/decision-forming
+    node: enrich-context
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: leafcutter/decisions
+    entities: []
+    source: real
+    asof: '2026-10-02'

@@ -5,9 +5,12 @@ BUSINESS CONTEXT: Retrieval must ground actual decisions rather than only helper
 ARCHITECTURE: Existing ScenarioCase real service/stores/checkpoint with an offline knowledge port.
 """
 
+import json
+from pathlib import Path
+
 from kernel.bootstrap import build_bindings
 from kernel.config import SourceConfig
-from kernel.contracts import RunStatus, schema_ids
+from kernel.contracts import RunStatus, new_id, schema_ids
 from knowledge.config import KnowledgeConfig
 from knowledge.contracts import Entity, KnowledgeEvidence, KnowledgeRetrievalResult, SourceReference
 from tests.kernel.integration.scenario_support import (
@@ -16,6 +19,31 @@ from tests.kernel.integration.scenario_support import (
     options_response,
     answer_human,
 )
+
+
+async def resume_supplied_synthesis(case, envelope):
+    """Answer one actual synthesis wait using only its supplied evidence excerpts."""
+    if envelope.status != RunStatus.WAITING_HOST or envelope.pending_interaction.operation != "synthesize_evidence":
+        return envelope
+    packet = envelope.pending_interaction
+    assert packet.output_schema_id == schema_ids.FINDINGS
+    assert len(packet.input_artifact_refs) == 1
+    artifact = json.loads(Path(packet.input_artifact_refs[0]).read_text(encoding="utf-8"))
+    assert artifact["operation"] == "synthesize_evidence"
+    assert {row["id"] for row in artifact["evidence"]} == set(packet.input_evidence_ids)
+    findings = [
+        {"id": new_id("find"), "kind": "inference", "claim": row["excerpt"],
+         "supporting_evidence_ids": [row["id"]], "producer": "controlled-host"}
+        for row in artifact["evidence"] if row.get("excerpt")
+    ]
+    assert findings, "This positive fixture must actually receive source excerpts"
+    responder = FakeHostResponder({schema_ids.FINDINGS: {
+        "findings": findings, "unknowns": ["No independent execution proof is supplied."]}})
+    resumed = await case.service().resume_run(envelope.run_id, responder.answer(envelope))
+    assert resumed.run_id == envelope.run_id
+    assert not (resumed.status == RunStatus.WAITING_HOST
+                and resumed.pending_interaction.operation == "synthesize_evidence"), "Unexpected repeated synthesis"
+    return resumed
 
 
 class TestKnowledgeRun(ScenarioCase):
@@ -104,6 +132,7 @@ class TestKnowledgeRun(ScenarioCase):
         )
         self.params["satisfies"] = {("c1", "A"): 0.95, ("c2", "A"): 0.9}
         paused = await self.service().start_run(task)
+        paused = await resume_supplied_synthesis(self, paused)
         assert paused.status == RunStatus.WAITING_HOST
         assert paused.pending_interaction.input_evidence_ids
         responder = FakeHostResponder({schema_ids.OPTIONS: options_response("primary")})
@@ -126,3 +155,5 @@ class TestKnowledgeRun(ScenarioCase):
 # DECISION HISTORY
 # ================================================================================
 # - 2026-10-01 20:00 [python-coder]: Verify integration through persisted full decision flow. (#TICKET-20261001-KM-400e-3)
+
+# - 2026-10-02 17:00 [test-writer]: Answer the actual configured synthesis packet before options without inventing facts. (#TICKETLESS reason=main-integration-fixture-repair)

@@ -20,6 +20,7 @@ from kernel.contracts import RegistrySnapshot, TaskInput
 from kernel.scheduler.context import KernelRuntime
 from kernel.scheduler.nodes_execute import execute
 from kernel.scheduler.nodes_gaps import record_gaps
+from kernel.scheduler.nodes_enrichment import enrich_context
 from kernel.scheduler.nodes_integrate import integrate
 from kernel.scheduler.nodes_interaction import await_interaction, open_interactions
 from kernel.scheduler.nodes_lifecycle import finalize, intake
@@ -43,14 +44,16 @@ def build_kernel_graph(checkpointer: Any = None) -> Any:
     # langgraph's add_node generics cannot infer a TypedDict state plus a Runtime parameter, so
     # the nodes are listed as Any (every node has the (state, runtime) signature).
     nodes: tuple[tuple[str, Any], ...] = (
-        ("intake", intake), ("schedule", schedule), ("route", route), ("execute", execute),
+        ("intake", intake), ("enrich_context", enrich_context),
+        ("schedule", schedule), ("route", route), ("execute", execute),
         ("integrate", integrate), ("record_gaps", record_gaps),
         ("open_interactions", open_interactions), ("await_interaction", await_interaction),
         ("finalize", finalize))
     for name, node in nodes:
         graph.add_node(name, node)
     graph.add_edge(START, "intake")
-    graph.add_edge("intake", "schedule")
+    graph.add_edge("intake", "enrich_context")
+    graph.add_edge("enrich_context", "schedule")
     graph.add_conditional_edges("schedule", after_schedule,
                                 ["route", "await_interaction", "finalize"])
     graph.add_conditional_edges("route", after_route,

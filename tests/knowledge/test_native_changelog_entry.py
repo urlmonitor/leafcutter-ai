@@ -242,9 +242,9 @@ def test_changelog_real_corpus_accounts_for_all_fields_and_three_recoveries():
         for path in (root / folder).glob("*.md")
         if path.name.lower() not in {"readme.md", "index.md"}
     }
-    assert len(records) == len(paths) == 548
+    assert len(records) == len(paths) == 550
     assert {record.source_path for record in records} == paths
-    assert len({r.native_id for r in records}) == 548
+    assert len({r.native_id for r in records}) == 550
     recovered = []
     for record in records:
         raw = record.derived["frontmatter_raw"]
@@ -267,3 +267,8 @@ def test_changelog_real_corpus_accounts_for_all_fields_and_three_recoveries():
         "`output_root: .leafcutter` and `shim_strategy: symlink`"
         in migration.metadata["migration_steps"][1]
     )
+
+
+# DECISION HISTORY
+# ========================================
+# - 2026-10-02 17:00 [test-writer]: Account for the two incoming main changelogs with the exact independent source census. (#TICKETLESS reason=main-integration-oracle-refresh)
