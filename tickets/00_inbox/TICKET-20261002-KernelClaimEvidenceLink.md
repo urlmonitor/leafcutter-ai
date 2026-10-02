@@ -18,9 +18,9 @@ last_updated: 2026-10-02
 files_touched:
   - kernel/capabilities/research/collect.py
 agents:
-  test-writer: needed
-  python-coder: needed
-  commit: needed
+  test-writer: signed_off
+  python-coder: signed_off
+  commit: signed_off
 ---
 
 # Kernel: evidence found for a human-added option is cited on it even below the relevance bar
@@ -43,3 +43,24 @@ In order to judge an option a human adds on what research found about it, we nee
 - How many claim needs are created per round (`research.max_targeted_needs`): `TICKET-20261002-KernelResearchEveryAddedOption.md`.
 
 ## Comments
+
+### 2026-10-02 12:40 — test-writer (status: ok)
+feedback-id: fb_2026-10-02_d3cd3362
+tests/kernel/grounding/test_claim_evidence_below_bar.py: 3 tests. Red on the unfixed code: `test_claim_need_records_evidence_below_the_bar` and `test_collected_claim_evidence_links_to_the_human_added_option` failed on missing ids; the non-claim guard passed.
+
+### 2026-10-02 12:41 — python-coder (status: ok)
+feedback-id: fb_2026-10-02_e13109d4
+`collect.py` `_absorb_bundle`: a claim need records every item its single-need child returned. The answer judgement still reads only items at or above the bar (`_passing_ids`, the same `retrieval.coverage_relevance_threshold` bar the collect path passes in). Verification:
+- the new tests are green;
+- mutation proof: with the fix reverted, 2 tests fail; with it restored, all 3 pass;
+- the full `tests/kernel` suite: 1461 passed, 7 skipped;
+- ruff is clean.
+
+### 2026-10-02 13:00 — commit (status: ok)
+feedback-id: fb_2026-10-02_3ac961be
+Committing collect.py fix, new test, and ticket sign-offs; build-churn files left unstaged.
+
+completion_manifest:
+  pre_commit_hooks_pass: true
+  commit_message_valid: true
+  ticket_staged: true

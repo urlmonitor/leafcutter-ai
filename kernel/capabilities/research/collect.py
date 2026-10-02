@@ -33,8 +33,10 @@ from kernel.contracts import schema_ids
 from kernel.contracts.capability import Usage
 from kernel.contracts.enums import NeedStatus, RequestKind, ResultStatus
 from kernel.contracts.evidence import (
+    CLAIM_NEED_PREFIX,
     Contradiction,
     EvidenceBundlePayload,
+    Evidence,
     EvidenceNeed,
     stronger_category,
 )
@@ -60,20 +62,34 @@ class Judgement:
     answers: dict[str, float] = field(default_factory=dict)
 
 
+def _passes(item: Evidence, bar: float) -> bool:
+    """Return True when the item was never judged for relevance or was judged at/above `bar`."""
+    return item.provenance.relevance is None or item.provenance.relevance >= bar
+
+
+def _passing_ids(ctx: ExecutionContext, out: Collected, need_id: str) -> list[str]:
+    """Return the need's recorded evidence ids that are kept and pass the relevance bar."""
+    bar = ctx.config.retrieval.coverage_relevance_threshold
+    return [i for i in out.need_evidence.get(need_id, [])
+            if i in out.evidence and _passes(out.evidence[i], bar)]
+
+
 def _absorb_bundle(out: Collected, payload: dict, bar: float) -> None:
     """Merge one evidence_bundle.v1 payload into the collected state.
 
     A bundle that reports on a single need also tells which of its evidence passed relevance for
     that need (judged at or above `bar`, or never judged, as a host's is): the answer judgement
-    reads exactly those items.
+    reads exactly those items. A claim need (`need.claim.<option id>`) records every item its
+    child returned, even below the bar, so the decision can link that evidence to the human-added
+    option; each item keeps its relevance, and `_passing_ids` still gates the answer judgement.
     """
     bundle = cast(EvidenceBundlePayload, validate_payload(schema_ids.EVIDENCE_BUNDLE, payload))
     if len(bundle.coverage) == 1:
         (need_id,) = bundle.coverage
-        passed = [e.id for e in bundle.evidence
-                  if e.provenance.relevance is None or e.provenance.relevance >= bar]
+        kept = [e.id for e in bundle.evidence
+                if need_id.startswith(CLAIM_NEED_PREFIX) or _passes(e, bar)]
         out.need_evidence[need_id] = list(dict.fromkeys([*out.need_evidence.get(need_id, []),
-                                                         *passed]))
+                                                         *kept]))
     out.unknowns += bundle.unknowns
     for item in bundle.evidence:
         out.evidence[item.id] = stronger_category(out.evidence.get(item.id), item)
@@ -151,7 +167,7 @@ def _answer_checks(ctx: ExecutionContext, out: Collected, needs: list[EvidenceNe
     if not ctx.config.research.answer_aware_coverage:
         return {}
     return {n.id: n for n in needs if out.coverage.get(n.id) is NeedStatus.SATISFIED
-            and any(i in out.evidence for i in out.need_evidence.get(n.id, []))}
+            and _passing_ids(ctx, out, n.id)}
 
 
 def _answer_question(need_id: str) -> QuestionSpec:
@@ -192,8 +208,8 @@ async def judge(ctx: ExecutionContext, invocation: CapabilityInvocation, questio
     state: dict[str, JsonValue] = {
         "question": question, "evidence": evidence_state(ctx, items),
         "findings": [f.claim for f in out.findings],
-        "answer_checks": {i: {"question": n.question, "evidence_ids": [
-            e for e in out.need_evidence[i] if e in out.evidence]} for i, n in checks.items()}}
+        "answer_checks": {i: {"question": n.question, "evidence_ids":
+                           _passing_ids(ctx, out, i)} for i, n in checks.items()}}
     result = await ask_jev(ctx, invocation, make_batch(ctx, PURPOSE, state, questions),
                            prior_usage=prior_usage)
     asked = {q.id for q in questions}
@@ -262,6 +278,10 @@ def record_contradiction(ctx: ExecutionContext, out: Collected, probability: flo
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-02 [python-coder]: A claim need records all evidence its single-need child returned,
+#   even below the relevance bar (live run run-de1c989117414c1c cited nothing on a human-added
+#   option). The answer judgement still reads only items passing the bar (`_passing_ids`), so
+#   below-bar claim items are never judged as answering. (#KernelClaimEvidenceLink)
 # - 2026-10-01 [python-coder]: The bundle keeps every limitation line (nothing is lost) and also
 #   names, per need, the retrieval cut notes of that need, so a decision can show one summary line
 #   per need instead of dozens (round 8 defect d). (#KernelDecisionStore)
