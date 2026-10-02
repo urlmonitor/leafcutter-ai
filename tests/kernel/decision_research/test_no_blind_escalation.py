@@ -17,7 +17,13 @@ from unittest.mock import MagicMock
 from kernel.capabilities.decision.assess import NONE_CHOICE, Assessment
 from kernel.capabilities.decision.combine import combine
 from kernel.capabilities.decision.loading import MAX_GAPS_KEPT, _absorb_options
-from kernel.capabilities.decision.ranking import DESIGN_ROUND
+from kernel.capabilities.decision.design_ending import choice_rationale, design_followup
+from kernel.capabilities.decision.ranking import (
+    DESIGN_ROUND,
+    NO_RESEARCH_TARGETS,
+    RESEARCH_CAP,
+    research_rounds,
+)
 from kernel.capabilities.decision.state import DecisionContinuation, Working
 from kernel.config import load_kernel_config
 from kernel.contracts.decision import Criterion, Option
@@ -78,6 +84,33 @@ class TestNoBlindEscalation(unittest.TestCase):
         v = combine(work, _assess(work), CFG)
         self.assertEqual(v.status, DecisionStatus.NEEDS_HUMAN)
         self.assertTrue(v.ranking)
+
+    def test_no_targets_below_the_cap_names_no_research_targets_not_the_cap(self) -> None:
+        # covers: UNKNOWN
+        # angle: discrimination
+        work = _work()  # no gaps, no added options, no uncited files: nothing to research
+        self.assertEqual(research_rounds(work), 0)
+        v = combine(work, _assess(work), CFG)
+        self.assertEqual(v.status, DecisionStatus.NEEDS_HUMAN)
+        self.assertEqual(v.reason, NO_RESEARCH_TARGETS)
+        self.assertNotEqual(v.reason, RESEARCH_CAP)
+        question = design_followup(work, v.reason, v.ranking, CFG).request.question
+        self.assertIn("No research round is due", question)
+        self.assertNotIn("limit", question)
+        work.cont = work.cont.model_copy(update={
+            "design_reason": v.reason, "design_ranking": v.ranking, "design_choice_id": "A"})
+        rationale = choice_rationale(work)
+        self.assertIn("because no_research_targets after 0 research round(s)", rationale)
+        self.assertNotIn("research_cap", rationale)
+
+    def test_no_targets_at_the_cap_still_reports_research_cap(self) -> None:
+        # covers: UNKNOWN
+        # angle: boundary
+        requested = [f"research:r{i}" for i in range(CFG.max_research_rounds)]
+        work = _work(requested=requested)  # no targets, but the cap really was reached
+        v = combine(work, _assess(work), CFG)
+        self.assertEqual(v.status, DecisionStatus.NEEDS_HUMAN)
+        self.assertEqual(v.reason, RESEARCH_CAP)
 
     def test_nothing_rankable_keeps_unidentified_gap(self) -> None:
         # covers: UNKNOWN
