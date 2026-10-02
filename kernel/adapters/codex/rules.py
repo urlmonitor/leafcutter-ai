@@ -17,9 +17,8 @@ ARCHITECTURE: One `prefix_rule` per subcommand. The first pattern token is a lis
 from __future__ import annotations
 
 import json
-from pathlib import Path
 
-from kernel.adapters.skill_common import MARKER, shell_path
+from kernel.adapters.skill_common import MARKER, shell_path, to_posix
 
 ALLOWED_SUBCOMMANDS = ("run", "resume", "status")
 REFUSED_SUBCOMMANDS = ("cancel", "gaps", "decisions", "install-skill")
@@ -33,7 +32,7 @@ def _literal(items: list[str]) -> str:
 def interpreter_forms(python: str) -> list[str]:
     """Return the interpreter spellings to match: as given, then forward-slash if different."""
     forms = [str(python)]
-    posix = Path(python).as_posix()
+    posix = to_posix(python)
     if posix != forms[0]:
         forms.append(posix)
     return forms

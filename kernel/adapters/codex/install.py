@@ -29,6 +29,7 @@ from kernel.adapters.skill_common import (
     fill,
     render_scope,
     shell_path,
+    to_posix,
     write_atomic,
 )
 from kernel.bootstrap import resolve_run_root
@@ -64,8 +65,8 @@ def _values(name: str, repo: Path | None, python: str | None, run_root: Path | N
     root = repo or repo_root()
     runs = Path(run_root) if run_root is not None else resolve_run_root(load_kernel_config(), root)
     command = f"{shell_path(python or sys.executable)} -m kernel"
-    return {"NAME": name, "COMMAND": command, "KERNEL_DIR": root.as_posix(),
-            "CLIENT_DIR": (runs / "client").as_posix(),
+    return {"NAME": name, "COMMAND": command, "KERNEL_DIR": to_posix(root),
+            "CLIENT_DIR": to_posix(runs / "client"),
             **render_scope(repository_root or root, workspace_id)}
 
 

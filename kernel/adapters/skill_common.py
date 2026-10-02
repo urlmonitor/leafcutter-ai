@@ -45,9 +45,25 @@ def check_name(name: str) -> None:
                              "the skill name must match [a-z0-9][a-z0-9-]* (max 63 characters)")
 
 
+def is_windows_path(text: str) -> bool:
+    """True if `text` looks like a Windows path (drive letter or backslash), on any OS."""
+    return bool(re.match(r"^[A-Za-z]:", text)) or "\\" in text
+
+
+def to_posix(path: Path | str) -> str:
+    """Return `path` with forward slashes, judged by its text, never by the running OS."""
+    text = str(path)
+    return text.replace("\\", "/") if is_windows_path(text) else text.rstrip("/") or text
+
+
+def folder_name(path: Path | str) -> str:
+    """Return the last path component of `path`, judged by its text, never by the running OS."""
+    return to_posix(path).rstrip("/").rsplit("/", 1)[-1]
+
+
 def shell_path(path: Path | str) -> str:
     """Return a forward-slash path, double-quoted when it contains whitespace."""
-    text = Path(path).as_posix()
+    text = to_posix(path)
     return f'"{text}"' if " " in text else text
 
 
@@ -62,9 +78,8 @@ def render_scope(repository_root: Path, workspace_id: str | None) -> dict[str, s
     The root is written with forward slashes (valid on Windows); the workspace id defaults to
     the repository folder name.
     """
-    root = Path(repository_root)
-    return {"REPOSITORY_ROOT": json_text(root.as_posix()),
-            "WORKSPACE_ID": json_text(workspace_id or root.name)}
+    return {"REPOSITORY_ROOT": json_text(to_posix(repository_root)),
+            "WORKSPACE_ID": json_text(workspace_id or folder_name(repository_root))}
 
 
 def fill(text: str, values: Mapping[str, str]) -> str:

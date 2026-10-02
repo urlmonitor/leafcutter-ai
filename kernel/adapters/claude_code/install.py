@@ -30,6 +30,7 @@ from kernel.adapters.skill_common import (
     owned,
     render_scope,
     shell_path,
+    to_posix,
     write_atomic,
 )
 from kernel.bootstrap import resolve_run_root
@@ -51,7 +52,7 @@ def command_line(repo: Path, python: str) -> str:
 
 def _rule_path(path: Path) -> str:
     """Return `path` as an absolute Claude Code path-rule prefix (`//` root, `/c/` drives)."""
-    text = Path(path).as_posix()
+    text = to_posix(path)
     drive = re.match(r"^([A-Za-z]):(/.*)?$", text)
     if drive:
         text = f"/{drive.group(1).lower()}{drive.group(2) or ''}"
@@ -90,7 +91,7 @@ def render_skill(name: str, repo: Path | None = None, python: str | None = None,
     command = command_line(root, python or sys.executable)
     runs = Path(run_root) if run_root is not None else resolve_run_root(load_kernel_config(), root)
     scratch = client_dir(runs)
-    values = {"NAME": name, "COMMAND": command, "CLIENT_DIR": scratch.as_posix(),
+    values = {"NAME": name, "COMMAND": command, "CLIENT_DIR": to_posix(scratch),
               "CLIENT_RULE": _rule_path(scratch), "RUN_ROOT_RULE": _rule_path(runs),
               **render_scope(repository_root or root, workspace_id)}
     return fill(text, values)

@@ -18,13 +18,20 @@ import json
 import re
 import tempfile
 import unittest
-from pathlib import Path
+from pathlib import Path, PurePosixPath
+from typing import cast
 
 import yaml
 
 from kernel.adapters.cli import main
-from kernel.adapters.codex.install import MARKER, InstallRefused, install_codex_skill
+from kernel.adapters.codex.install import (
+    MARKER,
+    InstallRefused,
+    install_codex_skill,
+    render_codex_skill,
+)
 from kernel.adapters.codex.rules import render_rules
+from kernel.adapters.skill_common import render_scope, shell_path
 from tests.kernel.helpers import narrow
 
 REPO = Path("/repo/leafcutter")
@@ -32,6 +39,11 @@ PYTHON = "/usr/bin/python3"
 HAND_WRITTEN = "# somebody else's file\n"
 RULE = re.compile(r"prefix_rule\((.*?)\n\)", re.DOTALL)
 SUBCOMMAND = re.compile(r'pattern = \[.*?, "-m", "kernel", "(\w[\w-]*)"\]')
+
+
+def posix_text(text: str) -> Path:
+    """Return `text` as a POSIX-flavoured path object (backslashes stay text), typed as Path."""
+    return cast(Path, PurePosixPath(text))
 
 
 def cli(*argv: str) -> tuple[int, dict]:
@@ -100,6 +112,26 @@ class TestInstalledFiles(CodexCase):
         text = render_rules("leafcutter", "C:\\Users\\dev\\.venv\\Scripts\\python.exe")
         self.assertIn('["C:\\\\Users\\\\dev\\\\.venv\\\\Scripts\\\\python.exe", '
                       '"C:/Users/dev/.venv/Scripts/python.exe"]', text)
+
+    def test_examples_use_forward_slashes_and_posix_paths_stay_single(self) -> None:
+        win = render_rules("leafcutter", "C:\\Users\\dev\\.venv\\Scripts\\python.exe")
+        for line in win.splitlines():
+            if line.strip().startswith(("match", "not_match")):
+                self.assertNotIn("\\", line)
+        posix = render_rules("leafcutter", "/usr/bin/python3")
+        self.assertIn('pattern = ["/usr/bin/python3", "-m", "kernel", "run"]', posix)
+
+    def test_windows_strings_render_the_same_on_any_os(self) -> None:
+        # PurePosixPath keeps backslashes as text, as a Linux runner sees a Windows string.
+        win = str(posix_text("C:\\Users\\dev\\leafcutter ai"))
+        self.assertEqual(shell_path(win), '"C:/Users/dev/leafcutter ai"')
+        scope = render_scope(posix_text("C:\\Users\\dev\\repo"), None)
+        self.assertEqual(scope, {"REPOSITORY_ROOT": "C:/Users/dev/repo", "WORKSPACE_ID": "repo"})
+        text = render_codex_skill("leafcutter", posix_text("C:\\kern"), "C:\\py\\python.exe",
+                                  posix_text("C:\\runs"))
+        self.assertIn("`C:/py/python.exe -m kernel`", text)
+        self.assertIn("working directory `C:/kern`", " ".join(text.split()))
+        self.assertIn("C:/runs/client/", text)
 
     def test_the_skill_names_the_rendered_scope(self) -> None:
         self.install(repository_root=Path("/work/r"), workspace_id="ws")
