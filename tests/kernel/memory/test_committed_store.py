@@ -32,6 +32,7 @@ class TestCommittedStore(unittest.TestCase):
     """The real store."""
 
     def test_the_committed_store_validates_and_its_index_is_current(self) -> None:
+        # covers: DK-100d-2
         report = validate_store(STORE, schema=schema(), vocab=vocabulary())
         self.assertTrue(report.ok, [p.as_dict() for p in report.problems])
 

@@ -79,6 +79,8 @@ class TestOptionsAndCriteriaProposals(DecisionTestCase):
         return inv, ctx, self.run_decision(resume(inv, waiting, [out]), ctx)
 
     def test_proposed_criteria_go_to_human_approval_before_jev(self) -> None:
+        # covers: DK-100b-1
+        # covers: DK-100b-3
         _, _, asked = self._proposal_round()
         request = asked.requests[0]
         self.assertEqual(request.kind, RequestKind.HUMAN)
@@ -89,6 +91,7 @@ class TestOptionsAndCriteriaProposals(DecisionTestCase):
         self.assertEqual(self.jev.call_count, 0)
 
     def test_jev_decides_against_approved_criteria_only(self) -> None:
+        # covers: DK-100b-1
         inv, ctx, asked = self._proposal_round()
         self.params["satisfies"] = {("p1", "A"): 0.95, ("p2", "A"): 0.95}
         approve = child(ctx, RequestKind.HUMAN, schema_ids.HUMAN_ANSWER,
@@ -128,6 +131,7 @@ class TestOptionsAndCriteriaProposals(DecisionTestCase):
         self.assertEqual(set(as_json(self.jev.batches[0].state)["criteria"]), {"p1"})
 
     def test_free_text_is_recorded_but_never_becomes_criteria(self) -> None:
+        # covers: DK-100b-1-ii
         inv, ctx, asked = self._proposal_round()
         text = child(ctx, RequestKind.HUMAN, schema_ids.HUMAN_ANSWER,
                      {"free_text": "- Must survive a crash\n- Must run offline"})
@@ -158,6 +162,7 @@ class TestOptionsAndCriteriaProposals(DecisionTestCase):
         self.assertEqual(self.jev.call_count, 0)
 
     def test_generated_options_are_proposals_until_approved(self) -> None:
+        # covers: DK-100b-1
         ctx = self.ctx()
         inv = invocation(DECISION, schema_ids.GOAL_REQUEST,
                          GoalRequestPayload(goal="Where should state live?").model_dump())
