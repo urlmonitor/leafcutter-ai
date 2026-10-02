@@ -1,0 +1,9 @@
+FF.AC-ENFORCEMENT [STRICT]: tests/knowledge/test_native_decision.py::test_decision_malformed_source_fails_explicitly[- list\n] covers not-done AC KM-400a-3-i — NOT masked (AC_ENFORCE_STRICT=1); reported as a real failure.
+FF                                                                       [100%]
+shared-layout-routing: declared_mutators=0 undeclared=0
+=========================== short test summary info ===========================
+FAILED tests/knowledge/test_native_decision.py::test_decision_plain_yaml_and_size_bound_enforced[anchor]
+FAILED tests/knowledge/test_native_decision.py::test_decision_plain_yaml_and_size_bound_enforced[tag]
+FAILED tests/knowledge/test_native_decision.py::test_decision_malformed_source_fails_explicitly[- list\n]
+FAILED tests/knowledge/test_native_decision.py::test_decision_malformed_source_fails_explicitly[title: first\ntitle: second\n]
+4 failed, 1 passed in 32.97s

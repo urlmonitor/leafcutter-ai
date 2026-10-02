@@ -1,0 +1,58 @@
+{
+  "strict_enforcement": "AC_ENFORCE_STRICT=1",
+  "receipts": {
+    "native-final-strict.xml": {
+      "tests": 390,
+      "passed": 389,
+      "failed": 0,
+      "skipped": 1,
+      "skip_reason": "Windows privilege unavailable for real symlink creation; other glossary path controls pass."
+    },
+    "core-regression.xml": {
+      "tests": 74,
+      "passed": 74,
+      "failed": 0,
+      "skipped": 0
+    },
+    "refresh-recovery-complete-green.xml": {
+      "tests": 16,
+      "passed": 16,
+      "failed": 0,
+      "skipped": 0
+    },
+    "domain-graph-regression.xml": {
+      "tests": 3,
+      "passed": 3,
+      "failed": 0,
+      "skipped": 0
+    },
+    "domain-regression.xml": {
+      "tests": 10,
+      "passed": 7,
+      "failed": 3,
+      "skipped": 0,
+      "note": "Initial graph tests used the wrong disposable port; the three are superseded by domain-graph-regression.xml. The seven migration tests passed."
+    }
+  },
+  "independent_review": "reports/native-fields/integration-review.json",
+  "review_resolution": "reports/native-fields/refresh-recovery.json",
+  "field_audit": "reports/native-fields/field-coverage.json",
+  "hosted_publication": "reports/native-fields/aura-publication.json",
+  "status": "complete",
+  "hosted_readback": "reports/native-fields/aura-readback.json",
+  "visual_verification": "reports/native-fields/aura-ui.json",
+  "active_checkout": "C:/Users/Hendrik/Code/leafcutter/worktrees/knowledge-retrieval-v01",
+  "installed_smoke": {
+    "passed": 27,
+    "report": "reports/native-fields/installed-smoke.xml"
+  },
+  "notes": [
+    "Decision reader supports approved canonical records, but current published source has zero Decision records.",
+    "30 retained compatibility Component hubs have no native registry record; their original reference properties remain exposed. All 9017 canonical/native-reference records have full native metadata.",
+    "No commit or PR was requested or created. Existing active checkout index and unrelated merge state were preserved."
+  ],
+  "cleanup": {
+    "disposable_neo4j_container": "stopped",
+    "isolated_test_temporary_directory": "Windows denied removal of pytest-of-Hendrik; not installed into the active checkout."
+  }
+}

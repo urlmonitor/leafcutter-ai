@@ -33,8 +33,10 @@ def add_parser(subparsers: argparse._SubParsersAction) -> None:
         parser.add_argument("--root", required=True)
         parser.add_argument("--repository-id", default="leafcutter")
         parser.add_argument("--revision", default="HEAD")
+        from knowledge.projection.canonical_loader import SUPPORTED_SURFACES
+
         parser.add_argument(
-            "--surfaces", nargs="+", choices=["acs", "adrs", "components"], default=None
+            "--surfaces", nargs="+", choices=sorted(SUPPORTED_SURFACES), default=None
         )
         if name in ("rollback", "cleanup"):
             parser.add_argument("--generation-id", required=True)

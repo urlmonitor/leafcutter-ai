@@ -129,7 +129,7 @@ The resumable runtime in leafcutter-ai (package `kernel/`) that takes a free-for
 
 ### capability
 
-In the Decision Kernel, the contract-driven unit of work that replaces the agent: an input contract, applicable policies, evidence preparation, decisions, an execution strategy, verification and a typed result. A capability may contain no model, one model call or a bounded worker loop, and callers do not depend on which. See ADR-052.
+In the Decision Kernel, the contract-driven unit of work that replaces the agent: an input contract, applicable policies, evidence preparation, decisions, an execution strategy, verification and a typed result. A capability may contain no model, one model call or a bounded worker loop, and callers do not depend on which. Every capability runs the same lifecycle: PREPARE → PRE-CHECK → COMPILE INVOCATION → EXECUTE → POST-CHECK → ACCEPT, REPAIR, REQUEST INFORMATION or ESCALATE (ADR-052 §4; see `docs/architecture/diagrams/c3-015-decision-kernel-flows-capability-lifecycle.md`). See ADR-052.
 
 ### Jev
 
@@ -173,7 +173,7 @@ The rule that colony-memory evidence is scoped to the policy, template and model
 
 ### performance store
 
-The planned Stage 4 store of compact routing statistics, produced by an analytics and evaluation job from Langfuse traces. The kernel reads these statistics and never queries Langfuse directly, so observability data does not become operational state. See ADR-056 §8.
+ADR-056's name for the store of compact routing statistics that a learning evaluator derives from Langfuse traces and scores. ADR-057 named it the **colony memory store**; ADR-065 keeps it in Neo4j as derived aggregates behind the `ColonyMemory` port of ADR-059. The kernel reads these statistics and never queries Langfuse directly, so observability data does not become operational state. See ADR-056 §8, ADR-057 and ADR-065.
 
 ### confidence calibration
 
@@ -186,3 +186,43 @@ A proposal to change a decision rule (a policy, checklist or ADR) because record
 ### scout
 
 Colony-model name for research and capability-gap handling: the work that goes where no capability exists yet. At founding the general-purpose model does scout work through approved fallback, and repeated gaps for the same need are the signal to build a specialized capability. See ADR-056 §6 and `docs/vision.md`.
+
+### LEAFCUTTER_COLONY_DB_URL
+
+Superseded. ADR-057 (2026-09-30) defined it as the `.env` variable holding a PostgreSQL connection URL for the colony memory store. ADR-065 (2026-10-02) moved the learned statistics to Neo4j, configured through the `LEAFCUTTER_NEO4J_*` settings, so this variable is no longer used. Kept so older documents stay readable. See ADR-057 §4 and ADR-065.
+
+### LEAFCUTTER_SELF_LEARNING
+
+Optional opt-out in the project-root `.env`: `LEAFCUTTER_SELF_LEARNING=false` keeps learned statistics off, even when a colony memory store is configured. Approved decision records and precedent are unaffected; they follow ADR-059's `memory.backend` setting. Otherwise enablement follows the store configuration (ADR-065). See ADR-057 §4 and ADR-065.
+
+### JEV_API_KEY
+
+The Jev credential, kept in the project-root `.env` next to the Langfuse keys (`LANGFUSE_PUBLIC_KEY`, `LANGFUSE_SECRET_KEY`, `LANGFUSE_BASE_URL`). The Decision Kernel needs it to call Jev.
+
+### NEEDS_CONTEXT
+
+A sentinel choice in the Decision Kernel's routing question (`kernel.route`). When Jev selects it, the request lacks the information needed to pick a capability safely: the routing outcome is `insufficient_context` and the kernel asks for clarification instead of routing. It sits alongside the `__NONE__` sentinel for "no matching capability". See `kernel/scheduler/routing.py`.
+
+### PROJECT_CONTEXT
+
+A `PROJECT_CONTEXT.md` file in an agent, skill or component directory that supplies project-specific context to legacy Leafcutter agents at spawn time. It is one of the channels of the agent knowledge plane. See `docs/architecture/agent_knowledge_plane.md`.
+
+### assemble_context_bundle
+
+A pure function in `scripts/injection_builders.py` that assembles the layered context bundle for agents dispatched by the fast-lane build: architecture docs, acceptance criteria, prior tests and working changes, ordered from most stable to most volatile so the stable prefix stays byte-identical for prompt caching. Exposed as the `assemble-bundle` CLI subcommand. See `docs/reference/fast-lane-prompt-caching.md`.
+
+### agent_knowledge_plane
+
+The architecture reference (`docs/architecture/agent_knowledge_plane.md`) for how legacy Leafcutter agents receive context at spawn time through the harness's injection channels, such as `CLAUDE.md`, auto-memory, the glossary, skills, agent frontmatter, folder `README.md` and `PROJECT_CONTEXT.md`. The Decision Kernel's context map contrasts with it (`docs/architecture/diagrams/c3-016-decision-kernel-context-map.md`).
+
+### agent_knowledge_system
+
+The architecture reference (`docs/architecture/agent_knowledge_system.md`) for how legacy Leafcutter agents persist learnings after work completes. It is the persistence-side complement to `agent_knowledge_plane`.
+
+### LEAFCUTTER_NEO4J_URI
+
+The connection URI of Leafcutter's Neo4j settings family: `LEAFCUTTER_NEO4J_URI`, `LEAFCUTTER_NEO4J_USERNAME`, `LEAFCUTTER_NEO4J_PASSWORD`, `LEAFCUTTER_NEO4J_DATABASE`, and the writer pair `LEAFCUTTER_NEO4J_WRITER_USERNAME` / `LEAFCUTTER_NEO4J_WRITER_PASSWORD`. ADR-062 (knowledge retrieval) introduced them, and ADR-065 also uses them to configure the colony memory store for learned statistics, replacing `LEAFCUTTER_COLONY_DB_URL`. Without them, or with `LEAFCUTTER_SELF_LEARNING=false`, learned statistics are off; decision records and precedent are unaffected (ADR-059). Whether statistics share ADR-062's database and credentials is ADR-065 Open Question 4.
+
+### out_of_domain
+
+A `GapType` value in the Decision Kernel (`kernel/contracts/enums.py`) and a choice of the intake intent classification (`kernel/intent/classify.py`): the request is not about software engineering in the repository. The kernel declines it and records it as a capability gap.

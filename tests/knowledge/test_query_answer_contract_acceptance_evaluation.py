@@ -10,7 +10,7 @@ import sys
 
 from knowledge import __main__ as cli
 from knowledge.service import KnowledgeService
-from tests.knowledge.test_query_answer_contract_acceptance_observation import controlled_storage
+from tests.knowledge.test_query_answer_contract_acceptance_observation import controlled_storage as controlled_storage
 from tests.knowledge.query_answer_contract_acceptance_support import REPOSITORY_ID, SOURCE_SHA, public_request
 
 

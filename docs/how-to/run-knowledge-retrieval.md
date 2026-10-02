@@ -6,7 +6,7 @@ created: '2026-10-01'
 components:
 - knowledge_management
 - decision_kernel
-last_updated: '2026-10-01'
+last_updated: '2026-10-02'
 description: Run scoped repository queries and inspect answer completeness, evidence and observation delivery.
 related_docs:
 - docs/reference/knowledge-retrieval-answers.md
@@ -26,6 +26,116 @@ Run commands from the trusted Leafcutter checkout. Indexed Git objects are data,
 - Read [ADR-062](../architecture/adrs/ADR-062-standalone-knowledge-retrieval.md) and the [kernel query-growth guide](kernel-query-growth.md) before enabling kernel research.
 
 ## Steps
+
+### Explore the graph in Aura
+
+The domain graph exposes native labels including `AC`, `ADR`, `Component`,
+`Agent`, `Skill`, `Ticket`, `Document`, `RoadmapPhase`, `GlossaryTerm`, `Flow`,
+`Mockup`, `MockData`, `ChangelogEntry`, `Capability`, `Decision`, `SourceFile`,
+and `Test`. A label has nodes only when the pinned source contains that type.
+Use `name` for captions (canonical identifiers), and inspect `title`, `source_path`
+and `source_revision` for context. Relationships use their actual types, such as
+`COMPONENT_MEMBERSHIP`, `DEPENDS_ON`, `COVERED_BY`, and `IMPLEMENTED_BY`.
+These remain source declarations, not proof that implementation or testing passed.
+
+In Aura **Bloom**, use the saved search phrase **Component finalize**, select the
+matching suggestion, then run it. Replace `finalize` with another component name
+to view its direct assignments. The saved phrase selects only current nodes and
+relationships. Results depend on the active mapper and source revision; the native
+field expansion also admits direct component assignments from newly supported types.
+Choose **In Scene** in the legend to show the categories present in this view.
+Aura resets this choice to **All** after a reload, so select **In Scene** again.
+The free instance uses its Default Perspective; an additional perspective requires
+an Aura upgrade. The saved captions use `name` for AC, ADR, Component, SourceFile
+and Test, and `title` for Ticket, Document and ChangelogEntry; titles appear on hover.
+The verified mapper-7 scene at source `59269e02` contains 74 nodes and 74
+relationships: 63 ACs, one ADR, one Component, three Tickets, two Documents and
+four ChangelogEntries. See `reports/native-fields/aura-ui.json` for visual evidence.
+
+Show items explicitly assigned to a component in the active snapshot:
+
+```cypher
+MATCH (n)
+WHERE n.current = true AND 'finalize' IN n.components
+RETURN n;
+```
+
+Show those items connected to the component:
+
+```cypher
+MATCH p = (n)-[:COMPONENT_MEMBERSHIP]->(c:Component {name: 'finalize'})
+WHERE n.current = true AND c.current = true
+RETURN p;
+```
+
+`components` is a list because an item may declare more than one membership.
+It includes direct assignments only; a test referenced by an AC does not acquire
+the AC's component automatically. Keep `current = true` in ordinary exploration
+to exclude retained historical copies. The component search omits `Repository`
+and `Snapshot`; they remain available for diagnostics. Ordinary label searches
+can still include historical copies unless a current filter is applied.
+
+Existing generic graphs can be inspected without writes:
+
+```sh
+python -m knowledge.domain_migrate --root REPOSITORY --repository-id leafcutter --expected-host AURA_HOST
+```
+
+After updating readers, add `--apply --backup ABSOLUTE_BACKUP_PATH` with explicitly
+configured writer credentials to perform the migration. Backups contain source
+evidence and should remain private and outside Git. Migration validates every
+retained snapshot, preserves entity keys, payloads, source revisions and counts,
+and replaces each legacy relationship atomically with its native typed equivalent.
+Interrupted runs can be inspected and resumed with a new backup path. Publication
+changes, corrupt records and cross-generation edges are rejected. Old writer
+versions must not be used after migration.
+
+### Inspect complete native fields
+
+Simple authored fields appear directly, for example `criteria`, `priority`,
+`test_required` and `depends_on`. Nested leaves use JSON Pointer names, retaining
+list positions and parent objects. For example, the first test specification's
+name is `/test_spec/0/name`. Quote these names with backticks in Cypher:
+
+```cypher
+MATCH (n:AC {current: true})
+WHERE 'finalize' IN n.components
+RETURN n.id, n.criteria, n.test_required, n.`/test_spec/0/name`;
+```
+
+Authored names that collide with graph bookkeeping use pointers too: `/id`,
+`/title`, `/components`, `/current`, and `/payload` preserve exact source values.
+The ordinary `components` property deduplicates explicit source declarations and
+direct membership edges. Unresolved declarations remain filterable and are reported
+in snapshot diagnostics; indirect connections do not imply membership.
+Registry data stays separate from template frontmatter, bodies and context, which
+appear under `_native_derived/derived/...`. Those fields are inspection aids,
+not additional authored attributes of the registry entry.
+
+Neo4j cannot store maps, nested lists or null as ordinary property values. The
+mapping exposes their non-null leaves and records null paths in
+`_native_null_paths`, empty containers in `_native_empty_paths`, and exact structure
+and types in `_native_shape`. A missing field is different from any of these.
+The lossless canonical payload remains available; low-disclosure retrieval retains
+its existing field allowlist and does not reveal the full source automatically.
+
+The maintained type registry is `knowledge/native_types/registry.py`; the reviewed
+inventory and individual field contracts are in `reports/native-fields/`. Each
+reader preserves extension fields as well as the currently declared schema fields.
+To inspect a native-field refresh at the existing active source commit:
+
+```sh
+python -m knowledge.native_refresh --root ENVIRONMENT_ROOT --source-root TRUSTED_CHECKOUT --repository-id leafcutter --expected-host AURA_HOST
+```
+
+Add `--apply --backup ABSOLUTE_PRIVATE_BACKUP_PATH` only for an authorized refresh
+with writer credentials. It builds a new mapper generation, verifies written fields
+before activation, and preserves the previous generations and their canonical data.
+It does not publish uncommitted files or claim missing source records exist.
+The 2026-10-02 publication contains 9,047 current nodes and 23,612 relationships,
+with all four earlier generations preserved. The current source contains no
+Decision records. Counts and field readback are recorded separately in
+`reports/native-fields/aura-publication.json` and `aura-readback.json`.
 
 ### Step 1 - Check optional service availability
 
@@ -50,7 +160,12 @@ python -m knowledge status --root REPOSITORY --repository-id leafcutter --revisi
 
 REPOSITORY is an absolute trusted checkout; REVISION is an exact commit SHA. Validation and plan do not connect or publish. Sync reads immutable Git objects, builds a full generation and atomically publishes after validation. Repeating the same revision/mapping reuses its generation. Failed builds leave the previous generation active; stale or non-descendant publications cannot silently replace it.
 
-Supported initial canonical surfaces are ACs, components, ADRs and referenced path-keyed files/tests. Other surfaces have colliding IDs and are explicitly excluded, never silently deduplicated. Required missing references fail closed. Inspect the validation result for the exact revision you intend to publish; a historical failure or success does not establish readiness of another revision.
+Default imports include all reviewed native record types. Existing AC, ADR and
+Component identities remain stable; additional kinds use kind-qualified native
+identities to prevent collisions. Specialized and generated document views are
+excluded from duplicate ingestion. SourceFile and Test remain explicitly referenced
+paths rather than a whole-repository file scan. Required missing references fail
+closed. Inspect the validation result for the exact revision you intend to publish.
 
 For an isolated supported-surface demonstration:
 
@@ -58,7 +173,12 @@ For an isolated supported-surface demonstration:
 python -m knowledge sync --root REPOSITORY --repository-id leafcutter-docs-demo --revision REVISION --surfaces adrs components
 ```
 
-Projection scope is fingerprinted; changing surfaces under an existing published identity is rejected. The separate demo identity cannot overwrite the full repository projection. Production Decision/Lesson/Policy mappings are unsupported. Reviewed synthetic records demonstrate history mechanics only; runtime traces/run roots do not become canonical history.
+Projection scope is fingerprinted; changing surfaces through ordinary sync under an
+existing published identity is rejected. Use the explicit native refresh for the
+reviewed scope expansion. The separate demo identity cannot overwrite the full
+repository projection. Decision records require the approved canonical source
+contract; pending merge content is not published. Lesson/Policy stores and runtime
+trace ingestion remain unsupported; synthetic history fixtures are labeled as such.
 
 ### Step 3 - Retrieve a bounded source-backed answer
 

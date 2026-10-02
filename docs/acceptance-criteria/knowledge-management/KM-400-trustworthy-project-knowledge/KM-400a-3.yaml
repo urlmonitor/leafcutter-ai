@@ -44,6 +44,7 @@ created: '2026-10-01'
 amended_by: []
 superseded_by: null
 covered_by:
+- KM-400a-3-i
 - tests/knowledge_live/catalog_checks.py::test_all_registered_templates_and_measured_synthetic_evaluation
 - tests/knowledge_live/neo4j_checks.py::test_live_graph_neighbors_preserve_edge_anchor_and_bound
 implemented_by:

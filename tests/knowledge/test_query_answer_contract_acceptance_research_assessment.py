@@ -106,7 +106,9 @@ class TestResearchAssessmentHandoff(ResearchAssessmentCase):
             return [] if left == right else [path]
         compared = [differences(state.get('assessment'), packet) for state in states]
         assert any(state.get('assessment') == packet for state in states), compared
-        import subprocess, sys, os
+        import subprocess
+        import sys
+        import os
         from kernel.contracts.run import RunEnvelope
         path = self.run_root / 'independent-assessment-restart.json'
         path.write_text(json.dumps({'pending': pending.model_dump(mode='json'),

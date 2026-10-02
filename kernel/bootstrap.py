@@ -102,8 +102,8 @@ class KernelEnvironment:
     tracer: Tracer
     redactor: Redactor
     jev_factory: Callable[[], JevPort] | None
-    knowledge_retriever: KnowledgeRetriever | None = None
     memory: ColonyMemory = field(default_factory=NullColonyMemory)
+    knowledge_retriever: KnowledgeRetriever | None = None
 
     async def aclose(self) -> None:
         """Await owned knowledge resources and stop the tracer for an async host."""

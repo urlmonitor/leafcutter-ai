@@ -32,9 +32,24 @@ from knowledge.projection.answer_fields import (
     mapped_relationships,
 )
 
-SUPPORTED_SURFACES = frozenset({"acs", "adrs", "components"})
 KINDS = {"acs": "AcceptanceCriterion", "adrs": "ADR", "components": "Component"}
-MAPPER_VERSION = "6"
+NATIVE_SURFACES = {
+    **KINDS,
+    "agents": "Agent",
+    "skills": "Skill",
+    "tickets": "Ticket",
+    "docs": "Document",
+    "roadmap": "RoadmapPhase",
+    "glossary": "GlossaryTerm",
+    "flows": "Flow",
+    "mockups": "Mockup",
+    "mock_data": "MockData",
+    "changelogs": "ChangelogEntry",
+    "capabilities": "Capability",
+    "decisions": "Decision",
+}
+SUPPORTED_SURFACES = frozenset(NATIVE_SURFACES)
+MAPPER_VERSION = "7"
 
 
 def load_snapshot(
@@ -78,7 +93,7 @@ def _load(
     requested = set(surfaces) if surfaces is not None else SUPPORTED_SURFACES
     if not requested or not requested <= SUPPORTED_SURFACES:
         raise ValueError("unsupported projection surface selection")
-    selected = {key: value for key, value in declared.items() if key in requested}
+    selected = {key: value for key, value in declared.items() if key in requested and key in KINDS}
     for surface in selected.values():
         safe_path(surface["path"])
     records = validate_acs(root, selected)
@@ -120,7 +135,9 @@ def _load(
     diagnostics.append(f"excluded_noncanonical_ac_documents:{excluded_nodes}")
     diagnostics.append(f"optional_declined_references:{graph.declined_count}")
     diagnostics.extend(_optional_diagnostics(root, graph, selected, records))
-    supported = sorted({"Component", "SourceFile", "Test"} | {KINDS[key] for key in requested})
+    supported = sorted(
+        {"Component", "SourceFile", "Test"} | {NATIVE_SURFACES[key] for key in requested}
+    )
     snapshot = ProjectionSnapshot(
         repository_id=repository_id,
         source_sha=sha,
@@ -132,6 +149,11 @@ def _load(
         supported_kinds=supported,
         supported_fields=mapped_fields(supported),
         supported_relationships=mapped_relationships(selected),
+    )
+    from knowledge.projection.native_metadata import enrich
+
+    snapshot = enrich(
+        snapshot, root, kinds={NATIVE_SURFACES[key] for key in requested}, validated_acs=records
     )
     validate_snapshot(snapshot)
     return snapshot

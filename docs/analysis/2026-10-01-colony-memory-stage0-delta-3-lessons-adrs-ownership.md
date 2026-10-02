@@ -83,7 +83,7 @@ If L0 ACs are authored (decision 3), this becomes one of them: "A learned record
 - `docs/roadmap.json` (4) and `docs/roadmap.md` (5, a regenerated mirror): the `phase_colony_*` titles and the `phase_kernel_4_trails` text;
 - `docs/components.json` (`colony_memory` description);
 - `docs/architecture/components/colony-memory.md` (23) and `decision-kernel.md` (2);
-- four diagrams: `decision-kernel-flows-learning-loop.md` (6), `-flows-overview.md` (4), `-flows-open-points.md` (2), `-context-jev.md` (2).
+- four diagrams: `c3-020-decision-kernel-flows-learning-loop.md` (6), `-flows-overview.md` (4), `-flows-open-points.md` (2), `-context-jev.md` (2).
 
 **Order:**
 1. Decisions 1, 2, 4 and 8.
