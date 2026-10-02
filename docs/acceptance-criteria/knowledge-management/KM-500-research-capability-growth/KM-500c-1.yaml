@@ -101,3 +101,94 @@ delivers_to:
   agent: python-coder
   contract: Implement KM-500c-1 at tests/knowledge/test_query_growth_kernel.py public test seam; neutral query catalog/admission
     and kernel integration share versioned descriptors and digest-bound activation receipts.
+product_truth:
+  - flow: leafcutter/retrieval-current-baseline
+    node: build
+    node_kind: branch
+    flow_kind: data
+    screen: null
+    mock_data: null
+    entities: []
+    source: real
+    asof: '2026-10-02'
+  - flow: leafcutter/retrieval-current-baseline
+    node: build-2
+    node_kind: branch
+    flow_kind: data
+    screen: null
+    mock_data: null
+    entities: []
+    source: real
+    asof: '2026-10-02'
+  - flow: leafcutter/retrieval-current-baseline
+    node: clarify
+    node_kind: branch
+    flow_kind: data
+    screen: null
+    mock_data: null
+    entities: []
+    source: real
+    asof: '2026-10-02'
+  - flow: leafcutter/retrieval-current-baseline
+    node: clarify-2
+    node_kind: branch
+    flow_kind: data
+    screen: null
+    mock_data: null
+    entities: []
+    source: real
+    asof: '2026-10-02'
+  - flow: leafcutter/retrieval-current-baseline
+    node: clarify-3
+    node_kind: branch
+    flow_kind: data
+    screen: null
+    mock_data: null
+    entities: []
+    source: real
+    asof: '2026-10-02'
+  - flow: leafcutter/retrieval-current-baseline
+    node: pin
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: null
+    entities: []
+    source: real
+    asof: '2026-10-02'
+  - flow: leafcutter/retrieval-current-baseline
+    node: return
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: null
+    entities: []
+    source: real
+    asof: '2026-10-02'
+  - flow: leafcutter/retrieval-current-baseline
+    node: synthesis
+    node_kind: branch
+    flow_kind: data
+    screen: null
+    mock_data: null
+    entities: []
+    source: real
+    asof: '2026-10-02'
+  - flow: leafcutter/retrieval-current-baseline
+    node: synthesis-2
+    node_kind: branch
+    flow_kind: data
+    screen: null
+    mock_data: null
+    entities: []
+    source: real
+    asof: '2026-10-02'
+  - flow: leafcutter/retrieval-current-baseline
+    node: synthesis-3
+    node_kind: branch
+    flow_kind: data
+    screen: null
+    mock_data: null
+    entities: []
+    source: real
+    asof: '2026-10-02'

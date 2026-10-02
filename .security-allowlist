@@ -524,3 +524,9 @@ ENTROPY_HIGH:reports/native-fields/itpo-ac-enrichment.json:224
 ENTROPY_HIGH:reports/native-fields/itpo-ac-enrichment.json:238
 ENTROPY_HIGH:reports/native-fields/itpo-ac-enrichment.json:252
 ENTROPY_HIGH:reports/native-fields/refresh-recovery-live-mutation.xml:1
+
+# Historical checkpoint paths and explicit local consent label; no credential.
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02/RS-02.live-response.json:491
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02/RS-03.live-response.json:491
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02/rerun-recipe.json:13
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02/rerun-recipe.json:17

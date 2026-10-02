@@ -190,3 +190,22 @@ test_spec:
   - KM-500g-1
   requires_db: false
   surface_invoked: python -m knowledge retrieve with the authorized existing observation composition
+product_truth:
+  - flow: leafcutter/retrieval-current-baseline
+    node: observation-loss
+    node_kind: branch
+    flow_kind: data
+    screen: null
+    mock_data: null
+    entities: []
+    source: real
+    asof: '2026-10-02'
+  - flow: leafcutter/retrieval-current-baseline
+    node: return
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: null
+    entities: []
+    source: real
+    asof: '2026-10-02'

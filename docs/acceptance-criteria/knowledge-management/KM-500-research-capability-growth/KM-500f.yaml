@@ -8,7 +8,7 @@ status: active
 req_status: active
 readiness: approved
 priority: medium
-work_status: todo
+work_status: in_progress
 criteria: 'See what a change affects and what the evidence actually proves.
 
 

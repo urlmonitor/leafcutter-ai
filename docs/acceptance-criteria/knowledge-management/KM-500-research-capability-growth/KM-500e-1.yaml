@@ -189,3 +189,49 @@ test_spec:
   covers:
   - KM-500e-1
   requires_db: false
+product_truth:
+  - flow: leafcutter/retrieval-current-baseline
+    node: clarify
+    node_kind: branch
+    flow_kind: data
+    screen: null
+    mock_data: null
+    entities: []
+    source: real
+    asof: '2026-10-02'
+  - flow: leafcutter/retrieval-current-baseline
+    node: clarify-2
+    node_kind: branch
+    flow_kind: data
+    screen: null
+    mock_data: null
+    entities: []
+    source: real
+    asof: '2026-10-02'
+  - flow: leafcutter/retrieval-current-baseline
+    node: clarify-3
+    node_kind: branch
+    flow_kind: data
+    screen: null
+    mock_data: null
+    entities: []
+    source: real
+    asof: '2026-10-02'
+  - flow: leafcutter/retrieval-current-baseline
+    node: request
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: null
+    entities: []
+    source: real
+    asof: '2026-10-02'
+  - flow: leafcutter/retrieval-current-baseline
+    node: understand
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: null
+    entities: []
+    source: real
+    asof: '2026-10-02'

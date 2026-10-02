@@ -1,0 +1,727 @@
+{
+  "id": "leafcutter/retrieval-current-baseline",
+  "component": "knowledge-management",
+  "product": "Leafcutter",
+  "name": "Current implementation and measured proof",
+  "level": "journey",
+  "summary": "Current retrieval mechanisms and measured evidence, with the pending decision-store candidate labeled separately.",
+  "kind": "data",
+  "source": "real",
+  "realization": "built",
+  "status": "active",
+  "readiness": "draft",
+  "version": 1,
+  "tags": [
+    "retrieval",
+    "research",
+    "knowledge",
+    "current-behavior",
+    "retrieval-reference"
+  ],
+  "entities": [],
+  "steps": [
+    {
+      "id": "request",
+      "label": "Start with the question",
+      "agent": "Caller",
+      "human": "Choose whether you already know the operation, or need the kernel to investigate a question.\n\nThe numbered route below is guided Neo4j research. The direct and native alternatives below are real, separate entry paths; they do not automatically execute this entire route. [Entry-point guide](docs/how-to/kernel-query-growth.md) · [Binding and fallback](integrations/knowledge_capability.py).\n\nA research task may dispatch native and graph retrieval as sibling children for different evidence needs; these are not necessarily mutually exclusive choices for the whole task.",
+      "order": 1,
+      "implements": [
+        "KM-500e-1",
+        "KM-500e-5"
+      ],
+      "consumes": [
+        "Original question and caller scope"
+      ],
+      "produces": [
+        "A chosen entry path"
+      ],
+      "reads": [],
+      "writes": [],
+      "impl_asof": "2026-10-02",
+      "impl_status": "in_progress"
+    },
+    {
+      "id": "pin",
+      "label": "Keep one source and scope",
+      "agent": "System",
+      "human": "Resolve the repository, permitted sources and published revision before work begins; keep those identities through pauses.\n\nThe graph route pins source SHA and generation. A requested revision must be published or retained; absent/stale/unavailable states stay explicit. The source is not silently relabeled after a pause. [Generation selection](knowledge/retrieval_steps.py) · [Research continuation](integrations/query_growth.py).",
+      "order": 2,
+      "implements": [
+        "KM-400b-3",
+        "KM-400d-3",
+        "KM-500c-1"
+      ],
+      "consumes": [
+        "Caller scope and publication manifest"
+      ],
+      "produces": [
+        "Pinned repository, revision and generation"
+      ],
+      "reads": [],
+      "writes": [],
+      "impl_asof": "2026-10-02",
+      "impl_status": "done"
+    },
+    {
+      "id": "understand",
+      "label": "Identify answer requirements",
+      "agent": "Jev",
+      "human": "Choose bounded answer requirements/readiness/entity kind when not supplied. Identify ambiguity without inventing component IDs. Separate conditional clarification actions dispatch and answer the wait. [Answer planning](integrations/query_answer_planning.py).",
+      "order": 3,
+      "implements": [
+        "KM-500a-1",
+        "KM-500e-1"
+      ],
+      "consumes": [
+        "Pinned question and any supplied answer requirements"
+      ],
+      "produces": [
+        "Answer requirements or clarification decision"
+      ],
+      "reads": [],
+      "writes": [],
+      "impl_asof": "2026-10-02",
+      "impl_status": "in_progress"
+    },
+    {
+      "id": "fit",
+      "label": "Check whether the data can answer it",
+      "agent": "System · deterministic source checks",
+      "human": "Check supported kinds, relationships and required fields before a missing-query build can be offered.\n\nMissing data, an unsupported mapping, an undisclosed field and an unknown capability are different from a missing query. An existing operation may still return useful partial evidence, but a coding agent is not asked to invent absent source facts. Pre-selection support does not itself prove that an operation is missing. [Capability-fit boundary](knowledge/capability_fit.py) · [Explicit graph nodes](integrations/query_graph.py).",
+      "order": 4,
+      "implements": [
+        "KM-500a-3",
+        "KM-500e-4"
+      ],
+      "consumes": [
+        "Answer requirements and actual pinned manifest"
+      ],
+      "produces": [
+        "Supported-data decision with explicit gaps"
+      ],
+      "reads": [],
+      "writes": [],
+      "impl_asof": "2026-10-02",
+      "impl_status": "in_progress"
+    },
+    {
+      "id": "select",
+      "label": "Choose a registered query",
+      "agent": "Jev",
+      "human": "Choose offered operation, clarify, skip or eligible build. No arbitrary Cypher or permission grants. Controlled tests do not prove live quality.",
+      "order": 5,
+      "implements": [
+        "KM-500a-2",
+        "KM-500b-1"
+      ],
+      "consumes": [
+        "Scoped need and offered contracts"
+      ],
+      "produces": [
+        "Selected operation or alternative"
+      ],
+      "reads": [],
+      "writes": [],
+      "impl_asof": "2026-10-02",
+      "impl_status": "done"
+    },
+    {
+      "id": "bind",
+      "label": "Bind and validate arguments",
+      "agent": "System",
+      "human": "Bind known caller/scoped/clarified values and validate the operation contract. No generic LLM argument generator is built here.",
+      "order": 6,
+      "implements": [
+        "KM-500a-2",
+        "KM-500b-1"
+      ],
+      "consumes": [
+        "Selected operation and known values"
+      ],
+      "produces": [
+        "Validated operation parameters"
+      ],
+      "reads": [],
+      "writes": [],
+      "impl_asof": "2026-10-02",
+      "impl_status": "done"
+    },
+    {
+      "id": "retrieve",
+      "label": "Retrieve bounded, attributable evidence",
+      "agent": "System",
+      "human": "Run the selected operation against the pinned generation, then disclose only the evidence allowed by the request and budgets.\n\nParameters remain scoped; query versions/digests are checked. Results carry source locators and limitations. Dedicated population operations support AC descendants and declared dependents. Fanout, result, excerpt and cumulative continuation limits can make a response partial. Semantic/hybrid mechanisms exist, but require matching embeddings and an approved, ready source mapping; mechanism availability is not production readiness. [Neutral service](knowledge/service.py) · [Answer reference](docs/reference/knowledge-retrieval-answers.md).",
+      "order": 7,
+      "implements": [
+        "KM-400d-1",
+        "KM-400d-2",
+        "KM-500e-2",
+        "KM-500e-3",
+        "KM-500f-1"
+      ],
+      "consumes": [
+        "Registered operation, pinned source and remaining budget"
+      ],
+      "produces": [
+        "Evidence, execution status and bounded completeness"
+      ],
+      "reads": [],
+      "writes": [],
+      "impl_asof": "2026-10-02",
+      "impl_status": "in_progress"
+    },
+    {
+      "id": "assess",
+      "label": "Check exact coverage",
+      "agent": "System",
+      "human": "Check required fields and population coverage after trimming. Keep conditional evidence limitations; a final page is not an exact total. [Assessment](knowledge/answers.py).",
+      "order": 8,
+      "implements": [
+        "KM-500c-2",
+        "KM-500c-3",
+        "KM-500f-2",
+        "KM-500f-3",
+        "KM-500f-4",
+        "KM-500f-5"
+      ],
+      "consumes": [
+        "Bounded evidence and answer requirements"
+      ],
+      "produces": [
+        "Coverage and limitations"
+      ],
+      "reads": [],
+      "writes": [],
+      "impl_asof": "2026-10-02",
+      "impl_status": "in_progress"
+    },
+    {
+      "id": "judge-coverage",
+      "label": "Judge research sufficiency",
+      "agent": "Jev",
+      "human": "Judge coverage against the original need. A positive vote cannot erase missing facts or partial assessments.",
+      "order": 9,
+      "implements": [
+        "KM-500c-2",
+        "KM-500c-3",
+        "KM-500f-2",
+        "KM-500f-3",
+        "KM-500f-4",
+        "KM-500f-5"
+      ],
+      "consumes": [
+        "Evidence and deterministic limitations"
+      ],
+      "produces": [
+        "Bounded sufficiency or follow-up decision"
+      ],
+      "reads": [],
+      "writes": [],
+      "impl_asof": "2026-10-02",
+      "impl_status": "in_progress"
+    },
+    {
+      "id": "return",
+      "label": "Return the answer, limits and next step",
+      "agent": "System",
+      "human": "Return attributable evidence and an honest outcome. Preserve a waiting run for a specific human or agent response; stop when limits or unresolved facts prevent more progress.\n\nPartial all-required research can expose its existing evidence bundle without becoming completed. Observations describe the final bounded outcome; standalone tracing is opt-in. A candidate trace URL is not proof of remote ingestion. Observation failure does not trigger a second retrieval or destroy the result. [Public result](kernel/service_envelope.py) · [App-owned observation](integrations/knowledge_observation.py) · [Diagnosis](integrations/knowledge_diagnosis.py).",
+      "order": 10,
+      "implements": [
+        "KM-500c-1",
+        "KM-500g-1",
+        "KM-500g-1-i",
+        "KM-500g-2"
+      ],
+      "consumes": [
+        "Evidence bundle, coverage, diagnostics and continuation"
+      ],
+      "produces": [
+        "Caller-visible result or durable waiting interaction"
+      ],
+      "reads": [],
+      "writes": [],
+      "impl_asof": "2026-10-02",
+      "impl_status": "in_progress"
+    }
+  ],
+  "branches": [
+    {
+      "id": "direct",
+      "from": "request",
+      "condition": "The caller already knows the operation and arguments",
+      "label": "Direct lookup · no Jev",
+      "agent": "System",
+      "human": "Validate a typed request → select a published generation → run the registered operation → return bounded evidence and an answer assessment when requirements were supplied.\n\nUse the standalone knowledge retrieve path. It does not enter kernel clarification, catalog construction or Jev sufficiency. An explicit knowledge payload in the kernel similarly bypasses automatic query growth. [Usage](docs/how-to/run-knowledge-retrieval.md) · [Direct execution](integrations/knowledge_execution.py).\n\nThe neutral command itself is deterministic and does not call Jev. An explicit kernel knowledge payload bypasses graph query selection, but surrounding kernel intent/routing or parent research may still call Jev.",
+      "outcome_kind": "alternative",
+      "implements": [
+        "KM-400e-1",
+        "KM-500e-5"
+      ],
+      "impl_asof": "2026-10-02",
+      "impl_status": "in_progress"
+    },
+    {
+      "id": "native",
+      "from": "request",
+      "condition": "No explicit knowledge request and no eligible graph source",
+      "label": "Prepare native candidates",
+      "agent": "System",
+      "human": "Extract terms and score/merge the bounded pool.\n\nConditional route action 1 of 3.",
+      "outcome_kind": "alternative",
+      "implements": [
+        "KM-400e-3"
+      ],
+      "impl_asof": "2026-10-02",
+      "impl_status": "done"
+    },
+    {
+      "id": "native-2",
+      "from": "request",
+      "condition": "No explicit knowledge request and no eligible graph source",
+      "label": "Conditionally judge native relevance",
+      "agent": "Jev",
+      "human": "Judge offered candidates only when data policy and budget permit.\n\nConditional route action 2 of 3.",
+      "outcome_kind": "alternative",
+      "implements": [
+        "KM-400e-3"
+      ],
+      "impl_asof": "2026-10-02",
+      "impl_status": "done"
+    },
+    {
+      "id": "native-3",
+      "from": "request",
+      "condition": "No explicit knowledge request and no eligible graph source",
+      "label": "Return native evidence",
+      "agent": "System",
+      "human": "Apply order or term-hit fallback, explicitly relevance-not-judged; return citations.\n\nConditional route action 3 of 3.",
+      "outcome_kind": "alternative",
+      "implements": [
+        "KM-400e-3"
+      ],
+      "impl_asof": "2026-10-02",
+      "impl_status": "done"
+    },
+    {
+      "id": "clarify",
+      "from": "understand",
+      "condition": "Required facts, population or inputs are ambiguous",
+      "label": "Dispatch clarification",
+      "agent": "System",
+      "human": "Persist bounded question and original context.\n\nConditional route action 1 of 3.",
+      "outcome_kind": "alternative",
+      "implements": [
+        "KM-500a-1",
+        "KM-500e-1",
+        "KM-500c-1"
+      ],
+      "impl_asof": "2026-10-02",
+      "impl_status": "in_progress"
+    },
+    {
+      "id": "clarify-2",
+      "from": "understand",
+      "condition": "Required facts, population or inputs are ambiguous",
+      "label": "Answer clarification",
+      "agent": "Human",
+      "human": "Supply the requested choice without widening authority.\n\nConditional route action 2 of 3.",
+      "outcome_kind": "alternative",
+      "implements": [
+        "KM-500a-1",
+        "KM-500e-1",
+        "KM-500c-1"
+      ],
+      "impl_asof": "2026-10-02",
+      "impl_status": "in_progress"
+    },
+    {
+      "id": "clarify-3",
+      "from": "understand",
+      "condition": "Required facts, population or inputs are ambiguous",
+      "label": "Validate clarification resume",
+      "agent": "System",
+      "human": "Validate matching state/interaction and resume once.\n\nConditional route action 3 of 3.",
+      "outcome_kind": "alternative",
+      "implements": [
+        "KM-500a-1",
+        "KM-500e-1",
+        "KM-500c-1"
+      ],
+      "impl_asof": "2026-10-02",
+      "impl_status": "in_progress"
+    },
+    {
+      "id": "data-gap",
+      "from": "fit",
+      "condition": "Required source kinds, fields or mappings are absent or unknown",
+      "label": "Disclose the data gap",
+      "agent": "System",
+      "human": "Keep the requested fact unresolved and name only the absence that the evidence actually establishes. Do not equate an unavailable source with an empty result, and do not treat missing data as permission to build a query.\n\nThe caller may receive bounded partial evidence; no unsupported exact answer is invented. [Acceptance audit](docs/analysis/2026-10-01-repository-answer-acceptance.md).",
+      "outcome_kind": "exit",
+      "implements": [
+        "KM-500e-2",
+        "KM-500e-4"
+      ],
+      "impl_asof": "2026-10-02",
+      "impl_status": "in_progress"
+    },
+    {
+      "id": "build",
+      "from": "select",
+      "condition": "Data is supported, but no offered query meets the need",
+      "label": "Author query candidate",
+      "agent": "Coding agent",
+      "human": "Author bounded recipe and expected-result cases from the scoped request.\n\nConditional route action 1 of 2.",
+      "outcome_kind": "alternative",
+      "implements": [
+        "KM-500b-1",
+        "KM-500b-2",
+        "KM-500b-3",
+        "KM-500c-1"
+      ],
+      "impl_asof": "2026-10-02",
+      "impl_status": "done"
+    },
+    {
+      "id": "build-2",
+      "from": "select",
+      "condition": "Data is supported, but no offered query meets the need",
+      "label": "Verify and activate query",
+      "agent": "System",
+      "human": "Independently compile/verify, enforce catalog-write permission and resume only a verified version.\n\nConditional route action 2 of 2.",
+      "outcome_kind": "alternative",
+      "implements": [
+        "KM-500b-1",
+        "KM-500b-2",
+        "KM-500b-3",
+        "KM-500c-1"
+      ],
+      "impl_asof": "2026-10-02",
+      "impl_status": "done"
+    },
+    {
+      "id": "unavailable",
+      "from": "retrieve",
+      "condition": "The source is stale, unavailable, denied or the budget is exhausted",
+      "label": "Stop honestly, without fabricating zero results",
+      "agent": "System",
+      "human": "Return the actual execution condition and source/budget limitation. A query that ran and found no matching evidence is different from a query that could not be served. A read-only failure does not authorize indexing, publication or catalog mutation.",
+      "outcome_kind": "failure",
+      "implements": [
+        "KM-400e-4",
+        "KM-500a-3"
+      ],
+      "impl_asof": "2026-10-02",
+      "impl_status": "done"
+    },
+    {
+      "id": "partial",
+      "from": "assess",
+      "condition": "Evidence or required fields remain incomplete",
+      "label": "Partial is an answer condition, not a success badge",
+      "agent": "System",
+      "human": "Retain the known subset, missing facts and unknown total. Continue only through the existing bounded research/continuation rules when useful work and budget remain; otherwise return partial or unresolved.\n\nNo automatic whole-population aggregation is implied by reaching the final page. Declared test links are not execution receipts; historical tested revisions remain historical. [Answer contract](docs/reference/knowledge-retrieval-answers.md).",
+      "outcome_kind": "alternative",
+      "implements": [
+        "KM-500e-3",
+        "KM-500c-2",
+        "KM-500c-3"
+      ],
+      "impl_asof": "2026-10-02",
+      "impl_status": "in_progress"
+    },
+    {
+      "id": "observation-loss",
+      "from": "return",
+      "condition": "Tracing is disabled, fails or is not remotely verified",
+      "label": "Keep the result; qualify observation",
+      "agent": "System",
+      "human": "Keep disabled, unavailable, unverified and verified observation states distinct. Withhold an accessible trace claim until matching remote evidence is independently verified. Preserve one retrieval attempt and a sanitized warning when observation fails.\n\nLive Jev and Langfuse end-to-end verification is not run in this documentation task. [Opt-in observation contract](tests/knowledge_live/test_query_answer_contract_acceptance_live_observation.py).",
+      "outcome_kind": "failure",
+      "implements": [
+        "KM-500g-1",
+        "KM-500g-1-i",
+        "KM-500g-2"
+      ],
+      "impl_asof": "2026-10-02",
+      "impl_status": "in_progress"
+    },
+    {
+      "id": "synthesis",
+      "from": "judge-coverage",
+      "condition": "Research needs a bounded host synthesis before finalizing",
+      "label": "Request synthesis",
+      "agent": "System",
+      "human": "Persist a typed synthesis wait with evidence and limits.\n\nConditional route action 1 of 3.",
+      "outcome_kind": "alternative",
+      "implements": [
+        "KM-500c-1",
+        "KM-500c-2"
+      ],
+      "impl_asof": "2026-10-02",
+      "impl_status": "done"
+    },
+    {
+      "id": "synthesis-2",
+      "from": "judge-coverage",
+      "condition": "Research needs a bounded host synthesis before finalizing",
+      "label": "Synthesize findings",
+      "agent": "Host LLM",
+      "human": "Produce findings grounded in supplied evidence.\n\nConditional route action 2 of 3.",
+      "outcome_kind": "alternative",
+      "implements": [
+        "KM-500c-1",
+        "KM-500c-2"
+      ],
+      "impl_asof": "2026-10-02",
+      "impl_status": "done"
+    },
+    {
+      "id": "synthesis-3",
+      "from": "judge-coverage",
+      "condition": "Research needs a bounded host synthesis before finalizing",
+      "label": "Resume synthesis",
+      "agent": "System",
+      "human": "Validate the matching response; preserve partial assessments.\n\nConditional route action 3 of 3.",
+      "outcome_kind": "alternative",
+      "implements": [
+        "KM-500c-1",
+        "KM-500c-2"
+      ],
+      "impl_asof": "2026-10-02",
+      "impl_status": "done"
+    },
+    {
+      "id": "skip",
+      "from": "select",
+      "condition": "Jev selects the offered skip outcome",
+      "label": "Skip this retrieval need",
+      "agent": "System",
+      "human": "After the recorded Jev skip decision, return blocked retrieval_not_needed, preserving usage and limits. Do not silently execute another query or claim a fulfilled answer.",
+      "outcome_kind": "exit",
+      "implements": [
+        "KM-500a-2",
+        "KM-500c-3"
+      ],
+      "impl_asof": "2026-10-02",
+      "impl_status": "done"
+    }
+  ],
+  "acceptance_scenarios": [
+    {
+      "given": "Original question and caller scope",
+      "when": "Start with the question",
+      "then": "A chosen entry path",
+      "for": "request"
+    },
+    {
+      "given": "Caller scope and publication manifest",
+      "when": "Keep one source and scope",
+      "then": "Pinned repository, revision and generation",
+      "for": "pin"
+    },
+    {
+      "given": "Pinned question and any supplied answer requirements",
+      "when": "Identify answer requirements",
+      "then": "Answer requirements or clarification decision",
+      "for": "understand"
+    },
+    {
+      "given": "Answer requirements and actual pinned manifest",
+      "when": "Check whether the data can answer it",
+      "then": "Supported-data decision with explicit gaps",
+      "for": "fit"
+    },
+    {
+      "given": "Scoped need and offered contracts",
+      "when": "Choose a registered query",
+      "then": "Selected operation or alternative",
+      "for": "select"
+    },
+    {
+      "given": "Selected operation and known values",
+      "when": "Bind and validate arguments",
+      "then": "Validated operation parameters",
+      "for": "bind"
+    },
+    {
+      "given": "Registered operation, pinned source and remaining budget",
+      "when": "Retrieve bounded, attributable evidence",
+      "then": "Evidence, execution status and bounded completeness",
+      "for": "retrieve"
+    },
+    {
+      "given": "Bounded evidence and answer requirements",
+      "when": "Check exact coverage",
+      "then": "Coverage and limitations",
+      "for": "assess"
+    },
+    {
+      "given": "Evidence and deterministic limitations",
+      "when": "Judge research sufficiency",
+      "then": "Bounded sufficiency or follow-up decision",
+      "for": "judge-coverage"
+    },
+    {
+      "given": "Evidence bundle, coverage, diagnostics and continuation",
+      "when": "Return the answer, limits and next step",
+      "then": "Caller-visible result or durable waiting interaction",
+      "for": "return"
+    },
+    {
+      "given": "The caller already knows the operation and arguments",
+      "when": "Direct lookup · no Jev",
+      "then": "Validate a typed request → select a published generation → run the registered operation → return bounded evidence and an answer assessment when requirements were supplied.",
+      "for": "direct"
+    },
+    {
+      "given": "No explicit knowledge request and no eligible graph source",
+      "when": "Prepare native candidates",
+      "then": "Extract terms and score/merge the bounded pool.",
+      "for": "native"
+    },
+    {
+      "given": "No explicit knowledge request and no eligible graph source",
+      "when": "Conditionally judge native relevance",
+      "then": "Judge offered candidates only when data policy and budget permit.",
+      "for": "native-2"
+    },
+    {
+      "given": "No explicit knowledge request and no eligible graph source",
+      "when": "Return native evidence",
+      "then": "Apply order or term-hit fallback, explicitly relevance-not-judged; return citations.",
+      "for": "native-3"
+    },
+    {
+      "given": "Required facts, population or inputs are ambiguous",
+      "when": "Dispatch clarification",
+      "then": "Persist bounded question and original context.",
+      "for": "clarify"
+    },
+    {
+      "given": "Required facts, population or inputs are ambiguous",
+      "when": "Answer clarification",
+      "then": "Supply the requested choice without widening authority.",
+      "for": "clarify-2"
+    },
+    {
+      "given": "Required facts, population or inputs are ambiguous",
+      "when": "Validate clarification resume",
+      "then": "Validate matching state/interaction and resume once.",
+      "for": "clarify-3"
+    },
+    {
+      "given": "Required source kinds, fields or mappings are absent or unknown",
+      "when": "Disclose the data gap",
+      "then": "Keep the requested fact unresolved and name only the absence that the evidence actually establishes. Do not equate an unavailable source with an empty result, and do not treat missing data as permission to build a query.",
+      "for": "data-gap"
+    },
+    {
+      "given": "Data is supported, but no offered query meets the need",
+      "when": "Author query candidate",
+      "then": "Author bounded recipe and expected-result cases from the scoped request.",
+      "for": "build"
+    },
+    {
+      "given": "Data is supported, but no offered query meets the need",
+      "when": "Verify and activate query",
+      "then": "Independently compile/verify, enforce catalog-write permission and resume only a verified version.",
+      "for": "build-2"
+    },
+    {
+      "given": "The source is stale, unavailable, denied or the budget is exhausted",
+      "when": "Stop honestly, without fabricating zero results",
+      "then": "Return the actual execution condition and source/budget limitation. A query that ran and found no matching evidence is different from a query that could not be served. A read-only failure does not authorize indexing, publication or catalog mutation.",
+      "for": "unavailable"
+    },
+    {
+      "given": "Evidence or required fields remain incomplete",
+      "when": "Partial is an answer condition, not a success badge",
+      "then": "Retain the known subset, missing facts and unknown total. Continue only through the existing bounded research/continuation rules when useful work and budget remain; otherwise return partial or unresolved.",
+      "for": "partial"
+    },
+    {
+      "given": "Tracing is disabled, fails or is not remotely verified",
+      "when": "Keep the result; qualify observation",
+      "then": "Keep disabled, unavailable, unverified and verified observation states distinct. Withhold an accessible trace claim until matching remote evidence is independently verified. Preserve one retrieval attempt and a sanitized warning when observation fails.",
+      "for": "observation-loss"
+    },
+    {
+      "given": "Research needs a bounded host synthesis before finalizing",
+      "when": "Request synthesis",
+      "then": "Persist a typed synthesis wait with evidence and limits.",
+      "for": "synthesis"
+    },
+    {
+      "given": "Research needs a bounded host synthesis before finalizing",
+      "when": "Synthesize findings",
+      "then": "Produce findings grounded in supplied evidence.",
+      "for": "synthesis-2"
+    },
+    {
+      "given": "Research needs a bounded host synthesis before finalizing",
+      "when": "Resume synthesis",
+      "then": "Validate the matching response; preserve partial assessments.",
+      "for": "synthesis-3"
+    },
+    {
+      "given": "Jev selects the offered skip outcome",
+      "when": "Skip this retrieval need",
+      "then": "After the recorded Jev skip decision, return blocked retrieval_not_needed, preserving usage and limits. Do not silently execute another query or claim a fulfilled answer.",
+      "for": "skip"
+    }
+  ],
+  "provenance": [
+    {
+      "action": "authored",
+      "by": "flow-author",
+      "date": "2026-10-02",
+      "note": "Current implementation reference\nCommitted retrieval and kernel-v01 baseline: e056ccd2996293d0b63f4ae081cc3368f244e11c. The working checkout also contains the tested decision-store integration candidate from a28b1c247ff01fa80adc7464cad93619ff386edb; its merge commit is pending the ADR collision-guard repair approval. The numbered retrieval journey describes the committed baseline and retained tested behavior; the separate decision-memory panel is explicitly candidate-only. This document does not claim the candidate is committed or live-verified. Flow readiness remains draft; AC statuses are derived bookkeeping, not proof labels."
+    },
+    {
+      "action": "authored",
+      "by": "flow-author",
+      "date": "2026-10-02",
+      "note": "Local-tested mechanisms\nPrior saved tests cover answer contracts, source-fit refusal, actual research handoff, fresh-process resumption, budget limits and observation failure boundaries. Tests using controlled storage or scripted Jev prove those boundaries, not live provider quality. [Acceptance matrix](reports/knowledge-answer-acceptance-matrix.json) · [Research tests](reports/knowledge-answer-research-tests.xml). Post-merge verification remains separate.\n\nThe v01 merge replay passed 101 tests plus 42 subtests, followed by five focused mixed-source, real chunking and resumed-budget controls. These are local controlled-provider tests. [Merge replay](reports/knowledge-answer-kernel-v01-merge-replay.xml) · [Focused controls](reports/knowledge-answer-reserve-final-controls.xml).\n\nThe reviewed decision-store integration candidate passed 293 tests plus 42 subtests, including actual local file publication/reuse and retained retrieval contracts. Jev and host behavior were scripted; no live provider proof is implied. [Decision-store merge tests](reports/knowledge-answer-decision-store-merge-tests.xml)."
+    },
+    {
+      "action": "authored",
+      "by": "flow-author",
+      "date": "2026-10-02",
+      "note": "Live-verified subset\nPrior Aura verification at 59269e024e4d0290b68b03d0d382745966e67e29 exercised six direct retrieval canaries. That source revision is historical once the kernel merge changes HEAD; it does not prove the merged whole research/Jev path. The older query-growth Aura receipt also used scripted actors. [Saved growth receipt](reports/knowledge-query-growth-aura.json). [Six direct Aura canaries](reports/knowledge-answer-aura-verification.json)."
+    },
+    {
+      "action": "authored",
+      "by": "flow-author",
+      "date": "2026-10-02",
+      "note": "Not enabled / unknown\nConfigured real Jev quality and matching remote Langfuse verification were not live-tested in these integration checks. Controlled Jev responses establish routing and boundary behavior only. Production semantic/vector readiness remains a source/model/generation condition, not a catalog capability flag. The decision-store merge is pending; its candidate behavior is described separately below."
+    },
+    {
+      "action": "authored",
+      "by": "flow-author",
+      "date": "2026-10-02",
+      "note": "How source changes reach retrieval\nIndex publication is an explicit immutable sync, or the configured main-branch CI trigger when enabled. Editing a working file or environment setting is not a publication event. Existing runs retain their source/generation pins. [Run and publication guide](docs/how-to/run-knowledge-retrieval.md)."
+    },
+    {
+      "action": "authored",
+      "by": "flow-author",
+      "date": "2026-10-02",
+      "note": "Decision memory — tested candidate, merge pending\nThe reviewed integration candidate adds a file/null ColonyMemory port. The decision LangGraph looks up published human-approved records; Jev judges applicability; a human can confirm reuse. Confirmed reuse may finish without research or retrieval. New human-approved decisions are staged in run artifacts; an explicit decisions publish command makes them available for later runs. Missing or stale indexes yield no precedent with a warning.\n\nThis is not Neo4j query-outcome learning: direct knowledge retrieval and the graph-query flow do not consult this memory port or automatically retune ranking. [Decision graph](kernel/capabilities/decision/executor.py) · [Memory and publication](docs/how-to/file-and-reuse-decisions-with-the-kernel.md)."
+    },
+    {
+      "action": "authored",
+      "by": "flow-author",
+      "date": "2026-10-02",
+      "note": "Requested target design — not built\nThe linked target now includes optional caller keywords, conditional interchangeable-LLM generation of five terms, Jev method/component choice, separate retrieval attempts, original-question comparison, advisory strategy recording and later applicability checking, then combination/deduplication and relevance ranking.\n\nNative term extraction, candidate merging and Jev reranking already exist; semantic mechanisms remain behind readiness gates. The new generative composition and advisory strategy read/write loop are not implemented or evaluated. Current human-approved decision publication is a different contract. No automatic model training or source authority is implied."
+    }
+  ],
+  "impl_summary": {
+    "done": 13,
+    "in_progress": 14,
+    "not_started": 0,
+    "total": 27,
+    "asof": "2026-10-02"
+  },
+  "shape_version": 2
+}

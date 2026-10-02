@@ -76,3 +76,18 @@ scripts read the store and either validate it or apply a targeted transform.
   scripts as real subprocess CLI invocations against a scratch fixture store rather
   than importing internals directly — preserve that convention when adding new
   derived-data checks so the fixtures stay a true generator -> validator seam test.
+
+## Offline retrieval walkthrough
+
+`flows/leafcutter/retrieve-project-knowledge.flow.json` is the narrative source. Its
+standalone HTML is a derived offline view, not another product-truth record. After
+editing the flow, run the canonical generator and validator, then from the repository root:
+
+```text
+node docs/product-truth/scripts/render-retrieval-walkthrough.cjs docs/product-truth/flows/leafcutter/retrieve-project-knowledge.flow.json docs/product-truth/flows/leafcutter/retrieve-project-knowledge.html .
+```
+
+The renderer embeds the flow, its hash, current linked AC work statuses, and the existing
+Atlas design tokens. It uses no remote assets. Local evidence links require the checkout;
+the journey itself remains readable offline. Flow readiness, implementation rollups,
+controlled tests and live verification are different labels.

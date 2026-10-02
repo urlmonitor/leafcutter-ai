@@ -8,7 +8,7 @@ status: active
 req_status: active
 readiness: approved
 priority: medium
-work_status: todo
+work_status: in_progress
 criteria: 'Find out what went wrong and what a useful next step would be.
 
 

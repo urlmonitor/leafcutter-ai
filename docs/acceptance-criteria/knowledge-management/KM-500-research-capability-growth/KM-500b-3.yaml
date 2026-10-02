@@ -128,3 +128,22 @@ delivers_to:
   agent: python-coder
   contract: Implement KM-500b-3 at tests/knowledge/test_query_admission.py public test seam; neutral query catalog/admission
     and kernel integration share versioned descriptors and digest-bound activation receipts.
+product_truth:
+  - flow: leafcutter/retrieval-current-baseline
+    node: build
+    node_kind: branch
+    flow_kind: data
+    screen: null
+    mock_data: null
+    entities: []
+    source: real
+    asof: '2026-10-02'
+  - flow: leafcutter/retrieval-current-baseline
+    node: build-2
+    node_kind: branch
+    flow_kind: data
+    screen: null
+    mock_data: null
+    entities: []
+    source: real
+    asof: '2026-10-02'

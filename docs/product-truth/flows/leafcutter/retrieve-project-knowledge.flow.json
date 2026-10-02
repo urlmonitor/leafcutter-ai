@@ -1,0 +1,647 @@
+{
+  "id": "leafcutter/retrieve-project-knowledge",
+  "component": "knowledge-management",
+  "product": "Leafcutter",
+  "name": "Ask a question. Get an answer with sources.",
+  "level": "journey",
+  "summary": "Ask a question; Jev chooses retrieval, evaluates evidence and returns an answer or a bounded next step.",
+  "kind": "data",
+  "source": "real",
+  "realization": "spec",
+  "status": "active",
+  "readiness": "draft",
+  "version": 3,
+  "tags": [
+    "retrieval",
+    "target-design"
+  ],
+  "entities": [],
+  "steps": [
+    {
+      "id": "question",
+      "label": "Ask the question",
+      "agent": "Caller",
+      "human": "Provide the retrieval question. Workspace and authorized repository context come from the host; keywords, known IDs or constraints are optional.\n\nThe caller does not choose a query operation, retrieval method, storage source or component filter.",
+      "order": 1,
+      "implements": [],
+      "produces": [
+        "The original question and optional context"
+      ],
+      "impl_asof": "2026-10-02",
+      "impl_status": "not_started",
+      "consumes": [
+        "Original question and trusted host context"
+      ]
+    },
+    {
+      "id": "offer-methods",
+      "label": "Offer permitted methods and contracts",
+      "agent": "System",
+      "human": "Resolve host scope/source identity and remaining budget; offer available method/query input-output contracts and compatible advisory records with provenance. Do not ask the caller to choose an operation or storage source. Preserve prior attempts and visited state on resume. A missing endpoint or candidate is not evidence that the question has no answer.",
+      "order": 2,
+      "implements": [],
+      "consumes": [
+        "The original question and optional context"
+      ],
+      "produces": [
+        "Offered method contracts, trusted scope/source, retained history and remaining budget"
+      ],
+      "impl_asof": "2026-10-02",
+      "impl_status": "not_started"
+    },
+    {
+      "id": "plan",
+      "label": "Jev chooses how to answer",
+      "agent": "Jev",
+      "human": "Choose one OR multiple compatible offered methods for the ORIGINAL question: registered query, keyword/vector search, graph-node/edge navigation, or repository folder/file navigation. Judge compatible advisory strategy records for applicability; they do not grant authority or replace evidence.\n\nChoose useful alternatives or complementary methods, not every method automatically. Preserve the pinned scope/source, visited locations, prior attempts, useful evidence and remaining budget. Delegate preparation to the selected child. Missing-query build is conditional capability repair, not another generic search method. Select only offered method/query IDs and candidate actions. If the offer is insufficient, request a supported capability-gap or clarification outcome rather than inventing a path, operation or scope.",
+      "order": 3,
+      "implements": [],
+      "produces": [
+        "One or more selected method plans and preparation decisions"
+      ],
+      "impl_asof": "2026-10-02",
+      "impl_status": "not_started",
+      "consumes": [
+        "Offered method contracts, trusted scope/source, retained history and remaining budget"
+      ]
+    },
+    {
+      "id": "retrieve",
+      "label": "Retrieve the evidence",
+      "agent": "System",
+      "human": "Dispatch the selected method children within the pinned scope and cumulative budget. Each child executes its own attempt once and returns separately attributable outcomes. Multiple selection does not promise simultaneous or parallel execution.\n\nRetain useful earlier evidence and continue other permitted selected options when one fails. Missing input/authority waits remain explicit. Return the attempt collection to [shared comparison](docs/product-truth/flows/leafcutter/retrieve-project-knowledge.flow.json#compare); never execute a returned child again. Use governed query creation only for a proven query gap over supported data.",
+      "order": 4,
+      "implements": [],
+      "produces": [
+        "Retained attributable attempt results"
+      ],
+      "expands_to": [
+        "leafcutter/retrieval-registered-query",
+        "leafcutter/retrieval-search-preparation",
+        "leafcutter/retrieval-source-traversal",
+        "leafcutter/retrieval-query-build"
+      ],
+      "impl_asof": "2026-10-02",
+      "impl_status": "not_started",
+      "consumes": [
+        "One or more selected method plans and preparation decisions"
+      ]
+    },
+    {
+      "id": "compare",
+      "label": "Compare attempts against the original question",
+      "agent": "Jev",
+      "human": "Judge which observed attempts best support the ORIGINAL question, using their evidence, requested facts and explicit limits. Choose a preferred attempt, complementary attempts, a tie, no useful result or incomparable results; a null winner is valid.\n\nA preference is only among this run’s observed attempts under these conditions, not verified correctness or a universal best method. Different scopes, source revisions or budgets must not be interpreted as causal method superiority. Preserve useful complementary evidence; do not discard it merely because another attempt ranks first.\n\nInclude registered queries, searches and traversal attempts in the same original-question comparison. With one attempt, report its usefulness without claiming a comparative winner. Select retained complementary evidence or a bounded changed-method/next-frontier plan; empty and failed attempts remain distinct. Only observed candidates and supported methods may be selected.",
+      "order": 5,
+      "implements": [],
+      "consumes": [
+        "Retained attributable attempt results"
+      ],
+      "produces": [
+        "Bounded comparative judgment with attempt references and limitations"
+      ],
+      "impl_asof": "2026-10-02",
+      "impl_status": "not_started"
+    },
+    {
+      "id": "remember",
+      "label": "Record advisory strategy decision",
+      "agent": "System",
+      "human": "Record Jev’s bounded comparison in a proposed typed advisory memory record before combining evidence. Store original question/context, attempt IDs, method/query/version, terms/filters, source/model versions, budgets, evidence links, comparison outcome and limits. Do not manufacture free-form Jev prose or human approval.\n\nAt this point final answer fulfillment is pending. If a later main assessment is attached, bind it to the same run and explicitly preserve its status; do not invent that outcome now. Record ties, no useful result and incomparable outcomes as such. A failed write is visible but does not erase retrieved evidence or force repeated searches.\n\nFuture planning may read these suggestions after deterministic compatibility checks and Jev applicability judgment. Stale or incompatible advice is ignored or flagged, never used to widen permissions, replace evidence or copy an old answer. This read/write integration is proposed: the current human-approved DecisionRecord/file publication contract cannot honestly store automatic advice or a no-winner judgment. No model training or approved product-decision mutation is implied.\n\nRecord selected method combinations and visited/frontier history where applicable. If Jev selects another method or traversal continuation, return through the explicit plan route after recording this comparison; no unchanged retry and no budget reset.",
+      "order": 6,
+      "implements": [],
+      "consumes": [
+        "Bounded comparative judgment with attempt references and limitations"
+      ],
+      "produces": [
+        "Advisory strategy record reference or explicit storage limitation"
+      ],
+      "impl_asof": "2026-10-02",
+      "impl_status": "not_started"
+    },
+    {
+      "id": "combine",
+      "label": "Combine and deduplicate useful evidence",
+      "agent": "System",
+      "human": "Combine selected complementary evidence only after comparison and advisory recording. Deduplicate canonical identities and overlapping chunks while retaining every supporting attempt/source locator. Preserve source/scope differences and coverage limits; combining partial sets does not prove an exhaustive population. Combine only when comparison selected evidence for an answer attempt; a changed-plan choice routes back without discarding existing evidence. Do not merge different revisions or incompatible populations as one canonical set. Keep such evidence separately attributed and qualify comparisons. Finding useful files/nodes does not establish corpus-wide coverage or exact totals.",
+      "order": 7,
+      "implements": [],
+      "consumes": [
+        "Retained attempt evidence, comparison and advisory record outcome"
+      ],
+      "produces": [
+        "Deduplicated evidence with per-attempt provenance"
+      ],
+      "impl_asof": "2026-10-02",
+      "impl_status": "not_started"
+    },
+    {
+      "id": "rank",
+      "label": "Judge relevance",
+      "agent": "Jev",
+      "human": "Choose relevance ordering over offered combined evidence against the original question; do not promote incomplete coverage.",
+      "order": 8,
+      "implements": [],
+      "consumes": [
+        "Deduplicated evidence"
+      ],
+      "produces": [
+        "Bounded relevance order"
+      ],
+      "impl_asof": "2026-10-02",
+      "impl_status": "not_started"
+    },
+    {
+      "id": "return-evidence",
+      "label": "Return ranked evidence",
+      "agent": "System",
+      "human": "Apply the accepted order and retain per-attempt/source provenance and limits. Pass evidence to [final answer sufficiency](docs/product-truth/flows/leafcutter/retrieve-project-knowledge.flow.json#assess) without another retrieval.",
+      "order": 9,
+      "implements": [],
+      "consumes": [
+        "Evidence and relevance order"
+      ],
+      "produces": [
+        "Ranked attributable evidence"
+      ],
+      "impl_asof": "2026-10-02",
+      "impl_status": "not_started"
+    },
+    {
+      "id": "assess",
+      "label": "Jev checks what the evidence answers",
+      "agent": "Jev",
+      "human": "Judge the combined evidence against the ORIGINAL question within deterministic completeness/provenance limits. Choose finish, changed-method retry, continued traversal, focused clarification or honest stop. Preserve useful evidence, visited/attempt history and remaining budget.\n\nA return route must change the selected method, inputs or observed frontier, or have a specifically justified bounded transient retry. Identical no-progress retries cannot loop. No budget resets or scope widening. Attempt comparison is not final answer completeness; a positive vote cannot turn a partial page into an exact total.",
+      "order": 10,
+      "implements": [],
+      "produces": [
+        "A finish, retry, clarification or stop decision"
+      ],
+      "impl_asof": "2026-10-02",
+      "impl_status": "not_started",
+      "consumes": [
+        "Attributable evidence and retrieval limitations"
+      ]
+    },
+    {
+      "id": "dispatch-wording",
+      "label": "Dispatch wording only when needed",
+      "agent": "System",
+      "human": "For a finish decision requiring prose, construct the typed host synthesis request from accepted evidence and limitations, then persist its matching wait. Otherwise pass unchanged structured facts directly to response assembly, bypassing LLM wording and its extra judgment. No wording request is issued for retry, clarification or stop.",
+      "order": 11,
+      "implements": [],
+      "produces": [
+        "Typed wording request or structured-facts bypass"
+      ],
+      "impl_asof": "2026-10-02",
+      "impl_status": "not_started",
+      "consumes": [
+        "Finish decision and accepted evidence"
+      ]
+    },
+    {
+      "id": "wording",
+      "label": "Optionally formulate the answer",
+      "agent": "Host LLM",
+      "human": "Only when wording is needed, synthesize from the accepted evidence and supplied limitations through a typed kernel handoff. Do not invent facts or remove qualifications. Otherwise bypass this step and use structured facts directly.",
+      "order": 12,
+      "implements": [],
+      "produces": [
+        "Candidate answer wording or structured-facts bypass"
+      ],
+      "impl_asof": "2026-10-02",
+      "impl_status": "not_started",
+      "consumes": [
+        "Accepted evidence and wording request"
+      ]
+    },
+    {
+      "id": "check-wording",
+      "label": "Validate response material",
+      "agent": "System",
+      "human": "Validate matching resume, schema, citations and retained limits. Invalid material follows bounded correction or partial stop.",
+      "order": 13,
+      "implements": [],
+      "produces": [
+        "Validated response material"
+      ],
+      "impl_asof": "2026-10-02",
+      "impl_status": "not_started",
+      "consumes": [
+        "Candidate wording or structured facts"
+      ]
+    },
+    {
+      "id": "judge-wording",
+      "label": "Accept synthesized wording when needed",
+      "agent": "Jev",
+      "human": "For generated wording choose accept, bounded revision or stop against supplied evidence. Structured facts bypass this wording judgment. Only accept or the unchanged structured-facts bypass reaches response assembly; revision returns to wording and stop returns the qualified terminal outcome.",
+      "order": 14,
+      "implements": [],
+      "produces": [
+        "Accept, bounded revision or stop decision"
+      ],
+      "impl_asof": "2026-10-02",
+      "impl_status": "not_started",
+      "consumes": [
+        "Validated response material"
+      ]
+    },
+    {
+      "id": "respond",
+      "label": "Return the result",
+      "agent": "System",
+      "human": "Assemble answer, evidence, status, limits and continuation references. Append only an actual matching final outcome to advisory strategy memory when available. Never assemble unaccepted candidate wording as an answer.",
+      "order": 15,
+      "implements": [],
+      "produces": [
+        "Caller-visible result"
+      ],
+      "impl_asof": "2026-10-02",
+      "impl_status": "not_started",
+      "consumes": [
+        "Explicitly accepted wording or unchanged structured-facts bypass"
+      ]
+    }
+  ],
+  "branches": [
+    {
+      "id": "clarification",
+      "label": "Ask only when necessary",
+      "condition": "An essential intent or authority choice cannot be resolved from context",
+      "human": "Select the offered clarification outcome for a material unresolved intent or authority choice. Do not author question prose or execute the wait.",
+      "agent": "Jev",
+      "outcome_kind": "alternative",
+      "implements": [],
+      "from": "plan",
+      "impl_asof": "2026-10-02",
+      "impl_status": "not_started"
+    },
+    {
+      "id": "retry",
+      "label": "Try a better plan",
+      "condition": "Evidence has a resolvable gap and budget remains",
+      "human": "Return to [method selection](docs/product-truth/flows/leafcutter/retrieve-project-knowledge.flow.json#plan) with the original question, gap, retained evidence, attempt/visited history and remaining budget. Choose a different or complementary method, changed valid inputs, or [an observed next frontier](docs/product-truth/flows/leafcutter/retrieval-source-traversal.flow.json#frontier). Do not repeat an unchanged no-progress attempt.",
+      "agent": "Jev",
+      "outcome_kind": "alternative",
+      "implements": [],
+      "from": "assess",
+      "impl_asof": "2026-10-02",
+      "impl_status": "not_started"
+    },
+    {
+      "id": "partial",
+      "label": "Return the useful partial answer",
+      "condition": "Some evidence is useful but completeness cannot be established",
+      "human": "Return supported partial findings and missing facts when progress, frontier or budget is exhausted. Retain their exact source/attempt provenance; do not claim completeness.",
+      "agent": "System",
+      "outcome_kind": "alternative",
+      "implements": [],
+      "from": "assess",
+      "impl_asof": "2026-10-02",
+      "impl_status": "not_started"
+    },
+    {
+      "id": "blocked",
+      "label": "Explain why retrieval cannot proceed",
+      "condition": "No permitted useful alternative remains, or a non-bypassable authority/source boundary prevents progress",
+      "human": "Return blocked with the actual reason when no permitted progress remains. A single failed method is not automatically terminal: otherwise send its explicit failure to [comparison](docs/product-truth/flows/leafcutter/retrieve-project-knowledge.flow.json#compare) and select an alternative. Never treat outage/denial as empty success.",
+      "agent": "System",
+      "outcome_kind": "alternative",
+      "implements": [],
+      "from": "retrieve",
+      "impl_asof": "2026-10-02",
+      "impl_status": "not_started"
+    },
+    {
+      "id": "clarify-after-evidence",
+      "label": "Ask a focused follow-up",
+      "condition": "Retrieved evidence reveals an unresolved intent or authority choice",
+      "human": "Select the offered clarification outcome for a material unresolved intent or authority choice. Do not author question prose or execute the wait.",
+      "agent": "Jev",
+      "outcome_kind": "alternative",
+      "implements": [],
+      "from": "assess",
+      "impl_asof": "2026-10-02",
+      "impl_status": "not_started"
+    },
+    {
+      "id": "finish",
+      "label": "Finish with an evidenced answer",
+      "condition": "The requested facts are supported and deterministic completeness checks pass",
+      "human": "Proceed to the structured result, with cited evidence and any remaining non-blocking limitations.",
+      "agent": "Jev",
+      "outcome_kind": "alternative",
+      "implements": [],
+      "from": "assess",
+      "impl_asof": "2026-10-02",
+      "impl_status": "not_started"
+    },
+    {
+      "id": "clarification-dispatch",
+      "label": "Dispatch the focused clarification",
+      "condition": "An essential intent or authority choice cannot be resolved from context",
+      "human": "Use a bounded question template, preserve original need/source/state, and issue the matching human interaction.",
+      "agent": "System",
+      "outcome_kind": "alternative",
+      "implements": [],
+      "from": "plan",
+      "impl_asof": "2026-10-02",
+      "impl_status": "not_started"
+    },
+    {
+      "id": "clarification-answer",
+      "label": "Supply the clarification",
+      "condition": "An essential intent or authority choice cannot be resolved from context",
+      "human": "Answer the requested intent or factual choice without broadening authority.",
+      "agent": "Human",
+      "outcome_kind": "alternative",
+      "implements": [],
+      "from": "plan",
+      "impl_asof": "2026-10-02",
+      "impl_status": "not_started"
+    },
+    {
+      "id": "clarification-resume",
+      "label": "Validate and resume",
+      "condition": "An essential intent or authority choice cannot be resolved from context",
+      "human": "Validate matching interaction/state and apply only the allowed answer. Resume the original need once; reject stale or conflicting replies. Return to [method selection](docs/product-truth/flows/leafcutter/retrieve-project-knowledge.flow.json#plan) with the same need, evidence and remaining budget.",
+      "agent": "System",
+      "outcome_kind": "alternative",
+      "implements": [],
+      "from": "plan",
+      "impl_asof": "2026-10-02",
+      "impl_status": "not_started"
+    },
+    {
+      "id": "clarify-after-evidence-dispatch",
+      "label": "Dispatch the focused clarification",
+      "condition": "Retrieved evidence reveals an unresolved intent or authority choice",
+      "human": "Use a bounded question template, preserve original need/source/state, and issue the matching human interaction.",
+      "agent": "System",
+      "outcome_kind": "alternative",
+      "implements": [],
+      "from": "assess",
+      "impl_asof": "2026-10-02",
+      "impl_status": "not_started"
+    },
+    {
+      "id": "clarify-after-evidence-answer",
+      "label": "Supply the clarification",
+      "condition": "Retrieved evidence reveals an unresolved intent or authority choice",
+      "human": "Answer the requested intent or factual choice without broadening authority.",
+      "agent": "Human",
+      "outcome_kind": "alternative",
+      "implements": [],
+      "from": "assess",
+      "impl_asof": "2026-10-02",
+      "impl_status": "not_started"
+    },
+    {
+      "id": "clarify-after-evidence-resume",
+      "label": "Validate and resume",
+      "condition": "Retrieved evidence reveals an unresolved intent or authority choice",
+      "human": "Validate matching interaction/state and apply only the allowed answer. Resume the original need once; reject stale or conflicting replies. Return to [method selection](docs/product-truth/flows/leafcutter/retrieve-project-knowledge.flow.json#plan) with the same need, evidence and remaining budget.",
+      "agent": "System",
+      "outcome_kind": "alternative",
+      "implements": [],
+      "from": "assess",
+      "impl_asof": "2026-10-02",
+      "impl_status": "not_started"
+    },
+    {
+      "id": "alternative-method",
+      "from": "remember",
+      "label": "Try another method or frontier",
+      "agent": "System",
+      "condition": "Jev selected a changed plan or observed traversal continuation and budget remains",
+      "human": "After recording the bounded comparison, route to [method selection](docs/product-truth/flows/leafcutter/retrieve-project-knowledge.flow.json#plan) or [the retained traversal frontier](docs/product-truth/flows/leafcutter/retrieval-source-traversal.flow.json#frontier). Preserve useful evidence and attempt IDs. If no changed action or budget remains, return the explicit partial/blocked stop instead.",
+      "outcome_kind": "alternative",
+      "implements": [],
+      "impl_asof": "2026-10-02",
+      "impl_status": "not_started"
+    }
+  ],
+  "acceptance_scenarios": [
+    {
+      "given": "Original question and trusted host context",
+      "when": "Ask the question",
+      "then": "The original question and optional context",
+      "for": "question"
+    },
+    {
+      "given": "The original question and optional context",
+      "when": "Offer permitted methods and contracts",
+      "then": "Offered method contracts, trusted scope/source, retained history and remaining budget",
+      "for": "offer-methods"
+    },
+    {
+      "given": "Offered method contracts, trusted scope/source, retained history and remaining budget",
+      "when": "Jev chooses how to answer",
+      "then": "One or more selected method plans and preparation decisions",
+      "for": "plan"
+    },
+    {
+      "given": "One or more selected method plans and preparation decisions",
+      "when": "Retrieve the evidence",
+      "then": "Retained attributable attempt results",
+      "for": "retrieve"
+    },
+    {
+      "given": "Retained attributable attempt results",
+      "when": "Compare attempts against the original question",
+      "then": "Bounded comparative judgment with attempt references and limitations",
+      "for": "compare"
+    },
+    {
+      "given": "Bounded comparative judgment with attempt references and limitations",
+      "when": "Record advisory strategy decision",
+      "then": "Advisory strategy record reference or explicit storage limitation",
+      "for": "remember"
+    },
+    {
+      "given": "Retained attempt evidence, comparison and advisory record outcome",
+      "when": "Combine and deduplicate useful evidence",
+      "then": "Deduplicated evidence with per-attempt provenance",
+      "for": "combine"
+    },
+    {
+      "given": "Deduplicated evidence",
+      "when": "Judge relevance",
+      "then": "Bounded relevance order",
+      "for": "rank"
+    },
+    {
+      "given": "Evidence and relevance order",
+      "when": "Return ranked evidence",
+      "then": "Ranked attributable evidence",
+      "for": "return-evidence"
+    },
+    {
+      "given": "Attributable evidence and retrieval limitations",
+      "when": "Jev checks what the evidence answers",
+      "then": "A finish, retry, clarification or stop decision",
+      "for": "assess"
+    },
+    {
+      "given": "Finish decision and accepted evidence",
+      "when": "Dispatch wording only when needed",
+      "then": "Typed wording request or structured-facts bypass",
+      "for": "dispatch-wording"
+    },
+    {
+      "given": "Accepted evidence and wording request",
+      "when": "Optionally formulate the answer",
+      "then": "Candidate answer wording or structured-facts bypass",
+      "for": "wording"
+    },
+    {
+      "given": "Candidate wording or structured facts",
+      "when": "Validate response material",
+      "then": "Validated response material",
+      "for": "check-wording"
+    },
+    {
+      "given": "Validated response material",
+      "when": "Accept synthesized wording when needed",
+      "then": "Accept, bounded revision or stop decision",
+      "for": "judge-wording"
+    },
+    {
+      "given": "Explicitly accepted wording or unchanged structured-facts bypass",
+      "when": "Return the result",
+      "then": "Caller-visible result",
+      "for": "respond"
+    },
+    {
+      "given": "An essential intent or authority choice cannot be resolved from context",
+      "when": "Ask only when necessary",
+      "then": "Select the offered clarification outcome for a material unresolved intent or authority choice. Do not author question prose or execute the wait.",
+      "for": "clarification"
+    },
+    {
+      "given": "Evidence has a resolvable gap and budget remains",
+      "when": "Try a better plan",
+      "then": "Return to [method selection](docs/product-truth/flows/leafcutter/retrieve-project-knowledge.flow.json#plan) with the original question, gap, retained evidence, attempt/visited history and remaining budget. Choose a different or complementary method, changed valid inputs, or [an observed next frontier](docs/product-truth/flows/leafcutter/retrieval-source-traversal.flow.json#frontier). Do not repeat an unchanged no-progress attempt.",
+      "for": "retry"
+    },
+    {
+      "given": "Some evidence is useful but completeness cannot be established",
+      "when": "Return the useful partial answer",
+      "then": "Return supported partial findings and missing facts when progress, frontier or budget is exhausted. Retain their exact source/attempt provenance; do not claim completeness.",
+      "for": "partial"
+    },
+    {
+      "given": "No permitted useful alternative remains, or a non-bypassable authority/source boundary prevents progress",
+      "when": "Explain why retrieval cannot proceed",
+      "then": "Return blocked with the actual reason when no permitted progress remains. A single failed method is not automatically terminal: otherwise send its explicit failure to [comparison](docs/product-truth/flows/leafcutter/retrieve-project-knowledge.flow.json#compare) and select an alternative. Never treat outage/denial as empty success.",
+      "for": "blocked"
+    },
+    {
+      "given": "Retrieved evidence reveals an unresolved intent or authority choice",
+      "when": "Ask a focused follow-up",
+      "then": "Select the offered clarification outcome for a material unresolved intent or authority choice. Do not author question prose or execute the wait.",
+      "for": "clarify-after-evidence"
+    },
+    {
+      "given": "The requested facts are supported and deterministic completeness checks pass",
+      "when": "Finish with an evidenced answer",
+      "then": "Proceed to the structured result, with cited evidence and any remaining non-blocking limitations.",
+      "for": "finish"
+    },
+    {
+      "given": "An essential intent or authority choice cannot be resolved from context",
+      "when": "Dispatch the focused clarification",
+      "then": "Use a bounded question template, preserve original need/source/state, and issue the matching human interaction.",
+      "for": "clarification-dispatch"
+    },
+    {
+      "given": "An essential intent or authority choice cannot be resolved from context",
+      "when": "Supply the clarification",
+      "then": "Answer the requested intent or factual choice without broadening authority.",
+      "for": "clarification-answer"
+    },
+    {
+      "given": "An essential intent or authority choice cannot be resolved from context",
+      "when": "Validate and resume",
+      "then": "Validate matching interaction/state and apply only the allowed answer. Resume the original need once; reject stale or conflicting replies. Return to [method selection](docs/product-truth/flows/leafcutter/retrieve-project-knowledge.flow.json#plan) with the same need, evidence and remaining budget.",
+      "for": "clarification-resume"
+    },
+    {
+      "given": "Retrieved evidence reveals an unresolved intent or authority choice",
+      "when": "Dispatch the focused clarification",
+      "then": "Use a bounded question template, preserve original need/source/state, and issue the matching human interaction.",
+      "for": "clarify-after-evidence-dispatch"
+    },
+    {
+      "given": "Retrieved evidence reveals an unresolved intent or authority choice",
+      "when": "Supply the clarification",
+      "then": "Answer the requested intent or factual choice without broadening authority.",
+      "for": "clarify-after-evidence-answer"
+    },
+    {
+      "given": "Retrieved evidence reveals an unresolved intent or authority choice",
+      "when": "Validate and resume",
+      "then": "Validate matching interaction/state and apply only the allowed answer. Resume the original need once; reject stale or conflicting replies. Return to [method selection](docs/product-truth/flows/leafcutter/retrieve-project-knowledge.flow.json#plan) with the same need, evidence and remaining budget.",
+      "for": "clarify-after-evidence-resume"
+    },
+    {
+      "given": "Jev selected a changed plan or observed traversal continuation and budget remains",
+      "when": "Try another method or frontier",
+      "then": "After recording the bounded comparison, route to [method selection](docs/product-truth/flows/leafcutter/retrieve-project-knowledge.flow.json#plan) or [the retained traversal frontier](docs/product-truth/flows/leafcutter/retrieval-source-traversal.flow.json#frontier). Preserve useful evidence and attempt IDs. If no changed action or budget remains, return the explicit partial/blocked stop instead.",
+      "for": "alternative-method"
+    }
+  ],
+  "provenance": [
+    {
+      "action": "authored",
+      "by": "product-owner/business-analyst/flow-author",
+      "date": "2026-10-02",
+      "note": "Target design — not a delivery claim\nUser-requested question-first design. This flow is spec/draft; existing runtime and test evidence do not establish this full contract. Existing acceptance criteria are context pending behavioral mapping, not new completion proof."
+    },
+    {
+      "action": "authored",
+      "by": "product-owner",
+      "date": "2026-10-02",
+      "note": "Input example\nQuestion: How many L2/L3 descendants of TQ-500f, excluding only TQ-500f itself, are done or todo?\n\nThe question is sufficient. Optional context or keywords may help, but they are hints, never authority to widen scope. Host-provided context supplies authorized workspace and source constraints.\n\nIf instead the caller says “test-writing ACs; exclude parent requirements”, clarify the family and parent rule only if they cannot be inferred safely."
+    },
+    {
+      "action": "authored",
+      "by": "product-owner",
+      "date": "2026-10-02",
+      "note": "Output example — illustrative contract\nStatus: answered. Answer: 15 ACs — 5 done and 10 todo. Evidence: the 15 canonical records, their work-status field locators and pinned source revision. Limitations: this specific TQ-500f population only; not all test-related requirements across the repository. Clarification: none.\n\nThese numbers illustrate the historical reviewed corpus, not a new execution of this proposed interface. Other valid statuses: partial, clarification_required and blocked.\n\nThese are answer-outcome labels for the proposed UI contract, not a replacement kernel lifecycle. Reuse the existing envelope/run/continuation statuses and expose run/retrieval references for inspection.\n\nHistorical example source: 9d11594782abfb417d0f3a826bfb1f91f3a523ac; the later hosted direct canary used 59269e024e4d0290b68b03d0d382745966e67e29. Neither is a claim about the current uncommitted population."
+    },
+    {
+      "action": "authored",
+      "by": "flow-author",
+      "date": "2026-10-02",
+      "note": "Current delivery is a separate comparison\n[Current implementation and proof](docs/product-truth/flows/leafcutter/retrieval-current-baseline.flow.json) preserves the committed e056ccd baseline, tested pending decision-store candidate, historical Aura reads and controlled-Jev test limits. It is not a mandatory runtime subflow of this target design."
+    },
+    {
+      "action": "authored",
+      "by": "flow-author",
+      "date": "2026-10-02",
+      "note": "Generation ownership and existing kernel reuse\nJev makes bounded decisions: choose, request, accept, refine, clarify or stop. A host LLM authors generative arguments, terms or wording; deterministic validation checks the result before use. Existing kernel host_handoff transport supports typed HostWorkRequest / InteractionSubmission and durable waiting_host / resume. The retrieval-input and LLM-term operation bindings and schemas are still proposed; there is no registered generic argument-generator endpoint. No new runtime flow was implemented."
+    },
+    {
+      "action": "extended",
+      "by": "flow-author",
+      "date": "2026-10-02",
+      "note": "Traversal and multiple-method design extension\nAdded bounded method selection/return routes and a shared attempt-comparison handoff. Target specification only; no runtime or acceptance-status change."
+    },
+    {
+      "action": "authored",
+      "by": "business-analyst",
+      "date": "2026-10-02",
+      "note": "Draft acceptance mapping — not implementation proof\nKM-500a-1/e-1: amend the normal agent contract to a question-only required input, host context, optional hints and clarification only for unresolved intent. KM-500a-2 and KM-400e-2 currently preserve deterministic explicit-operation paths: retain those low-level compatibility contracts, but explicitly scope the proposed Jev-owned normal-agent facade rather than silently overriding them.\n\nKM-500c-2/c-3: map Jev assessment after every retrieval to finish, changed-plan retry, clarification or honest stop with the original question preserved. KM-500e-4 and b-1..3 remain reusable deterministic source-fit/build/admission boundaries. KM-400c-2..5 provide existing semantic mechanics, not proof of this composition. Optional model-neutral five-term generation, adaptive method/component selection, per-attempt comparison before combination, and advisory strategy persistence/reuse are proposed behaviors needing substantive AC coverage in this design. They are not implemented learning or proof of correctness. No existing criteria, readiness or completion is changed by this design.\n\nThe draft input-preparation contract must explicitly separate Jev decisions, delegated LLM authorship, deterministic validation and bounded resume. Existing host transport is reused; preparation-specific operation/schema registration remains a design gap, not delivered functionality.\n\nDraft gaps: preserve comparable per-attempt evidence and tie/complementary/no-useful/incomparable outcomes; record machine-assessed strategy advice separately from human-approved decisions; read it during later planning with source/query/model compatibility and Jev applicability checks. KM-500c-2/c-3/e-4 supply assessment and boundary context; KM-500d-3 evaluation controls and KM-400c-1 reviewed-memory rules do not establish this new advisory loop. No approved AC or work status changes.\n\nNew draft traversal/multi-method gap: Jev chooses only offered node/edge or folder/file candidates; System performs scoped pinned reads. Support one or multiple compatible method plans and bounded backtracking/continuation with retained evidence, visited/attempt history, cumulative budgets and explicit no-progress stops. Existing KM-500a-2/c-2/c-3/e-4 and KM-400d bounds are context, not proof of this unbuilt adaptive orchestration. No AC approval or work status changes."
+    }
+  ],
+  "impl_summary": {
+    "done": 0,
+    "in_progress": 0,
+    "not_started": 28,
+    "total": 28,
+    "asof": "2026-10-02"
+  },
+  "shape_version": 2
+}

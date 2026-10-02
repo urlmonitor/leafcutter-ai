@@ -8,7 +8,7 @@ status: active
 req_status: active
 readiness: approved
 priority: medium
-work_status: todo
+work_status: in_progress
 criteria: 'Get the facts you asked for, with clear limits on what they mean.
 
 

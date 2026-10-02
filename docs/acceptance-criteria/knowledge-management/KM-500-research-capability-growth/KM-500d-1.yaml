@@ -8,7 +8,7 @@ status: active
 req_status: active
 readiness: approved
 priority: medium
-work_status: todo
+work_status: in_progress
 parent: KM-500d
 criteria: 'Given an agent has an information need and may know either an exact operation or only a research
   question
