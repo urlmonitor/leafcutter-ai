@@ -1,0 +1,380 @@
+{
+  "id": "leafcutter/decision-forming",
+  "component": "decision_kernel",
+  "product": "Leafcutter",
+  "name": "Forming a decision in a kernel run",
+  "level": "pipeline",
+  "summary": "A kernel run researches your question and Jev assesses the options; you approve the criteria and make the ranked choice.",
+  "kind": "data",
+  "source": "real",
+  "realization": "built",
+  "status": "active",
+  "readiness": "draft",
+  "superseded_by": null,
+  "version": 1,
+  "shape_version": 2,
+  "tags": [
+    "decision-kernel",
+    "decision-lifecycle",
+    "decision-forming",
+    "pipeline"
+  ],
+  "entities": [
+    "Decision"
+  ],
+  "mock_data_ref": "leafcutter/decisions",
+  "steps": [
+    {
+      "id": "ask",
+      "label": "Ask the question",
+      "human": "You ask Claude Code a question; it hands the goal to the kernel through the /leafcutter skill or python -m kernel run.",
+      "order": 1,
+      "agent": "claude_code",
+      "produces": [
+        "goal"
+      ],
+      "impl_asof": "2026-10-02",
+      "impl_status": "not_started"
+    },
+    {
+      "id": "classify",
+      "label": "Classify the intent",
+      "human": "The kernel asks Jev one question to tell whether the goal is a decision, a request for evidence, for ideas, for a change, or out of its domain.",
+      "order": 2,
+      "agent": "kernel.intent",
+      "consumes": [
+        "goal"
+      ],
+      "produces": [
+        "intent: decision"
+      ],
+      "impl_asof": "2026-10-02",
+      "impl_status": "not_started"
+    },
+    {
+      "id": "precedent",
+      "label": "Check for precedent",
+      "human": "Earlier published decisions that might apply are looked up and judged; how that works is shown in the precedent sub-flow.",
+      "order": 3,
+      "agent": "kernel precedent step",
+      "consumes": [
+        "intent: decision"
+      ],
+      "produces": [
+        "prior_decisions evidence"
+      ],
+      "reads": [
+        "Decision"
+      ],
+      "expands_to": [
+        "leafcutter/decision-retrieval"
+      ],
+      "impl_asof": "2026-10-02",
+      "impl_status": "not_started"
+    },
+    {
+      "id": "ground",
+      "label": "Ground it in the repository",
+      "human": "The research capability retrieves repository evidence with exact, section-aware locators and Jev reranks it; a precedent alone never counts as grounding.",
+      "order": 4,
+      "agent": "kernel research capability",
+      "consumes": [
+        "intent: decision"
+      ],
+      "produces": [
+        "grounding evidence"
+      ],
+      "impl_asof": "2026-10-02",
+      "impl_status": "not_started"
+    },
+    {
+      "id": "synthesize",
+      "label": "Synthesize the findings",
+      "human": "Claude Code, as host, writes findings that cite only the retrieved evidence (synthesize_evidence).",
+      "order": 5,
+      "agent": "claude_code",
+      "consumes": [
+        "grounding evidence",
+        "prior_decisions evidence"
+      ],
+      "produces": [
+        "findings"
+      ],
+      "impl_asof": "2026-10-02",
+      "impl_status": "not_started"
+    },
+    {
+      "id": "propose",
+      "label": "Propose options and criteria",
+      "human": "Claude Code, as host, proposes options and criteria (generate_options); options you named in your question are checked against your words and kept as yours.",
+      "order": 6,
+      "agent": "claude_code",
+      "consumes": [
+        "goal",
+        "findings"
+      ],
+      "produces": [
+        "proposed options and criteria"
+      ],
+      "impl_asof": "2026-10-02",
+      "impl_status": "not_started"
+    },
+    {
+      "id": "approve-proposals",
+      "label": "Approve the proposals",
+      "human": "Decision point: you see the proposed options and criteria and approve them, approve only some, edit the criteria, or add options. Nothing proposed is used until you approve it.",
+      "order": 7,
+      "screen": "decision-approve-proposals",
+      "agent": "human (asked through claude_code)",
+      "consumes": [
+        "proposed options and criteria"
+      ],
+      "produces": [
+        "approved options and criteria"
+      ],
+      "impl_asof": "2026-10-02",
+      "impl_status": "not_started"
+    },
+    {
+      "id": "research-options",
+      "label": "Research the options' claims",
+      "human": "A targeted research round checks the claims the approved options make and reads the files they cite.",
+      "order": 8,
+      "agent": "kernel research capability",
+      "consumes": [
+        "approved options and criteria"
+      ],
+      "produces": [
+        "option evidence"
+      ],
+      "impl_asof": "2026-10-02",
+      "impl_status": "not_started"
+    },
+    {
+      "id": "assess",
+      "label": "Assess every option",
+      "human": "Jev judges every option against every criterion (does it satisfy it, is the evidence sufficient) and marks each criterion as evidence-answerable or a design judgement.",
+      "order": 9,
+      "agent": "jev",
+      "consumes": [
+        "approved options and criteria",
+        "grounding evidence",
+        "option evidence"
+      ],
+      "produces": [
+        "ranked options"
+      ],
+      "impl_asof": "2026-10-02",
+      "impl_status": "not_started"
+    },
+    {
+      "id": "choose",
+      "label": "Make the ranked choice",
+      "human": "Decision point: you see the options ranked by Jev's per-criterion scores. The ranking is evidence, not a decision; you choose an option, add one, or answer in your own words.",
+      "order": 10,
+      "screen": "decision-ranked-choice",
+      "agent": "human (asked through claude_code)",
+      "consumes": [
+        "ranked options"
+      ],
+      "produces": [
+        "human choice"
+      ],
+      "impl_asof": "2026-10-02",
+      "impl_status": "not_started"
+    },
+    {
+      "id": "resolve",
+      "label": "Resolve the decision",
+      "human": "The decision resolves with approved_by: human:<id> and approved_at, and report.md is written to the run folder.",
+      "order": 11,
+      "agent": "kernel decision executor",
+      "consumes": [
+        "human choice"
+      ],
+      "produces": [
+        "resolved decision (approved_by: human)",
+        "report.md"
+      ],
+      "writes": [
+        "Decision"
+      ],
+      "impl_asof": "2026-10-02",
+      "impl_status": "not_started"
+    }
+  ],
+  "branches": [
+    {
+      "id": "revise-proposals",
+      "from": "approve-proposals",
+      "condition": "you approve only some proposals, edit the criteria, or add options",
+      "label": "Revise before approving",
+      "human": "Only what you approved, edited or added goes on to research and assessment; a free-text answer is kept as your input and noted as a limitation, never turned into criteria.",
+      "agent": "human (asked through claude_code)",
+      "consumes": [
+        "proposed options and criteria"
+      ],
+      "produces": [
+        "approved options and criteria"
+      ],
+      "outcome_kind": "alternative",
+      "impl_asof": "2026-10-02",
+      "impl_status": "not_started"
+    },
+    {
+      "id": "budget-reserve",
+      "from": "assess",
+      "condition": "another research round and a final assessment no longer fit in the Jev call budget",
+      "label": "Ask early, on limited evidence",
+      "human": "You get the ranked question early, from the last complete assessment, marked plainly as a ranking made on limited evidence.",
+      "agent": "kernel budget gate",
+      "consumes": [
+        "ranked options"
+      ],
+      "produces": [
+        "ranked options (limited evidence)"
+      ],
+      "outcome_kind": "alternative",
+      "impl_asof": "2026-10-02",
+      "impl_status": "not_started"
+    },
+    {
+      "id": "rerank",
+      "from": "choose",
+      "condition": "you add an option or answer in your own words instead of choosing",
+      "label": "Assess and rank again",
+      "human": "What you added changes what is being ranked, so the options are assessed and ranked again before you are asked once more.",
+      "agent": "kernel decision executor",
+      "consumes": [
+        "ranked options"
+      ],
+      "produces": [
+        "approved options and criteria"
+      ],
+      "outcome_kind": "alternative",
+      "impl_asof": "2026-10-02",
+      "impl_status": "not_started"
+    },
+    {
+      "id": "no-answer",
+      "from": "choose",
+      "condition": "you never answer or you cancel the run",
+      "label": "No answer, no record",
+      "human": "The decision never resolves, so no record is staged and nothing reaches docs/decisions/.",
+      "agent": "kernel",
+      "consumes": [
+        "ranked options"
+      ],
+      "outcome_kind": "exit",
+      "impl_asof": "2026-10-02",
+      "impl_status": "not_started"
+    }
+  ],
+  "acceptance_scenarios": [
+    {
+      "for": "ask",
+      "given": "a question asked in Claude Code",
+      "when": "Claude Code invokes the /leafcutter skill or python -m kernel run",
+      "then": "the kernel receives the question as the goal of a new run"
+    },
+    {
+      "for": "classify",
+      "given": "a goal received by the kernel",
+      "when": "kernel.intent asks Jev to classify it",
+      "then": "the goal is classed as decision, evidence, ideas, change or out of domain with one Jev question, and a decision goal starts the decision graph"
+    },
+    {
+      "for": "precedent",
+      "given": "a decision goal and published records in docs/decisions/",
+      "when": "the precedent step runs",
+      "then": "matching earlier records are looked up and judged, and any that apply are carried forward as prior_decisions evidence"
+    },
+    {
+      "for": "ground",
+      "given": "a decision goal",
+      "when": "grounding research runs",
+      "then": "repository evidence is retrieved with explicit locators and reranked by Jev, and a precedent alone is not accepted as grounding"
+    },
+    {
+      "for": "synthesize",
+      "given": "retrieved grounding evidence",
+      "when": "Claude Code synthesizes findings as host",
+      "then": "every finding cites the retrieved evidence and nothing else"
+    },
+    {
+      "for": "propose",
+      "given": "findings and a goal that names some options",
+      "when": "Claude Code generates options and criteria",
+      "then": "the named options are verified against the goal text and kept as the caller's options alongside the proposed ones"
+    },
+    {
+      "for": "approve-proposals",
+      "given": "proposed options and criteria",
+      "when": "you approve them",
+      "then": "only approved options and criteria are used for research and assessment"
+    },
+    {
+      "for": "research-options",
+      "given": "approved options that make claims and cite files",
+      "when": "the targeted research round runs",
+      "then": "evidence for those claims and files is retrieved before assessment"
+    },
+    {
+      "for": "assess",
+      "given": "approved options, criteria and their evidence",
+      "when": "Jev assesses them",
+      "then": "every option is scored against every criterion for satisfies and sufficient, and each criterion is classed evidence_answerable or design_judgement"
+    },
+    {
+      "for": "choose",
+      "given": "options ranked by Jev's per-criterion scores",
+      "when": "you are asked to choose",
+      "then": "the ranking is shown as evidence and the decision waits for your choice"
+    },
+    {
+      "for": "resolve",
+      "given": "your choice of an option",
+      "when": "the decision resolves",
+      "then": "it carries approved_by: human:<id> and approved_at, and report.md is written to the run folder"
+    },
+    {
+      "for": "revise-proposals",
+      "given": "proposed options and criteria",
+      "when": "you approve a subset, edit the criteria or add options",
+      "then": "the revised set is what is researched and assessed, and free text is recorded as a limitation rather than turned into criteria"
+    },
+    {
+      "for": "budget-reserve",
+      "given": "a completed assessment and a Jev budget that cannot fund another research round plus a final assessment",
+      "when": "the budget gate checks the next round",
+      "then": "the ranked question is asked early from the last complete assessment with a limited-evidence limitation"
+    },
+    {
+      "for": "rerank",
+      "given": "the ranked-choice question",
+      "when": "you add an option or answer in free text",
+      "then": "the options are assessed and ranked again before you are asked to choose"
+    },
+    {
+      "for": "no-answer",
+      "given": "the ranked-choice question",
+      "when": "you never answer or you cancel",
+      "then": "the decision does not resolve and no decision record is staged"
+    }
+  ],
+  "provenance": [
+    {
+      "action": "authored",
+      "by": "flow-author (decision-lifecycle product-truth session)",
+      "date": "2026-10-02",
+      "note": "Sub-flow 1 of leafcutter/decision-lifecycle (kernel decision dec-5e7445182eaec1f2). Human decision points modelled as branches (ADR-025 is rendered from branches[]; the schema has no decisions[] field). Checked against the kernel decision capability on main (approvals.py, budget_gate.py)."
+    }
+  ],
+  "impl_summary": {
+    "done": 0,
+    "in_progress": 0,
+    "not_started": 15,
+    "total": 15,
+    "asof": "2026-10-02"
+  }
+}

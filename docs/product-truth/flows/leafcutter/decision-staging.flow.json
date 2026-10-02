@@ -1,0 +1,167 @@
+{
+  "id": "leafcutter/decision-staging",
+  "component": "decision_kernel",
+  "product": "Leafcutter",
+  "name": "Staging the decision record",
+  "level": "pipeline",
+  "summary": "When a run ends, a human-approved decision is written as a YAML record under the run folder, ready to publish.",
+  "kind": "data",
+  "source": "real",
+  "realization": "built",
+  "status": "active",
+  "readiness": "draft",
+  "superseded_by": null,
+  "version": 1,
+  "shape_version": 2,
+  "tags": [
+    "decision-kernel",
+    "decision-lifecycle",
+    "decision-staging",
+    "pipeline"
+  ],
+  "entities": [
+    "Decision"
+  ],
+  "mock_data_ref": "leafcutter/decisions",
+  "steps": [
+    {
+      "id": "detect",
+      "label": "Spot an approved decision",
+      "human": "At the end of the run, the decision executor sees a completed decision that a human approved.",
+      "order": 1,
+      "agent": "kernel decision executor",
+      "consumes": [
+        "resolved decision (approved_by: human)"
+      ],
+      "produces": [
+        "decision to stage"
+      ],
+      "reads": [
+        "Decision"
+      ],
+      "impl_asof": "2026-10-02",
+      "impl_status": "not_started"
+    },
+    {
+      "id": "build-record",
+      "label": "Build the record",
+      "human": "The record builder collects the question, options, criteria, evidence references (locators and hashes, no text), the ranking you saw, the precedents considered, and provenance: run id, Langfuse trace id, repository revision and versions. It refuses an approver who is not human or a missing approved_at.",
+      "order": 2,
+      "agent": "kernel record builder",
+      "consumes": [
+        "decision to stage"
+      ],
+      "produces": [
+        "DecisionRecord"
+      ],
+      "reads": [
+        "Decision"
+      ],
+      "writes": [
+        "Decision"
+      ],
+      "impl_asof": "2026-10-02",
+      "impl_status": "not_started"
+    },
+    {
+      "id": "write-staged",
+      "label": "Write it under the run folder",
+      "human": "The file backend writes the YAML to <run_root>/runs/<run_id>/staged/decisions/<id>.yaml, never into the repository: during a run the kernel only reads the repository (ADR-060).",
+      "order": 3,
+      "agent": "kernel memory file backend",
+      "consumes": [
+        "DecisionRecord"
+      ],
+      "produces": [
+        "staged record (<run_root>/runs/<run_id>/staged/decisions/<id>.yaml)"
+      ],
+      "writes": [
+        "Decision"
+      ],
+      "impl_asof": "2026-10-02",
+      "impl_status": "not_started"
+    },
+    {
+      "id": "announce",
+      "label": "Tell you how to publish",
+      "human": "The run's result says \"decision record staged: <path>\" and gives the command python -m kernel decisions publish --run-id R. The /leafcutter skill shows you this and never publishes by itself.",
+      "order": 4,
+      "screen": "decision-record-staged",
+      "agent": "/leafcutter skill (claude_code)",
+      "consumes": [
+        "staged record (<run_root>/runs/<run_id>/staged/decisions/<id>.yaml)"
+      ],
+      "produces": [
+        "publish instruction"
+      ],
+      "reads": [
+        "Decision"
+      ],
+      "impl_asof": "2026-10-02",
+      "impl_status": "not_started"
+    }
+  ],
+  "branches": [
+    {
+      "id": "not-stageable",
+      "from": "detect",
+      "condition": "the decision was resolved by the host alone or has no human approval",
+      "label": "Nothing is staged",
+      "human": "No record is written, so there is nothing to publish and no later run can find this decision as precedent.",
+      "agent": "kernel decision executor",
+      "consumes": [
+        "resolved decision (approved_by: human)"
+      ],
+      "outcome_kind": "exit",
+      "impl_asof": "2026-10-02",
+      "impl_status": "not_started"
+    }
+  ],
+  "acceptance_scenarios": [
+    {
+      "for": "detect",
+      "given": "a run that ended with a resolved decision",
+      "when": "the decision executor finishes",
+      "then": "it hands the decision to the record builder only if a human approved it"
+    },
+    {
+      "for": "build-record",
+      "given": "a completed decision approved by a human",
+      "when": "the record builder builds the DecisionRecord",
+      "then": "the record holds the question, options, criteria, evidence locators and hashes without evidence text, the ranking shown, the precedents considered and the run's provenance, and a non-human approver or a missing approved_at is refused"
+    },
+    {
+      "for": "write-staged",
+      "given": "a built DecisionRecord",
+      "when": "the file backend saves it",
+      "then": "the YAML is written to <run_root>/runs/<run_id>/staged/decisions/<id>.yaml and no file in the repository changes"
+    },
+    {
+      "for": "announce",
+      "given": "a staged decision record",
+      "when": "the run's result is returned to Claude Code",
+      "then": "the message names the staged path and the publish command, and the skill does not publish on its own"
+    },
+    {
+      "for": "not-stageable",
+      "given": "a decision resolved by the host alone, or with no human approval",
+      "when": "the run ends",
+      "then": "no decision record is staged"
+    }
+  ],
+  "provenance": [
+    {
+      "action": "authored",
+      "by": "flow-author (decision-lifecycle product-truth session)",
+      "date": "2026-10-02",
+      "note": "Sub-flow 2 of leafcutter/decision-lifecycle (kernel decision dec-5e7445182eaec1f2): the automatic staging of a human-approved decision at the end of a run."
+    }
+  ],
+  "impl_summary": {
+    "done": 0,
+    "in_progress": 0,
+    "not_started": 5,
+    "total": 5,
+    "asof": "2026-10-02"
+  }
+}

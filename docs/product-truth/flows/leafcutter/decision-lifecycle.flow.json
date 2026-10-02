@@ -1,0 +1,163 @@
+{
+  "id": "leafcutter/decision-lifecycle",
+  "component": "decision_kernel",
+  "product": "Leafcutter",
+  "name": "How a decision is formed, saved, stored and reused",
+  "level": "journey",
+  "summary": "How a decision is formed in a kernel run, staged as a record, published to docs/decisions/, and reused as precedent.",
+  "kind": "data",
+  "source": "real",
+  "realization": "built",
+  "status": "active",
+  "readiness": "draft",
+  "superseded_by": null,
+  "version": 1,
+  "shape_version": 2,
+  "tags": [
+    "decision-kernel",
+    "decision-lifecycle",
+    "decision-records",
+    "journey",
+    "hierarchy"
+  ],
+  "entities": [
+    "Decision"
+  ],
+  "mock_data_ref": "leafcutter/decisions",
+  "steps": [
+    {
+      "id": "form",
+      "label": "Form the decision",
+      "human": "You ask a question; the kernel researches it, Jev assesses the options, and you approve the criteria and make the ranked choice.",
+      "order": 1,
+      "agent": "kernel",
+      "produces": [
+        "resolved decision (approved_by: human)"
+      ],
+      "writes": [
+        "Decision"
+      ],
+      "expands_to": [
+        "leafcutter/decision-forming"
+      ],
+      "impl_asof": "2026-10-02",
+      "impl_status": "not_started"
+    },
+    {
+      "id": "stage",
+      "label": "Stage the record",
+      "human": "When the run ends, the approved decision is saved as a record in the run folder (never in the repository), and you are told how to publish it.",
+      "order": 2,
+      "agent": "kernel decision executor",
+      "consumes": [
+        "resolved decision (approved_by: human)"
+      ],
+      "produces": [
+        "staged record (<run_root>/runs/<run_id>/staged/decisions/<id>.yaml)"
+      ],
+      "reads": [
+        "Decision"
+      ],
+      "writes": [
+        "Decision"
+      ],
+      "expands_to": [
+        "leafcutter/decision-staging"
+      ],
+      "impl_asof": "2026-10-02",
+      "impl_status": "not_started"
+    },
+    {
+      "id": "publish",
+      "label": "Publish the record",
+      "human": "You run the publish command; the record is validated, written to docs/decisions/, the index is regenerated, and the change goes through a normal git review.",
+      "order": 3,
+      "agent": "python -m kernel decisions publish",
+      "consumes": [
+        "staged record (<run_root>/runs/<run_id>/staged/decisions/<id>.yaml)"
+      ],
+      "produces": [
+        "published record (docs/decisions/<id>.yaml)",
+        "docs/decisions/index.json"
+      ],
+      "reads": [
+        "Decision"
+      ],
+      "writes": [
+        "Decision"
+      ],
+      "expands_to": [
+        "leafcutter/decision-publishing"
+      ],
+      "impl_asof": "2026-10-02",
+      "impl_status": "not_started"
+    },
+    {
+      "id": "reuse",
+      "label": "Reuse it as precedent",
+      "human": "A later decision run finds the record through the index; Jev judges whether it applies, and a strong match asks you to reuse it or decide anew.",
+      "order": 4,
+      "agent": "kernel precedent step",
+      "consumes": [
+        "published record (docs/decisions/<id>.yaml)",
+        "docs/decisions/index.json"
+      ],
+      "produces": [
+        "prior_decisions evidence",
+        "reused decision (approved by the current human)"
+      ],
+      "reads": [
+        "Decision"
+      ],
+      "writes": [
+        "Decision"
+      ],
+      "expands_to": [
+        "leafcutter/decision-retrieval"
+      ],
+      "impl_asof": "2026-10-02",
+      "impl_status": "not_started"
+    }
+  ],
+  "acceptance_scenarios": [
+    {
+      "for": "form",
+      "given": "a question asked through Claude Code",
+      "when": "the kernel runs it as a decision",
+      "then": "the decision resolves only after a human approves the criteria and makes the ranked choice, and it carries approved_by: human:<id> and approved_at"
+    },
+    {
+      "for": "stage",
+      "given": "a resolved decision a human approved",
+      "when": "the run ends",
+      "then": "its record is written under <run_root>/runs/<run_id>/staged/decisions/ and nothing is written into the repository"
+    },
+    {
+      "for": "publish",
+      "given": "a staged decision record",
+      "when": "a human runs python -m kernel decisions publish --run-id R",
+      "then": "the record is validated, written to docs/decisions/<id>.yaml, the index is regenerated, and the change is reviewed and merged in git"
+    },
+    {
+      "for": "reuse",
+      "given": "a published decision record on main",
+      "when": "a later decision run looks for precedent",
+      "then": "the record is found through docs/decisions/index.json and is used as evidence, or offered for reuse, but never resolves a decision on its own"
+    }
+  ],
+  "provenance": [
+    {
+      "action": "authored",
+      "by": "flow-author (decision-lifecycle product-truth session)",
+      "date": "2026-10-02",
+      "note": "Parent journey of the decision lifecycle, per kernel decision dec-5e7445182eaec1f2 (one parent flow whose steps expand into four sub-flows). Describes the decision store merged in PR #978. Screens are not wired yet; mockups come later."
+    }
+  ],
+  "impl_summary": {
+    "done": 0,
+    "in_progress": 0,
+    "not_started": 4,
+    "total": 4,
+    "asof": "2026-10-02"
+  }
+}
