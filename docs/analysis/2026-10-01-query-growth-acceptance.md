@@ -42,9 +42,12 @@ Independent review first captured regressions for an unmapped memory relationshi
 
 The recipe language remains bounded. Unsupported grammar is an explicit code-build limitation. The live provider test is separately pending authorization; scripted Jev exercises control flow, not real model decision quality. Final commit hooks and release state are separate from this behavioral acceptance.
 
-## Repeatable CI proof - 2026-10-02
+## Native-branch repeatable CI proof - 2026-10-02
 
-The required AC links now point to `test_local_query_growth_public_proof` in
+The following records the implementation merged from native branch commit
+`4f5643d9`; it is historical branch provenance, not the integrated path below.
+
+At that native-branch revision, the required AC links pointed to `test_local_query_growth_public_proof` in
 `tests/knowledge_live/query_growth_checks.py`. It publishes a tiny synthetic,
 committed Git corpus to an isolated loopback Neo4j service and exercises the real
 projection, generated Cypher, verifier, catalog, kernel continuation and reopened
@@ -59,3 +62,15 @@ check. The supplemental hosted probe is now an explicit callable:
 `run_aura_query_growth_public_proof()`, with `LEAFCUTTER_RUN_AURA_QUERY_LIVE=1` and
 configured Aura read credentials required. It shares the same scenario and writes
 its own labeled report only after a successful hosted run.
+
+## Integrated retrieval proof path - 2026-10-02
+
+The integrated release retains `tests/knowledge_live/query_growth_local_checks.py::test_local_query_growth_public_proof`
+for these four ACs. It uses real local Neo4j and public kernel continuation,
+consumes the configured synthesis packet with source-citing controlled findings,
+and verifies bad-candidate refusal, persisted verification digests and fresh
+catalog reopening. It retains the repository synthesis default. Scripted actors
+do not establish live semantic usefulness. The separate historical hosted entry
+`test_aura_query_growth_public_proof` in `query_growth_checks.py` remains manual
+and requires explicit Aura authorization; it is not automatic completion coverage.
+Neither path refreshes or relabels the earlier hosted receipts.

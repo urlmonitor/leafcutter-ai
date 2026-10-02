@@ -163,3 +163,22 @@ test_spec:
   covers:
   - KM-500f-4
   requires_db: false
+product_truth:
+  - flow: leafcutter/retrieval-current-baseline
+    node: assess
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: null
+    entities: []
+    source: real
+    asof: '2026-10-02'
+  - flow: leafcutter/retrieval-current-baseline
+    node: judge-coverage
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: null
+    entities: []
+    source: real
+    asof: '2026-10-02'

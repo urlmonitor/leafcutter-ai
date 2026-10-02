@@ -8,7 +8,7 @@ status: active
 req_status: active
 readiness: approved
 priority: medium
-work_status: todo
+work_status: in_progress
 parent: KM-500d
 criteria: 'Given an installation has a configured canonical indexing branch, a current workspace revision and
   a published graph revision

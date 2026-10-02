@@ -121,19 +121,24 @@ def test_mockup_real_canonical_population_includes_unregistered_and_null_renders
     root = Path(__file__).resolve().parents[2]
     records = _extract(root)
     paths = list((root / "docs/product-truth/mockups").rglob("*.mockup.json"))
-    assert paths
+    assert len(records) == len(paths) == 15
     assert {record.source_path for record in records} == {p.relative_to(root).as_posix() for p in paths}
-    assert len(records) == len(paths)
     manifest = json.loads((root / "docs/product-truth/index.json").read_text(encoding="utf-8-sig"))
     registered = {entry["id"]: entry for entry in manifest["artifacts"] if entry["type"] == "mockup"}
+    assert sum(record.derived["manifest_registered"] for record in records) == 14
+    assert sum("render_body" in record.derived for record in records) == 10
+    assert sum("shape_version" in record.metadata for record in records) == 5
+    assert sum("realization" in record.metadata for record in records) == 5
     for record in records:
         original = json.loads((root / record.source_path).read_text(encoding="utf-8-sig"))
         assert record.metadata == original
         assert decode(encode(record.metadata)) == original
+        for field in ("realization", "shape_version"):
+            assert (field in record.metadata) == (field in original)
         assert record.derived["manifest_registered"] == (record.native_id in registered)
         if record.native_id in registered:
             assert record.derived["manifest_record"] == registered[record.native_id]
-        if original.get("renders") is None:
+        if original["renders"] is None:
             assert not any(key.startswith("render_") for key in record.derived)
         else:
             render = (root / record.source_path).parent / original["renders"]

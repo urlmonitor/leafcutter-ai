@@ -3,7 +3,7 @@ title: Independent repository-answer acceptance report
 type: explanation
 status: active
 created: '2026-10-01'
-last_updated: '2026-10-01'
+last_updated: '2026-10-02'
 components:
 - knowledge_management
 - decision_kernel
@@ -92,3 +92,70 @@ The first normal commit check additionally required 26 DECISION HISTORY comment 
 The exception-handling hook required a diagnostic at the neutral observer failure boundary. The repair adds one fixed sanitized warning and preserves the unavailable response. Independent targeted replay passed seven failure, privacy and budget cases: a controlled exception detail never appears in captured logs or returned JSON, and no traceback is attached. The matrix records this narrow code change and its tested fingerprint separately; the earlier broad suites were not rerun or relabeled.
 
 The normal proof-declaration check required truthful angle tags and scanner-visible wrappers for existing asynchronous scenarios. Support extraction preserves the collected test IDs and assertions. The affected replay passed 23 tests plus 2 subtests; two checks consume saved actual artifacts through public interfaces in fresh processes. The [test-only repair receipt](../../reports/knowledge-answer-proof-metadata-repair.json) records the unchanged product fingerprint and canonical size/complexity checks. A genuine opt-in remote-observation test was authored and default-skipped with consent absent; no remote verification ran. Scanner agreement is declaration alignment and does not change the clause audit, partial obligations or lifecycle verdicts.
+
+## 2026-10-02 closure and continuation handoff
+
+This addendum preserves the earlier evaluation's source/proof boundaries. It records later
+work and a user-authorized status audit; it does not manufacture missing role signoffs.
+
+- Branch: `feature/knowledge-retrieval-v01`; committed HEAD
+  `e056ccd2996293d0b63f4ae081cc3368f244e11c` (retrieval plus kernel v0.1).
+- Pending MERGE_HEAD: `a28b1c247ff01fa80adc7464cad93619ff386edb` (decision store).
+  Its resolved candidate passed [293 tests plus 42 subtests](../../reports/knowledge-answer-decision-store-merge-tests.xml)
+  using controlled Jev/host responses. The merge is not committed.
+- Later [Aura publication](../../reports/knowledge-answer-aura-publication.json) and
+  [six passing direct canaries](../../reports/knowledge-answer-aura-verification.json) used
+  `59269e024e4d0290b68b03d0d382745966e67e29`. They prove hosted reads at that historical
+  revision, not live Jev quality or publication of the current merged candidate.
+
+### Status corrections
+
+Six records changed from todo to in_progress: KM-500d/e/f/g (active child work),
+KM-500d-1 (public interface/documentation work exists; installed discovery proof remains),
+and KM-500d-2 (manual hosted publication exists; canonical-event deployment proof remains).
+GE-122a-1-ii changed from done to in_progress after a reproduced merge-import defect.
+No readiness or acceptance criteria changed. No record was promoted to done.
+KM-400 retains its existing bounded-mechanics completion, not a production semantic-quality claim.
+The 15 answer-contract units retain in_progress: 12 have local/documentation support, while
+formal lifecycle gates remain; d3/g1/g2 also retain explicit partial verdicts.
+
+### Remaining work, in priority order
+
+1. **Finish the requested merge safely.** Direct user approval is still needed for the
+   persistent collision-guard repair rejected by automatic approval review. Preserve
+   GE-122a-1-ii's same-record import allowance and distinct-record collision refusal.
+   [Real Git RED receipt](../../reports/knowledge-answer-adr-merge-guard-red.xml): two failed,
+   seven passed. Guard source/deployment are untouched. After approval: repair, independent
+   GREEN controls, canonical deployment/parity, normal preflight and the one remaining
+   commit retry. No bypass, renumbering or remote-ref exclusion.
+2. **Obtain live quality/observation evidence:** KM-500a-4 real Jev planning/selection quality
+   and KM-500g-1 real Langfuse ingestion/reference verification. Provider transmission consent
+   remains pending; configured credentials and controlled responses are not proof or consent.
+3. **Close capability-growth obligations:** KM-500b-4 actual coding-agent delivery/resume and
+   the recorded bounded-recipe architecture question; KM-500b-5 compatibility revalidation,
+   retirement/rollback and interrupted activation recovery.
+4. **Complete operational acceptance:** KM-500d-1 installed agent discovery; d-2 actual
+   configured canonical-branch event, publication timing, correlation, capacity and deployed
+   privilege proof; g-2's remaining freshness prerequisite. Manual Aura sync is insufficient.
+5. **Finish evaluation and semantic material handling:** KM-500d-3 representative reviewed
+   baseline beyond the 12-case sample; d-4 attributable long-material semantic chunks,
+   versioned cache and entity collapse. Existing native text chunks do not satisfy d-4's
+   embedding/vector contract. Production semantic mappings/model readiness stay explicit.
+6. **Close release/lifecycle records using actual work:** complete remaining applicable review,
+   fulfillment and role gates, retain qualified outcomes, commit the documentation/status
+   changes, and only publish a new graph revision under a separately confirmed rollout scope.
+   Do not copy historical passing receipts onto a new revision or invent prior RED/signoffs.
+
+### Proposed, not built
+
+Optional caller keywords, Haiku's five search terms, Jev method/component selection and
+outcome-driven retrieval learning remain a proposal, not approved completed AC delivery.
+Existing native term scoring/candidate merging/Jev reranking is distinct from that proposal.
+Decision-store precedent reuse is a separate human-approved file-memory route, not automatic
+Neo4j answer-correctness learning. No new feature-planning workflow is included.
+
+The [current standalone walkthrough](../product-truth/flows/leafcutter/retrieve-project-knowledge.html)
+and adjacent canonical flow show these boundaries. Browser rendering was not verified because
+no approved browser surface was available. Preserve the unrelated AC stat residual,
+`config/commit_guardian/`, locked `pytest-of-Hendrik/`, and existing reports. No provider calls,
+Aura republish, guard edits, push or merge commit were performed by this closure audit.

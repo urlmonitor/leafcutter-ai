@@ -2,6 +2,8 @@
 
 from types import SimpleNamespace
 
+from tests.knowledge.test_kernel_run import resume_supplied_synthesis
+
 
 def test_catalog_activation_is_a_narrow_permissioned_effect():
     """# covers: KM-500b-3
@@ -76,9 +78,6 @@ class TestQueryGrowthRun(ScenarioCase):
         from knowledge.config import KnowledgeConfig
         from kernel.providers.fakes import choice_answer, noul_answer
         self.config = self.config.model_copy(update={
-            # End this query-growth scenario at its evidence bundle. Separate
-            # linked research tests exercise optional host synthesis.
-            "research": self.config.research.model_copy(update={"allow_synthesis": False}),
             "knowledge": KnowledgeConfig(backend="neo4j",repository_id="fixture",
                 repository_root=str(self.repo)),
             "sources": [SourceConfig(id="graph",kind="graph_query",categories=["task_context"])],
@@ -181,6 +180,7 @@ class TestQueryGrowthRun(ScenarioCase):
         submission=raw_submission(coding.pending_interaction.model_dump(mode="json"),coding.run_id,
                                   response={"candidate":candidate()})
         result=await self.service().resume_run(coding.run_id,submission)
+        result=await resume_supplied_synthesis(self,result)
         assert result.status in {RunStatus.COMPLETED,RunStatus.PARTIAL},result.model_dump_json()
         if not grant:
             assert result.run_id==human.run_id and result.pending_interaction is None
@@ -202,6 +202,7 @@ class TestQueryGrowthRun(ScenarioCase):
         self.port=KnowledgeService(self.db,source_resolver=Source(),query_catalog=self.catalog)
         self.query_choice="get_component_tests"
         fresh=await self.service().start_run(task.model_copy(update={"scope":make_scope(self.repo,component_ids=["component"])}))
+        fresh=await resume_supplied_synthesis(self,fresh)
         assert fresh.status in {RunStatus.COMPLETED,RunStatus.PARTIAL},fresh.model_dump_json()
         assert fresh.evidence_ids and fresh.run_id!=result.run_id
         fresh_values=await self.checkpoint_values(fresh.run_id)
@@ -223,3 +224,8 @@ class TestQueryGrowthRun(ScenarioCase):
         # covers: KM-500c-3
         # angle: criterion
         await self._build_and_resume(grant=False)
+
+
+# DECISION HISTORY
+# ========================================
+# - 2026-10-02 17:00 [test-writer]: Preserve continuation and reuse assertions across the actual synthesis wait. (#TICKETLESS reason=main-integration-fixture-repair)

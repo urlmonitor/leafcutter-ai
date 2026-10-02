@@ -11,6 +11,8 @@ components: [knowledge_management, decision_kernel]
 
 This discovery catalog preserves five questions from each of BA, PO, IT PO, coder and QA, then groups shared needs into eight query families. The questions are proposed recurring needs, not measured frequency, implemented capabilities or approved acceptance criteria. The proposed first evaluation batch tests six families before implementation decisions are made.
 
+The later [question-to-answer retrieval scenarios](2026-10-02-retrieval-scenarios.md) apply these families to the proposed multi-method product flow. Their `RS` cases are design-only and are distinct from the executed `RQE` baseline cases.
+
 Technical observations refer to implementation commit `9d11594782abfb417d0f3a826bfb1f91f3a523ac`. Pending working-tree AC additions are not part of that published source. The linked [evaluation cases](2026-10-01-repository-query-evaluation-cases.json) are planned specifications; this discovery work does not execute them or establish passing results.
 
 ## Shared answer requirements

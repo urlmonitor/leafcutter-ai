@@ -1,4 +1,5 @@
-"""Glossary source fidelity, discovery boundaries, and identity behavior.
+"""MODULE: test_native_glossary_term
+GOAL: Verify glossary source fidelity, discovery boundaries, and identity behavior.
 
 BUSINESS CONTEXT: KM-400a-3-i exposes the authored fields of native terms.
 ARCHITECTURE: Unit and real-artifact checks exercise the snapshot-local reader.
@@ -8,6 +9,7 @@ from datetime import date
 from importlib import import_module
 import json
 from pathlib import Path
+import sys
 from urllib.parse import quote
 
 import pytest
@@ -190,11 +192,11 @@ def test_native_glossary_custom_path_and_absent_surface_default(tmp_path):
         {"surfaces": {"glossary": {"path": ""}}},
         {"surfaces": {"glossary": {"path": "../outside.md"}}},
         {"surfaces": {"glossary": {"path": "C:/outside.md"}}},
-        {"surfaces": {"glossary": {"path": "C:outside.md"}}},
-        {"surfaces": {"glossary": {"path": r"\outside.md"}}},
-        {"surfaces": {"glossary": {"path": r"\\server\share\outside.md"}}},
-        {"surfaces": {"glossary": {"path": r"..\outside.md"}}},
         {"surfaces": {"glossary": {"path": 42}}},
+        {"surfaces": {"glossary": {"path": r"C:outside.md"}}},
+        {"surfaces": {"glossary": {"path": r"\outside.md"}}},
+        {"surfaces": {"glossary": {"path": r"..\outside.md"}}},
+        {"surfaces": {"glossary": {"path": r"\\server\share\outside.md"}}},
     ],
 )
 def test_native_glossary_invalid_configuration_fails(tmp_path, value):
@@ -214,14 +216,34 @@ def test_native_glossary_symlink_outside_snapshot_fails(tmp_path):
     # angle: failure
     source = tmp_path / "snapshot"
     source.mkdir()
-    target = _write(tmp_path, "### External\nNot owned.\n", name="outside.md")
-    (source / "docs").mkdir()
+    target = _write(tmp_path, "### External\nNot owned.\n", name="external/glossary.md")
+    before = target.read_bytes()
+    link = source / "docs/glossary.md"
+    link.parent.mkdir()
+    junction_created = False
     try:
-        (source / "docs/glossary.md").symlink_to(target)
+        link.symlink_to(target)
     except OSError as error:
-        pytest.skip(f"Host does not permit symlink creation: {error}")
-    with pytest.raises(ValueError):
-        _extract(source)
+        if sys.platform != "win32" or error.winerror != 1314:
+            raise
+        # A real directory junction needs no Windows symlink privilege.
+        # This is the same filesystem fallback used by BP-900h-6 tests.
+        import _winapi
+
+        link.parent.rmdir()
+        _winapi.CreateJunction(str(target.parent), str(link.parent))
+        junction_created = True
+    try:
+        assert link.resolve() == target.resolve()
+        assert not link.resolve().is_relative_to(source.resolve())
+        assert link.read_bytes() == before
+        with pytest.raises(ValueError, match=r"not in (the )?subpath"):
+            _extract(source)
+        assert target.read_bytes() == before
+    finally:
+        if junction_created:
+            # Remove only the owned junction, never its external target.
+            link.parent.rmdir()
 
 
 @pytest.mark.parametrize(
@@ -261,7 +283,8 @@ def test_native_glossary_real_corpus_matches_all_authored_sections():
 
     metadata, body = frontmatter(root / "docs/glossary.md")
     records = _extract(root)
-    assert records
+    # Reviewed current corpus: 41 original sections plus ten authored kernel terms.
+    assert len(records) == 51
     assert "candle_horizon" not in {record.native_id for record in records}
     assert {
         "create-ticket.js",
@@ -269,6 +292,8 @@ def test_native_glossary_real_corpus_matches_all_authored_sections():
         "negative_control_result",
         "decision kernel",
         "jev",
+        "needs_context",
+        "out_of_domain",
     } <= {record.native_id for record in records}
     lines = body.splitlines(keepends=True)
     # The reviewed real file has simple top-level sections, independently slice all.
@@ -281,3 +306,8 @@ def test_native_glossary_real_corpus_matches_all_authored_sections():
         assert record.derived == {"file_frontmatter": metadata}
         assert record.native_id == term.lower()
         assert record.locator == "#term=" + quote(term.lower(), safe="")
+
+
+# DECISION HISTORY
+# ========================================
+# - 2026-10-02 16:00 [test-writer]: Cover foreign-platform drive and root syntax without weakening snapshot controls. (#TICKETLESS reason=required-ci-portability-repair)

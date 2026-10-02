@@ -153,8 +153,7 @@ def test_ticket_real_store_preserves_every_frontmatter_field():
         path for path in (root / "tickets").rglob("*.md") if path.name.lower() != "readme.md"
     )
     records = _extract(root)
-    assert candidates
-    assert len(records) == len(candidates)
+    assert len(records) == len(candidates) == 1560
     assert len({record.native_id for record in records}) == len(records)
     by_path = {record.source_path: record for record in records}
     fields = set()
@@ -176,3 +175,5 @@ def test_ticket_real_store_preserves_every_frontmatter_field():
     assert {"title", "status", "components", "source_ac"} <= fields
     assert expected_epics
     assert {r.source_path for r in records if r.derived["subtype"] == "epic"} == expected_epics
+    assert len(fields) == 44
+    assert sum(record.derived["subtype"] == "epic" for record in records) == 92

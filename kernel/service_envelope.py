@@ -18,9 +18,9 @@ from typing import Any
 from kernel.contracts.capability import ErrorInfo, Usage
 from kernel.contracts.enums import ObservabilityStatus, RunStatus, WorkItemStatus
 from kernel.contracts import schema_ids, validate_payload, validate_semantics, SemanticContext
-from kernel.contracts.run import OutputRef
-from kernel.contracts.run import CapabilityGap, RunEnvelope, TraceRefs, UsageSummary
-from kernel.contracts.run import with_trace_refs
+from kernel.contracts.run import (
+    CapabilityGap, OutputRef, RunEnvelope, TraceRefs, UsageSummary, with_trace_refs,
+)
 from kernel.interaction import pending_packet
 from kernel.observability.tracer import TraceState
 from kernel.persistence.base import RunRecord

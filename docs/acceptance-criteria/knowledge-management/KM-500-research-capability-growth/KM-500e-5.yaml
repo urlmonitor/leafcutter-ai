@@ -150,3 +150,22 @@ it_requirements:
   coverage proof.
 - Review examples against the released behavioral ACs and keep this reference as the definition source for KM-500g-3.
   Resolve conflicting terminology rather than adding a second meaning in a how-to.
+product_truth:
+  - flow: leafcutter/retrieval-current-baseline
+    node: direct
+    node_kind: branch
+    flow_kind: data
+    screen: null
+    mock_data: null
+    entities: []
+    source: real
+    asof: '2026-10-02'
+  - flow: leafcutter/retrieval-current-baseline
+    node: request
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: null
+    entities: []
+    source: real
+    asof: '2026-10-02'

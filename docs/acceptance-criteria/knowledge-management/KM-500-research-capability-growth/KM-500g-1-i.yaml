@@ -138,3 +138,22 @@ test_spec:
   covers:
   - KM-500g-1-i
   requires_db: false
+product_truth:
+  - flow: leafcutter/retrieval-current-baseline
+    node: observation-loss
+    node_kind: branch
+    flow_kind: data
+    screen: null
+    mock_data: null
+    entities: []
+    source: real
+    asof: '2026-10-02'
+  - flow: leafcutter/retrieval-current-baseline
+    node: return
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: null
+    entities: []
+    source: real
+    asof: '2026-10-02'

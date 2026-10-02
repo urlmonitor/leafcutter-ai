@@ -86,3 +86,13 @@ test_spec:
   - KM-400b-3
 test_rationale: Behavioral proof uses the public caller and source-format fixture so internal helper tests
   cannot mask missing wiring. Live server gates remain distinct from deterministic fake-provider tests.
+product_truth:
+  - flow: leafcutter/retrieval-current-baseline
+    node: pin
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: null
+    entities: []
+    source: real
+    asof: '2026-10-02'

@@ -216,6 +216,13 @@ def _options_violations(p: OptionsPayload, ctx: SemanticContext) -> list[str]:
 
     `named_options` is refused only on a host submission: the kernel creates it after verifying
     the host's claims against the goal, so a kernel-built payload may carry it.
+
+    Args:
+        p: Validated payload whose references are checked.
+        ctx: Trusted provenance identifying a kernel-built payload.
+
+    Returns:
+        Detected option and criterion approval violations.
     """
     if p.named_options and not ctx.kernel_built:
         return ["named_options is set by the kernel only: return named options in `options` "
