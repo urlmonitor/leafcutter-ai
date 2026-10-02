@@ -198,7 +198,8 @@ class TestRoundSixShape(Round6Case):
         ids = [i.input_payload["need"]["id"] for i in values["invocations"].values()
                if i.capability_id == "retrieve.repository"]
         targeted = [x for x in ids if x.startswith(("need.gap", "need.claim"))]
-        self.assertEqual(sorted(targeted), ["need.claim.opt.added.1", "need.gap.1"])
+        # claim cap is separate: one claim plus gaps capped at max_targeted_needs (2)
+        self.assertEqual(sorted(targeted), ["need.claim.opt.added.1", "need.gap.1", "need.gap.2"])
         self.assertEqual(self.purposes().get("research.plan_needs", 0), 0)  # no Jev planning call
 
     async def test_budget_envelope_usage_and_trace_agree(self) -> None:
