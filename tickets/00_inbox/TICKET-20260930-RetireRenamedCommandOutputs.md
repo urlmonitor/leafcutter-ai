@@ -27,7 +27,7 @@ files_touched:
   - tickets/00_inbox/TICKET-20260930-RetireRenamedCommandOutputs.md
   - tickets/00_inbox/TICKET-20260930-RenameLeafcutterHubCommand.md
   - changelogs/2026-09-30-2111-the-package-knowledge-hub-command-is-now-leafcutter-help.md
-last_updated: 2026-09-30
+last_updated: 2026-10-02
 ---
 
 # Build removes installed command/workflow files whose package template was renamed or deleted
@@ -94,6 +94,21 @@ every family, with reporting and documentation obligations. This ticket is a nar
 step for the command/workflow family only. It does not claim to satisfy BP-1500b or any
 of its children, and it leaves their records untouched. Per user decision, it carries no
 new ACs.
+
+**Field note (2026-10-02).** New worktrees opened by single-ticket `/build-feature` runs
+contained `.claude/commands/leafcutter.md` and `.gemini/workflows/leafcutter.md`.
+`check-output-drift` then failed with `gaps=2` until both files were deleted by hand.
+- **Where the files came from.** The likely source is the main checkout `leafcutter-ai/`.
+  It is the only install here that still holds the old files: they are in its
+  `.leafcutter/commands/`, `.claude/commands/` and `.gemini/workflows/`, and it has no
+  `leafcutter-help.md`. Its `.build_manifest.json` still records both canonical paths, so by
+  this ticket's design its next build should retire them. That was not verified here.
+- **How they spread.** `build-feature.js` sets up a worktree by copying `.leafcutter`
+  instead of building it, so anything the main checkout holds ends up in every new worktree.
+  That part is covered by BO-4300a-1-ia and BO-4300c-1
+  (EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace).
+
+No new ticket was filed. The build side is covered by this ticket and the BP-1500b family.
 
 ## Done When
 - [x] A test reproduces the defect first: a scratch adopter built with the hub template at its old name, then rebuilt after the rename, still holds the old `leafcutter.md` in all four installed locations. (Red on the previous build: all four copies left behind.)
