@@ -28,6 +28,9 @@ class TestKnowledgeRun(ScenarioCase):
         super().setUp()
         self.config = self.config.model_copy(
             update={
+                # This AC proves retrieval and persistence with no synthesis host.
+                # Synthesis continuation is covered by the research-policy tests.
+                "research": self.config.research.model_copy(update={"allow_synthesis": False}),
                 "knowledge": KnowledgeConfig(
                     backend="neo4j", repository_id="fixture", repository_root=str(self.repo)
                 ),

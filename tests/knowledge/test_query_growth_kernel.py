@@ -76,6 +76,9 @@ class TestQueryGrowthRun(ScenarioCase):
         from knowledge.config import KnowledgeConfig
         from kernel.providers.fakes import choice_answer, noul_answer
         self.config = self.config.model_copy(update={
+            # End this query-growth scenario at its evidence bundle. Separate
+            # linked research tests exercise optional host synthesis.
+            "research": self.config.research.model_copy(update={"allow_synthesis": False}),
             "knowledge": KnowledgeConfig(backend="neo4j",repository_id="fixture",
                 repository_root=str(self.repo)),
             "sources": [SourceConfig(id="graph",kind="graph_query",categories=["task_context"])],

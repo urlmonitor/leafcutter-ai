@@ -20,3 +20,12 @@ instead of assuming fixed corpus sizes. Glossary paths reject Windows absolute,
 drive-relative, UNC and parent escapes on every host. The completion gate uses
 an isolated real Neo4j query-growth proof; hosted Aura verification remains an
 explicit supplemental probe. The full pytest CI job remains disabled as requested.
+
+The async-aware proof scanner keeps the Aura deployment smoke check separate from
+KM-400e-3, whose approved contract explicitly requires an offline fake-port proof.
+Its existing public-kernel test remains linked and runs without hosted credentials.
+
+Retrieval-only kernel fixtures explicitly disable optional host synthesis instead
+of depending on a changing repository default. Their public invocation, evidence,
+checkpoint and query-reuse assertions remain intact; research-policy tests retain
+synthesis coverage.
