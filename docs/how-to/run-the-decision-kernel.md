@@ -72,6 +72,11 @@ confident about, which suits a repository-only run with no host research source:
 ```
 
 `research.need_supporting_threshold` may not exceed `need_required_threshold` (0.8 by default).
+The run root resolves independently of the shell's current directory, in this order: (1) the
+`LEAFCUTTER_KERNEL_RUN_ROOT` environment value, (2) `paths.run_root` from the config in effect
+(absolute as given), (3) a relative `paths.run_root` resolved against the kernel's own checkout,
+never the caller's cwd. A run started from one directory can be resumed from any other.
+
 A relative `paths.run_root` resolves against the checkout (default `.leafcutter/kernel`, which is
 git-ignored). An invalid override exits 5 with `config_invalid`.
 
