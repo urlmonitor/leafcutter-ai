@@ -87,6 +87,11 @@ def choice_question(question_id: str, template_id: str, instructions: str,
 def make_batch(ctx: ExecutionContext, purpose: str, state: dict[str, JsonValue],
                questions: list[QuestionSpec]) -> JevBatch:
     """Build a Jev batch carrying the invocation's correlation ids."""
+    if ctx.context_enrichment is not None:
+        from kernel.enrichment_projection import attach_context
+
+        state = attach_context(state, ctx.context_enrichment, ctx.config.jev.max_state_chars,
+                               ctx.config.data_policy.send_repo_excerpts_to_jev)
     return JevBatch(purpose=purpose, state=state, questions=questions, correlation=ctx.corr)
 
 

@@ -17,6 +17,7 @@ from types import ModuleType
 from kernel.contracts import (
     base,
     capability,
+    context,
     decision,
     enums,
     evidence,
@@ -112,7 +113,9 @@ from kernel.contracts.work import (  # noqa: F401
     WorkItem,
 )
 
-_MODULES: tuple[ModuleType, ...] = (base, capability, decision, enums, evidence, interaction,
+from kernel.contracts.context import CallerContext, ContextExcerpt, EnrichedContext  # noqa: F401
+
+_MODULES: tuple[ModuleType, ...] = (base, capability, context, decision, enums, evidence, interaction,
                                     payloads, query, run, task, work)
 
 

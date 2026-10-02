@@ -1,0 +1,87 @@
+id: DK-200c-2
+title: "Integration descriptions remain evidence without proving live operation"
+component: decision-kernel
+components: [decision_kernel]
+level: L2
+status: active
+readiness: draft
+req_status: draft
+priority: high
+work_status: done
+criteria: |
+  Given repository documentation describes a Leafcutter integration,
+  And the capability is registered and the caller says it can invoke it,
+  And no live invocation outcome was observed,
+  When enrichment hands its context to intent or later work,
+  Then those descriptions remain identified as documentation, registration and caller claims,
+  And the context does not present them as proof that a live invocation succeeded.
+depends_on: [DK-200c]
+covered_by:
+  - "DK-200c-2-i"
+  - "DK-200c-2-ii"
+  - "tests/kernel/enrichment/test_context_enrichment.py::TestContextEnrichmentEvaluation::test_each_labelled_case_meets_the_context_contract"
+  - "tests/kernel/intent/test_context_enrichment_wiring.py::TestContextEnrichmentWiring::test_host_artifact_and_host_resume_retain_the_saved_context"
+  - "tests/kernel/intent/test_context_enrichment_wiring.py::TestContextEnrichmentWiring::test_native_decision_judgments_receive_the_saved_context"
+implemented_by:
+  - "kernel/contracts/context.py"
+  - "kernel/context_enrichment.py"
+  - "kernel/enrichment_projection.py"
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "Documentation, registered capability identifiers and caller observations must retain their provenance when handed to consumers."
+  - "The context trust statement must state that registration or a caller claim is not proof of successful live operation."
+delivers_to: null
+expects_from:
+  ac_id: DK-200a-3
+  contract: "EnrichedContext checkpoint value: original_goal:string; caller_context:{host:string|null, capabilities:string[], conversation:string[], observations:string[]}; workspace_id:string; repository_root:string; registered_capabilities:string[]; evidence:{source_id:string, locator:string, excerpt:string, content_hash:string, truncated:boolean}[]; sources_consulted:string[]; files_scanned:integer; limitations:string[]; truncated:boolean; status:gathered|no_evidence|partial|unavailable|disabled. Caller claims and source evidence remain distinct; the saved value is unchanged by provider projection."
+test_required: true
+test_spec:
+  - name: test_each_labelled_case_meets_the_context_contract
+    target_dir: tests/kernel/enrichment/
+    framework: pytest
+    type: behavioral
+    angle: real_artifact
+    description: "Labelled caller and repository facts remain in their own fields without invented claims or registered capabilities."
+  - name: test_host_artifact_and_host_resume_retain_the_saved_context
+    target_dir: tests/kernel/intent/
+    framework: pytest
+    type: integration
+    angle: seam
+    description: "The real host input artifact preserves claim/evidence provenance and explicitly states that registration does not prove runtime availability."
+  - name: test_native_decision_judgments_receive_the_saved_context
+    target_dir: tests/kernel/intent/
+    framework: pytest
+    type: integration
+    angle: seam
+    description: "The real decision assessment receives saved evidence and caller claims with the same trust limits."
+test_rationale: "Provenance and explicit trust limits are verified at consuming boundaries; these tests do not claim that every model response or an installed runtime is correct."
+doc_links:
+  - path: docs/product-truth/flows/leafcutter/decision-forming.flow.json
+    relationship: implements
+    status: exists
+  - path: docs/architecture/components/decision-kernel.md
+    relationship: describes
+    status: exists
+  - path: docs/how-to/run-the-decision-kernel.md
+    relationship: context
+    status: exists
+origin_agent: business-analyst
+created: 2026-10-02
+amended_by:
+  - reason: "IT PO technical enrichment and verified test mapping on 2026-10-02; BA criteria and draft readiness preserved."
+superseded_by: null
+notes: |
+  Decomposed from the user-authorized context-enrichment scope and existing
+  DK-100 through DK-104. IT PO technical constraints and exact behavioral test
+  links are recorded. Readiness remains draft; no product approval is implied.
+product_truth:
+  - flow: leafcutter/decision-forming
+    node: enrich-context
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: leafcutter/decisions
+    entities: []
+    source: real
+    asof: '2026-10-02'

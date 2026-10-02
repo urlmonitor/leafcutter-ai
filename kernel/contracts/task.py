@@ -19,6 +19,7 @@ from kernel.contracts import schema_ids
 from kernel.contracts.base import KernelModel, PersistedModel, StableId, fail
 from kernel.contracts.enums import ActorKind, ApprovalStatus, ConstraintSeverity
 from kernel.contracts.evidence import EvidenceInput
+from kernel.contracts.context import CallerContext
 
 _ORIGINS = frozenset({"caller", "policy", "human", "host"})
 
@@ -122,6 +123,7 @@ class TaskInput(KernelModel):
     input_payload_schema: str | None = None
     input_payload: dict[str, VerbatimJson] | None = None
     initial_evidence: list[EvidenceInput] = Field(default_factory=list)
+    context: CallerContext = Field(default_factory=CallerContext)
     constraints: list[Constraint] = Field(default_factory=list)
     permissions: list[str] = Field(default_factory=lambda: ["read_repo"])
 

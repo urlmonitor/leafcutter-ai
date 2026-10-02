@@ -25,6 +25,7 @@ from kernel.contracts import (
     Decision,
     ErrorInfo,
     Evidence,
+    EnrichedContext,
     Finding,
     HostWorkRequest,
     HumanQuestion,
@@ -214,6 +215,7 @@ class KernelState(TypedDict, total=False):
     root_task_id: str
     task_input: TaskInput
     task: Task
+    context_enrichment: EnrichedContext
     registry: RegistrySnapshot
     permissions: list[str]
     requests: Annotated[dict[str, Request], merge_map]
