@@ -235,10 +235,6 @@ from _done_proof_automation_gate import (  # BO-2900a-3 rework
 # ---------------------------------------------------------------------------
 _COMMIT_GUARDIAN_DIR = Path(__file__).resolve().parent.parent / "commit_guardian"
 
-# ---------------------------------------------------------------------------
-# Constants
-# ---------------------------------------------------------------------------
-
 # Matches a pytest -v result line: <nodeid> <OUTCOME>
 # Handles relative and absolute paths including "../" prefixes.
 # Outcomes: PASSED, FAILED, XFAIL, XPASS, SKIPPED, ERROR.
@@ -247,8 +243,8 @@ _PYTEST_RESULT_RE = re.compile(
     re.MULTILINE,
 )
 
-# Matches a function definition whose name starts with "test_".
-_TEST_DEF_RE = re.compile(r"^\s*def\s+(test_\w+)")
+# Matches synchronous and asynchronous test definitions; both carry coverage tags.
+_TEST_DEF_RE = re.compile(r"^\s*(?:async\s+)?def\s+(test_\w+)")
 
 # BP-1100g-3: matches the SECOND tag axis on a test function -- "which kind
 # of proof this test was written to give" -- mirroring COVERS_TAG_RE's own
@@ -824,14 +820,12 @@ def run_vitest_and_parse(
     }
 
 
-# ---------------------------------------------------------------------------
-# Internal helpers — I/O layer
+# Internal helpers - I/O layer
 #
 # BP-100n-4-ii-ii: _build_ac_status_map itself now lives in
 # _done_proof_phase_helpers.py (re-exported below, same pattern as
 # is_covers_tag_waived) — see this module's own docstring "Second relocation"
 # paragraph for why.
-# ---------------------------------------------------------------------------
 
 
 def _is_excluded_path(path: Path) -> bool:
@@ -2137,7 +2131,7 @@ def _apply_reachability_gate(
 
     exemptions: list[dict] = []
     exempt_verdict = False
-    collected_invocations = None
+    invocation_collector = None
     if str(_COMMIT_GUARDIAN_DIR) not in sys.path:
         sys.path.insert(0, str(_COMMIT_GUARDIAN_DIR))
     try:
@@ -2160,11 +2154,11 @@ def _apply_reachability_gate(
             print(
                 f"WARNING: done_proof: cannot load {registry_path}: {exc}", file=sys.stderr,
             )
-        exempt_verdict = is_exempt(unit, exemptions)
+        exempt_verdict, invocation_collector = is_exempt(unit, exemptions), collected_invocations
 
     # BO-2900a-3 condition (3): a unit run as a program by real automation
     # does not satisfy "no automation runs it" -- verdict unchanged.
-    if unit_is_invoked_by_automation(unit, project_root, test_root, collected_invocations):
+    if unit_is_invoked_by_automation(unit, project_root, test_root, invocation_collector):
         return verdict
 
     if exempt_verdict:

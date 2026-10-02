@@ -20,6 +20,7 @@ from kernel.config import KernelConfig
 from kernel.contracts.base import CorrelationIds
 from kernel.contracts.capability import CapabilityDescriptor, CapabilityResult
 from kernel.contracts.evidence import Evidence
+from kernel.contracts.context import EnrichedContext
 from kernel.contracts.task import Scope
 from kernel.contracts.work import CapabilityInvocation
 from kernel.memory.port import ColonyMemory, NullColonyMemory
@@ -83,6 +84,7 @@ class ExecutionContext:
     constraints: tuple[str, ...] = ()
     #: Approved-decision memory: read precedent, stage a record (never written to the repository).
     memory: ColonyMemory = field(default_factory=NullColonyMemory)
+    context_enrichment: EnrichedContext | None = None
 
     def evidence(self, ids: Sequence[str]) -> list[Evidence]:
         """Return the evidence items for ids (unknown ids are omitted), in the given order."""

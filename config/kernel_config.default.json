@@ -29,6 +29,17 @@
     "min_confidence": 0.5,
     "max_clarifications": 2
   },
+  "context_enrichment": {
+    "enabled": true,
+    "source_ids": ["repo.docs", "repo.components", "repo.config", "repo.decisions", "repo.principles", "repo.patterns"],
+    "max_files": 180,
+    "max_sources": 6,
+    "max_evidence": 6,
+    "max_chars": 8000,
+    "max_context_chars": 4000,
+    "max_excerpt_chars": 1600,
+    "max_seconds": 3.0
+  },
   "decision": {
     "sufficiency_threshold": 0.8,
     "satisfies_threshold": 0.8,

@@ -1,0 +1,84 @@
+id: DK-200a-3
+title: "Grounding preserves the request and distinguishes supplied claims from sourced excerpts"
+component: decision-kernel
+components: [decision_kernel]
+level: L2
+status: active
+readiness: draft
+req_status: draft
+priority: high
+work_status: done
+criteria: |
+  Given the request "Can you use leafcutter now? I mean run the kernel and know about it?"
+  And the caller supplies its host identity, capabilities, conversation and observations,
+  And permitted repository documentation describes Leafcutter,
+  When initial enrichment gathers context,
+  Then the original request remains verbatim,
+  And retained caller claims remain distinguishable from repository excerpts,
+  And each retained excerpt identifies its source, location and content hash,
+  And workspace identity and registered capabilities remain identifiable as their own context.
+depends_on: [DK-200a]
+covered_by:
+  - "DK-200a-3-i"
+  - "DK-200a-3-ii"
+  - "tests/kernel/enrichment/test_context_enrichment.py::TestContextEnrichmentEvaluation::test_each_labelled_case_meets_the_context_contract"
+  - "tests/kernel/intent/test_context_enrichment_wiring.py::TestContextEnrichmentWiring::test_repository_context_reaches_intent_before_any_human_question"
+implemented_by:
+  - "kernel/contracts/context.py"
+  - "kernel/contracts/task.py"
+  - "kernel/context_enrichment.py"
+  - "kernel/enrichment_sources.py"
+assigned_agent: python-coder
+estimated_complexity: L
+it_requirements:
+  - "Caller context must remain an explicitly supplied claim set separate from source-attributed repository evidence."
+  - "Hashes must identify the redacted text actually retained; the task input must remain unchanged."
+  - "Registered capability identifiers must come from the kernel capability registry and must not imply live availability."
+delivers_to:
+  agent: python-coder
+  contract: "EnrichedContext checkpoint value: original_goal:string; caller_context:{host:string|null, capabilities:string[], conversation:string[], observations:string[]}; workspace_id:string; repository_root:string; registered_capabilities:string[]; evidence:{source_id:string, locator:string, excerpt:string, content_hash:string, truncated:boolean}[]; sources_consulted:string[]; files_scanned:integer; limitations:string[]; truncated:boolean; status:gathered|no_evidence|partial|unavailable|disabled. Caller claims and source evidence remain distinct; the saved value is unchanged by provider projection."
+expects_from: null
+test_required: true
+test_spec:
+  - name: test_each_labelled_case_meets_the_context_contract
+    target_dir: tests/kernel/enrichment/
+    framework: pytest
+    type: behavioral
+    angle: real_artifact
+    description: "The original Leafcutter request and labelled caller claims remain unchanged; each retained excerpt matches its real source and exact hash and no unregistered capability is invented."
+  - name: test_repository_context_reaches_intent_before_any_human_question
+    target_dir: tests/kernel/intent/
+    framework: pytest
+    type: integration
+    angle: reachability
+    description: "Saved workspace identity, repository root and sorted registered capability IDs equal the actual service inputs and registry."
+test_rationale: "Independent labels and on-disk source text verify provenance; the service test additionally verifies real workspace and registry metadata."
+doc_links:
+  - path: docs/product-truth/flows/leafcutter/decision-forming.flow.json
+    relationship: implements
+    status: exists
+  - path: docs/architecture/components/decision-kernel.md
+    relationship: describes
+    status: exists
+  - path: docs/how-to/run-the-decision-kernel.md
+    relationship: context
+    status: exists
+origin_agent: business-analyst
+created: 2026-10-02
+amended_by:
+  - reason: "IT PO technical enrichment and verified test mapping on 2026-10-02; BA criteria and draft readiness preserved."
+superseded_by: null
+notes: |
+  Decomposed from the user-authorized context-enrichment scope and existing
+  DK-100 through DK-104. IT PO technical constraints and exact behavioral test
+  links are recorded. Readiness remains draft; no product approval is implied.
+product_truth:
+  - flow: leafcutter/decision-forming
+    node: enrich-context
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: leafcutter/decisions
+    entities: []
+    source: real
+    asof: '2026-10-02'

@@ -4,14 +4,14 @@
   "product": "Leafcutter",
   "name": "How a decision is formed, saved, stored and reused",
   "level": "journey",
-  "summary": "How a decision is formed in a kernel run, staged as a record, published to docs/decisions/, and reused as precedent.",
+  "summary": "A request is enriched, formed into a human-approved decision, staged, published and later reused as precedent.",
   "kind": "data",
   "source": "real",
   "realization": "built",
   "status": "active",
   "readiness": "draft",
   "superseded_by": null,
-  "version": 1,
+  "version": 2,
   "shape_version": 2,
   "tags": [
     "decision-kernel",
@@ -28,11 +28,8 @@
     {
       "id": "form",
       "label": "Form the decision",
-      "human": "You ask a question; the kernel researches it, Jev assesses the options, and you approve the criteria and make the ranked choice.",
+      "human": "You ask a question; the kernel enriches its context before intent, then researches the decision, assesses options and asks you to approve and choose.",
       "order": 1,
-      "implements": [
-        "DK-300b-3"
-      ],
       "agent": "kernel",
       "produces": [
         "resolved decision (approved_by: human)"
@@ -44,16 +41,16 @@
         "leafcutter/decision-forming"
       ],
       "impl_asof": "2026-10-02",
-      "impl_status": "in_progress"
+      "impl_status": "in_progress",
+      "implements": [
+        "DK-300b-3"
+      ]
     },
     {
       "id": "stage",
       "label": "Stage the record",
       "human": "When the run ends, the approved decision is saved as a record in the run folder (never in the repository), and you are told how to publish it.",
       "order": 2,
-      "implements": [
-        "DK-300c-3"
-      ],
       "agent": "kernel decision executor",
       "consumes": [
         "resolved decision (approved_by: human)"
@@ -71,16 +68,16 @@
         "leafcutter/decision-staging"
       ],
       "impl_asof": "2026-10-02",
-      "impl_status": "in_progress"
+      "impl_status": "in_progress",
+      "implements": [
+        "DK-300c-3"
+      ]
     },
     {
       "id": "publish",
       "label": "Publish the record",
       "human": "You run the publish command; the record is validated, written to docs/decisions/, the index is regenerated, and the change goes through a normal git review.",
       "order": 3,
-      "implements": [
-        "DK-300d-3"
-      ],
       "agent": "python -m kernel decisions publish",
       "consumes": [
         "staged record (<run_root>/runs/<run_id>/staged/decisions/<id>.yaml)"
@@ -99,17 +96,16 @@
         "leafcutter/decision-publishing"
       ],
       "impl_asof": "2026-10-02",
-      "impl_status": "in_progress"
+      "impl_status": "in_progress",
+      "implements": [
+        "DK-300d-3"
+      ]
     },
     {
       "id": "reuse",
       "label": "Reuse it as precedent",
       "human": "A later decision run finds the record through the index; Jev judges whether it applies, and a strong match asks you to reuse it or decide anew.",
       "order": 4,
-      "implements": [
-        "DK-300e-1",
-        "DK-300e-3"
-      ],
       "agent": "kernel precedent step",
       "consumes": [
         "published record (docs/decisions/<id>.yaml)",
@@ -129,7 +125,11 @@
         "leafcutter/decision-retrieval"
       ],
       "impl_asof": "2026-10-02",
-      "impl_status": "in_progress"
+      "impl_status": "in_progress",
+      "implements": [
+        "DK-300e-1",
+        "DK-300e-3"
+      ]
     }
   ],
   "acceptance_scenarios": [
@@ -137,7 +137,7 @@
       "for": "form",
       "given": "a question asked through Claude Code",
       "when": "the kernel runs it as a decision",
-      "then": "the decision resolves only after a human approves the criteria and makes the ranked choice, and it carries approved_by: human:<id> and approved_at"
+      "then": "bounded context enrichment precedes intent, and a decision resolves only after a human approves criteria and makes the ranked choice, carrying approved_by: human:<id> and approved_at"
     },
     {
       "for": "stage",
@@ -164,6 +164,12 @@
       "by": "flow-author (decision-lifecycle product-truth session)",
       "date": "2026-10-02",
       "note": "Parent journey of the decision lifecycle, per kernel decision dec-5e7445182eaec1f2 (one parent flow whose steps expand into four sub-flows). Describes the decision store merged in PR #978. Screens are not wired yet; mockups come later."
+    },
+    {
+      "action": "extended",
+      "by": "Codex (user-requested context enrichment)",
+      "date": "2026-10-02",
+      "note": "Extended the canonical flow with the implemented initial context pass before intent. DK-100 through DK-104 link implementation and evaluation. The isolated report records 10/10 cases; the separate paired live intent report records 5/5 expected enriched labels with ten Jev calls, without claiming general improvement. Readiness stays draft; no persona approval is claimed."
     }
   ],
   "impl_summary": {

@@ -109,7 +109,8 @@ class IntentStep:
         elif (assessment.outcome is RoutingOutcome.INSUFFICIENT_CONTEXT
               and self.cfg.routing.on_insufficient_context == "human"
               and len(answers) < self.cfg.intent.max_clarifications):
-            question = intent_question(task.original_goal, answers[-1] if answers else None)
+            question = intent_question(task.original_goal, answers[-1] if answers else None,
+                                       context=self.state.get("context_enrichment"))
             if self._park(item, question):
                 return
             self.task_update = task.model_copy(update={"intent": INTENT_DEFAULT})
@@ -128,9 +129,14 @@ class IntentStep:
                                     reason_codes=["human_chosen"])
         if guards.jev_calls_available(self.draft.budgets, self.cfg.limits) < 1:
             return IntentAssessment(RoutingOutcome.UNAVAILABLE, reason_codes=["budget_exhausted"])
+        context = self.state.get("context_enrichment")
+        if context is not None and not self.cfg.data_policy.send_repo_excerpts_to_jev:
+            context = context.model_copy(update={"evidence": [], "limitations": [
+                *context.limitations, "repository context withheld from Jev by data policy"]})
         assessment = await assess_intent(
             self.ctx.jev, task.original_goal, answers, task.scope.component_ids, self.cfg.intent,
-            run_corr(self.state, work_item_id=item.id))
+            run_corr(self.state, work_item_id=item.id), context=context,
+            max_state_chars=self.cfg.jev.max_state_chars)
         self.draft.budgets = guards.account_usage(
             self.draft.budgets.model_copy(update={
                 "jev_calls": self.draft.budgets.jev_calls + 1}),

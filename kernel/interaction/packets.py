@@ -13,6 +13,8 @@ ARCHITECTURE: Pure builders over plain state mappings (no scheduler imports, so 
 
 from __future__ import annotations
 
+from kernel.enrichment_projection import context_payload
+
 import json
 import logging
 from collections.abc import Callable, Mapping
@@ -183,7 +185,9 @@ def write_input_artifact(artifacts: ArtifactStorePort, redactor: Redactor, run_i
         "task_template": f"{ref.template_id}@{ref.template_version}" if ref else None,
         "prompt_fingerprint": ref.fingerprint if ref else None,
         "request_schema": invocation.input_payload_schema if invocation else None,
-        "request": dict(invocation.input_payload) if invocation else {}, "evidence": evidence})
+        "request": dict(invocation.input_payload) if invocation else {}, "evidence": evidence,
+        "context_enrichment": context_payload(state["context_enrichment"])
+        if state.get("context_enrichment") is not None else None})
     try:
         written = artifacts.write_artifact(run_id, f"input-{packet.id}.json",
                                            json.dumps(body, indent=2, sort_keys=True) + "\n")

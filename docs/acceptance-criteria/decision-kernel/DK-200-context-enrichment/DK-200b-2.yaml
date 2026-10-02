@@ -1,0 +1,95 @@
+id: DK-200b-2
+title: "Configured discovery and text allowances bound initial context"
+component: decision-kernel
+components: [decision_kernel]
+level: L2
+status: active
+readiness: draft
+req_status: draft
+priority: high
+work_status: done
+criteria: |
+  Given matching sources, files and text exceed the configured gathering allowances,
+  When the initial pass gathers context,
+  Then consulted source count, examined file count, retained excerpt count and retained text stay within their configured allowances,
+  And the result identifies truncation or unexamined material,
+  And the original request is unchanged.
+depends_on: [DK-200b]
+covered_by:
+  - "DK-200b-2-i"
+  - "tests/kernel/enrichment/test_context_enrichment.py::TestContextEnrichmentBoundaries::test_file_count_and_payload_bounds_are_enforced_and_reported"
+  - "tests/kernel/enrichment/test_context_enrichment.py::TestContextEnrichmentBoundaries::test_source_budget_changes_the_number_of_consulted_sources"
+  - "tests/kernel/enrichment/test_context_enrichment.py::TestContextEnrichmentBoundaries::test_supplied_context_budget_preserves_goal_and_marks_truncation"
+implemented_by:
+  - "kernel/config_context.py"
+  - "config/kernel_config.default.json"
+  - "config/kernel_config.schema.json"
+  - "kernel/context_enrichment.py"
+  - "kernel/enrichment_sources.py"
+assigned_agent: python-coder
+estimated_complexity: L
+it_requirements:
+  - "Source, file, excerpt, per-excerpt text, total excerpt text and caller-text allowances must come from validated context_enrichment configuration."
+  - "Reaching any configured allowance must preserve the original request and explicitly identify truncation or unexamined coverage."
+  - "Reported examined counts must reflect attempted discovery rather than configured maxima."
+delivers_to: null
+expects_from: null
+test_required: true
+test_spec:
+  - name: test_file_count_and_payload_bounds_are_enforced_and_reported
+    target_dir: tests/kernel/enrichment/
+    framework: pytest
+    type: unit
+    angle: boundary
+    description: "Changing the file allowance from three to one changes discovery counts while excerpt count, per-excerpt and total text remain bounded and truncation is reported."
+  - name: test_source_budget_changes_the_number_of_consulted_sources
+    target_dir: tests/kernel/enrichment/
+    framework: pytest
+    type: unit
+    angle: boundary
+    description: "Changing a three-source search allowance from one to three changes consulted source and file counts and marks limited coverage."
+  - name: test_supplied_context_budget_preserves_goal_and_marks_truncation
+    target_dir: tests/kernel/enrichment/
+    framework: pytest
+    type: unit
+    angle: boundary
+    description: "Retained caller text stays within 160 characters, the input goal and conversation remain unchanged and shortening is reported."
+test_rationale: "Varying independent allowances prevents a fixed count or empty result from masquerading as resource enforcement."
+doc_links:
+  - path: docs/product-truth/flows/leafcutter/decision-forming.flow.json
+    relationship: implements
+    status: exists
+  - path: docs/architecture/components/decision-kernel.md
+    relationship: describes
+    status: exists
+  - path: docs/how-to/run-the-decision-kernel.md
+    relationship: context
+    status: exists
+origin_agent: business-analyst
+created: 2026-10-02
+amended_by:
+  - reason: "IT PO technical enrichment and verified test mapping on 2026-10-02; BA criteria and draft readiness preserved."
+superseded_by: null
+notes: |
+  Decomposed from the user-authorized context-enrichment scope and existing
+  DK-100 through DK-104. IT PO technical constraints and exact behavioral test
+  links are recorded. Readiness remains draft; no product approval is implied.
+product_truth:
+  - flow: leafcutter/decision-forming
+    node: enrich-context
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: leafcutter/decisions
+    entities: []
+    source: real
+    asof: '2026-10-02'
+  - flow: leafcutter/decision-forming
+    node: limited-context
+    node_kind: branch
+    flow_kind: data
+    screen: null
+    mock_data: leafcutter/decisions
+    entities: []
+    source: real
+    asof: '2026-10-02'

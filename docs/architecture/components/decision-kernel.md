@@ -7,7 +7,7 @@ flight_level: L2-Container
 diagram_type: container
 root: true
 created: 2026-09-30
-last_updated: 2026-10-01
+last_updated: 2026-10-02
 components:
   - decision_kernel
 related_docs:
@@ -19,9 +19,12 @@ related_docs:
   - docs/architecture/adrs/ADR-054-process-representation-and-maturity-model.md
   - docs/architecture/adrs/ADR-055-capability-registry-starts-empty.md
   - docs/architecture/adrs/ADR-056-colony-memory-evidence-reinforcement.md
+  - docs/architecture/adrs/ADR-057-colony-memory-store-optional-postgres.md
+  - docs/architecture/adrs/ADR-058-langfuse-colony-history-scores-datasets.md
   - docs/architecture/adrs/ADR-059-decision-store-reviewable-yaml-records-now-graph-later.md
   - docs/architecture/adrs/ADR-060-source-of-truth-and-approval-authority.md
   - docs/architecture/adrs/ADR-061-identity-of-declared-and-learned-records.md
+  - docs/architecture/adrs/ADR-065-colony-learned-statistics-neo4j-aggregates.md
   - docs/how-to/run-the-decision-kernel.md
   - docs/how-to/inspect-kernel-traces-with-langfuse-mcp.md
   - docs/analysis/2026-10-01-decision-kernel-v0-demo-report.md
@@ -40,11 +43,32 @@ tags:
 
 # Decision Kernel — Container Overview
 
-The decision kernel is a small, resumable runtime. It takes a free-form engineering goal and
-routes it to a registered capability using Jev's bounded judgments. It gathers evidence through
+The decision kernel is a small, resumable runtime. It takes a free-form engineering goal,
+enriches its context in one bounded read-only pass, and routes it to a registered capability
+using Jev's bounded judgments. It gathers evidence through
 native decision and research capabilities. Generative or human work goes out as explicit,
 checkpointed handoffs. Every run ends in a typed terminal state with evidence and a Langfuse
 trace.
+
+Initial enrichment precedes intent, including on runs with an explicit output contract. The
+`kernel.context_enrichment.gather_context` boundary combines explicitly supplied caller context,
+workspace identity, registered capability ids and relevant allowed repository excerpts. It keeps
+the original goal verbatim, caller claims separate from evidence, and provenance and limitations
+on the result. It makes no Jev calls, performs no host work, and cannot authorize actions or choose
+user preferences. The checkpointed result and `context.enriched` event precede intent assessment;
+resumes reuse that context. Missing sources, disabled gathering and exhausted bounds remain
+explicit outcomes rather than invented facts. Intent can still ask a human after consuming the
+context. The [forming flow](../../product-truth/flows/leafcutter/decision-forming.flow.json) is the
+canonical product truth. The [DK-200 context-enrichment requirements](../../acceptance-criteria/decision-kernel/DK-200-context-enrichment/DK-200.yaml)
+contain the BA behavioral decomposition and IT PO test contracts; they supersede the preliminary DK-100 through DK-104 records.
+
+That saved context also reaches native capability judgments, later repository query hints and
+redacted host input artifacts. `kernel.enrichment_projection` adds explicit trust boundaries and
+fits optional context into each Jev batch's remaining payload allowance. It never enlarges the
+configured limit or rewrites the base request; trimming or omission is reported, while the full
+snapshot remains checkpointed. Data policy can withhold repository excerpts from Jev. The
+[running guide](../../how-to/run-the-decision-kernel.md#context-before-intent) describes both the
+isolated context eval and the paired live intent probe, including their limits.
 
 It lives only in leafcutter-ai, as the top-level package `kernel/`. It is **not**
 shipped to adopter projects.
@@ -76,6 +100,10 @@ flowchart LR
 
 Diagram parent: none (`root: true`). This overview is the entry point. The detailed design is
 in [Decision Kernel V0 Design — Part 1](../../analysis/2026-09-30-decision-kernel-design.md).
+The end-to-end flows, the context map (where Jev, the host LLM, workers and humans get their
+context) and the learning loop are in
+[Decision Kernel — Flows and Context](../diagrams/c2-007-decision-kernel-flows-overview.md). The
+colony memory layer is in [Colony Memory](colony-memory.md).
 
 ## Exposed interfaces
 
@@ -111,9 +139,12 @@ Registered in `docs/components.json` under `decision_kernel.exposed_interfaces`:
 | [ADR-054](../adrs/ADR-054-process-representation-and-maturity-model.md) | How process knowledge is held (workflow, policy/checklist or LLM-guided) and how it matures. |
 | [ADR-055](../adrs/ADR-055-capability-registry-starts-empty.md) | The capability registry starts empty. Legacy agents and skills enter only by recorded decision. |
 | [ADR-056](../adrs/ADR-056-colony-memory-evidence-reinforcement.md) | Colony memory: paths gain evidence from verified outcomes, never from usage alone. Decisions carry outcomes, and capability gaps drive what gets built next. V0 records the prerequisites only. |
+| [ADR-057](../adrs/ADR-057-colony-memory-store-optional-postgres.md) | The colony memory store is optional plain PostgreSQL behind a `ColonyMemory` port with a Null implementation. Enabled by `LEAFCUTTER_COLONY_DB_URL`. Store technology superseded by [ADR-065](../adrs/ADR-065-colony-learned-statistics-neo4j-aggregates.md). See [colony-memory.md](colony-memory.md). |
+| [ADR-058](../adrs/ADR-058-langfuse-colony-history-scores-datasets.md) | Langfuse is the colony history: every node traced, decisions scored, datasets as regression memory. |
 | [ADR-059](../adrs/ADR-059-decision-store-reviewable-yaml-records-now-graph-later.md) | Decision store: human-approved decisions are filed as YAML records under `docs/decisions/` behind a `ColonyMemory` port and reused as precedent; a graph backend can replace the files later. |
 | [ADR-060](../adrs/ADR-060-source-of-truth-and-approval-authority.md) | Git is canonical for published records; only a human approval creates a record; the kernel never writes the repository during a run; precedent is evidence, not authority. |
 | [ADR-061](../adrs/ADR-061-identity-of-declared-and-learned-records.md) | Existing ids stay; decisions get a kernel-minted `dec-<16hex>` id; a record is keyed by (repository_id, kind, id). |
+| [ADR-065](../adrs/ADR-065-colony-learned-statistics-neo4j-aggregates.md) | Learned colony statistics live in Neo4j as derived aggregates updated after specific actions, behind ADR-059's `ColonyMemory` port; supersedes ADR-057's PostgreSQL store in part. |
 
 ## Specification
 

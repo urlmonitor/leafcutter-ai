@@ -87,7 +87,7 @@ def _context(packet: dict[str, Any], ctx: KernelRuntime, budget: ShareBudget
         tracer=ctx.tracer, corr=corr, artifacts=ctx.artifacts, budget=budget,
         evidence_lookup=lookup, clock=ctx.clock, cancel_probe=ctx.cancel_probe,
         descriptor=packet["descriptor"], constraints=tuple(packet.get("constraints", ())),
-        memory=ctx.memory)
+        memory=ctx.memory, context_enrichment=packet.get("context_enrichment"))
 
 
 def cancelled_result(invocation: CapabilityInvocation) -> CapabilityResult:

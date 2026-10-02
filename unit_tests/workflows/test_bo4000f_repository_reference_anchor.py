@@ -358,5 +358,56 @@ class TestDriverAnchorsEveryInvocation(unittest.TestCase):
         )
 
 
+class TestFileReferenceIsAnchoredOnItsFolder(_RealRepositoryFixture):
+    """BO-4000g: a reference naming a ticket FILE answers as its folder does."""
+
+    @property
+    def ticket_file(self) -> Path:
+        return self.epic_target / "01_TICKET-x.md"
+
+    def test_base_given_a_ticket_file_matches_the_folder_answer(self) -> None:
+        # covers: BO-4000g
+        # angle: criterion
+        """`base <ticket .md file>` names the real main checkout and worktree
+        base, exactly as it does for the folder holding that file."""
+        self.assertTrue(self.ticket_file.is_file())
+        from_folder = self._facts_script("base", str(self.epic_target))
+        self.assertIsNotNone(from_folder["main_checkout"])  # negative control
+        from_file = self._facts_script("base", str(self.ticket_file))
+        self.assertIsNotNone(from_file["main_checkout"])
+        self.assertIsNotNone(from_file["worktree_base"])
+        self.assertEqual(from_file, from_folder)
+
+    def test_facts_reference_a_ticket_file_reports_same_repository(self) -> None:
+        # covers: BO-4000g
+        # angle: criterion
+        """`facts --reference <ticket .md file>` answers same_repository true
+        for the linked worktree, so an existing worktree is reused."""
+        from_folder = self._facts_script(
+            "facts", str(self.linked), "--reference", str(self.epic_target)
+        )
+        self.assertTrue(from_folder["same_repository"])  # negative control
+        from_file = self._facts_script(
+            "facts", str(self.linked), "--reference", str(self.ticket_file)
+        )
+        self.assertTrue(from_file["same_repository"])
+        self.assertEqual(from_file, from_folder)
+
+    def test_branch_standing_repo_a_ticket_file_sees_the_branch(self) -> None:
+        # covers: BO-4000g
+        # angle: criterion
+        """`branch-standing --repo <ticket .md file>` finds the existing branch
+        instead of silently reporting it absent."""
+        from_folder = self._facts_script(
+            "branch-standing", TEMP_BRANCH, "--repo", str(self.epic_target)
+        )
+        self.assertTrue(from_folder["exists"])  # negative control
+        from_file = self._facts_script(
+            "branch-standing", TEMP_BRANCH, "--repo", str(self.ticket_file)
+        )
+        self.assertTrue(from_file["exists"])
+        self.assertEqual(from_file, from_folder)
+
+
 if __name__ == "__main__":
     unittest.main()

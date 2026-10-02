@@ -1,0 +1,76 @@
+id: DK-200b-1
+title: "Initial gathering stays inside permitted read-only repository scope"
+component: decision-kernel
+components: [decision_kernel]
+level: L2
+status: active
+readiness: draft
+req_status: draft
+priority: high
+work_status: done
+criteria: |
+  Given an allowed source contains a matching document within the task's read roots,
+  And equally matching documents are outside those roots or explicitly denied,
+  When initial enrichment gathers repository context,
+  Then only the permitted document can contribute evidence,
+  And repository contents remain unchanged,
+  And gathering invokes neither a model judgment nor host work nor a human interaction.
+depends_on: [DK-200b]
+covered_by:
+  - "tests/kernel/enrichment/test_context_enrichment.py::TestContextEnrichmentEvaluation::test_each_labelled_case_meets_the_context_contract"
+  - "tests/kernel/enrichment/test_context_enrichment.py::TestEvaluationFalsifiability::test_disabling_the_real_deny_policy_causes_the_secret_case_to_fail"
+implemented_by:
+  - "kernel/context_enrichment.py"
+  - "kernel/enrichment_sources.py"
+assigned_agent: python-coder
+estimated_complexity: L
+it_requirements:
+  - "Repository reads must satisfy the intersection of configured source selection, task read permission, read roots and deny policies."
+  - "The gathering boundary must not write repository files, request a model judgment, dispatch host work or create a human interaction."
+  - "Source exclusions must not be reinterpreted as permission to expand scope."
+delivers_to: null
+expects_from: null
+test_required: true
+test_spec:
+  - name: test_each_labelled_case_meets_the_context_contract
+    target_dir: tests/kernel/enrichment/
+    framework: pytest
+    type: behavioral
+    angle: real_artifact
+    description: "Labelled read-permission, read-root, source-allowlist and deny-policy cases retain only allowed facts and leave the full task input and on-disk files unchanged."
+  - name: test_disabling_the_real_deny_policy_causes_the_secret_case_to_fail
+    target_dir: tests/kernel/enrichment/
+    framework: pytest
+    type: unit
+    angle: failure
+    description: "Disabling the actual deny policy makes the forbidden-source evaluation case fail on its labelled secret material."
+test_rationale: "The production gather function executes against real fixture files without a classifier, host or interaction runner; the negative control proves scope leakage is observable."
+doc_links:
+  - path: docs/product-truth/flows/leafcutter/decision-forming.flow.json
+    relationship: implements
+    status: exists
+  - path: docs/architecture/components/decision-kernel.md
+    relationship: describes
+    status: exists
+  - path: docs/how-to/run-the-decision-kernel.md
+    relationship: context
+    status: exists
+origin_agent: business-analyst
+created: 2026-10-02
+amended_by:
+  - reason: "IT PO technical enrichment and verified test mapping on 2026-10-02; BA criteria and draft readiness preserved."
+superseded_by: null
+notes: |
+  Decomposed from the user-authorized context-enrichment scope and existing
+  DK-100 through DK-104. IT PO technical constraints and exact behavioral test
+  links are recorded. Readiness remains draft; no product approval is implied.
+product_truth:
+  - flow: leafcutter/decision-forming
+    node: enrich-context
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: leafcutter/decisions
+    entities: []
+    source: real
+    asof: '2026-10-02'
