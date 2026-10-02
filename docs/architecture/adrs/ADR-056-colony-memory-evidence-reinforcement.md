@@ -4,7 +4,7 @@ description: "Leafcutter learns from the observed outcome of every capability in
 type: "adr"
 status: "active"
 created: "2026-09-30"
-last_updated: "2026-09-30"
+last_updated: "2026-10-02"
 deciders:
   - BrainCandy
 components:
@@ -15,6 +15,7 @@ related_docs:
   - docs/architecture/adrs/ADR-054-process-representation-and-maturity-model.md
   - docs/architecture/adrs/ADR-057-colony-memory-store-optional-postgres.md
   - docs/architecture/adrs/ADR-058-langfuse-colony-history-scores-datasets.md
+  - docs/architecture/adrs/ADR-065-colony-learned-statistics-neo4j-aggregates.md
   - docs/architecture/components/decision-kernel.md
   - docs/vision.md
   - docs/analysis/2026-09-30-decision-kernel-design-2-contracts-registry-config.md
@@ -293,7 +294,9 @@ The later stages follow the spec's §3 roadmap:
 [ADR-057](ADR-057-colony-memory-store-optional-postgres.md) later refines the performance store's
 placement: it is the optional PostgreSQL colony memory store, and its write-only COLLECT step (no
 behavioural change) may start right after V0. ANALYZE, SUGGEST and INFLUENCE ROUTING keep the
-placement and gates above.
+placement and gates above. (Store technology superseded:
+[ADR-065](ADR-065-colony-learned-statistics-neo4j-aggregates.md) keeps the learned statistics in
+Neo4j as derived aggregates; the staging and gates are unchanged.)
 
 ## Consequences
 
@@ -368,6 +371,8 @@ This ADR explicitly does not decide:
 5. **Where the performance store lives and its format.** This includes whether the job also
    reads the authoritative local `events.jsonl` records. Answered by
    [ADR-057](ADR-057-colony-memory-store-optional-postgres.md): an optional PostgreSQL store, named the colony memory store.
+   [ADR-065](ADR-065-colony-learned-statistics-neo4j-aggregates.md) supersedes the store
+   technology: the store is Neo4j and holds the statistics as derived aggregates.
 6. **Threshold changes.** Whether calibration-driven changes to evidence thresholds may apply
    automatically within bounds, or always need review.
 

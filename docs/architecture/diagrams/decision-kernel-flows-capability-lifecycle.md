@@ -7,7 +7,7 @@ diagram_type: state
 status: draft
 parent: docs/architecture/diagrams/decision-kernel-flows-overview.md
 created: 2026-09-30
-last_updated: 2026-09-30
+last_updated: 2026-10-02
 source_ticket: null
 components:
   - decision_kernel
@@ -19,6 +19,8 @@ related_docs:
 related_code:
   - kernel/capabilities/decision/
   - kernel/capabilities/research/
+  - kernel/capabilities/host/compiler.py
+  - kernel/memory/precedent.py
   - kernel/scheduler/validation.py
 tags:
   - decision-kernel
@@ -34,9 +36,9 @@ execution, not as instructions inside a prompt.
 [ADR-053](../adrs/ADR-053-intelligence-selection-deterministic-jev-llm-human.md) §7 requires every
 check to name its executor.
 
-**Status.** Both ADRs are accepted. V0 has no generic lifecycle graph. Its native `decision` and
-`research` graphs and the `host.*` handoffs already follow the shape; the table below shows
-where. ADR-052 leaves open whether the V0 graphs are restated in lifecycle terms.
+**Status.** Both ADRs are accepted. V0 is on main and has no generic lifecycle graph. Its native
+`decision` and `research` graphs and the `host.*` handoffs already follow the shape; the table
+below shows where. ADR-052 leaves open whether the V0 graphs are restated in lifecycle terms.
 
 ```mermaid
 stateDiagram-v2
@@ -78,15 +80,15 @@ outcome, or where REPAIR re-enters. The transitions above follow ADR-052 §5's i
 
 | Step | ADR-052 meaning | Executor | V0 decision capability | V0 research and retrieval | V0 kernel and host |
 |---|---|---|---|---|---|
-| PREPARE | Resolve policies, acquire evidence | deterministic; jev for need planning and reranking | `load`: question, options and criteria from the payload or child outcomes; evidence via `ctx.evidence(ids)` | `plan_needs` (jev), `resolve_sources` (deterministic) | No policies in V0 (Stage 3) |
+| PREPARE | Resolve policies, acquire evidence | deterministic; jev for need planning, reranking and precedent applicability | `load`: question, options and criteria from the payload or child outcomes; evidence via `ctx.evidence(ids)`. `precedent`: earlier approved decisions through the `ColonyMemory` port, judged by Jev, applicable ones added as `prior_decisions` evidence (ADR-059 §5) | `plan_needs` (jev only when the request does not name its needs), `resolve_sources` (deterministic) | No policies in V0 (Stage 3) |
 | PRE-CHECK | Can this operation proceed? | deterministic first (ADR-053 §5); human for preference | `validate_basis` (deterministic) | — | Eligibility filter and budget reservation before any Jev call (deterministic) |
-| COMPILE INVOCATION | Build the operation-specific input | deterministic only (ADR-052 §3) | Jev questions from versioned templates | Same | `open_interactions` builds the `HostWorkRequest`; V0 has no component named "invocation compiler" (OP-08) |
-| EXECUTE | Code, research, synthesis, tools | jev, deterministic, reasoning, human | `assess`: one Jev batch | Retrieval children: search (deterministic) and rerank (jev); `host.research` (reasoning) | `host.*` operations performed by Claude Code (reasoning) |
-| POST-CHECK | Evaluate the actual result | deterministic, test_runner, jev, reasoning, human | `combine`: pure code over Jev answers and `decision.*` thresholds | `collect` (jev `conflict`), `evaluate` (jev `evaluable`) | `integrate` validates every result; `resume_run` validates every submission (deterministic) |
-| ACCEPT | Return the typed result | deterministic | `emit` `resolved` → `completed` with `decision_report.v1` | `completed` with `evidence_bundle.v1` | `conversion.py` turns host output into a completed result |
+| COMPILE INVOCATION | Build the operation-specific input | deterministic only (ADR-052 §3) | Jev questions from versioned templates | Same | `open_interactions` builds the `HostWorkRequest`; its task statement is compiled and fingerprinted by `kernel/capabilities/host/compiler.py` (P8). No compiler for worker loops yet (OP-08) |
+| EXECUTE | Code, research, synthesis, tools | jev, deterministic, reasoning, human | `assess`: one Jev batch, including criterion-kind and precedent questions | Retrieval children: search (deterministic) and rerank (jev); `host.research` (reasoning) | `host.*` operations performed by Claude Code (reasoning) |
+| POST-CHECK | Evaluate the actual result | deterministic, test_runner, jev, reasoning, human | `combine`: pure code over Jev answers and `decision.*` thresholds | `collect` and `evaluate`: one jev batch (`conflict`, `evaluable`, `answers.<need>`) | `integrate` validates every result; `resume_run` validates every submission (deterministic) |
+| ACCEPT | Return the typed result | deterministic | `emit` `resolved` → `completed` with `decision_report.v1`; a decision a human approved is also staged as a record in the run root (ADR-060 §2–§3) | `completed` with `evidence_bundle.v1` | Each host operation's `convert` turns host output into a completed result |
 | REPAIR | Fix within bounds | deterministic bounds | — | — | Invalid host output: one repair (`host.max_repair_attempts`); retryable failure: same binding, up to `limits.max_retries` |
 | REQUEST INFORMATION | Return a typed unresolved result | — | `emit` `needs_evidence`, `needs_options`, `needs_synthesis` → `waiting` with a child request | `waiting` with retrieval, `host.research` or synthesis children | The kernel schedules the children and resumes the parent |
-| ESCALATE | Hand to a human or stop | human | `needs_human` → `human_question_request.v1`; `blocked` when the same request already failed; `partial` when nothing changed | `partial` when a required need stays unsatisfied | Guards end in `partial` or `blocked`; `no_match` records a gap, then fallback or `blocked` |
+| ESCALATE | Hand to a human or stop | human | `needs_human` → `human_question_request.v1`, including a ranked design choice and a precedent reuse question; `blocked` when the same request already failed or grounding found nothing; `partial` when nothing changed | `partial` when a required need stays unsatisfied | Guards end in `partial` or `blocked`; `no_match` records a gap, then fallback or `blocked` |
 
 A check that ran is not a check that was right. The runtime guarantees that a required check
 ran, not that a `jev` or `reasoning` answer is correct (ADR-052 §6, ADR-053 §6).
@@ -100,10 +102,13 @@ ran, not that a `jev` or `reasoning` answer is correct (ADR-052 §6, ADR-053 §6
 | `needs_options` | LLM | `options_request.v1` to `host.generate_options` |
 | `needs_synthesis` | LLM | `synthesis_request.v1` to `host.synthesize` |
 | `needs_human` | Human | `human_question_request.v1` |
+| A design judgement, flat assessments, the research cap or the budget reserve | Human | A ranked question (`design_reason`); the human's choice resolves the decision |
+| A precedent applies strongly and the decision has no options yet | Human | Reuse it or decide anew; a reuse resolves with the precedent's option, approved by the current human (ADR-060 §4–§5) |
 | Routing `no_match` | — | Capability gap, then approved fallback or `blocked` |
 
-Options but no criteria: an LLM proposes criteria as host work, a human approves or edits them,
-and only then does Jev assess (design part 4, criteria-proposal path; OP-04).
+Options but no criteria: an LLM proposes criteria as host work, a human approves a subset, edits
+them (`edited_criteria`) or adds options, and only then does Jev assess (design part 4,
+criteria-proposal path; OP-04).
 
 ## Which representation runs (ADR-054 §4)
 

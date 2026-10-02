@@ -108,11 +108,11 @@
       "id": "colony_memory",
       "name": "Colony Memory",
       "type": "infrastructure",
-      "description": "Optional cross-run learning layer: ColonyMemory port with PostgreSQL and Null implementations, fed by a learning evaluator from Langfuse traces and scores.",
+      "description": "Optional cross-run learning layer: learned statistics as derived aggregates in Neo4j (ADR-065) behind the ColonyMemory port (ADR-059), fed by a learning evaluator from Langfuse traces and scores; statistics are off when no Neo4j store is configured, while decision records follow memory.backend (ADR-059).",
       "detail_ref": "docs/architecture/components/colony-memory.md",
       "status": "planned",
       "primary_code": [
-        "kernel/colony_memory"
+        "kernel/memory"
       ],
       "agent_affinity": [],
       "exposed_interfaces": []

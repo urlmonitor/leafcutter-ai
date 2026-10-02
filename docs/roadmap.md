@@ -10,7 +10,7 @@ description: Overview of Project Roadmap.
 ---
 <!-- AUTO-GENERATED — do not edit by hand. Source: docs/roadmap.json -->
 <!-- Regenerate manually: python portable-dev-workflow/scripts/commit_guardian/regenerate_roadmap_mirror.py --manual -->
-<!-- Generated: 2026-10-02T08:21:33Z -->
+<!-- Generated: 2026-10-02T08:57:04Z -->
 
 # Project Roadmap
 
@@ -39,7 +39,7 @@ description: Overview of Project Roadmap.
 | `phase_kernel_3_workflows` | Decision Kernel — First Workers: Engineering Workflows and Executable Policies (kernel Stage 3) | Planned |
 | `phase_kernel_4_trails` | Decision Kernel — Trails: Colony Memory and Controlled Learning (kernel Stage 4) | Planned |
 | `phase_kernel_5_specialists` | Decision Kernel — Specialists: Independent Engineering Runtime (kernel Stage 5) | Planned |
-| `phase_colony_1_collect` | Colony Memory — COLLECT (optional PostgreSQL store, write-only) | Planned |
+| `phase_colony_1_collect` | Colony Memory — COLLECT (optional Neo4j store, write-only) | Planned |
 | `phase_colony_2_analyze` | Colony Memory — ANALYZE (learning evaluator, statistics, calibration) | Planned |
 | `phase_colony_3_suggest` | Colony Memory — SUGGEST (evidence shown, routing unchanged) | Planned |
 | `phase_colony_4_influence` | Colony Memory — INFLUENCE ROUTING (historical evidence in Jev routing) | Planned |
@@ -194,7 +194,7 @@ Discovery before acceptance criteria, AC-specific context, inherited component p
 
 **Status**: Planned
 
-Traces become colony memory (ADR-056): an analytics job feeds a performance store; decisions carry outcomes and per-type calibration; wrong decisions produce reviewed policy-gap and promotion proposals; capability gaps are ranked to propose what to build next. Reinforcement-informed routing and exploration come only after the performance store exists and passes evaluation (spec §19). Delivered through the colony-memory track phase_colony_2_analyze to phase_colony_5_evolve on the optional PostgreSQL colony memory store (ADR-057, ADR-058).
+Traces become colony memory (ADR-056): an analytics job feeds a performance store; decisions carry outcomes and per-type calibration; wrong decisions produce reviewed policy-gap and promotion proposals; capability gaps are ranked to propose what to build next. Reinforcement-informed routing and exploration come only after the performance store exists and passes evaluation (spec §19). Delivered through the colony-memory track phase_colony_2_analyze to phase_colony_5_evolve on the optional Neo4j colony memory store (ADR-065, ADR-058).
 
 **Exit Criteria**:
 
@@ -216,16 +216,16 @@ Direct model and agent executors, additional clients, stronger isolation and pro
 - Each native executor that replaces host.* work is justified by recorded host_only scout evidence (spec §21, ADR-056 §9)
 - At least one colony-health measure improves on the previous stage's baseline (share of requests resolved by specialized capabilities rather than fallback; decision accuracy and calibration per type; cost and time per resolved task; rework rate; gap recurrence after a capability ships). A stage is not reported as strengthening the colony without such a measure (ADR-056 §9)
 
-### phase_colony_1_collect: Colony Memory — COLLECT (optional PostgreSQL store, write-only)
+### phase_colony_1_collect: Colony Memory — COLLECT (optional Neo4j store, write-only)
 
 **Status**: Planned
 
-The optional colony memory store starts recording (ADR-057). A ColonyMemory port with a PostgreSQL implementation and NullColonyMemory is chosen once at startup. LEAFCUTTER_COLONY_DB_URL (any Postgres URL, including a Supabase Postgres connection string; no Supabase API) enables it, LEAFCUTTER_SELF_LEARNING=false opts out. Records graph usage, decisions, outcomes, capability gaps and fallback usage with context dimensions. No behavioural influence. Earliest start: right after phase_kernel_1_founding (inside V0 only if the V0 build decides so).
+The optional colony memory store starts recording learned statistics (ADR-057 as amended by ADR-065). A Neo4j backend attaches to the ColonyMemory port (ADR-059) next to its file and null backends; Learned statistics are off when no Neo4j store is configured (LEAFCUTTER_NEO4J_* settings) or when LEAFCUTTER_SELF_LEARNING=false; decision records and precedent keep following memory.backend (ADR-059). Statistics are derived aggregates updated after specific actions. Records graph usage, decisions, outcomes, capability gaps and fallback usage with context dimensions. No behavioural influence. Earliest start: right after phase_kernel_1_founding (inside V0 only if the V0 build decides so).
 
 **Exit Criteria**:
 
-- Without LEAFCUTTER_COLONY_DB_URL (or with LEAFCUTTER_SELF_LEARNING=false) the kernel, Jev, LangGraph, Claude handoff and Langfuse tracing work unchanged via NullColonyMemory, and no code outside the port branches on the setting (ADR-057 §3)
-- With a Postgres URL (a local Postgres and a Supabase Postgres connection string both verified), completed runs write graph usage, decision outcomes, capability gaps and fallback usage through a standard Postgres driver, with no Supabase client or REST API (ADR-057 §2)
+- Without a configured Neo4j store (or with LEAFCUTTER_SELF_LEARNING=false) learned statistics are off and the kernel, Jev, LangGraph, Claude handoff, Langfuse tracing and ADR-059 precedent work unchanged; no code outside the port's startup choice branches on the setting (ADR-057 §3, ADR-065 §4)
+- With a configured Neo4j store, completed runs update derived statistic aggregates (graph usage, decision outcomes, capability gaps, fallback usage) after the defined trigger actions; the aggregates are rebuildable and never canonical (ADR-065, ADR-060)
 - Every recorded statistic carries the mandatory context dimensions (capability, task_type, component, repository/project, policy_version); nothing is recorded as a global rate (ADR-057 §7)
 - Recording changes no routing or decision behaviour (ADR-057 §10)
 - Every important kernel node is traced in Langfuse, including non-LLM steps, via the v4/OpenTelemetry SDK (ADR-058)
@@ -283,4 +283,4 @@ The colony detects recurring capability gaps, weak policies (POLICY GAP), candid
 
 ---
 
-*Last regenerated: 2026-10-02T08:21:33Z. Do not edit this file directly — edit `docs/roadmap.json` instead.*
+*Last regenerated: 2026-10-02T08:57:04Z. Do not edit this file directly — edit `docs/roadmap.json` instead.*

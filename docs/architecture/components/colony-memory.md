@@ -1,13 +1,13 @@
 ---
 title: "Colony Memory — Container Overview"
-description: "Container-level overview of Leafcutter's optional cross-run learning layer: Langfuse traces and scores as colony history, an optional plain-PostgreSQL colony memory store behind the ColonyMemory port as the pheromone map, and Langfuse datasets as regression memory. Status: planned; not part of kernel V0 scope."
+description: "Container-level overview of what Leafcutter keeps across kernel runs: Langfuse traces and scores as colony history (ADR-058), human-approved decision records in Git reused as precedent (ADR-059 to ADR-061, live on main), and learned statistics as derived Neo4j aggregates (ADR-065, planned), both kinds of memory behind one ColonyMemory port."
 type: reference
 status: draft
 flight_level: L2-Container
 diagram_type: container
 root: true
 created: 2026-09-30
-last_updated: 2026-09-30
+last_updated: 2026-10-02
 source_ticket: tickets/00_inbox/TICKET-20260930-KernelBootstrapV0.md
 components:
   - colony_memory
@@ -16,282 +16,285 @@ related_docs:
   - docs/architecture/adrs/ADR-056-colony-memory-evidence-reinforcement.md
   - docs/architecture/adrs/ADR-057-colony-memory-store-optional-postgres.md
   - docs/architecture/adrs/ADR-058-langfuse-colony-history-scores-datasets.md
+  - docs/architecture/adrs/ADR-059-decision-store-reviewable-yaml-records-now-graph-later.md
+  - docs/architecture/adrs/ADR-060-source-of-truth-and-approval-authority.md
+  - docs/architecture/adrs/ADR-061-identity-of-declared-and-learned-records.md
+  - docs/architecture/adrs/ADR-065-colony-learned-statistics-neo4j-aggregates.md
+  - docs/how-to/run-the-decision-kernel.md
   - docs/analysis/2026-09-30-decision-kernel-design-3-kernel-scheduler.md
-  - docs/analysis/2026-09-30-leafcutter-kernel-spec-rev3-5-client-observability-safeguards.md
+  - docs/analysis/2026-09-30-decision-kernel-design-4-jev-and-capabilities.md
   - docs/analysis/2026-09-30-leafcutter-kernel-spec-rev3-7-later-stages.md
 related_code:
-  - kernel/__init__.py
-  - kernel/contracts/base.py
+  - kernel/memory/port.py
+  - kernel/memory/backend.py
+  - kernel/memory/file_store.py
+  - kernel/memory/precedent.py
+  - kernel/config_memory.py
+  - kernel/bootstrap.py
   - kernel/observability/langfuse_tracer.py
-  - kernel/secrets.py
 tags:
   - colony-memory
   - self-learning
-  - postgres
+  - decision-store
+  - neo4j
   - langfuse
 ---
 
 # Colony Memory — Container Overview
 
-Colony memory is Leafcutter's optional cross-run learning layer. It turns the outcomes of
-finished kernel runs into compact statistics that the kernel can read when it routes. It is the
-"Leafcutter performance store" of [ADR-056 §8](../adrs/ADR-056-colony-memory-evidence-reinforcement.md),
-built as an optional, plain PostgreSQL database behind a single port.
+Colony memory is what Leafcutter keeps from one kernel run for the next. It holds two kinds of
+memory with different authority, and the kernel reaches both through one `ColonyMemory` port
+([ADR-059](../adrs/ADR-059-decision-store-reviewable-yaml-records-now-graph-later.md) §2).
 
 > **Langfuse remembers what happened. The colony memory store remembers what Leafcutter learned.**
 
-**Status: planned.** No code exists yet. The component is registered as `colony_memory` in
-`docs/components.json`. It is not part of kernel V0 scope (see [Staging](#staging-ladder)).
+| | Approved decision records | Learned statistics |
+|---|---|---|
+| What | One YAML file per decision a human approved, `docs/decisions/<dec-id>.yaml`, plus the generated `index.json` | Compact derived aggregates: success rates, decision outcomes, paths, capability gaps, calibration |
+| Where | Git | Neo4j, optional |
+| Authority | Canonical ([ADR-060](../adrs/ADR-060-source-of-truth-and-approval-authority.md) §1) | Derived, rebuildable, never canonical and never workflow state |
+| Written by | A person, with `python -m kernel decisions publish`; a run only stages (ADR-060 §2–§3) | The application, after specific actions; which actions is open |
+| The kernel reads it as | Precedent: `prior_decisions` evidence for decision Jev calls (ADR-059 §5) | Routing context, from the INFLUENCE ROUTING step only |
+| Changes routing scores | Never (ADR-060 §4) | Only after calibration and held-out evaluation |
+| Status | **Live on main** (`kernel/memory/`, PR #978) | **Planned**, from `phase_colony_1_collect` |
+| Decided in | ADR-059, ADR-060, [ADR-061](../adrs/ADR-061-identity-of-declared-and-learned-records.md) | [ADR-065](../adrs/ADR-065-colony-learned-statistics-neo4j-aggregates.md), which supersedes [ADR-057](../adrs/ADR-057-colony-memory-store-optional-postgres.md) in part |
 
-**Everything named on this page is ILLUSTRATIVE** unless an ADR decides it: table names, column
-names, port method names, score names, dataset names, class names and all numbers. They come
-from the 2026-09-30 design discussion and are not a decided schema or API.
+Names in the learned-statistics sections are ILLUSTRATIVE unless an ADR decides them: aggregate
+names, fields, score and dataset names and all numbers come from the 2026-09-30 discussion. The
+decision-record names (port methods, config keys, CLI commands) are as built on main.
 
 ```mermaid
 flowchart LR
-  K[Decision kernel run] -->|trace and observations| LFT[Langfuse traces and scores]
-  REV[Human review, code, evaluators] -->|scores| LFT
-  LFT -->|final outcome known| EV[Learning evaluator]
-  EV -->|record outcomes| PORT[ColonyMemory port]
-  PORT --> PG[Postgres implementation]
-  PORT --> NUL[NullColonyMemory]
-  PG -->|connection URL| DB[(PostgreSQL colony memory store)]
-  PORT -->|compact stats| K
-  K -->|routing context| JEV[Jev]
-  LFT -->|confirmed mistakes| DS[(Langfuse datasets)]
-  DS -->|regression evaluation| CHG[Policy, ADR, prompt or threshold change]
-  K -->|per-run local state| RR[(Run root)]
-  subgraph HIST [Colony history]
-    LFT
+  K["Decision kernel run"] -->|"one trace per run"| LFT["Langfuse traces and scores"]
+  K -->|"find, get, stage"| PORT{"ColonyMemory port"}
+  PORT -->|"precedent hits"| K
+  PORT --> FILE["FileColonyMemory - memory.backend file"]
+  PORT --> NUL["NullColonyMemory - memory.backend null"]
+  PORT -.->|"planned"| GRB["Graph backend"]
+  FILE -->|"reads through index.json"| GIT[("docs/decisions - Git, canonical")]
+  FILE -->|"stages an approved record"| RR[(".leafcutter/kernel run root")]
+  RR -->|"a person runs decisions publish"| GIT
+  LFT -.->|"planned"| EV["Learning evaluator"]
+  EV -.->|"update aggregates"| GRB
+  GRB -.-> NEO[("Neo4j - derived statistic aggregates")]
+  LFT -.->|"confirmed mistakes"| DS[("Langfuse datasets")]
+  subgraph REC ["Decision records - live, ADR-059 to 061"]
+    FILE
+    GIT
   end
-  subgraph PHER [Pheromone map]
-    PORT
-    PG
-    NUL
-    DB
-  end
-  subgraph REG [Regression memory]
-    DS
+  subgraph STAT ["Learned statistics - planned, ADR-065"]
+    EV
+    GRB
+    NEO
   end
 ```
 
-Diagram parent: none (`root: true`). The kernel side is described in
-[Decision Kernel — Container Overview](decision-kernel.md). The run root is
-`.leafcutter/kernel/` ([design part 3](../../analysis/2026-09-30-decision-kernel-design-3-kernel-scheduler.md)).
+Diagram parent: none (`root: true`). The kernel side is
+[Decision Kernel — Container Overview](decision-kernel.md); the run root is described in
+[design part 3](../../analysis/2026-09-30-decision-kernel-design-3-kernel-scheduler.md).
 
-## Three layers
+## Layers
 
 | Layer | Where | What it holds | Question it answers |
 |---|---|---|---|
-| **Colony history** | Langfuse traces and scores | Complete traces: model calls, Jev decisions, retrieval, graph execution, evidence, outcomes, corrections, cost, latency and evaluation scores. | What actually happened? |
-| **Pheromone map** | PostgreSQL colony memory store | Small derived statistics: success rates, wrong decisions, preferred paths, confidence calibration, capability gaps and routing statistics. | What has the colony learned? |
-| **Regression memory** | Langfuse datasets | Historical examples of confirmed mistakes, each with its correct outcome. | Does a proposed change repeat an old mistake? |
+| **Colony history** | Langfuse traces and scores | Complete traces: model calls, Jev decisions, retrieval, graph execution, evidence, outcomes, corrections, cost, latency and evaluation scores | What actually happened? |
+| **Decision records** | `docs/decisions/` in Git | Question, options, criteria, evidence references, selected option, rationale, approval, provenance, append-only corrections | What did a person decide, and why? |
+| **Pheromone map** | Neo4j aggregates (planned) | Success rates, wrong decisions, preferred paths, confidence calibration, capability gaps, routing statistics | What has the colony learned? |
+| **Regression memory** | Langfuse datasets | Confirmed mistakes, each with its correct outcome | Does a change repeat an old mistake? |
 
-The store does not replace Langfuse. Langfuse stays the source of detailed observational
-evidence, and the store is a compact operational memory optimised for routing. New Python code
-uses the Langfuse v4 / OpenTelemetry SDK, not the deprecated legacy `trace()` / `span()` API.
-[ADR-058](../adrs/ADR-058-langfuse-colony-history-scores-datasets.md) records Langfuse's role as
-colony history, scores and datasets.
+Langfuse stays the detailed evidence; neither store replaces it
+([ADR-058](../adrs/ADR-058-langfuse-colony-history-scores-datasets.md)). New Python code uses the
+Langfuse v4 / OpenTelemetry SDK.
 
 ## Containers
 
 | Container | Responsibility | Decided in |
 |---|---|---|
-| Decision kernel | Emits one trace per run, with observations for routing, decisions, capability invocations and the final outcome. Reads compact statistics through the port when it routes. | [decision-kernel.md](decision-kernel.md) |
-| Langfuse traces and scores | Colony history. A score attaches to a trace or to one observation. Scores can come from human review, application code, deterministic evaluators or LLM judges. | [ADR-058](../adrs/ADR-058-langfuse-colony-history-scores-datasets.md) |
-| Learning evaluator | Once a run's final outcome is known, distils it into the store through the port, outside the hot path. When and where it runs is open. | [ADR-057](../adrs/ADR-057-colony-memory-store-optional-postgres.md), [ADR-058](../adrs/ADR-058-langfuse-colony-history-scores-datasets.md) |
-| ColonyMemory port | The only interface between Leafcutter and the store. | [ADR-057](../adrs/ADR-057-colony-memory-store-optional-postgres.md) |
-| Postgres implementation | Reads and writes a plain PostgreSQL database over a standard connection URL. | [ADR-057](../adrs/ADR-057-colony-memory-store-optional-postgres.md) |
-| `NullColonyMemory` | Records nothing and returns no statistics. Used whenever self-learning is disabled. | [ADR-057](../adrs/ADR-057-colony-memory-store-optional-postgres.md) |
-| PostgreSQL colony memory store | The pheromone map: compact aggregates and decision outcomes. | [ADR-057](../adrs/ADR-057-colony-memory-store-optional-postgres.md) |
-| Langfuse datasets | Regression cases built from confirmed mistakes. | [ADR-058](../adrs/ADR-058-langfuse-colony-history-scores-datasets.md) |
-| Run root | `.leafcutter/kernel/`: local per-run state. Unchanged by this layer. | [design part 3](../../analysis/2026-09-30-decision-kernel-design-3-kernel-scheduler.md) |
+| Decision kernel | One trace per run. The decision capability reads precedent and stages approved records through the port. Later reads compact statistics when it routes | [decision-kernel.md](decision-kernel.md) |
+| `ColonyMemory` port | `kernel/memory/port.py`, the only interface to both kinds of memory. Built once by `build_memory` in `kernel/bootstrap.py` and handed to every `ExecutionContext.memory`; the scheduler never reads or writes it | ADR-059 §2, ADR-065 |
+| `FileColonyMemory` | `kernel/memory/file_store.py`: finds candidates through `index.json`, checks each file's sha256 against the index, stages into `<run_root>/runs/<run_id>/staged/decisions/` | ADR-059, ADR-060 §3 |
+| `NullColonyMemory` | Remembers nothing: no precedent, nothing staged | ADR-059 §2 |
+| Publication | `python -m kernel decisions validate`, `index`, `publish --run-id R [--correct OLD_ID]`; `kernel/memory/publish.py` is the only writer of `docs/decisions/` | ADR-059 §3–§4, ADR-060 §3, §5 |
+| Graph backend (planned) | Holds learned statistics as derived aggregates in Neo4j, on the same port | ADR-065 |
+| Learning evaluator (planned) | Updates the aggregates from finished-run outcomes, outside the hot path | ADR-057 §5, ADR-065 |
+| Langfuse traces, scores, datasets | Colony history and regression memory | ADR-058 |
 
 ## The ColonyMemory port
 
-One abstraction hides the database, so the rest of Leafcutter has no dependency on it. The
-method names below are ILLUSTRATIVE, taken from the source:
+As built on main (`kernel/memory/port.py`):
 
 ```python
-class ColonyMemory:
-    async def get_capability_stats(...): ...
-    async def record_capability_outcome(...): ...
-    async def record_decision_outcome(...): ...
-    async def get_path_stats(...): ...
-    async def record_capability_gap(...): ...
+class ColonyMemory(Protocol):
+    def find_decisions(self, query: DecisionQuery) -> list[DecisionHit]: ...
+    def get_decision(self, decision_id: str) -> DecisionRecord | None: ...
+    def stage_decision(self, record: DecisionRecord) -> StagedRecord | None: ...
 ```
 
-- **Two implementations.** A Postgres-backed implementation (called "Postgres implementation"
-  here; its class name is not decided) and `NullColonyMemory`. There is no
-  `SupabaseColonyMemory`.
-- **Chosen once, at startup.** Every other part of Leafcutter receives a `ColonyMemory` and never
-  asks which one it has. No code outside the startup selection branches on the database URL.
-- **Plain PostgreSQL.** Leafcutter connects with a standard Postgres connection URL. It uses no
-  Supabase client (`supabase-py`), no PostgREST or other REST endpoints, and no Supabase auth or
-  row-level security features.
-- **Any Postgres host works.** A Supabase project's Postgres connection string is one option. A
-  local Postgres, a self-hosted Postgres or any other Postgres-compatible host works the same way.
+- **Synchronous and bounded.** A backend that needs IO wraps it in a worker thread at the call
+  site instead of making every caller async (port decision history).
+- **Chosen once.** `build_memory(cfg.memory, repo_root, run_root)` picks the backend from
+  configuration. No other code branches on it, and a graph backend registers there without a
+  kernel change (ADR-059 §2).
+- **No statistics methods yet.** ADR-057 sketched `get_capability_stats`,
+  `record_capability_outcome`, `record_decision_outcome`, `get_path_stats` and
+  `record_capability_gap` (ILLUSTRATIVE). ADR-065 §3 puts statistics on this same port and leaves
+  their names and signatures to the build (OP-27).
+- **Identity.** Records carry `repository_id` and `kind: decision`; a decision id is `dec-` plus 16
+  hex characters derived from the owning work item, so every pause of one decision shares it
+  (ADR-061 §2–§3).
 
 ## Enablement
 
-Two variables in the project-root `.env` control the layer:
-
-| Variable | Effect |
-|---|---|
-| `LEAFCUTTER_COLONY_DB_URL` | Present: self-learning is enabled and the Postgres implementation is used. Absent: self-learning is disabled and `NullColonyMemory` is used. |
-| `LEAFCUTTER_SELF_LEARNING=false` | Explicit opt-out. Self-learning stays disabled even when a database URL is configured. |
-
-Enablement is inferred from the URL's presence. The only explicit switch is the opt-out.
+| Setting | Controls | Effect | Source |
+|---|---|---|---|
+| `memory.backend` in the kernel config: `file` (default) or `null` | Decision records | `file`: precedent and staging. `null`: neither | ADR-059 §2 |
+| `memory.max_precedents` 3, `min_candidate_score` 0.3, `applies_threshold` 0.5, `reuse_threshold` 0.8, `repository_id` `leafcutter-ai` | Precedent lookup | Bounds and thresholds; `max_precedents: 0` switches the lookup off | `config/kernel_config.default.json` |
+| `LEAFCUTTER_NEO4J_*` settings | Learned statistics (planned) | A configured store enables the graph backend | ADR-065 |
+| `LEAFCUTTER_SELF_LEARNING=false` | Learned statistics | Explicit opt-out, unchanged from ADR-057 §4 | ADR-065 |
+| `LEAFCUTTER_COLONY_DB_URL` | Nothing | History only: ADR-057's PostgreSQL URL, superseded by ADR-065. No code reads it | ADR-057 §4 |
 
 ```mermaid
 flowchart TD
-  S[Kernel startup] --> O{"LEAFCUTTER_SELF_LEARNING=false?"}
-  O -->|yes| N[NullColonyMemory]
-  O -->|no| U{"LEAFCUTTER_COLONY_DB_URL present?"}
-  U -->|yes| P[Postgres implementation]
-  U -->|no| N
+  S["Kernel startup - build_memory"] --> B{"memory.backend"}
+  B -->|"file, default"| F["FileColonyMemory - precedent and staging"]
+  B -->|"null"| N["NullColonyMemory - no precedent, nothing staged"]
+  S -.->|"planned, ADR-065"| Q{"Neo4j store configured and LEAFCUTTER_SELF_LEARNING not false?"}
+  Q -.->|"yes"| G["Graph backend - learned statistics"]
+  Q -.->|"no"| X["No learned statistics"]
 ```
 
-With self-learning disabled, Leafcutter works normally. The kernel, Jev, LangGraph, Claude Code
-handoffs and Langfuse tracing are unaffected. Only cross-run colony memory is missing. The
-kernel's existing credential loader is `kernel/secrets.py`; how it picks up these two variables
-is left to the build.
+ADR-065 §4 selects `NullColonyMemory` without a Neo4j store or with the opt-out; read literally,
+that also switches off precedent. §3 leaves the composition to the build (OP-28). With all memory
+off, the kernel, Jev, LangGraph, Claude Code handoffs and Langfuse tracing are unaffected.
 
-## Data path
+## Data path: decision records (live)
 
-1. **Run.** A kernel run emits one Langfuse trace, with child observations for every important
-   node and not only for model calls: routing, research, decisions, host handoffs, verification
-   and the final outcome.
+1. **Lookup.** The decision graph runs `load`, `precedent`, `validate_basis`, `assess`, `combine`,
+   `emit`. The `precedent` node calls `find_decisions` once per decision with the question, the
+   scope's component ids and any roadmap phase named in the constraints. The file backend filters
+   the index and scores the text by content-word overlap.
+2. **Judge.** Jev answers one `precedent.<dec-id>` question per candidate ("does the previous
+   decision apply to the current question in its context?"). With options present it rides the
+   `assess` batch; with no options yet it is one `decision.precedent` call.
+3. **Evidence.** At `applies_threshold` the precedent becomes `prior_decisions` evidence: source
+   `memory.decisions`, locator = the record path, a title naming the approver and date, and no
+   `provenance.actor`. It does not stand in for option-grounding research.
+4. **Reuse question.** At `reuse_threshold`, with no options of its own and not superseded, the
+   best precedent is offered: reuse it or decide anew. Only the current human's answer resolves
+   anything (ADR-060 §4–§5).
+5. **Stage.** A resolved decision that a human approved is staged through `stage_decision`;
+   `kernel/memory/builder.py` refuses every other decision. The run's limitations name the staged
+   file and the publish command.
+6. **Publish.** A person runs `python -m kernel decisions publish --run-id R`. The record enters
+   `docs/decisions/` and normal git review. `--correct OLD_ID` appends a correction and a
+   `superseded_by` link and changes nothing else.
+
+## Data path: learned statistics (planned)
+
+1. **Run.** One Langfuse trace per run, with observations for routing, research, decisions, host
+   handoffs and the final outcome (live).
 2. **Score.** When an outcome becomes known, scores attach to the observation it concerns.
-   ILLUSTRATIVE: a Jev decision "node vs subgraph → subgraph, confidence .94" that a later review
-   changed to node gets `decision_correct = false`, `final_choice = node` and
-   `reason = "No independent lifecycle"`. A routing decision can get `routing_success`,
-   `required_fallback`, `required_rework` and `human_override`. A capability gap handled by
-   fallback can get `capability_gap`, `fallback`, `fallback_success` and its cost.
-3. **Evaluate.** The learning evaluator reads the finished outcome from Langfuse and records
-   compact aggregates through the port. Whether it runs right after each completed run or
-   periodically, and where it runs, is an open question.
-4. **Store.** The PostgreSQL store keeps the aggregates and decision outcomes.
-5. **Route.** At routing time the kernel reads compact statistics for the candidates through the
-   port and passes them to Jev as routing context. ILLUSTRATIVE: each candidate carries its
-   historical success for similar requests, average cost and average latency. This step
-   influences routing only from the INFLUENCE ROUTING stage onward.
-6. **Regress.** A confirmed mistake becomes a Langfuse dataset case. ILLUSTRATIVE: input is the
-   feature description and the ADR, expected result is node, and the previous Jev result was
-   subgraph, in a dataset such as `node_vs_subgraph_decisions`. Before a change to an ADR, Jev's
-   instructions, evidence retrieval or confidence thresholds is deployed, the decision system is
-   run against these cases.
+   ILLUSTRATIVE: a Jev decision "node vs subgraph → subgraph, .94" that review changed to node gets
+   `decision_correct = false`, `final_choice = node`. Not built: the `Tracer` has no score call.
+3. **Update.** The learning evaluator updates the derived aggregates in Neo4j after specific
+   actions. Which actions is ADR-065 open question 1 (candidates: run finalized, score attached,
+   decision approved or corrected).
+4. **Route.** From INFLUENCE ROUTING the kernel reads compact statistics per candidate through the
+   port and passes them to the routing Jev call (OP-03).
+5. **Regress.** A confirmed mistake becomes a Langfuse dataset case; see
+   [Regression memory](../diagrams/decision-kernel-flows-regression-memory.md).
 
-```text
-kernel run → Langfuse trace and scores → learning evaluator → PostgreSQL colony store
-           → compact stats → routing context for Jev
-
-production mistake → Langfuse trace → confirmed outcome → score → dataset case
-           → improved decision policy → offline regression evaluation → deploy
-```
-
-**The hot path reads the store, never Langfuse.** The kernel does not query raw traces before a
-Jev call. Routing keeps working when Langfuse is unavailable, and statistics never override the
-deterministic eligibility exclusions that run before Jev
+**The hot path reads the stores, never Langfuse.** Routing keeps working when Langfuse is down,
+and statistics never override the deterministic eligibility exclusions
 ([ADR-056 §8](../adrs/ADR-056-colony-memory-evidence-reinforcement.md)).
 
-## Starting tables (ILLUSTRATIVE)
+## Statistic kinds (ILLUSTRATIVE)
 
-| Table | Purpose | Example columns from the source |
+ADR-057 §6 proposed four relational tables. ADR-065 keeps the statistics as derived aggregates in
+the graph and leaves the model to the build. The kinds and the source's example fields remain:
+
+| Kind | Purpose | Example fields from the source |
 |---|---|---|
-| `capability_stats` | Which capabilities and graphs work well in which situations. | `capability_id`, `context_signature`, `usage_count`, `success_count`, `failure_count`, `fallback_count`, `override_count`, `avg_cost`, `avg_latency_ms`, `updated_at` |
-| `decision_outcomes` | What Jev decided and whether it was later confirmed or corrected. The raw material for calibration. | `decision_type`, `policy_version`, `selected_option`, `confidence`, `final_option`, `correct`, `human_override`, `context_signature`, `created_at` |
-| `path_stats` | Successful recurring graph and node sequences. | `path_signature`, `context_type`, `count`, `success_rate`, `avg_cost`, `avg_latency` |
-| `capability_gaps` | Tasks Leafcutter could not solve natively. | None proposed. ADR-056 §6 names frequency, fallback cost and fallback success as the pressure signal. |
+| Capability statistics | Which capabilities and graphs work well in which situations | `capability_id`, `context_signature`, `usage_count`, `success_count`, `failure_count`, `fallback_count`, `override_count`, `avg_cost`, `avg_latency_ms` |
+| Decision outcomes | What Jev decided and whether it was confirmed or corrected; raw material for calibration | `decision_type`, `policy_version`, `selected_option`, `confidence`, `final_option`, `correct`, `human_override` |
+| Path statistics | Successful recurring graph and node sequences | `path_signature`, `context_type`, `count`, `success_rate`, `avg_cost` |
+| Capability gaps | Tasks Leafcutter could not solve natively | ADR-056 §6: frequency, fallback cost and fallback success |
 
-**Context is mandatory.** A statistic without context makes a misleading pheromone trail, so the
-store never holds a global success rate such as "decision_research success = 96%". Every
-statistic is scoped by at least these dimensions:
+**Context is mandatory.** No global success rate: every statistic is scoped by at least
+capability, task_type, component, repository / project and policy_version (ADR-057 §7, carried
+over by ADR-065). Decision records already carry `repository_id`, components, roadmap phase,
+`decision_type` and policy, template, model and kernel versions in their provenance; V0 still has
+no `task_type` (OP-22).
 
-- capability
-- task_type
-- component
-- repository / project
-- policy_version
-
-Later dimensions are framework, language and decision_type, combined through a context signature
-(the ILLUSTRATIVE `context_signature` column). A useful statement is scoped. ILLUSTRATIVE:
-"decision_research has a 97% success rate for architectural decisions involving LangGraph in this
-repository".
-
-**Usage is not evidence.** A column such as `usage_count` may be recorded, but usage alone never
-raises a path's standing. Only verified outcomes do
-([ADR-056 §2, §3](../adrs/ADR-056-colony-memory-evidence-reinforcement.md)). Evidence is
-version-scoped and decays (ADR-056 §3 rule 2), which is one reason `policy_version` is mandatory.
+**Usage is not evidence.** Usage alone never raises a path's standing; only verified outcomes do
+(ADR-056 §2–§3). Evidence is version-scoped and decays (ADR-056 §3 rule 2).
 
 ## Staging ladder
 
-Historical statistics must not change routing automatically at first. Early accidental successes
-would otherwise reinforce themselves into bad behaviour.
+ADR-065 carries ADR-057 §10's ladder over. It governs learned statistics, not decision records:
+precedent is evidence from day one and never touches routing scores (ADR-059 §5).
 
 | Step | What happens | Source stage |
 |---|---|---|
-| 1. COLLECT | The store is optional. Record graph usage, decisions, outcomes, capability gaps and fallback usage. No influence on behaviour. | Phase 1, MVP |
-| 2. ANALYZE | Derive statistics: success rates, common paths, wrong decisions, confidence calibration. | Phase 2, V1 |
-| 3. SUGGEST | Show advice such as "historically this path performs better". Routing itself does not change. | Phase 3 |
-| 4. INFLUENCE ROUTING | Feed historical evidence into Jev routing. Only after calibration and after the held-out evaluation of [spec §19.4](../../analysis/2026-09-30-leafcutter-kernel-spec-rev3-7-later-stages.md#194-evaluate-before-activation). | Phase 4, V2 |
-| 5. EVOLVE | Detect recurring capability gaps, weak policies, candidate workflows and repeated LLM reasoning, and propose improvements. Proposals stay reviewed: "trails may rank and propose; they may not legislate" (ADR-056 §3 rule 5). | V3 and final state |
+| 1. COLLECT | Optional Neo4j store, write-only. Record graph usage, decisions, outcomes, gaps, fallback usage | After V0; statistics start only here (ADR-065 §6) |
+| 2. ANALYZE | Learning evaluator; success rates, common paths, wrong decisions, calibration | Stage 4 |
+| 3. SUGGEST | Show advice such as "historically this path performs better"; routing unchanged | Stage 4 |
+| 4. INFLUENCE ROUTING | Feed historical evidence into Jev routing, after calibration and the held-out evaluation of [spec §19.4](../../analysis/2026-09-30-leafcutter-kernel-spec-rev3-7-later-stages.md#194-evaluate-before-activation) | Stage 4 or later |
+| 5. EVOLVE | Detect recurring gaps, weak policies, candidate workflows; proposals stay reviewed: "trails may rank and propose; they may not legislate" (ADR-056 §3 rule 5) | Stage 4 proposals, then V3 |
 
-**V0 scope.** The ladder is not part of kernel V0 scope unless the V0 build decides that COLLECT
-is in; ADR-057 puts COLLECT's earliest start right after V0. Until then, V0 carries only the recording prerequisites that ADR-056 §9 recommends:
-version fields beside `CorrelationIds`, an outcome event keyed to `decision_id`, and countable gap
-records. A stage is reported as strengthening the colony only when a colony-health measure shows
-it (ADR-056 §9).
+**V0 on main and ADR-056 §9.** V0 is merged without COLLECT. Of the three recording prerequisites,
+countable gap records exist (`gaps/observations.jsonl`, `python -m kernel gaps`). Version fields
+are not next to `CorrelationIds`; Jev generations carry template ids and versions, and decision
+records carry versions in provenance. There is no outcome event keyed to `decision_id`; record
+corrections are the nearest form. Whether this meets the founding exit criterion is not recorded
+(OP-26).
 
 ## Relation to the run root
 
-The colony memory store does not replace the V0 run root `.leafcutter/kernel/`. The two hold
-different things.
+| | Run root `.leafcutter/kernel/` | Decision records | Learned statistics |
+|---|---|---|---|
+| Scope | One checkout, per run | One repository, shared through Git | Across runs; later possibly a team |
+| Holds | Checkpoints, run records, `events.jsonl`, artifacts, interaction ledger, gap observations, telemetry spool, staged decision records | Published, human-approved decisions | Derived aggregates |
+| Authority | Authoritative for workflow state | Canonical for decisions (ADR-060 §1) | Derived; never workflow state |
+| Required | Always | Optional (`memory.backend: null`) | Optional |
 
-| | Run root `.leafcutter/kernel/` | Colony memory store |
-|---|---|---|
-| Scope | One repository checkout, per run | Across runs; later possibly shared by a team |
-| Holds | Checkpoints, run records, `events.jsonl`, artifacts, the interaction ledger, gap observations and the telemetry spool | Compact statistics and decision outcomes |
-| Authority | Authoritative for workflow state ([spec §12.2](../../analysis/2026-09-30-leafcutter-kernel-spec-rev3-5-client-observability-safeguards.md#122-trace-continuity-across-process-restarts)) | Derived. Never workflow state. |
-| Required | Always | Optional |
-
-`gaps/observations.jsonl` remains the V0 record of capability gaps. V0 does not re-export its
-degraded-mode telemetry spool to Langfuse, so an evaluator that reads only Langfuse undercounts
-those runs. Whether the evaluator also reads the local `events.jsonl` records is ADR-056 open
-question 5.
-
-**Shared colony learning (later).** A team can point every developer and CI at the same
-database. Evidence one person discovers, such as a well-performing path or a wrong decision, then
-improves routing and calibration for everyone. This raises the privacy and identity questions
-below.
+A staged record is lost if nobody publishes it before the run root is cleaned (ADR-060,
+Negative). V0 does not re-export the degraded-mode telemetry spool to Langfuse, so an evaluator
+that reads only Langfuse undercounts those runs (OP-19).
 
 ## Open questions
 
-1. **Privacy and data minimisation for a shared database.** What a shared store may hold when it
-   spans developers and CI. `decision_outcomes` holds one row per decision, not only aggregates.
-2. **Migrations and schema versioning.** How the schema is created and upgraded on an adopter's
-   database, and how a Leafcutter version recognises a schema it cannot read.
-3. **Retention and decay.** How long rows are kept, and the decay function that ADR-056 §3
-   rule 2 requires but leaves open (ADR-056 open question 1).
-4. **Evaluator cadence and location.** Whether the learning evaluator runs right after each
-   completed run or periodically, and where it runs.
-5. **Multi-repository identity.** How the repository / project dimension identifies one
-   repository across clones, forks, worktrees and CI runners that share a database.
+The store questions moved to ADR-065's open questions: (1) trigger actions, (2) the aggregate
+model, (3) incremental update or rebuild, (4) sharing the database and credentials of the planned
+knowledge-retrieval projections (ADR-062, not yet on main), (5) an unreachable store, (6) privacy
+of a shared store, (7) hosting. Still open here:
 
-ADR-057 adds further questions, such as behaviour when a configured store is unreachable.
+1. **Retention and decay** of statistics: ADR-056 open question 1.
+2. **Repository identity for statistics.** ADR-061 §3 keys records by
+   `(repository_id, kind, id)` with `memory.repository_id`; whether statistics use the same
+   `repository_id` across clones, forks and CI is not stated.
+3. **Evaluator placement and inputs** (ADR-057 open question 4; cadence: ADR-065 question 3): OP-19.
+4. **Two switches, one port**: OP-28.
+
 ADR-056's open questions also apply, in particular ground truth for "correct".
 
 ## Decisions
 
 | ADR | Decides |
 |---|---|
-| [ADR-056](../adrs/ADR-056-colony-memory-evidence-reinforcement.md) | Colony memory: evidence from verified outcomes, never from usage alone. Runtime routing reads a compact store, never Langfuse. Learned changes are reviewed proposals. |
-| [ADR-057](../adrs/ADR-057-colony-memory-store-optional-postgres.md) | The colony memory store is optional plain PostgreSQL behind the ColonyMemory port, with Postgres and Null implementations. |
-| [ADR-058](../adrs/ADR-058-langfuse-colony-history-scores-datasets.md) | Langfuse is colony history: traces, scores, and datasets as regression memory. |
+| [ADR-056](../adrs/ADR-056-colony-memory-evidence-reinforcement.md) | Evidence from verified outcomes, never from usage alone. Routing reads a compact store, never Langfuse. Learned changes are reviewed proposals |
+| [ADR-057](../adrs/ADR-057-colony-memory-store-optional-postgres.md) | Optional colony memory store behind a port with a Null implementation; context dimensions; staging ladder. Its PostgreSQL store, `LEAFCUTTER_COLONY_DB_URL` and relational tables are superseded by ADR-065 |
+| [ADR-058](../adrs/ADR-058-langfuse-colony-history-scores-datasets.md) | Langfuse is colony history: traces, scores, and datasets as regression memory |
+| [ADR-059](../adrs/ADR-059-decision-store-reviewable-yaml-records-now-graph-later.md) | Approved decisions are YAML records behind the `ColonyMemory` port; precedent is evidence from day one |
+| [ADR-060](../adrs/ADR-060-source-of-truth-and-approval-authority.md) | Git is canonical; only a human approval creates a record; the kernel never writes the repository during a run |
+| [ADR-061](../adrs/ADR-061-identity-of-declared-and-learned-records.md) | Existing ids stay; decisions get `dec-<16hex>`; the key is `(repository_id, kind, id)` |
+| [ADR-065](../adrs/ADR-065-colony-learned-statistics-neo4j-aggregates.md) | Learned statistics are derived Neo4j aggregates on the same port, starting only with COLLECT; supersedes ADR-057 in part |
 
 ## Cross-Links
 
 - Kernel overview: [Decision Kernel — Container Overview](decision-kernel.md)
-- Run root layout: [kernel design part 3](../../analysis/2026-09-30-decision-kernel-design-3-kernel-scheduler.md)
-- Observability rules: [kernel spec Rev 3 part 5, §12](../../analysis/2026-09-30-leafcutter-kernel-spec-rev3-5-client-observability-safeguards.md)
+- Flows: [Learning loop](../diagrams/decision-kernel-flows-learning-loop.md),
+  [Design Map](../diagrams/decision-kernel-flows-overview.md)
+- Running it and publishing records: [How to run the decision kernel](../../how-to/run-the-decision-kernel.md)
+- The first record: [dec-ef8ddcb79d668a67](../../decisions/dec-ef8ddcb79d668a67.yaml)
 - Controlled learning: [kernel spec Rev 3 part 7, §19](../../analysis/2026-09-30-leafcutter-kernel-spec-rev3-7-later-stages.md)

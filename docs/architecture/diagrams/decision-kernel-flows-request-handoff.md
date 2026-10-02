@@ -1,13 +1,13 @@
 ---
 title: "Decision Kernel Request Flow 2 — Host or Human Handoff, Resume and Finalize"
-description: "L3 sequence of the second half of a kernel run: the waiting RunEnvelope, Claude Code performing exactly the requested host operation or asking the human, the validated resume through the submissions ledger, parent continuation and finalization, including rejection, repair and cancellation."
+description: "L3 sequence of the second half of a kernel run: the waiting RunEnvelope, Claude Code performing exactly the requested host operation or asking the human, the validated resume through the submissions ledger with the as-built rejection codes, parent continuation and finalization, including rejection, repair, cancellation and a staged decision record."
 type: architecture
 flight_level: L3-Component
 diagram_type: sequence
 status: draft
 parent: docs/architecture/diagrams/decision-kernel-flows-overview.md
 created: 2026-09-30
-last_updated: 2026-09-30
+last_updated: 2026-10-02
 source_ticket: null
 components:
   - decision_kernel
@@ -17,10 +17,14 @@ related_docs:
   - docs/analysis/2026-09-30-decision-kernel-design-5-client-observability.md
   - docs/analysis/2026-09-30-leafcutter-kernel-spec-rev3-5-client-observability-safeguards.md
   - docs/architecture/diagrams/decision-kernel-flows-request-native.md
+  - docs/architecture/adrs/ADR-060-source-of-truth-and-approval-authority.md
 related_code:
   - kernel/scheduler/nodes_interaction.py
+  - kernel/interaction/ledger.py
+  - kernel/interaction/submissions.py
+  - kernel/interaction/results.py
   - kernel/persistence/run_store.py
-  - kernel/contracts/interaction.py
+  - kernel/service_cancel.py
 tags:
   - decision-kernel
   - handoff
@@ -34,9 +38,9 @@ ended with a `waiting_host` or `waiting_human` envelope and a CLI process that e
 This page shows how Claude Code serves the pending interaction, how `resume` validates the
 answer before the graph moves, and how the run reaches a terminal state.
 
-**Status: V0.** Interaction nodes and submission validation are phase P6. The RunService
-implementation, CLI and skill are P7. The `host.*` operations are P8. Cancellation hardening is
-P9 (design part 6).
+**Status: V0, on main.** Interaction nodes and submission validation (P6), the `RunService`
+implementation, CLI and skill (P7), the `host.*` operations (P8) and cancellation hardening (P9)
+merged with PR #973 (design part 6).
 
 The cycle repeats: one handoff at a time, because `max_concurrent_host` is 1 and only the queue
 head is served (design part 3).
@@ -55,7 +59,7 @@ sequenceDiagram
     SVC-->>CLI: RunEnvelope waiting_host or waiting_human with pending_interaction and state_revision
     CLI-->>CC: JSON on stdout, exit 0
     alt waiting_host
-        Note over CC: perform only the named operation, read only the listed artifacts, use only allowed_operations
+        Note over CC: perform only the named operation, read only the listed artifacts, follow the compiled task statement
         CC->>CC: write JSON that conforms to output_json_schema, actor host claude_code
     else waiting_human
         CC->>U: AskUserQuestion with question, choices and consequences
@@ -64,8 +68,8 @@ sequenceDiagram
     end
     CC->>CLI: resume --run-id RUN --response response.json --json
     CLI->>SVC: resume_run(run_id, InteractionSubmission)
-    SVC->>RR: run.json not cancelled, queue head, submissions ledger
-    SVC->>SVC: check interaction_id, state_revision, kind and actor, schema, semantic checks
+    SVC->>RR: run.json not cancelled, submissions ledger
+    SVC->>SVC: check shape, run, interaction, revision, kind, actor, schema, semantics
     alt submission rejected
         SVC-->>CLI: error code plus current envelope, state unchanged
         CLI-->>CC: exit 3, the host repairs once using error details
@@ -78,11 +82,11 @@ sequenceDiagram
         OWN-->>SCH: completed, or waiting with a new child
         Note over SCH: a new host or human child starts the cycle again from message 1
         SCH->>SCH: finalize - root completed, output schema matches, no required item open
-        SCH->>RR: report.json, report.md, terminal status in run.json, events
+        SCH->>RR: report.json, report.md, terminal status in run.json, events, any staged decision record
         SCH-->>SVC: terminal state
         SVC-->>CLI: RunEnvelope completed, partial, blocked or failed
         CLI-->>CC: JSON on stdout, exit 0
-        CC-->>U: report_ref as written, evidence locators, limitations, gaps, trace URL
+        CC-->>U: report_ref as written, evidence locators, limitations, gaps, trace URL, publish command if a record was staged
     end
 ```
 
@@ -93,40 +97,57 @@ See also: [Request Flow 1](decision-kernel-flows-request-native.md) and
 
 ## Resume validation, in order
 
-`RunService.resume_run` checks the submission before it touches the graph (design part 3).
+`resume_run` calls `submit_interaction` (`kernel/interaction/ledger.py`), which checks the
+submission before it touches the graph; `check_submission` (`kernel/interaction/submissions.py`)
+holds the per-field checks. The codes are the stable `RejectionCode` values.
 
 | Check | Rejection code | Effect |
 |---|---|---|
-| `run.json` status is `cancelled` | `run_cancelled` | Stale resumes after a cancel are refused; cancellation provenance is kept |
-| No pending interaction: an identical ledger hash replays the current envelope; anything else is refused | `stale_submission` | An identical duplicate is idempotent |
-| `interaction_id` is the queue head and `expected_state_revision` matches | `stale_submission` | |
-| A `human` interaction accepts only `human_answer.v1` from `actor.kind="human"`; a `host_work` interaction only its `output_schema_id` from `actor.kind="host"` | `kind_mismatch` | A generative result can never answer a human question |
-| Schema through the catalog, then the semantic checks: cited ids exist, the selected option was supplied, the `choice_id` was offered | `schema_invalid`, `semantic_invalid` | State unchanged; the interaction stays pending; host repairs count against `host.max_repair_attempts` (1) |
+| `run.json` carries a cancellation | `cancelled_or_superseded` | Stale resumes after a cancel are refused; cancellation provenance is kept |
+| A ledger entry exists for this interaction: the same hash replays, or finishes a resume that died mid-flight; a different hash is refused | `not_pending`, `details.reason=conflicting_duplicate` | An identical duplicate is idempotent |
+| The submission's shape | `schema_invalid` | |
+| The run id is this run's | `forged_id` | |
+| The interaction is the queue head. An id the kernel never issued; an interaction whose item was cancelled, failed or blocked; any other | `forged_id`; `cancelled_or_superseded`; `not_pending` | |
+| `expected_state_revision` matches | `stale_revision` | |
+| The response schema fits the interaction: `human_answer.v1` for `human`, its `output_schema_id` for `host_work` | `wrong_kind` | A generative result can never answer a human question |
+| The actor kind fits: `human` or `host` | `actor_mismatch` | |
+| The full submission model, then the payload schema through the catalog, then the semantic checks: cited ids exist, the selected option was supplied, the `choice_id` was offered | `schema_invalid`, `semantic_invalid` | State unchanged; the interaction stays pending; host repairs count against `host.max_repair_attempts` (1) |
 
-The ledger entry is written before `Command(resume=…)`. A restart finds the ledger entry and
-resumes the still-pending interaction. The P6 restart tests must cover a restart just before
-and just after that write (spec §13.1, design part 3).
+Design part 3's resume section still names the earlier codes `run_cancelled`, `stale_submission`
+and `kind_mismatch` (OP-30). The ledger entry is written before `Command(resume=…)`, so a restart
+finds the entry and resumes the still-pending interaction (spec §13.1, design part 3).
 
 ## What a submission becomes
 
 | Submission | Becomes | Source |
 |---|---|---|
-| Host output (`options.v1`, `findings.v1`, `evidence_bundle.v1`) | `CapabilityResult(completed)`; host evidence carries `verification=host_reported`; options stay `proposal_status=proposed`; usage is `unavailable` unless the host reports it | design part 4, `conversion.py` |
-| Human answer (`human_answer.v1`) | `Evidence(category=task_context, semantic_type=human_input, source.kind=human)`, with the actor and `relayed_by` in provenance | design part 4 |
+| Host output (`options.v1`, `findings.v1`, `evidence_bundle.v1`, `human_question_request.v1`) | `CapabilityResult(completed)`. Host evidence carries `verification=host_reported`; options and criteria stay `proposed`; excess options and findings that cite missing evidence are dropped with a limitation; an option that cites no supplied evidence is flagged `not grounded`; usage is `unavailable` unless the host reports it | Each operation's `convert` in `kernel/capabilities/host/`; design part 4 |
+| Human answer (`human_answer.v1`) | `Evidence(category=task_context, semantic_type=human_input, source.kind=human)`, with the actor and `relayed_by` in provenance. Structured fields approve or edit proposals, add options, pick a ranked option or answer a precedent reuse question | `kernel/interaction/results.py`, `kernel/capabilities/decision/approvals.py` |
 
-Every host operation also records a `host_only` gap observation. That is the scout signal the
-[learning loop](decision-kernel-flows-learning-loop.md) counts later (design part 4, ADR-056 §6).
+An executed host operation also records a `host_only` gap observation, on an accepted answer or
+an exhausted repair budget. That is the scout signal the
+[learning loop](decision-kernel-flows-learning-loop.md) counts later (design part 3, ADR-056 §6).
 
 ## Other ways a run ends
 
-- **Cancel.** `python -m kernel cancel --run-id RUN --actor human:<id>` writes `cancel` and
-  `status=cancelled` to `run.json` and appends `run.cancelled`. A running process sees it through
-  `cancel_probe()` between supersteps (design part 3). P9 still has to verify the
-  `aupdate_state(as_node="finalize")` step (design part 6, risk 5).
+- **Cancel.** `python -m kernel cancel --run-id RUN --actor human:<id>` commits `cancel` and
+  `status=cancelled` to `run.json` with `compare_and_update` (the first actor wins), appends
+  `run.cancelled` and closes a paused graph thread with `aupdate_state(as_node="finalize")`,
+  verified on LangGraph 1.2.12 (design part 3, risk 5). A running process sees the flag through
+  `cancel_probe()` between supersteps and before each invocation.
 - **Silence.** An unanswered human question keeps the run in `waiting_human` until someone
   cancels it. No answer is inferred from silence (spec §11.6).
 - **Guards.** Budget, time, no-progress and depth guards end the run as `partial` or `blocked`
-  with the unresolved question (design part 3).
+  with the unresolved question. The report names the budget, the config key that raises it and
+  the remedies (design part 3).
+
+## A staged decision record
+
+When the decision resolves with a human approval, the record is staged in
+`runs/<run_id>/staged/decisions/` and the completed run's limitations name the publish command.
+The skill shows that command but never runs it; a person runs
+`python -m kernel decisions publish --run-id RUN` to file the record in `docs/decisions/` for git
+review ([ADR-060](../adrs/ADR-060-source-of-truth-and-approval-authority.md) §3).
 
 ## Tracing across processes
 
@@ -135,7 +156,7 @@ Each CLI process opens a trace segment (`leafcutter.run` or `leafcutter.run.resu
 Handoffs appear as `interaction.opened`, `submission.accepted` and `submission.rejected` events.
 The host's own work is host-reported, not traced by the kernel (design part 5; ADR-058 §2).
 
-Open points for this flow: OP-04, OP-12, OP-15 in [open points](decision-kernel-flows-open-points.md).
+Open points for this flow: OP-04, OP-12, OP-30 in [open points](decision-kernel-flows-open-points.md).
 
 ## Legend
 
@@ -152,3 +173,4 @@ Open points for this flow: OP-04, OP-12, OP-15 in [open points](decision-kernel-
 - Sibling: [Request Flow 1](decision-kernel-flows-request-native.md)
 - Client, CLI exit codes and skill body: [design part 5](../../analysis/2026-09-30-decision-kernel-design-5-client-observability.md)
 - Host handoff contract: [spec part 5 §11](../../analysis/2026-09-30-leafcutter-kernel-spec-rev3-5-client-observability-safeguards.md)
+- Running it: [How to run the decision kernel](../../how-to/run-the-decision-kernel.md)

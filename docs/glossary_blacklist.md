@@ -153,3 +153,27 @@ the glossary-automation system (`check_glossary_coverage.py` / `glossary-triage`
 | run_other_leafcutter_commands | Forbidden host-operation identifier, already listed and explained in the `choose_next_step` glossary entry | 2026-10-01 |
 | node_vs_subgraph_decisions | Illustrative dataset / trace-node name from the example in ADR-058, not a real project identifier; same category as the `node_vs_subgraph` precedent | 2026-10-01 |
 | retrieve_internal_patterns | Illustrative dataset / trace-node name from the example in ADR-058, not a real project identifier; same category as the `node_vs_subgraph` precedent | 2026-10-01 |
+| LEAFCUTTER_NEO4J_USERNAME | Member of the Neo4j settings family explained in the `LEAFCUTTER_NEO4J_URI` glossary entry | 2026-10-02 |
+| LEAFCUTTER_NEO4J_PASSWORD | Member of the Neo4j settings family explained in the `LEAFCUTTER_NEO4J_URI` glossary entry | 2026-10-02 |
+| LEAFCUTTER_NEO4J_DATABASE | Member of the Neo4j settings family explained in the `LEAFCUTTER_NEO4J_URI` glossary entry | 2026-10-02 |
+| LEAFCUTTER_NEO4J_WRITER_USERNAME | Member of the Neo4j settings family explained in the `LEAFCUTTER_NEO4J_URI` glossary entry | 2026-10-02 |
+| LEAFCUTTER_NEO4J_WRITER_PASSWORD | Member of the Neo4j settings family explained in the `LEAFCUTTER_NEO4J_URI` glossary entry | 2026-10-02 |
+| max_query_terms | Decision Kernel config key (retrieval and research tuning); a setting, not a standalone domain concept — same category as the max_repair_attempts precedent | 2026-10-02 |
+| max_explicit_locators | Decision Kernel config key (retrieval and research tuning); a setting, not a standalone domain concept — same category as the max_repair_attempts precedent | 2026-10-02 |
+| max_grounding_evidence | Decision Kernel config key (retrieval and research tuning); a setting, not a standalone domain concept — same category as the max_repair_attempts precedent | 2026-10-02 |
+| max_targeted_needs | Decision Kernel config key (retrieval and research tuning); a setting, not a standalone domain concept — same category as the max_repair_attempts precedent | 2026-10-02 |
+| min_candidate_score | Decision Kernel config key (retrieval and research tuning); a setting, not a standalone domain concept — same category as the max_repair_attempts precedent | 2026-10-02 |
+| rerank_max_batches | Decision Kernel config key (retrieval and research tuning); a setting, not a standalone domain concept — same category as the max_repair_attempts precedent | 2026-10-02 |
+| rerank_max_per_need | Decision Kernel config key (retrieval and research tuning); a setting, not a standalone domain concept — same category as the max_repair_attempts precedent | 2026-10-02 |
+| satisfied_min_items | Decision Kernel config key (retrieval and research tuning); a setting, not a standalone domain concept — same category as the max_repair_attempts precedent | 2026-10-02 |
+| approved_criterion_ids | Field name of a Decision Kernel contract or submission; not a standalone domain concept — same category as the expected_state_revision precedent | 2026-10-02 |
+| approved_option_ids | Field name of a Decision Kernel contract or submission; not a standalone domain concept — same category as the expected_state_revision precedent | 2026-10-02 |
+| requested_output_schema | Field name of a Decision Kernel contract or submission; not a standalone domain concept — same category as the expected_state_revision precedent | 2026-10-02 |
+| evidence_needs_only | Field name of a Decision Kernel contract or submission; not a standalone domain concept — same category as the expected_state_revision precedent | 2026-10-02 |
+| out_of_scope_write | Decline code of the kernel's intake intent classification (kernel/intent/roots.py), explained in the context-jev flow doc; not a standalone domain concept | 2026-10-02 |
+| cancelled_or_superseded | Submission rejection code (kernel/interaction/submissions.py); a code value documented in the request-handoff flow doc, not a standalone domain concept | 2026-10-02 |
+| compare_and_update | Run-store method name (kernel/persistence); an implementation detail, not a domain concept | 2026-10-02 |
+| FORBIDDEN_HOST_OPERATIONS | Python constant in kernel/capabilities/host; the concepts are covered by the `choose_next_step` glossary entry and the host-worker context doc | 2026-10-02 |
+| COMMON_REQUIREMENTS | Python constant in kernel/capabilities/host; the concepts are covered by the `choose_next_step` glossary entry and the host-worker context doc | 2026-10-02 |
+| OLD_ID | CLI metavar placeholder of `python -m kernel decisions publish --correct OLD_ID`; not a domain concept | 2026-10-02 |
+| GIT_OPTIONAL_LOCKS | Standard Git environment variable, not project-specific jargon | 2026-10-02 |

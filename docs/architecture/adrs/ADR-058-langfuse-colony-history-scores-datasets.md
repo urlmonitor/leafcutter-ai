@@ -4,7 +4,7 @@ description: "Langfuse is Leafcutter's foundational record of what happened. Eve
 type: "adr"
 status: "active"
 created: "2026-09-30"
-last_updated: "2026-09-30"
+last_updated: "2026-10-02"
 deciders:
   - BrainCandy
 components:
@@ -14,6 +14,7 @@ related_docs:
   - docs/architecture/adrs/ADR-053-intelligence-selection-deterministic-jev-llm-human.md
   - docs/architecture/adrs/ADR-056-colony-memory-evidence-reinforcement.md
   - docs/architecture/adrs/ADR-057-colony-memory-store-optional-postgres.md
+  - docs/architecture/adrs/ADR-065-colony-learned-statistics-neo4j-aggregates.md
   - docs/architecture/components/colony-memory.md
   - docs/architecture/components/decision-kernel.md
   - docs/analysis/2026-09-30-decision-kernel-design-3-kernel-scheduler.md
@@ -52,8 +53,9 @@ routing reads compact statistics and never Langfuse
 ([§8](ADR-056-colony-memory-evidence-reinforcement.md#8-observability-stays-separate-from-operational-state)).
 ADR-056 does not say where an outcome is recorded, or how it finds the decision it belongs to.
 [ADR-057](ADR-057-colony-memory-store-optional-postgres.md) decides the store for the compact
-statistics: an optional, plain-PostgreSQL colony memory store (see
-[colony memory](../components/colony-memory.md)).
+statistics: an optional, plain-PostgreSQL colony memory store (superseded: see
+[ADR-065](ADR-065-colony-learned-statistics-neo4j-aggregates.md), which keeps the statistics in
+Neo4j; see also [colony memory](../components/colony-memory.md)).
 
 The discussion asked: "Would we use Langfuse for the tracking / tracing of this?" The answer was
 yes, as the primary tracking and evaluation layer, but not as the live memory that the kernel
@@ -94,9 +96,9 @@ decisions, outcomes, corrections, cost, latency and evaluation scores. It answer
 happened?"
 
 - Langfuse MUST be part of Leafcutter Core. It MUST NOT be an optional add-on, and it MUST NOT sit
-  behind ADR-057's self-learning switch: neither `LEAFCUTTER_COLONY_DB_URL` nor
-  `LEAFCUTTER_SELF_LEARNING` affects tracing. With no colony memory store configured, every run
-  MUST still be traced.
+  behind ADR-057's self-learning switch: neither `LEAFCUTTER_COLONY_DB_URL` (superseded by the
+  `LEAFCUTTER_NEO4J_*` settings: see ADR-065) nor `LEAFCUTTER_SELF_LEARNING` affects tracing.
+  With no colony memory store configured, every run MUST still be traced.
 - Foundational does not make a run depend on it. Missing keys, a failed auth check or an SDK
   error MUST keep degrading to the local spool and `observability="degraded"`, as design part 5
   specifies ([spec §12.4](../../analysis/2026-09-30-leafcutter-kernel-spec-rev3-5-client-observability-safeguards.md)).
@@ -221,7 +223,7 @@ organisation. The kernel's own `Tracer.span(...)` is a Leafcutter protocol metho
 | Layer | Holds | Answers | Read by |
 |---|---|---|---|
 | **Langfuse traces and scores: colony history** | Complete traces, evidence references, decisions, outcomes, corrections, cost, latency, scores | What actually happened? | Humans, the learning evaluator, analytics |
-| **Colony memory store: pheromone map** ([ADR-057](ADR-057-colony-memory-store-optional-postgres.md)) | Small derived statistics | What has the colony learned? | The kernel, at runtime |
+| **Colony memory store: pheromone map** ([ADR-057](ADR-057-colony-memory-store-optional-postgres.md); Neo4j since [ADR-065](ADR-065-colony-learned-statistics-neo4j-aggregates.md)) | Small derived statistics | What has the colony learned? | The kernel, at runtime |
 | **Langfuse Datasets: regression memory** | Confirmed wrong decisions as cases | Which old mistakes must not come back? | Offline regression, before deploy |
 
 ```text
@@ -319,7 +321,8 @@ This ADR explicitly does not decide:
 
 - Source: the 2026-09-30 "Langfuse + colony-memory store" discussion between BrainCandy and an
   assistant, endorsed by BrainCandy, and his binding instruction of the same day (the colony
-  store is plain PostgreSQL; ADR-057 records that part).
+  store is plain PostgreSQL; ADR-057 records that part, superseded: see
+  [ADR-065](ADR-065-colony-learned-statistics-neo4j-aggregates.md)).
 - Originating work: `tickets/00_inbox/TICKET-20260930-KernelBootstrapV0.md`
 - [ADR-056](ADR-056-colony-memory-evidence-reinforcement.md) §3 rule 5, §4, §8 and Open
   Question 3; [ADR-057](ADR-057-colony-memory-store-optional-postgres.md);

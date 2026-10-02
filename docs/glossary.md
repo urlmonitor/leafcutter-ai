@@ -173,7 +173,7 @@ The rule that colony-memory evidence is scoped to the policy, template and model
 
 ### performance store
 
-ADR-056's name for the store of compact routing statistics that a learning evaluator derives from Langfuse traces and scores. ADR-057 realises it as the optional PostgreSQL **colony memory store** behind the `ColonyMemory` port. The kernel reads these statistics and never queries Langfuse directly, so observability data does not become operational state. See ADR-056 §8 and ADR-057.
+ADR-056's name for the store of compact routing statistics that a learning evaluator derives from Langfuse traces and scores. ADR-057 named it the **colony memory store**; ADR-065 keeps it in Neo4j as derived aggregates behind the `ColonyMemory` port of ADR-059. The kernel reads these statistics and never queries Langfuse directly, so observability data does not become operational state. See ADR-056 §8, ADR-057 and ADR-065.
 
 ### confidence calibration
 
@@ -189,11 +189,11 @@ Colony-model name for research and capability-gap handling: the work that goes w
 
 ### LEAFCUTTER_COLONY_DB_URL
 
-Optional variable in the project-root `.env` holding a PostgreSQL connection URL for the colony memory store. When it is set, and `LEAFCUTTER_SELF_LEARNING` is not `false`, self-learning is enabled. Any Postgres URL works, including a Supabase project's Postgres connection string; the Supabase API is not used. Without it, Leafcutter works the same, just without cross-run learning. See ADR-057 §4.
+Superseded. ADR-057 (2026-09-30) defined it as the `.env` variable holding a PostgreSQL connection URL for the colony memory store. ADR-065 (2026-10-02) moved the learned statistics to Neo4j, configured through the `LEAFCUTTER_NEO4J_*` settings, so this variable is no longer used. Kept so older documents stay readable. See ADR-057 §4 and ADR-065.
 
 ### LEAFCUTTER_SELF_LEARNING
 
-Optional opt-out in the project-root `.env`: `LEAFCUTTER_SELF_LEARNING=false` keeps self-learning off, so the kernel uses `NullColonyMemory`, even when `LEAFCUTTER_COLONY_DB_URL` is set. Otherwise enablement is inferred from the URL. See ADR-057 §4.
+Optional opt-out in the project-root `.env`: `LEAFCUTTER_SELF_LEARNING=false` keeps learned statistics off, even when a colony memory store is configured. Approved decision records and precedent are unaffected; they follow ADR-059's `memory.backend` setting. Otherwise enablement follows the store configuration (ADR-065). See ADR-057 §4 and ADR-065.
 
 ### JEV_API_KEY
 
@@ -218,3 +218,11 @@ The architecture reference (`docs/architecture/agent_knowledge_plane.md`) for ho
 ### agent_knowledge_system
 
 The architecture reference (`docs/architecture/agent_knowledge_system.md`) for how legacy Leafcutter agents persist learnings after work completes. It is the persistence-side complement to `agent_knowledge_plane`.
+
+### LEAFCUTTER_NEO4J_URI
+
+The connection URI of Leafcutter's Neo4j settings family: `LEAFCUTTER_NEO4J_URI`, `LEAFCUTTER_NEO4J_USERNAME`, `LEAFCUTTER_NEO4J_PASSWORD`, `LEAFCUTTER_NEO4J_DATABASE`, and the writer pair `LEAFCUTTER_NEO4J_WRITER_USERNAME` / `LEAFCUTTER_NEO4J_WRITER_PASSWORD`. ADR-062 (knowledge retrieval) introduced them, and ADR-065 also uses them to configure the colony memory store for learned statistics, replacing `LEAFCUTTER_COLONY_DB_URL`. Without them, or with `LEAFCUTTER_SELF_LEARNING=false`, learned statistics are off; decision records and precedent are unaffected (ADR-059). Whether statistics share ADR-062's database and credentials is ADR-065 Open Question 4.
+
+### out_of_domain
+
+A `GapType` value in the Decision Kernel (`kernel/contracts/enums.py`) and a choice of the intake intent classification (`kernel/intent/classify.py`): the request is not about software engineering in the repository. The kernel declines it and records it as a capability gap.
