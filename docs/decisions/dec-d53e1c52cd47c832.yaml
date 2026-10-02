@@ -1,0 +1,375 @@
+schema_version: '1.0'
+kind: decision
+id: dec-d53e1c52cd47c832
+repository_id: leafcutter-ai
+title: Make the kernel the default entry for design, planning and lookup questions in Claude ...
+description: Decide what to build next for the Leafcutter decision kernel so that it is wired into the ...
+decision_type: design
+question: 'Decide what to build next for the Leafcutter decision kernel so that it is wired into the real development workflow
+  and has direct impact. Today nothing outside kernel/ and the /leafcutter skill calls the kernel, and docs/decisions holds
+  one record, while design decisions answered by the user in Claude Code sessions are not recorded anywhere the kernel can
+  reuse. Options: run trace analyzers over the recent kernel traces; file human decisions made in Claude Code sessions as
+  decision records; have agents consult the kernel for precedent before asking the user a design question, applying standing
+  policies such as POL-GIT-001 directly; or another option grounded in the repository.'
+components: []
+change_target: []
+risk_surface: []
+roadmap_phase: []
+file_globs: []
+repository_wide: true
+selected_option_id: opt.kernel_entry_point
+supersedes: []
+superseded_by: []
+related:
+  - dec-ef8ddcb79d668a67
+task_context:
+  goal: 'Decide what to build next for the Leafcutter decision kernel so that it is wired into the real development workflow
+    and has direct impact. Today nothing outside kernel/ and the /leafcutter skill calls the kernel, and docs/decisions holds
+    one record, while design decisions answered by the user in Claude Code sessions are not recorded anywhere the kernel can
+    reuse. Options: run trace analyzers over the recent kernel traces; file human decisions made in Claude Code sessions as
+    decision records; have agents consult the kernel for precedent before asking the user a design question, applying standing
+    policies such as POL-GIT-001 directly; or another option grounded in the repository.'
+  component_ids: []
+  technologies: []
+  constraints: []
+rationale:
+  text: 'Design decision settled by a human. Kernel ranking (Jev''s per-criterion judgement, evidence not authority; stopped
+    researching because design_judgement after 1 research round(s)): 1. [opt.kernel_entry_point] Make the kernel the default
+    entry for design, planning and lookup questions in Claude Code sessions (required mean 0.80, 2/3 passed); 2. [opt.consult_precedent]
+    have agents consult the kernel for precedent before asking the user a design question, applying standing policies such
+    as POL-GIT-001 directly (required mean 0.48, 0/3 passed); 3. [opt.session_records] file human decisions made in Claude
+    Code sessions as decision records (required mean 0.42, 0/3 passed); 4. [opt.trace_analyzers] run trace analyzers over
+    the recent kernel traces (required mean 0.28, 0/3 passed). human:user chose option [opt.kernel_entry_point] Make the kernel
+    the default entry for design, planning and lookup questions in Claude Code sessions (kernel rank 1 of 4).'
+  origin: template
+assumptions:
+  - Routing everyday questions through the kernel is affordable in Jev calls and latency.
+unresolved_risks: []
+assessment:
+  basis: kernel_ranking
+  design_reason: design_judgement
+  confidence: 0.8033
+  selected_rank: 1
+  ranking:
+    - option_id: opt.kernel_entry_point
+      rank: 1
+      required_passed: 2
+      required_total: 3
+      required_mean: 0.8033
+      scores:
+        crit.direct_impact: 0.87
+        crit.feeds_store: 0.61
+        crit.human_authority: 0.66
+        crit.outside_caller: 0.88
+        crit.small_slice: 0.37
+    - option_id: opt.consult_precedent
+      rank: 2
+      required_passed: 0
+      required_total: 3
+      required_mean: 0.4767
+      scores:
+        crit.direct_impact: 0.51
+        crit.feeds_store: 0.15
+        crit.human_authority: 0.6
+        crit.outside_caller: 0.32
+        crit.small_slice: 0.55
+    - option_id: opt.session_records
+      rank: 3
+      required_passed: 0
+      required_total: 3
+      required_mean: 0.42
+      scores:
+        crit.direct_impact: 0.52
+        crit.feeds_store: 0.39
+        crit.human_authority: 0.54
+        crit.outside_caller: 0.2
+        crit.small_slice: 0.59
+    - option_id: opt.trace_analyzers
+      rank: 4
+      required_passed: 0
+      required_total: 3
+      required_mean: 0.2833
+      scores:
+        crit.direct_impact: 0.12
+        crit.feeds_store: 0.07
+        crit.human_authority: 0.64
+        crit.outside_caller: 0.09
+        crit.small_slice: 0.6
+final_outcome:
+  status: pending
+  observed_at: null
+  note: ''
+options:
+  - id: opt.trace_analyzers
+    title: run trace analyzers over the recent kernel traces
+    description: ''
+    assumptions: []
+    evidence_ids:
+      - ev-4236c5066658dce0
+    proposed_by: caller_goal
+    approved_by: null
+  - id: opt.session_records
+    title: file human decisions made in Claude Code sessions as decision records
+    description: ''
+    assumptions: []
+    evidence_ids:
+      - ev-870e8099a38e8907
+      - ev-5e30cba917bb4d5c
+      - ev-b57d5714ec514bdf
+    proposed_by: caller_goal
+    approved_by: null
+  - id: opt.consult_precedent
+    title: have agents consult the kernel for precedent before asking the user a design question, applying standing policies
+      such as POL-GIT-001 directly
+    description: ''
+    assumptions: []
+    evidence_ids:
+      - ev-7caeb8163053969c
+      - ev-54241e0c6028f1e1
+    proposed_by: caller_goal
+    approved_by: null
+  - id: opt.kernel_entry_point
+    title: Make the kernel the default entry for design, planning and lookup questions in Claude Code sessions
+    description: A standing instruction or hook routes every design, planning, where-is and how-to-fix question in a Claude
+      Code session through the kernel CLI first, with Claude Code acting as its host, so the kernel gains a real caller, records
+      decisions and capability gaps from everyday work, and its failures surface as defects.
+    assumptions:
+      - Routing everyday questions through the kernel is affordable in Jev calls and latency.
+    evidence_ids:
+      - ev-a297882a8da2c395
+      - ev-4236c5066658dce0
+      - ev-9138fc4821e5b41c
+    proposed_by: host.generate_options
+    approved_by: human:user
+criteria:
+  - id: crit.direct_impact
+    question: Does the option change what happens in the real development workflow (a question not asked again, a policy applied,
+      a decision reused) rather than only improving the kernel in isolation?
+    priority: required
+    kind: design_judgement
+    evidence_ids:
+      - ev-f5911c9d4e0603ef
+      - ev-f657e2f7b406cf8f
+      - ev-9138fc4821e5b41c
+      - ev-1d195ec5c4c771bb
+      - ev-7caeb8163053969c
+  - id: crit.outside_caller
+    question: Does the option give the kernel at least one caller outside kernel/ and the /leafcutter skill?
+    priority: required
+    kind: design_judgement
+    evidence_ids:
+      - ev-a1b1334711f30783
+      - ev-f657e2f7b406cf8f
+      - ev-5e30cba917bb4d5c
+      - ev-a297882a8da2c395
+      - ev-1d195ec5c4c771bb
+  - id: crit.human_authority
+    question: Does the option keep the rule that only a human approval creates a decision record and that precedent is evidence,
+      never authority (ADR-060)?
+    priority: required
+    kind: design_judgement
+    evidence_ids:
+      - ev-f657e2f7b406cf8f
+      - ev-9138fc4821e5b41c
+      - ev-7caeb8163053969c
+      - ev-5e30cba917bb4d5c
+      - ev-d55eebec654804e3
+  - id: crit.feeds_store
+    question: Does the option add human-approved decision records from real work to docs/decisions?
+    priority: supporting
+    kind: design_judgement
+    evidence_ids:
+      - ev-f657e2f7b406cf8f
+      - ev-9138fc4821e5b41c
+      - ev-1d195ec5c4c771bb
+      - ev-5e30cba917bb4d5c
+      - ev-54241e0c6028f1e1
+  - id: crit.small_slice
+    question: Can the option be built and verified as one ticket without new infrastructure such as a graph database?
+    priority: supporting
+    kind: design_judgement
+    evidence_ids:
+      - ev-5e30cba917bb4d5c
+      - ev-7caeb8163053969c
+      - ev-9138fc4821e5b41c
+      - ev-1d195ec5c4c771bb
+      - ev-b57d5714ec514bdf
+evidence:
+  - id: ev-f657e2f7b406cf8f
+    locator: docs/decisions/dec-ef8ddcb79d668a67.yaml
+    category: prior_decisions
+    content_hash: 729963ea6862b0f7dd2aadbe1a011ec89256f97c6d165dd986bbce168015d53b
+    verification: source_verified
+    relevance: 0.62
+    source_version:
+      commit: a4b9a94f5b266503993e65a97727b5059717f6c4
+      dirty: true
+  - id: ev-5e30cba917bb4d5c
+    locator: tickets/00_inbox/TICKET-20261001-KernelDecisionStore.md#L40-L52 (§Binding user decisions)
+    category: prior_decisions
+    content_hash: 028cbd546952eb92a277a51e2a5d86a39420bcdde1878953e10de234ae4ea697
+    verification: source_verified
+    relevance: 0.91
+    source_version:
+      commit: a28b1c247ff01fa80adc7464cad93619ff386edb
+      dirty: false
+  - id: ev-54241e0c6028f1e1
+    locator: docs/how-to/file-and-reuse-decisions-with-the-kernel.md#L73-L90 (§Steps > Step 5 — See the precedent in the next
+      run)
+    category: task_context
+    content_hash: 8c5550e0bd1ffff30d90ce0fc534cccb4a4d2ba67ae65a5f613a0c14fcd28826
+    verification: source_verified
+    relevance: 0.85
+    source_version:
+      commit: a28b1c247ff01fa80adc7464cad93619ff386edb
+      dirty: false
+  - id: ev-7caeb8163053969c
+    locator: docs/analysis/2026-09-30-decision-kernel-design-4-jev-and-capabilities.md#L274-L278 (§As built (decision store))
+    category: prior_decisions
+    content_hash: fcce247efd2a062157be713753e887de52bd58dd4800e8fc96b889704c48751c
+    verification: source_verified
+    relevance: 0.79
+    source_version:
+      commit: a28b1c247ff01fa80adc7464cad93619ff386edb
+      dirty: false
+  - id: ev-a297882a8da2c395
+    locator: docs/components.json#L130-L153 (components > decision_kernel)
+    category: task_context
+    content_hash: 75dab6fd4b51a05841b0b2f99b1d025d3a3583d9c5c3eb0d9cf0188c7a64328e
+    verification: source_verified
+    relevance: 0.67
+    source_version:
+      commit: a28b1c247ff01fa80adc7464cad93619ff386edb
+      dirty: false
+  - id: ev-9138fc4821e5b41c
+    locator: docs/architecture/components/decision-kernel.md#L103-L115 (§Decisions)
+    category: prior_decisions
+    content_hash: 41be9c8f3538315109e84f05b92b34104f0a84b20977689b05aed74d6d3c6d23
+    verification: source_verified
+    relevance: 0.84
+    source_version:
+      commit: a28b1c247ff01fa80adc7464cad93619ff386edb
+      dirty: false
+  - id: ev-1d195ec5c4c771bb
+    locator: docs/roadmap.json#L126-L152 (phases)
+    category: task_context
+    content_hash: 12aba4b3470ae33bc3f96349bd1316d9eefaaa28d873ddb41c62408a33d5dbc9
+    verification: source_verified
+    relevance: 0.63
+    source_version:
+      commit: a28b1c247ff01fa80adc7464cad93619ff386edb
+      dirty: false
+  - id: ev-b57d5714ec514bdf
+    locator: docs/architecture/adrs/ADR-059-decision-store-reviewable-yaml-records-now-graph-later.md#L42-L63 (§Context)
+    category: prior_decisions
+    content_hash: c01468916e539fe97d7f1994b7428b37b544aada7534a7fbce72cc8461ead401
+    verification: source_verified
+    relevance: 0.84
+    source_version:
+      commit: a28b1c247ff01fa80adc7464cad93619ff386edb
+      dirty: false
+  - id: ev-870e8099a38e8907
+    locator: kernel/capabilities/decision/executor.py#L113-L141 (def _stage)
+    category: existing_patterns
+    content_hash: 40d34bc7284d2a0dd9bed338f85cdd697de21a7b8e0a06d7828598989a1a58a9
+    verification: source_verified
+    relevance: 0.69
+    source_version:
+      commit: a28b1c247ff01fa80adc7464cad93619ff386edb
+      dirty: false
+  - id: ev-4236c5066658dce0
+    locator: docs/vision.md#L55-L65 (§Growing the Colony, Step by Step)
+    category: prior_decisions
+    content_hash: eee2146c29a308697739d220233525700cbb1ce19d0f0bf3b7bd36257bdbe120
+    verification: source_verified
+    relevance: 0.74
+    source_version:
+      commit: a28b1c247ff01fa80adc7464cad93619ff386edb
+      dirty: false
+  - id: ev-d55eebec654804e3
+    locator: docs/analysis/2026-09-30-decision-kernel-design-2-contracts-registry-config.md#L243-L248 (§As built (decision
+      store))
+    category: prior_decisions
+    content_hash: d1ce648be775538ba9456c3bb2048a8216bfd9ac7a9318b15576bda637d82a96
+    verification: source_verified
+    relevance: 0.73
+    source_version:
+      commit: a28b1c247ff01fa80adc7464cad93619ff386edb
+      dirty: false
+  - id: ev-f5911c9d4e0603ef
+    locator: docs/analysis/2026-09-30-leafcutter-kernel-spec-rev3.md#L137-L149 (§3. Development stages [ROADMAP])
+    category: existing_patterns
+    content_hash: 53b41bd6521c5411e035767988bffc6585ada53d018cc82ae2361126bdd39077
+    verification: source_verified
+    relevance: 0.68
+    source_version:
+      commit: a28b1c247ff01fa80adc7464cad93619ff386edb
+      dirty: false
+  - id: ev-760a503e844e6199
+    locator: docs/architecture/components/decision-kernel.md#L89-L100 (§Containers)
+    category: existing_patterns
+    content_hash: 940f7c17c29de9bea608c2f1dba49bb55843b27cd40bb244e419ee8e8048793d
+    verification: source_verified
+    relevance: 0.57
+    source_version:
+      commit: a28b1c247ff01fa80adc7464cad93619ff386edb
+      dirty: false
+  - id: ev-a1b1334711f30783
+    locator: docs/analysis/2026-09-30-decision-kernel-design-5-client-observability.md#L73-L86 (§Claude Code skill (P7))
+    category: existing_patterns
+    content_hash: 5c14bfddeb9d0b27612ca70e1863f67c814bc5a9d6815ee0beecd762d97a5865
+    verification: source_verified
+    relevance: 0.51
+    source_version:
+      commit: a28b1c247ff01fa80adc7464cad93619ff386edb
+      dirty: false
+  - id: ev-4969d7bc24aff0ea
+    locator: docs/how-to/inspect-kernel-traces-with-langfuse-mcp.md#L122-L128 (§Steps > Step 4 — Know that traces are read
+      as observations)
+    category: existing_patterns
+    content_hash: 8ed020aa6e4b2824d9b9cce34b13c5287f4552dfc55271e3bd570e9163e8bd89
+    verification: source_verified
+    relevance: 0.69
+    source_version:
+      commit: a28b1c247ff01fa80adc7464cad93619ff386edb
+      dirty: false
+  - id: ev-f45ccf627be7432d
+    locator: docs/analysis/2026-10-01-decision-kernel-v0-demo-report.md#L186-L202 (§Completion statement assessment (spec
+      section 16))
+    category: existing_patterns
+    content_hash: 74d6a189b194baa3a4af9246a1d2e89be44ca60cc2ddb8eb698ae24faf6af810
+    verification: source_verified
+    relevance: 0.51
+    source_version:
+      commit: a28b1c247ff01fa80adc7464cad93619ff386edb
+      dirty: false
+precedents_considered:
+  - id: dec-ef8ddcb79d668a67
+    applicability: 0.62
+    action: used_as_evidence
+    note: human:user approved [opt.added.1] on 2026-10-01
+approval:
+  approval_status: approved
+  approved_by: human:user
+  approved_at: '2026-10-02T05:39:33Z'
+  note: ''
+provenance:
+  origin: learned
+  created_by_capability: decision
+  created_at: '2026-10-02T05:39:33Z'
+  run_id: run-f0f15b38791a428f
+  root_task_id: task-d79031d492de49be
+  langfuse_trace_id: e944fec7169f6c70f899f3e7f9097fd4
+  langfuse_trace_url: null
+  repository_revision:
+    commit: null
+    dirty: false
+  policy_version: null
+  template_version: decision.assess@1
+  model_version: jev-latest
+  kernel_version: 0.1.0.dev0
+  decision_versions:
+    options: 23b2e4a6d6cf
+    criteria: 852fc47d7b94
+    templates: decision.assess@1
+corrections: []

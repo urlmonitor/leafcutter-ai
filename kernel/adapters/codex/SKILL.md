@@ -1,9 +1,6 @@
 ---
 name: {{NAME}}
-description: Run Leafcutter's decision and research workflow for a supplied goal. Transport only; the kernel owns every decision.
-argument-hint: [goal]
-disable-model-invocation: true
-allowed-tools: Bash({{COMMAND}} run *) Bash({{COMMAND}} resume *) Bash({{COMMAND}} status *) Edit({{CLIENT_RULE}}/**) Read({{RUN_ROOT_RULE}}/**) AskUserQuestion
+description: Run Leafcutter's decision and research workflow for a goal. Use it only when the user types ${{NAME}} followed by the goal. Transport only, the kernel owns every decision.
 ---
 <!-- leafcutter-kernel-skill -->
 
@@ -13,11 +10,18 @@ You carry messages between the user and the Leafcutter kernel. The kernel decide
 next; you never do. Every command below prints exactly ONE JSON document on stdout (logs go to
 stderr) and ends with `--json`. `KERNEL` means `{{COMMAND}}`.
 
+Run every `KERNEL` command exactly as written, with the working directory `{{KERNEL_DIR}}`
+(the kernel checkout). Add no `cd`, no environment variables and no wrapper script: a
+pre-approved rule matches the command only in this form.
+
 ## 1. Start
 
-1. With Write, create a scratch JSON file inside `{{CLIENT_DIR}}/` (the only place you may
-   write) holding the goal VERBATIM, never paraphrased or shell-quoted:
-   `{"goal": "<$ARGUMENTS>", "caller": {"id": "user", "kind": "human"},
+The GOAL is the text after `${{NAME}}` in the user's message. If it is empty, ask the user for it
+in one short plain-text question and stop.
+
+1. Write a scratch JSON file inside `{{CLIENT_DIR}}/` (the only place you may write) holding the
+   goal VERBATIM, never paraphrased or shell-quoted:
+   `{"goal": "<GOAL>", "caller": {"id": "user", "kind": "human"},
    "scope": {"workspace_id": "{{WORKSPACE_ID}}", "repository_root": "{{REPOSITORY_ROOT}}"}}`
    Copy the two `scope` values exactly; they were fixed when the skill was installed. Never
    replace them with your working directory.
@@ -34,12 +38,18 @@ stderr) and ends with `--json`. `KERNEL` means `{{COMMAND}}`.
   - Use only `allowed_operations`; never anything in `forbidden_operations`.
   - Follow `goal` and `output_requirements`; produce JSON valid against `output_json_schema`.
   - Write the submission file (section 3) inside `{{CLIENT_DIR}}/` and run `resume`.
-- `waiting_human`: ask the USER, with AskUserQuestion, the packet's `question`, showing each
-  `choices[].label` and `consequences` and `why_research_cannot_settle`.
-  - Offer free text only if `free_text_allowed`.
-  - If `structured_allowed`, offer approve or edit: a structured answer approves
-    `approved_criterion_ids` / `approved_option_ids` or supplies `edited_criteria`.
-  - Never answer for the user, never choose a default. Then write the human submission and `resume`.
+- `waiting_human`: ask the USER the packet's `question`. Never answer for the user. Never choose for
+  the user, not even a default.
+  - If a `request_user_input` tool is available this turn, use it, with each `choices[].label`
+    as an option.
+  - Otherwise show, once and in plain text (no multiple-choice menu tool), the `question`, each
+    `choices[].label` with its `consequences`, and `why_research_cannot_settle`. Then end your
+    turn and wait.
+  - Take the user's reply naming a choice. If it does not clearly name one choice, ask once more
+    and wait again. Offer free text only if `free_text_allowed`.
+  - If `structured_allowed`, a structured answer approves `approved_criterion_ids` /
+    `approved_option_ids` or supplies `edited_criteria`.
+  - Then write the human submission and `resume`.
 - `completed`, `partial`, `blocked`, `failed`, `cancelled`: stop. Present `report_ref` (read the
   file), `limitations`, `open_questions`, `gaps`, `evidence_ids` and `trace_refs.trace_url` if
   present. Do not call a `partial` or `blocked` run complete.
@@ -54,9 +64,9 @@ Write a submission file inside `{{CLIENT_DIR}}/` and run `KERNEL resume --run-id
 
 `{"run_id": "<run_id>", "interaction_id": "<pending_interaction.id>",
 "expected_state_revision": <pending_interaction.state_revision>, "actor": <actor>,
-"relayed_by": "claude_code", "response_schema_id": "<schema>", "response": <response>}`
+"relayed_by": "codex", "response_schema_id": "<schema>", "response": <response>}`
 
-- Host work: `actor` = `{"kind": "host", "id": "claude_code"}`, `response_schema_id` =
+- Host work: `actor` = `{"kind": "host", "id": "codex"}`, `response_schema_id` =
   `pending_interaction.output_schema_id`, `response` = your JSON output.
 - Human answer: `actor` = `{"kind": "human", "id": "human:user"}`, `response_schema_id` =
   `leafcutter.human_answer.v1`, `response` = exactly ONE of `{"choice_id": "<id>"}`,
@@ -74,5 +84,6 @@ Write a submission file inside `{{CLIENT_DIR}}/` and run `KERNEL resume --run-id
 
 Choose the next capability or step, change policy or permissions, approve anything on the user's
 behalf, edit repository files or write anywhere but `{{CLIENT_DIR}}/`, run other Leafcutter
-commands (`cancel`, `install-skill` and `decisions publish` are the user's to run, never yours), invent evidence, or continue a run
-after `cancelled`. Keep run ids, interaction ids and state revisions exactly as received.
+commands (`cancel`, `install-skill` and `decisions publish` are the user's to run, never yours),
+invent evidence, or continue a run after `cancelled`. Keep run ids, interaction ids and state
+revisions exactly as received.
