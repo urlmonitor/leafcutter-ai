@@ -208,3 +208,9 @@ P10 writes `docs/how-to/inspect-kernel-traces-with-langfuse-mcp.md` from the cur
 - **Export failures.** The Langfuse span exporter is wrapped (`ObservedSpanExporter`): a failed export marks the tracer degraded with a reason, spools the spans, and the envelope reports `observability: degraded` instead of `ok`. A successful export stays `ok`.
 - **Ranked question.** The human question of a design decision lists the options as `#1, #2, ...` with each required and supporting criterion in words (`likely not met (0.10)`), the evidence each option cites, and allows an added option or a free-text answer.
 - **Not yet done** (trace review finding 7, wave 3): LangGraph callback spans are still exported, Jev generations carry their real latency only in metadata, retriever and rerank outputs name no paths or evidence ids, and the service name is the SDK default.
+
+## As built (decision store)
+
+- **CLI.** `python -m kernel decisions validate | index | publish --run-id R [--correct OLD_ID] [--reason TEXT]` (options `--config`, `--repo-root` on each); it needs no Jev key and no environment, prints one JSON document, and exits 0 ok, 3 refused with the problems listed, 5 environment error. `validate` is what the committed-store test and CI run (no new pre-commit hook: that is package surface).
+- **Skill.** `/leafcutter` stays transport only: it may tell the user a record is staged and give the publish command, and its pre-approved commands remain `run`, `resume` and `status`; `decisions` is never pre-approved.
+- **Observability.** `decision.precedent` is a small tracer event (candidate and applicable ids, offered id, scores; no text).

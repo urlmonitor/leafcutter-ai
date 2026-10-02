@@ -1,0 +1,40 @@
+{
+  "schema_version": "1.0",
+  "generated_by": "python -m kernel decisions index",
+  "_comment": "Generated; never edit by hand. Regenerate with the command in generated_by.",
+  "count": 1,
+  "records": [
+    {
+      "id": "dec-ef8ddcb79d668a67",
+      "file": "dec-ef8ddcb79d668a67.yaml",
+      "sha256": "d4426542cc89f863b3795b69e1caf182607980c8b642190318fc7c608c3ea819",
+      "title": "Kernel-contract YAML per decision",
+      "question": "Decide how Leafcutter should file decision records as JSON or YAML files under docs/ so later kernel runs can find and reuse them as precedent: which fields a record needs, which classification filters it carries (component, file type or language, repository-wide, roadmap phase), the folder layout and file naming, and how human approval and later corrections are recorded.",
+      "decision_type": "design",
+      "selected_option_id": "opt.added.1",
+      "selected_option_title": "Kernel-contract YAML per decision",
+      "approved_by": "human:user",
+      "approved_at": "2026-10-01T14:48:31Z",
+      "components": [
+        "decision_kernel",
+        "knowledge_management"
+      ],
+      "change_target": [
+        "schema",
+        "docs"
+      ],
+      "risk_surface": [
+        "internal"
+      ],
+      "roadmap_phase": [
+        "phase_kernel_1_founding"
+      ],
+      "file_globs": [],
+      "repository_wide": false,
+      "supersedes": [],
+      "superseded_by": [],
+      "related": [],
+      "corrections": 0
+    }
+  ]
+}

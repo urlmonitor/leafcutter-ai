@@ -294,7 +294,7 @@ Expected output: one JSON line with `"gaps"`, `"total"`, `"build_opportunities"`
 
 ## See Also
 
-- [How to inspect kernel traces with the Langfuse MCP server](inspect-kernel-traces-with-langfuse-mcp.md)
+- [How to inspect kernel traces with the Langfuse MCP server](inspect-kernel-traces-with-langfuse-mcp.md); [how to file approved decisions and reuse them as precedent](file-and-reuse-decisions-with-the-kernel.md)
 - [Decision kernel container overview](../architecture/components/decision-kernel.md)
 - [V0 demo and run report](../analysis/2026-10-01-decision-kernel-v0-demo-report.md)
 - [Documentation Index](../INDEX.md)

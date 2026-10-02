@@ -1,6 +1,6 @@
 """
 MODULE: kernel.adapters.cli
-GOAL: The `python -m kernel` command line: run, resume, status, cancel, gaps and install-skill,
+GOAL: The `python -m kernel` command line: run, resume, status, cancel, gaps, decisions and install-skill,
     each printing exactly one JSON document on stdout and returning a documented exit code.
 BUSINESS CONTEXT: A cooperative client (the Claude Code skill) drives the kernel as a sequence of
     short processes (Rev 3 section 11.2). It must tell a normal workflow state from a protocol
@@ -39,6 +39,7 @@ from kernel.bootstrap import KernelEnvironment, build_environment
 from kernel.config import ConfigError
 from kernel.contracts.run import CapabilityGap
 from kernel.contracts.task import TaskInput
+from kernel.memory import cli as decisions_cli
 from kernel.observability.redaction import Redactor
 from kernel.persistence.gap_store import is_build_opportunity
 from kernel.registry.adapter import RegistryError
@@ -84,6 +85,7 @@ def build_parser() -> argparse.ArgumentParser:
     cancel.add_argument("--actor", required=True, help="human:<id>")
     commands.add_parser("gaps", parents=[common],
                         help="show the aggregated capability gaps (deduplicated)")
+    decisions_cli.add_parser(commands, common)
     install = commands.add_parser("install-skill", help="install the Claude Code skill")
     install.add_argument("--json", action="store_true")
     install.add_argument("--target-dir", required=True, type=Path,
@@ -212,8 +214,12 @@ def main(argv: list[str] | None = None, *, environment: EnvironmentFactory = bui
         return int(exc.code) if isinstance(exc.code, int) else CLI_EXIT_CODES["usage"]
     stdout = sys.stdout
     with contextlib.redirect_stdout(sys.stderr):
-        code, document = _install(args) if args.command == "install-skill" \
-            else _run_with_environment(args, environment)
+        if args.command == "install-skill":
+            code, document = _install(args)
+        elif args.command == "decisions":
+            code, document = decisions_cli.run_decisions(args)
+        else:
+            code, document = _run_with_environment(args, environment)
     emit(document, stdout)
     return code
 
@@ -221,6 +227,9 @@ def main(argv: list[str] | None = None, *, environment: EnvironmentFactory = bui
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-01 [python-coder]: `decisions validate|index|publish` is registered here and run
+#   without an environment (no Jev key needed); publication is explicit, never part of a run.
+#   (#KernelDecisionStore)
 # - 2026-10-01 16:30 [python-coder]: Exit-5 messages built from exception text pass through the
 #   environment's Redactor; the catch-all would otherwise print a provider error that echoes a
 #   credential. (#KernelBootstrapV0/FIXC)

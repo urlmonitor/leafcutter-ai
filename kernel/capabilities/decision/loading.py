@@ -26,10 +26,11 @@ from kernel.capabilities.decision.state import (
     Working,
     derive_decision_id,
 )
+from kernel.capabilities.research.limitations import collapse_for_decision, merge_limitations
 from kernel.contracts import schema_ids
 from kernel.contracts.decision import Criterion, Option
 from kernel.contracts.enums import EvidenceCategory, RequestKind, ResultStatus
-from kernel.contracts.evidence import Evidence, EvidenceBundlePayload
+from kernel.contracts.evidence import CLAIM_NEED_PREFIX, Evidence, EvidenceBundlePayload
 from kernel.contracts.payloads import (
     DecisionRequestPayload,
     FindingsPayload,
@@ -100,8 +101,27 @@ def _absorb_bundle(work: Working, payload: dict, inline: dict[str, Evidence]) ->
     merged = list(dict.fromkeys([*work.cont.evidence_ids, *ids]))
     work.cont = work.cont.model_copy(update={"evidence_ids": merged})
     inline.update({e.id: e for e in model.evidence})
-    work.limitations += model.limitations
+    work.limitations = merge_limitations(
+        work.limitations, collapse_for_decision(model.limitations, model.need_limitations))
+    _link_claim_evidence(work, model.need_evidence)
     _keep_gaps(work, model.unknowns)
+
+
+def _link_claim_evidence(work: Working, need_evidence: dict[str, list[str]]) -> None:
+    """Cite the evidence a claim need found on the option it checked (round 8 defect a).
+
+    A human-added option has no evidence of its own; research then looked for evidence about its
+    claims (`need.claim.<option id>`). That evidence is linked to the option, so the ranked
+    question and the record say what the option rests on instead of "no evidence cited".
+    """
+    for need_id, ids in need_evidence.items():
+        if not need_id.startswith(CLAIM_NEED_PREFIX):
+            continue
+        option_id = need_id[len(CLAIM_NEED_PREFIX):]
+        for index, option in enumerate(work.options):
+            if option.id == option_id:
+                refs = list(dict.fromkeys([*option.source_refs, *ids]))[:work.evidence_cap]
+                work.options[index] = option.model_copy(update={"source_refs": refs})
 
 
 def _absorb_findings(work: Working, payload: dict) -> None:
@@ -203,6 +223,9 @@ def load_working(invocation: CapabilityInvocation, ctx: ExecutionContext) -> Wor
     work = _payload_inputs(invocation, cont)
     work.require_grounding = ctx.config.decision.require_option_grounding
     work.evidence_cap = ctx.config.decision.max_grounding_evidence
+    work.now = ctx.clock()
+    work.cite_max = ctx.config.memory.criterion_evidence_max
+    work.cite_overlap = ctx.config.memory.criterion_evidence_min_overlap
     _check_failures(invocation, invocation.child_outcomes, work)
     inline: dict[str, Evidence] = {}
     actor = _answering_actor(ctx, invocation)
@@ -217,6 +240,9 @@ def load_working(invocation: CapabilityInvocation, ctx: ExecutionContext) -> Wor
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-01 [python-coder]: Evidence a claim need found is linked to the human-added option it
+#   checked, and bundle limitations are deduplicated with one cut summary per need (round 8
+#   defects a and d); the invocation's clock stamps human approvals. (#KernelDecisionStore)
 # - 2026-10-01 [python-coder]: The unknowns of a synthesis (in a bundle or findings) are kept as
 #   the decision's gaps for the next research request. (#KernelV01/D)
 # - 2026-10-02 [python-coder]: mypy: the payload base values are dict[str, Any] (#KernelBootstrapV0/GROUND)

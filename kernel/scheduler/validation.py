@@ -79,7 +79,8 @@ def _check_output(result: CapabilityResult, request: Request, known_evidence: se
         return _rejected("output_schema_mismatch", f"expected {request.requested_output_schema}, "
                          f"got {schema_id}")
     ctx = SemanticContext(known_evidence_ids=frozenset(known_evidence),
-                          known_finding_ids=frozenset(known_findings))
+                          known_finding_ids=frozenset(known_findings),
+                          kernel_built=True)  # a result is the kernel's converted output
     try:
         validate_semantics(schema_id, model, ctx)
     except SemanticValidationError as exc:
@@ -120,6 +121,9 @@ def validate_result(result: CapabilityResult, invocation: CapabilityInvocation,
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-01 [python-coder]: Result validation marks its SemanticContext kernel_built: a
+#   capability result is the kernel's converted output, so host-only rules (named_options) do not
+#   apply to it; the submission path keeps them. (#KernelNamedOptionsBlocked)
 # - 2026-09-30 22:30 [python-coder]: Supplied-option checks are left to the decision capability
 #   (P5): options may arrive through child outcomes, so the kernel cannot know the full set and
 #   a strict check here would reject valid reports. (#KernelBootstrapV0/P4)

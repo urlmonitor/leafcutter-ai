@@ -165,5 +165,16 @@
     "environment": "development",
     "trace_name": "leafcutter-run",
     "flush_on_exit": true
+  },
+  "memory": {
+    "backend": "file",
+    "repository_id": "leafcutter-ai",
+    "decisions_dir": "docs/decisions",
+    "max_precedents": 3,
+    "min_candidate_score": 0.3,
+    "applies_threshold": 0.5,
+    "reuse_threshold": 0.8,
+    "criterion_evidence_max": 5,
+    "criterion_evidence_min_overlap": 2
   }
 }

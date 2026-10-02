@@ -1,9 +1,9 @@
 """
 MODULE: tests.kernel.retrieval.test_retrieval_benchmark
-GOAL: An offline regression benchmark of the lexical retrieval stage over the real repository
-    checkout: for each named goal, the places that MUST reach the first Jev rerank batch and the
-    files that must NOT crowd it, with two recorded results as ratchets no change may fall below:
-    round E (the "before") and round F (the current best).
+GOAL: An offline regression benchmark of the lexical retrieval stage over a pinned corpus (the
+    files of `corpus_commit`): for each named goal, the places that MUST reach the first Jev rerank
+    batch and the files that must NOT crowd it, with two recorded results as ratchets no change
+    may fall below: round E (the "before") and round F (the current best).
 BUSINESS CONTEXT: Round E made research cheap (one rerank batch of 20 per need) and the live
     regression on goals 5 and 2 showed what that cost: the batch filled with registry JSON,
     ticket comments and AC yaml while `kernel/persistence/run_store.py`, the tests READMEs and the
@@ -18,13 +18,13 @@ ARCHITECTURE: benchmark_cases.json holds the cases and, per case, the round E ("
     no noisy file pattern exceeds its `max` in the first batch. Must-haves a lexical search does
     not reach stay listed in the fixture (`current.pool_position`) as the gap that semantic
     retrieval, not this score, has to close. The second-domain scenario ("Where should a cache
-    live?") runs on a throwaway repository with noise built to crowd the pool. Only the files git
-    does not ignore are scored, as in CI. No Jev, no network, no writes.
+    live?") runs on a throwaway repository with noise built to crowd the pool. CORPUS: the files
+    scored are those of `corpus_commit`, so only ranking code and parameters move the ratchets;
+    a missing pin skips locally and fails under CI. No Jev, no network, no writes to the checkout.
 """
 
 from __future__ import annotations
 
-import shutil
 import subprocess
 import tempfile
 import unittest
@@ -32,22 +32,23 @@ from pathlib import Path
 from typing import Any
 
 from tests.kernel.retrieval.benchmark_support import (
-    GIT_IGNORED,
+    CORPUS_COMMIT,
     REPO_ROOT,
     BatchResult,
+    CorpusUnavailable,
     JudgedResult,
     crowding,
-    is_git_checkout,
     judged_names,
     judged_with_oracle,
     load_cases,
+    materialise,
+    pinned_corpus,
     reached,
     run_case,
 )
 
 CASES = load_cases()
-NOT_A_CHECKOUT = "not a full repository checkout (docs/analysis is missing)"
-NOT_A_GIT_CHECKOUT = "not a git checkout (the benchmark scores only what git does not ignore)"
+MISSING_SHA = "0" * 40
 CACHE_ADR = ("Decision: the cache lives in process memory with a size cap, because the cached "
              "values are cheap to rebuild and must never outlive a deploy.\n")
 
@@ -69,22 +70,19 @@ def case_results() -> dict[str, BatchResult]:
     return _RESULTS
 
 
-class RealCheckout(unittest.TestCase):
-    """Base: the cases run over the checkout this file lives in."""
+class PinnedCorpus(unittest.TestCase):
+    """Base: the cases run over the pinned corpus (skipped locally, failed under CI, if missing)."""
 
     results: dict[str, BatchResult]
 
     @classmethod
     def setUpClass(cls) -> None:
-        """Share the one run of every case (skipped outside a full checkout)."""
-        if not (REPO_ROOT / "docs" / "analysis").is_dir():
-            raise unittest.SkipTest(NOT_A_CHECKOUT)
-        if not is_git_checkout(REPO_ROOT):
-            raise unittest.SkipTest(NOT_A_GIT_CHECKOUT)
+        """Share the one run of every case over the corpus of `corpus_commit`."""
+        pinned_corpus()
         cls.results = case_results()
 
 
-class TestRatchet(RealCheckout):
+class TestRatchet(PinnedCorpus):
     """No case may fall below what round E reached, or below what round F reached."""
 
     def lost(self, case: dict[str, Any], record: str) -> list[str]:
@@ -126,7 +124,7 @@ class TestRatchet(RealCheckout):
                                  case["id"])
 
 
-class TestJudged(RealCheckout):
+class TestJudged(PinnedCorpus):
     """What the real rerank loop would judge (scripted oracle: must-haves 0.9, the rest 0.1)."""
 
     judged: dict[str, JudgedResult]
@@ -158,7 +156,7 @@ class TestJudged(RealCheckout):
         self.assertGreater(after, before)
 
 
-class TestCaps(RealCheckout):
+class TestCaps(PinnedCorpus):
     """No noisy file pattern (registry JSON, AC yaml, tickets) dominates the first batch."""
 
     def test_no_noisy_pattern_exceeds_its_cap_in_the_first_batch(self) -> None:
@@ -191,32 +189,32 @@ class TestSecondDomain(unittest.TestCase):
         self.assertIn("docs/architecture/adrs/ADR-901-cache-location.md", found)
 
 
-class TestCheckoutCorpus(unittest.TestCase):
-    """A git checkout is scored as git sees it: a build's ignored copies (real folders on Windows,
-    symlinks never walked on Linux) cannot move a result on one platform only."""
+class TestPinnedCorpus(unittest.TestCase):
+    """The files scored are the pinned commit's; a missing pin cannot silence the ratchet in CI."""
 
-    def test_an_ignored_build_copy_changes_no_score(self) -> None:
-        if shutil.which("git") is None:
-            self.skipTest("git is not installed")
-        case: dict[str, Any] = {"goal": "Where should a cache live?", "category": "prior_decisions"}
-        with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as tmp:
-            root = Path(tmp)
-            subprocess.run(["git", "init", "-q"], cwd=root, check=True)
-            write(root, ".gitignore", "docs/architecture/adrs/build/\n")
-            write(root, "docs/architecture/adrs/ADR-901-cache-location.md", CACHE_ADR)
-            for n in range(6):
-                write(root, f"docs/analysis/note-{n}.md", f"# Note {n}\nA cache lives, item {n}.\n")
-            before = run_case(case, root=root)
-            for n in range(10):  # what the build's copy fallback leaves in a source root
-                write(root, f"docs/architecture/adrs/build/copy-{n}.md", "cache " * (n + 1) + "\n")
-            after = run_case(case, root=root)
-        self.assertEqual(sum(r.skipped.get(GIT_IGNORED, 0) for r in after.reports), 10)
-        self.assertEqual([(c.locator, c.score) for c in after.pool],
-                         [(c.locator, c.score) for c in before.pool])
+    def test_a_missing_pin_skips_locally_and_fails_under_ci(self) -> None:
+        with self.assertRaises(unittest.SkipTest) as local:
+            materialise(MISSING_SHA, ["kernel"], env={})
+        self.assertIn(f"git fetch --no-tags --depth=1 origin {MISSING_SHA}", str(local.exception))
+        for flag in ("CI", "GITHUB_ACTIONS"):
+            with self.subTest(flag), self.assertRaises(CorpusUnavailable):
+                materialise(MISSING_SHA, ["kernel"], env={flag: "true"})
+
+    def test_the_corpus_holds_only_files_of_the_pinned_commit(self) -> None:
+        corpus = pinned_corpus()
+        pinned = set(subprocess.run(["git", "ls-tree", "-r", "--name-only", CORPUS_COMMIT],
+                                    cwd=REPO_ROOT, capture_output=True, text=True,
+                                    check=True).stdout.splitlines())
+        on_disk = {p.relative_to(corpus).as_posix() for p in corpus.rglob("*") if p.is_file()}
+        self.assertIn("kernel/capabilities/retrieval/repository.py", on_disk)
+        self.assertEqual(on_disk - pinned, set(), "files that are not in the pinned commit")
 
 
 class TestHarness(unittest.TestCase):
     """The benchmark data is well formed."""
+
+    def test_the_corpus_is_pinned_to_a_full_commit_sha(self) -> None:
+        self.assertRegex(CORPUS_COMMIT, r"^[0-9a-f]{40}$")
 
     def test_every_case_has_a_baseline_for_each_must_have_and_cap(self) -> None:
         for case in CASES:
@@ -244,6 +242,10 @@ if __name__ == "__main__":
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-01 [python-coder]: The cases run over the pinned corpus (`corpus_commit`), not the live
+#   checkout, so docs-only changes cannot move the ratchets; a missing pin skips locally and fails
+#   under CI, and the corpus is shown to hold only the pinned commit's files. The git-ignored
+#   filter test went with the filter. (#KernelBenchmarkPinnedCorpus)
 # - 2026-10-01 [python-coder]: Round F `current` values re-recorded at CI's checkout path after the
 #   checkout-folder fix: tighter positions and crowding, and 3 calls (was 2) for
 #   lessons_approval_provenance; round E baselines unchanged. (#KernelV01/CI)
