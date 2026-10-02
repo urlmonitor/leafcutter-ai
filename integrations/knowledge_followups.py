@@ -17,7 +17,7 @@ if TYPE_CHECKING:
 
 import time
 
-from knowledge.contracts import KnowledgeRetrievalRequest
+from knowledge.contracts import KnowledgeRetrievalRequest, RetrievalBudget
 
 
 def response_matches(request: KnowledgeRetrievalRequest, result: KnowledgeRetrievalResult) -> bool:
@@ -106,7 +106,7 @@ async def disclose_selected(
     remaining_candidates = request.budget.max_candidates
     previous = None
     retrieval_ids = []
-    result = None
+    result: KnowledgeRetrievalResult
     for round_index in range(request.budget.max_rounds):
         result = await observed_call(port, current, ctx)
         retrieval_ids.append(result.retrieval_id)
@@ -153,6 +153,8 @@ async def disclose_selected(
             max_candidates=remaining_candidates,
             deadline_ms=remaining_ms,
         )
+        # A matched nonempty response establishes an immutable source revision.
+        assert result.source_sha is not None
         current = KnowledgeRetrievalRequest(
             request_id=initial.request_id,
             repository_id=initial.repository_id,
@@ -161,7 +163,7 @@ async def disclose_selected(
             mode="exact",
             arguments={"entity_ids": [e.entity.canonical_id for e in result.evidence]},
             disclosure_level=target_level,
-            budget=bounds,
+            budget=RetrievalBudget.model_validate(bounds),
             correlation=initial.correlation,
             answer_requirements=initial.answer_requirements,
             assessment=initial.assessment,

@@ -30,7 +30,7 @@ def _template(root, metadata, body="Keep this as source text.\n"):
 def test_agent_preserves_all_registry_fields_and_separate_template_meanings(tmp_path):
     # covers: KM-400a-1-iv
     # covers: KM-400a-3-i
-    # type: unit
+    # test type: unit
     # angle: criterion
     entry = {
         "id": "example",
@@ -138,7 +138,7 @@ def test_agent_preserves_all_registry_fields_and_separate_template_meanings(tmp_
 def test_agent_real_registry_preserves_all_entries_and_registered_templates():
     # covers: KM-400a-1-iv
     # covers: KM-400a-3-i
-    # type: integration
+    # test type: integration
     # angle: real_artifact
     root = Path(__file__).resolve().parents[2]
     entries = json.loads((root / "config/agent_registry.json").read_text(encoding="utf-8"))[
@@ -174,7 +174,7 @@ def test_agent_real_registry_preserves_all_entries_and_registered_templates():
 def test_agent_absent_registry_does_not_discover_unregistered_templates(tmp_path):
     # covers: KM-400a-1-iv
     # covers: KM-400a-3-i
-    # type: unit
+    # test type: unit
     # angle: boundary
     _template(tmp_path, {"name": "unregistered"})
     assert _extract(tmp_path) == []
@@ -195,7 +195,7 @@ def test_agent_absent_registry_does_not_discover_unregistered_templates(tmp_path
 def test_agent_invalid_registry_envelope_or_identity_fails(tmp_path, value):
     # covers: KM-400a-1-iv
     # covers: KM-400a-3-i
-    # type: unit
+    # test type: unit
     # angle: failure
     source = _registry(tmp_path, [])
     source.write_text(json.dumps(value), encoding="utf-8")
@@ -219,7 +219,7 @@ def test_agent_invalid_registry_envelope_or_identity_fails(tmp_path, value):
 def test_agent_template_reference_cannot_escape_snapshot(tmp_path, reference):
     # covers: KM-400a-1-iv
     # covers: KM-400a-3-i
-    # type: unit
+    # test type: unit
     # angle: boundary
     _registry(tmp_path, [{"id": "example", "template_path": reference}])
     with pytest.raises(ValueError, match="template_path"):
@@ -229,7 +229,7 @@ def test_agent_template_reference_cannot_escape_snapshot(tmp_path, reference):
 def test_agent_missing_template_fails_explicitly(tmp_path):
     # covers: KM-400a-1-iv
     # covers: KM-400a-3-i
-    # type: unit
+    # test type: unit
     # angle: failure
     _registry(tmp_path, [{"id": "example", "template_path": "templates/missing.md"}])
     with pytest.raises(ValueError, match="cannot read native source"):
@@ -239,7 +239,7 @@ def test_agent_missing_template_fails_explicitly(tmp_path):
 def test_agent_missing_and_null_template_fields_remain_distinct(tmp_path):
     # covers: KM-400a-1-iv
     # covers: KM-400a-3-i
-    # type: unit
+    # test type: unit
     # angle: boundary
     entries = [{"id": "absent"}, {"id": "null", "template_path": None, "domain": None}]
     _registry(tmp_path, entries)

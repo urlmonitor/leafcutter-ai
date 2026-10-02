@@ -11,12 +11,19 @@ ARCHITECTURE: Dependencies point inward to neutral contracts; see docs/architect
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+from .ports import QueryBackend
+from .query_catalog import QueryCatalog
+
+if TYPE_CHECKING:
+    from .config import KnowledgeConfig
+
 import time
 import asyncio
 from .deadlines import deadline
 from uuid import uuid4
 from .errors import invalid, KnowledgeError
-from .query_models import QueryCandidate, validate_arguments
+from .query_models import QueryCandidate, QueryDescriptor, validate_arguments
 from .query_compile import compile_query, digest_data
 from .query_execution import execute_query
 from .query_store import activate
@@ -25,7 +32,7 @@ from .query_store import activate
 class QueryAdmission:
     """Trusted admission port; the kernel separately enforces catalog-write permission."""
 
-    def __init__(self, catalog: object, backend: object, repository_id: str) -> None:
+    def __init__(self, catalog: QueryCatalog, backend: QueryBackend, repository_id: str) -> None:
         """Bind resources selected by application composition.
 
         Args:
@@ -146,7 +153,9 @@ class QueryAdmission:
         }
 
 
-async def evaluate_candidate(backend: object, candidate: QueryCandidate, pinned: dict) -> dict:
+async def evaluate_candidate(
+    backend: QueryBackend, candidate: QueryCandidate, pinned: dict
+) -> dict:
     """Execute independent fixed checks plus the candidate's declared expectations.
 
     Args:
@@ -203,7 +212,7 @@ async def evaluate_candidate(backend: object, candidate: QueryCandidate, pinned:
 
 
 async def verify_foreign_scope(
-    backend: object, descriptor: object, pinned: dict, arguments: dict
+    backend: QueryBackend, descriptor: QueryDescriptor, pinned: dict, arguments: dict
 ) -> None:
     """Demand that a foreign repository cannot borrow the pinned generation.
 
@@ -227,7 +236,7 @@ async def verify_foreign_scope(
         invalid("admission foreign-scope isolation failed")
 
 
-def build_query_admission(config: object, retriever: object) -> QueryAdmission | None:
+def build_query_admission(config: KnowledgeConfig, retriever: object) -> QueryAdmission | None:
     """Compose the trusted port from an existing backend pool and explicit catalog root.
 
     Args:

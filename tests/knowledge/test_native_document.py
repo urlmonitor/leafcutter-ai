@@ -30,7 +30,7 @@ def _config(root, surfaces):
 def test_document_preserves_complete_frontmatter_and_body(tmp_path):
     # covers: KM-400a-1-vii
     # covers: KM-400a-3-i
-    # type: unit
+    # test type: unit
     # angle: criterion
     from knowledge.native_properties import decode, encode
 
@@ -67,7 +67,7 @@ def test_document_preserves_complete_frontmatter_and_body(tmp_path):
 def test_document_legacy_memory_identity_and_safe_display_fallback(tmp_path):
     # covers: KM-400a-1-vii
     # covers: KM-400a-3-i
-    # type: unit
+    # test type: unit
     # angle: boundary
     body = "```md\n# Example title\n```\n\n# Real title\ntext\n"
     _write(tmp_path, "memory/same.md", None, body)
@@ -87,7 +87,7 @@ def test_document_legacy_memory_identity_and_safe_display_fallback(tmp_path):
 def test_document_excludes_owned_views_without_dropping_authored_guides(tmp_path):
     # covers: KM-400a-1-vii
     # covers: KM-400a-3-i
-    # type: unit
+    # test type: unit
     # angle: boundary
     excluded = [
         "docs/architecture/adrs/ADR-001-a.md",
@@ -116,7 +116,7 @@ def test_document_excludes_owned_views_without_dropping_authored_guides(tmp_path
 def test_document_configured_surfaces_and_product_manifest_views(tmp_path):
     # covers: KM-400a-1-vii
     # covers: KM-400a-3-i
-    # type: unit
+    # test type: unit
     # angle: criterion
     _config(
         tmp_path,
@@ -164,7 +164,7 @@ def test_document_configured_surfaces_and_product_manifest_views(tmp_path):
 def test_document_malformed_frontmatter_fails_explicitly(tmp_path, contents):
     # covers: KM-400a-1-vii
     # covers: KM-400a-3-i
-    # type: unit
+    # test type: unit
     # angle: failure
     path = _write(tmp_path, "docs/invalid.md")
     path.write_text(contents, encoding="utf-8")
@@ -176,7 +176,7 @@ def test_document_malformed_frontmatter_fails_explicitly(tmp_path, contents):
 def test_document_refuses_invalid_or_escaping_surface(tmp_path, entry):
     # covers: KM-400a-1-vii
     # covers: KM-400a-3-i
-    # type: unit
+    # test type: unit
     # angle: boundary
     _config(tmp_path, {"docs": entry})
     with pytest.raises(ValueError):
@@ -186,7 +186,7 @@ def test_document_refuses_invalid_or_escaping_surface(tmp_path, entry):
 def test_document_missing_roots_is_empty(tmp_path):
     # covers: KM-400a-1-vii
     # covers: KM-400a-3-i
-    # type: unit
+    # test type: unit
     # angle: boundary
     assert _extract(tmp_path) == []
 
@@ -194,7 +194,7 @@ def test_document_missing_roots_is_empty(tmp_path):
 def test_document_real_corpus_full_metadata_fidelity():
     # covers: KM-400a-1-vii
     # covers: KM-400a-3-i
-    # type: integration
+    # test type: integration
     # angle: real_artifact
     from knowledge.native_types.common import frontmatter
 

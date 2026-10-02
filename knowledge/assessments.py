@@ -6,13 +6,14 @@ ARCHITECTURE: Neutral read-only consumer; injected actual retrieval outranks pac
 """
 
 from __future__ import annotations
+from .contracts import KnowledgeRetrievalResult, ProjectionSnapshot
 from .assessment_evidence import prepare
 from .assessment_proof import verification
 from .errors import invalid
 
 
 def assess(
-    payload: dict, *, retrieval: object | None = None, manifest: object | None = None
+    payload: dict, *, retrieval: KnowledgeRetrievalResult | None = None, manifest: ProjectionSnapshot | dict | None = None
 ) -> dict:
     """Assess supplied evidence and, when present, the final actual retrieval result.
 
@@ -67,7 +68,7 @@ def assess(
     return result
 
 
-def _declarations(payload: dict, retrieval: object | None) -> list[str]:
+def _declarations(payload: dict, retrieval: KnowledgeRetrievalResult | None) -> list[str]:
     """Use actual canonical links when called from research; ignore packet overrides.
 
     Args:
@@ -94,7 +95,7 @@ def _declarations(payload: dict, retrieval: object | None) -> list[str]:
     ]
 
 
-def _bind_retrieval(result: dict, payload: dict, retrieval: object) -> None:
+def _bind_retrieval(result: dict, payload: dict, retrieval: KnowledgeRetrievalResult) -> None:
     """Refuse to credit supplied reports against failed or differently scoped retrieval.
 
     Args:

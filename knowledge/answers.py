@@ -7,12 +7,14 @@ ARCHITECTURE: Pure neutral consumer; application callers may recompute after tru
 from __future__ import annotations
 
 from collections import Counter
-from typing import TYPE_CHECKING
-from .answer_models import AnswerAssessment, MissingField, PopulationCompleteness
+from typing import TYPE_CHECKING, Literal
+from .answer_models import (
+    AnswerAssessment, AnswerRequirements, AnswerScope, MissingField, PopulationCompleteness,
+)
 from .answer_fields import field_value
 
 if TYPE_CHECKING:
-    from .contracts import KnowledgeRetrievalRequest, KnowledgeRetrievalResult
+    from .contracts import KnowledgeEvidence, KnowledgeRetrievalRequest, KnowledgeRetrievalResult
 
 
 def assess_answer(
@@ -31,7 +33,7 @@ def assess_answer(
     if need is None:
         return None
     items = {item.entity.canonical_id: item for item in result.evidence}
-    limitations = _limitations(request, result, items)
+    limitations = _limitations(request, result, items, need.scope)
     missing = _missing_fields(need.required_fields, items)
     counts = dict(Counter(_work_status(item) for item in items.values()))
     relevant_status = "work_status" in need.required_fields
@@ -42,7 +44,9 @@ def assess_answer(
     complete = not limitations
     hard_failure = _hard_failure(need, result, limitations)
     fulfilled = not missing and not hard_failure and not (need.require_complete and limitations)
-    state = "fulfilled" if fulfilled else ("partial" if items else "unresolved")
+    state: Literal["fulfilled", "partial", "unresolved"] = (
+        "fulfilled" if fulfilled else ("partial" if items else "unresolved")
+    )
     return AnswerAssessment(
         status=state,
         original_question=need.original_question,
@@ -63,7 +67,9 @@ def assess_answer(
     )
 
 
-def _hard_failure(need: object, result: object, limitations: list[str]) -> bool:
+def _hard_failure(
+    need: AnswerRequirements, result: KnowledgeRetrievalResult, limitations: list[str]
+) -> bool:
     """Treat absent execution, scope and exact-clause evidence as non-waivable gaps.
 
     Args:
@@ -90,7 +96,7 @@ def _hard_failure(need: object, result: object, limitations: list[str]) -> bool:
     )
 
 
-def _work_status(item: object) -> str:
+def _work_status(item: KnowledgeEvidence) -> str:
     """Keep absent or malformed implementation status in the unknown bucket."""
     value = field_value(item, "work_status")
     return value if isinstance(value, str) and value else "unknown"
@@ -119,7 +125,8 @@ def _missing_fields(fields: list[str], items: dict) -> list[MissingField]:
 
 
 def _limitations(
-    request: KnowledgeRetrievalRequest, result: KnowledgeRetrievalResult, items: dict
+    request: KnowledgeRetrievalRequest, result: KnowledgeRetrievalResult, items: dict,
+    scope: AnswerScope,
 ) -> list[str]:
     """Require actual completeness and population identity before exact totals.
 
@@ -127,6 +134,7 @@ def _limitations(
         request: Original request and question contract.
         result: Actual bounded response.
         items: Unique actual evidence identities.
+        scope: Validated question population from the original requirements.
 
     Returns:
         Distinct limitations preventing an exact complete answer.
@@ -144,7 +152,6 @@ def _limitations(
         limits.append("requested source revision is not established")
     if request.mode in {"semantic", "hybrid", "precedent"}:
         limits.append("bounded relevance retrieval does not establish a complete population")
-    scope = request.answer_requirements.scope
     if scope.population != "returned_entities":
         actual = result.stats.get("population", {})
         if not _scope_matches(scope, actual):
@@ -157,7 +164,7 @@ def _limitations(
     return list(dict.fromkeys(limits))
 
 
-def _scope_matches(scope: object, actual: dict) -> bool:
+def _scope_matches(scope: AnswerScope, actual: dict) -> bool:
     """Require actual population identity and inclusion to match the question scope."""
     return all(
         actual.get(name) == getattr(scope, name)

@@ -6,6 +6,7 @@ ARCHITECTURE: Mirrors kernel.secrets source precedence using stdlib only; no ker
 
 from __future__ import annotations
 
+from collections.abc import Mapping, Sequence
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -54,7 +55,7 @@ def _read(path: Path, *, explicit: bool = False) -> dict[str, str]:
 
 def environment_sources(
     start: str | Path | None = None, *, env: dict[str, str] | None = None
-) -> list[dict[str, str]]:
+) -> list[Mapping[str, str]]:
     """Return process, named file and nearest ancestor file in precedence order.
 
     Args:
@@ -62,12 +63,12 @@ def environment_sources(
 
 
     Returns:
-        list[dict[str, str]]: Process mapping followed by explicit and discovered file mappings.
+        list[Mapping[str, str]]: Process mapping followed by explicit and discovered file mappings.
 
     Keyword-only env: Optional process-environment mapping used instead of os.environ.
     """
     environment = os.environ if env is None else env
-    sources = [environment]
+    sources: list[Mapping[str, str]] = [environment]
     explicit = (
         Path(environment["LEAFCUTTER_ENV_FILE"]).resolve()
         if environment.get("LEAFCUTTER_ENV_FILE")
@@ -85,7 +86,7 @@ def environment_sources(
     return sources
 
 
-def select_value(sources: list[dict[str, str]], *names: str) -> str | None:
+def select_value(sources: Sequence[Mapping[str, str]], *names: str) -> str | None:
     """Select source before alias priority; never print or persist the selected value.
 
     Args:
@@ -99,8 +100,8 @@ def select_value(sources: list[dict[str, str]], *names: str) -> str | None:
 
 
 def resolve_neo4j(
-    config: KnowledgeConfig | dict, *, env: dict[str, str] | None = None
-) -> list[str]:
+    config: KnowledgeConfig, *, env: dict[str, str] | None = None
+) -> tuple[str, str, str]:
     """Resolve serving aliases; custom variable names remain explicit and fail closed.
 
     Args:
@@ -108,7 +109,7 @@ def resolve_neo4j(
 
 
     Returns:
-        list[str]: URI, username and password in backend constructor order.
+        tuple[str, str, str]: URI, username and password in backend constructor order.
 
     Keyword-only env: Optional process-environment mapping used instead of os.environ.
     """
@@ -125,13 +126,14 @@ def resolve_neo4j(
             invalid("invalid Neo4j URI")
         if host.endswith(".databases.neo4j.io"):
             values[1] = "neo4j"
-    missing = [name for name, value in zip(names, values) if not value]
-    if missing:
+    uri, username, password = values
+    if not uri or not username or not password:
+        missing = [name for name, value in zip(names, values) if not value]
         invalid("enabled Neo4j backend missing settings: " + ", ".join(missing))
-    return values
+    return uri, username, password
 
 
-def resolve_database(config: KnowledgeConfig | dict, *, env: dict[str, str] | None = None) -> str:
+def resolve_database(config: KnowledgeConfig, *, env: dict[str, str] | None = None) -> str:
     """Use an explicit configured database, then environment aliases, then neo4j.
 
     Args:

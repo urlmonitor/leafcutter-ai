@@ -132,8 +132,8 @@ class EnvironmentOverrides:
     """Test seams: any piece set here replaces the production wiring."""
 
     knowledge_retriever: KnowledgeRetriever | None = None
-    query_catalog: object | None = None
-    query_admission: object | None = None
+    query_catalog: QueryCatalog | None = None
+    query_admission: QueryAdmission | None = None
     tracer: Tracer | None = None
     jev_factory: Callable[[], JevPort] | None = None
     bindings: BindingTable | None = None

@@ -5,7 +5,7 @@ from __future__ import annotations
 from contextvars import ContextVar
 import time
 
-deadline = ContextVar("knowledge_deadline", default=None)
+deadline: ContextVar[float | None] = ContextVar("knowledge_deadline", default=None)
 
 
 def remaining_seconds(default: float) -> float:

@@ -6,13 +6,20 @@ ARCHITECTURE: Existing immutable payloads remain authoritative for retrieval.
 
 from __future__ import annotations
 
+from knowledge.contracts import ProjectionSnapshot
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from .neo4j_backend import Neo4jBackend
+    from neo4j import ManagedTransaction
+
 import hashlib
 
 from knowledge.adapters.domain_schema import LABELS, RELATIONSHIPS, display_properties, memberships
 from knowledge.adapters.neo4j_backend import scope_key
 
 
-async def build(db: object, snapshot: object, key: str) -> None:
+async def build(db: Neo4jBackend, snapshot: ProjectionSnapshot, key: str) -> None:
     """Write bounded batches using only allowlisted physical labels and edge types.
 
     Args:
@@ -78,7 +85,7 @@ async def build(db: object, snapshot: object, key: str) -> None:
             )
 
 
-def set_current(db: object, tx: object, key: str, current: bool) -> None:
+def set_current(db: Neo4jBackend, tx: ManagedTransaction, key: str, current: bool) -> None:
     """Update scene filters inside the same transaction as the publication pointer."""
     db._rows(
         tx,

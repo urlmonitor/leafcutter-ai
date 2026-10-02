@@ -14,7 +14,7 @@ import json
 import math
 from pathlib import Path
 import re
-from typing import Any
+from typing import Any, NoReturn, NotRequired, TypedDict, cast
 
 from jsonschema import Draft202012Validator
 import yaml
@@ -32,7 +32,14 @@ _GLOBS_LINE = re.compile(r"^globs:[ \t]*(.*)$((?:\n[ \t]+-[ \t]+.*)*)", re.MULTI
 MAX_RECORD_BYTES = 400_000
 
 
-def _fail(message: str) -> None:
+class _ReferencedRecord(TypedDict):
+    """Fields shared by schema-validated options, criteria and evidence."""
+
+    id: str
+    evidence_ids: NotRequired[list[str]]
+
+
+def _fail(message: str) -> NoReturn:
     raise ValueError(f"Decision: {message}")
 
 
@@ -68,20 +75,25 @@ def validate_metadata(raw: Mapping[str, object]) -> None:
     if error is not None:
         _fail(f"{'/'.join(map(str, error.path)) or '<record>'}: {error.message}")
     _authored_values(data, SCHEMA)
+    # JSON Schema above establishes these collection shapes without coercion.
+    groups = {
+        name: cast(list[_ReferencedRecord], data.get(name, []))
+        for name in ("options", "criteria", "evidence")
+    }
     ids = {}
-    for name in ("options", "criteria", "evidence"):
-        values = [item["id"] for item in data.get(name, [])]
+    for name, items in groups.items():
+        values = [item["id"] for item in items]
         if len(values) != len(set(values)):
             _fail(f"duplicate {name} id")
         ids[name] = set(values)
     if data["selected_option_id"] not in ids["options"]:
         _fail("selected_option_id does not name an option")
     for name in ("options", "criteria"):
-        for item in data.get(name, []):
+        for item in groups[name]:
             if any(value not in ids["evidence"] for value in item.get("evidence_ids", [])):
                 _fail(f"{name}/{item['id']} cites unknown evidence")
     for name in _LINKS:
-        for target in data.get(name, []):
+        for target in cast(list[str], data.get(name, [])):
             if not _ID.fullmatch(target) or target == data["id"]:
                 _fail(f"{name} has malformed or self-link target {target!r}")
     if data.get("repository_wide") is not True and not any(data.get(name) for name in _FILTERS):

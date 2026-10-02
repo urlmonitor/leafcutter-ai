@@ -11,7 +11,7 @@ import hashlib
 import json
 from pathlib import Path
 
-from knowledge.contracts import Entity, Relation, SourceReference
+from knowledge.contracts import Entity, ProjectionSnapshot, Relation, SourceReference
 from knowledge.native_properties import decode, encode
 from knowledge.native_types.common import NativeRecord
 from knowledge.native_types.registry import collect
@@ -48,14 +48,21 @@ def apply_record(entity: Entity, record: NativeRecord) -> Entity:
     return entity.model_copy(update={"properties": properties})
 
 
-def enrich(snapshot, root: Path, *, include_new: bool = True, kinds=None, validated_acs=None):
+def enrich(
+    snapshot: ProjectionSnapshot,
+    root: Path,
+    *,
+    include_new: bool = True,
+    kinds: set[str] | None = None,
+    validated_acs: dict[str, dict] | None = None,
+) -> ProjectionSnapshot:
     """Enrich existing records and add distinct canonical kinds from reviewed readers."""
     records = collect(root, kinds=kinds, validated_acs=validated_acs)
     identities = {(record.kind, record.native_id): record for record in records}
     paths = {(record.kind, record.source_path, record.locator): record for record in records}
     consumed = set()
     nodes = []
-    reference_counts = Counter()
+    reference_counts: Counter[str] = Counter()
     for entity in snapshot.nodes:
         record = identities.get((entity.kind, entity.canonical_id))
         if record is None:

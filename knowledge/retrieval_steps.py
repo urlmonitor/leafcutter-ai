@@ -49,7 +49,7 @@ async def load_generation(
     if snapshot is None:
         out.status = "stale"
         out.warnings.append("pinned generation expired" if state else "no published generation")
-        return
+        return None
     if not state and request.revision != "latest" and request.revision != snapshot.source_sha:
         resolver = getattr(service.backend, "get_revision", None)
         retained = await resolver(request.repository_id, request.revision) if resolver else None
@@ -64,7 +64,7 @@ async def load_generation(
         out.status = "stale"
         out.warnings.append("requested revision is not published")
         if not request.allow_stale:
-            return
+            return None
     target_kinds = {
         "get_related_policies": "Policy",
         "get_previous_decisions": "Decision",
@@ -109,11 +109,17 @@ async def fetch_candidates(
         )
     if request.operation_digest and request.operation_digest != "builtin:1":
         from .query_execution import execute_query
+        from .ports import CompiledQueryBackend
 
+        if not isinstance(service.backend, CompiledQueryBackend):
+            not_ready("backend does not support compiled catalog queries")
+
+        if service.query_catalog is None:
+            invalid("registered operation requires a query catalog")
         descriptor = service.query_catalog.get(
             request.operation, request.operation_version, request.operation_digest
         )
-        rows = await execute_query(
+        query_rows = await execute_query(
             service.backend,
             descriptor,
             request.repository_id,
@@ -122,12 +128,12 @@ async def fetch_candidates(
             min(remaining_candidates, offset + request.budget.max_results + 1),
             request.budget.max_neighbors_per_seed,
         )
-        if rows.truncated:
+        if query_rows.truncated:
             out.warnings.append("query expansion or result bound reached; omitted total unknown")
             out.truncated = True
             out.status = "partial"
-        out.stats["recipe_expansion_truncated"] = rows.truncated
-        return rows, {}, None
+        out.stats["recipe_expansion_truncated"] = query_rows.truncated
+        return query_rows, {}, None
     if request.mode in {"semantic", "hybrid"} or request.operation.startswith("find_similar"):
         rows, provenance, semantic_work = await SemanticSearch(
             service.backend, service.embeddings

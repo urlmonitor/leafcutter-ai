@@ -6,6 +6,11 @@ ARCHITECTURE: Validate every generation before writes; bounded atomic batches ca
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING, Protocol
+
+if TYPE_CHECKING:
+    from .neo4j_backend import Neo4jBackend
+
 import hashlib
 import json
 import logging
@@ -19,7 +24,15 @@ from knowledge.projection.validation import validate_snapshot
 LOGGER = logging.getLogger(__name__)
 
 
-async def inspect(db: object, repository_id: str) -> dict:
+class InspectionReader(Protocol):
+    """Read interface shared by migration and published-generation inspection."""
+
+    async def _run(
+        self, statement: str, parameters: dict | None = None, write: bool = False
+    ) -> list[dict]: ...
+
+
+async def inspect(db: InspectionReader, repository_id: str) -> dict:
     """Read and validate all owned generations; this function never writes.
 
     Args:
@@ -148,7 +161,7 @@ def _validate(meta: dict, nodes: list[dict], edges: list[dict]) -> ProjectionSna
     return snapshot
 
 
-async def migrate(db: object, plan: dict) -> dict:
+async def migrate(db: Neo4jBackend, plan: dict) -> dict:
     """Apply a freshly revalidated plan and verify immutable content after migration.
 
     Args:

@@ -36,13 +36,13 @@ def _entity(**changes):
         },
     }
     values.update(changes)
-    return Entity(**values)
+    return Entity.model_validate(values)
 
 
 def test_test_reference_exposes_complete_contract_and_future_fields(tmp_path):
     # covers: KM-400a-1-xvii
     # covers: KM-400a-3-i
-    # type: unit
+    # test type: unit
     # angle: criterion
     entity = _entity()
     entity.properties.update(
@@ -98,7 +98,7 @@ def test_test_reference_never_observes_current_filesystem(
 ):
     # covers: KM-400a-1-xvii
     # covers: KM-400a-3-i
-    # type: unit
+    # test type: unit
     # angle: boundary
     entity = _entity()
     entity.properties["missing"] = missing
@@ -139,7 +139,7 @@ def test_test_reference_never_observes_current_filesystem(
 def test_test_reference_absent_empty_null_and_false_remain_distinct(tmp_path, properties):
     # covers: KM-400a-1-xvii
     # covers: KM-400a-3-i
-    # type: unit
+    # test type: unit
     # angle: boundary
     entity = _entity(title="", summary="", properties=properties)
     entity.source.locator = ""
@@ -155,7 +155,7 @@ def test_test_reference_absent_empty_null_and_false_remain_distinct(tmp_path, pr
 def test_test_reference_removes_only_exact_adapter_keys(tmp_path):
     # covers: KM-400a-1-xvii
     # covers: KM-400a-3-i
-    # type: unit
+    # test type: unit
     # angle: boundary
     entity = _entity(
         properties={
@@ -182,7 +182,7 @@ def test_test_reference_removes_only_exact_adapter_keys(tmp_path):
 def test_test_reference_copies_nested_data_in_both_directions(tmp_path):
     # covers: KM-400a-1-xvii
     # covers: KM-400a-3-i
-    # type: unit
+    # test type: unit
     # angle: boundary
     entity = _entity(properties={"nested": [{"items": [1, 2]}]})
     record = _reader().from_entity(tmp_path, entity)
@@ -200,7 +200,7 @@ def test_test_reference_copies_nested_data_in_both_directions(tmp_path):
 def test_test_reference_rejects_other_kinds_without_path_reclassification(tmp_path, kind):
     # covers: KM-400a-1-xvii
     # covers: KM-400a-3-i
-    # type: unit
+    # test type: unit
     # angle: failure
     with pytest.raises(ValueError, match="Test"):
         _reader().from_entity(tmp_path, _entity(kind=kind))
@@ -213,7 +213,7 @@ def test_test_reference_rejects_other_kinds_without_path_reclassification(tmp_pa
 def test_test_reference_revalidates_source_paths_without_repair(tmp_path, path):
     # covers: KM-400a-1-xvii
     # covers: KM-400a-3-i
-    # type: unit
+    # test type: unit
     # angle: failure
     entity = _entity()
     entity.source.path = path
@@ -224,7 +224,7 @@ def test_test_reference_revalidates_source_paths_without_repair(tmp_path, path):
 def test_test_reference_rejects_non_entity_and_invalid_pinned_source(tmp_path):
     # covers: KM-400a-1-xvii
     # covers: KM-400a-3-i
-    # type: unit
+    # test type: unit
     # angle: failure
     with pytest.raises(TypeError, match="Entity"):
         _reader().from_entity(tmp_path, _entity().model_dump(mode="python"))
@@ -240,7 +240,7 @@ def test_test_reference_rejects_non_entity_and_invalid_pinned_source(tmp_path):
 def test_test_reference_preserves_existing_classification_without_invention(tmp_path, path):
     # covers: KM-400a-1-xvii
     # covers: KM-400a-3-i
-    # type: unit
+    # test type: unit
     # angle: boundary
     entity = _entity()
     entity.source.path = path

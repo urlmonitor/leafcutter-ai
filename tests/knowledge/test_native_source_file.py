@@ -35,13 +35,13 @@ def _entity(**changes):
         },
     }
     value.update(changes)
-    return Entity(**value)
+    return Entity.model_validate(value)
 
 
 def test_source_file_complete_contract_and_nested_future_fields(tmp_path):
     # covers: KM-400a-1-xvi
     # covers: KM-400a-3-i
-    # type: unit
+    # test type: unit
     # angle: criterion
     entity = _entity()
     entity.source.locator = "retained locator"
@@ -81,7 +81,7 @@ def test_source_file_never_refreshes_pinned_existence_or_hash(
 ):
     # covers: KM-400a-1-xvi
     # covers: KM-400a-3-i
-    # type: unit
+    # test type: unit
     # angle: boundary
     entity = _entity()
     entity.properties["missing"] = missing
@@ -118,7 +118,7 @@ def test_source_file_never_refreshes_pinned_existence_or_hash(
 def test_source_file_absence_empty_and_false_are_distinct(tmp_path):
     # covers: KM-400a-1-xvi
     # covers: KM-400a-3-i
-    # type: unit
+    # test type: unit
     # angle: boundary
     entity = _entity(
         title="",
@@ -137,7 +137,7 @@ def test_source_file_absence_empty_and_false_are_distinct(tmp_path):
 def test_source_file_repeat_enrichment_removes_only_exact_internal_keys(tmp_path):
     # covers: KM-400a-1-xvi
     # covers: KM-400a-3-i
-    # type: unit
+    # test type: unit
     # angle: boundary
     entity = _entity(
         properties={
@@ -162,7 +162,7 @@ def test_source_file_repeat_enrichment_removes_only_exact_internal_keys(tmp_path
 def test_source_file_nested_values_are_independent_copies(tmp_path):
     # covers: KM-400a-1-xvi
     # covers: KM-400a-3-i
-    # type: unit
+    # test type: unit
     # angle: boundary
     entity = _entity(properties={"nested": [{"values": [1, 2]}]})
     record = _read(tmp_path, entity)
@@ -176,7 +176,7 @@ def test_source_file_nested_values_are_independent_copies(tmp_path):
 def test_source_file_rejects_other_entity_kinds(tmp_path, kind):
     # covers: KM-400a-1-xvi
     # covers: KM-400a-3-i
-    # type: unit
+    # test type: unit
     # angle: failure
     with pytest.raises(ValueError, match="SourceFile"):
         _read(tmp_path, _entity(kind=kind))
@@ -189,7 +189,7 @@ def test_source_file_rejects_other_entity_kinds(tmp_path, kind):
 def test_source_file_revalidates_invalid_source_path(tmp_path, path):
     # covers: KM-400a-1-xvi
     # covers: KM-400a-3-i
-    # type: unit
+    # test type: unit
     # angle: failure
     entity = _entity()
     entity.source.path = path
@@ -200,7 +200,7 @@ def test_source_file_revalidates_invalid_source_path(tmp_path, path):
 def test_source_file_rejects_non_entity_and_invalid_reference(tmp_path):
     # covers: KM-400a-1-xvi
     # covers: KM-400a-3-i
-    # type: unit
+    # test type: unit
     # angle: failure
     with pytest.raises(TypeError, match="Entity"):
         _read(tmp_path, _entity().model_dump(mode="python"))

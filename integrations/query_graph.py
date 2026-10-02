@@ -83,7 +83,7 @@ async def _clarify_scope(state: QueryState, config: RunnableConfig) -> dict:
     run = _runtime(config)
     plan = state["plan"]
     if missing_scope(plan.get("answer_requirements")) or plan.get("answer_planning_missing"):
-        return {"result": scope_clarification(run["invocation"], run["ctx"], plan, state["usage"])}
+        return {"result": scope_clarification(run["invocation"], run["ctx"], plan, tuple(state["usage"]))}
     return {}
 
 

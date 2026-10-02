@@ -6,11 +6,12 @@ ARCHITECTURE: Pure quote validation over scoped input; no new inspection permiss
 """
 
 from __future__ import annotations
+from .contracts import KnowledgeRetrievalResult
 from .assessment_evidence import quoted, structured
 
 
 def interpret(
-    payload: dict, evidence: list[dict], declarations: list[str], retrieval: object | None = None
+    payload: dict, evidence: list[dict], declarations: list[str], retrieval: KnowledgeRetrievalResult | None = None
 ) -> dict:
     """Dispatch a conditional interpretation using only provided attributable content.
 

@@ -10,6 +10,7 @@ from __future__ import annotations
 from datetime import date, datetime
 import json
 import math
+from typing import cast
 
 RESERVED = frozenset(
     {
@@ -69,7 +70,8 @@ def encode(metadata: dict) -> dict:
     """Expose every authored leaf, retaining structure without adding defaults."""
     if not isinstance(metadata, dict):
         raise ValueError("native metadata must be an object")
-    props, shape = {}, {}
+    props: dict[str, object] = {}
+    shape: dict[str, dict[str, object]] = {}
 
     def visit(value: object, parts: tuple[str, ...]) -> None:
         pointer = _pointer(parts) if parts else ""
@@ -146,7 +148,8 @@ def _restore(value: object, kind: str) -> object:
     if kind == "datetime" and isinstance(value, str):
         return datetime.fromisoformat(value)
     if kind == "big_integer":
-        return int(value)
+        # The encoder stores integers outside Neo4j's range as decimal strings.
+        return int(cast(str, value))
     return value
 
 
@@ -196,4 +199,5 @@ def decode(properties: dict) -> dict:
             return int(value)
         return _restore(value, kind)
 
-    return visit(())
+    # encode() always describes an object at the root.
+    return cast(dict, visit(()))

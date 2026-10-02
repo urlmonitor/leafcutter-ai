@@ -13,6 +13,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
+    from neo4j import ManagedTransaction
     from knowledge.adapters.neo4j_backend import Neo4jBackend
     from knowledge.contracts import ProjectionSnapshot
 
@@ -144,7 +145,7 @@ async def switch_active(
     key = scope_key(repository_id, generation_id)
     expected = scope_key(repository_id, expected_generation) if expected_generation else None
 
-    def transaction(tx: object) -> object:
+    def transaction(tx: ManagedTransaction) -> bool:
         """Serialize pointer comparison and publication under one write lock.
 
         Args:
@@ -227,7 +228,7 @@ async def cleanup(
     key = scope_key(repository_id, generation_id)
     cutoff = (time.time() if now is None else now) - retention_seconds
 
-    def transaction(tx: object) -> object:
+    def transaction(tx: ManagedTransaction) -> list[str] | None:
         """Delete only an inactive generation whose retention has elapsed.
 
         Args:

@@ -160,7 +160,7 @@ def _load(
 
 
 def _optional_diagnostics(
-    root: str | Path | None,
+    root: str | Path,
     graph: KnowledgeMap,
     selected: dict[str, dict],
     records: dict[str, dict],
@@ -223,7 +223,7 @@ def _validate_node_ids(
     Returns:
         Count after enforcing the specified bound.
     """
-    seen = {}
+    seen: dict[str, str] = {}
     excluded = 0
     for surface, definition in meta.items():
         for node in extract_nodes(surface, definition["path"]):

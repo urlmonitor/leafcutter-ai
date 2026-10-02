@@ -6,6 +6,8 @@ ARCHITECTURE: Parent-field traversal and incoming depends_on only; no caller Cyp
 """
 
 from __future__ import annotations
+
+from .ports import KnowledgeBackend
 from .contracts import (
     Relation,
     Entity,
@@ -17,7 +19,7 @@ from .answer_models import AnswerScope
 
 
 async def retrieve_population(
-    backend: object,
+    backend: KnowledgeBackend,
     request: KnowledgeRetrievalRequest,
     out: KnowledgeRetrievalResult,
     snapshot: ProjectionSnapshot,
@@ -103,7 +105,7 @@ def _select(nodes: list[Entity], root: Entity, scope: AnswerScope) -> list[Entit
 
 
 async def _children(
-    backend: object,
+    backend: KnowledgeBackend,
     request: KnowledgeRetrievalRequest,
     snapshot: ProjectionSnapshot,
     roots: list[Entity],
@@ -165,7 +167,7 @@ async def _children(
 
 
 async def _dependents(
-    backend: object,
+    backend: KnowledgeBackend,
     request: KnowledgeRetrievalRequest,
     out: KnowledgeRetrievalResult,
     snapshot: ProjectionSnapshot,
@@ -208,7 +210,9 @@ async def _dependents(
     )
     if set(ids) != {node.canonical_id for node in seeds}:
         definition["complete"] = False
-    found, provenance, work = {}, {}, len(seeds)
+    found: dict[str, Entity] = {}
+    provenance: dict = {}
+    work = len(seeds)
     for seed in seeds:
         limit = min(remaining - work, request.budget.max_neighbors_per_seed + 1)
         if limit <= 0:

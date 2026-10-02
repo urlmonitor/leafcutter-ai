@@ -6,6 +6,7 @@ ARCHITECTURE: Pure conditional assessment; no repository discovery or execution.
 """
 
 from __future__ import annotations
+from typing import TypeGuard
 from .assessment_evidence import structured
 from .assessment_quotes import quoted_report
 
@@ -27,7 +28,11 @@ def verification(payload: dict, evidence: list[dict], declarations: list[str]) -
             continue
         content = structured(item)
         quoted = quoted_report(item) if content is None else None
-        if not _valid_receipt(content) and quoted is None:
+        if _valid_receipt(content):
+            report = content
+        elif quoted is not None:
+            report = quoted
+        else:
             limitations.append(
                 "execution report format or required identity is unsupported: "
                 + item["evidence_id"]
@@ -35,7 +40,7 @@ def verification(payload: dict, evidence: list[dict], declarations: list[str]) -
             continue
         receipts.append(
             {
-                **_reported_fields(content or quoted),
+                **_reported_fields(report),
                 "proof_kind": "supplied_quoted_report" if quoted else "supplied_execution_report",
                 "evidence_id": item["evidence_id"],
                 "source": item["source"],
@@ -84,7 +89,7 @@ def _reported_fields(content: dict) -> dict:
     return {name: value for name, value in content.items() if name in names}
 
 
-def _valid_receipt(value: dict | None) -> bool:
+def _valid_receipt(value: dict | None) -> TypeGuard[dict]:
     """Accept the explicit structured report format while retaining every claimed state.
 
     Args:

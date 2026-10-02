@@ -11,14 +11,16 @@ from collections import Counter
 import hashlib
 import json
 import time
+from typing import cast
 from .ports import KnowledgeRetriever
-from .contracts import KnowledgeRetrievalRequest
+from .contracts import KnowledgeRetrievalRequest, KnowledgeRetrievalResult
+from .query_catalog import QueryCatalog
 from .errors import invalid, KnowledgeError
 from .evaluation_assertions import judge
 
 
 async def evaluate(
-    retriever: KnowledgeRetriever, cases: list[dict] | dict, *, query_catalog: object | None = None
+    retriever: KnowledgeRetriever, cases: list[dict] | dict, *, query_catalog: QueryCatalog | None = None
 ) -> dict:
     """Execute reviewed cases; expectations are consumed only after actual retrieval.
 
@@ -32,7 +34,7 @@ async def evaluate(
     Keyword-only query_catalog: Same trusted catalog used by normal research.
     """
     rich = isinstance(cases, dict)
-    pack = cases if rich else {"cases": cases}
+    pack = cases if isinstance(cases, dict) else {"cases": cases}
     if rich and pack.get("evaluation_version") != "2":
         invalid(
             "evaluation objects require explicit version 2 adaptation; planned specifications are not runnable"
@@ -41,7 +43,7 @@ async def evaluate(
     if not isinstance(authored, list) or len(authored) > 500:
         invalid("evaluation needs at most 500 explicit cases")
     rows = [await _case(retriever, case, pack, rich, query_catalog) for case in authored]
-    report = {
+    report: dict[str, object] = {
         "evaluation_version": "2" if rich else "1",
         "cases": rows,
         "semantic_usefulness_proven": False,
@@ -72,7 +74,7 @@ async def evaluate(
 
 
 async def _case(
-    retriever: KnowledgeRetriever, case: dict, pack: dict, rich: bool, catalog: object | None
+    retriever: KnowledgeRetriever, case: dict, pack: dict, rich: bool, catalog: QueryCatalog | None
 ) -> dict:
     """Run a case once, retaining not-run state and independent expectations.
 
@@ -164,7 +166,7 @@ def _scope_judgments(actual: dict, case: dict, pack: dict) -> list[dict]:
 
 
 async def _execute_case(
-    retriever: KnowledgeRetriever, case: dict, catalog: object | None
+    retriever: KnowledgeRetriever, case: dict, catalog: QueryCatalog | None
 ) -> tuple[dict, dict]:
     """Invoke the actual public retrieval or assessment consumer before any grading.
 
@@ -191,12 +193,16 @@ async def _execute_case(
             "measurement_kind": "supplied_evidence_assessment",
         }
     raw = case.get("request")
-    request = catalog.request(raw) if catalog else KnowledgeRetrievalRequest.model_validate(raw)
+    request = (
+        catalog.request(cast(dict, raw))
+        if catalog
+        else KnowledgeRetrievalRequest.model_validate(raw)
+    )
     result = await retriever.retrieve(request)
     return result.model_dump(mode="json"), _metrics(case, request, result)
 
 
-def _metrics(case: dict, request: KnowledgeRetrievalRequest, result: object) -> dict:
+def _metrics(case: dict, request: KnowledgeRetrievalRequest, result: KnowledgeRetrievalResult) -> dict:
     """Measure relevance only for successful complete retrieval, retaining every state.
 
     Args:

@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import re
 
+from knowledge.contracts import Entity, ProjectionSnapshot
 from knowledge.native_types.registry import LABELS
 
 RELATIONSHIPS = {
@@ -50,7 +51,7 @@ def storage_statement(statement: str) -> str:
     )
 
 
-def display_properties(entity: object, components: list[str]) -> dict:
+def display_properties(entity: Entity, components: list[str]) -> dict:
     """Expose exact source identity and declared memberships as ordinary properties.
 
     Args:
@@ -98,9 +99,9 @@ def display_properties(entity: object, components: list[str]) -> dict:
     return result
 
 
-def memberships(snapshot: object) -> dict[str, list[str]]:
+def memberships(snapshot: ProjectionSnapshot) -> dict[str, list[str]]:
     """Map direct source-declared component edges to filter values."""
-    result = {node.canonical_id: [] for node in snapshot.nodes}
+    result: dict[str, list[str]] = {node.canonical_id: [] for node in snapshot.nodes}
     for edge in snapshot.edges:
         if edge.edge_type == "component_membership":
             result[edge.source_id].append(edge.target_id)

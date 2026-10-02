@@ -7,6 +7,7 @@ ARCHITECTURE: Pure merge and coverage guards over existing research state.
 from __future__ import annotations
 
 import json
+from typing import cast
 from kernel.contracts.enums import NeedStatus
 from kernel.capabilities.research.state import Collected
 from pydantic import JsonValue
@@ -24,7 +25,7 @@ def merge_assessments(out: Collected, incoming: dict[str, dict[str, JsonValue]])
         if previous is None or previous == report:
             out.assessments[need_id] = report
             continue
-        reports = previous.get("reports", [previous]) if previous.get("assessment_conflict") else [previous]
+        reports = cast(list[JsonValue], previous.get("reports", [previous])) if previous.get("assessment_conflict") else [previous]
         keyed = {json.dumps(item, sort_keys=True): item for item in [*reports, report]}
         out.assessments[need_id] = {
             "status": "unresolved", "assessment_conflict": True,

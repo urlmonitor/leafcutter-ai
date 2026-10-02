@@ -10,6 +10,7 @@ DECISION HISTORY
 
 from __future__ import annotations
 
+from types import ModuleType
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -36,7 +37,7 @@ class SourceValidationError(ValueError):
         )
 
 
-def _validator(root: Path) -> tuple[object, dict, set[str]]:
+def _validator(root: Path) -> tuple[ModuleType, dict, set[str]]:
     """Load the trusted AC validator, schema and snapshot component registry.
 
     Args:

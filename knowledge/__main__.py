@@ -18,7 +18,7 @@ from .config import KnowledgeConfig, build_retriever
 from .contracts import KnowledgeRetrievalRequest
 
 
-async def run(args: object, *, observer: object | None = None) -> dict:
+async def run(args: argparse.Namespace, *, observer: object | None = None) -> dict:
     """Execute one standalone JSON command and release owned resources.
 
     Args:

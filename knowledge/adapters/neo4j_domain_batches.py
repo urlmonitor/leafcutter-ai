@@ -6,6 +6,11 @@ ARCHITECTURE: Each batch locks the repository, checks its pointer and commits at
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from knowledge.adapters.neo4j_backend import Neo4jBackend
+
 from knowledge.adapters.domain_schema import (
     LABELS,
     RELATIONSHIPS,
@@ -16,7 +21,7 @@ from knowledge.adapters.domain_schema import (
 from knowledge.contracts import ProjectionSnapshot
 
 
-async def locked(db: object, plan: dict, statement: str, parameters: dict) -> None:
+async def locked(db: Neo4jBackend, plan: dict, statement: str, parameters: dict) -> None:
     """Execute migration-only raw Cypher under an expected-publication check.
 
     Args:
@@ -39,7 +44,7 @@ async def locked(db: object, plan: dict, statement: str, parameters: dict) -> No
     await db._transaction(transaction, True)
 
 
-async def migrate_generation(db: object, plan: dict, group: dict) -> None:
+async def migrate_generation(db: Neo4jBackend, plan: dict, group: dict) -> None:
     """Relabel nodes in place and atomically replace each legacy edge with its typed copy."""
     snapshot = ProjectionSnapshot.model_validate(group["snapshot"])
     components = memberships(snapshot)
@@ -100,7 +105,7 @@ async def migrate_generation(db: object, plan: dict, group: dict) -> None:
     )
 
 
-async def finish_repository(db: object, plan: dict) -> None:
+async def finish_repository(db: Neo4jBackend, plan: dict) -> None:
     """Publish readable metadata and remove only unused legacy schema definitions."""
     await locked(
         db,

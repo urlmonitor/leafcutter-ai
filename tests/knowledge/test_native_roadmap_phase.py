@@ -44,7 +44,7 @@ def _config(root, path):
 def test_phase_fields_context_order_and_future_fields_are_lossless(tmp_path):
     # covers: KM-400a-1-viii
     # covers: KM-400a-3-i
-    # type: unit
+    # test type: unit
     # angle: criterion
     phases = [
         _phase(
@@ -88,7 +88,7 @@ def test_phase_fields_context_order_and_future_fields_are_lossless(tmp_path):
 def test_optional_fields_remain_absent_and_empty_lists_remain_present(tmp_path):
     # covers: KM-400a-1-viii
     # covers: KM-400a-3-i
-    # type: unit
+    # test type: unit
     # angle: boundary
     source = _write(tmp_path)
     (record,) = _extract(tmp_path)
@@ -101,7 +101,7 @@ def test_optional_fields_remain_absent_and_empty_lists_remain_present(tmp_path):
 def test_configured_source_and_nonempty_description(tmp_path):
     # covers: KM-400a-1-viii
     # covers: KM-400a-3-i
-    # type: unit
+    # test type: unit
     # angle: seam
     _config(tmp_path, "plans/custom.json")
     source = _write(tmp_path, [_phase(description="Exact description")], path="plans/custom.json")
@@ -114,7 +114,7 @@ def test_configured_source_and_nonempty_description(tmp_path):
 def test_absent_optional_source_returns_no_records(tmp_path):
     # covers: KM-400a-1-viii
     # covers: KM-400a-3-i
-    # type: unit
+    # test type: unit
     # angle: boundary
     assert _extract(tmp_path) == []
     _config(tmp_path, "plans/absent.json")
@@ -125,7 +125,7 @@ def test_absent_optional_source_returns_no_records(tmp_path):
 def test_malformed_source_fails(tmp_path, contents):
     # covers: KM-400a-1-viii
     # covers: KM-400a-3-i
-    # type: unit
+    # test type: unit
     # angle: failure
     _write(tmp_path)
     (tmp_path / "docs/roadmap.json").write_text(contents, encoding="utf-8")
@@ -150,7 +150,7 @@ def test_malformed_source_fails(tmp_path, contents):
 def test_invalid_phase_shape_fails(tmp_path, changes):
     # covers: KM-400a-1-viii
     # covers: KM-400a-3-i
-    # type: unit
+    # test type: unit
     # angle: failure
     _write(tmp_path, [_phase(**changes)])
     with pytest.raises(ValueError):
@@ -160,7 +160,7 @@ def test_invalid_phase_shape_fails(tmp_path, changes):
 def test_duplicate_ids_fail(tmp_path):
     # covers: KM-400a-1-viii
     # covers: KM-400a-3-i
-    # type: unit
+    # test type: unit
     # angle: failure
     _write(tmp_path, [_phase(), _phase(title="A second title")])
     with pytest.raises(ValueError, match="duplicate"):
@@ -180,7 +180,7 @@ def test_duplicate_ids_fail(tmp_path):
 def test_invalid_root_context_fails(tmp_path, context):
     # covers: KM-400a-1-viii
     # covers: KM-400a-3-i
-    # type: unit
+    # test type: unit
     # angle: failure
     _write(tmp_path, **context)
     with pytest.raises(ValueError):
@@ -200,7 +200,7 @@ def test_invalid_root_context_fails(tmp_path, context):
 def test_configured_path_escape_fails_even_when_target_absent(tmp_path, path):
     # covers: KM-400a-1-viii
     # covers: KM-400a-3-i
-    # type: unit
+    # test type: unit
     # angle: boundary
     _config(tmp_path, path)
     with pytest.raises(ValueError):
@@ -210,7 +210,7 @@ def test_configured_path_escape_fails_even_when_target_absent(tmp_path, path):
 def test_real_roadmap_all_fields_and_context_match_source():
     # covers: KM-400a-1-viii
     # covers: KM-400a-3-i
-    # type: integration
+    # test type: integration
     # angle: real_artifact
     root = Path(__file__).resolve().parents[2]
     source = json.loads((root / "docs/roadmap.json").read_text(encoding="utf-8"))

@@ -37,7 +37,7 @@ def _config(root, value):
 def test_native_glossary_preserves_fields_and_exact_markdown(tmp_path):
     # covers: KM-400a-1-ix
     # covers: KM-400a-3-i
-    # type: unit
+    # test type: unit
     # angle: criterion
     metadata = {
         "title": "Whole glossary",
@@ -70,7 +70,7 @@ def test_native_glossary_preserves_fields_and_exact_markdown(tmp_path):
 def test_native_glossary_ignores_comments_and_fences_without_truncation(tmp_path):
     # covers: KM-400a-1-ix
     # covers: KM-400a-3-i
-    # type: unit
+    # test type: unit
     # angle: boundary
     prefix = "<!--\n### Comment example\n-->\n```md\n### Fenced introduction\n```\n"
     definition = """\nDefinition before examples.
@@ -109,7 +109,7 @@ Real final paragraph.
 def test_native_glossary_fence_info_does_not_open_html_comment(tmp_path):
     # covers: KM-400a-1-ix
     # covers: KM-400a-3-i
-    # type: unit
+    # test type: unit
     # angle: boundary
     definition = "```<!--example\n### Fake\n<!-- also fenced\n```\nAfter the fence.\n"
     _write(tmp_path, "### First\n" + definition + "### Second\nVisible.\n")
@@ -121,7 +121,7 @@ def test_native_glossary_fence_info_does_not_open_html_comment(tmp_path):
 def test_native_glossary_true_section_boundaries_and_empty_definition(tmp_path):
     # covers: KM-400a-1-ix
     # covers: KM-400a-3-i
-    # type: unit
+    # test type: unit
     # angle: boundary
     _write(
         tmp_path,
@@ -138,7 +138,7 @@ def test_native_glossary_true_section_boundaries_and_empty_definition(tmp_path):
 def test_native_glossary_identities_survive_insertion_and_reordering(tmp_path):
     # covers: KM-400a-1-ix
     # covers: KM-400a-3-i
-    # type: unit
+    # test type: unit
     # angle: boundary
     terms = ["create-ticket.js", "ticket creation pipeline", "A/B", "A B", "A%2FB"]
     _write(tmp_path, "".join(f"### {term}\nDefinition of {term}.\n" for term in terms))
@@ -160,7 +160,7 @@ def test_native_glossary_identities_survive_insertion_and_reordering(tmp_path):
 def test_native_glossary_duplicate_normalized_terms_fail(tmp_path, second):
     # covers: KM-400a-1-ix
     # covers: KM-400a-3-i
-    # type: unit
+    # test type: unit
     # angle: failure
     _write(tmp_path, f"### Name\nFirst.\n### {second}\nSecond.\n")
     with pytest.raises(ValueError, match="duplicate.*term"):
@@ -170,7 +170,7 @@ def test_native_glossary_duplicate_normalized_terms_fail(tmp_path, second):
 def test_native_glossary_custom_path_and_absent_surface_default(tmp_path):
     # covers: KM-400a-1-ix
     # covers: KM-400a-3-i
-    # type: unit
+    # test type: unit
     # angle: seam
     _write(tmp_path, "### Default\nDefault definition.\n")
     _config(tmp_path, {"surfaces": {"docs": {"path": "docs/"}}})
@@ -202,7 +202,7 @@ def test_native_glossary_custom_path_and_absent_surface_default(tmp_path):
 def test_native_glossary_invalid_configuration_fails(tmp_path, value):
     # covers: KM-400a-1-ix
     # covers: KM-400a-3-i
-    # type: unit
+    # test type: unit
     # angle: failure
     _config(tmp_path, value)
     with pytest.raises(ValueError):
@@ -212,7 +212,7 @@ def test_native_glossary_invalid_configuration_fails(tmp_path, value):
 def test_native_glossary_symlink_outside_snapshot_fails(tmp_path):
     # covers: KM-400a-1-ix
     # covers: KM-400a-3-i
-    # type: unit
+    # test type: unit
     # angle: failure
     source = tmp_path / "snapshot"
     source.mkdir()
@@ -252,7 +252,7 @@ def test_native_glossary_symlink_outside_snapshot_fails(tmp_path):
 def test_native_glossary_malformed_frontmatter_fails(tmp_path, text):
     # covers: KM-400a-1-ix
     # covers: KM-400a-3-i
-    # type: unit
+    # test type: unit
     # angle: failure
     _write(tmp_path, text)
     with pytest.raises(ValueError):
@@ -262,7 +262,7 @@ def test_native_glossary_malformed_frontmatter_fails(tmp_path, text):
 def test_native_glossary_missing_and_empty_store_emit_no_placeholder(tmp_path):
     # covers: KM-400a-1-ix
     # covers: KM-400a-3-i
-    # type: unit
+    # test type: unit
     # angle: boundary
     assert _extract(tmp_path) == []
     _write(tmp_path, "# Glossary\nIntroduction.\n### \nNo named term.\n")
@@ -276,7 +276,7 @@ def test_native_glossary_missing_and_empty_store_emit_no_placeholder(tmp_path):
 def test_native_glossary_real_corpus_matches_all_authored_sections():
     # covers: KM-400a-1-ix
     # covers: KM-400a-3-i
-    # type: integration
+    # test type: integration
     # angle: real_artifact
     root = Path(__file__).resolve().parents[2]
     from knowledge.native_types.common import frontmatter

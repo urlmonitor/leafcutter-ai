@@ -19,12 +19,12 @@ def _registry(root, components):
     return path
 
 
-def test_component_preserves_every_field_and_registry_identity(tmp_path):
+def test_component_preserves_every_field_and_registry_identity(tmp_path) -> None:
     # covers: KM-400a-1-iii
     # covers: KM-400a-3-i
-    # type: unit
+    # test type: unit
     # angle: criterion
-    entries = {
+    entries: dict[str, dict[str, object]] = {
         "z~component/1": {
             "id": "z~component/1",
             "name": "Exact registry name",
@@ -43,7 +43,9 @@ def test_component_preserves_every_field_and_registry_identity(tmp_path):
         "a_component": {"id": "a_component", "detail_ref": None},
     }
     path = _registry(tmp_path, entries)
-    document = tmp_path / entries["z~component/1"]["detail_ref"]
+    detail_ref = entries["z~component/1"]["detail_ref"]
+    assert isinstance(detail_ref, str)
+    document = tmp_path / detail_ref
     document.parent.mkdir(parents=True)
     document.write_text(
         "---\n" + yaml.safe_dump({"type": "reference", "status": "draft"}) + "---\nBody",
@@ -72,7 +74,7 @@ def test_component_preserves_every_field_and_registry_identity(tmp_path):
 def test_component_real_registry_fields_match_exact_entries():
     # covers: KM-400a-1-iii
     # covers: KM-400a-3-i
-    # type: integration
+    # test type: integration
     # angle: real_artifact
     root = Path(__file__).resolve().parents[2]
     entries = json.loads((root / "docs/components.json").read_text(encoding="utf-8"))["components"]
@@ -96,7 +98,7 @@ def test_component_real_registry_fields_match_exact_entries():
 def test_component_absent_registry_ignores_architecture_documents(tmp_path):
     # covers: KM-400a-1-iii
     # covers: KM-400a-3-i
-    # type: unit
+    # test type: unit
     # angle: boundary
     document = tmp_path / "docs/architecture/components/unregistered.md"
     document.parent.mkdir(parents=True)
@@ -113,7 +115,7 @@ def test_component_absent_registry_ignores_architecture_documents(tmp_path):
 def test_component_malformed_registry_fails_explicitly(tmp_path, contents):
     # covers: KM-400a-1-iii
     # covers: KM-400a-3-i
-    # type: unit
+    # test type: unit
     # angle: failure
     path = tmp_path / "docs/components.json"
     path.parent.mkdir()
@@ -125,7 +127,7 @@ def test_component_malformed_registry_fails_explicitly(tmp_path, contents):
 def test_component_identity_conflict_fails_without_rewriting(tmp_path):
     # covers: KM-400a-1-iii
     # covers: KM-400a-3-i
-    # type: unit
+    # test type: unit
     # angle: failure
     path = _registry(tmp_path, {"registered": {"id": "other"}})
     before = path.read_bytes()
@@ -148,19 +150,23 @@ def test_component_identity_conflict_fails_without_rewriting(tmp_path):
 def test_component_reference_cannot_escape_snapshot(tmp_path, reference):
     # covers: KM-400a-1-iii
     # covers: KM-400a-3-i
-    # type: unit
+    # test type: unit
     # angle: boundary
     _registry(tmp_path, {"component": {"id": "component", "detail_ref": reference}})
     with pytest.raises(ValueError, match="detail_ref.*snapshot"):
         _extract(tmp_path)
 
 
-def test_component_nonstring_presentation_fields_remain_authored(tmp_path):
+def test_component_nonstring_presentation_fields_remain_authored(tmp_path) -> None:
     # covers: KM-400a-1-iii
     # covers: KM-400a-3-i
-    # type: unit
+    # test type: unit
     # angle: boundary
-    entry = {"name": None, "description": {"future": "shape"}, "primary_code": []}
+    entry: dict[str, object] = {
+        "name": None,
+        "description": {"future": "shape"},
+        "primary_code": [],
+    }
     _registry(tmp_path, {"legacy": entry})
     (record,) = _extract(tmp_path)
     assert record.metadata == entry

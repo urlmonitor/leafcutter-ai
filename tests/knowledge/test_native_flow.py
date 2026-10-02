@@ -50,7 +50,7 @@ def _entry(native_id="leafcutter/example", path="flows/leafcutter/example.flow.j
 def test_flow_all_nested_fields_preserved_and_manifest_separate(tmp_path):
     # covers: KM-400a-1-x
     # covers: KM-400a-3-i
-    # type: unit
+    # test type: unit
     # angle: criterion
     raw = _flow()
     raw.update(
@@ -145,7 +145,7 @@ def test_flow_all_nested_fields_preserved_and_manifest_separate(tmp_path):
 def test_flow_unregistered_sources_and_empty_shapes_stay_visible(tmp_path):
     # covers: KM-400a-1-x
     # covers: KM-400a-3-i
-    # type: unit
+    # test type: unit
     # angle: boundary
     raw = _flow()
     raw.update({"superseded_by": None, "branches": [], "provenance": [], "tags": []})
@@ -164,7 +164,7 @@ def test_flow_unregistered_sources_and_empty_shapes_stay_visible(tmp_path):
 def test_flow_real_corpus_deep_equality_and_no_rewrites():
     # covers: KM-400a-1-x
     # covers: KM-400a-3-i
-    # type: integration
+    # test type: integration
     # angle: real_artifact
     root = Path(__file__).resolve().parents[2]
     paths = sorted((root / "docs/product-truth/flows").rglob("*.flow.json"))
@@ -178,16 +178,17 @@ def test_flow_real_corpus_deep_equality_and_no_rewrites():
     registered = {row["id"]: row for row in manifest["artifacts"] if row["type"] == "flow"}
     assert {record.native_id: record.derived["manifest_entry"] for record in records} == registered
     assert all(record.description == source[record.native_id]["summary"] for record in records)
-    assert sum(
-        record.description != record.derived["manifest_entry"]["summary"] for record in records
-    ) == 14
+    assert (
+        sum(record.description != record.derived["manifest_entry"]["summary"] for record in records)
+        == 14
+    )
     assert all(p.read_bytes() == data for p, data in before.items())
 
 
 def test_flow_missing_store_is_empty(tmp_path):
     # covers: KM-400a-1-x
     # covers: KM-400a-3-i
-    # type: unit
+    # test type: unit
     # angle: boundary
     assert _extract(tmp_path) == []
 
@@ -198,7 +199,7 @@ def test_flow_missing_store_is_empty(tmp_path):
 def test_flow_malformed_manifest_fails(tmp_path, contents):
     # covers: KM-400a-1-x
     # covers: KM-400a-3-i
-    # type: unit
+    # test type: unit
     # angle: failure
     path = _manifest(tmp_path, [])
     path.write_text(contents, encoding="utf-8")
@@ -223,7 +224,7 @@ def test_flow_malformed_manifest_fails(tmp_path, contents):
 def test_flow_unsafe_or_noncanonical_declared_path_fails(tmp_path, path):
     # covers: KM-400a-1-x
     # covers: KM-400a-3-i
-    # type: unit
+    # test type: unit
     # angle: boundary
     _source(tmp_path, _flow())
     _manifest(tmp_path, [_entry(path=path)])
@@ -237,7 +238,7 @@ def test_flow_unsafe_or_noncanonical_declared_path_fails(tmp_path, path):
 def test_flow_invalid_registration_or_identity_fails(tmp_path, case):
     # covers: KM-400a-1-x
     # covers: KM-400a-3-i
-    # type: unit
+    # test type: unit
     # angle: failure
     entry = _entry()
     entries = [entry]
@@ -266,7 +267,7 @@ def test_flow_invalid_registration_or_identity_fails(tmp_path, case):
 def test_flow_invalid_source_fails(tmp_path, contents):
     # covers: KM-400a-1-x
     # covers: KM-400a-3-i
-    # type: unit
+    # test type: unit
     # angle: failure
     source = _source(tmp_path, _flow())
     source.write_text(contents, encoding="utf-8")
@@ -289,7 +290,7 @@ def test_flow_invalid_source_fails(tmp_path, contents):
 def test_flow_required_source_shapes_fail_explicitly(tmp_path, field, value):
     # covers: KM-400a-1-x
     # covers: KM-400a-3-i
-    # type: unit
+    # test type: unit
     # angle: failure
     raw = _flow()
     raw[field] = value
@@ -301,7 +302,7 @@ def test_flow_required_source_shapes_fail_explicitly(tmp_path, field, value):
 def test_flow_no_manifest_and_normalized_registration_spelling(tmp_path):
     # covers: KM-400a-1-x
     # covers: KM-400a-3-i
-    # type: unit
+    # test type: unit
     # angle: boundary
     raw = _flow()
     _source(tmp_path, raw)

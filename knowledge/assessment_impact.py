@@ -56,7 +56,7 @@ def impact(payload: dict) -> dict:
 
 def _population(
     raw: dict | None, repository_id: str
-) -> tuple[object | None, set[str], dict | None]:
+) -> tuple[KnowledgeRetrievalResult | None, set[str], dict | None]:
     """Validate source, directed declaration provenance and enumeration completeness.
 
     Args:

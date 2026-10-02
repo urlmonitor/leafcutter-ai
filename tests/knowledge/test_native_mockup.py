@@ -66,7 +66,7 @@ def _entry(**changes):
 def test_mockup_all_fields_unknown_extensions_and_shape_are_preserved(tmp_path):
     # covers: KM-400a-1-xi
     # covers: KM-400a-3-i
-    # type: integration
+    # test type: integration
     # angle: criterion
     metadata = _metadata()
     metadata["future"] = {"x/y~z": [None, True, {}, [], ""]}
@@ -84,7 +84,7 @@ def test_mockup_all_fields_unknown_extensions_and_shape_are_preserved(tmp_path):
 def test_mockup_manifest_and_render_remain_separate_exact_supporting_sources(tmp_path):
     # covers: KM-400a-1-xi
     # covers: KM-400a-3-i
-    # type: integration
+    # test type: integration
     # angle: seam
     metadata = _metadata()
     metadata["renders"] = "cart.html"
@@ -116,15 +116,19 @@ def test_mockup_manifest_and_render_remain_separate_exact_supporting_sources(tmp
 def test_mockup_real_canonical_population_includes_unregistered_and_null_renders():
     # covers: KM-400a-1-xi
     # covers: KM-400a-3-i
-    # type: integration
+    # test type: integration
     # angle: real_artifact
     root = Path(__file__).resolve().parents[2]
     records = _extract(root)
     paths = list((root / "docs/product-truth/mockups").rglob("*.mockup.json"))
     assert len(records) == len(paths) == 15
-    assert {record.source_path for record in records} == {p.relative_to(root).as_posix() for p in paths}
+    assert {record.source_path for record in records} == {
+        p.relative_to(root).as_posix() for p in paths
+    }
     manifest = json.loads((root / "docs/product-truth/index.json").read_text(encoding="utf-8-sig"))
-    registered = {entry["id"]: entry for entry in manifest["artifacts"] if entry["type"] == "mockup"}
+    registered = {
+        entry["id"]: entry for entry in manifest["artifacts"] if entry["type"] == "mockup"
+    }
     assert sum(record.derived["manifest_registered"] for record in records) == 14
     assert sum("render_body" in record.derived for record in records) == 10
     assert sum("shape_version" in record.metadata for record in records) == 5
@@ -154,7 +158,7 @@ def test_mockup_real_canonical_population_includes_unregistered_and_null_renders
 def test_mockup_missing_store_and_absent_optional_fields_are_not_manufactured(tmp_path):
     # covers: KM-400a-1-xi
     # covers: KM-400a-3-i
-    # type: unit
+    # test type: unit
     # angle: boundary
     fixture = tmp_path / "leafcutter-web/fixtures/cart.mockup.json"
     fixture.parent.mkdir(parents=True)
@@ -172,7 +176,7 @@ def test_mockup_missing_store_and_absent_optional_fields_are_not_manufactured(tm
 def test_mockup_safe_missing_render_is_reported_without_losing_record(tmp_path):
     # covers: KM-400a-1-xi
     # covers: KM-400a-3-i
-    # type: unit
+    # test type: unit
     # angle: failure
     metadata = _metadata()
     metadata["renders"] = "not-yet-drawn.html"
@@ -197,7 +201,7 @@ def test_mockup_safe_missing_render_is_reported_without_losing_record(tmp_path):
 def test_mockup_malformed_records_fail_explicitly(tmp_path, text):
     # covers: KM-400a-1-xi
     # covers: KM-400a-3-i
-    # type: unit
+    # test type: unit
     # angle: failure
     _source(tmp_path, text=text)
     with pytest.raises(ValueError):
@@ -207,7 +211,7 @@ def test_mockup_malformed_records_fail_explicitly(tmp_path, text):
 def test_mockup_duplicate_records_and_manifest_ids_fail_explicitly(tmp_path):
     # covers: KM-400a-1-xi
     # covers: KM-400a-3-i
-    # type: unit
+    # test type: unit
     # angle: failure
     _source(tmp_path)
     duplicate = _source(tmp_path, name="plant/second")
@@ -234,7 +238,7 @@ def test_mockup_duplicate_records_and_manifest_ids_fail_explicitly(tmp_path):
 def test_mockup_render_paths_cannot_escape_or_fetch_urls(tmp_path, unsafe):
     # covers: KM-400a-1-xi
     # covers: KM-400a-3-i
-    # type: unit
+    # test type: unit
     # angle: boundary
     metadata = _metadata()
     metadata["renders"] = unsafe
@@ -255,7 +259,7 @@ def test_mockup_render_paths_cannot_escape_or_fetch_urls(tmp_path, unsafe):
 def test_mockup_manifest_path_and_identity_conflicts_fail(tmp_path, entry):
     # covers: KM-400a-1-xi
     # covers: KM-400a-3-i
-    # type: unit
+    # test type: unit
     # angle: boundary
     _source(tmp_path)
     _manifest(tmp_path, [entry])
@@ -266,7 +270,7 @@ def test_mockup_manifest_path_and_identity_conflicts_fail(tmp_path, entry):
 def test_mockup_resolved_escape_is_rejected_before_read(tmp_path, monkeypatch):
     # covers: KM-400a-1-xi
     # covers: KM-400a-3-i
-    # type: unit
+    # test type: unit
     # angle: boundary
     source = _source(tmp_path)
     original_resolve = Path.resolve
