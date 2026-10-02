@@ -66,7 +66,9 @@ class TestAuraKernelRun(ScenarioCase):
 
     async def test_aura_evidence_survives_complete_kernel_run_and_checkpoint(self):
         """Complete deterministic decisions with real pinned Aura source evidence."""
-        # covers: KM-400e-3
+        # Supplemental hosted deployment probe. KM-400e-3 explicitly requires
+        # the database-free public-kernel proof in tests/knowledge/test_kernel_run.py;
+        # this environment-dependent probe is not a CI completion prerequisite.
         task = self.task("primary", request=False)
         task = task.model_copy(
             update={

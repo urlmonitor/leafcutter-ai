@@ -242,6 +242,8 @@ def test_decision_absent_or_empty_store_needs_no_schema_or_kernel(tmp_path):
     assert module.extract(tmp_path) == []
     # The populated repository corpus is checked separately; these fixtures
     # deliberately contain neither a schema nor a kernel implementation.
+    assert not (tmp_path / "kernel").exists()
+    assert not (tmp_path / "schemas").exists()
 
 
 BAD_FIELDS = [

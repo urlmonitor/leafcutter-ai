@@ -236,11 +236,14 @@ def test_changelog_real_corpus_accounts_for_all_fields_and_three_recoveries():
     # angle: real_artifact
     root = Path(__file__).resolve().parents[2]
     records = _extract(root)
+    config = json.loads(
+        (root / "templates/scripts/commit_guardian/commit_guardian.json").read_text(encoding="utf-8")
+    )
     paths = {
         path.relative_to(root).as_posix()
-        for folder in ("changelogs", "docs/changelog")
-        for path in (root / folder).glob("*.md")
-        if path.name.lower() not in {"readme.md", "index.md"}
+        for store in (root / config["changelogs_dir"], root / "docs/changelog")
+        for path in store.glob("*.md")
+        if path.is_file() and path.name.lower() not in {"readme.md", "index.md"}
     }
     assert len(records) == len(paths) == 550
     assert {record.source_path for record in records} == paths

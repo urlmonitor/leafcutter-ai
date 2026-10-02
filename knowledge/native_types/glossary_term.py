@@ -43,6 +43,7 @@ def _surface(root: Path) -> Path:
         or value.is_absolute()
         or windows.drive
         or windows.root
+        or ".." in value.parts
         or ".." in windows.parts
     ):
         raise ValueError("native glossary path must be a nonempty repository-relative file")

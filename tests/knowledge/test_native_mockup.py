@@ -122,6 +122,9 @@ def test_mockup_real_canonical_population_includes_unregistered_and_null_renders
     records = _extract(root)
     paths = list((root / "docs/product-truth/mockups").rglob("*.mockup.json"))
     assert len(records) == len(paths) == 15
+    assert {record.source_path for record in records} == {p.relative_to(root).as_posix() for p in paths}
+    manifest = json.loads((root / "docs/product-truth/index.json").read_text(encoding="utf-8-sig"))
+    registered = {entry["id"]: entry for entry in manifest["artifacts"] if entry["type"] == "mockup"}
     assert sum(record.derived["manifest_registered"] for record in records) == 14
     assert sum("render_body" in record.derived for record in records) == 10
     assert sum("shape_version" in record.metadata for record in records) == 5
@@ -132,8 +135,16 @@ def test_mockup_real_canonical_population_includes_unregistered_and_null_renders
         assert decode(encode(record.metadata)) == original
         for field in ("realization", "shape_version"):
             assert (field in record.metadata) == (field in original)
+        assert record.derived["manifest_registered"] == (record.native_id in registered)
+        if record.native_id in registered:
+            assert record.derived["manifest_record"] == registered[record.native_id]
         if original["renders"] is None:
             assert not any(key.startswith("render_") for key in record.derived)
+        else:
+            render = (root / record.source_path).parent / original["renders"]
+            assert ("render_body" in record.derived) == render.is_file()
+            if render.is_file():
+                assert record.derived["render_body"] == render.read_bytes().decode("utf-8-sig")
     sign_in = next(record for record in records if record.native_id == "fern-and-fig/sign-in")
     assert sign_in.derived["manifest_registered"] is False
     cart = next(record for record in records if record.native_id == "fern-and-fig/cart")
