@@ -244,7 +244,10 @@ class AddedOption(KernelModel):
 
 
 class HumanAnswerPayload(KernelModel):
-    """leafcutter.human_answer.v1: exactly one of choice_id, free_text or a structured answer.
+    """leafcutter.human_answer.v1: one of choice_id, free_text or a structured answer.
+
+    The pair {choice_id, free_text} is also one mode: a choice with a condition. The choice is
+    authoritative and the text is recorded verbatim as the condition.
 
     The structured answer answers an approve-or-edit question about proposed criteria and
     options: `approved_*_ids` approve a subset (the listed ids are approved, every other pending
@@ -268,11 +271,13 @@ class HumanAnswerPayload(KernelModel):
 
     @model_validator(mode="after")
     def _exactly_one(self) -> HumanAnswerPayload:
-        """Exactly one of choice_id, non-empty free_text and the structured fields must be set."""
+        """One mode must be set: a choice (optionally with free text), free text or structure."""
         has_text = bool(self.free_text and self.free_text.strip())
         modes = [self.choice_id is not None, has_text, self.is_structured]
-        if sum(modes) != 1:
-            fail("set exactly one of choice_id, free_text and a structured approval answer")
+        is_pair = self.choice_id is not None and has_text and not self.is_structured
+        if sum(modes) != 1 and not is_pair:
+            fail("set exactly one of choice_id, free_text and a structured approval answer "
+                 "(a choice may carry free text as its condition)")
         if self.approved_criterion_ids is not None and self.edited_criteria is not None:
             fail("approved_criterion_ids and edited_criteria are alternatives")
         _unique(self.approved_option_ids or [], "approved option")
@@ -292,6 +297,8 @@ __all__ = [
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-02 [python-coder]: human_answer.v1 accepts the pair {choice_id, free_text}: a choice
+#   with a condition; other mixes stay rejected. (#KernelChoiceWithCondition)
 # - 2026-10-01 [python-coder]: Research now reads option_context; the request also carries
 #   criteria_context and gaps (what a synthesis could not find), OptionContext.human_added marks
 #   unverified claims, and retrieval_request.query_hints lets queries lead with the goal.

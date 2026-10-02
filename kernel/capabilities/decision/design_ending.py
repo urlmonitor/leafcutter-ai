@@ -20,6 +20,7 @@ from kernel.capabilities.decision.ranking import (
     BUDGET_RESERVE,
     DESIGN_JUDGEMENT,
     NO_PROGRESS,
+    NO_RESEARCH_TARGETS,
     RESEARCH_CAP,
     research_rounds,
 )
@@ -49,6 +50,8 @@ _WHY = {
                  "is not converging, so a human decides.",
     RESEARCH_CAP: "The research-round limit for this decision was reached without a settled "
                   "answer, so a human decides.",
+    NO_RESEARCH_TARGETS: "No research round is due: the options name no open question, cited "
+                         "file or added claim left to look up, so a human decides.",
     BUDGET_RESERVE: "The Jev call budget (limits.max_jev_calls) cannot fund another research "
                     "round beside the assessment kept in reserve, so this ranking rests on the "
                     "evidence gathered so far and a human decides.",
@@ -169,6 +172,12 @@ def choice_rationale(work: Working) -> str:
     """Return the rationale that records the kernel ranking and the human's choice."""
     cont = work.cont
     ranking = cont.design_ranking
+    condition = "".join(f" Condition stated by the human: {c}" for c in cont.conditions)
+    if cont.design_reason == "human_ruling":
+        title = next(o.title for o in work.options if o.id == cont.design_choice_id)
+        return (f"Human ruling: {cont.approved_by or 'human'} chose option "
+                f"[{cont.design_choice_id}] {title} when the kernel could not settle the "
+                f"decision itself.{condition}")
     rank = next((r.rank for r in ranking if r.option_id == cont.design_choice_id), None)
     title = next(o.title for o in work.options if o.id == cont.design_choice_id)
     where = f"kernel rank {rank} of {len(ranking)}" if rank else "not in the kernel ranking"
@@ -176,7 +185,7 @@ def choice_rationale(work: Working) -> str:
             f"judgement, evidence not authority; stopped researching because "
             f"{cont.design_reason or DESIGN_JUDGEMENT} after {research_rounds(work)} research "
             f"round(s)): {ranking_text(work, ranking)}. {cont.approved_by or 'human'} chose "
-            f"option [{cont.design_choice_id}] {title} ({where}).")
+            f"option [{cont.design_choice_id}] {title} ({where}).{condition}")
 
 
 def ranking_assessments(work: Working, cfg: DecisionConfig) -> list[CriterionAssessment]:

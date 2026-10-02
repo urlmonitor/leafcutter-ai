@@ -24,6 +24,7 @@ _Item = TypeVar("_Item", Option, Criterion)
 APPROVE = "approve"
 REJECT = "reject"
 DEFAULT_APPROVER = "human"
+HUMAN_RULING = "human_ruling"
 
 
 def _approve(item: _Item, actor: str) -> _Item:
@@ -129,19 +130,26 @@ def _apply_decision_approval(work: Working, answer: HumanAnswerPayload, actor: s
         work.limitations.append(f"unrecognised decision approval answer {answer.choice_id!r}")
 
 
-def _apply_escalation(work: Working, answer: HumanAnswerPayload) -> None:
-    """Record a human ruling on a tie, conflict, preference or unidentified gap."""
+def _apply_escalation(work: Working, answer: HumanAnswerPayload, actor: str) -> None:
+    """Record a human ruling on a tie, conflict, preference or unidentified gap.
+
+    A choice of a usable option settles the decision with the human as approver; free text
+    that accompanies it is a verbatim condition.
+    """
     cont = work.cont
     updates: dict[str, object] = {}
     text = (answer.free_text or "").strip()
     if answer.choice_id:
         known = {o.id for o in work.usable_options}
-        if answer.choice_id in known:
-            updates["preferred_option_id"] = answer.choice_id
-            text = text or f"The requester prefers option {answer.choice_id}."
-        else:
+        if answer.choice_id not in known:
             work.limitations.append(f"answer {answer.choice_id!r} is not a usable option")
             return
+        _stamp(work, actor)
+        updates.update(preferred_option_id=answer.choice_id, design_choice_id=answer.choice_id,
+                       design_reason=HUMAN_RULING)
+        if text:
+            updates["conditions"] = [*cont.conditions, text]
+        text = ""
     if text:
         updates["human_inputs"] = [*cont.human_inputs, text]
     reason = cont.pending_reason
@@ -149,7 +157,7 @@ def _apply_escalation(work: Working, answer: HumanAnswerPayload) -> None:
         updates["preference_answered"] = True
     if reason == "conflict":
         updates["conflict_resolved"] = True
-    work.cont = cont.model_copy(update=updates)
+    work.cont = work.cont.model_copy(update=updates)
 
 
 def _apply_design_choice(work: Working, answer: HumanAnswerPayload, actor: str) -> None:
@@ -162,8 +170,9 @@ def _apply_design_choice(work: Working, answer: HumanAnswerPayload, actor: str) 
     if answer.added_options:
         work.options = [*work.options, *_added_options(work, answer, actor)]
     if answer.free_text and answer.free_text.strip():
+        key = "human_inputs" if answer.choice_id is None else "conditions"
         work.cont = cont.model_copy(update={
-            "human_inputs": [*cont.human_inputs, answer.free_text.strip()]})
+            key: [*getattr(cont, key), answer.free_text.strip()]})
     if answer.choice_id is None:
         return
     if answer.choice_id in {o.id for o in work.usable_options}:
@@ -202,7 +211,7 @@ def apply_human_answer(work: Working, answer: HumanAnswerPayload, actor: str | N
     elif phase == "awaiting_decision_approval":
         _apply_decision_approval(work, answer, who)
     elif phase == "awaiting_human":
-        _apply_escalation(work, answer)
+        _apply_escalation(work, answer, who)
     elif phase == "awaiting_design_choice":
         _apply_design_choice(work, answer, who)
     elif phase == "awaiting_precedent":
@@ -214,6 +223,9 @@ def apply_human_answer(work: Working, answer: HumanAnswerPayload, actor: str | N
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-02 [python-coder]: A choice of a usable option at an escalation settles the decision
+#   (human approver, design_reason human_ruling); free text with a choice is a verbatim condition.
+#   (#KernelChoiceWithCondition)
 # - 2026-10-01 [python-coder]: Every human approval stamps who and when (cont.approved_by and
 #   approved_at) so a staged record carries the approver and the approval time; the human's reuse
 #   or decide-anew answer to a precedent offer is recorded the same way. (#KernelDecisionStore)

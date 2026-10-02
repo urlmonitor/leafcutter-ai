@@ -130,7 +130,8 @@ def _stage(ctx: ExecutionContext, work: Working, result: CapabilityResult, *, ba
         ctx, decision, options=work.options, criteria=work.criteria, evidence=work.evidence,
         ranking=cont.design_ranking if basis == "kernel_ranking" else (), precedents=notes,
         basis=basis, criterion_evidence={c.id: work.evidence_for(c) for c in work.usable_criteria},
-        supersedes=supersedes, related=related)
+        supersedes=supersedes, related=related,
+        conditions=cont.conditions)
     if staged is None:
         return result
     note = (f"decision record staged: {staged.path}; publish it for review with: "

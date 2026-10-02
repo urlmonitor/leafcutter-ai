@@ -19,6 +19,7 @@ from dataclasses import dataclass, field, replace
 from kernel.capabilities.decision.assess import NONE_CHOICE, Assessment
 from kernel.capabilities.decision.ranking import (
     DESIGN_ROUND,
+    NO_RESEARCH_TARGETS,
     design_reason,
     design_round_due,
     loop_reason,
@@ -224,6 +225,9 @@ def combine(work: Working, a: Assessment, cfg: DecisionConfig) -> Verdict:
         reason = loop_reason(work, a, cfg)
         if verdict.status is DecisionStatus.NEEDS_EVIDENCE and reason:
             verdict = _hand_to_human(work, a, cfg, reason)
+        elif verdict.reason == "unidentified_gap" and work.usable_options:
+            verdict = (_design_research() if design_round_due(work, cfg)
+                       else _hand_to_human(work, a, cfg, reason or NO_RESEARCH_TARGETS))
     else:
         verdict = _unsettled(work, a, cfg) or _select(work, a, cfg)
     return replace(verdict, assessments=build_assessments(work, a, cfg))
@@ -232,6 +236,10 @@ def combine(work: Working, a: Assessment, cfg: DecisionConfig) -> Verdict:
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-02 [python-coder]: No blind unidentified_gap while options are rankable: run the
+#   targeted research round if due, else hand the human the ranked question, naming why research
+#   stopped (loop_reason, or no_research_targets when no round is due; never a research cap that
+#   was not reached). (#KernelResearchFirst)
 # - 2026-10-01 [python-coder]: A criterion assessment cites the evidence relevant to that
 #   criterion (and option), not every evidence id (round 8 defect e). (#KernelDecisionStore)
 # - 2026-10-01 [python-coder]: A design judgement no longer ranks at once: while a targeted
