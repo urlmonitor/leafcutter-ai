@@ -132,19 +132,31 @@ def validate_snapshot(snapshot: ProjectionSnapshot) -> None:
     """
     identifiers = set()
     kinds = {entity.canonical_id: entity.kind for entity in snapshot.nodes}
-    allowed = {
-        "AcceptanceCriterion",
-        "Component",
-        "ADR",
-        "SourceFile",
-        "Test",
-        "Decision",
-        "Lesson",
-    }
+    from knowledge.native_types.registry import LABELS
+
+    allowed = set(LABELS)
     for entity in snapshot.nodes:
         if entity.kind not in allowed:
             raise ValueError("unsupported projected kind " + entity.kind)
-        if entity.kind in {"Decision", "Lesson"} and entity.properties.get("synthetic") is not True:
+        if entity.kind == "Decision" and entity.properties.get("native_record") is True:
+            from knowledge.native_properties import decode
+            from knowledge.native_types.decision import validate_metadata
+
+            try:
+                raw = decode(entity.properties["_native_projection"])
+            except (KeyError, TypeError, ValueError) as error:
+                raise ValueError("native Decision requires complete approved metadata") from error
+            validate_metadata(raw)
+            if (
+                entity.canonical_id != "Decision:" + raw["id"]
+                or entity.properties.get("_native_identity") != raw["id"]
+                or entity.source.path != "docs/decisions/" + raw["id"] + ".yaml"
+                or entity.properties.get("_native_source_path") != entity.source.path
+            ):
+                raise ValueError("native Decision identity differs from its source")
+        elif (
+            entity.kind in {"Decision", "Lesson"} and entity.properties.get("synthetic") is not True
+        ):
             raise ValueError("historical extension currently requires synthetic labeling")
         if entity.canonical_id in identifiers:
             raise ValueError("duplicate canonical ID " + entity.canonical_id)
@@ -167,8 +179,10 @@ def _validate_edge(edge: Relation, kinds: dict) -> None:
         edge: Declared relationship with canonical endpoint IDs.
         kinds: Canonical entity IDs mapped to their declared entity kinds.
     """
+    from knowledge.native_types.registry import LABELS
+
     endpoints = {
-        "component_membership": ({"AcceptanceCriterion", "ADR", "Component"}, {"Component"}),
+        "component_membership": (set(LABELS) - {"SourceFile", "Test", "Lesson"}, {"Component"}),
         "covered_by": ({"AcceptanceCriterion"}, {"AcceptanceCriterion", "SourceFile", "Test"}),
         "implemented_by": (
             {"AcceptanceCriterion"},

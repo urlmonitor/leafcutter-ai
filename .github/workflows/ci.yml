@@ -234,6 +234,43 @@ jobs:
   done-proof:
     name: Proof-of-done coverage check (BO-2500b)
     runs-on: ubuntu-latest
+    services:
+      knowledge-retrieval:
+        image: neo4j:5.26-community
+        env:
+          NEO4J_AUTH: neo4j/leafcutter-local-tests
+          NEO4J_server_memory_heap_initial__size: 256m
+          NEO4J_server_memory_heap_max__size: 512m
+          NEO4J_server_memory_pagecache_size: 128m
+        ports:
+          - 17687:7687
+        options: >-
+          --health-cmd "cypher-shell -u neo4j -p leafcutter-local-tests 'RETURN 1'"
+          --health-interval 10s --health-timeout 10s --health-retries 12
+      knowledge-domain:
+        image: neo4j:5.26-community
+        env:
+          NEO4J_AUTH: neo4j/leafcutter-domain-tests
+          NEO4J_server_memory_heap_initial__size: 256m
+          NEO4J_server_memory_heap_max__size: 512m
+          NEO4J_server_memory_pagecache_size: 128m
+        ports:
+          - 18087:7687
+        options: >-
+          --health-cmd "cypher-shell -u neo4j -p leafcutter-domain-tests 'RETURN 1'"
+          --health-interval 10s --health-timeout 10s --health-retries 12
+      knowledge-native:
+        image: neo4j:5.26-community
+        env:
+          NEO4J_AUTH: neo4j/leafcutter-native-tests
+          NEO4J_server_memory_heap_initial__size: 256m
+          NEO4J_server_memory_heap_max__size: 512m
+          NEO4J_server_memory_pagecache_size: 128m
+        ports:
+          - 18088:7687
+        options: >-
+          --health-cmd "cypher-shell -u neo4j -p leafcutter-native-tests 'RETURN 1'"
+          --health-interval 10s --health-timeout 10s --health-retries 12
     # Blocking gate (BO-2500b-3): diff-scoped ci-changed mode evaluates only ACs
     # changed in the PR, making this safe to require without failing on pre-existing
     # done ACs that predate the covers-tag mandate.

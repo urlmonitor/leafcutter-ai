@@ -44,6 +44,23 @@ created: '2026-10-01'
 amended_by: []
 superseded_by: null
 covered_by:
+- KM-400a-1-i
+- KM-400a-1-ii
+- KM-400a-1-iii
+- KM-400a-1-iv
+- KM-400a-1-v
+- KM-400a-1-vi
+- KM-400a-1-vii
+- KM-400a-1-viii
+- KM-400a-1-ix
+- KM-400a-1-x
+- KM-400a-1-xi
+- KM-400a-1-xii
+- KM-400a-1-xiii
+- KM-400a-1-xiv
+- KM-400a-1-xv
+- KM-400a-1-xvi
+- KM-400a-1-xvii
 - tests/knowledge/test_projection.py::test_projection_reads_commit_not_dirty_checkout_and_reuses_identity
 - tests/knowledge/test_source_boundaries.py::test_snapshot_rejects_unknown_types_and_unreviewed_memory
 implemented_by:

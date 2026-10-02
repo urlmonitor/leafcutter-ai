@@ -7,7 +7,6 @@ ARCHITECTURE: Actual CLI and Git source reader; controlled receipts are explicit
 """
 import asyncio
 import json
-from pathlib import Path
 import sys
 
 from knowledge import __main__ as cli

@@ -21,4 +21,31 @@ Catalog writes require the configured directory and explicit application authori
 
 ## Maintenance
 
+Aura stores native `AC`, `ADR`, `Component`, `SourceFile` and `Test` nodes with
+uppercase relationship types. `name` is the readable canonical identifier;
+`title` and `source_path` provide details. `components` contains all directly
+declared memberships, without propagating ownership to linked tests or files.
+`current` follows the publication pointer atomically, including rollback.
+`Repository` and `Snapshot` are diagnostic metadata, excluded from the saved
+component search. In Aura, choose **In Scene** to hide unused legend categories.
+
+`native_types/registry.py` also registers Agent, Skill, Ticket, Document,
+RoadmapPhase, GlossaryTerm, Flow, Mockup, MockData, ChangelogEntry, Capability and
+approved Decision source readers. Readers preserve complete authored fields;
+`native_properties.py` exposes typed leaves with lossless shape metadata, and
+`projection/native_metadata.py` keeps authored and derived fields separate.
+`reports/native-fields/` contains the per-type reviews and verification receipts.
+Use `python -m knowledge.native_refresh` to inspect an expansion at the existing
+published source commit; explicit apply requires a private backup and writer
+credentials. The new generation is read back before activation; historical
+canonical data is preserved. Ordinary sync uses the same complete mapping.
+
+The adapter translates the old compiler-owned label patterns at execution so
+existing registered query digests and canonical payloads remain unchanged.
+Legacy and native generations can be read during migration. New publications
+require migrated metadata and always use the native format. Inspect and migrate
+explicitly with `python -m knowledge.domain_migrate`; apply requires separate
+writer credentials and an exclusive backup file. Do not enable an old writer
+against the migrated database.
+
 Run the focused `tests/knowledge/test_query_admission.py` and independent boundary tests. Run `tests/knowledge_live/query_growth_checks.py` against the isolated Neo4j service before claiming generated-query compatibility. Update the component architecture and operational guide when changing the compiler language. Candidate expected IDs are authored judgments: successful checks do not establish general semantic usefulness.

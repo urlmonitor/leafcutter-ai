@@ -39,6 +39,12 @@ async def publish(
         Whether the guarded operation succeeded.
     """
     validate_snapshot(snapshot)
+    legacy = await db._run(
+        "MATCH (r {repository_id:$repo}) WHERE 'KRRepository' IN labels(r) RETURN count(r) AS count",
+        {"repo": snapshot.repository_id},
+    )
+    if legacy[0]["count"]:
+        raise ValueError("migrate the legacy graph presentation before publishing")
     key = scope_key(snapshot.repository_id, snapshot.generation_id)
     digest = hashlib.sha256(snapshot.model_dump_json().encode()).hexdigest()
     kinds = snapshot.supported_kinds or sorted({n.kind for n in snapshot.nodes})
@@ -57,9 +63,11 @@ async def publish(
         "edge_count": len(snapshot.edges),
         "digest": digest,
         "created_at": time.time(),
+        "name": snapshot.source_sha[:8],
+        "storage_version": 2,
     }
     rows = await db._run(
-        'MERGE (g:KRGeneration {key:$key}) ON CREATE SET g += $meta, g.status="building", g.semantic_ready=false RETURN g.digest AS digest, g.status AS status',
+        'MERGE (g:Snapshot {key:$key}) ON CREATE SET g += $meta, g.status="building", g.semantic_ready=false RETURN g.digest AS digest, g.status AS status',
         {"key": key, "meta": metadata},
         True,
     )
@@ -94,42 +102,9 @@ async def _build(db: Neo4jBackend, snapshot: ProjectionSnapshot, key: str) -> No
         snapshot: Validated immutable generation and its canonical source records.
         key: Trusted hashed repository/generation scope key.
     """
-    rows = [
-        {
-            "key": scope_key(key, n.canonical_id),
-            "canonical_id": n.canonical_id,
-            "kind": n.kind,
-            "payload": n.model_dump_json(),
-            "content_hash": n.source.content_hash,
-            "status": n.properties.get("status"),
-            "parent_id": n.properties.get("structural_parent"),
-            "decision_type": n.properties.get("decision_type"),
-        }
-        for n in snapshot.nodes
-    ]
-    for start in range(0, len(rows), 250):
-        await db._run(
-            "UNWIND $rows AS row MERGE (n:KREntity {key:row.key}) SET n += row, n.generation_key=$key",
-            {"rows": rows[start : start + 250], "key": key},
-            True,
-        )
-    edges = [
-        {
-            "source": scope_key(key, e.source_id),
-            "target": scope_key(key, e.target_id),
-            "edge_type": e.edge_type,
-            "locator": e.locator,
-            "payload": e.model_dump_json(),
-            "key": hashlib.sha256(e.model_dump_json().encode()).hexdigest(),
-        }
-        for e in snapshot.edges
-    ]
-    for start in range(0, len(edges), 250):
-        await db._run(
-            "UNWIND $rows AS row MATCH (a:KREntity {key:row.source}), (b:KREntity {key:row.target}) MERGE (a)-[r:KR_LINK {key:row.key}]->(b) SET r.edge_type=row.edge_type, r.locator=row.locator, r.payload=row.payload, r.generation_key=$key",
-            {"rows": edges[start : start + 250], "key": key},
-            True,
-        )
+    from knowledge.adapters.neo4j_domain_build import build
+
+    await build(db, snapshot, key)
 
 
 async def _validate_counts(db: Neo4jBackend, key: str, nodes: int, edges: int) -> None:
@@ -178,9 +153,17 @@ async def switch_active(
         Returns:
             True when the pointer was published; False when the comparison refused it.
         """
+        legacy = db._rows(
+            tx,
+            "MATCH (r {repository_id:$repo}) WHERE 'KRRepository' IN labels(r) "
+            "RETURN count(r) AS count",
+            {"repo": repository_id},
+        )
+        if legacy[0]["count"]:
+            raise ValueError("migrate the legacy graph presentation before changing publication")
         rows = db._rows(
             tx,
-            "MERGE (r:KRRepository {repository_id:$repo}) SET r.lock=coalesce(r.lock,0)+1 RETURN r.active AS active",
+            "MERGE (r:Repository {repository_id:$repo}) SET r.lock=coalesce(r.lock,0)+1, r.name=$repo RETURN r.active AS active",
             {"repo": repository_id},
         )
         current = rows[0]["active"]
@@ -195,7 +178,10 @@ async def switch_active(
         )
         if not eligible:
             return False
+        from knowledge.adapters.neo4j_domain_build import set_current
+
         if current:
+            set_current(db, tx, current, False)
             db._rows(
                 tx,
                 "MATCH (g:KRGeneration {key:$key}) SET g.retired_at=$now",
@@ -203,7 +189,7 @@ async def switch_active(
             )
         db._rows(
             tx,
-            "MATCH (r:KRRepository {repository_id:$repo}) SET r.active=$key",
+            "MATCH (r:Repository {repository_id:$repo}) SET r.active=$key",
             {"repo": repository_id, "key": key},
         )
         db._rows(
@@ -211,6 +197,7 @@ async def switch_active(
             'MATCH (g:KRGeneration {key:$key}) SET g.status="ready",g.ready_at=$now REMOVE g.retired_at',
             {"key": key, "now": time.time()},
         )
+        set_current(db, tx, key, True)
         return True
 
     return await db._transaction(transaction, True)

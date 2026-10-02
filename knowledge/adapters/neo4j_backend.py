@@ -90,7 +90,9 @@ class Neo4jBackend:
         Returns:
             Transaction result records materialized as plain dictionaries.
         """
-        return [record.data() for record in tx.run(statement, parameters)]
+        from knowledge.adapters.domain_schema import storage_statement
+
+        return [record.data() for record in tx.run(storage_statement(statement), parameters)]
 
     async def _transaction(
         self, callback: Callable[[object], object], write: bool = False
@@ -127,6 +129,24 @@ class Neo4jBackend:
         for statement in migration.read_text(encoding="utf-8").split(";"):
             if statement.strip():
                 await self._run(statement, write=True)
+        from knowledge.native_types.registry import LABELS
+
+        for label in LABELS.values():
+            # Registry values are a finite trusted vocabulary, never input data.
+            if label in {"AC", "ADR", "Component", "SourceFile", "Test", "Decision", "Lesson"}:
+                continue
+            await self._run(
+                f"CREATE CONSTRAINT native_{label.lower()}_identity IF NOT EXISTS FOR (n:{label}) REQUIRE n.key IS UNIQUE",
+                write=True,
+            )
+            await self._run(
+                f"CREATE INDEX native_{label.lower()}_scope IF NOT EXISTS FOR (n:{label}) ON (n.generation_key, n.canonical_id)",
+                write=True,
+            )
+            await self._run(
+                f"CREATE INDEX native_{label.lower()}_name IF NOT EXISTS FOR (n:{label}) ON (n.name)",
+                write=True,
+            )
 
     async def capabilities(self) -> dict:
         """Advertise implemented mechanisms; readiness is generation-specific."""

@@ -8,7 +8,6 @@ ARCHITECTURE: Real DB/readers/service/evaluator; named boundary controls remove 
 from __future__ import annotations
 import argparse
 import asyncio
-from copy import deepcopy
 import json
 from pathlib import Path
 from urllib.parse import urlparse
