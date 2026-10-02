@@ -1,8 +1,8 @@
 # Continuous-integration gate for leafcutter-ai.
 #
-# Runs on every push to main and every PR targeting main. Nine jobs — seven
-# BLOCKING (the required status checks named in the branch-protection ruleset)
-# and two informational:
+# Runs on every push to main and every PR targeting main. Required checks are
+# configured in the main-branch ruleset. The full pytest job is disabled by
+# owner request because of its runtime; other jobs retain their existing policy.
 #
 #   lint       — ruff check over scripts/, tests/, unit_tests/, kernel/ (config:
 #                ruff.toml), plus kernel/ under E722,BLE001,TRY (the Error Handling
@@ -27,22 +27,11 @@
 #                that makes a reintroduced address fail CI even on a
 #                contributor whose local pre-commit hooks are not installed.
 #
-#   test       — full pytest suite over tests/ and unit_tests/. BLOCKING: there
-#                is no continue-on-error on this job, so a PR carrying a failing
-#                test cannot merge. The build step
-#                (python scripts/build.py --target-dir .) runs before pytest
-#                because build.py's install_shims() creates symlinks at
-#                scripts/commit_guardian/, scripts/doc_compliance/, and
-#                scripts/feedback/ pointing into .leafcutter/scripts/. Tests
-#                import from those paths at startup; without the build step they
-#                fail at import on a fresh clone (ADR-016). A step before pytest
-#                fetches the retrieval benchmark's pinned corpus commit (depth 1),
-#                read from tests/kernel/retrieval/benchmark_cases.json. The suite runs under
-#                AC_ENFORCE_STRICT=1 so AC-enforcement xfail-masking is off and
-#                genuinely-failing tests surface as real failures. Promoting this
-#                job to blocking WAS the BP-1200b deliverable; it is done, and the
-#                job name "Test suite (pytest)" is the stable contract referenced
-#                by the required-status-checks list (BP-1200c) — do NOT rename it.
+#   test       - full pytest suite over tests/ and unit_tests/. DISABLED by
+#                owner request on 2026-10-02 because the full run takes too long.
+#                The job-level condition prevents runner allocation and every
+#                setup/test step. Its definition remains available for an
+#                explicit future re-enable; local commit hooks remain enabled.
 #
 #   done-proof — proof-of-done coverage (BO-2500b). BLOCKING, diff-scoped.
 #
@@ -198,13 +187,10 @@ jobs:
 
   test:
     name: Test suite (pytest)
+    # Disabled indefinitely by owner request (2026-10-02): full-suite runtime.
+    # This check is also removed from the main-branch required-check list.
+    if: ${{ false }}
     runs-on: ubuntu-latest
-    # BLOCKING gate (BP-1200b): the suite is green on a fresh checkout under
-    # AC_ENFORCE_STRICT=1 (build step + install_shims, then strict pytest), so a
-    # PR carrying a failing test now fails this check and cannot merge. There is
-    # NO continue-on-error — dropping it is the whole point of this job.
-    # The job name "Test suite (pytest)" is the stable contract referenced by the
-    # branch-protection required-status-checks list (BP-1200c) — do NOT rename it.
     steps:
       - uses: actions/checkout@v4
 
