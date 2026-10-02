@@ -1,4 +1,12 @@
-"""Opt-in Aura query-growth proof with explicitly scripted Jev judgments."""
+"""MODULE: query_growth_checks
+GOAL: Retain opt-in historical Aura query-growth proof with scripted Jev judgments.
+BUSINESS CONTEXT: Hosted context requires explicit authorization.
+ARCHITECTURE: Manual hosted harness; ordinary CI uses the local real graph proof.
+
+Run this manual harness only with explicit Aura read authorization. Repeatable CI
+coverage is query_growth_local_checks.py::test_local_query_growth_public_proof;
+this historical source-pinned harness remains available and is not CI coverage.
+"""
 import json
 import os
 import unittest
@@ -52,9 +60,9 @@ class TestAuraQueryGrowth(ScenarioCase):
 
     async def test_aura_admission_same_research_and_persistent_reuse(self):
         """Real compiled Cypher executes through the full paused/resumed kernel."""
-        # covers: KM-500b-2
-        # covers: KM-500b-3
-        # covers: KM-500c-1
+        # historical hosted coverage: KM-500b-2
+        # historical hosted coverage: KM-500b-3
+        # historical hosted coverage: KM-500c-1
         # angle: real_artifact
         question="Which directly declared test files cover acceptance criteria belonging to the project component?"
         need=EvidenceNeed(id="need.tests",category="task_context",priority="required",question=question)
@@ -104,10 +112,10 @@ class TestAuraQueryGrowth(ScenarioCase):
 
 def test_aura_query_growth_public_proof():
     """Drive the real Aura scenario through a synchronous discoverable proof entry."""
-    # covers: KM-500b-2
-    # covers: KM-500b-3
-    # covers: KM-500c-1
-    # covers: KM-500c-2
+    # historical hosted coverage: KM-500b-2
+    # historical hosted coverage: KM-500b-3
+    # historical hosted coverage: KM-500c-1
+    # historical hosted coverage: KM-500c-2
     # angle: real_artifact
     assert os.environ.get("LEAFCUTTER_RUN_AURA_QUERY_LIVE") == "1", "explicit Aura read opt-in required"
     case = TestAuraQueryGrowth("test_aura_admission_same_research_and_persistent_reuse")
@@ -116,3 +124,8 @@ def test_aura_query_growth_public_proof():
     assert result.testsRun == 1
     assert not result.skipped
     assert result.wasSuccessful(), result.errors + result.failures
+
+
+# DECISION HISTORY
+# ========================================
+# - 2026-10-02 16:00 [test-writer]: Keep hosted authorization separate from equivalent local CI proof. (#TICKETLESS reason=required-ci-proof-repair)

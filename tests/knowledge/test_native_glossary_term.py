@@ -1,4 +1,5 @@
-"""Glossary source fidelity, discovery boundaries, and identity behavior.
+"""MODULE: test_native_glossary_term
+GOAL: Verify glossary source fidelity, discovery boundaries, and identity behavior.
 
 BUSINESS CONTEXT: KM-400a-3-i exposes the authored fields of native terms.
 ARCHITECTURE: Unit and real-artifact checks exercise the snapshot-local reader.
@@ -192,6 +193,10 @@ def test_native_glossary_custom_path_and_absent_surface_default(tmp_path):
         {"surfaces": {"glossary": {"path": "../outside.md"}}},
         {"surfaces": {"glossary": {"path": "C:/outside.md"}}},
         {"surfaces": {"glossary": {"path": 42}}},
+        {"surfaces": {"glossary": {"path": r"C:outside.md"}}},
+        {"surfaces": {"glossary": {"path": r"\outside.md"}}},
+        {"surfaces": {"glossary": {"path": r"..\outside.md"}}},
+        {"surfaces": {"glossary": {"path": r"\\server\share\outside.md"}}},
     ],
 )
 def test_native_glossary_invalid_configuration_fails(tmp_path, value):
@@ -301,3 +306,8 @@ def test_native_glossary_real_corpus_matches_all_authored_sections():
         assert record.derived == {"file_frontmatter": metadata}
         assert record.native_id == term.lower()
         assert record.locator == "#term=" + quote(term.lower(), safe="")
+
+
+# DECISION HISTORY
+# ========================================
+# - 2026-10-02 16:00 [test-writer]: Cover foreign-platform drive and root syntax without weakening snapshot controls. (#TICKETLESS reason=required-ci-portability-repair)

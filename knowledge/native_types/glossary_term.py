@@ -1,4 +1,5 @@
-"""Read native glossary sections without losing their authored Markdown.
+"""MODULE: glossary_term
+GOAL: Read native glossary sections without losing their authored Markdown.
 
 BUSINESS CONTEXT: KM-400a-3-i exposes complete native source fields in Neo4j.
 ARCHITECTURE: A snapshot-local reader; glossary authoring and publication stay outside.
@@ -8,7 +9,7 @@ DOC_LINKS: docs/glossary.md
 from __future__ import annotations
 
 from copy import deepcopy
-from pathlib import Path
+from pathlib import Path, PureWindowsPath
 import re
 from urllib.parse import quote
 
@@ -36,7 +37,14 @@ def _surface(root: Path) -> Path:
                 raise ValueError("native glossary surface must declare a string path")
             configured = entry["path"]
     value = Path(configured)
-    if not configured.strip() or value.is_absolute() or value.drive or ".." in value.parts:
+    windows = PureWindowsPath(configured)
+    if (
+        not configured.strip()
+        or value.is_absolute()
+        or windows.drive
+        or windows.root
+        or ".." in windows.parts
+    ):
         raise ValueError("native glossary path must be a nonempty repository-relative file")
     path = root / value
     relative(root, path)
@@ -149,3 +157,8 @@ def extract(root: Path) -> list[NativeRecord]:
             )
         )
     return records
+
+
+# DECISION HISTORY
+# ========================================
+# - 2026-10-02 16:00 [python-coder]: Reject foreign-platform absolute paths before snapshot resolution. (#TICKETLESS reason=required-ci-portability-repair)

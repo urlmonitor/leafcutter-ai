@@ -55,7 +55,8 @@ doc_links:
     capability-growth evidence.
 origin_agent: business-analyst
 created: '2026-10-01'
-amended_by: []
+amended_by:
+- '2026-10-02: Replace automatic hosted-Aura coverage with repeatable real local-Neo4j public-kernel admission, resume and reuse proof; retain the hosted harness and receipt as manual historical deployment evidence. Scripted Jev and host actors do not establish live semantic quality. Criteria and lifecycle unchanged.'
 superseded_by: null
 covered_by:
 - tests/knowledge/test_query_admission.py::test_cli_catalog_restart_discovery_and_write_denial
@@ -63,7 +64,7 @@ covered_by:
 - tests/knowledge/test_query_growth_kernel.py::test_catalog_activation_is_a_narrow_permissioned_effect
 - tests/knowledge_live/query_catalog_checks.py::test_real_generated_query_admission_and_restarted_public_retrieval
 - tests/knowledge/test_query_growth_kernel.py::TestQueryGrowthRun::test_denied_activation_never_falls_back_or_changes_the_catalog
-- tests/knowledge_live/query_growth_checks.py::test_aura_query_growth_public_proof
+- tests/knowledge_live/query_growth_local_checks.py::test_local_query_growth_public_proof
 implemented_by:
 - tickets/00_inbox/TICKET-20261001-KM-500b-3.md
 - knowledge/query_models.py
