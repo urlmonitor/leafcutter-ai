@@ -5,14 +5,14 @@ type: architecture
 flight_level: L3-Component
 diagram_type: data_flow
 status: draft
-parent: docs/architecture/diagrams/decision-kernel-flows-overview.md
+parent: docs/architecture/diagrams/c2-007-decision-kernel-flows-overview.md
 created: 2026-09-30
 last_updated: 2026-10-02
 source_ticket: null
 components:
   - decision_kernel
 related_docs:
-  - docs/architecture/diagrams/decision-kernel-context-map.md
+  - docs/architecture/diagrams/c3-016-decision-kernel-context-map.md
   - docs/architecture/adrs/ADR-052-capabilities-replace-agents-prompts-are-compiled.md
   - docs/architecture/adrs/ADR-060-source-of-truth-and-approval-authority.md
   - docs/analysis/2026-09-30-decision-kernel-design-4-jev-and-capabilities.md
@@ -58,9 +58,9 @@ flowchart LR
   COMP -.-> WRK["Planned - bounded worker loop"]
 ```
 
-Parent: [Decision Kernel and Colony Memory — Design Map](decision-kernel-flows-overview.md)
+Parent: [Decision Kernel and Colony Memory — Design Map](c2-007-decision-kernel-flows-overview.md)
 
-See also: [Request Flow 2 — Handoff, Resume and Finalize](decision-kernel-flows-request-handoff.md).
+See also: [Request Flow 2 — Handoff, Resume and Finalize](c3-014-decision-kernel-flows-request-handoff.md).
 
 ## Host LLM and the host packet compiler
 
@@ -128,7 +128,7 @@ layer: setting backlog priority from capability-gap statistics, where Jev may on
 ranking (ADR-056 §6); reviewing every learned change before activation (ADR-056 §3 rule 5); and
 human-review scores in Langfuse (ADR-058 §3, decided but not scheduled).
 
-Open points for this page: OP-04, OP-07, OP-08, OP-10, OP-12, OP-26, OP-29 in [open points](decision-kernel-flows-open-points.md).
+Open points for this page: OP-04, OP-07, OP-08, OP-10, OP-12, OP-26, OP-29 in [open points](c3-022-decision-kernel-flows-open-points.md).
 
 ## Legend
 
@@ -141,8 +141,8 @@ Open points for this page: OP-04, OP-07, OP-08, OP-10, OP-12, OP-26, OP-29 in [o
 
 ## Cross-Links
 
-- Parent: [Design Map](decision-kernel-flows-overview.md)
-- Sibling pages: [Context map](decision-kernel-context-map.md), [Request Flow 2](decision-kernel-flows-request-handoff.md)
+- Parent: [Design Map](c2-007-decision-kernel-flows-overview.md)
+- Sibling pages: [Context map](c3-016-decision-kernel-context-map.md), [Request Flow 2](c3-014-decision-kernel-flows-request-handoff.md)
 - Host operations and as-built notes: [design part 4](../../analysis/2026-09-30-decision-kernel-design-4-jev-and-capabilities.md)
 - Skill and envelope: [design part 5](../../analysis/2026-09-30-decision-kernel-design-5-client-observability.md)
 - Running the kernel and publishing records: [How to run the decision kernel](../../how-to/run-the-decision-kernel.md)

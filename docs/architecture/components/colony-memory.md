@@ -202,7 +202,7 @@ off, the kernel, Jev, LangGraph, Claude Code handoffs and Langfuse tracing are u
 4. **Route.** From INFLUENCE ROUTING the kernel reads compact statistics per candidate through the
    port and passes them to the routing Jev call (OP-03).
 5. **Regress.** A confirmed mistake becomes a Langfuse dataset case; see
-   [Regression memory](../diagrams/decision-kernel-flows-regression-memory.md).
+   [Regression memory](../diagrams/c3-021-decision-kernel-flows-regression-memory.md).
 
 **The hot path reads the stores, never Langfuse.** Routing keeps working when Langfuse is down,
 and statistics never override the deterministic eligibility exclusions
@@ -293,8 +293,8 @@ ADR-056's open questions also apply, in particular ground truth for "correct".
 ## Cross-Links
 
 - Kernel overview: [Decision Kernel — Container Overview](decision-kernel.md)
-- Flows: [Learning loop](../diagrams/decision-kernel-flows-learning-loop.md),
-  [Design Map](../diagrams/decision-kernel-flows-overview.md)
+- Flows: [Learning loop](../diagrams/c3-020-decision-kernel-flows-learning-loop.md),
+  [Design Map](../diagrams/c2-007-decision-kernel-flows-overview.md)
 - Running it and publishing records: [How to run the decision kernel](../../how-to/run-the-decision-kernel.md)
 - The first record: [dec-ef8ddcb79d668a67](../../decisions/dec-ef8ddcb79d668a67.yaml)
 - Controlled learning: [kernel spec Rev 3 part 7, §19](../../analysis/2026-09-30-leafcutter-kernel-spec-rev3-7-later-stages.md)

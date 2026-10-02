@@ -5,7 +5,7 @@ type: architecture
 flight_level: L3-Component
 diagram_type: sequence
 status: draft
-parent: docs/architecture/diagrams/decision-kernel-flows-overview.md
+parent: docs/architecture/diagrams/c2-007-decision-kernel-flows-overview.md
 created: 2026-09-30
 last_updated: 2026-10-02
 source_ticket: null
@@ -17,7 +17,7 @@ related_docs:
   - docs/analysis/2026-09-30-decision-kernel-design-4-jev-and-capabilities.md
   - docs/analysis/2026-09-30-decision-kernel-design-5-client-observability.md
   - docs/analysis/2026-09-30-leafcutter-kernel-spec-rev3-4-scheduler-jev-capabilities.md
-  - docs/architecture/diagrams/decision-kernel-flows-request-handoff.md
+  - docs/architecture/diagrams/c3-014-decision-kernel-flows-request-handoff.md
 related_code:
   - kernel/service.py
   - kernel/adapters/cli.py
@@ -38,7 +38,7 @@ tags:
 
 This is the first half of one kernel run. It starts when the user calls the `/leafcutter` skill
 in Claude Code. It ends at one of two points: the run finalizes, or it stops and waits for host or
-human work. The second half is [Request Flow 2](decision-kernel-flows-request-handoff.md).
+human work. The second half is [Request Flow 2](c3-014-decision-kernel-flows-request-handoff.md).
 
 **Status: V0, on main.** Phases P1–P10 merged with PR #973, the V0.1 rounds with PR #977 and the
 decision store with PR #978. The CLI, `RunService` and skill (P7) and the host operations (P8) are
@@ -48,8 +48,8 @@ built (design parts 5 and 6).
 and approved criteria, as in the spec §4.4 demonstration ("node or subgraph?"). The typed payload
 makes the intent `explicit`, so no intake intent question is asked. With a bare goal the first
 route pass asks Jev the answer kind first; with no options, research grounds the option space and
-the host proposes options. Those branches are in [flow 2](decision-kernel-flows-request-handoff.md)
-and [Context: Jev calls](decision-kernel-context-jev.md).
+the host proposes options. Those branches are in [flow 2](c3-014-decision-kernel-flows-request-handoff.md)
+and [Context: Jev calls](c3-017-decision-kernel-context-jev.md).
 
 ```mermaid
 sequenceDiagram
@@ -104,10 +104,10 @@ sequenceDiagram
     CLI-->>CC: one JSON document on stdout, exit 0
 ```
 
-Parent: [Decision Kernel and Colony Memory — Design Map](decision-kernel-flows-overview.md)
+Parent: [Decision Kernel and Colony Memory — Design Map](c2-007-decision-kernel-flows-overview.md)
 
-See also: [Request Flow 2 — Handoff, Resume and Finalize](decision-kernel-flows-request-handoff.md)
-and [Context: Jev calls](decision-kernel-context-jev.md).
+See also: [Request Flow 2 — Handoff, Resume and Finalize](c3-014-decision-kernel-flows-request-handoff.md)
+and [Context: Jev calls](c3-017-decision-kernel-context-jev.md).
 
 ## Where the flow waits
 
@@ -143,14 +143,14 @@ Step numbers are the diagram's message numbers.
 
 Every node, capability and Jev call becomes a Langfuse observation on one trace whose id is
 derived from `run_id` (design part 5). The trace is observability only; the run root is
-authoritative ([learning loop](decision-kernel-flows-learning-loop.md)).
+authoritative ([learning loop](c3-020-decision-kernel-flows-learning-loop.md)).
 
 **Later stages change the context, not this sequence.** From the INFLUENCE ROUTING step, the
 routing call can also receive learned statistics (ADR-065 store). From Stage 2, evidence can come
 from the context compiler, and ADR-062 knowledge retrieval (not yet on main) would add a research
-source. See [Context: Jev calls](decision-kernel-context-jev.md).
+source. See [Context: Jev calls](c3-017-decision-kernel-context-jev.md).
 
-Open points for this flow: OP-01, OP-03, OP-31 in [open points](decision-kernel-flows-open-points.md).
+Open points for this flow: OP-01, OP-03, OP-31 in [open points](c3-022-decision-kernel-flows-open-points.md).
 
 ## Legend
 
@@ -163,8 +163,8 @@ Open points for this flow: OP-01, OP-03, OP-31 in [open points](decision-kernel-
 
 ## Cross-Links
 
-- Parent: [Design Map](decision-kernel-flows-overview.md)
-- Sibling: [Request Flow 2](decision-kernel-flows-request-handoff.md)
+- Parent: [Design Map](c2-007-decision-kernel-flows-overview.md)
+- Sibling: [Request Flow 2](c3-014-decision-kernel-flows-request-handoff.md)
 - Kernel graph topology: [design part 3](../../analysis/2026-09-30-decision-kernel-design-3-kernel-scheduler.md)
 - Capabilities and Jev templates: [design part 4](../../analysis/2026-09-30-decision-kernel-design-4-jev-and-capabilities.md)
 - Running it: [How to run the decision kernel](../../how-to/run-the-decision-kernel.md)

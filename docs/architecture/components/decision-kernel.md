@@ -80,7 +80,7 @@ Diagram parent: none (`root: true`). This overview is the entry point. The detai
 in [Decision Kernel V0 Design — Part 1](../../analysis/2026-09-30-decision-kernel-design.md).
 The end-to-end flows, the context map (where Jev, the host LLM, workers and humans get their
 context) and the learning loop are in
-[Decision Kernel — Flows and Context](../diagrams/decision-kernel-flows-overview.md). The
+[Decision Kernel — Flows and Context](../diagrams/c2-007-decision-kernel-flows-overview.md). The
 colony memory layer is in [Colony Memory](colony-memory.md).
 
 ## Exposed interfaces

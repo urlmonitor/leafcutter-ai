@@ -5,7 +5,7 @@ type: architecture
 flight_level: L3-Component
 diagram_type: data_flow
 status: draft
-parent: docs/architecture/diagrams/decision-kernel-flows-overview.md
+parent: docs/architecture/diagrams/c2-007-decision-kernel-flows-overview.md
 created: 2026-09-30
 last_updated: 2026-10-02
 source_ticket: null
@@ -72,10 +72,10 @@ flowchart TD
   STG -->|"a person runs decisions publish"| GIT
 ```
 
-Parent: [Decision Kernel and Colony Memory — Design Map](decision-kernel-flows-overview.md)
+Parent: [Decision Kernel and Colony Memory — Design Map](c2-007-decision-kernel-flows-overview.md)
 
-See also: [Regression memory](decision-kernel-flows-regression-memory.md) (the offline branch)
-and [Context: Jev calls](decision-kernel-context-jev.md) (what each Jev call receives).
+See also: [Regression memory](c3-021-decision-kernel-flows-regression-memory.md) (the offline branch)
+and [Context: Jev calls](c3-017-decision-kernel-context-jev.md) (what each Jev call receives).
 
 | Step | What happens | Status | Source |
 |---|---|---|---|
@@ -174,7 +174,7 @@ so run data can be shared across checkouts (design part 6, risk 12).
 - Every statistic carries its context dimensions; no global success rates (ADR-057 §7).
 
 Open points for this page: OP-18 to OP-22, OP-25 to OP-28 and OP-31 in
-[open points](decision-kernel-flows-open-points.md).
+[open points](c3-022-decision-kernel-flows-open-points.md).
 
 ## Legend
 
@@ -187,7 +187,7 @@ Open points for this page: OP-18 to OP-22, OP-25 to OP-28 and OP-31 in
 
 ## Cross-Links
 
-- Parent: [Design Map](decision-kernel-flows-overview.md)
+- Parent: [Design Map](c2-007-decision-kernel-flows-overview.md)
 - Port, backends and settings: [Colony Memory — Container Overview](../components/colony-memory.md)
 - Decisions: [ADR-056](../adrs/ADR-056-colony-memory-evidence-reinforcement.md),
   [ADR-057](../adrs/ADR-057-colony-memory-store-optional-postgres.md),
@@ -196,4 +196,4 @@ Open points for this page: OP-18 to OP-22, OP-25 to OP-28 and OP-31 in
   [ADR-060](../adrs/ADR-060-source-of-truth-and-approval-authority.md),
   [ADR-061](../adrs/ADR-061-identity-of-declared-and-learned-records.md),
   [ADR-065](../adrs/ADR-065-colony-learned-statistics-neo4j-aggregates.md)
-- Sibling: [Regression memory](decision-kernel-flows-regression-memory.md)
+- Sibling: [Regression memory](c3-021-decision-kernel-flows-regression-memory.md)

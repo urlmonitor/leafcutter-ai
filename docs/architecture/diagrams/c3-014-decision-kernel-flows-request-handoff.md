@@ -5,7 +5,7 @@ type: architecture
 flight_level: L3-Component
 diagram_type: sequence
 status: draft
-parent: docs/architecture/diagrams/decision-kernel-flows-overview.md
+parent: docs/architecture/diagrams/c2-007-decision-kernel-flows-overview.md
 created: 2026-09-30
 last_updated: 2026-10-02
 source_ticket: null
@@ -16,7 +16,7 @@ related_docs:
   - docs/analysis/2026-09-30-decision-kernel-design-4-jev-and-capabilities.md
   - docs/analysis/2026-09-30-decision-kernel-design-5-client-observability.md
   - docs/analysis/2026-09-30-leafcutter-kernel-spec-rev3-5-client-observability-safeguards.md
-  - docs/architecture/diagrams/decision-kernel-flows-request-native.md
+  - docs/architecture/diagrams/c3-013-decision-kernel-flows-request-native.md
   - docs/architecture/adrs/ADR-060-source-of-truth-and-approval-authority.md
 related_code:
   - kernel/scheduler/nodes_interaction.py
@@ -33,7 +33,7 @@ tags:
 
 # Decision Kernel Request Flow 2 — Host or Human Handoff, Resume and Finalize
 
-This is the second half of a kernel run. [Request Flow 1](decision-kernel-flows-request-native.md)
+This is the second half of a kernel run. [Request Flow 1](c3-013-decision-kernel-flows-request-native.md)
 ended with a `waiting_host` or `waiting_human` envelope and a CLI process that exited normally.
 This page shows how Claude Code serves the pending interaction, how `resume` validates the
 answer before the graph moves, and how the run reaches a terminal state.
@@ -90,10 +90,10 @@ sequenceDiagram
     end
 ```
 
-Parent: [Decision Kernel and Colony Memory — Design Map](decision-kernel-flows-overview.md)
+Parent: [Decision Kernel and Colony Memory — Design Map](c2-007-decision-kernel-flows-overview.md)
 
-See also: [Request Flow 1](decision-kernel-flows-request-native.md) and
-[Context: host, worker, human](decision-kernel-context-host-worker-human.md).
+See also: [Request Flow 1](c3-013-decision-kernel-flows-request-native.md) and
+[Context: host, worker, human](c3-019-decision-kernel-context-host-worker-human.md).
 
 ## Resume validation, in order
 
@@ -126,7 +126,7 @@ finds the entry and resumes the still-pending interaction (spec §13.1, design p
 
 An executed host operation also records a `host_only` gap observation, on an accepted answer or
 an exhausted repair budget. That is the scout signal the
-[learning loop](decision-kernel-flows-learning-loop.md) counts later (design part 3, ADR-056 §6).
+[learning loop](c3-020-decision-kernel-flows-learning-loop.md) counts later (design part 3, ADR-056 §6).
 
 ## Other ways a run ends
 
@@ -156,7 +156,7 @@ Each CLI process opens a trace segment (`leafcutter.run` or `leafcutter.run.resu
 Handoffs appear as `interaction.opened`, `submission.accepted` and `submission.rejected` events.
 The host's own work is host-reported, not traced by the kernel (design part 5; ADR-058 §2).
 
-Open points for this flow: OP-04, OP-12, OP-30 in [open points](decision-kernel-flows-open-points.md).
+Open points for this flow: OP-04, OP-12, OP-30 in [open points](c3-022-decision-kernel-flows-open-points.md).
 
 ## Legend
 
@@ -169,8 +169,8 @@ Open points for this flow: OP-04, OP-12, OP-30 in [open points](decision-kernel-
 
 ## Cross-Links
 
-- Parent: [Design Map](decision-kernel-flows-overview.md)
-- Sibling: [Request Flow 1](decision-kernel-flows-request-native.md)
+- Parent: [Design Map](c2-007-decision-kernel-flows-overview.md)
+- Sibling: [Request Flow 1](c3-013-decision-kernel-flows-request-native.md)
 - Client, CLI exit codes and skill body: [design part 5](../../analysis/2026-09-30-decision-kernel-design-5-client-observability.md)
 - Host handoff contract: [spec part 5 §11](../../analysis/2026-09-30-leafcutter-kernel-spec-rev3-5-client-observability-safeguards.md)
 - Running it: [How to run the decision kernel](../../how-to/run-the-decision-kernel.md)

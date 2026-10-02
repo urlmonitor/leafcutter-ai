@@ -24,7 +24,7 @@ adrs:
 - `docs/architecture/adrs/ADR-057`, `ADR-058`, `ADR-065` — the colony memory store (ADR-057, now
   superseded in part), Langfuse as the colony history, and learned statistics in Neo4j.
 - `docs/architecture/components/colony-memory.md` and the `colony_memory` component.
-- `docs/architecture/diagrams/decision-kernel-flows-*.md` and `decision-kernel-context-*.md` — the
+- `docs/architecture/diagrams/c2-007-decision-kernel-flows-overview.md` and `c3-013` to `c3-022` (`decision-kernel-*`) — the
   design inventory, request flows, capability lifecycle, context map per consumer, learning loop,
   regression memory and open points.
 - `docs/roadmap.json` — the colony-memory track `phase_colony_1_collect` to `phase_colony_5_evolve`.

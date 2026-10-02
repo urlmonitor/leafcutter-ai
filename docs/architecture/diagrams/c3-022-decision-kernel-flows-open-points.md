@@ -5,14 +5,14 @@ type: reference
 flight_level: L3-Component
 diagram_type: none
 status: draft
-parent: docs/architecture/diagrams/decision-kernel-flows-overview.md
+parent: docs/architecture/diagrams/c2-007-decision-kernel-flows-overview.md
 created: 2026-09-30
 last_updated: 2026-10-02
 source_ticket: null
 components:
   - decision_kernel
 related_docs:
-  - docs/architecture/diagrams/decision-kernel-flows-overview.md
+  - docs/architecture/diagrams/c2-007-decision-kernel-flows-overview.md
   - docs/architecture/adrs/ADR-052-capabilities-replace-agents-prompts-are-compiled.md
   - docs/architecture/adrs/ADR-055-capability-registry-starts-empty.md
   - docs/architecture/adrs/ADR-056-colony-memory-evidence-reinforcement.md
@@ -33,7 +33,7 @@ tags:
 
 # Decision Kernel and Colony Memory — Open Points in the Designs
 
-The pages under the [Design Map](decision-kernel-flows-overview.md) map only what the sources
+The pages under the [Design Map](c2-007-decision-kernel-flows-overview.md) map only what the sources
 say. This list names every place where they are silent or disagree. It was written on 2026-09-30
 against `feature/kernel-bootstrap-v0` and re-checked on 2026-10-02 against main, after PRs #973,
 #977 and #978, ADR-059 to ADR-061 and [ADR-065](../adrs/ADR-065-colony-learned-statistics-neo4j-aggregates.md). Numbers are stable: a settled item
@@ -236,7 +236,7 @@ keeps its number. None is resolved here.
 
 ## Cross-Links
 
-- Parent: [Design Map](decision-kernel-flows-overview.md)
+- Parent: [Design Map](c2-007-decision-kernel-flows-overview.md)
 - Open questions at their source: [ADR-052](../adrs/ADR-052-capabilities-replace-agents-prompts-are-compiled.md),
   [ADR-054](../adrs/ADR-054-process-representation-and-maturity-model.md),
   [ADR-056](../adrs/ADR-056-colony-memory-evidence-reinforcement.md),

@@ -5,7 +5,7 @@ type: architecture
 flight_level: L3-Component
 diagram_type: data_flow
 status: draft
-parent: docs/architecture/diagrams/decision-kernel-flows-overview.md
+parent: docs/architecture/diagrams/c2-007-decision-kernel-flows-overview.md
 created: 2026-09-30
 last_updated: 2026-10-02
 source_ticket: null
@@ -16,7 +16,7 @@ related_docs:
   - docs/architecture/adrs/ADR-058-langfuse-colony-history-scores-datasets.md
   - docs/architecture/adrs/ADR-060-source-of-truth-and-approval-authority.md
   - docs/analysis/2026-09-30-leafcutter-kernel-spec-rev3-7-later-stages.md
-  - docs/architecture/diagrams/decision-kernel-flows-learning-loop.md
+  - docs/architecture/diagrams/c3-020-decision-kernel-flows-learning-loop.md
 related_code:
   - kernel/observability/tracer.py
   - kernel/observability/correlation.py
@@ -53,9 +53,9 @@ flowchart LR
   REV -.-> DEP["Activate or deploy"]
 ```
 
-Parent: [Decision Kernel and Colony Memory — Design Map](decision-kernel-flows-overview.md)
+Parent: [Decision Kernel and Colony Memory — Design Map](c2-007-decision-kernel-flows-overview.md)
 
-See also: [Learning loop](decision-kernel-flows-learning-loop.md) (the runtime branch).
+See also: [Learning loop](c3-020-decision-kernel-flows-learning-loop.md) (the runtime branch).
 
 ## From a decision to a dataset case
 
@@ -101,7 +101,7 @@ ADR-056 §3 rule 5). The change records its regression result together with its 
   (ADR-058 Negative).
 - What counts as "correct" is not settled (ADR-056 open question 3; ADR-058 open question 1).
 
-Open points for this page: OP-21, OP-24, OP-25, OP-32 in [open points](decision-kernel-flows-open-points.md).
+Open points for this page: OP-21, OP-24, OP-25, OP-32 in [open points](c3-022-decision-kernel-flows-open-points.md).
 
 ## Legend
 
@@ -112,8 +112,8 @@ Open points for this page: OP-21, OP-24, OP-25, OP-32 in [open points](decision-
 
 ## Cross-Links
 
-- Parent: [Design Map](decision-kernel-flows-overview.md)
-- Sibling: [Learning loop](decision-kernel-flows-learning-loop.md)
+- Parent: [Design Map](c2-007-decision-kernel-flows-overview.md)
+- Sibling: [Learning loop](c3-020-decision-kernel-flows-learning-loop.md)
 - Decisions: [ADR-056](../adrs/ADR-056-colony-memory-evidence-reinforcement.md) §3–§4,
   [ADR-058](../adrs/ADR-058-langfuse-colony-history-scores-datasets.md) §3–§4,
   [ADR-060](../adrs/ADR-060-source-of-truth-and-approval-authority.md) §5,

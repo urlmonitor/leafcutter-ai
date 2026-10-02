@@ -5,7 +5,7 @@ type: architecture
 flight_level: L3-Component
 diagram_type: data_flow
 status: draft
-parent: docs/architecture/diagrams/decision-kernel-flows-overview.md
+parent: docs/architecture/diagrams/c2-007-decision-kernel-flows-overview.md
 created: 2026-09-30
 last_updated: 2026-10-02
 source_ticket: null
@@ -87,19 +87,19 @@ flowchart LR
   COMP -.-> WRK
 ```
 
-Parent: [Decision Kernel and Colony Memory — Design Map](decision-kernel-flows-overview.md)
+Parent: [Decision Kernel and Colony Memory — Design Map](c2-007-decision-kernel-flows-overview.md)
 
 ## Consumers
 
 | Consumer | Receives, in short | Assembled by | Available from | Detail |
 |---|---|---|---|---|
-| Intake intent Jev call | The goal (or the clarified goal), component ids, earlier clarification answers, five answer kinds plus `__NEEDS_CONTEXT__` | First `route` pass, `kernel/intent/classify.py`, template `kernel.intent` v1 | V0 | [Jev calls](decision-kernel-context-jev.md) |
-| Routing Jev call | Task goal and component ids, the request, the descriptions of eligible `semantic` capabilities, the `__NONE__` and `__NEEDS_CONTEXT__` choices, earlier clarification answers | `route` node with the routing template (`kernel/scheduler/routing.py`) | V0. Learned statistics: INFLUENCE ROUTING (Stage 4 or later, store per ADR-065) | [Jev calls](decision-kernel-context-jev.md) |
-| Decision Jev calls (`assess`: kind, sufficiency, satisfaction, missing knowledge, preference, conflict, precedent) | Question, options, approved criteria, evidence excerpts, findings, constraints, **precedent candidates and precedent evidence** | Decision graph: `load`, `precedent`, templates in `assess` | V0. Precedent: V0, decision store (ADR-059 §5). Policies: Stage 3. Glossary-aware context: Stage 2 | [Jev calls](decision-kernel-context-jev.md) |
-| Research capability and its retrieval | Research question, evidence needs, category descriptions, source catalog, option context, search candidates | Research graph, `retrieve.repository` | V0. Context compiler: Stage 2. ADR-062 knowledge retrieval: in progress, not on main | [Research](decision-kernel-context-research.md) |
-| Host LLM (Claude Code) | A `HostWorkRequest`: operation, compiled task statement, input artifacts, evidence ids, allowed and forbidden operations, output schema. Also its own session context | `open_interactions`; the task statement is compiled by `kernel/capabilities/host/compiler.py` | V0 | [Host, worker, human](decision-kernel-context-host-worker-human.md) |
-| Bounded worker loop (for example coding) | A compiled view of the implementation contract: operation, task, approved decisions, evidence, constraints, expected output | A compiler for worker loops and the context compiler, both planned | Later: inputs in Stages 2–3, executor in Stage 5 | [Host, worker, human](decision-kernel-context-host-worker-human.md) |
-| Human | A `HumanQuestion`: question, choices with consequences, free-text and structured-answer rules, why research cannot settle it. Includes the precedent reuse question and the ranked design choice | `open_interactions`, with template wording or `host.formulate_question` | V0 | [Host, worker, human](decision-kernel-context-host-worker-human.md) |
+| Intake intent Jev call | The goal (or the clarified goal), component ids, earlier clarification answers, five answer kinds plus `__NEEDS_CONTEXT__` | First `route` pass, `kernel/intent/classify.py`, template `kernel.intent` v1 | V0 | [Jev calls](c3-017-decision-kernel-context-jev.md) |
+| Routing Jev call | Task goal and component ids, the request, the descriptions of eligible `semantic` capabilities, the `__NONE__` and `__NEEDS_CONTEXT__` choices, earlier clarification answers | `route` node with the routing template (`kernel/scheduler/routing.py`) | V0. Learned statistics: INFLUENCE ROUTING (Stage 4 or later, store per ADR-065) | [Jev calls](c3-017-decision-kernel-context-jev.md) |
+| Decision Jev calls (`assess`: kind, sufficiency, satisfaction, missing knowledge, preference, conflict, precedent) | Question, options, approved criteria, evidence excerpts, findings, constraints, **precedent candidates and precedent evidence** | Decision graph: `load`, `precedent`, templates in `assess` | V0. Precedent: V0, decision store (ADR-059 §5). Policies: Stage 3. Glossary-aware context: Stage 2 | [Jev calls](c3-017-decision-kernel-context-jev.md) |
+| Research capability and its retrieval | Research question, evidence needs, category descriptions, source catalog, option context, search candidates | Research graph, `retrieve.repository` | V0. Context compiler: Stage 2. ADR-062 knowledge retrieval: in progress, not on main | [Research](c3-018-decision-kernel-context-research.md) |
+| Host LLM (Claude Code) | A `HostWorkRequest`: operation, compiled task statement, input artifacts, evidence ids, allowed and forbidden operations, output schema. Also its own session context | `open_interactions`; the task statement is compiled by `kernel/capabilities/host/compiler.py` | V0 | [Host, worker, human](c3-019-decision-kernel-context-host-worker-human.md) |
+| Bounded worker loop (for example coding) | A compiled view of the implementation contract: operation, task, approved decisions, evidence, constraints, expected output | A compiler for worker loops and the context compiler, both planned | Later: inputs in Stages 2–3, executor in Stage 5 | [Host, worker, human](c3-019-decision-kernel-context-host-worker-human.md) |
+| Human | A `HumanQuestion`: question, choices with consequences, free-text and structured-answer rules, why research cannot settle it. Includes the precedent reuse question and the ranked design choice | `open_interactions`, with template wording or `host.formulate_question` | V0 | [Host, worker, human](c3-019-decision-kernel-context-host-worker-human.md) |
 
 ## Rules that hold for every kernel consumer
 
@@ -128,7 +128,7 @@ Projections", is accepted on branch `feature/knowledge-retrieval-v01` and not ye
 a separate retrieval package over immutable Neo4j projections of Git whose port the composition
 root injects into the capability mechanism, with results converted into the kernel's `Evidence`
 contract. Until it merges, research reads only the V0 sources on the
-[research page](decision-kernel-context-research.md).
+[research page](c3-018-decision-kernel-context-research.md).
 
 ## Contrast: how legacy agents get their context
 
@@ -153,7 +153,7 @@ pre-approves only `run`, `resume` and `status` (design part 5). The spec calls C
 compromise, not a sandbox or a guaranteed clean model context" (spec §2.3, §11.5). A clean
 per-task context comes with direct executors in Stage 5 (spec §20). See OP-12.
 
-Open points for this page: OP-06, OP-11, OP-12, OP-13, OP-29, OP-31 in [open points](decision-kernel-flows-open-points.md).
+Open points for this page: OP-06, OP-11, OP-12, OP-13, OP-29, OP-31 in [open points](c3-022-decision-kernel-flows-open-points.md).
 
 ## Legend
 
@@ -166,11 +166,11 @@ Open points for this page: OP-06, OP-11, OP-12, OP-13, OP-29, OP-31 in [open poi
 
 ## Cross-Links
 
-- Parent: [Design Map](decision-kernel-flows-overview.md)
-- Detail pages: [Jev calls](decision-kernel-context-jev.md), [Research](decision-kernel-context-research.md),
-  [Host, worker, human](decision-kernel-context-host-worker-human.md)
+- Parent: [Design Map](c2-007-decision-kernel-flows-overview.md)
+- Detail pages: [Jev calls](c3-017-decision-kernel-context-jev.md), [Research](c3-018-decision-kernel-context-research.md),
+  [Host, worker, human](c3-019-decision-kernel-context-host-worker-human.md)
 - Memory: [Colony Memory — Container Overview](../components/colony-memory.md),
-  [Learning loop](decision-kernel-flows-learning-loop.md)
+  [Learning loop](c3-020-decision-kernel-flows-learning-loop.md)
 - Legacy: [Agent Knowledge Plane](../agent_knowledge_plane.md),
   [Agent Knowledge System](../agent_knowledge_system.md),
   [Injection Builder](../components/injection-builder.md)

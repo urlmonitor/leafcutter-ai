@@ -5,14 +5,14 @@ type: architecture
 flight_level: L3-Component
 diagram_type: data_flow
 status: draft
-parent: docs/architecture/diagrams/decision-kernel-flows-overview.md
+parent: docs/architecture/diagrams/c2-007-decision-kernel-flows-overview.md
 created: 2026-09-30
 last_updated: 2026-10-02
 source_ticket: null
 components:
   - decision_kernel
 related_docs:
-  - docs/architecture/diagrams/decision-kernel-context-map.md
+  - docs/architecture/diagrams/c3-016-decision-kernel-context-map.md
   - docs/analysis/2026-09-30-decision-kernel-design-4-jev-and-capabilities.md
   - docs/analysis/2026-09-30-leafcutter-kernel-spec-rev3-4-scheduler-jev-capabilities.md
   - docs/analysis/2026-09-30-leafcutter-kernel-spec-rev3-7-later-stages.md
@@ -59,10 +59,10 @@ flowchart LR
   KR["In progress - ADR-062 knowledge retrieval, not on main"] -.->|"Evidence via an adapter"| BUN
 ```
 
-Parent: [Decision Kernel and Colony Memory — Design Map](decision-kernel-flows-overview.md)
+Parent: [Decision Kernel and Colony Memory — Design Map](c2-007-decision-kernel-flows-overview.md)
 
-See also: [Context map](decision-kernel-context-map.md) and
-[Request Flow 1](decision-kernel-flows-request-native.md).
+See also: [Context map](c3-016-decision-kernel-context-map.md) and
+[Request Flow 1](c3-013-decision-kernel-flows-request-native.md).
 
 ## Research graph inputs
 
@@ -103,7 +103,7 @@ The graph is `plan` (`plan_needs`, `resolve_sources`), `collect`, `evaluate`, `f
   `glossary` surface is unused, and glossary-aware context is Stage 2 (OP-05).
 - **Decision records.** `docs/decisions/` is not a research source. Approved decisions reach a
   decision only as precedent through the `ColonyMemory` port
-  ([Jev calls](decision-kernel-context-jev.md); OP-31).
+  ([Jev calls](c3-017-decision-kernel-context-jev.md); OP-31).
 - `task_context` also arrives without retrieval: `TaskInput.initial_evidence` and human answers
   enter the run as `task_context` evidence (design parts 3 and 4).
 
@@ -150,7 +150,7 @@ converts results into the kernel's `Evidence` and `SourceVersion` contracts. It 
 research context source. It introduces no decision or lesson store of its own; whether learned
 statistics share its Neo4j database is an ADR-065 open question.
 
-Open points for this page: OP-05, OP-06, OP-11, OP-31 in [open points](decision-kernel-flows-open-points.md).
+Open points for this page: OP-05, OP-06, OP-11, OP-31 in [open points](c3-022-decision-kernel-flows-open-points.md).
 
 ## Legend
 
@@ -162,7 +162,7 @@ Open points for this page: OP-05, OP-06, OP-11, OP-31 in [open points](decision-
 
 ## Cross-Links
 
-- Parent: [Design Map](decision-kernel-flows-overview.md)
-- Sibling pages: [Context map](decision-kernel-context-map.md), [Jev calls](decision-kernel-context-jev.md)
+- Parent: [Design Map](c2-007-decision-kernel-flows-overview.md)
+- Sibling pages: [Context map](c3-016-decision-kernel-context-map.md), [Jev calls](c3-017-decision-kernel-context-jev.md)
 - The knowledge map it reads: [Knowledge System](../components/knowledge-system.md)
 - Adapter design and as-built notes: [design part 4](../../analysis/2026-09-30-decision-kernel-design-4-jev-and-capabilities.md)

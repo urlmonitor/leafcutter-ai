@@ -12,16 +12,16 @@ source_ticket: null
 components:
   - decision_kernel
 children:
-  - docs/architecture/diagrams/decision-kernel-flows-request-native.md
-  - docs/architecture/diagrams/decision-kernel-flows-request-handoff.md
-  - docs/architecture/diagrams/decision-kernel-flows-capability-lifecycle.md
-  - docs/architecture/diagrams/decision-kernel-context-map.md
-  - docs/architecture/diagrams/decision-kernel-context-jev.md
-  - docs/architecture/diagrams/decision-kernel-context-research.md
-  - docs/architecture/diagrams/decision-kernel-context-host-worker-human.md
-  - docs/architecture/diagrams/decision-kernel-flows-learning-loop.md
-  - docs/architecture/diagrams/decision-kernel-flows-regression-memory.md
-  - docs/architecture/diagrams/decision-kernel-flows-open-points.md
+  - docs/architecture/diagrams/c3-013-decision-kernel-flows-request-native.md
+  - docs/architecture/diagrams/c3-014-decision-kernel-flows-request-handoff.md
+  - docs/architecture/diagrams/c3-015-decision-kernel-flows-capability-lifecycle.md
+  - docs/architecture/diagrams/c3-016-decision-kernel-context-map.md
+  - docs/architecture/diagrams/c3-017-decision-kernel-context-jev.md
+  - docs/architecture/diagrams/c3-018-decision-kernel-context-research.md
+  - docs/architecture/diagrams/c3-019-decision-kernel-context-host-worker-human.md
+  - docs/architecture/diagrams/c3-020-decision-kernel-flows-learning-loop.md
+  - docs/architecture/diagrams/c3-021-decision-kernel-flows-regression-memory.md
+  - docs/architecture/diagrams/c3-022-decision-kernel-flows-open-points.md
 related_docs:
   - docs/architecture/components/decision-kernel.md
   - docs/architecture/components/colony-memory.md
@@ -65,7 +65,7 @@ show the flows, the data paths and where each consumer gets its context.
 These pages map what the sources and main's code say as of 2026-10-02. They were first written on
 2026-09-30 and re-checked after PRs #973, #977 and #978 merged the kernel and the decision store.
 They add no design of their own. Planned elements are marked planned. Where sources are silent or
-disagree, the pages point to the [open points](decision-kernel-flows-open-points.md) list instead
+disagree, the pages point to the [open points](c3-022-decision-kernel-flows-open-points.md) list instead
 of choosing an answer.
 
 **Status words used on every page**
@@ -128,7 +128,7 @@ Parent: none (`root: true`). The kernel's own container view is
 - **Decision memory is live; learned statistics are planned.** A decision a human approved is
   staged in the run root, published to `docs/decisions/` by a person and offered to later
   decisions as precedent. Statistics from Langfuse are later work
-  ([learning loop](decision-kernel-flows-learning-loop.md)).
+  ([learning loop](c3-020-decision-kernel-flows-learning-loop.md)).
 
 ## Design inventory
 
@@ -183,16 +183,16 @@ flowchart LR
 
 | Page | Shows |
 |---|---|
-| [Request flow 1: native work](decision-kernel-flows-request-native.md) | Skill → CLI → RunService → scheduler → Jev routing → decision with precedent → research → retrieval, up to the first wait |
-| [Request flow 2: handoff and resume](decision-kernel-flows-request-handoff.md) | Host or human handoff, resume validation, parent continuation, finalize, a staged record |
-| [Capability lifecycle](decision-kernel-flows-capability-lifecycle.md) | ADR-052 lifecycle with the executor of every step (ADR-053) and the V0 mapping |
-| [Context map](decision-kernel-context-map.md) | Every kernel consumer and its context sources, contrasted with the legacy knowledge plane |
-| [Context: Jev calls](decision-kernel-context-jev.md) | Intake intent, routing and decision Jev calls, including precedent |
-| [Context: research](decision-kernel-context-research.md) | Research capability, the retrieval adapter and planned sources |
-| [Context: host, worker, human](decision-kernel-context-host-worker-human.md) | Compiled host packets, bounded worker loop, human interactions and publication |
-| [Learning loop](decision-kernel-flows-learning-loop.md) | Live: approved records → Git → precedent. Planned: Langfuse → evaluator → Neo4j → routing |
-| [Regression memory](decision-kernel-flows-regression-memory.md) | Confirmed mistakes → Langfuse datasets → regression evaluation before a change |
-| [Open points](decision-kernel-flows-open-points.md) | Where the sources are silent or disagree, with their 2026-10-02 status |
+| [Request flow 1: native work](c3-013-decision-kernel-flows-request-native.md) | Skill → CLI → RunService → scheduler → Jev routing → decision with precedent → research → retrieval, up to the first wait |
+| [Request flow 2: handoff and resume](c3-014-decision-kernel-flows-request-handoff.md) | Host or human handoff, resume validation, parent continuation, finalize, a staged record |
+| [Capability lifecycle](c3-015-decision-kernel-flows-capability-lifecycle.md) | ADR-052 lifecycle with the executor of every step (ADR-053) and the V0 mapping |
+| [Context map](c3-016-decision-kernel-context-map.md) | Every kernel consumer and its context sources, contrasted with the legacy knowledge plane |
+| [Context: Jev calls](c3-017-decision-kernel-context-jev.md) | Intake intent, routing and decision Jev calls, including precedent |
+| [Context: research](c3-018-decision-kernel-context-research.md) | Research capability, the retrieval adapter and planned sources |
+| [Context: host, worker, human](c3-019-decision-kernel-context-host-worker-human.md) | Compiled host packets, bounded worker loop, human interactions and publication |
+| [Learning loop](c3-020-decision-kernel-flows-learning-loop.md) | Live: approved records → Git → precedent. Planned: Langfuse → evaluator → Neo4j → routing |
+| [Regression memory](c3-021-decision-kernel-flows-regression-memory.md) | Confirmed mistakes → Langfuse datasets → regression evaluation before a change |
+| [Open points](c3-022-decision-kernel-flows-open-points.md) | Where the sources are silent or disagree, with their 2026-10-02 status |
 
 ## Definitions
 

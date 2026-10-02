@@ -5,7 +5,7 @@ type: architecture
 flight_level: L3-Component
 diagram_type: state
 status: draft
-parent: docs/architecture/diagrams/decision-kernel-flows-overview.md
+parent: docs/architecture/diagrams/c2-007-decision-kernel-flows-overview.md
 created: 2026-09-30
 last_updated: 2026-10-02
 source_ticket: null
@@ -59,7 +59,7 @@ stateDiagram-v2
     ESCALATE --> [*]
 ```
 
-Parent: [Decision Kernel and Colony Memory — Design Map](decision-kernel-flows-overview.md)
+Parent: [Decision Kernel and Colony Memory — Design Map](c2-007-decision-kernel-flows-overview.md)
 
 ADR-052 names the steps and the four outcomes. It does not say which check leads to which
 outcome, or where REPAIR re-enters. The transitions above follow ADR-052 §5's illustrative
@@ -122,10 +122,10 @@ The kernel uses the most mature representation available, in this order:
 | Nothing fits → capability gap | 0 Unknown | `record_gaps`; fallback only if `host.fallback_on_no_match` and the rules in design part 4 allow it |
 
 Repeated LLM reasoning is promoted to policies, and repeated policies to workflows, only through
-review (ADR-054 §3). Evidence from the [learning loop](decision-kernel-flows-learning-loop.md)
+review (ADR-054 §3). Evidence from the [learning loop](c3-020-decision-kernel-flows-learning-loop.md)
 proposes promotions; it never activates them (ADR-056 §7).
 
-Open points for this page: OP-04, OP-07, OP-08, OP-09, OP-10 in [open points](decision-kernel-flows-open-points.md).
+Open points for this page: OP-04, OP-07, OP-08, OP-09, OP-10 in [open points](c3-022-decision-kernel-flows-open-points.md).
 
 ## Legend
 
@@ -137,8 +137,8 @@ Open points for this page: OP-04, OP-07, OP-08, OP-09, OP-10 in [open points](de
 
 ## Cross-Links
 
-- Parent: [Design Map](decision-kernel-flows-overview.md)
-- Where each step gets its input: [Context map](decision-kernel-context-map.md)
+- Parent: [Design Map](c2-007-decision-kernel-flows-overview.md)
+- Where each step gets its input: [Context map](c3-016-decision-kernel-context-map.md)
 - Decisions: [ADR-052](../adrs/ADR-052-capabilities-replace-agents-prompts-are-compiled.md),
   [ADR-053](../adrs/ADR-053-intelligence-selection-deterministic-jev-llm-human.md),
   [ADR-054](../adrs/ADR-054-process-representation-and-maturity-model.md)

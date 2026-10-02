@@ -5,14 +5,14 @@ type: architecture
 flight_level: L3-Component
 diagram_type: data_flow
 status: draft
-parent: docs/architecture/diagrams/decision-kernel-flows-overview.md
+parent: docs/architecture/diagrams/c2-007-decision-kernel-flows-overview.md
 created: 2026-09-30
 last_updated: 2026-10-02
 source_ticket: null
 components:
   - decision_kernel
 related_docs:
-  - docs/architecture/diagrams/decision-kernel-context-map.md
+  - docs/architecture/diagrams/c3-016-decision-kernel-context-map.md
   - docs/analysis/2026-09-30-decision-kernel-design-2-contracts-registry-config.md
   - docs/analysis/2026-09-30-decision-kernel-design-3-kernel-scheduler.md
   - docs/analysis/2026-09-30-decision-kernel-design-4-jev-and-capabilities.md
@@ -42,7 +42,7 @@ Jev answers typed questions about a supplied state. It never invents options, cr
 questions (ADR-053 §2). So everything Jev knows in a call is exactly what kernel code puts into
 the state and the question templates. This page lists that content for the Jev consumers in the
 request flow. The research capability's Jev calls are on the
-[research page](decision-kernel-context-research.md).
+[research page](c3-018-decision-kernel-context-research.md).
 
 ```mermaid
 flowchart LR
@@ -63,10 +63,10 @@ flowchart LR
   JD --> CODE
 ```
 
-Parent: [Decision Kernel and Colony Memory — Design Map](decision-kernel-flows-overview.md)
+Parent: [Decision Kernel and Colony Memory — Design Map](c2-007-decision-kernel-flows-overview.md)
 
-See also: [Context map](decision-kernel-context-map.md) and
-[Learning loop](decision-kernel-flows-learning-loop.md) (how precedent records come to exist).
+See also: [Context map](c3-016-decision-kernel-context-map.md) and
+[Learning loop](c3-020-decision-kernel-flows-learning-loop.md) (how precedent records come to exist).
 
 ## Intake intent Jev call
 
@@ -145,7 +145,7 @@ a strongly applicable one only produces a reuse-or-decide-anew question to the c
 (ADR-060 §4). A low-calibration decision type is first read as a weak decision basis, not as a
 Jev fault (ADR-056 §4).
 
-Open points for this page: OP-01, OP-03, OP-04, OP-05, OP-07, OP-31 in [open points](decision-kernel-flows-open-points.md).
+Open points for this page: OP-01, OP-03, OP-04, OP-05, OP-07, OP-31 in [open points](c3-022-decision-kernel-flows-open-points.md).
 
 ## Legend
 
@@ -158,8 +158,8 @@ Open points for this page: OP-01, OP-03, OP-04, OP-05, OP-07, OP-31 in [open poi
 
 ## Cross-Links
 
-- Parent: [Design Map](decision-kernel-flows-overview.md)
-- Sibling pages: [Context map](decision-kernel-context-map.md), [Research](decision-kernel-context-research.md)
+- Parent: [Design Map](c2-007-decision-kernel-flows-overview.md)
+- Sibling pages: [Context map](c3-016-decision-kernel-context-map.md), [Research](c3-018-decision-kernel-context-research.md)
 - Templates and thresholds: [design part 4](../../analysis/2026-09-30-decision-kernel-design-4-jev-and-capabilities.md),
   [design part 2](../../analysis/2026-09-30-decision-kernel-design-2-contracts-registry-config.md)
 - Intake intent: [design part 3](../../analysis/2026-09-30-decision-kernel-design-3-kernel-scheduler.md)

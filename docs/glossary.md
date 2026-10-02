@@ -129,7 +129,7 @@ The resumable runtime in leafcutter-ai (package `kernel/`) that takes a free-for
 
 ### capability
 
-In the Decision Kernel, the contract-driven unit of work that replaces the agent: an input contract, applicable policies, evidence preparation, decisions, an execution strategy, verification and a typed result. A capability may contain no model, one model call or a bounded worker loop, and callers do not depend on which. Every capability runs the same lifecycle: PREPARE → PRE-CHECK → COMPILE INVOCATION → EXECUTE → POST-CHECK → ACCEPT, REPAIR, REQUEST INFORMATION or ESCALATE (ADR-052 §4; see `docs/architecture/diagrams/decision-kernel-flows-capability-lifecycle.md`). See ADR-052.
+In the Decision Kernel, the contract-driven unit of work that replaces the agent: an input contract, applicable policies, evidence preparation, decisions, an execution strategy, verification and a typed result. A capability may contain no model, one model call or a bounded worker loop, and callers do not depend on which. Every capability runs the same lifecycle: PREPARE → PRE-CHECK → COMPILE INVOCATION → EXECUTE → POST-CHECK → ACCEPT, REPAIR, REQUEST INFORMATION or ESCALATE (ADR-052 §4; see `docs/architecture/diagrams/c3-015-decision-kernel-flows-capability-lifecycle.md`). See ADR-052.
 
 ### Jev
 
@@ -213,7 +213,7 @@ A pure function in `scripts/injection_builders.py` that assembles the layered co
 
 ### agent_knowledge_plane
 
-The architecture reference (`docs/architecture/agent_knowledge_plane.md`) for how legacy Leafcutter agents receive context at spawn time through the harness's injection channels, such as `CLAUDE.md`, auto-memory, the glossary, skills, agent frontmatter, folder `README.md` and `PROJECT_CONTEXT.md`. The Decision Kernel's context map contrasts with it (`docs/architecture/diagrams/decision-kernel-context-map.md`).
+The architecture reference (`docs/architecture/agent_knowledge_plane.md`) for how legacy Leafcutter agents receive context at spawn time through the harness's injection channels, such as `CLAUDE.md`, auto-memory, the glossary, skills, agent frontmatter, folder `README.md` and `PROJECT_CONTEXT.md`. The Decision Kernel's context map contrasts with it (`docs/architecture/diagrams/c3-016-decision-kernel-context-map.md`).
 
 ### agent_knowledge_system
 
