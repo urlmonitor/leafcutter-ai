@@ -3,7 +3,7 @@ title: Correct knowledge retrieval and native metadata annotations
 description: User-requested annotation maintenance for the existing KM-400a-3-i delivery;
   no new product feature.
 created: '2026-10-02'
-status: in_progress
+status: done
 priority: medium
 depends_on: []
 components:
@@ -17,7 +17,7 @@ ac_traceability:
   path: docs/acceptance-criteria/knowledge-management/KM-400-trustworthy-project-knowledge/KM-400a-3-i.yaml
 agents:
   commit: signed_off
-  pull-request: needed
+  pull-request: signed_off
 files_touched:
 - .github/workflows/ci.yml
 - integrations/knowledge_capability.py
@@ -113,7 +113,7 @@ The coding agents completed the changes and root reviewed them. Local mypy check
 native metadata tests passed 131 cases, CLI/configuration tests passed 36 cases,
 core retrieval checks passed 45 cases, query admission passed 18 cases, and the
 assessment/kernel contract checks passed 46 cases. These are scoped checks, not a
-full-suite result. Publication and merge remain pending.
+full-suite result. PR creation is complete; final CI completion and merge remain pending.
 
 ## Test Requirements
 
@@ -131,7 +131,7 @@ tests:
 ## Sign-offs
 
 - [x] commit — 2026-10-02 17:45
-- [ ] pull-request
+- [x] pull-request — 2026-10-02 17:50
 
 ## Comments
 
@@ -155,3 +155,17 @@ resolved it. The new maintenance ticket's required depends_on field was supplied
 The message accurately describes the reviewed annotation, validation and CI scope.
 The authorized commit includes the exact files_touched list; publication remains
 assigned to pull-request. No other phase sign-off is claimed.
+
+### 2026-10-02 17:50 - pull-request (status: ok)
+feedback-id: fb_2026-10-02_82f0cc4a
+completion_manifest:
+  branch_pushed: true
+  pr_created: true
+  pr_body_complete: true
+Root pushed commit 8b48f945c6dc40829d719ecc619532941ea9335a and created
+[PR #1006](https://github.com/urlmonitor/leafcutter-ai/pull/1006).
+The open PR and exact published revision were verified. Its body explains the
+annotation corrections, CI scope and focused validation, including the disabled
+full pytest job. Both listed maintenance phases are complete, so this ticket is
+done under the PR-creation phase contract. Final CI completion and merge remain
+pending; this sign-off does not claim either has completed.
