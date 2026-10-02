@@ -17,7 +17,7 @@ from __future__ import annotations
 
 from dataclasses import replace
 
-from kernel.capabilities.decision.ranking import RESEARCH_CAP
+from kernel.capabilities.decision.ranking import NO_RESEARCH_TARGETS
 from kernel.contracts import schema_ids
 from kernel.contracts.enums import ApprovalStatus, DecisionStatus, RequestKind, ResultStatus
 from kernel.contracts.payloads import DecisionReportPayload
@@ -32,8 +32,8 @@ CONDITION = "but Jev should be able to decide based on some criteria"
 class RankedGapCase(PrecedentCase):
     """Thin evidence, Jev names only a human preference as missing, options are rankable.
 
-    The kernel does not escalate this blindly: with no research round due it hands the human the
-    ranked question (pending reason `research_cap`, phase `awaiting_design_choice`).
+    The kernel does not escalate this blindly: the options name nothing to research, so it hands the
+    human the ranked question (pending reason `no_research_targets`, phase `awaiting_design_choice`).
     """
 
     def setUp(self) -> None:
@@ -47,7 +47,7 @@ class RankedGapCase(PrecedentCase):
             findings = child(ctx, RequestKind.SYNTHESIS, schema_ids.FINDINGS, {})
             waiting = self.run_decision(resume(inv, waiting, [findings]), ctx)
         self.assertEqual(waiting.decisions[0].status, DecisionStatus.NEEDS_HUMAN)
-        self.assertEqual(waiting.continuation_state["pending_reason"], RESEARCH_CAP)
+        self.assertEqual(waiting.continuation_state["pending_reason"], NO_RESEARCH_TARGETS)
         self.assertEqual(waiting.continuation_state["phase"], "awaiting_design_choice")
         return inv, ctx, waiting
 
