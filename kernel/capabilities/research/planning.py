@@ -30,6 +30,7 @@ from kernel.capabilities.decision.jev_support import ask_jev, make_batch, noul_q
 from kernel.capabilities.research.state import Plan
 from kernel.capabilities.research.targeting import (
     NeedQuery,
+    claims_left_out,
     default_query,
     existing_locators,
     locator_sources,
@@ -64,8 +65,14 @@ class Resolution:
 
 def _targeted(ctx: ExecutionContext, plan: Plan) -> list[tuple[EvidenceNeed, NeedQuery]]:
     """Return the gap and claim needs of the plan with their queries (bounded by config)."""
-    return targeted(plan, ctx.config.research.max_targeted_needs,
+    cfg = ctx.config.research
+    return targeted(plan, cfg.max_claim_needs, cfg.max_targeted_needs,
                     ctx.config.retrieval.max_explicit_locators)
+
+
+def claim_limitations(ctx: ExecutionContext, plan: Plan) -> list[str]:
+    """Return one limitation per human-added option the claim cap leaves unresearched."""
+    return claims_left_out(plan, ctx.config.research.max_claim_needs)
 
 
 def need_queries(ctx: ExecutionContext, plan: Plan) -> dict[str, NeedQuery]:
@@ -269,6 +276,8 @@ def resolve_sources(ctx: ExecutionContext, needs: list[EvidenceNeed], plan: Plan
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-02 [python-coder]: Claim needs and gap needs are capped separately; claim_limitations
+#   names the added options the claim cap leaves out. (#KernelResearchEveryAddedOption)
 # - 2026-10-01 [python-coder]: Checked locators also gain `path::Symbol` for a contract or class
 #   the need's text names (round 8 defect f). (#KernelDecisionStore)
 # - 2026-10-01 [python-coder]: Every retrieval child carries `max_rerank_batches` (what the Jev

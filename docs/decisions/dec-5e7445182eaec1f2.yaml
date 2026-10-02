@@ -1,0 +1,314 @@
+schema_version: '1.0'
+kind: decision
+id: dec-5e7445182eaec1f2
+repository_id: leafcutter-ai
+title: one decision-lifecycle flow whose steps expand to four sub-flows
+description: Decide how to model the Leafcutter decision lifecycle in the product-truth store ...
+decision_type: design
+question: 'Decide how to model the Leafcutter decision lifecycle in the product-truth store (docs/product-truth/flows/leafcutter/)
+  so it shows end to end how a decision is formed, staged as a record, published into docs/decisions, and retrieved as precedent
+  by a later run. Options: four separate flows, one per stage; one decision-lifecycle flow whose steps expand to four sub-flows;
+  or another option grounded in the repository.'
+components: []
+change_target: []
+risk_surface: []
+roadmap_phase: []
+file_globs: []
+repository_wide: true
+selected_option_id: opt.parent_with_subflows
+supersedes: []
+superseded_by: []
+related: []
+task_context:
+  goal: 'Decide how to model the Leafcutter decision lifecycle in the product-truth store (docs/product-truth/flows/leafcutter/)
+    so it shows end to end how a decision is formed, staged as a record, published into docs/decisions, and retrieved as precedent
+    by a later run. Options: four separate flows, one per stage; one decision-lifecycle flow whose steps expand to four sub-flows;
+    or another option grounded in the repository.'
+  component_ids: []
+  technologies: []
+  constraints: []
+rationale:
+  text: 'Design decision settled by a human. Kernel ranking (Jev''s per-criterion judgement, evidence not authority; stopped
+    researching because design_judgement after 1 research round(s)): 1. [opt.single_flow_decision_points] One decision-lifecycle
+    flow with a step per stage and its human decision points made explicit (required mean 0.79, 1/3 passed); 2. [opt.parent_with_subflows]
+    one decision-lifecycle flow whose steps expand to four sub-flows (required mean 0.65, 0/3 passed); 3. [opt.four_flows]
+    four separate flows, one per stage (required mean 0.48, 0/3 passed). human:user chose option [opt.parent_with_subflows]
+    one decision-lifecycle flow whose steps expand to four sub-flows (kernel rank 2 of 3).'
+  origin: template
+assumptions: []
+unresolved_risks: []
+assessment:
+  basis: kernel_ranking
+  design_reason: design_judgement
+  confidence: 0.6467
+  selected_rank: 2
+  ranking:
+    - option_id: opt.single_flow_decision_points
+      rank: 1
+      required_passed: 1
+      required_total: 3
+      required_mean: 0.7867
+      scores:
+        crit.decision_points: 0.88
+        crit.end_to_end: 0.82
+        crit.schema_fit: 0.78
+        crit.small_to_maintain: 0.74
+        crit.stage_actors_visible: 0.76
+    - option_id: opt.parent_with_subflows
+      rank: 2
+      required_passed: 0
+      required_total: 3
+      required_mean: 0.6467
+      scores:
+        crit.decision_points: 0.4
+        crit.end_to_end: 0.68
+        crit.schema_fit: 0.77
+        crit.small_to_maintain: 0.53
+        crit.stage_actors_visible: 0.49
+    - option_id: opt.four_flows
+      rank: 3
+      required_passed: 0
+      required_total: 3
+      required_mean: 0.48
+      scores:
+        crit.decision_points: 0.24
+        crit.end_to_end: 0.23
+        crit.schema_fit: 0.66
+        crit.small_to_maintain: 0.18
+        crit.stage_actors_visible: 0.55
+final_outcome:
+  status: pending
+  observed_at: null
+  note: ''
+options:
+  - id: opt.four_flows
+    title: four separate flows, one per stage
+    description: ''
+    assumptions: []
+    evidence_ids:
+      - ev-870e8099a38e8907
+      - ev-18a5b9e23f10db73
+      - ev-ea2c0f7ba98278e6
+      - ev-7caeb8163053969c
+    proposed_by: caller_goal
+    approved_by: null
+  - id: opt.parent_with_subflows
+    title: one decision-lifecycle flow whose steps expand to four sub-flows
+    description: ''
+    assumptions: []
+    evidence_ids:
+      - ev-09d6600aecef55c8
+      - ev-18a5b9e23f10db73
+    proposed_by: caller_goal
+    approved_by: null
+  - id: opt.single_flow_decision_points
+    title: One decision-lifecycle flow with a step per stage and its human decision points made explicit
+    description: A single flow whose steps are the four stages, with the human choices inside them (approving criteria, the
+      ranked choice, reuse or decide anew, running publish) modelled as explicit decision points rather than implicit branches,
+      in the spirit of ADR-025.
+    assumptions: []
+    evidence_ids:
+      - ev-09d6600aecef55c8
+      - ev-5e30cba917bb4d5c
+      - ev-b57d5714ec514bdf
+    proposed_by: host.generate_options
+    approved_by: human:user
+criteria:
+  - id: crit.end_to_end
+    question: Can a reviewer follow forming, staging, publishing and retrieval as one connected journey in the Atlas, including
+      the hand-offs between them (the staged file, the published record and index)?
+    priority: required
+    kind: design_judgement
+    evidence_ids:
+      - ev-7caeb8163053969c
+      - ev-a297882a8da2c395
+      - ev-09d6600aecef55c8
+      - ev-1dda45483b2abc6b
+      - ev-d55eebec654804e3
+  - id: crit.stage_actors_visible
+    question: Does each stage keep its own actor and trigger visible (a kernel run with a human choice, automatic staging,
+      a human-run publish with git review, a later run's precedent lookup) so it can be reviewed and linked to its own acceptance
+      criteria?
+    priority: required
+    kind: design_judgement
+    evidence_ids:
+      - ev-5e30cba917bb4d5c
+      - ev-b57d5714ec514bdf
+      - ev-7caeb8163053969c
+      - ev-870e8099a38e8907
+      - ev-9138fc4821e5b41c
+  - id: crit.schema_fit
+    question: Can the option be expressed with the current flow schema and validator (steps, branches, screens resolving to
+      registered mockups) without changing the schema?
+    priority: required
+    kind: design_judgement
+    evidence_ids:
+      - ev-09d6600aecef55c8
+      - ev-b34ce63a08300ff7
+      - ev-7caeb8163053969c
+  - id: crit.decision_points
+    question: Does the option give the human decision points (criteria approval, the ranked choice, reuse or decide anew)
+      a visible place of their own?
+    priority: supporting
+    kind: design_judgement
+    evidence_ids:
+      - ev-7caeb8163053969c
+      - ev-b57d5714ec514bdf
+      - ev-45b00064516815da
+      - ev-d55eebec654804e3
+      - ev-ea2c0f7ba98278e6
+  - id: crit.small_to_maintain
+    question: Does the option keep the number of artifacts small enough that one change to the lifecycle touches few files?
+    priority: supporting
+    kind: design_judgement
+    evidence_ids:
+      - ev-5e30cba917bb4d5c
+      - ev-b34ce63a08300ff7
+      - ev-7caeb8163053969c
+      - ev-b57d5714ec514bdf
+      - ev-18a5b9e23f10db73
+evidence:
+  - id: ev-5e30cba917bb4d5c
+    locator: tickets/00_inbox/TICKET-20261001-KernelDecisionStore.md#L40-L52 (§Binding user decisions)
+    category: prior_decisions
+    content_hash: 028cbd546952eb92a277a51e2a5d86a39420bcdde1878953e10de234ae4ea697
+    verification: source_verified
+    relevance: 0.89
+    source_version:
+      commit: a28b1c247ff01fa80adc7464cad93619ff386edb
+      dirty: false
+  - id: ev-d55eebec654804e3
+    locator: docs/analysis/2026-09-30-decision-kernel-design-2-contracts-registry-config.md#L243-L248 (§As built (decision
+      store))
+    category: prior_decisions
+    content_hash: d1ce648be775538ba9456c3bb2048a8216bfd9ac7a9318b15576bda637d82a96
+    verification: source_verified
+    relevance: 0.82
+    source_version:
+      commit: a28b1c247ff01fa80adc7464cad93619ff386edb
+      dirty: false
+  - id: ev-7caeb8163053969c
+    locator: docs/analysis/2026-09-30-decision-kernel-design-4-jev-and-capabilities.md#L274-L278 (§As built (decision store))
+    category: prior_decisions
+    content_hash: fcce247efd2a062157be713753e887de52bd58dd4800e8fc96b889704c48751c
+    verification: source_verified
+    relevance: 0.73
+    source_version:
+      commit: a28b1c247ff01fa80adc7464cad93619ff386edb
+      dirty: false
+  - id: ev-9138fc4821e5b41c
+    locator: docs/architecture/components/decision-kernel.md#L103-L115 (§Decisions)
+    category: prior_decisions
+    content_hash: 41be9c8f3538315109e84f05b92b34104f0a84b20977689b05aed74d6d3c6d23
+    verification: source_verified
+    relevance: 0.73
+    source_version:
+      commit: a28b1c247ff01fa80adc7464cad93619ff386edb
+      dirty: false
+  - id: ev-ea2c0f7ba98278e6
+    locator: docs/how-to/file-and-reuse-decisions-with-the-kernel.md#L127-L137 (§Troubleshooting)
+    category: task_context
+    content_hash: dcbe01de28d40cc7c6e326d7ea8fc919635a74e6cb5464ef3e04987fc6a5d4df
+    verification: source_verified
+    relevance: 0.78
+    source_version:
+      commit: a28b1c247ff01fa80adc7464cad93619ff386edb
+      dirty: false
+  - id: ev-a297882a8da2c395
+    locator: docs/components.json#L130-L153 (components > decision_kernel)
+    category: task_context
+    content_hash: 75dab6fd4b51a05841b0b2f99b1d025d3a3583d9c5c3eb0d9cf0188c7a64328e
+    verification: source_verified
+    relevance: 0.68
+    source_version:
+      commit: a28b1c247ff01fa80adc7464cad93619ff386edb
+      dirty: false
+  - id: ev-b57d5714ec514bdf
+    locator: docs/architecture/adrs/ADR-059-decision-store-reviewable-yaml-records-now-graph-later.md#L42-L63 (§Context)
+    category: prior_decisions
+    content_hash: c01468916e539fe97d7f1994b7428b37b544aada7534a7fbce72cc8461ead401
+    verification: source_verified
+    relevance: 0.89
+    source_version:
+      commit: a28b1c247ff01fa80adc7464cad93619ff386edb
+      dirty: false
+  - id: ev-18a5b9e23f10db73
+    locator: kernel/memory/file_store.py#L1-L37 (module level)
+    category: existing_patterns
+    content_hash: 36d6a3f845b8cc1949c1cb8ed4d66c962635d00ddda17db033bdd0782cad62b1
+    verification: source_verified
+    relevance: 0.84
+    source_version:
+      commit: a28b1c247ff01fa80adc7464cad93619ff386edb
+      dirty: false
+  - id: ev-870e8099a38e8907
+    locator: kernel/capabilities/decision/executor.py#L113-L141 (def _stage)
+    category: existing_patterns
+    content_hash: 40d34bc7284d2a0dd9bed338f85cdd697de21a7b8e0a06d7828598989a1a58a9
+    verification: source_verified
+    relevance: 0.81
+    source_version:
+      commit: a28b1c247ff01fa80adc7464cad93619ff386edb
+      dirty: false
+  - id: ev-45b00064516815da
+    locator: kernel/memory/staging.py#L52-L81 (def stage_decision_record)
+    category: existing_patterns
+    content_hash: 42f0ab89c57aa0d5bed02ff893502b51088107ae5d25b2e8326f3e21a0ea22cd
+    verification: source_verified
+    relevance: 0.78
+    source_version:
+      commit: a28b1c247ff01fa80adc7464cad93619ff386edb
+      dirty: false
+  - id: ev-09d6600aecef55c8
+    locator: docs/architecture/adrs/ADR-025-first-class-flow-decisions.md#L37-L71 (§Context)
+    category: prior_decisions
+    content_hash: 70bc5d45a1607d6caa991d9707ff01658b59072cda0e49baf211cf3ee059cb65
+    verification: source_verified
+    relevance: 0.75
+    source_version:
+      commit: a28b1c247ff01fa80adc7464cad93619ff386edb
+      dirty: false
+  - id: ev-1dda45483b2abc6b
+    locator: kernel/memory/__init__.py#L1-L23
+    category: existing_patterns
+    content_hash: 7b339a96e88c9560bd9ccfa73fc4203a44b3d59f49f52dc05ff4e7d4828f78f3
+    verification: source_verified
+    relevance: 0.76
+    source_version:
+      commit: a28b1c247ff01fa80adc7464cad93619ff386edb
+      dirty: false
+  - id: ev-b34ce63a08300ff7
+    locator: docs/how-to/product-truth-schema-reference.md#L79-L98 (§Flow — `flow.schema.json` > Step (`steps[]`))
+    category: existing_patterns
+    content_hash: 495195247ef86bcbf17e699475978e2c326401cb0dd2bbfd8a8bbcfca0ad6c45
+    verification: source_verified
+    relevance: 0.86
+    source_version:
+      commit: a28b1c247ff01fa80adc7464cad93619ff386edb
+      dirty: false
+precedents_considered: []
+approval:
+  approval_status: approved
+  approved_by: human:user
+  approved_at: '2026-10-02T05:56:54Z'
+  note: ''
+provenance:
+  origin: learned
+  created_by_capability: decision
+  created_at: '2026-10-02T05:56:54Z'
+  run_id: run-7c7d6474612b438b
+  root_task_id: task-9c55753c15e9466d
+  langfuse_trace_id: b08d45b4f4d504ead065df9d2e5232a0
+  langfuse_trace_url: null
+  repository_revision:
+    commit: null
+    dirty: false
+  policy_version: null
+  template_version: decision.assess@1
+  model_version: jev-latest
+  kernel_version: 0.1.0.dev0
+  decision_versions:
+    options: b90a83470b93
+    criteria: 658c6fe0976e
+    templates: decision.assess@1
+corrections: []

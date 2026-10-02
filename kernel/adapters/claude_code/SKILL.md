@@ -18,7 +18,9 @@ stderr) and ends with `--json`. `KERNEL` means `{{COMMAND}}`.
 1. With Write, create a scratch JSON file inside `{{CLIENT_DIR}}/` (the only place you may
    write) holding the goal VERBATIM, never paraphrased or shell-quoted:
    `{"goal": "<$ARGUMENTS>", "caller": {"id": "user", "kind": "human"},
-   "scope": {"workspace_id": "<project name>", "repository_root": "<absolute project root>"}}`
+   "scope": {"workspace_id": "{{WORKSPACE_ID}}", "repository_root": "{{REPOSITORY_ROOT}}"}}`
+   Copy the two `scope` values exactly; they were fixed when the skill was installed. Never
+   replace them with your working directory.
    Do NOT add `requested_output_schema`: the kernel works out what kind of answer the goal
    needs. Set it only when the user explicitly asks for a decision
    (`leafcutter.decision_report.v1`), an evidence lookup (`leafcutter.evidence_bundle.v1`) or
