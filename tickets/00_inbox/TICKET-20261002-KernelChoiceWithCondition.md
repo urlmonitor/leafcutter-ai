@@ -47,6 +47,7 @@ In order that "pick option X, but with condition Y" can be answered as said, we 
 - With a pair, the choice is authoritative and the text is recorded verbatim as a condition. It reaches Jev's constraints (assess.py:88-89, labelled human-stated), the rationale, and the staged record's `task_context.constraints`. `answer_text` renders both.
 - A choice of a usable option at an escalation resolves with the human as approver. `design_reason` names it a human ruling, so the rationale is not misleading.
 - Tests: the pair is accepted where free text is allowed and rejected where not; the condition lands in the constraints, rationale and staged record; a choice at unidentified_gap completes the decision.
+- (Added 2026-10-02 by the orchestrator, reachability) The Claude Code and Codex skill texts tell the host it may send {choice_id, free_text} when the user picks a choice and adds a condition, and free text is allowed.
 
 ## Sign-offs
 - [x] test-writer — 2026-10-02 14:32
@@ -132,3 +133,7 @@ completion_manifest:
   pre_commit_hooks_pass: true
   commit_message_valid: true
   ticket_staged: true
+
+### 2026-10-02 18:00 — python-coder (status: ok)
+feedback-id: fb_2026-10-02_0f324846
+Skill reachability: Claude Code and Codex SKILL.md now tell the host it may send {choice_id, free_text} (condition relayed verbatim) where free_text_allowed. Test added in tests/kernel/adapters/test_install_skill.py; tests/kernel/adapters 128 passed, ruff clean.

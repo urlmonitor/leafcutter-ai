@@ -47,6 +47,7 @@ in one short plain-text question and stop.
     turn and wait.
   - Take the user's reply naming a choice. If it does not clearly name one choice, ask once more
     and wait again. Offer free text only if `free_text_allowed`.
+  - If `free_text_allowed` and the user picks a choice but also adds a note or condition, send both (`choice_id` + `free_text`).
   - If `structured_allowed`, a structured answer approves `approved_criterion_ids` /
     `approved_option_ids` or supplies `edited_criteria`.
   - Then write the human submission and `resume`.
@@ -70,7 +71,9 @@ Write a submission file inside `{{CLIENT_DIR}}/` and run `KERNEL resume --run-id
   `pending_interaction.output_schema_id`, `response` = your JSON output.
 - Human answer: `actor` = `{"kind": "human", "id": "human:user"}`, `response_schema_id` =
   `leafcutter.human_answer.v1`, `response` = exactly ONE of `{"choice_id": "<id>"}`,
-  `{"free_text": "<text>"}` or the structured fields.
+  `{"free_text": "<text>"}` or the structured fields, OR the pair
+  `{"choice_id": "<id>", "free_text": "<condition>"}` when the user picked a choice and added a
+  condition (only where `free_text_allowed`). Relay the condition verbatim.
 
 ## 4. Exit codes
 
