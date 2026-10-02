@@ -55,7 +55,7 @@ covered_by:
 - tests/kernel/capabilities/test_research_graph.py::TestCollect::test_unsatisfied_required_need_makes_the_bundle_partial
 - tests/kernel/capabilities/test_research_graph.py::TestCollect::test_failed_child_is_a_limitation_never_an_empty_result
 - tests/kernel/capabilities/test_research_graph.py::TestSynthesisAndStop::test_synthesis_resume_finishes_without_replanning_or_more_jev_calls
-- tests/knowledge_live/query_growth_checks.py::test_aura_query_growth_public_proof
+- tests/knowledge_live/query_growth_checks.py::test_local_query_growth_public_proof
 implemented_by:
 - tickets/00_inbox/TICKET-20261001-KM-500c-2.md
 - integrations/query_growth.py

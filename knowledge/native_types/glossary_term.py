@@ -8,7 +8,7 @@ DOC_LINKS: docs/glossary.md
 from __future__ import annotations
 
 from copy import deepcopy
-from pathlib import Path
+from pathlib import Path, PureWindowsPath
 import re
 from urllib.parse import quote
 
@@ -36,7 +36,15 @@ def _surface(root: Path) -> Path:
                 raise ValueError("native glossary surface must declare a string path")
             configured = entry["path"]
     value = Path(configured)
-    if not configured.strip() or value.is_absolute() or value.drive or ".." in value.parts:
+    windows = PureWindowsPath(configured)
+    if (
+        not configured.strip()
+        or value.is_absolute()
+        or windows.drive
+        or windows.root
+        or ".." in value.parts
+        or ".." in windows.parts
+    ):
         raise ValueError("native glossary path must be a nonempty repository-relative file")
     path = root / value
     relative(root, path)

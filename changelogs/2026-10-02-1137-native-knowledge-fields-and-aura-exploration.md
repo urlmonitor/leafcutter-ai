@@ -14,3 +14,9 @@ tickets:
 The PR includes the earlier standalone knowledge retrieval and governed query
 foundation on which native metadata projection depends. The database remains a
 rebuildable projection of an immutable repository revision.
+
+Integration checks compare every current native record with its authored source
+instead of assuming fixed corpus sizes. Glossary paths reject Windows absolute,
+drive-relative, UNC and parent escapes on every host. The completion gate uses
+an isolated real Neo4j query-growth proof; hosted Aura verification remains an
+explicit supplemental probe. The full pytest CI job remains disabled as requested.

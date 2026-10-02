@@ -236,8 +236,18 @@ def test_changelog_real_corpus_accounts_for_all_fields_and_three_recoveries():
     # angle: real_artifact
     root = Path(__file__).resolve().parents[2]
     records = _extract(root)
-    assert len(records) == 531
-    assert len({r.native_id for r in records}) == 531
+    config = json.loads(
+        (root / "templates/scripts/commit_guardian/commit_guardian.json").read_text(encoding="utf-8")
+    )
+    paths = {
+        path.relative_to(root).as_posix()
+        for store in (root / config["changelogs_dir"], root / "docs/changelog")
+        for path in store.glob("*.md")
+        if path.is_file() and path.name.lower() not in {"readme.md", "index.md"}
+    }
+    assert paths
+    assert {r.source_path for r in records} == paths
+    assert len({r.native_id for r in records}) == len(records) == len(paths)
     recovered = []
     for record in records:
         raw = record.derived["frontmatter_raw"]

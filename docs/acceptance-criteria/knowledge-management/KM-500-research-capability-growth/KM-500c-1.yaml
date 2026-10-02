@@ -54,7 +54,7 @@ covered_by:
 - tests/knowledge/test_query_growth_adversarial.py::test_resume_rejects_other_verified_version_of_same_operation
 - tests/knowledge/test_query_growth_adversarial.py::test_scalar_clarification_preserves_pins_and_cannot_override_scope
 - tests/kernel/interaction/test_restart_resume.py::TestKilledAroundTheLedgerWrite::test_kill_mid_resume_then_replay_finishes_the_run_without_reapplying
-- tests/knowledge_live/query_growth_checks.py::test_aura_query_growth_public_proof
+- tests/knowledge_live/query_growth_checks.py::test_local_query_growth_public_proof
 implemented_by:
 - tickets/00_inbox/TICKET-20261001-KM-500c-1.md
 - integrations/query_growth.py

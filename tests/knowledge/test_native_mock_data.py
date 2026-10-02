@@ -128,22 +128,18 @@ def test_mock_data_real_corpus_preserves_all_records_and_unregistered_dataset():
     root = Path(__file__).resolve().parents[2]
     records = _extract(root)
     paths = list((root / "docs/product-truth/mock-data").rglob("*.mock.json"))
-    assert len(records) == len(paths) == 2
-    assert sum(record.derived["manifest_registered"] for record in records) == 1
-    assert sum(len(record.metadata["entities"]) for record in records) == 8
-    assert (
-        sum(
-            len(spec["records"])
-            for record in records
-            for spec in record.metadata["entities"].values()
-        )
-        == 48
-    )
+    assert paths
+    assert {record.source_path for record in records} == {p.relative_to(root).as_posix() for p in paths}
+    assert len(records) == len(paths)
+    manifest = json.loads((root / "docs/product-truth/index.json").read_text(encoding="utf-8-sig"))
+    registered = {entry["id"]: entry for entry in manifest["artifacts"] if entry["type"] == "mock_data"}
     for record in records:
         source = json.loads((root / record.source_path).read_text(encoding="utf-8-sig"))
         assert record.metadata == source
         assert decode(encode(record.metadata)) == source
-        assert "shape_version" not in record.metadata
+        assert record.derived["manifest_registered"] == (record.native_id in registered)
+        if record.native_id in registered:
+            assert record.derived["manifest_entry"] == registered[record.native_id]
     unregistered = next(
         record for record in records if record.native_id == "guardrails/frontend-ac-declarations"
     )

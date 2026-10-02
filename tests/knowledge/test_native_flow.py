@@ -171,12 +171,16 @@ def test_flow_real_corpus_deep_equality_and_no_rewrites():
     before = {p: p.read_bytes() for p in paths}
     source = {json.loads(data)["id"]: json.loads(data) for data in before.values()}
     records = _extract(root)
-    assert len(records) == len(paths) == 14
+    assert paths
+    assert len(records) == len(paths)
     assert {record.native_id: record.metadata for record in records} == source
-    assert all(record.derived["registered"] for record in records)
-    assert all(
-        record.description != record.derived["manifest_entry"]["summary"] for record in records
-    )
+    manifest = json.loads((root / "docs/product-truth/index.json").read_text(encoding="utf-8-sig"))
+    registered = {entry["id"]: entry for entry in manifest["artifacts"] if entry["type"] == "flow"}
+    for record in records:
+        assert record.description == source[record.native_id]["summary"]
+        assert record.derived["registered"] == (record.native_id in registered)
+        if record.native_id in registered:
+            assert record.derived["manifest_entry"] == registered[record.native_id]
     assert all(p.read_bytes() == data for p, data in before.items())
 
 

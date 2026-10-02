@@ -4,7 +4,7 @@ description: Final per-criterion evidence and limits for KM-500 research capabil
 type: explanation
 status: active
 created: '2026-10-01'
-last_updated: '2026-10-01'
+last_updated: '2026-10-02'
 components: [knowledge_management, decision_kernel]
 ---
 # Query-growth acceptance - 2026-10-01
@@ -41,3 +41,21 @@ Independent review first captured regressions for an unmapped memory relationshi
 `reports/knowledge-query-growth-source-judgments.json` independently reads canonical YAML at the committed source: `git_vcs_operations` has eight ACs and four directly declared test files; `release_manager` has one AC and no direct test reference. The stored candidate uses these positive/empty judgments. This query answers which test files are directly declared for component ACs. It does not prove those tests pass, infer undeclared coverage, or establish general semantic usefulness. No fabricated semantic scores are reported.
 
 The recipe language remains bounded. Unsupported grammar is an explicit code-build limitation. The live provider test is separately pending authorization; scripted Jev exercises control flow, not real model decision quality. Final commit hooks and release state are separate from this behavioral acceptance.
+
+## Repeatable CI proof - 2026-10-02
+
+The required AC links now point to `test_local_query_growth_public_proof` in
+`tests/knowledge_live/query_growth_checks.py`. It publishes a tiny synthetic,
+committed Git corpus to an isolated loopback Neo4j service and exercises the real
+projection, generated Cypher, verifier, catalog, kernel continuation and reopened
+checkpoint. Jev and host delivery are scripted. The query-only scenario explicitly
+disables optional host synthesis and asserts that bounded evidence remains
+partial; the existing research tests retain the synthesis-policy coverage.
+
+This makes the proof repeatable without hosted credentials, a particular Aura
+retention window, or Windows-only environment paths. The historical Aura result
+above remains pinned to its recorded source and is not refreshed by the local
+check. The supplemental hosted probe is now an explicit callable:
+`run_aura_query_growth_public_proof()`, with `LEAFCUTTER_RUN_AURA_QUERY_LIVE=1` and
+configured Aura read credentials required. It shares the same scenario and writes
+its own labeled report only after a successful hosted run.

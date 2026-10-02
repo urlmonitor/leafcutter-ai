@@ -153,10 +153,12 @@ def test_ticket_real_store_preserves_every_frontmatter_field():
         path for path in (root / "tickets").rglob("*.md") if path.name.lower() != "readme.md"
     )
     records = _extract(root)
-    assert len(records) == len(candidates) == 1532
+    assert candidates
+    assert len(records) == len(candidates)
     assert len({record.native_id for record in records}) == len(records)
     by_path = {record.source_path: record for record in records}
     fields = set()
+    expected_epics = set()
     for path in candidates:
         lines = path.read_text(encoding="utf-8-sig").splitlines(keepends=True)
         assert lines[0].strip() == "---"
@@ -166,5 +168,11 @@ def test_ticket_real_store_preserves_every_frontmatter_field():
         assert record.metadata == metadata
         assert record.derived["body"] == "".join(lines[end + 1 :])
         fields.update(metadata)
-    assert len(fields) == 44
-    assert sum(record.derived["subtype"] == "epic" for record in records) == 92
+        if metadata.get("type") == "epic" or (
+            path.name.lower() == "master_plan.md"
+            and any(part.startswith("EPIC-") for part in path.relative_to(root).parts[:-1])
+        ):
+            expected_epics.add(record.source_path)
+    assert {"title", "status", "components", "source_ac"} <= fields
+    assert expected_epics
+    assert {r.source_path for r in records if r.derived["subtype"] == "epic"} == expected_epics
