@@ -1,0 +1,398 @@
+{
+  "id": "leafcutter/criteria-library",
+  "component": "decision_kernel",
+  "product": "Leafcutter",
+  "name": "Building and curating the criteria library",
+  "level": "journey",
+  "summary": "Mined repeat questions become person-approved categories, counted from the records and explorable in Neo4j.",
+  "kind": "data",
+  "source": "mock",
+  "realization": "spec",
+  "status": "active",
+  "readiness": "draft",
+  "superseded_by": null,
+  "version": 1,
+  "shape_version": 2,
+  "tags": [
+    "decision-kernel",
+    "decision-criteria",
+    "criterion-categories",
+    "criteria-mining",
+    "knowledge-graph",
+    "journey"
+  ],
+  "entities": [
+    "CriterionCategory",
+    "CriterionCategoryAggregate"
+  ],
+  "mock_data_ref": "leafcutter/criterion-categories",
+  "steps": [
+    {
+      "id": "mine",
+      "label": "Mine repeat questions",
+      "human": "An offline mining job, run apart from any decision, reads the published decision records and the Langfuse history of kernel runs, including failed, cancelled and never-published ones, and proposes the questions that keep coming back as candidate categories.",
+      "order": 1,
+      "agent": "criteria_mining (offline job)",
+      "produces": [
+        "candidate categories (proposed_by criteria_mining)",
+        "mined_from sightings"
+      ],
+      "reads": [
+        "Decision"
+      ],
+      "writes": [
+        "CriterionCategory"
+      ],
+      "impl_asof": "2026-10-03",
+      "impl_status": "not_started"
+    },
+    {
+      "id": "suggest-grouping",
+      "label": "Suggest groupings",
+      "human": "Wordings that ask the same thing are suggested as one category with one preferred wording and its other wordings, optionally under a broader category. The grouping method is still being decided, so every grouping is only a suggestion.",
+      "order": 2,
+      "agent": "grouping method (being decided in kernel run run-b5af8c7fae2248ba)",
+      "consumes": [
+        "candidate categories (proposed_by criteria_mining)",
+        "mined_from sightings"
+      ],
+      "produces": [
+        "suggested groupings (pref_label, alt_labels, broader)"
+      ],
+      "reads": [
+        "CriterionCategory"
+      ],
+      "writes": [
+        "CriterionCategory"
+      ],
+      "impl_asof": "2026-10-03",
+      "impl_status": "not_started"
+    },
+    {
+      "id": "approve",
+      "label": "Approve a category",
+      "human": "Decision point: you see each suggested category with its wordings and where they were seen, and accept it, change it or undo the grouping. Only your approval turns a candidate into a category record; the mining job and models never approve.",
+      "order": 3,
+      "agent": "human (in a kernel run)",
+      "consumes": [
+        "suggested groupings (pref_label, alt_labels, broader)"
+      ],
+      "produces": [
+        "approved category (approved_by human)"
+      ],
+      "reads": [
+        "CriterionCategory"
+      ],
+      "writes": [
+        "CriterionCategory"
+      ],
+      "impl_asof": "2026-10-03",
+      "impl_status": "not_started"
+    },
+    {
+      "id": "stage",
+      "label": "Stage the record",
+      "human": "The approved category is written beside the run that approved it, under <run_root>/runs/<run_id>/staged/criterion_categories/<id>.yaml, and never into the repository.",
+      "order": 4,
+      "agent": "kernel (approving run)",
+      "consumes": [
+        "approved category (approved_by human)"
+      ],
+      "produces": [
+        "staged category record"
+      ],
+      "writes": [
+        "CriterionCategory"
+      ],
+      "impl_asof": "2026-10-03",
+      "impl_status": "not_started"
+    },
+    {
+      "id": "publish",
+      "label": "Publish to the library",
+      "human": "You publish the staged record: it is checked, written to docs/criteria/<id>.yaml (folder name still to be confirmed), and reviewed and merged like any other change. Published decision records are never edited.",
+      "order": 5,
+      "agent": "human-run publish (command not yet defined)",
+      "consumes": [
+        "staged category record"
+      ],
+      "produces": [
+        "published category record (docs/criteria/<id>.yaml)"
+      ],
+      "reads": [
+        "CriterionCategory",
+        "Decision"
+      ],
+      "writes": [
+        "CriterionCategory"
+      ],
+      "impl_asof": "2026-10-03",
+      "impl_status": "not_started"
+    },
+    {
+      "id": "count-usage",
+      "label": "Count usage from the records",
+      "human": "How many published decisions used each category is generated from the records into a freshness-checked index, never written by hand. Being used often never counts as proof that a category is good.",
+      "order": 6,
+      "agent": "generated criteria index (like docs/decisions/index.json)",
+      "consumes": [
+        "published category record (docs/criteria/<id>.yaml)"
+      ],
+      "produces": [
+        "usage_count per category"
+      ],
+      "reads": [
+        "CriterionCategory",
+        "Decision"
+      ],
+      "impl_asof": "2026-10-03",
+      "impl_status": "not_started"
+    },
+    {
+      "id": "aggregate-outcomes",
+      "label": "Keep outcomes as Neo4j aggregates",
+      "human": "Where the optional Neo4j learning store is set up, how the decisions behind each published category turned out is rebuilt in full as aggregates keyed by category id and context. None of it is written into Git or used to choose what is offered.",
+      "order": 7,
+      "agent": "colony memory store (Neo4j, ADR-065)",
+      "consumes": [
+        "published category record (docs/criteria/<id>.yaml)",
+        "usage_count per category"
+      ],
+      "produces": [
+        "CriterionCategoryAggregate rows"
+      ],
+      "reads": [
+        "CriterionCategory",
+        "Decision"
+      ],
+      "writes": [
+        "CriterionCategoryAggregate"
+      ],
+      "impl_asof": "2026-10-03",
+      "impl_status": "not_started"
+    },
+    {
+      "id": "import-to-graph",
+      "label": "Import categories into the knowledge graph",
+      "human": "After publish, the knowledge importer reads the published category records as a new native kind through the ADR-062 reader registry and projects each category, its replaced-by links and its membership edges between decisions, criteria and categories into the next Neo4j generation.",
+      "order": 8,
+      "agent": "knowledge importer (ADR-062 native-type reader registry)",
+      "consumes": [
+        "published category record (docs/criteria/<id>.yaml)"
+      ],
+      "produces": [
+        "CriterionCategory nodes",
+        "decision-criterion-category membership edges"
+      ],
+      "reads": [
+        "CriterionCategory",
+        "Decision"
+      ],
+      "impl_asof": "2026-10-03",
+      "impl_status": "not_started"
+    },
+    {
+      "id": "explore",
+      "label": "Explore which decisions share which questions",
+      "human": "You ask the graph which categories a decision's criteria used and which decisions used a category, and follow a question across every decision that asked it.",
+      "order": 9,
+      "agent": "human (through registered knowledge queries)",
+      "consumes": [
+        "CriterionCategory nodes",
+        "decision-criterion-category membership edges"
+      ],
+      "produces": [
+        "categories per decision",
+        "decisions per category"
+      ],
+      "reads": [
+        "CriterionCategory",
+        "Decision"
+      ],
+      "impl_asof": "2026-10-03",
+      "impl_status": "not_started"
+    },
+    {
+      "id": "curate",
+      "label": "Merge, split or retire categories",
+      "human": "Later you merge, split or retire published categories through the same stage and publish path. Ids never change, members move to the replacement, the retired category points to it with a replaced-by link, and no decision record is touched.",
+      "order": 10,
+      "agent": "human (in a kernel run)",
+      "consumes": [
+        "published category record (docs/criteria/<id>.yaml)"
+      ],
+      "produces": [
+        "retired category (replaced_by set)",
+        "updated published categories"
+      ],
+      "reads": [
+        "CriterionCategory"
+      ],
+      "writes": [
+        "CriterionCategory"
+      ],
+      "impl_asof": "2026-10-03",
+      "impl_status": "not_started"
+    }
+  ],
+  "branches": [
+    {
+      "id": "reject-suggestion",
+      "from": "approve",
+      "condition": "you reject the candidate or undo its suggested grouping",
+      "label": "Reject or undo: nothing staged",
+      "human": "The candidate stays a proposal or is dropped; no record is staged and no published category changes.",
+      "agent": "human (in a kernel run)",
+      "consumes": [
+        "suggested groupings (pref_label, alt_labels, broader)"
+      ],
+      "outcome_kind": "exit",
+      "impl_asof": "2026-10-03",
+      "impl_status": "not_started"
+    },
+    {
+      "id": "no-learning-store",
+      "from": "aggregate-outcomes",
+      "condition": "no Neo4j learning store is configured, or LEAFCUTTER_SELF_LEARNING is false",
+      "label": "No learning store: outcomes off",
+      "human": "Outcome statistics are simply off; usage counts, reuse and every decision work exactly the same.",
+      "agent": "colony memory store (Neo4j, ADR-065)",
+      "consumes": [
+        "published category record (docs/criteria/<id>.yaml)"
+      ],
+      "outcome_kind": "alternative",
+      "impl_asof": "2026-10-03",
+      "impl_status": "not_started"
+    },
+    {
+      "id": "import-fails",
+      "from": "import-to-graph",
+      "condition": "a category record fails validation, for example a member names a criterion its decision does not carry, or the build fails",
+      "label": "Import fails: graph unchanged",
+      "human": "The new generation is not published; the active graph stays as it was, the failing record is named, and nothing changes in Git.",
+      "agent": "knowledge importer (ADR-062 native-type reader registry)",
+      "consumes": [
+        "published category record (docs/criteria/<id>.yaml)"
+      ],
+      "outcome_kind": "failure",
+      "impl_asof": "2026-10-03",
+      "impl_status": "not_started"
+    },
+    {
+      "id": "change-in-record",
+      "from": "explore",
+      "condition": "you want to rename, merge, split or retire a category you found in the graph",
+      "label": "Change it in the record, not the graph",
+      "human": "The graph is a rebuildable view, never the place a category changes: the change is made in the category record, goes through stage and publish, and the next generation shows it.",
+      "agent": "human",
+      "consumes": [
+        "categories per decision",
+        "decisions per category"
+      ],
+      "outcome_kind": "alternative",
+      "impl_asof": "2026-10-03",
+      "impl_status": "not_started"
+    }
+  ],
+  "acceptance_scenarios": [
+    {
+      "for": "mine",
+      "given": "published decision records in docs/decisions/ and Langfuse traces of earlier kernel runs, including failed, cancelled and staged-but-unpublished ones",
+      "when": "a person runs the offline mining job",
+      "then": "repeat questions come back as candidate categories with proposed_by criteria_mining, approval_status proposed and mined_from sightings from both sources; a trace sighting is evidence for a proposal, never a member, and no decision run reads Langfuse or waits on the job"
+    },
+    {
+      "for": "suggest-grouping",
+      "given": "candidate categories, questions newly drafted for decisions and the published categories",
+      "when": "groupings are suggested, by whichever method is chosen",
+      "then": "each suggestion has one preferred wording, its other wordings and at most one broader category; no wording is suggested into two live categories, broader never leads back to its start, and nothing changes until a person accepts the suggestion"
+    },
+    {
+      "for": "approve",
+      "given": "a candidate category proposed by criteria_mining",
+      "when": "a person accepts it, after changing its wording or grouping if needed",
+      "then": "it becomes approved with approved_by human:<name> and approved_at, and no path lets the mining job or a model approve it"
+    },
+    {
+      "for": "reject-suggestion",
+      "given": "a suggested category",
+      "when": "a person rejects it or undoes its grouping",
+      "then": "nothing is staged, no published category changes, and the candidate never becomes a record"
+    },
+    {
+      "for": "stage",
+      "given": "an approved category",
+      "when": "the approving run ends",
+      "then": "its record is written to <run_root>/runs/<run_id>/staged/criterion_categories/<id>.yaml with lifecycle_stage staged and a stable cat- id, record_path stays null, and nothing is written into Git"
+    },
+    {
+      "for": "publish",
+      "given": "a staged category record",
+      "when": "a person runs the publish command and the change is reviewed and merged",
+      "then": "the record is checked (every (decision id, criterion id) member names a published decision whose criteria carry that criterion in one of the category's wordings, and no wording sits in two live categories), written to docs/criteria/<id>.yaml with lifecycle_stage published, and no decision record changes"
+    },
+    {
+      "for": "count-usage",
+      "given": "published categories whose members name published decisions",
+      "when": "the generated index is rebuilt",
+      "then": "each category's usage_count equals the number of distinct decision ids among its members, a hand-edited count fails the freshness check, and the count never changes which categories are offered"
+    },
+    {
+      "for": "aggregate-outcomes",
+      "given": "published categories, the final outcomes of their member decisions and a configured Neo4j store",
+      "when": "an added item triggers a rebuild",
+      "then": "every aggregate row is rebuilt in full, keyed by category id and context, with decision_count equal to confirmed plus corrected plus abandoned plus pending and summing to the category's usage_count; category records carry no outcome statistics"
+    },
+    {
+      "for": "no-learning-store",
+      "given": "no configured Neo4j learning store, or LEAFCUTTER_SELF_LEARNING=false",
+      "when": "categories are published and reused",
+      "then": "no outcome aggregates are built, usage counts are still generated, and decisions behave exactly as they do with the store"
+    },
+    {
+      "for": "import-to-graph",
+      "given": "published category records with (decision id, criterion id) members and the published decisions they name",
+      "when": "the knowledge sync builds a new generation from one commit",
+      "then": "each published category becomes one node keyed by (repository_id, kind, id), each member pair links the decision, its criterion and the category, the generation is validated and published atomically, and Decision records are read exactly as before"
+    },
+    {
+      "for": "import-fails",
+      "given": "a published category record with a member naming a criterion its decision does not carry",
+      "when": "the knowledge sync builds a new generation",
+      "then": "the build fails naming that record, the active generation stays untouched, and no file in Git is changed"
+    },
+    {
+      "for": "explore",
+      "given": "a published generation holding category cat-1dc11c5a2ffa7310 and decision dec-d53e1c52cd47c832 with their membership edges",
+      "when": "a person asks which categories that decision used and which decisions used that category",
+      "then": "the answers name two categories for the decision (through its crit.small_slice and crit.human_authority criteria) and three decisions for the category, come from registered parameterized queries pinned to one generation, and match the reviewed records in Git"
+    },
+    {
+      "for": "change-in-record",
+      "given": "a category found while exploring the graph",
+      "when": "a person wants to change it",
+      "then": "no write path into the graph exists; the change is made in the reviewed category record through stage and publish, and the graph shows it only after the next rebuild, which can always be repeated from Git"
+    },
+    {
+      "for": "curate",
+      "given": "two published categories that ask the same question",
+      "when": "a person merges one into the other and publishes the change",
+      "then": "the absorbed one becomes retired with replaced_by naming the published replacement (several ids on a split) and a retirement entry by human:<name>; its members move to the replacement, its id stays resolvable, and no published decision record changes"
+    }
+  ],
+  "provenance": [
+    {
+      "action": "authored",
+      "by": "flow-author (reusable-criteria-store session)",
+      "date": "2026-10-03",
+      "note": "Journey for building and curating the reusable criteria library (DK-300a, b, c, f and g) under decision dec-93c1c730463c1f3c, populated from leafcutter/criterion-categories. Created new because no existing flow covers CriterionCategory records; reuse inside a decision run extends leafcutter/decision-forming instead. Mining reads both published records and Langfuse traces as an offline job (user decision 2026-10-02). The grouping step is method-neutral while a kernel run decides the clustering method. The importer (DK-300g, in scope since the ADR-062 knowledge retrieval merged on main in PR #998) projects categories and membership through the native-type reader registry; the graph is a rebuildable view. No mockups exist, so no screens are wired. implements left empty for the business-analyst."
+    }
+  ],
+  "impl_summary": {
+    "done": 0,
+    "in_progress": 0,
+    "not_started": 14,
+    "total": 14,
+    "asof": "2026-10-03"
+  }
+}

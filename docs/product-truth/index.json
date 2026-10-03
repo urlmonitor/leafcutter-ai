@@ -480,14 +480,14 @@
       "id": "leafcutter/decision-forming",
       "type": "flow",
       "title": "Forming a decision in a kernel run",
-      "summary": "The kernel enriches the request before intent, researches the decision, then asks you to approve and choose.",
+      "summary": "The kernel enriches and researches the request, starts from approved criteria, then asks you to approve and choose.",
       "kind": "data",
       "source": "real",
       "component": "decision_kernel",
       "path": "flows/leafcutter/decision-forming.flow.json",
       "status": "active",
       "readiness": "draft",
-      "version": 2,
+      "version": 3,
       "entities": [
         "Decision"
       ],
@@ -495,15 +495,17 @@
       "impl_summary": {
         "done": 2,
         "in_progress": 0,
-        "not_started": 15,
-        "total": 17,
-        "asof": "2026-10-02"
+        "not_started": 19,
+        "total": 21,
+        "asof": "2026-10-03"
       },
       "tags": [
         "decision-kernel",
         "decision-lifecycle",
         "decision-forming",
-        "pipeline"
+        "pipeline",
+        "criterion-categories",
+        "criteria-reuse"
       ]
     },
     {
@@ -595,6 +597,39 @@
         "precedent",
         "pipeline"
       ]
+    },
+    {
+      "id": "leafcutter/criteria-library",
+      "type": "flow",
+      "title": "Building and curating the criteria library",
+      "summary": "Mined repeat questions become person-approved categories, counted from the records and explorable in Neo4j.",
+      "kind": "data",
+      "source": "mock",
+      "component": "decision_kernel",
+      "path": "flows/leafcutter/criteria-library.flow.json",
+      "status": "active",
+      "readiness": "draft",
+      "version": 1,
+      "entities": [
+        "CriterionCategory",
+        "CriterionCategoryAggregate"
+      ],
+      "mock_data_ref": "leafcutter/criterion-categories",
+      "tags": [
+        "decision-kernel",
+        "decision-criteria",
+        "criterion-categories",
+        "criteria-mining",
+        "knowledge-graph",
+        "journey"
+      ],
+      "impl_summary": {
+        "done": 0,
+        "in_progress": 0,
+        "not_started": 14,
+        "total": 14,
+        "asof": "2026-10-03"
+      }
     },
     {
       "id": "fern-and-fig/catalog",
@@ -995,6 +1030,7 @@
     },
     "decision_kernel": {
       "flows": [
+        "leafcutter/criteria-library",
         "leafcutter/decision-forming",
         "leafcutter/decision-lifecycle",
         "leafcutter/decision-publishing",
@@ -1085,13 +1121,21 @@
       "canonical_mock_data": {
         "decision_kernel": "leafcutter/criterion-categories"
       },
-      "flows": {}
+      "flows": {
+        "decision_kernel": [
+          "leafcutter/criteria-library"
+        ]
+      }
     },
     "CriterionCategoryAggregate": {
       "canonical_mock_data": {
         "decision_kernel": "leafcutter/criterion-categories"
       },
-      "flows": {}
+      "flows": {
+        "decision_kernel": [
+          "leafcutter/criteria-library"
+        ]
+      }
     },
     "Customer": {
       "canonical_mock_data": {
@@ -1350,6 +1394,26 @@
       "expands": [],
       "parents": []
     },
+    "leafcutter/criteria-library": {
+      "component": "decision_kernel",
+      "level": "journey",
+      "entities": [
+        "CriterionCategory",
+        "CriterionCategoryAggregate"
+      ],
+      "mock_data_ref": "leafcutter/criterion-categories",
+      "path": "flows/leafcutter/criteria-library.flow.json",
+      "impl_status": "not_started",
+      "impl_summary": {
+        "done": 0,
+        "in_progress": 0,
+        "not_started": 14,
+        "total": 14,
+        "asof": "2026-10-03"
+      },
+      "expands": [],
+      "parents": []
+    },
     "leafcutter/decision-forming": {
       "component": "decision_kernel",
       "level": "pipeline",
@@ -1362,9 +1426,9 @@
       "impl_summary": {
         "done": 2,
         "in_progress": 0,
-        "not_started": 15,
-        "total": 17,
-        "asof": "2026-10-02"
+        "not_started": 19,
+        "total": 21,
+        "asof": "2026-10-03"
       },
       "expands": [
         "leafcutter/decision-retrieval"

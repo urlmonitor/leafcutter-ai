@@ -4,20 +4,22 @@
   "product": "Leafcutter",
   "name": "Forming a decision in a kernel run",
   "level": "pipeline",
-  "summary": "The kernel enriches the request before intent, researches the decision, then asks you to approve and choose.",
+  "summary": "The kernel enriches and researches the request, starts from approved criteria, then asks you to approve and choose.",
   "kind": "data",
   "source": "real",
   "realization": "built",
   "status": "active",
   "readiness": "draft",
   "superseded_by": null,
-  "version": 2,
+  "version": 3,
   "shape_version": 2,
   "tags": [
     "decision-kernel",
     "decision-lifecycle",
     "decision-forming",
-    "pipeline"
+    "pipeline",
+    "criterion-categories",
+    "criteria-reuse"
   ],
   "entities": [
     "Decision"
@@ -150,15 +152,56 @@
       "impl_status": "not_started"
     },
     {
+      "id": "reuse-criteria",
+      "label": "Start from approved categories",
+      "human": "The approved criterion categories that fit this decision's kind and components are offered first, in their preferred wording, each linked to its category. These are earlier questions, not an earlier answer, and they are proposals like any other.",
+      "order": 7,
+      "agent": "kernel criteria reuse step",
+      "consumes": [
+        "intent: decision",
+        "findings"
+      ],
+      "produces": [
+        "reused criteria (each linked to its category)"
+      ],
+      "reads": [
+        "CriterionCategory"
+      ],
+      "impl_asof": "2026-10-03",
+      "impl_status": "not_started"
+    },
+    {
+      "id": "judge-gap",
+      "label": "Judge what the reused criteria miss",
+      "human": "Jev judges whether the reused criteria leave out something this decision needs. Its verdict, gap or no gap, goes with the proposals to the approval gate, so you can see why new criteria were or were not drafted.",
+      "order": 8,
+      "agent": "jev",
+      "consumes": [
+        "reused criteria (each linked to its category)",
+        "findings",
+        "goal"
+      ],
+      "produces": [
+        "gap verdict"
+      ],
+      "reads": [
+        "CriterionCategory"
+      ],
+      "impl_asof": "2026-10-03",
+      "impl_status": "not_started"
+    },
+    {
       "id": "propose",
       "label": "Propose options and criteria",
-      "human": "Claude Code, as host, proposes options and criteria (generate_options); options you named in your question are checked against your words and kept as yours.",
-      "order": 7,
+      "human": "Claude Code, as host, proposes options (generate_options) beside the reused criteria; options you named in your question are checked against your words and kept as yours. It drafts no new criteria unless Jev found a gap or no category fits.",
+      "order": 9,
       "agent": "claude_code",
       "consumes": [
         "goal",
         "findings",
-        "enriched context"
+        "enriched context",
+        "reused criteria (each linked to its category)",
+        "gap verdict"
       ],
       "produces": [
         "proposed options and criteria"
@@ -169,8 +212,8 @@
     {
       "id": "approve-proposals",
       "label": "Approve the proposals",
-      "human": "Decision point: you see the proposed options and criteria and approve them, approve only some, edit the criteria, or add options. Nothing proposed is used until you approve it.",
-      "order": 8,
+      "human": "Decision point: you see the proposed options and criteria, reused ones marked with their category and Jev's gap verdict beside them, and approve them, approve only some, edit the criteria, or add options. Nothing proposed or reused is used until you approve it.",
+      "order": 10,
       "screen": "decision-approve-proposals",
       "agent": "human (asked through claude_code)",
       "consumes": [
@@ -186,7 +229,7 @@
       "id": "research-options",
       "label": "Research the options' claims",
       "human": "A targeted research round checks the claims the approved options make and reads the files they cite.",
-      "order": 9,
+      "order": 11,
       "agent": "kernel research capability",
       "consumes": [
         "approved options and criteria",
@@ -202,7 +245,7 @@
       "id": "assess",
       "label": "Assess every option",
       "human": "Jev judges every option against every criterion (does it satisfy it, is the evidence sufficient) and marks each criterion as evidence-answerable or a design judgement.",
-      "order": 10,
+      "order": 12,
       "agent": "jev",
       "consumes": [
         "approved options and criteria",
@@ -220,7 +263,7 @@
       "id": "choose",
       "label": "Make the ranked choice",
       "human": "Decision point: you see the options ranked by Jev's per-criterion scores. The ranking is evidence, not a decision; you choose an option, add one, or answer in your own words.",
-      "order": 11,
+      "order": 13,
       "screen": "decision-ranked-choice",
       "agent": "human (asked through claude_code)",
       "consumes": [
@@ -236,7 +279,7 @@
       "id": "resolve",
       "label": "Resolve the decision",
       "human": "The decision resolves with approved_by: human:<id> and approved_at, and report.md is written to the run folder.",
-      "order": 12,
+      "order": 14,
       "agent": "kernel decision executor",
       "consumes": [
         "human choice"
@@ -277,6 +320,39 @@
       ],
       "impl_asof": "2026-10-02",
       "impl_status": "done"
+    },
+    {
+      "id": "empty-library",
+      "from": "reuse-criteria",
+      "condition": "no published category fits the decision's kind and components, including when the library is still empty",
+      "label": "No category fits: frame it as today",
+      "human": "Nothing is reused and no gap is judged; options and criteria are proposed exactly as they are today, so an empty library never blocks or slows a decision.",
+      "agent": "kernel criteria reuse step",
+      "consumes": [
+        "intent: decision",
+        "findings"
+      ],
+      "outcome_kind": "alternative",
+      "impl_asof": "2026-10-03",
+      "impl_status": "not_started"
+    },
+    {
+      "id": "draft-for-gap",
+      "from": "judge-gap",
+      "condition": "Jev finds that the reused criteria leave out something this decision needs",
+      "label": "Draft criteria for the gap only",
+      "human": "Claude Code, as host, drafts new criteria for that gap alone, beside the reused ones; you can still add your own at the approval gate, and new wordings become material for the next mining round.",
+      "agent": "claude_code",
+      "consumes": [
+        "gap verdict",
+        "findings"
+      ],
+      "produces": [
+        "gap criteria"
+      ],
+      "outcome_kind": "alternative",
+      "impl_asof": "2026-10-03",
+      "impl_status": "not_started"
     },
     {
       "id": "revise-proposals",
@@ -412,6 +488,18 @@
       "then": "every finding cites the retrieved evidence and nothing else"
     },
     {
+      "for": "reuse-criteria",
+      "given": "published categories whose decision_types and components fit a new decision, beside candidate, staged and retired categories that would also fit",
+      "when": "the decision is framed after its findings are written",
+      "then": "only the published categories are offered first as starting criteria, in their preferred wording and each linked to its category id; they are found from the reviewed records in Git by filter and wording, never from Langfuse, and reach the approval gate as proposals, never as approved criteria"
+    },
+    {
+      "for": "judge-gap",
+      "given": "reused criteria and the findings of a decision",
+      "when": "Jev judges whether the reused criteria cover what the decision needs",
+      "then": "a gap verdict states whether something is missing and what it is, and the verdict is shown with the proposals at the approval gate"
+    },
+    {
       "for": "propose",
       "given": "findings and a goal that names some options",
       "when": "Claude Code generates options and criteria",
@@ -452,6 +540,18 @@
       "given": "proposed options and criteria",
       "when": "you approve a subset, edit the criteria or add options",
       "then": "the revised set is what is researched and assessed, and free text is recorded as a limitation rather than turned into criteria"
+    },
+    {
+      "for": "empty-library",
+      "given": "no published category fits the decision's kind and components, or the library is empty",
+      "when": "the decision is framed",
+      "then": "options and criteria are proposed exactly as in a run without the library, no gap judgement is spent, and the decision is neither blocked nor slowed"
+    },
+    {
+      "for": "draft-for-gap",
+      "given": "a gap verdict naming a concern the reused criteria leave out",
+      "when": "criteria are drafted",
+      "then": "new criteria are drafted for that concern alone, none repeats a reused criterion, and you can still add your own before approving"
     },
     {
       "for": "budget-reserve",
@@ -502,13 +602,19 @@
       "by": "business-analyst and it-po (Claude agent prompts, user-requested review)",
       "date": "2026-10-02",
       "note": "Replaced preliminary DK-100 through DK-104 links with the DK-200 hierarchy: 12 behavioral and 12 edge-case criteria, with 47 exact test links covering 32 test methods. All 32 focused tests and 36 subtests pass. The superseded records retain their original criteria and evidence. Readiness remains draft."
+    },
+    {
+      "action": "extended",
+      "by": "flow-author (reusable-criteria-store session)",
+      "date": "2026-10-03",
+      "note": "Added reuse-first criteria (DK-300d) and gap-only drafting (DK-300e) under decision dec-93c1c730463c1f3c: new steps reuse-criteria and judge-gap before propose, and branches empty-library (cold start, behaviour unchanged) and draft-for-gap. The propose and approve-proposals lines now say new criteria are drafted only for a gap and reused criteria are proposals you approve like any other. Steps renumbered, ids kept, implements left empty for the business-analyst. The new nodes describe unbuilt behaviour; the categories they read live in leafcutter/criterion-categories, while mock_data_ref stays leafcutter/decisions. Readiness stays draft."
     }
   ],
   "impl_summary": {
     "done": 2,
     "in_progress": 0,
-    "not_started": 15,
-    "total": 17,
-    "asof": "2026-10-02"
+    "not_started": 19,
+    "total": 21,
+    "asof": "2026-10-03"
   }
 }
