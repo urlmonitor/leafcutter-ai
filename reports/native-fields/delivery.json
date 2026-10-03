@@ -47,12 +47,13 @@
     "report": "reports/native-fields/installed-smoke.xml"
   },
   "notes": [
-    "Decision reader supports approved canonical records, but current published source has zero Decision records.",
-    "30 retained compatibility Component hubs have no native registry record; their original reference properties remain exposed. All 9017 canonical/native-reference records have full native metadata.",
-    "No commit or PR was requested or created. Existing active checkout index and unrelated merge state were preserved."
+    "The historical aura-publication.json source had zero Decision records. The 2026-10-03 publication contains six Decisions with all 31 authored fields per record verified by live readback; see latest_hosted_publication_and_readback.",
+    "At the historical aura-publication.json revision, 30 retained compatibility Component hubs had no native registry record; their original reference properties remained exposed. All 9017 canonical/native-reference records had full native metadata.",
+    "At the original operational delivery, no commit or PR was requested or created. The existing active checkout index and unrelated merge state were preserved. Historical test and visual receipts above describe that original delivery."
   ],
   "cleanup": {
     "disposable_neo4j_container": "stopped",
     "isolated_test_temporary_directory": "Windows denied removal of pytest-of-Hendrik; not installed into the active checkout."
-  }
+  },
+  "latest_hosted_publication_and_readback": "reports/native-fields/aura-decisions-2026-10-03.json"
 }
