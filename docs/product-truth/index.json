@@ -27,7 +27,9 @@
     "FrontendComponent",
     "AcDeclaration",
     "GuardrailFinding",
-    "Decision"
+    "Decision",
+    "CriterionCategory",
+    "CriterionCategoryAggregate"
   ],
   "artifacts": [
     {
@@ -637,6 +639,28 @@
       ]
     },
     {
+      "id": "leafcutter/criterion-categories",
+      "type": "mock_data",
+      "title": "Leafcutter criterion categories",
+      "summary": "The canonical CriterionCategory dataset: reusable decision-criteria categories mined from published decision records and Langfuse traces, across candidate, staged, published and retired stages, plus the separate Neo4j outcome aggregates keyed by category id.",
+      "component": "decision_kernel",
+      "path": "mock-data/leafcutter/criterion-categories.mock.json",
+      "status": "active",
+      "readiness": "draft",
+      "version": 1,
+      "entities": [
+        "CriterionCategory",
+        "CriterionCategoryAggregate"
+      ],
+      "tags": [
+        "decision-kernel",
+        "decision-criteria",
+        "criterion-categories",
+        "criteria-mining",
+        "precedent"
+      ]
+    },
+    {
       "id": "leafcutter/decision-approve-proposals",
       "type": "mockup",
       "title": "Approve the generated proposals",
@@ -978,6 +1002,7 @@
         "leafcutter/decision-staging"
       ],
       "mock_data": [
+        "leafcutter/criterion-categories",
         "leafcutter/decisions"
       ],
       "mockups": [
@@ -1055,6 +1080,18 @@
           "leafcutter/how-acs-are-built"
         ]
       }
+    },
+    "CriterionCategory": {
+      "canonical_mock_data": {
+        "decision_kernel": "leafcutter/criterion-categories"
+      },
+      "flows": {}
+    },
+    "CriterionCategoryAggregate": {
+      "canonical_mock_data": {
+        "decision_kernel": "leafcutter/criterion-categories"
+      },
+      "flows": {}
     },
     "Customer": {
       "canonical_mock_data": {
