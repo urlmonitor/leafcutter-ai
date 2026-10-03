@@ -1,0 +1,36 @@
+{
+  "id": "leafcutter/decision-split-approve",
+  "component": "decision_kernel",
+  "screen": "decision-split-approve",
+  "title": "Approve the proposed split",
+  "summary": "The human gate for a compound goal, research request or multi-part decision question the kernel could not route to one capability. Shows the subject as submitted, each proposed part with the verbatim span it covers, its dependencies and the capability that will run it, one proposal that was dropped, and the answers: approve, edit a part, pick a subset, or reject. Populated from dcp-reusable-criteria-proposed.",
+  "entities": [
+    "Decision",
+    "Decomposition"
+  ],
+  "source": "mock",
+  "realization": "mock",
+  "renders": "decision-split-approve.html",
+  "status": "active",
+  "superseded_by": null,
+  "readiness": "draft",
+  "version": 1,
+  "shape_version": 1,
+  "tags": [
+    "decision-kernel",
+    "decision-lifecycle",
+    "approval",
+    "split",
+    "decomposition",
+    "human-gate"
+  ],
+  "mock_data_ref": "leafcutter/decisions",
+  "provenance": [
+    {
+      "action": "authored",
+      "by": "mockup-author",
+      "date": "2026-10-03",
+      "note": "Drafted from leafcutter/decisions Decomposition records; styled from the Atlas tokens via docs/ui-context.md (globals.css, tailwind.config.ts, layout.tsx, kit.tsx)."
+    }
+  ]
+}

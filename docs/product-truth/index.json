@@ -953,6 +953,58 @@
         "orders",
         "stub"
       ]
+    },
+    {
+      "id": "leafcutter/decision-split-approve",
+      "type": "mockup",
+      "title": "Approve the proposed split",
+      "summary": "The human gate for a compound goal, research request or multi-part decision question the kernel could not route to one capability. Shows the subject as submitted, each proposed part with the verbatim span it covers, its dependencies and the capability that will run it, one proposal that was dropped, and the answers: approve, edit a part, pick a subset, or reject. Populated from dcp-reusable-criteria-proposed.",
+      "screen": "decision-split-approve",
+      "source": "mock",
+      "component": "decision_kernel",
+      "path": "mockups/leafcutter/decision-split-approve.mockup.json",
+      "status": "active",
+      "readiness": "draft",
+      "version": 1,
+      "entities": [
+        "Decision",
+        "Decomposition"
+      ],
+      "mock_data_ref": "leafcutter/decisions",
+      "tags": [
+        "decision-kernel",
+        "decision-lifecycle",
+        "approval",
+        "split",
+        "decomposition",
+        "human-gate"
+      ]
+    },
+    {
+      "id": "leafcutter/decision-split-progress",
+      "type": "mockup",
+      "title": "Split progress and report",
+      "summary": "What happens after the split gate. Each part shows its outcome (decided, answered, pending, settled by a human, not run), its link to the child decision record or research result, and its dependency order, including an edited part and a left-out part. A rejected split gets a plain report. Populated from the hand split, the mid-run split, the research split and the rejected split.",
+      "screen": "decision-split-progress",
+      "source": "mock",
+      "component": "decision_kernel",
+      "path": "mockups/leafcutter/decision-split-progress.mockup.json",
+      "status": "active",
+      "readiness": "draft",
+      "version": 1,
+      "entities": [
+        "Decision",
+        "Decomposition"
+      ],
+      "mock_data_ref": "leafcutter/decisions",
+      "tags": [
+        "decision-kernel",
+        "decision-lifecycle",
+        "split",
+        "decomposition",
+        "progress",
+        "report"
+      ]
     }
   ],
   "by_component": {
@@ -989,7 +1041,9 @@
         "leafcutter/decision-ranked-choice",
         "leafcutter/decision-record-published",
         "leafcutter/decision-record-staged",
-        "leafcutter/decision-reuse-or-decide-anew"
+        "leafcutter/decision-reuse-or-decide-anew",
+        "leafcutter/decision-split-approve",
+        "leafcutter/decision-split-progress"
       ]
     },
     "ux-prototyping": {
