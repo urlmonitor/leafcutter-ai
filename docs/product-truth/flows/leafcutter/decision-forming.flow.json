@@ -4,23 +4,26 @@
   "product": "Leafcutter",
   "name": "Forming a decision in a kernel run",
   "level": "pipeline",
-  "summary": "A kernel run researches your question and Jev assesses the options; you approve the criteria and make the ranked choice.",
+  "summary": "A kernel run researches your question, splitting a compound one into parts you approve; you then make the ranked choice.",
   "kind": "data",
   "source": "real",
   "realization": "built",
   "status": "active",
   "readiness": "draft",
   "superseded_by": null,
-  "version": 1,
+  "version": 2,
   "shape_version": 2,
   "tags": [
     "decision-kernel",
     "decision-lifecycle",
     "decision-forming",
-    "pipeline"
+    "pipeline",
+    "split",
+    "decomposition"
   ],
   "entities": [
-    "Decision"
+    "Decision",
+    "Decomposition"
   ],
   "mock_data_ref": "leafcutter/decisions",
   "steps": [
@@ -52,10 +55,93 @@
       "impl_status": "not_started"
     },
     {
+      "id": "split-detect",
+      "label": "Spot a compound subject",
+      "human": "Routing looks for one capability to take the subject. When it finds none (no match with reason jev_none, or an ambiguous gap), the subject is taken to hold several questions and a split starts.",
+      "order": 3,
+      "agent": "kernel routing",
+      "consumes": [
+        "goal"
+      ],
+      "produces": [
+        "compound subject"
+      ],
+      "writes": [
+        "Decomposition"
+      ],
+      "impl_asof": "2026-10-03",
+      "impl_status": "not_started"
+    },
+    {
+      "id": "split-propose",
+      "label": "Propose the parts",
+      "human": "Claude Code, as host, proposes 2 to 5 bounded parts (host.decompose_goal). Each part quotes the words of the subject it covers, names the parts it waits for, and says whether a decision or a research child runs it.",
+      "order": 4,
+      "agent": "claude_code",
+      "consumes": [
+        "compound subject"
+      ],
+      "produces": [
+        "proposed split"
+      ],
+      "reads": [
+        "Decomposition"
+      ],
+      "writes": [
+        "Decomposition"
+      ],
+      "impl_asof": "2026-10-03",
+      "impl_status": "not_started"
+    },
+    {
+      "id": "split-approve",
+      "label": "Approve the split",
+      "human": "Decision point: you see the subject as submitted, each proposed part with its quote, its dependencies and the capability that will run it, and any dropped proposal. You approve, edit a part, pick a subset, or reject. Nothing runs until you answer.",
+      "order": 5,
+      "screen": "decision-split-approve",
+      "agent": "human (asked through claude_code)",
+      "consumes": [
+        "proposed split"
+      ],
+      "produces": [
+        "approved split"
+      ],
+      "reads": [
+        "Decomposition"
+      ],
+      "writes": [
+        "Decomposition"
+      ],
+      "impl_asof": "2026-10-03",
+      "impl_status": "not_started"
+    },
+    {
+      "id": "split-run",
+      "label": "Run the parts in order",
+      "human": "The approved parts run one at a time as children of this run, in dependency order. A decision part goes through the steps that follow, from precedent to resolve; a research part runs as a research child. An earlier part's result is precedent for the later ones.",
+      "order": 6,
+      "agent": "kernel scheduler",
+      "consumes": [
+        "approved split"
+      ],
+      "produces": [
+        "child work items (dependency order)"
+      ],
+      "reads": [
+        "Decomposition",
+        "Decision"
+      ],
+      "writes": [
+        "Decomposition"
+      ],
+      "impl_asof": "2026-10-03",
+      "impl_status": "not_started"
+    },
+    {
       "id": "precedent",
       "label": "Check for precedent",
       "human": "Earlier published decisions that might apply are looked up and judged; how that works is shown in the precedent sub-flow.",
-      "order": 3,
+      "order": 7,
       "agent": "kernel precedent step",
       "consumes": [
         "intent: decision"
@@ -76,7 +162,7 @@
       "id": "ground",
       "label": "Ground it in the repository",
       "human": "The research capability retrieves repository evidence with exact, section-aware locators and Jev reranks it; a precedent alone never counts as grounding.",
-      "order": 4,
+      "order": 8,
       "agent": "kernel research capability",
       "consumes": [
         "intent: decision"
@@ -91,7 +177,7 @@
       "id": "synthesize",
       "label": "Synthesize the findings",
       "human": "Claude Code, as host, writes findings that cite only the retrieved evidence (synthesize_evidence).",
-      "order": 5,
+      "order": 9,
       "agent": "claude_code",
       "consumes": [
         "grounding evidence",
@@ -107,7 +193,7 @@
       "id": "propose",
       "label": "Propose options and criteria",
       "human": "Claude Code, as host, proposes options and criteria (generate_options); options you named in your question are checked against your words and kept as yours.",
-      "order": 6,
+      "order": 10,
       "agent": "claude_code",
       "consumes": [
         "goal",
@@ -123,7 +209,7 @@
       "id": "approve-proposals",
       "label": "Approve the proposals",
       "human": "Decision point: you see the proposed options and criteria and approve them, approve only some, edit the criteria, or add options. Nothing proposed is used until you approve it.",
-      "order": 7,
+      "order": 11,
       "screen": "decision-approve-proposals",
       "agent": "human (asked through claude_code)",
       "consumes": [
@@ -139,7 +225,7 @@
       "id": "research-options",
       "label": "Research the options' claims",
       "human": "A targeted research round checks the claims the approved options make and reads the files they cite.",
-      "order": 8,
+      "order": 12,
       "agent": "kernel research capability",
       "consumes": [
         "approved options and criteria"
@@ -154,7 +240,7 @@
       "id": "assess",
       "label": "Assess every option",
       "human": "Jev judges every option against every criterion (does it satisfy it, is the evidence sufficient) and marks each criterion as evidence-answerable or a design judgement.",
-      "order": 9,
+      "order": 13,
       "agent": "jev",
       "consumes": [
         "approved options and criteria",
@@ -171,7 +257,7 @@
       "id": "choose",
       "label": "Make the ranked choice",
       "human": "Decision point: you see the options ranked by Jev's per-criterion scores. The ranking is evidence, not a decision; you choose an option, add one, or answer in your own words.",
-      "order": 10,
+      "order": 14,
       "screen": "decision-ranked-choice",
       "agent": "human (asked through claude_code)",
       "consumes": [
@@ -187,7 +273,7 @@
       "id": "resolve",
       "label": "Resolve the decision",
       "human": "The decision resolves with approved_by: human:<id> and approved_at, and report.md is written to the run folder.",
-      "order": 11,
+      "order": 15,
       "agent": "kernel decision executor",
       "consumes": [
         "human choice"
@@ -201,9 +287,136 @@
       ],
       "impl_asof": "2026-10-02",
       "impl_status": "not_started"
+    },
+    {
+      "id": "split-report",
+      "label": "Report the split",
+      "human": "You see where each part stands (pending, decided, answered or not run), with a link to its child decision record or research result; the run report's split section has one line per part.",
+      "order": 16,
+      "screen": "decision-split-progress",
+      "agent": "kernel",
+      "consumes": [
+        "approved split",
+        "resolved decision (approved_by: human)"
+      ],
+      "produces": [
+        "report.md split section"
+      ],
+      "reads": [
+        "Decomposition",
+        "Decision"
+      ],
+      "writes": [
+        "Decomposition"
+      ],
+      "impl_asof": "2026-10-03",
+      "impl_status": "not_started"
     }
   ],
   "branches": [
+    {
+      "id": "split-not-needed",
+      "from": "split-detect",
+      "condition": "routing finds one capability for the subject",
+      "label": "One question, no split",
+      "human": "Nothing is split: the run goes on as one decision, from the precedent step.",
+      "agent": "kernel routing",
+      "consumes": [
+        "goal"
+      ],
+      "outcome_kind": "alternative",
+      "impl_asof": "2026-10-03",
+      "impl_status": "not_started"
+    },
+    {
+      "id": "split-mid-run",
+      "from": "split-detect",
+      "condition": "a work item below the root holds a multi-part decision question or a research request with several needs",
+      "label": "Split found mid-run",
+      "human": "The same split starts for that work item, recorded as found mid-run at its depth and with no routing result, and it goes to the same gate.",
+      "agent": "kernel scheduler",
+      "produces": [
+        "compound subject"
+      ],
+      "writes": [
+        "Decomposition"
+      ],
+      "outcome_kind": "alternative",
+      "impl_asof": "2026-10-03",
+      "impl_status": "not_started"
+    },
+    {
+      "id": "split-dropped",
+      "from": "split-propose",
+      "condition": "a proposed part's quote is not found in the subject",
+      "label": "Drop a part with no quote",
+      "human": "That proposal is dropped before it reaches you. The gate shows it read-only with its reason; it cannot be approved or run, though you can add its question with an edit.",
+      "screen": "decision-split-approve",
+      "agent": "kernel",
+      "consumes": [
+        "proposed split"
+      ],
+      "produces": [
+        "dropped proposals (read-only, with reason)"
+      ],
+      "reads": [
+        "Decomposition"
+      ],
+      "writes": [
+        "Decomposition"
+      ],
+      "outcome_kind": "failure",
+      "impl_asof": "2026-10-03",
+      "impl_status": "not_started"
+    },
+    {
+      "id": "split-revise",
+      "from": "split-approve",
+      "condition": "you edit a part's text or untick some parts before approving",
+      "label": "Edit or pick a subset",
+      "human": "An edited part runs with your words and the record keeps the proposed text; an unticked part is recorded as left out and never runs. At least one part stays in.",
+      "screen": "decision-split-approve",
+      "agent": "human (asked through claude_code)",
+      "consumes": [
+        "proposed split"
+      ],
+      "produces": [
+        "approved split"
+      ],
+      "reads": [
+        "Decomposition"
+      ],
+      "writes": [
+        "Decomposition"
+      ],
+      "outcome_kind": "alternative",
+      "impl_asof": "2026-10-03",
+      "impl_status": "not_started"
+    },
+    {
+      "id": "split-reject",
+      "from": "split-approve",
+      "condition": "you reject the split",
+      "label": "Reject the split",
+      "human": "No part runs. The run ends blocked, and its report says plainly that the split was rejected and nothing was decided, with a hint to ask again as one bounded question.",
+      "screen": "decision-split-progress",
+      "agent": "kernel",
+      "consumes": [
+        "proposed split"
+      ],
+      "produces": [
+        "split report (rejected)"
+      ],
+      "reads": [
+        "Decomposition"
+      ],
+      "writes": [
+        "Decomposition"
+      ],
+      "outcome_kind": "exit",
+      "impl_asof": "2026-10-03",
+      "impl_status": "not_started"
+    },
     {
       "id": "revise-proposals",
       "from": "approve-proposals",
@@ -284,6 +497,30 @@
       "then": "the goal is classed as decision, evidence, ideas, change or out of domain with one Jev question, and a decision goal starts the decision graph"
     },
     {
+      "for": "split-detect",
+      "given": "a root goal holding several questions, for which routing finds no single capability (no match with reason jev_none, or an ambiguous gap)",
+      "when": "routing runs on the run's root",
+      "then": "a split is started for the goal, recording it verbatim with found_at routing, work_item_depth 0 and the routing result as its trigger"
+    },
+    {
+      "for": "split-propose",
+      "given": "a compound subject",
+      "when": "Claude Code proposes the split through host.decompose_goal",
+      "then": "2 to 5 parts are proposed, each quoting verbatim the span of the subject it covers, naming the parts it depends on (no cycles) and the capability that will run it, and the run waits for a human answer with no part run"
+    },
+    {
+      "for": "split-approve",
+      "given": "a proposed split shown on the split gate",
+      "when": "you approve it as shown",
+      "then": "every part is kept, the answer is recorded with gate_by human:<name> and the time, and the parts are released to run in dependency order; no part runs before a human answer"
+    },
+    {
+      "for": "split-run",
+      "given": "an approved split whose part p2 depends on part p1",
+      "when": "the parts run",
+      "then": "they run one at a time as children of the same run, p1 settles before p2 starts, and p1's result is passed to p2 as precedent evidence whose applicability Jev still judges"
+    },
+    {
       "for": "precedent",
       "given": "a decision goal and published records in docs/decisions/",
       "when": "the precedent step runs",
@@ -338,6 +575,42 @@
       "then": "it carries approved_by: human:<id> and approved_at, and report.md is written to the run folder"
     },
     {
+      "for": "split-report",
+      "given": "an approved split whose parts are settling in dependency order",
+      "when": "you look at the split's progress, or the run ends",
+      "then": "each part shows its outcome (pending, decided, answered or not run) with a link to its child decision record or research result, and the run report's split section has one line per part, starting with the part id and naming its outcome"
+    },
+    {
+      "for": "split-not-needed",
+      "given": "a goal that routing can give to one capability",
+      "when": "routing runs on the run's root",
+      "then": "no split is started and the run goes on as one decision from the precedent step"
+    },
+    {
+      "for": "split-mid-run",
+      "given": "a work item below the run's root that holds a multi-part decision question or a research request with several needs",
+      "when": "the run reaches that work item",
+      "then": "a split is started for it with found_at mid_run, its work-item depth (1 or more) and no routing trigger, and it goes to the same split gate"
+    },
+    {
+      "for": "split-dropped",
+      "given": "a proposed part whose quoted span is not in the subject text",
+      "when": "the proposal is turned into the split",
+      "then": "that part is left out of the parts and shown at the gate read-only with its reason, and it cannot be approved or run"
+    },
+    {
+      "for": "split-revise",
+      "given": "a proposed split shown on the split gate",
+      "when": "you edit a part's text or untick some parts, then approve",
+      "then": "an edited part runs with your text and the record keeps the proposed text beside it, and an unticked part is recorded as left out and never runs"
+    },
+    {
+      "for": "split-reject",
+      "given": "a proposed split shown on the split gate",
+      "when": "you reject it",
+      "then": "no part runs, the run ends blocked, and its report says plainly that the split was rejected and nothing was decided"
+    },
+    {
       "for": "revise-proposals",
       "given": "proposed options and criteria",
       "when": "you approve a subset, edit the criteria or add options",
@@ -368,13 +641,19 @@
       "by": "flow-author (decision-lifecycle product-truth session)",
       "date": "2026-10-02",
       "note": "Sub-flow 1 of leafcutter/decision-lifecycle (kernel decision dec-5e7445182eaec1f2). Human decision points modelled as branches (ADR-025 is rendered from branches[]; the schema has no decisions[] field). Checked against the kernel decision capability on main (approvals.py, budget_gate.py)."
+    },
+    {
+      "action": "extended",
+      "by": "flow-author (split-compound-goals plan-feature session)",
+      "date": "2026-10-03",
+      "note": "v2: extended in place with the split path for a compound subject (a goal, a research request with several needs, or a multi-part decision question), not a new flow. Four steps after classify (split-detect, split-propose, split-approve on screen decision-split-approve, split-run) and one after resolve (split-report on screen decision-split-progress), plus five branches (split-not-needed, split-mid-run, split-dropped, split-revise, split-reject), each with one acceptance scenario. Existing steps keep their ids and content; from precedent on their order moves up by 4. Wired to leafcutter/decisions v3 (Decomposition). The split nodes describe host.decompose_goal (KernelDecomposeMultiPartGoal ticket), which is not built yet: they are spec inside this built flow and carry no ACs until the business-analyst back-links them."
     }
   ],
   "impl_summary": {
     "done": 0,
     "in_progress": 0,
-    "not_started": 15,
-    "total": 15,
-    "asof": "2026-10-02"
+    "not_started": 25,
+    "total": 25,
+    "asof": "2026-10-03"
   }
 }

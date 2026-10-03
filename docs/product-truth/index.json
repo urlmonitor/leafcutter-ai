@@ -479,30 +479,33 @@
       "id": "leafcutter/decision-forming",
       "type": "flow",
       "title": "Forming a decision in a kernel run",
-      "summary": "A kernel run researches your question and Jev assesses the options; you approve the criteria and make the ranked choice.",
+      "summary": "A kernel run researches your question, splitting a compound one into parts you approve; you then make the ranked choice.",
       "kind": "data",
       "source": "real",
       "component": "decision_kernel",
       "path": "flows/leafcutter/decision-forming.flow.json",
       "status": "active",
       "readiness": "draft",
-      "version": 1,
+      "version": 2,
       "entities": [
-        "Decision"
+        "Decision",
+        "Decomposition"
       ],
       "mock_data_ref": "leafcutter/decisions",
       "impl_summary": {
         "done": 0,
         "in_progress": 0,
-        "not_started": 15,
-        "total": 15,
-        "asof": "2026-10-02"
+        "not_started": 25,
+        "total": 25,
+        "asof": "2026-10-03"
       },
       "tags": [
         "decision-kernel",
         "decision-lifecycle",
         "decision-forming",
-        "pipeline"
+        "pipeline",
+        "split",
+        "decomposition"
       ]
     },
     {
@@ -1144,7 +1147,11 @@
       "canonical_mock_data": {
         "decision_kernel": "leafcutter/decisions"
       },
-      "flows": {}
+      "flows": {
+        "decision_kernel": [
+          "leafcutter/decision-forming"
+        ]
+      }
     },
     "Diff": {
       "canonical_mock_data": {},
@@ -1381,7 +1388,8 @@
       "component": "decision_kernel",
       "level": "pipeline",
       "entities": [
-        "Decision"
+        "Decision",
+        "Decomposition"
       ],
       "mock_data_ref": "leafcutter/decisions",
       "path": "flows/leafcutter/decision-forming.flow.json",
@@ -1389,9 +1397,9 @@
       "impl_summary": {
         "done": 0,
         "in_progress": 0,
-        "not_started": 15,
-        "total": 15,
-        "asof": "2026-10-02"
+        "not_started": 25,
+        "total": 25,
+        "asof": "2026-10-03"
       },
       "expands": [
         "leafcutter/decision-retrieval"
