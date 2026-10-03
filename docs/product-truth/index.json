@@ -27,7 +27,8 @@
     "FrontendComponent",
     "AcDeclaration",
     "GuardrailFinding",
-    "Decision"
+    "Decision",
+    "Decomposition"
   ],
   "artifacts": [
     {
@@ -620,20 +621,23 @@
       "id": "leafcutter/decisions",
       "type": "mock_data",
       "title": "Leafcutter decision records",
-      "summary": "The canonical Decision dataset for the decision lifecycle: real staged, published and reused kernel decision records, plus an illustrative superseded pair.",
+      "summary": "The canonical Decision dataset for the decision lifecycle: real staged, published and reused kernel decision records, plus an illustrative superseded pair, and the splits (Decomposition) of compound goals, research requests and multi-part questions into bounded parts.",
       "component": "decision_kernel",
       "path": "mock-data/leafcutter/decisions.mock.json",
       "status": "active",
       "readiness": "draft",
-      "version": 2,
+      "version": 3,
       "entities": [
-        "Decision"
+        "Decision",
+        "Decomposition"
       ],
       "tags": [
         "decision-kernel",
         "decision-lifecycle",
         "decision-records",
-        "precedent"
+        "precedent",
+        "decomposition",
+        "compound-goal"
       ]
     },
     {
@@ -1081,6 +1085,12 @@
           "leafcutter/decision-staging"
         ]
       }
+    },
+    "Decomposition": {
+      "canonical_mock_data": {
+        "decision_kernel": "leafcutter/decisions"
+      },
+      "flows": {}
     },
     "Diff": {
       "canonical_mock_data": {},
