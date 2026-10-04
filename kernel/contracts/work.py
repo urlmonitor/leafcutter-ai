@@ -11,7 +11,7 @@ ARCHITECTURE: Capabilities emit RequestProposal (no identity); the kernel assign
 
 from __future__ import annotations
 
-from kernel.contracts.verbatim import VerbatimJson
+from kernel.contracts.verbatim import VerbatimJson, VerbatimString
 
 from pydantic import Field, model_validator
 
@@ -36,7 +36,7 @@ class RequestBody(KernelModel):
     """Fields a capability may propose for follow-up work."""
 
     kind: RequestKind
-    goal: str | None = None
+    goal: VerbatimString | None = None
     question: str | None = None
     payload_schema: str
     payload: dict[str, VerbatimJson]
@@ -154,4 +154,5 @@ class CapabilityInvocation(PersistedModel):
 #   operation instead of tying on the lowest id. (#KernelBootstrapV0/INT)
 # - 2026-09-30 22:00 [python-coder]: Request and RequestProposal share RequestBody so the
 #   identity-free proposal cannot drift from the registered request. (#KernelBootstrapV0/P1)
+# - 2026-10-03 15:10 [python-coder]: Preserve verbatim goals and separate meaning, caller and clarification channels. (#DK-300/entity-context)
 # ====================================================================

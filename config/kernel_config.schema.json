@@ -197,6 +197,97 @@
       "title": "DecisionConfig",
       "type": "object"
     },
+    "EntityContextConfig": {
+      "additionalProperties": false,
+      "description": "Independent entity-index and interpretation limits.",
+      "properties": {
+        "enabled": {
+          "title": "Enabled",
+          "type": "boolean"
+        },
+        "index_path": {
+          "title": "Index Path",
+          "type": "string"
+        },
+        "max_ambiguity_candidates": {
+          "maximum": 3,
+          "minimum": 1,
+          "title": "Max Ambiguity Candidates",
+          "type": "integer"
+        },
+        "max_caller_chars": {
+          "maximum": 12000,
+          "minimum": 1,
+          "title": "Max Caller Chars",
+          "type": "integer"
+        },
+        "max_entities": {
+          "maximum": 16,
+          "minimum": 1,
+          "title": "Max Entities",
+          "type": "integer"
+        },
+        "max_lookups": {
+          "maximum": 64,
+          "minimum": 1,
+          "title": "Max Lookups",
+          "type": "integer"
+        },
+        "max_meaning_chars": {
+          "maximum": 300,
+          "minimum": 1,
+          "title": "Max Meaning Chars",
+          "type": "integer"
+        },
+        "max_seconds": {
+          "exclusiveMinimum": 0,
+          "maximum": 2,
+          "title": "Max Seconds",
+          "type": "number"
+        },
+        "max_serialized_chars": {
+          "maximum": 8000,
+          "minimum": 1000,
+          "title": "Max Serialized Chars",
+          "type": "integer"
+        },
+        "max_unknown_chars": {
+          "maximum": 128,
+          "minimum": 1,
+          "title": "Max Unknown Chars",
+          "type": "integer"
+        },
+        "max_unknowns": {
+          "maximum": 8,
+          "minimum": 1,
+          "title": "Max Unknowns",
+          "type": "integer"
+        },
+        "source_ids": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Source Ids",
+          "type": "array"
+        }
+      },
+      "required": [
+        "enabled",
+        "index_path",
+        "source_ids",
+        "max_caller_chars",
+        "max_lookups",
+        "max_entities",
+        "max_ambiguity_candidates",
+        "max_meaning_chars",
+        "max_serialized_chars",
+        "max_unknowns",
+        "max_unknown_chars",
+        "max_seconds"
+      ],
+      "title": "EntityContextConfig",
+      "type": "object"
+    },
     "EvidenceCategory": {
       "description": "Generic evidence categories (no vendor names).",
       "enum": [
@@ -998,6 +1089,11 @@
       "additionalProperties": false,
       "description": "One entry of the source catalog (where evidence may come from).",
       "properties": {
+        "automatic_research": {
+          "default": true,
+          "title": "Automatic Research",
+          "type": "boolean"
+        },
         "categories": {
           "items": {
             "$ref": "#/$defs/EvidenceCategory"
@@ -1078,6 +1174,9 @@
     "decision": {
       "$ref": "#/$defs/DecisionConfig"
     },
+    "entity_context": {
+      "$ref": "#/$defs/EntityContextConfig"
+    },
     "host": {
       "$ref": "#/$defs/HostConfig"
     },
@@ -1126,6 +1225,7 @@
     "routing",
     "intent",
     "context_enrichment",
+    "entity_context",
     "decision",
     "research",
     "retrieval",

@@ -29,6 +29,7 @@ from kernel.contracts import (
     RoutingAssessment,
     RoutingOutcome,
     TraceContext,
+    Task,
     WorkItem,
     WorkItemStatus,
     canonical_json,
@@ -284,11 +285,9 @@ class _Router(IntentStep):
             self.draft.put_item(item, routing_ref=ref)
             self._unclear(entry, result)
 
-    async def run(self) -> dict[str, Any]:
-        """Route the whole agenda and return the state update."""
+    def _entries(self, task: Task) -> list[RouteEntry]:
+        """Dispatch pinned and human work, returning agenda entries needing capability routing."""
         state, draft = self.state, self.draft
-        await self.resolve_intent()
-        task = self.task_update or state["task"]
         entries: list[RouteEntry] = []
         for item_id in state.get("agenda", []):
             item = draft.items[item_id]
@@ -307,6 +306,13 @@ class _Router(IntentStep):
                 entries.append(RouteEntry(item.id, request, report,
                                           [a.text for a in self.answers_of(item)],
                                           intent_bound=root_contract_bound(task, request, item.id)))
+        return entries
+
+    async def run(self) -> dict[str, Any]:
+        """Route the whole agenda and return the state update."""
+        state, draft = self.state, self.draft
+        await self.resolve_intent()
+        entries = self._entries(self.task_update or state["task"])
         results: dict[str, RouteResult | None] = {
             e.item_id: deterministic_result(e.report, e.intent_bound) for e in entries}
         semantic = [e for e in entries if results[e.item_id] is None]
@@ -362,10 +368,15 @@ def after_route(state: KernelState) -> list[Send | str]:
 def _packet(state: KernelState, invocation_id: str, shares: dict[str, int]) -> dict[str, Any]:
     """Build the read-only packet a Send worker receives (a snapshot, never shared state)."""
     invocation = state["invocations"][invocation_id]
+    root = state["work_items"].get(state["task"].root_work_item_id or "")
+    request = state["requests"].get(root.request_id) if root else None
+    clarifications = request.payload.get("clarifications", []) if request else []
     return {"invocation": invocation,
             "descriptor": state["registry"].get(invocation.capability_id),
             "evidence": dict(state.get("evidence", {})), "scope": state["task"].scope,
             "context_enrichment": state.get("context_enrichment"),
+            "entity_context": state.get("entity_context"),
+            "clarifications": clarifications if isinstance(clarifications, list) else [],
             "constraints": constraint_texts(state), "shares": dict(shares)}
 
 
@@ -397,4 +408,5 @@ def _packet(state: KernelState, invocation_id: str, shares: dict[str, int]) -> d
 #   over state["trace"], so invocations and host packets created after a resume nest under the
 #   resuming segment (bug D). (#KernelBootstrapV0/P7)
 # - 2026-10-02 16:54 [python-coder]: Bind typed research only after eligibility. (#KM-500a/2)
+# - 2026-10-03 15:10 [python-coder]: Preserve verbatim goals and separate meaning, caller and clarification channels. (#DK-300/entity-context)
 # ====================================================================

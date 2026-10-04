@@ -530,3 +530,16 @@ ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02/RS-02.live-response.json:491
 ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02/RS-03.live-response.json:491
 ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02/rerun-recipe.json:13
 ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02/rerun-recipe.json:17
+
+# DK-300 delivery evidence: trace URL and identifiers, synthetic fixture identifiers,
+# and pytest temporary paths; verified not to contain credential material.
+# Immutable report lines are pinned; other secret rules remain active.
+ENTROPY_HIGH:reports/entity-ac-live-demo/demo.md:11
+ENTROPY_HIGH:reports/entity-context-independent-final.xml:1
+ENTROPY_HIGH:reports/entity-context-kernel-verified.xml:1
+ENTROPY_HIGH:reports/entity-context-vocabulary.xml:1
+ENTROPY_HIGH:reports/entity-context-vocabulary.xml:37
+ENTROPY_HIGH:reports/entity-graph-selection-independent-green.xml:1
+ENTROPY_HIGH:reports/entity-native-pointer-core-broad.xml:1
+# Deliberately fake redaction fixture; test-file line wildcard follows CLAUDE.md.
+GENERIC_SECRET:tests/kernel/entity_context/test_permissions.py:*

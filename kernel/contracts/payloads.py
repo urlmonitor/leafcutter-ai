@@ -10,7 +10,7 @@ ARCHITECTURE: One model per schema id; schema_catalog maps id -> model. Structur
 
 from __future__ import annotations
 
-from kernel.contracts.verbatim import VerbatimJson
+from kernel.contracts.verbatim import VerbatimJson, VerbatimString
 
 from typing import Literal
 
@@ -33,7 +33,8 @@ def _unique(ids: list[str], what: str) -> None:
 class GoalRequestPayload(KernelModel):
     """leafcutter.goal_request.v1: a free-form goal for the root capability request."""
 
-    goal: str = Field(min_length=1, max_length=4000)
+    goal: VerbatimString = Field(min_length=1, max_length=16000)
+    clarifications: list[VerbatimString] = Field(default_factory=list)
     context_summary: str | None = None
 
 
@@ -158,7 +159,8 @@ class RetrievalRequestPayload(KernelModel):
 class OptionsRequestPayload(KernelModel):
     """leafcutter.options_request.v1."""
 
-    problem: str = Field(min_length=1)
+    problem: VerbatimString = Field(min_length=1)
+    clarifications: list[VerbatimString] = Field(default_factory=list)
     constraint_ids: list[str] = Field(default_factory=list)
     existing_option_ids: list[str] = Field(default_factory=list)
     evidence_ids: list[str] = Field(default_factory=list)
@@ -327,6 +329,7 @@ __all__ = [
 # - 2026-09-30 22:00 [python-coder]: goal_request, human_question_request and human_answer are
 #   added to the nine Rev 3 section 7.11 schemas because the root request, human interaction
 #   and human answer need registered payloads (design part 2). (#KernelBootstrapV0/P1)
+# - 2026-10-03 15:10 [python-coder]: Preserve verbatim goals and separate meaning, caller and clarification channels. (#DK-300/entity-context)
 # ====================================================================
 
 # - 2026-10-01 20:00 [python-coder]: Bind optional knowledge through existing scoped retrieval contracts. (#TICKET-20261001-KM-400e-3)
