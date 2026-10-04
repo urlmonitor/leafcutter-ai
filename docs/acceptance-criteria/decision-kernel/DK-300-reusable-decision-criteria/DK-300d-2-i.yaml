@@ -45,3 +45,13 @@ notes: |
   Whether the edited wording still asks the same question is a grouping judgement, so it reaches the category only as a suggestion a person accepts (DK-300b rule (d)), through the next mining round or the in-run grouping. The edited wording is illustrative.
   FLOW BACK-LINK (for step.implements, to be applied by the store owner): leafcutter/decision-forming: approve-proposals.
   Authored by the business-analyst stage of /plan-feature (route strategic) under decision dec-93c1c730463c1f3c; readiness draft, no product approval implied.
+product_truth:
+  - flow: leafcutter/decision-forming
+    node: approve-proposals
+    node_kind: step
+    flow_kind: data
+    screen: decision-approve-proposals
+    mock_data: leafcutter/decisions
+    entities: []
+    source: real
+    asof: '2026-10-04'

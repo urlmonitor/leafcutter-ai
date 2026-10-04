@@ -52,3 +52,25 @@ notes: |
   NON-GOAL guard (L0 and DK-300f notes): using outcome statistics to choose or rank offered categories is INFLUENCE, which belongs after held-out evaluation (ADR-056 section 3, phase_colony_4_influence). Being used often never counts as proof that a category is good (ADR-056). The swap is the falsifiable form: any ranking by usage or outcome changes the order in one of the two runs.
   FLOW BACK-LINK (for step.implements, to be applied by the store owner): leafcutter/criteria-library: count-usage; leafcutter/decision-forming: reuse-criteria.
   Authored by the business-analyst stage of /plan-feature (route strategic) under decision dec-93c1c730463c1f3c; readiness draft, no product approval implied.
+product_truth:
+  - flow: leafcutter/criteria-library
+    node: count-usage
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: leafcutter/criterion-categories
+    entities:
+      - CriterionCategory
+      - Decision
+    source: mock
+    asof: '2026-10-04'
+  - flow: leafcutter/decision-forming
+    node: reuse-criteria
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: leafcutter/decisions
+    entities:
+      - CriterionCategory
+    source: real
+    asof: '2026-10-04'

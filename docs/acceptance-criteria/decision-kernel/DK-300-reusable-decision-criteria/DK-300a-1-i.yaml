@@ -50,3 +50,15 @@ notes: |
   The last clause is the positive control: the rule keys on whether the decision is PUBLISHED, not on which source the sighting came from. Mutation it must catch: proposing every sighting that names a decision id as a member (that turns the dec-e4c6a3e133b9694b clause red while the published case stays green).
   FLOW BACK-LINK (for step.implements, to be applied by the store owner): leafcutter/criteria-library: mine.
   Authored by the business-analyst stage of /plan-feature (route strategic) under decision dec-93c1c730463c1f3c; readiness draft, no product approval implied.
+product_truth:
+  - flow: leafcutter/criteria-library
+    node: mine
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: leafcutter/criterion-categories
+    entities:
+      - CriterionCategory
+      - Decision
+    source: mock
+    asof: '2026-10-04'

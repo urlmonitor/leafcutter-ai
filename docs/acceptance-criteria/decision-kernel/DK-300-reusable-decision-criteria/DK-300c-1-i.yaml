@@ -47,3 +47,14 @@ notes: |
   ADR-060: only a person approves; the mining job and models never do (mock invariant: approved_by matches ^human(:<name>)?$ on every approved record). The last clause is the positive control: an approval path that refuses everyone satisfies the first clauses.
   FLOW BACK-LINK (for step.implements, to be applied by the store owner): leafcutter/criteria-library: approve.
   Authored by the business-analyst stage of /plan-feature (route strategic) under decision dec-93c1c730463c1f3c; readiness draft, no product approval implied.
+product_truth:
+  - flow: leafcutter/criteria-library
+    node: approve
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: leafcutter/criterion-categories
+    entities:
+      - CriterionCategory
+    source: mock
+    asof: '2026-10-04'

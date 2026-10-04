@@ -49,3 +49,15 @@ notes: |
   ADR-062: disabled, unavailable, unsupported and stale are distinct from an empty successful search. dec-5e7445182eaec1f2's only proposed membership is in the candidate cat-73d233fc8b15c735, which is not in Git.
   FLOW BACK-LINK (for step.implements, to be applied by the store owner): leafcutter/criteria-library: explore.
   Authored by the business-analyst stage of /plan-feature (route strategic) under decision dec-93c1c730463c1f3c; readiness draft, no product approval implied.
+product_truth:
+  - flow: leafcutter/criteria-library
+    node: explore
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: leafcutter/criterion-categories
+    entities:
+      - CriterionCategory
+      - Decision
+    source: mock
+    asof: '2026-10-04'

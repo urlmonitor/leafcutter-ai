@@ -47,3 +47,13 @@ notes: |
   Flow branch: criteria-library import-fails (outcome failure). Such a record should never pass publish (DK-300c-2-i); the import re-checks because Git can be edited outside the publish path. The corrected build is the positive control.
   FLOW BACK-LINK (for step.implements, to be applied by the store owner): leafcutter/criteria-library: import-fails.
   Authored by the business-analyst stage of /plan-feature (route strategic) under decision dec-93c1c730463c1f3c; readiness draft, no product approval implied.
+product_truth:
+  - flow: leafcutter/criteria-library
+    node: import-fails
+    node_kind: branch
+    flow_kind: data
+    screen: null
+    mock_data: leafcutter/criterion-categories
+    entities: []
+    source: mock
+    asof: '2026-10-04'

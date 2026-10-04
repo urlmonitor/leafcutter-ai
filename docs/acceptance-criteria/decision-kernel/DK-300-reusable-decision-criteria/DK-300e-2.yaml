@@ -53,3 +53,22 @@ notes: |
   Feedback loop (DK-300e): drafted and person-added criteria that end in a PUBLISHED decision become published-record input to the mining (DK-300a-1); draft-only wordings are seen through run history only.
   FLOW BACK-LINK (for step.implements, to be applied by the store owner): leafcutter/decision-forming: draft-for-gap, propose.
   Authored by the business-analyst stage of /plan-feature (route strategic) under decision dec-93c1c730463c1f3c; readiness draft, no product approval implied.
+product_truth:
+  - flow: leafcutter/decision-forming
+    node: draft-for-gap
+    node_kind: branch
+    flow_kind: data
+    screen: null
+    mock_data: leafcutter/decisions
+    entities: []
+    source: real
+    asof: '2026-10-04'
+  - flow: leafcutter/decision-forming
+    node: propose
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: leafcutter/decisions
+    entities: []
+    source: real
+    asof: '2026-10-04'

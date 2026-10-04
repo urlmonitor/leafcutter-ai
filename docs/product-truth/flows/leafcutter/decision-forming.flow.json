@@ -168,7 +168,13 @@
         "CriterionCategory"
       ],
       "impl_asof": "2026-10-03",
-      "impl_status": "not_started"
+      "impl_status": "not_started",
+      "implements": [
+        "DK-300a-2",
+        "DK-300d-1",
+        "DK-300d-1-i",
+        "DK-300f-4"
+      ]
     },
     {
       "id": "judge-gap",
@@ -188,7 +194,12 @@
         "CriterionCategory"
       ],
       "impl_asof": "2026-10-03",
-      "impl_status": "not_started"
+      "impl_status": "not_started",
+      "implements": [
+        "DK-300e-1",
+        "DK-300e-1-i",
+        "DK-300e-1-ii"
+      ]
     },
     {
       "id": "propose",
@@ -207,7 +218,10 @@
         "proposed options and criteria"
       ],
       "impl_asof": "2026-10-02",
-      "impl_status": "not_started"
+      "impl_status": "not_started",
+      "implements": [
+        "DK-300e-2"
+      ]
     },
     {
       "id": "approve-proposals",
@@ -223,7 +237,11 @@
         "approved options and criteria"
       ],
       "impl_asof": "2026-10-02",
-      "impl_status": "not_started"
+      "impl_status": "not_started",
+      "implements": [
+        "DK-300d-2",
+        "DK-300d-2-i"
+      ]
     },
     {
       "id": "research-options",
@@ -334,7 +352,11 @@
       ],
       "outcome_kind": "alternative",
       "impl_asof": "2026-10-03",
-      "impl_status": "not_started"
+      "impl_status": "not_started",
+      "implements": [
+        "DK-300e-3",
+        "DK-300e-3-i"
+      ]
     },
     {
       "id": "draft-for-gap",
@@ -352,7 +374,13 @@
       ],
       "outcome_kind": "alternative",
       "impl_asof": "2026-10-03",
-      "impl_status": "not_started"
+      "impl_status": "not_started",
+      "implements": [
+        "DK-300b-4",
+        "DK-300b-4-i",
+        "DK-300e-2",
+        "DK-300e-2-i"
+      ]
     },
     {
       "id": "revise-proposals",

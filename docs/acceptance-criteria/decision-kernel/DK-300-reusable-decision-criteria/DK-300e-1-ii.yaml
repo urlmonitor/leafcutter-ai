@@ -43,3 +43,14 @@ notes: |
   DK-300e notes: a sufficiency verdict the person overrules is useful evidence for later calibration. This AC keeps the evidence; using it to change Jev's behaviour is influence and belongs after held-out evaluation (ADR-056 section 3), not here. Where the run's outcome keeps it (report, trace or both) is for the IT PO.
   FLOW BACK-LINK (for step.implements, to be applied by the store owner): leafcutter/decision-forming: judge-gap.
   Authored by the business-analyst stage of /plan-feature (route strategic) under decision dec-93c1c730463c1f3c; readiness draft, no product approval implied.
+product_truth:
+  - flow: leafcutter/decision-forming
+    node: judge-gap
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: leafcutter/decisions
+    entities:
+      - CriterionCategory
+    source: real
+    asof: '2026-10-04'

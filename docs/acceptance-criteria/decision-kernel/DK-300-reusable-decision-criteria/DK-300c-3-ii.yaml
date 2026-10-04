@@ -43,3 +43,14 @@ notes: |
   Mock invariant: broader never names a retired category. Without this rule a merge leaves a dangling broader link that the knowledge graph import would then reject (DK-300g-1-i).
   FLOW BACK-LINK (for step.implements, to be applied by the store owner): leafcutter/criteria-library: curate.
   Authored by the business-analyst stage of /plan-feature (route strategic) under decision dec-93c1c730463c1f3c; readiness draft, no product approval implied.
+product_truth:
+  - flow: leafcutter/criteria-library
+    node: curate
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: leafcutter/criterion-categories
+    entities:
+      - CriterionCategory
+    source: mock
+    asof: '2026-10-04'

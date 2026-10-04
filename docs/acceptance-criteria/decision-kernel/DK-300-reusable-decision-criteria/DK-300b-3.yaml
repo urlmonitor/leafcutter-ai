@@ -57,3 +57,14 @@ notes: |
   Observable through the per-wording count of Jev and language-model calls.
   FLOW BACK-LINK (for step.implements, to be applied by the store owner): leafcutter/criteria-library: suggest-grouping.
   Authored by the business-analyst stage of /plan-feature (route strategic) under decision dec-93c1c730463c1f3c; readiness draft, no product approval implied.
+product_truth:
+  - flow: leafcutter/criteria-library
+    node: suggest-grouping
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: leafcutter/criterion-categories
+    entities:
+      - CriterionCategory
+    source: mock
+    asof: '2026-10-04'

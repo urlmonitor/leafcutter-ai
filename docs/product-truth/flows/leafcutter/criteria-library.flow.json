@@ -44,7 +44,14 @@
         "CriterionCategory"
       ],
       "impl_asof": "2026-10-03",
-      "impl_status": "not_started"
+      "impl_status": "not_started",
+      "implements": [
+        "DK-300a-1",
+        "DK-300a-1-i",
+        "DK-300a-1-ii",
+        "DK-300a-1-iii",
+        "DK-300a-2"
+      ]
     },
     {
       "id": "suggest-grouping",
@@ -66,7 +73,17 @@
         "CriterionCategory"
       ],
       "impl_asof": "2026-10-03",
-      "impl_status": "not_started"
+      "impl_status": "not_started",
+      "implements": [
+        "DK-300b-1",
+        "DK-300b-1-i",
+        "DK-300b-2",
+        "DK-300b-2-i",
+        "DK-300b-3",
+        "DK-300b-3-i",
+        "DK-300b-4",
+        "DK-300b-4-i"
+      ]
     },
     {
       "id": "approve",
@@ -87,7 +104,11 @@
         "CriterionCategory"
       ],
       "impl_asof": "2026-10-03",
-      "impl_status": "not_started"
+      "impl_status": "not_started",
+      "implements": [
+        "DK-300c-1",
+        "DK-300c-1-i"
+      ]
     },
     {
       "id": "stage",
@@ -105,7 +126,10 @@
         "CriterionCategory"
       ],
       "impl_asof": "2026-10-03",
-      "impl_status": "not_started"
+      "impl_status": "not_started",
+      "implements": [
+        "DK-300c-1"
+      ]
     },
     {
       "id": "publish",
@@ -127,7 +151,13 @@
         "CriterionCategory"
       ],
       "impl_asof": "2026-10-03",
-      "impl_status": "not_started"
+      "impl_status": "not_started",
+      "implements": [
+        "DK-300c-2",
+        "DK-300c-2-i",
+        "DK-300c-2-ii",
+        "DK-300d-3"
+      ]
     },
     {
       "id": "count-usage",
@@ -146,7 +176,11 @@
         "Decision"
       ],
       "impl_asof": "2026-10-03",
-      "impl_status": "not_started"
+      "impl_status": "not_started",
+      "implements": [
+        "DK-300f-1",
+        "DK-300f-4"
+      ]
     },
     {
       "id": "aggregate-outcomes",
@@ -169,7 +203,11 @@
         "CriterionCategoryAggregate"
       ],
       "impl_asof": "2026-10-03",
-      "impl_status": "not_started"
+      "impl_status": "not_started",
+      "implements": [
+        "DK-300f-2",
+        "DK-300f-2-i"
+      ]
     },
     {
       "id": "import-to-graph",
@@ -189,7 +227,10 @@
         "Decision"
       ],
       "impl_asof": "2026-10-03",
-      "impl_status": "not_started"
+      "impl_status": "not_started",
+      "implements": [
+        "DK-300g-1"
+      ]
     },
     {
       "id": "explore",
@@ -210,7 +251,13 @@
         "Decision"
       ],
       "impl_asof": "2026-10-03",
-      "impl_status": "not_started"
+      "impl_status": "not_started",
+      "implements": [
+        "DK-300g-2",
+        "DK-300g-2-i",
+        "DK-300g-3",
+        "DK-300g-3-i"
+      ]
     },
     {
       "id": "curate",
@@ -232,7 +279,12 @@
         "CriterionCategory"
       ],
       "impl_asof": "2026-10-03",
-      "impl_status": "not_started"
+      "impl_status": "not_started",
+      "implements": [
+        "DK-300c-3",
+        "DK-300c-3-i",
+        "DK-300c-3-ii"
+      ]
     }
   ],
   "branches": [
@@ -248,7 +300,10 @@
       ],
       "outcome_kind": "exit",
       "impl_asof": "2026-10-03",
-      "impl_status": "not_started"
+      "impl_status": "not_started",
+      "implements": [
+        "DK-300c-1-ii"
+      ]
     },
     {
       "id": "no-learning-store",
@@ -262,7 +317,10 @@
       ],
       "outcome_kind": "alternative",
       "impl_asof": "2026-10-03",
-      "impl_status": "not_started"
+      "impl_status": "not_started",
+      "implements": [
+        "DK-300f-3"
+      ]
     },
     {
       "id": "import-fails",
@@ -276,7 +334,10 @@
       ],
       "outcome_kind": "failure",
       "impl_asof": "2026-10-03",
-      "impl_status": "not_started"
+      "impl_status": "not_started",
+      "implements": [
+        "DK-300g-1-i"
+      ]
     },
     {
       "id": "change-in-record",
@@ -291,7 +352,10 @@
       ],
       "outcome_kind": "alternative",
       "impl_asof": "2026-10-03",
-      "impl_status": "not_started"
+      "impl_status": "not_started",
+      "implements": [
+        "DK-300g-1-ii"
+      ]
     }
   ],
   "acceptance_scenarios": [

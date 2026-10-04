@@ -66,3 +66,14 @@ notes: |
   OPEN: (1) whether a component-limited category fits a repository-wide decision (all seven published decisions but one are repository_wide with components []); (2) whether there is a cap or a relevance order on how many fitting categories are offered when the library grows (with five categories all fit); (3) decision_type has a pattern in the decision record schema but no declared vocabulary, while the decision's crit.filters_from_declared_vocabularies asks for one.
   FLOW BACK-LINK (for step.implements, to be applied by the store owner): leafcutter/decision-forming: reuse-criteria.
   Authored by the business-analyst stage of /plan-feature (route strategic) under decision dec-93c1c730463c1f3c; readiness draft, no product approval implied.
+product_truth:
+  - flow: leafcutter/decision-forming
+    node: reuse-criteria
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: leafcutter/decisions
+    entities:
+      - CriterionCategory
+    source: real
+    asof: '2026-10-04'

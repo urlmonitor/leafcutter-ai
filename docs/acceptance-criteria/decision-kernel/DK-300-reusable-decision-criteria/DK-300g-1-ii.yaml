@@ -49,3 +49,13 @@ notes: |
   Flow branch: criteria-library change-in-record. Git stays canonical (ADR-059, ADR-060); ADR-062 allows only registered read queries and excludes arbitrary model-generated Cypher.
   FLOW BACK-LINK (for step.implements, to be applied by the store owner): leafcutter/criteria-library: change-in-record.
   Authored by the business-analyst stage of /plan-feature (route strategic) under decision dec-93c1c730463c1f3c; readiness draft, no product approval implied.
+product_truth:
+  - flow: leafcutter/criteria-library
+    node: change-in-record
+    node_kind: branch
+    flow_kind: data
+    screen: null
+    mock_data: leafcutter/criterion-categories
+    entities: []
+    source: mock
+    asof: '2026-10-04'

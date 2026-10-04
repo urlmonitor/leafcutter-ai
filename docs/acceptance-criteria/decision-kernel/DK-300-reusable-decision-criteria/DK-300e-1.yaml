@@ -55,3 +55,14 @@ notes: |
   The example is grounded in dec-93c1c730463c1f3c, whose crit.projectable_as_native_kind no published mock category asks. Testable with a controlled Jev provider.
   FLOW BACK-LINK (for step.implements, to be applied by the store owner): leafcutter/decision-forming: judge-gap.
   Authored by the business-analyst stage of /plan-feature (route strategic) under decision dec-93c1c730463c1f3c; readiness draft, no product approval implied.
+product_truth:
+  - flow: leafcutter/decision-forming
+    node: judge-gap
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: leafcutter/decisions
+    entities:
+      - CriterionCategory
+    source: real
+    asof: '2026-10-04'

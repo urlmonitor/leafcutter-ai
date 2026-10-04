@@ -42,3 +42,13 @@ notes: |
   A repeat is a wording equal to a reused criterion's preferred or other wording. A paraphrase is a grouping question (DK-300b-4), not a repeat. The kept criterion is the positive control.
   FLOW BACK-LINK (for step.implements, to be applied by the store owner): leafcutter/decision-forming: draft-for-gap.
   Authored by the business-analyst stage of /plan-feature (route strategic) under decision dec-93c1c730463c1f3c; readiness draft, no product approval implied.
+product_truth:
+  - flow: leafcutter/decision-forming
+    node: draft-for-gap
+    node_kind: branch
+    flow_kind: data
+    screen: null
+    mock_data: leafcutter/decisions
+    entities: []
+    source: real
+    asof: '2026-10-04'

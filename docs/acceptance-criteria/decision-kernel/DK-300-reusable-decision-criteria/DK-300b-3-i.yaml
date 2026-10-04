@@ -48,3 +48,14 @@ notes: |
   Labels may repeat between a retired category and its replacement (the mock's uniqueness invariant covers only categories that are not retired), so a deterministic match can hit two records. Precision-first (DK-300b-2): an ambiguous split goes to a person, not to a guess.
   FLOW BACK-LINK (for step.implements, to be applied by the store owner): leafcutter/criteria-library: suggest-grouping.
   Authored by the business-analyst stage of /plan-feature (route strategic) under decision dec-93c1c730463c1f3c; readiness draft, no product approval implied.
+product_truth:
+  - flow: leafcutter/criteria-library
+    node: suggest-grouping
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: leafcutter/criterion-categories
+    entities:
+      - CriterionCategory
+    source: mock
+    asof: '2026-10-04'

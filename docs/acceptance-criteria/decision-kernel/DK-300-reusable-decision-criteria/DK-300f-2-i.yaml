@@ -46,3 +46,16 @@ notes: |
   Mock invariant: an aggregate's category_id names a published category, never a candidate, staged or retired one. The cat-d15d52392d7aa94c clause is the positive control: a rebuild that drops every merged category passes the first clause.
   FLOW BACK-LINK (for step.implements, to be applied by the store owner): leafcutter/criteria-library: aggregate-outcomes.
   Authored by the business-analyst stage of /plan-feature (route strategic) under decision dec-93c1c730463c1f3c; readiness draft, no product approval implied.
+product_truth:
+  - flow: leafcutter/criteria-library
+    node: aggregate-outcomes
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: leafcutter/criterion-categories
+    entities:
+      - CriterionCategory
+      - CriterionCategoryAggregate
+      - Decision
+    source: mock
+    asof: '2026-10-04'

@@ -50,3 +50,13 @@ notes: |
   OPEN: the flow says a rejected candidate "stays a proposal or is dropped". Which one is not settled, and it decides whether the next mining run proposes it again (DK-300a-1-ii). The wording "Can it be done as one small ticket?" and the secrets candidate are illustrative.
   FLOW BACK-LINK (for step.implements, to be applied by the store owner): leafcutter/criteria-library: reject-suggestion.
   Authored by the business-analyst stage of /plan-feature (route strategic) under decision dec-93c1c730463c1f3c; readiness draft, no product approval implied.
+product_truth:
+  - flow: leafcutter/criteria-library
+    node: reject-suggestion
+    node_kind: branch
+    flow_kind: data
+    screen: null
+    mock_data: leafcutter/criterion-categories
+    entities: []
+    source: mock
+    asof: '2026-10-04'

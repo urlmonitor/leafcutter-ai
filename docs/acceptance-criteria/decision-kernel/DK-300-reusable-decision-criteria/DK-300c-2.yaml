@@ -62,3 +62,15 @@ notes: |
   OPEN, asked of the user: (1) the published folder: the mock assumes docs/criteria/<id>.yaml, the name the decision's question used, but dec-93c1c730463c1f3c did not fix it; (2) the publish command's name (a new command, or the decision publish extended to category records); (3) whether a new config/paths.json surface or pre-commit hook is needed. The decision's criterion crit.no_new_package_surface prefers none; if one is added, the IT PO must set package_surface: true on the AC that adds it.
   FLOW BACK-LINK (for step.implements, to be applied by the store owner): leafcutter/criteria-library: publish.
   Authored by the business-analyst stage of /plan-feature (route strategic) under decision dec-93c1c730463c1f3c; readiness draft, no product approval implied.
+product_truth:
+  - flow: leafcutter/criteria-library
+    node: publish
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: leafcutter/criterion-categories
+    entities:
+      - CriterionCategory
+      - Decision
+    source: mock
+    asof: '2026-10-04'

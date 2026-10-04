@@ -44,3 +44,15 @@ notes: |
   Mock invariants: no label belongs to two categories that are not retired; a (decision id, criterion id) pair is a member of at most one staged or published category. The flow's publish scenario names the label rule explicitly.
   FLOW BACK-LINK (for step.implements, to be applied by the store owner): leafcutter/criteria-library: publish.
   Authored by the business-analyst stage of /plan-feature (route strategic) under decision dec-93c1c730463c1f3c; readiness draft, no product approval implied.
+product_truth:
+  - flow: leafcutter/criteria-library
+    node: publish
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: leafcutter/criterion-categories
+    entities:
+      - CriterionCategory
+      - Decision
+    source: mock
+    asof: '2026-10-04'

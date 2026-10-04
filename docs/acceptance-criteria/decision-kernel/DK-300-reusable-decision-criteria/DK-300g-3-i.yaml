@@ -52,3 +52,15 @@ notes: |
   ADR-061 and the decision: a retired id stays resolvable through replaced_by. Distinguishing a retired id from an unknown one keeps a typo from looking like an unused category.
   FLOW BACK-LINK (for step.implements, to be applied by the store owner): leafcutter/criteria-library: explore.
   Authored by the business-analyst stage of /plan-feature (route strategic) under decision dec-93c1c730463c1f3c; readiness draft, no product approval implied.
+product_truth:
+  - flow: leafcutter/criteria-library
+    node: explore
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: leafcutter/criterion-categories
+    entities:
+      - CriterionCategory
+      - Decision
+    source: mock
+    asof: '2026-10-04'

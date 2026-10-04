@@ -43,3 +43,13 @@ notes: |
   Flow branch condition: "no published category fits the decision's kind and components, including when the library is still empty".
   FLOW BACK-LINK (for step.implements, to be applied by the store owner): leafcutter/decision-forming: empty-library.
   Authored by the business-analyst stage of /plan-feature (route strategic) under decision dec-93c1c730463c1f3c; readiness draft, no product approval implied.
+product_truth:
+  - flow: leafcutter/decision-forming
+    node: empty-library
+    node_kind: branch
+    flow_kind: data
+    screen: null
+    mock_data: leafcutter/decisions
+    entities: []
+    source: real
+    asof: '2026-10-04'

@@ -54,3 +54,15 @@ notes: |
   The last clause is the varying-population control: a hardcoded count satisfies the stated counts but not the change.
   FLOW BACK-LINK (for step.implements, to be applied by the store owner): leafcutter/criteria-library: count-usage.
   Authored by the business-analyst stage of /plan-feature (route strategic) under decision dec-93c1c730463c1f3c; readiness draft, no product approval implied.
+product_truth:
+  - flow: leafcutter/criteria-library
+    node: count-usage
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: leafcutter/criterion-categories
+    entities:
+      - CriterionCategory
+      - Decision
+    source: mock
+    asof: '2026-10-04'
