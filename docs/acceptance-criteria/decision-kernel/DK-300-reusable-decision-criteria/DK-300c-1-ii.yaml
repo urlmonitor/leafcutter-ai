@@ -1,0 +1,52 @@
+id: DK-300c-1-ii
+title: Rejecting or undoing a suggestion stages nothing and changes no published category
+component: decision-kernel
+components:
+- decision_kernel
+level: L3
+status: active
+readiness: draft
+req_status: draft
+priority: medium
+work_status: todo
+roadmap_phase: phase_kernel_2_knowledge
+criteria: |
+  Given a kernel run that presents the candidate cat-73d233fc8b15c735, a suggestion to add the wording "Can it be done as one small ticket?" to the published cat-1dc11c5a2ffa7310, and the candidate for "Does the option keep secrets out of the published records?",
+  When the person rejects cat-73d233fc8b15c735, undoes the suggested addition to cat-1dc11c5a2ffa7310 and accepts the third candidate,
+  And the run ends,
+  Then no record is staged for cat-73d233fc8b15c735 and none for cat-1dc11c5a2ffa7310,
+  And cat-1dc11c5a2ffa7310 keeps exactly its published wordings and members,
+  And cat-73d233fc8b15c735 does not become a record,
+  And the accepted third candidate is staged.
+depends_on:
+- DK-300c-1
+covered_by: []
+implemented_by: []
+assigned_agent: python-coder
+estimated_complexity: null
+delivers_to: null
+expects_from:
+  ac_id: DK-300c-1
+  contract: Approval path for candidates and grouping suggestions.
+doc_links:
+- path: docs/decisions/dec-93c1c730463c1f3c.yaml
+  relationship: governs
+  status: exists
+- path: docs/product-truth/flows/leafcutter/criteria-library.flow.json
+  relationship: implements
+  status: exists
+- path: docs/product-truth/mock-data/leafcutter/criterion-categories.mock.json
+  relationship: specified-by
+  status: exists
+- path: docs/architecture/adrs/ADR-060-source-of-truth-and-approval-authority.md
+  relationship: constrains
+  status: exists
+origin_agent: business-analyst
+created: 2026-10-04
+amended_by: []
+superseded_by: null
+notes: |
+  Flow branch: criteria-library reject-suggestion (outcome exit). The accepted third candidate is the positive control: a stager that stages nothing satisfies every "nothing" clause.
+  OPEN: the flow says a rejected candidate "stays a proposal or is dropped". Which one is not settled, and it decides whether the next mining run proposes it again (DK-300a-1-ii). The wording "Can it be done as one small ticket?" and the secrets candidate are illustrative.
+  FLOW BACK-LINK (for step.implements, to be applied by the store owner): leafcutter/criteria-library: reject-suggestion.
+  Authored by the business-analyst stage of /plan-feature (route strategic) under decision dec-93c1c730463c1f3c; readiness draft, no product approval implied.

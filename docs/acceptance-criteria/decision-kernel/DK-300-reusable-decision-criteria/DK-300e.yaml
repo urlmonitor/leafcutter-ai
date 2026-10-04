@@ -41,7 +41,11 @@ origin_agent: product-owner
 created: 2026-10-03
 amended_by: []
 superseded_by: null
-covered_by: []
+covered_by:
+  - DK-300e-1
+  - DK-300e-2
+  - DK-300e-3
+  - DK-300e-4
 implemented_by: []
 documentation_triggers:
   - sequence-diagram

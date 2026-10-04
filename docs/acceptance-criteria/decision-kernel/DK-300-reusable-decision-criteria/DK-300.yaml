@@ -98,8 +98,9 @@ notes: |
     - "review of past decisions and run history" -> the offline criteria-mining job
     - "learning store" -> the optional Neo4j colony memory store (ADR-065)
     - "project's knowledge graph" -> a Neo4j projection of the reviewed records
-      (the ADR-062 projector; ADR-062 sits on the unmerged branch
-      feature/knowledge-retrieval-v01)
+      (the ADR-062 knowledge importer; ADR-062 and its native reader registry
+      merged to main in PR #998 from feature/knowledge-retrieval-v01, and are
+      not yet on this branch, ac-authoring/reusable-criteria-store)
 
   ROADMAP ALIGNMENT. Anchored at phase_kernel_2_knowledge ("reusable retrieval
   memory, so evidence is assembled before a specialist model is called"). That

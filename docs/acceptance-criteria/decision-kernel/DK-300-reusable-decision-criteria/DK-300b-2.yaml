@@ -1,0 +1,57 @@
+id: DK-300b-2
+title: Each wording is placed in one existing category or in none, and precision decides the acceptance setting
+component: decision-kernel
+components:
+- decision_kernel
+level: L2
+status: active
+readiness: draft
+req_status: draft
+priority: medium
+work_status: todo
+roadmap_phase: phase_kernel_2_knowledge
+criteria: |
+  Given a labelled set of 78 wordings measured against 7 categories, 22 that belong to one category and 56 that belong to none, plus 4 related-but-different pairs, as in the Jev trial for kernel run run-b5af8c7fae2248ba,
+  When the grouping is evaluated on that set at each acceptance setting it offers,
+  Then every wording gets exactly one outcome: one existing category that is not retired, or "none",
+  And a wording the grouping cannot place at the acceptance setting gets "none", never the nearest category,
+  And for each setting the evaluation reports the accepted merges, their precision (correct merges out of accepted merges), their recall (correct merges out of the 22 that belong) and the share of the 56 left at "none",
+  And the setting in use is the one with the highest precision, recall deciding only between settings of equal precision, so on the trial's figures a setting with 100% precision (12 of 12) and 55% recall (12 of 22) is chosen over one with 94% precision (15 of 16) and 68% recall (15 of 22),
+  And a wording left at "none" stays its own candidate, which a person can still merge later.
+depends_on:
+- DK-300b
+- DK-300b-1
+covered_by:
+- DK-300b-2-i
+implemented_by: []
+assigned_agent: python-coder
+estimated_complexity: null
+delivers_to: null
+expects_from:
+  ac_id: DK-300b-1
+  contract: 'Grouping suggestion with placement: category id | none.'
+doc_links:
+- path: docs/decisions/dec-93c1c730463c1f3c.yaml
+  relationship: governs
+  status: exists
+- path: docs/product-truth/flows/leafcutter/criteria-library.flow.json
+  relationship: implements
+  status: exists
+- path: docs/product-truth/mock-data/leafcutter/criterion-categories.mock.json
+  relationship: specified-by
+  status: exists
+- path: docs/architecture/adrs/ADR-053-intelligence-selection-deterministic-jev-llm-human.md
+  relationship: constrains
+  status: exists
+origin_agent: business-analyst
+created: 2026-10-04
+amended_by: []
+superseded_by: null
+notes: |
+  PENDING METHOD (DK-300b): the grouping method is being decided in kernel run
+  run-b5af8c7fae2248ba after a Jev trial. This record is method-neutral by design.
+  USER RULE (b), settled: a wrong merge is worse than a missed merge, so favour precision. A missed merge is recoverable (it stays a candidate and DK-300c-3 can merge it later); a wrong merge silently weighs two concerns as one.
+  EVIDENCE USED ONLY TO MAKE THIS CONCRETE (not a method choice): a live Jev trial asked "which existing category asks the same question, or none?" for 82 wordings against 7 categories. At p>=0.8: 100% precision, 55% recall; at p>=0.7: 94% precision, 68% recall; at p>=0.5: 78% precision, 82% recall. The false merges were mostly compound criteria that bundle two questions (DK-300b-2-i). Caveats from the trial: the gold set is LLM-drafted mock data approved as mock data, the sample is small, one run at one seed.
+  Pending with the method decision: whether the labelled set is this trial's or a person-reviewed one, whether a numeric precision floor or a minimum recall applies, and what "acceptance setting" means for a method with no confidence (a deterministic method offers one setting).
+  FLOW BACK-LINK (for step.implements, to be applied by the store owner): leafcutter/criteria-library: suggest-grouping.
+  Authored by the business-analyst stage of /plan-feature (route strategic) under decision dec-93c1c730463c1f3c; readiness draft, no product approval implied.

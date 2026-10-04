@@ -1,0 +1,52 @@
+id: DK-300g-5
+title: 'Reference: the criterion category kind in the knowledge graph and its two queries'
+component: decision-kernel
+components:
+- decision_kernel
+- knowledge_management
+level: L2
+status: active
+readiness: draft
+req_status: draft
+priority: medium
+work_status: todo
+roadmap_phase: phase_kernel_2_knowledge
+criteria: |
+  Given the import (DK-300g-1) and the two registered queries (DK-300g-2, DK-300g-3),
+  When a reader opens the reference,
+  Then it states the identity of a category node, the properties it carries and its links (membership through a criterion, replaced by, broader),
+  And it states each query's parameter, its answer fields and its distinct non-answers (disabled, unavailable, unknown category),
+  And it states that the decision kind is read exactly as before and that the graph is rebuilt from Git and never edited.
+depends_on:
+- DK-300g
+- DK-300g-1
+- DK-300g-2
+- DK-300g-3
+covered_by: []
+implemented_by: []
+assigned_agent: documentation-expert
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+doc_links:
+- path: docs/decisions/dec-93c1c730463c1f3c.yaml
+  relationship: governs
+  status: exists
+- path: docs/product-truth/mock-data/leafcutter/criterion-categories.mock.json
+  relationship: specified-by
+  status: exists
+- path: docs/architecture/adrs/ADR-062-standalone-knowledge-retrieval.md
+  relationship: constrains
+  status: planned
+  relevance: 'On origin/main since PR #998 (merged from feature/knowledge-retrieval-v01); not yet on this branch. Immutable generations, atomic publication, registered parameterized queries only, finite native reader registry.'
+- path: docs/architecture/components/knowledge-retrieval.md
+  relationship: describes
+  status: planned
+  relevance: 'On origin/main since PR #998; not yet on this branch. Native reader registry, generation publication, query catalog.'
+origin_agent: business-analyst
+created: 2026-10-04
+amended_by: []
+superseded_by: null
+notes: |
+  Documentation AC answering DK-300g's reference-doc trigger. Its deliverable is the document only.
+  Authored by the business-analyst stage of /plan-feature (route strategic) under decision dec-93c1c730463c1f3c; readiness draft, no product approval implied.

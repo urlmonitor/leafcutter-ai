@@ -1,0 +1,49 @@
+id: DK-300c-1-i
+title: The mining job and models can never approve a category
+component: decision-kernel
+components:
+- decision_kernel
+level: L3
+status: active
+readiness: draft
+req_status: draft
+priority: medium
+work_status: todo
+roadmap_phase: phase_kernel_2_knowledge
+criteria: |
+  Given the candidate cat-73d233fc8b15c735 in a kernel run,
+  When an approval of it is attempted by criteria_mining, by jev or by claude_code instead of by a person,
+  Then the approval is refused, naming the approver that was refused,
+  And the candidate stays proposed and nothing is staged for it,
+  And the same candidate accepted by human:user in the same run is staged.
+depends_on:
+- DK-300c-1
+covered_by: []
+implemented_by: []
+assigned_agent: python-coder
+estimated_complexity: null
+delivers_to: null
+expects_from:
+  ac_id: DK-300c-1
+  contract: Approval path for candidates.
+doc_links:
+- path: docs/decisions/dec-93c1c730463c1f3c.yaml
+  relationship: governs
+  status: exists
+- path: docs/product-truth/flows/leafcutter/criteria-library.flow.json
+  relationship: implements
+  status: exists
+- path: docs/product-truth/mock-data/leafcutter/criterion-categories.mock.json
+  relationship: specified-by
+  status: exists
+- path: docs/architecture/adrs/ADR-060-source-of-truth-and-approval-authority.md
+  relationship: constrains
+  status: exists
+origin_agent: business-analyst
+created: 2026-10-04
+amended_by: []
+superseded_by: null
+notes: |
+  ADR-060: only a person approves; the mining job and models never do (mock invariant: approved_by matches ^human(:<name>)?$ on every approved record). The last clause is the positive control: an approval path that refuses everyone satisfies the first clauses.
+  FLOW BACK-LINK (for step.implements, to be applied by the store owner): leafcutter/criteria-library: approve.
+  Authored by the business-analyst stage of /plan-feature (route strategic) under decision dec-93c1c730463c1f3c; readiness draft, no product approval implied.

@@ -1,0 +1,50 @@
+id: DK-300a-1-iii
+title: A source the mining could not read is reported, never passed off as read
+component: decision-kernel
+components:
+- decision_kernel
+level: L3
+status: active
+readiness: draft
+req_status: draft
+priority: medium
+work_status: todo
+roadmap_phase: phase_kernel_2_knowledge
+criteria: |
+  Given the run history in Langfuse cannot be reached,
+  And the published decision records can be read,
+  When a person runs the offline criteria mining,
+  Then the mining result states that the run history was not read and why,
+  And the candidates it proposes rest on published-record sightings only and are marked as resting on one source,
+  And the result never states that both sources were read,
+  And when the run history can be reached again, the next mining run reports both sources as read.
+depends_on:
+- DK-300a-1
+covered_by: []
+implemented_by: []
+assigned_agent: python-coder
+estimated_complexity: null
+delivers_to: null
+expects_from:
+  ac_id: DK-300a-1
+  contract: Mining result with sources_read per source and a reason for each unavailable source.
+doc_links:
+- path: docs/decisions/dec-93c1c730463c1f3c.yaml
+  relationship: governs
+  status: exists
+- path: docs/product-truth/flows/leafcutter/criteria-library.flow.json
+  relationship: implements
+  status: exists
+- path: docs/architecture/adrs/ADR-058-langfuse-colony-history-scores-datasets.md
+  relationship: constrains
+  status: exists
+  relevance: 'Section 6: only an offline job reads Langfuse; the kernel''s hot path never does.'
+origin_agent: business-analyst
+created: 2026-10-04
+amended_by: []
+superseded_by: null
+notes: |
+  Honest-limit rule, as for the kernel's context enrichment (unavailable is distinct from empty). A mining run that silently reads one source would quietly break the user's requirement that BOTH sources are mined.
+  The same applies in the other direction (records unreadable, run history readable); one direction is pinned here as the concrete case.
+  FLOW BACK-LINK (for step.implements, to be applied by the store owner): leafcutter/criteria-library: mine.
+  Authored by the business-analyst stage of /plan-feature (route strategic) under decision dec-93c1c730463c1f3c; readiness draft, no product approval implied.

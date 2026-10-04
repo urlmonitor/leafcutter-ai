@@ -1,0 +1,52 @@
+id: DK-300a-1-i
+title: A run-history sighting supports a proposal but never makes a member
+component: decision-kernel
+components:
+- decision_kernel
+level: L3
+status: active
+readiness: draft
+req_status: draft
+priority: medium
+work_status: todo
+roadmap_phase: phase_kernel_2_knowledge
+criteria: |
+  Given a candidate category whose sightings are the three published crit.small_slice criteria of dec-4673055ef54113d5, dec-acdfd972fcaca478 and dec-d53e1c52cd47c832 and four run-history sightings of "Can it be put in place with a small change?" (crit-small-change),
+  And one of those runs, run-35ecc5ce9780442d, staged the decision dec-e4c6a3e133b9694b, which was never published,
+  When the candidate's proposed members are listed,
+  Then exactly the three pairs (dec-4673055ef54113d5, crit.small_slice), (dec-acdfd972fcaca478, crit.small_slice) and (dec-d53e1c52cd47c832, crit.small_slice) are proposed as members,
+  And no run-history sighting is proposed as a member, including (dec-e4c6a3e133b9694b, crit-small-change),
+  And all seven sightings stay listed as evidence for the proposal,
+  And once dec-e4c6a3e133b9694b is published carrying crit-small-change, the next mining run proposes (dec-e4c6a3e133b9694b, crit-small-change) as a member.
+depends_on:
+- DK-300a-1
+covered_by: []
+implemented_by: []
+assigned_agent: python-coder
+estimated_complexity: null
+delivers_to: null
+expects_from:
+  ac_id: DK-300a-1
+  contract: Mining result with mined_from sightings carrying source, decision_id and run_status.
+doc_links:
+- path: docs/decisions/dec-93c1c730463c1f3c.yaml
+  relationship: governs
+  status: exists
+- path: docs/product-truth/flows/leafcutter/criteria-library.flow.json
+  relationship: implements
+  status: exists
+- path: docs/product-truth/mock-data/leafcutter/criterion-categories.mock.json
+  relationship: specified-by
+  status: exists
+- path: docs/architecture/adrs/ADR-060-source-of-truth-and-approval-authority.md
+  relationship: constrains
+  status: exists
+origin_agent: business-analyst
+created: 2026-10-04
+amended_by: []
+superseded_by: null
+notes: |
+  Mock invariant: "A trace sighting is evidence for a proposal, never a member"; only published-record sightings can become (decision id, criterion id) membership.
+  The last clause is the positive control: the rule keys on whether the decision is PUBLISHED, not on which source the sighting came from. Mutation it must catch: proposing every sighting that names a decision id as a member (that turns the dec-e4c6a3e133b9694b clause red while the published case stays green).
+  FLOW BACK-LINK (for step.implements, to be applied by the store owner): leafcutter/criteria-library: mine.
+  Authored by the business-analyst stage of /plan-feature (route strategic) under decision dec-93c1c730463c1f3c; readiness draft, no product approval implied.

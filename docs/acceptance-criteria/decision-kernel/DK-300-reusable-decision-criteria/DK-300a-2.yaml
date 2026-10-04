@@ -1,0 +1,54 @@
+id: DK-300a-2
+title: Making a decision never reads run history and never waits on mining
+component: decision-kernel
+components:
+- decision_kernel
+level: L2
+status: active
+readiness: draft
+req_status: draft
+priority: medium
+work_status: todo
+roadmap_phase: phase_kernel_2_knowledge
+criteria: |
+  Given the run history in Langfuse cannot be reached,
+  And a mining run is in progress, or the last mining run failed,
+  And the published library holds cat-1dc11c5a2ffa7310 and cat-d15d52392d7aa94c,
+  When a person makes a design decision in a kernel run,
+  Then the decision run makes no request to the run history,
+  And it reaches the approval of proposals without waiting for the mining run,
+  And it offers the same categories and spends the same number of Jev calls as the same decision made when no mining run has ever happened.
+depends_on:
+- DK-300a
+covered_by: []
+implemented_by: []
+assigned_agent: python-coder
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+doc_links:
+- path: docs/decisions/dec-93c1c730463c1f3c.yaml
+  relationship: governs
+  status: exists
+- path: docs/product-truth/flows/leafcutter/decision-forming.flow.json
+  relationship: implements
+  status: exists
+- path: docs/product-truth/flows/leafcutter/criteria-library.flow.json
+  relationship: implements
+  status: exists
+- path: docs/architecture/adrs/ADR-058-langfuse-colony-history-scores-datasets.md
+  relationship: constrains
+  status: exists
+  relevance: 'Section 6: only an offline job reads Langfuse; the kernel''s hot path never does.'
+- path: docs/architecture/components/decision-kernel.md
+  relationship: describes
+  status: exists
+origin_agent: business-analyst
+created: 2026-10-04
+amended_by: []
+superseded_by: null
+notes: |
+  SETTLED (L0 notes, ADR-058 section 6, ADR-056): the kernel never reads Langfuse on the hot path; only the offline mining job does. "Making a decision never waits on it" is the customer form of this rule in DK-300a.
+  Comparison across three mining states (never run / in progress / failed) is the anti-vacuity device: an implementation that ignores mining entirely passes, which is the intended behaviour; one that reads mining output or Langfuse during the run shows a different call count or a request.
+  FLOW BACK-LINK (for step.implements, to be applied by the store owner): leafcutter/criteria-library: mine; leafcutter/decision-forming: reuse-criteria.
+  Authored by the business-analyst stage of /plan-feature (route strategic) under decision dec-93c1c730463c1f3c; readiness draft, no product approval implied.

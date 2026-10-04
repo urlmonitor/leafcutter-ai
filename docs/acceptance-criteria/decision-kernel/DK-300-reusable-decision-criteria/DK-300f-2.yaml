@@ -1,0 +1,62 @@
+id: DK-300f-2
+title: Outcome statistics per category are rebuilt in full in the learning store, never in the records
+component: decision-kernel
+components:
+- decision_kernel
+level: L2
+status: active
+readiness: draft
+req_status: draft
+priority: medium
+work_status: todo
+roadmap_phase: phase_colony_1_collect
+criteria: |
+  Given the published cat-1dc11c5a2ffa7310 whose member decisions dec-4673055ef54113d5, dec-acdfd972fcaca478 and dec-d53e1c52cd47c832 all have the final outcome pending,
+  And a configured learning store,
+  When an added item triggers a rebuild,
+  Then every aggregate row is rebuilt, each keyed by category id and context (capability, task type, decision type, components, repository-wide, repository id, policy version),
+  And the row of cat-1dc11c5a2ffa7310 in the repository-wide design context has a decision count of 3, made of 0 confirmed, 0 corrected, 0 abandoned and 3 pending,
+  And for each category the decision counts summed over its rows equal its usage count,
+  And all rows carry the same rebuild time,
+  And after dec-acdfd972fcaca478's outcome becomes confirmed and a rebuild runs, the row shows 1 confirmed and 2 pending,
+  And no category record holds an outcome or success statistic.
+depends_on:
+- DK-300f
+- DK-300f-1
+covered_by:
+- DK-300f-2-i
+implemented_by: []
+assigned_agent: python-coder
+estimated_complexity: null
+delivers_to: null
+expects_from:
+  ac_id: DK-300f-1
+  contract: Generated usage index per category.
+doc_links:
+- path: docs/decisions/dec-93c1c730463c1f3c.yaml
+  relationship: governs
+  status: exists
+- path: docs/product-truth/flows/leafcutter/criteria-library.flow.json
+  relationship: implements
+  status: exists
+- path: docs/product-truth/mock-data/leafcutter/criterion-categories.mock.json
+  relationship: specified-by
+  status: exists
+- path: docs/architecture/adrs/ADR-065-colony-learned-statistics-neo4j-aggregates.md
+  relationship: constrains
+  status: exists
+- path: docs/architecture/adrs/ADR-056-colony-memory-evidence-reinforcement.md
+  relationship: constrains
+  status: exists
+- path: docs/architecture/components/colony-memory.md
+  relationship: describes
+  status: exists
+origin_agent: business-analyst
+created: 2026-10-04
+amended_by: []
+superseded_by: null
+notes: |
+  This is the user's "also into neo4j" for OUTCOMES. SETTLED (crit.outcomes_left_to_colony_store, ADR-065): outcome statistics are derived, rebuildable Neo4j aggregates keyed by the published category id, never in Git. Mock: CriterionCategoryAggregate rows (task_type and policy_version are null in V0, never omitted; each added item rebuilds all aggregates in full, ADR-065 A1.1/A1.2).
+  Component drift: colony_memory belongs in components but is not in the AC schema enum (see DK-300f notes).
+  FLOW BACK-LINK (for step.implements, to be applied by the store owner): leafcutter/criteria-library: aggregate-outcomes.
+  Authored by the business-analyst stage of /plan-feature (route strategic) under decision dec-93c1c730463c1f3c; readiness draft, no product approval implied.

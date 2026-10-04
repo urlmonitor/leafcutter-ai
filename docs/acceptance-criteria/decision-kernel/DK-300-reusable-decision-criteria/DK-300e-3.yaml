@@ -1,0 +1,53 @@
+id: DK-300e-3
+title: With no fitting published category, a decision is framed exactly as without the library
+component: decision-kernel
+components:
+- decision_kernel
+level: L2
+status: active
+readiness: draft
+req_status: draft
+priority: medium
+work_status: todo
+roadmap_phase: phase_kernel_2_knowledge
+criteria: |
+  Given the published criteria library is empty,
+  When a design decision is framed,
+  Then options and criteria are proposed exactly as in a run without the library, through the same request to the host,
+  And no gap judgement is made and no Jev call is spent on reuse, grouping or a gap,
+  And the run reaches the approval of proposals with the same number of Jev calls and host requests as a run without the library,
+  And when one published category fits the same decision, it is offered.
+depends_on:
+- DK-300e
+- DK-300d-1
+covered_by:
+- DK-300e-3-i
+implemented_by: []
+assigned_agent: python-coder
+estimated_complexity: null
+delivers_to: null
+expects_from:
+  ac_id: DK-300d-1
+  contract: Reuse step returning no fitting category.
+doc_links:
+- path: docs/decisions/dec-93c1c730463c1f3c.yaml
+  relationship: governs
+  status: exists
+- path: docs/product-truth/flows/leafcutter/decision-forming.flow.json
+  relationship: implements
+  status: exists
+- path: docs/architecture/adrs/ADR-053-intelligence-selection-deterministic-jev-llm-human.md
+  relationship: constrains
+  status: exists
+- path: docs/architecture/components/decision-kernel.md
+  relationship: describes
+  status: exists
+origin_agent: business-analyst
+created: 2026-10-04
+amended_by: []
+superseded_by: null
+notes: |
+  COLD START regression guard (DK-300e notes): an empty library must not block, degrade or slow a decision. "Not slowed" is measured as zero extra Jev calls and zero extra host requests, which a test can count; wall-clock time is not asserted.
+  The last clause is the anti-vacuity control: a reuse step that never offers anything passes every other clause.
+  FLOW BACK-LINK (for step.implements, to be applied by the store owner): leafcutter/decision-forming: empty-library.
+  Authored by the business-analyst stage of /plan-feature (route strategic) under decision dec-93c1c730463c1f3c; readiness draft, no product approval implied.

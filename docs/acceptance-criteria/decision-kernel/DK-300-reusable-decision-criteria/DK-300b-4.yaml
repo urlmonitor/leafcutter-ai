@@ -1,0 +1,61 @@
+id: DK-300b-4
+title: Questions drafted during a decision run get grouping suggestions within that run's Jev budget
+component: decision-kernel
+components:
+- decision_kernel
+level: L2
+status: active
+readiness: draft
+req_status: draft
+priority: medium
+work_status: todo
+roadmap_phase: phase_kernel_2_knowledge
+criteria: |
+  Given a decision run in which a criterion was drafted for a gap, "Can the format be read into the knowledge graph as one reviewed kind?",
+  And the published library holds cat-1dc11c5a2ffa7310, cat-d15d52392d7aa94c, cat-52b16c7b5a23106f, cat-d6ce5f78c181ebd1 and cat-1df63b670163b54e,
+  When the drafted criteria are grouped before the approval of proposals,
+  Then each drafted criterion is shown at that approval with its suggested existing category or with "none",
+  And every Jev call spent on this grouping counts against the run's Jev budget,
+  And a suggestion takes effect only when the person accepts it at that approval, and the person can change or undo it there,
+  And in a run whose library holds no published category, no grouping call is made.
+depends_on:
+- DK-300b
+- DK-300b-1
+- DK-300e-2
+covered_by:
+- DK-300b-4-i
+implemented_by: []
+assigned_agent: python-coder
+estimated_complexity: null
+delivers_to: null
+expects_from:
+  ac_id: DK-300e-2
+  contract: Gap criteria drafted in the run, each with its wording.
+doc_links:
+- path: docs/decisions/dec-93c1c730463c1f3c.yaml
+  relationship: governs
+  status: exists
+- path: docs/product-truth/flows/leafcutter/criteria-library.flow.json
+  relationship: implements
+  status: exists
+- path: docs/product-truth/flows/leafcutter/decision-forming.flow.json
+  relationship: implements
+  status: exists
+- path: docs/architecture/adrs/ADR-053-intelligence-selection-deterministic-jev-llm-human.md
+  relationship: constrains
+  status: exists
+- path: docs/architecture/components/decision-kernel.md
+  relationship: describes
+  status: exists
+origin_agent: business-analyst
+created: 2026-10-04
+amended_by: []
+superseded_by: null
+notes: |
+  PENDING METHOD (DK-300b): the grouping method is being decided in kernel run
+  run-b5af8c7fae2248ba after a Jev trial. This record is method-neutral by design.
+  USER RULE (c), settled: grouping of questions drafted DURING a decision run is in scope, within the run's Jev budget, without slowing a run on an empty library. The flow's suggest-grouping scenario names "questions newly drafted for decisions" as input.
+  Criteria a person adds at the approval are not grouped in the run; they reach grouping through the next mining round once their decision is published (DK-300e feedback loop).
+  What an accepted in-run suggestion links the criterion to is the same link a reused criterion carries (DK-300d-3 decides how that link becomes a member pair).
+  FLOW BACK-LINK (for step.implements, to be applied by the store owner): leafcutter/criteria-library: suggest-grouping; leafcutter/decision-forming: draft-for-gap.
+  Authored by the business-analyst stage of /plan-feature (route strategic) under decision dec-93c1c730463c1f3c; readiness draft, no product approval implied.

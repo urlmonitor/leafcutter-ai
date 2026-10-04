@@ -1,0 +1,47 @@
+id: DK-300b-4-i
+title: When the run's budget cannot fund grouping, the run goes on without it and says so
+component: decision-kernel
+components:
+- decision_kernel
+level: L3
+status: active
+readiness: draft
+req_status: draft
+priority: medium
+work_status: todo
+roadmap_phase: phase_kernel_2_knowledge
+criteria: |
+  Given a decision run with drafted gap criteria,
+  And a remaining Jev budget that cannot fund the grouping calls and still fund the run's research and assessment,
+  When the drafted criteria would be grouped,
+  Then no grouping call is made,
+  And the approval of proposals shows the drafted criteria without suggestions and states that grouping was skipped for budget,
+  And the run's research and assessment are funded as they would be without grouping.
+depends_on:
+- DK-300b-4
+covered_by: []
+implemented_by: []
+assigned_agent: python-coder
+estimated_complexity: null
+delivers_to: null
+expects_from:
+  ac_id: DK-300b-4
+  contract: In-run grouping step and the run's Jev budget gate.
+doc_links:
+- path: docs/decisions/dec-93c1c730463c1f3c.yaml
+  relationship: governs
+  status: exists
+- path: docs/product-truth/flows/leafcutter/decision-forming.flow.json
+  relationship: implements
+  status: exists
+- path: docs/architecture/components/decision-kernel.md
+  relationship: describes
+  status: exists
+origin_agent: business-analyst
+created: 2026-10-04
+amended_by: []
+superseded_by: null
+notes: |
+  Grouping is the first thing dropped when the budget is tight: it serves the library, the research and assessment serve this decision. Mirrors the forming flow's budget-reserve branch (the person is told plainly what was skipped).
+  FLOW BACK-LINK (for step.implements, to be applied by the store owner): leafcutter/criteria-library: suggest-grouping; leafcutter/decision-forming: draft-for-gap.
+  Authored by the business-analyst stage of /plan-feature (route strategic) under decision dec-93c1c730463c1f3c; readiness draft, no product approval implied.

@@ -1,0 +1,58 @@
+id: DK-300c-3
+title: Merging categories retires one into the other without changing any id or decision record
+component: decision-kernel
+components:
+- decision_kernel
+level: L2
+status: active
+readiness: draft
+req_status: draft
+priority: medium
+work_status: todo
+roadmap_phase: phase_kernel_2_knowledge
+criteria: |
+  Given the published cat-40cc613f737e3323 with the member (dec-acdfd972fcaca478, crit.person_authorises) and the published cat-d15d52392d7aa94c with the member (dec-d53e1c52cd47c832, crit.human_authority), both asking whether only a person's approval authorises a record,
+  When human:user merges cat-40cc613f737e3323 into cat-d15d52392d7aa94c in a kernel run and publishes the change,
+  Then cat-40cc613f737e3323 is retired, with replaced_by [cat-d15d52392d7aa94c], no members, and a retirement entry naming human:user, the time and the reason,
+  And cat-d15d52392d7aa94c keeps its id, gains the member (dec-acdfd972fcaca478, crit.person_authorises) and gains the retired category's preferred wording as one of its other wordings,
+  And cat-40cc613f737e3323 stays resolvable by its id,
+  And no published decision record changes.
+depends_on:
+- DK-300c
+- DK-300c-2
+covered_by:
+- DK-300c-3-i
+- DK-300c-3-ii
+implemented_by: []
+assigned_agent: python-coder
+estimated_complexity: null
+delivers_to: null
+expects_from:
+  ac_id: DK-300c-2
+  contract: Stage-and-publish path for category records.
+doc_links:
+- path: docs/decisions/dec-93c1c730463c1f3c.yaml
+  relationship: governs
+  status: exists
+- path: docs/product-truth/flows/leafcutter/criteria-library.flow.json
+  relationship: implements
+  status: exists
+- path: docs/product-truth/mock-data/leafcutter/criterion-categories.mock.json
+  relationship: specified-by
+  status: exists
+- path: docs/architecture/adrs/ADR-060-source-of-truth-and-approval-authority.md
+  relationship: constrains
+  status: exists
+- path: docs/architecture/adrs/ADR-061-identity-of-declared-and-learned-records.md
+  relationship: constrains
+  status: exists
+origin_agent: business-analyst
+created: 2026-10-04
+amended_by: []
+superseded_by: null
+notes: |
+  Flow node: criteria-library curate. Data: mock records cat-40cc613f737e3323 (retired) and cat-d15d52392d7aa94c (replaces it), the exact state a merge leaves behind.
+  SETTLED by dec-93c1c730463c1f3c (crit.regroup_without_rewrites): regrouping edits only category data, and retired ids stay resolvable through replaced_by. Mock invariant: lifecycle_stage retired iff replaced_by is not empty iff retirement is set; a retired category has no members.
+  A merge goes through the same stage and publish path as a new category (DK-300c-1, DK-300c-2); its checks apply.
+  FLOW BACK-LINK (for step.implements, to be applied by the store owner): leafcutter/criteria-library: curate.
+  Authored by the business-analyst stage of /plan-feature (route strategic) under decision dec-93c1c730463c1f3c; readiness draft, no product approval implied.

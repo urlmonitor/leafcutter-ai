@@ -1,0 +1,72 @@
+id: DK-300g-1
+title: Published categories are imported into the knowledge graph as their own reviewed kind, beside unchanged decisions
+component: decision-kernel
+components:
+- decision_kernel
+- knowledge_management
+level: L2
+status: active
+readiness: draft
+req_status: draft
+priority: medium
+work_status: todo
+roadmap_phase: phase_kernel_2_knowledge
+criteria: |
+  Given a commit holding the published categories cat-1dc11c5a2ffa7310, cat-d15d52392d7aa94c, cat-52b16c7b5a23106f, cat-d6ce5f78c181ebd1 and cat-1df63b670163b54e, the retired cat-40cc613f737e3323 and the published decisions their members name,
+  When the knowledge sync builds a new generation from that commit,
+  Then each of the six categories becomes exactly one node keyed by repository id, kind criterion_category and category id,
+  And each member pair links its decision, that decision's criterion and the category, so cat-1dc11c5a2ffa7310 has three such links,
+  And cat-40cc613f737e3323 is linked to cat-d15d52392d7aa94c as replaced by it, and a broader category, where one is set, is linked from the narrower one,
+  And the staged cat-6c3eb4f2af148922 and the candidate cat-73d233fc8b15c735, which are not in the commit, do not appear,
+  And the generation is validated and published as a whole,
+  And every decision node and its fields are the same as in a generation built from the same commit without categories.
+depends_on:
+- DK-300g
+- DK-300c-2
+covered_by:
+- DK-300g-1-i
+- DK-300g-1-ii
+implemented_by: []
+assigned_agent: python-coder
+estimated_complexity: null
+delivers_to:
+  agent: python-coder
+  contract: 'Per generation: one criterion_category node per published or retired category keyed (repository_id, kind, id); membership links decision -> criterion -> category per member pair; REPLACED_BY and BROADER links. Consumed by the two registered queries (DK-300g-2, DK-300g-3).'
+expects_from:
+  ac_id: DK-300c-2
+  contract: Published category records in the category library.
+doc_links:
+- path: docs/decisions/dec-93c1c730463c1f3c.yaml
+  relationship: governs
+  status: exists
+- path: docs/product-truth/flows/leafcutter/criteria-library.flow.json
+  relationship: implements
+  status: exists
+- path: docs/product-truth/mock-data/leafcutter/criterion-categories.mock.json
+  relationship: specified-by
+  status: exists
+- path: docs/architecture/adrs/ADR-062-standalone-knowledge-retrieval.md
+  relationship: constrains
+  status: planned
+  relevance: 'On origin/main since PR #998 (merged from feature/knowledge-retrieval-v01); not yet on this branch. Immutable generations, atomic publication, registered parameterized queries only, finite native reader registry.'
+- path: docs/architecture/components/knowledge-retrieval.md
+  relationship: describes
+  status: planned
+  relevance: 'On origin/main since PR #998; not yet on this branch. Native reader registry, generation publication, query catalog.'
+- path: docs/architecture/adrs/ADR-059-decision-store-reviewable-yaml-records-now-graph-later.md
+  relationship: constrains
+  status: exists
+- path: docs/architecture/adrs/ADR-061-identity-of-declared-and-learned-records.md
+  relationship: constrains
+  status: exists
+origin_agent: business-analyst
+created: 2026-10-04
+amended_by: []
+superseded_by: null
+notes: |
+  USER DECISION (2026-10-03, verbatim): "neo4j fully works. so also add the importer so we can see which decision uses which categories for its decision". DK-300g is in scope now, not deferred.
+  The ADR-062 knowledge projection is on origin/main (PR #998 and later), not yet on this branch. Its native reader registry is finite, so criterion_category needs a new reviewed native kind (dec-93c1c730463c1f3c crit.projectable_as_native_kind; the chosen option scored 0.34 there, so this is the riskiest part of the goal). ADR-062: Git is canonical, a generation is built from one immutable commit, validated and published atomically, and a failed build leaves the active generation untouched.
+  How a criterion is represented in the graph (its own node or a property of the decision node) is for the IT PO; the AC asserts the link decision -> criterion -> category, which the two queries need.
+  Note for the IT PO: the BA did not read the importer source (BA scope excludes source code); this AC rests on ADR-062, the knowledge-retrieval component doc and the how-to on origin/main.
+  FLOW BACK-LINK (for step.implements, to be applied by the store owner): leafcutter/criteria-library: import-to-graph.
+  Authored by the business-analyst stage of /plan-feature (route strategic) under decision dec-93c1c730463c1f3c; readiness draft, no product approval implied.

@@ -1,0 +1,51 @@
+id: DK-300g-2-i
+title: An empty answer is distinct from a graph that could not answer
+component: decision-kernel
+components:
+- decision_kernel
+- knowledge_management
+level: L3
+status: active
+readiness: draft
+req_status: draft
+priority: medium
+work_status: todo
+roadmap_phase: phase_kernel_2_knowledge
+criteria: |
+  Given dec-5e7445182eaec1f2, which no published category lists as a member,
+  When a person asks which categories it used against a published generation,
+  Then the answer is an empty list, marked as a complete answer from that generation,
+  And when no knowledge graph is configured, the same question answers "disabled", and when the configured graph cannot be reached it answers "unavailable", each with its reason and never as an empty list.
+depends_on:
+- DK-300g-2
+covered_by: []
+implemented_by: []
+assigned_agent: python-coder
+estimated_complexity: null
+delivers_to: null
+expects_from:
+  ac_id: DK-300g-2
+  contract: 'Registered query: categories used by a decision.'
+doc_links:
+- path: docs/decisions/dec-93c1c730463c1f3c.yaml
+  relationship: governs
+  status: exists
+- path: docs/product-truth/flows/leafcutter/criteria-library.flow.json
+  relationship: implements
+  status: exists
+- path: docs/architecture/adrs/ADR-062-standalone-knowledge-retrieval.md
+  relationship: constrains
+  status: planned
+  relevance: 'On origin/main since PR #998 (merged from feature/knowledge-retrieval-v01); not yet on this branch. Immutable generations, atomic publication, registered parameterized queries only, finite native reader registry.'
+- path: docs/architecture/components/knowledge-retrieval.md
+  relationship: describes
+  status: planned
+  relevance: 'On origin/main since PR #998; not yet on this branch. Native reader registry, generation publication, query catalog.'
+origin_agent: business-analyst
+created: 2026-10-04
+amended_by: []
+superseded_by: null
+notes: |
+  ADR-062: disabled, unavailable, unsupported and stale are distinct from an empty successful search. dec-5e7445182eaec1f2's only proposed membership is in the candidate cat-73d233fc8b15c735, which is not in Git.
+  FLOW BACK-LINK (for step.implements, to be applied by the store owner): leafcutter/criteria-library: explore.
+  Authored by the business-analyst stage of /plan-feature (route strategic) under decision dec-93c1c730463c1f3c; readiness draft, no product approval implied.

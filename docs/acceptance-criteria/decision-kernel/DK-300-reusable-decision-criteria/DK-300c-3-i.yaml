@@ -1,0 +1,49 @@
+id: DK-300c-3-i
+title: Splitting a category moves each member to exactly one replacement
+component: decision-kernel
+components:
+- decision_kernel
+level: L3
+status: active
+readiness: draft
+req_status: draft
+priority: medium
+work_status: todo
+roadmap_phase: phase_kernel_2_knowledge
+criteria: |
+  Given the published cat-d6ce5f78c181ebd1 with the members (dec-ef8ddcb79d668a67, crit.findable_by_filters) and (dec-93c1c730463c1f3c, crit.cheap_candidate_lookup),
+  When human:user splits it into two new categories, one asking whether precedent can be selected by filter and one asking whether criteria can be found by filter and wording, assigns each member to one of them and publishes the change,
+  Then cat-d6ce5f78c181ebd1 is retired with replaced_by naming both new category ids,
+  And each of its two members is a member of exactly one replacement, with none lost and none in both,
+  And a split that leaves a member without a replacement is refused, naming that member.
+depends_on:
+- DK-300c-3
+covered_by: []
+implemented_by: []
+assigned_agent: python-coder
+estimated_complexity: null
+delivers_to: null
+expects_from:
+  ac_id: DK-300c-3
+  contract: Merge/split/retire through stage and publish.
+doc_links:
+- path: docs/decisions/dec-93c1c730463c1f3c.yaml
+  relationship: governs
+  status: exists
+- path: docs/product-truth/flows/leafcutter/criteria-library.flow.json
+  relationship: implements
+  status: exists
+- path: docs/product-truth/mock-data/leafcutter/criterion-categories.mock.json
+  relationship: specified-by
+  status: exists
+- path: docs/architecture/adrs/ADR-061-identity-of-declared-and-learned-records.md
+  relationship: constrains
+  status: exists
+origin_agent: business-analyst
+created: 2026-10-04
+amended_by: []
+superseded_by: null
+notes: |
+  The split itself is illustrative (no real category has been split). The two new ids are minted by the kernel (cat-<16 hex>, a mock assumption to confirm).
+  FLOW BACK-LINK (for step.implements, to be applied by the store owner): leafcutter/criteria-library: curate.
+  Authored by the business-analyst stage of /plan-feature (route strategic) under decision dec-93c1c730463c1f3c; readiness draft, no product approval implied.

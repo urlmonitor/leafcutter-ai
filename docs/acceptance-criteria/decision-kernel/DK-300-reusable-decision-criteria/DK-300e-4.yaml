@@ -1,0 +1,51 @@
+id: DK-300e-4
+title: 'Sequence diagram: reuse-first framing, gap judgement and gap-only drafting in a decision run'
+component: decision-kernel
+components:
+- decision_kernel
+level: L2
+status: active
+readiness: draft
+req_status: draft
+priority: medium
+work_status: todo
+roadmap_phase: phase_kernel_2_knowledge
+criteria: |
+  Given reuse (DK-300d-1), the gap verdict (DK-300e-1), gap drafting (DK-300e-2), in-run grouping (DK-300b-4) and the empty-library branch (DK-300e-3),
+  When a reader opens the sequence diagram of framing a decision with the criteria library,
+  Then it shows, in order, the reuse of published categories, Jev's gap judgement, drafting by the host for the gap only, the grouping of drafted criteria, and the person's approval of proposals with the reused marks and the verdict,
+  And it shows the empty-library branch, in which nothing is reused and no gap is judged,
+  And it shows that the categories are read from the reviewed records and never from the run history.
+depends_on:
+- DK-300e
+- DK-300d-1
+- DK-300e-1
+- DK-300e-2
+- DK-300e-3
+- DK-300b-4
+covered_by: []
+implemented_by: []
+assigned_agent: architecture-diagram-author
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+doc_links:
+- path: docs/decisions/dec-93c1c730463c1f3c.yaml
+  relationship: governs
+  status: exists
+- path: docs/product-truth/flows/leafcutter/decision-forming.flow.json
+  relationship: implements
+  status: exists
+- path: docs/architecture/components/decision-kernel.md
+  relationship: describes
+  status: exists
+- path: docs/architecture/adrs/ADR-053-intelligence-selection-deterministic-jev-llm-human.md
+  relationship: constrains
+  status: exists
+origin_agent: business-analyst
+created: 2026-10-04
+amended_by: []
+superseded_by: null
+notes: |
+  Documentation AC answering the sequence-diagram triggers of BOTH DK-300e and DK-300d: the two L1s describe consecutive steps of one run, and two diagrams of the same sequence would drift.
+  Authored by the business-analyst stage of /plan-feature (route strategic) under decision dec-93c1c730463c1f3c; readiness draft, no product approval implied.

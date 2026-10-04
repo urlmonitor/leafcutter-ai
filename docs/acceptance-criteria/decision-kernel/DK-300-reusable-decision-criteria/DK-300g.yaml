@@ -41,7 +41,12 @@ origin_agent: product-owner
 created: 2026-10-03
 amended_by: []
 superseded_by: null
-covered_by: []
+covered_by:
+  - DK-300g-1
+  - DK-300g-2
+  - DK-300g-3
+  - DK-300g-4
+  - DK-300g-5
 implemented_by: []
 documentation_triggers:
   - how-to
@@ -51,12 +56,16 @@ notes: |
   separate from DK-300f's outcome aggregates so that it can be deferred on its
   own.
 
-  RISK FLAGGED. The projector that would read category records as a native kind
-  is ADR-062's. ADR-062 and knowledge/native_types/decision.py live on the
-  UNMERGED branch feature/knowledge-retrieval-v01 (see the decision's evidence
-  ev-c7f5671559baafaf and ev-b7fc7cba343d593c). The chosen option scored only
-  0.34 on projectability. This L1 is blocked until that branch lands or another
-  projection target is chosen. The IT PO confirms the graph target and whether
+  IN SCOPE NOW (user decision 2026-10-03, verbatim: "neo4j fully works. so
+  also add the importer so we can see which decision uses which categories for
+  its decision"). The importer that reads category records as a native kind is
+  ADR-062's. ADR-062 and knowledge/native_types/decision.py were on the branch
+  feature/knowledge-retrieval-v01 when the decision cited them (evidence
+  ev-c7f5671559baafaf and ev-b7fc7cba343d593c); that branch merged to main in
+  PR #998, so they are on main but not yet on this branch. The native reader
+  registry is finite, so a new reviewed native kind is needed. The chosen
+  option scored only 0.34 on projectability, so this remains the riskiest part
+  of the goal. The IT PO confirms the graph target and whether
   knowledge_management is the right second component.
 
   Git stays canonical (ADR-059, ADR-060). The graph is derived and rebuildable,

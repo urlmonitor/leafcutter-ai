@@ -1,0 +1,54 @@
+id: DK-300c-5
+title: 'Reference: the criterion category record'
+component: decision-kernel
+components:
+- decision_kernel
+level: L2
+status: active
+readiness: draft
+req_status: draft
+priority: medium
+work_status: todo
+roadmap_phase: phase_kernel_2_knowledge
+criteria: |
+  Given the category record behaviours DK-300c-1 to DK-300c-3,
+  When a reader opens the criterion category reference,
+  Then it lists every field of the record with its type and meaning, and separates authored fields from derived views (the usage count, the member view, the reverse replaces list),
+  And it states the identity rule (repository id, kind criterion_category, category id), the id scheme and that a label edit, merge or split never changes an id,
+  And it states the lifecycle and approval rules, the membership rules and the publish checks,
+  And it states where staged and published records live, marking each item the user has not yet confirmed as pending.
+depends_on:
+- DK-300c
+- DK-300c-1
+- DK-300c-2
+- DK-300c-3
+covered_by: []
+implemented_by: []
+assigned_agent: documentation-expert
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+doc_links:
+- path: docs/decisions/dec-93c1c730463c1f3c.yaml
+  relationship: governs
+  status: exists
+- path: docs/product-truth/mock-data/leafcutter/criterion-categories.mock.json
+  relationship: specified-by
+  status: exists
+- path: docs/architecture/adrs/ADR-061-identity-of-declared-and-learned-records.md
+  relationship: constrains
+  status: exists
+- path: docs/architecture/adrs/ADR-060-source-of-truth-and-approval-authority.md
+  relationship: constrains
+  status: exists
+- path: docs/how-to/file-and-reuse-decisions-with-the-kernel.md
+  relationship: related
+  status: exists
+  relevance: The stage-then-publish path decision records follow; category records follow it by analogy.
+origin_agent: business-analyst
+created: 2026-10-04
+amended_by: []
+superseded_by: null
+notes: |
+  Documentation AC answering DK-300c's reference-doc trigger (the new record type). Pending items it must mark until confirmed: the id scheme, the published folder name, the publish command name.
+  Authored by the business-analyst stage of /plan-feature (route strategic) under decision dec-93c1c730463c1f3c; readiness draft, no product approval implied.

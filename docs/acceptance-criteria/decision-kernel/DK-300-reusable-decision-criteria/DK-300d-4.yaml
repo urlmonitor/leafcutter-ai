@@ -1,0 +1,51 @@
+id: DK-300d-4
+title: 'How-to: start a decision from the criteria library'
+component: decision-kernel
+components:
+- decision_kernel
+level: L2
+status: active
+readiness: draft
+req_status: draft
+priority: medium
+work_status: todo
+roadmap_phase: phase_kernel_2_knowledge
+criteria: |
+  Given reuse-first framing (DK-300d-1, DK-300d-2) and the gap verdict (DK-300e-1),
+  When a person reads the how-to guide before making a decision,
+  Then the guide shows how reused criteria appear at the approval of proposals, with their category id and preferred wording, and what Jev's gap verdict beside them means,
+  And it shows how to keep, edit or drop a reused criterion and how to add one's own,
+  And it states what happens when no published category fits,
+  And it states that a reused criterion gains no authority from earlier use and is used only once approved.
+depends_on:
+- DK-300d
+- DK-300d-1
+- DK-300d-2
+- DK-300e-1
+covered_by: []
+implemented_by: []
+assigned_agent: documentation-expert
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+doc_links:
+- path: docs/decisions/dec-93c1c730463c1f3c.yaml
+  relationship: governs
+  status: exists
+- path: docs/product-truth/flows/leafcutter/decision-forming.flow.json
+  relationship: implements
+  status: exists
+- path: docs/how-to/file-and-reuse-decisions-with-the-kernel.md
+  relationship: related
+  status: exists
+  relevance: The stage-then-publish path decision records follow; category records follow it by analogy.
+- path: docs/how-to/run-the-decision-kernel.md
+  relationship: related
+  status: exists
+origin_agent: business-analyst
+created: 2026-10-04
+amended_by: []
+superseded_by: null
+notes: |
+  Documentation AC answering DK-300d's how-to trigger. DK-300d's sequence-diagram trigger is answered by DK-300e-4, one diagram for the whole reuse-first forming sequence (DK-300d and DK-300e describe consecutive steps of the same run). Its deliverable is the document only.
+  Authored by the business-analyst stage of /plan-feature (route strategic) under decision dec-93c1c730463c1f3c; readiness draft, no product approval implied.

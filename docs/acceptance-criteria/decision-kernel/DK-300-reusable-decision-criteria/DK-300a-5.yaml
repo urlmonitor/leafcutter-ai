@@ -1,0 +1,51 @@
+id: DK-300a-5
+title: 'Component diagram: the criteria mining as a separate offline component'
+component: decision-kernel
+components:
+- decision_kernel
+level: L2
+status: active
+readiness: draft
+req_status: draft
+priority: medium
+work_status: todo
+roadmap_phase: phase_kernel_2_knowledge
+criteria: |
+  Given the criteria mining (DK-300a-1) is a new component,
+  When a reader opens the component diagram of the criteria library,
+  Then it shows the mining as its own component outside the decision run, reading the published decision records and the run history, and producing candidates only,
+  And it shows the category library, grouping suggestions, the generated usage index, the learning store and the knowledge graph import in relation to the decision kernel,
+  And it shows no connection from the decision run to the run history.
+depends_on:
+- DK-300a
+- DK-300a-1
+covered_by: []
+implemented_by: []
+assigned_agent: architecture-diagram-author
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+doc_links:
+- path: docs/decisions/dec-93c1c730463c1f3c.yaml
+  relationship: governs
+  status: exists
+- path: docs/product-truth/flows/leafcutter/criteria-library.flow.json
+  relationship: implements
+  status: exists
+- path: docs/architecture/components/decision-kernel.md
+  relationship: describes
+  status: exists
+- path: docs/architecture/components/colony-memory.md
+  relationship: describes
+  status: exists
+- path: docs/architecture/adrs/ADR-058-langfuse-colony-history-scores-datasets.md
+  relationship: constrains
+  status: exists
+  relevance: 'Section 6: only an offline job reads Langfuse; the kernel''s hot path never does.'
+origin_agent: business-analyst
+created: 2026-10-04
+amended_by: []
+superseded_by: null
+notes: |
+  Documentation AC answering DK-300a's component-diagram trigger. The mining job is a new architectural component (L1 notes).
+  Authored by the business-analyst stage of /plan-feature (route strategic) under decision dec-93c1c730463c1f3c; readiness draft, no product approval implied.

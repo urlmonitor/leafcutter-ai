@@ -1,0 +1,50 @@
+id: DK-300a-4
+title: 'Sequence diagram: offline mining from two sources to a person''s review'
+component: decision-kernel
+components:
+- decision_kernel
+level: L2
+status: active
+readiness: draft
+req_status: draft
+priority: medium
+work_status: todo
+roadmap_phase: phase_kernel_2_knowledge
+criteria: |
+  Given the criteria mining (DK-300a-1) and the rule that a decision run never reads run history (DK-300a-2),
+  When a reader opens the sequence diagram of criteria mining,
+  Then it shows a person starting the mining, the mining reading the published decision records and the run history in Langfuse, candidates passing to grouping suggestions, and a person reviewing them in a kernel run,
+  And it shows no message from a decision run to the run history or to the mining,
+  And it marks the point at which a person's approval is required before anything is staged,
+  And it shows the branch in which one source cannot be read.
+depends_on:
+- DK-300a
+- DK-300a-1
+- DK-300a-2
+covered_by: []
+implemented_by: []
+assigned_agent: architecture-diagram-author
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+doc_links:
+- path: docs/decisions/dec-93c1c730463c1f3c.yaml
+  relationship: governs
+  status: exists
+- path: docs/product-truth/flows/leafcutter/criteria-library.flow.json
+  relationship: implements
+  status: exists
+- path: docs/architecture/adrs/ADR-058-langfuse-colony-history-scores-datasets.md
+  relationship: constrains
+  status: exists
+  relevance: 'Section 6: only an offline job reads Langfuse; the kernel''s hot path never does.'
+- path: docs/architecture/components/decision-kernel.md
+  relationship: describes
+  status: exists
+origin_agent: business-analyst
+created: 2026-10-04
+amended_by: []
+superseded_by: null
+notes: |
+  Documentation AC answering DK-300a's sequence-diagram trigger (Langfuse, the decision store, the mining job and a reviewing person).
+  Authored by the business-analyst stage of /plan-feature (route strategic) under decision dec-93c1c730463c1f3c; readiness draft, no product approval implied.

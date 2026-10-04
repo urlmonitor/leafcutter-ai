@@ -1,0 +1,54 @@
+id: DK-300g-3-i
+title: Asking about a retired category leads to its replacement
+component: decision-kernel
+components:
+- decision_kernel
+- knowledge_management
+level: L3
+status: active
+readiness: draft
+req_status: draft
+priority: medium
+work_status: todo
+roadmap_phase: phase_kernel_2_knowledge
+criteria: |
+  Given the retired cat-40cc613f737e3323, replaced by cat-d15d52392d7aa94c,
+  When a person asks which decisions used cat-40cc613f737e3323,
+  Then the answer names no decision of its own and names cat-d15d52392d7aa94c as its replacement,
+  And asking about cat-d15d52392d7aa94c names dec-d53e1c52cd47c832 through crit.human_authority and dec-acdfd972fcaca478 through crit.person_authorises,
+  And asking about an id that no category has ever had answers "unknown category", not an empty list.
+depends_on:
+- DK-300g-3
+covered_by: []
+implemented_by: []
+assigned_agent: python-coder
+estimated_complexity: null
+delivers_to: null
+expects_from:
+  ac_id: DK-300g-3
+  contract: 'Registered query: decisions that used a category.'
+doc_links:
+- path: docs/decisions/dec-93c1c730463c1f3c.yaml
+  relationship: governs
+  status: exists
+- path: docs/product-truth/flows/leafcutter/criteria-library.flow.json
+  relationship: implements
+  status: exists
+- path: docs/product-truth/mock-data/leafcutter/criterion-categories.mock.json
+  relationship: specified-by
+  status: exists
+- path: docs/architecture/adrs/ADR-061-identity-of-declared-and-learned-records.md
+  relationship: constrains
+  status: exists
+- path: docs/architecture/adrs/ADR-062-standalone-knowledge-retrieval.md
+  relationship: constrains
+  status: planned
+  relevance: 'On origin/main since PR #998 (merged from feature/knowledge-retrieval-v01); not yet on this branch. Immutable generations, atomic publication, registered parameterized queries only, finite native reader registry.'
+origin_agent: business-analyst
+created: 2026-10-04
+amended_by: []
+superseded_by: null
+notes: |
+  ADR-061 and the decision: a retired id stays resolvable through replaced_by. Distinguishing a retired id from an unknown one keeps a typo from looking like an unused category.
+  FLOW BACK-LINK (for step.implements, to be applied by the store owner): leafcutter/criteria-library: explore.
+  Authored by the business-analyst stage of /plan-feature (route strategic) under decision dec-93c1c730463c1f3c; readiness draft, no product approval implied.

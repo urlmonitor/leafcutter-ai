@@ -49,7 +49,12 @@ origin_agent: product-owner
 created: 2026-10-03
 amended_by: []
 superseded_by: null
-covered_by: []
+covered_by:
+  - DK-300c-1
+  - DK-300c-2
+  - DK-300c-3
+  - DK-300c-4
+  - DK-300c-5
 implemented_by: []
 documentation_triggers:
   - how-to

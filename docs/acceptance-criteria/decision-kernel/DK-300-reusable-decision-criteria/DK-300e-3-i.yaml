@@ -1,0 +1,45 @@
+id: DK-300e-3-i
+title: A library of only unpublished, retired or non-fitting categories counts as empty
+component: decision-kernel
+components:
+- decision_kernel
+level: L3
+status: active
+readiness: draft
+req_status: draft
+priority: medium
+work_status: todo
+roadmap_phase: phase_kernel_2_knowledge
+criteria: |
+  Given the library holds only the candidate cat-73d233fc8b15c735, the staged cat-6c3eb4f2af148922 and the retired cat-40cc613f737e3323, all for decision type design,
+  When a design decision is framed,
+  Then nothing is reused, no gap judgement is made, and the decision is framed as with an empty library,
+  And the same holds when published categories exist but none fits the decision's type or components.
+depends_on:
+- DK-300e-3
+covered_by: []
+implemented_by: []
+assigned_agent: python-coder
+estimated_complexity: null
+delivers_to: null
+expects_from:
+  ac_id: DK-300e-3
+  contract: Empty-library framing.
+doc_links:
+- path: docs/decisions/dec-93c1c730463c1f3c.yaml
+  relationship: governs
+  status: exists
+- path: docs/product-truth/flows/leafcutter/decision-forming.flow.json
+  relationship: implements
+  status: exists
+- path: docs/product-truth/mock-data/leafcutter/criterion-categories.mock.json
+  relationship: specified-by
+  status: exists
+origin_agent: business-analyst
+created: 2026-10-04
+amended_by: []
+superseded_by: null
+notes: |
+  Flow branch condition: "no published category fits the decision's kind and components, including when the library is still empty".
+  FLOW BACK-LINK (for step.implements, to be applied by the store owner): leafcutter/decision-forming: empty-library.
+  Authored by the business-analyst stage of /plan-feature (route strategic) under decision dec-93c1c730463c1f3c; readiness draft, no product approval implied.
