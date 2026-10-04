@@ -1,6 +1,6 @@
 """
 MODULE: kernel.capabilities.retrieval.locators
-GOAL: Fetch exact explicit locators (`path`, `path#Lx-Ly`, `path#heading`, `path::Symbol`) as
+GOAL: Fetch exact explicit locators (`path`, `path#Lx-Ly`, `path#heading`, `path#/pointer`, `path::Symbol`) as
     candidates, under the same read policy as every other read.
 BUSINESS CONTEXT: When an option or finding cites a file or symbol, the next retrieval must be
     able to look that exact place up instead of hoping a lexical search surfaces it (live runs
@@ -15,9 +15,15 @@ ARCHITECTURE: Synchronous and read-only; the executor runs it in a worker thread
 
 from __future__ import annotations
 
+import json
+import logging
 import re
 from dataclasses import dataclass, field, replace
 from pathlib import Path, PurePosixPath, PureWindowsPath
+
+import yaml
+
+from knowledge.adapters.source_excerpt import excerpt as source_excerpt
 
 from kernel.capabilities.retrieval.access import ReadPolicy, file_mtime
 from kernel.capabilities.retrieval.candidates import Candidate
@@ -32,6 +38,7 @@ from kernel.contracts.enums import SourceKind
 
 STRATEGY = "explicit_locator"
 _LINES = re.compile(r"L?(\d+)(?:\s*-\s*L?(\d+))?")
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -43,7 +50,7 @@ class ExplicitResult:
 
 
 def parse_locator(raw: str) -> tuple[str, str, str]:
-    """Split a locator into (path, kind, argument); kind is file, lines, heading or symbol."""
+    """Split a locator into path, selector kind and argument, preserving structured pointers."""
     text = raw.strip()
     if "::" in text:
         path, _, symbol = text.partition("::")
@@ -51,7 +58,7 @@ def parse_locator(raw: str) -> tuple[str, str, str]:
     if "#" in text:
         path, _, fragment = text.partition("#")
         fragment = fragment.strip()
-        kind = "lines" if _LINES.fullmatch(fragment) else "heading"
+        kind = "pointer" if fragment.startswith("/") else "lines" if _LINES.fullmatch(fragment) else "heading"
         return path.strip(), kind, fragment
     return text, "file", ""
 
@@ -112,18 +119,50 @@ def _fetch_one(policy: ReadPolicy, sources: list[SourceConfig], raw: str, terms:
     outcome = narrowed.read_text(target)
     if outcome.text is None:
         return f"refused: {outcome.reason or 'unreadable'}"
-    lines = outcome.text.splitlines()
-    section, why = _section_for(kind, arg, outcome.text, lines)
+    selected = _selected_excerpt(rel, kind, arg, outcome.text, terms, cfg)
+    if isinstance(selected, str):
+        return selected
+    locator, body, truncated = selected
+    low = body.lower()
+    return Candidate(
+        source_id=source_id, kind=SourceKind.REPOSITORY_FILE, strategy=STRATEGY, path=rel,
+        title=rel, locator=locator, excerpt=body,
+        hits=sum(low.count(t) for t in terms), terms=tuple(t for t in terms if t in low),
+        truncated=truncated, modified_at=file_mtime(target), explicit=True)
+
+
+def _selected_excerpt(path: str, kind: str, arg: str, text: str, terms: list[str],
+                       cfg: RetrievalConfig) -> tuple[str, str, bool] | str:
+    """Bound only the selected source value and retain an independently reusable locator."""
+    if kind == "pointer":
+        return _pointer_excerpt(path, arg, text, terms, cfg)
+    lines = text.splitlines()
+    section, why = _section_for(kind, arg, text, lines)
     if section is None:
         return f"not found: {why}"
     start, end, body, truncated = section_excerpt(lines, section, terms, cfg)
     label = f" ({section.label})" if section.label else ""
-    low = body.lower()
-    return Candidate(
-        source_id=source_id, kind=SourceKind.REPOSITORY_FILE, strategy=STRATEGY, path=rel,
-        title=rel, locator=f"{rel}#L{start + 1}-L{end}{label}", excerpt=body,
-        hits=sum(low.count(t) for t in terms), terms=tuple(t for t in terms if t in low),
-        truncated=truncated, modified_at=file_mtime(target), explicit=True)
+    return f"{path}#L{start + 1}-L{end}{label}", body, truncated
+
+
+def _pointer_excerpt(path: str, pointer: str, text: str, terms: list[str],
+                      cfg: RetrievalConfig) -> tuple[str, str, bool] | str:
+    """Resolve native JSON/YAML pointers after the ordinary source-read policy has admitted bytes."""
+    suffix = Path(path).suffix.lower()
+    if suffix not in {".json", ".yaml", ".yml"}:
+        return "refused: structured pointers require a JSON or YAML source"
+    try:
+        if suffix == ".json":
+            json.loads(text)
+        selected = source_excerpt(text.encode("utf-8"), pointer).decode("utf-8")
+    except (ValueError, yaml.YAMLError, RecursionError) as exc:
+        logger.warning("structured source locator unavailable: %s", type(exc).__name__)
+        return "not found: invalid, absent or ambiguous structured source locator"
+    if not selected.strip():
+        return "not found: structured source locator selects no content"
+    lines = selected.splitlines()
+    _, _, body, truncated = section_excerpt(lines, Section(0, len(lines)), terms, cfg)
+    return f"{path}#{pointer}", body, truncated
 
 
 def fetch_explicit(policy: ReadPolicy, sources: list[SourceConfig], locators: list[str],
@@ -162,4 +201,5 @@ def fetch_explicit(policy: ReadPolicy, sources: list[SourceConfig], locators: li
 #   root (not only the category-selected sources), so a citation can be followed even when the
 #   need's category does not list that source, while the config allowlist, read roots and deny
 #   globs still bound what can be read. (#KernelV01/B)
+# - 2026-10-03 18:35 [python-coder]: Resolve canonical structured references through the shared native selector before applying excerpt bounds; preserve pointer provenance and refuse invalid selectors. (#DK-300/entity-context)
 # ====================================================================

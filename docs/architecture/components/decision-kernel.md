@@ -7,10 +7,11 @@ flight_level: L2-Container
 diagram_type: container
 root: true
 created: 2026-09-30
-last_updated: 2026-10-02
+last_updated: 2026-10-03
 components:
   - decision_kernel
 related_docs:
+  - docs/analysis/2026-10-03-kernel-entity-context-concept.md
   - docs/architecture/adrs/ADR-064-persona-discovery-before-feature-planning.md
   - docs/analysis/2026-09-30-decision-kernel-design.md
   - docs/analysis/2026-09-30-decision-kernel-design-3-kernel-scheduler.md
@@ -52,22 +53,31 @@ checkpointed handoffs. Every run ends in a typed terminal state with evidence an
 trace.
 
 Initial enrichment precedes intent, including on runs with an explicit output contract. The
-`kernel.context_enrichment.gather_context` boundary combines explicitly supplied caller context,
-workspace identity, registered capability ids and relevant allowed repository excerpts. It keeps
-the original goal verbatim, caller claims separate from evidence, and provenance and limitations
-on the result. It makes no Jev calls, performs no host work, and cannot authorize actions or choose
-user preferences. The checkpointed result and `context.enriched` event precede intent assessment;
-resumes reuse that context. Missing sources, disabled gathering and exhausted bounds remain
-explicit outcomes rather than invented facts. Intent can still ask a human after consuming the
-context. The [forming flow](../../product-truth/flows/leafcutter/decision-forming.flow.json) is the
-canonical product truth. The [DK-200 context-enrichment requirements](../../acceptance-criteria/decision-kernel/DK-200-context-enrichment/DK-200.yaml)
-contain the BA behavioral decomposition and IT PO test contracts; they supersede the preliminary DK-100 through DK-104 records.
+`kernel.entity_context.recognize_entities` boundary recognizes repository glossary terms,
+document and artifact categories, Python symbols and native artifact IDs in a permission-filtered
+local index. It supplies compact owner-authored meanings, signatures and canonical references;
+the selected capability retrieves task evidence after intent. The goal stays verbatim, with
+caller claims, clarifications and meaning provenance in separate channels. Recognition makes
+no Jev calls, performs no host work, and cannot authorize actions or choose user preferences.
+Its checkpoint and `context.recognized` event precede intent assessment. Resumes reuse that
+checkpoint; missing or stale indexes, disabled recognition and exhausted bounds remain explicit
+outcomes, without a crawl or lexical fallback. Build the derived index explicitly with
+`python -m kernel entities build --repository-root <path>` before running recognition.
 
-That saved context also reaches native capability judgments, later repository query hints and
-redacted host input artifacts. `kernel.enrichment_projection` adds explicit trust boundaries and
-fits optional context into each Jev batch's remaining payload allowance. It never enlarges the
-configured limit or rewrites the base request; trimming or omission is reported, while the full
-snapshot remains checkpointed. Data policy can withhold repository excerpts from Jev. The
+The [entity-context concept](../../analysis/2026-10-03-kernel-entity-context-concept.md)
+describes the implemented boundaries. The [forming flow](../../product-truth/flows/leafcutter/decision-forming.flow.json)
+is the canonical product truth. [DK-300 requirements](../../acceptance-criteria/decision-kernel/DK-300-entity-context/DK-300.yaml)
+link BA behavior, IT PO contracts and exact tests. Historical DK-200 requirements and
+the legacy lexical enrichment API remain available for existing checkpoints and their tests;
+fresh runs use entity recognition. Goals accept up to 16,000 characters.
+
+That saved context also reaches native capability judgments, later canonical retrieval hints and
+redacted host input artifacts. `kernel.entity_projection` adds explicit trust boundaries and
+fits optional context into the exact serialized Jev request allowance, including questions.
+It never enlarges the configured limit or rewrites the goal; trimming or omission is reported,
+while the full snapshot remains checkpointed. Required fields that cannot fit are rejected
+before a provider call. Data policy can withhold all repository meaning metadata from Jev and
+host projections. The
 [running guide](../../how-to/run-the-decision-kernel.md#context-before-intent) describes both the
 isolated context eval and the paired live intent probe, including their limits.
 

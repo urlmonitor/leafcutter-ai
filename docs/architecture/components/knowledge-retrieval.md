@@ -7,7 +7,7 @@ status: active
 flight_level: L3-Component
 diagram_type: component
 created: '2026-10-01'
-last_updated: '2026-10-02'
+last_updated: '2026-10-03'
 components: [knowledge_management, decision_kernel]
 related_docs:
   - docs/architecture/adrs/ADR-062-standalone-knowledge-retrieval.md
@@ -70,6 +70,40 @@ that all retained canonical payloads and relationship endpoints remain unchanged
 These storage fields do not enlarge the retrieval disclosure allowlist.
 
 The kernel adapter binds configured repository identity/root, validates results, records request/execution metadata and obtains selected source detail within cumulative limits. It delegates ordinary file retrieval unchanged and adds no driver, query language, scheduler or checkpoint model to the kernel. Configuration and payload schemas are generated from existing model conventions; schema parity tests cover the added fields.
+
+## Entity-guided operation selection
+
+The built-in selection path is specified by `DK-300d-4` and `DK-300d-5`.
+After intent, a natural-language evidence need can offer the existing executable
+read operations for permitted recognized IDs and trusted component scope. Jev
+chooses a finite operation or target; deterministic code binds and validates the
+arguments. It does not accept model-authored argument JSON or Cypher. Repository
+identity, root, selected sources, source revision and remaining budgets stay pinned.
+The built-in selector applies when the separate query catalog is not configured;
+a configured catalog retains the authored query-growth workflow below.
+
+Natural AC descendant requests use a Python-bound recipe covering levels L0
+through L3 and excluding the selected root. Discovery precedes authorization of
+each source disclosure. Limits, denied detail and truncated populations remain
+visible, so a bounded result cannot silently become an exhaustive population claim.
+
+An offered repository fallback is executable only where both the current request
+and run source policy admit native retrieval. A graph-only child cannot widen its
+sources; an existing native research sibling remains a separate permitted path.
+Explicit operation requests retain their existing deterministic behavior. Ticket
+nodes and stored priority fields do not imply support for listing every ticket
+with high or critical priority; that exhaustive filtered query is outside this
+extension. Bounded sibling repository evidence does not remove its completeness
+limitation, which survives durable research and synthesis resume. Ordinary
+unsupported selection can still leave a useful permitted repository sibling.
+No result ordering is required. Independent deterministic tests cover the registered
+binding, real knowledge service, research continuation and synthesis resume;
+the verification record is `reports/entity-graph-selection-evaluation.md`.
+Live Jev selection quality and publication readiness remain separate operational
+checks rather than claims established by controlled-port tests.
+
+Optional Neo4j activation belongs in an explicitly selected local configuration;
+the shared default continues to support backend-off repository retrieval.
 
 ## Authored query growth
 

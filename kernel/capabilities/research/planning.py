@@ -39,6 +39,7 @@ from kernel.capabilities.research.targeting import (
 )
 from kernel.capabilities.retrieval.access import ReadPolicy
 from kernel.capabilities.retrieval.knowledge_map import PATHS_JSON, SCRIPT, trusted_root
+from kernel.capabilities.retrieval.locators import parse_locator
 from kernel.config import SourceConfig
 from kernel.contracts import schema_ids
 from kernel.contracts.capability import Usage
@@ -216,7 +217,8 @@ def _child(need: EvidenceNeed, source_ids: list[str], sources: list[SourceConfig
            batches: int | None = None, jev_reserve: int = 0) -> RequestProposal:
     """Build one retrieval child with original answer obligations and its rerank allowance.
 
-    Query hints go to every child; exact locators only to a native one (a host reads no files).
+    Query hints go to every child; exact locators and their owners stay on file-search
+    children so they cannot widen a graph-only source selection.
 
     Args:
         need: Evidence need to address.
@@ -234,11 +236,14 @@ def _child(need: EvidenceNeed, source_ids: list[str], sources: list[SourceConfig
     """
     operation = retrieval_operation({"source_ids": source_ids}, sources)
     native = operation == "retrieve"
-    holders = locator_sources(query.locators, sources) if native else []
+    graph_ids = {source.id for source in sources if source.kind == "graph_query"}
+    graph_only = bool(source_ids) and set(source_ids) <= graph_ids
+    file_search = native and not graph_only
+    holders = locator_sources(query.locators, sources) if file_search else []
     payload = RetrievalRequestPayload(
         need=need, answer_requirements=answer_requirements, assessment=assessment,
         source_ids=list(dict.fromkeys([*source_ids, *holders])),
-        query_hints=query.hints, explicit_locators=query.locators if native else [],
+        query_hints=query.hints, explicit_locators=query.locators if file_search else [],
         max_rerank_batches=batches, jev_reserve=jev_reserve)
     return RequestProposal(
         kind=RequestKind.EVIDENCE, question=need.question, evidence_needs=[need],
@@ -274,6 +279,7 @@ def _candidates(ctx: ExecutionContext, need: EvidenceNeed, plan: Plan) -> list[S
     """Catalog sources covering the need, narrowed by scope source ids and caller restrictions."""
     scope_ids, restricted = set(ctx.scope.source_ids), set(plan.source_restrictions)
     return [s for s in ctx.config.sources if need.category in s.categories
+            and (s.automatic_research or s.id in restricted)
             and (not scope_ids or s.id in scope_ids) and (not restricted or s.id in restricted)]
 
 
@@ -305,6 +311,49 @@ def _defer_host_only(out: Resolution) -> None:
                 out.attempted.remove(source_id)
 
 
+def _permitted_entity_locator(ctx: ExecutionContext, source: SourceConfig, locator: str) -> bool:
+    """Check a cached locator against the current resolved-path and source restrictions."""
+    policy = ReadPolicy(Path(ctx.scope.repository_root), tuple(ctx.scope.read_roots),
+                        (*ctx.config.retrieval.deny_globs, *source.deny_globs),
+                        source.max_file_bytes or ctx.config.retrieval.max_file_bytes)
+    path, _, _ = parse_locator(locator)
+    target = policy.root / path
+    relative = policy.relative(target)
+    if relative is None or policy.is_denied(path) or policy.is_denied(relative):
+        return False
+    resolved = target.resolve()
+    return any(resolved == root or root in resolved.parents
+               for root in policy.resolve_roots(source.roots).roots)
+
+
+def _entity_locators(ctx: ExecutionContext, plan: Plan) -> list[str]:
+    """Recheck resolved meaning locators against current scope and source policy before hints."""
+    if ctx.entity_context is None:
+        return []
+    sources = {source.id: source for source in ctx.config.sources
+               if source.kind == "repo_text"
+               and (not ctx.scope.source_ids or source.id in ctx.scope.source_ids)
+               and (not plan.source_restrictions or source.id in plan.source_restrictions)}
+    result = []
+    for card in ctx.entity_context.entities:
+        source = sources.get(card.provenance.source_id)
+        if card.resolution != "resolved" or source is None:
+            continue
+        if _permitted_entity_locator(ctx, source, card.provenance.locator):
+            result.append(card.provenance.locator)
+    return list(dict.fromkeys(result))[:ctx.config.retrieval.max_explicit_locators]
+
+
+def _context_query(ctx: ExecutionContext, query: NeedQuery, locators: list[str]) -> NeedQuery:
+    """Carry bounded caller claims and later clarifications as search hints, never evidence."""
+    context = ctx.entity_context or ctx.context_enrichment
+    caller = ([*reversed(context.caller_context.conversation), *context.caller_context.observations]
+              if context is not None else [])
+    return NeedQuery([*query.hints, *ctx.clarifications, *caller],
+                     list(dict.fromkeys([*locators, *query.locators]))[
+                         :ctx.config.retrieval.max_explicit_locators])
+
+
 def resolve_sources(ctx: ExecutionContext, needs: list[EvidenceNeed], plan: Plan) -> Resolution:
     """Map each need to a native retrieval child, a host.research child, or unavailable.
 
@@ -320,13 +369,9 @@ def resolve_sources(ctx: ExecutionContext, needs: list[EvidenceNeed], plan: Plan
     root = Path(ctx.scope.repository_root)
     own = {i: _checked(root, q) for i, q in need_queries(ctx, plan).items()}
     shared = _checked(root, default_query(plan, ctx.config.retrieval.max_explicit_locators))
-    context = ctx.context_enrichment
-    if context is not None:
-        hints = [*reversed(context.caller_context.conversation), *context.caller_context.observations]
-        # These are bounded context hints, never a replacement for the question or criteria.
-        shared = NeedQuery([*shared.hints, *hints], shared.locators)
-        own = {key: NeedQuery([*query.hints, *hints], query.locators)
-               for key, query in own.items()}
+    locators = _entity_locators(ctx, plan)
+    shared = _context_query(ctx, shared, locators)
+    own = {key: _context_query(ctx, query, locators) for key, query in own.items()}
     batches = batch_allowance(jev_available(ctx.budget), plan.jev_reserve, len(needs), ctx.config)
     for need in needs:
         candidates = _candidates(ctx, need, plan)
@@ -387,8 +432,11 @@ def resolve_sources(ctx: ExecutionContext, needs: list[EvidenceNeed], plan: Plan
 # - 2026-09-30 23:00 [python-coder]: Source filtering by `technologies` is not applied because a
 #   SourceConfig carries no technology field; technologies only feed retrieval query terms.
 #   (#KernelBootstrapV0/P5)
+# - 2026-10-03 15:10 [python-coder]: Preserve verbatim goals and separate meaning, caller and clarification channels. (#DK-300/entity-context)
 # ====================================================================
 
 # - 2026-10-01 20:00 [python-coder]: Bind optional knowledge through existing scoped retrieval contracts. (#TICKET-20261001-KM-400e-3)
 
 # - 2026-10-02 04:36 [conflict-resolver]: Preserve split graph sources and evidence packets alongside rerank limits. (#TICKETLESS reason=kernel-v01-integration)
+# - 2026-10-03 17:00 [python-coder]: Select context-only owner stores through explicit sources or resolved locators, preserving ordinary research behavior. (#DK-300/entity-context)
+# - 2026-10-03 22:24 [Codex]: Keep graph-only retrieval children scoped to their graph sources while retaining explicit locator ownership on file-search siblings. (#TICKETLESS reason=user-approved-DK-300d-5)

@@ -4,6 +4,13 @@
   "additionalProperties": false,
   "description": "leafcutter.options_request.v1.",
   "properties": {
+    "clarifications": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Clarifications",
+      "type": "array"
+    },
     "constraint_ids": {
       "items": {
         "type": "string"

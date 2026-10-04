@@ -817,14 +817,14 @@
       "id": "leafcutter/decision-lifecycle",
       "type": "flow",
       "title": "How a decision is formed, saved, stored and reused",
-      "summary": "A request is enriched, formed into a human-approved decision, staged, published and later reused as precedent.",
+      "summary": "Interpret entity meanings, form a decision with later evidence, then stage, publish and reuse it.",
       "kind": "data",
       "source": "real",
       "component": "decision_kernel",
       "path": "flows/leafcutter/decision-lifecycle.flow.json",
       "status": "active",
       "readiness": "draft",
-      "version": 2,
+      "version": 4,
       "entities": [
         "Decision"
       ],
@@ -834,7 +834,7 @@
         "in_progress": 1,
         "not_started": 3,
         "total": 4,
-        "asof": "2026-10-02"
+        "asof": "2026-10-03"
       },
       "tags": [
         "decision-kernel",
@@ -848,24 +848,24 @@
       "id": "leafcutter/decision-forming",
       "type": "flow",
       "title": "Forming a decision in a kernel run",
-      "summary": "The kernel enriches the request before intent, researches the decision, then asks you to approve and choose.",
+      "summary": "Recognize entity meanings before intent, then research a decision and ask you to approve and choose.",
       "kind": "data",
       "source": "real",
       "component": "decision_kernel",
       "path": "flows/leafcutter/decision-forming.flow.json",
       "status": "active",
       "readiness": "draft",
-      "version": 2,
+      "version": 4,
       "entities": [
         "Decision"
       ],
       "mock_data_ref": "leafcutter/decisions",
       "impl_summary": {
-        "done": 2,
+        "done": 5,
         "in_progress": 0,
-        "not_started": 15,
+        "not_started": 12,
         "total": 17,
-        "asof": "2026-10-02"
+        "asof": "2026-10-03"
       },
       "tags": [
         "decision-kernel",
@@ -1488,11 +1488,11 @@
       "path": "flows/leafcutter/decision-forming.flow.json",
       "impl_status": "in_progress",
       "impl_summary": {
-        "done": 2,
+        "done": 5,
         "in_progress": 0,
-        "not_started": 15,
+        "not_started": 12,
         "total": 17,
-        "asof": "2026-10-02"
+        "asof": "2026-10-03"
       },
       "expands": [
         "leafcutter/decision-retrieval"
@@ -1518,7 +1518,7 @@
         "in_progress": 1,
         "not_started": 3,
         "total": 4,
-        "asof": "2026-10-02"
+        "asof": "2026-10-03"
       },
       "expands": [
         "leafcutter/decision-forming",
@@ -2589,7 +2589,7 @@
         "asof": "2026-07-20"
       }
     ],
-    "DK-200a-1": [
+    "DK-300a-1": [
       {
         "flow": "leafcutter/decision-forming",
         "node": "enrich-context",
@@ -2599,10 +2599,10 @@
         "mock_data": "leafcutter/decisions",
         "entities": [],
         "source": "real",
-        "asof": "2026-10-02"
+        "asof": "2026-10-03"
       }
     ],
-    "DK-200a-1-i": [
+    "DK-300a-1-i": [
       {
         "flow": "leafcutter/decision-forming",
         "node": "enrich-context",
@@ -2612,10 +2612,10 @@
         "mock_data": "leafcutter/decisions",
         "entities": [],
         "source": "real",
-        "asof": "2026-10-02"
+        "asof": "2026-10-03"
       }
     ],
-    "DK-200a-2": [
+    "DK-300a-2": [
       {
         "flow": "leafcutter/decision-forming",
         "node": "enrich-context",
@@ -2625,10 +2625,10 @@
         "mock_data": "leafcutter/decisions",
         "entities": [],
         "source": "real",
-        "asof": "2026-10-02"
+        "asof": "2026-10-03"
       }
     ],
-    "DK-200a-3": [
+    "DK-300a-2-i": [
       {
         "flow": "leafcutter/decision-forming",
         "node": "enrich-context",
@@ -2638,10 +2638,10 @@
         "mock_data": "leafcutter/decisions",
         "entities": [],
         "source": "real",
-        "asof": "2026-10-02"
+        "asof": "2026-10-03"
       }
     ],
-    "DK-200a-3-i": [
+    "DK-300a-3": [
       {
         "flow": "leafcutter/decision-forming",
         "node": "enrich-context",
@@ -2651,10 +2651,10 @@
         "mock_data": "leafcutter/decisions",
         "entities": [],
         "source": "real",
-        "asof": "2026-10-02"
+        "asof": "2026-10-03"
       }
     ],
-    "DK-200a-3-ii": [
+    "DK-300a-3-i": [
       {
         "flow": "leafcutter/decision-forming",
         "node": "enrich-context",
@@ -2664,10 +2664,21 @@
         "mock_data": "leafcutter/decisions",
         "entities": [],
         "source": "real",
-        "asof": "2026-10-02"
+        "asof": "2026-10-03"
       }
     ],
-    "DK-200a-4": [
+    "DK-300b-1": [
+      {
+        "flow": "leafcutter/decision-forming",
+        "node": "ask",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": "leafcutter/decisions",
+        "entities": [],
+        "source": "real",
+        "asof": "2026-10-03"
+      },
       {
         "flow": "leafcutter/decision-forming",
         "node": "enrich-context",
@@ -2677,10 +2688,21 @@
         "mock_data": "leafcutter/decisions",
         "entities": [],
         "source": "real",
-        "asof": "2026-10-02"
+        "asof": "2026-10-03"
       }
     ],
-    "DK-200b-1": [
+    "DK-300b-1-i": [
+      {
+        "flow": "leafcutter/decision-forming",
+        "node": "ask",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": "leafcutter/decisions",
+        "entities": [],
+        "source": "real",
+        "asof": "2026-10-03"
+      },
       {
         "flow": "leafcutter/decision-forming",
         "node": "enrich-context",
@@ -2690,10 +2712,10 @@
         "mock_data": "leafcutter/decisions",
         "entities": [],
         "source": "real",
-        "asof": "2026-10-02"
+        "asof": "2026-10-03"
       }
     ],
-    "DK-200b-2": [
+    "DK-300b-2": [
       {
         "flow": "leafcutter/decision-forming",
         "node": "enrich-context",
@@ -2703,7 +2725,46 @@
         "mock_data": "leafcutter/decisions",
         "entities": [],
         "source": "real",
-        "asof": "2026-10-02"
+        "asof": "2026-10-03"
+      }
+    ],
+    "DK-300b-2-i": [
+      {
+        "flow": "leafcutter/decision-forming",
+        "node": "enrich-context",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": "leafcutter/decisions",
+        "entities": [],
+        "source": "real",
+        "asof": "2026-10-03"
+      }
+    ],
+    "DK-300b-3": [
+      {
+        "flow": "leafcutter/decision-forming",
+        "node": "enrich-context",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": "leafcutter/decisions",
+        "entities": [],
+        "source": "real",
+        "asof": "2026-10-03"
+      }
+    ],
+    "DK-300b-3-i": [
+      {
+        "flow": "leafcutter/decision-forming",
+        "node": "enrich-context",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": "leafcutter/decisions",
+        "entities": [],
+        "source": "real",
+        "asof": "2026-10-03"
       },
       {
         "flow": "leafcutter/decision-forming",
@@ -2714,10 +2775,10 @@
         "mock_data": "leafcutter/decisions",
         "entities": [],
         "source": "real",
-        "asof": "2026-10-02"
+        "asof": "2026-10-03"
       }
     ],
-    "DK-200b-2-i": [
+    "DK-300c-1": [
       {
         "flow": "leafcutter/decision-forming",
         "node": "enrich-context",
@@ -2727,7 +2788,20 @@
         "mock_data": "leafcutter/decisions",
         "entities": [],
         "source": "real",
-        "asof": "2026-10-02"
+        "asof": "2026-10-03"
+      }
+    ],
+    "DK-300c-1-i": [
+      {
+        "flow": "leafcutter/decision-forming",
+        "node": "enrich-context",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": "leafcutter/decisions",
+        "entities": [],
+        "source": "real",
+        "asof": "2026-10-03"
       },
       {
         "flow": "leafcutter/decision-forming",
@@ -2738,10 +2812,10 @@
         "mock_data": "leafcutter/decisions",
         "entities": [],
         "source": "real",
-        "asof": "2026-10-02"
+        "asof": "2026-10-03"
       }
     ],
-    "DK-200b-3": [
+    "DK-300c-2": [
       {
         "flow": "leafcutter/decision-forming",
         "node": "enrich-context",
@@ -2751,10 +2825,10 @@
         "mock_data": "leafcutter/decisions",
         "entities": [],
         "source": "real",
-        "asof": "2026-10-02"
+        "asof": "2026-10-03"
       }
     ],
-    "DK-200b-3-i": [
+    "DK-300c-3": [
       {
         "flow": "leafcutter/decision-forming",
         "node": "enrich-context",
@@ -2764,10 +2838,21 @@
         "mock_data": "leafcutter/decisions",
         "entities": [],
         "source": "real",
-        "asof": "2026-10-02"
+        "asof": "2026-10-03"
       }
     ],
-    "DK-200b-4": [
+    "DK-300c-3-i": [
+      {
+        "flow": "leafcutter/decision-forming",
+        "node": "classify",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": "leafcutter/decisions",
+        "entities": [],
+        "source": "real",
+        "asof": "2026-10-03"
+      },
       {
         "flow": "leafcutter/decision-forming",
         "node": "enrich-context",
@@ -2777,10 +2862,21 @@
         "mock_data": "leafcutter/decisions",
         "entities": [],
         "source": "real",
-        "asof": "2026-10-02"
+        "asof": "2026-10-03"
       }
     ],
-    "DK-200b-4-i": [
+    "DK-300d-1": [
+      {
+        "flow": "leafcutter/decision-forming",
+        "node": "classify",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": "leafcutter/decisions",
+        "entities": [],
+        "source": "real",
+        "asof": "2026-10-03"
+      },
       {
         "flow": "leafcutter/decision-forming",
         "node": "enrich-context",
@@ -2790,33 +2886,33 @@
         "mock_data": "leafcutter/decisions",
         "entities": [],
         "source": "real",
-        "asof": "2026-10-02"
+        "asof": "2026-10-03"
+      },
+      {
+        "flow": "leafcutter/decision-lifecycle",
+        "node": "form",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": "leafcutter/decisions",
+        "entities": [
+          "Decision"
+        ],
+        "source": "real",
+        "asof": "2026-10-03"
       }
     ],
-    "DK-200b-4-ii": [
+    "DK-300d-1-i": [
       {
         "flow": "leafcutter/decision-forming",
-        "node": "enrich-context",
+        "node": "classify",
         "node_kind": "step",
         "flow_kind": "data",
         "screen": null,
         "mock_data": "leafcutter/decisions",
         "entities": [],
         "source": "real",
-        "asof": "2026-10-02"
-      }
-    ],
-    "DK-200c-1": [
-      {
-        "flow": "leafcutter/decision-forming",
-        "node": "enrich-context",
-        "node_kind": "step",
-        "flow_kind": "data",
-        "screen": null,
-        "mock_data": "leafcutter/decisions",
-        "entities": [],
-        "source": "real",
-        "asof": "2026-10-02"
+        "asof": "2026-10-03"
       },
       {
         "flow": "leafcutter/decision-forming",
@@ -2827,36 +2923,23 @@
         "mock_data": "leafcutter/decisions",
         "entities": [],
         "source": "real",
-        "asof": "2026-10-02"
+        "asof": "2026-10-03"
       }
     ],
-    "DK-200c-1-i": [
+    "DK-300d-2": [
       {
         "flow": "leafcutter/decision-forming",
-        "node": "enrich-context",
+        "node": "classify",
         "node_kind": "step",
         "flow_kind": "data",
         "screen": null,
         "mock_data": "leafcutter/decisions",
         "entities": [],
         "source": "real",
-        "asof": "2026-10-02"
+        "asof": "2026-10-03"
       },
       {
         "flow": "leafcutter/decision-forming",
-        "node": "limited-context",
-        "node_kind": "branch",
-        "flow_kind": "data",
-        "screen": null,
-        "mock_data": "leafcutter/decisions",
-        "entities": [],
-        "source": "real",
-        "asof": "2026-10-02"
-      }
-    ],
-    "DK-200c-1-ii": [
-      {
-        "flow": "leafcutter/decision-forming",
         "node": "enrich-context",
         "node_kind": "step",
         "flow_kind": "data",
@@ -2864,21 +2947,60 @@
         "mock_data": "leafcutter/decisions",
         "entities": [],
         "source": "real",
-        "asof": "2026-10-02"
+        "asof": "2026-10-03"
+      }
+    ],
+    "DK-300d-2-i": [
+      {
+        "flow": "leafcutter/decision-forming",
+        "node": "classify",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": "leafcutter/decisions",
+        "entities": [],
+        "source": "real",
+        "asof": "2026-10-03"
       },
       {
         "flow": "leafcutter/decision-forming",
-        "node": "limited-context",
-        "node_kind": "branch",
+        "node": "enrich-context",
+        "node_kind": "step",
         "flow_kind": "data",
         "screen": null,
         "mock_data": "leafcutter/decisions",
         "entities": [],
         "source": "real",
-        "asof": "2026-10-02"
+        "asof": "2026-10-03"
       }
     ],
-    "DK-200c-2": [
+    "DK-300d-3": [
+      {
+        "flow": "leafcutter/decision-forming",
+        "node": "ground",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": "leafcutter/decisions",
+        "entities": [],
+        "source": "real",
+        "asof": "2026-10-03"
+      },
+      {
+        "flow": "leafcutter/decision-lifecycle",
+        "node": "form",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": "leafcutter/decisions",
+        "entities": [
+          "Decision"
+        ],
+        "source": "real",
+        "asof": "2026-10-03"
+      }
+    ],
+    "DK-300d-3-i": [
       {
         "flow": "leafcutter/decision-forming",
         "node": "enrich-context",
@@ -2888,10 +3010,88 @@
         "mock_data": "leafcutter/decisions",
         "entities": [],
         "source": "real",
-        "asof": "2026-10-02"
+        "asof": "2026-10-03"
+      },
+      {
+        "flow": "leafcutter/decision-lifecycle",
+        "node": "form",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": "leafcutter/decisions",
+        "entities": [
+          "Decision"
+        ],
+        "source": "real",
+        "asof": "2026-10-03"
       }
     ],
-    "DK-200c-2-i": [
+    "DK-300d-4": [
+      {
+        "flow": "leafcutter/decision-forming",
+        "node": "ground",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": "leafcutter/decisions",
+        "entities": [],
+        "source": "real",
+        "asof": "2026-10-03"
+      }
+    ],
+    "DK-300d-4-i": [
+      {
+        "flow": "leafcutter/decision-forming",
+        "node": "ground",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": "leafcutter/decisions",
+        "entities": [],
+        "source": "real",
+        "asof": "2026-10-03"
+      }
+    ],
+    "DK-300d-4-ii": [
+      {
+        "flow": "leafcutter/decision-forming",
+        "node": "ground",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": "leafcutter/decisions",
+        "entities": [],
+        "source": "real",
+        "asof": "2026-10-03"
+      }
+    ],
+    "DK-300d-5": [
+      {
+        "flow": "leafcutter/decision-forming",
+        "node": "ground",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": "leafcutter/decisions",
+        "entities": [],
+        "source": "real",
+        "asof": "2026-10-03"
+      }
+    ],
+    "DK-300d-5-i": [
+      {
+        "flow": "leafcutter/decision-forming",
+        "node": "ground",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": "leafcutter/decisions",
+        "entities": [],
+        "source": "real",
+        "asof": "2026-10-03"
+      }
+    ],
+    "DK-300e-1": [
       {
         "flow": "leafcutter/decision-forming",
         "node": "enrich-context",
@@ -2901,10 +3101,10 @@
         "mock_data": "leafcutter/decisions",
         "entities": [],
         "source": "real",
-        "asof": "2026-10-02"
+        "asof": "2026-10-03"
       }
     ],
-    "DK-200c-2-ii": [
+    "DK-300e-2": [
       {
         "flow": "leafcutter/decision-forming",
         "node": "enrich-context",
@@ -2914,10 +3114,10 @@
         "mock_data": "leafcutter/decisions",
         "entities": [],
         "source": "real",
-        "asof": "2026-10-02"
+        "asof": "2026-10-03"
       }
     ],
-    "DK-200d-1": [
+    "DK-300e-2-i": [
       {
         "flow": "leafcutter/decision-forming",
         "node": "enrich-context",
@@ -2927,33 +3127,7 @@
         "mock_data": "leafcutter/decisions",
         "entities": [],
         "source": "real",
-        "asof": "2026-10-02"
-      }
-    ],
-    "DK-200d-2": [
-      {
-        "flow": "leafcutter/decision-forming",
-        "node": "enrich-context",
-        "node_kind": "step",
-        "flow_kind": "data",
-        "screen": null,
-        "mock_data": "leafcutter/decisions",
-        "entities": [],
-        "source": "real",
-        "asof": "2026-10-02"
-      }
-    ],
-    "DK-200d-2-i": [
-      {
-        "flow": "leafcutter/decision-forming",
-        "node": "enrich-context",
-        "node_kind": "step",
-        "flow_kind": "data",
-        "screen": null,
-        "mock_data": "leafcutter/decisions",
-        "entities": [],
-        "source": "real",
-        "asof": "2026-10-02"
+        "asof": "2026-10-03"
       }
     ],
     "FIN-100": [

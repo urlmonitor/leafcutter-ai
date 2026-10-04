@@ -81,6 +81,7 @@ def select_sources(ctx: ExecutionContext, request: RetrievalRequestPayload
     catalog = {s.id: s for s in ctx.config.sources}
     for source in ctx.config.sources:
         eligible = (source.kind in NATIVE_KINDS and request.need.category in source.categories
+                    and (source.automatic_research or source.id in asked)
                     and (not asked or source.id in asked)
                     and (not scope_ids or source.id in scope_ids))
         if eligible:
@@ -316,3 +317,4 @@ class RepositoryRetrievalExecutor:
 #   bundle with coverage `unavailable` (not failed, not empty) so research can report the
 #   unavailable sources. (#KernelBootstrapV0/P5)
 # ====================================================================
+# - 2026-10-03 17:00 [python-coder]: Keep context owner catalogs out of automatic research while preserving explicit permitted retrieval. (#DK-300/entity-context)

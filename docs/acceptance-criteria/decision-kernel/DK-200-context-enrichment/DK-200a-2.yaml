@@ -9,11 +9,12 @@ req_status: draft
 priority: high
 work_status: done
 criteria: |
-  Given a run has gathered context and is waiting for a human answer or a host result,
-  And a document used by enrichment changes while the run waits,
+  Given a fresh run has checkpointed entity interpretation and waits for human or host input,
+  And canonical source content and the entity index change while the run waits,
   When the waiting run resumes,
-  Then the run retains its original context snapshot,
-  And no second initial enrichment outcome is produced for that run.
+  Then the run retains its original EntityContext snapshot,
+  And no second recognition pass or context.recognized outcome is produced,
+  And later evidence records changed source content separately from the saved meanings.
 depends_on: [DK-200a]
 covered_by:
   - "tests/kernel/intent/test_context_enrichment_wiring.py::TestContextEnrichmentWiring::test_resume_reuses_checkpointed_context_instead_of_reading_changed_files"
@@ -26,12 +27,12 @@ implemented_by:
 assigned_agent: python-coder
 estimated_complexity: M
 it_requirements:
-  - "Persisted context must survive process boundaries and human or host resume without re-reading changed repository files."
-  - "Resuming the same run must not create a second initial context event or replace its checkpointed context."
+  - "Persisted EntityContext must survive fresh-service human or host resume without rebuilding the index or repeating recognition; routed evidence retrieval may read changed sources."
+  - "Resuming the same run must not create a second context.recognized event or replace its checkpointed meanings."
 delivers_to: null
 expects_from:
-  ac_id: DK-200a-3
-  contract: "EnrichedContext checkpoint value: original_goal:string; caller_context:{host:string|null, capabilities:string[], conversation:string[], observations:string[]}; workspace_id:string; repository_root:string; registered_capabilities:string[]; evidence:{source_id:string, locator:string, excerpt:string, content_hash:string, truncated:boolean}[]; sources_consulted:string[]; files_scanned:integer; limitations:string[]; truncated:boolean; status:gathered|no_evidence|partial|unavailable|disabled. Caller claims and source evidence remain distinct; the saved value is unchanged by provider projection."
+  ac_id: DK-300d-1
+  contract: "EntityContext version 1.0 checkpoint under state.entity_context; kind=entity_context; original_goal remains verbatim; caller_context and registered_capabilities are separate; entities contain compact typed meanings, canonical references and provenance, never body evidence; unresolved references, coverage, budgets and limitations describe the pass; status=recognized|no_matches|partial|unavailable|disabled. Human and host resume reuse the saved snapshot without recognition or index rebuilding. Historical EnrichedContext checkpoints retain their old channel and semantics."
 test_required: true
 test_spec:
   - name: test_resume_reuses_checkpointed_context_instead_of_reading_changed_files
@@ -39,13 +40,13 @@ test_spec:
     framework: pytest
     type: integration
     angle: reachability
-    description: "After a human pause and repository mutation, resume preserves the identical context snapshot and exactly one context.enriched event."
+    description: "After a human pause, source mutation and index rebuild, resume preserves identical EntityContext and exactly one context.recognized event; later evidence contains changed source content and provenance."
   - name: test_host_artifact_and_host_resume_retain_the_saved_context
     target_dir: tests/kernel/intent/
     framework: pytest
     type: integration
     angle: seam
-    description: "A valid host submission through a fresh service preserves the prior context after repository mutation and produces no second context.enriched event."
+    description: "A valid host submission through a fresh service preserves prior EntityContext after source mutation and index rebuild, without re-recognition or a second context.recognized event."
 test_rationale: "Human and host continuations are distinct entry paths; both require checkpoint round-trip evidence against a changed repository."
 doc_links:
   - path: docs/product-truth/flows/leafcutter/decision-forming.flow.json
@@ -61,18 +62,11 @@ origin_agent: business-analyst
 created: 2026-10-02
 amended_by:
   - reason: "IT PO technical enrichment and verified test mapping on 2026-10-02; BA criteria and draft readiness preserved."
+  - reason: "2026-10-04 DK-300 migration under the user-approved entity-context redesign: retain the fresh-run ordering, explicit-route, snapshot and downstream-handoff invariants, but replace obsolete lexical EnrichedContext/body-evidence expectations with versioned EntityContext. Historical reports and direct gather_context compatibility remain unchanged; these revised criteria are verified by current behavioral tests, not historical scores."
 superseded_by: null
 notes: |
   Decomposed from the user-authorized context-enrichment scope and existing
   DK-100 through DK-104. IT PO technical constraints and exact behavioral test
   links are recorded. Readiness remains draft; no product approval is implied.
-product_truth:
-  - flow: leafcutter/decision-forming
-    node: enrich-context
-    node_kind: step
-    flow_kind: data
-    screen: null
-    mock_data: leafcutter/decisions
-    entities: []
-    source: real
-    asof: '2026-10-02'
+  Fresh-run wiring now follows DK-300d-1 and DK-300d-3/-3-i. The earlier
+  lexical contract remains recorded in Git and the historical evaluation reports.

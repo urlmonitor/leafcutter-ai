@@ -23,6 +23,7 @@ from pydantic import BaseModel, ConfigDict, Field, ValidationError, model_valida
 from integrations.knowledge_config import KnowledgeBindingConfig
 from kernel.config_memory import MemoryConfig
 from kernel.config_context import ContextEnrichmentConfig
+from kernel.config_entity import EntityContextConfig
 from kernel.contracts.base import fail
 from kernel.contracts.enums import EvidenceCategory
 
@@ -220,6 +221,7 @@ class SourceConfig(_Section):
     id: str
     kind: Literal["repo_text", "knowledge_map", "graph_query", "host_research"]
     categories: list[EvidenceCategory] = Field(min_length=1)
+    automatic_research: bool = True  # false: select only through explicit sources or locators
     roots: list[str] = Field(default_factory=list)
     surfaces: list[str] = Field(default_factory=list)
     deny_globs: list[str] = Field(default_factory=list)  # added to `retrieval.deny_globs`
@@ -274,6 +276,7 @@ class KernelConfig(_Section):
     routing: RoutingConfig
     intent: IntentConfig
     context_enrichment: ContextEnrichmentConfig
+    entity_context: EntityContextConfig
     decision: DecisionConfig
     research: ResearchConfig
     retrieval: RetrievalConfig
@@ -425,3 +428,6 @@ def write_config_schema(path: Path) -> None:
 # ====================================================================
 
 # - 2026-10-01 20:00 [python-coder]: Bind optional knowledge through existing scoped retrieval contracts. (#TICKET-20261001-KM-400e-3)
+
+# - 2026-10-03 15:05 [python-coder]: Keep pre-intent meanings deterministic, scoped and separate from task evidence. (#TICKETLESS reason=user-approved-ac-first-DK300)
+# - 2026-10-03 17:00 [python-coder]: Separate catalog permission from automatic research eligibility so meaning owners do not bypass precedent filtering. (#DK-300/entity-context)

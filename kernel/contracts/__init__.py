@@ -19,6 +19,7 @@ from kernel.contracts import (
     capability,
     context,
     decision,
+    entity_context,
     enums,
     evidence,
     interaction,
@@ -114,8 +115,12 @@ from kernel.contracts.work import (  # noqa: F401
 )
 
 from kernel.contracts.context import CallerContext, ContextExcerpt, EnrichedContext  # noqa: F401
+from kernel.contracts.entity_context import (  # noqa: F401
+    EntityBudgets, EntityCard, EntityContext, EntityCounts, EntityCoverage,
+    EntityMatch, EntityProvenance, UnresolvedEntity,
+)
 
-_MODULES: tuple[ModuleType, ...] = (base, capability, context, decision, enums, evidence, interaction,
+_MODULES: tuple[ModuleType, ...] = (base, capability, context, decision, entity_context, enums, evidence, interaction,
                                     payloads, query, run, task, work)
 
 
@@ -140,4 +145,5 @@ __all__ = [name for name in dir() if not name.startswith("_")]
 # ====================================================================
 # - 2026-09-30 22:00 [python-coder]: ALL_MODELS is introspected rather than hand-listed so the
 #   serde allowlist can never lag behind a new contract. (#KernelBootstrapV0/P1)
+# - 2026-10-03 15:10 [python-coder]: Preserve verbatim goals and separate meaning, caller and clarification channels. (#DK-300/entity-context)
 # ====================================================================
