@@ -1,0 +1,60 @@
+id: DK-500c-2-i
+title: Publish refuses a member that its decision does not carry
+component: decision-kernel
+components:
+- decision_kernel
+level: L3
+status: active
+readiness: draft
+req_status: draft
+priority: medium
+work_status: todo
+roadmap_phase: phase_kernel_2_knowledge
+criteria: |
+  Given a staged category record with the member (dec-d53e1c52cd47c832, crit.person_authorises),
+  And crit.person_authorises is a criterion of dec-acdfd972fcaca478, while dec-d53e1c52cd47c832 carries no criterion with that id,
+  When a person runs the publish,
+  Then the publish is refused, naming the category id and the pair (dec-d53e1c52cd47c832, crit.person_authorises),
+  And nothing enters the published library and no decision record changes,
+  And a member whose criterion exists but asks a question that is none of the category's wordings is refused the same way,
+  And after the pair is corrected to (dec-acdfd972fcaca478, crit.person_authorises), the same publish succeeds.
+depends_on:
+- DK-500c-2
+covered_by: []
+implemented_by: []
+assigned_agent: python-coder
+estimated_complexity: null
+delivers_to: null
+expects_from:
+  ac_id: DK-500c-2
+  contract: Publish checks over staged category records.
+doc_links:
+- path: docs/decisions/dec-93c1c730463c1f3c.yaml
+  relationship: governs
+  status: exists
+- path: docs/product-truth/flows/leafcutter/criteria-library.flow.json
+  relationship: implements
+  status: exists
+- path: docs/product-truth/mock-data/leafcutter/criterion-categories.mock.json
+  relationship: specified-by
+  status: exists
+origin_agent: business-analyst
+created: 2026-10-04
+amended_by: []
+superseded_by: null
+notes: |
+  Mock invariants: every member names a published decision whose criteria contain the criterion, and that criterion's question is the category's pref_label or one of its alt_labels. The corrected pair is the positive control.
+  FLOW BACK-LINK (for step.implements, to be applied by the store owner): leafcutter/criteria-library: publish.
+  Authored by the business-analyst stage of /plan-feature (route strategic) under decision dec-93c1c730463c1f3c; readiness draft, no product approval implied.
+product_truth:
+  - flow: leafcutter/criteria-library
+    node: publish
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: leafcutter/criterion-categories
+    entities:
+      - CriterionCategory
+      - Decision
+    source: mock
+    asof: '2026-10-04'

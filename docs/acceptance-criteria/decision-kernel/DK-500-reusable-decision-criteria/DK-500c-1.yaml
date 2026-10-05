@@ -1,0 +1,88 @@
+id: DK-500c-1
+title: Only a person's approval in a kernel run turns a candidate into a staged category record
+component: decision-kernel
+components:
+- decision_kernel
+level: L2
+status: active
+readiness: draft
+req_status: draft
+priority: medium
+work_status: todo
+roadmap_phase: phase_kernel_2_knowledge
+criteria: |
+  Given the candidate cat-73d233fc8b15c735 with proposed_by criteria_mining, approval_status proposed and the preferred wording "Maintainability: does it keep working with little upkeep as decisions and the harness evolve?",
+  When human:user accepts it in a kernel run after changing its preferred wording to "Does it keep working with little upkeep as decisions, components and the harness evolve?",
+  And that run ends,
+  Then the category carries approval_status approved, approved_by human:user and the time of the approval,
+  And its id is still cat-73d233fc8b15c735 after the wording change,
+  And its record is written into that run's staged area with lifecycle_stage staged and that run's id, and it has no place in the published library yet,
+  And no file in the repository changes.
+depends_on:
+- DK-500c
+- DK-500b-1
+covered_by:
+- DK-500c-1-i
+- DK-500c-1-ii
+implemented_by: []
+assigned_agent: python-coder
+estimated_complexity: null
+delivers_to:
+  agent: python-coder
+  contract: 'Staged category record in the approving run''s staged area: {id: cat-<16 hex>, repository_id, kind: criterion_category, pref_label, alt_labels[], broader, replaced_by: [], members[] {decision_id, criterion_id}, decision_types[], components[], lifecycle_stage: staged, approval_status: approved, proposed_by, proposed_at, approved_by: human(:<name>), approved_at, run_id, staged_path, record_path: null, retirement: null, mined_from[]}. Consumed by publish (DK-500c-2).'
+expects_from:
+  ac_id: DK-500b-1
+  contract: Grouping suggestions and mined candidates presented in a kernel run.
+doc_links:
+- path: docs/decisions/dec-93c1c730463c1f3c.yaml
+  relationship: governs
+  status: exists
+- path: docs/product-truth/flows/leafcutter/criteria-library.flow.json
+  relationship: implements
+  status: exists
+- path: docs/product-truth/mock-data/leafcutter/criterion-categories.mock.json
+  relationship: specified-by
+  status: exists
+- path: docs/architecture/adrs/ADR-060-source-of-truth-and-approval-authority.md
+  relationship: constrains
+  status: exists
+- path: docs/architecture/adrs/ADR-061-identity-of-declared-and-learned-records.md
+  relationship: constrains
+  status: exists
+- path: docs/how-to/file-and-reuse-decisions-with-the-kernel.md
+  relationship: related
+  status: exists
+  relevance: The stage-then-publish path decision records follow; category records follow it by analogy.
+origin_agent: business-analyst
+created: 2026-10-04
+amended_by: []
+superseded_by: null
+declares_side_effect: true
+notes: |
+  Flow nodes: criteria-library approve and stage (the stage step is the immediate consequence of the approval when the run ends, so both are one behaviour here).
+  SETTLED by dec-93c1c730463c1f3c: records are staged in the run root and enter Git only through a human-run publish.
+  MOCK ASSUMPTIONS this AC adopts and asks the user to confirm: the id scheme cat-<16 hex>, kernel-minted at proposal and never changed by a label edit, merge or split; the staging location <run_root>/runs/<run_id>/staged/criterion_categories/<id>.yaml (kept out of the criteria text, which says "that run's staged area"); approved_by matching human(:<name>).
+  Open: where the person reviews candidates (which kernel capability or command opens the review run).
+  FLOW BACK-LINK (for step.implements, to be applied by the store owner): leafcutter/criteria-library: approve, stage.
+  Authored by the business-analyst stage of /plan-feature (route strategic) under decision dec-93c1c730463c1f3c; readiness draft, no product approval implied.
+product_truth:
+  - flow: leafcutter/criteria-library
+    node: approve
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: leafcutter/criterion-categories
+    entities:
+      - CriterionCategory
+    source: mock
+    asof: '2026-10-04'
+  - flow: leafcutter/criteria-library
+    node: stage
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: leafcutter/criterion-categories
+    entities:
+      - CriterionCategory
+    source: mock
+    asof: '2026-10-04'

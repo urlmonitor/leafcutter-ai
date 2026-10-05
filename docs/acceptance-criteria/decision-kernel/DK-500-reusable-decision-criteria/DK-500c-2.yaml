@@ -1,0 +1,76 @@
+id: DK-500c-2
+title: Publishing a staged category checks it and enters it into the library without touching any decision record
+component: decision-kernel
+components:
+- decision_kernel
+level: L2
+status: active
+readiness: draft
+req_status: draft
+priority: medium
+work_status: todo
+roadmap_phase: phase_kernel_2_knowledge
+criteria: |
+  Given the staged record of cat-6c3eb4f2af148922 from run-8e11d78d6e2a6c2e, with the member (dec-93c1c730463c1f3c, crit.filters_from_declared_vocabularies) and the broader category cat-d6ce5f78c181ebd1,
+  When a person runs the publish for that run,
+  Then the record is checked: every member names a published decision whose criteria carry that criterion, that criterion's question is one of the category's wordings, no wording is a label of another staged or published category, no member pair belongs to another staged or published category, and the broader category is published,
+  And the record is written into the published category library with lifecycle_stage published, where it is reviewed and merged like any other change,
+  And the generated usage index is rebuilt to include it,
+  And no decision record changes.
+depends_on:
+- DK-500c
+- DK-500c-1
+covered_by:
+- DK-500c-2-i
+- DK-500c-2-ii
+implemented_by: []
+assigned_agent: python-coder
+estimated_complexity: null
+delivers_to:
+  agent: python-coder
+  contract: Published category record in the category library (record_path set, lifecycle_stage published) plus a regenerated, freshness-checked usage index. Consumed by reuse (DK-500d-1), usage counts (DK-500f-1) and the knowledge graph import (DK-500g-1).
+expects_from:
+  ac_id: DK-500c-1
+  contract: Staged category record in the approving run's staged area.
+doc_links:
+- path: docs/decisions/dec-93c1c730463c1f3c.yaml
+  relationship: governs
+  status: exists
+- path: docs/product-truth/flows/leafcutter/criteria-library.flow.json
+  relationship: implements
+  status: exists
+- path: docs/product-truth/mock-data/leafcutter/criterion-categories.mock.json
+  relationship: specified-by
+  status: exists
+- path: docs/architecture/adrs/ADR-060-source-of-truth-and-approval-authority.md
+  relationship: constrains
+  status: exists
+- path: docs/architecture/adrs/ADR-061-identity-of-declared-and-learned-records.md
+  relationship: constrains
+  status: exists
+- path: docs/how-to/file-and-reuse-decisions-with-the-kernel.md
+  relationship: related
+  status: exists
+  relevance: The stage-then-publish path decision records follow; category records follow it by analogy.
+origin_agent: business-analyst
+created: 2026-10-04
+amended_by: []
+superseded_by: null
+declares_side_effect: true
+notes: |
+  Flow node: criteria-library publish. Publish follows the decision records' publish by analogy (validate the whole store and the staged record, write it, regenerate the index; the person commits and the change is reviewed).
+  OPEN, asked of the user: (1) the published folder: the mock assumes docs/criteria/<id>.yaml, the name the decision's question used, but dec-93c1c730463c1f3c did not fix it; (2) the publish command's name (a new command, or the decision publish extended to category records); (3) whether a new config/paths.json surface or pre-commit hook is needed. The decision's criterion crit.no_new_package_surface prefers none; if one is added, the IT PO must set package_surface: true on the AC that adds it.
+  FLOW BACK-LINK (for step.implements, to be applied by the store owner): leafcutter/criteria-library: publish.
+  Authored by the business-analyst stage of /plan-feature (route strategic) under decision dec-93c1c730463c1f3c; readiness draft, no product approval implied.
+product_truth:
+  - flow: leafcutter/criteria-library
+    node: publish
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: leafcutter/criterion-categories
+    entities:
+      - CriterionCategory
+      - Decision
+    source: mock
+    asof: '2026-10-04'

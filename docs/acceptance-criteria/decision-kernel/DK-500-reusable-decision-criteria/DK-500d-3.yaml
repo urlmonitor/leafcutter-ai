@@ -1,0 +1,73 @@
+id: DK-500d-3
+title: A reused criterion becomes a category member only after its decision is published, and only through a person's publish
+component: decision-kernel
+components:
+- decision_kernel
+level: L2
+status: active
+readiness: draft
+req_status: draft
+priority: medium
+work_status: todo
+roadmap_phase: phase_kernel_2_knowledge
+criteria: |
+  Given a design decision run that reused cat-1dc11c5a2ffa7310 unedited as its criterion crit.small_slice, approved by the person,
+  And the run ended with its decision record staged,
+  When the decision record is published,
+  Then the pair of the new decision id and crit.small_slice joins the members of cat-1dc11c5a2ffa7310 only through a category change that a person publishes and that is reviewed like any other change,
+  And the pair never joins while the decision record is only staged, and never by editing the published decision record,
+  And once both are published, the usage count of cat-1dc11c5a2ffa7310 rises from 3 to 4,
+  And a run whose decision is never published adds no member.
+depends_on:
+- DK-500d
+- DK-500d-1
+- DK-500c-2
+covered_by: []
+implemented_by: []
+assigned_agent: python-coder
+estimated_complexity: null
+delivers_to: null
+expects_from:
+  ac_id: DK-500c-2
+  contract: Stage-and-publish path for category records.
+doc_links:
+- path: docs/decisions/dec-93c1c730463c1f3c.yaml
+  relationship: governs
+  status: exists
+- path: docs/product-truth/flows/leafcutter/criteria-library.flow.json
+  relationship: implements
+  status: exists
+- path: docs/product-truth/flows/leafcutter/decision-forming.flow.json
+  relationship: implements
+  status: exists
+- path: docs/product-truth/mock-data/leafcutter/criterion-categories.mock.json
+  relationship: specified-by
+  status: exists
+- path: docs/architecture/adrs/ADR-060-source-of-truth-and-approval-authority.md
+  relationship: constrains
+  status: exists
+- path: docs/how-to/file-and-reuse-decisions-with-the-kernel.md
+  relationship: related
+  status: exists
+  relevance: The stage-then-publish path decision records follow; category records follow it by analogy.
+origin_agent: business-analyst
+created: 2026-10-04
+amended_by: []
+superseded_by: null
+notes: |
+  OPEN, NOT SETTLED BY THE FLOWS (PO open item): how a NEW decision's reuse becomes a member pair. Option 1: publishing the decision also stages and publishes the category update in the same person-run publish. Option 2: the next mining round proposes the pair for a person (DK-500a-1-ii's last clause). This AC pins only the invariants both options must keep; the IT PO or the user picks the path. DK-500f's usage and outcome counts depend on it.
+  Membership lives only in the category record; published decision records stay unchanged (dec-93c1c730463c1f3c).
+  FLOW BACK-LINK (for step.implements, to be applied by the store owner): leafcutter/criteria-library: publish.
+  Authored by the business-analyst stage of /plan-feature (route strategic) under decision dec-93c1c730463c1f3c; readiness draft, no product approval implied.
+product_truth:
+  - flow: leafcutter/criteria-library
+    node: publish
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: leafcutter/criterion-categories
+    entities:
+      - CriterionCategory
+      - Decision
+    source: mock
+    asof: '2026-10-04'

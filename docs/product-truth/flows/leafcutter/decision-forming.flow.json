@@ -170,10 +170,10 @@
       "impl_asof": "2026-10-03",
       "impl_status": "not_started",
       "implements": [
-        "DK-300a-2",
-        "DK-300d-1",
-        "DK-300d-1-i",
-        "DK-300f-4"
+        "DK-500a-2",
+        "DK-500d-1",
+        "DK-500d-1-i",
+        "DK-500f-4"
       ]
     },
     {
@@ -196,9 +196,9 @@
       "impl_asof": "2026-10-03",
       "impl_status": "not_started",
       "implements": [
-        "DK-300e-1",
-        "DK-300e-1-i",
-        "DK-300e-1-ii"
+        "DK-500e-1",
+        "DK-500e-1-i",
+        "DK-500e-1-ii"
       ]
     },
     {
@@ -220,7 +220,7 @@
       "impl_asof": "2026-10-02",
       "impl_status": "not_started",
       "implements": [
-        "DK-300e-2"
+        "DK-500e-2"
       ]
     },
     {
@@ -239,8 +239,8 @@
       "impl_asof": "2026-10-02",
       "impl_status": "not_started",
       "implements": [
-        "DK-300d-2",
-        "DK-300d-2-i"
+        "DK-500d-2",
+        "DK-500d-2-i"
       ]
     },
     {
@@ -354,8 +354,8 @@
       "impl_asof": "2026-10-03",
       "impl_status": "not_started",
       "implements": [
-        "DK-300e-3",
-        "DK-300e-3-i"
+        "DK-500e-3",
+        "DK-500e-3-i"
       ]
     },
     {
@@ -376,10 +376,10 @@
       "impl_asof": "2026-10-03",
       "impl_status": "not_started",
       "implements": [
-        "DK-300b-4",
-        "DK-300b-4-i",
-        "DK-300e-2",
-        "DK-300e-2-i"
+        "DK-500b-4",
+        "DK-500b-4-i",
+        "DK-500e-2",
+        "DK-500e-2-i"
       ]
     },
     {
@@ -635,7 +635,7 @@
       "action": "extended",
       "by": "flow-author (reusable-criteria-store session)",
       "date": "2026-10-03",
-      "note": "Added reuse-first criteria (DK-300d) and gap-only drafting (DK-300e) under decision dec-93c1c730463c1f3c: new steps reuse-criteria and judge-gap before propose, and branches empty-library (cold start, behaviour unchanged) and draft-for-gap. The propose and approve-proposals lines now say new criteria are drafted only for a gap and reused criteria are proposals you approve like any other. Steps renumbered, ids kept, implements left empty for the business-analyst. The new nodes describe unbuilt behaviour; the categories they read live in leafcutter/criterion-categories, while mock_data_ref stays leafcutter/decisions. Readiness stays draft."
+      "note": "Added reuse-first criteria (DK-500d) and gap-only drafting (DK-500e) under decision dec-93c1c730463c1f3c: new steps reuse-criteria and judge-gap before propose, and branches empty-library (cold start, behaviour unchanged) and draft-for-gap. The propose and approve-proposals lines now say new criteria are drafted only for a gap and reused criteria are proposals you approve like any other. Steps renumbered, ids kept, implements left empty for the business-analyst. The new nodes describe unbuilt behaviour; the categories they read live in leafcutter/criterion-categories, while mock_data_ref stays leafcutter/decisions. Readiness stays draft."
     }
   ],
   "impl_summary": {

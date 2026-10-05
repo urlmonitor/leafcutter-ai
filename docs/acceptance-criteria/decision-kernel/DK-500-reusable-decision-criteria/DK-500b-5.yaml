@@ -1,0 +1,52 @@
+id: DK-500b-5
+title: 'Reference: grouping suggestions, their rules and how their quality is measured'
+component: decision-kernel
+components:
+- decision_kernel
+level: L2
+status: active
+readiness: draft
+req_status: draft
+priority: medium
+work_status: todo
+roadmap_phase: phase_kernel_2_knowledge
+criteria: |
+  Given the grouping behaviours DK-500b-1 to DK-500b-4,
+  When a reader opens the grouping reference,
+  Then it lists the fields of a grouping suggestion (the placed category or "none", preferred wording, other wordings, broader category, reason),
+  And it states the four settled rules: cheapest placement first, precision over recall, in-run grouping within the run's Jev budget and free on an empty library, and every grouping a suggestion a person accepts, changes or undoes,
+  And it states the invariants: no label in two live categories, broader never loops and never names a retired category,
+  And it defines precision, recall and the share left at "none" for a labelled set and an acceptance setting,
+  And it marks the grouping method as pending the decision of kernel run run-b5af8c7fae2248ba, without describing any method as chosen.
+depends_on:
+- DK-500b
+- DK-500b-1
+- DK-500b-2
+- DK-500b-3
+- DK-500b-4
+covered_by: []
+implemented_by: []
+assigned_agent: documentation-expert
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+doc_links:
+- path: docs/decisions/dec-93c1c730463c1f3c.yaml
+  relationship: governs
+  status: exists
+- path: docs/product-truth/flows/leafcutter/criteria-library.flow.json
+  relationship: implements
+  status: exists
+- path: docs/product-truth/mock-data/leafcutter/criterion-categories.mock.json
+  relationship: specified-by
+  status: exists
+- path: docs/architecture/adrs/ADR-053-intelligence-selection-deterministic-jev-llm-human.md
+  relationship: constrains
+  status: exists
+origin_agent: business-analyst
+created: 2026-10-04
+amended_by: []
+superseded_by: null
+notes: |
+  Documentation AC answering DK-500b's reference-doc trigger. Update it when run-b5af8c7fae2248ba settles the method; until then the method section says pending. Its deliverable is the document only.
+  Authored by the business-analyst stage of /plan-feature (route strategic) under decision dec-93c1c730463c1f3c; readiness draft, no product approval implied.

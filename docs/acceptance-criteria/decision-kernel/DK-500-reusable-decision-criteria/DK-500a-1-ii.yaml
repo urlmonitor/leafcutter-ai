@@ -1,0 +1,68 @@
+id: DK-500a-1-ii
+title: Mining again does not re-propose a question the library or an open candidate already asks
+component: decision-kernel
+components:
+- decision_kernel
+level: L3
+status: active
+readiness: draft
+req_status: draft
+priority: medium
+work_status: todo
+roadmap_phase: phase_kernel_2_knowledge
+criteria: |
+  Given the published category cat-1dc11c5a2ffa7310 with the preferred wording "Can it be built and verified as one ticket?" and members from dec-4673055ef54113d5, dec-acdfd972fcaca478 and dec-d53e1c52cd47c832,
+  And the candidate cat-73d233fc8b15c735 from an earlier mining run still awaits a person,
+  When a person runs the mining again over the same published records and run history,
+  Then no new candidate is proposed whose wordings are labels of cat-1dc11c5a2ffa7310,
+  And cat-73d233fc8b15c735 is not proposed a second time under another id,
+  And cat-1dc11c5a2ffa7310 is unchanged by the mining run,
+  And a newly published decision whose criterion asks "Can it be built and verified as one ticket?" is reported as a sighting for cat-1dc11c5a2ffa7310, for a person to review, rather than as a new candidate.
+depends_on:
+- DK-500a-1
+covered_by: []
+implemented_by: []
+assigned_agent: python-coder
+estimated_complexity: null
+delivers_to: null
+expects_from:
+  ac_id: DK-500a-1
+  contract: Mining result; plus the published category records it compares against.
+doc_links:
+- path: docs/decisions/dec-93c1c730463c1f3c.yaml
+  relationship: governs
+  status: exists
+- path: docs/product-truth/flows/leafcutter/criteria-library.flow.json
+  relationship: implements
+  status: exists
+- path: docs/product-truth/mock-data/leafcutter/criterion-categories.mock.json
+  relationship: specified-by
+  status: exists
+- path: docs/architecture/adrs/ADR-060-source-of-truth-and-approval-authority.md
+  relationship: constrains
+  status: exists
+- path: docs/architecture/adrs/ADR-061-identity-of-declared-and-learned-records.md
+  relationship: constrains
+  status: exists
+origin_agent: business-analyst
+created: 2026-10-04
+amended_by: []
+superseded_by: null
+notes: |
+  Mining runs repeatedly (it is the feedback loop for DK-500e: drafted and person-added criteria in published decisions become material for the next round). Without this rule every round re-proposes the whole library.
+  The last clause is consistent with both open options for how a NEW decision's reuse becomes a member pair (DK-500d-3): if the publish already added the pair, the mining finds it is already a member and reports nothing new.
+  Open: whether a candidate a person REJECTED is remembered so that the next mining run does not propose it again (see DK-500c-1-ii notes).
+  FLOW BACK-LINK (for step.implements, to be applied by the store owner): leafcutter/criteria-library: mine.
+  Authored by the business-analyst stage of /plan-feature (route strategic) under decision dec-93c1c730463c1f3c; readiness draft, no product approval implied.
+product_truth:
+  - flow: leafcutter/criteria-library
+    node: mine
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: leafcutter/criterion-categories
+    entities:
+      - CriterionCategory
+      - Decision
+    source: mock
+    asof: '2026-10-04'

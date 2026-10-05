@@ -1,0 +1,77 @@
+id: DK-500a-1
+title: One mining run reads both published decisions and run history and reports every sighting with its source
+component: decision-kernel
+components:
+- decision_kernel
+level: L2
+status: active
+readiness: draft
+req_status: draft
+priority: medium
+work_status: todo
+roadmap_phase: phase_kernel_2_knowledge
+criteria: |
+  Given the published decision records dec-4673055ef54113d5, dec-acdfd972fcaca478 and dec-d53e1c52cd47c832 each carry the criterion crit.small_slice, worded three different ways,
+  And the run history in Langfuse holds the question "Can it be put in place with a small change?" from four kernel runs: run-1dec9568f85745e4 (partial), run-35ecc5ce9780442d (completed, its decision dec-e4c6a3e133b9694b staged and never published), run-5bd2023780654292 (failed) and run-de1c989117414c1c (waiting for a person),
+  And no criterion category exists yet,
+  When a person runs the offline criteria mining,
+  Then crit.small_slice is reported with three published-record sightings, one per decision, each naming its decision id, its criterion id and the wording that decision carries,
+  And "Can it be put in place with a small change?" is reported with four run-history sightings, one per run, each naming its run id, its run status and its Langfuse trace id,
+  And the sightings from the failed, the waiting and the never-published runs are among them,
+  And every candidate category the mining proposes has proposed_by criteria_mining and approval_status proposed, no approver, no staging run and no place in the published library.
+depends_on:
+- DK-500a
+covered_by:
+- DK-500a-1-i
+- DK-500a-1-ii
+- DK-500a-1-iii
+implemented_by: []
+assigned_agent: python-coder
+estimated_complexity: null
+delivers_to:
+  agent: python-coder
+  contract: 'Mining result: candidates[] each {proposed_by: criteria_mining, approval_status: proposed, proposed_at, mined_from[] {source: published_record|langfuse_trace, run_id, run_status: string|null, langfuse_trace_id, decision_id: dec id|null, criterion_id, origin: approved|generated|human_edited, wording}}, plus sources_read {published_records: read|unavailable, run_history: read|unavailable} with a reason per unavailable source. Consumed by grouping suggestions (DK-500b-1) and by approval in a kernel run (DK-500c-1).'
+expects_from: null
+doc_links:
+- path: docs/decisions/dec-93c1c730463c1f3c.yaml
+  relationship: governs
+  status: exists
+- path: docs/product-truth/flows/leafcutter/criteria-library.flow.json
+  relationship: implements
+  status: exists
+- path: docs/product-truth/mock-data/leafcutter/criterion-categories.mock.json
+  relationship: specified-by
+  status: exists
+- path: docs/architecture/adrs/ADR-058-langfuse-colony-history-scores-datasets.md
+  relationship: constrains
+  status: exists
+  relevance: 'Section 6: only an offline job reads Langfuse; the kernel''s hot path never does.'
+- path: docs/architecture/adrs/ADR-060-source-of-truth-and-approval-authority.md
+  relationship: constrains
+  status: exists
+- path: docs/architecture/components/decision-kernel.md
+  relationship: describes
+  status: exists
+origin_agent: business-analyst
+created: 2026-10-04
+amended_by: []
+superseded_by: null
+notes: |
+  USER REQUIREMENT (2026-10-02, decided directly by the user; no decision record exists for it): mining reads BOTH published decision records AND the Langfuse run history of kernel runs, including failed, cancelled, waiting and never-published runs. It is an OFFLINE job that produces CANDIDATES only. Do not drop either source.
+  Flow node: leafcutter/criteria-library step mine. Data: mock leafcutter/criterion-categories, record cat-1dc11c5a2ffa7310 (its mined_from entries are the sightings named above).
+  Deliberately NOT asserted here: how sightings become one candidate (that is grouping, DK-500b) and the minimum number of sightings that makes a question "recurring" (open; see the run's open questions). The trigger in this AC is a person starting the job on demand, as the flow's acceptance scenario says; whether it is also scheduled is open.
+  Where candidates are kept between the mining run and a person's review is open: the mock data keeps them out of both the run root and Git (run_id, staged_path and record_path are null while candidate).
+  FLOW BACK-LINK (for step.implements, to be applied by the store owner): leafcutter/criteria-library: mine.
+  Authored by the business-analyst stage of /plan-feature (route strategic) under decision dec-93c1c730463c1f3c; readiness draft, no product approval implied.
+product_truth:
+  - flow: leafcutter/criteria-library
+    node: mine
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: leafcutter/criterion-categories
+    entities:
+      - CriterionCategory
+      - Decision
+    source: mock
+    asof: '2026-10-04'

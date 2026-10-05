@@ -46,11 +46,11 @@
       "impl_asof": "2026-10-03",
       "impl_status": "not_started",
       "implements": [
-        "DK-300a-1",
-        "DK-300a-1-i",
-        "DK-300a-1-ii",
-        "DK-300a-1-iii",
-        "DK-300a-2"
+        "DK-500a-1",
+        "DK-500a-1-i",
+        "DK-500a-1-ii",
+        "DK-500a-1-iii",
+        "DK-500a-2"
       ]
     },
     {
@@ -75,14 +75,14 @@
       "impl_asof": "2026-10-03",
       "impl_status": "not_started",
       "implements": [
-        "DK-300b-1",
-        "DK-300b-1-i",
-        "DK-300b-2",
-        "DK-300b-2-i",
-        "DK-300b-3",
-        "DK-300b-3-i",
-        "DK-300b-4",
-        "DK-300b-4-i"
+        "DK-500b-1",
+        "DK-500b-1-i",
+        "DK-500b-2",
+        "DK-500b-2-i",
+        "DK-500b-3",
+        "DK-500b-3-i",
+        "DK-500b-4",
+        "DK-500b-4-i"
       ]
     },
     {
@@ -106,8 +106,8 @@
       "impl_asof": "2026-10-03",
       "impl_status": "not_started",
       "implements": [
-        "DK-300c-1",
-        "DK-300c-1-i"
+        "DK-500c-1",
+        "DK-500c-1-i"
       ]
     },
     {
@@ -128,7 +128,7 @@
       "impl_asof": "2026-10-03",
       "impl_status": "not_started",
       "implements": [
-        "DK-300c-1"
+        "DK-500c-1"
       ]
     },
     {
@@ -153,10 +153,10 @@
       "impl_asof": "2026-10-03",
       "impl_status": "not_started",
       "implements": [
-        "DK-300c-2",
-        "DK-300c-2-i",
-        "DK-300c-2-ii",
-        "DK-300d-3"
+        "DK-500c-2",
+        "DK-500c-2-i",
+        "DK-500c-2-ii",
+        "DK-500d-3"
       ]
     },
     {
@@ -178,8 +178,8 @@
       "impl_asof": "2026-10-03",
       "impl_status": "not_started",
       "implements": [
-        "DK-300f-1",
-        "DK-300f-4"
+        "DK-500f-1",
+        "DK-500f-4"
       ]
     },
     {
@@ -205,8 +205,8 @@
       "impl_asof": "2026-10-03",
       "impl_status": "not_started",
       "implements": [
-        "DK-300f-2",
-        "DK-300f-2-i"
+        "DK-500f-2",
+        "DK-500f-2-i"
       ]
     },
     {
@@ -229,7 +229,7 @@
       "impl_asof": "2026-10-03",
       "impl_status": "not_started",
       "implements": [
-        "DK-300g-1"
+        "DK-500g-1"
       ]
     },
     {
@@ -253,10 +253,10 @@
       "impl_asof": "2026-10-03",
       "impl_status": "not_started",
       "implements": [
-        "DK-300g-2",
-        "DK-300g-2-i",
-        "DK-300g-3",
-        "DK-300g-3-i"
+        "DK-500g-2",
+        "DK-500g-2-i",
+        "DK-500g-3",
+        "DK-500g-3-i"
       ]
     },
     {
@@ -281,9 +281,9 @@
       "impl_asof": "2026-10-03",
       "impl_status": "not_started",
       "implements": [
-        "DK-300c-3",
-        "DK-300c-3-i",
-        "DK-300c-3-ii"
+        "DK-500c-3",
+        "DK-500c-3-i",
+        "DK-500c-3-ii"
       ]
     }
   ],
@@ -302,7 +302,7 @@
       "impl_asof": "2026-10-03",
       "impl_status": "not_started",
       "implements": [
-        "DK-300c-1-ii"
+        "DK-500c-1-ii"
       ]
     },
     {
@@ -319,7 +319,7 @@
       "impl_asof": "2026-10-03",
       "impl_status": "not_started",
       "implements": [
-        "DK-300f-3"
+        "DK-500f-3"
       ]
     },
     {
@@ -336,7 +336,7 @@
       "impl_asof": "2026-10-03",
       "impl_status": "not_started",
       "implements": [
-        "DK-300g-1-i"
+        "DK-500g-1-i"
       ]
     },
     {
@@ -354,7 +354,7 @@
       "impl_asof": "2026-10-03",
       "impl_status": "not_started",
       "implements": [
-        "DK-300g-1-ii"
+        "DK-500g-1-ii"
       ]
     }
   ],
@@ -449,7 +449,7 @@
       "action": "authored",
       "by": "flow-author (reusable-criteria-store session)",
       "date": "2026-10-03",
-      "note": "Journey for building and curating the reusable criteria library (DK-300a, b, c, f and g) under decision dec-93c1c730463c1f3c, populated from leafcutter/criterion-categories. Created new because no existing flow covers CriterionCategory records; reuse inside a decision run extends leafcutter/decision-forming instead. Mining reads both published records and Langfuse traces as an offline job (user decision 2026-10-02). The grouping step is method-neutral while a kernel run decides the clustering method. The importer (DK-300g, in scope since the ADR-062 knowledge retrieval merged on main in PR #998) projects categories and membership through the native-type reader registry; the graph is a rebuildable view. No mockups exist, so no screens are wired. implements left empty for the business-analyst."
+      "note": "Journey for building and curating the reusable criteria library (DK-500a, b, c, f and g) under decision dec-93c1c730463c1f3c, populated from leafcutter/criterion-categories. Created new because no existing flow covers CriterionCategory records; reuse inside a decision run extends leafcutter/decision-forming instead. Mining reads both published records and Langfuse traces as an offline job (user decision 2026-10-02). The grouping step is method-neutral while a kernel run decides the clustering method. The importer (DK-500g, in scope since the ADR-062 knowledge retrieval merged on main in PR #998) projects categories and membership through the native-type reader registry; the graph is a rebuildable view. No mockups exist, so no screens are wired. implements left empty for the business-analyst."
     }
   ],
   "impl_summary": {

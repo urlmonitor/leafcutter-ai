@@ -1,0 +1,72 @@
+id: DK-500g
+title: "Explore which decisions share which questions"
+component: decision-kernel
+components:
+  - decision_kernel
+  - knowledge_management
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_kernel_2_knowledge
+criteria: |
+  Categories appear beside the decisions that used them, ready to explore.
+
+  Published categories show up alongside the decisions that used them in the
+  project's knowledge graph, so you can follow a question across every decision
+  that asked it and spot groups of decisions that rest on the same concerns. The
+  graph is a view built from the reviewed records, so it can always be rebuilt
+  and is never the place where a category is changed.
+depends_on:
+  - DK-500
+doc_links:
+  - path: docs/decisions/dec-93c1c730463c1f3c.yaml
+    relationship: governs
+    status: exists
+    relevance: "The format must be projectable into Neo4j as one reviewed native kind without changing how the Decision kind is read (criterion crit.projectable_as_native_kind, scored 0.34 for the chosen option)."
+  - path: docs/product-truth/mock-data/leafcutter/criterion-categories.mock.json
+    relationship: specified-by
+    status: exists
+  - path: docs/architecture/adrs/ADR-059-decision-store-reviewable-yaml-records-now-graph-later.md
+    relationship: constrains
+    status: exists
+    relevance: "YAML now, graph later: Git stays canonical, the graph is derived."
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: product-owner
+created: 2026-10-03
+amended_by: []
+superseded_by: null
+covered_by:
+  - DK-500g-1
+  - DK-500g-2
+  - DK-500g-3
+  - DK-500g-4
+  - DK-500g-5
+implemented_by: []
+documentation_triggers:
+  - how-to
+  - reference-doc
+notes: |
+  This L1 is the user's "also into neo4j" for the CATEGORIES THEMSELVES. It is
+  separate from DK-500f's outcome aggregates so that it can be deferred on its
+  own.
+
+  IN SCOPE NOW (user decision 2026-10-03, verbatim: "neo4j fully works. so
+  also add the importer so we can see which decision uses which categories for
+  its decision"). The importer that reads category records as a native kind is
+  ADR-062's. ADR-062 and knowledge/native_types/decision.py were on the branch
+  feature/knowledge-retrieval-v01 when the decision cited them (evidence
+  ev-c7f5671559baafaf and ev-b7fc7cba343d593c); that branch merged to main in
+  PR #998, so they are on main but not yet on this branch. The native reader
+  registry is finite, so a new reviewed native kind is needed. The chosen
+  option scored only 0.34 on projectability, so this remains the riskiest part
+  of the goal. The IT PO confirms the graph target and whether
+  knowledge_management is the right second component.
+
+  Git stays canonical (ADR-059, ADR-060). The graph is derived and rebuildable,
+  and edits are never made there.

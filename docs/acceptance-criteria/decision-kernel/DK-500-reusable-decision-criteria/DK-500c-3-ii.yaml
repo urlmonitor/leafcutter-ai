@@ -1,0 +1,56 @@
+id: DK-500c-3-ii
+title: Retiring a broader category requires its narrower categories to point somewhere live
+component: decision-kernel
+components:
+- decision_kernel
+level: L3
+status: active
+readiness: draft
+req_status: draft
+priority: medium
+work_status: todo
+roadmap_phase: phase_kernel_2_knowledge
+criteria: |
+  Given cat-6c3eb4f2af148922 has been published with cat-d6ce5f78c181ebd1 as its broader category,
+  When a person merges or splits cat-d6ce5f78c181ebd1 and publishes the change without changing cat-6c3eb4f2af148922,
+  Then the publish is refused, naming cat-6c3eb4f2af148922 and its retired broader category,
+  And when the same change also sets the broader category of cat-6c3eb4f2af148922 to a live replacement, or to none, the publish succeeds.
+depends_on:
+- DK-500c-3
+covered_by: []
+implemented_by: []
+assigned_agent: python-coder
+estimated_complexity: null
+delivers_to: null
+expects_from:
+  ac_id: DK-500c-3
+  contract: Merge/split/retire through stage and publish.
+doc_links:
+- path: docs/decisions/dec-93c1c730463c1f3c.yaml
+  relationship: governs
+  status: exists
+- path: docs/product-truth/flows/leafcutter/criteria-library.flow.json
+  relationship: implements
+  status: exists
+- path: docs/product-truth/mock-data/leafcutter/criterion-categories.mock.json
+  relationship: specified-by
+  status: exists
+origin_agent: business-analyst
+created: 2026-10-04
+amended_by: []
+superseded_by: null
+notes: |
+  Mock invariant: broader never names a retired category. Without this rule a merge leaves a dangling broader link that the knowledge graph import would then reject (DK-500g-1-i).
+  FLOW BACK-LINK (for step.implements, to be applied by the store owner): leafcutter/criteria-library: curate.
+  Authored by the business-analyst stage of /plan-feature (route strategic) under decision dec-93c1c730463c1f3c; readiness draft, no product approval implied.
+product_truth:
+  - flow: leafcutter/criteria-library
+    node: curate
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: leafcutter/criterion-categories
+    entities:
+      - CriterionCategory
+    source: mock
+    asof: '2026-10-04'
