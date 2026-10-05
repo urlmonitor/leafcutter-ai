@@ -125,4 +125,14 @@ current code, not this entry's narrative:
   once its own closure condition (the `BO-1500f-1` store transition) landed via PR #864. This
   entry closes as a duplicate resolution, not an independent one.
 
+**Recurrence, 2026-09-16 (recorded 2026-09-16 on `acs/bo-3200f-chartered-executor` against the open entry; carried into this resolved entry when that branch merged main on 2026-09-30).** Before the `ACD-2100b-5` fix (`e4ee392d`) reached main
+(after 2026-09-22), the same shape — a relayed config read whose transport failure is turned into
+a substantive and false verdict — recurred in `/plan-feature` with a different transport failure:
+not truncation but a **charter refusal**. `status-checker` declined the registry read as out of
+scope and put `exit_code: 1` inside its refusal payload, so the run reported "exit code 1, no
+stdout" and blamed a 131 KB registry that was present and readable at both candidate locations.
+See `KI-ACD-009`. The general rule — a failure in the layer carrying an answer must never be
+reported as a finding about the subject — is `BO-3200g`; moving mechanical errands off
+read-only agents is `BO-3200f`.
+
 ---

@@ -97,9 +97,13 @@ $ find <workspace> -name agent_registry.json -not -path '*/worktrees/*'
 - **Resolve the registry path, do not hardcode a relative one.** Use the same root
   resolution the guardian hooks use, so the read works from a worktree as well as the
   workspace root.
-- **Do not gate startup on a live agent dispatch to read a static local file.** The
-  workflow runtime can read it directly; routing it through a `status-checker` adds an
-  API round-trip whose failure mode is a false halt.
+- **Do not gate startup on a live agent dispatch to read a static local file.**
+  Routing it through a `status-checker` adds an API round-trip whose failure mode is a
+  false halt. **Correction (recorded 2026-09-16):** this bullet used to say the workflow
+  runtime can read the file directly. It cannot: the E2 engine gives a workflow body no
+  filesystem or subprocess primitive (`docs/reference/workflow-authoring-contract.md` §1).
+  `ACD-2100b-5` (`e4ee392d`) resolved it by moving the read into a pre-flight script the
+  plan-feature skill runs before the workflow starts, passing the verdict in through `args`.
 
 **Why it matters beyond the message.** `/plan-feature` is the mandated entry point for
 all new work (`CLAUDE.md`, "New Work Goes Through ACs"). While this holds, that path is
@@ -214,5 +218,28 @@ migrated coverage in `f3d4630b` ("test(ac-driven-dev): migrate gate mocks to the
 resume-answer protocol") already established behaviorally. That commit merged to `main` in
 PR #864. With the store now recording what the code and tests have shown since 2026-09-21,
 this entry is closed and moved to `resolved/`.
+
+**Third cause — a charter refusal, not an I/O failure (recorded 2026-09-16 on `acs/bo-3200f-chartered-executor` against the open entry; carried into this resolved entry when that branch merged main on 2026-09-30).** Two `/plan-feature`
+reproductions on 2026-09-16 (`wf_6e6de02b-3f9`, `wf_82e1655d-e68`) halted at
+`resolve-workspace-setup-permission` before any authoring agent ran, reporting that the registry
+could not be read. The file was present and readable at both candidate locations (131 KB,
+`.leafcutter/config/` and `config/`). The step read the registry by dispatching `status-checker`
+to `cat` it, and `status-checker` (`permits_shell: false`) refused both times:
+
+```
+run 1: {"status":"failed","payload":{"blocker_summary":"out-of-scope-request: arbitrary cat command with no ticket context"}}
+run 2: {"output":"","exit_code":1,"error":"out-of-scope: status-checker only executes commands within the ticket-investigation protocol... I will not run arbitrary file-read commands outside that scope."}
+```
+
+In run 2 the refusing agent put `exit_code: 1` inside its refusal, so the run reported "exit code
+1, no stdout", which is indistinguishable from an unreadable file. The halt message's "lookup
+failure, not a permissions verdict" wording had landed, but it could not tell a refusal from an I/O
+error. That day `plan-feature.js` still dispatched about 20 shell steps to `status-checker`.
+
+This startup dispatch is gone: `ACD-2100b-5`'s pre-flight (`e4ee392d`, on main after 2026-09-22)
+reads the registry before the workflow starts. The other shell dispatches are tracked in
+`KI-BO-20260927-status-checker-runs-workflow-shell-commands`. AC coverage for the refusal class:
+`BO-3200g` (a refusal is reported as a refusal), `BO-3200f` (mechanical errands go to a chartered
+executor), `AR-200c` (every agent states its limits).
 
 ---

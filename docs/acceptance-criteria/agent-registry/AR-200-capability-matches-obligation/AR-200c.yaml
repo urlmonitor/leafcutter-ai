@@ -1,0 +1,90 @@
+id: AR-200c
+title: "Every specialist's limits are written down, not guessed at"
+component: agent-registry
+components:
+  - agent_registry
+  - build_orchestration
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  What each specialist may and may not do is stated -- for all of them.
+
+  Every specialist says plainly what it is permitted to do, so nothing has to infer
+  a permission from silence. Silence is never read as a yes and never read as a no,
+  because there is no silence left to read.
+depends_on: [AR-200]
+documentation_triggers: [reference-doc]
+doc_links:
+  - path: docs/known-issues/build-orchestration/open-high-ki-bo-20260901-1620.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      THE ENTRY THIS L1 HOMES -- it read "Status: open -- no AC" until 2026-09-16.
+      Measured there: permits_shell is declared on 2 of roughly 60 agents; the schema
+      says absent means read-only; the first reader to consult the field reasoned from
+      the two populated cases and got the default backwards, in a code comment that now
+      teaches the error. Its own correction notes that backfilling alone changes
+      nothing, because the live gate is `permits_shell === true` and absent already
+      takes the same branch as false -- so the value is in a reader that distinguishes
+      UNDECIDED from DECIDED-NONE, not in the field merely being populated.
+  - path: docs/architecture/components/agent-registry.md
+    relationship: describes
+    status: exists
+    relevance: "Component doc for the registry whose declarations this L1 makes complete."
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+    relevance: "Field and placement conventions for this record."
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: product-owner
+created: 2026-09-16
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: config
+risk_surface: contract_boundary
+notes: |
+  PLACEMENT, AND A FIT TENSION RECORDED RATHER THAN PAPERED OVER. This L1 was placed
+  under AR-200 by the user's decision on 2026-09-16 (no new L0). The fit is good
+  against the parent's FOLDER NAME and title -- capability matches obligation -- and
+  imperfect against the parent's CRITERIA BODY, which is written narrowly about a
+  specialist being equipped to RECORD A VERDICT. Declaring what a specialist may do is
+  the precondition for checking that any such match holds, but it is not verdict
+  recording. Flagged for the user rather than resolved here: either AR-200's criteria
+  is broadened by an explicit amendment to cover declaration as well as equipment, or
+  this record is re-homed. Do not quietly treat the fit as clean -- a later author
+  reading AR-200's criteria alone will not predict this child.
+
+  NOT A BACKFILL TICKET. The known issue is explicit that populating 58 records buys
+  documentation and not behaviour, because absent and false already take the identical
+  branch at the one live gate. The benefit here is that "not stated" stops being a
+  state anything can misread. Whether that is achieved by populating every entry, or
+  by changing what absence means, or by making readers distinguish undecided from
+  decided-none, is a decision for the BA and the IT PO. The criteria above is
+  deliberately silent on which, and must stay silent on it.
+
+  WHY medium. On its own this changes no behaviour -- it is legibility. It earns its
+  place because it is the precondition for enforcing anything: BO-3200f removes the
+  need to ask a specialist for an errand, and BO-3200g makes a refusal legible, but
+  neither stops a new errand being wired to a party that cannot run it. That
+  enforcement cannot be written against a field that 58 of 60 agents leave unstated.
+
+  DO NOT ABSORB: whether a given dispatch is wired to a chartered agent. That is
+  enforcement, and it belongs under BO-3200a as an extension of BO-3200a-2's sweep
+  from "every path that resolves a fact" to "every dispatch whose prompt runs a
+  command". Recorded for the BA. This record is only about the declaration being
+  complete enough to enforce against.
+
+  SIBLINGS. AR-200a (a specialist told to record a verdict can record one) and
+  AR-200b (a specialist told to use a tool is given it) are both about a specialist
+  being EQUIPPED. This one is about the declaration being LEGIBLE. Three L1 slots
+  remain free under AR-200 after this record.

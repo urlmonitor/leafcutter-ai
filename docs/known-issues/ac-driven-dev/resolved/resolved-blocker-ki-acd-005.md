@@ -120,4 +120,15 @@ of a provenance discriminator resting on undocumented-in-code agent honesty — 
 carry its own OPEN entry rather than live only as a note here: see
 [`KI-ACD-20260923-provenance-producer-unverified`](../open-high-ki-acd-20260923-provenance-producer-unverified.md).
 
+**Cross-reference (recorded 2026-09-16 on `acs/bo-3200f-chartered-executor` against the open entry; carried into this resolved entry when that branch merged main on 2026-09-30).** This entry is one of two ways the same `status-checker`
+out-of-scope refusal was misread. Here the refusal was parsed as **the user's consent** (a choice
+to cancel). In `KI-ACD-009` the identical refusal was parsed as an **I/O failure** (a registry that
+could not be read), which sent the operator to repair a file that was present and healthy. Same
+cause, two victims, two remedies:
+
+- consent provenance → `BO-3200c` / `BO-3200c-2` and `ACD-2100c`
+- outcome class → `BO-3200g` ("You are never sent to repair something that is not broken")
+
+Both sit downstream of `BO-3200f`, which moves mechanical errands off read-only reporting agents.
+
 ---

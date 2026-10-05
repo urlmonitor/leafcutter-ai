@@ -61,35 +61,34 @@ blocking a commit — check the id exists before using it.
 
 ## Verified orphans — declared triggers with no AC-side home
 
-Four fields are named by an agent template or runbook as the thing that drives
+Three fields are named by an agent template or runbook as the thing that drives
 behaviour, and have **zero occurrences in both `config/ac_store_schema.json` and
-`scripts/ac_store/generate_ticket_from_ac.py`**:
+`scripts/ac_store/generate_ticket_from_ac.py`** (re-verified 2026-09-16):
 
 | field | named by | consequence |
 |---|---|---|
-| `declares_side_effect` | generator's own routing (~line 903) | see below — the worst of the four |
-| `user_facing_surface` | `config/agent_registry.json` (~2597) as the legacy `user-surface-smoker` trigger | second orphaned trigger for the same agent |
+| `user_facing_surface` | `config/agent_registry.json` (~2597) as the legacy `user-surface-smoker` trigger | orphaned trigger for the smoker |
 | `live_surface_test` | `live-surface-tester` (registry ~2663) | the agent exists and is registered; nothing can request it |
 | `test_failure_rework_cap` | `building-epics/SKILL.md` §4 (~784), "configurable per-ticket via ticket frontmatter" | the cap cannot actually be overridden |
 
-**`declares_side_effect` is the sharpest case, and an earlier analysis got it
-backwards.** It was claimed to exist at `ac_store_schema.json:637`; line 637 is
-`product_truth`, and the field has zero occurrences in the schema and zero ACs
-carrying it. Because the schema sets top-level `additionalProperties: false`, it
-**cannot legally be authored on an AC at all**. The generator's routing at ~903
-(`if declares_side_effect: all_needed.add("user-surface-smoker")`) and its
-non-overridable enforcement at ~920 are live but dead-ended.
+**`declares_side_effect` is no longer an orphan — do not act on older notes
+saying it cannot be authored.** It is now a schema field
+(`ac_store_schema.json` ~676), carried by 170 ACs, and **derived, not chosen**:
+`check_ac_schema.py` computes it from the record's own `Then` clause and blocks
+the commit on a missing or disagreeing value. See
+[ac-schema.md](../../reference/ac-schema.md#declares_side_effect-is-derived-from-the-then-clause).
+Generator routing (~1312) adds `user-surface-smoker` as `needed`, non-overridably.
 
-Compounding it: `generate_ticket_from_ac.py` contains **zero** occurrences of
-`Smoke Fixture` or `actuation_contract`, while `user-surface-smoker` reads its
-assertions from a `## Smoke Fixture` ticket-body block. Its algorithm is "for
-each stanza in the block" — with no block, the loop body never executes and the
-gate passes vacuously. Same failure shape as the BO-2900 tree: a check that
+That makes the next gap **live, not theoretical**: `generate_ticket_from_ac.py`
+still contains **zero** occurrences of `Smoke Fixture` or `actuation_contract`,
+and `user-surface-smoker` reads its assertions "for each stanza" of a
+`## Smoke Fixture` block with no stated handling for an absent block. A routed
+ticket with no block risks a vacuous pass — the BO-2900 shape: a check that
 never ran, read as a check that passed.
 
-Any AC giving these a home must deliver the **declaration slot** as well as the
-**content**, and the three smoker/tester triggers should share one mechanism
-rather than spawning a third.
+Any AC homing the three remaining fields must deliver the **declaration slot**
+as well as the **content**, reusing `declares_side_effect`'s mechanism rather
+than spawning a parallel one.
 
 ## Schema enforcement — corrects ACD-1900a's notes
 
@@ -105,7 +104,8 @@ schema violation at <root> — Additional properties are not allowed
 ('declares_side_effect' was unexpected)
 ```
 
-exit 1. The commit hook `scripts/commit_guardian/check_ac_schema.py` uses the
+exit 1. (That probe's field has since been added to the schema; the enforcement
+point stands for any genuinely undeclared field.) The commit hook `scripts/commit_guardian/check_ac_schema.py` uses the
 same mechanism.
 
 **Consequence for sequencing:** ACD-1900a is a **hard gate** on every write-side
