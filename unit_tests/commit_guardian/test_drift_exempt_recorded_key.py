@@ -145,10 +145,15 @@ class _DriftExemptFixture(unittest.TestCase):
         )
         return result.returncode, result.stdout + result.stderr
 
-    def _result_fields(self, combined: str) -> re.Match:
-        """Return the parsed RESULT summary line, failing if the gate emitted none."""
+    def _result_fields(self, combined: str) -> re.Match[str]:
+        """Return the parsed RESULT summary line, failing if the gate emitted none.
+
+        Uses ``self.fail`` rather than ``assertIsNotNone`` so the None case is
+        narrowed away for the type checker as well as at runtime.
+        """
         match = _RESULT_LINE_RE.search(combined)
-        self.assertIsNotNone(match, f"No RESULT summary line. Output:\n{combined}")
+        if match is None:
+            self.fail(f"No RESULT summary line. Output:\n{combined}")
         return match
 
 
