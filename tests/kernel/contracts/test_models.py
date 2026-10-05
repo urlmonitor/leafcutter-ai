@@ -227,10 +227,11 @@ class TestTaskInput(unittest.TestCase):
         self.assertEqual(ok.input_payload, {"goal": "x"})
 
     def test_goal_length_bounds(self) -> None:
+        self.assertEqual(self._input(goal="x" * 16000).goal, "x" * 16000)
         with self.assertRaises(ValidationError):
             self._input(goal="")
         with self.assertRaises(ValidationError):
-            self._input(goal="x" * 4001)
+            self._input(goal="x" * 16001)
 
 
 class TestGapKey(unittest.TestCase):

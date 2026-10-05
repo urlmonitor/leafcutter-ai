@@ -60,6 +60,7 @@ from datetime import date
 from pathlib import Path
 
 import yaml
+from product_truth_flow_fields import refresh_flow_fields
 from product_truth_text import _scalar, apply_product_truth_text, serialize_product_truth  # noqa: F401
 from product_truth_shapes import combine_statuses, expansion_targets, normalise_flow_shapes
 
@@ -394,24 +395,7 @@ def write_flows(flows: dict, flow_paths: dict, ac_map: dict, check: bool, run_da
     """
     changed = False
     for flow_id, flow in flows.items():
-        for node, _kind in iter_nodes(flow):
-            new_status = compute_node_status(node, ac_map, flows)
-            existing_status = node.get("impl_status")
-            existing_impl_asof = node.get("impl_asof")
-            # Preserve impl_asof when status has not changed.
-            if new_status == existing_status and existing_impl_asof is not None:
-                node["impl_asof"] = existing_impl_asof
-            else:
-                node["impl_asof"] = run_date
-            node["impl_status"] = new_status
-
-        # Preserve impl_summary.asof when the non-asof counts are unchanged.
-        existing_summary = flow.get("impl_summary", {})
-        new_summary = compute_flow_impl_summary(flow, ac_map, flows, run_date=run_date)
-        if _without_asof(existing_summary) == _without_asof(new_summary) and "asof" in existing_summary:
-            flow["impl_summary"] = {**_without_asof(new_summary), "asof": existing_summary["asof"]}
-        else:
-            flow["impl_summary"] = new_summary
+        refresh_flow_fields(flow, flows, ac_map, run_date, compute_node_status, compute_flow_impl_summary)
 
         path = STORE / flow_paths[flow_id]
         new_text = json.dumps(flow, indent=2, ensure_ascii=False) + "\n"

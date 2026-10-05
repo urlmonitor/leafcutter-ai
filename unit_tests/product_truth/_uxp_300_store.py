@@ -45,10 +45,45 @@ def select_ac_paths(source: Path, required: set[str]) -> dict[str, Path]:
     return selected
 
 
+def copy_contract_dependencies(store: Path) -> None:
+    """Keep real contract models and declared schema/receipt dependencies in the fixture.
+
+    This copies source bytes, never substitutes validation models or drops flows.
+    Model imports need the kernel, integration and knowledge source packages;
+    schemas and receipts remain limited to paths declared by the real artifacts.
+    """
+    paths: set[str] = set()
+    has_models = False
+    for path in (store / "flows").rglob("*.flow.json"):
+        flow = json.loads(path.read_text(encoding="utf-8"))
+        for definition in flow.get("contract_definitions", {}).values():
+            has_models = has_models or "model" in definition
+            if "schema" in definition:
+                paths.add(definition["schema"])
+        for node in flow.get("steps", []) + flow.get("branches", []):
+            for example in node.get("io_contracts", {}).get("examples", []):
+                if "source" in example:
+                    paths.add(example["source"]["path"])
+    destination_root = store.parent.parent.resolve()
+    if has_models:
+        for package in ("kernel", "integrations", "knowledge"):
+            paths.update(source.relative_to(REPO_ROOT).as_posix()
+                         for source in (REPO_ROOT / package).rglob("*.py")
+                         if "__pycache__" not in source.parts)
+    for relative in sorted(paths):
+        source = (REPO_ROOT / relative).resolve()
+        destination = (destination_root / relative).resolve()
+        if not source.is_relative_to(REPO_ROOT.resolve()) or not destination.is_relative_to(destination_root):
+            raise ValueError(f"contract dependency escapes fixture: {relative}")
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(source, destination)
+
+
 def copy_bounded_store(docs: Path, *, extra_ac_ids: tuple[str, ...] = ()) -> Path:
     """Copy real bytes without changing authored pointers or derived fields."""
     store = docs / "product-truth"
     shutil.copytree(PT_SOURCE, store, ignore=shutil.ignore_patterns("__pycache__"))
+    copy_contract_dependencies(store)
     required = set(extra_ac_ids)
     for path in (store / "flows").rglob("*.flow.json"):
         flow = json.loads(path.read_text(encoding="utf-8"))

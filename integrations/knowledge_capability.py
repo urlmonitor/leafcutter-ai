@@ -222,7 +222,8 @@ class KnowledgeRetrievalExecutor:
                 from integrations.query_growth import invoke_query_growth
                 return await invoke_query_growth(self.retriever,self.query_catalog,self.query_admission,
                                                  invocation,bounded_ctx,request,eligible)
-            return await invoke_knowledge(self.retriever, invocation, bounded_ctx, request, eligible)
+            return await invoke_knowledge(self.retriever, invocation, bounded_ctx, request, eligible,
+                                          fallback=self.fallback)
 
 
 # DECISION HISTORY
@@ -230,3 +231,4 @@ class KnowledgeRetrievalExecutor:
 # - 2026-10-01 20:00 [python-coder]: Preserve canonical evidence and optional bounded retrieval. (#TICKET-20261001-KM-400e-3)
 
 # - 2026-10-02 04:42 [python-coder]: Carry the requester reserve through graph planning on the real worker budget. (#TICKETLESS reason=kernel-v01-integration)
+# - 2026-10-03 20:00 [python-coder]: Consume selected repository fallback through the same bounded capability facade. (#TICKETLESS reason=user-approved-DK300-graph-routing)

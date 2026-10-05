@@ -32,7 +32,8 @@ def _run(
     from tests.kernel.helpers import make_context, make_invocation
 
     config = load_kernel_config().model_copy(
-        update={"knowledge": KnowledgeConfig(repository_id="repo", repository_root=str(tmp_path))}
+        update={"knowledge": KnowledgeConfig(repository_id="repo", repository_root=str(tmp_path),
+                                               embeddings_enabled=ambiguous)}
     )
     calls = []
 
@@ -41,7 +42,8 @@ def _run(
 
         async def capabilities(self):
             """Capabilities."""
-            return {"graph": True, "semantic": ambiguous, "hybrid": ambiguous}
+            return {"graph": True, "semantic": ambiguous, "semantic_ready": ambiguous,
+                    "hybrid": ambiguous}
 
         async def retrieve(self, request):
             """Retrieve."""
@@ -114,13 +116,11 @@ def _run(
                 update={"component_ids": [] if ambiguous else ["knowledge_management"]}
             ),
         )
-        if ambiguous:
-            from kernel.providers.fakes import ScriptedJev, choice_answer
+        from kernel.providers.fakes import ScriptedJev, choice_answer
 
-            jev = ScriptedJev().script(
-                "knowledge.retrieval_mode", "knowledge.mode", choice_answer("hybrid")
-            )
-            ctx = replace(ctx, jev=jev)
+        selected = "find_similar_decisions" if ambiguous else "get_component_context"
+        jev = ScriptedJev().script("knowledge.operation_select", "operation", choice_answer(selected))
+        ctx = replace(ctx, jev=jev)
     invocation = invocation.model_copy(update={"input_payload": payload})
     from kernel.config import repo_root
 
@@ -249,9 +249,9 @@ def test_ambiguous_registered_request_uses_existing_jev_once(tmp_path):
     # covers: KM-400e-2
     result, calls, ctx = _run(tmp_path, ambiguous=True)
     assert ctx.jev.call_count == 1
-    assert calls[0].mode == "hybrid"
+    assert calls[0].mode == "semantic"
     assert result.evidence
-    assert result.diagnostics["knowledge_requested_mode"] == "hybrid"
+    assert result.diagnostics["knowledge_requested_mode"] == "semantic"
     assert "Jev" in result.diagnostics["knowledge_reason"]
     assert result.diagnostics["knowledge_allowed_fallback"] == "none"
     assert "max_rounds" in result.diagnostics["knowledge_budget"]

@@ -43,6 +43,7 @@ from kernel.config import ConfigError
 from kernel.contracts.run import CapabilityGap
 from kernel.contracts.task import TaskInput
 from kernel.memory import cli as decisions_cli
+from kernel import entity_cli
 from kernel.observability.redaction import Redactor
 from kernel.persistence.gap_store import is_build_opportunity
 from kernel.registry.adapter import RegistryError
@@ -90,6 +91,7 @@ def build_parser() -> argparse.ArgumentParser:
     commands.add_parser("gaps", parents=[common],
                         help="show the aggregated capability gaps (deduplicated)")
     decisions_cli.add_parser(commands, common)
+    entity_cli.add_parser(commands)
     install = commands.add_parser("install-skill", help="install the Claude Code or Codex skill")
     install.add_argument("--json", action="store_true")
     install.add_argument("--host", choices=HOSTS, default="claude_code",
@@ -239,6 +241,8 @@ def main(argv: list[str] | None = None, *, environment: EnvironmentFactory = bui
             code, document = _install(args)
         elif args.command == "decisions":
             code, document = decisions_cli.run_decisions(args)
+        elif args.command == "entities":
+            code, document = entity_cli.run(args)
         else:
             code, document = _run_with_environment(args, environment)
     emit(document, stdout)
@@ -270,3 +274,5 @@ def main(argv: list[str] | None = None, *, environment: EnvironmentFactory = bui
 # - 2026-10-01 12:10 [python-coder]: stdout is redirected to stderr while a command runs, so
 #   library output cannot break the one-JSON-document contract. (#KernelBootstrapV0/P7)
 # ====================================================================
+
+# - 2026-10-03 15:05 [python-coder]: Keep pre-intent meanings deterministic, scoped and separate from task evidence. (#TICKETLESS reason=user-approved-ac-first-DK300)

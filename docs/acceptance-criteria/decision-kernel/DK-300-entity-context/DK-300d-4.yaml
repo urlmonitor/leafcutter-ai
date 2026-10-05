@@ -1,0 +1,132 @@
+id: DK-300d-4
+title: "Natural-language evidence needs select a bounded supported graph read"
+component: decision-kernel
+components: [decision_kernel, knowledge_management]
+level: L2
+status: active
+readiness: reviewed
+req_status: draft
+priority: high
+work_status: done
+criteria: |
+  Given a research question refers to the recognized acceptance criterion "DK-300d-3" or a component authorized by the run scope,
+  And an enabled knowledge source offers executable read operations for those references,
+  When the kernel chooses how to retrieve evidence after intent,
+  Then Jev selects only among the offered supported reads, permitted repository fallback and an unsupported outcome,
+  And operation arguments are bound from the resolved canonical references and trusted component scope rather than invented by Jev,
+  And execution validates the selected operation and returns attributable task evidence with the actual source revision and request identity,
+  And the original question remains available when the evidence is assessed.
+depends_on: ["DK-300d","DK-300d-3","KM-400e-2","KM-400e-3"]
+covered_by:
+  - "DK-300d-4-i"
+  - "DK-300d-4-ii"
+  - "tests/kernel/entity_context/test_knowledge_operation_selection.py::test_entity_question_selects_bound_graph_operation_and_yields_evidence"
+  - "tests/kernel/entity_context/test_knowledge_operation_selection.py::test_multiple_trusted_targets_are_finite_and_selected"
+  - "tests/kernel/entity_context/test_knowledge_operation_selection.py::test_recognized_targets_bind_existing_population_and_component_operations"
+  - "tests/kernel/entity_context/test_knowledge_operation_selection.py::test_unimplemented_catalog_placeholder_is_not_offered"
+  - "tests/kernel/entity_context/test_knowledge_operation_selection.py::test_canonical_all_identity_is_not_the_target_group_sentinel"
+  - "tests/kernel/entity_context/test_knowledge_operation_selection.py::test_population_selection_reaches_actual_knowledge_service"
+implemented_by:
+  - "integrations/graph_offers.py"
+  - "integrations/graph_selection.py"
+  - "integrations/graph_population.py"
+  - "integrations/knowledge_execution.py"
+  - "integrations/knowledge_capability.py"
+  - "integrations/knowledge_followups.py"
+  - "kernel/entity_owners.py"
+  - "kernel/entity_owner_scope.py"
+assigned_agent: python-coder
+estimated_complexity: L
+change_target: code
+risk_surface: contract_boundary
+it_requirements:
+  - "Reuse existing Jev choose/score contracts and the current read-operation catalog. Offer only implemented operations whose required typed arguments can be supplied from the permitted context; model-generated argument JSON, executable queries and arbitrary Cypher are not accepted."
+  - "Every offered argument and finite target set must satisfy the existing operation input schema, descriptor argument bounds and configured retrieval candidate/result limits before the selector call."
+  - "Recognized artifact identities must be translated using their canonical owner mapping, including kind-qualified native identifiers; no guessed prefix or spelling conversion may invent a graph identity."
+  - "An unresolved or ambiguous recognition is not an authorized target. Where multiple permitted targets remain, select from a finite offered target list rather than choosing the first identity."
+  - "Selection and execution are separately observable with offered/selected operation, bounded arguments, reason, fallback, usage and evidence provenance. Evidence remains separate from meaning cards."
+  - "The automatic selector applies to existing built-in reads when the separate query catalog is not configured. A natural descendant request uses a deterministic Python recipe for all AC levels L0 through L3 with the root excluded; bounded discovery or missing/truncated disclosure remains explicitly incomplete rather than proving an exhaustive result."
+delivers_to:
+  agent: python-coder
+  contract: "Existing registered retrieve.repository binding / KnowledgeRetrievalExecutor.ainvoke is the integration boundary. integrations.graph_selection.assess_graph_operation(ctx,invocation,payload,capabilities) returns (RetrievalChoice,list[Usage]). Jev purpose knowledge.operation_select, question id operation, offers only executable bounded operation identities plus unsupported and an authorized repository-fallback outcome; optional purpose knowledge.target_select, question id target, selects a finite trusted target. Python constructs arguments from resolved permitted entity IDs and trusted component scope. Explicit payload.knowledge bypasses this selector."
+expects_from:
+  ac_id: DK-300d-3
+  contract: "Checkpointed EntityContext supplies resolved permitted canonical references as optional retrieval hints; caller claims and meanings remain distinct from task evidence and authority."
+test_required: true
+test_spec:
+  - name: "test_entity_question_selects_bound_graph_operation_and_yields_evidence"
+    target_dir: "tests/kernel/entity_context/"
+    framework: "pytest"
+    type: "integration"
+    angle: "reachability"
+    description: "tests/kernel/entity_context/test_knowledge_operation_selection.py::test_entity_question_selects_bound_graph_operation_and_yields_evidence: Run the real index/recognizer and research/planner through the registered binding with recording Jev and knowledge port; assert offered operations, deterministic canonical ID binding, actual graph invocation and evidence consumed by the kernel."
+  - name: "test_multiple_trusted_targets_are_finite_and_selected"
+    target_dir: "tests/kernel/entity_context/"
+    framework: "pytest"
+    type: "integration"
+    angle: "boundary"
+    description: "tests/kernel/entity_context/test_knowledge_operation_selection.py::test_multiple_trusted_targets_are_finite_and_selected: Offer multiple permitted component/entity targets; assert the chosen target belongs to the finite trusted set and is used by the executed read, with no first-target shortcut."
+  - name: "test_recognized_targets_bind_existing_population_and_component_operations"
+    target_dir: "tests/kernel/entity_context/"
+    framework: "pytest"
+    type: "integration"
+    angle: "seam"
+    description: "tests/kernel/entity_context/test_knowledge_operation_selection.py::test_recognized_targets_bind_existing_population_and_component_operations: Use recognized canonical targets and trusted component scope to select existing population/component reads; assert operation-specific typed arguments and bounded execution through the registered binding."
+  - name: "test_unimplemented_catalog_placeholder_is_not_offered"
+    target_dir: "tests/kernel/entity_context/"
+    framework: "pytest"
+    type: "integration"
+    angle: "discrimination"
+    description: "tests/kernel/entity_context/test_knowledge_operation_selection.py::test_unimplemented_catalog_placeholder_is_not_offered: Expose a catalog placeholder without an executable implementation and assert it cannot become a selectable built-in read."
+  - name: "test_canonical_all_identity_is_not_the_target_group_sentinel"
+    target_dir: "tests/kernel/entity_context/"
+    framework: "pytest"
+    type: "integration"
+    angle: "boundary"
+    description: "tests/kernel/entity_context/test_knowledge_operation_selection.py::test_canonical_all_identity_is_not_the_target_group_sentinel: Supply a canonical target whose identity is all and assert it retains its exact identity instead of accidentally selecting a target group."
+  - name: "test_population_selection_reaches_actual_knowledge_service"
+    target_dir: "tests/kernel/entity_context/"
+    framework: "pytest"
+    type: "integration"
+    angle: "reachability"
+    description: "tests/kernel/entity_context/test_knowledge_operation_selection.py::test_population_selection_reaches_actual_knowledge_service: Exercise selected descendant retrieval through the real knowledge service; assert all L0-L3 levels with the root excluded, bounded progressive disclosure and explicit incompleteness when result/detail limits prevent a complete population."
+test_rationale: "Exercise the existing registered capability and real research path with recording Jev and knowledge ports; a direct helper or source-string test cannot prove selection is consumed. Controlled-port proof does not establish live Jev quality or Neo4j publication readiness."
+doc_links:
+  - path: integrations/README.md
+    relationship: describes
+    status: exists
+  - path: kernel/README.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/components/knowledge-retrieval.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/components/decision-kernel.md
+    relationship: describes
+    status: exists
+  - path: docs/product-truth/flows/leafcutter/decision-forming.flow.json
+    relationship: implements
+    status: exists
+  - path: docs/architecture/adrs/ADR-062-standalone-knowledge-retrieval.md
+    relationship: context
+    status: exists
+origin_agent: business-analyst
+created: 2026-10-03
+amended_by:
+  - reason: "IT PO added bounded selector contracts and behavioral test specifications under the user's explicit wire-it-up authorization."
+superseded_by: null
+notes: |
+  Focused extension of DK-300d-3 and existing KM-400e-2, KM-400e-3 and KM-400e-4.
+  Independently verified on 2026-10-03: 148 strict deterministic cases passed, including 51 selector cases, 84 existing entity cases and 13 bridge cases; no failures, errors or skips.
+  Verification evidence: reports/entity-graph-selection-independent-green.xml and reports/entity-graph-selection-evaluation.md. Controlled ports do not establish live Jev quality or Neo4j publication readiness; no new query implementation or admission is claimed.
+  No matching reusable pattern was found in the 4620-file AC inventory.
+product_truth:
+  - flow: leafcutter/decision-forming
+    node: ground
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: leafcutter/decisions
+    entities: []
+    source: real
+    asof: '2026-10-03'

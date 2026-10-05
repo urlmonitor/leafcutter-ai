@@ -17,12 +17,13 @@ from kernel.capabilities.host.formulate_question import FormulateQuestion
 from kernel.capabilities.host.generate_options import GenerateOptions
 from kernel.capabilities.host.research import Research
 from kernel.capabilities.host.query_build import QueryBuild
+from kernel.capabilities.host.retrieval_needs import RetrievalNeeds
 from kernel.capabilities.host.spec import TEMPLATE_VERSION
 from kernel.capabilities.host.synthesize import Synthesize
 
 OPERATIONS: dict[str, HostOperation] = {
     op.capability_id: op for op in (GenerateOptions(), Synthesize(), Research(),
-                                    FormulateQuestion(), QueryBuild())}
+                                    FormulateQuestion(), QueryBuild(), RetrievalNeeds())}
 GENERIC = GenericHostOperation()
 TEMPLATE_VERSION_KEY = "host_template"
 
@@ -50,3 +51,4 @@ def template_versions(capability_id: str) -> dict[str, str]:
 #   declares what a capability accepts and produces, while only this table decides what the
 #   kernel compiles and converts. (#KernelBootstrapV0/P8)
 # ====================================================================
+# - 2026-10-03 00:00 [python-coder]: Add typed host-needs support without activating production retrieval. (#TICKETLESS reason=user-requested-isolated-host-experiment)

@@ -9,7 +9,7 @@ ARCHITECTURE: TaskInput is the external boundary (unknown fields rejected); Task
 
 from __future__ import annotations
 
-from kernel.contracts.verbatim import VerbatimJson
+from kernel.contracts.verbatim import VerbatimJson, VerbatimString
 
 from pathlib import Path, PurePosixPath, PureWindowsPath
 
@@ -115,7 +115,7 @@ class Constraint(KernelModel):
 class TaskInput(KernelModel):
     """External request to start a run (unknown fields rejected)."""
 
-    goal: str = Field(min_length=1, max_length=4000)
+    goal: VerbatimString = Field(min_length=1, max_length=16000)
     caller: Actor
     scope: Scope
     #: None means "not chosen by the caller": intake classifies the goal (Rev 3 section 7.11).
@@ -147,7 +147,7 @@ class Task(PersistedModel):
 
     root_task_id: str
     parent_task_id: str | None = None
-    original_goal: str
+    original_goal: VerbatimString
     intent: str | None = None
     scope: Scope
     evidence_refs: list[str] = Field(default_factory=list)
@@ -166,4 +166,5 @@ class Task(PersistedModel):
 # - 2026-09-30 22:00 [python-coder]: Component-id validation is a pure helper
 #   (unknown_component_ids) instead of a model validator, so contracts stay free of file IO.
 #   (#KernelBootstrapV0/P1)
+# - 2026-10-03 15:10 [python-coder]: Preserve verbatim goals and separate meaning, caller and clarification channels. (#DK-300/entity-context)
 # ====================================================================

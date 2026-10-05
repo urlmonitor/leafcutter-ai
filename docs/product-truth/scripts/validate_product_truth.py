@@ -344,6 +344,7 @@ from product_truth_label_checks import (  # noqa: F401  # re-exported for caller
 # main() (see JSONSCHEMA_MISSING) instead of degrading to no validation.
 try:
     import jsonschema
+    from product_truth_contracts import check_contracts, contract_summary
 except ImportError:
     jsonschema = None  # type: ignore[assignment]
 
@@ -582,6 +583,10 @@ def run_checks() -> dict:
     ac_ids = set(ac_records)
 
     flows, flow_paths = load_flows(unreadable_flows)
+    contracts = check_contracts(flows, STORE.parent.parent)
+    errors.extend(contracts["errors"])
+    warnings.extend(contracts["warnings"])
+    record_check_executed(checks, "json-contracts", contracts["checked_nodes"])
     for flow in flows.values():
         _validate_schema(flow, flow_schema, f"flow {flow['id']}", errors)
         _check_flow(flow, ac_ids, errors, warnings)
@@ -651,6 +656,7 @@ def run_checks() -> dict:
         "checks": checks,
         "outcome": report_outcome(checks, has_errors=bool(errors)),
         "counts": {"flows": len(flows), "mocks": len(mocks), "mockups": len(mockups)},
+        "json_contracts": contracts,
         "examined_flows": len(flows),
         "unreadable_flows": unreadable_flows,
         "resolved_pointers": resolved_pointers,
@@ -680,6 +686,7 @@ def main() -> int:
         return 2
 
     report = run_checks()
+    logger.warning("%s", contract_summary(report["json_contracts"]))
     refusal = tighten_refusal(args.tighten, report["bounds"]) if args.tighten else None
     if refusal:
         logger.error("REFUSED: %s", refusal)
