@@ -42,6 +42,23 @@ jobs:
     timeout-minutes: 120
     steps:
       - uses: actions/checkout@v4
+        with:
+          # FULL HISTORY, matching ci.yml's test-shard job. Several
+          # tests/knowledge/ tests read repository history through
+          # knowledge/adapters/git_source.py; against the default depth-1
+          # shallow clone they die at fixture setup with
+          # `fatal: Needed a single revision`.
+          #
+          # This matters MORE here than in ci.yml. There a shallow clone is a
+          # visible red; here those tests still "complete" in milliseconds and
+          # get recorded with a near-zero duration. pytest-split would then
+          # treat a cluster of genuinely slow tests as free and pack them onto
+          # one shard — the file would look complete and balance the suite
+          # wrongly, which is worse than having no file at all.
+          #
+          # Run 37317817836 recorded 9559/9559 durations with ~27 of them
+          # measured as setup errors for exactly this reason.
+          fetch-depth: 0
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -118,6 +135,37 @@ jobs:
                   "assigned the average and the heavy ones cluster."
               )
           PY
+
+      - name: Upload the durations file as an artifact
+        # INSURANCE, and it is not theoretical. Run 37317817836 spent 110
+        # minutes, recorded a perfect 9559/9559, and then lost all of it when
+        # the PR step failed -- the file lived only in the runner workspace, so
+        # a last-step failure threw away the entire run.
+        #
+        # `if: always()` so it also fires when the completeness guard above
+        # REFUSES: a rejected file is exactly the thing worth inspecting, and
+        # discarding it leaves nobody able to see why it was short.
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-durations
+          path: .github/test_durations.json
+          if-no-files-found: warn
+
+      - name: Stop this repo's own git hooks firing inside the PR action
+        # The build step above runs install_shims, which installs the
+        # pre-commit git hook into this runner's checkout. create-pull-request
+        # then makes a commit, the hook fires, and the whole job dies on
+        # `Unexpected error: [WARNING] Unstaged files detected.` -- which is
+        # precisely how run 37317817836 lost 110 minutes of compute at the
+        # final step.
+        #
+        # Disabling hooks here is right rather than expedient: this commit is
+        # a machine-generated timing artifact on a throwaway branch, and the
+        # hooks it would run are the same ones that will run for real when the
+        # resulting PR is reviewed and merged. Nothing is bypassed, only
+        # deferred to the gate that actually guards main.
+        run: git config core.hooksPath /dev/null
 
       - name: Open a PR with the refreshed durations
         uses: peter-evans/create-pull-request@v6
