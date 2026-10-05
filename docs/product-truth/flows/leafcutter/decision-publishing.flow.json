@@ -11,7 +11,7 @@
   "status": "active",
   "readiness": "draft",
   "superseded_by": null,
-  "version": 1,
+  "version": 2,
   "shape_version": 2,
   "tags": [
     "decision-kernel",
@@ -27,117 +27,1134 @@
     {
       "id": "decide-to-publish",
       "label": "Decide to publish",
-      "human": "Decision point: you run python -m kernel decisions publish --run-id R yourself, or ask Claude Code to run it and open a PR.",
+      "human": "Decision point: you run python -m kernel decisions publish --run-id R yourself, or ask Claude Code to run it and open a PR.\n\nThe reconstructed JSON projections come from the parsed YAML record docs/decisions/dec-ef8ddcb79d668a67.yaml; they are not a new API envelope or a replay of its historical execution. The CLI argument is --run-id run-2fbb4ef43b1345f6; this is a command over a staged file, not a JSON publication API.\n\nContract fields and examples (generated)\nConsumes:\n  decision_record/id: string (required)\n  decision_record/selected_option_id: string (required)\n  decision_record/approval/approved_by: string (required)\n  decision_record/approval/approved_at: string (required)\n  decision_record/provenance/run_id: string (required)\n  Runtime contract: [decision_record](kernel/memory/models.py)\nProduces:\n  No checked JSON binding documented in this direction.\n\nExisting decision-record scenario: decision_record — decision_record; reconstructed; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"id\": \"dec-ef8ddcb79d668a67\",\n  \"title\": \"Kernel-contract YAML per decision\",\n  \"decision_type\": \"design\",\n  \"selected_option_id\": \"opt.added.1\",\n  \"components\": [\n    \"decision_kernel\",\n    \"knowledge_management\"\n  ],\n  \"approval\": {\n    \"approval_status\": \"approved\",\n    \"approved_by\": \"human:user\",\n    \"approved_at\": \"2026-10-01T14:48:31Z\",\n    \"note\": \"approved_at is the decision's updated_at: the kernel Decision had no approved_at field when this decision was approved (added by #KernelDecisionStore).\"\n  },\n  \"provenance\": {\n    \"run_id\": \"run-2fbb4ef43b1345f6\",\n    \"created_at\": \"2026-10-01T14:48:31Z\"\n  }\n}",
       "order": 1,
       "agent": "human (or claude_code on request)",
       "consumes": [
-        "staged record (<run_root>/runs/<run_id>/staged/decisions/<id>.yaml)",
-        "publish instruction"
+        "decision_record/id: string (required)",
+        "decision_record/selected_option_id: string (required)",
+        "decision_record/approval/approved_by: string (required)",
+        "decision_record/approval/approved_at: string (required)",
+        "decision_record/provenance/run_id: string (required)"
       ],
-      "produces": [
-        "publish request (--run-id R)"
-      ],
+      "produces": [],
       "reads": [
         "Decision"
       ],
       "impl_asof": "2026-10-02",
-      "impl_status": "not_started"
+      "impl_status": "not_started",
+      "io_contracts": {
+        "consumes": [
+          {
+            "contract": "decision_record",
+            "fields": [
+              {
+                "path": "/id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/selected_option_id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/approval/approved_by",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/approval/approved_at",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/provenance/run_id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              }
+            ]
+          }
+        ],
+        "produces": [],
+        "examples": [
+          {
+            "contract": "decision_record",
+            "mode": "projection",
+            "origin": "reconstructed",
+            "label": "Existing decision-record scenario: decision_record",
+            "value": {
+              "id": "dec-ef8ddcb79d668a67",
+              "title": "Kernel-contract YAML per decision",
+              "decision_type": "design",
+              "selected_option_id": "opt.added.1",
+              "components": [
+                "decision_kernel",
+                "knowledge_management"
+              ],
+              "approval": {
+                "approval_status": "approved",
+                "approved_by": "human:user",
+                "approved_at": "2026-10-01T14:48:31Z",
+                "note": "approved_at is the decision's updated_at: the kernel Decision had no approved_at field when this decision was approved (added by #KernelDecisionStore)."
+              },
+              "provenance": {
+                "run_id": "run-2fbb4ef43b1345f6",
+                "created_at": "2026-10-01T14:48:31Z"
+              }
+            }
+          }
+        ]
+      }
     },
     {
       "id": "check-record",
       "label": "Validate the staged record",
-      "human": "The command checks the record's schema, its links, and its filter values against docs/components.json and docs/roadmap.json.",
+      "human": "The command checks the record's schema, its links, and its filter values against docs/components.json and docs/roadmap.json.\n\nThe same parsed record proceeds after schema, vocabulary and link checks. PublishResult and Problem are internal Python dataclasses; the enclosing CLI serializes the operation result as JSON through _published.\n\nContract fields and examples (generated)\nConsumes:\n  decision_record/id: string (required)\n  decision_record/selected_option_id: string (required)\n  decision_record/approval/approved_by: string (required)\n  decision_record/approval/approved_at: string (required)\n  decision_record/provenance/run_id: string (required)\n  Runtime contract: [decision_record](kernel/memory/models.py)\nProduces:\n  decision_record/id: string (required)\n  decision_record/selected_option_id: string (required)\n  decision_record/approval/approved_by: string (required)\n  decision_record/approval/approved_at: string (required)\n  decision_record/provenance/run_id: string (required)\n  Runtime contract: [decision_record](kernel/memory/models.py)\n\nExisting decision-record scenario: decision_record — decision_record; reconstructed; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"id\": \"dec-ef8ddcb79d668a67\",\n  \"title\": \"Kernel-contract YAML per decision\",\n  \"decision_type\": \"design\",\n  \"selected_option_id\": \"opt.added.1\",\n  \"components\": [\n    \"decision_kernel\",\n    \"knowledge_management\"\n  ],\n  \"approval\": {\n    \"approval_status\": \"approved\",\n    \"approved_by\": \"human:user\",\n    \"approved_at\": \"2026-10-01T14:48:31Z\",\n    \"note\": \"approved_at is the decision's updated_at: the kernel Decision had no approved_at field when this decision was approved (added by #KernelDecisionStore).\"\n  },\n  \"provenance\": {\n    \"run_id\": \"run-2fbb4ef43b1345f6\",\n    \"created_at\": \"2026-10-01T14:48:31Z\"\n  }\n}",
       "order": 2,
       "agent": "python -m kernel decisions publish",
       "consumes": [
-        "publish request (--run-id R)",
-        "staged record (<run_root>/runs/<run_id>/staged/decisions/<id>.yaml)"
+        "decision_record/id: string (required)",
+        "decision_record/selected_option_id: string (required)",
+        "decision_record/approval/approved_by: string (required)",
+        "decision_record/approval/approved_at: string (required)",
+        "decision_record/provenance/run_id: string (required)"
       ],
       "produces": [
-        "validated record"
+        "decision_record/id: string (required)",
+        "decision_record/selected_option_id: string (required)",
+        "decision_record/approval/approved_by: string (required)",
+        "decision_record/approval/approved_at: string (required)",
+        "decision_record/provenance/run_id: string (required)"
       ],
       "reads": [
         "Decision"
       ],
       "impl_asof": "2026-10-02",
-      "impl_status": "not_started"
+      "impl_status": "not_started",
+      "io_contracts": {
+        "consumes": [
+          {
+            "contract": "decision_record",
+            "fields": [
+              {
+                "path": "/id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/selected_option_id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/approval/approved_by",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/approval/approved_at",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/provenance/run_id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              }
+            ]
+          }
+        ],
+        "produces": [
+          {
+            "contract": "decision_record",
+            "fields": [
+              {
+                "path": "/id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/selected_option_id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/approval/approved_by",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/approval/approved_at",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/provenance/run_id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              }
+            ]
+          }
+        ],
+        "examples": [
+          {
+            "contract": "decision_record",
+            "mode": "projection",
+            "origin": "reconstructed",
+            "label": "Existing decision-record scenario: decision_record",
+            "value": {
+              "id": "dec-ef8ddcb79d668a67",
+              "title": "Kernel-contract YAML per decision",
+              "decision_type": "design",
+              "selected_option_id": "opt.added.1",
+              "components": [
+                "decision_kernel",
+                "knowledge_management"
+              ],
+              "approval": {
+                "approval_status": "approved",
+                "approved_by": "human:user",
+                "approved_at": "2026-10-01T14:48:31Z",
+                "note": "approved_at is the decision's updated_at: the kernel Decision had no approved_at field when this decision was approved (added by #KernelDecisionStore)."
+              },
+              "provenance": {
+                "run_id": "run-2fbb4ef43b1345f6",
+                "created_at": "2026-10-01T14:48:31Z"
+              }
+            }
+          }
+        ]
+      }
     },
     {
       "id": "write-published",
       "label": "Write the record and the index",
-      "human": "The command writes docs/decisions/<id>.yaml and regenerates docs/decisions/index.json.",
+      "human": "The command writes docs/decisions/<id>.yaml and regenerates docs/decisions/index.json.\n\nThe record is stored as YAML. IndexEntry is one records[] member of index.json; the file also contains schema_version, generated_by, _comment and count.\n\nContract fields and examples (generated)\nConsumes:\n  decision_record/id: string (required)\n  decision_record/selected_option_id: string (required)\n  decision_record/approval/approved_by: string (required)\n  decision_record/approval/approved_at: string (required)\n  decision_record/provenance/run_id: string (required)\n  Runtime contract: [decision_record](kernel/memory/models.py)\nProduces:\n  decision_record/id: string (required)\n  decision_record/selected_option_id: string (required)\n  decision_record/approval/approved_by: string (required)\n  decision_record/approval/approved_at: string (required)\n  decision_record/provenance/run_id: string (required)\n  Runtime contract: [decision_record](kernel/memory/models.py)\n  decision_index_entry/id: string (required)\n  decision_index_entry/file: string (required)\n  decision_index_entry/sha256: string (required)\n  decision_index_entry/selected_option_id: string (required)\n  decision_index_entry/approved_by: string (required)\n  decision_index_entry/approved_at: string (required)\n  Runtime contract: [decision_index_entry](kernel/memory/index.py)\n  SOURCE-REVIEWED DOCUMENTATION: Reviewed from kernel/memory/cli.py _doc/_published/run_decisions and validate.py Problem.as_dict. This documentation schema covers ordinary and refused results, not environment errors; no automatic source-code parity or runtime schema enforcement is claimed.\n  decision_publish_result/ok: boolean (required)\n  decision_publish_result/problems: array (required)\n  decision_publish_result/published: array (required)\n  decision_publish_result/already_present: array (required)\n  decision_publish_result/corrected: array (required)\n  decision_publish_result/index_written: boolean (required)\n  Schema: [decision_publish_result](docs/product-truth/schemas/decision-publish-result.schema.json)\n\nExisting decision-record scenario: decision_record — decision_record; reconstructed; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"id\": \"dec-ef8ddcb79d668a67\",\n  \"title\": \"Kernel-contract YAML per decision\",\n  \"decision_type\": \"design\",\n  \"selected_option_id\": \"opt.added.1\",\n  \"components\": [\n    \"decision_kernel\",\n    \"knowledge_management\"\n  ],\n  \"approval\": {\n    \"approval_status\": \"approved\",\n    \"approved_by\": \"human:user\",\n    \"approved_at\": \"2026-10-01T14:48:31Z\",\n    \"note\": \"approved_at is the decision's updated_at: the kernel Decision had no approved_at field when this decision was approved (added by #KernelDecisionStore).\"\n  },\n  \"provenance\": {\n    \"run_id\": \"run-2fbb4ef43b1345f6\",\n    \"created_at\": \"2026-10-01T14:48:31Z\"\n  }\n}\n\nExisting decision-record scenario: decision_index_entry — decision_index_entry; reconstructed; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"id\": \"dec-ef8ddcb79d668a67\",\n  \"file\": \"dec-ef8ddcb79d668a67.yaml\",\n  \"sha256\": \"d4426542cc89f863b3795b69e1caf182607980c8b642190318fc7c608c3ea819\",\n  \"selected_option_id\": \"opt.added.1\",\n  \"approved_by\": \"human:user\",\n  \"approved_at\": \"2026-10-01T14:48:31Z\"\n}\n\nIllustrative successful publish CLI result — decision_publish_result; illustrative; complete payload:\n{\n  \"ok\": true,\n  \"problems\": [],\n  \"published\": [\n    \"dec-ef8ddcb79d668a67\"\n  ],\n  \"already_present\": [],\n  \"corrected\": [],\n  \"index_written\": true\n}",
       "order": 3,
       "agent": "python -m kernel decisions publish",
       "consumes": [
-        "validated record"
+        "decision_record/id: string (required)",
+        "decision_record/selected_option_id: string (required)",
+        "decision_record/approval/approved_by: string (required)",
+        "decision_record/approval/approved_at: string (required)",
+        "decision_record/provenance/run_id: string (required)"
       ],
       "produces": [
-        "published record (docs/decisions/<id>.yaml)",
-        "docs/decisions/index.json"
+        "decision_record/id: string (required)",
+        "decision_record/selected_option_id: string (required)",
+        "decision_record/approval/approved_by: string (required)",
+        "decision_record/approval/approved_at: string (required)",
+        "decision_record/provenance/run_id: string (required)",
+        "decision_index_entry/id: string (required)",
+        "decision_index_entry/file: string (required)",
+        "decision_index_entry/sha256: string (required)",
+        "decision_index_entry/selected_option_id: string (required)",
+        "decision_index_entry/approved_by: string (required)",
+        "decision_index_entry/approved_at: string (required)",
+        "decision_publish_result/ok: boolean (required)",
+        "decision_publish_result/problems: array (required)",
+        "decision_publish_result/published: array (required)",
+        "decision_publish_result/already_present: array (required)",
+        "decision_publish_result/corrected: array (required)",
+        "decision_publish_result/index_written: boolean (required)"
       ],
       "writes": [
         "Decision"
       ],
       "impl_asof": "2026-10-02",
-      "impl_status": "not_started"
+      "impl_status": "not_started",
+      "io_contracts": {
+        "consumes": [
+          {
+            "contract": "decision_record",
+            "fields": [
+              {
+                "path": "/id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/selected_option_id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/approval/approved_by",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/approval/approved_at",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/provenance/run_id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              }
+            ]
+          }
+        ],
+        "produces": [
+          {
+            "contract": "decision_record",
+            "fields": [
+              {
+                "path": "/id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/selected_option_id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/approval/approved_by",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/approval/approved_at",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/provenance/run_id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              }
+            ]
+          },
+          {
+            "contract": "decision_index_entry",
+            "fields": [
+              {
+                "path": "/id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/file",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/sha256",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/selected_option_id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/approved_by",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/approved_at",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              }
+            ]
+          },
+          {
+            "contract": "decision_publish_result",
+            "fields": [
+              {
+                "path": "/ok",
+                "types": [
+                  "boolean"
+                ],
+                "required": true
+              },
+              {
+                "path": "/problems",
+                "types": [
+                  "array"
+                ],
+                "required": true
+              },
+              {
+                "path": "/published",
+                "types": [
+                  "array"
+                ],
+                "required": true
+              },
+              {
+                "path": "/already_present",
+                "types": [
+                  "array"
+                ],
+                "required": true
+              },
+              {
+                "path": "/corrected",
+                "types": [
+                  "array"
+                ],
+                "required": true
+              },
+              {
+                "path": "/index_written",
+                "types": [
+                  "boolean"
+                ],
+                "required": true
+              }
+            ]
+          }
+        ],
+        "examples": [
+          {
+            "contract": "decision_record",
+            "mode": "projection",
+            "origin": "reconstructed",
+            "label": "Existing decision-record scenario: decision_record",
+            "value": {
+              "id": "dec-ef8ddcb79d668a67",
+              "title": "Kernel-contract YAML per decision",
+              "decision_type": "design",
+              "selected_option_id": "opt.added.1",
+              "components": [
+                "decision_kernel",
+                "knowledge_management"
+              ],
+              "approval": {
+                "approval_status": "approved",
+                "approved_by": "human:user",
+                "approved_at": "2026-10-01T14:48:31Z",
+                "note": "approved_at is the decision's updated_at: the kernel Decision had no approved_at field when this decision was approved (added by #KernelDecisionStore)."
+              },
+              "provenance": {
+                "run_id": "run-2fbb4ef43b1345f6",
+                "created_at": "2026-10-01T14:48:31Z"
+              }
+            }
+          },
+          {
+            "contract": "decision_index_entry",
+            "mode": "projection",
+            "origin": "reconstructed",
+            "label": "Existing decision-record scenario: decision_index_entry",
+            "value": {
+              "id": "dec-ef8ddcb79d668a67",
+              "file": "dec-ef8ddcb79d668a67.yaml",
+              "sha256": "d4426542cc89f863b3795b69e1caf182607980c8b642190318fc7c608c3ea819",
+              "selected_option_id": "opt.added.1",
+              "approved_by": "human:user",
+              "approved_at": "2026-10-01T14:48:31Z"
+            }
+          },
+          {
+            "contract": "decision_publish_result",
+            "mode": "full",
+            "origin": "illustrative",
+            "label": "Illustrative successful publish CLI result",
+            "value": {
+              "ok": true,
+              "problems": [],
+              "published": [
+                "dec-ef8ddcb79d668a67"
+              ],
+              "already_present": [],
+              "corrected": [],
+              "index_written": true
+            }
+          }
+        ]
+      }
     },
     {
       "id": "check-store",
       "label": "Validate the store",
-      "human": "python -m kernel decisions validate passes over the whole decision store.",
+      "human": "python -m kernel decisions validate passes over the whole decision store.\n\nThe validate CLI returns a JSON document containing ok, problems and records, plus exit code 0 or 3. Source: kernel/memory/cli.py run_decisions and validate.py.\n\nContract fields and examples (generated)\nConsumes:\n  decision_record/id: string (required)\n  decision_record/selected_option_id: string (required)\n  decision_record/approval/approved_by: string (required)\n  decision_record/approval/approved_at: string (required)\n  decision_record/provenance/run_id: string (required)\n  Runtime contract: [decision_record](kernel/memory/models.py)\n  decision_index_entry/id: string (required)\n  decision_index_entry/file: string (required)\n  decision_index_entry/sha256: string (required)\n  decision_index_entry/selected_option_id: string (required)\n  decision_index_entry/approved_by: string (required)\n  decision_index_entry/approved_at: string (required)\n  Runtime contract: [decision_index_entry](kernel/memory/index.py)\nProduces:\n  SOURCE-REVIEWED DOCUMENTATION: Reviewed from kernel/memory/cli.py _doc/_published/run_decisions and validate.py Problem.as_dict. This documentation schema covers ordinary and refused results, not environment errors; no automatic source-code parity or runtime schema enforcement is claimed.\n  decision_validate_result/ok: boolean (required)\n  decision_validate_result/problems: array (required)\n  decision_validate_result/records: integer (required)\n  Schema: [decision_validate_result](docs/product-truth/schemas/decision-validate-result.schema.json)\n\nExisting decision-record scenario: decision_record — decision_record; reconstructed; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"id\": \"dec-ef8ddcb79d668a67\",\n  \"title\": \"Kernel-contract YAML per decision\",\n  \"decision_type\": \"design\",\n  \"selected_option_id\": \"opt.added.1\",\n  \"components\": [\n    \"decision_kernel\",\n    \"knowledge_management\"\n  ],\n  \"approval\": {\n    \"approval_status\": \"approved\",\n    \"approved_by\": \"human:user\",\n    \"approved_at\": \"2026-10-01T14:48:31Z\",\n    \"note\": \"approved_at is the decision's updated_at: the kernel Decision had no approved_at field when this decision was approved (added by #KernelDecisionStore).\"\n  },\n  \"provenance\": {\n    \"run_id\": \"run-2fbb4ef43b1345f6\",\n    \"created_at\": \"2026-10-01T14:48:31Z\"\n  }\n}\n\nExisting decision-record scenario: decision_index_entry — decision_index_entry; reconstructed; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"id\": \"dec-ef8ddcb79d668a67\",\n  \"file\": \"dec-ef8ddcb79d668a67.yaml\",\n  \"sha256\": \"d4426542cc89f863b3795b69e1caf182607980c8b642190318fc7c608c3ea819\",\n  \"selected_option_id\": \"opt.added.1\",\n  \"approved_by\": \"human:user\",\n  \"approved_at\": \"2026-10-01T14:48:31Z\"\n}\n\nIllustrative one-record store validation — decision_validate_result; illustrative; complete payload:\n{\n  \"ok\": true,\n  \"problems\": [],\n  \"records\": 1\n}",
       "order": 4,
       "agent": "python -m kernel decisions validate",
       "consumes": [
-        "published record (docs/decisions/<id>.yaml)",
-        "docs/decisions/index.json"
+        "decision_record/id: string (required)",
+        "decision_record/selected_option_id: string (required)",
+        "decision_record/approval/approved_by: string (required)",
+        "decision_record/approval/approved_at: string (required)",
+        "decision_record/provenance/run_id: string (required)",
+        "decision_index_entry/id: string (required)",
+        "decision_index_entry/file: string (required)",
+        "decision_index_entry/sha256: string (required)",
+        "decision_index_entry/selected_option_id: string (required)",
+        "decision_index_entry/approved_by: string (required)",
+        "decision_index_entry/approved_at: string (required)"
       ],
       "produces": [
-        "store validation pass"
+        "decision_validate_result/ok: boolean (required)",
+        "decision_validate_result/problems: array (required)",
+        "decision_validate_result/records: integer (required)"
       ],
       "reads": [
         "Decision"
       ],
       "impl_asof": "2026-10-02",
-      "impl_status": "not_started"
+      "impl_status": "not_started",
+      "io_contracts": {
+        "consumes": [
+          {
+            "contract": "decision_record",
+            "fields": [
+              {
+                "path": "/id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/selected_option_id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/approval/approved_by",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/approval/approved_at",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/provenance/run_id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              }
+            ]
+          },
+          {
+            "contract": "decision_index_entry",
+            "fields": [
+              {
+                "path": "/id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/file",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/sha256",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/selected_option_id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/approved_by",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/approved_at",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              }
+            ]
+          }
+        ],
+        "produces": [
+          {
+            "contract": "decision_validate_result",
+            "fields": [
+              {
+                "path": "/ok",
+                "types": [
+                  "boolean"
+                ],
+                "required": true
+              },
+              {
+                "path": "/problems",
+                "types": [
+                  "array"
+                ],
+                "required": true
+              },
+              {
+                "path": "/records",
+                "types": [
+                  "integer"
+                ],
+                "required": true
+              }
+            ]
+          }
+        ],
+        "examples": [
+          {
+            "contract": "decision_record",
+            "mode": "projection",
+            "origin": "reconstructed",
+            "label": "Existing decision-record scenario: decision_record",
+            "value": {
+              "id": "dec-ef8ddcb79d668a67",
+              "title": "Kernel-contract YAML per decision",
+              "decision_type": "design",
+              "selected_option_id": "opt.added.1",
+              "components": [
+                "decision_kernel",
+                "knowledge_management"
+              ],
+              "approval": {
+                "approval_status": "approved",
+                "approved_by": "human:user",
+                "approved_at": "2026-10-01T14:48:31Z",
+                "note": "approved_at is the decision's updated_at: the kernel Decision had no approved_at field when this decision was approved (added by #KernelDecisionStore)."
+              },
+              "provenance": {
+                "run_id": "run-2fbb4ef43b1345f6",
+                "created_at": "2026-10-01T14:48:31Z"
+              }
+            }
+          },
+          {
+            "contract": "decision_index_entry",
+            "mode": "projection",
+            "origin": "reconstructed",
+            "label": "Existing decision-record scenario: decision_index_entry",
+            "value": {
+              "id": "dec-ef8ddcb79d668a67",
+              "file": "dec-ef8ddcb79d668a67.yaml",
+              "sha256": "d4426542cc89f863b3795b69e1caf182607980c8b642190318fc7c608c3ea819",
+              "selected_option_id": "opt.added.1",
+              "approved_by": "human:user",
+              "approved_at": "2026-10-01T14:48:31Z"
+            }
+          },
+          {
+            "contract": "decision_validate_result",
+            "mode": "full",
+            "origin": "illustrative",
+            "label": "Illustrative one-record store validation",
+            "value": {
+              "ok": true,
+              "problems": [],
+              "records": 1
+            }
+          }
+        ]
+      }
     },
     {
       "id": "review",
       "label": "Commit and review in git",
-      "human": "The new record and index are committed, and a PR is opened and reviewed like any other change; git is the canonical store.",
+      "human": "The new record and index are committed, and a PR is opened and reviewed like any other change; git is the canonical store.\n\nThese existing business artifacts are the review inputs. Git hosting provides its own PR workflow; this flow adds no custom JSON approval object.\n\nContract fields and examples (generated)\nConsumes:\n  decision_record/id: string (required)\n  decision_record/selected_option_id: string (required)\n  decision_record/approval/approved_by: string (required)\n  decision_record/approval/approved_at: string (required)\n  decision_record/provenance/run_id: string (required)\n  Runtime contract: [decision_record](kernel/memory/models.py)\n  decision_index_entry/id: string (required)\n  decision_index_entry/file: string (required)\n  decision_index_entry/sha256: string (required)\n  decision_index_entry/selected_option_id: string (required)\n  decision_index_entry/approved_by: string (required)\n  decision_index_entry/approved_at: string (required)\n  Runtime contract: [decision_index_entry](kernel/memory/index.py)\nProduces:\n  No checked JSON binding documented in this direction.\n\nExisting decision-record scenario: decision_record — decision_record; reconstructed; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"id\": \"dec-ef8ddcb79d668a67\",\n  \"title\": \"Kernel-contract YAML per decision\",\n  \"decision_type\": \"design\",\n  \"selected_option_id\": \"opt.added.1\",\n  \"components\": [\n    \"decision_kernel\",\n    \"knowledge_management\"\n  ],\n  \"approval\": {\n    \"approval_status\": \"approved\",\n    \"approved_by\": \"human:user\",\n    \"approved_at\": \"2026-10-01T14:48:31Z\",\n    \"note\": \"approved_at is the decision's updated_at: the kernel Decision had no approved_at field when this decision was approved (added by #KernelDecisionStore).\"\n  },\n  \"provenance\": {\n    \"run_id\": \"run-2fbb4ef43b1345f6\",\n    \"created_at\": \"2026-10-01T14:48:31Z\"\n  }\n}\n\nExisting decision-record scenario: decision_index_entry — decision_index_entry; reconstructed; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"id\": \"dec-ef8ddcb79d668a67\",\n  \"file\": \"dec-ef8ddcb79d668a67.yaml\",\n  \"sha256\": \"d4426542cc89f863b3795b69e1caf182607980c8b642190318fc7c608c3ea819\",\n  \"selected_option_id\": \"opt.added.1\",\n  \"approved_by\": \"human:user\",\n  \"approved_at\": \"2026-10-01T14:48:31Z\"\n}",
       "order": 5,
       "screen": "decision-record-published",
       "agent": "git review (commit and PR)",
       "consumes": [
-        "store validation pass",
-        "published record (docs/decisions/<id>.yaml)",
-        "docs/decisions/index.json"
+        "decision_record/id: string (required)",
+        "decision_record/selected_option_id: string (required)",
+        "decision_record/approval/approved_by: string (required)",
+        "decision_record/approval/approved_at: string (required)",
+        "decision_record/provenance/run_id: string (required)",
+        "decision_index_entry/id: string (required)",
+        "decision_index_entry/file: string (required)",
+        "decision_index_entry/sha256: string (required)",
+        "decision_index_entry/selected_option_id: string (required)",
+        "decision_index_entry/approved_by: string (required)",
+        "decision_index_entry/approved_at: string (required)"
       ],
-      "produces": [
-        "decision record PR"
-      ],
+      "produces": [],
       "reads": [
         "Decision"
       ],
       "impl_asof": "2026-10-02",
-      "impl_status": "not_started"
+      "impl_status": "not_started",
+      "io_contracts": {
+        "consumes": [
+          {
+            "contract": "decision_record",
+            "fields": [
+              {
+                "path": "/id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/selected_option_id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/approval/approved_by",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/approval/approved_at",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/provenance/run_id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              }
+            ]
+          },
+          {
+            "contract": "decision_index_entry",
+            "fields": [
+              {
+                "path": "/id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/file",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/sha256",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/selected_option_id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/approved_by",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/approved_at",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              }
+            ]
+          }
+        ],
+        "produces": [],
+        "examples": [
+          {
+            "contract": "decision_record",
+            "mode": "projection",
+            "origin": "reconstructed",
+            "label": "Existing decision-record scenario: decision_record",
+            "value": {
+              "id": "dec-ef8ddcb79d668a67",
+              "title": "Kernel-contract YAML per decision",
+              "decision_type": "design",
+              "selected_option_id": "opt.added.1",
+              "components": [
+                "decision_kernel",
+                "knowledge_management"
+              ],
+              "approval": {
+                "approval_status": "approved",
+                "approved_by": "human:user",
+                "approved_at": "2026-10-01T14:48:31Z",
+                "note": "approved_at is the decision's updated_at: the kernel Decision had no approved_at field when this decision was approved (added by #KernelDecisionStore)."
+              },
+              "provenance": {
+                "run_id": "run-2fbb4ef43b1345f6",
+                "created_at": "2026-10-01T14:48:31Z"
+              }
+            }
+          },
+          {
+            "contract": "decision_index_entry",
+            "mode": "projection",
+            "origin": "reconstructed",
+            "label": "Existing decision-record scenario: decision_index_entry",
+            "value": {
+              "id": "dec-ef8ddcb79d668a67",
+              "file": "dec-ef8ddcb79d668a67.yaml",
+              "sha256": "d4426542cc89f863b3795b69e1caf182607980c8b642190318fc7c608c3ea819",
+              "selected_option_id": "opt.added.1",
+              "approved_by": "human:user",
+              "approved_at": "2026-10-01T14:48:31Z"
+            }
+          }
+        ]
+      }
     },
     {
       "id": "merge",
       "label": "Merge to main",
-      "human": "The PR merges to main, and from then on every later run can find the record (for example dec-ef8ddcb79d668a67).",
+      "human": "The PR merges to main, and from then on every later run can find the record (for example dec-ef8ddcb79d668a67).\n\nThe files become available on the merged revision. A later run must use a checkout containing that revision; merge does not refresh every running kernel.\n\nContract fields and examples (generated)\nConsumes:\n  decision_record/id: string (required)\n  decision_record/selected_option_id: string (required)\n  decision_record/approval/approved_by: string (required)\n  decision_record/approval/approved_at: string (required)\n  decision_record/provenance/run_id: string (required)\n  Runtime contract: [decision_record](kernel/memory/models.py)\n  decision_index_entry/id: string (required)\n  decision_index_entry/file: string (required)\n  decision_index_entry/sha256: string (required)\n  decision_index_entry/selected_option_id: string (required)\n  decision_index_entry/approved_by: string (required)\n  decision_index_entry/approved_at: string (required)\n  Runtime contract: [decision_index_entry](kernel/memory/index.py)\nProduces:\n  decision_record/id: string (required)\n  decision_record/selected_option_id: string (required)\n  decision_record/approval/approved_by: string (required)\n  decision_record/approval/approved_at: string (required)\n  decision_record/provenance/run_id: string (required)\n  Runtime contract: [decision_record](kernel/memory/models.py)\n  decision_index_entry/id: string (required)\n  decision_index_entry/file: string (required)\n  decision_index_entry/sha256: string (required)\n  decision_index_entry/selected_option_id: string (required)\n  decision_index_entry/approved_by: string (required)\n  decision_index_entry/approved_at: string (required)\n  Runtime contract: [decision_index_entry](kernel/memory/index.py)\n\nExisting decision-record scenario: decision_record — decision_record; reconstructed; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"id\": \"dec-ef8ddcb79d668a67\",\n  \"title\": \"Kernel-contract YAML per decision\",\n  \"decision_type\": \"design\",\n  \"selected_option_id\": \"opt.added.1\",\n  \"components\": [\n    \"decision_kernel\",\n    \"knowledge_management\"\n  ],\n  \"approval\": {\n    \"approval_status\": \"approved\",\n    \"approved_by\": \"human:user\",\n    \"approved_at\": \"2026-10-01T14:48:31Z\",\n    \"note\": \"approved_at is the decision's updated_at: the kernel Decision had no approved_at field when this decision was approved (added by #KernelDecisionStore).\"\n  },\n  \"provenance\": {\n    \"run_id\": \"run-2fbb4ef43b1345f6\",\n    \"created_at\": \"2026-10-01T14:48:31Z\"\n  }\n}\n\nExisting decision-record scenario: decision_index_entry — decision_index_entry; reconstructed; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"id\": \"dec-ef8ddcb79d668a67\",\n  \"file\": \"dec-ef8ddcb79d668a67.yaml\",\n  \"sha256\": \"d4426542cc89f863b3795b69e1caf182607980c8b642190318fc7c608c3ea819\",\n  \"selected_option_id\": \"opt.added.1\",\n  \"approved_by\": \"human:user\",\n  \"approved_at\": \"2026-10-01T14:48:31Z\"\n}",
       "order": 6,
       "agent": "git (merge to main)",
       "consumes": [
-        "decision record PR"
+        "decision_record/id: string (required)",
+        "decision_record/selected_option_id: string (required)",
+        "decision_record/approval/approved_by: string (required)",
+        "decision_record/approval/approved_at: string (required)",
+        "decision_record/provenance/run_id: string (required)",
+        "decision_index_entry/id: string (required)",
+        "decision_index_entry/file: string (required)",
+        "decision_index_entry/sha256: string (required)",
+        "decision_index_entry/selected_option_id: string (required)",
+        "decision_index_entry/approved_by: string (required)",
+        "decision_index_entry/approved_at: string (required)"
       ],
       "produces": [
-        "published record on main"
+        "decision_record/id: string (required)",
+        "decision_record/selected_option_id: string (required)",
+        "decision_record/approval/approved_by: string (required)",
+        "decision_record/approval/approved_at: string (required)",
+        "decision_record/provenance/run_id: string (required)",
+        "decision_index_entry/id: string (required)",
+        "decision_index_entry/file: string (required)",
+        "decision_index_entry/sha256: string (required)",
+        "decision_index_entry/selected_option_id: string (required)",
+        "decision_index_entry/approved_by: string (required)",
+        "decision_index_entry/approved_at: string (required)"
       ],
       "writes": [
         "Decision"
       ],
       "impl_asof": "2026-10-02",
-      "impl_status": "not_started"
+      "impl_status": "not_started",
+      "io_contracts": {
+        "consumes": [
+          {
+            "contract": "decision_record",
+            "fields": [
+              {
+                "path": "/id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/selected_option_id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/approval/approved_by",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/approval/approved_at",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/provenance/run_id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              }
+            ]
+          },
+          {
+            "contract": "decision_index_entry",
+            "fields": [
+              {
+                "path": "/id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/file",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/sha256",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/selected_option_id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/approved_by",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/approved_at",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              }
+            ]
+          }
+        ],
+        "produces": [
+          {
+            "contract": "decision_record",
+            "fields": [
+              {
+                "path": "/id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/selected_option_id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/approval/approved_by",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/approval/approved_at",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/provenance/run_id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              }
+            ]
+          },
+          {
+            "contract": "decision_index_entry",
+            "fields": [
+              {
+                "path": "/id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/file",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/sha256",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/selected_option_id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/approved_by",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/approved_at",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              }
+            ]
+          }
+        ],
+        "examples": [
+          {
+            "contract": "decision_record",
+            "mode": "projection",
+            "origin": "reconstructed",
+            "label": "Existing decision-record scenario: decision_record",
+            "value": {
+              "id": "dec-ef8ddcb79d668a67",
+              "title": "Kernel-contract YAML per decision",
+              "decision_type": "design",
+              "selected_option_id": "opt.added.1",
+              "components": [
+                "decision_kernel",
+                "knowledge_management"
+              ],
+              "approval": {
+                "approval_status": "approved",
+                "approved_by": "human:user",
+                "approved_at": "2026-10-01T14:48:31Z",
+                "note": "approved_at is the decision's updated_at: the kernel Decision had no approved_at field when this decision was approved (added by #KernelDecisionStore)."
+              },
+              "provenance": {
+                "run_id": "run-2fbb4ef43b1345f6",
+                "created_at": "2026-10-01T14:48:31Z"
+              }
+            }
+          },
+          {
+            "contract": "decision_index_entry",
+            "mode": "projection",
+            "origin": "reconstructed",
+            "label": "Existing decision-record scenario: decision_index_entry",
+            "value": {
+              "id": "dec-ef8ddcb79d668a67",
+              "file": "dec-ef8ddcb79d668a67.yaml",
+              "sha256": "d4426542cc89f863b3795b69e1caf182607980c8b642190318fc7c608c3ea819",
+              "selected_option_id": "opt.added.1",
+              "approved_by": "human:user",
+              "approved_at": "2026-10-01T14:48:31Z"
+            }
+          }
+        ]
+      }
     }
   ],
   "branches": [
@@ -146,55 +1163,359 @@
       "from": "decide-to-publish",
       "condition": "you choose not to publish",
       "label": "Keep it staged",
-      "human": "The record stays only in the run folder; later runs look up precedent through docs/decisions/index.json, so they will not find it.",
+      "human": "The record stays only in the run folder; later runs look up precedent through docs/decisions/index.json, so they will not find it.\n\nNo index entry is published; the record remains only under its run folder.\n\nContract fields and examples (generated)\nConsumes:\n  decision_record/id: string (required)\n  decision_record/selected_option_id: string (required)\n  decision_record/approval/approved_by: string (required)\n  decision_record/approval/approved_at: string (required)\n  decision_record/provenance/run_id: string (required)\n  Runtime contract: [decision_record](kernel/memory/models.py)\nProduces:\n  No checked JSON binding documented in this direction.\n\nExisting decision-record scenario: decision_record — decision_record; reconstructed; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"id\": \"dec-ef8ddcb79d668a67\",\n  \"title\": \"Kernel-contract YAML per decision\",\n  \"decision_type\": \"design\",\n  \"selected_option_id\": \"opt.added.1\",\n  \"components\": [\n    \"decision_kernel\",\n    \"knowledge_management\"\n  ],\n  \"approval\": {\n    \"approval_status\": \"approved\",\n    \"approved_by\": \"human:user\",\n    \"approved_at\": \"2026-10-01T14:48:31Z\",\n    \"note\": \"approved_at is the decision's updated_at: the kernel Decision had no approved_at field when this decision was approved (added by #KernelDecisionStore).\"\n  },\n  \"provenance\": {\n    \"run_id\": \"run-2fbb4ef43b1345f6\",\n    \"created_at\": \"2026-10-01T14:48:31Z\"\n  }\n}",
       "agent": "human",
       "consumes": [
-        "staged record (<run_root>/runs/<run_id>/staged/decisions/<id>.yaml)"
+        "decision_record/id: string (required)",
+        "decision_record/selected_option_id: string (required)",
+        "decision_record/approval/approved_by: string (required)",
+        "decision_record/approval/approved_at: string (required)",
+        "decision_record/provenance/run_id: string (required)"
       ],
       "outcome_kind": "exit",
       "impl_asof": "2026-10-02",
-      "impl_status": "not_started"
+      "impl_status": "not_started",
+      "io_contracts": {
+        "consumes": [
+          {
+            "contract": "decision_record",
+            "fields": [
+              {
+                "path": "/id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/selected_option_id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/approval/approved_by",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/approval/approved_at",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/provenance/run_id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              }
+            ]
+          }
+        ],
+        "produces": [],
+        "examples": [
+          {
+            "contract": "decision_record",
+            "mode": "projection",
+            "origin": "reconstructed",
+            "label": "Existing decision-record scenario: decision_record",
+            "value": {
+              "id": "dec-ef8ddcb79d668a67",
+              "title": "Kernel-contract YAML per decision",
+              "decision_type": "design",
+              "selected_option_id": "opt.added.1",
+              "components": [
+                "decision_kernel",
+                "knowledge_management"
+              ],
+              "approval": {
+                "approval_status": "approved",
+                "approved_by": "human:user",
+                "approved_at": "2026-10-01T14:48:31Z",
+                "note": "approved_at is the decision's updated_at: the kernel Decision had no approved_at field when this decision was approved (added by #KernelDecisionStore)."
+              },
+              "provenance": {
+                "run_id": "run-2fbb4ef43b1345f6",
+                "created_at": "2026-10-01T14:48:31Z"
+              }
+            }
+          }
+        ]
+      },
+      "produces": []
     },
     {
       "id": "no-staged-record",
       "from": "check-record",
       "condition": "the run has no staged decision record",
       "label": "Exit 3: no staged record",
-      "human": "The command stops with exit code 3 and the message \"no staged decision record for this run\"; nothing is written.",
+      "human": "The publish command returns exit code 3 with its JSON result: ok false, a problem naming the run, empty written-record lists and index_written false. No file is written.\n\nContract fields and examples (generated)\nConsumes:\n  No checked JSON binding documented in this direction.\nProduces:\n  SOURCE-REVIEWED DOCUMENTATION: Reviewed from kernel/memory/cli.py _doc/_published/run_decisions and validate.py Problem.as_dict. This documentation schema covers ordinary and refused results, not environment errors; no automatic source-code parity or runtime schema enforcement is claimed.\n  decision_publish_result/ok: boolean (required)\n  decision_publish_result/problems: array (required)\n  decision_publish_result/published: array (required)\n  decision_publish_result/already_present: array (required)\n  decision_publish_result/corrected: array (required)\n  decision_publish_result/index_written: boolean (required)\n  Schema: [decision_publish_result](docs/product-truth/schemas/decision-publish-result.schema.json)\n\nIllustrative failed publish: no staged record — decision_publish_result; illustrative; complete payload:\n{\n  \"ok\": false,\n  \"problems\": [\n    {\n      \"file\": \"run-2fbb4ef43b1345f6\",\n      \"message\": \"no staged decision record for this run\"\n    }\n  ],\n  \"published\": [],\n  \"already_present\": [],\n  \"corrected\": [],\n  \"index_written\": false\n}",
       "agent": "python -m kernel decisions publish",
-      "consumes": [
-        "publish request (--run-id R)"
-      ],
+      "consumes": [],
       "outcome_kind": "failure",
       "impl_asof": "2026-10-02",
-      "impl_status": "not_started"
+      "impl_status": "not_started",
+      "io_contracts": {
+        "consumes": [],
+        "produces": [
+          {
+            "contract": "decision_publish_result",
+            "fields": [
+              {
+                "path": "/ok",
+                "types": [
+                  "boolean"
+                ],
+                "required": true
+              },
+              {
+                "path": "/problems",
+                "types": [
+                  "array"
+                ],
+                "required": true
+              },
+              {
+                "path": "/published",
+                "types": [
+                  "array"
+                ],
+                "required": true
+              },
+              {
+                "path": "/already_present",
+                "types": [
+                  "array"
+                ],
+                "required": true
+              },
+              {
+                "path": "/corrected",
+                "types": [
+                  "array"
+                ],
+                "required": true
+              },
+              {
+                "path": "/index_written",
+                "types": [
+                  "boolean"
+                ],
+                "required": true
+              }
+            ]
+          }
+        ],
+        "examples": [
+          {
+            "contract": "decision_publish_result",
+            "mode": "full",
+            "origin": "illustrative",
+            "label": "Illustrative failed publish: no staged record",
+            "value": {
+              "ok": false,
+              "problems": [
+                {
+                  "file": "run-2fbb4ef43b1345f6",
+                  "message": "no staged decision record for this run"
+                }
+              ],
+              "published": [],
+              "already_present": [],
+              "corrected": [],
+              "index_written": false
+            }
+          }
+        ]
+      },
+      "produces": [
+        "decision_publish_result/ok: boolean (required)",
+        "decision_publish_result/problems: array (required)",
+        "decision_publish_result/published: array (required)",
+        "decision_publish_result/already_present: array (required)",
+        "decision_publish_result/corrected: array (required)",
+        "decision_publish_result/index_written: boolean (required)"
+      ]
     },
     {
       "id": "unknown-filter",
       "from": "check-record",
       "condition": "a component or roadmap phase on the record is not in docs/components.json or docs/roadmap.json",
       "label": "Exit 3: unknown filter value",
-      "human": "The command stops with exit code 3 and names the unknown value; nothing is written until the record uses known values.",
+      "human": "The command stops with exit code 3 and names the unknown value; nothing is written until the record uses known values.\n\nString filter values pass the model, while kernel/memory/vocab.py and validate.py enforce the repository vocabulary. This negative example is intentionally invalid for publication.\n\nContract fields and examples (generated)\nConsumes:\n  decision_record/id: string (required)\n  decision_record/components: array (optional; default [])\n  decision_record/change_target: array (optional; default [])\n  decision_record/risk_surface: array (optional; default [])\n  decision_record/roadmap_phase: array (optional; default [])\n  Runtime contract: [decision_record](kernel/memory/models.py)\nProduces:\n  SOURCE-REVIEWED DOCUMENTATION: Reviewed from kernel/memory/cli.py _doc/_published/run_decisions and validate.py Problem.as_dict. This documentation schema covers ordinary and refused results, not environment errors; no automatic source-code parity or runtime schema enforcement is claimed.\n  decision_publish_result/ok: boolean (required)\n  decision_publish_result/problems: array (required)\n  decision_publish_result/published: array (required)\n  decision_publish_result/already_present: array (required)\n  decision_publish_result/corrected: array (required)\n  decision_publish_result/index_written: boolean (required)\n  Schema: [decision_publish_result](docs/product-truth/schemas/decision-publish-result.schema.json)\n\nIllustrative model-valid filter rejected by repository vocabulary checks — decision_record; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"id\": \"dec-ef8ddcb79d668a67\",\n  \"components\": [\n    \"unknown_component\"\n  ]\n}\n\nIllustrative refused publish with invalid component; diagnostic wording illustrative — decision_publish_result; illustrative; complete payload:\n{\n  \"ok\": false,\n  \"problems\": [\n    {\n      \"file\": \"dec-ef8ddcb79d668a67.yaml\",\n      \"message\": \"components: unknown value unknown_component\"\n    }\n  ],\n  \"published\": [],\n  \"already_present\": [],\n  \"corrected\": [],\n  \"index_written\": false\n}",
       "agent": "python -m kernel decisions publish",
       "consumes": [
-        "staged record (<run_root>/runs/<run_id>/staged/decisions/<id>.yaml)"
+        "decision_record/id: string (required)",
+        "decision_record/components: array (optional; default [])",
+        "decision_record/change_target: array (optional; default [])",
+        "decision_record/risk_surface: array (optional; default [])",
+        "decision_record/roadmap_phase: array (optional; default [])"
       ],
       "outcome_kind": "failure",
       "impl_asof": "2026-10-02",
-      "impl_status": "not_started"
+      "impl_status": "not_started",
+      "io_contracts": {
+        "consumes": [
+          {
+            "contract": "decision_record",
+            "fields": [
+              {
+                "path": "/id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/components",
+                "types": [
+                  "array"
+                ],
+                "required": false,
+                "default": []
+              },
+              {
+                "path": "/change_target",
+                "types": [
+                  "array"
+                ],
+                "required": false,
+                "default": []
+              },
+              {
+                "path": "/risk_surface",
+                "types": [
+                  "array"
+                ],
+                "required": false,
+                "default": []
+              },
+              {
+                "path": "/roadmap_phase",
+                "types": [
+                  "array"
+                ],
+                "required": false,
+                "default": []
+              }
+            ]
+          }
+        ],
+        "produces": [
+          {
+            "contract": "decision_publish_result",
+            "fields": [
+              {
+                "path": "/ok",
+                "types": [
+                  "boolean"
+                ],
+                "required": true
+              },
+              {
+                "path": "/problems",
+                "types": [
+                  "array"
+                ],
+                "required": true
+              },
+              {
+                "path": "/published",
+                "types": [
+                  "array"
+                ],
+                "required": true
+              },
+              {
+                "path": "/already_present",
+                "types": [
+                  "array"
+                ],
+                "required": true
+              },
+              {
+                "path": "/corrected",
+                "types": [
+                  "array"
+                ],
+                "required": true
+              },
+              {
+                "path": "/index_written",
+                "types": [
+                  "boolean"
+                ],
+                "required": true
+              }
+            ]
+          }
+        ],
+        "examples": [
+          {
+            "contract": "decision_record",
+            "mode": "projection",
+            "origin": "illustrative",
+            "label": "Illustrative model-valid filter rejected by repository vocabulary checks",
+            "value": {
+              "id": "dec-ef8ddcb79d668a67",
+              "components": [
+                "unknown_component"
+              ]
+            }
+          },
+          {
+            "contract": "decision_publish_result",
+            "mode": "full",
+            "origin": "illustrative",
+            "label": "Illustrative refused publish with invalid component; diagnostic wording illustrative",
+            "value": {
+              "ok": false,
+              "problems": [
+                {
+                  "file": "dec-ef8ddcb79d668a67.yaml",
+                  "message": "components: unknown value unknown_component"
+                }
+              ],
+              "published": [],
+              "already_present": [],
+              "corrected": [],
+              "index_written": false
+            }
+          }
+        ]
+      },
+      "produces": [
+        "decision_publish_result/ok: boolean (required)",
+        "decision_publish_result/problems: array (required)",
+        "decision_publish_result/published: array (required)",
+        "decision_publish_result/already_present: array (required)",
+        "decision_publish_result/corrected: array (required)",
+        "decision_publish_result/index_written: boolean (required)"
+      ]
     },
     {
       "id": "correct-older",
       "from": "write-published",
       "condition": "you pass --correct OLD_ID for an older record that the new record supersedes",
       "label": "Correct an older record",
-      "human": "The older record gets a correction and superseded_by appended; nothing in it is rewritten, because the store is append-only.",
+      "human": "An explicit publish --correct appends corrections and superseded_by on the older record while preserving its original selected option, evidence and assumptions. The YAML file is rewritten atomically.\n\nSource: kernel/memory/publish.py apply_correction. The before/after pair is counterfactual: dec-0000000000000001 is an illustrative future record identifier, not an existing record or actual approval. The new record would first need valid human approval and a supersedes link to this older record.\n\nContract fields and examples (generated)\nConsumes:\n  decision_record/id: string (required)\n  decision_record/supersedes: array (optional; default [])\n  decision_record/superseded_by: array (optional; default [])\n  decision_record/corrections: array (optional; default [])\n  Runtime contract: [decision_record](kernel/memory/models.py)\nProduces:\n  decision_record/id: string (required)\n  decision_record/superseded_by: array (optional; default [])\n  decision_record/corrections: array (optional; default [])\n  Runtime contract: [decision_record](kernel/memory/models.py)\n\nExisting record before hypothetical correction — decision_record; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"id\": \"dec-ef8ddcb79d668a67\",\n  \"selected_option_id\": \"opt.added.1\",\n  \"superseded_by\": [],\n  \"corrections\": []\n}\n\nCounterfactual after explicit correction; synthetic new record id, not stored — decision_record; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"id\": \"dec-ef8ddcb79d668a67\",\n  \"selected_option_id\": \"opt.added.1\",\n  \"superseded_by\": [\n    \"dec-0000000000000001\"\n  ],\n  \"corrections\": [\n    {\n      \"reason\": \"Illustrative future correction after a new human decision.\",\n      \"corrected_at\": \"2026-10-03T00:00:00Z\",\n      \"corrected_by\": \"human:user\",\n      \"superseded_by\": \"dec-0000000000000001\",\n      \"new_selected_option_id\": \"opt.yaml_files_plus_generated_index\",\n      \"preserved\": {\n        \"selected_option_id\": \"opt.added.1\",\n        \"evidence_ids\": [\n          \"ev-27c8e6023c8b1d02\",\n          \"ev-c682e3aed7a3d61d\",\n          \"ev-9b13e430034dcba6\",\n          \"ev-1d195ec5c4c771bb\",\n          \"ev-063eb814db4cb414\",\n          \"ev-591abf9deb88606d\",\n          \"ev-dec0aa32a14392ad\",\n          \"ev-88966751b3cbceef\",\n          \"ev-2a5b96a5d4b66790\",\n          \"ev-fdd2af1c9390c516\",\n          \"ev-7f8e5dd6dd088a40\",\n          \"ev-eb8ec95cb3030bb5\",\n          \"ev-11610d16ed6c35b8\",\n          \"ev-0ea3b25df48c740d\",\n          \"ev-9b98e1c4095659ed\",\n          \"ev-d9a4bc930c81099f\",\n          \"ev-5a9817bc11ed3072\",\n          \"ev-1f1a3e8d235cebde\",\n          \"ev-bfc498da5709f897\",\n          \"ev-b6b3a0715fda1c3b\"\n        ],\n        \"assumptions\": []\n      }\n    }\n  ]\n}",
       "agent": "python -m kernel decisions publish --correct OLD_ID",
       "consumes": [
-        "validated record"
+        "decision_record/id: string (required)",
+        "decision_record/supersedes: array (optional; default [])",
+        "decision_record/superseded_by: array (optional; default [])",
+        "decision_record/corrections: array (optional; default [])"
       ],
       "produces": [
-        "correction and superseded_by on the older record"
+        "decision_record/id: string (required)",
+        "decision_record/superseded_by: array (optional; default [])",
+        "decision_record/corrections: array (optional; default [])"
       ],
       "reads": [
         "Decision"
@@ -204,7 +1525,139 @@
       ],
       "outcome_kind": "alternative",
       "impl_asof": "2026-10-02",
-      "impl_status": "not_started"
+      "impl_status": "not_started",
+      "io_contracts": {
+        "consumes": [
+          {
+            "contract": "decision_record",
+            "fields": [
+              {
+                "path": "/id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/supersedes",
+                "types": [
+                  "array"
+                ],
+                "required": false,
+                "default": []
+              },
+              {
+                "path": "/superseded_by",
+                "types": [
+                  "array"
+                ],
+                "required": false,
+                "default": []
+              },
+              {
+                "path": "/corrections",
+                "types": [
+                  "array"
+                ],
+                "required": false,
+                "default": []
+              }
+            ]
+          }
+        ],
+        "produces": [
+          {
+            "contract": "decision_record",
+            "fields": [
+              {
+                "path": "/id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/superseded_by",
+                "types": [
+                  "array"
+                ],
+                "required": false,
+                "default": []
+              },
+              {
+                "path": "/corrections",
+                "types": [
+                  "array"
+                ],
+                "required": false,
+                "default": []
+              }
+            ]
+          }
+        ],
+        "examples": [
+          {
+            "contract": "decision_record",
+            "mode": "projection",
+            "origin": "illustrative",
+            "label": "Existing record before hypothetical correction",
+            "value": {
+              "id": "dec-ef8ddcb79d668a67",
+              "selected_option_id": "opt.added.1",
+              "superseded_by": [],
+              "corrections": []
+            }
+          },
+          {
+            "contract": "decision_record",
+            "mode": "projection",
+            "origin": "illustrative",
+            "label": "Counterfactual after explicit correction; synthetic new record id, not stored",
+            "value": {
+              "id": "dec-ef8ddcb79d668a67",
+              "selected_option_id": "opt.added.1",
+              "superseded_by": [
+                "dec-0000000000000001"
+              ],
+              "corrections": [
+                {
+                  "reason": "Illustrative future correction after a new human decision.",
+                  "corrected_at": "2026-10-03T00:00:00Z",
+                  "corrected_by": "human:user",
+                  "superseded_by": "dec-0000000000000001",
+                  "new_selected_option_id": "opt.yaml_files_plus_generated_index",
+                  "preserved": {
+                    "selected_option_id": "opt.added.1",
+                    "evidence_ids": [
+                      "ev-27c8e6023c8b1d02",
+                      "ev-c682e3aed7a3d61d",
+                      "ev-9b13e430034dcba6",
+                      "ev-1d195ec5c4c771bb",
+                      "ev-063eb814db4cb414",
+                      "ev-591abf9deb88606d",
+                      "ev-dec0aa32a14392ad",
+                      "ev-88966751b3cbceef",
+                      "ev-2a5b96a5d4b66790",
+                      "ev-fdd2af1c9390c516",
+                      "ev-7f8e5dd6dd088a40",
+                      "ev-eb8ec95cb3030bb5",
+                      "ev-11610d16ed6c35b8",
+                      "ev-0ea3b25df48c740d",
+                      "ev-9b98e1c4095659ed",
+                      "ev-d9a4bc930c81099f",
+                      "ev-5a9817bc11ed3072",
+                      "ev-1f1a3e8d235cebde",
+                      "ev-bfc498da5709f897",
+                      "ev-b6b3a0715fda1c3b"
+                    ],
+                    "assumptions": []
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      }
     }
   ],
   "acceptance_scenarios": [
@@ -275,6 +1728,12 @@
       "by": "flow-author (decision-lifecycle product-truth session)",
       "date": "2026-10-02",
       "note": "Sub-flow 3 of leafcutter/decision-lifecycle (kernel decision dec-5e7445182eaec1f2): a human-run publish command, then git review. Exit codes and --correct checked against kernel/memory/cli.py and publish.py on main."
+    },
+    {
+      "action": "extended",
+      "by": "product-truth-expert",
+      "date": "2026-10-03",
+      "note": "Migrated every node to source-backed checked handoffs and labeled examples; preserved runtime, approvals and AC status."
     }
   ],
   "impl_summary": {
@@ -283,5 +1742,23 @@
     "not_started": 10,
     "total": 10,
     "asof": "2026-10-02"
+  },
+  "contract_definitions": {
+    "decision_index_entry": {
+      "model": "decision_index_entry"
+    },
+    "decision_record": {
+      "model": "decision_record"
+    },
+    "decision_publish_result": {
+      "schema": "docs/product-truth/schemas/decision-publish-result.schema.json",
+      "authority": "source_reviewed",
+      "note": "Reviewed from kernel/memory/cli.py _doc/_published/run_decisions and validate.py Problem.as_dict. This documentation schema covers ordinary and refused results, not environment errors; no automatic source-code parity or runtime schema enforcement is claimed."
+    },
+    "decision_validate_result": {
+      "schema": "docs/product-truth/schemas/decision-validate-result.schema.json",
+      "authority": "source_reviewed",
+      "note": "Reviewed from kernel/memory/cli.py _doc/_published/run_decisions and validate.py Problem.as_dict. This documentation schema covers ordinary and refused results, not environment errors; no automatic source-code parity or runtime schema enforcement is claimed."
+    }
   }
 }

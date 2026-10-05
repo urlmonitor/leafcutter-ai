@@ -1,0 +1,110 @@
+id: UXP-523-3
+title: Structured details appear once while the author's explanation remains visible
+component: ux-prototyping
+components:
+- ux_prototyping
+level: L3
+status: active
+req_status: active
+work_status: done
+readiness: reviewed
+priority: medium
+criteria: 'Given a node has usable structured contract metadata and also contains generated compatibility
+  labels and a generated contract section in its narrative,
+
+  When a person opens that node in Atlas,
+
+  Then the author''s narrative before the generated marker appears once,
+
+  And the contract fields and examples appear once in the structured detail display,
+
+  And the generated narrative section and compatibility badges do not repeat those same fields and examples,
+
+  And authored text is not removed merely because it contains words also used by a contract.'
+depends_on:
+- UXP-523
+doc_links:
+- path: docs/how-to/product-truth-schema-reference.md
+  relationship: specifies
+  status: exists
+- path: docs/architecture/components/ux-prototyping.md
+  relationship: describes
+  status: exists
+assigned_agent: frontend-coder
+origin_agent: business-analyst
+created: '2026-10-05'
+amended_by:
+- reason: '2026-10-05 business-analyst: recorded source/test traceability and locally verified completion
+    after IT PO review; retained reviewed readiness and existing parent statuses. Hosted CI and merge had not yet run at that local verification.'
+superseded_by: null
+covered_by:
+- leafcutter-web/components/flows/__tests__/flow-drawer.contracts.test.tsx
+- leafcutter-web/components/flows/__tests__/flow-explorer.contracts.test.tsx
+implemented_by:
+- leafcutter-web/lib/data/flows.ts
+- leafcutter-web/lib/data/types.ts
+- leafcutter-web/lib/data/flow-contracts.ts
+- leafcutter-web/components/flows/flow-contracts.tsx
+- leafcutter-web/components/flows/flow-drawer.tsx
+notes: 'The test writer verified 20 Atlas contract tests across three suites and the full TypeScript check.
+  The drawer and real loader-to-selection path assert one structured representation while retaining the
+  author''s narrative.
+
+
+  The user accepted the displayed feature and authorized completing its AC/test coverage and merging after
+  green checks. Readiness remains reviewed: BA and IT PO reviewed these newly authored criteria; no separate
+  individual-AC user sign-off is claimed. Work status records locally verified implementation. At the local verification recorded on 2026-10-05,
+  hosted CI and merge had not yet run. GitHub PR checks and merge status track release completion. This leaf does not claim production retrieval integration or completion
+  of its broader parent.'
+estimated_complexity: S
+change_target:
+- code
+- ui
+risk_surface: contract_boundary
+it_requirements:
+- Suppress only canonical generated compatibility content when the structured display guard accepts the
+  node. Never remove authored prose by matching contract words or apparent JSON fragments.
+- Preserve the authored data and generated compatibility copies on disk; this AC changes the read surface,
+  not source ownership.
+expects_from:
+  ac_id: UXP-700e-2-ii
+  contract: The canonical generator derives node consumes/produces string arrays and the human suffix
+    starting with Contract fields and examples (generated) from io_contracts, preserving authored prose
+    before that marker; Atlas may omit those derived copies only when it can display the structured metadata.
+delivers_to: null
+test_spec:
+- name: shows one contract heading, readable field table, and each raw example once
+  target_dir: leafcutter-web/components/flows/__tests__/
+  description: Authored narrative and structured field/example content appear once while generated copies
+    are absent.
+  framework: vitest
+  type: component
+  angle: criterion
+- name: shows missing bindings and true non-JSON reasons without generated duplicates
+  target_dir: leafcutter-web/components/flows/__tests__/
+  description: Gap and non-JSON branches also avoid compatibility-section duplication.
+  framework: vitest
+  type: component
+  angle: boundary
+- name: renders actual %s contracts after selecting a graph node
+  target_dir: leafcutter-web/components/flows/__tests__/
+  description: Select actual stored nodes carrying the generated suffix and verify one structured display
+    through the real production seam.
+  framework: vitest
+  type: component
+  angle: reachability
+test_rationale: Counting rendered examples and preserving prose catches implementations that merely add
+  a second panel or erase unrelated author text. The stored-flow seam prevents isolated-prop tests from
+  hiding missing explorer wiring.
+test_required: true
+declares_side_effect: false
+product_truth:
+  - flow: leafcutter/explore-flows-in-atlas
+    node: inspect
+    node_kind: step
+    flow_kind: user
+    screen: null
+    mock_data: null
+    entities: []
+    source: real
+    asof: '2026-10-05'

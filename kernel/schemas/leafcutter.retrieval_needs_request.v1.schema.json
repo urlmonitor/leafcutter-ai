@@ -1,0 +1,62 @@
+{
+  "$defs": {
+    "JsonValue": {}
+  },
+  "$id": "leafcutter.retrieval_needs_request.v1",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Original question and bounded candidate meanings, independent of backend support.",
+  "properties": {
+    "catalog": {
+      "additionalProperties": {
+        "additionalProperties": {
+          "type": "string"
+        },
+        "type": "object"
+      },
+      "title": "Catalog",
+      "type": "object"
+    },
+    "context": {
+      "items": {
+        "type": "string"
+      },
+      "maxItems": 32,
+      "title": "Context",
+      "type": "array"
+    },
+    "known_ids": {
+      "items": {
+        "type": "string"
+      },
+      "maxItems": 64,
+      "title": "Known Ids",
+      "type": "array"
+    },
+    "original_question": {
+      "maxLength": 8000,
+      "minLength": 1,
+      "title": "Original Question",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": "1.0",
+      "default": "1.0",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "source_scope": {
+      "additionalProperties": {
+        "$ref": "#/$defs/JsonValue"
+      },
+      "title": "Source Scope",
+      "type": "object"
+    }
+  },
+  "required": [
+    "original_question",
+    "catalog"
+  ],
+  "title": "RetrievalNeedsRequest",
+  "type": "object"
+}

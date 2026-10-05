@@ -13,6 +13,10 @@
 #                docs/components.json. BLOCKING. Diff-scoped on PRs, full tree
 #                on push to main.
 #
+#   product-truth-valid - the same offline store validator used by pre-commit,
+#                including documented handoff fields and examples. BLOCKING,
+#                every PR/push, plus its focused contract regression tests.
+#
 #   shipped-address-check — nothing under templates/ (including templates/docs/)
 #                or config/ carries a real-looking database connection address
 #                (INF-1100d-4 / INF-1100d-4-i). BLOCKING, full tree every run —
@@ -162,6 +166,58 @@ jobs:
         # The Decision Kernel is written to the Error Handling Policy (CLAUDE.md), so it is held
         # to the full E722/BLE001/TRY set; the other trees are not (see ruff.toml).
         run: ruff check kernel --select E722,BLE001,TRY
+
+  product-truth-valid:
+    name: Product truth valid (offline)
+    runs-on: ubuntu-latest
+    # A focused whole-store check on every PR/push catches dependency-only
+    # changes and removed contract metadata without a second driftable selector.
+    # Keep this the same validator invoked by check-product-truth-validate.
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install dev dependencies
+        run: pip install -r requirements-dev.txt
+
+      - name: Validate product-truth contracts and store
+        run: python docs/product-truth/scripts/validate_product_truth.py --quiet
+
+      - name: Test product-truth contract enforcement
+        env:
+          AC_ENFORCE_STRICT: "1"
+        run: python -m pytest unit_tests/product_truth/test_flow_io_contract*.py -q
+
+  atlas-contracts:
+    name: Atlas contract display
+    runs-on: ubuntu-latest
+    # Display-only changes must exercise the real loader/explorer/drawer seam,
+    # even when no AC status or product-truth JSON file changed in this PR.
+    defaults:
+      run:
+        working-directory: leafcutter-web
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+          cache-dependency-path: leafcutter-web/package-lock.json
+
+      - name: Install Atlas dependencies
+        run: npm ci
+
+      - name: Type check Atlas and its tests
+        run: npx tsc --noEmit --incremental false
+
+      - name: Test Atlas contract display
+        run: npm test -- components/flows/__tests__/flow-drawer.contracts.test.tsx components/flows/__tests__/flow-explorer.contracts.test.tsx lib/data/__tests__/flows.contracts.test.ts
 
   component-vocab:
     name: Component vocab style (components.json)

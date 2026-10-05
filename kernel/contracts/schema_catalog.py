@@ -38,12 +38,15 @@ from kernel.contracts.payloads import (
 
 from kernel.contracts.query import (QueryBuildRequest, QueryCandidate,
                                     QueryActivationRequest, QueryActivationReceipt)
+from kernel.contracts.retrieval_needs import RetrievalNeedsRequest, RetrievalNeedsOutput
 
 logger = logging.getLogger(__name__)
 
 JSON_SCHEMA_DIALECT = "https://json-schema.org/draft/2020-12/schema"
 
 SCHEMA_CATALOG: dict[str, type[KernelModel]] = {
+    sid.RETRIEVAL_NEEDS_REQUEST: RetrievalNeedsRequest,
+    sid.RETRIEVAL_NEEDS_OUTPUT: RetrievalNeedsOutput,
     sid.QUERY_BUILD_REQUEST: QueryBuildRequest,
     sid.QUERY_CANDIDATE: QueryCandidate,
     sid.QUERY_ACTIVATION_REQUEST: QueryActivationRequest,
@@ -340,3 +343,4 @@ def export_json_schemas(directory: Path) -> list[Path]:
 #   resume path can map them to semantic_invalid without catching exceptions.
 #   (#KernelBootstrapV0/P1)
 # ====================================================================
+# - 2026-10-03 00:00 [python-coder]: Add typed host-needs support without activating production retrieval. (#TICKETLESS reason=user-requested-isolated-host-experiment)
