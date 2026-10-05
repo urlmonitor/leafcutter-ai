@@ -1,0 +1,45 @@
+id: DK-400c-2-i
+title: "The quote check ignores line breaks and spacing but not changed words"
+component: decision-kernel
+components:
+  - decision_kernel
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_kernel_1_founding
+criteria: |
+  Given a goal whose text breaks the line between "put them into a new file" and "type (needs
+    evaluation)",
+  When the host proposes part p1 quoting "put them into a new file type (needs evaluation)", with a
+    single space where the goal has a line break,
+  And part p2 quoting "put them into a new file kind (needs evaluation)",
+  And part p3 quoting "we must make sure that we are able to cluster them somehow",
+  Then p1 and p3 are kept, because their quotes match the goal once spaces and line breaks are
+    treated alike,
+  And p2 is set aside read-only with the reason "quote not found in the goal".
+depends_on:
+  - DK-400c-2
+doc_links:
+  - path: docs/product-truth/mock-data/leafcutter/decisions.mock.json
+    relationship: specified-by
+    status: exists
+    relevance: "subject_text is verbatim with whitespace normalised; covers is a verbatim substring."
+assigned_agent: python-coder
+estimated_complexity: null
+delivers_to: null
+expects_from:
+  ac_id: DK-400c-2
+  contract: "The quote check that sets proposals aside."
+origin_agent: business-analyst
+created: 2026-10-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Pins the mock-data rule "verbatim (whitespace normalised)" from both sides, so that neither
+  an over-strict nor a fuzzy match passes. Letter case is not normalised by the mock data and is
+  not relaxed here.

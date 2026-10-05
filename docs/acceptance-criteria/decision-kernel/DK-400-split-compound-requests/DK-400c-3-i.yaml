@@ -1,0 +1,41 @@
+id: DK-400c-3-i
+title: "Fewer than two parts left after setting aside unquoted ones also means one question"
+component: decision-kernel
+components:
+  - decision_kernel
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_kernel_1_founding
+criteria: |
+  Given the decision-records goal offered for a split with trigger bundled_accepted,
+  When the host proposes three parts and two of them quote words the goal does not contain,
+  Then only one part would remain, so no split gate is shown and no part is created,
+  And the goal goes ahead as one decision from the precedent step,
+  And the two set-aside proposals are not offered for approval.
+depends_on:
+  - DK-400c-3
+  - DK-400c-2
+doc_links:
+  - path: docs/product-truth/flows/leafcutter/decision-forming.flow.json
+    relationship: implements
+    status: exists
+    relevance: "Flow v4 node(s) split-propose, split-dropped, with their acceptance scenarios."
+assigned_agent: python-coder
+estimated_complexity: null
+delivers_to: null
+expects_from:
+  ac_id: DK-400c-2
+  contract: "The quote check, applied before the part count is taken."
+origin_agent: business-analyst
+created: 2026-10-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Confirms the DK-400c note "fewer than 2 parts left AFTER dropping: the same rule as fewer
+  than 2 should apply". The count is taken after the quote check.

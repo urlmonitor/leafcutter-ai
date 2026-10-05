@@ -1,0 +1,50 @@
+id: DK-400a-3
+title: "A single question routing can give to one capability is never split"
+component: decision-kernel
+components:
+  - decision_kernel
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_kernel_1_founding
+criteria: |
+  Given a run whose root goal is the single question "Which retention period should the
+    kernel's Langfuse traces use?",
+  And routing gives it to the decision capability,
+  When routing runs on the run's root,
+  Then no split is started and the run has no split record,
+  And the person is asked no question about splitting,
+  And the run goes on as one decision from the precedent step,
+  And the run's report has no split section.
+depends_on:
+  - DK-400a
+doc_links:
+  - path: docs/product-truth/flows/leafcutter/decision-forming.flow.json
+    relationship: implements
+    status: exists
+    relevance: "Flow v4 node(s) split-not-needed, with their acceptance scenarios."
+  - path: docs/architecture/adrs/ADR-053-intelligence-selection-deterministic-jev-llm-human.md
+    relationship: constrains
+    status: exists
+    relevance: "Host proposes (generative), Jev only judges, a person approves; cheapest mechanism first."
+  - path: docs/how-to/run-the-decision-kernel.md
+    relationship: context
+    status: exists
+    relevance: "Run statuses, gap records, resume answers and the run report as they are today."
+assigned_agent: python-coder
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst
+created: 2026-10-05
+amended_by: []
+superseded_by: null
+covered_by:
+  - DK-400a-3-i
+implemented_by: []
+notes: |
+  Flow branch split-not-needed. The guard against turning today's working path into a
+  gate: a single bounded question must reach the same interactions it reaches today.

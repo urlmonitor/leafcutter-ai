@@ -1,0 +1,46 @@
+id: DK-400a-3-i
+title: "A question that lists alternatives or constraints is one question, not a bundle"
+component: decision-kernel
+components:
+  - decision_kernel
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_kernel_1_founding
+criteria: |
+  Given a run whose root goal is "Should this new capability be an atomic node or an
+    encapsulated subgraph, given that it must be resumable and traced?",
+  And routing gives it to the decision capability,
+  When routing runs on the run's root,
+  Then no split is started, because the alternatives joined by "or" are the options of one
+    question and the conditions joined by "and" are constraints on it,
+  And the run goes on as one decision from the precedent step with no split gate shown.
+depends_on:
+  - DK-400a-3
+doc_links:
+  - path: docs/product-truth/flows/leafcutter/decision-forming.flow.json
+    relationship: implements
+    status: exists
+    relevance: "Flow v4 node(s) split-not-needed, with their acceptance scenarios."
+  - path: docs/architecture/adrs/ADR-053-intelligence-selection-deterministic-jev-llm-human.md
+    relationship: constrains
+    status: exists
+    relevance: "Host proposes (generative), Jev only judges, a person approves; cheapest mechanism first."
+assigned_agent: python-coder
+estimated_complexity: null
+delivers_to: null
+expects_from:
+  ac_id: DK-400a-3
+  contract: "The no-split path for a single question that this false-positive case must reach."
+origin_agent: business-analyst
+created: 2026-10-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  The likeliest false positive: conjunctions inside one question. The example is the how-to's
+  own sample goal with a constraint clause added.

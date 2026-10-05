@@ -1,0 +1,55 @@
+id: DK-400a-1-ii
+title: "A request that is split is not counted as a capability gap, and a real gap still is"
+component: decision-kernel
+components:
+  - decision_kernel
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_kernel_1_founding
+criteria: |
+  Given run A, whose root goal is the reusable-criteria goal turned away by routing
+    (trigger jev_none) and offered as a split that the person approves,
+  And run B, whose root is the single request "Write release notes for the last ten merged pull
+    requests", which no registered capability can meet,
+  When both runs have ended and the capability-gap list across runs is read,
+  Then run A contributes no capability-gap record,
+  And run B contributes one capability-gap record, the same record it would produce today,
+  And run A's goal does not appear in the list as a build opportunity.
+depends_on:
+  - DK-400a-1
+  - DK-400a-4
+doc_links:
+  - path: docs/product-truth/flows/leafcutter/decision-forming.flow.json
+    relationship: implements
+    status: exists
+    relevance: "Flow v4 node(s) split-detect, single-no-capability, with their acceptance scenarios."
+  - path: docs/roadmap.json
+    relationship: related
+    status: exists
+    relevance: "phase_kernel_1_founding exit criterion 2: countable capability-gap records."
+  - path: docs/how-to/run-the-decision-kernel.md
+    relationship: context
+    status: exists
+    relevance: "Run statuses, gap records, resume answers and the run report as they are today."
+assigned_agent: python-coder
+estimated_complexity: null
+delivers_to: null
+expects_from:
+  ac_id: DK-400a-1
+  contract: "The split start that replaces today's gap record for a bundled, turned-away request."
+origin_agent: business-analyst
+created: 2026-10-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Keeps gap counts honest in both directions (DK-400 ROADMAP ALIGNMENT): a compound request
+  is not counted as a gap, and a real gap is not hidden behind a split.
+  OPEN (reported to the user): whether a gap is recorded when the person REJECTS the split of a
+  turned-away request (DK-400d-3-i). The person may be saying "this is one question", and then
+  the kernel still cannot meet it. This AC deliberately covers only the approved case.

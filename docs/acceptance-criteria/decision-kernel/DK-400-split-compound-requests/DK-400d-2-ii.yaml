@@ -1,0 +1,49 @@
+id: DK-400d-2-ii
+title: "A reworded part may carry words the request does not contain, such as a set-aside proposal's question"
+component: decision-kernel
+components:
+  - decision_kernel
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_kernel_1_founding
+criteria: |
+  Given the reusable-criteria split at the split gate, with the set-aside proposal "Decide when
+    an LLM may generate further categories" shown read-only,
+  When the person rewords p3 to "Decide how the reusable categories are clustered, and when an LLM
+    may generate further categories" and approves,
+  Then p3 is recorded as edited and runs with the person's words, although they are not a quote of
+    the goal,
+  And p3 keeps its proposed text and its original quote "we must make sure that we are able to
+    cluster them somehow",
+  And the set-aside proposal itself stays read-only and never runs.
+depends_on:
+  - DK-400d-2
+  - DK-400c-2
+doc_links:
+  - path: docs/product-truth/flows/leafcutter/decision-forming.flow.json
+    relationship: implements
+    status: exists
+    relevance: "Flow v4 node(s) split-dropped, split-revise, with their acceptance scenarios."
+  - path: docs/product-truth/mockups/leafcutter/decision-split-approve.mockup.json
+    relationship: specified-by
+    status: exists
+    relevance: "Screen decision-split-approve (v2)."
+assigned_agent: python-coder
+estimated_complexity: null
+delivers_to: null
+expects_from:
+  ac_id: DK-400c-2
+  contract: "The set-aside proposal shown read-only at the gate."
+origin_agent: business-analyst
+created: 2026-10-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Flow split-dropped: "you can add its question with an edit". Non-obvious: the verbatim-quote
+  check applies to the host's proposals, not to the person's own words.

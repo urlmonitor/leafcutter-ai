@@ -1,0 +1,56 @@
+id: DK-400b-1
+title: "A research request with several needs is offered as a split into research parts"
+component: decision-kernel
+components:
+  - decision_kernel
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_kernel_1_founding
+criteria: |
+  Given a run whose root is the research request of mock record
+    dcp-reuse-threshold-research: "Find where the kernel reads memory.reuse_threshold, which tests
+    cover the reuse offer, and whether an ADR fixes the 0.8 value.",
+  And routing's result for it is an ambiguous gap,
+  When routing runs on the run's root,
+  Then a split is offered with subject kind research_request, found at routing, work-item depth 0
+    and trigger ambiguous, keeping the request exactly as submitted,
+  And every part offered at the split gate names research as the capability that will run it,
+  And the split is answered at the same split gate, with the same four answers, as a split of a
+    goal.
+depends_on:
+  - DK-400b
+  - DK-400a-1
+doc_links:
+  - path: docs/product-truth/flows/leafcutter/decision-forming.flow.json
+    relationship: implements
+    status: exists
+    relevance: "Flow v4 node(s) split-detect, with their acceptance scenarios."
+  - path: docs/product-truth/mock-data/leafcutter/decisions.mock.json
+    relationship: specified-by
+    status: exists
+    relevance: "subject_kind research_request; record dcp-reuse-threshold-research (three research parts)."
+  - path: docs/product-truth/mockups/leafcutter/decision-split-approve.mockup.json
+    relationship: specified-by
+    status: exists
+    relevance: "Screen decision-split-approve (v2)."
+assigned_agent: python-coder
+estimated_complexity: null
+delivers_to: null
+expects_from:
+  ac_id: DK-400a-1
+  contract: "The routing-time split start, reused for a subject of kind research_request."
+origin_agent: business-analyst
+created: 2026-10-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  The user's "(and other things)": the split is not tied to goals. DK-400b notes: a research
+  request split this way runs research children only. What happens to a host proposal that names
+  decision for a part of a research request (refuse and repair, like any malformed host answer,
+  or re-label) is for the IT PO.

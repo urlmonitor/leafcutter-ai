@@ -1,0 +1,50 @@
+id: DK-400f-4
+title: "How-to: read a split's progress and its report section"
+component: decision-kernel
+components:
+  - decision_kernel
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_kernel_1_founding
+criteria: |
+  Given a person whose run split a request,
+  When they read the kernel how-to section on following a split,
+  Then it explains each part outcome shown, pending, decided, answered and not run, and where each
+    part's link leads: a staged decision record or research findings,
+  And it explains the report's split section, one line per part, and the plain line a rejected split
+    leaves,
+  And it states that a decided part's record is staged and that the person publishes it, as for any
+    other decision.
+depends_on:
+  - DK-400f
+  - DK-400f-1
+  - DK-400f-2
+  - DK-400f-3
+doc_links:
+  - path: docs/how-to/run-the-decision-kernel.md
+    relationship: describes
+    status: exists
+    relevance: "The kernel how-to; reading the split belongs beside Step 6 (read the result)."
+  - path: docs/product-truth/mockups/leafcutter/decision-split-progress.mockup.json
+    relationship: specified-by
+    status: exists
+    relevance: "Screen decision-split-progress (v2)."
+assigned_agent: documentation-expert
+estimated_complexity: null
+delivers_to: null
+expects_from:
+  ac_id: DK-400f-2
+  contract: "The report's split section the how-to explains."
+change_target: docs
+origin_agent: business-analyst
+created: 2026-10-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Documentation AC for DK-400f documentation_triggers [how-to].

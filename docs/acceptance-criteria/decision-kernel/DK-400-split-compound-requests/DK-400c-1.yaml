@@ -1,0 +1,72 @@
+id: DK-400c-1
+title: "The host proposes two to five parts, each quoting your words, and no part runs until you answer"
+component: decision-kernel
+components:
+  - decision_kernel
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_kernel_1_founding
+criteria: |
+  Given the reusable-criteria goal waiting for its split proposal,
+  When the host proposes four parts, each naming decision as the capability that will run it:
+    p1 "Decide which new file type the reusable categories are put into (needs evaluation)",
+      quoting "we can should put them into a new file type (needs evaluation)", waiting for no
+      part,
+    p2 "Decide how the reusable categories are then also put into Neo4j", quoting "and then also
+      into neo4j", waiting for p1,
+    p3 "Decide how the reusable categories are clustered", quoting "we must make sure that we are
+      able to cluster them somehow", waiting for p1,
+    p4 "Decide whether to mine the reusable categories from Langfuse as a start", quoting "As a
+      start we can probably mine them from langfuse", waiting for no part,
+  Then the split gate offers p1 to p4 in that order, each with its quote, the parts it waits for
+    and its capability,
+  And the run waits for a person's answer (run status waiting_human) with every part not run,
+  And the parts come only from the host's proposal: Jev is not asked to write, merge or reword any
+    part.
+depends_on:
+  - DK-400c
+  - DK-400a-1
+doc_links:
+  - path: docs/product-truth/flows/leafcutter/decision-forming.flow.json
+    relationship: implements
+    status: exists
+    relevance: "Flow v4 node(s) split-propose, with their acceptance scenarios."
+  - path: docs/product-truth/mock-data/leafcutter/decisions.mock.json
+    relationship: specified-by
+    status: exists
+    relevance: "Invariants on parts (2 to 5, unique ids, covers verbatim, depends_on acyclic); record dcp-reusable-criteria-proposed."
+  - path: docs/product-truth/mockups/leafcutter/decision-split-approve.mockup.json
+    relationship: specified-by
+    status: exists
+    relevance: "Screen decision-split-approve (v2)."
+  - path: docs/architecture/adrs/ADR-053-intelligence-selection-deterministic-jev-llm-human.md
+    relationship: constrains
+    status: exists
+    relevance: "Host proposes (generative), Jev only judges, a person approves; cheapest mechanism first."
+assigned_agent: python-coder
+estimated_complexity: null
+delivers_to:
+  agent: python-coder
+  contract: "A proposed split (2 to 5 parts with text, verbatim quote, dependencies, capability) that the gate (DK-400d-1) offers and the scheduler (DK-400e-1) runs."
+expects_from:
+  ac_id: DK-400a-1
+  contract: "A split record whose subject text the proposal quotes from."
+origin_agent: business-analyst
+created: 2026-10-05
+amended_by: []
+superseded_by: null
+covered_by:
+  - DK-400c-1-i
+  - DK-400c-1-ii
+implemented_by: []
+notes: |
+  Flow step split-propose. The host operation is host.decompose_goal (working name, from the
+  superseded KernelDecomposeMultiPartGoal ticket). Proposing is generative host work, never Jev's
+  (ADR-053, DK-400 SETTLED 1).
+  For the IT PO: the registry entry for the new host operation (ADR-055), the configured bound
+  on child work per run, the off switch that restores today's behaviour, and the ADR with a
+  pinned number.

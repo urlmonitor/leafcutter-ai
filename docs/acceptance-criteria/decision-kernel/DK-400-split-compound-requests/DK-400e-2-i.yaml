@@ -1,0 +1,42 @@
+id: DK-400e-2-i
+title: "A research part settles as answered with findings, not with a decision record"
+component: decision-kernel
+components:
+  - decision_kernel
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_kernel_1_founding
+criteria: |
+  Given the reuse-threshold research split approved with research parts p1, p2 and p3,
+  When each part runs as research,
+  Then each settles as answered, with its findings and a link to its research result,
+  And no decision record is created for any of the three parts.
+depends_on:
+  - DK-400e-2
+doc_links:
+  - path: docs/product-truth/flows/leafcutter/decision-forming.flow.json
+    relationship: implements
+    status: exists
+    relevance: "Flow v4 node(s) split-run, with their acceptance scenarios."
+  - path: docs/product-truth/mock-data/leafcutter/decisions.mock.json
+    relationship: specified-by
+    status: exists
+    relevance: "outcome answered iff child_capability research with result_ref and findings; record dcp-reuse-threshold-research."
+assigned_agent: python-coder
+estimated_complexity: null
+delivers_to: null
+expects_from:
+  ac_id: DK-400e-1
+  contract: "Parts run as work items of the same run."
+origin_agent: business-analyst
+created: 2026-10-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  DK-400e SETTLED: a research part returns findings, not a record.

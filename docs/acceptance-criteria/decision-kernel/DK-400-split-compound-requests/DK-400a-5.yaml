@@ -1,0 +1,59 @@
+id: DK-400a-5
+title: "Reference entry: when a request is split, left whole or recorded as a capability gap"
+component: decision-kernel
+components:
+  - decision_kernel
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_kernel_1_founding
+criteria: |
+  Given a reader who wants to know what the kernel does with a request that may hold several
+    questions,
+  When they open the kernel's reference entry on splits,
+  Then it states the four routing-time outcomes, each with one example request: offered as a
+    split because routing turned it away (jev_none or ambiguous), offered as a split although
+    routing would accept it as one decision (bundled_accepted), left whole as one decision, and
+    recorded as a capability gap,
+  And it states that a request proposed as fewer than two parts is treated as one question with
+    no split gate,
+  And it states that a request that is split is not counted as a capability gap, while a single
+    question no capability can meet still is.
+depends_on:
+  - DK-400a
+  - DK-400a-1
+  - DK-400a-2
+  - DK-400a-3
+  - DK-400a-4
+  - DK-400c-3
+doc_links:
+  - path: docs/reference/decision-kernel-splits.md
+    relationship: describes
+    status: planned
+    relevance: "Planned reference page for kernel splits; DK-400b-4 adds to the same entry. The documentation-expert may place it elsewhere and update this link."
+  - path: docs/architecture/components/decision-kernel.md
+    relationship: describes
+    status: exists
+    relevance: "Kernel containers: routing, scheduler, host handoffs, run root."
+  - path: docs/product-truth/flows/leafcutter/decision-forming.flow.json
+    relationship: implements
+    status: exists
+    relevance: "Flow v4 node(s) split-detect, split-not-needed, single-no-capability, with their acceptance scenarios."
+assigned_agent: documentation-expert
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+change_target: docs
+origin_agent: business-analyst
+created: 2026-10-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Documentation AC for DK-400a documentation_triggers [reference-doc]. DK-400a and DK-400b
+  share one reference entry; this AC writes the routing rule, DK-400b-4 adds the kinds and
+  places.

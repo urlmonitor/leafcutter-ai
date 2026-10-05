@@ -1,0 +1,46 @@
+id: DK-400d-2-i
+title: "Unticking every part is not an approval"
+component: decision-kernel
+components:
+  - decision_kernel
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_kernel_1_founding
+criteria: |
+  Given the trace-analyzers split waiting at the split gate with parts p1 and p2,
+  When the person unticks both parts and approves,
+  Then the answer is not accepted as an approval and nothing is recorded as approved,
+  And the gate says that at least one part must stay in, or that the split can be rejected instead,
+  And the gate stays open with no part run.
+depends_on:
+  - DK-400d-2
+doc_links:
+  - path: docs/product-truth/flows/leafcutter/decision-forming.flow.json
+    relationship: implements
+    status: exists
+    relevance: "Flow v4 node(s) split-revise, with their acceptance scenarios."
+  - path: docs/product-truth/mock-data/leafcutter/decisions.mock.json
+    relationship: specified-by
+    status: exists
+    relevance: "Invariant: an approved split has at least one part not left_out."
+assigned_agent: python-coder
+estimated_complexity: null
+delivers_to: null
+expects_from:
+  ac_id: DK-400d-2
+  contract: "The subset answer whose lower bound this case enforces."
+origin_agent: business-analyst
+created: 2026-10-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Settles the DK-400d CARRY TO L2 point left to the BA: the gate refuses an approval with
+  every part unticked, rather than treating it as a rejection. A rejection has different
+  consequences per trigger (blocked, or kept whole), so it must be the person's explicit answer,
+  never inferred.

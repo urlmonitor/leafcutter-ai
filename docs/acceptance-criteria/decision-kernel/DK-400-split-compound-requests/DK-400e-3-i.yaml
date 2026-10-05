@@ -1,0 +1,43 @@
+id: DK-400e-3-i
+title: "An earlier part's result judged not to apply is not used as evidence"
+component: decision-kernel
+components:
+  - decision_kernel
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_kernel_1_founding
+criteria: |
+  Given the reusable-criteria split where p4, "Decide whether to mine the reusable categories
+    from Langfuse as a start", runs after p1 was decided,
+  When Jev judges p1's record to apply to p4's question below the applicability threshold,
+  Then p4's record names p1's record as considered and not applicable,
+  And p1's record is not used as evidence for p4's options or criteria.
+depends_on:
+  - DK-400e-3
+doc_links:
+  - path: docs/product-truth/mock-data/leafcutter/decisions.mock.json
+    relationship: specified-by
+    status: exists
+    relevance: "precedents_considered action: below 0.5 not_applicable."
+  - path: docs/product-truth/flows/leafcutter/decision-retrieval.flow.json
+    relationship: related
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: null
+delivers_to: null
+expects_from:
+  ac_id: DK-400e-3
+  contract: "The precedent offer and Jev's applicability judgment."
+origin_agent: business-analyst
+created: 2026-10-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  The "never taken as given" half of DK-400e: the earlier result is judged, and a low fit
+  keeps it out of the evidence.

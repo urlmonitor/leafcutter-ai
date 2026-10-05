@@ -1,0 +1,58 @@
+id: DK-400d-2
+title: "Rewording and leaving out parts in one approval: reworded parts keep the proposal, left-out parts never run"
+component: decision-kernel
+components:
+  - decision_kernel
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_kernel_1_founding
+criteria: |
+  Given the split-bounds split waiting at the split gate with parts p1, p2 and p3,
+  When the person human:user rewords p2 from "Decide how many child decisions one run may start" to
+    "Decide how many child decisions one run may start, counting every split in the run",
+  And unticks p3,
+  And approves with the note "p2: count every split in the run. p3 left out: parallel children are
+    out of scope; children run one after another.",
+  Then p1 is recorded as kept, p2 as edited and p3 as left out,
+  And p2 keeps its proposed text beside the reworded text, and its quote is unchanged,
+  And p2 runs with the reworded text as its question,
+  And p3 never runs,
+  And the split keeps the person's note word for word.
+depends_on:
+  - DK-400d
+  - DK-400d-1
+doc_links:
+  - path: docs/product-truth/flows/leafcutter/decision-forming.flow.json
+    relationship: implements
+    status: exists
+    relevance: "Flow v4 node(s) split-revise, with their acceptance scenarios."
+  - path: docs/product-truth/mock-data/leafcutter/decisions.mock.json
+    relationship: specified-by
+    status: exists
+    relevance: "parts[].review edited iff proposed_text is set; left_out has outcome not_run; record dcp-split-bounds-mid-run."
+  - path: docs/product-truth/mockups/leafcutter/decision-split-approve.mockup.json
+    relationship: specified-by
+    status: exists
+    relevance: "Screen decision-split-approve (v2)."
+assigned_agent: python-coder
+estimated_complexity: null
+delivers_to: null
+expects_from:
+  ac_id: DK-400d-1
+  contract: "The approval path that this answer extends with edits and a subset."
+origin_agent: business-analyst
+created: 2026-10-05
+amended_by: []
+superseded_by: null
+covered_by:
+  - DK-400d-2-i
+  - DK-400d-2-ii
+implemented_by: []
+notes: |
+  Flow branch split-revise. Edits and a subset combine in one approval (DK-400d CARRY TO L2).
+  Left to the IT PO (DK-400 Q7): whether a person may add a new part, or change a part's
+  dependencies or capability, at the gate.

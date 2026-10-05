@@ -53,7 +53,12 @@ amended_by:
   - reason: "2026-10-05 PO, user decision: rejecting the split of a request the kernel would have accepted as one decision lets it go ahead as one decision, exactly as today; rejecting the split of a request the kernel turned away still ends with the plain nothing-was-decided note. Title narrowed from 'Nothing runs' to 'No part runs' accordingly."
   - reason: "2026-10-05 PO, user decision: a rejected split found mid-run also goes ahead as one; only a split of a turned-away request ends blocked when rejected. The open-question hold on L2 work was removed."
 superseded_by: null
-covered_by: []
+covered_by:
+  - DK-400d-1
+  - DK-400d-2
+  - DK-400d-3
+  - DK-400d-4
+  - DK-400d-5
 implemented_by: []
 documentation_triggers:
   - how-to

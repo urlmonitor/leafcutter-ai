@@ -1,0 +1,48 @@
+id: DK-400d-1-i
+title: "Only a person can answer the split gate; an answer from the host or a model is refused"
+component: decision-kernel
+components:
+  - decision_kernel
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_kernel_1_founding
+criteria: |
+  Given a split waiting at the split gate,
+  When an answer arrives whose actor is the host, the kernel or a model rather than a person,
+  Then the answer is refused, the split records no answer and the run stays waiting for a person,
+  And when the same answer is then relayed by the host on behalf of the person human:user, it is
+    accepted and recorded as given by human:user, never by the host.
+depends_on:
+  - DK-400d-1
+doc_links:
+  - path: docs/architecture/adrs/ADR-060-source-of-truth-and-approval-authority.md
+    relationship: constrains
+    status: exists
+    relevance: "Only a person answers a gate and approves a decision; precedent is evidence, never authority."
+  - path: docs/product-truth/mock-data/leafcutter/decisions.mock.json
+    relationship: specified-by
+    status: exists
+    relevance: "Invariant: gate_by matches human(:<name>) iff gate_answer is set; never a model."
+  - path: docs/how-to/run-the-decision-kernel.md
+    relationship: context
+    status: exists
+    relevance: "Run statuses, gap records, resume answers and the run report as they are today."
+assigned_agent: python-coder
+estimated_complexity: null
+delivers_to: null
+expects_from:
+  ac_id: DK-400d-1
+  contract: "The gate answer path whose actor this case checks."
+origin_agent: business-analyst
+created: 2026-10-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  DK-400 SETTLED 2 and ADR-060. The relay case matters because the person answers through
+  Claude Code: the relayer is the host, the actor is the person.

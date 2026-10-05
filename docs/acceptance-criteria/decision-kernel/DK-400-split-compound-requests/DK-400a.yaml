@@ -48,7 +48,12 @@ amended_by:
   - reason: "2026-10-05 PO, after the user approved the framing at the PO gate: widened to bundled requests the kernel would accept as one choice (user answer to PO open question 1). The single-question and capability-gap guarantees are unchanged."
   - reason: "2026-10-05 PO: mock-data follow-up restated as in progress (trigger bundled_accepted being added by the mock-data author, uncommitted) rather than missing."
 superseded_by: null
-covered_by: []
+covered_by:
+  - DK-400a-1
+  - DK-400a-2
+  - DK-400a-3
+  - DK-400a-4
+  - DK-400a-5
 implemented_by: []
 documentation_triggers:
   - reference-doc

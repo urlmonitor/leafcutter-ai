@@ -1,0 +1,46 @@
+id: DK-400e-2-ii
+title: "Approving the split approves no part's decision"
+component: decision-kernel
+components:
+  - decision_kernel
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_kernel_1_founding
+criteria: |
+  Given the reusable-criteria split approved by human:user at the split gate,
+  When part p1's decision reaches its final choice,
+  Then the person is asked to approve p1's choice, as for any other decision,
+  And no decision record exists for p1 until the person approves that choice,
+  And the approver and approval time on p1's record are those of p1's choice, not those of the
+    split's approval.
+depends_on:
+  - DK-400e-2
+doc_links:
+  - path: docs/architecture/adrs/ADR-060-source-of-truth-and-approval-authority.md
+    relationship: constrains
+    status: exists
+    relevance: "Only a person answers a gate and approves a decision; precedent is evidence, never authority."
+  - path: docs/product-truth/flows/leafcutter/decision-forming.flow.json
+    relationship: implements
+    status: exists
+    relevance: "Flow v4 node(s) split-run, resolve, with their acceptance scenarios."
+assigned_agent: python-coder
+estimated_complexity: null
+delivers_to: null
+expects_from:
+  ac_id: DK-400e-2
+  contract: "The per-part decision record path."
+origin_agent: business-analyst
+created: 2026-10-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  ADR-060 section 2: only a human approval of the decision itself creates a record. A split
+  multiplies the questions a person is asked (DK-400e CARRY TO L2), which matters for the
+  bounded-count setting the IT PO owns.

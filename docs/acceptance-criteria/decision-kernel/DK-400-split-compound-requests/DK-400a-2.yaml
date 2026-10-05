@@ -1,0 +1,67 @@
+id: DK-400a-2
+title: "A bundled request that routing would accept as one decision is offered as a split first"
+component: decision-kernel
+components:
+  - decision_kernel
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_kernel_1_founding
+criteria: |
+  Given a run whose root goal is the decision-records goal of mock record
+    dcp-decision-records-bundled ("Decide how Leafcutter should file decision records as JSON or
+    YAML files under docs/ so later kernel runs can find and reuse them as precedent: which fields
+    a record needs, which classification filters it carries ..., the folder layout and file
+    naming, and how human approval and later corrections are recorded."),
+  And that goal bundles five separate decisions: fields, classification filters, folder layout,
+    file naming, and approval and corrections,
+  And routing gives the goal to the decision capability as one decision,
+  When routing runs on the run's root,
+  Then a split is offered for the goal with trigger bundled_accepted, found at routing and
+    work-item depth 0, keeping the goal exactly as submitted,
+  And no options and no criteria are formed for the goal as a whole before the person answers
+    the split gate,
+  And the routing result (the decision capability) is kept with the split, so that a rejected
+    split can go ahead as that one decision.
+depends_on:
+  - DK-400a
+doc_links:
+  - path: docs/product-truth/flows/leafcutter/decision-forming.flow.json
+    relationship: implements
+    status: exists
+    relevance: "Flow v4 node(s) split-detect, with their acceptance scenarios."
+  - path: docs/product-truth/mock-data/leafcutter/decisions.mock.json
+    relationship: specified-by
+    status: exists
+    relevance: "Decomposition.trigger bundled_accepted; record dcp-decision-records-bundled."
+  - path: docs/analysis/2026-10-01-kernel-trace-review-decision-records-run.md
+    relationship: related
+    status: exists
+    relevance: "Finding 5: five sub-decisions answered as one pick-one-of-N."
+  - path: docs/architecture/adrs/ADR-053-intelligence-selection-deterministic-jev-llm-human.md
+    relationship: constrains
+    status: exists
+    relevance: "Host proposes (generative), Jev only judges, a person approves; cheapest mechanism first."
+assigned_agent: python-coder
+estimated_complexity: null
+delivers_to:
+  agent: python-coder
+  contract: "A split record with trigger bundled_accepted plus the kept routing result, which the kept-whole rejection (DK-400d-3-ii) resumes from."
+expects_from: null
+origin_agent: business-analyst
+created: 2026-10-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Flow node split-detect, the accepted-as-one case (user decision 2026-10-05, DK-400 Q1).
+  The real case is the run of 2026-10-01 (run-5d246775f5e54f11), where the person had to add a
+  composite option because five decisions were squeezed into one choice.
+  Left to the IT PO: where this is caught, at routing or at the start of the decision
+  capability on the root work item. Both must reach the same split gate (DK-400d). The check now
+  runs on every routed request, so its cost and false-positive rate matter. DK-400a-3 and
+  DK-400a-3-i pin the false-positive side.

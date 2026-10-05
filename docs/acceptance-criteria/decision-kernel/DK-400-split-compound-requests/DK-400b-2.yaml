@@ -1,0 +1,57 @@
+id: DK-400b-2
+title: "A many-sided decision question found partway through a run starts the same split"
+component: decision-kernel
+components:
+  - decision_kernel
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_kernel_1_founding
+criteria: |
+  Given a run whose root went ahead as one decision,
+  And a work item at depth 1 below the root holds the decision question of mock record
+    dcp-split-bounds-mid-run: "Decide the bounds for a split: how many sub-questions one split may
+    propose, how many child decisions one run may start, and whether children may run in
+    parallel.",
+  When the run reaches that work item,
+  Then a split is started for that work item with subject kind decision_question, found mid-run,
+    work-item depth 1 and no routing trigger,
+  And the split's subject is the work item's question exactly as it stands, not the root goal,
+  And the work item does not go ahead as one decision while its split is proposed and unanswered,
+  And the split goes to the same split gate as a split found at routing.
+depends_on:
+  - DK-400b
+doc_links:
+  - path: docs/product-truth/flows/leafcutter/decision-forming.flow.json
+    relationship: implements
+    status: exists
+    relevance: "Flow v4 node(s) split-mid-run, with their acceptance scenarios."
+  - path: docs/product-truth/mock-data/leafcutter/decisions.mock.json
+    relationship: specified-by
+    status: exists
+    relevance: "Invariant: found_at routing iff depth 0 iff a trigger is present; record dcp-split-bounds-mid-run."
+  - path: docs/architecture/adrs/ADR-053-intelligence-selection-deterministic-jev-llm-human.md
+    relationship: constrains
+    status: exists
+    relevance: "Host proposes (generative), Jev only judges, a person approves; cheapest mechanism first."
+assigned_agent: python-coder
+estimated_complexity: null
+delivers_to:
+  agent: python-coder
+  contract: "A mid-run split record (found_at mid_run, depth, null trigger) that the proposal step and the kept-whole rejection (DK-400d-3-iii) read."
+expects_from: null
+origin_agent: business-analyst
+created: 2026-10-05
+amended_by: []
+superseded_by: null
+covered_by:
+  - DK-400b-2-i
+  - DK-400b-2-ii
+implemented_by: []
+notes: |
+  Flow branch split-mid-run. Left to the IT PO: what tells the kernel, partway through, that a
+  work item holds several questions (apply the ADR-053 order, as on DK-400a). Also left to the IT
+  PO (DK-400 Q6): whether a part of an approved split may itself be split again, and how deep.

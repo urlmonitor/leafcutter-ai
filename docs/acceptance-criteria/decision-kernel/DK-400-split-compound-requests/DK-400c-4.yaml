@@ -1,0 +1,55 @@
+id: DK-400c-4
+title: "Component diagram: where the split sits among the kernel's containers"
+component: decision-kernel
+components:
+  - decision_kernel
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_kernel_1_founding
+criteria: |
+  Given a reader of the decision kernel's architecture,
+  When they open the component diagram for splitting a request,
+  Then it shows the new host operation that proposes parts as a host handoff beside the existing
+    host handoffs,
+  And it shows the pieces a split passes through: detection at routing and at a work item, the
+    quote check that sets proposals aside, the person's split gate, the scheduler that runs the
+    approved parts, and the run report's split section,
+  And it shows the split record in the run root and its links to the parts' decision records,
+  And every container in it corresponds to one named in the kernel's container overview.
+depends_on:
+  - DK-400c
+  - DK-400c-1
+  - DK-400c-2
+doc_links:
+  - path: docs/architecture/components/decision-kernel.md
+    relationship: describes
+    status: exists
+    relevance: "Kernel containers: routing, scheduler, host handoffs, run root."
+  - path: docs/architecture/diagrams/c2-007-decision-kernel-flows-overview.md
+    relationship: related
+    status: exists
+    relevance: "Parent flows overview the new diagram sits under."
+  - path: docs/architecture/diagrams/c3-014-decision-kernel-flows-request-handoff.md
+    relationship: related
+    status: exists
+    relevance: "Existing host-handoff diagram the new host operation sits beside."
+assigned_agent: architecture-diagram-author
+estimated_complexity: null
+delivers_to: null
+expects_from:
+  ac_id: DK-400c-1
+  contract: "The proposal step and its host operation, which the diagram places."
+change_target: docs
+origin_agent: business-analyst
+created: 2026-10-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Documentation AC for DK-400c documentation_triggers [component-diagram]. The new diagram's
+  file number comes from the diagram sequence tool.

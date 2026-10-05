@@ -1,0 +1,54 @@
+id: DK-400e-5
+title: "Sequence diagram: running the approved parts and their own approvals"
+component: decision-kernel
+components:
+  - decision_kernel
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_kernel_1_founding
+criteria: |
+  Given a reader who wants to follow an approved split to its end,
+  When they open the sequence diagram for running a split,
+  Then it shows the scheduler starting one part at a time in dependency order, each part's own
+    decision or research steps, and the person approving each decided part's choice,
+  And it shows an earlier part's record reaching a later part as precedent that Jev judges,
+  And it shows a part that cannot be settled, the parts waiting for it marked not run, and an
+    independent part carrying on.
+depends_on:
+  - DK-400e
+  - DK-400e-1
+  - DK-400e-2
+  - DK-400e-3
+  - DK-400e-4
+doc_links:
+  - path: docs/architecture/components/decision-kernel.md
+    relationship: describes
+    status: exists
+    relevance: "Kernel containers: routing, scheduler, host handoffs, run root."
+  - path: docs/architecture/diagrams/c2-007-decision-kernel-flows-overview.md
+    relationship: related
+    status: exists
+  - path: docs/product-truth/flows/leafcutter/decision-forming.flow.json
+    relationship: implements
+    status: exists
+    relevance: "Flow v4 node(s) split-run, split-report, with their acceptance scenarios."
+assigned_agent: architecture-diagram-author
+estimated_complexity: null
+delivers_to: null
+expects_from:
+  ac_id: DK-400e-4
+  contract: "The failure path the diagram shows."
+change_target: docs
+origin_agent: business-analyst
+created: 2026-10-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Documentation AC for DK-400e documentation_triggers [sequence-diagram]. It continues where
+  DK-400c-5 stops (at the gate).

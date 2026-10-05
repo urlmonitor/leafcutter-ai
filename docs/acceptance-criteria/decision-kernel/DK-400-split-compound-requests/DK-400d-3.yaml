@@ -1,0 +1,61 @@
+id: DK-400d-3
+title: "Rejecting the split runs no part and keeps the person's answer"
+component: decision-kernel
+components:
+  - decision_kernel
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_kernel_1_founding
+criteria: |
+  Given a split waiting at the split gate, whatever the reason it was offered,
+  When the person human:user rejects it at 2026-10-05T09:14:26Z with a note,
+  Then no part runs and no work item is created for any part,
+  And every part is recorded as rejected and not run,
+  And the split records the answer rejected, given by human:user at that time, with the note word
+    for word,
+  And how the work goes on is set by why the split was offered: a request routing turned away ends
+    blocked, while a request routing would have accepted, or a work item found mid-run, is kept
+    whole.
+depends_on:
+  - DK-400d
+  - DK-400d-1
+doc_links:
+  - path: docs/product-truth/flows/leafcutter/decision-forming.flow.json
+    relationship: implements
+    status: exists
+    relevance: "Flow v4 node(s) split-reject, split-reject-kept-whole, with their acceptance scenarios."
+  - path: docs/product-truth/mock-data/leafcutter/decisions.mock.json
+    relationship: specified-by
+    status: exists
+    relevance: "gate_answer rejected; states rejected and rejected_kept_whole; every part.review rejected and outcome not_run."
+  - path: docs/product-truth/mockups/leafcutter/decision-split-approve.mockup.json
+    relationship: specified-by
+    status: exists
+    relevance: "Screen decision-split-approve (v2)."
+  - path: docs/architecture/adrs/ADR-060-source-of-truth-and-approval-authority.md
+    relationship: constrains
+    status: exists
+    relevance: "Only a person answers a gate and approves a decision; precedent is evidence, never authority."
+assigned_agent: python-coder
+estimated_complexity: null
+delivers_to: null
+expects_from:
+  ac_id: DK-400d-1
+  contract: "The gate answer path, here with the answer rejected."
+origin_agent: business-analyst
+created: 2026-10-05
+amended_by: []
+superseded_by: null
+covered_by:
+  - DK-400d-3-i
+  - DK-400d-3-ii
+  - DK-400d-3-iii
+implemented_by: []
+notes: |
+  The rule common to both rejection branches. Its endings are the L3s: turned away
+  (DK-400d-3-i, flow split-reject), accepted as one (DK-400d-3-ii) and found mid-run
+  (DK-400d-3-iii), both flow split-reject-kept-whole. The report line for each is DK-400f-3.

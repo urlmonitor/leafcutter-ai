@@ -1,0 +1,55 @@
+id: DK-400f-3
+title: "A rejected split gets one plain report line, whichever way the work went on"
+component: decision-kernel
+components:
+  - decision_kernel
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_kernel_1_founding
+criteria: |
+  Given the trace-analyzers split rejected after routing had turned the goal away (trigger
+    jev_none),
+  And the decision-records split rejected after routing would have accepted the goal as one decision
+    (trigger bundled_accepted),
+  When each run's report is read,
+  Then the first says "The proposed split was rejected by human:user; nothing was decided.",
+    followed by a hint to ask again as one bounded question, with an example rewording,
+  And the second carries the one line "The proposed split was rejected by human:user; the goal is
+    kept whole and runs as one decision." above the report of that one decision,
+  And a rejected split found mid-run gets the same kind of line, naming the work item kept whole,
+  And none of these reports has a per-part section.
+depends_on:
+  - DK-400f
+  - DK-400d-3
+doc_links:
+  - path: docs/product-truth/flows/leafcutter/decision-forming.flow.json
+    relationship: implements
+    status: exists
+    relevance: "Flow v4 node(s) split-reject, split-reject-kept-whole, with their acceptance scenarios."
+  - path: docs/product-truth/mock-data/leafcutter/decisions.mock.json
+    relationship: specified-by
+    status: exists
+    relevance: "report_lines of records dcp-trace-analyzers-rejected and dcp-decision-records-bundled."
+  - path: docs/product-truth/mockups/leafcutter/decision-split-progress.mockup.json
+    relationship: specified-by
+    status: exists
+    relevance: "Screen decision-split-progress (v2)."
+assigned_agent: python-coder
+estimated_complexity: null
+delivers_to: null
+expects_from:
+  ac_id: DK-400d-3
+  contract: "The recorded rejection and its trigger."
+origin_agent: business-analyst
+created: 2026-10-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  User decision 2026-10-05 (DK-400 REJECTION; the one-line default is confirmed). The line
+  texts are those of the mock records.

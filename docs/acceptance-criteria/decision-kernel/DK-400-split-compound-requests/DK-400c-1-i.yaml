@@ -1,0 +1,57 @@
+id: DK-400c-1-i
+title: "A proposal of more than five parts offers five and lists the rest as not covered, never dropping them silently"
+component: decision-kernel
+components:
+  - decision_kernel
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_kernel_1_founding
+criteria: |
+  Given a bundled goal for which the host proposes seven parts, p1 to p7, each quoting its
+    words from the goal and none waiting for a later part,
+  When the proposal is turned into the split,
+  Then the split gate offers p1 to p5 for approval,
+  And it lists p6 and p7 read-only as not covered by this split, each with its text and quote,
+  And it tells the person that the request holds more than five parts and that p6 and p7 will not
+    be answered by this split but can be asked again as a request of their own,
+  And p6 and p7 can be neither ticked nor run.
+depends_on:
+  - DK-400c-1
+doc_links:
+  - path: docs/product-truth/flows/leafcutter/decision-forming.flow.json
+    relationship: implements
+    status: exists
+    relevance: "Flow v4 node(s) split-propose, with their acceptance scenarios."
+  - path: docs/product-truth/mock-data/leafcutter/decisions.mock.json
+    relationship: specified-by
+    status: exists
+    relevance: "parts holds 2 to 5 entries; dropped[] is reserved for proposals whose quote is not in the subject."
+  - path: docs/product-truth/mockups/leafcutter/decision-split-approve.mockup.json
+    relationship: specified-by
+    status: exists
+    relevance: "Screen decision-split-approve (v2)."
+assigned_agent: python-coder
+estimated_complexity: null
+delivers_to: null
+expects_from:
+  ac_id: DK-400c-1
+  contract: "The proposal-to-split conversion this bound applies to."
+origin_agent: business-analyst
+created: 2026-10-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  User decision (DK-400 Q2): more than five means asking the person to narrow the request, or
+  offering five parts and listing the rest read-only as not covered; never a silent drop. This AC
+  takes the second option as the default and tells the person how to ask for the rest, so both
+  readings are served. Reported to the user as an open question.
+  For the IT PO: which five are offered when a dependency crosses the cut (for example p3 waits
+  for p6). The example deliberately has no such dependency.
+  PRODUCT-TRUTH GAP: the mock data has no field for "not covered" parts. dropped[] cannot hold
+  them, because its invariant requires a quote that is NOT in the subject.

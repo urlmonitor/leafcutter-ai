@@ -1,0 +1,52 @@
+id: DK-400f-1
+title: "One view shows every part's outcome with a link to its answer"
+component: decision-kernel
+components:
+  - decision_kernel
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_kernel_1_founding
+criteria: |
+  Given the split-bounds split while p1 is decided, p2 is pending and p3 was left out,
+  When the person looks at the split's progress,
+  Then p1 shows decided, with a link to its decision record,
+  And p2 shows pending (waiting), with its reworded text and its proposed text beside it,
+  And p3 shows not run, left out at the split,
+  And for the reuse-threshold research split, each answered part shows answered, with a link to its
+    research findings.
+depends_on:
+  - DK-400f
+  - DK-400e-1
+doc_links:
+  - path: docs/product-truth/flows/leafcutter/decision-forming.flow.json
+    relationship: implements
+    status: exists
+    relevance: "Flow v4 node(s) split-report, with their acceptance scenarios."
+  - path: docs/product-truth/mockups/leafcutter/decision-split-progress.mockup.json
+    relationship: specified-by
+    status: exists
+    relevance: "Screen decision-split-progress (v2)."
+  - path: docs/product-truth/mock-data/leafcutter/decisions.mock.json
+    relationship: specified-by
+    status: exists
+    relevance: "parts[].outcome, decision_id, result_ref; records dcp-split-bounds-mid-run and dcp-reuse-threshold-research."
+assigned_agent: python-coder
+estimated_complexity: null
+delivers_to: null
+expects_from:
+  ac_id: DK-400e-1
+  contract: "Settled parts with their outcomes and links."
+origin_agent: business-analyst
+created: 2026-10-05
+amended_by: []
+superseded_by: null
+covered_by:
+  - DK-400f-1-i
+implemented_by: []
+notes: |
+  Flow step split-report (screen decision-split-progress). Hand splits are history only
+  (DK-400 Q4): no AC here covers the settled_by_human outcome or the hand-split record.

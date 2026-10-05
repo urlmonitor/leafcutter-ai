@@ -1,0 +1,45 @@
+id: DK-400f-1-i
+title: "A decided part's link opens its staged record and says it still awaits publishing"
+component: decision-kernel
+components:
+  - decision_kernel
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_kernel_1_founding
+criteria: |
+  Given a split whose part p1 is decided, and whose record is staged in the run but not
+    published,
+  When the person follows p1's link in the split's progress,
+  Then it opens p1's staged record in the run,
+  And the view says that the record is staged and that a person publishes it,
+  And the kernel does not publish the record on the person's behalf.
+depends_on:
+  - DK-400f-1
+doc_links:
+  - path: docs/architecture/adrs/ADR-060-source-of-truth-and-approval-authority.md
+    relationship: constrains
+    status: exists
+    relevance: "Only a person answers a gate and approves a decision; precedent is evidence, never authority."
+  - path: docs/product-truth/mock-data/leafcutter/decisions.mock.json
+    relationship: specified-by
+    status: exists
+    relevance: "Decision.staged_path and lifecycle_stage staged."
+assigned_agent: python-coder
+estimated_complexity: null
+delivers_to: null
+expects_from:
+  ac_id: DK-400f-1
+  contract: "The part link shown in the progress view."
+origin_agent: business-analyst
+created: 2026-10-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  ADR-060 section 3: a record enters the repository only when a person publishes it. A split
+  can stage several records in one run, so the view must make clear none is published yet.

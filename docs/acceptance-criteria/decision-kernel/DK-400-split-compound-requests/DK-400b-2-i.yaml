@@ -1,0 +1,49 @@
+id: DK-400b-2-i
+title: "A mid-run split's quotes are checked against the work item's own words, not the root goal"
+component: decision-kernel
+components:
+  - decision_kernel
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_kernel_1_founding
+criteria: |
+  Given the mid-run split of the split-bounds decision question at work-item depth 1,
+  And the root goal's text contains the words "children are counted per run", which the work
+    item's question does not contain,
+  When the host proposes part p1 quoting "how many sub-questions one split may propose", part p2
+    quoting "whether children may run in parallel" and part p3 quoting "children are counted per
+    run",
+  Then p1 and p2 are kept, because their quotes are in the work item's question,
+  And p3 is set aside read-only with the reason that its quote is not found in the subject,
+    although its words appear in the root goal.
+depends_on:
+  - DK-400b-2
+  - DK-400c-2
+doc_links:
+  - path: docs/product-truth/flows/leafcutter/decision-forming.flow.json
+    relationship: implements
+    status: exists
+    relevance: "Flow v4 node(s) split-mid-run, split-dropped, with their acceptance scenarios."
+  - path: docs/product-truth/mock-data/leafcutter/decisions.mock.json
+    relationship: specified-by
+    status: exists
+    relevance: "Invariant: every parts[].covers is a verbatim substring of subject_text."
+assigned_agent: python-coder
+estimated_complexity: null
+delivers_to: null
+expects_from:
+  ac_id: DK-400c-2
+  contract: "The quote check that sets proposals aside, applied here to the mid-run subject."
+origin_agent: business-analyst
+created: 2026-10-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Non-obvious: the subject of a mid-run split is the work item, so a quote of the root goal is
+  not a quote of the subject.

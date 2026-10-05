@@ -1,0 +1,50 @@
+id: DK-400d-3-ii
+title: "Rejecting the split of a request routing would accept keeps it whole as one decision"
+component: decision-kernel
+components:
+  - decision_kernel
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_kernel_1_founding
+criteria: |
+  Given the decision-records goal, which routing would accept as one decision (trigger
+    bundled_accepted), offered as parts p1 to p5,
+  When human:user rejects the split with the note "Keep it whole: one record format covers all
+    five, so decide it as one.",
+  Then the goal goes ahead as one decision from the precedent step, exactly as it would without a
+    split,
+  And the run is not blocked by the rejection,
+  And the split's state is kept whole (rejected_kept_whole) and no part has a work item,
+  And once the person approves that one decision, its record asks the goal as submitted, the split
+    names that record as the decision the goal was kept whole as, and the record is linked to no
+    part.
+depends_on:
+  - DK-400d-3
+  - DK-400a-2
+doc_links:
+  - path: docs/product-truth/flows/leafcutter/decision-forming.flow.json
+    relationship: implements
+    status: exists
+    relevance: "Flow v4 node(s) split-reject-kept-whole, with their acceptance scenarios."
+  - path: docs/product-truth/mock-data/leafcutter/decisions.mock.json
+    relationship: specified-by
+    status: exists
+    relevance: "State rejected_kept_whole and whole_decision_id; record dcp-decision-records-bundled."
+assigned_agent: python-coder
+estimated_complexity: null
+delivers_to: null
+expects_from:
+  ac_id: DK-400a-2
+  contract: "The kept routing result (decision capability) the goal resumes with."
+origin_agent: business-analyst
+created: 2026-10-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Flow branch split-reject-kept-whole, user decision 2026-10-05 (DK-400 REJECTION).

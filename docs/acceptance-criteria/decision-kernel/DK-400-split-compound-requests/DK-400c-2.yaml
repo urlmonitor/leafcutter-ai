@@ -1,0 +1,57 @@
+id: DK-400c-2
+title: "A proposed part that does not quote your words is set aside and shown with its reason"
+component: decision-kernel
+components:
+  - decision_kernel
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_kernel_1_founding
+criteria: |
+  Given the reusable-criteria goal waiting for its split proposal,
+  When the host proposes the four parts p1 to p4 with verbatim quotes, and a fifth part "Decide
+    when an LLM may generate further categories" quoting "generate new categories only when Jev
+    finds some missing", words the goal does not contain (it says "generate further categories if
+    jev thinks some are missing"),
+  Then the fifth proposal is not one of the split's parts,
+  And the split gate lists it read-only with its text, its quote and the reason "quote not found
+    in the goal",
+  And it can be neither approved, ticked nor run,
+  And p1 to p4 are offered for approval.
+depends_on:
+  - DK-400c
+  - DK-400c-1
+doc_links:
+  - path: docs/product-truth/flows/leafcutter/decision-forming.flow.json
+    relationship: implements
+    status: exists
+    relevance: "Flow v4 node(s) split-dropped, with their acceptance scenarios."
+  - path: docs/product-truth/mock-data/leafcutter/decisions.mock.json
+    relationship: specified-by
+    status: exists
+    relevance: "dropped[] { text, covers, reason }; record dcp-reusable-criteria-proposed."
+  - path: docs/product-truth/mockups/leafcutter/decision-split-approve.mockup.json
+    relationship: specified-by
+    status: exists
+    relevance: "Screen decision-split-approve (v2)."
+assigned_agent: python-coder
+estimated_complexity: null
+delivers_to: null
+expects_from:
+  ac_id: DK-400c-1
+  contract: "The host's proposal, before conversion into the split."
+origin_agent: business-analyst
+created: 2026-10-05
+amended_by: []
+superseded_by: null
+covered_by:
+  - DK-400c-2-i
+implemented_by: []
+notes: |
+  Flow branch split-dropped. The person can still add the set-aside question by rewording a
+  part (DK-400d-2-ii).
+  OPEN for the IT PO: a kept part that waits for a set-aside proposal (its dependency would name a
+  part that is not in the split).

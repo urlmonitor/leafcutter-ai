@@ -1,0 +1,57 @@
+id: DK-400d-5
+title: "State diagram: the states of a split and the answers that move it"
+component: decision-kernel
+components:
+  - decision_kernel
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_kernel_1_founding
+criteria: |
+  Given a reader who wants to know which states a split can be in,
+  When they open the split state diagram,
+  Then it shows six states, proposed, approved, in progress, completed, rejected, and kept whole
+    after rejection, with the event that causes each transition,
+  And it shows that only a person's answer leaves proposed: approve leads to approved; reject leads
+    to rejected when routing had turned the request away, and to kept whole when routing would have
+    accepted it or it was found mid-run,
+  And it shows approved moving to in progress when the first part settles, and to completed when
+    every approved part has settled.
+depends_on:
+  - DK-400d
+  - DK-400d-1
+  - DK-400d-3
+doc_links:
+  - path: docs/product-truth/mock-data/leafcutter/decisions.mock.json
+    relationship: specified-by
+    status: exists
+    relevance: "Decomposition.state: proposed | approved | in_progress | completed | rejected | rejected_kept_whole."
+  - path: docs/architecture/components/decision-kernel.md
+    relationship: describes
+    status: exists
+    relevance: "Kernel containers: routing, scheduler, host handoffs, run root."
+  - path: docs/architecture/diagrams/c2-007-decision-kernel-flows-overview.md
+    relationship: related
+    status: exists
+assigned_agent: architecture-diagram-author
+estimated_complexity: null
+delivers_to: null
+expects_from:
+  ac_id: DK-400d-3
+  contract: "The rejection transitions keyed on the trigger."
+change_target: docs
+origin_agent: business-analyst
+created: 2026-10-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Documentation AC for DK-400d documentation_triggers [state-diagram]. The DK-400d DOCS note
+  says five states; mock data v4 has six (it adds rejected_kept_whole).
+  PRODUCT-TRUTH GAP: no state covers a split that ends with an approved part unsettled
+  (DK-400e-4). Such a split stays in progress forever. The diagram follows the mock data once
+  that is decided.

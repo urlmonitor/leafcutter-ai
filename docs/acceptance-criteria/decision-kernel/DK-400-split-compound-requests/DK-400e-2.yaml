@@ -1,0 +1,55 @@
+id: DK-400e-2
+title: "Each decided part gets its own decision record, linked back to the split"
+component: decision-kernel
+components:
+  - decision_kernel
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_kernel_1_founding
+criteria: |
+  Given the split-bounds split approved with p1 kept, p2 reworded to "Decide how many child
+    decisions one run may start, counting every split in the run", and p3 left out,
+  When p1 and p2 each go through their own decision steps and the person approves each choice,
+  Then p1 and p2 each have their own decision record staged in the run,
+  And p2's record asks the reworded question, not the proposed text,
+  And each record shows the split and the part it answers: dcp-split-bounds-mid-run part p1, and
+    dcp-split-bounds-mid-run part p2,
+  And p3 has no decision record.
+depends_on:
+  - DK-400e
+  - DK-400e-1
+doc_links:
+  - path: docs/product-truth/flows/leafcutter/decision-forming.flow.json
+    relationship: implements
+    status: exists
+    relevance: "Flow v4 node(s) split-run, with their acceptance scenarios."
+  - path: docs/product-truth/mock-data/leafcutter/decisions.mock.json
+    relationship: specified-by
+    status: exists
+    relevance: "parts[].decision_id and the derived Decision.split_part; a decided part's record asks the part's text."
+  - path: docs/architecture/adrs/ADR-060-source-of-truth-and-approval-authority.md
+    relationship: constrains
+    status: exists
+    relevance: "Only a person answers a gate and approves a decision; precedent is evidence, never authority."
+assigned_agent: python-coder
+estimated_complexity: null
+delivers_to: null
+expects_from:
+  ac_id: DK-400e-1
+  contract: "Parts run as work items of the same run."
+origin_agent: business-analyst
+created: 2026-10-05
+amended_by: []
+superseded_by: null
+covered_by:
+  - DK-400e-2-i
+  - DK-400e-2-ii
+implemented_by: []
+notes: |
+  Carries the second half of the superseded KernelCompoundGoalSplit ticket: one decision
+  record per sub-decision, linked to the goal. The link is a derived reverse view
+  (Decision.split_part), not a field of the record file, so published records keep their shape.

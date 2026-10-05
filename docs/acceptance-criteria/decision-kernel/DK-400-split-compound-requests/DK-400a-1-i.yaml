@@ -1,0 +1,54 @@
+id: DK-400a-1-i
+title: "An ambiguous routing result on a bundled goal starts the same split, recorded as ambiguous"
+component: decision-kernel
+components:
+  - decision_kernel
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_kernel_1_founding
+criteria: |
+  Given a run whose root goal is "Decide the storage format for reusable decision criteria,
+    and find which published decision records already repeat the same criteria",
+  And routing finds the decision capability and the research capability equally fitting, so its
+    result is an ambiguous gap rather than one capability,
+  When routing runs on the run's root,
+  Then a split is started for the goal with trigger ambiguous, not jev_none,
+  And the top routing candidate is not picked silently to run the whole goal,
+  And the run waits for the host to propose the parts, exactly as for a split with trigger
+    jev_none.
+depends_on:
+  - DK-400a-1
+doc_links:
+  - path: docs/product-truth/flows/leafcutter/decision-forming.flow.json
+    relationship: implements
+    status: exists
+    relevance: "Flow v4 node(s) split-detect, with their acceptance scenarios."
+  - path: docs/product-truth/mock-data/leafcutter/decisions.mock.json
+    relationship: specified-by
+    status: exists
+    relevance: "Decomposition.trigger ambiguous; record dcp-reuse-threshold-research is the research-request sample with this trigger."
+  - path: docs/architecture/adrs/ADR-053-intelligence-selection-deterministic-jev-llm-human.md
+    relationship: constrains
+    status: exists
+    relevance: "Host proposes (generative), Jev only judges, a person approves; cheapest mechanism first."
+assigned_agent: python-coder
+estimated_complexity: null
+delivers_to: null
+expects_from:
+  ac_id: DK-400a-1
+  contract: "The routing-time split start that this case reuses with a different trigger value."
+origin_agent: business-analyst
+created: 2026-10-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Edge case of DK-400a-1. ADR-053 section 6: an uncertain routing answer never passes
+  silently, so the ambiguity must not be resolved by running the top candidate on the whole goal.
+  A goal whose parts need different capabilities (here one decision part and one research part)
+  is a normal split; each part names its own capability (DK-400c-1).

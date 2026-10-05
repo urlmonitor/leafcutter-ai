@@ -1,0 +1,66 @@
+id: DK-400a-1
+title: "A bundled request that routing turns away is offered as a split, not ended as a capability gap"
+component: decision-kernel
+components:
+  - decision_kernel
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_kernel_1_founding
+criteria: |
+  Given a run whose root goal is the reusable-criteria goal of mock record
+    dcp-reusable-criteria-by-hand ("For the kernel we often use similar decision basis and we
+    should also reuse them. ... That way we only need LLMs to generate further categories if jev
+    thinks some are missing to make better decision"),
+  And that goal holds four separate questions: the storage format, the Neo4j projection, the
+    clustering method and the mining source,
+  And routing finds no single capability for it (no match, reason jev_none),
+  When routing runs on the run's root,
+  Then a split is started for the goal instead of the run ending blocked,
+  And the split keeps the goal exactly as submitted as its subject, with subject kind goal,
+    found at routing, work-item depth 0 and trigger jev_none,
+  And the run waits for the host to propose the parts (run status waiting_host).
+depends_on:
+  - DK-400a
+doc_links:
+  - path: docs/product-truth/flows/leafcutter/decision-forming.flow.json
+    relationship: implements
+    status: exists
+    relevance: "Flow v4 node(s) split-detect, with their acceptance scenarios."
+  - path: docs/product-truth/mock-data/leafcutter/decisions.mock.json
+    relationship: specified-by
+    status: exists
+    relevance: "Decomposition fields subject_text, subject_kind, found_at, work_item_depth, trigger; records dcp-reusable-criteria-by-hand and dcp-reusable-criteria-proposed."
+  - path: docs/architecture/adrs/ADR-053-intelligence-selection-deterministic-jev-llm-human.md
+    relationship: constrains
+    status: exists
+    relevance: "Host proposes (generative), Jev only judges, a person approves; cheapest mechanism first."
+  - path: docs/architecture/components/decision-kernel.md
+    relationship: describes
+    status: exists
+    relevance: "Kernel containers: routing, scheduler, host handoffs, run root."
+assigned_agent: python-coder
+estimated_complexity: null
+delivers_to:
+  agent: python-coder
+  contract: "A split record for the root request (subject text verbatim, subject kind, found at routing, depth 0, trigger) that the proposal step (DK-400c-1) reads and the gate (DK-400d-1) shows."
+expects_from: null
+origin_agent: business-analyst
+created: 2026-10-05
+amended_by: []
+superseded_by: null
+covered_by:
+  - DK-400a-1-i
+  - DK-400a-1-ii
+implemented_by: []
+notes: |
+  Flow node split-detect, the turned-away case. The real case is the run of 2026-10-02
+  (run-40d2159630bb48bd), which ended blocked with an unsupported gap and was then split by hand
+  outside the kernel.
+  Left to the IT PO on purpose (DK-400a CARRY TO L2): how the kernel tells one question from
+  several. Candidates are a cheap check before any proposal, in ADR-053 order (deterministic
+  code, then Jev), or the proposal itself with the fewer-than-two rule (DK-400c-3).
+  The ambiguous trigger is DK-400a-1-i; honest gap counts are DK-400a-1-ii.

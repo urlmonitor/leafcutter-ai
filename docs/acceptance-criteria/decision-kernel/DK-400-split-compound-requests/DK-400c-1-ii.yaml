@@ -1,0 +1,53 @@
+id: DK-400c-1-ii
+title: "A proposal with circular or unknown dependencies never reaches the gate"
+component: decision-kernel
+components:
+  - decision_kernel
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_kernel_1_founding
+criteria: |
+  Given a bundled goal waiting for its split proposal,
+  When the host proposes either three parts where p1 waits for p2 and p2 waits for p1, or parts
+    where p3 waits for a part p9 that the proposal does not contain,
+  Then the proposal is not shown at the split gate and no part runs,
+  And the host's answer is refused with a message naming the circular chain "p1 -> p2 -> p1", or
+    the unknown part "p9",
+  And the host may send a corrected proposal within the repair attempts allowed for any host
+    answer.
+depends_on:
+  - DK-400c-1
+doc_links:
+  - path: docs/product-truth/flows/leafcutter/decision-forming.flow.json
+    relationship: implements
+    status: exists
+    relevance: "Flow v4 node(s) split-propose, with their acceptance scenarios."
+  - path: docs/product-truth/mock-data/leafcutter/decisions.mock.json
+    relationship: specified-by
+    status: exists
+    relevance: "Invariant: parts[].depends_on names only other part ids of the same record, with no cycles."
+  - path: docs/how-to/run-the-decision-kernel.md
+    relationship: context
+    status: exists
+    relevance: "Run statuses, gap records, resume answers and the run report as they are today."
+assigned_agent: python-coder
+estimated_complexity: null
+delivers_to: null
+expects_from:
+  ac_id: DK-400c-1
+  contract: "The proposal-to-split conversion that validates dependencies."
+origin_agent: business-analyst
+created: 2026-10-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  The flow requires "no cycles" but does not say what happens to a proposal that has one. A
+  host answer that fails its contract may be repaired today (the how-to: repair attempts are
+  configured). What happens when the repair attempts run out is for the IT PO; reported as an
+  open question.

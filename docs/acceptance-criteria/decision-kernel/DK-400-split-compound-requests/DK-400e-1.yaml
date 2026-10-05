@@ -1,0 +1,56 @@
+id: DK-400e-1
+title: "Approved parts run one at a time, in dependency order, inside the same run"
+component: decision-kernel
+components:
+  - decision_kernel
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_kernel_1_founding
+criteria: |
+  Given the reusable-criteria split approved with p1 and p4 waiting for no part, and p2 and p3
+    waiting for p1,
+  When the parts run,
+  Then each part runs as a work item of the same run, not as a new run,
+  And at no moment are two parts in progress at once,
+  And p2 and p3 start only after p1 has settled,
+  And the parts settle in the order p1, p2, p3, p4 (dependency order, taking the parts that are free
+    to start in proposed order), numbered 1 to 4 with no gaps.
+depends_on:
+  - DK-400e
+  - DK-400d-1
+doc_links:
+  - path: docs/product-truth/flows/leafcutter/decision-forming.flow.json
+    relationship: implements
+    status: exists
+    relevance: "Flow v4 node(s) split-run, with their acceptance scenarios."
+  - path: docs/product-truth/mock-data/leafcutter/decisions.mock.json
+    relationship: specified-by
+    status: exists
+    relevance: "Invariants on settled_order (1..n, after every dependency) and parts[].run_id (children of the run that split)."
+  - path: docs/architecture/components/decision-kernel.md
+    relationship: describes
+    status: exists
+    relevance: "Kernel containers: routing, scheduler, host handoffs, run root."
+assigned_agent: python-coder
+estimated_complexity: null
+delivers_to:
+  agent: python-coder
+  contract: "Settled parts (outcome, settled_order, decision record or research result) that the progress view and report (DK-400f) read."
+expects_from:
+  ac_id: DK-400d-1
+  contract: "An approved split with its parts and dependencies."
+origin_agent: business-analyst
+created: 2026-10-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Flow step split-run. Parallel children are out of scope (DK-400 SETTLED 5).
+  ASSUMPTION (reported): among parts free to start, proposed order decides. This matches every
+  sample record. The person's preferred order is kept only as words in the gate note.
+  For the IT PO: the configured bound on child work per run, and the off switch.

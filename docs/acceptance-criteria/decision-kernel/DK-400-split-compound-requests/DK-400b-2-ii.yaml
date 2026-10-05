@@ -1,0 +1,50 @@
+id: DK-400b-2-ii
+title: "A research request with several needs raised partway through a run is split as a research request"
+component: decision-kernel
+components:
+  - decision_kernel
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_kernel_1_founding
+criteria: |
+  Given a research request raised at work-item depth 1 below the run's root, holding three
+    needs: "Find which runs staged a decision record last week, which of those records were
+    published, and who approved each one.",
+  When the run reaches that research request,
+  Then a split is started for it with subject kind research_request, found mid-run, work-item
+    depth 1 and no routing trigger,
+  And every part offered at the split gate names research as the capability that will run it,
+  And the research request does not run as one research step while its split is proposed and
+    unanswered.
+depends_on:
+  - DK-400b-2
+  - DK-400b-1
+doc_links:
+  - path: docs/product-truth/flows/leafcutter/decision-forming.flow.json
+    relationship: implements
+    status: exists
+    relevance: "Flow v4 node(s) split-mid-run, with their acceptance scenarios."
+  - path: docs/product-truth/mock-data/leafcutter/decisions.mock.json
+    relationship: specified-by
+    status: exists
+    relevance: "subject_kind research_request with found_at mid_run."
+assigned_agent: python-coder
+estimated_complexity: null
+delivers_to: null
+expects_from:
+  ac_id: DK-400b-2
+  contract: "The mid-run split start, reused for a subject of kind research_request."
+origin_agent: business-analyst
+created: 2026-10-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Flow split-mid-run names both a multi-part decision question and a research request with
+  several needs. No mock record shows the mid-run research case; the example request is
+  illustrative.

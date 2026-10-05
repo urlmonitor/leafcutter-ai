@@ -1,0 +1,56 @@
+id: DK-400c-5
+title: "Sequence diagram: from a bundled request to the person's answer at the split gate"
+component: decision-kernel
+components:
+  - decision_kernel
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_kernel_1_founding
+criteria: |
+  Given a reader who wants to follow one split from its start to the gate,
+  When they open the sequence diagram for proposing a split,
+  Then it shows, in order: routing spotting a bundled request, the kernel asking the host for a
+    proposal, the host's answer, the kernel setting aside proposals whose quotes are not in the
+    request, the person's answer at the split gate, and the kernel releasing the approved parts,
+  And it shows the run waiting on the host and then on the person, with no part run before the
+    person's answer,
+  And it shows the three endings of the gate as distinct: approved, rejected and ended blocked,
+    and rejected and kept whole.
+depends_on:
+  - DK-400c
+  - DK-400c-1
+  - DK-400c-2
+  - DK-400d-1
+  - DK-400d-3
+doc_links:
+  - path: docs/architecture/components/decision-kernel.md
+    relationship: describes
+    status: exists
+    relevance: "Kernel containers: routing, scheduler, host handoffs, run root."
+  - path: docs/architecture/diagrams/c2-007-decision-kernel-flows-overview.md
+    relationship: related
+    status: exists
+  - path: docs/product-truth/flows/leafcutter/decision-forming.flow.json
+    relationship: implements
+    status: exists
+    relevance: "Flow v4 node(s) split-detect, split-propose, split-dropped, split-approve, split-reject, split-reject-kept-whole, with their acceptance scenarios."
+assigned_agent: architecture-diagram-author
+estimated_complexity: null
+delivers_to: null
+expects_from:
+  ac_id: DK-400d-3
+  contract: "The two rejection endings the diagram shows as distinct terminations."
+change_target: docs
+origin_agent: business-analyst
+created: 2026-10-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Documentation AC for DK-400c documentation_triggers [sequence-diagram]. Running the parts
+  is DK-400e-5's diagram, so this one stops at the gate.

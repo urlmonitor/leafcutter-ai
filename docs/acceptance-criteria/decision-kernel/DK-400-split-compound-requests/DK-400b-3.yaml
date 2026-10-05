@@ -1,0 +1,55 @@
+id: DK-400b-3
+title: "Every split comes to the same gate and says whether it came from your request or was found along the way"
+component: decision-kernel
+components:
+  - decision_kernel
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_kernel_1_founding
+criteria: |
+  Given three proposed splits: the reusable-criteria goal (found at routing, trigger jev_none),
+    the reuse-threshold research request (found at routing, trigger ambiguous) and the
+    split-bounds decision question (found mid-run at work-item depth 1),
+  When each is shown at the split gate,
+  Then each offers the same four answers: approve as shown, reword a part, leave parts out, and
+    reject,
+  And each names what was split: a goal, a research request or a decision question,
+  And the first two say the split came from the person's own request, and the third says it was
+    found along the way at work-item depth 1,
+  And the split's progress view shows the same origin for each.
+depends_on:
+  - DK-400b
+  - DK-400b-1
+  - DK-400b-2
+doc_links:
+  - path: docs/product-truth/flows/leafcutter/decision-forming.flow.json
+    relationship: implements
+    status: exists
+    relevance: "Flow v4 node(s) split-mid-run, split-approve, with their acceptance scenarios."
+  - path: docs/product-truth/mockups/leafcutter/decision-split-approve.mockup.json
+    relationship: specified-by
+    status: exists
+    relevance: "Screen decision-split-approve (v2)."
+  - path: docs/product-truth/mockups/leafcutter/decision-split-progress.mockup.json
+    relationship: specified-by
+    status: exists
+    relevance: "Screen decision-split-progress (v2)."
+assigned_agent: python-coder
+estimated_complexity: null
+delivers_to: null
+expects_from:
+  ac_id: DK-400b-2
+  contract: "found_at and work_item_depth on the split record, which the gate and progress view show."
+origin_agent: business-analyst
+created: 2026-10-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  DK-400b criteria: "you can see whether a split came from your own request or was found along
+  the way". One gate for every subject kind (DK-400b SETTLED).

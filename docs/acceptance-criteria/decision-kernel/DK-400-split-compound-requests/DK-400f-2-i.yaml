@@ -1,0 +1,47 @@
+id: DK-400f-2-i
+title: "The report names each part that was not settled or not run, and why"
+component: decision-kernel
+components:
+  - decision_kernel
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_kernel_1_founding
+criteria: |
+  Given the reusable-criteria split where p1 reached its budget stop, p2 and p3 wait for p1,
+    and p4 was decided,
+  When the run ends,
+  Then the split section has four lines, one per part,
+  And p1's line says that it was not settled and names the budget stop,
+  And the lines for p2 and p3 say "not run" and that each waited for p1,
+  And p4's line says decided, with its record id.
+depends_on:
+  - DK-400f-2
+  - DK-400e-4
+doc_links:
+  - path: docs/product-truth/flows/leafcutter/decision-forming.flow.json
+    relationship: implements
+    status: exists
+    relevance: "Flow v4 node(s) split-report, with their acceptance scenarios."
+  - path: docs/product-truth/mock-data/leafcutter/decisions.mock.json
+    relationship: specified-by
+    status: exists
+    relevance: "report_lines."
+assigned_agent: python-coder
+estimated_complexity: null
+delivers_to: null
+expects_from:
+  ac_id: DK-400e-4
+  contract: "The not-run parts and their reasons."
+origin_agent: business-analyst
+created: 2026-10-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Report side of DK-400e-4. p1's line wording waits on the missing outcome value (see the
+  DK-400e-4 notes); it must not say "not run", because p1 ran.

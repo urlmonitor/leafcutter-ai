@@ -1,0 +1,58 @@
+id: DK-400d-1
+title: "Approving the split as shown keeps every part, records who answered and when, and releases the parts"
+component: decision-kernel
+components:
+  - decision_kernel
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_kernel_1_founding
+criteria: |
+  Given the reusable-criteria split waiting at the split gate with parts p1 to p4,
+  And the gate shows the goal exactly as submitted beside every part,
+  When the person human:user approves the split as shown at 2026-10-05T09:30:00Z,
+  Then every part is recorded as kept,
+  And the split records the answer approved, given by human:user at 2026-10-05T09:30:00Z,
+  And the parts are released to run in dependency order,
+  And no part had started before that answer.
+depends_on:
+  - DK-400d
+  - DK-400c-1
+doc_links:
+  - path: docs/product-truth/flows/leafcutter/decision-forming.flow.json
+    relationship: implements
+    status: exists
+    relevance: "Flow v4 node(s) split-approve, with their acceptance scenarios."
+  - path: docs/product-truth/mock-data/leafcutter/decisions.mock.json
+    relationship: specified-by
+    status: exists
+    relevance: "gate_answer, gate_by (human:<name>), gate_at; parts[].review kept; state proposed -> approved."
+  - path: docs/product-truth/mockups/leafcutter/decision-split-approve.mockup.json
+    relationship: specified-by
+    status: exists
+    relevance: "Screen decision-split-approve (v2)."
+  - path: docs/architecture/adrs/ADR-060-source-of-truth-and-approval-authority.md
+    relationship: constrains
+    status: exists
+    relevance: "Only a person answers a gate and approves a decision; precedent is evidence, never authority."
+assigned_agent: python-coder
+estimated_complexity: null
+delivers_to:
+  agent: python-coder
+  contract: "An approved split (each part kept, edited or left out, with gate_by and gate_at) that the scheduler (DK-400e-1) runs."
+expects_from:
+  ac_id: DK-400c-1
+  contract: "The proposed split the gate offers."
+origin_agent: business-analyst
+created: 2026-10-05
+amended_by: []
+superseded_by: null
+covered_by:
+  - DK-400d-1-i
+implemented_by: []
+notes: |
+  Flow step split-approve. Who answered and when are kept with the split (ADR-060: only a
+  person approves).

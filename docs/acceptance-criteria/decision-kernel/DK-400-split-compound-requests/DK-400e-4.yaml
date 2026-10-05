@@ -1,0 +1,53 @@
+id: DK-400e-4
+title: "When a part cannot be settled, the parts that wait for it are not run and independent parts carry on"
+component: decision-kernel
+components:
+  - decision_kernel
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_kernel_1_founding
+criteria: |
+  Given the reusable-criteria split approved with p1 and p4 waiting for no part, and p2 and p3
+    waiting for p1,
+  When p1's decision ends without a decision because it reached its budget stop,
+  Then p2 and p3 are not run, each with the reason that it waits for p1, which was not settled
+    (budget stop),
+  And p4 still runs and settles,
+  And a part that waits for p2 or p3 is also not run, with the reason naming the part it waited for,
+  And the run does not end as completed while any approved part is unsettled.
+depends_on:
+  - DK-400e
+  - DK-400e-1
+doc_links:
+  - path: docs/product-truth/flows/leafcutter/decision-forming.flow.json
+    relationship: implements
+    status: exists
+    relevance: "Flow v4 node(s) split-run, with their acceptance scenarios."
+  - path: docs/product-truth/mock-data/leafcutter/decisions.mock.json
+    relationship: specified-by
+    status: exists
+    relevance: "parts[].outcome not_run."
+assigned_agent: python-coder
+estimated_complexity: null
+delivers_to: null
+expects_from:
+  ac_id: DK-400e-1
+  contract: "The dependency-ordered run of the parts."
+origin_agent: business-analyst
+created: 2026-10-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  User decision (DK-400 Q5). "Cannot be settled" covers its decision ending blocked, hitting a
+  capability gap, reaching a budget stop, or being cancelled.
+  OPEN (reported): the run's final status in this case. The AC requires only that it is not
+  completed; partial is the likely default.
+  PRODUCT-TRUTH GAPS (flow and mock data): the flow has no branch for a failed part; the outcome
+  enum has no value for a part that ran but did not settle (not_run would be untrue); and the
+  Decomposition state machine has no ending for this case.

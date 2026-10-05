@@ -1,0 +1,53 @@
+id: DK-400d-4
+title: "How-to: answer the split gate"
+component: decision-kernel
+components:
+  - decision_kernel
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_kernel_1_founding
+criteria: |
+  Given a person who has been shown a proposed split by the kernel,
+  When they read the kernel how-to section on answering a split,
+  Then it shows the four answers, approve as shown, reword a part, leave parts out and reject, with
+    one example each, and that rewording and leaving out can be combined in one approval,
+  And it states that unticking every part is not an approval, and that a set-aside proposal cannot
+    be approved but its question can be added by rewording a part,
+  And it states what a rejection leads to: a request the kernel turned away ends blocked with
+    nothing decided, while a request the kernel would have accepted, or one found mid-run, goes
+    ahead as one,
+  And it states that only a person answers, and that an answer relayed by the host carries that
+    person's own name.
+depends_on:
+  - DK-400d
+  - DK-400d-1
+  - DK-400d-2
+  - DK-400d-3
+doc_links:
+  - path: docs/how-to/run-the-decision-kernel.md
+    relationship: describes
+    status: exists
+    relevance: "The kernel how-to; answering a split belongs beside answering the other gates (Step 5)."
+  - path: docs/product-truth/mockups/leafcutter/decision-split-approve.mockup.json
+    relationship: specified-by
+    status: exists
+    relevance: "Screen decision-split-approve (v2)."
+assigned_agent: documentation-expert
+estimated_complexity: null
+delivers_to: null
+expects_from:
+  ac_id: DK-400d-3
+  contract: "The rejection endings the how-to explains."
+change_target: docs
+origin_agent: business-analyst
+created: 2026-10-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Documentation AC for DK-400d documentation_triggers [how-to].

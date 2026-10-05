@@ -1,0 +1,49 @@
+id: DK-400a-4
+title: "A single question no capability can meet stays a capability gap and never reaches the split gate"
+component: decision-kernel
+components:
+  - decision_kernel
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_kernel_1_founding
+criteria: |
+  Given a run whose root is the single request "Write release notes for the last ten merged
+    pull requests",
+  And no registered capability can meet it (routing: no match),
+  When routing runs on the run's root,
+  Then no split is started and the split gate is never shown,
+  And the run records the same capability gap, and ends blocked with the same report, as it does
+    today,
+  And the report has no split section and no line about a rejected split.
+depends_on:
+  - DK-400a
+doc_links:
+  - path: docs/product-truth/flows/leafcutter/decision-forming.flow.json
+    relationship: implements
+    status: exists
+    relevance: "Flow v4 node(s) single-no-capability, with their acceptance scenarios."
+  - path: docs/product-truth/mock-data/leafcutter/decisions.mock.json
+    relationship: specified-by
+    status: exists
+    relevance: "Decomposition.trigger note: a single bounded question no capability can meet gets no Decomposition and stays a capability gap."
+  - path: docs/how-to/run-the-decision-kernel.md
+    relationship: context
+    status: exists
+    relevance: "Run statuses, gap records, resume answers and the run report as they are today."
+assigned_agent: python-coder
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst
+created: 2026-10-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Flow branch single-no-capability (PO open point b). A missing ability is never passed off as
+  a split.

@@ -1,0 +1,53 @@
+id: DK-400f-2
+title: "The run report gives one line per part, starting with the part id and naming its outcome"
+component: decision-kernel
+components:
+  - decision_kernel
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_kernel_1_founding
+criteria: |
+  Given the split-bounds split whose parts have all settled or been left out,
+  When the run ends,
+  Then the report's split section has exactly three lines, one per part, in this form:
+    "p1 decided: Two to five sub-questions per split (<p1's record id>, staged)",
+    "p2 decided: At most five child decisions per run (<p2's record id>, staged; p1's record cited
+    as precedent)",
+    "p3 not run: left out at the split",
+  And while the split gate was open, the report had no split lines.
+depends_on:
+  - DK-400f
+  - DK-400e-1
+  - DK-400e-2
+doc_links:
+  - path: docs/product-truth/flows/leafcutter/decision-forming.flow.json
+    relationship: implements
+    status: exists
+    relevance: "Flow v4 node(s) split-report, with their acceptance scenarios."
+  - path: docs/product-truth/mock-data/leafcutter/decisions.mock.json
+    relationship: specified-by
+    status: exists
+    relevance: "report_lines: one line per part starting with the part id; [] while the gate is open; record dcp-split-bounds-mid-run."
+  - path: docs/how-to/run-the-decision-kernel.md
+    relationship: context
+    status: exists
+    relevance: "Run statuses, gap records, resume answers and the run report as they are today."
+assigned_agent: python-coder
+estimated_complexity: null
+delivers_to: null
+expects_from:
+  ac_id: DK-400e-2
+  contract: "Decided parts' record ids and precedent citations."
+origin_agent: business-analyst
+created: 2026-10-05
+amended_by: []
+superseded_by: null
+covered_by:
+  - DK-400f-2-i
+implemented_by: []
+notes: |
+  Flow step split-report. The line texts are those of the mock record.
