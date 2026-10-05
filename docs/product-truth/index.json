@@ -27,7 +27,9 @@
     "FrontendComponent",
     "AcDeclaration",
     "GuardrailFinding",
-    "Decision"
+    "Decision",
+    "CriterionCategory",
+    "CriterionCategoryAggregate"
   ],
   "artifacts": [
     {
@@ -848,14 +850,14 @@
       "id": "leafcutter/decision-forming",
       "type": "flow",
       "title": "Forming a decision in a kernel run",
-      "summary": "Recognize entity meanings before intent, then research a decision and ask you to approve and choose.",
+      "summary": "The kernel interprets the request, reuses approved criteria, researches it, then asks you to approve and choose.",
       "kind": "data",
       "source": "real",
       "component": "decision_kernel",
       "path": "flows/leafcutter/decision-forming.flow.json",
       "status": "active",
       "readiness": "draft",
-      "version": 6,
+      "version": 7,
       "entities": [
         "Decision"
       ],
@@ -863,15 +865,17 @@
       "impl_summary": {
         "done": 5,
         "in_progress": 0,
-        "not_started": 12,
-        "total": 17,
+        "not_started": 16,
+        "total": 21,
         "asof": "2026-10-05"
       },
       "tags": [
         "decision-kernel",
         "decision-lifecycle",
         "decision-forming",
-        "pipeline"
+        "pipeline",
+        "criterion-categories",
+        "criteria-reuse"
       ]
     },
     {
@@ -1129,6 +1133,61 @@
         "total": 16,
         "asof": "2026-10-03"
       }
+    },
+    {
+      "id": "leafcutter/criteria-library",
+      "type": "flow",
+      "title": "Building and curating the criteria library",
+      "summary": "Mined repeat questions become person-approved categories, counted from the records and explorable in Neo4j.",
+      "kind": "data",
+      "source": "mock",
+      "component": "decision_kernel",
+      "path": "flows/leafcutter/criteria-library.flow.json",
+      "status": "active",
+      "readiness": "draft",
+      "version": 2,
+      "entities": [
+        "CriterionCategory",
+        "CriterionCategoryAggregate"
+      ],
+      "mock_data_ref": "leafcutter/criterion-categories",
+      "tags": [
+        "decision-kernel",
+        "decision-criteria",
+        "criterion-categories",
+        "criteria-mining",
+        "knowledge-graph",
+        "journey"
+      ],
+      "impl_summary": {
+        "done": 0,
+        "in_progress": 0,
+        "not_started": 14,
+        "total": 14,
+        "asof": "2026-10-05"
+      }
+    },
+    {
+      "id": "leafcutter/criterion-categories",
+      "type": "mock_data",
+      "title": "Leafcutter criterion categories",
+      "summary": "The canonical CriterionCategory dataset: reusable decision-criteria categories mined from published decision records and Langfuse traces, across candidate, staged, published and retired stages, plus the separate Neo4j outcome aggregates keyed by category id.",
+      "component": "decision_kernel",
+      "path": "mock-data/leafcutter/criterion-categories.mock.json",
+      "status": "active",
+      "readiness": "draft",
+      "version": 1,
+      "entities": [
+        "CriterionCategory",
+        "CriterionCategoryAggregate"
+      ],
+      "tags": [
+        "decision-kernel",
+        "decision-criteria",
+        "criterion-categories",
+        "criteria-mining",
+        "precedent"
+      ]
     }
   ],
   "by_component": {
@@ -1151,6 +1210,7 @@
     },
     "decision_kernel": {
       "flows": [
+        "leafcutter/criteria-library",
         "leafcutter/decision-forming",
         "leafcutter/decision-lifecycle",
         "leafcutter/decision-publishing",
@@ -1158,6 +1218,7 @@
         "leafcutter/decision-staging"
       ],
       "mock_data": [
+        "leafcutter/criterion-categories",
         "leafcutter/decisions"
       ],
       "mockups": [
@@ -1246,6 +1307,26 @@
       "flows": {
         "build-pipeline": [
           "leafcutter/how-acs-are-built"
+        ]
+      }
+    },
+    "CriterionCategory": {
+      "canonical_mock_data": {
+        "decision_kernel": "leafcutter/criterion-categories"
+      },
+      "flows": {
+        "decision_kernel": [
+          "leafcutter/criteria-library"
+        ]
+      }
+    },
+    "CriterionCategoryAggregate": {
+      "canonical_mock_data": {
+        "decision_kernel": "leafcutter/criterion-categories"
+      },
+      "flows": {
+        "decision_kernel": [
+          "leafcutter/criteria-library"
         ]
       }
     },
@@ -1506,6 +1587,26 @@
       "expands": [],
       "parents": []
     },
+    "leafcutter/criteria-library": {
+      "component": "decision_kernel",
+      "level": "journey",
+      "entities": [
+        "CriterionCategory",
+        "CriterionCategoryAggregate"
+      ],
+      "mock_data_ref": "leafcutter/criterion-categories",
+      "path": "flows/leafcutter/criteria-library.flow.json",
+      "impl_status": "not_started",
+      "impl_summary": {
+        "done": 0,
+        "in_progress": 0,
+        "not_started": 14,
+        "total": 14,
+        "asof": "2026-10-05"
+      },
+      "expands": [],
+      "parents": []
+    },
     "leafcutter/decision-forming": {
       "component": "decision_kernel",
       "level": "pipeline",
@@ -1518,8 +1619,8 @@
       "impl_summary": {
         "done": 5,
         "in_progress": 0,
-        "not_started": 12,
-        "total": 17,
+        "not_started": 16,
+        "total": 21,
         "asof": "2026-10-05"
       },
       "expands": [
@@ -3177,6 +3278,768 @@
         "mock_data": "leafcutter/decisions",
         "entities": [],
         "source": "real",
+        "asof": "2026-10-05"
+      }
+    ],
+    "DK-500a-1": [
+      {
+        "flow": "leafcutter/criteria-library",
+        "node": "mine",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": "leafcutter/criterion-categories",
+        "entities": [
+          "CriterionCategory",
+          "Decision"
+        ],
+        "source": "mock",
+        "asof": "2026-10-05"
+      }
+    ],
+    "DK-500a-1-i": [
+      {
+        "flow": "leafcutter/criteria-library",
+        "node": "mine",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": "leafcutter/criterion-categories",
+        "entities": [
+          "CriterionCategory",
+          "Decision"
+        ],
+        "source": "mock",
+        "asof": "2026-10-05"
+      }
+    ],
+    "DK-500a-1-ii": [
+      {
+        "flow": "leafcutter/criteria-library",
+        "node": "mine",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": "leafcutter/criterion-categories",
+        "entities": [
+          "CriterionCategory",
+          "Decision"
+        ],
+        "source": "mock",
+        "asof": "2026-10-05"
+      }
+    ],
+    "DK-500a-1-iii": [
+      {
+        "flow": "leafcutter/criteria-library",
+        "node": "mine",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": "leafcutter/criterion-categories",
+        "entities": [
+          "CriterionCategory",
+          "Decision"
+        ],
+        "source": "mock",
+        "asof": "2026-10-05"
+      }
+    ],
+    "DK-500a-2": [
+      {
+        "flow": "leafcutter/criteria-library",
+        "node": "mine",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": "leafcutter/criterion-categories",
+        "entities": [
+          "CriterionCategory",
+          "Decision"
+        ],
+        "source": "mock",
+        "asof": "2026-10-05"
+      },
+      {
+        "flow": "leafcutter/decision-forming",
+        "node": "reuse-criteria",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": "leafcutter/decisions",
+        "entities": [
+          "CriterionCategory"
+        ],
+        "source": "real",
+        "asof": "2026-10-05"
+      }
+    ],
+    "DK-500b-1": [
+      {
+        "flow": "leafcutter/criteria-library",
+        "node": "suggest-grouping",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": "leafcutter/criterion-categories",
+        "entities": [
+          "CriterionCategory"
+        ],
+        "source": "mock",
+        "asof": "2026-10-05"
+      }
+    ],
+    "DK-500b-1-i": [
+      {
+        "flow": "leafcutter/criteria-library",
+        "node": "suggest-grouping",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": "leafcutter/criterion-categories",
+        "entities": [
+          "CriterionCategory"
+        ],
+        "source": "mock",
+        "asof": "2026-10-05"
+      }
+    ],
+    "DK-500b-2": [
+      {
+        "flow": "leafcutter/criteria-library",
+        "node": "suggest-grouping",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": "leafcutter/criterion-categories",
+        "entities": [
+          "CriterionCategory"
+        ],
+        "source": "mock",
+        "asof": "2026-10-05"
+      }
+    ],
+    "DK-500b-2-i": [
+      {
+        "flow": "leafcutter/criteria-library",
+        "node": "suggest-grouping",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": "leafcutter/criterion-categories",
+        "entities": [
+          "CriterionCategory"
+        ],
+        "source": "mock",
+        "asof": "2026-10-05"
+      }
+    ],
+    "DK-500b-3": [
+      {
+        "flow": "leafcutter/criteria-library",
+        "node": "suggest-grouping",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": "leafcutter/criterion-categories",
+        "entities": [
+          "CriterionCategory"
+        ],
+        "source": "mock",
+        "asof": "2026-10-05"
+      }
+    ],
+    "DK-500b-3-i": [
+      {
+        "flow": "leafcutter/criteria-library",
+        "node": "suggest-grouping",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": "leafcutter/criterion-categories",
+        "entities": [
+          "CriterionCategory"
+        ],
+        "source": "mock",
+        "asof": "2026-10-05"
+      }
+    ],
+    "DK-500b-4": [
+      {
+        "flow": "leafcutter/criteria-library",
+        "node": "suggest-grouping",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": "leafcutter/criterion-categories",
+        "entities": [
+          "CriterionCategory"
+        ],
+        "source": "mock",
+        "asof": "2026-10-05"
+      },
+      {
+        "flow": "leafcutter/decision-forming",
+        "node": "draft-for-gap",
+        "node_kind": "branch",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": "leafcutter/decisions",
+        "entities": [],
+        "source": "real",
+        "asof": "2026-10-05"
+      }
+    ],
+    "DK-500b-4-i": [
+      {
+        "flow": "leafcutter/criteria-library",
+        "node": "suggest-grouping",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": "leafcutter/criterion-categories",
+        "entities": [
+          "CriterionCategory"
+        ],
+        "source": "mock",
+        "asof": "2026-10-05"
+      },
+      {
+        "flow": "leafcutter/decision-forming",
+        "node": "draft-for-gap",
+        "node_kind": "branch",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": "leafcutter/decisions",
+        "entities": [],
+        "source": "real",
+        "asof": "2026-10-05"
+      }
+    ],
+    "DK-500c-1": [
+      {
+        "flow": "leafcutter/criteria-library",
+        "node": "approve",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": "leafcutter/criterion-categories",
+        "entities": [
+          "CriterionCategory"
+        ],
+        "source": "mock",
+        "asof": "2026-10-05"
+      },
+      {
+        "flow": "leafcutter/criteria-library",
+        "node": "stage",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": "leafcutter/criterion-categories",
+        "entities": [
+          "CriterionCategory"
+        ],
+        "source": "mock",
+        "asof": "2026-10-05"
+      }
+    ],
+    "DK-500c-1-i": [
+      {
+        "flow": "leafcutter/criteria-library",
+        "node": "approve",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": "leafcutter/criterion-categories",
+        "entities": [
+          "CriterionCategory"
+        ],
+        "source": "mock",
+        "asof": "2026-10-05"
+      }
+    ],
+    "DK-500c-1-ii": [
+      {
+        "flow": "leafcutter/criteria-library",
+        "node": "reject-suggestion",
+        "node_kind": "branch",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": "leafcutter/criterion-categories",
+        "entities": [],
+        "source": "mock",
+        "asof": "2026-10-05"
+      }
+    ],
+    "DK-500c-2": [
+      {
+        "flow": "leafcutter/criteria-library",
+        "node": "publish",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": "leafcutter/criterion-categories",
+        "entities": [
+          "CriterionCategory",
+          "Decision"
+        ],
+        "source": "mock",
+        "asof": "2026-10-05"
+      }
+    ],
+    "DK-500c-2-i": [
+      {
+        "flow": "leafcutter/criteria-library",
+        "node": "publish",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": "leafcutter/criterion-categories",
+        "entities": [
+          "CriterionCategory",
+          "Decision"
+        ],
+        "source": "mock",
+        "asof": "2026-10-05"
+      }
+    ],
+    "DK-500c-2-ii": [
+      {
+        "flow": "leafcutter/criteria-library",
+        "node": "publish",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": "leafcutter/criterion-categories",
+        "entities": [
+          "CriterionCategory",
+          "Decision"
+        ],
+        "source": "mock",
+        "asof": "2026-10-05"
+      }
+    ],
+    "DK-500c-3": [
+      {
+        "flow": "leafcutter/criteria-library",
+        "node": "curate",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": "leafcutter/criterion-categories",
+        "entities": [
+          "CriterionCategory"
+        ],
+        "source": "mock",
+        "asof": "2026-10-05"
+      }
+    ],
+    "DK-500c-3-i": [
+      {
+        "flow": "leafcutter/criteria-library",
+        "node": "curate",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": "leafcutter/criterion-categories",
+        "entities": [
+          "CriterionCategory"
+        ],
+        "source": "mock",
+        "asof": "2026-10-05"
+      }
+    ],
+    "DK-500c-3-ii": [
+      {
+        "flow": "leafcutter/criteria-library",
+        "node": "curate",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": "leafcutter/criterion-categories",
+        "entities": [
+          "CriterionCategory"
+        ],
+        "source": "mock",
+        "asof": "2026-10-05"
+      }
+    ],
+    "DK-500d-1": [
+      {
+        "flow": "leafcutter/decision-forming",
+        "node": "reuse-criteria",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": "leafcutter/decisions",
+        "entities": [
+          "CriterionCategory"
+        ],
+        "source": "real",
+        "asof": "2026-10-05"
+      }
+    ],
+    "DK-500d-1-i": [
+      {
+        "flow": "leafcutter/decision-forming",
+        "node": "reuse-criteria",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": "leafcutter/decisions",
+        "entities": [
+          "CriterionCategory"
+        ],
+        "source": "real",
+        "asof": "2026-10-05"
+      }
+    ],
+    "DK-500d-2": [
+      {
+        "flow": "leafcutter/decision-forming",
+        "node": "approve-proposals",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": "decision-approve-proposals",
+        "mock_data": "leafcutter/decisions",
+        "entities": [],
+        "source": "real",
+        "asof": "2026-10-05"
+      }
+    ],
+    "DK-500d-2-i": [
+      {
+        "flow": "leafcutter/decision-forming",
+        "node": "approve-proposals",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": "decision-approve-proposals",
+        "mock_data": "leafcutter/decisions",
+        "entities": [],
+        "source": "real",
+        "asof": "2026-10-05"
+      }
+    ],
+    "DK-500d-3": [
+      {
+        "flow": "leafcutter/criteria-library",
+        "node": "publish",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": "leafcutter/criterion-categories",
+        "entities": [
+          "CriterionCategory",
+          "Decision"
+        ],
+        "source": "mock",
+        "asof": "2026-10-05"
+      }
+    ],
+    "DK-500e-1": [
+      {
+        "flow": "leafcutter/decision-forming",
+        "node": "judge-gap",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": "leafcutter/decisions",
+        "entities": [
+          "CriterionCategory"
+        ],
+        "source": "real",
+        "asof": "2026-10-05"
+      }
+    ],
+    "DK-500e-1-i": [
+      {
+        "flow": "leafcutter/decision-forming",
+        "node": "judge-gap",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": "leafcutter/decisions",
+        "entities": [
+          "CriterionCategory"
+        ],
+        "source": "real",
+        "asof": "2026-10-05"
+      }
+    ],
+    "DK-500e-1-ii": [
+      {
+        "flow": "leafcutter/decision-forming",
+        "node": "judge-gap",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": "leafcutter/decisions",
+        "entities": [
+          "CriterionCategory"
+        ],
+        "source": "real",
+        "asof": "2026-10-05"
+      }
+    ],
+    "DK-500e-2": [
+      {
+        "flow": "leafcutter/decision-forming",
+        "node": "draft-for-gap",
+        "node_kind": "branch",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": "leafcutter/decisions",
+        "entities": [],
+        "source": "real",
+        "asof": "2026-10-05"
+      },
+      {
+        "flow": "leafcutter/decision-forming",
+        "node": "propose",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": "leafcutter/decisions",
+        "entities": [],
+        "source": "real",
+        "asof": "2026-10-05"
+      }
+    ],
+    "DK-500e-2-i": [
+      {
+        "flow": "leafcutter/decision-forming",
+        "node": "draft-for-gap",
+        "node_kind": "branch",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": "leafcutter/decisions",
+        "entities": [],
+        "source": "real",
+        "asof": "2026-10-05"
+      }
+    ],
+    "DK-500e-3": [
+      {
+        "flow": "leafcutter/decision-forming",
+        "node": "empty-library",
+        "node_kind": "branch",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": "leafcutter/decisions",
+        "entities": [],
+        "source": "real",
+        "asof": "2026-10-05"
+      }
+    ],
+    "DK-500e-3-i": [
+      {
+        "flow": "leafcutter/decision-forming",
+        "node": "empty-library",
+        "node_kind": "branch",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": "leafcutter/decisions",
+        "entities": [],
+        "source": "real",
+        "asof": "2026-10-05"
+      }
+    ],
+    "DK-500f-1": [
+      {
+        "flow": "leafcutter/criteria-library",
+        "node": "count-usage",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": "leafcutter/criterion-categories",
+        "entities": [
+          "CriterionCategory",
+          "Decision"
+        ],
+        "source": "mock",
+        "asof": "2026-10-05"
+      }
+    ],
+    "DK-500f-2": [
+      {
+        "flow": "leafcutter/criteria-library",
+        "node": "aggregate-outcomes",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": "leafcutter/criterion-categories",
+        "entities": [
+          "CriterionCategory",
+          "CriterionCategoryAggregate",
+          "Decision"
+        ],
+        "source": "mock",
+        "asof": "2026-10-05"
+      }
+    ],
+    "DK-500f-2-i": [
+      {
+        "flow": "leafcutter/criteria-library",
+        "node": "aggregate-outcomes",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": "leafcutter/criterion-categories",
+        "entities": [
+          "CriterionCategory",
+          "CriterionCategoryAggregate",
+          "Decision"
+        ],
+        "source": "mock",
+        "asof": "2026-10-05"
+      }
+    ],
+    "DK-500f-3": [
+      {
+        "flow": "leafcutter/criteria-library",
+        "node": "no-learning-store",
+        "node_kind": "branch",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": "leafcutter/criterion-categories",
+        "entities": [],
+        "source": "mock",
+        "asof": "2026-10-05"
+      }
+    ],
+    "DK-500f-4": [
+      {
+        "flow": "leafcutter/criteria-library",
+        "node": "count-usage",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": "leafcutter/criterion-categories",
+        "entities": [
+          "CriterionCategory",
+          "Decision"
+        ],
+        "source": "mock",
+        "asof": "2026-10-05"
+      },
+      {
+        "flow": "leafcutter/decision-forming",
+        "node": "reuse-criteria",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": "leafcutter/decisions",
+        "entities": [
+          "CriterionCategory"
+        ],
+        "source": "real",
+        "asof": "2026-10-05"
+      }
+    ],
+    "DK-500g-1": [
+      {
+        "flow": "leafcutter/criteria-library",
+        "node": "import-to-graph",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": "leafcutter/criterion-categories",
+        "entities": [
+          "CriterionCategory",
+          "Decision"
+        ],
+        "source": "mock",
+        "asof": "2026-10-05"
+      }
+    ],
+    "DK-500g-1-i": [
+      {
+        "flow": "leafcutter/criteria-library",
+        "node": "import-fails",
+        "node_kind": "branch",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": "leafcutter/criterion-categories",
+        "entities": [],
+        "source": "mock",
+        "asof": "2026-10-05"
+      }
+    ],
+    "DK-500g-1-ii": [
+      {
+        "flow": "leafcutter/criteria-library",
+        "node": "change-in-record",
+        "node_kind": "branch",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": "leafcutter/criterion-categories",
+        "entities": [],
+        "source": "mock",
+        "asof": "2026-10-05"
+      }
+    ],
+    "DK-500g-2": [
+      {
+        "flow": "leafcutter/criteria-library",
+        "node": "explore",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": "leafcutter/criterion-categories",
+        "entities": [
+          "CriterionCategory",
+          "Decision"
+        ],
+        "source": "mock",
+        "asof": "2026-10-05"
+      }
+    ],
+    "DK-500g-2-i": [
+      {
+        "flow": "leafcutter/criteria-library",
+        "node": "explore",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": "leafcutter/criterion-categories",
+        "entities": [
+          "CriterionCategory",
+          "Decision"
+        ],
+        "source": "mock",
+        "asof": "2026-10-05"
+      }
+    ],
+    "DK-500g-3": [
+      {
+        "flow": "leafcutter/criteria-library",
+        "node": "explore",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": "leafcutter/criterion-categories",
+        "entities": [
+          "CriterionCategory",
+          "Decision"
+        ],
+        "source": "mock",
+        "asof": "2026-10-05"
+      }
+    ],
+    "DK-500g-3-i": [
+      {
+        "flow": "leafcutter/criteria-library",
+        "node": "explore",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": "leafcutter/criterion-categories",
+        "entities": [
+          "CriterionCategory",
+          "Decision"
+        ],
+        "source": "mock",
         "asof": "2026-10-05"
       }
     ],
