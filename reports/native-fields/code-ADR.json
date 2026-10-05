@@ -1,0 +1,62 @@
+{
+  "entity_kind": "ADR",
+  "implemented_on": "2026-10-02",
+  "implementation": "knowledge/native_types/adr.py",
+  "tests": "tests/knowledge/test_native_adr.py",
+  "api": "extract(root: Path) -> list[NativeRecord]",
+  "metadata_contract": "Complete safe-YAML frontmatter mapping; dates remain typed for shared serialization; no invented defaults or native fields.",
+  "identity_contract": "Existing non-empty source id override, otherwise complete filename stem; never shortened ADR prefix.",
+  "derived_contract": [
+    "raw body",
+    "frontmatter presence",
+    "source contract diagnostics",
+    "first raw status section",
+    "direct two-column status table with row source locators",
+    "unique raw adr_status/adr_date/adr_author/adr_supersedes values"
+  ],
+  "red": {
+    "failed": 6,
+    "cause": "ModuleNotFoundError before implementation",
+    "report": "reports/native-fields/code-ADR-red.xml"
+  },
+  "green": {
+    "passed": 6,
+    "report": "reports/native-fields/code-ADR-green.xml",
+    "strict_ac_enforcement": true
+  },
+  "mutation_proofs": [
+    {
+      "injection": "Process-local wrapper invented status active in empty legacy frontmatter",
+      "exit_code": 1,
+      "restored": true
+    },
+    {
+      "injection": "Process-local wrapper inferred ambiguous date and later unrelated table author",
+      "exit_code": 1,
+      "restored": true
+    }
+  ],
+  "real_corpus": {
+    "records": 56,
+    "frontmatter_absent": 1,
+    "diagnostic_counts": {
+      "missing_required_field": 8,
+      "unexpected_document_type": 1,
+      "schema_requirement_disagreement": 59,
+      "missing_frontmatter": 1,
+      "unexpected_document_status": 14
+    }
+  },
+  "integration_owner": "Root integrates NativeRecord serialization, retained-snapshot enrichment, and Neo4j publication.",
+  "aura_writes": false,
+  "index_exclusion_red": {
+    "failed": 1,
+    "cause": "Directory README and Master_Plan became extra ADR records before compatibility fix",
+    "report": "reports/native-fields/code-ADR-index-red.xml"
+  },
+  "verification": {
+    "ruff_format": "passed",
+    "ruff_check": "passed",
+    "strict_ac_enforcement": true
+  }
+}

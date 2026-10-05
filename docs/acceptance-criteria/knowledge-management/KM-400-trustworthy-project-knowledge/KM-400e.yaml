@@ -1,0 +1,61 @@
+id: KM-400e
+title: "Use project knowledge when it helps and continue honestly when it cannot"
+component: knowledge-management
+components: [knowledge_management]
+level: L1
+status: active
+req_status: active
+readiness: approved
+priority: medium
+work_status: done
+criteria: |
+  Use evidence deliberately and recognize when it is unavailable.
+
+  Agents choose when project knowledge is needed, obtain attributable evidence through their existing working process, and stop once they have enough. The project remains usable when this capability is disabled, and outages or missing prerequisites are never presented as proof that no knowledge exists.
+parent: KM-400
+depends_on: [KM-400]
+doc_links:
+  - path: docs/reference/artifact-knowledge-graph-data-map.md
+    relationship: context
+    status: exists
+    relevance: Reuse canonical identities and declared relationship semantics; do not create competing models.
+  - path: docs/acceptance-criteria/knowledge-management/KM-KGS-100-knowledge-graph-surfaces/KM-KGS-100.yaml
+    relationship: context
+    status: exists
+    relevance: Reuse existing graph-surface and requirement-to-test traceability requirements without relabeling them as implemented.
+  - path: docs/acceptance-criteria/knowledge-management/KM-ADM-100.yaml
+    relationship: context
+    status: exists
+    relevance: Inherit honest treatment of declared, inferred and missing connections.
+  - path: docs/acceptance-criteria/ac-store/ACS-1100-honest-coverage-answers/ACS-1100.yaml
+    relationship: context
+    status: exists
+    relevance: Inherit the standing requirement that reported figures state coverage and method.
+documentation_triggers: [how-to, reference-doc, component-diagram]
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: product-owner
+created: '2026-10-01'
+amended_by: []
+superseded_by: null
+covered_by:
+  - KM-400e-1
+  - KM-400e-2
+  - KM-400e-3
+  - KM-400e-4
+  - KM-400e-5
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  Authored by PO for the user-authorized full Knowledge Retrieval implementation
+  (guide dated 2026-10-01, stages 0-4). Approval records the user's delegation to
+  orchestrate building and to have PO, BA and IT PO create/amend/use ACs; it is not
+  evidence of completion. All work remains todo until behavioral proof exists.
+  KM-400 is the next available flat family after KM-300; existing IDs are retained.
+  Stage 0 must reconcile the guide with actual canonical entities, capability
+  contracts, kernel integration and tracing ownership before production mapping.
+  Graph-only delivery is an intermediate milestone, not completion of this family.
+  No roadmap or vision changes are authorized or made by these records.

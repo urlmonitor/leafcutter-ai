@@ -1,0 +1,175 @@
+{
+  "id": "leafcutter/retrieval-query-build",
+  "component": "knowledge-management",
+  "product": "Leafcutter",
+  "name": "Build once, verify, reuse",
+  "level": "journey",
+  "summary": "A proven query gap may produce a reusable capability; unsupported data is not fixed by inventing a query.",
+  "kind": "data",
+  "source": "real",
+  "realization": "spec",
+  "status": "active",
+  "readiness": "draft",
+  "version": 2,
+  "tags": [
+    "retrieval",
+    "target-design"
+  ],
+  "entities": [],
+  "steps": [
+    {
+      "id": "gap",
+      "label": "Decide whether a query is missing",
+      "agent": "Jev",
+      "human": "Select the bounded build outcome only when source data is supported and no offered query fits. Do not write the request.",
+      "order": 1,
+      "implements": [],
+      "produces": [
+        "Missing-capability decision"
+      ],
+      "impl_asof": "2026-10-02",
+      "impl_status": "not_started",
+      "consumes": [
+        "Original need and source/catalog evidence"
+      ]
+    },
+    {
+      "id": "build-request",
+      "label": "Construct the scoped request",
+      "agent": "System",
+      "human": "Assemble original need, input/output requirements and source-fit evidence; deduplicate equivalent active builds and dispatch the coding agent. A data gap is not a query build.",
+      "order": 2,
+      "implements": [],
+      "produces": [
+        "Scoped query-build request"
+      ],
+      "impl_asof": "2026-10-02",
+      "impl_status": "not_started",
+      "consumes": [
+        "Missing-capability decision"
+      ]
+    },
+    {
+      "id": "author",
+      "label": "Build a candidate query",
+      "agent": "Coding agent",
+      "human": "Author a parameterized bounded query and its self-describing input/output contract, tests and reviewed evaluation cases. Preserve the question and source context for resumption.\n\nCurrent bounded recipe compilation is an implementation baseline; the outstanding proper-query authoring architecture decision is not silently resolved here.",
+      "order": 3,
+      "implements": [],
+      "produces": [
+        "A candidate query plus verification material"
+      ],
+      "impl_asof": "2026-10-02",
+      "impl_status": "not_started",
+      "consumes": [
+        "A scoped query-build request"
+      ]
+    },
+    {
+      "id": "admit",
+      "label": "Verify and register",
+      "agent": "System",
+      "human": "Independently verify the candidate and its evidence, then activate a version only with the required permission. Failed or incompatible candidates stay unregistered and visible.",
+      "order": 4,
+      "implements": [],
+      "produces": [
+        "Verified reusable version"
+      ],
+      "impl_asof": "2026-10-02",
+      "impl_status": "not_started",
+      "consumes": [
+        "A candidate query plus verification material"
+      ]
+    },
+    {
+      "id": "resume",
+      "label": "Resume the original need",
+      "agent": "System",
+      "human": "Execute the accepted query for the waiting question, then return to shared attempt comparison. Later requests can reuse the registered version rather than rebuilding it.\n\nReturn the executed result to [the shared attempt comparison loop](docs/product-truth/flows/leafcutter/retrieve-project-knowledge.flow.json#compare), which compares attempts before advisory recording, combination and final sufficiency.\n\nThis step is reachable only with a verified admitted version. A rejected or failed candidate exits through the failure branch without execution.\n\nReturn this attempt and its limits to [shared attempt comparison](docs/product-truth/flows/leafcutter/retrieve-project-knowledge.flow.json#compare) alongside prior or complementary methods. The main route owns comparison, advisory recording and combination once.",
+      "order": 5,
+      "implements": [],
+      "produces": [
+        "Retained attributable attempt results"
+      ],
+      "impl_asof": "2026-10-02",
+      "impl_status": "not_started",
+      "consumes": [
+        "Verified reusable version"
+      ]
+    }
+  ],
+  "branches": [
+    {
+      "id": "admission-failed",
+      "label": "Stop a rejected build",
+      "condition": "Verification, authorization or activation fails",
+      "human": "Do not register or execute the rejected candidate. Preserve its failure, original need and prior evidence; return to [method selection](docs/product-truth/flows/leafcutter/retrieve-project-knowledge.flow.json#plan) for a permitted alternative when useful work/budget remains, otherwise report partial or blocked.",
+      "agent": "System",
+      "outcome_kind": "failure",
+      "implements": [],
+      "from": "admit",
+      "impl_asof": "2026-10-02",
+      "impl_status": "not_started"
+    }
+  ],
+  "acceptance_scenarios": [
+    {
+      "given": "Original need and source/catalog evidence",
+      "when": "Decide whether a query is missing",
+      "then": "Missing-capability decision",
+      "for": "gap"
+    },
+    {
+      "given": "Missing-capability decision",
+      "when": "Construct the scoped request",
+      "then": "Scoped query-build request",
+      "for": "build-request"
+    },
+    {
+      "given": "A scoped query-build request",
+      "when": "Build a candidate query",
+      "then": "A candidate query plus verification material",
+      "for": "author"
+    },
+    {
+      "given": "A candidate query plus verification material",
+      "when": "Verify and register",
+      "then": "Verified reusable version",
+      "for": "admit"
+    },
+    {
+      "given": "Verified reusable version",
+      "when": "Resume the original need",
+      "then": "Retained attributable attempt results",
+      "for": "resume"
+    },
+    {
+      "given": "Verification, authorization or activation fails",
+      "when": "Stop a rejected build",
+      "then": "Do not register or execute the rejected candidate. Preserve its failure, original need and prior evidence; return to [method selection](docs/product-truth/flows/leafcutter/retrieve-project-knowledge.flow.json#plan) for a permitted alternative when useful work/budget remains, otherwise report partial or blocked.",
+      "for": "admission-failed"
+    }
+  ],
+  "provenance": [
+    {
+      "action": "authored",
+      "by": "product-owner/business-analyst/flow-author",
+      "date": "2026-10-02",
+      "note": "Target design — not a delivery claim\nUser-requested question-first design. This flow is spec/draft; existing runtime and test evidence do not establish this full contract. Existing acceptance criteria are context pending behavioral mapping, not new completion proof."
+    },
+    {
+      "action": "extended",
+      "by": "flow-author",
+      "date": "2026-10-02",
+      "note": "Traversal and multiple-method design extension\nAdded bounded method selection/return routes and a shared attempt-comparison handoff. Target specification only; no runtime or acceptance-status change."
+    }
+  ],
+  "impl_summary": {
+    "done": 0,
+    "in_progress": 0,
+    "not_started": 6,
+    "total": 6,
+    "asof": "2026-10-02"
+  },
+  "shape_version": 2
+}

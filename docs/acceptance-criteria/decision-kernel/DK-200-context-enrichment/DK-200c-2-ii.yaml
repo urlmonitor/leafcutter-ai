@@ -64,13 +64,3 @@ notes: |
   Decomposed from the user-authorized context-enrichment scope and existing
   DK-100 through DK-104. IT PO technical constraints and exact behavioral test
   links are recorded. Readiness remains draft; no product approval is implied.
-product_truth:
-  - flow: leafcutter/decision-forming
-    node: enrich-context
-    node_kind: step
-    flow_kind: data
-    screen: null
-    mock_data: leafcutter/decisions
-    entities: []
-    source: real
-    asof: '2026-10-02'

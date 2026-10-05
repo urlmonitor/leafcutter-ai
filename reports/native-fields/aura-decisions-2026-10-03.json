@@ -1,0 +1,132 @@
+{
+  "verified_at": "2026-10-03T12:17:14.051042+00:00",
+  "published": true,
+  "source_sha": "2d4bee9fe665bc2f9b173baa752081bde69bc34c",
+  "generation_id": "1a82328de52bb8ae8c6df177a3a706ee8c2f49d02750976eda0fffabb27038ed",
+  "decisions": [
+    {
+      "id": "dec-4673055ef54113d5",
+      "title": "Native read-only GitHub source for facts that feed decisions, with host handoff only for ...",
+      "top_level_fields": 31,
+      "physical_properties": 253,
+      "metadata_exact": true,
+      "payload_exact": true
+    },
+    {
+      "id": "dec-5e7445182eaec1f2",
+      "title": "one decision-lifecycle flow whose steps expand to four sub-flows",
+      "top_level_fields": 31,
+      "physical_properties": 237,
+      "metadata_exact": true,
+      "payload_exact": true
+    },
+    {
+      "id": "dec-73b6db1907adc960",
+      "title": "Render the Codex skill from the same in-package source into the workspace root where ...",
+      "top_level_fields": 31,
+      "physical_properties": 261,
+      "metadata_exact": true,
+      "payload_exact": true
+    },
+    {
+      "id": "dec-acdfd972fcaca478",
+      "title": "Publish directly when the important gates are met and the decision is not risky, through ...",
+      "top_level_fields": 31,
+      "physical_properties": 305,
+      "metadata_exact": true,
+      "payload_exact": true
+    },
+    {
+      "id": "dec-d53e1c52cd47c832",
+      "title": "Make the kernel the default entry for design, planning and lookup questions in Claude ...",
+      "top_level_fields": 31,
+      "physical_properties": 283,
+      "metadata_exact": true,
+      "payload_exact": true
+    },
+    {
+      "id": "dec-ef8ddcb79d668a67",
+      "title": "Kernel-contract YAML per decision",
+      "top_level_fields": 31,
+      "physical_properties": 315,
+      "metadata_exact": true,
+      "payload_exact": true
+    }
+  ],
+  "counts": [
+    {
+      "kind": "ADR",
+      "count": 62
+    },
+    {
+      "kind": "AcceptanceCriterion",
+      "count": 4587
+    },
+    {
+      "kind": "Agent",
+      "count": 61
+    },
+    {
+      "kind": "Capability",
+      "count": 9
+    },
+    {
+      "kind": "ChangelogEntry",
+      "count": 552
+    },
+    {
+      "kind": "Component",
+      "count": 78
+    },
+    {
+      "kind": "Decision",
+      "count": 6
+    },
+    {
+      "kind": "Document",
+      "count": 736
+    },
+    {
+      "kind": "Flow",
+      "count": 25
+    },
+    {
+      "kind": "GlossaryTerm",
+      "count": 51
+    },
+    {
+      "kind": "MockData",
+      "count": 3
+    },
+    {
+      "kind": "Mockup",
+      "count": 15
+    },
+    {
+      "kind": "RoadmapPhase",
+      "count": 18
+    },
+    {
+      "kind": "Skill",
+      "count": 42
+    },
+    {
+      "kind": "SourceFile",
+      "count": 1074
+    },
+    {
+      "kind": "Test",
+      "count": 464
+    },
+    {
+      "kind": "Ticket",
+      "count": 1561
+    }
+  ],
+  "relationship_count": 24519,
+  "previous_generations_preserved": 5,
+  "all_authored_decision_fields_verified": true,
+  "repository_id": "leafcutter",
+  "node_count": 9344,
+  "scope": "Live Aura publication and readback at the pinned source revision; the importer was already present on main. This receipt predates the documentation-only PR that records it."
+}

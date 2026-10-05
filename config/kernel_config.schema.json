@@ -197,6 +197,97 @@
       "title": "DecisionConfig",
       "type": "object"
     },
+    "EntityContextConfig": {
+      "additionalProperties": false,
+      "description": "Independent entity-index and interpretation limits.",
+      "properties": {
+        "enabled": {
+          "title": "Enabled",
+          "type": "boolean"
+        },
+        "index_path": {
+          "title": "Index Path",
+          "type": "string"
+        },
+        "max_ambiguity_candidates": {
+          "maximum": 3,
+          "minimum": 1,
+          "title": "Max Ambiguity Candidates",
+          "type": "integer"
+        },
+        "max_caller_chars": {
+          "maximum": 12000,
+          "minimum": 1,
+          "title": "Max Caller Chars",
+          "type": "integer"
+        },
+        "max_entities": {
+          "maximum": 16,
+          "minimum": 1,
+          "title": "Max Entities",
+          "type": "integer"
+        },
+        "max_lookups": {
+          "maximum": 64,
+          "minimum": 1,
+          "title": "Max Lookups",
+          "type": "integer"
+        },
+        "max_meaning_chars": {
+          "maximum": 300,
+          "minimum": 1,
+          "title": "Max Meaning Chars",
+          "type": "integer"
+        },
+        "max_seconds": {
+          "exclusiveMinimum": 0,
+          "maximum": 2,
+          "title": "Max Seconds",
+          "type": "number"
+        },
+        "max_serialized_chars": {
+          "maximum": 8000,
+          "minimum": 1000,
+          "title": "Max Serialized Chars",
+          "type": "integer"
+        },
+        "max_unknown_chars": {
+          "maximum": 128,
+          "minimum": 1,
+          "title": "Max Unknown Chars",
+          "type": "integer"
+        },
+        "max_unknowns": {
+          "maximum": 8,
+          "minimum": 1,
+          "title": "Max Unknowns",
+          "type": "integer"
+        },
+        "source_ids": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Source Ids",
+          "type": "array"
+        }
+      },
+      "required": [
+        "enabled",
+        "index_path",
+        "source_ids",
+        "max_caller_chars",
+        "max_lookups",
+        "max_entities",
+        "max_ambiguity_candidates",
+        "max_meaning_chars",
+        "max_serialized_chars",
+        "max_unknowns",
+        "max_unknown_chars",
+        "max_seconds"
+      ],
+      "title": "EntityContextConfig",
+      "type": "object"
+    },
     "EvidenceCategory": {
       "description": "Generic evidence categories (no vendor names).",
       "enum": [
@@ -336,6 +427,122 @@
         "price_per_input_token_usd"
       ],
       "title": "JevConfig",
+      "type": "object"
+    },
+    "KnowledgeBindingConfig": {
+      "additionalProperties": false,
+      "properties": {
+        "backend": {
+          "title": "Backend",
+          "type": "string"
+        },
+        "database": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Database"
+        },
+        "embedding_dimensions": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Embedding Dimensions"
+        },
+        "embedding_endpoint_env": {
+          "title": "Embedding Endpoint Env",
+          "type": "string"
+        },
+        "embedding_model": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Embedding Model"
+        },
+        "embedding_token_env": {
+          "title": "Embedding Token Env",
+          "type": "string"
+        },
+        "embeddings_enabled": {
+          "title": "Embeddings Enabled",
+          "type": "boolean"
+        },
+        "neo4j_password_env": {
+          "title": "Neo4J Password Env",
+          "type": "string"
+        },
+        "neo4j_uri_env": {
+          "title": "Neo4J Uri Env",
+          "type": "string"
+        },
+        "neo4j_username_env": {
+          "title": "Neo4J Username Env",
+          "type": "string"
+        },
+        "query_catalog_root": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Query Catalog Root"
+        },
+        "query_timeout": {
+          "exclusiveMinimum": 0,
+          "maximum": 30,
+          "title": "Query Timeout",
+          "type": "number"
+        },
+        "repository_id": {
+          "title": "Repository Id",
+          "type": "string"
+        },
+        "repository_root": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Repository Root"
+        }
+      },
+      "required": [
+        "backend",
+        "repository_id",
+        "repository_root",
+        "query_catalog_root",
+        "neo4j_uri_env",
+        "neo4j_username_env",
+        "neo4j_password_env",
+        "database",
+        "embeddings_enabled",
+        "embedding_endpoint_env",
+        "embedding_token_env",
+        "embedding_model",
+        "embedding_dimensions",
+        "query_timeout"
+      ],
+      "title": "KnowledgeBindingConfig",
       "type": "object"
     },
     "LangfuseConfig": {
@@ -882,6 +1089,11 @@
       "additionalProperties": false,
       "description": "One entry of the source catalog (where evidence may come from).",
       "properties": {
+        "automatic_research": {
+          "default": true,
+          "title": "Automatic Research",
+          "type": "boolean"
+        },
         "categories": {
           "items": {
             "$ref": "#/$defs/EvidenceCategory"
@@ -905,6 +1117,7 @@
           "enum": [
             "repo_text",
             "knowledge_map",
+            "graph_query",
             "host_research"
           ],
           "title": "Kind",
@@ -961,6 +1174,9 @@
     "decision": {
       "$ref": "#/$defs/DecisionConfig"
     },
+    "entity_context": {
+      "$ref": "#/$defs/EntityContextConfig"
+    },
     "host": {
       "$ref": "#/$defs/HostConfig"
     },
@@ -969,6 +1185,9 @@
     },
     "jev": {
       "$ref": "#/$defs/JevConfig"
+    },
+    "knowledge": {
+      "$ref": "#/$defs/KnowledgeBindingConfig"
     },
     "langfuse": {
       "$ref": "#/$defs/LangfuseConfig"
@@ -1000,11 +1219,13 @@
     }
   },
   "required": [
+    "knowledge",
     "paths",
     "limits",
     "routing",
     "intent",
     "context_enrichment",
+    "entity_context",
     "decision",
     "research",
     "retrieval",

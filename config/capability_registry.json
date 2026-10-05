@@ -250,6 +250,79 @@
         "admitted_on": "2026-09-30",
         "admitted_by": "BrainCandy"
       }
+    },
+    {
+      "id": "host.query_build",
+      "name": "host.query_build",
+      "description": "Bounded reusable graph query construction and verified admission.",
+      "version": "1.0.0",
+      "request_kinds": [
+        "capability"
+      ],
+      "operations": [
+        "build_query"
+      ],
+      "accepts_schemas": [
+        "leafcutter.query_build_request.v1"
+      ],
+      "produces_schemas": [
+        "leafcutter.query_candidate.v1"
+      ],
+      "execution_mode": "host_handoff",
+      "binding": "host.query_build",
+      "side_effect_class": "run_artifacts",
+      "permissions_required": [
+        "read_repo"
+      ],
+      "routing": "fixed",
+      "cost_hints": {
+        "jev_calls": 0,
+        "host_operations": 1,
+        "latency_ms": null
+      },
+      "admission": {
+        "kind": "native_registration",
+        "decision_ref": "TICKET-20261001-KM-500b-3",
+        "admitted_on": "2026-09-30",
+        "admitted_by": "BrainCandy"
+      }
+    },
+    {
+      "id": "knowledge.activate_query",
+      "name": "knowledge.activate_query",
+      "description": "Bounded reusable graph query construction and verified admission.",
+      "version": "1.0.0",
+      "request_kinds": [
+        "capability"
+      ],
+      "operations": [
+        "activate_query"
+      ],
+      "accepts_schemas": [
+        "leafcutter.query_activation_request.v1"
+      ],
+      "produces_schemas": [
+        "leafcutter.query_activation_receipt.v1"
+      ],
+      "execution_mode": "native",
+      "binding": "knowledge.activate_query",
+      "side_effect_class": "catalog_write",
+      "permissions_required": [
+        "read_repo",
+        "write_query_catalog"
+      ],
+      "routing": "fixed",
+      "cost_hints": {
+        "jev_calls": 0,
+        "host_operations": 0,
+        "latency_ms": null
+      },
+      "admission": {
+        "kind": "native_registration",
+        "decision_ref": "TICKET-20261001-KM-500b-3",
+        "admitted_on": "2026-09-30",
+        "admitted_by": "BrainCandy"
+      }
     }
   ]
 }

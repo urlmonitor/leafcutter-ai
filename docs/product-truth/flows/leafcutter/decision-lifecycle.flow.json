@@ -4,14 +4,14 @@
   "product": "Leafcutter",
   "name": "How a decision is formed, saved, stored and reused",
   "level": "journey",
-  "summary": "A request is enriched, formed into a human-approved decision, staged, published and later reused as precedent.",
+  "summary": "Interpret entity meanings, form a decision with later evidence, then stage, publish and reuse it.",
   "kind": "data",
   "source": "real",
   "realization": "built",
   "status": "active",
   "readiness": "draft",
   "superseded_by": null,
-  "version": 2,
+  "version": 4,
   "shape_version": 2,
   "tags": [
     "decision-kernel",
@@ -27,8 +27,13 @@
   "steps": [
     {
       "id": "form",
+      "implements": [
+        "DK-300d-1",
+        "DK-300d-3",
+        "DK-300d-3-i"
+      ],
       "label": "Form the decision",
-      "human": "You ask a question; the kernel enriches its context before intent, then researches the decision, assesses options and asks you to approve and choose.",
+      "human": "You ask a question; compact entity meanings help classify intent, then the kernel retrieves decision evidence, assesses options and asks you to approve and choose.",
       "order": 1,
       "agent": "kernel",
       "produces": [
@@ -40,7 +45,7 @@
       "expands_to": [
         "leafcutter/decision-forming"
       ],
-      "impl_asof": "2026-10-02",
+      "impl_asof": "2026-10-03",
       "impl_status": "in_progress"
     },
     {
@@ -124,7 +129,7 @@
       "for": "form",
       "given": "a question asked through Claude Code",
       "when": "the kernel runs it as a decision",
-      "then": "bounded context enrichment precedes intent, and a decision resolves only after a human approves criteria and makes the ranked choice, carrying approved_by: human:<id> and approved_at"
+      "then": "the flow recognizes compact entity meanings before intent, retrieves task evidence afterward, and resolves only after a human approves criteria and makes the ranked choice, carrying approved_by: human:<id> and approved_at"
     },
     {
       "for": "stage",
@@ -157,6 +162,18 @@
       "by": "Codex (user-requested context enrichment)",
       "date": "2026-10-02",
       "note": "Extended the canonical flow with the implemented initial context pass before intent. DK-100 through DK-104 link implementation and evaluation. The isolated report records 10/10 cases; the separate paired live intent report records 5/5 expected enriched labels with ten Jev calls, without claiming general improvement. Readiness stays draft; no persona approval is claimed."
+    },
+    {
+      "action": "extended",
+      "by": "GPT-6.1 (user-requested entity-context concept)",
+      "date": "2026-10-03",
+      "note": "Kept the existing parent journey and forming sub-flow coherent with the unimplemented entity-meaning design. Realization is spec and readiness remains draft; existing decision publication and precedent semantics are unchanged. Historical DK-200 evidence applies to running lexical enrichment, not this recognition proposal."
+    },
+    {
+      "action": "extended",
+      "by": "BA, IT PO, test writer, Python coders and independent evaluator (user-authorized agent pipeline)",
+      "date": "2026-10-03",
+      "note": "Implemented DK-300 entity meanings before intent, explicit index preparation, bounded verbatim goals, permission-filtered meaning projection and later canonical evidence hints. AC links carry implementation and independent test evidence; see reports/entity-context-verification.md. Historical DK-200 evidence remains historical. Derived status is generated from ACs; readiness remains draft and no human approval is implied."
     }
   ],
   "impl_summary": {
@@ -164,6 +181,6 @@
     "in_progress": 1,
     "not_started": 3,
     "total": 4,
-    "asof": "2026-10-02"
+    "asof": "2026-10-03"
   }
 }

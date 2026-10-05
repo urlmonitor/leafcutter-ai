@@ -86,4 +86,6 @@ python scripts/adr_refs.py --index --write
 | [ADR-059](ADR-059-decision-store-reviewable-yaml-records-now-graph-later.md) | Active | Decision Store — Reviewable YAML Records Now, a Graph Later | 2026-10-01 |
 | [ADR-060](ADR-060-source-of-truth-and-approval-authority.md) | Active | Source of Truth and Approval Authority — Git Is Canonical, a Human Approves, Precedent Is Evidence | 2026-10-01 |
 | [ADR-061](ADR-061-identity-of-declared-and-learned-records.md) | Active | Identity — Existing Ids Stay, Decisions Get a Kernel-Minted Id, Records Are Keyed by Repository, Kind and Id | 2026-10-01 |
+| [ADR-062](ADR-062-standalone-knowledge-retrieval.md) | Active | Standalone Knowledge Retrieval over Immutable Git Projections | 2026-10-01 |
+| [ADR-064](ADR-064-persona-discovery-before-feature-planning.md) | Active | Persona Discovery Before Feature Planning | 2026-10-01 |
 | [ADR-065](ADR-065-colony-learned-statistics-neo4j-aggregates.md) | Active | Colony Learned Statistics Live in Neo4j as Derived Aggregates — Supersedes ADR-057 in Part | 2026-10-02 |

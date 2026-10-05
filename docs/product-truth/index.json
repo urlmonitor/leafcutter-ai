@@ -446,192 +446,6 @@
       ]
     },
     {
-      "id": "leafcutter/decision-lifecycle",
-      "type": "flow",
-      "title": "How a decision is formed, saved, stored and reused",
-      "summary": "A request is enriched, formed into a human-approved decision, staged, published and later reused as precedent.",
-      "kind": "data",
-      "source": "real",
-      "component": "decision_kernel",
-      "path": "flows/leafcutter/decision-lifecycle.flow.json",
-      "status": "active",
-      "readiness": "draft",
-      "version": 2,
-      "entities": [
-        "Decision"
-      ],
-      "mock_data_ref": "leafcutter/decisions",
-      "impl_summary": {
-        "done": 0,
-        "in_progress": 1,
-        "not_started": 3,
-        "total": 4,
-        "asof": "2026-10-02"
-      },
-      "tags": [
-        "decision-kernel",
-        "decision-lifecycle",
-        "decision-records",
-        "journey",
-        "hierarchy"
-      ]
-    },
-    {
-      "id": "leafcutter/decision-forming",
-      "type": "flow",
-      "title": "Forming a decision in a kernel run",
-      "summary": "The kernel enriches and researches the request, starts from approved criteria, then asks you to approve and choose.",
-      "kind": "data",
-      "source": "real",
-      "component": "decision_kernel",
-      "path": "flows/leafcutter/decision-forming.flow.json",
-      "status": "active",
-      "readiness": "draft",
-      "version": 3,
-      "entities": [
-        "Decision"
-      ],
-      "mock_data_ref": "leafcutter/decisions",
-      "impl_summary": {
-        "done": 2,
-        "in_progress": 0,
-        "not_started": 19,
-        "total": 21,
-        "asof": "2026-10-03"
-      },
-      "tags": [
-        "decision-kernel",
-        "decision-lifecycle",
-        "decision-forming",
-        "pipeline",
-        "criterion-categories",
-        "criteria-reuse"
-      ]
-    },
-    {
-      "id": "leafcutter/decision-staging",
-      "type": "flow",
-      "title": "Staging the decision record",
-      "summary": "When a run ends, a human-approved decision is written as a YAML record under the run folder, ready to publish.",
-      "kind": "data",
-      "source": "real",
-      "component": "decision_kernel",
-      "path": "flows/leafcutter/decision-staging.flow.json",
-      "status": "active",
-      "readiness": "draft",
-      "version": 1,
-      "entities": [
-        "Decision"
-      ],
-      "mock_data_ref": "leafcutter/decisions",
-      "impl_summary": {
-        "done": 0,
-        "in_progress": 0,
-        "not_started": 5,
-        "total": 5,
-        "asof": "2026-10-02"
-      },
-      "tags": [
-        "decision-kernel",
-        "decision-lifecycle",
-        "decision-staging",
-        "pipeline"
-      ]
-    },
-    {
-      "id": "leafcutter/decision-publishing",
-      "type": "flow",
-      "title": "Publishing the decision record",
-      "summary": "You run the publish command; the record is validated, written to docs/decisions/, indexed, and merged via git review.",
-      "kind": "data",
-      "source": "real",
-      "component": "decision_kernel",
-      "path": "flows/leafcutter/decision-publishing.flow.json",
-      "status": "active",
-      "readiness": "draft",
-      "version": 1,
-      "entities": [
-        "Decision"
-      ],
-      "mock_data_ref": "leafcutter/decisions",
-      "impl_summary": {
-        "done": 0,
-        "in_progress": 0,
-        "not_started": 10,
-        "total": 10,
-        "asof": "2026-10-02"
-      },
-      "tags": [
-        "decision-kernel",
-        "decision-lifecycle",
-        "decision-publishing",
-        "pipeline"
-      ]
-    },
-    {
-      "id": "leafcutter/decision-retrieval",
-      "type": "flow",
-      "title": "Retrieving a decision as precedent",
-      "summary": "A later run finds earlier records via the index; Jev judges if each applies, and a strong match asks you to reuse it.",
-      "kind": "data",
-      "source": "real",
-      "component": "decision_kernel",
-      "path": "flows/leafcutter/decision-retrieval.flow.json",
-      "status": "active",
-      "readiness": "draft",
-      "version": 1,
-      "entities": [
-        "Decision"
-      ],
-      "mock_data_ref": "leafcutter/decisions",
-      "impl_summary": {
-        "done": 0,
-        "in_progress": 0,
-        "not_started": 8,
-        "total": 8,
-        "asof": "2026-10-02"
-      },
-      "tags": [
-        "decision-kernel",
-        "decision-lifecycle",
-        "precedent",
-        "pipeline"
-      ]
-    },
-    {
-      "id": "leafcutter/criteria-library",
-      "type": "flow",
-      "title": "Building and curating the criteria library",
-      "summary": "Mined repeat questions become person-approved categories, counted from the records and explorable in Neo4j.",
-      "kind": "data",
-      "source": "mock",
-      "component": "decision_kernel",
-      "path": "flows/leafcutter/criteria-library.flow.json",
-      "status": "active",
-      "readiness": "draft",
-      "version": 1,
-      "entities": [
-        "CriterionCategory",
-        "CriterionCategoryAggregate"
-      ],
-      "mock_data_ref": "leafcutter/criterion-categories",
-      "tags": [
-        "decision-kernel",
-        "decision-criteria",
-        "criterion-categories",
-        "criteria-mining",
-        "knowledge-graph",
-        "journey"
-      ],
-      "impl_summary": {
-        "done": 0,
-        "in_progress": 0,
-        "not_started": 14,
-        "total": 14,
-        "asof": "2026-10-03"
-      }
-    },
-    {
       "id": "fern-and-fig/catalog",
       "type": "mock_data",
       "title": "Fern & Fig catalog",
@@ -651,167 +465,6 @@
         "catalog",
         "checkout",
         "payment"
-      ]
-    },
-    {
-      "id": "leafcutter/decisions",
-      "type": "mock_data",
-      "title": "Leafcutter decision records",
-      "summary": "The canonical Decision dataset for the decision lifecycle: real staged, published and reused kernel decision records, plus an illustrative superseded pair.",
-      "component": "decision_kernel",
-      "path": "mock-data/leafcutter/decisions.mock.json",
-      "status": "active",
-      "readiness": "draft",
-      "version": 2,
-      "entities": [
-        "Decision"
-      ],
-      "tags": [
-        "decision-kernel",
-        "decision-lifecycle",
-        "decision-records",
-        "precedent"
-      ]
-    },
-    {
-      "id": "leafcutter/criterion-categories",
-      "type": "mock_data",
-      "title": "Leafcutter criterion categories",
-      "summary": "The canonical CriterionCategory dataset: reusable decision-criteria categories mined from published decision records and Langfuse traces, across candidate, staged, published and retired stages, plus the separate Neo4j outcome aggregates keyed by category id.",
-      "component": "decision_kernel",
-      "path": "mock-data/leafcutter/criterion-categories.mock.json",
-      "status": "active",
-      "readiness": "draft",
-      "version": 1,
-      "entities": [
-        "CriterionCategory",
-        "CriterionCategoryAggregate"
-      ],
-      "tags": [
-        "decision-kernel",
-        "decision-criteria",
-        "criterion-categories",
-        "criteria-mining",
-        "precedent"
-      ]
-    },
-    {
-      "id": "leafcutter/decision-approve-proposals",
-      "type": "mockup",
-      "title": "Approve the generated proposals",
-      "summary": "The kernel's first question after option generation: the options taken from the request (usable as given) and the proposed options, each with what it is grounded in, the proposed criteria marked required or supporting, and the four answers (approve, approve a subset, edit criteria, add an option). Populated from the options and criteria of dec-5e7445182eaec1f2.",
-      "screen": "decision-approve-proposals",
-      "source": "mock",
-      "component": "decision_kernel",
-      "path": "mockups/leafcutter/decision-approve-proposals.mockup.json",
-      "status": "active",
-      "readiness": "draft",
-      "version": 1,
-      "entities": [
-        "Decision"
-      ],
-      "mock_data_ref": "leafcutter/decisions",
-      "tags": [
-        "decision-kernel",
-        "decision-lifecycle",
-        "approval",
-        "forming",
-        "criteria"
-      ]
-    },
-    {
-      "id": "leafcutter/decision-ranked-choice",
-      "type": "mockup",
-      "title": "The ranked choice",
-      "summary": "Options ranked by Jev's per-criterion judgement, each with its rank, N of 3 required criteria likely met, required-criteria mean and per-criterion lines with evidence, an explicit note that the ranking is evidence and not a decision, and the choose-one / add-your-own / free-text answers. Populated from dec-5e7445182eaec1f2, where the human chose rank 2.",
-      "screen": "decision-ranked-choice",
-      "source": "mock",
-      "component": "decision_kernel",
-      "path": "mockups/leafcutter/decision-ranked-choice.mockup.json",
-      "status": "active",
-      "readiness": "draft",
-      "version": 1,
-      "entities": [
-        "Decision"
-      ],
-      "mock_data_ref": "leafcutter/decisions",
-      "tags": [
-        "decision-kernel",
-        "decision-lifecycle",
-        "ranking",
-        "forming",
-        "human-decision"
-      ]
-    },
-    {
-      "id": "leafcutter/decision-reuse-or-decide-anew",
-      "type": "mockup",
-      "title": "Reuse it, or decide anew?",
-      "summary": "The precedent confirm question: dec-ef8ddcb79d668a67 chose Kernel-contract YAML per decision for a matching question; reuse it or decide anew, with the consequence of each choice and why research cannot settle it (only a human may reuse it; precedent is evidence, not authority). Populated from dec-ef8ddcb79d668a67 and dec-7cdc61ea41a206e0.",
-      "screen": "decision-reuse-or-decide-anew",
-      "source": "mock",
-      "component": "decision_kernel",
-      "path": "mockups/leafcutter/decision-reuse-or-decide-anew.mockup.json",
-      "status": "active",
-      "readiness": "draft",
-      "version": 1,
-      "entities": [
-        "Decision"
-      ],
-      "mock_data_ref": "leafcutter/decisions",
-      "tags": [
-        "decision-kernel",
-        "decision-lifecycle",
-        "precedent",
-        "reuse",
-        "human-decision"
-      ]
-    },
-    {
-      "id": "leafcutter/decision-record-staged",
-      "type": "mockup",
-      "title": "Record staged",
-      "summary": "The completed run's result: status completed, the decision and approver, the staged record path, the python -m kernel decisions publish command, and a note that publishing writes into the repository and is the user's to run. Populated from dec-7cdc61ea41a206e0, staged and never published.",
-      "screen": "decision-record-staged",
-      "source": "mock",
-      "component": "decision_kernel",
-      "path": "mockups/leafcutter/decision-record-staged.mockup.json",
-      "status": "active",
-      "readiness": "draft",
-      "version": 1,
-      "entities": [
-        "Decision"
-      ],
-      "mock_data_ref": "leafcutter/decisions",
-      "tags": [
-        "decision-kernel",
-        "decision-lifecycle",
-        "staging",
-        "publish"
-      ]
-    },
-    {
-      "id": "leafcutter/decision-record-published",
-      "type": "mockup",
-      "title": "Published record in review",
-      "summary": "A decision record as reviewed in git or a detail view: title, question, selected option, approval block, precedents considered, supersedes and superseded_by, provenance (run id, Langfuse trace id, repository revision), record path and PR. Populated from dec-d53e1c52cd47c832 (PR #979), with the superseded pair dec-dfb0b8d1eb88ec16 and dec-bcae2c02f17508c1 shown as an illustrative correction.",
-      "screen": "decision-record-published",
-      "source": "mock",
-      "component": "decision_kernel",
-      "path": "mockups/leafcutter/decision-record-published.mockup.json",
-      "status": "active",
-      "readiness": "draft",
-      "version": 1,
-      "entities": [
-        "Decision"
-      ],
-      "mock_data_ref": "leafcutter/decisions",
-      "tags": [
-        "decision-kernel",
-        "decision-lifecycle",
-        "published",
-        "review",
-        "supersession"
       ]
     },
     {
@@ -1008,6 +661,506 @@
         "orders",
         "stub"
       ]
+    },
+    {
+      "id": "leafcutter/retrieve-project-knowledge",
+      "type": "flow",
+      "title": "Ask a question. Get an answer with sources.",
+      "summary": "Ask a question; Jev chooses retrieval, evaluates evidence and returns an answer or a bounded next step.",
+      "kind": "data",
+      "source": "real",
+      "component": "knowledge-management",
+      "path": "flows/leafcutter/retrieve-project-knowledge.flow.json",
+      "status": "active",
+      "readiness": "draft",
+      "version": 3,
+      "entities": [],
+      "tags": [
+        "retrieval",
+        "target-design"
+      ],
+      "impl_summary": {
+        "done": 0,
+        "in_progress": 0,
+        "not_started": 28,
+        "total": 28,
+        "asof": "2026-10-02"
+      }
+    },
+    {
+      "id": "leafcutter/retrieval-registered-query",
+      "type": "flow",
+      "title": "Choose and execute a registered query",
+      "summary": "Jev selects an offered query; delegated preparation and system validation produce executable inputs.",
+      "kind": "data",
+      "source": "real",
+      "component": "knowledge-management",
+      "path": "flows/leafcutter/retrieval-registered-query.flow.json",
+      "status": "active",
+      "readiness": "draft",
+      "version": 2,
+      "entities": [],
+      "tags": [
+        "retrieval",
+        "target-design"
+      ],
+      "impl_summary": {
+        "done": 0,
+        "in_progress": 0,
+        "not_started": 8,
+        "total": 8,
+        "asof": "2026-10-02"
+      }
+    },
+    {
+      "id": "leafcutter/retrieval-search-preparation",
+      "type": "flow",
+      "title": "Prepare and run candidate searches",
+      "summary": "Gather terms, optionally generate five, then run bounded searches and return separate attributable attempts.",
+      "kind": "data",
+      "source": "real",
+      "component": "knowledge-management",
+      "path": "flows/leafcutter/retrieval-search-preparation.flow.json",
+      "status": "active",
+      "readiness": "draft",
+      "version": 2,
+      "entities": [],
+      "tags": [
+        "retrieval",
+        "target-design"
+      ],
+      "impl_summary": {
+        "done": 0,
+        "in_progress": 0,
+        "not_started": 11,
+        "total": 11,
+        "asof": "2026-10-02"
+      }
+    },
+    {
+      "id": "leafcutter/retrieval-query-build",
+      "type": "flow",
+      "title": "Build once, verify, reuse",
+      "summary": "A proven query gap may produce a reusable capability; unsupported data is not fixed by inventing a query.",
+      "kind": "data",
+      "source": "real",
+      "component": "knowledge-management",
+      "path": "flows/leafcutter/retrieval-query-build.flow.json",
+      "status": "active",
+      "readiness": "draft",
+      "version": 2,
+      "entities": [],
+      "tags": [
+        "retrieval",
+        "target-design"
+      ],
+      "impl_summary": {
+        "done": 0,
+        "in_progress": 0,
+        "not_started": 6,
+        "total": 6,
+        "asof": "2026-10-02"
+      }
+    },
+    {
+      "id": "leafcutter/retrieval-current-baseline",
+      "type": "flow",
+      "title": "Current implementation and measured proof",
+      "summary": "Current retrieval mechanisms and measured evidence, with the pending decision-store candidate labeled separately.",
+      "kind": "data",
+      "source": "real",
+      "component": "knowledge-management",
+      "path": "flows/leafcutter/retrieval-current-baseline.flow.json",
+      "status": "active",
+      "readiness": "draft",
+      "version": 1,
+      "entities": [],
+      "tags": [
+        "retrieval",
+        "research",
+        "knowledge",
+        "current-behavior",
+        "retrieval-reference"
+      ],
+      "impl_summary": {
+        "done": 13,
+        "in_progress": 14,
+        "not_started": 0,
+        "total": 27,
+        "asof": "2026-10-02"
+      }
+    },
+    {
+      "id": "leafcutter/retrieval-source-traversal",
+      "type": "flow",
+      "path": "flows/leafcutter/retrieval-source-traversal.flow.json",
+      "kind": "data",
+      "source": "real",
+      "component": "knowledge-management",
+      "status": "active",
+      "readiness": "draft",
+      "version": 1,
+      "entities": [],
+      "tags": [
+        "retrieval",
+        "target-design"
+      ],
+      "title": "Navigate nodes, folders and files",
+      "impl_summary": {
+        "done": 0,
+        "in_progress": 0,
+        "not_started": 11,
+        "total": 11,
+        "asof": "2026-10-02"
+      },
+      "summary": "Jev chooses observed navigation candidates; the system reads bounded sources and retains the path and evidence."
+    },
+    {
+      "id": "leafcutter/decision-lifecycle",
+      "type": "flow",
+      "title": "How a decision is formed, saved, stored and reused",
+      "summary": "Interpret entity meanings, form a decision with later evidence, then stage, publish and reuse it.",
+      "kind": "data",
+      "source": "real",
+      "component": "decision_kernel",
+      "path": "flows/leafcutter/decision-lifecycle.flow.json",
+      "status": "active",
+      "readiness": "draft",
+      "version": 4,
+      "entities": [
+        "Decision"
+      ],
+      "mock_data_ref": "leafcutter/decisions",
+      "impl_summary": {
+        "done": 0,
+        "in_progress": 1,
+        "not_started": 3,
+        "total": 4,
+        "asof": "2026-10-03"
+      },
+      "tags": [
+        "decision-kernel",
+        "decision-lifecycle",
+        "decision-records",
+        "journey",
+        "hierarchy"
+      ]
+    },
+    {
+      "id": "leafcutter/decision-forming",
+      "type": "flow",
+      "title": "Forming a decision in a kernel run",
+      "summary": "The kernel interprets the request, reuses approved criteria, researches it, then asks you to approve and choose.",
+      "kind": "data",
+      "source": "real",
+      "component": "decision_kernel",
+      "path": "flows/leafcutter/decision-forming.flow.json",
+      "status": "active",
+      "readiness": "draft",
+      "version": 5,
+      "entities": [
+        "Decision"
+      ],
+      "mock_data_ref": "leafcutter/decisions",
+      "impl_summary": {
+        "done": 5,
+        "in_progress": 0,
+        "not_started": 16,
+        "total": 21,
+        "asof": "2026-10-05"
+      },
+      "tags": [
+        "decision-kernel",
+        "decision-lifecycle",
+        "decision-forming",
+        "pipeline",
+        "criterion-categories",
+        "criteria-reuse"
+      ]
+    },
+    {
+      "id": "leafcutter/decision-staging",
+      "type": "flow",
+      "title": "Staging the decision record",
+      "summary": "When a run ends, a human-approved decision is written as a YAML record under the run folder, ready to publish.",
+      "kind": "data",
+      "source": "real",
+      "component": "decision_kernel",
+      "path": "flows/leafcutter/decision-staging.flow.json",
+      "status": "active",
+      "readiness": "draft",
+      "version": 1,
+      "entities": [
+        "Decision"
+      ],
+      "mock_data_ref": "leafcutter/decisions",
+      "impl_summary": {
+        "done": 0,
+        "in_progress": 0,
+        "not_started": 5,
+        "total": 5,
+        "asof": "2026-10-02"
+      },
+      "tags": [
+        "decision-kernel",
+        "decision-lifecycle",
+        "decision-staging",
+        "pipeline"
+      ]
+    },
+    {
+      "id": "leafcutter/decision-publishing",
+      "type": "flow",
+      "title": "Publishing the decision record",
+      "summary": "You run the publish command; the record is validated, written to docs/decisions/, indexed, and merged via git review.",
+      "kind": "data",
+      "source": "real",
+      "component": "decision_kernel",
+      "path": "flows/leafcutter/decision-publishing.flow.json",
+      "status": "active",
+      "readiness": "draft",
+      "version": 1,
+      "entities": [
+        "Decision"
+      ],
+      "mock_data_ref": "leafcutter/decisions",
+      "impl_summary": {
+        "done": 0,
+        "in_progress": 0,
+        "not_started": 10,
+        "total": 10,
+        "asof": "2026-10-02"
+      },
+      "tags": [
+        "decision-kernel",
+        "decision-lifecycle",
+        "decision-publishing",
+        "pipeline"
+      ]
+    },
+    {
+      "id": "leafcutter/decision-retrieval",
+      "type": "flow",
+      "title": "Retrieving a decision as precedent",
+      "summary": "A later run finds earlier records via the index; Jev judges if each applies, and a strong match asks you to reuse it.",
+      "kind": "data",
+      "source": "real",
+      "component": "decision_kernel",
+      "path": "flows/leafcutter/decision-retrieval.flow.json",
+      "status": "active",
+      "readiness": "draft",
+      "version": 1,
+      "entities": [
+        "Decision"
+      ],
+      "mock_data_ref": "leafcutter/decisions",
+      "impl_summary": {
+        "done": 0,
+        "in_progress": 0,
+        "not_started": 8,
+        "total": 8,
+        "asof": "2026-10-02"
+      },
+      "tags": [
+        "decision-kernel",
+        "decision-lifecycle",
+        "precedent",
+        "pipeline"
+      ]
+    },
+    {
+      "id": "leafcutter/criteria-library",
+      "type": "flow",
+      "title": "Building and curating the criteria library",
+      "summary": "Mined repeat questions become person-approved categories, counted from the records and explorable in Neo4j.",
+      "kind": "data",
+      "source": "mock",
+      "component": "decision_kernel",
+      "path": "flows/leafcutter/criteria-library.flow.json",
+      "status": "active",
+      "readiness": "draft",
+      "version": 1,
+      "entities": [
+        "CriterionCategory",
+        "CriterionCategoryAggregate"
+      ],
+      "mock_data_ref": "leafcutter/criterion-categories",
+      "tags": [
+        "decision-kernel",
+        "decision-criteria",
+        "criterion-categories",
+        "criteria-mining",
+        "knowledge-graph",
+        "journey"
+      ],
+      "impl_summary": {
+        "done": 0,
+        "in_progress": 0,
+        "not_started": 14,
+        "total": 14,
+        "asof": "2026-10-05"
+      }
+    },
+    {
+      "id": "leafcutter/decisions",
+      "type": "mock_data",
+      "title": "Leafcutter decision records",
+      "summary": "The canonical Decision dataset for the decision lifecycle: real staged, published and reused kernel decision records, plus an illustrative superseded pair.",
+      "component": "decision_kernel",
+      "path": "mock-data/leafcutter/decisions.mock.json",
+      "status": "active",
+      "readiness": "draft",
+      "version": 2,
+      "entities": [
+        "Decision"
+      ],
+      "tags": [
+        "decision-kernel",
+        "decision-lifecycle",
+        "decision-records",
+        "precedent"
+      ]
+    },
+    {
+      "id": "leafcutter/criterion-categories",
+      "type": "mock_data",
+      "title": "Leafcutter criterion categories",
+      "summary": "The canonical CriterionCategory dataset: reusable decision-criteria categories mined from published decision records and Langfuse traces, across candidate, staged, published and retired stages, plus the separate Neo4j outcome aggregates keyed by category id.",
+      "component": "decision_kernel",
+      "path": "mock-data/leafcutter/criterion-categories.mock.json",
+      "status": "active",
+      "readiness": "draft",
+      "version": 1,
+      "entities": [
+        "CriterionCategory",
+        "CriterionCategoryAggregate"
+      ],
+      "tags": [
+        "decision-kernel",
+        "decision-criteria",
+        "criterion-categories",
+        "criteria-mining",
+        "precedent"
+      ]
+    },
+    {
+      "id": "leafcutter/decision-approve-proposals",
+      "type": "mockup",
+      "title": "Approve the generated proposals",
+      "summary": "The kernel's first question after option generation: the options taken from the request (usable as given) and the proposed options, each with what it is grounded in, the proposed criteria marked required or supporting, and the four answers (approve, approve a subset, edit criteria, add an option). Populated from the options and criteria of dec-5e7445182eaec1f2.",
+      "screen": "decision-approve-proposals",
+      "source": "mock",
+      "component": "decision_kernel",
+      "path": "mockups/leafcutter/decision-approve-proposals.mockup.json",
+      "status": "active",
+      "readiness": "draft",
+      "version": 1,
+      "entities": [
+        "Decision"
+      ],
+      "mock_data_ref": "leafcutter/decisions",
+      "tags": [
+        "decision-kernel",
+        "decision-lifecycle",
+        "approval",
+        "forming",
+        "criteria"
+      ]
+    },
+    {
+      "id": "leafcutter/decision-ranked-choice",
+      "type": "mockup",
+      "title": "The ranked choice",
+      "summary": "Options ranked by Jev's per-criterion judgement, each with its rank, N of 3 required criteria likely met, required-criteria mean and per-criterion lines with evidence, an explicit note that the ranking is evidence and not a decision, and the choose-one / add-your-own / free-text answers. Populated from dec-5e7445182eaec1f2, where the human chose rank 2.",
+      "screen": "decision-ranked-choice",
+      "source": "mock",
+      "component": "decision_kernel",
+      "path": "mockups/leafcutter/decision-ranked-choice.mockup.json",
+      "status": "active",
+      "readiness": "draft",
+      "version": 1,
+      "entities": [
+        "Decision"
+      ],
+      "mock_data_ref": "leafcutter/decisions",
+      "tags": [
+        "decision-kernel",
+        "decision-lifecycle",
+        "ranking",
+        "forming",
+        "human-decision"
+      ]
+    },
+    {
+      "id": "leafcutter/decision-reuse-or-decide-anew",
+      "type": "mockup",
+      "title": "Reuse it, or decide anew?",
+      "summary": "The precedent confirm question: dec-ef8ddcb79d668a67 chose Kernel-contract YAML per decision for a matching question; reuse it or decide anew, with the consequence of each choice and why research cannot settle it (only a human may reuse it; precedent is evidence, not authority). Populated from dec-ef8ddcb79d668a67 and dec-7cdc61ea41a206e0.",
+      "screen": "decision-reuse-or-decide-anew",
+      "source": "mock",
+      "component": "decision_kernel",
+      "path": "mockups/leafcutter/decision-reuse-or-decide-anew.mockup.json",
+      "status": "active",
+      "readiness": "draft",
+      "version": 1,
+      "entities": [
+        "Decision"
+      ],
+      "mock_data_ref": "leafcutter/decisions",
+      "tags": [
+        "decision-kernel",
+        "decision-lifecycle",
+        "precedent",
+        "reuse",
+        "human-decision"
+      ]
+    },
+    {
+      "id": "leafcutter/decision-record-staged",
+      "type": "mockup",
+      "title": "Record staged",
+      "summary": "The completed run's result: status completed, the decision and approver, the staged record path, the python -m kernel decisions publish command, and a note that publishing writes into the repository and is the user's to run. Populated from dec-7cdc61ea41a206e0, staged and never published.",
+      "screen": "decision-record-staged",
+      "source": "mock",
+      "component": "decision_kernel",
+      "path": "mockups/leafcutter/decision-record-staged.mockup.json",
+      "status": "active",
+      "readiness": "draft",
+      "version": 1,
+      "entities": [
+        "Decision"
+      ],
+      "mock_data_ref": "leafcutter/decisions",
+      "tags": [
+        "decision-kernel",
+        "decision-lifecycle",
+        "staging",
+        "publish"
+      ]
+    },
+    {
+      "id": "leafcutter/decision-record-published",
+      "type": "mockup",
+      "title": "Published record in review",
+      "summary": "A decision record as reviewed in git or a detail view: title, question, selected option, approval block, precedents considered, supersedes and superseded_by, provenance (run id, Langfuse trace id, repository revision), record path and PR. Populated from dec-d53e1c52cd47c832 (PR #979), with the superseded pair dec-dfb0b8d1eb88ec16 and dec-bcae2c02f17508c1 shown as an illustrative correction.",
+      "screen": "decision-record-published",
+      "source": "mock",
+      "component": "decision_kernel",
+      "path": "mockups/leafcutter/decision-record-published.mockup.json",
+      "status": "active",
+      "readiness": "draft",
+      "version": 1,
+      "entities": [
+        "Decision"
+      ],
+      "mock_data_ref": "leafcutter/decisions",
+      "tags": [
+        "decision-kernel",
+        "decision-lifecycle",
+        "published",
+        "review",
+        "supersession"
+      ]
     }
   ],
   "by_component": {
@@ -1048,6 +1201,18 @@
         "leafcutter/decision-record-staged",
         "leafcutter/decision-reuse-or-decide-anew"
       ]
+    },
+    "knowledge-management": {
+      "flows": [
+        "leafcutter/retrieval-current-baseline",
+        "leafcutter/retrieval-query-build",
+        "leafcutter/retrieval-registered-query",
+        "leafcutter/retrieval-search-preparation",
+        "leafcutter/retrieval-source-traversal",
+        "leafcutter/retrieve-project-knowledge"
+      ],
+      "mock_data": [],
+      "mockups": []
     },
     "ux-prototyping": {
       "flows": [
@@ -1409,7 +1574,7 @@
         "in_progress": 0,
         "not_started": 14,
         "total": 14,
-        "asof": "2026-10-03"
+        "asof": "2026-10-05"
       },
       "expands": [],
       "parents": []
@@ -1424,11 +1589,11 @@
       "path": "flows/leafcutter/decision-forming.flow.json",
       "impl_status": "in_progress",
       "impl_summary": {
-        "done": 2,
+        "done": 5,
         "in_progress": 0,
-        "not_started": 19,
+        "not_started": 16,
         "total": 21,
-        "asof": "2026-10-03"
+        "asof": "2026-10-05"
       },
       "expands": [
         "leafcutter/decision-retrieval"
@@ -1454,7 +1619,7 @@
         "in_progress": 1,
         "not_started": 3,
         "total": 4,
-        "asof": "2026-10-02"
+        "asof": "2026-10-03"
       },
       "expands": [
         "leafcutter/decision-forming",
@@ -1727,6 +1892,127 @@
           "step": "code"
         }
       ]
+    },
+    "leafcutter/retrieval-current-baseline": {
+      "component": "knowledge-management",
+      "level": "journey",
+      "entities": [],
+      "path": "flows/leafcutter/retrieval-current-baseline.flow.json",
+      "impl_status": "in_progress",
+      "impl_summary": {
+        "done": 13,
+        "in_progress": 14,
+        "not_started": 0,
+        "total": 27,
+        "asof": "2026-10-02"
+      },
+      "expands": [],
+      "parents": []
+    },
+    "leafcutter/retrieval-query-build": {
+      "component": "knowledge-management",
+      "level": "journey",
+      "entities": [],
+      "path": "flows/leafcutter/retrieval-query-build.flow.json",
+      "impl_status": "not_started",
+      "impl_summary": {
+        "done": 0,
+        "in_progress": 0,
+        "not_started": 6,
+        "total": 6,
+        "asof": "2026-10-02"
+      },
+      "expands": [],
+      "parents": [
+        {
+          "flow": "leafcutter/retrieve-project-knowledge",
+          "step": "retrieve"
+        }
+      ]
+    },
+    "leafcutter/retrieval-registered-query": {
+      "component": "knowledge-management",
+      "level": "journey",
+      "entities": [],
+      "path": "flows/leafcutter/retrieval-registered-query.flow.json",
+      "impl_status": "not_started",
+      "impl_summary": {
+        "done": 0,
+        "in_progress": 0,
+        "not_started": 8,
+        "total": 8,
+        "asof": "2026-10-02"
+      },
+      "expands": [],
+      "parents": [
+        {
+          "flow": "leafcutter/retrieve-project-knowledge",
+          "step": "retrieve"
+        }
+      ]
+    },
+    "leafcutter/retrieval-search-preparation": {
+      "component": "knowledge-management",
+      "level": "journey",
+      "entities": [],
+      "path": "flows/leafcutter/retrieval-search-preparation.flow.json",
+      "impl_status": "not_started",
+      "impl_summary": {
+        "done": 0,
+        "in_progress": 0,
+        "not_started": 11,
+        "total": 11,
+        "asof": "2026-10-02"
+      },
+      "expands": [],
+      "parents": [
+        {
+          "flow": "leafcutter/retrieve-project-knowledge",
+          "step": "retrieve"
+        }
+      ]
+    },
+    "leafcutter/retrieval-source-traversal": {
+      "component": "knowledge-management",
+      "level": "journey",
+      "entities": [],
+      "path": "flows/leafcutter/retrieval-source-traversal.flow.json",
+      "impl_status": "not_started",
+      "impl_summary": {
+        "done": 0,
+        "in_progress": 0,
+        "not_started": 11,
+        "total": 11,
+        "asof": "2026-10-02"
+      },
+      "expands": [],
+      "parents": [
+        {
+          "flow": "leafcutter/retrieve-project-knowledge",
+          "step": "retrieve"
+        }
+      ]
+    },
+    "leafcutter/retrieve-project-knowledge": {
+      "component": "knowledge-management",
+      "level": "journey",
+      "entities": [],
+      "path": "flows/leafcutter/retrieve-project-knowledge.flow.json",
+      "impl_status": "not_started",
+      "impl_summary": {
+        "done": 0,
+        "in_progress": 0,
+        "not_started": 28,
+        "total": 28,
+        "asof": "2026-10-02"
+      },
+      "expands": [
+        "leafcutter/retrieval-query-build",
+        "leafcutter/retrieval-registered-query",
+        "leafcutter/retrieval-search-preparation",
+        "leafcutter/retrieval-source-traversal"
+      ],
+      "parents": []
     }
   },
   "by_ac": {
@@ -2404,7 +2690,7 @@
         "asof": "2026-07-20"
       }
     ],
-    "DK-200a-1": [
+    "DK-300a-1": [
       {
         "flow": "leafcutter/decision-forming",
         "node": "enrich-context",
@@ -2414,10 +2700,10 @@
         "mock_data": "leafcutter/decisions",
         "entities": [],
         "source": "real",
-        "asof": "2026-10-02"
+        "asof": "2026-10-03"
       }
     ],
-    "DK-200a-1-i": [
+    "DK-300a-1-i": [
       {
         "flow": "leafcutter/decision-forming",
         "node": "enrich-context",
@@ -2427,10 +2713,10 @@
         "mock_data": "leafcutter/decisions",
         "entities": [],
         "source": "real",
-        "asof": "2026-10-02"
+        "asof": "2026-10-03"
       }
     ],
-    "DK-200a-2": [
+    "DK-300a-2": [
       {
         "flow": "leafcutter/decision-forming",
         "node": "enrich-context",
@@ -2440,10 +2726,10 @@
         "mock_data": "leafcutter/decisions",
         "entities": [],
         "source": "real",
-        "asof": "2026-10-02"
+        "asof": "2026-10-03"
       }
     ],
-    "DK-200a-3": [
+    "DK-300a-2-i": [
       {
         "flow": "leafcutter/decision-forming",
         "node": "enrich-context",
@@ -2453,10 +2739,10 @@
         "mock_data": "leafcutter/decisions",
         "entities": [],
         "source": "real",
-        "asof": "2026-10-02"
+        "asof": "2026-10-03"
       }
     ],
-    "DK-200a-3-i": [
+    "DK-300a-3": [
       {
         "flow": "leafcutter/decision-forming",
         "node": "enrich-context",
@@ -2466,10 +2752,10 @@
         "mock_data": "leafcutter/decisions",
         "entities": [],
         "source": "real",
-        "asof": "2026-10-02"
+        "asof": "2026-10-03"
       }
     ],
-    "DK-200a-3-ii": [
+    "DK-300a-3-i": [
       {
         "flow": "leafcutter/decision-forming",
         "node": "enrich-context",
@@ -2479,10 +2765,21 @@
         "mock_data": "leafcutter/decisions",
         "entities": [],
         "source": "real",
-        "asof": "2026-10-02"
+        "asof": "2026-10-03"
       }
     ],
-    "DK-200a-4": [
+    "DK-300b-1": [
+      {
+        "flow": "leafcutter/decision-forming",
+        "node": "ask",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": "leafcutter/decisions",
+        "entities": [],
+        "source": "real",
+        "asof": "2026-10-03"
+      },
       {
         "flow": "leafcutter/decision-forming",
         "node": "enrich-context",
@@ -2492,10 +2789,21 @@
         "mock_data": "leafcutter/decisions",
         "entities": [],
         "source": "real",
-        "asof": "2026-10-02"
+        "asof": "2026-10-03"
       }
     ],
-    "DK-200b-1": [
+    "DK-300b-1-i": [
+      {
+        "flow": "leafcutter/decision-forming",
+        "node": "ask",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": "leafcutter/decisions",
+        "entities": [],
+        "source": "real",
+        "asof": "2026-10-03"
+      },
       {
         "flow": "leafcutter/decision-forming",
         "node": "enrich-context",
@@ -2505,10 +2813,10 @@
         "mock_data": "leafcutter/decisions",
         "entities": [],
         "source": "real",
-        "asof": "2026-10-02"
+        "asof": "2026-10-03"
       }
     ],
-    "DK-200b-2": [
+    "DK-300b-2": [
       {
         "flow": "leafcutter/decision-forming",
         "node": "enrich-context",
@@ -2518,7 +2826,46 @@
         "mock_data": "leafcutter/decisions",
         "entities": [],
         "source": "real",
-        "asof": "2026-10-02"
+        "asof": "2026-10-03"
+      }
+    ],
+    "DK-300b-2-i": [
+      {
+        "flow": "leafcutter/decision-forming",
+        "node": "enrich-context",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": "leafcutter/decisions",
+        "entities": [],
+        "source": "real",
+        "asof": "2026-10-03"
+      }
+    ],
+    "DK-300b-3": [
+      {
+        "flow": "leafcutter/decision-forming",
+        "node": "enrich-context",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": "leafcutter/decisions",
+        "entities": [],
+        "source": "real",
+        "asof": "2026-10-03"
+      }
+    ],
+    "DK-300b-3-i": [
+      {
+        "flow": "leafcutter/decision-forming",
+        "node": "enrich-context",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": "leafcutter/decisions",
+        "entities": [],
+        "source": "real",
+        "asof": "2026-10-03"
       },
       {
         "flow": "leafcutter/decision-forming",
@@ -2529,10 +2876,10 @@
         "mock_data": "leafcutter/decisions",
         "entities": [],
         "source": "real",
-        "asof": "2026-10-02"
+        "asof": "2026-10-03"
       }
     ],
-    "DK-200b-2-i": [
+    "DK-300c-1": [
       {
         "flow": "leafcutter/decision-forming",
         "node": "enrich-context",
@@ -2542,7 +2889,20 @@
         "mock_data": "leafcutter/decisions",
         "entities": [],
         "source": "real",
-        "asof": "2026-10-02"
+        "asof": "2026-10-03"
+      }
+    ],
+    "DK-300c-1-i": [
+      {
+        "flow": "leafcutter/decision-forming",
+        "node": "enrich-context",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": "leafcutter/decisions",
+        "entities": [],
+        "source": "real",
+        "asof": "2026-10-03"
       },
       {
         "flow": "leafcutter/decision-forming",
@@ -2553,10 +2913,10 @@
         "mock_data": "leafcutter/decisions",
         "entities": [],
         "source": "real",
-        "asof": "2026-10-02"
+        "asof": "2026-10-03"
       }
     ],
-    "DK-200b-3": [
+    "DK-300c-2": [
       {
         "flow": "leafcutter/decision-forming",
         "node": "enrich-context",
@@ -2566,10 +2926,10 @@
         "mock_data": "leafcutter/decisions",
         "entities": [],
         "source": "real",
-        "asof": "2026-10-02"
+        "asof": "2026-10-03"
       }
     ],
-    "DK-200b-3-i": [
+    "DK-300c-3": [
       {
         "flow": "leafcutter/decision-forming",
         "node": "enrich-context",
@@ -2579,10 +2939,21 @@
         "mock_data": "leafcutter/decisions",
         "entities": [],
         "source": "real",
-        "asof": "2026-10-02"
+        "asof": "2026-10-03"
       }
     ],
-    "DK-200b-4": [
+    "DK-300c-3-i": [
+      {
+        "flow": "leafcutter/decision-forming",
+        "node": "classify",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": "leafcutter/decisions",
+        "entities": [],
+        "source": "real",
+        "asof": "2026-10-03"
+      },
       {
         "flow": "leafcutter/decision-forming",
         "node": "enrich-context",
@@ -2592,10 +2963,21 @@
         "mock_data": "leafcutter/decisions",
         "entities": [],
         "source": "real",
-        "asof": "2026-10-02"
+        "asof": "2026-10-03"
       }
     ],
-    "DK-200b-4-i": [
+    "DK-300d-1": [
+      {
+        "flow": "leafcutter/decision-forming",
+        "node": "classify",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": "leafcutter/decisions",
+        "entities": [],
+        "source": "real",
+        "asof": "2026-10-03"
+      },
       {
         "flow": "leafcutter/decision-forming",
         "node": "enrich-context",
@@ -2605,33 +2987,33 @@
         "mock_data": "leafcutter/decisions",
         "entities": [],
         "source": "real",
-        "asof": "2026-10-02"
+        "asof": "2026-10-03"
+      },
+      {
+        "flow": "leafcutter/decision-lifecycle",
+        "node": "form",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": "leafcutter/decisions",
+        "entities": [
+          "Decision"
+        ],
+        "source": "real",
+        "asof": "2026-10-03"
       }
     ],
-    "DK-200b-4-ii": [
+    "DK-300d-1-i": [
       {
         "flow": "leafcutter/decision-forming",
-        "node": "enrich-context",
+        "node": "classify",
         "node_kind": "step",
         "flow_kind": "data",
         "screen": null,
         "mock_data": "leafcutter/decisions",
         "entities": [],
         "source": "real",
-        "asof": "2026-10-02"
-      }
-    ],
-    "DK-200c-1": [
-      {
-        "flow": "leafcutter/decision-forming",
-        "node": "enrich-context",
-        "node_kind": "step",
-        "flow_kind": "data",
-        "screen": null,
-        "mock_data": "leafcutter/decisions",
-        "entities": [],
-        "source": "real",
-        "asof": "2026-10-02"
+        "asof": "2026-10-03"
       },
       {
         "flow": "leafcutter/decision-forming",
@@ -2642,36 +3024,23 @@
         "mock_data": "leafcutter/decisions",
         "entities": [],
         "source": "real",
-        "asof": "2026-10-02"
+        "asof": "2026-10-03"
       }
     ],
-    "DK-200c-1-i": [
+    "DK-300d-2": [
       {
         "flow": "leafcutter/decision-forming",
-        "node": "enrich-context",
+        "node": "classify",
         "node_kind": "step",
         "flow_kind": "data",
         "screen": null,
         "mock_data": "leafcutter/decisions",
         "entities": [],
         "source": "real",
-        "asof": "2026-10-02"
+        "asof": "2026-10-03"
       },
       {
         "flow": "leafcutter/decision-forming",
-        "node": "limited-context",
-        "node_kind": "branch",
-        "flow_kind": "data",
-        "screen": null,
-        "mock_data": "leafcutter/decisions",
-        "entities": [],
-        "source": "real",
-        "asof": "2026-10-02"
-      }
-    ],
-    "DK-200c-1-ii": [
-      {
-        "flow": "leafcutter/decision-forming",
         "node": "enrich-context",
         "node_kind": "step",
         "flow_kind": "data",
@@ -2679,21 +3048,60 @@
         "mock_data": "leafcutter/decisions",
         "entities": [],
         "source": "real",
-        "asof": "2026-10-02"
+        "asof": "2026-10-03"
+      }
+    ],
+    "DK-300d-2-i": [
+      {
+        "flow": "leafcutter/decision-forming",
+        "node": "classify",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": "leafcutter/decisions",
+        "entities": [],
+        "source": "real",
+        "asof": "2026-10-03"
       },
       {
         "flow": "leafcutter/decision-forming",
-        "node": "limited-context",
-        "node_kind": "branch",
+        "node": "enrich-context",
+        "node_kind": "step",
         "flow_kind": "data",
         "screen": null,
         "mock_data": "leafcutter/decisions",
         "entities": [],
         "source": "real",
-        "asof": "2026-10-02"
+        "asof": "2026-10-03"
       }
     ],
-    "DK-200c-2": [
+    "DK-300d-3": [
+      {
+        "flow": "leafcutter/decision-forming",
+        "node": "ground",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": "leafcutter/decisions",
+        "entities": [],
+        "source": "real",
+        "asof": "2026-10-03"
+      },
+      {
+        "flow": "leafcutter/decision-lifecycle",
+        "node": "form",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": "leafcutter/decisions",
+        "entities": [
+          "Decision"
+        ],
+        "source": "real",
+        "asof": "2026-10-03"
+      }
+    ],
+    "DK-300d-3-i": [
       {
         "flow": "leafcutter/decision-forming",
         "node": "enrich-context",
@@ -2703,10 +3111,88 @@
         "mock_data": "leafcutter/decisions",
         "entities": [],
         "source": "real",
-        "asof": "2026-10-02"
+        "asof": "2026-10-03"
+      },
+      {
+        "flow": "leafcutter/decision-lifecycle",
+        "node": "form",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": "leafcutter/decisions",
+        "entities": [
+          "Decision"
+        ],
+        "source": "real",
+        "asof": "2026-10-03"
       }
     ],
-    "DK-200c-2-i": [
+    "DK-300d-4": [
+      {
+        "flow": "leafcutter/decision-forming",
+        "node": "ground",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": "leafcutter/decisions",
+        "entities": [],
+        "source": "real",
+        "asof": "2026-10-03"
+      }
+    ],
+    "DK-300d-4-i": [
+      {
+        "flow": "leafcutter/decision-forming",
+        "node": "ground",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": "leafcutter/decisions",
+        "entities": [],
+        "source": "real",
+        "asof": "2026-10-03"
+      }
+    ],
+    "DK-300d-4-ii": [
+      {
+        "flow": "leafcutter/decision-forming",
+        "node": "ground",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": "leafcutter/decisions",
+        "entities": [],
+        "source": "real",
+        "asof": "2026-10-03"
+      }
+    ],
+    "DK-300d-5": [
+      {
+        "flow": "leafcutter/decision-forming",
+        "node": "ground",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": "leafcutter/decisions",
+        "entities": [],
+        "source": "real",
+        "asof": "2026-10-03"
+      }
+    ],
+    "DK-300d-5-i": [
+      {
+        "flow": "leafcutter/decision-forming",
+        "node": "ground",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": "leafcutter/decisions",
+        "entities": [],
+        "source": "real",
+        "asof": "2026-10-03"
+      }
+    ],
+    "DK-300e-1": [
       {
         "flow": "leafcutter/decision-forming",
         "node": "enrich-context",
@@ -2716,10 +3202,10 @@
         "mock_data": "leafcutter/decisions",
         "entities": [],
         "source": "real",
-        "asof": "2026-10-02"
+        "asof": "2026-10-03"
       }
     ],
-    "DK-200c-2-ii": [
+    "DK-300e-2": [
       {
         "flow": "leafcutter/decision-forming",
         "node": "enrich-context",
@@ -2729,10 +3215,10 @@
         "mock_data": "leafcutter/decisions",
         "entities": [],
         "source": "real",
-        "asof": "2026-10-02"
+        "asof": "2026-10-03"
       }
     ],
-    "DK-200d-1": [
+    "DK-300e-2-i": [
       {
         "flow": "leafcutter/decision-forming",
         "node": "enrich-context",
@@ -2742,33 +3228,7 @@
         "mock_data": "leafcutter/decisions",
         "entities": [],
         "source": "real",
-        "asof": "2026-10-02"
-      }
-    ],
-    "DK-200d-2": [
-      {
-        "flow": "leafcutter/decision-forming",
-        "node": "enrich-context",
-        "node_kind": "step",
-        "flow_kind": "data",
-        "screen": null,
-        "mock_data": "leafcutter/decisions",
-        "entities": [],
-        "source": "real",
-        "asof": "2026-10-02"
-      }
-    ],
-    "DK-200d-2-i": [
-      {
-        "flow": "leafcutter/decision-forming",
-        "node": "enrich-context",
-        "node_kind": "step",
-        "flow_kind": "data",
-        "screen": null,
-        "mock_data": "leafcutter/decisions",
-        "entities": [],
-        "source": "real",
-        "asof": "2026-10-02"
+        "asof": "2026-10-03"
       }
     ],
     "DK-500a-1": [
@@ -3609,6 +4069,878 @@
         "entities": [],
         "source": "real",
         "asof": "2026-07-20"
+      }
+    ],
+    "KM-400b-3": [
+      {
+        "flow": "leafcutter/retrieval-current-baseline",
+        "node": "pin",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [],
+        "source": "real",
+        "asof": "2026-10-02"
+      }
+    ],
+    "KM-400d-1": [
+      {
+        "flow": "leafcutter/retrieval-current-baseline",
+        "node": "retrieve",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [],
+        "source": "real",
+        "asof": "2026-10-02"
+      }
+    ],
+    "KM-400d-2": [
+      {
+        "flow": "leafcutter/retrieval-current-baseline",
+        "node": "retrieve",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [],
+        "source": "real",
+        "asof": "2026-10-02"
+      }
+    ],
+    "KM-400d-3": [
+      {
+        "flow": "leafcutter/retrieval-current-baseline",
+        "node": "pin",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [],
+        "source": "real",
+        "asof": "2026-10-02"
+      }
+    ],
+    "KM-400e-1": [
+      {
+        "flow": "leafcutter/retrieval-current-baseline",
+        "node": "direct",
+        "node_kind": "branch",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [],
+        "source": "real",
+        "asof": "2026-10-02"
+      }
+    ],
+    "KM-400e-3": [
+      {
+        "flow": "leafcutter/retrieval-current-baseline",
+        "node": "native",
+        "node_kind": "branch",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [],
+        "source": "real",
+        "asof": "2026-10-02"
+      },
+      {
+        "flow": "leafcutter/retrieval-current-baseline",
+        "node": "native-2",
+        "node_kind": "branch",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [],
+        "source": "real",
+        "asof": "2026-10-02"
+      },
+      {
+        "flow": "leafcutter/retrieval-current-baseline",
+        "node": "native-3",
+        "node_kind": "branch",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [],
+        "source": "real",
+        "asof": "2026-10-02"
+      }
+    ],
+    "KM-400e-4": [
+      {
+        "flow": "leafcutter/retrieval-current-baseline",
+        "node": "unavailable",
+        "node_kind": "branch",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [],
+        "source": "real",
+        "asof": "2026-10-02"
+      }
+    ],
+    "KM-500a-1": [
+      {
+        "flow": "leafcutter/retrieval-current-baseline",
+        "node": "clarify",
+        "node_kind": "branch",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [],
+        "source": "real",
+        "asof": "2026-10-02"
+      },
+      {
+        "flow": "leafcutter/retrieval-current-baseline",
+        "node": "clarify-2",
+        "node_kind": "branch",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [],
+        "source": "real",
+        "asof": "2026-10-02"
+      },
+      {
+        "flow": "leafcutter/retrieval-current-baseline",
+        "node": "clarify-3",
+        "node_kind": "branch",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [],
+        "source": "real",
+        "asof": "2026-10-02"
+      },
+      {
+        "flow": "leafcutter/retrieval-current-baseline",
+        "node": "understand",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [],
+        "source": "real",
+        "asof": "2026-10-02"
+      }
+    ],
+    "KM-500a-2": [
+      {
+        "flow": "leafcutter/retrieval-current-baseline",
+        "node": "bind",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [],
+        "source": "real",
+        "asof": "2026-10-02"
+      },
+      {
+        "flow": "leafcutter/retrieval-current-baseline",
+        "node": "select",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [],
+        "source": "real",
+        "asof": "2026-10-02"
+      },
+      {
+        "flow": "leafcutter/retrieval-current-baseline",
+        "node": "skip",
+        "node_kind": "branch",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [],
+        "source": "real",
+        "asof": "2026-10-02"
+      }
+    ],
+    "KM-500a-3": [
+      {
+        "flow": "leafcutter/retrieval-current-baseline",
+        "node": "fit",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [],
+        "source": "real",
+        "asof": "2026-10-02"
+      },
+      {
+        "flow": "leafcutter/retrieval-current-baseline",
+        "node": "unavailable",
+        "node_kind": "branch",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [],
+        "source": "real",
+        "asof": "2026-10-02"
+      }
+    ],
+    "KM-500b-1": [
+      {
+        "flow": "leafcutter/retrieval-current-baseline",
+        "node": "bind",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [],
+        "source": "real",
+        "asof": "2026-10-02"
+      },
+      {
+        "flow": "leafcutter/retrieval-current-baseline",
+        "node": "build",
+        "node_kind": "branch",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [],
+        "source": "real",
+        "asof": "2026-10-02"
+      },
+      {
+        "flow": "leafcutter/retrieval-current-baseline",
+        "node": "build-2",
+        "node_kind": "branch",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [],
+        "source": "real",
+        "asof": "2026-10-02"
+      },
+      {
+        "flow": "leafcutter/retrieval-current-baseline",
+        "node": "select",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [],
+        "source": "real",
+        "asof": "2026-10-02"
+      }
+    ],
+    "KM-500b-2": [
+      {
+        "flow": "leafcutter/retrieval-current-baseline",
+        "node": "build",
+        "node_kind": "branch",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [],
+        "source": "real",
+        "asof": "2026-10-02"
+      },
+      {
+        "flow": "leafcutter/retrieval-current-baseline",
+        "node": "build-2",
+        "node_kind": "branch",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [],
+        "source": "real",
+        "asof": "2026-10-02"
+      }
+    ],
+    "KM-500b-3": [
+      {
+        "flow": "leafcutter/retrieval-current-baseline",
+        "node": "build",
+        "node_kind": "branch",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [],
+        "source": "real",
+        "asof": "2026-10-02"
+      },
+      {
+        "flow": "leafcutter/retrieval-current-baseline",
+        "node": "build-2",
+        "node_kind": "branch",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [],
+        "source": "real",
+        "asof": "2026-10-02"
+      }
+    ],
+    "KM-500c-1": [
+      {
+        "flow": "leafcutter/retrieval-current-baseline",
+        "node": "build",
+        "node_kind": "branch",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [],
+        "source": "real",
+        "asof": "2026-10-02"
+      },
+      {
+        "flow": "leafcutter/retrieval-current-baseline",
+        "node": "build-2",
+        "node_kind": "branch",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [],
+        "source": "real",
+        "asof": "2026-10-02"
+      },
+      {
+        "flow": "leafcutter/retrieval-current-baseline",
+        "node": "clarify",
+        "node_kind": "branch",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [],
+        "source": "real",
+        "asof": "2026-10-02"
+      },
+      {
+        "flow": "leafcutter/retrieval-current-baseline",
+        "node": "clarify-2",
+        "node_kind": "branch",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [],
+        "source": "real",
+        "asof": "2026-10-02"
+      },
+      {
+        "flow": "leafcutter/retrieval-current-baseline",
+        "node": "clarify-3",
+        "node_kind": "branch",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [],
+        "source": "real",
+        "asof": "2026-10-02"
+      },
+      {
+        "flow": "leafcutter/retrieval-current-baseline",
+        "node": "pin",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [],
+        "source": "real",
+        "asof": "2026-10-02"
+      },
+      {
+        "flow": "leafcutter/retrieval-current-baseline",
+        "node": "return",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [],
+        "source": "real",
+        "asof": "2026-10-02"
+      },
+      {
+        "flow": "leafcutter/retrieval-current-baseline",
+        "node": "synthesis",
+        "node_kind": "branch",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [],
+        "source": "real",
+        "asof": "2026-10-02"
+      },
+      {
+        "flow": "leafcutter/retrieval-current-baseline",
+        "node": "synthesis-2",
+        "node_kind": "branch",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [],
+        "source": "real",
+        "asof": "2026-10-02"
+      },
+      {
+        "flow": "leafcutter/retrieval-current-baseline",
+        "node": "synthesis-3",
+        "node_kind": "branch",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [],
+        "source": "real",
+        "asof": "2026-10-02"
+      }
+    ],
+    "KM-500c-2": [
+      {
+        "flow": "leafcutter/retrieval-current-baseline",
+        "node": "assess",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [],
+        "source": "real",
+        "asof": "2026-10-02"
+      },
+      {
+        "flow": "leafcutter/retrieval-current-baseline",
+        "node": "judge-coverage",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [],
+        "source": "real",
+        "asof": "2026-10-02"
+      },
+      {
+        "flow": "leafcutter/retrieval-current-baseline",
+        "node": "partial",
+        "node_kind": "branch",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [],
+        "source": "real",
+        "asof": "2026-10-02"
+      },
+      {
+        "flow": "leafcutter/retrieval-current-baseline",
+        "node": "synthesis",
+        "node_kind": "branch",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [],
+        "source": "real",
+        "asof": "2026-10-02"
+      },
+      {
+        "flow": "leafcutter/retrieval-current-baseline",
+        "node": "synthesis-2",
+        "node_kind": "branch",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [],
+        "source": "real",
+        "asof": "2026-10-02"
+      },
+      {
+        "flow": "leafcutter/retrieval-current-baseline",
+        "node": "synthesis-3",
+        "node_kind": "branch",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [],
+        "source": "real",
+        "asof": "2026-10-02"
+      }
+    ],
+    "KM-500c-3": [
+      {
+        "flow": "leafcutter/retrieval-current-baseline",
+        "node": "assess",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [],
+        "source": "real",
+        "asof": "2026-10-02"
+      },
+      {
+        "flow": "leafcutter/retrieval-current-baseline",
+        "node": "judge-coverage",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [],
+        "source": "real",
+        "asof": "2026-10-02"
+      },
+      {
+        "flow": "leafcutter/retrieval-current-baseline",
+        "node": "partial",
+        "node_kind": "branch",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [],
+        "source": "real",
+        "asof": "2026-10-02"
+      },
+      {
+        "flow": "leafcutter/retrieval-current-baseline",
+        "node": "skip",
+        "node_kind": "branch",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [],
+        "source": "real",
+        "asof": "2026-10-02"
+      }
+    ],
+    "KM-500e-1": [
+      {
+        "flow": "leafcutter/retrieval-current-baseline",
+        "node": "clarify",
+        "node_kind": "branch",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [],
+        "source": "real",
+        "asof": "2026-10-02"
+      },
+      {
+        "flow": "leafcutter/retrieval-current-baseline",
+        "node": "clarify-2",
+        "node_kind": "branch",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [],
+        "source": "real",
+        "asof": "2026-10-02"
+      },
+      {
+        "flow": "leafcutter/retrieval-current-baseline",
+        "node": "clarify-3",
+        "node_kind": "branch",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [],
+        "source": "real",
+        "asof": "2026-10-02"
+      },
+      {
+        "flow": "leafcutter/retrieval-current-baseline",
+        "node": "request",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [],
+        "source": "real",
+        "asof": "2026-10-02"
+      },
+      {
+        "flow": "leafcutter/retrieval-current-baseline",
+        "node": "understand",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [],
+        "source": "real",
+        "asof": "2026-10-02"
+      }
+    ],
+    "KM-500e-2": [
+      {
+        "flow": "leafcutter/retrieval-current-baseline",
+        "node": "data-gap",
+        "node_kind": "branch",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [],
+        "source": "real",
+        "asof": "2026-10-02"
+      },
+      {
+        "flow": "leafcutter/retrieval-current-baseline",
+        "node": "retrieve",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [],
+        "source": "real",
+        "asof": "2026-10-02"
+      }
+    ],
+    "KM-500e-3": [
+      {
+        "flow": "leafcutter/retrieval-current-baseline",
+        "node": "partial",
+        "node_kind": "branch",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [],
+        "source": "real",
+        "asof": "2026-10-02"
+      },
+      {
+        "flow": "leafcutter/retrieval-current-baseline",
+        "node": "retrieve",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [],
+        "source": "real",
+        "asof": "2026-10-02"
+      }
+    ],
+    "KM-500e-4": [
+      {
+        "flow": "leafcutter/retrieval-current-baseline",
+        "node": "data-gap",
+        "node_kind": "branch",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [],
+        "source": "real",
+        "asof": "2026-10-02"
+      },
+      {
+        "flow": "leafcutter/retrieval-current-baseline",
+        "node": "fit",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [],
+        "source": "real",
+        "asof": "2026-10-02"
+      }
+    ],
+    "KM-500e-5": [
+      {
+        "flow": "leafcutter/retrieval-current-baseline",
+        "node": "direct",
+        "node_kind": "branch",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [],
+        "source": "real",
+        "asof": "2026-10-02"
+      },
+      {
+        "flow": "leafcutter/retrieval-current-baseline",
+        "node": "request",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [],
+        "source": "real",
+        "asof": "2026-10-02"
+      }
+    ],
+    "KM-500f-1": [
+      {
+        "flow": "leafcutter/retrieval-current-baseline",
+        "node": "retrieve",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [],
+        "source": "real",
+        "asof": "2026-10-02"
+      }
+    ],
+    "KM-500f-2": [
+      {
+        "flow": "leafcutter/retrieval-current-baseline",
+        "node": "assess",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [],
+        "source": "real",
+        "asof": "2026-10-02"
+      },
+      {
+        "flow": "leafcutter/retrieval-current-baseline",
+        "node": "judge-coverage",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [],
+        "source": "real",
+        "asof": "2026-10-02"
+      }
+    ],
+    "KM-500f-3": [
+      {
+        "flow": "leafcutter/retrieval-current-baseline",
+        "node": "assess",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [],
+        "source": "real",
+        "asof": "2026-10-02"
+      },
+      {
+        "flow": "leafcutter/retrieval-current-baseline",
+        "node": "judge-coverage",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [],
+        "source": "real",
+        "asof": "2026-10-02"
+      }
+    ],
+    "KM-500f-4": [
+      {
+        "flow": "leafcutter/retrieval-current-baseline",
+        "node": "assess",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [],
+        "source": "real",
+        "asof": "2026-10-02"
+      },
+      {
+        "flow": "leafcutter/retrieval-current-baseline",
+        "node": "judge-coverage",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [],
+        "source": "real",
+        "asof": "2026-10-02"
+      }
+    ],
+    "KM-500f-5": [
+      {
+        "flow": "leafcutter/retrieval-current-baseline",
+        "node": "assess",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [],
+        "source": "real",
+        "asof": "2026-10-02"
+      },
+      {
+        "flow": "leafcutter/retrieval-current-baseline",
+        "node": "judge-coverage",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [],
+        "source": "real",
+        "asof": "2026-10-02"
+      }
+    ],
+    "KM-500g-1": [
+      {
+        "flow": "leafcutter/retrieval-current-baseline",
+        "node": "observation-loss",
+        "node_kind": "branch",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [],
+        "source": "real",
+        "asof": "2026-10-02"
+      },
+      {
+        "flow": "leafcutter/retrieval-current-baseline",
+        "node": "return",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [],
+        "source": "real",
+        "asof": "2026-10-02"
+      }
+    ],
+    "KM-500g-1-i": [
+      {
+        "flow": "leafcutter/retrieval-current-baseline",
+        "node": "observation-loss",
+        "node_kind": "branch",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [],
+        "source": "real",
+        "asof": "2026-10-02"
+      },
+      {
+        "flow": "leafcutter/retrieval-current-baseline",
+        "node": "return",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [],
+        "source": "real",
+        "asof": "2026-10-02"
+      }
+    ],
+    "KM-500g-2": [
+      {
+        "flow": "leafcutter/retrieval-current-baseline",
+        "node": "observation-loss",
+        "node_kind": "branch",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [],
+        "source": "real",
+        "asof": "2026-10-02"
+      },
+      {
+        "flow": "leafcutter/retrieval-current-baseline",
+        "node": "return",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [],
+        "source": "real",
+        "asof": "2026-10-02"
       }
     ],
     "UXP-210a": [

@@ -16,12 +16,13 @@ from kernel.capabilities.host.base import GenericHostOperation, HostOperation
 from kernel.capabilities.host.formulate_question import FormulateQuestion
 from kernel.capabilities.host.generate_options import GenerateOptions
 from kernel.capabilities.host.research import Research
+from kernel.capabilities.host.query_build import QueryBuild
 from kernel.capabilities.host.spec import TEMPLATE_VERSION
 from kernel.capabilities.host.synthesize import Synthesize
 
 OPERATIONS: dict[str, HostOperation] = {
     op.capability_id: op for op in (GenerateOptions(), Synthesize(), Research(),
-                                    FormulateQuestion())}
+                                    FormulateQuestion(), QueryBuild())}
 GENERIC = GenericHostOperation()
 TEMPLATE_VERSION_KEY = "host_template"
 

@@ -1,0 +1,59 @@
+name: Knowledge projection sync
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      revision:
+        description: 'Exact canonical commit SHA to replay (40 lowercase hex characters)'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  sync:
+    if: vars.KNOWLEDGE_SYNC_ENABLED == 'true' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    concurrency:
+      group: knowledge-canonical-${{ github.repository }}
+      cancel-in-progress: false
+    env:
+      SOURCE_REVISION: ${{ github.event.inputs.revision || github.sha }}
+      KNOWLEDGE_REPOSITORY_ID: ${{ vars.KNOWLEDGE_REPOSITORY_ID || 'leafcutter' }}
+      LEAFCUTTER_NEO4J_URI: ${{ secrets.LEAFCUTTER_NEO4J_URI }}
+      LEAFCUTTER_NEO4J_WRITER_USERNAME: ${{ secrets.LEAFCUTTER_NEO4J_WRITER_USERNAME }}
+      LEAFCUTTER_NEO4J_WRITER_PASSWORD: ${{ secrets.LEAFCUTTER_NEO4J_WRITER_PASSWORD }}
+      LEAFCUTTER_NEO4J_DATABASE: ${{ vars.LEAFCUTTER_NEO4J_DATABASE || 'neo4j' }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Validate configured writer and immutable canonical revision
+        shell: bash
+        run: |
+          python - <<'PY'
+          import os, re
+          names = ('LEAFCUTTER_NEO4J_URI', 'LEAFCUTTER_NEO4J_WRITER_USERNAME', 'LEAFCUTTER_NEO4J_WRITER_PASSWORD')
+          missing = [name for name in names if not os.environ.get(name)]
+          if missing:
+              raise SystemExit('Knowledge sync writer configuration missing: ' + ', '.join(missing))
+          if not re.fullmatch(r'[0-9a-f]{40}', os.environ['SOURCE_REVISION']):
+              raise SystemExit('Replay requires an exact 40-character commit SHA')
+          PY
+          git merge-base --is-ancestor "$SOURCE_REVISION" origin/main
+      - name: Install standalone writer dependencies
+        run: python -m pip install -r knowledge/requirements-neo4j.txt 'pydantic>=2,<3'
+      - name: Validate and publish canonical snapshot
+        shell: bash
+        run: |
+          python -m knowledge validate --root "$GITHUB_WORKSPACE" --repository-id "$KNOWLEDGE_REPOSITORY_ID" --revision "$SOURCE_REVISION"
+          python -m knowledge sync --root "$GITHUB_WORKSPACE" --repository-id "$KNOWLEDGE_REPOSITORY_ID" --revision "$SOURCE_REVISION"
+          python -m knowledge status --root "$GITHUB_WORKSPACE" --repository-id "$KNOWLEDGE_REPOSITORY_ID" --revision "$SOURCE_REVISION"
