@@ -1,6 +1,6 @@
 ---
 title: "Kernel: split a multi-part design goal into bounded decisions instead of blocking"
-status: todo
+status: deferred
 components:
   - decision_kernel
 created: 2026-10-02
@@ -15,7 +15,8 @@ tags:
   - decision-kernel
   - routing
   - host-operation
-last_updated: 2026-10-02
+  - superseded
+last_updated: 2026-10-05
 agents:
   test-writer: needed
   python-coder: needed
@@ -25,6 +26,24 @@ agents:
 ---
 
 # Kernel: split a multi-part design goal into bounded decisions instead of blocking
+
+> **Superseded on 2026-10-05: do not build from this ticket.** The DK-400 AC tree
+> (`docs/acceptance-criteria/decision-kernel/DK-400-split-compound-requests/`, merged in PR #1012)
+> replaces it. It covers this ticket's routing-failure case (`jev_none` or `ambiguous`,
+> run-40d2159630bb48bd) and the rest of its scope:
+> - the `host.decompose_goal` proposal with verbatim quotes (DK-400c);
+> - the human split gate (DK-400d);
+> - child runs in dependency order (DK-400e);
+> - the report (DK-400f);
+> - the bounds and the ADR (ADR-067, before DK-400c-1).
+>
+> Two rules differ from this ticket, as the user decided at the DK-400 gates:
+> - a rejected split of an `ambiguous` request falls back to today's clarification question, and
+>   only `jev_none` ends `blocked`;
+> - bundled requests the kernel would accept as one are split too.
+>
+> Build from the ACs with `/build-ac`. The ticket is retired with status `deferred` and moves to
+> `tickets/99_rejected/` on main (move-on-main-only).
 
 ## Actor / Goal
 In order that a goal holding several design questions gets decided instead of blocked, we need the
