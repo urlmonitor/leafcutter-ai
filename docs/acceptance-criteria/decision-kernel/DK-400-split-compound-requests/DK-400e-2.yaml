@@ -1,0 +1,123 @@
+id: DK-400e-2
+title: "Each decided part gets its own decision record, linked back to the split"
+component: decision-kernel
+components:
+  - decision_kernel
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_kernel_1_founding
+criteria: |
+  Given the split-bounds split approved with p1 kept, p2 reworded to "Decide how many child
+    decisions one run may start, counting every split in the run", and p3 left out,
+  When p1 and p2 each go through their own decision steps and the person approves each choice,
+  Then p1 and p2 each have their own decision record staged in the run,
+  And p2's record asks the reworded question, not the proposed text,
+  And each record shows the split and the part it answers: dcp-split-bounds-mid-run part p1, and
+    dcp-split-bounds-mid-run part p2,
+  And p3 has no decision record.
+depends_on:
+  - DK-400e
+  - DK-400e-1
+doc_links:
+  - path: docs/product-truth/flows/leafcutter/decision-forming.flow.json
+    relationship: implements
+    status: exists
+    relevance: "Flow v5 node(s) split-run, with their acceptance scenarios."
+  - path: docs/product-truth/mock-data/leafcutter/decisions.mock.json
+    relationship: specified-by
+    status: exists
+    relevance: "parts[].decision_id and the derived Decision.split_part; a decided part's record asks the part's text."
+  - path: docs/architecture/adrs/ADR-060-source-of-truth-and-approval-authority.md
+    relationship: constrains
+    status: exists
+    relevance: "Only a person answers a gate and approves a decision; precedent is evidence, never authority."
+  - path: docs/architecture/adrs/ADR-059-decision-store-reviewable-yaml-records-now-graph-later.md
+    relationship: constrains
+    status: exists
+    relevance: One YAML record per approved decision; published records keep their shape.
+  - path: docs/analysis/2026-09-30-decision-kernel-design-3-kernel-scheduler.md
+    relationship: describes
+    status: exists
+    relevance: Route node and batched Jev routing, intent step, guards and budgets, root completion, gap recording,
+      resume and restart.
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to:
+  agent: python-coder
+  contract: Each decided part stages one record at <run_root>/runs/<run_id>/staged/decisions/<dec id>.yaml whose
+    question is the part's text as approved (the edited text when reworded), whose approval is the person's answer
+    to that part's own final choice, and whose precedents_considered names every earlier decided part of the split
+    with applicability and action; the split record's parts[].decision_id names it, and Decision.split_part {decomposition,
+    part} is derived from that link (no new field in the record file). Consumed by DK-400e-3 (precedent), DK-400f-1
+    (links) and DK-400f-2 (report lines).
+expects_from:
+  ac_id: DK-400e-1
+  contract: "Parts run as work items of the same run."
+it_requirements:
+  - Each decided part stages its own record through the existing staging gate, which refuses any decision that is
+    not resolved and approved by a human with an approval time (ADR-060); one record per part, its id derived from
+    the part's work item.
+  - The record's question is the part's text as approved (the edited text when reworded).
+  - The link from record to split is derived (Decision.split_part from parts[].decision_id); config/decision_record.schema.json
+    and the published record shape are unchanged (ADR-059).
+  - A left-out part has no work item and no record.
+change_target: code
+risk_surface: contract_boundary
+test_required: true
+test_spec:
+  - name: test_each_decided_part_stages_its_own_record
+    target_dir: tests/kernel/split/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: For the split-bounds split, p1 and p2 each stage one record in the run, each named by its part's
+      decision_id, and p3 has none.
+  - name: test_reworded_part_record_asks_reworded_question
+    target_dir: tests/kernel/split/
+    framework: pytest
+    type: integration
+    angle: seam
+    description: p2's staged record asks the reworded text, not the proposed text.
+  - name: test_staged_part_records_keep_the_record_schema
+    target_dir: tests/kernel/memory/
+    framework: pytest
+    type: integration
+    angle: real_artifact
+    description: Every staged part record validates against the committed config/decision_record.schema.json with
+      no split field, and split_part is derived from the split record.
+test_rationale: Records are files staged by the real staging gate; the tests read the staged YAML back and validate
+  it against the committed schema rather than inspect an in-memory decision.
+origin_agent: business-analyst
+created: 2026-10-05
+amended_by:
+  - reason: it-po-technical-enrichment
+    date: '2026-10-05'
+    by: it-po
+    summary: 'Technical enrichment: assigned_agent confirmed, estimated_complexity, change_target, risk_surface,
+      it_requirements, delivers_to/expects_from contracts, doc_links and the test contract set; readiness draft
+      -> reviewed. BA criteria and product_truth unchanged.'
+superseded_by: null
+covered_by:
+  - DK-400e-2-i
+  - DK-400e-2-ii
+implemented_by: []
+notes: |
+  Carries the second half of the superseded KernelCompoundGoalSplit ticket: one decision
+  record per sub-decision, linked to the goal. The link is a derived reverse view
+  (Decision.split_part), not a field of the record file, so published records keep their shape.
+product_truth:
+  - flow: leafcutter/decision-forming
+    node: split-run
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: leafcutter/decisions
+    entities:
+      - Decision
+      - Decomposition
+    source: real
+    asof: '2026-10-05'

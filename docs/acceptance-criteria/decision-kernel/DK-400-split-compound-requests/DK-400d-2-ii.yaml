@@ -1,0 +1,96 @@
+id: DK-400d-2-ii
+title: "A reworded part may carry words the request does not contain, such as a set-aside proposal's question"
+component: decision-kernel
+components:
+  - decision_kernel
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_kernel_1_founding
+criteria: |
+  Given the reusable-criteria split at the split gate, with the set-aside proposal "Decide when
+    an LLM may generate further categories" shown read-only,
+  When the person rewords p3 to "Decide how the reusable categories are clustered, and when an LLM
+    may generate further categories" and approves,
+  Then p3 is recorded as edited and runs with the person's words, although they are not a quote of
+    the goal,
+  And p3 keeps its proposed text and its original quote "we must make sure that we are able to
+    cluster them somehow",
+  And the set-aside proposal itself stays read-only and never runs.
+depends_on:
+  - DK-400d-2
+  - DK-400c-2
+doc_links:
+  - path: docs/product-truth/flows/leafcutter/decision-forming.flow.json
+    relationship: implements
+    status: exists
+    relevance: "Flow v5 node(s) split-dropped, split-revise, with their acceptance scenarios."
+  - path: docs/product-truth/mockups/leafcutter/decision-split-approve.mockup.json
+    relationship: specified-by
+    status: exists
+    relevance: "Screen decision-split-approve (v2)."
+  - path: docs/analysis/2026-09-30-decision-kernel-design-4-jev-and-capabilities.md
+    relationship: describes
+    status: exists
+    relevance: Jev template rules, host operations and their conversion, capability gaps, the precedent node.
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: DK-400c-2
+  contract: "The set-aside proposal shown read-only at the gate."
+it_requirements:
+  - The quote check applies to host proposals only; a person's edited text may contain any words, including a set-aside
+    proposal's question.
+  - The set-aside proposal stays in dropped[] unchanged and never gets a work item.
+change_target: code
+risk_surface: contract_boundary
+test_required: true
+test_spec:
+  - name: test_reworded_part_may_absorb_set_aside_question
+    target_dir: tests/kernel/split/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: p3 reworded to include the set-aside question is recorded edited with its proposed text and original
+      quote, and runs with the person's words; the set-aside entry is unchanged and never runs.
+test_rationale: Proves the quote rule is applied to host proposals only, through the real gate path.
+origin_agent: business-analyst
+created: 2026-10-05
+amended_by:
+  - reason: it-po-technical-enrichment
+    date: '2026-10-05'
+    by: it-po
+    summary: 'Technical enrichment: assigned_agent confirmed, estimated_complexity, change_target, risk_surface,
+      it_requirements, delivers_to/expects_from contracts, doc_links and the test contract set; readiness draft
+      -> reviewed. BA criteria and product_truth unchanged.'
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Flow split-dropped: "you can add its question with an edit". Non-obvious: the verbatim-quote
+  check applies to the host's proposals, not to the person's own words.
+product_truth:
+  - flow: leafcutter/decision-forming
+    node: split-dropped
+    node_kind: branch
+    flow_kind: data
+    screen: decision-split-approve
+    mock_data: leafcutter/decisions
+    entities:
+      - Decomposition
+    source: real
+    asof: '2026-10-05'
+  - flow: leafcutter/decision-forming
+    node: split-revise
+    node_kind: branch
+    flow_kind: data
+    screen: decision-split-approve
+    mock_data: leafcutter/decisions
+    entities:
+      - Decomposition
+    source: real
+    asof: '2026-10-05'

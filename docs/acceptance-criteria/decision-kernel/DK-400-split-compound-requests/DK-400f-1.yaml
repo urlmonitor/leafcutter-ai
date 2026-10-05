@@ -1,0 +1,116 @@
+id: DK-400f-1
+title: "One view shows every part's outcome with a link to its answer"
+component: decision-kernel
+components:
+  - decision_kernel
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_kernel_1_founding
+criteria: |
+  Given the split-bounds split while p1 is decided, p2 is pending and p3 was left out,
+  When the person looks at the split's progress,
+  Then p1 shows decided, with a link to its decision record,
+  And p2 shows pending (waiting), with its reworded text and its proposed text beside it,
+  And p3 shows not run, left out at the split,
+  And for the reuse-threshold research split, each answered part shows answered, with a link to its
+    research findings.
+depends_on:
+  - DK-400f
+  - DK-400e-1
+doc_links:
+  - path: docs/product-truth/flows/leafcutter/decision-forming.flow.json
+    relationship: implements
+    status: exists
+    relevance: "Flow v5 node(s) split-report, with their acceptance scenarios."
+  - path: docs/product-truth/mockups/leafcutter/decision-split-progress.mockup.json
+    relationship: specified-by
+    status: exists
+    relevance: "Screen decision-split-progress (v2)."
+  - path: docs/product-truth/mock-data/leafcutter/decisions.mock.json
+    relationship: specified-by
+    status: exists
+    relevance: "parts[].outcome, decision_id, result_ref; records dcp-split-bounds-mid-run and dcp-reuse-threshold-research."
+  - path: docs/analysis/2026-09-30-decision-kernel-design-5-client-observability.md
+    relationship: describes
+    status: exists
+    relevance: RunService resume validation, the RunEnvelope, report.md, tracing and redaction.
+  - path: docs/analysis/2026-09-30-decision-kernel-design-3-kernel-scheduler.md
+    relationship: describes
+    status: exists
+    relevance: Route node and batched Jev routing, intent step, guards and budgets, root completion, gap recording,
+      resume and restart.
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to: null
+expects_from:
+  ac_id: DK-400e-1
+  contract: Settled parts (DK-400e-1 delivers_to shape) with their outcomes, decision_id or result_ref.
+it_requirements:
+  - 'The envelope of run, resume and status carries a split progress block whenever a split exists; status needs
+    no Jev key and does not resume the run. The block holds subject kind, origin, state and per part: id, text,
+    proposed_text when edited, review, outcome, waited_for, stop_reason and the link.'
+  - 'Links are absolute paths: a decided part links its staged record (<run_root>/runs/<run_id>/staged/decisions/<dec
+    id>.yaml), an answered part its result artifact (<run_root>/runs/<run_id>/artifacts/result-<inv>.json).'
+  - 'The outcomes shown are exactly pending, decided, answered, not settled and not run; a left-out part shows not
+    run, left out at the split. The kernel never shows settled_by_human or a hand split (DK-400 Q4: hand splits
+    are history only).'
+  - 'Companion surface outside this AC: presenting the block through the host skills is llm-expert work (recommended
+    follow-up AC).'
+change_target: code
+risk_surface: contract_boundary
+test_required: true
+test_spec:
+  - name: test_progress_shows_each_part_outcome_and_link
+    target_dir: tests/kernel/split/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: While p1 is decided, p2 pending and p3 left out, the envelope's split block shows decided with
+      a link to p1's staged record, pending with both texts for p2, and not run, left out for p3.
+  - name: test_research_split_progress_links_findings
+    target_dir: tests/kernel/split/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: For the reuse-threshold split each answered part links its result artifact.
+  - name: test_status_shows_progress_without_resuming
+    target_dir: tests/kernel/adapters/
+    framework: pytest
+    type: integration
+    angle: reachability
+    description: python -m kernel status on a waiting split run prints the split block without a Jev key and without
+      changing the run's state revision.
+test_rationale: The person sees progress through status and the envelope, so the reachability test uses the real
+  CLI, and the links are checked by opening the files they name.
+origin_agent: business-analyst
+created: 2026-10-05
+amended_by:
+  - reason: it-po-technical-enrichment
+    date: '2026-10-05'
+    by: it-po
+    summary: 'Technical enrichment: assigned_agent confirmed, estimated_complexity, change_target, risk_surface,
+      it_requirements, delivers_to/expects_from contracts, doc_links and the test contract set; readiness draft
+      -> reviewed. BA criteria and product_truth unchanged.'
+superseded_by: null
+covered_by:
+  - DK-400f-1-i
+implemented_by: []
+notes: |
+  Flow step split-report (screen decision-split-progress). Hand splits are history only
+  (DK-400 Q4): no AC here covers the settled_by_human outcome or the hand-split record.
+product_truth:
+  - flow: leafcutter/decision-forming
+    node: split-report
+    node_kind: step
+    flow_kind: data
+    screen: decision-split-progress
+    mock_data: leafcutter/decisions
+    entities:
+      - Decision
+      - Decomposition
+    source: real
+    asof: '2026-10-05'

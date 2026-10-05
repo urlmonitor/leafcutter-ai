@@ -1,0 +1,103 @@
+id: DK-400a-3-i
+title: "A question that lists alternatives or constraints is one question, not a bundle"
+component: decision-kernel
+components:
+  - decision_kernel
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_kernel_1_founding
+criteria: |
+  Given a run whose root goal is "Should this new capability be an atomic node or an
+    encapsulated subgraph, given that it must be resumable and traced?",
+  And routing gives it to the decision capability,
+  When routing runs on the run's root,
+  Then no split is started, because the alternatives joined by "or" are the options of one
+    question and the conditions joined by "and" are constraints on it,
+  And the run goes on as one decision from the precedent step with no split gate shown.
+depends_on:
+  - DK-400a-3
+doc_links:
+  - path: docs/product-truth/flows/leafcutter/decision-forming.flow.json
+    relationship: implements
+    status: exists
+    relevance: "Flow v5 node(s) split-not-needed, with their acceptance scenarios."
+  - path: docs/architecture/adrs/ADR-053-intelligence-selection-deterministic-jev-llm-human.md
+    relationship: constrains
+    status: exists
+    relevance: "Host proposes (generative), Jev only judges, a person approves; cheapest mechanism first."
+  - path: docs/analysis/2026-09-30-decision-kernel-design-4-jev-and-capabilities.md
+    relationship: describes
+    status: exists
+    relevance: Jev template rules, host operations and their conversion, capability gaps, the precedent node.
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: DK-400a-3
+  contract: The no-split path for a single question that this false-positive case must reach.
+it_requirements:
+  - 'The bundle question template states the boundary cases literally, per the Jev template rules (one literal judgement,
+    named state parts, template id and version): alternatives joined by ''or'' are the options of one question;
+    conditions or constraints joined by ''and'' qualify that question; only separate questions that each need their
+    own answer count as bundled.'
+  - 'A labelled example set of single and bundled requests (at least the examples in this tree: retention period,
+    node or subgraph with constraints, reusable criteria, decision records, trace analyzers, reuse threshold research)
+    is checked in for an opt-in live eval that reports false-positive and false-negative counts at split.bundle_threshold;
+    the default threshold must keep every single-question example below it.'
+  - No deterministic keyword rule (counting 'and', 'or' or question marks) may start or block a split; the kernel
+    acts on the Jev answer only through the threshold.
+change_target: code
+risk_surface: contract_boundary
+test_required: true
+test_spec:
+  - name: test_alternatives_and_constraints_question_not_split
+    target_dir: tests/kernel/split/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: With the scripted bundle answer below the threshold, the node-or-subgraph question with its constraint
+      clause goes on as one decision from the precedent step with no split gate.
+  - name: test_bundle_question_template_carries_boundary_cases
+    target_dir: tests/kernel/split/
+    framework: pytest
+    type: unit
+    angle: criterion
+    description: The compiled bundle question has a template id and version and states that alternatives joined
+      by 'or' and constraints joined by 'and' belong to one question.
+  - name: test_bundle_eval_set_covers_tree_examples
+    target_dir: tests/kernel/split/
+    framework: pytest
+    type: unit
+    angle: real_artifact
+    description: The checked-in eval set loads in the eval harness and labels every example of this tree.
+test_rationale: Jev's real answer cannot be asserted offline. Offline tests prove that the kernel acts only on the
+  answer and that the question carries the boundary cases; the opt-in live eval measures the false-positive rate.
+origin_agent: business-analyst
+created: 2026-10-05
+amended_by:
+  - reason: it-po-technical-enrichment
+    date: '2026-10-05'
+    by: it-po
+    summary: 'Technical enrichment: assigned_agent confirmed, estimated_complexity, change_target, risk_surface,
+      it_requirements, delivers_to/expects_from contracts, doc_links and the test contract set; readiness draft
+      -> reviewed. BA criteria and product_truth unchanged.'
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  The likeliest false positive: conjunctions inside one question. The example is the how-to's
+  own sample goal with a constraint clause added.
+product_truth:
+  - flow: leafcutter/decision-forming
+    node: split-not-needed
+    node_kind: branch
+    flow_kind: data
+    screen: null
+    mock_data: leafcutter/decisions
+    entities: []
+    source: real
+    asof: '2026-10-05'

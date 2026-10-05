@@ -1,0 +1,85 @@
+id: DK-400d-4
+title: "How-to: answer the split gate"
+component: decision-kernel
+components:
+  - decision_kernel
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_kernel_1_founding
+criteria: |
+  Given a person who has been shown a proposed split by the kernel,
+  When they read the kernel how-to section on answering a split,
+  Then it shows the four answers, approve as shown, reword a part, leave parts out and reject, with
+    one example each, and that rewording and leaving out can be combined in one approval,
+  And it states that unticking every part is not an approval, and that a set-aside proposal cannot
+    be approved but its question can be added by rewording a part,
+  And it states what a rejection leads to: a request no capability could meet ends blocked with
+    nothing decided and its capability gap recorded; a request the kernel found ambiguous goes
+    back to the clarification question the kernel asks today; and a request the kernel would have
+    accepted, or one found mid-run, goes ahead as one,
+  And it states that only a person answers, and that an answer relayed by the host carries that
+    person's own name.
+depends_on:
+  - DK-400d
+  - DK-400d-1
+  - DK-400d-2
+  - DK-400d-3
+doc_links:
+  - path: docs/how-to/run-the-decision-kernel.md
+    relationship: describes
+    status: exists
+    relevance: "The kernel how-to; answering a split belongs beside answering the other gates (Step 5)."
+  - path: docs/product-truth/mockups/leafcutter/decision-split-approve.mockup.json
+    relationship: specified-by
+    status: exists
+    relevance: "Screen decision-split-approve (v2)."
+  - path: docs/architecture/adrs/ADR-067-kernel-splits-bundled-requests-into-approved-parts.md
+    relationship: describes
+    status: planned
+    relevance: Pinned ADR for splitting a bundled request; adr-author dispatched directly with this number and filename.
+      Re-verify the number is free before dispatch.
+assigned_agent: documentation-expert
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: DK-400d-1
+  contract: The built split answer schema and its refusal rules (DK-400d-1, DK-400d-2-i) and the rejection endings
+    of DK-400d-3.
+change_target: docs
+it_requirements:
+  - 'Describes the built gate only: the four answers with one example each, combined rewording and leaving out,
+    the refused all-unticked approval, set-aside and not-covered proposals, the rejection endings by trigger (jev_none
+    ends blocked with nothing decided and its gap recorded; ambiguous goes back to today''s clarification question;
+    bundled_accepted or mid-run goes ahead as one), and that only a person answers (a relayed answer carries the
+    person''s own id).'
+  - Edits docs/how-to/run-the-decision-kernel.md beside Step 5 and shows the exact submission shape of the split
+    answer schema, matching the built schema.
+  - Uses the terms of ADR-067 and links the reference entry of DK-400a-5.
+risk_surface: internal
+test_required: false
+origin_agent: business-analyst
+created: 2026-10-05
+amended_by:
+  - reason: it-po-technical-enrichment
+    date: '2026-10-05'
+    by: it-po
+    summary: 'Technical enrichment: assigned_agent confirmed, estimated_complexity, change_target, risk_surface,
+      it_requirements, delivers_to/expects_from contracts, doc_links and the test contract set; readiness draft
+      -> reviewed. BA criteria and product_truth unchanged.'
+  - reason: ba-user-gate-amendment
+    date: '2026-10-05'
+    by: business-analyst
+    summary: "User rule at the final gate: a rejected split of an ambiguous request falls back to today's clarification question; only jev_none ends blocked with the capability gap. Withdrawn wording: 'a request the kernel turned away ends blocked with nothing decided, while a request the kernel would have accepted, or one found mid-run, goes ahead as one,'. Replaced by three rejection endings. IT PO fields were not edited."
+  - reason: it-po-final-gate-re-enrichment
+    date: '2026-10-05'
+    by: it-po
+    summary: Rejection endings in it_requirements enumerated per the final-gate rule.
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Documentation AC for DK-400d documentation_triggers [how-to].

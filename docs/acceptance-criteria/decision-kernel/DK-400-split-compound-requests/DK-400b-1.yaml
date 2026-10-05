@@ -1,0 +1,122 @@
+id: DK-400b-1
+title: "A research request with several needs is offered as a split into research parts"
+component: decision-kernel
+components:
+  - decision_kernel
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_kernel_1_founding
+criteria: |
+  Given a run whose root is the research request of mock record
+    dcp-reuse-threshold-research: "Find where the kernel reads memory.reuse_threshold, which tests
+    cover the reuse offer, and whether an ADR fixes the 0.8 value.",
+  And routing's result for it is an ambiguous gap,
+  When routing runs on the run's root,
+  Then a split is offered with subject kind research_request, found at routing, work-item depth 0
+    and trigger ambiguous, keeping the request exactly as submitted,
+  And every part offered at the split gate names research as the capability that will run it,
+  And the split is answered at the same split gate, with the same four answers, as a split of a
+    goal.
+depends_on:
+  - DK-400b
+  - DK-400a-1
+doc_links:
+  - path: docs/product-truth/flows/leafcutter/decision-forming.flow.json
+    relationship: implements
+    status: exists
+    relevance: "Flow v5 node(s) split-detect, with their acceptance scenarios."
+  - path: docs/product-truth/mock-data/leafcutter/decisions.mock.json
+    relationship: specified-by
+    status: exists
+    relevance: "subject_kind research_request; record dcp-reuse-threshold-research (three research parts)."
+  - path: docs/product-truth/mockups/leafcutter/decision-split-approve.mockup.json
+    relationship: specified-by
+    status: exists
+    relevance: "Screen decision-split-approve (v2)."
+  - path: docs/analysis/2026-09-30-decision-kernel-design-4-jev-and-capabilities.md
+    relationship: describes
+    status: exists
+    relevance: Jev template rules, host operations and their conversion, capability gaps, the precedent node.
+  - path: docs/architecture/adrs/ADR-053-intelligence-selection-deterministic-jev-llm-human.md
+    relationship: constrains
+    status: exists
+    relevance: Deterministic checks first, then Jev, then the LLM, then a person; an uncertain answer never passes
+      silently.
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to: null
+expects_from:
+  ac_id: DK-400a-1
+  contract: The routing-time split start (DK-400a-1 shape) with subject_kind 'research_request' and trigger 'ambiguous'.
+it_requirements:
+  - subject_kind research_request is set when the root's requested or classified output is leafcutter.evidence_bundle.v1,
+    and the decomposition request then allows only the child capability research.
+  - 'Allowed child capabilities by subject kind: goal -> decision or research; research_request -> research; decision_question
+    -> decision.'
+  - 'A host proposal that names a capability outside the allowed set for any part (decision for a part of a research
+    request) is a contract violation: the answer is refused with a message naming each offending part id, and the
+    host may repair it within host.max_repair_attempts. The kernel never re-labels a part''s capability itself.
+    Exhausted repairs follow DK-400c-1-ii.'
+  - The split gate, its four answers and the answer validation are one code path for every subject kind; there is
+    no research-specific gate.
+change_target: code
+risk_surface: contract_boundary
+test_required: true
+test_spec:
+  - name: test_ambiguous_research_request_split_into_research_parts
+    target_dir: tests/kernel/split/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: The reuse-threshold request (evidence output, routing needs-context, bundle 0.9) yields a split
+      with subject_kind research_request and trigger ambiguous, and a gate whose every part names research.
+  - name: test_decision_part_in_research_split_refused_for_repair
+    target_dir: tests/kernel/split/
+    framework: pytest
+    type: integration
+    angle: failure
+    description: A host answer naming decision for p2 of the research request is refused naming p2, state is unchanged,
+      and a corrected answer is then accepted.
+  - name: test_research_split_uses_common_gate
+    target_dir: tests/kernel/split/
+    framework: pytest
+    type: integration
+    angle: seam
+    description: The gate interaction of the research split offers the same four answers as the gate of a goal split.
+test_rationale: Refusal versus re-labelling is a contract decision at the host boundary, so it is tested through
+  a real host submission and its rejection.
+origin_agent: business-analyst
+created: 2026-10-05
+amended_by:
+  - reason: it-po-technical-enrichment
+    date: '2026-10-05'
+    by: it-po
+    summary: 'Technical enrichment: assigned_agent confirmed, estimated_complexity, change_target, risk_surface,
+      it_requirements, delivers_to/expects_from contracts, doc_links and the test contract set; readiness draft
+      -> reviewed. BA criteria and product_truth unchanged.'
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  The user's "(and other things)": the split is not tied to goals. DK-400b notes: a research
+  request split this way runs research children only. What happens to a host proposal that names
+  decision for a part of a research request (refuse and repair, like any malformed host answer,
+  or re-label) is for the IT PO.
+  IT PO (2026-10-05): settled a decision part in a research request (BA open point 6): the host's
+  answer is refused and repaired like any malformed host answer; the kernel never re-labels a part's
+  capability.
+product_truth:
+  - flow: leafcutter/decision-forming
+    node: split-detect
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: leafcutter/decisions
+    entities:
+      - Decomposition
+    source: real
+    asof: '2026-10-05'

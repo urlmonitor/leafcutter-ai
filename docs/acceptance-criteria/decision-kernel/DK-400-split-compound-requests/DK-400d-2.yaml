@@ -1,0 +1,117 @@
+id: DK-400d-2
+title: "Rewording and leaving out parts in one approval: reworded parts keep the proposal, left-out parts never run"
+component: decision-kernel
+components:
+  - decision_kernel
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_kernel_1_founding
+criteria: |
+  Given the split-bounds split waiting at the split gate with parts p1, p2 and p3,
+  When the person human:user rewords p2 from "Decide how many child decisions one run may start" to
+    "Decide how many child decisions one run may start, counting every split in the run",
+  And unticks p3,
+  And approves with the note "p2: count every split in the run. p3 left out: parallel children are
+    out of scope; children run one after another.",
+  Then p1 is recorded as kept, p2 as edited and p3 as left out,
+  And p2 keeps its proposed text beside the reworded text, and its quote is unchanged,
+  And p2 runs with the reworded text as its question,
+  And p3 never runs,
+  And the split keeps the person's note word for word.
+depends_on:
+  - DK-400d
+  - DK-400d-1
+doc_links:
+  - path: docs/product-truth/flows/leafcutter/decision-forming.flow.json
+    relationship: implements
+    status: exists
+    relevance: "Flow v5 node(s) split-revise, with their acceptance scenarios."
+  - path: docs/product-truth/mock-data/leafcutter/decisions.mock.json
+    relationship: specified-by
+    status: exists
+    relevance: "parts[].review edited iff proposed_text is set; left_out has outcome not_run; record dcp-split-bounds-mid-run."
+  - path: docs/product-truth/mockups/leafcutter/decision-split-approve.mockup.json
+    relationship: specified-by
+    status: exists
+    relevance: "Screen decision-split-approve (v2)."
+  - path: docs/architecture/diagrams/c3-014-decision-kernel-flows-request-handoff.md
+    relationship: describes
+    status: exists
+    relevance: Host or human handoff, validated resume, repair and finalize as built.
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to: null
+expects_from:
+  ac_id: DK-400d-1
+  contract: The gate answer schema and approval path of DK-400d-1, here with per-part reviews edited and left_out
+    and a note.
+it_requirements:
+  - Edits and a subset combine in one approval. An edited part keeps covers unchanged, records proposed_text (the
+    host's words) and text (the person's words), and runs with text as its question.
+  - A left-out part gets review left_out and outcome not_run and never gets a work item. A kept part's dependency
+    on a left-out part is released (it starts without it and never gets waited_for), and the release is recorded
+    as a run event.
+  - The note is stored word for word (only leading and trailing whitespace may be trimmed) within the configured
+    input limits.
+  - An edited text is bounded like a goal (1 to 4000 characters) and is not quote-checked (DK-400d-2-ii).
+change_target: code
+risk_surface: contract_boundary
+test_required: true
+test_spec:
+  - name: test_reword_and_leave_out_in_one_approval
+    target_dir: tests/kernel/split/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: Rewording p2 and unticking p3 in one approval records p1 kept, p2 edited with both texts and its
+      quote unchanged, p3 left out, and the note word for word.
+  - name: test_edited_part_runs_with_reworded_question
+    target_dir: tests/kernel/split/
+    framework: pytest
+    type: integration
+    angle: seam
+    description: p2's decision work item asks the reworded text, and p3 never gets a work item.
+  - name: test_dependency_on_left_out_part_released
+    target_dir: tests/kernel/split/
+    framework: pytest
+    type: integration
+    angle: boundary
+    description: A kept part that waited only for a left-out part starts without waiting and has no waited_for.
+test_rationale: The edited text must reach the part's own decision, which only a seam test across the gate and the
+  scheduler shows.
+origin_agent: business-analyst
+created: 2026-10-05
+amended_by:
+  - reason: it-po-technical-enrichment
+    date: '2026-10-05'
+    by: it-po
+    summary: 'Technical enrichment: assigned_agent confirmed, estimated_complexity, change_target, risk_surface,
+      it_requirements, delivers_to/expects_from contracts, doc_links and the test contract set; readiness draft
+      -> reviewed. BA criteria and product_truth unchanged.'
+superseded_by: null
+covered_by:
+  - DK-400d-2-i
+  - DK-400d-2-ii
+implemented_by: []
+notes: |
+  Flow branch split-revise. Edits and a subset combine in one approval (DK-400d CARRY TO L2).
+  Left to the IT PO (DK-400 Q7): whether a person may add a new part, or change a part's
+  dependencies or capability, at the gate.
+  IT PO (2026-10-05): settled a gap the criteria leave open: a kept part's dependency on a left-out
+  part is released at approval, so it runs without it (leaving it out is the person's choice, not a
+  failure).
+product_truth:
+  - flow: leafcutter/decision-forming
+    node: split-revise
+    node_kind: branch
+    flow_kind: data
+    screen: decision-split-approve
+    mock_data: leafcutter/decisions
+    entities:
+      - Decomposition
+    source: real
+    asof: '2026-10-05'

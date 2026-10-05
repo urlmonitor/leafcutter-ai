@@ -1,0 +1,159 @@
+id: DK-400f-3
+title: "A rejected split gets one plain report line, whichever way the work went on"
+component: decision-kernel
+components:
+  - decision_kernel
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_kernel_1_founding
+criteria: |
+  Given the trace-analyzers split rejected after routing had turned the goal away (trigger
+    jev_none),
+  And the decision-records split rejected after routing would have accepted the goal as one decision
+    (trigger bundled_accepted),
+  When each run's report is read,
+  Then the first says "The proposed split was rejected by human:user; nothing was decided.",
+    followed by a hint to ask again as one bounded question, with an example rewording,
+  And the second carries the one line "The proposed split was rejected by human:user; the goal is
+    kept whole and runs as one decision." above the report of that one decision,
+  And a rejected split found mid-run gets the same kind of line, naming the work item kept whole,
+  And a rejected split of a request routing found ambiguous gets the one line "The proposed split
+    was rejected by human:user; the request falls back to today's clarification question, and
+    nothing is decided yet.", followed by the clarification question that was asked,
+  And none of these reports has a per-part section.
+depends_on:
+  - DK-400f
+  - DK-400d-3
+doc_links:
+  - path: docs/product-truth/flows/leafcutter/decision-forming.flow.json
+    relationship: implements
+    status: exists
+    relevance: "Flow v5 node(s) split-reject, split-reject-kept-whole, with their acceptance scenarios."
+  - path: docs/product-truth/mock-data/leafcutter/decisions.mock.json
+    relationship: specified-by
+    status: exists
+    relevance: "report_lines of records dcp-trace-analyzers-rejected and dcp-decision-records-bundled."
+  - path: docs/product-truth/mockups/leafcutter/decision-split-progress.mockup.json
+    relationship: specified-by
+    status: exists
+    relevance: "Screen decision-split-progress (v2)."
+  - path: docs/analysis/2026-09-30-decision-kernel-design-5-client-observability.md
+    relationship: describes
+    status: exists
+    relevance: RunService resume validation, the RunEnvelope, report.md, tracing and redaction.
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to: null
+expects_from:
+  ac_id: DK-400d-3
+  contract: The recorded rejection, its gate_by and the trigger and found_at that pick the ending (DK-400d-3 delivers_to
+    shape).
+it_requirements:
+  - 'A rejected split''s report carries exactly one plain line and no per-part section: ''The proposed split was
+    rejected by <gate_by>; nothing was decided.'' for state rejected; ''The proposed split was rejected by <gate_by>;
+    the goal is kept whole and runs as one decision.'' above that decision''s own report for a bundled_accepted
+    kept-whole split; and for a mid-run split a line naming the work item kept whole.'
+  - 'For state rejected_clarify the split record''s report_lines hold exactly two lines as soon as the clarification
+    question opens: ''The proposed split was rejected by <gate_by>; the request falls back to today''s clarification
+    question, and nothing is decided yet.'' and ''Question asked: <the clarification question text as opened>''
+    (mock-data v6 record dcp-format-and-repeats-clarify). The envelope exposes them while the run is waiting_human,
+    and report.md keeps them above whatever the clarified request goes on to produce.'
+  - 'While the run is waiting_human the envelope is the report surface: the two lines live on the split record and
+    in the envelope, no interim report.md is written (as for today''s waiting runs), and report.md at finalize keeps
+    them above whatever follows.'
+  - The rephrasing hint after a jev_none rejection (state rejected) uses the host's optional one_question_rewording
+    from the proposal when present, shown as a suggestion and never run; otherwise today's template rephrasing hint.
+  - The line names gate_by exactly as recorded.
+change_target: code
+risk_surface: contract_boundary
+test_required: true
+test_spec:
+  - name: test_rejected_jev_none_report_line_and_hint
+    target_dir: tests/kernel/split/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: The trace-analyzers (jev_none) rejection writes the nothing-was-decided line followed by a rephrasing
+      hint with an example rewording, and no per-part section.
+  - name: test_rejected_bundled_report_line_above_one_decision
+    target_dir: tests/kernel/split/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: The decision-records rejection writes the kept-whole line above the report of the one decision.
+  - name: test_rejected_mid_run_line_names_kept_whole_item
+    target_dir: tests/kernel/split/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: A rejected mid-run split writes one line naming the work item kept whole.
+  - name: test_rejected_ambiguous_report_line_and_clarification_question
+    target_dir: tests/kernel/split/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: Rejecting the ambiguous format-and-repeats split yields the falls-back line followed by 'Question
+      asked:' with the exact text of the opened clarification question, no per-part section, and the run waiting_human.
+test_rationale: Each ending writes a different report; the tests read the written report.md of each.
+origin_agent: business-analyst
+created: 2026-10-05
+amended_by:
+  - reason: it-po-technical-enrichment
+    date: '2026-10-05'
+    by: it-po
+    summary: 'Technical enrichment: assigned_agent confirmed, estimated_complexity, change_target, risk_surface,
+      it_requirements, delivers_to/expects_from contracts, doc_links and the test contract set; readiness draft
+      -> reviewed. BA criteria and product_truth unchanged.'
+  - reason: ba-user-gate-amendment
+    date: '2026-10-05'
+    by: business-analyst
+    summary: "User rule at the final gate: a rejected split of an ambiguous request falls back to today's clarification question, so its report cannot say that nothing was decided and the run ended. Added the clause for the ambiguous rejection's one plain line, followed by the clarification question asked; no clause was withdrawn. The line text is that of mock-data v6 record dcp-format-and-repeats-clarify (uncommitted in this worktree). IT PO fields were not edited; it_requirements and test_spec need a line and a test for this ending."
+  - reason: it-po-final-gate-re-enrichment
+    date: '2026-10-05'
+    by: it-po
+    summary: 'Added the ambiguous rejection''s report lines and their test. Coordinator default for Q2: added the
+      envelope-as-report-surface line (no interim report.md).'
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  User decision 2026-10-05 (DK-400 REJECTION; the one-line default is confirmed). The line
+  texts are those of the mock records.
+  IT PO (2026-10-05): the example rewording in the rejected report is generative text, so it comes
+  from the host's proposal (optional one_question_rewording in leafcutter.goal_decomposition.v1),
+  never from Jev or a template guess; when absent, today's template hint is used.
+product_truth:
+  - flow: leafcutter/decision-forming
+    node: split-reject
+    node_kind: branch
+    flow_kind: data
+    screen: decision-split-progress
+    mock_data: leafcutter/decisions
+    entities:
+      - Decomposition
+    source: real
+    asof: '2026-10-05'
+  - flow: leafcutter/decision-forming
+    node: split-reject-clarify
+    node_kind: branch
+    flow_kind: data
+    screen: decision-split-progress
+    mock_data: leafcutter/decisions
+    entities:
+      - Decomposition
+    source: real
+    asof: '2026-10-05'
+  - flow: leafcutter/decision-forming
+    node: split-reject-kept-whole
+    node_kind: branch
+    flow_kind: data
+    screen: decision-split-progress
+    mock_data: leafcutter/decisions
+    entities:
+      - Decomposition
+    source: real
+    asof: '2026-10-05'

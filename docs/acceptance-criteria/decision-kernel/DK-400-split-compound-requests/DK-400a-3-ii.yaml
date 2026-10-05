@@ -1,0 +1,108 @@
+id: DK-400a-3-ii
+title: "A caller-supplied decision request is never checked for bundling, even when its question bundles several"
+component: decision-kernel
+components:
+  - decision_kernel
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_kernel_1_founding
+criteria: |
+  Given a run started with a caller-supplied decision request (leafcutter.decision_request.v1)
+    whose question is "Decide which fields a decision record needs, which folder layout the
+    records use and how record files are named",
+  And the request names its own two options, "One YAML record per decision under docs/decisions"
+    and "One JSON record per decision under docs/decisions", and its own three criteria,
+    "Git-reviewable", "findable by later runs" and "keeps the human approval",
+  When routing runs on the run's root,
+  Then the request is not checked for bundling and no split is offered,
+  And the run has no split record,
+  And the person is asked no question about splitting,
+  And the run goes ahead as the one decision the caller named, with the caller's question, two
+    options and three criteria unchanged.
+depends_on:
+  - DK-400a-3
+doc_links:
+  - path: docs/product-truth/flows/leafcutter/decision-forming.flow.json
+    relationship: implements
+    status: exists
+    relevance: "Flow v5 node(s) split-typed-request (from split-detect), with their acceptance scenarios."
+  - path: docs/product-truth/mock-data/leafcutter/decisions.mock.json
+    relationship: specified-by
+    status: exists
+    relevance: "v5 invariant: no Decomposition has a caller-supplied decision request (leafcutter.decision_request.v1) as its subject; such a request is never checked for bundling or split."
+  - path: docs/how-to/run-the-decision-kernel.md
+    relationship: context
+    status: exists
+    relevance: "Step 3: a caller supplies input_payload_schema leafcutter.decision_request.v1 with question, options and criteria to skip option generation."
+  - path: docs/architecture/adrs/ADR-053-intelligence-selection-deterministic-jev-llm-human.md
+    relationship: constrains
+    status: exists
+    relevance: "Telling a typed request apart is an exact check, so it runs before any Jev or host judgment about bundling."
+  - path: docs/analysis/2026-09-30-decision-kernel-design-3-kernel-scheduler.md
+    relationship: describes
+    status: exists
+    relevance: Route node and batched Jev routing, intent step, guards and budgets, root completion, gap recording,
+      resume and restart.
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: DK-400a-3
+  contract: "The no-split path that a caller-supplied decision request takes without any bundling check."
+it_requirements:
+  - 'The typed-request exemption is an exact check on the item''s input payload schema id (leafcutter.decision_request.v1),
+    evaluated before any Jev question is assembled: no bundle question for that item appears in any Jev batch.'
+  - The caller's question, options and criteria reach the decision capability unchanged, as today.
+  - The exemption is driven by the payload schema, never by goal wording.
+change_target: code
+risk_surface: contract_boundary
+test_required: true
+test_spec:
+  - name: test_typed_decision_request_never_checked_for_bundling
+    target_dir: tests/kernel/split/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: A decision_request.v1 run whose question bundles three questions has no bundle question in any
+      recorded Jev batch, no split record and no split interaction.
+  - name: test_typed_decision_request_payload_reaches_decision_unchanged
+    target_dir: tests/kernel/split/
+    framework: pytest
+    type: integration
+    angle: seam
+    description: The decision invocation receives the caller's question, two options and three criteria unchanged.
+test_rationale: The exemption must hold before Jev is asked, so the test inspects the recorded Jev batches of a
+  real run, not a predicate in isolation.
+origin_agent: business-analyst
+created: 2026-10-05
+amended_by:
+  - reason: it-po-technical-enrichment
+    date: '2026-10-05'
+    by: it-po
+    summary: 'Technical enrichment: assigned_agent confirmed, estimated_complexity, change_target, risk_surface,
+      it_requirements, delivers_to/expects_from contracts, doc_links and the test contract set; readiness draft
+      -> reviewed. BA criteria and product_truth unchanged.'
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  User answer to BA open question Q5 (2026-10-05): a caller-supplied decision request is NEVER
+  checked for bundling or split. The caller framed it as one decision, and a split would throw
+  away the caller's options and criteria. Flow v5 branch split-typed-request.
+  Placed as an L3 under DK-400a-3, because DK-400a is at its 5-L2 cap. The example question
+  bundles three questions on purpose: a routed goal like it would be offered a split
+  (DK-400a-2), a typed request is not.
+product_truth:
+  - flow: leafcutter/decision-forming
+    node: split-typed-request
+    node_kind: branch
+    flow_kind: data
+    screen: null
+    mock_data: leafcutter/decisions
+    entities: []
+    source: real
+    asof: '2026-10-05'

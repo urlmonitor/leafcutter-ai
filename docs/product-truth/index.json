@@ -29,7 +29,8 @@
     "GuardrailFinding",
     "Decision",
     "CriterionCategory",
-    "CriterionCategoryAggregate"
+    "CriterionCategoryAggregate",
+    "Decomposition"
   ],
   "artifacts": [
     {
@@ -471,7 +472,7 @@
       "id": "fern-and-fig/plant-listing",
       "type": "mockup",
       "title": "Plant listing",
-      "summary": "The Fern & Fig catalogue landing screen — a grid of plant cards with price + stock badge, populated from the catalog Plant records. THE gold-reference mockup.",
+      "summary": "The Fern & Fig catalogue landing screen â€” a grid of plant cards with price + stock badge, populated from the catalog Plant records. THE gold-reference mockup.",
       "screen": "plant-listing",
       "source": "mock",
       "component": "ux-prototyping",
@@ -493,7 +494,7 @@
       "id": "fern-and-fig/plant-detail",
       "type": "mockup",
       "title": "Plant detail",
-      "summary": "STUB — one plant's photo, price and stock with add-to-cart. Registered so the buy-a-plant flow's detail step resolves; HTML not yet drawn.",
+      "summary": "STUB â€” one plant's photo, price and stock with add-to-cart. Registered so the buy-a-plant flow's detail step resolves; HTML not yet drawn.",
       "screen": "plant-detail",
       "source": "mock",
       "component": "ux-prototyping",
@@ -514,7 +515,7 @@
       "id": "fern-and-fig/cart",
       "type": "mockup",
       "title": "Cart",
-      "summary": "STUB — plant, quantity, unit price and running total before payment. Registered so the buy-a-plant flow's cart step resolves; HTML not yet drawn.",
+      "summary": "STUB â€” plant, quantity, unit price and running total before payment. Registered so the buy-a-plant flow's cart step resolves; HTML not yet drawn.",
       "screen": "cart",
       "source": "mock",
       "component": "ux-prototyping",
@@ -536,7 +537,7 @@
       "id": "fern-and-fig/checkout",
       "type": "mockup",
       "title": "Checkout",
-      "summary": "STUB — confirm details and pay, creating an Order. Registered so the buy-a-plant flow's checkout step resolves; HTML not yet drawn.",
+      "summary": "STUB â€” confirm details and pay, creating an Order. Registered so the buy-a-plant flow's checkout step resolves; HTML not yet drawn.",
       "screen": "checkout",
       "source": "mock",
       "component": "ux-prototyping",
@@ -580,7 +581,7 @@
       "id": "fern-and-fig/notify-me",
       "type": "mockup",
       "title": "Notify me",
-      "summary": "STUB — notify-me action for an out-of-stock plant. Registered so the buy-a-plant flow's notify branch resolves; HTML not yet drawn.",
+      "summary": "STUB â€” notify-me action for an out-of-stock plant. Registered so the buy-a-plant flow's notify branch resolves; HTML not yet drawn.",
       "screen": "notify-me",
       "source": "mock",
       "component": "ux-prototyping",
@@ -602,7 +603,7 @@
       "id": "fern-and-fig/orders-list",
       "type": "mockup",
       "title": "My orders",
-      "summary": "STUB — list of past orders with number, item, total and status. Registered so the track-an-order flow's orders step resolves; HTML not yet drawn.",
+      "summary": "STUB â€” list of past orders with number, item, total and status. Registered so the track-an-order flow's orders step resolves; HTML not yet drawn.",
       "screen": "orders-list",
       "source": "mock",
       "component": "ux-prototyping",
@@ -624,7 +625,7 @@
       "id": "fern-and-fig/order-detail",
       "type": "mockup",
       "title": "Order detail",
-      "summary": "STUB — one order's item, quantity, total, payment status and date. Registered so the track-an-order flow's orderDetail step resolves; HTML not yet drawn.",
+      "summary": "STUB â€” one order's item, quantity, total, payment status and date. Registered so the track-an-order flow's orderDetail step resolves; HTML not yet drawn.",
       "screen": "order-detail",
       "source": "mock",
       "component": "ux-prototyping",
@@ -645,7 +646,7 @@
       "id": "fern-and-fig/shipment-tracking",
       "type": "mockup",
       "title": "Track shipment",
-      "summary": "STUB — current delivery stage for an order. Registered so the track-an-order flow's track step resolves; HTML not yet drawn.",
+      "summary": "STUB â€” current delivery stage for an order. Registered so the track-an-order flow's track step resolves; HTML not yet drawn.",
       "screen": "shipment-tracking",
       "source": "mock",
       "component": "ux-prototyping",
@@ -850,23 +851,24 @@
       "id": "leafcutter/decision-forming",
       "type": "flow",
       "title": "Forming a decision in a kernel run",
-      "summary": "The kernel interprets the request, reuses approved criteria, researches it, then asks you to approve and choose.",
+      "summary": "Recognize entities before intent, split compound requests into approved parts, reuse approved criteria, then you choose.",
       "kind": "data",
       "source": "real",
       "component": "decision_kernel",
       "path": "flows/leafcutter/decision-forming.flow.json",
       "status": "active",
       "readiness": "draft",
-      "version": 7,
+      "version": 8,
       "entities": [
-        "Decision"
+        "Decision",
+        "Decomposition"
       ],
       "mock_data_ref": "leafcutter/decisions",
       "impl_summary": {
         "done": 5,
         "in_progress": 0,
-        "not_started": 16,
-        "total": 21,
+        "not_started": 33,
+        "total": 38,
         "asof": "2026-10-05"
       },
       "tags": [
@@ -875,7 +877,9 @@
         "decision-forming",
         "pipeline",
         "criterion-categories",
-        "criteria-reuse"
+        "criteria-reuse",
+        "split",
+        "decomposition"
       ]
     },
     {
@@ -972,20 +976,23 @@
       "id": "leafcutter/decisions",
       "type": "mock_data",
       "title": "Leafcutter decision records",
-      "summary": "The canonical Decision dataset for the decision lifecycle: real staged, published and reused kernel decision records, plus an illustrative superseded pair.",
+      "summary": "The canonical Decision dataset for the decision lifecycle: real staged, published and reused kernel decision records, plus an illustrative superseded pair, and the splits (Decomposition) of compound goals, research requests and multi-part questions into bounded parts.",
       "component": "decision_kernel",
       "path": "mock-data/leafcutter/decisions.mock.json",
       "status": "active",
       "readiness": "draft",
-      "version": 2,
+      "version": 6,
       "entities": [
-        "Decision"
+        "Decision",
+        "Decomposition"
       ],
       "tags": [
         "decision-kernel",
         "decision-lifecycle",
         "decision-records",
-        "precedent"
+        "precedent",
+        "decomposition",
+        "compound-goal"
       ]
     },
     {
@@ -1188,6 +1195,58 @@
         "criteria-mining",
         "precedent"
       ]
+    },
+    {
+      "id": "leafcutter/decision-split-approve",
+      "type": "mockup",
+      "title": "Approve the proposed split",
+      "summary": "The human gate for a bundled goal, research request or multi-part question that the kernel offers to split. Two samples: a jev_none goal (reject ends the run blocked) and a bundled_accepted goal of seven parts, where five are offered and two are listed read-only as not covered, ask again (reject keeps it whole). Shows each part with its verbatim span, dependencies and capability, one dropped proposal, and the answers: approve, edit, pick a subset, reject.",
+      "screen": "decision-split-approve",
+      "source": "mock",
+      "component": "decision_kernel",
+      "path": "mockups/leafcutter/decision-split-approve.mockup.json",
+      "status": "active",
+      "readiness": "draft",
+      "version": 4,
+      "entities": [
+        "Decision",
+        "Decomposition"
+      ],
+      "mock_data_ref": "leafcutter/decisions",
+      "tags": [
+        "decision-kernel",
+        "decision-lifecycle",
+        "approval",
+        "split",
+        "decomposition",
+        "human-gate"
+      ]
+    },
+    {
+      "id": "leafcutter/decision-split-progress",
+      "type": "mockup",
+      "title": "Split progress and report",
+      "summary": "What happens after the split gate. Each part shows its outcome (decided, answered, pending, settled by a human, not settled, not run), its child record link and dependency order. Cards: hand split, mid-run split, research split, a partial run (budget stop, dependants not run, one part still decided), a rejected split kept whole (run not blocked), and a rejected split that ends blocked.",
+      "screen": "decision-split-progress",
+      "source": "mock",
+      "component": "decision_kernel",
+      "path": "mockups/leafcutter/decision-split-progress.mockup.json",
+      "status": "active",
+      "readiness": "draft",
+      "version": 4,
+      "entities": [
+        "Decision",
+        "Decomposition"
+      ],
+      "mock_data_ref": "leafcutter/decisions",
+      "tags": [
+        "decision-kernel",
+        "decision-lifecycle",
+        "split",
+        "decomposition",
+        "progress",
+        "report"
+      ]
     }
   ],
   "by_component": {
@@ -1226,7 +1285,9 @@
         "leafcutter/decision-ranked-choice",
         "leafcutter/decision-record-published",
         "leafcutter/decision-record-staged",
-        "leafcutter/decision-reuse-or-decide-anew"
+        "leafcutter/decision-reuse-or-decide-anew",
+        "leafcutter/decision-split-approve",
+        "leafcutter/decision-split-progress"
       ]
     },
     "knowledge-management": {
@@ -1353,6 +1414,16 @@
           "leafcutter/decision-publishing",
           "leafcutter/decision-retrieval",
           "leafcutter/decision-staging"
+        ]
+      }
+    },
+    "Decomposition": {
+      "canonical_mock_data": {
+        "decision_kernel": "leafcutter/decisions"
+      },
+      "flows": {
+        "decision_kernel": [
+          "leafcutter/decision-forming"
         ]
       }
     },
@@ -1611,7 +1682,8 @@
       "component": "decision_kernel",
       "level": "pipeline",
       "entities": [
-        "Decision"
+        "Decision",
+        "Decomposition"
       ],
       "mock_data_ref": "leafcutter/decisions",
       "path": "flows/leafcutter/decision-forming.flow.json",
@@ -1619,8 +1691,8 @@
       "impl_summary": {
         "done": 5,
         "in_progress": 0,
-        "not_started": 16,
-        "total": 21,
+        "not_started": 33,
+        "total": 38,
         "asof": "2026-10-05"
       },
       "expands": [
@@ -3277,6 +3349,789 @@
         "screen": null,
         "mock_data": "leafcutter/decisions",
         "entities": [],
+        "source": "real",
+        "asof": "2026-10-05"
+      }
+    ],
+    "DK-400a-1": [
+      {
+        "flow": "leafcutter/decision-forming",
+        "node": "split-detect",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": "leafcutter/decisions",
+        "entities": [
+          "Decomposition"
+        ],
+        "source": "real",
+        "asof": "2026-10-05"
+      }
+    ],
+    "DK-400a-1-i": [
+      {
+        "flow": "leafcutter/decision-forming",
+        "node": "split-detect",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": "leafcutter/decisions",
+        "entities": [
+          "Decomposition"
+        ],
+        "source": "real",
+        "asof": "2026-10-05"
+      }
+    ],
+    "DK-400a-1-ii": [
+      {
+        "flow": "leafcutter/decision-forming",
+        "node": "single-no-capability",
+        "node_kind": "branch",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": "leafcutter/decisions",
+        "entities": [],
+        "source": "real",
+        "asof": "2026-10-05"
+      },
+      {
+        "flow": "leafcutter/decision-forming",
+        "node": "split-detect",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": "leafcutter/decisions",
+        "entities": [
+          "Decomposition"
+        ],
+        "source": "real",
+        "asof": "2026-10-05"
+      }
+    ],
+    "DK-400a-2": [
+      {
+        "flow": "leafcutter/decision-forming",
+        "node": "split-detect",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": "leafcutter/decisions",
+        "entities": [
+          "Decomposition"
+        ],
+        "source": "real",
+        "asof": "2026-10-05"
+      }
+    ],
+    "DK-400a-3": [
+      {
+        "flow": "leafcutter/decision-forming",
+        "node": "split-not-needed",
+        "node_kind": "branch",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": "leafcutter/decisions",
+        "entities": [],
+        "source": "real",
+        "asof": "2026-10-05"
+      }
+    ],
+    "DK-400a-3-i": [
+      {
+        "flow": "leafcutter/decision-forming",
+        "node": "split-not-needed",
+        "node_kind": "branch",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": "leafcutter/decisions",
+        "entities": [],
+        "source": "real",
+        "asof": "2026-10-05"
+      }
+    ],
+    "DK-400a-3-ii": [
+      {
+        "flow": "leafcutter/decision-forming",
+        "node": "split-typed-request",
+        "node_kind": "branch",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": "leafcutter/decisions",
+        "entities": [],
+        "source": "real",
+        "asof": "2026-10-05"
+      }
+    ],
+    "DK-400a-4": [
+      {
+        "flow": "leafcutter/decision-forming",
+        "node": "single-no-capability",
+        "node_kind": "branch",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": "leafcutter/decisions",
+        "entities": [],
+        "source": "real",
+        "asof": "2026-10-05"
+      }
+    ],
+    "DK-400b-1": [
+      {
+        "flow": "leafcutter/decision-forming",
+        "node": "split-detect",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": "leafcutter/decisions",
+        "entities": [
+          "Decomposition"
+        ],
+        "source": "real",
+        "asof": "2026-10-05"
+      }
+    ],
+    "DK-400b-2": [
+      {
+        "flow": "leafcutter/decision-forming",
+        "node": "split-mid-run",
+        "node_kind": "branch",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": "leafcutter/decisions",
+        "entities": [
+          "Decomposition"
+        ],
+        "source": "real",
+        "asof": "2026-10-05"
+      }
+    ],
+    "DK-400b-2-i": [
+      {
+        "flow": "leafcutter/decision-forming",
+        "node": "split-dropped",
+        "node_kind": "branch",
+        "flow_kind": "data",
+        "screen": "decision-split-approve",
+        "mock_data": "leafcutter/decisions",
+        "entities": [
+          "Decomposition"
+        ],
+        "source": "real",
+        "asof": "2026-10-05"
+      },
+      {
+        "flow": "leafcutter/decision-forming",
+        "node": "split-mid-run",
+        "node_kind": "branch",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": "leafcutter/decisions",
+        "entities": [
+          "Decomposition"
+        ],
+        "source": "real",
+        "asof": "2026-10-05"
+      }
+    ],
+    "DK-400b-2-ii": [
+      {
+        "flow": "leafcutter/decision-forming",
+        "node": "split-mid-run",
+        "node_kind": "branch",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": "leafcutter/decisions",
+        "entities": [
+          "Decomposition"
+        ],
+        "source": "real",
+        "asof": "2026-10-05"
+      }
+    ],
+    "DK-400b-3": [
+      {
+        "flow": "leafcutter/decision-forming",
+        "node": "split-approve",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": "decision-split-approve",
+        "mock_data": "leafcutter/decisions",
+        "entities": [
+          "Decomposition"
+        ],
+        "source": "real",
+        "asof": "2026-10-05"
+      },
+      {
+        "flow": "leafcutter/decision-forming",
+        "node": "split-mid-run",
+        "node_kind": "branch",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": "leafcutter/decisions",
+        "entities": [
+          "Decomposition"
+        ],
+        "source": "real",
+        "asof": "2026-10-05"
+      }
+    ],
+    "DK-400c-1": [
+      {
+        "flow": "leafcutter/decision-forming",
+        "node": "split-propose",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": "leafcutter/decisions",
+        "entities": [
+          "Decomposition"
+        ],
+        "source": "real",
+        "asof": "2026-10-05"
+      }
+    ],
+    "DK-400c-1-i": [
+      {
+        "flow": "leafcutter/decision-forming",
+        "node": "split-too-many-parts",
+        "node_kind": "branch",
+        "flow_kind": "data",
+        "screen": "decision-split-approve",
+        "mock_data": "leafcutter/decisions",
+        "entities": [
+          "Decomposition"
+        ],
+        "source": "real",
+        "asof": "2026-10-05"
+      }
+    ],
+    "DK-400c-1-ii": [
+      {
+        "flow": "leafcutter/decision-forming",
+        "node": "split-propose",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": "leafcutter/decisions",
+        "entities": [
+          "Decomposition"
+        ],
+        "source": "real",
+        "asof": "2026-10-05"
+      }
+    ],
+    "DK-400c-2": [
+      {
+        "flow": "leafcutter/decision-forming",
+        "node": "split-dropped",
+        "node_kind": "branch",
+        "flow_kind": "data",
+        "screen": "decision-split-approve",
+        "mock_data": "leafcutter/decisions",
+        "entities": [
+          "Decomposition"
+        ],
+        "source": "real",
+        "asof": "2026-10-05"
+      }
+    ],
+    "DK-400c-2-i": [
+      {
+        "flow": "leafcutter/decision-forming",
+        "node": "split-dropped",
+        "node_kind": "branch",
+        "flow_kind": "data",
+        "screen": "decision-split-approve",
+        "mock_data": "leafcutter/decisions",
+        "entities": [
+          "Decomposition"
+        ],
+        "source": "real",
+        "asof": "2026-10-05"
+      }
+    ],
+    "DK-400c-3": [
+      {
+        "flow": "leafcutter/decision-forming",
+        "node": "split-too-few-parts",
+        "node_kind": "branch",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": "leafcutter/decisions",
+        "entities": [],
+        "source": "real",
+        "asof": "2026-10-05"
+      }
+    ],
+    "DK-400c-3-i": [
+      {
+        "flow": "leafcutter/decision-forming",
+        "node": "split-dropped",
+        "node_kind": "branch",
+        "flow_kind": "data",
+        "screen": "decision-split-approve",
+        "mock_data": "leafcutter/decisions",
+        "entities": [
+          "Decomposition"
+        ],
+        "source": "real",
+        "asof": "2026-10-05"
+      },
+      {
+        "flow": "leafcutter/decision-forming",
+        "node": "split-too-few-parts",
+        "node_kind": "branch",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": "leafcutter/decisions",
+        "entities": [],
+        "source": "real",
+        "asof": "2026-10-05"
+      }
+    ],
+    "DK-400d-1": [
+      {
+        "flow": "leafcutter/decision-forming",
+        "node": "split-approve",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": "decision-split-approve",
+        "mock_data": "leafcutter/decisions",
+        "entities": [
+          "Decomposition"
+        ],
+        "source": "real",
+        "asof": "2026-10-05"
+      }
+    ],
+    "DK-400d-1-i": [
+      {
+        "flow": "leafcutter/decision-forming",
+        "node": "split-approve",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": "decision-split-approve",
+        "mock_data": "leafcutter/decisions",
+        "entities": [
+          "Decomposition"
+        ],
+        "source": "real",
+        "asof": "2026-10-05"
+      }
+    ],
+    "DK-400d-1-ii": [
+      {
+        "flow": "leafcutter/decision-forming",
+        "node": "split-approve",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": "decision-split-approve",
+        "mock_data": "leafcutter/decisions",
+        "entities": [
+          "Decomposition"
+        ],
+        "source": "real",
+        "asof": "2026-10-05"
+      },
+      {
+        "flow": "leafcutter/decision-forming",
+        "node": "split-report",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": "decision-split-progress",
+        "mock_data": "leafcutter/decisions",
+        "entities": [
+          "Decision",
+          "Decomposition"
+        ],
+        "source": "real",
+        "asof": "2026-10-05"
+      }
+    ],
+    "DK-400d-2": [
+      {
+        "flow": "leafcutter/decision-forming",
+        "node": "split-revise",
+        "node_kind": "branch",
+        "flow_kind": "data",
+        "screen": "decision-split-approve",
+        "mock_data": "leafcutter/decisions",
+        "entities": [
+          "Decomposition"
+        ],
+        "source": "real",
+        "asof": "2026-10-05"
+      }
+    ],
+    "DK-400d-2-i": [
+      {
+        "flow": "leafcutter/decision-forming",
+        "node": "split-revise",
+        "node_kind": "branch",
+        "flow_kind": "data",
+        "screen": "decision-split-approve",
+        "mock_data": "leafcutter/decisions",
+        "entities": [
+          "Decomposition"
+        ],
+        "source": "real",
+        "asof": "2026-10-05"
+      }
+    ],
+    "DK-400d-2-ii": [
+      {
+        "flow": "leafcutter/decision-forming",
+        "node": "split-dropped",
+        "node_kind": "branch",
+        "flow_kind": "data",
+        "screen": "decision-split-approve",
+        "mock_data": "leafcutter/decisions",
+        "entities": [
+          "Decomposition"
+        ],
+        "source": "real",
+        "asof": "2026-10-05"
+      },
+      {
+        "flow": "leafcutter/decision-forming",
+        "node": "split-revise",
+        "node_kind": "branch",
+        "flow_kind": "data",
+        "screen": "decision-split-approve",
+        "mock_data": "leafcutter/decisions",
+        "entities": [
+          "Decomposition"
+        ],
+        "source": "real",
+        "asof": "2026-10-05"
+      }
+    ],
+    "DK-400d-3": [
+      {
+        "flow": "leafcutter/decision-forming",
+        "node": "split-reject",
+        "node_kind": "branch",
+        "flow_kind": "data",
+        "screen": "decision-split-progress",
+        "mock_data": "leafcutter/decisions",
+        "entities": [
+          "Decomposition"
+        ],
+        "source": "real",
+        "asof": "2026-10-05"
+      },
+      {
+        "flow": "leafcutter/decision-forming",
+        "node": "split-reject-clarify",
+        "node_kind": "branch",
+        "flow_kind": "data",
+        "screen": "decision-split-progress",
+        "mock_data": "leafcutter/decisions",
+        "entities": [
+          "Decomposition"
+        ],
+        "source": "real",
+        "asof": "2026-10-05"
+      },
+      {
+        "flow": "leafcutter/decision-forming",
+        "node": "split-reject-kept-whole",
+        "node_kind": "branch",
+        "flow_kind": "data",
+        "screen": "decision-split-progress",
+        "mock_data": "leafcutter/decisions",
+        "entities": [
+          "Decomposition"
+        ],
+        "source": "real",
+        "asof": "2026-10-05"
+      }
+    ],
+    "DK-400d-3-i": [
+      {
+        "flow": "leafcutter/decision-forming",
+        "node": "split-reject",
+        "node_kind": "branch",
+        "flow_kind": "data",
+        "screen": "decision-split-progress",
+        "mock_data": "leafcutter/decisions",
+        "entities": [
+          "Decomposition"
+        ],
+        "source": "real",
+        "asof": "2026-10-05"
+      },
+      {
+        "flow": "leafcutter/decision-forming",
+        "node": "split-reject-clarify",
+        "node_kind": "branch",
+        "flow_kind": "data",
+        "screen": "decision-split-progress",
+        "mock_data": "leafcutter/decisions",
+        "entities": [
+          "Decomposition"
+        ],
+        "source": "real",
+        "asof": "2026-10-05"
+      }
+    ],
+    "DK-400d-3-ii": [
+      {
+        "flow": "leafcutter/decision-forming",
+        "node": "split-reject-kept-whole",
+        "node_kind": "branch",
+        "flow_kind": "data",
+        "screen": "decision-split-progress",
+        "mock_data": "leafcutter/decisions",
+        "entities": [
+          "Decomposition"
+        ],
+        "source": "real",
+        "asof": "2026-10-05"
+      }
+    ],
+    "DK-400d-3-iii": [
+      {
+        "flow": "leafcutter/decision-forming",
+        "node": "split-reject-kept-whole",
+        "node_kind": "branch",
+        "flow_kind": "data",
+        "screen": "decision-split-progress",
+        "mock_data": "leafcutter/decisions",
+        "entities": [
+          "Decomposition"
+        ],
+        "source": "real",
+        "asof": "2026-10-05"
+      }
+    ],
+    "DK-400e-1": [
+      {
+        "flow": "leafcutter/decision-forming",
+        "node": "split-run",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": "leafcutter/decisions",
+        "entities": [
+          "Decision",
+          "Decomposition"
+        ],
+        "source": "real",
+        "asof": "2026-10-05"
+      }
+    ],
+    "DK-400e-2": [
+      {
+        "flow": "leafcutter/decision-forming",
+        "node": "split-run",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": "leafcutter/decisions",
+        "entities": [
+          "Decision",
+          "Decomposition"
+        ],
+        "source": "real",
+        "asof": "2026-10-05"
+      }
+    ],
+    "DK-400e-2-i": [
+      {
+        "flow": "leafcutter/decision-forming",
+        "node": "split-run",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": "leafcutter/decisions",
+        "entities": [
+          "Decision",
+          "Decomposition"
+        ],
+        "source": "real",
+        "asof": "2026-10-05"
+      }
+    ],
+    "DK-400e-2-ii": [
+      {
+        "flow": "leafcutter/decision-forming",
+        "node": "split-run",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": "leafcutter/decisions",
+        "entities": [
+          "Decision",
+          "Decomposition"
+        ],
+        "source": "real",
+        "asof": "2026-10-05"
+      }
+    ],
+    "DK-400e-3": [
+      {
+        "flow": "leafcutter/decision-forming",
+        "node": "split-run",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": "leafcutter/decisions",
+        "entities": [
+          "Decision",
+          "Decomposition"
+        ],
+        "source": "real",
+        "asof": "2026-10-05"
+      }
+    ],
+    "DK-400e-3-i": [
+      {
+        "flow": "leafcutter/decision-forming",
+        "node": "split-run",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": "leafcutter/decisions",
+        "entities": [
+          "Decision",
+          "Decomposition"
+        ],
+        "source": "real",
+        "asof": "2026-10-05"
+      }
+    ],
+    "DK-400e-4": [
+      {
+        "flow": "leafcutter/decision-forming",
+        "node": "split-part-unsettled",
+        "node_kind": "branch",
+        "flow_kind": "data",
+        "screen": "decision-split-progress",
+        "mock_data": "leafcutter/decisions",
+        "entities": [
+          "Decomposition"
+        ],
+        "source": "real",
+        "asof": "2026-10-05"
+      }
+    ],
+    "DK-400f-1": [
+      {
+        "flow": "leafcutter/decision-forming",
+        "node": "split-report",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": "decision-split-progress",
+        "mock_data": "leafcutter/decisions",
+        "entities": [
+          "Decision",
+          "Decomposition"
+        ],
+        "source": "real",
+        "asof": "2026-10-05"
+      }
+    ],
+    "DK-400f-1-i": [
+      {
+        "flow": "leafcutter/decision-forming",
+        "node": "split-report",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": "decision-split-progress",
+        "mock_data": "leafcutter/decisions",
+        "entities": [
+          "Decision",
+          "Decomposition"
+        ],
+        "source": "real",
+        "asof": "2026-10-05"
+      }
+    ],
+    "DK-400f-2": [
+      {
+        "flow": "leafcutter/decision-forming",
+        "node": "split-report",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": "decision-split-progress",
+        "mock_data": "leafcutter/decisions",
+        "entities": [
+          "Decision",
+          "Decomposition"
+        ],
+        "source": "real",
+        "asof": "2026-10-05"
+      }
+    ],
+    "DK-400f-2-i": [
+      {
+        "flow": "leafcutter/decision-forming",
+        "node": "split-part-unsettled",
+        "node_kind": "branch",
+        "flow_kind": "data",
+        "screen": "decision-split-progress",
+        "mock_data": "leafcutter/decisions",
+        "entities": [
+          "Decomposition"
+        ],
+        "source": "real",
+        "asof": "2026-10-05"
+      },
+      {
+        "flow": "leafcutter/decision-forming",
+        "node": "split-report",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": "decision-split-progress",
+        "mock_data": "leafcutter/decisions",
+        "entities": [
+          "Decision",
+          "Decomposition"
+        ],
+        "source": "real",
+        "asof": "2026-10-05"
+      }
+    ],
+    "DK-400f-3": [
+      {
+        "flow": "leafcutter/decision-forming",
+        "node": "split-reject",
+        "node_kind": "branch",
+        "flow_kind": "data",
+        "screen": "decision-split-progress",
+        "mock_data": "leafcutter/decisions",
+        "entities": [
+          "Decomposition"
+        ],
+        "source": "real",
+        "asof": "2026-10-05"
+      },
+      {
+        "flow": "leafcutter/decision-forming",
+        "node": "split-reject-clarify",
+        "node_kind": "branch",
+        "flow_kind": "data",
+        "screen": "decision-split-progress",
+        "mock_data": "leafcutter/decisions",
+        "entities": [
+          "Decomposition"
+        ],
+        "source": "real",
+        "asof": "2026-10-05"
+      },
+      {
+        "flow": "leafcutter/decision-forming",
+        "node": "split-reject-kept-whole",
+        "node_kind": "branch",
+        "flow_kind": "data",
+        "screen": "decision-split-progress",
+        "mock_data": "leafcutter/decisions",
+        "entities": [
+          "Decomposition"
+        ],
         "source": "real",
         "asof": "2026-10-05"
       }
