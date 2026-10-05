@@ -28,7 +28,7 @@ doc_links:
   - path: docs/product-truth/flows/leafcutter/decision-forming.flow.json
     relationship: implements
     status: exists
-    relevance: "Flow v4 node(s) split-propose, split-not-needed, single-no-capability, with their acceptance scenarios."
+    relevance: "Flow v5 node(s) split-too-few-parts, with their acceptance scenarios."
   - path: docs/product-truth/mock-data/leafcutter/decisions.mock.json
     relationship: specified-by
     status: exists
@@ -48,5 +48,5 @@ covered_by:
 implemented_by: []
 notes: |
   User decision (DK-400 Q2): fewer than two bounded parts means it was one question after
-  all, with no gate. The flow has no node for this case yet; it is mapped to split-propose.
-  Flow-author follow-up: add a branch for the out-of-bounds proposal (fewer than 2, more than 5).
+  all, with no gate. Flow v5 branch split-too-few-parts (more than five parts is
+  split-too-many-parts, DK-400c-1-i).

@@ -26,7 +26,7 @@ doc_links:
   - path: docs/product-truth/flows/leafcutter/decision-forming.flow.json
     relationship: implements
     status: exists
-    relevance: "Flow v4 node(s) split-detect, single-no-capability, with their acceptance scenarios."
+    relevance: "Flow v5 node(s) split-detect, single-no-capability, with their acceptance scenarios."
   - path: docs/roadmap.json
     relationship: related
     status: exists
@@ -50,6 +50,7 @@ implemented_by: []
 notes: |
   Keeps gap counts honest in both directions (DK-400 ROADMAP ALIGNMENT): a compound request
   is not counted as a gap, and a real gap is not hidden behind a split.
-  OPEN (reported to the user): whether a gap is recorded when the person REJECTS the split of a
-  turned-away request (DK-400d-3-i). The person may be saying "this is one question", and then
-  the kernel still cannot meet it. This AC deliberately covers only the approved case.
+  DECIDED (user answer to BA open question Q1, 2026-10-05): when the person REJECTS the split
+  of a turned-away request, the run still records the capability gap, as today. That case is
+  DK-400d-3-i (mock-data v5 capability_gap_recorded). This AC covers the approved case, where no
+  gap is recorded for the request.

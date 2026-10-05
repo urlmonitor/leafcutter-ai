@@ -25,7 +25,7 @@ doc_links:
   - path: docs/product-truth/flows/leafcutter/decision-forming.flow.json
     relationship: specified-by
     status: exists
-    relevance: "Step split-detect and branches split-not-needed and single-no-capability. Flow v4 widens split-detect to the accepted-as-one case and adds single-no-capability; v3 and earlier start a split only on routing failure (see notes)."
+    relevance: "Flow v5: step split-detect and branches split-not-needed, single-no-capability and split-typed-request. Flow v4 widened split-detect to the accepted-as-one case and added single-no-capability; v5 adds split-typed-request (a caller-supplied decision request is never split); v3 and earlier start a split only on routing failure (see notes)."
   - path: docs/product-truth/mock-data/leafcutter/decisions.mock.json
     relationship: specified-by
     status: exists

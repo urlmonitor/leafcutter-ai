@@ -1,5 +1,5 @@
 id: DK-400f-2-i
-title: "The report names each part that was not settled or not run, and why"
+title: "The report of a partial run names each part that was not settled or not run, and why"
 component: decision-kernel
 components:
   - decision_kernel
@@ -13,11 +13,15 @@ roadmap_phase: phase_kernel_1_founding
 criteria: |
   Given the reusable-criteria split where p1 reached its budget stop, p2 and p3 wait for p1,
     and p4 was decided,
-  When the run ends,
-  Then the split section has four lines, one per part,
-  And p1's line says that it was not settled and names the budget stop,
-  And the lines for p2 and p3 say "not run" and that each waited for p1,
-  And p4's line says decided, with its record id.
+  When the run ends partial,
+  Then the split section has four lines, one per part:
+    "p1 not settled: its decision reached its budget stop",
+    "p2 not run: waits for p1, which was not settled (budget stop)",
+    "p3 not run: waits for p1, which was not settled (budget stop)",
+    "p4 decided: Mine from both Langfuse traces and published decision records (<p4's record
+    id>, staged)",
+  And p1's line never says "not run", because p1 ran,
+  And the report gives the run's outcome as partial, not completed.
 depends_on:
   - DK-400f-2
   - DK-400e-4
@@ -25,23 +29,25 @@ doc_links:
   - path: docs/product-truth/flows/leafcutter/decision-forming.flow.json
     relationship: implements
     status: exists
-    relevance: "Flow v4 node(s) split-report, with their acceptance scenarios."
+    relevance: "Flow v5 node(s) split-report and split-part-unsettled, with their acceptance scenarios."
   - path: docs/product-truth/mock-data/leafcutter/decisions.mock.json
     relationship: specified-by
     status: exists
-    relevance: "report_lines."
+    relevance: "v5 report_lines of record dcp-reusable-criteria-partial: a not_settled part's line names its stop_reason, a waiting part's line names the part it waited for."
 assigned_agent: python-coder
 estimated_complexity: null
 delivers_to: null
 expects_from:
   ac_id: DK-400e-4
-  contract: "The not-run parts and their reasons."
+  contract: "The not-settled part, the not-run parts and their reasons, and the partial run status."
 origin_agent: business-analyst
 created: 2026-10-05
-amended_by: []
+amended_by:
+  - reason: "2026-10-05 BA, user answer to BA open question Q3 (the run ends partial) and mock-data v5 report_lines. Withdrawn wording: 'When the run ends,'; 'Then the split section has four lines, one per part,'; 'And p1's line says that it was not settled and names the budget stop,'; 'And the lines for p2 and p3 say \"not run\" and that each waited for p1,'; 'And p4's line says decided, with its record id.' Replaced by 'When the run ends partial,' with the four line texts of record dcp-reusable-criteria-partial, plus the clauses that p1's line never says not run and that the report gives the run's outcome as partial. Title now names the partial run. doc_links relevance refreshed to flow v5 and mock data v5; expects_from contract widened to the partial run status."
 superseded_by: null
 covered_by: []
 implemented_by: []
 notes: |
-  Report side of DK-400e-4. p1's line wording waits on the missing outcome value (see the
-  DK-400e-4 notes); it must not say "not run", because p1 ran.
+  Report side of DK-400e-4. The line texts are those of mock-data v5 record
+  dcp-reusable-criteria-partial. The v4 gap this AC waited on (no outcome value for a part that
+  ran but did not settle) is closed by the v5 outcome not_settled.

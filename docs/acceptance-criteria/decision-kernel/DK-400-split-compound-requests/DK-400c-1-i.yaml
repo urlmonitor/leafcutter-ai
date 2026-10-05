@@ -25,7 +25,7 @@ doc_links:
   - path: docs/product-truth/flows/leafcutter/decision-forming.flow.json
     relationship: implements
     status: exists
-    relevance: "Flow v4 node(s) split-propose, with their acceptance scenarios."
+    relevance: "Flow v5 node(s) split-too-many-parts, with their acceptance scenarios."
   - path: docs/product-truth/mock-data/leafcutter/decisions.mock.json
     relationship: specified-by
     status: exists
@@ -50,8 +50,9 @@ notes: |
   User decision (DK-400 Q2): more than five means asking the person to narrow the request, or
   offering five parts and listing the rest read-only as not covered; never a silent drop. This AC
   takes the second option as the default and tells the person how to ask for the rest, so both
-  readings are served. Reported to the user as an open question.
+  readings are served. The user kept this default on 2026-10-05 (answer to BA open question Q2).
   For the IT PO: which five are offered when a dependency crosses the cut (for example p3 waits
   for p6). The example deliberately has no such dependency.
-  PRODUCT-TRUTH GAP: the mock data has no field for "not covered" parts. dropped[] cannot hold
-  them, because its invariant requires a quote that is NOT in the subject.
+  Mock data v5 records these parts in not_covered[] (quotes that ARE in the subject, reason
+  "beyond the five-part cap"; sample dcp-decision-records-seven-parts), separate from dropped[].
+  Flow v5 branch split-too-many-parts.

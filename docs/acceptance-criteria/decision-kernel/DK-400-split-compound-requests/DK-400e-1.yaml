@@ -26,7 +26,7 @@ doc_links:
   - path: docs/product-truth/flows/leafcutter/decision-forming.flow.json
     relationship: implements
     status: exists
-    relevance: "Flow v4 node(s) split-run, with their acceptance scenarios."
+    relevance: "Flow v5 node(s) split-run, with their acceptance scenarios."
   - path: docs/product-truth/mock-data/leafcutter/decisions.mock.json
     relationship: specified-by
     status: exists
@@ -51,6 +51,7 @@ covered_by: []
 implemented_by: []
 notes: |
   Flow step split-run. Parallel children are out of scope (DK-400 SETTLED 5).
-  ASSUMPTION (reported): among parts free to start, proposed order decides. This matches every
-  sample record. The person's preferred order is kept only as words in the gate note.
+  Among parts free to start, proposed order decides: the user kept this default on 2026-10-05
+  (answer to BA open question Q4). It matches every sample record. The person's preferred order
+  is kept only as words in the gate note.
   For the IT PO: the configured bound on child work per run, and the off switch.

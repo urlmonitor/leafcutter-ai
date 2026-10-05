@@ -1,5 +1,5 @@
 id: DK-400d-3-i
-title: "Rejecting the split of a request routing turned away ends the run blocked with nothing decided"
+title: "Rejecting the split of a request routing turned away ends the run blocked, with nothing decided and the capability gap recorded"
 component: decision-kernel
 components:
   - decision_kernel
@@ -17,6 +17,8 @@ criteria: |
   When human:user rejects the split with the note "One question, not two: how often they run
     follows from which traces they read. I will ask it again as one question.",
   Then the run ends blocked,
+  And the run records the same capability gap for the goal that it records today when routing
+    turns a request away,
   And nothing is decided and no decision record is staged,
   And the split's state is rejected.
 depends_on:
@@ -25,11 +27,11 @@ doc_links:
   - path: docs/product-truth/flows/leafcutter/decision-forming.flow.json
     relationship: implements
     status: exists
-    relevance: "Flow v4 node(s) split-reject, with their acceptance scenarios."
+    relevance: "Flow v5 node(s) split-reject, with their acceptance scenarios (the run still records the capability gap, as today)."
   - path: docs/product-truth/mock-data/leafcutter/decisions.mock.json
     relationship: specified-by
     status: exists
-    relevance: "Invariant: state rejected iff rejected with trigger jev_none or ambiguous, run_status blocked; record dcp-trace-analyzers-rejected."
+    relevance: "v5 invariants: state rejected iff rejected with trigger jev_none or ambiguous, run_status blocked; capability_gap_recorded true iff state rejected (or a hand split); record dcp-trace-analyzers-rejected."
 assigned_agent: python-coder
 estimated_complexity: null
 delivers_to: null
@@ -38,10 +40,14 @@ expects_from:
   contract: "The recorded rejection and the trigger it reads."
 origin_agent: business-analyst
 created: 2026-10-05
-amended_by: []
+amended_by:
+  - reason: "2026-10-05 BA, user answer to BA open question Q1: a rejected split of a turned-away request still records the capability gap, as today. Added the clause 'And the run records the same capability gap for the goal that it records today when routing turns a request away'; no earlier clause was withdrawn. Title widened from 'Rejecting the split of a request routing turned away ends the run blocked with nothing decided'. doc_links relevance refreshed to flow v5 and mock data v5."
 superseded_by: null
 covered_by: []
 implemented_by: []
 notes: |
   Flow branch split-reject. Only this rejection ends the run blocked (user decision
-  2026-10-05). OPEN: whether this run also records a capability gap (see DK-400a-1-ii).
+  2026-10-05). The capability gap is still recorded, as today (user answer to BA open question
+  Q1, 2026-10-05; mock-data v5 field capability_gap_recorded). This keeps gap counts honest in
+  both directions together with DK-400a-1-ii: an approved split records no gap for the request,
+  and a rejected split of a turned-away request does.

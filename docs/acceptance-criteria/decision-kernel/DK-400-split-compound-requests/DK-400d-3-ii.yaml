@@ -29,7 +29,7 @@ doc_links:
   - path: docs/product-truth/flows/leafcutter/decision-forming.flow.json
     relationship: implements
     status: exists
-    relevance: "Flow v4 node(s) split-reject-kept-whole, with their acceptance scenarios."
+    relevance: "Flow v5 node(s) split-reject-kept-whole, with their acceptance scenarios."
   - path: docs/product-truth/mock-data/leafcutter/decisions.mock.json
     relationship: specified-by
     status: exists

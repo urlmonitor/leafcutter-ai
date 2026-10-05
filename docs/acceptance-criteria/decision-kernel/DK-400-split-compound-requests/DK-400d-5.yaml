@@ -13,22 +13,25 @@ roadmap_phase: phase_kernel_1_founding
 criteria: |
   Given a reader who wants to know which states a split can be in,
   When they open the split state diagram,
-  Then it shows six states, proposed, approved, in progress, completed, rejected, and kept whole
-    after rejection, with the event that causes each transition,
+  Then it shows seven states, proposed, approved, in progress, completed, ended partial, rejected,
+    and kept whole after rejection, with the event that causes each transition,
   And it shows that only a person's answer leaves proposed: approve leads to approved; reject leads
     to rejected when routing had turned the request away, and to kept whole when routing would have
     accepted it or it was found mid-run,
-  And it shows approved moving to in progress when the first part settles, and to completed when
-    every approved part has settled.
+  And it shows approved moving to in progress when the first part has an outcome, and to completed
+    when every approved part has settled,
+  And it shows the split ending in ended partial, with the run partial, when no approved part is
+    still pending and at least one did not settle.
 depends_on:
   - DK-400d
   - DK-400d-1
   - DK-400d-3
+  - DK-400e-4
 doc_links:
   - path: docs/product-truth/mock-data/leafcutter/decisions.mock.json
     relationship: specified-by
     status: exists
-    relevance: "Decomposition.state: proposed | approved | in_progress | completed | rejected | rejected_kept_whole."
+    relevance: "v5 Decomposition.state: proposed | approved | in_progress | completed | ended_partial | rejected | rejected_kept_whole."
   - path: docs/architecture/components/decision-kernel.md
     relationship: describes
     status: exists
@@ -45,13 +48,13 @@ expects_from:
 change_target: docs
 origin_agent: business-analyst
 created: 2026-10-05
-amended_by: []
+amended_by:
+  - reason: "2026-10-05 BA, consequence of the user answer to BA open question Q3 (the run ends partial) and mock-data v5 state ended_partial; not in the coordinator's edit list, made so that this AC does not contradict the amended DK-400e-4. Withdrawn wording: 'Then it shows six states, proposed, approved, in progress, completed, rejected, and kept whole after rejection, with the event that causes each transition,' and 'And it shows approved moving to in progress when the first part settles, and to completed when every approved part has settled.' Replaced by seven states including ended partial, 'when the first part has an outcome' (the v5 meaning of in_progress), and a new clause for the ended-partial ending. depends_on gains DK-400e-4; doc_links relevance refreshed to mock data v5."
 superseded_by: null
 covered_by: []
 implemented_by: []
 notes: |
   Documentation AC for DK-400d documentation_triggers [state-diagram]. The DK-400d DOCS note
-  says five states; mock data v4 has six (it adds rejected_kept_whole).
-  PRODUCT-TRUTH GAP: no state covers a split that ends with an approved part unsettled
-  (DK-400e-4). Such a split stays in progress forever. The diagram follows the mock data once
-  that is decided.
+  says five states; mock data v5 has seven (it adds rejected_kept_whole and ended_partial).
+  The v4 gap this AC recorded (no state for a split that ends with an approved part unsettled)
+  is closed by the v5 state ended_partial (DK-400e-4).

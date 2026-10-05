@@ -37,7 +37,7 @@ doc_links:
   - path: docs/product-truth/flows/leafcutter/decision-forming.flow.json
     relationship: implements
     status: exists
-    relevance: "Flow v4 node(s) split-detect, split-propose, split-dropped, split-approve, split-reject, split-reject-kept-whole, with their acceptance scenarios."
+    relevance: "Flow v5 node(s) split-detect, split-propose, split-dropped, split-approve, split-reject, split-reject-kept-whole, with their acceptance scenarios."
 assigned_agent: architecture-diagram-author
 estimated_complexity: null
 delivers_to: null

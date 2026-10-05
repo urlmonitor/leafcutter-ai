@@ -157,10 +157,9 @@ notes: |
     - "request" -> the subject (Decomposition.subject_text, subject_kind)
     - "turned away" -> routing no_match with reason jev_none, or an ambiguous gap
     - "squeezed into one choice" -> routing matched one capability (decision)
-      for a subject that holds several questions. Flow v4's split-detect covers
-      it, and the mock data is gaining trigger bundled_accepted (uncommitted,
-      in progress by the mock-data author, to be committed together with
-      these ACs; see DK-400a)
+      for a subject that holds several questions. split-detect covers it
+      since flow v4 (now v5), and the mock data records it as trigger
+      bundled_accepted (mock data v5; see DK-400a)
     - "an ability the kernel lacks" -> a capability-gap record (unsupported)
     - "split" -> a Decomposition record
     - "part" -> parts[]; "the words it covers" -> covers;

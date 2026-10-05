@@ -29,7 +29,7 @@ doc_links:
   - path: docs/product-truth/flows/leafcutter/decision-forming.flow.json
     relationship: implements
     status: exists
-    relevance: "Flow v4 node(s) split-mid-run, split-approve, with their acceptance scenarios."
+    relevance: "Flow v5 node(s) split-approve, split-mid-run, with their acceptance scenarios."
   - path: docs/product-truth/mockups/leafcutter/decision-split-approve.mockup.json
     relationship: specified-by
     status: exists

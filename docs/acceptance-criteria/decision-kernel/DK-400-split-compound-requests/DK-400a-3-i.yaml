@@ -24,7 +24,7 @@ doc_links:
   - path: docs/product-truth/flows/leafcutter/decision-forming.flow.json
     relationship: implements
     status: exists
-    relevance: "Flow v4 node(s) split-not-needed, with their acceptance scenarios."
+    relevance: "Flow v5 node(s) split-not-needed, with their acceptance scenarios."
   - path: docs/architecture/adrs/ADR-053-intelligence-selection-deterministic-jev-llm-human.md
     relationship: constrains
     status: exists
