@@ -11,7 +11,7 @@
   "status": "active",
   "readiness": "draft",
   "superseded_by": null,
-  "version": 3,
+  "version": 4,
   "shape_version": 2,
   "tags": [
     "decision-kernel",
@@ -101,7 +101,7 @@
     {
       "id": "split-detect",
       "label": "Spot a compound subject",
-      "human": "Routing looks for one capability to take the subject. When it finds none (no match with reason jev_none, or an ambiguous gap), the subject is taken to hold several questions and a split starts.",
+      "human": "At routing, the subject is checked for several separate questions bundled together. A bundled subject is offered as a split whether routing found no single capability for it (jev_none or ambiguous) or would accept it as one decision. A no-match alone does not make a subject compound.",
       "order": 4,
       "agent": "kernel routing",
       "consumes": [
@@ -456,7 +456,7 @@
     {
       "id": "split-not-needed",
       "from": "split-detect",
-      "condition": "routing finds one capability for the subject",
+      "condition": "the subject is a single question and routing finds one capability for it",
       "label": "One question, no split",
       "human": "Nothing is split: the run goes on as one decision, from the precedent step.",
       "agent": "kernel routing",
@@ -465,6 +465,20 @@
       ],
       "outcome_kind": "alternative",
       "impl_asof": "2026-10-03",
+      "impl_status": "not_started"
+    },
+    {
+      "id": "single-no-capability",
+      "from": "split-detect",
+      "condition": "the subject is a single question and routing finds no capability for it",
+      "label": "One question, no capability",
+      "human": "Nothing is split and the split gate is never shown: the run records the capability gap exactly as it does today.",
+      "agent": "kernel routing",
+      "consumes": [
+        "goal"
+      ],
+      "outcome_kind": "exit",
+      "impl_asof": "2026-10-05",
       "impl_status": "not_started"
     },
     {
@@ -535,8 +549,8 @@
     {
       "id": "split-reject",
       "from": "split-approve",
-      "condition": "you reject the split",
-      "label": "Reject the split",
+      "condition": "you reject a split offered because routing turned the subject away (trigger jev_none or ambiguous)",
+      "label": "Reject, run ends blocked",
       "human": "No part runs. The run ends blocked, and its report says plainly that the split was rejected and nothing was decided, with a hint to ask again as one bounded question.",
       "screen": "decision-split-progress",
       "agent": "kernel",
@@ -554,6 +568,30 @@
       ],
       "outcome_kind": "exit",
       "impl_asof": "2026-10-03",
+      "impl_status": "not_started"
+    },
+    {
+      "id": "split-reject-kept-whole",
+      "from": "split-approve",
+      "condition": "you reject a split offered for a subject routing would have accepted as one (trigger bundled_accepted), or for a work item found mid-run",
+      "label": "Reject, keep it whole",
+      "human": "No part runs. The subject or item goes ahead as one decision or research step, exactly as without a split, and the run is not blocked. The report keeps one plain line saying a split was offered and rejected.",
+      "agent": "kernel",
+      "consumes": [
+        "proposed split"
+      ],
+      "produces": [
+        "subject kept whole (one decision or research step)"
+      ],
+      "reads": [
+        "Decomposition"
+      ],
+      "writes": [
+        "Decomposition"
+      ],
+      "screen": "decision-split-progress",
+      "outcome_kind": "alternative",
+      "impl_asof": "2026-10-05",
       "impl_status": "not_started"
     }
   ],
@@ -608,9 +646,9 @@
     },
     {
       "for": "split-detect",
-      "given": "a root goal holding several questions, for which routing finds no single capability (no match with reason jev_none, or an ambiguous gap)",
+      "given": "a root goal that bundles several separate questions, whether routing finds no single capability for it (jev_none or ambiguous) or would accept it as one decision",
       "when": "routing runs on the run's root",
-      "then": "a split is started for the goal, recording it verbatim with found_at routing, work_item_depth 0 and the routing result as its trigger"
+      "then": "a split is offered for it instead of one decision being formed, recording the goal verbatim with found_at routing, work_item_depth 0 and the routing result"
     },
     {
       "for": "split-propose",
@@ -692,9 +730,15 @@
     },
     {
       "for": "split-not-needed",
-      "given": "a goal that routing can give to one capability",
+      "given": "a single question that routing can give to one capability",
       "when": "routing runs on the run's root",
       "then": "no split is started and the run goes on as one decision from the precedent step"
+    },
+    {
+      "for": "single-no-capability",
+      "given": "a single question that no capability can handle",
+      "when": "routing runs on the run's root",
+      "then": "no split is started: the run records the capability gap exactly as today and is never sent to the split gate"
     },
     {
       "for": "split-mid-run",
@@ -716,9 +760,15 @@
     },
     {
       "for": "split-reject",
-      "given": "a proposed split shown on the split gate",
+      "given": "a proposed split of a root goal that routing turned away (trigger jev_none or ambiguous), shown on the split gate",
       "when": "you reject it",
       "then": "no part runs, the run ends blocked, and its report says plainly that the split was rejected and nothing was decided"
+    },
+    {
+      "for": "split-reject-kept-whole",
+      "given": "a proposed split shown on the split gate, offered for a root goal routing would have accepted as one decision (trigger bundled_accepted) or for a work item found mid-run",
+      "when": "you reject it",
+      "then": "no part runs, the subject or item goes ahead as one decision or research step exactly as without a split, the run is not blocked, and the report keeps one plain line saying a split was offered and rejected"
     },
     {
       "for": "revise-proposals",
@@ -781,13 +831,25 @@
       "by": "flow-author (split-compound-goals plan-feature session)",
       "date": "2026-10-03",
       "note": "v2: extended in place with the split path for a compound subject (a goal, a research request with several needs, or a multi-part decision question), not a new flow. Four steps after classify (split-detect, split-propose, split-approve on screen decision-split-approve, split-run) and one after resolve (split-report on screen decision-split-progress), plus five branches (split-not-needed, split-mid-run, split-dropped, split-revise, split-reject), each with one acceptance scenario. Existing steps keep their ids and content; from precedent on their order moves up by 4. Wired to leafcutter/decisions v3 (Decomposition). The split nodes describe host.decompose_goal (KernelDecomposeMultiPartGoal ticket), which is not built yet: they are spec inside this built flow and carry no ACs until the business-analyst back-links them."
+    },
+    {
+      "action": "extended",
+      "by": "flow-author (split-compound-goals plan-feature session)",
+      "date": "2026-10-04",
+      "note": "v4, user decision: also split accepted bundled requests. split-detect now fires when the subject bundles several separate questions, whether routing found no single capability (jev_none or ambiguous) or would accept it as one decision; a routing no-match alone no longer counts as compound. The case behind it is run-5d246775f5e54f11, where the request was accepted, squeezed into one pick-one-of-N, and the human had to write a composite option. New exit branch single-no-capability: a single question no capability can handle keeps today's gap handling and never reaches the split gate. split-not-needed is kept, narrowed to a single question routing can handle. One acceptance scenario each; no ACs linked."
+    },
+    {
+      "action": "extended",
+      "by": "flow-author (split-compound-goals plan-feature session)",
+      "date": "2026-10-05",
+      "note": "Still v4 (same uncommitted amendment). User decision: how a rejected split ends depends on why it was offered. split-reject is scoped to a subject routing turned away (trigger jev_none or ambiguous): the run ends blocked and nothing is decided. New alternative branch split-reject-kept-whole: rejecting a split of a subject routing would have accepted as one (trigger bundled_accepted), or of an item found mid-run, keeps it whole; it goes ahead as one decision or research step and the run is not blocked. Matches leafcutter/decisions v4 state rejected_kept_whole (whole_decision_id), sample dcp-decision-records-bundled. One acceptance scenario; no ACs linked."
     }
   ],
   "impl_summary": {
     "done": 2,
     "in_progress": 0,
-    "not_started": 25,
-    "total": 27,
-    "asof": "2026-10-04"
+    "not_started": 27,
+    "total": 29,
+    "asof": "2026-10-05"
   }
 }

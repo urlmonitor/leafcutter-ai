@@ -93,7 +93,7 @@
 <main>
   <div class="topbar"><span class="eyebrow" style="margin:0">Decision kernel / Split progress and report</span><span class="badge warning">mock mode</span></div>
 <div class="panel"><div class="eyebrow">After the gate</div><h1>Where each part of the split stands</h1>
-<p class="sub">Each approved part runs as a child of its run, in dependency order. Every part shows its outcome and links to its child decision record. A rejected split gets a plain report.</p>
+<p class="sub">Each approved part runs as a child of its run, in dependency order. Every part shows its outcome and links to its child decision record. A rejected split gets a plain report: blocked when routing had turned the request away, kept whole (the run goes on) otherwise.</p>
 <div class="row" style="margin-top:8px"><span class="badge success">decided</span><span class="badge success">answered</span><span class="badge warning">pending</span><span class="badge info">settled by a human</span><span class="badge plain">not run</span></div></div>
 <div class="panel"><div class="row between"><div><div class="eyebrow">goal / run-40d2…48bd</div><h2>Reusable decision criteria: a goal split by hand</h2></div><div class="row"><span class="badge warning">in progress</span></div></div>
 <p class="small">Split found at routing; proposed by <span class="mono">claude_code</span>; answered by <span class="mono">human:user</span> (time not recorded: a hand split).</p>
@@ -146,7 +146,31 @@ p3 not run: left out at the split</pre></div>
 <h3 style="margin-top:12px">Run report: split section</h3><pre class="mono">p1 answered: kernel/config_memory.py loads memory.reuse_threshold; kernel/memory/precedent.py offers reuse at that value or above
 p2 answered: tests/kernel/memory/test_precedent_units.py and tests/kernel/memory/test_decision_precedent.py cover the reuse offer
 p3 answered: no ADR fixes 0.8; ADR-060 leaves the value to configuration</pre></div>
-<div class="panel"><div class="row between"><div><div class="eyebrow">goal / run-5f08…c714</div><h2>Trace analyzers: split rejected</h2></div><div class="row"><span class="badge destructive">rejected</span></div></div>
+<div class="panel"><div class="row between"><div><div class="eyebrow">goal / run-3e8a…9a40</div><h2>Decision records: split rejected, goal kept whole</h2></div><div class="row"><span class="badge info">rejected, kept whole</span></div></div>
+<p class="small">Split found at routing; proposed by <span class="mono">host.decompose_goal</span>; answered by <span class="mono">human:user</span> at 2026-10-05T09:14:26Z.</p>
+<p class="small">Gate note: &ldquo;Keep it whole: one record format covers all five, so decide it as one.&rdquo;</p>
+<div class="note ok"><strong>Kept whole. The goal goes ahead as one decision and the run is not blocked.</strong> Routing would have accepted it as one (trigger <span class="mono">bundled_accepted</span>), so rejecting the split did not stop it. No decision is staged yet: the run is still waiting for the host.</div><h3 style="margin-top:12px">Run report</h3><pre class="mono">The proposed split was rejected by human:user; the goal is kept whole and runs as one decision.</pre><details style="margin-top:8px"><summary class="small">Parts that were proposed (none ran)</summary><div class="part off"><div class="rank">p1</div><div>
+<div class="row between"><h3>Decide which fields a decision record needs</h3><span class="badge plain">not run</span></div>
+<p class="small"><span class="badge plain">decision capability</span> no dependency &middot; not settled</p>
+<div class="span">&ldquo;which fields a record needs&rdquo;</div><p class="small">Rejected with the split.</p></div></div>
+<div class="part off"><div class="rank">p2</div><div>
+<div class="row between"><h3>Decide which classification filters a record carries (component, file type or language, repository-wide, roadmap phase)</h3><span class="badge plain">not run</span></div>
+<p class="small"><span class="badge plain">decision capability</span> after p1 &middot; not settled</p>
+<div class="span">&ldquo;which classification filters it carries (component, file type or language, repository-wide, roadmap phase)&rdquo;</div><p class="small">Rejected with the split.</p></div></div>
+<div class="part off"><div class="rank">p3</div><div>
+<div class="row between"><h3>Decide the folder layout for decision records under docs/</h3><span class="badge plain">not run</span></div>
+<p class="small"><span class="badge plain">decision capability</span> no dependency &middot; not settled</p>
+<div class="span">&ldquo;the folder layout&rdquo;</div><p class="small">Rejected with the split.</p></div></div>
+<div class="part off"><div class="rank">p4</div><div>
+<div class="row between"><h3>Decide how decision record files are named</h3><span class="badge plain">not run</span></div>
+<p class="small"><span class="badge plain">decision capability</span> after p3 &middot; not settled</p>
+<div class="span">&ldquo;file naming&rdquo;</div><p class="small">Rejected with the split.</p></div></div>
+<div class="part off"><div class="rank">p5</div><div>
+<div class="row between"><h3>Decide how human approval and later corrections are recorded</h3><span class="badge plain">not run</span></div>
+<p class="small"><span class="badge plain">decision capability</span> after p1 &middot; not settled</p>
+<div class="span">&ldquo;how human approval and later corrections are recorded&rdquo;</div><p class="small">Rejected with the split.</p></div></div>
+</details></div>
+<div class="panel"><div class="row between"><div><div class="eyebrow">goal / run-5f08…c714</div><h2>Trace analyzers: split rejected</h2></div><div class="row"><span class="badge destructive">rejected, run blocked</span></div></div>
 <p class="small">Split found at routing; proposed by <span class="mono">host.decompose_goal</span>; answered by <span class="mono">human:user</span> at 2026-10-02T16:33:10Z.</p>
 <p class="small">Gate note: &ldquo;One question, not two: how often they run follows from which traces they read. I will ask it again as one question.&rdquo;</p>
 <div class="note"><strong>The run ended blocked. Nothing was decided.</strong></div><h3 style="margin-top:12px">Run report</h3><pre class="mono">The proposed split was rejected by human:user; nothing was decided.

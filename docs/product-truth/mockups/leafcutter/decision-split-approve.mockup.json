@@ -3,7 +3,7 @@
   "component": "decision_kernel",
   "screen": "decision-split-approve",
   "title": "Approve the proposed split",
-  "summary": "The human gate for a compound goal, research request or multi-part decision question the kernel could not route to one capability. Shows the subject as submitted, each proposed part with the verbatim span it covers, its dependencies and the capability that will run it, one proposal that was dropped, and the answers: approve, edit a part, pick a subset, or reject. Populated from dcp-reusable-criteria-proposed.",
+  "summary": "The human gate for a compound goal, research request or multi-part decision question that the kernel offers to split: when routing turns it away, when routing would accept it as one, or when a work item holds several questions mid-run. Shows the subject as submitted, each proposed part with the verbatim span it covers, its dependencies and the capability that will run it, one proposal that was dropped, and the answers: approve, edit a part, pick a subset, or reject. The reject label depends on the trigger: run ends blocked for jev_none or ambiguous, keep it whole for bundled_accepted or mid-run. Populated from dcp-reusable-criteria-proposed (trigger jev_none).",
   "entities": [
     "Decision",
     "Decomposition"
@@ -14,7 +14,7 @@
   "status": "active",
   "superseded_by": null,
   "readiness": "draft",
-  "version": 1,
+  "version": 2,
   "shape_version": 1,
   "tags": [
     "decision-kernel",
@@ -31,6 +31,12 @@
       "by": "mockup-author",
       "date": "2026-10-03",
       "note": "Drafted from leafcutter/decisions Decomposition records; styled from the Atlas tokens via docs/ui-context.md (globals.css, tailwind.config.ts, layout.tsx, kit.tsx)."
+    },
+    {
+      "action": "extended",
+      "by": "mockup-author",
+      "date": "2026-10-05",
+      "note": "Decisions v4: split also offered when routing would accept the request (bundled_accepted); reject depends on the trigger (blocked, or kept whole)."
     }
   ]
 }

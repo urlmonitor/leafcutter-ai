@@ -3,7 +3,7 @@
   "component": "decision_kernel",
   "screen": "decision-split-progress",
   "title": "Split progress and report",
-  "summary": "What happens after the split gate. Each part shows its outcome (decided, answered, pending, settled by a human, not run), its link to the child decision record or research result, and its dependency order, including an edited part and a left-out part. A rejected split gets a plain report. Populated from the hand split, the mid-run split, the research split and the rejected split.",
+  "summary": "What happens after the split gate. Each part shows its outcome (decided, answered, pending, settled by a human, not run), its link to the child decision record or research result, and its dependency order, including an edited part and a left-out part. A rejected split gets a plain report: blocked when routing had turned the request away, kept whole (the run goes on) otherwise. Populated from the hand split, the mid-run split, the research split and the rejected split.",
   "entities": [
     "Decision",
     "Decomposition"
@@ -14,7 +14,7 @@
   "status": "active",
   "superseded_by": null,
   "readiness": "draft",
-  "version": 1,
+  "version": 2,
   "shape_version": 1,
   "tags": [
     "decision-kernel",
@@ -31,6 +31,12 @@
       "by": "mockup-author",
       "date": "2026-10-03",
       "note": "Drafted from leafcutter/decisions Decomposition records; styled from the Atlas tokens via docs/ui-context.md (globals.css, tailwind.config.ts, layout.tsx, kit.tsx)."
+    },
+    {
+      "action": "extended",
+      "by": "mockup-author",
+      "date": "2026-10-05",
+      "note": "Decisions v4: split also offered when routing would accept the request (bundled_accepted); reject depends on the trigger (blocked, or kept whole)."
     }
   ]
 }

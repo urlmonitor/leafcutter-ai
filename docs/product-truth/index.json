@@ -665,14 +665,14 @@
       "id": "leafcutter/decision-split-approve",
       "type": "mockup",
       "title": "Approve the proposed split",
-      "summary": "The human gate for a compound goal, research request or multi-part decision question the kernel could not route to one capability. Shows the subject as submitted, each proposed part with the verbatim span it covers, its dependencies and the capability that will run it, one proposal that was dropped, and the answers: approve, edit a part, pick a subset, or reject. Populated from dcp-reusable-criteria-proposed.",
+      "summary": "The human gate for a compound goal, research request or multi-part decision question that the kernel offers to split: when routing turns it away, when routing would accept it as one, or when a work item holds several questions mid-run. Shows the subject as submitted, each proposed part with the verbatim span it covers, its dependencies and the capability that will run it, one proposal that was dropped, and the answers: approve, edit a part, pick a subset, or reject. The reject label depends on the trigger: run ends blocked for jev_none or ambiguous, keep it whole for bundled_accepted or mid-run. Populated from dcp-reusable-criteria-proposed (trigger jev_none).",
       "screen": "decision-split-approve",
       "source": "mock",
       "component": "decision_kernel",
       "path": "mockups/leafcutter/decision-split-approve.mockup.json",
       "status": "active",
       "readiness": "draft",
-      "version": 1,
+      "version": 2,
       "entities": [
         "Decision",
         "Decomposition"
@@ -691,14 +691,14 @@
       "id": "leafcutter/decision-split-progress",
       "type": "mockup",
       "title": "Split progress and report",
-      "summary": "What happens after the split gate. Each part shows its outcome (decided, answered, pending, settled by a human, not run), its link to the child decision record or research result, and its dependency order, including an edited part and a left-out part. A rejected split gets a plain report. Populated from the hand split, the mid-run split, the research split and the rejected split.",
+      "summary": "What happens after the split gate. Each part shows its outcome (decided, answered, pending, settled by a human, not run), its link to the child decision record or research result, and its dependency order, including an edited part and a left-out part. A rejected split gets a plain report: blocked when routing had turned the request away, kept whole (the run goes on) otherwise. Populated from the hand split, the mid-run split, the research split and the rejected split.",
       "screen": "decision-split-progress",
       "source": "mock",
       "component": "decision_kernel",
       "path": "mockups/leafcutter/decision-split-progress.mockup.json",
       "status": "active",
       "readiness": "draft",
-      "version": 1,
+      "version": 2,
       "entities": [
         "Decision",
         "Decomposition"
@@ -908,7 +908,7 @@
       "path": "flows/leafcutter/decision-forming.flow.json",
       "status": "active",
       "readiness": "draft",
-      "version": 3,
+      "version": 4,
       "entities": [
         "Decision",
         "Decomposition"
@@ -917,9 +917,9 @@
       "impl_summary": {
         "done": 2,
         "in_progress": 0,
-        "not_started": 25,
-        "total": 27,
-        "asof": "2026-10-04"
+        "not_started": 27,
+        "total": 29,
+        "asof": "2026-10-05"
       },
       "tags": [
         "decision-kernel",
@@ -1029,7 +1029,7 @@
       "path": "mock-data/leafcutter/decisions.mock.json",
       "status": "active",
       "readiness": "draft",
-      "version": 3,
+      "version": 4,
       "entities": [
         "Decision",
         "Decomposition"
@@ -1562,9 +1562,9 @@
       "impl_summary": {
         "done": 2,
         "in_progress": 0,
-        "not_started": 25,
-        "total": 27,
-        "asof": "2026-10-04"
+        "not_started": 27,
+        "total": 29,
+        "asof": "2026-10-05"
       },
       "expands": [
         "leafcutter/decision-retrieval"
