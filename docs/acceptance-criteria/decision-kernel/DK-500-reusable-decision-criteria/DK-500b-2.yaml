@@ -5,9 +5,9 @@ components:
 - decision_kernel
 level: L2
 status: active
-readiness: reviewed
+readiness: approved
 req_status: draft
-priority: medium
+priority: high
 work_status: todo
 roadmap_phase: phase_kernel_2_knowledge
 criteria: |
@@ -35,7 +35,7 @@ risk_surface: internal
 it_requirements:
 - 'The acceptance setting is dec-a070edfb6465bced''s Jev probability threshold: a placement is accepted only when Jev''s chosen option is an existing category and its probability is >= the threshold. Default 0.8, held in kernel config and never hard-coded at a call site.'
 - 'An offline evaluation command (IT PO default name: python -m kernel criteria evaluate-grouping) scores the grouping on a labelled set at each configured setting (default 0.5, 0.7 and 0.8). It reports, per setting, the accepted merges, precision (correct / accepted), recall (correct / in-category) and the share of none-labelled wordings left at none, and selects the setting with the highest precision, recall breaking ties only. No minimum recall applies, because a missed merge stays a candidate.'
-- 'The labelled set is the trial''s: 78 wordings against 7 categories (22 in-category, 56 none) plus 4 related-but-different pair probes. It is committed as a test fixture together with the trial''s recorded per-wording Jev outcomes, so CI replays it through a controlled Jev provider. The trial artifacts exist today only in a session scratchpad; copying them into the repository (the fixture plus a reports/ receipt with the trial''s caveats) is part of this AC.'
+- 'The labelled set is the trial''s: 78 wordings against 7 categories (22 in-category, 56 none) plus 4 related-but-different pair probes. The trial is committed durably at docs/analysis/2026-10-03-jev-trial-criteria-grouping/ (results.json with the recorded per-wording Jev outcomes, summary.md with the figures and caveats; the run script itself is not kept, and summary.md states how the trial was run). The CI fixture is taken from that directory, either read from it or derived from it with its source named, so CI replays the recorded outcomes through a controlled Jev provider. The fixture never points at a session scratchpad.'
 - A live re-evaluation against real Jev is an operator check, not CI. Its report names the model version, the date and the selected setting, and it never changes the configured threshold by itself; a person changes the config.
 - Every wording gets exactly one outcome, one existing non-retired category or none. Below the threshold the outcome is none, never the nearest category, and a none wording stays its own candidate.
 test_required: true
@@ -94,6 +94,10 @@ doc_links:
   relationship: governs
   status: exists
   relevance: 'Grouping method (opt.jev_pick_existing, approved by human:user 2026-10-04): code places exact label or criterion-id matches, then Jev answers one bounded choice per wording over all existing categories plus ''none'' while the library fits one choice question, a merge only at p >= 0.8; leftovers become code-made one-member candidates; no LLM, no broader-link suggestions; in a run one Jev choice per drafted question within the run''s Jev budget. Its question says ''AC DK-300b'', which is DK-500b after the 2026-10-05 renumbering.'
+- path: docs/analysis/2026-10-03-jev-trial-criteria-grouping/summary.md
+  relationship: related
+  status: exists
+  relevance: 'The committed Jev trial (results.json, summary.md): the labelled set, recorded outcomes and caveats the evaluation fixture comes from.'
 origin_agent: business-analyst
 created: 2026-10-04
 amended_by:
@@ -101,12 +105,16 @@ amended_by:
   date: '2026-10-05'
   by: it-po
   summary: 'Technical enrichment: assigned_agent confirmed, estimated_complexity, change_target, risk_surface, it_requirements, contracts, doc_links and the test contract set; readiness draft -> reviewed. BA criteria unchanged.'
+- reason: it-po-closure-after-ba-rewording
+  date: '2026-10-05'
+  by: it-po
+  summary: The fixture it_requirement now points at the committed trial evidence in docs/analysis/2026-10-03-jev-trial-criteria-grouping/ instead of the session scratchpad; a related doc_link to its summary.md is added. Criteria unchanged.
 superseded_by: null
 notes: |
   DECIDED METHOD (replaces the earlier pending-method note, which named the cancelled run run-b5af8c7fae2248ba): dec-a070edfb6465bced, option opt.jev_pick_existing, chosen by human:user on 2026-10-04 in run run-14655bf6d5e84cb3. Its question still says 'AC DK-300b' because the record is append-only; that is DK-500b after the 2026-10-05 renumbering. The method: (1) code places every wording that exactly matches a preferred or other label of an existing category, or shares a criterion id with a member, with no model call; (2) Jev answers one bounded choice per remaining wording over ALL existing non-retired categories (each shown by its preferred and other labels) plus 'none', while the library fits one choice question, and a merge is suggested only at p >= 0.8; (3) wordings left at 'none' become one-member candidate categories made by code, worded as the wording. No LLM anywhere in grouping and no broader-link suggestions. Cold start: no categories, so every wording is its own one-member candidate and Jev is not called. In a decision run: one Jev choice per drafted question within the run's Jev budget. Evidence for p >= 0.8: a live Jev trial on 82 wordings (22 in-category, 56 none, 4 pair probes) measured 100% precision (12/12) and 55% recall (12/22) at p >= 0.8, 94% / 68% at 0.7 and 78% / 82% at 0.5; caveats: LLM-drafted mock gold set approved as mock data, one run at one seed, small sample.
   USER RULE (b), settled: a wrong merge is worse than a missed merge, so favour precision. A missed merge is recoverable (it stays a candidate and DK-500c-3 can merge it later); a wrong merge silently weighs two concerns as one.
   EVIDENCE USED ONLY TO MAKE THIS CONCRETE (not a method choice): a live Jev trial asked "which existing category asks the same question, or none?" for 82 wordings against 7 categories. At p>=0.8: 100% precision, 55% recall; at p>=0.7: 94% precision, 68% recall; at p>=0.5: 78% precision, 82% recall. The false merges were mostly compound criteria that bundle two questions (DK-500b-2-i). Caveats from the trial: the gold set is LLM-drafted mock data approved as mock data, the sample is small, one run at one seed.
-  SETTLED by the IT PO (2026-10-05): the labelled set is this trial's, committed as a fixture (the scratchpad copy is temporary); the selection rule (highest precision, recall breaks ties) is the precision rule and no minimum recall applies; the acceptance setting is Jev's probability threshold, default 0.8.
+  SETTLED by the IT PO (2026-10-05): the labelled set is this trial's, committed durably at docs/analysis/2026-10-03-jev-trial-criteria-grouping/ and used as the fixture source; the selection rule (highest precision, recall breaks ties) is the precision rule and no minimum recall applies; the acceptance setting is Jev's probability threshold, default 0.8.
   FLOW BACK-LINK (for step.implements, to be applied by the store owner): leafcutter/criteria-library: suggest-grouping.
   Authored by the business-analyst stage of /plan-feature (route strategic) under decision dec-93c1c730463c1f3c; readiness draft, no product approval implied.
 product_truth:

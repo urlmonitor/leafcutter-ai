@@ -7,18 +7,20 @@ level: L1
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
-priority: medium
+readiness: approved
+priority: high
 roadmap_phase: phase_kernel_2_knowledge
 criteria: |
   Similar questions merge into one category, so each concern is weighed once.
 
   Questions that ask the same thing in different wording are gathered into one
-  category with one preferred wording, and related categories can sit under a
-  broader one, so a decision does not weigh the same concern twice and the
-  library stays small enough to browse. How the grouping is worked out is still
-  to be decided; whichever way is chosen, its groupings are suggestions a person
-  can accept, change or undo.
+  category with one preferred wording, so a decision does not weigh the same
+  concern twice and the library stays small enough to browse. Grouping first
+  puts together questions whose wording is identical; for each remaining
+  question, Jev, the kernel's judging model, picks an existing category only
+  when it is sure, and otherwise the question starts a new category of its own.
+  Its groupings are suggestions a person can accept, change or undo, and only a
+  person places a category under a broader one.
 depends_on:
   - DK-500
 doc_links:
@@ -26,6 +28,10 @@ doc_links:
     relationship: governs
     status: exists
     relevance: "Preferred label, alternative labels and an optional broader category (SKOS-style); regrouping edits only category data (criterion crit.regroup_without_rewrites)."
+  - path: docs/decisions/dec-a070edfb6465bced.yaml
+    relationship: governs
+    status: exists
+    relevance: "Grouping method (option opt.jev_pick_existing, approved by human:user 2026-10-04): exact label or criterion-id matches grouped by code; one Jev choice per remaining candidate over all existing categories plus 'none', merge suggested only at p >= 0.8; leftovers become one-member categories made by code; no LLM; no broader-link suggestions."
   - path: docs/product-truth/mock-data/leafcutter/criterion-categories.mock.json
     relationship: specified-by
     status: exists
@@ -33,14 +39,18 @@ doc_links:
   - path: docs/architecture/adrs/ADR-053-intelligence-selection-deterministic-jev-llm-human.md
     relationship: constrains
     status: exists
-    relevance: "Whatever clustering method is chosen should use the cheapest mechanism that groups reliably: deterministic code, then Jev, then an LLM, then a human."
+    relevance: "The decided method follows the cost order: deterministic code first, Jev next, no LLM, and a person accepts or changes the result."
 assigned_agent: null
 estimated_complexity: null
 delivers_to: null
 expects_from: null
 origin_agent: product-owner
 created: 2026-10-03
-amended_by: []
+amended_by:
+  - reason: "method decided in dec-a070edfb6465bced"
+    date: '2026-10-05'
+    by: product-owner
+    summary: "Criteria reworded. Was: 'and related categories can sit under a broader one, ... How the grouping is worked out is still to be decided; whichever way is chosen, its groupings are suggestions a person can accept, change or undo.' Now: identical wording is grouped first, Jev picks an existing category only when it is sure, otherwise the question starts its own category; groupings stay suggestions a person can accept, change or undo, and only a person sets a broader category (the decision rules out broader-link suggestions). Notes changed from OPEN to DECIDED; governing doc_link to dec-a070edfb6465bced added; ADR-053 relevance updated. Requested by the /plan-feature coordinator after the user approved the tree."
 superseded_by: null
 covered_by:
   - DK-500b-1
@@ -52,20 +62,27 @@ implemented_by: []
 documentation_triggers:
   - reference-doc
 notes: |
-  OPEN: THE CLUSTERING METHOD IS NOT DECIDED. The user asked that criteria can
-  be clustered "somehow". dec-93c1c730463c1f3c settles where groupings are
-  stored, not how they are worked out. Do not assume a method at L2. Candidate
-  families for a later decision: deterministic wording and label matching, text
-  or embedding similarity, Jev judging "same question?" pairs, LLM proposal, or
-  a mix of these. ADR-053 orders them by cost. Recommendation: run a kernel
-  decision on the method before the BA writes method-specific L2s. Method-neutral
-  L2s (for example "a grouping is a suggestion until a person accepts it" and
-  "no label belongs to two live categories") can proceed now.
+  DECIDED: THE CLUSTERING METHOD (2026-10-04). It is decision
+  dec-a070edfb6465bced, option opt.jev_pick_existing, approved by human:user.
+  dec-93c1c730463c1f3c settles where groupings are stored; this decision
+  settles how they are worked out. In order:
+    1. Code groups exact label or criterion-id matches.
+    2. For each remaining candidate, Jev answers one bounded choice over ALL
+       existing categories (preferred plus alternative labels) plus 'none',
+       while the library fits in one choice question. A merge is suggested only
+       at p >= 0.8, the trial's 100% precision point.
+    3. Candidates Jev leaves unassigned become one-member candidate categories,
+       made by code and worded as the candidate.
+  No LLM is involved, and grouping makes no broader-link suggestions. At cold
+  start there are no categories, so every candidate becomes a one-member
+  candidate. Within a decision run, each drafted question gets one Jev choice,
+  inside the run's Jev budget. The decision record still calls this
+  requirement 'AC DK-300b'; it was renumbered to DK-500b on 2026-10-05.
 
-  SCOPE. Grouping applies in three places:
-    1. to mined candidates (DK-500a),
+  SCOPE. Grouping applies in two places:
+    1. to mined candidates (DK-500a), and
     2. to questions drafted new for a decision (DK-500e), which may belong to an
-       existing category, and
-    3. to existing categories, which may sit under a broader one.
-  Merges and splits that a person makes are DK-500c. This L1 covers only the
-  suggested grouping.
+       existing category.
+  Broader links are not suggested by grouping. A person sets them, and the
+  checks on person-set broader values are in DK-500b-1-i. Merges and splits
+  that a person makes are DK-500c. This L1 covers only the suggested grouping.

@@ -5,19 +5,19 @@ components:
 - decision_kernel
 level: L2
 status: active
-readiness: draft
+readiness: approved
 req_status: draft
-priority: medium
+priority: high
 work_status: todo
 roadmap_phase: phase_kernel_2_knowledge
 criteria: |
   Given the grouping behaviours DK-500b-1 to DK-500b-4,
   When a reader opens the grouping reference,
-  Then it lists the fields of a grouping suggestion (the placed category or "none", preferred wording, other wordings, broader category, reason),
+  Then it lists the fields of a grouping suggestion (the placed category or "none", preferred wording, other wordings, reason), and states that a broader category is never suggested and appears only when a person has set it,
   And it states the four settled rules: cheapest placement first, precision over recall, in-run grouping within the run's Jev budget and free on an empty library, and every grouping a suggestion a person accepts, changes or undoes,
   And it states the invariants: no label in two live categories, broader never loops and never names a retired category,
   And it defines precision, recall and the share left at "none" for a labelled set and an acceptance setting,
-  And it marks the grouping method as pending the decision of kernel run run-b5af8c7fae2248ba, without describing any method as chosen.
+  And it describes the grouping method decided in dec-a070edfb6465bced: code places exact label and criterion-id matches without any model call, Jev then picks one existing category or "none" for each remaining wording and a merge is suggested only at p >= 0.8, each wording left at "none" becomes a one-member candidate category made by code, no language model is asked, and no broader category is ever suggested.
 depends_on:
 - DK-500b
 - DK-500b-1
@@ -33,8 +33,10 @@ expects_from: null
 change_target: docs
 risk_surface: internal
 it_requirements:
-- 'ENRICHMENT-BLOCKED on a BA amendment: the last Then clause requires the reference to mark the method as pending kernel run run-b5af8c7fae2248ba without describing any method as chosen, but dec-a070edfb6465bced (approved 2026-10-04) has chosen it. Building the page as written would document a false state, so readiness stays draft until the criteria are amended.'
-- 'Once amended: one reference page under docs/reference/ with reference frontmatter. It lists the suggestion fields as built (DK-500b-1 contract), the four settled rules, the invariants, the precision / recall / none-share definitions exactly as the evaluation command computes them (DK-500b-2), the 0.8 threshold with its trial evidence and caveats, the shared normalisation rule, the library-size bound and the cold start.'
+- 'One reference page under docs/reference/ with reference frontmatter (check_doc_frontmatter must pass). It lists the suggestion fields as built in the DK-500b-1 contract (placement: category id or none, pref_label, alt_labels, reason with its kind and Jev probability) and states that broader is never suggested and is present only when a person set it.'
+- 'It describes the method exactly as dec-a070edfb6465bced decided it and DK-500b-3 builds it, including the parts the criteria leave implicit: the shared wording normalisation (Unicode NFC, trimmed, whitespace collapsed, case-folded, punctuation significant), criterion-id placements shown with reason criterion_id, the one-choice-question bound (reason library_exceeds_choice_bound, never a shortlist), the configured 0.8 threshold and the cold start with no Jev call.'
+- Precision, recall and the none share are defined exactly as the evaluation command computes them (DK-500b-2). The trial figures and caveats come from the committed trial summary (linked in doc_links) and are linked rather than restated loosely.
+- Write it only after DK-500b-1 to DK-500b-4 are implemented. The reference documents behaviour and closes no behavioural AC.
 test_required: false
 doc_links:
 - path: docs/decisions/dec-93c1c730463c1f3c.yaml
@@ -53,6 +55,10 @@ doc_links:
   relationship: governs
   status: exists
   relevance: 'Grouping method (opt.jev_pick_existing, approved by human:user 2026-10-04): code places exact label or criterion-id matches, then Jev answers one bounded choice per wording over all existing categories plus ''none'' while the library fits one choice question, a merge only at p >= 0.8; leftovers become code-made one-member candidates; no LLM, no broader-link suggestions; in a run one Jev choice per drafted question within the run''s Jev budget. Its question says ''AC DK-300b'', which is DK-500b after the 2026-10-05 renumbering.'
+- path: docs/analysis/2026-10-03-jev-trial-criteria-grouping/summary.md
+  relationship: related
+  status: exists
+  relevance: 'The Jev trial behind the 0.8 threshold: per-threshold precision, recall and none share, and the caveats the reference must carry.'
 origin_agent: business-analyst
 created: 2026-10-04
 amended_by:
@@ -60,8 +66,20 @@ amended_by:
   date: '2026-10-05'
   by: it-po
   summary: 'Technical enrichment: assigned_agent confirmed, estimated_complexity, change_target docs, risk_surface, it_requirements and doc_links set; test_required false (documentation only). readiness kept draft: the criteria still require the method to be shown as pending, which dec-a070edfb6465bced contradicts. BA criteria unchanged.'
+- reason: method decided in dec-a070edfb6465bced
+  date: '2026-10-05'
+  by: business-analyst
+  summary: 'Last Then clause rewritten. Was: "And it marks the grouping method as pending the decision of kernel run run-b5af8c7fae2248ba, without describing any method as chosen." Now it describes the decided method (opt.jev_pick_existing): exact label and criterion-id matches placed by code, one Jev choice of an existing category or none per remaining wording with a merge only at p >= 0.8, leftovers as code-made one-member candidates, no language model, no broader suggestions. Other criteria and the IT PO fields unchanged.'
+- reason: method decided in dec-a070edfb6465bced
+  date: '2026-10-05'
+  by: business-analyst
+  summary: 'First Then clause: "broader category" removed from the suggestion fields and qualified. Was: "Then it lists the fields of a grouping suggestion (the placed category or "none", preferred wording, other wordings, broader category, reason),". Now the fields are the placed category or none, preferred wording, other wordings and reason, and the reference states that a broader category is never suggested and appears only when a person has set it. Other criteria and the IT PO fields unchanged.'
+- reason: it-po-closure-after-ba-rewording
+  date: '2026-10-05'
+  by: it-po
+  summary: 'BA amendment of the first and last Then clauses received: the ENRICHMENT-BLOCKED it_requirement and note are removed, it_requirements are aligned with the amended criteria (no broader in the suggestion fields; the decided method), a related link to the committed trial evidence is added, and readiness draft -> reviewed. Criteria unchanged.'
 superseded_by: null
 notes: |
   Documentation AC answering DK-500b's reference-doc trigger. Its deliverable is the document only.
-  IT PO (2026-10-05): the method is settled by dec-a070edfb6465bced (run-b5af8c7fae2248ba was cancelled). The last Then clause must be amended by the BA to describe the decided method; until then this AC is enrichment-blocked and stays readiness draft.
+  IT PO (2026-10-05): the method is settled by dec-a070edfb6465bced (run-b5af8c7fae2248ba was cancelled). The BA amended the first and last Then clauses to the decided method, so the earlier enrichment block is lifted and readiness is reviewed.
   Authored by the business-analyst stage of /plan-feature (route strategic) under decision dec-93c1c730463c1f3c; readiness draft, no product approval implied.

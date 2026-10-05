@@ -1,13 +1,13 @@
 id: DK-500b-3
-title: Code places what it can, Jev places what code cannot, and a language model proposes only for what both leave unplaced
+title: Code places what it can, Jev places what code cannot, and code makes a one-member candidate of what both leave unplaced
 component: decision-kernel
 components:
 - decision_kernel
 level: L2
 status: active
-readiness: reviewed
+readiness: approved
 req_status: draft
-priority: medium
+priority: high
 work_status: todo
 roadmap_phase: phase_kernel_2_knowledge
 criteria: |
@@ -15,8 +15,8 @@ criteria: |
   When groupings are suggested,
   Then the identical wording is placed in cat-1dc11c5a2ffa7310 without any Jev or language-model call,
   And Jev is asked only about the two wordings that are not identical to a label,
-  And a language model is asked to propose a new category only for wordings that both code and Jev left at "none", and never for a wording already placed,
-  And a category a language model proposes is a candidate like a mined one, waiting for a person's approval.
+  And each wording that both code and Jev left at "none", such as "Does the option keep secrets out of the published records?", becomes a one-member candidate category made by code and worded as that wording,
+  And no language model is asked at any point, and each code-made candidate waits for a person's approval like a mined one.
 depends_on:
 - DK-500b
 - DK-500b-1
@@ -33,10 +33,10 @@ change_target: code
 risk_surface: internal
 it_requirements:
 - 'Order, per dec-a070edfb6465bced: (1) code places a wording that equals a preferred or other label of an existing category, or whose criterion id equals a member''s criterion id, with no Jev or model call; (2) Jev answers one bounded choice question per remaining wording; (3) wordings Jev leaves at none or below the threshold become one-member candidate categories made by code, worded as the wording.'
-- No language model and no host request is used anywhere in grouping, offline or in a run, and the tests count zero host or LLM requests. The criteria's language-model clauses are therefore satisfied with no language-model call at all (see the caveat in notes).
+- No language model and no host request is used anywhere in grouping, offline or in a run; the tests count zero host or LLM requests. A wording left at none becomes a one-member candidate made by code, proposed and waiting for a person's approval like a mined candidate.
 - 'Jev question form: one choice question per wording. The options are every existing non-retired category the caller can see (published, plus staged and open candidates when offline), each described by its preferred and other labels, plus ''none''. Category ids are opaque option keys; criterion ids and sources are not shown to Jev. Questions are batched up to jev.max_questions_per_call per call.'
 - 'Bound: Jev is asked only while the full option list fits one choice question within the configured Jev request bounds (jev.max_state_chars). When it does not fit, no Jev call is made, the wordings stay at none with reason library_exceeds_choice_bound, and the condition is reported. The option list is never truncated or silently shortlisted.'
-- A criterion-id placement carries reason criterion_id so the person sees it at review, because decision-local criterion ids can collide across decisions (dec-93c1c730463c1f3c, crit.stable_identity).
+- Criterion-id matching stays in the exact-match step, as dec-a070edfb6465bced decided and as the user confirmed on 2026-10-05, although decision-local criterion ids can collide across decisions (dec-93c1c730463c1f3c, crit.stable_identity). Every criterion-id placement therefore carries reason criterion_id and names the matched member pair, so the person sees at review that the match rests on the id and not on the wording.
 - 'Wording equality (''exact match'', ''identical'', ''repeat'', label uniqueness) is one shared rule for every caller (offline grouping, in-run grouping, publish label checks, drafted-repeat removal, edit detection): Unicode NFC, trimmed, internal whitespace collapsed to one space, case-folded; punctuation and word order stay significant. No caller may apply a looser or stricter rule of its own.'
 - Each wording's placement reason and its Jev and model call counts are exposed in the result; these are the criteria's observables.
 - 'Cold start: with no existing category no Jev call is made, and every wording becomes a one-member candidate.'
@@ -106,12 +106,21 @@ amended_by:
   date: '2026-10-05'
   by: it-po
   summary: 'Technical enrichment: assigned_agent confirmed, estimated_complexity, change_target, risk_surface, it_requirements, contracts, doc_links and the test contract set; readiness draft -> reviewed. BA criteria unchanged.'
+- reason: method decided in dec-a070edfb6465bced
+  date: '2026-10-05'
+  by: business-analyst
+  summary: 'Title and the third and fourth Then clauses reworded to the decided method (opt.jev_pick_existing). Was: title "Code places what it can, Jev places what code cannot, and a language model proposes only for what both leave unplaced"; clauses "And a language model is asked to propose a new category only for wordings that both code and Jev left at "none", and never for a wording already placed," and "And a category a language model proposes is a candidate like a mined one, waiting for a person''s approval." Now leftovers become code-made one-member candidates and no language model is asked. Given, When, the first two Then clauses and the IT PO fields unchanged.'
+- reason: it-po-closure-after-ba-rewording
+  date: '2026-10-05'
+  by: it-po
+  summary: 'After the BA rewording: the caveat on the language-model clauses is resolved (notes and the no-LLM it_requirement), and the user''s 2026-10-05 choice to keep criterion-id matching is recorded with the review-visible reason criterion_id. Criteria unchanged.'
 superseded_by: null
 notes: |
   DECIDED METHOD (replaces the earlier pending-method note, which named the cancelled run run-b5af8c7fae2248ba): dec-a070edfb6465bced, option opt.jev_pick_existing, chosen by human:user on 2026-10-04 in run run-14655bf6d5e84cb3. Its question still says 'AC DK-300b' because the record is append-only; that is DK-500b after the 2026-10-05 renumbering. The method: (1) code places every wording that exactly matches a preferred or other label of an existing category, or shares a criterion id with a member, with no model call; (2) Jev answers one bounded choice per remaining wording over ALL existing non-retired categories (each shown by its preferred and other labels) plus 'none', while the library fits one choice question, and a merge is suggested only at p >= 0.8; (3) wordings left at 'none' become one-member candidate categories made by code, worded as the wording. No LLM anywhere in grouping and no broader-link suggestions. Cold start: no categories, so every wording is its own one-member candidate and Jev is not called. In a decision run: one Jev choice per drafted question within the run's Jev budget. Evidence for p >= 0.8: a live Jev trial on 82 wordings (22 in-category, 56 none, 4 pair probes) measured 100% precision (12/12) and 55% recall (12/22) at p >= 0.8, 94% / 68% at 0.7 and 78% / 82% at 0.5; caveats: LLM-drafted mock gold set approved as mock data, one run at one seed, small sample.
   USER RULE (a), settled: an LLM generates categories only for what code and Jev cannot place. The user's original words: "only need LLMs to generate further categories if jev thinks some are missing", applied to grouping as well as to gap drafting (ADR-053 order: deterministic code, then Jev, then an LLM, then a human).
   SETTLED (IT PO, 2026-10-05, under dec-a070edfb6465bced): "identical" is equality under one shared normalisation (Unicode NFC, trimmed, whitespace collapsed, case-folded; punctuation significant), and no LLM is used at all: the "none" wordings become one-member candidates made by code. The "secrets" wording is illustrative and not in the mock data.
-  CAVEAT FOR THE BA: the third and fourth Then clauses (and the title) still describe a language model proposing categories; under the decided method they hold only because no language model is ever asked. Recommend rewording them to the decided method (leftovers become code-made one-member candidates; no language model is asked).
+  RESOLVED (IT PO, 2026-10-05): the BA reworded the title and the third and fourth Then clauses to the decided method (leftovers become code-made one-member candidates; no language model is asked), so the earlier caveat on the language-model clauses is closed.
+  CRITERION-ID MATCHING KEPT (user, 2026-10-05): asked whether to drop criterion-id matching because decision-local criterion ids collide across decisions, the user chose to keep it as dec-a070edfb6465bced decided. The safeguard is visibility: each criterion-id placement shows reason criterion_id and the matched pair at review, where the person can change or undo it.
   Observable through the per-wording count of Jev and language-model calls.
   FLOW BACK-LINK (for step.implements, to be applied by the store owner): leafcutter/criteria-library: suggest-grouping.
   Authored by the business-analyst stage of /plan-feature (route strategic) under decision dec-93c1c730463c1f3c; readiness draft, no product approval implied.

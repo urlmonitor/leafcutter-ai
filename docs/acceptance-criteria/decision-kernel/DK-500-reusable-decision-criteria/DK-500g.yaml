@@ -8,8 +8,8 @@ level: L1
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
-priority: medium
+readiness: approved
+priority: high
 roadmap_phase: phase_kernel_2_knowledge
 criteria: |
   Categories appear beside the decisions that used them, ready to explore.
@@ -39,7 +39,11 @@ delivers_to: null
 expects_from: null
 origin_agent: product-owner
 created: 2026-10-03
-amended_by: []
+amended_by:
+  - reason: "ADR-062 merged onto this branch; IT PO confirmation recorded"
+    date: '2026-10-05'
+    by: product-owner
+    summary: "Notes only; the criteria text is unchanged. 'They are on main but not yet on this branch' now says ADR-062 and knowledge/ reached this branch with the 2026-10-05 merge of origin/main; the IT PO's confirmation of the ADR-062 graph target and of knowledge_management as the second component is recorded. Requested by the /plan-feature coordinator after the user approved the tree."
 superseded_by: null
 covered_by:
   - DK-500g-1
@@ -61,12 +65,16 @@ notes: |
   its decision"). The importer that reads category records as a native kind is
   ADR-062's. ADR-062 and knowledge/native_types/decision.py were on the branch
   feature/knowledge-retrieval-v01 when the decision cited them (evidence
-  ev-c7f5671559baafaf and ev-b7fc7cba343d593c); that branch merged to main in
-  PR #998, so they are on main but not yet on this branch. The native reader
-  registry is finite, so a new reviewed native kind is needed. The chosen
-  option scored only 0.34 on projectability, so this remains the riskiest part
-  of the goal. The IT PO confirms the graph target and whether
-  knowledge_management is the right second component.
+  ev-c7f5671559baafaf and ev-b7fc7cba343d593c). That branch merged to main in
+  PR #998, and they reached this branch with the 2026-10-05 merge of
+  origin/main. The native reader registry is finite, so a new reviewed native
+  kind is needed. The chosen option scored only 0.34 on projectability, so
+  this remains the riskiest part of the goal.
+
+  IT PO CONFIRMED (2026-10-05, recorded in DK-500g-1's notes): the graph target
+  is the ADR-062 projection, with criterion_category as one new reviewed native
+  kind, and knowledge_management is the right second component (its
+  primary_code includes knowledge/).
 
   Git stays canonical (ADR-059, ADR-060). The graph is derived and rebuildable,
   and edits are never made there.

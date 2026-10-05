@@ -5,9 +5,9 @@ components:
 - decision_kernel
 level: L2
 status: active
-readiness: reviewed
+readiness: approved
 req_status: draft
-priority: medium
+priority: high
 work_status: todo
 roadmap_phase: phase_colony_1_collect
 criteria: |

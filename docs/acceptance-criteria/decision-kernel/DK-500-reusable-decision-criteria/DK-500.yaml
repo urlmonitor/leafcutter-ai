@@ -8,8 +8,8 @@ level: L0
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
-priority: medium
+readiness: approved
+priority: high
 roadmap_phase: phase_kernel_2_knowledge
 criteria: |
   Your approved decision criteria, reused instead of reinvented each time.
@@ -28,6 +28,10 @@ doc_links:
     relationship: governs
     status: exists
     relevance: "Settled storage format for reusable criteria (option opt.category_records_membership_refs, approved by human:user 2026-10-02): one reviewed category record per category with SKOS-style labels, membership held only in the category record as (decision id, criterion id) pairs, records staged in the run root and entered into Git only by a human-run publish, usage counts generated, outcome statistics as Neo4j aggregates (ADR-065)."
+  - path: docs/decisions/dec-a070edfb6465bced.yaml
+    relationship: governs
+    status: exists
+    relevance: "Settled grouping method (option opt.jev_pick_existing, approved by human:user 2026-10-04); governs DK-500b and the grouping step inside DK-500a and DK-500e."
   - path: docs/product-truth/mock-data/leafcutter/criterion-categories.mock.json
     relationship: specified-by
     status: exists
@@ -48,7 +52,11 @@ delivers_to: null
 expects_from: null
 origin_agent: product-owner
 created: 2026-10-03
-amended_by: []
+amended_by:
+  - reason: "refreshed after the grouping-method decision dec-a070edfb6465bced"
+    date: '2026-10-05'
+    by: product-owner
+    summary: "Notes and doc_links only; the criteria text is unchanged. The clustering method is recorded as decided (opt.jev_pick_existing), ADR-062 as merged onto this branch, the user's roadmap answer (anchors kept), and both decisions as governing the tree (doc_link to dec-a070edfb6465bced added). Requested by the /plan-feature coordinator after the user approved the tree."
 superseded_by: null
 covered_by:
   - DK-500a
@@ -81,8 +89,20 @@ notes: |
        The kernel never reads Langfuse on the hot path (ADR-058 section 6,
        ADR-056).
 
-  STILL OPEN: the clustering method (DK-500b). Treat it as a needed capability
-  with no method chosen yet.
+  DECIDED (2026-10-04): the clustering method (DK-500b) is decision
+  dec-a070edfb6465bced, option opt.jev_pick_existing, approved by human:user.
+  Code groups exact label or criterion-id matches. Jev picks an existing
+  category or 'none' per candidate and suggests a merge only at p >= 0.8.
+  Leftovers become one-member categories made by code. No LLM is involved, no
+  broader links are suggested, and in-run grouping stays within the run's Jev
+  budget. See DK-500b's notes.
+
+  GOVERNING DECISIONS. Two decisions now govern this tree (doc_links,
+  relationship governs):
+    - dec-93c1c730463c1f3c, the file type (category records). All 65 ACs in
+      the tree link it.
+    - dec-a070edfb6465bced, the grouping method. This L0, DK-500b and the 23
+      L2/L3s that rest on grouping link it (25 records as of 2026-10-05).
 
   DISTINCT FROM PRECEDENT REUSE. The decision-retrieval flow reuses an earlier
   ANSWER: a whole published decision used as precedent. This goal reuses the
@@ -100,15 +120,17 @@ notes: |
     - "learning store" -> the optional Neo4j colony memory store (ADR-065)
     - "project's knowledge graph" -> a Neo4j projection of the reviewed records
       (the ADR-062 knowledge importer; ADR-062 and its native reader registry
-      merged to main in PR #998 from feature/knowledge-retrieval-v01, and are
-      not yet on this branch, ac-authoring/reusable-criteria-store)
+      merged to main in PR #998 from feature/knowledge-retrieval-v01, and
+      reached this branch, ac-authoring/reusable-criteria-store, with the
+      2026-10-05 merge of origin/main)
 
   ROADMAP ALIGNMENT. Anchored at phase_kernel_2_knowledge ("reusable retrieval
   memory, so evidence is assembled before a specialist model is called"). That
   phase is planned, not active. The active kernel phase is
   phase_kernel_1_founding, and its exit criteria do not mention reusing
-  criteria. DK-500f is anchored at phase_colony_1_collect. No roadmap change was
-  made; the fit is flagged to the user.
+  criteria. DK-500f is anchored at phase_colony_1_collect. The PO flagged this
+  fit to the user, and the user kept these anchors (2026-10-05). No roadmap
+  change was made.
 
   NON-GOAL. Using outcome statistics to choose or rank which categories are
   offered would let colony memory influence behaviour. That belongs to the
