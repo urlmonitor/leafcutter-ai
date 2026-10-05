@@ -17,6 +17,7 @@ from pydantic import Field, JsonValue
 
 from kernel.contracts.base import CorrelationIds, KernelModel, canonical_json, sha256_hex
 from kernel.contracts.capability import Usage
+from kernel.contracts.verbatim import VerbatimJson
 
 
 def json_strings(values: Iterable[str]) -> list[JsonValue]:
@@ -80,7 +81,7 @@ class JevBatch(KernelModel):
     """Questions sharing one state, sent in a single provider call."""
 
     purpose: str = Field(min_length=1)
-    state: dict[str, JsonValue]
+    state: dict[str, VerbatimJson]
     questions: list[QuestionSpec] = Field(min_length=1)
     correlation: CorrelationIds = Field(default_factory=CorrelationIds)
 
@@ -173,4 +174,5 @@ class JevPort(Protocol):
 # - 2026-09-30 22:00 [python-coder]: JevUnavailable, JevInvalidResponse and JevPayloadTooLarge
 #   are defined here (not in jev_errors.py) because ScriptedJev must raise them in P1; P3's
 #   jev_errors.py may re-export and add adapter-only errors. (#KernelBootstrapV0/P1)
+# - 2026-10-03 15:10 [python-coder]: Preserve verbatim goals and separate meaning, caller and clarification channels. (#DK-300/entity-context)
 # ====================================================================

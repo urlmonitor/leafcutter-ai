@@ -12,11 +12,14 @@ import subprocess
 import sys
 from copy import deepcopy
 from pathlib import Path
+from unittest.mock import AsyncMock, Mock
 
+import httpx
 import pytest
+from pydantic import ValidationError
 
 from integrations.retrieval_needs_llm import build_llm_needs_task, make_experiment_service
-from kernel.contracts import Actor, ActorKind, HostWorkRequest, RunStatus, schema_ids
+from kernel.contracts import Actor, ActorKind, HostWorkRequest, RunStatus, TaskInput, schema_ids
 from kernel.contracts.retrieval_needs import RetrievalNeedsOutput, RetrievalNeedsRequest
 from kernel.interaction import SubmissionRejected
 from tests.kernel.helpers import make_scope
@@ -75,26 +78,53 @@ def submission(envelope, packet, response):
             "response_schema_id": packet.output_schema_id, "response": response}
 
 
-def test_real_packet_artifact_and_host_submission_resume_to_typed_output(tmp_path):
+@pytest.mark.parametrize("question_length", [None, 8000])
+def test_real_packet_artifact_and_host_submission_resume_to_typed_output(tmp_path, monkeypatch, question_length):
     # covers: KM-500e-1
     # angle: seam
+    index_read = Mock(side_effect=AssertionError("Unexpected entity-index read"))
+    jev_assess = AsyncMock(side_effect=AssertionError("Unexpected Jev assessment"))
+    async_send = AsyncMock(side_effect=AssertionError("Unexpected async provider request"))
+    sync_send = Mock(side_effect=AssertionError("Unexpected sync provider request"))
+    monkeypatch.setattr("kernel.entity_context.read_index", index_read)
+    monkeypatch.setattr("integrations.retrieval_needs_llm._ForbiddenJev.assess", jev_assess)
+    monkeypatch.setattr(httpx.AsyncClient, "send", async_send)
+    monkeypatch.setattr(httpx.Client, "send", sync_send)
+    request = source_request()
+    if question_length is not None:
+        question = (request.original_question + "\n").ljust(question_length - 2, "x") + "\n "
+        request = source_request(question)
+
     async def check():
-        service, envelope, packet, body = await begin(tmp_path)
+        service, envelope, packet, body = await begin(tmp_path, request)
         try:
+            assert service._env.config.context_enrichment.enabled is False
+            assert service._env.config.entity_context.enabled is False
             assert packet.operation == "interpret_retrieval_needs"
             assert packet.output_schema_id == schema_ids.RETRIEVAL_NEEDS_OUTPUT
             assert packet.output_json_schema
             assert packet.allowed_operations == ["interpret_retrieval_needs"]
-            assert body["request"]["original_question"] == source_request().original_question
+            assert body["request"]["original_question"] == request.original_question
             assert "KM-500c-2" in body["request"]["catalog"]["target_ids"]
-            assert body["request"]["context"] == source_request().context
-            enrichment = body["context_enrichment"]
+            for name in ("context", "known_ids", "source_scope"):
+                assert body["request"][name] == getattr(request, name)
+            for dimension in ("entity_types", "required_fields", "document_types", "relationships"):
+                assert body["request"]["catalog"][dimension] == request.catalog[dimension]
+            assert body.get("context_enrichment") is None
+            enrichment = body["entity_context"]
             assert enrichment["status"] == "disabled"
-            assert enrichment["files_scanned"] == 0
-            assert enrichment["evidence"] == []
-            assert enrichment["sources_consulted"] == []
-            assert enrichment["caller_context"]["conversation"] == []
-            assert enrichment["caller_context"]["observations"] == []
+            assert enrichment["entities"] == []
+            assert enrichment["unresolved"] == []
+            assert enrichment["coverage"]["index_status"] == "disabled"
+            assert enrichment["coverage"]["scan_complete"] is False
+            assert enrichment["coverage"]["index_fingerprint"] is None
+            assert enrichment["budgets"]["lookups"] == 0
+            assert enrichment["budgets"]["jev_calls"] == 0
+            assert body["caller_context"]["conversation"] == []
+            assert body["caller_context"]["observations"] == []
+            assert body["caller_context"]["capabilities"] == []
+            assert body["registered_capabilities"] == ["host.retrieval_needs"]
+            assert body["evidence"] == []
             assert "expected" not in body and "human_gold" not in body
             final = await service.resume_run(envelope.run_id, submission(envelope, packet, controlled_response(body["request"])))
             assert final.status is RunStatus.COMPLETED
@@ -102,11 +132,29 @@ def test_real_packet_artifact_and_host_submission_resume_to_typed_output(tmp_pat
             assert final.output.payload["selections"]["target_ids"] == ["KM-500c-2"]
             assert final.output.payload["engine"] == "host_llm"
             assert final.output.payload["model_id"] is None
+            assert final.output.payload["original_question"] == request.original_question
             assert final.usage_summary.jev_calls == 0
             assert final.usage_summary.host_operations == 1
+            index_read.assert_not_called()
+            jev_assess.assert_not_called()
+            async_send.assert_not_called()
+            sync_send.assert_not_called()
         finally:
             await service._env.aclose()
     asyncio.run(check())
+
+
+def test_needs_request_limit_does_not_expand_with_the_generic_task_goal():
+    # covers: KM-500e-1
+    # angle: boundary
+    scope = make_scope(ROOT, read_roots=["docs"])
+    caller = Actor(id="unit-test", kind=ActorKind.HOST)
+    question = "x" * 8001
+    assert TaskInput(goal=question, caller=caller, scope=scope).goal == question
+    # A caller-created model copy cannot bypass the helper's stricter request boundary.
+    request = source_request().model_copy(update={"original_question": question})
+    with pytest.raises(ValidationError, match="at most 8000"):
+        build_llm_needs_task(request, scope, caller)
 
 
 @pytest.mark.parametrize("mutation", ["unknown_id", "unknown_field", "changed_scope", "changed_question", "extra_approval"])

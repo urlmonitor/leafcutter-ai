@@ -4,7 +4,7 @@ description: "Set up credentials, start a run from the command line, answer the 
 type: how-to
 status: active
 created: 2026-10-01
-last_updated: 2026-10-02
+last_updated: 2026-10-03
 components:
   - decision_kernel
 related_docs:
@@ -22,7 +22,7 @@ related_code:
 
 # How to run the decision kernel
 
-The kernel takes a goal, enriches its context before classifying intent, decides it against repository evidence with the real Jev provider, and
+The kernel takes a goal, recognizes repository terms before classifying intent, decides it against repository evidence with the real Jev provider, and
 pauses whenever it needs host work or a human answer. You drive it with `python -m kernel`.
 
 ## Prerequisites
@@ -141,11 +141,22 @@ so no extra Jev call). Evidence that is on topic but does not answer leaves the 
 with a limitation: `research.answer_threshold` (0.7) sets the bar and
 `research.answer_aware_coverage` (`true`) switches it off.
 
-### Step 3 — Write the task and start the run
+### Step 3 - Prepare entity meanings, write the task and start the run
+
+Prepare the local entity index for the repository and config you will use:
+
+```bash
+python -m kernel entities build --repository-root C:/Users/me/leafcutter
+```
+
+Rebuild after changing canonical source files or source configuration. This is explicit
+maintenance; a run does not rebuild or search the repository before intent if the index is
+missing or stale. It records limited coverage and continues to intent. See the
+[context guide](supply-and-evaluate-kernel-context.md) for bounds, provenance and evaluations.
 
 The goal travels as data, never on a command line. Write a `TaskInput` JSON file and pass it with
 `--input-file`, or pipe it on stdin (`-` or no flag reads stdin). `repository_root` is an absolute
-path; `read_roots` is optional.
+path; `read_roots` is optional. The goal may contain up to 16,000 characters, preserved verbatim.
 
 ```json
 {

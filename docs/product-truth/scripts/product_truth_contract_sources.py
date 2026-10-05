@@ -82,7 +82,7 @@ def model_for(name):
     """Import only this package's reviewed model set, never an authored import path."""
     names = {"retrieval_needs_request", "retrieval_needs_output", "task_input", "scope", "actor",
              "host_work_request", "interaction_submission", "submission_record", "capability_invocation",
-             "capability_result", "run_envelope", "work_item", "decision", "enriched_context", "human_question",
+             "capability_result", "run_envelope", "work_item", "decision", "enriched_context", "entity_context", "human_question",
              "decision_record", "decision_index_entry", "decision_query", "provider_answer", "option", "criterion",
              "option_ranking", "evidence", "knowledge_request", "knowledge_result", "projection_snapshot",
              "answer_requirements", "answer_assessment", "query_descriptor", "query_candidate",
@@ -102,6 +102,7 @@ def model_for(name):
     from kernel.contracts.run import RunEnvelope
     from kernel.persistence.base import SubmissionRecord
     from kernel.contracts.context import EnrichedContext
+    from kernel.contracts.entity_context import EntityContext
     from kernel.contracts.interaction import HumanQuestion
     from kernel.contracts.decision import Decision, ProviderAnswer, Option, Criterion, OptionRanking
     from kernel.contracts.evidence import Evidence, EvidenceBundlePayload
@@ -121,7 +122,7 @@ def model_for(name):
                     "human_answer": HumanAnswerPayload, "goal_request": GoalRequestPayload, "query_descriptor": QueryDescriptor, "query_candidate": QueryCandidate,
                     "jev_batch": JevBatch, "jev_result": JevResult, "choice_answer": ChoiceAnswer, "knowledge_request": KnowledgeRetrievalRequest, "knowledge_result": KnowledgeRetrievalResult,
                     "projection_snapshot": ProjectionSnapshot, "answer_requirements": AnswerRequirements,
-                    "answer_assessment": AnswerAssessment,"decision": Decision, "enriched_context": EnrichedContext, "human_question": HumanQuestion,
+                    "answer_assessment": AnswerAssessment,"decision": Decision, "enriched_context": EnrichedContext, "entity_context": EntityContext, "human_question": HumanQuestion,
                     "decision_record": DecisionRecord, "decision_index_entry": IndexEntry, "decision_query": DecisionQuery,
                     "provider_answer": ProviderAnswer, "option": Option, "criterion": Criterion,
                     "option_ranking": OptionRanking, "evidence": Evidence}

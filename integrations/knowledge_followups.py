@@ -18,6 +18,7 @@ if TYPE_CHECKING:
 import time
 
 from knowledge.contracts import KnowledgeRetrievalRequest, RetrievalBudget
+from integrations.graph_population import preserve_population
 
 
 def response_matches(request: KnowledgeRetrievalRequest, result: KnowledgeRetrievalResult) -> bool:
@@ -107,6 +108,7 @@ async def disclose_selected(
     previous = None
     retrieval_ids = []
     result: KnowledgeRetrievalResult
+    population_result: KnowledgeRetrievalResult | None = None
     for round_index in range(request.budget.max_rounds):
         result = await observed_call(port, current, ctx)
         retrieval_ids.append(result.retrieval_id)
@@ -114,6 +116,8 @@ async def disclose_selected(
             not authorized(ctx, current, e) for e in result.evidence
         ):
             break
+        if population_result is None and "population" in result.stats:
+            population_result = result
         fingerprint = tuple(
             (e.entity.canonical_id, e.entity.source.source_sha, e.entity.source.locator, e.content)
             for e in result.evidence
@@ -168,9 +172,11 @@ async def disclose_selected(
             answer_requirements=initial.answer_requirements,
             assessment=initial.assessment,
         )
+    preserve_population(population_result, result, current)
     return current, result, retrieval_ids
 
 
 # DECISION HISTORY
 # ================================================================================
 # - 2026-10-01 20:00 [python-coder]: Preserve canonical evidence and optional bounded retrieval. (#TICKET-20261001-KM-400e-3)
+# - 2026-10-03 20:00 [python-coder]: Retain authorized population scope and incompleteness across source disclosure. (#TICKETLESS reason=user-approved-DK300-graph-routing)

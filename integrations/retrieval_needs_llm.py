@@ -55,6 +55,7 @@ def _config(root: Path, run_root: Path) -> KernelConfig:
     body["paths"]["run_root"] = str(run_root.resolve())
     body["context_enrichment"]["enabled"] = False
     body["context_enrichment"]["source_ids"] = []
+    body["entity_context"]["enabled"] = False
     body["knowledge"]["backend"] = "none"
     body["memory"]["backend"] = "null"
     body["langfuse"]["enabled"] = False

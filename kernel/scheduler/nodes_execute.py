@@ -87,7 +87,9 @@ def _context(packet: dict[str, Any], ctx: KernelRuntime, budget: ShareBudget
         tracer=ctx.tracer, corr=corr, artifacts=ctx.artifacts, budget=budget,
         evidence_lookup=lookup, clock=ctx.clock, cancel_probe=ctx.cancel_probe,
         descriptor=packet["descriptor"], constraints=tuple(packet.get("constraints", ())),
-        memory=ctx.memory, context_enrichment=packet.get("context_enrichment"))
+        memory=ctx.memory, context_enrichment=packet.get("context_enrichment"),
+        entity_context=packet.get("entity_context"),
+        clarifications=tuple(packet.get("clarifications", ())))
 
 
 def cancelled_result(invocation: CapabilityInvocation) -> CapabilityResult:
@@ -173,4 +175,5 @@ __all__ = ["ELAPSED_KEY", "JEV_RESERVED_KEY", "ShareBudget", "cancelled_result",
 # - 2026-09-30 22:30 [python-coder]: Workers get an even share of the remaining Jev budget
 #   instead of a shared counter: no mutable state crosses workers, the split is deterministic,
 #   and the sum of shares can never exceed the limit. (#KernelBootstrapV0/P4)
+# - 2026-10-03 15:10 [python-coder]: Preserve verbatim goals and separate meaning, caller and clarification channels. (#DK-300/entity-context)
 # ====================================================================

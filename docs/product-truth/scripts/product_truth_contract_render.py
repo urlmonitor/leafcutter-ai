@@ -26,6 +26,7 @@ MODEL_SOURCES = {
     "decision": "kernel/contracts/decision.py", "provider_answer": "kernel/contracts/decision.py",
     "option": "kernel/contracts/decision.py", "criterion": "kernel/contracts/decision.py",
     "option_ranking": "kernel/contracts/decision.py", "evidence": "kernel/contracts/evidence.py",
+    "entity_context": "kernel/contracts/entity_context.py",
     "enriched_context": "kernel/contracts/context.py", "human_question": "kernel/contracts/interaction.py",
     "decision_record": "kernel/memory/models.py", "decision_index_entry": "kernel/memory/index.py",
     "decision_query": "kernel/memory/port.py",

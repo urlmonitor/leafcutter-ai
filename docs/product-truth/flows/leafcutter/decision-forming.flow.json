@@ -4,14 +4,14 @@
   "product": "Leafcutter",
   "name": "Forming a decision in a kernel run",
   "level": "pipeline",
-  "summary": "The kernel enriches the request before intent, researches the decision, then asks you to approve and choose.",
+  "summary": "Recognize entity meanings before intent, then research a decision and ask you to approve and choose.",
   "kind": "data",
   "source": "real",
   "realization": "built",
   "status": "active",
   "readiness": "draft",
   "superseded_by": null,
-  "version": 3,
+  "version": 6,
   "shape_version": 2,
   "tags": [
     "decision-kernel",
@@ -37,8 +37,12 @@
         "task_input/context: object (optional)",
         "task_input/requested_output_schema: null|string (optional; default null)"
       ],
-      "impl_asof": "2026-10-02",
-      "impl_status": "not_started",
+      "implements": [
+        "DK-300b-1",
+        "DK-300b-1-i"
+      ],
+      "impl_asof": "2026-10-03",
+      "impl_status": "done",
       "io_contracts": {
         "consumes": [],
         "produces": [
@@ -112,50 +116,58 @@
     },
     {
       "id": "enrich-context",
-      "label": "Enrich the context",
-      "human": "Before intent, one bounded read-only pass combines supplied host and conversation claims, workspace facts and relevant permitted excerpts, retaining provenance and unknowns without asking you or granting authority.\n\nTaskInput.context is caller-supplied; EnrichedContext is the checkpointed internal result. The no_evidence example has no retrieved evidence and reports its limit.\n\nContract fields and examples (generated)\nConsumes:\n  task_input/goal: string (required)\n  task_input/context: object (optional)\n  task_input/scope: object (required)\n  Runtime contract: [task_input](kernel/contracts/task.py)\nProduces:\n  enriched_context/original_goal: string (required)\n  enriched_context/caller_context: object (optional)\n  enriched_context/status: string (required)\n  enriched_context/evidence: array (optional; default [])\n  enriched_context/limitations: array (optional; default [])\n  enriched_context/truncated: boolean (optional; default false)\n  Runtime contract: [enriched_context](kernel/contracts/context.py)\n\nDecision-record scenario: task_input — task_input; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"goal\": \"Decide how Leafcutter should file decision records as JSON or YAML files under docs/ so later kernel runs can find and reuse them as precedent: which fields a record needs, which classification filters it carries (component, file type or language, repository-wide, roadmap phase), the folder layout and file naming, and how human approval and later corrections are recorded.\",\n  \"caller\": {\n    \"kind\": \"human\",\n    \"id\": \"user\"\n  },\n  \"scope\": {\n    \"workspace_id\": \"leafcutter-ai\",\n    \"repository_root\": \"C:\\\\Users\\\\Hendrik\\\\Code\\\\leafcutter\\\\worktrees\\\\typed-research-binding-v01\"\n  },\n  \"context\": {\n    \"conversation\": []\n  }\n}\n\nDecision-record scenario: enriched_context — enriched_context; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"original_goal\": \"Decide how Leafcutter should file decision records as JSON or YAML files under docs/ so later kernel runs can find and reuse them as precedent: which fields a record needs, which classification filters it carries (component, file type or language, repository-wide, roadmap phase), the folder layout and file naming, and how human approval and later corrections are recorded.\",\n  \"status\": \"no_evidence\",\n  \"evidence\": [],\n  \"limitations\": [\n    \"Illustrative current context pass; not a receipt from the older run.\"\n  ]\n}",
+      "label": "Recognize repository terms",
+      "human": "One deterministic pass recognizes glossary terms, typed artifact categories, qualified symbols and IDs in a scoped local index, supplying compact meanings and honest unknowns before intent; task evidence is retrieved later.\n\nTaskInput.context contains supplied caller claims; EntityContext is the checkpointed internal result. The example is the actual missing-index result shape: recognition remains unavailable with no invented meanings, and intent can still classify the unchanged question. It illustrates this branch rather than claiming a receipt from the older decision run. No repository body search or index rebuild fills the gap. Source: kernel/entity_context.py and kernel/entity_index_read.py.\n\nContract fields and examples (generated)\nConsumes:\n  task_input/goal: string (required)\n  task_input/context: object (optional)\n  task_input/scope: object (required)\n  Runtime contract: [task_input](kernel/contracts/task.py)\nProduces:\n  entity_context/kind: string (optional; default \"entity_context\")\n  entity_context/original_goal: string (required)\n  entity_context/caller_context: object (optional)\n  entity_context/workspace_id: string (required)\n  entity_context/repository_root: string (required)\n  entity_context/registered_capabilities: array (optional; default [])\n  entity_context/status: string (required)\n  entity_context/entities: array (optional; default [])\n  entity_context/unresolved: array (optional; default [])\n  entity_context/coverage/index_status: string (optional; default \"unavailable\")\n  entity_context/coverage/scan_complete: boolean (optional; default false)\n  entity_context/coverage/counts/omitted: integer (optional; default 0)\n  entity_context/budgets/jev_calls: integer (optional; default 0)\n  entity_context/limitations: array (optional; default [])\n  Runtime contract: [entity_context](kernel/contracts/entity_context.py)\n\nDecision-record scenario: task_input — task_input; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"goal\": \"Decide how Leafcutter should file decision records as JSON or YAML files under docs/ so later kernel runs can find and reuse them as precedent: which fields a record needs, which classification filters it carries (component, file type or language, repository-wide, roadmap phase), the folder layout and file naming, and how human approval and later corrections are recorded.\",\n  \"caller\": {\n    \"kind\": \"human\",\n    \"id\": \"user\"\n  },\n  \"scope\": {\n    \"workspace_id\": \"leafcutter-ai\",\n    \"repository_root\": \"C:\\\\Users\\\\Hendrik\\\\Code\\\\leafcutter\\\\worktrees\\\\typed-research-binding-v01\"\n  },\n  \"context\": {\n    \"conversation\": []\n  }\n}\n\nIllustrative missing-index checkpoint projection; not a historical execution receipt — entity_context; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"kind\": \"entity_context\",\n  \"original_goal\": \"Decide how Leafcutter should file decision records as JSON or YAML files under docs/ so later kernel runs can find and reuse them as precedent: which fields a record needs, which classification filters it carries (component, file type or language, repository-wide, roadmap phase), the folder layout and file naming, and how human approval and later corrections are recorded.\",\n  \"caller_context\": {\n    \"conversation\": []\n  },\n  \"workspace_id\": \"leafcutter-ai\",\n  \"repository_root\": \"C:\\\\Users\\\\Hendrik\\\\Code\\\\leafcutter\\\\worktrees\\\\typed-research-binding-v01\",\n  \"status\": \"unavailable\",\n  \"entities\": [],\n  \"unresolved\": [],\n  \"coverage\": {\n    \"index_status\": \"missing\",\n    \"scan_complete\": false,\n    \"counts\": {\n      \"omitted\": 0\n    }\n  },\n  \"limitations\": [\n    \"entity index missing; prepare it explicitly\"\n  ]\n}",
       "order": 2,
-      "agent": "kernel.context_enrichment",
+      "agent": "kernel.entity_context",
       "consumes": [
         "task_input/goal: string (required)",
         "task_input/context: object (optional)",
         "task_input/scope: object (required)"
       ],
       "produces": [
-        "enriched_context/original_goal: string (required)",
-        "enriched_context/caller_context: object (optional)",
-        "enriched_context/status: string (required)",
-        "enriched_context/evidence: array (optional; default [])",
-        "enriched_context/limitations: array (optional; default [])",
-        "enriched_context/truncated: boolean (optional; default false)"
+        "entity_context/kind: string (optional; default \"entity_context\")",
+        "entity_context/original_goal: string (required)",
+        "entity_context/caller_context: object (optional)",
+        "entity_context/workspace_id: string (required)",
+        "entity_context/repository_root: string (required)",
+        "entity_context/registered_capabilities: array (optional; default [])",
+        "entity_context/status: string (required)",
+        "entity_context/entities: array (optional; default [])",
+        "entity_context/unresolved: array (optional; default [])",
+        "entity_context/coverage/index_status: string (optional; default \"unavailable\")",
+        "entity_context/coverage/scan_complete: boolean (optional; default false)",
+        "entity_context/coverage/counts/omitted: integer (optional; default 0)",
+        "entity_context/budgets/jev_calls: integer (optional; default 0)",
+        "entity_context/limitations: array (optional; default [])"
       ],
       "implements": [
-        "DK-200a-1",
-        "DK-200a-1-i",
-        "DK-200a-2",
-        "DK-200a-3",
-        "DK-200a-3-i",
-        "DK-200a-3-ii",
-        "DK-200a-4",
-        "DK-200b-1",
-        "DK-200b-2",
-        "DK-200b-2-i",
-        "DK-200b-3",
-        "DK-200b-3-i",
-        "DK-200b-4",
-        "DK-200b-4-i",
-        "DK-200b-4-ii",
-        "DK-200c-1",
-        "DK-200c-1-i",
-        "DK-200c-1-ii",
-        "DK-200c-2",
-        "DK-200c-2-i",
-        "DK-200c-2-ii",
-        "DK-200d-1",
-        "DK-200d-2",
-        "DK-200d-2-i"
+        "DK-300a-1",
+        "DK-300a-1-i",
+        "DK-300a-2",
+        "DK-300a-2-i",
+        "DK-300a-3",
+        "DK-300a-3-i",
+        "DK-300b-1",
+        "DK-300b-1-i",
+        "DK-300b-2",
+        "DK-300b-2-i",
+        "DK-300b-3",
+        "DK-300b-3-i",
+        "DK-300c-1",
+        "DK-300c-1-i",
+        "DK-300c-2",
+        "DK-300c-3",
+        "DK-300c-3-i",
+        "DK-300d-1",
+        "DK-300d-2",
+        "DK-300d-2-i",
+        "DK-300d-3-i",
+        "DK-300e-1",
+        "DK-300e-2",
+        "DK-300e-2-i"
       ],
-      "impl_asof": "2026-10-02",
+      "impl_asof": "2026-10-03",
       "impl_status": "done",
       "io_contracts": {
         "consumes": [
@@ -188,8 +200,16 @@
         ],
         "produces": [
           {
-            "contract": "enriched_context",
+            "contract": "entity_context",
             "fields": [
+              {
+                "path": "/kind",
+                "types": [
+                  "string"
+                ],
+                "required": false,
+                "default": "entity_context"
+              },
               {
                 "path": "/original_goal",
                 "types": [
@@ -205,6 +225,28 @@
                 "required": false
               },
               {
+                "path": "/workspace_id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/repository_root",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/registered_capabilities",
+                "types": [
+                  "array"
+                ],
+                "required": false,
+                "default": []
+              },
+              {
                 "path": "/status",
                 "types": [
                   "string"
@@ -212,12 +254,52 @@
                 "required": true
               },
               {
-                "path": "/evidence",
+                "path": "/entities",
                 "types": [
                   "array"
                 ],
                 "required": false,
                 "default": []
+              },
+              {
+                "path": "/unresolved",
+                "types": [
+                  "array"
+                ],
+                "required": false,
+                "default": []
+              },
+              {
+                "path": "/coverage/index_status",
+                "types": [
+                  "string"
+                ],
+                "required": false,
+                "default": "unavailable"
+              },
+              {
+                "path": "/coverage/scan_complete",
+                "types": [
+                  "boolean"
+                ],
+                "required": false,
+                "default": false
+              },
+              {
+                "path": "/coverage/counts/omitted",
+                "types": [
+                  "integer"
+                ],
+                "required": false,
+                "default": 0
+              },
+              {
+                "path": "/budgets/jev_calls",
+                "types": [
+                  "integer"
+                ],
+                "required": false,
+                "default": 0
               },
               {
                 "path": "/limitations",
@@ -226,14 +308,6 @@
                 ],
                 "required": false,
                 "default": []
-              },
-              {
-                "path": "/truncated",
-                "types": [
-                  "boolean"
-                ],
-                "required": false,
-                "default": false
               }
             ]
           }
@@ -260,16 +334,30 @@
             }
           },
           {
-            "contract": "enriched_context",
+            "contract": "entity_context",
             "mode": "projection",
             "origin": "illustrative",
-            "label": "Decision-record scenario: enriched_context",
+            "label": "Illustrative missing-index checkpoint projection; not a historical execution receipt",
             "value": {
+              "kind": "entity_context",
               "original_goal": "Decide how Leafcutter should file decision records as JSON or YAML files under docs/ so later kernel runs can find and reuse them as precedent: which fields a record needs, which classification filters it carries (component, file type or language, repository-wide, roadmap phase), the folder layout and file naming, and how human approval and later corrections are recorded.",
-              "status": "no_evidence",
-              "evidence": [],
+              "caller_context": {
+                "conversation": []
+              },
+              "workspace_id": "leafcutter-ai",
+              "repository_root": "C:\\Users\\Hendrik\\Code\\leafcutter\\worktrees\\typed-research-binding-v01",
+              "status": "unavailable",
+              "entities": [],
+              "unresolved": [],
+              "coverage": {
+                "index_status": "missing",
+                "scan_complete": false,
+                "counts": {
+                  "omitted": 0
+                }
+              },
               "limitations": [
-                "Illustrative current context pass; not a receipt from the older run."
+                "entity index missing; prepare it explicitly"
               ]
             }
           }
@@ -279,14 +367,24 @@
     {
       "id": "classify",
       "label": "Classify the intent",
-      "human": "Jev classifies the original goal with the gathered context; an explicit output contract still controls routing, and unresolved user intent can still require clarification.\n\nSource: kernel/intent/classify.py and step.py. ChoiceAnswer is the provider result; the kernel applies it to root routing. An explicit requested_output_schema can skip inference.\n\nContract fields and examples (generated)\nConsumes:\n  enriched_context/original_goal: string (required)\n  enriched_context/status: string (required)\n  enriched_context/evidence: array (optional; default [])\n  enriched_context/limitations: array (optional; default [])\n  Runtime contract: [enriched_context](kernel/contracts/context.py)\nProduces:\n  choice_answer/question_id: string (optional; default \"\")\n  choice_answer/choice: string (required)\n  choice_answer/probabilities: object (required)\n  choice_answer/confidence: null|number (optional; default null)\n  Runtime contract: [choice_answer](kernel/providers/base.py)\n\nDecision-record scenario: enriched_context — enriched_context; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"original_goal\": \"Decide how Leafcutter should file decision records as JSON or YAML files under docs/ so later kernel runs can find and reuse them as precedent: which fields a record needs, which classification filters it carries (component, file type or language, repository-wide, roadmap phase), the folder layout and file naming, and how human approval and later corrections are recorded.\",\n  \"status\": \"no_evidence\",\n  \"evidence\": [],\n  \"limitations\": [\n    \"Illustrative current context pass; not a receipt from the older run.\"\n  ]\n}\n\nDecision-record scenario: choice_answer — choice_answer; illustrative; complete payload:\n{\n  \"question_id\": \"intent.answer_kind\",\n  \"choice\": \"decision\",\n  \"probabilities\": {\n    \"decision\": 1.0\n  },\n  \"confidence\": 1.0\n}",
+      "human": "Jev classifies the unchanged goal using compact entity meanings and separate caller claims; an explicit contract still controls routing, and only unresolved intent or a necessary choice requires clarification.\n\nThe input binding is the internal EntityContext checkpoint passed to intent, not the JSON sent verbatim to Jev. kernel/entity_projection.py creates a bounded meaning projection, with caller_context and registered_capabilities in separate channels; clarifications travel separately from the unchanged goal. The projection can add trust and occurrence counts and shorten retained matches, so it is not an EntityContext DTO. ChoiceAnswer is the provider result; the kernel applies it to root routing. An explicit requested_output_schema can skip inference. Source: kernel/intent/classify.py and kernel/intent/step.py.\n\nContract fields and examples (generated)\nConsumes:\n  entity_context/kind: string (optional; default \"entity_context\")\n  entity_context/original_goal: string (required)\n  entity_context/caller_context: object (optional)\n  entity_context/workspace_id: string (required)\n  entity_context/repository_root: string (required)\n  entity_context/registered_capabilities: array (optional; default [])\n  entity_context/status: string (required)\n  entity_context/entities: array (optional; default [])\n  entity_context/unresolved: array (optional; default [])\n  entity_context/coverage/index_status: string (optional; default \"unavailable\")\n  entity_context/coverage/scan_complete: boolean (optional; default false)\n  entity_context/coverage/counts/omitted: integer (optional; default 0)\n  entity_context/budgets/jev_calls: integer (optional; default 0)\n  entity_context/limitations: array (optional; default [])\n  Runtime contract: [entity_context](kernel/contracts/entity_context.py)\nProduces:\n  choice_answer/question_id: string (optional; default \"\")\n  choice_answer/choice: string (required)\n  choice_answer/probabilities: object (required)\n  choice_answer/confidence: null|number (optional; default null)\n  Runtime contract: [choice_answer](kernel/providers/base.py)\n\nIllustrative missing-index checkpoint projection; not a historical execution receipt — entity_context; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"kind\": \"entity_context\",\n  \"original_goal\": \"Decide how Leafcutter should file decision records as JSON or YAML files under docs/ so later kernel runs can find and reuse them as precedent: which fields a record needs, which classification filters it carries (component, file type or language, repository-wide, roadmap phase), the folder layout and file naming, and how human approval and later corrections are recorded.\",\n  \"caller_context\": {\n    \"conversation\": []\n  },\n  \"workspace_id\": \"leafcutter-ai\",\n  \"repository_root\": \"C:\\\\Users\\\\Hendrik\\\\Code\\\\leafcutter\\\\worktrees\\\\typed-research-binding-v01\",\n  \"status\": \"unavailable\",\n  \"entities\": [],\n  \"unresolved\": [],\n  \"coverage\": {\n    \"index_status\": \"missing\",\n    \"scan_complete\": false,\n    \"counts\": {\n      \"omitted\": 0\n    }\n  },\n  \"limitations\": [\n    \"entity index missing; prepare it explicitly\"\n  ]\n}\n\nDecision-record scenario: choice_answer — choice_answer; illustrative; complete payload:\n{\n  \"question_id\": \"intent.answer_kind\",\n  \"choice\": \"decision\",\n  \"probabilities\": {\n    \"decision\": 1.0\n  },\n  \"confidence\": 1.0\n}",
       "order": 3,
       "agent": "kernel.intent",
       "consumes": [
-        "enriched_context/original_goal: string (required)",
-        "enriched_context/status: string (required)",
-        "enriched_context/evidence: array (optional; default [])",
-        "enriched_context/limitations: array (optional; default [])"
+        "entity_context/kind: string (optional; default \"entity_context\")",
+        "entity_context/original_goal: string (required)",
+        "entity_context/caller_context: object (optional)",
+        "entity_context/workspace_id: string (required)",
+        "entity_context/repository_root: string (required)",
+        "entity_context/registered_capabilities: array (optional; default [])",
+        "entity_context/status: string (required)",
+        "entity_context/entities: array (optional; default [])",
+        "entity_context/unresolved: array (optional; default [])",
+        "entity_context/coverage/index_status: string (optional; default \"unavailable\")",
+        "entity_context/coverage/scan_complete: boolean (optional; default false)",
+        "entity_context/coverage/counts/omitted: integer (optional; default 0)",
+        "entity_context/budgets/jev_calls: integer (optional; default 0)",
+        "entity_context/limitations: array (optional; default [])"
       ],
       "produces": [
         "choice_answer/question_id: string (optional; default \"\")",
@@ -294,19 +392,63 @@
         "choice_answer/probabilities: object (required)",
         "choice_answer/confidence: null|number (optional; default null)"
       ],
-      "impl_asof": "2026-10-02",
-      "impl_status": "not_started",
+      "implements": [
+        "DK-300d-1",
+        "DK-300d-1-i",
+        "DK-300d-2",
+        "DK-300d-2-i",
+        "DK-300c-3-i"
+      ],
+      "impl_asof": "2026-10-03",
+      "impl_status": "done",
       "io_contracts": {
         "consumes": [
           {
-            "contract": "enriched_context",
+            "contract": "entity_context",
             "fields": [
+              {
+                "path": "/kind",
+                "types": [
+                  "string"
+                ],
+                "required": false,
+                "default": "entity_context"
+              },
               {
                 "path": "/original_goal",
                 "types": [
                   "string"
                 ],
                 "required": true
+              },
+              {
+                "path": "/caller_context",
+                "types": [
+                  "object"
+                ],
+                "required": false
+              },
+              {
+                "path": "/workspace_id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/repository_root",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/registered_capabilities",
+                "types": [
+                  "array"
+                ],
+                "required": false,
+                "default": []
               },
               {
                 "path": "/status",
@@ -316,12 +458,52 @@
                 "required": true
               },
               {
-                "path": "/evidence",
+                "path": "/entities",
                 "types": [
                   "array"
                 ],
                 "required": false,
                 "default": []
+              },
+              {
+                "path": "/unresolved",
+                "types": [
+                  "array"
+                ],
+                "required": false,
+                "default": []
+              },
+              {
+                "path": "/coverage/index_status",
+                "types": [
+                  "string"
+                ],
+                "required": false,
+                "default": "unavailable"
+              },
+              {
+                "path": "/coverage/scan_complete",
+                "types": [
+                  "boolean"
+                ],
+                "required": false,
+                "default": false
+              },
+              {
+                "path": "/coverage/counts/omitted",
+                "types": [
+                  "integer"
+                ],
+                "required": false,
+                "default": 0
+              },
+              {
+                "path": "/budgets/jev_calls",
+                "types": [
+                  "integer"
+                ],
+                "required": false,
+                "default": 0
               },
               {
                 "path": "/limitations",
@@ -374,16 +556,30 @@
         ],
         "examples": [
           {
-            "contract": "enriched_context",
+            "contract": "entity_context",
             "mode": "projection",
             "origin": "illustrative",
-            "label": "Decision-record scenario: enriched_context",
+            "label": "Illustrative missing-index checkpoint projection; not a historical execution receipt",
             "value": {
+              "kind": "entity_context",
               "original_goal": "Decide how Leafcutter should file decision records as JSON or YAML files under docs/ so later kernel runs can find and reuse them as precedent: which fields a record needs, which classification filters it carries (component, file type or language, repository-wide, roadmap phase), the folder layout and file naming, and how human approval and later corrections are recorded.",
-              "status": "no_evidence",
-              "evidence": [],
+              "caller_context": {
+                "conversation": []
+              },
+              "workspace_id": "leafcutter-ai",
+              "repository_root": "C:\\Users\\Hendrik\\Code\\leafcutter\\worktrees\\typed-research-binding-v01",
+              "status": "unavailable",
+              "entities": [],
+              "unresolved": [],
+              "coverage": {
+                "index_status": "missing",
+                "scan_complete": false,
+                "counts": {
+                  "omitted": 0
+                }
+              },
               "limitations": [
-                "Illustrative current context pass; not a receipt from the older run."
+                "entity index missing; prepare it explicitly"
               ]
             }
           },
@@ -569,7 +765,7 @@
     {
       "id": "ground",
       "label": "Ground it in the repository",
-      "human": "The research capability retrieves repository evidence with exact, section-aware locators and Jev reranks it; a precedent alone never counts as grounding.\n\nResearchRequestPayload is the registered input; EvidenceBundlePayload is the result. The example evidence path/hash is reconstructed from the existing record, not newly retrieved.\n\nContract fields and examples (generated)\nConsumes:\n  research_request/question: string (required)\n  research_request/existing_evidence_ids: array (optional; default [])\n  research_request/source_restrictions: array (optional; default [])\n  research_request/expected_coverage: string (optional; default \"all_required\")\n  Runtime contract: [research_request](kernel/contracts/payloads.py)\nProduces:\n  evidence_bundle/evidence: array (optional; default [])\n  evidence_bundle/evidence_ids: array (optional; default [])\n  evidence_bundle/limitations: array (optional; default [])\n  evidence_bundle/unknowns: array (optional; default [])\n  Runtime contract: [evidence_bundle](kernel/contracts/evidence.py)\n\nDecision-record scenario: research_request — research_request; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"question\": \"Decide how Leafcutter should file decision records as JSON or YAML files under docs/ so later kernel runs can find and reuse them as precedent: which fields a record needs, which classification filters it carries (component, file type or language, repository-wide, roadmap phase), the folder layout and file naming, and how human approval and later corrections are recorded.\",\n  \"existing_evidence_ids\": [],\n  \"expected_coverage\": \"all_required\"\n}\n\nDecision-record scenario: evidence_bundle — evidence_bundle; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"evidence_ids\": [\n    \"ev-27c8e6023c8b1d02\"\n  ],\n  \"evidence\": [\n    {\n      \"id\": \"ev-27c8e6023c8b1d02\",\n      \"category\": \"prior_decisions\",\n      \"content_hash\": \"06845bf5bd25c6e571dc24b27e0b41b474274dcc130da8c0868ab25ec12f9536\",\n      \"source\": {\n        \"locator\": \"docs/analysis/2026-10-01-colony-memory-stage0-delta-2-reuse-and-mvp.md#L43-L74 (§(c) Minimal Neo4j MVP > c.1 Node and edge set)\"\n      },\n      \"verification\": \"source_verified\"\n    }\n  ],\n  \"limitations\": []\n}",
+      "human": "After intent, research retrieves task evidence with exact locators and Jev reranks it. For a natural-language graph need, offer executable bounded reads with arguments bound from permitted canonical references and trusted component scope; Jev chooses an offered operation, permitted repository fallback or unsupported. Validate confidence, budget and pinned source scope before execution. Explicit operation requests retain their existing path. Entity meanings and precedent alone never count as grounding.\n\nResearchRequestPayload is the registered input; EvidenceBundlePayload is the result. The example evidence path/hash is reconstructed from the existing record, not newly retrieved.\n\nContract fields and examples (generated)\nConsumes:\n  research_request/question: string (required)\n  research_request/existing_evidence_ids: array (optional; default [])\n  research_request/source_restrictions: array (optional; default [])\n  research_request/expected_coverage: string (optional; default \"all_required\")\n  Runtime contract: [research_request](kernel/contracts/payloads.py)\nProduces:\n  evidence_bundle/evidence: array (optional; default [])\n  evidence_bundle/evidence_ids: array (optional; default [])\n  evidence_bundle/limitations: array (optional; default [])\n  evidence_bundle/unknowns: array (optional; default [])\n  Runtime contract: [evidence_bundle](kernel/contracts/evidence.py)\n\nDecision-record scenario: research_request — research_request; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"question\": \"Decide how Leafcutter should file decision records as JSON or YAML files under docs/ so later kernel runs can find and reuse them as precedent: which fields a record needs, which classification filters it carries (component, file type or language, repository-wide, roadmap phase), the folder layout and file naming, and how human approval and later corrections are recorded.\",\n  \"existing_evidence_ids\": [],\n  \"expected_coverage\": \"all_required\"\n}\n\nDecision-record scenario: evidence_bundle — evidence_bundle; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"evidence_ids\": [\n    \"ev-27c8e6023c8b1d02\"\n  ],\n  \"evidence\": [\n    {\n      \"id\": \"ev-27c8e6023c8b1d02\",\n      \"category\": \"prior_decisions\",\n      \"content_hash\": \"06845bf5bd25c6e571dc24b27e0b41b474274dcc130da8c0868ab25ec12f9536\",\n      \"source\": {\n        \"locator\": \"docs/analysis/2026-10-01-colony-memory-stage0-delta-2-reuse-and-mvp.md#L43-L74 (§(c) Minimal Neo4j MVP > c.1 Node and edge set)\"\n      },\n      \"verification\": \"source_verified\"\n    }\n  ],\n  \"limitations\": []\n}",
       "order": 5,
       "agent": "kernel research capability",
       "consumes": [
@@ -584,8 +780,16 @@
         "evidence_bundle/limitations: array (optional; default [])",
         "evidence_bundle/unknowns: array (optional; default [])"
       ],
-      "impl_asof": "2026-10-02",
-      "impl_status": "not_started",
+      "implements": [
+        "DK-300d-3",
+        "DK-300d-4",
+        "DK-300d-4-i",
+        "DK-300d-4-ii",
+        "DK-300d-5",
+        "DK-300d-5-i"
+      ],
+      "impl_asof": "2026-10-03",
+      "impl_status": "done",
       "io_contracts": {
         "consumes": [
           {
@@ -1861,35 +2065,99 @@
     {
       "id": "limited-context",
       "from": "enrich-context",
-      "condition": "sources are absent, unreadable or denied, gathering is disabled, or a configured limit is reached",
+      "condition": "the scoped entity index is missing, stale or partly unsupported, a reference is ambiguous or unknown, recognition is disabled, or a configured bound is reached",
       "label": "Continue with honest limits",
-      "human": "The kernel records what was gathered and what remains unknown; intent receives that outcome and decides whether it can proceed or needs a user answer.\n\nThe same EnrichedContext proceeds to intent, with its limits unchanged; no complete-evidence outcome is claimed.\n\nContract fields and examples (generated)\nConsumes:\n  enriched_context/status: string (required)\n  enriched_context/limitations: array (optional; default [])\n  enriched_context/evidence: array (optional; default [])\n  Runtime contract: [enriched_context](kernel/contracts/context.py)\nProduces:\n  enriched_context/status: string (required)\n  enriched_context/limitations: array (optional; default [])\n  enriched_context/evidence: array (optional; default [])\n  Runtime contract: [enriched_context](kernel/contracts/context.py)\n\nDecision-record scenario: enriched_context — enriched_context; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"original_goal\": \"Decide how Leafcutter should file decision records as JSON or YAML files under docs/ so later kernel runs can find and reuse them as precedent: which fields a record needs, which classification filters it carries (component, file type or language, repository-wide, roadmap phase), the folder layout and file naming, and how human approval and later corrections are recorded.\",\n  \"status\": \"no_evidence\",\n  \"evidence\": [],\n  \"limitations\": [\n    \"Illustrative current context pass; not a receipt from the older run.\"\n  ]\n}",
-      "agent": "kernel.context_enrichment",
+      "human": "Record partial coverage, unresolved references and omitted counts, then classify with those limits; no broad search or index rebuild is used as a fallback, and an unknown entity alone does not require a question.\n\nThe same EntityContext checkpoint proceeds to intent with its limits intact. The illustrative missing-index example has status=unavailable and coverage.index_status=missing; it carries neither a recognized entity nor task evidence. Unknown entities alone do not force a human question.\n\nContract fields and examples (generated)\nConsumes:\n  entity_context/kind: string (optional; default \"entity_context\")\n  entity_context/original_goal: string (required)\n  entity_context/caller_context: object (optional)\n  entity_context/workspace_id: string (required)\n  entity_context/repository_root: string (required)\n  entity_context/registered_capabilities: array (optional; default [])\n  entity_context/status: string (required)\n  entity_context/entities: array (optional; default [])\n  entity_context/unresolved: array (optional; default [])\n  entity_context/coverage/index_status: string (optional; default \"unavailable\")\n  entity_context/coverage/scan_complete: boolean (optional; default false)\n  entity_context/coverage/counts/omitted: integer (optional; default 0)\n  entity_context/budgets/jev_calls: integer (optional; default 0)\n  entity_context/limitations: array (optional; default [])\n  Runtime contract: [entity_context](kernel/contracts/entity_context.py)\nProduces:\n  entity_context/kind: string (optional; default \"entity_context\")\n  entity_context/original_goal: string (required)\n  entity_context/caller_context: object (optional)\n  entity_context/workspace_id: string (required)\n  entity_context/repository_root: string (required)\n  entity_context/registered_capabilities: array (optional; default [])\n  entity_context/status: string (required)\n  entity_context/entities: array (optional; default [])\n  entity_context/unresolved: array (optional; default [])\n  entity_context/coverage/index_status: string (optional; default \"unavailable\")\n  entity_context/coverage/scan_complete: boolean (optional; default false)\n  entity_context/coverage/counts/omitted: integer (optional; default 0)\n  entity_context/budgets/jev_calls: integer (optional; default 0)\n  entity_context/limitations: array (optional; default [])\n  Runtime contract: [entity_context](kernel/contracts/entity_context.py)\n\nIllustrative missing-index checkpoint projection; not a historical execution receipt — entity_context; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"kind\": \"entity_context\",\n  \"original_goal\": \"Decide how Leafcutter should file decision records as JSON or YAML files under docs/ so later kernel runs can find and reuse them as precedent: which fields a record needs, which classification filters it carries (component, file type or language, repository-wide, roadmap phase), the folder layout and file naming, and how human approval and later corrections are recorded.\",\n  \"caller_context\": {\n    \"conversation\": []\n  },\n  \"workspace_id\": \"leafcutter-ai\",\n  \"repository_root\": \"C:\\\\Users\\\\Hendrik\\\\Code\\\\leafcutter\\\\worktrees\\\\typed-research-binding-v01\",\n  \"status\": \"unavailable\",\n  \"entities\": [],\n  \"unresolved\": [],\n  \"coverage\": {\n    \"index_status\": \"missing\",\n    \"scan_complete\": false,\n    \"counts\": {\n      \"omitted\": 0\n    }\n  },\n  \"limitations\": [\n    \"entity index missing; prepare it explicitly\"\n  ]\n}",
+      "agent": "kernel.entity_context",
       "consumes": [
-        "enriched_context/status: string (required)",
-        "enriched_context/limitations: array (optional; default [])",
-        "enriched_context/evidence: array (optional; default [])"
+        "entity_context/kind: string (optional; default \"entity_context\")",
+        "entity_context/original_goal: string (required)",
+        "entity_context/caller_context: object (optional)",
+        "entity_context/workspace_id: string (required)",
+        "entity_context/repository_root: string (required)",
+        "entity_context/registered_capabilities: array (optional; default [])",
+        "entity_context/status: string (required)",
+        "entity_context/entities: array (optional; default [])",
+        "entity_context/unresolved: array (optional; default [])",
+        "entity_context/coverage/index_status: string (optional; default \"unavailable\")",
+        "entity_context/coverage/scan_complete: boolean (optional; default false)",
+        "entity_context/coverage/counts/omitted: integer (optional; default 0)",
+        "entity_context/budgets/jev_calls: integer (optional; default 0)",
+        "entity_context/limitations: array (optional; default [])"
       ],
       "produces": [
-        "enriched_context/status: string (required)",
-        "enriched_context/limitations: array (optional; default [])",
-        "enriched_context/evidence: array (optional; default [])"
+        "entity_context/kind: string (optional; default \"entity_context\")",
+        "entity_context/original_goal: string (required)",
+        "entity_context/caller_context: object (optional)",
+        "entity_context/workspace_id: string (required)",
+        "entity_context/repository_root: string (required)",
+        "entity_context/registered_capabilities: array (optional; default [])",
+        "entity_context/status: string (required)",
+        "entity_context/entities: array (optional; default [])",
+        "entity_context/unresolved: array (optional; default [])",
+        "entity_context/coverage/index_status: string (optional; default \"unavailable\")",
+        "entity_context/coverage/scan_complete: boolean (optional; default false)",
+        "entity_context/coverage/counts/omitted: integer (optional; default 0)",
+        "entity_context/budgets/jev_calls: integer (optional; default 0)",
+        "entity_context/limitations: array (optional; default [])"
       ],
       "outcome_kind": "alternative",
       "implements": [
-        "DK-200b-2",
-        "DK-200b-2-i",
-        "DK-200c-1",
-        "DK-200c-1-i",
-        "DK-200c-1-ii"
+        "DK-300b-3-i",
+        "DK-300c-1-i",
+        "DK-300d-1-i"
       ],
-      "impl_asof": "2026-10-02",
+      "impl_asof": "2026-10-03",
       "impl_status": "done",
       "io_contracts": {
         "consumes": [
           {
-            "contract": "enriched_context",
+            "contract": "entity_context",
             "fields": [
+              {
+                "path": "/kind",
+                "types": [
+                  "string"
+                ],
+                "required": false,
+                "default": "entity_context"
+              },
+              {
+                "path": "/original_goal",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/caller_context",
+                "types": [
+                  "object"
+                ],
+                "required": false
+              },
+              {
+                "path": "/workspace_id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/repository_root",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/registered_capabilities",
+                "types": [
+                  "array"
+                ],
+                "required": false,
+                "default": []
+              },
               {
                 "path": "/status",
                 "types": [
@@ -1898,7 +2166,7 @@
                 "required": true
               },
               {
-                "path": "/limitations",
+                "path": "/entities",
                 "types": [
                   "array"
                 ],
@@ -1906,7 +2174,47 @@
                 "default": []
               },
               {
-                "path": "/evidence",
+                "path": "/unresolved",
+                "types": [
+                  "array"
+                ],
+                "required": false,
+                "default": []
+              },
+              {
+                "path": "/coverage/index_status",
+                "types": [
+                  "string"
+                ],
+                "required": false,
+                "default": "unavailable"
+              },
+              {
+                "path": "/coverage/scan_complete",
+                "types": [
+                  "boolean"
+                ],
+                "required": false,
+                "default": false
+              },
+              {
+                "path": "/coverage/counts/omitted",
+                "types": [
+                  "integer"
+                ],
+                "required": false,
+                "default": 0
+              },
+              {
+                "path": "/budgets/jev_calls",
+                "types": [
+                  "integer"
+                ],
+                "required": false,
+                "default": 0
+              },
+              {
+                "path": "/limitations",
                 "types": [
                   "array"
                 ],
@@ -1918,8 +2226,52 @@
         ],
         "produces": [
           {
-            "contract": "enriched_context",
+            "contract": "entity_context",
             "fields": [
+              {
+                "path": "/kind",
+                "types": [
+                  "string"
+                ],
+                "required": false,
+                "default": "entity_context"
+              },
+              {
+                "path": "/original_goal",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/caller_context",
+                "types": [
+                  "object"
+                ],
+                "required": false
+              },
+              {
+                "path": "/workspace_id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/repository_root",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/registered_capabilities",
+                "types": [
+                  "array"
+                ],
+                "required": false,
+                "default": []
+              },
               {
                 "path": "/status",
                 "types": [
@@ -1928,7 +2280,7 @@
                 "required": true
               },
               {
-                "path": "/limitations",
+                "path": "/entities",
                 "types": [
                   "array"
                 ],
@@ -1936,7 +2288,47 @@
                 "default": []
               },
               {
-                "path": "/evidence",
+                "path": "/unresolved",
+                "types": [
+                  "array"
+                ],
+                "required": false,
+                "default": []
+              },
+              {
+                "path": "/coverage/index_status",
+                "types": [
+                  "string"
+                ],
+                "required": false,
+                "default": "unavailable"
+              },
+              {
+                "path": "/coverage/scan_complete",
+                "types": [
+                  "boolean"
+                ],
+                "required": false,
+                "default": false
+              },
+              {
+                "path": "/coverage/counts/omitted",
+                "types": [
+                  "integer"
+                ],
+                "required": false,
+                "default": 0
+              },
+              {
+                "path": "/budgets/jev_calls",
+                "types": [
+                  "integer"
+                ],
+                "required": false,
+                "default": 0
+              },
+              {
+                "path": "/limitations",
                 "types": [
                   "array"
                 ],
@@ -1948,16 +2340,30 @@
         ],
         "examples": [
           {
-            "contract": "enriched_context",
+            "contract": "entity_context",
             "mode": "projection",
             "origin": "illustrative",
-            "label": "Decision-record scenario: enriched_context",
+            "label": "Illustrative missing-index checkpoint projection; not a historical execution receipt",
             "value": {
+              "kind": "entity_context",
               "original_goal": "Decide how Leafcutter should file decision records as JSON or YAML files under docs/ so later kernel runs can find and reuse them as precedent: which fields a record needs, which classification filters it carries (component, file type or language, repository-wide, roadmap phase), the folder layout and file naming, and how human approval and later corrections are recorded.",
-              "status": "no_evidence",
-              "evidence": [],
+              "caller_context": {
+                "conversation": []
+              },
+              "workspace_id": "leafcutter-ai",
+              "repository_root": "C:\\Users\\Hendrik\\Code\\leafcutter\\worktrees\\typed-research-binding-v01",
+              "status": "unavailable",
+              "entities": [],
+              "unresolved": [],
+              "coverage": {
+                "index_status": "missing",
+                "scan_complete": false,
+                "counts": {
+                  "omitted": 0
+                }
+              },
               "limitations": [
-                "Illustrative current context pass; not a receipt from the older run."
+                "entity index missing; prepare it explicitly"
               ]
             }
           }
@@ -2461,48 +2867,6 @@
       "then": "the kernel receives the verbatim goal and any explicitly supplied caller context as separate input"
     },
     {
-      "for": "enrich-context",
-      "given": "the goal Can you use leafcutter now? I mean run the kernel and know about it?, supplied host context and relevant permitted repository documentation",
-      "when": "a new run starts",
-      "then": "one bounded pass keeps the goal verbatim, distinguishes caller claims from sourced excerpts, records locators and hashes, and checkpoints and traces context before intent; documentation alone never proves live availability"
-    },
-    {
-      "for": "enrich-context",
-      "given": "an explicit output contract or a resumed human or host interaction",
-      "when": "intake or resume proceeds",
-      "then": "every new task gets the initial pass without changing its explicit contract, while a resumed task reuses its checkpointed context"
-    },
-    {
-      "for": "enrich-context",
-      "given": "denied paths, narrow read roots, sensitive values, irrelevant files and configured source, file, excerpt, character and time limits",
-      "when": "gathering searches the allowed sources",
-      "then": "scope and redaction policy hold, bounds are enforced, exclusions and truncation remain honest, and no Jev call, repository mutation or human interaction occurs in this step"
-    },
-    {
-      "for": "enrich-context",
-      "given": "a question requiring a user preference or an unavailable live-runtime fact, and retrieved text instructing the kernel to act",
-      "when": "context enrichment finishes",
-      "then": "the preference and unobserved runtime fact remain unknown, retrieved instructions are evidence without authority, and intent receives the context before any clarification"
-    },
-    {
-      "for": "enrich-context",
-      "given": "a labelled enrichment-only corpus with relevant and irrelevant sources and adversarial cases",
-      "when": "the isolated evaluation invokes production gathering",
-      "then": "case-level checks measure relevance, provenance, request fidelity, safety, bounds and honest unknowns without downstream intent or final-answer grading"
-    },
-    {
-      "for": "limited-context",
-      "given": "missing, unreadable or denied sources, disabled gathering or an exhausted limit",
-      "when": "the single initial pass ends",
-      "then": "gathered, no_evidence, partial, unavailable or disabled status and limitations describe the actual outcome; intent receives that outcome rather than a fabricated fact or an enrichment-owned human pause"
-    },
-    {
-      "for": "classify",
-      "given": "the original goal and the checkpointed initial enrichment outcome",
-      "when": "kernel.intent asks Jev to classify it",
-      "then": "the classifier consumes both before choosing decision, evidence, ideas, change or out of domain, or asking about unresolved intent; an explicit contract still wins"
-    },
-    {
       "for": "precedent",
       "given": "a decision goal and published records in docs/decisions/",
       "when": "the precedent step runs",
@@ -2524,7 +2888,7 @@
       "for": "propose",
       "given": "findings and a goal that names some options",
       "when": "Claude Code generates options and criteria",
-      "then": "the named options are verified against the goal text and kept as the caller's options alongside the proposed ones"
+      "then": "the named options are verified against the goal text and kept as the caller's options alongside the ones"
     },
     {
       "for": "approve-proposals",
@@ -2582,15 +2946,87 @@
     },
     {
       "for": "enrich-context",
-      "given": "a request whose referent is supplied in the conversation context",
-      "when": "intent routes the task onward to research, decision judgments or host work",
-      "then": "the saved context and its trust boundaries reach native judgments and host input artifacts, conversation and observations inform later repository query hints, and the original goal is unchanged"
+      "given": "a goal naming a glossary phrase, a typed document category, a qualified Python symbol and an existing AC ID",
+      "when": "the pre-intent pass runs against a current permitted index",
+      "then": "intent receives bounded definitions, type meanings, symbol signature and purpose, and ID/title/canonical reference; no repository body search, relation expansion, Jev call or human pause occurs"
     },
     {
       "for": "enrich-context",
-      "given": "saved enrichment that would exceed the remaining provider payload budget or repository excerpts forbidden by data policy",
-      "when": "a consumer builds its Jev batch",
-      "then": "optional context is trimmed with a limitation or omitted with a warning if no marker fits, forbidden excerpts are withheld, and the base request and full checkpointed context remain intact"
+      "given": "a 1000-word goal within the 16000-character admission bound, with an ID near its end and repeated glossary mentions",
+      "when": "recognition scans the entire admitted goal before selecting candidates",
+      "then": "the late ID remains eligible, repeated identities share one card, ordinary prose adds no searches, and fixed lookup, time, card and serialized-output bounds hold with honest omitted counts"
+    },
+    {
+      "for": "enrich-context",
+      "given": "a goal exceeding the admitted contract or a required classifier request exceeding the receiver budget",
+      "when": "admission or provider projection checks exact size",
+      "then": "the request is explicitly rejected rather than silently classifying a goal prefix; optional caller and entity projections share the exact serialized receiver allowance"
+    },
+    {
+      "for": "enrich-context",
+      "given": "same-spelling names across namespaces, generic prose, overlapping phrases, duplicate short symbol names and a qualified symbol reference",
+      "when": "deterministic owner-declared matching and resolution run",
+      "then": "boundary-sensitive and type-cued matching excludes false hits, repeated identities deduplicate, bounded ambiguities remain unresolved, and qualification selects the exact permitted symbol"
+    },
+    {
+      "for": "enrich-context",
+      "given": "valid but absent IDs, malformed IDs, unsupported-language symbols and a new feature name",
+      "when": "recognition resolves against canonical owner syntax and scoped index membership",
+      "then": "explicit references retain unknown, invalid or unsupported states without fabricated meaning, full artifact reads or automatic human clarification"
+    },
+    {
+      "for": "enrich-context",
+      "given": "denied paths, narrow read roots, a symlink escape, sensitive values and an index built under broader permissions",
+      "when": "the index is filtered before matching or disclosing metadata",
+      "then": "names, existence, titles, paths, signatures and hashes of forbidden entries are withheld; caller claims and source meanings remain separate untrusted data without granting authority"
+    },
+    {
+      "for": "enrich-context",
+      "given": "an explicit output contract or a resumed human or host interaction",
+      "when": "intake or resume proceeds under the contract",
+      "then": "new tasks receive recognition without changing their explicit contract, while resumed tasks reuse checkpointed interpretation context and later evidence records separate snapshot provenance"
+    },
+    {
+      "for": "enrich-context",
+      "given": "checkpointed interpretation context with changed source files or optional context exceeding a provider budget",
+      "when": "later native judgments or host work consume its projection",
+      "then": "meaning provenance remains distinct from task evidence, changed snapshots remain visible, optional context fits the exact remaining receiver budget, and the original goal and full admitted checkpoint stay intact"
+    },
+    {
+      "for": "enrich-context",
+      "given": "a labeled entity corpus with ordinary prose, long inputs, aliases, symbols, IDs and adversarial definitions",
+      "when": "the recognition-only evaluation and a separate paired intent evaluation run",
+      "then": "case-level checks report identity precision and recall by family, ambiguity, provenance, permissions, bounds and actual lookup work; historical DK-200 tests are not treated as proof of the new design"
+    },
+    {
+      "for": "limited-context",
+      "given": "a missing, stale, invalid or partly unsupported index, disabled recognition or an exhausted bound",
+      "when": "the initial pass finishes",
+      "then": "recognized, no_matches, partial, unavailable or disabled describes its actual coverage; no crawl, BM25, embeddings, wildcard fallback or synchronous full index rebuild occurs before intent"
+    },
+    {
+      "for": "classify",
+      "given": "the unchanged goal, compact entity meanings, separate caller claims and unresolved references",
+      "when": "Jev classifies intent",
+      "then": "an explicit contract wins; unknown new entities can still route as change, and definitions do not prove runtime availability, user preference, approval or task completion"
+    },
+    {
+      "for": "ground",
+      "given": "a classified decision goal and entity meanings containing canonical references",
+      "when": "the routed capability needs evidence",
+      "then": "references guide targeted retrieval after intent; AC criteria, function bodies, relations and precedent are read only as needed and meanings never substitute for supporting evidence"
+    },
+    {
+      "for": "ground",
+      "given": "a natural-language evidence need with permitted canonical IDs or trusted component context and a configured graph read source",
+      "when": "Jev selects among executable offered operations and a permitted repository fallback or unsupported outcome",
+      "then": "trusted code binds and validates bounded arguments, confidence, remaining budget and pinned access scope before execution; returned evidence retains actual request and source provenance"
+    },
+    {
+      "for": "ground",
+      "given": "an explicit operation request, an ordinary repository question or a request for every ticket with high or critical priority without a supporting exhaustive graph operation",
+      "when": "the retrieval route is selected",
+      "then": "explicit operation requests avoid the new selector; permitted repository retrieval remains usable; graph-only scope is never widened and a missing exhaustive Ticket priority filter is not claimed as supported or complete, even after bounded sibling repository evidence"
     }
   ],
   "provenance": [
@@ -2617,14 +3053,32 @@
       "by": "product-truth-expert",
       "date": "2026-10-03",
       "note": "Migrated every node to source-backed checked handoffs and labeled examples; preserved runtime, approvals and AC status."
+    },
+    {
+      "action": "extended",
+      "by": "GPT-6.1 (user-requested entity-context concept)",
+      "date": "2026-10-03",
+      "note": "Design only; see docs/analysis/2026-10-03-kernel-entity-context-concept.md. Existing bounded lexical enrichment remains the running implementation. Changed recognition and limited-context nodes no longer implement historical DK-200 criteria; those ACs and their prior test evidence remain unchanged. New AC pointers await normal planning. Realization is spec and readiness remains draft; no implementation or persona approval is claimed."
+    },
+    {
+      "action": "extended",
+      "by": "BA, IT PO, test writer, Python coders and independent evaluator (user-authorized agent pipeline)",
+      "date": "2026-10-03",
+      "note": "Implemented DK-300 entity meanings before intent, explicit index preparation, bounded verbatim goals, permission-filtered meaning projection and later canonical evidence hints. AC links carry implementation and independent test evidence; see reports/entity-context-verification.md. Historical DK-200 evidence remains historical. Derived status is generated from ACs; readiness remains draft and no human approval is implied."
+    },
+    {
+      "action": "extended",
+      "by": "product-truth expert",
+      "date": "2026-10-05",
+      "note": "Reconciled structured handoffs with merged DK-300 runtime: EntityContext checkpoint replaces old EnrichedContext examples while provider projections and caller/clarification channels remain separate. Retained incoming AC links, scenarios and behavior, restored illustrative-example/wrapper caveats, and preserved historical receipts and approvals. Selected checkpoint examples omit serialized measurements and registry metadata and are labelled illustrative projections. Full model construction with defaults was independently validated; no observed runtime capture is claimed."
     }
   ],
   "impl_summary": {
-    "done": 2,
+    "done": 5,
     "in_progress": 0,
-    "not_started": 15,
+    "not_started": 12,
     "total": 17,
-    "asof": "2026-10-02"
+    "asof": "2026-10-03"
   },
   "contract_definitions": {
     "choice_answer": {
@@ -2644,9 +3098,6 @@
     },
     "decision_report": {
       "model": "decision_report"
-    },
-    "enriched_context": {
-      "model": "enriched_context"
     },
     "evidence": {
       "model": "evidence"
@@ -2689,6 +3140,9 @@
     },
     "task_input": {
       "model": "task_input"
+    },
+    "entity_context": {
+      "model": "entity_context"
     }
   }
 }

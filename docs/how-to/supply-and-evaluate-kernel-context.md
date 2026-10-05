@@ -1,21 +1,22 @@
 ---
 title: "How to supply and evaluate kernel context enrichment"
-description: "Supply caller context, configure the bounded pre-intent gathering pass, and run isolated and paired intent evaluations."
+description: "Prepare an entity index, supply caller context, inspect meanings before intent, and evaluate recognition separately from later research."
 type: how-to
 status: active
 created: 2026-10-02
-last_updated: 2026-10-02
+last_updated: 2026-10-03
 components:
   - decision_kernel
 related_docs:
   - docs/how-to/run-the-decision-kernel.md
   - docs/architecture/components/decision-kernel.md
 related_code:
-  - kernel/context_enrichment.py
-  - kernel/enrichment_projection.py
-  - kernel/config_context.py
-  - tests/kernel/enrichment/eval_runner.py
-  - tests/kernel/enrichment/live_eval.py
+  - kernel/entity_context.py
+  - kernel/entity_index.py
+  - kernel/entity_projection.py
+  - kernel/config_entity.py
+  - tests/kernel/entity_context/eval_runner.py
+  - tests/kernel/entity_context/intent_eval.py
 ---
 
 # How to supply and evaluate kernel context enrichment
@@ -25,11 +26,29 @@ configuration and the run/resume workflow. This guide covers the context pass be
 
 ## Context before intent
 
-Every new task first gets one bounded, read-only context pass. It gathers workspace identity,
-registered capabilities and relevant excerpts from permitted repository sources. The original
-goal is preserved verbatim. Source ids, locators and content hashes make the excerpts auditable;
-registered capabilities and documentation describe the integration, but do not prove that a live
+Every new task first gets one bounded, read-only entity recognition pass. It recognizes glossary
+terms, document genres, knowledge destination kinds, native artifact kinds, Python declarations
+and canonical artifact IDs. Intent receives compact definitions, declaration signatures or titles
+with their provenance. Research retrieves supporting bodies only after intent has selected work.
+Registered capabilities and definitions describe the integration; they do not prove that a live
 kernel call or external service has succeeded.
+
+Prepare the disposable local index explicitly before starting runs:
+
+```bash
+python -m kernel entities build --repository-root C:/Users/me/leafcutter
+```
+
+Use the same `--config` override for preparation and runs. The default index is
+`.leafcutter/kernel/entity-index.json` inside the scoped repository. Rebuild it after changing
+canonical sources, source configuration or readers. Preparation uses canonical native readers
+and Python syntax parsing; it does not import the scoped repository's Python code.
+
+Recognition reads the prepared index and checks its recorded filesystem metadata. It does not
+build an index, search source bodies or call a model. Missing, stale or invalid data yields
+explicit coverage limitations. There is no automatic lexical-search fallback. A later routed
+capability can still retrieve evidence. Freshness checks detect ordinary edits, additions and
+deletions; they are not tamper-proof filesystem attestation.
 
 Supply relevant host and conversation context explicitly in the optional `context` object:
 
@@ -47,68 +66,89 @@ Supply relevant host and conversation context explicitly in the optional `contex
 }
 ```
 
-These fields are caller-supplied claims, kept separate from gathered evidence. The kernel cannot
+These fields are caller-supplied claims, kept separate from repository meanings. The kernel cannot
 read the chat implicitly. Supply only context needed to interpret the request. Neither supplied
 claims nor retrieved instructions grant permissions, approve actions, or choose user preferences.
 
-`context_enrichment` in the config controls `enabled`, `source_ids`, `max_sources`, `max_files`,
-`max_evidence`, `max_excerpt_chars`, `max_chars` (total excerpt text), `max_context_chars` (caller
-context) and `max_seconds`. Retrieval still obeys the source catalog, task read roots, deny rules,
-redaction and data policy. This pass performs no Jev call or host operation and never waits for a
-human. It is an initial grounding pass, not recursive research or a live runtime probe.
+`entity_context` controls the new pass. Defaults admit the entire goal up to 16,000 characters
+without trimming whitespace, consider up to 12,000 characters of supplied context with newer
+conversation first, perform at most 64 distinct lookups and return at most 16 identities. An
+ambiguous name has at most three alternatives. Meanings and signatures are capped at 300
+characters; the compact meaning projection has an 8,000-character serialized budget. At most
+eight unknown references of 128 characters are retained. The recognition deadline is two
+seconds. Configure these through `config/kernel_config.default.json` and overrides; goal
+admission is a contract limit, not a runtime override.
 
-The run checkpoints its context and emits `context.enriched` before `intent.assessed`. Its status
-is `gathered`, `no_evidence`, `partial`, `unavailable` or `disabled`, with limitations and
-truncation recorded honestly. Intent receives that outcome and may still ask about a missing
-preference, unclear user intent or a fact the available context cannot establish. An explicit
-output contract skips automatic answer-kind selection, but still gets context enrichment. Resume
-uses the same run's checkpointed context; a new task starts a fresh pass.
+The full admitted goal is scanned before bounded candidate selection. Repeated mentions share
+one identity card. Coverage distinguishes a completed scan with omitted cards from a scan that
+could not finish. Owner-declared aliases are honored; unknown names do not trigger a broad search
+or automatically ask a human. Permission checks cover source IDs, read roots, deny rules,
+resolved paths, redaction and data policy before names, counts or fingerprints are disclosed.
 
-The same saved context travels into native research and decision judgments and into the host's
-input artifact with provenance and trust boundaries attached. Supplied conversation and
-observations also inform later repository query hints, so a resolved reference remains usable
-after intent classification. The Claude Code and Codex adapters supply relevant context they already know;
-other callers can populate the same `TaskInput.context` fields.
+The run checkpoints `entity_context` and emits `context.recognized` before `intent.assessed`.
+Outcomes are `recognized`, `no_matches`, `partial`, `unavailable` and `disabled`. Inspect
+`entity.recognition`, `entity.resolution` and `entity.projection` for coverage, work, sizes and
+limitations. Recognition makes zero Jev calls; intent and later research have their own calls.
+An explicit output contract still gets recognition even when it skips automatic answer-kind
+selection. Resume reuses the initial checkpoint, while later evidence has its own provenance.
 
-Enrichment shares the receiving Jev batch's `jev.max_state_chars` allowance. When a complete
-snapshot will not fit alongside the request, its optional context projection is shortened and
-marked as truncated; the original request and full checkpointed snapshot stay intact. If even
-a small truncation marker cannot fit, context is omitted from that batch with a warning. Context
-does not increase the configured provider payload limit. Repository excerpts are withheld when
-`data_policy.send_repo_excerpts_to_jev` is false.
+Native judgments and host artifacts label meanings, caller claims and supporting evidence
+separately. Resolved canonical references can guide later retrieval, which reapplies its read
+policy. A meaning cannot prove live availability, fulfill an AC or approve a decision.
 
-The isolated, offline enrichment eval invokes production gathering without intent or final-answer
-grading:
+The native decision and flow sources are indexed for identity recognition but have
+`automatic_research: false`. They enter later research through explicit source selection or a
+resolved canonical locator, preserving ordinary category-based research behavior. If a native
+reader validates a whole store, a narrower run withholds that kind when any required validation
+input is denied; its coverage is partial regardless of the hidden input's contents.
+
+On the entity path, the exact serialized Jev state-plus-questions envelope must fit
+`jev.max_state_chars`. The original request and required question fields have priority over
+optional context. Optional cards and caller projections are reduced with limitations, or omitted
+with a warning if even a marker cannot fit. If required fields alone exceed the limit, the request
+is rejected before a provider call. The checkpoint stays unchanged. Repository meanings are
+withheld from both Jev and the host's optional entity context when
+`data_policy.send_repo_excerpts_to_jev` is false; existing task-evidence handling remains a
+separate downstream channel.
+
+## Evaluate recognition independently
+
+The isolated offline eval invokes production index preparation and recognition against labeled
+fixtures. It scores exact identities, family precision and recall, offsets, provenance, permissions,
+coverage and bounds. Empty corpora fail, and negative controls check that wrong identities,
+permission bypasses and dropped goal tails cannot pass:
 
 ```bash
-python -m tests.kernel.enrichment.eval_runner --output reports/context-enrichment-eval.json
-python -m pytest tests/kernel/enrichment tests/kernel/intent/test_context_enrichment_wiring.py -q
+python -m tests.kernel.entity_context.eval_runner --output reports/entity-context-eval.json
+python -m pytest tests/kernel/entity_context -q
 ```
 
-The labelled cases live in `tests/kernel/fixtures/eval/context_enrichment.json`; case results cover
-relevant-source discovery, provenance, caller context, unknowns, read scope, redaction and bounds.
-The [2026-10-02 isolated report](../../reports/context-enrichment-eval-2026-10-02.json) records
-10/10 cases passing with zero Jev calls.
-The [regression mutation report](../../reports/context-enrichment-mutations-2026-10-02.json)
-records eight deliberately broken variants detected by the tests, covering field limits,
-conversation priority, retained-text hashes, payload projection and data-policy enforcement.
-The variants were applied in memory; production files were not modified.
+Set `AC_ENFORCE_STRICT=1` while implementing ACs so a failing test for unfinished work cannot be
+reported as an expected failure. Cases are in `tests/fixtures/entity_evaluation/corpus.json`.
+The separate `tests.kernel.entity_context.intent_eval.run_pairs(provider)` harness compares
+legacy lexical enrichment and entity meanings with identical caller context and records provider
+usage. Its caller explicitly supplies either a controlled provider or a configured live Jev
+adapter. A controlled-provider result establishes wiring; it is not a live model-quality result.
+Neither recognition scores nor a small paired sample establish a general improvement in answers.
+The [DK-300 verification report](../../reports/entity-context-verification.md) links the tests,
+independent findings, correction loop, live comparison and known regression baseline.
 
-To measure the effect on real intent classification, set `LEAFCUTTER_KERNEL_LIVE=1` in the
-environment and run the separate paired probe with configured Jev credentials:
+## Existing runs and historical evidence
 
-```bash
-python -m tests.kernel.enrichment.live_eval --output reports/context-enrichment-live-eval.json
-```
+Old checkpoints retain `context_enrichment`, excerpt provenance and `context.enriched`; resume
+does not relabel them or rebuild context. The old `context_enrichment` settings and standalone
+`kernel.context_enrichment.gather_context` remain for compatibility. Fresh runs use
+`entity_context`; disabling recognition does not restore lexical gathering.
 
-It makes at most ten assessments: five cases with and without enrichment, using the same current
-intent prompt. The [2026-10-02 live report](../../reports/context-enrichment-live-eval-2026-10-02.json)
-records 5/5 expected enriched labels with ten Jev calls. In that run, "Same for Zephyr, please."
-changed from `insufficient_context` to `ideas`; the original Leafcutter availability question
-was `evidence` in both arms. A preference-dependent choice stayed `decision`, and "That." stayed
-`insufficient_context`. This small probe records one observation per arm; it does not establish a
-general improvement rate, prove live runtime availability, or show that enrichment alone fixed
-the earlier availability-question failure.
+The DK-200 direct-gather tests and the [2026-10-02 isolated report](../../reports/context-enrichment-eval-2026-10-02.json),
+[mutation report](../../reports/context-enrichment-mutations-2026-10-02.json) and
+[live paired report](../../reports/context-enrichment-live-eval-2026-10-02.json) describe the
+historical excerpt implementation. They do not verify the DK-300 entity contract.
+
+The fresh-run wiring criteria DK-200a-1, DK-200a-1-i, DK-200a-2 and DK-200a-4 were
+explicitly amended on 2026-10-04 to retain their ordering, routing, snapshot and handoff
+invariants under `EntityContext`. Their current test links prove those revised criteria;
+their old lexical expectations remain in Git history. DK-300 defines the full new contract.
 
 ## Answer kinds after enrichment
 
@@ -124,8 +164,8 @@ kernel asks Jev one bounded question about the goal and enriched context and pic
 | `out_of_domain` | something unrelated to software engineering or this repository | declined: status `blocked`, limitation `out_of_domain`; never a build opportunity |
 
 If Jev is unsure (thresholds in `config.intent`), the run pauses with a question that offers these
-kinds as choices; free text is allowed, and the answer is classified again as the new statement of
-the goal. At most `intent.max_clarifications` questions are asked; after that the run ends with a
+kinds as choices; free text is allowed and is classified as a separately recorded clarification
+alongside the unchanged original goal. At most `intent.max_clarifications` questions are asked; after that the run ends with a
 plain `unclear_request` message and a suggested rephrasing. If Jev is unavailable the default
 `decision_report` is kept. **To bypass the classification set `requested_output_schema`
 yourself** (`leafcutter.decision_report.v1`, `leafcutter.evidence_bundle.v1` or

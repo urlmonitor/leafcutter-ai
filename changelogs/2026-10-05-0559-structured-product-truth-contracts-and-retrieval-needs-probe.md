@@ -1,7 +1,7 @@
 ---
 title: "Structured Product Truth contracts and retrieval-needs probe"
 date: "2026-10-05"
-time: "12:00"
+time: "05:59"
 type: manual
 components:
   - ux_prototyping

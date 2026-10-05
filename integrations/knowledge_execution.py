@@ -10,7 +10,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from typing import Any
-    from kernel.capabilities.base import ExecutionContext
+    from kernel.capabilities.base import CapabilityExecutor, ExecutionContext
     from kernel.contracts import CapabilityInvocation, CapabilityResult, Usage
     from kernel.contracts.payloads import RetrievalRequestPayload
     from knowledge.ports import KnowledgeRetriever
@@ -21,7 +21,6 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from typing import Any
     from knowledge.contracts import (
-        KnowledgeEvidence,
         KnowledgeRetrievalRequest,
         KnowledgeRetrievalResult,
     )
@@ -33,16 +32,20 @@ if TYPE_CHECKING:
 
 
 import asyncio
-from pathlib import Path, PurePosixPath, PureWindowsPath
+from functools import partial
 
 from pydantic import ValidationError
 
 from integrations.knowledge_capability import map_bounded_evidence
 from integrations.knowledge_followups import disclose_selected, response_matches
+from integrations.knowledge_scope import _authorized, _scoped_request
 from integrations.retrieval_decision import assess_retrieval_mode
+from integrations.graph_selection import assess_graph_operation
+from integrations.graph_selection_result import selection_result
+from integrations.graph_population import selected_requirements
 from kernel.capabilities.decision.jev_support import StopCapability, failed_result
-from kernel.capabilities.retrieval.access import ReadPolicy
 from kernel.contracts import schema_ids
+from kernel.contracts.base import canonical_json
 from kernel.contracts.capability import CapabilityResult
 from kernel.contracts.enums import NeedStatus, ResultStatus
 from kernel.contracts.evidence import EvidenceBundlePayload, UnavailableSource
@@ -54,75 +57,6 @@ from integrations.knowledge_diagnosis import attach_diagnosis
 from integrations.knowledge_assessment import (
     bind_assessment, finalize_assessment, assessment_diagnostics, assessment_limits, assessment_bundle,
 )
-
-
-def _authorized(
-    ctx: ExecutionContext, request: KnowledgeRetrievalRequest, item: KnowledgeEvidence
-) -> bool:
-    """Check revision/repository and existing path policy before exposing evidence.
-
-    Args:
-        ctx: Trusted execution scope, budgets and telemetry owner.
-        request: Validated repository-scoped retrieval request.
-        item: Disclosed neutral evidence to map or authorize.
-
-    Returns:
-        bool: Validated result of the documented operation.
-    """
-    source = item.entity.source
-    if source.repository_id != request.repository_id:
-        return False
-    if (
-        request.revision != "latest"
-        and not request.allow_stale
-        and source.source_sha != request.revision
-    ):
-        return False
-    path, win = PurePosixPath(source.path), PureWindowsPath(source.path)
-    if path.is_absolute() or win.drive or ".." in (*path.parts, *win.parts):
-        return False
-    policy = ReadPolicy(
-        Path(ctx.scope.repository_root).resolve(),
-        tuple(ctx.scope.read_roots),
-        tuple(ctx.config.retrieval.deny_globs),
-        ctx.config.retrieval.max_file_bytes,
-    )
-    return policy.relative(policy.root / source.path) is not None and not policy.is_denied(
-        source.path
-    )
-
-
-def _scoped_request(
-    ctx: ExecutionContext, payload: RetrievalRequestPayload, capabilities: dict[str, Any]
-) -> dict[str, Any]:
-    """Validate trusted repository/source bindings before routing.
-
-    Args:
-        ctx: Existing trusted task scope and configuration.
-        payload: Caller retrieval payload.
-        capabilities: Available retrieval mechanisms.
-
-    Returns:
-        dict[str, Any]: Explicit request fields after scope validation.
-    """
-    config = ctx.config.knowledge
-    root = config.repository_root
-    if capabilities.get("status") != "disabled" and (
-        not root or Path(root).resolve() != Path(ctx.scope.repository_root).resolve()
-    ):
-        raise KnowledgeError(
-            "scope_mismatch", "knowledge repository binding does not match task scope"
-        )
-    raw = dict(payload.knowledge or {})
-    if raw.get("repository_id", config.repository_id) != config.repository_id:
-        raise KnowledgeError("scope_mismatch", "requested knowledge repository is not authorized")
-    if ctx.scope.source_ids and not any(
-        s.id in ctx.scope.source_ids and s.kind == "graph_query" for s in ctx.config.sources
-    ):
-        raise KnowledgeError(
-            "scope_mismatch", "task source scope does not allow knowledge retrieval"
-        )
-    return raw
 
 
 async def _request(
@@ -341,11 +275,11 @@ def _kernel_result(
     result = KnowledgeRetrievalResult.model_validate(result.model_dump())
     if not response_matches(request, result):
         return attach_diagnosis(failed_result(
-            invocation, "knowledge_invalid_response", "knowledge response binding mismatch"
+            invocation, "knowledge_invalid_response", "knowledge response binding mismatch", usage=usage
         ), request, result, "knowledge response binding mismatch")
-    if any(not _authorized(ctx, request, item) for item in result.evidence):
+    if any(not _authorized(ctx, request, item, source_ids=source_ids) for item in result.evidence):
         return attach_diagnosis(failed_result(
-            invocation, "knowledge_scope_violation", "knowledge evidence outside authorized scope"
+            invocation, "knowledge_scope_violation", "knowledge evidence outside authorized scope", usage=usage
         ), request, result, "knowledge evidence outside authorized scope")
     evidence = map_bounded_evidence(ctx, payload, request, result, invocation)
     unmet = _assess_final_answer(request, result)
@@ -424,7 +358,7 @@ async def invoke_knowledge(
     ctx: ExecutionContext,
     payload: RetrievalRequestPayload,
     source_ids: set[str],
-    *, query_catalog: QueryCatalog | None=None,
+    *, query_catalog: QueryCatalog | None=None, fallback: CapabilityExecutor | None = None,
 ) -> CapabilityResult:
     """Validate, execute and map one bounded call through the existing capability boundary.
 
@@ -438,9 +372,28 @@ async def invoke_knowledge(
     Returns:
         CapabilityResult: Validated result of the documented operation.
     """
+    usage: list[Usage] = []
+    selection_diagnostics: dict[str, str] = {}
     try:
         capabilities = await asyncio.wait_for(port.capabilities(), timeout=3)
-        request, reason, usage = await _request(ctx, invocation, payload, capabilities, query_catalog)
+        selected_payload = payload
+        selection_reason = None
+        _scoped_request(ctx, payload, capabilities)
+        if payload.knowledge is None:
+            choice, usage = await assess_graph_operation(ctx, invocation, payload, capabilities)
+            if not choice.retrieve:
+                return await selection_result(ctx, invocation, payload, choice, usage, fallback)
+            selected_payload = payload.model_copy(update={"knowledge": {
+                "mode": choice.mode, "operation": choice.operation,
+                "arguments": choice.arguments, "disclosure_level": 0},
+                "answer_requirements": selected_requirements(payload, choice)})
+            selection_reason = choice.reason
+            selection_diagnostics = {"knowledge_selection": "selected",
+                "knowledge_selected_operation": choice.operation,
+                "knowledge_selected_arguments": canonical_json(choice.arguments)}
+        request, reason, request_usage = await _request(ctx, invocation, selected_payload, capabilities, query_catalog)
+        usage.extend(request_usage)
+        reason = selection_reason or reason
         original_mode = request.mode
         target = (
             request.disclosure_level
@@ -448,7 +401,7 @@ async def invoke_knowledge(
             else {"locator": 0, "summary": 2, "excerpt": 3}[payload.detail]
         )
         request, result, retrieval_ids = await disclose_selected(
-            port, request, ctx, target, _observed_call, _authorized
+            port, request, ctx, target, _observed_call, partial(_authorized, source_ids=source_ids)
         )
         output = _kernel_result(
             invocation, ctx, payload, request, result, reason, usage, source_ids
@@ -456,18 +409,18 @@ async def invoke_knowledge(
         output.diagnostics["knowledge_requested_mode"] = original_mode
         output.diagnostics["knowledge_rounds"] = len(retrieval_ids)
         output.diagnostics["knowledge_retrieval_refs"] = ",".join(retrieval_ids)
-        return output
+        output.diagnostics.update(selection_diagnostics)
     except StopCapability as exc:
         return exc.result
     except ValidationError as exc:
         fields = ", ".join(".".join(map(str, e["loc"])) for e in exc.errors())
         return failed_result(
-            invocation, "knowledge_invalid_request", f"invalid knowledge fields: {fields}"
+            invocation, "knowledge_invalid_request", f"invalid knowledge fields: {fields}", usage=usage
         )
     except (KnowledgeError, TimeoutError, JevInvalidResponse) as exc:
         code = getattr(exc, "code", "unavailable")
         if code not in {"unavailable", "unsupported", "stale", "disabled"}:
-            return failed_result(invocation, f"knowledge_{code}", str(exc))
+            return failed_result(invocation, f"knowledge_{code}", str(exc), usage=usage)
         bundle = EvidenceBundlePayload(
             request_id=invocation.id,
             coverage={payload.need.id: NeedStatus.UNAVAILABLE},
@@ -481,10 +434,14 @@ async def invoke_knowledge(
             output_schema_id=schema_ids.EVIDENCE_BUNDLE,
             output_payload=bundle.model_dump(mode="json"),
             limitations=bundle.limitations,
-            diagnostics={"knowledge_status": code},
+            diagnostics={"knowledge_status": code, **selection_diagnostics},
+            usage=usage,
         )
+    else:
+        return output
 
 
 # DECISION HISTORY
 # ================================================================================
 # - 2026-10-01 20:00 [python-coder]: Preserve canonical evidence and optional bounded retrieval. (#TICKET-20261001-KM-400e-3)
+# - 2026-10-03 20:00 [python-coder]: Select natural-question operations and retain paid usage through binding and execution failures. (#TICKETLESS reason=user-approved-DK300-graph-routing)

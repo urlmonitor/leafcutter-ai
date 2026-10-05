@@ -38,8 +38,7 @@ origin_agent: business-analyst
 created: '2026-10-05'
 amended_by:
 - reason: '2026-10-05 business-analyst: recorded source/test traceability and locally verified completion
-    after IT PO review; retained reviewed readiness and existing parent statuses. Hosted CI and merge
-    remain pending.'
+    after IT PO review; retained reviewed readiness and existing parent statuses. Hosted CI and merge had not yet run at that local verification.'
 superseded_by: null
 covered_by:
 - unit_tests/product_truth/test_flow_io_contracts.py
@@ -55,8 +54,8 @@ notes: 'The test writer verified the Python contract suites: 49 tests plus 16 su
 
   The user accepted the displayed feature and authorized completing its AC/test coverage and merging after
   green checks. Readiness remains reviewed: BA and IT PO reviewed these newly authored criteria; no separate
-  individual-AC user sign-off is claimed. Work status records locally verified implementation. Hosted
-  CI and PR merge are pending. This leaf does not claim production retrieval integration or completion
+  individual-AC user sign-off is claimed. Work status records locally verified implementation. At the local verification recorded on 2026-10-05,
+  hosted CI and merge had not yet run. GitHub PR checks and merge status track release completion. This leaf does not claim production retrieval integration or completion
   of its broader parent.'
 estimated_complexity: L
 change_target:
