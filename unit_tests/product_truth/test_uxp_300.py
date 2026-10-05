@@ -25,7 +25,7 @@ from pathlib import Path
 import yaml
 
 from unit_tests.product_truth._uxp_300_store import (
-    AC_SOURCE, PT_SOURCE, REPO_ROOT, copy_bounded_store,
+    AC_SOURCE, PT_SOURCE, REPO_ROOT, copy_bounded_store, copy_contract_dependencies,
     replace_backlinks, select_ac_paths, write_duplicate_plant, write_json,
 )
 
@@ -261,6 +261,8 @@ class TestBacklinkYamlBoundaries(unittest.TestCase):
     def setUp(self) -> None:
         scripts = PT_SOURCE / "scripts"
         spec = importlib.util.spec_from_file_location("uxp300_yaml_generator", scripts / "generate_product_truth.py")
+        if spec is None or spec.loader is None:
+            raise ImportError("Product Truth generator module has no importable loader")
         self.generator = importlib.util.module_from_spec(spec)
         sys.path.insert(0, str(scripts))
         try:
@@ -368,6 +370,7 @@ class TestTheStorePassesItsOwnValidator(unittest.TestCase):
                 shutil.copytree(src, dst, dirs_exist_ok=True)
             else:
                 shutil.copy2(src, dst)
+        copy_contract_dependencies(store)
         expected_flows = len(list((PT_SOURCE / "flows").rglob("*.flow.json")))
         expected_mocks = len(list((PT_SOURCE / "mock-data").rglob("*.mock.json")))
         expected_acs = len([path for path in AC_SOURCE.rglob("*.yaml") if path.name != "index.yaml"])
