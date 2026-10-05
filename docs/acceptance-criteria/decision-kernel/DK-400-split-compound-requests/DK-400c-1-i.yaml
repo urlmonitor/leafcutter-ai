@@ -56,3 +56,14 @@ notes: |
   Mock data v5 records these parts in not_covered[] (quotes that ARE in the subject, reason
   "beyond the five-part cap"; sample dcp-decision-records-seven-parts), separate from dropped[].
   Flow v5 branch split-too-many-parts.
+product_truth:
+  - flow: leafcutter/decision-forming
+    node: split-too-many-parts
+    node_kind: branch
+    flow_kind: data
+    screen: decision-split-approve
+    mock_data: leafcutter/decisions
+    entities:
+      - Decomposition
+    source: real
+    asof: '2026-10-05'

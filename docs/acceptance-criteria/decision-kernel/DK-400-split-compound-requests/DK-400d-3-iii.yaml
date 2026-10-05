@@ -47,3 +47,14 @@ notes: |
   User decision 2026-10-05: a rejected mid-run split goes ahead as one, like bundled_accepted.
   The mock data covers it (the rejected_kept_whole invariant names found_at mid_run), but no
   sample record shows a rejected mid-run split.
+product_truth:
+  - flow: leafcutter/decision-forming
+    node: split-reject-kept-whole
+    node_kind: branch
+    flow_kind: data
+    screen: decision-split-progress
+    mock_data: leafcutter/decisions
+    entities:
+      - Decomposition
+    source: real
+    asof: '2026-10-05'

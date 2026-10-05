@@ -44,3 +44,13 @@ implemented_by: []
 notes: |
   The likeliest false positive: conjunctions inside one question. The example is the how-to's
   own sample goal with a constraint clause added.
+product_truth:
+  - flow: leafcutter/decision-forming
+    node: split-not-needed
+    node_kind: branch
+    flow_kind: data
+    screen: null
+    mock_data: leafcutter/decisions
+    entities: []
+    source: real
+    asof: '2026-10-05'

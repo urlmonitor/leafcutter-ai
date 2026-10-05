@@ -43,3 +43,15 @@ implemented_by: []
 notes: |
   ADR-060 section 3: a record enters the repository only when a person publishes it. A split
   can stage several records in one run, so the view must make clear none is published yet.
+product_truth:
+  - flow: leafcutter/decision-forming
+    node: split-report
+    node_kind: step
+    flow_kind: data
+    screen: decision-split-progress
+    mock_data: leafcutter/decisions
+    entities:
+      - Decision
+      - Decomposition
+    source: real
+    asof: '2026-10-05'

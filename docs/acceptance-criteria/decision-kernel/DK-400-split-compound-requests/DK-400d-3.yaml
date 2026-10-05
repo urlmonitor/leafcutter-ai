@@ -59,3 +59,24 @@ notes: |
   The rule common to both rejection branches. Its endings are the L3s: turned away
   (DK-400d-3-i, flow split-reject), accepted as one (DK-400d-3-ii) and found mid-run
   (DK-400d-3-iii), both flow split-reject-kept-whole. The report line for each is DK-400f-3.
+product_truth:
+  - flow: leafcutter/decision-forming
+    node: split-reject
+    node_kind: branch
+    flow_kind: data
+    screen: decision-split-progress
+    mock_data: leafcutter/decisions
+    entities:
+      - Decomposition
+    source: real
+    asof: '2026-10-05'
+  - flow: leafcutter/decision-forming
+    node: split-reject-kept-whole
+    node_kind: branch
+    flow_kind: data
+    screen: decision-split-progress
+    mock_data: leafcutter/decisions
+    entities:
+      - Decomposition
+    source: real
+    asof: '2026-10-05'

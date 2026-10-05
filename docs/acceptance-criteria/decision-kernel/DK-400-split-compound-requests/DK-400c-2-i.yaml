@@ -43,3 +43,14 @@ notes: |
   Pins the mock-data rule "verbatim (whitespace normalised)" from both sides, so that neither
   an over-strict nor a fuzzy match passes. Letter case is not normalised by the mock data and is
   not relaxed here.
+product_truth:
+  - flow: leafcutter/decision-forming
+    node: split-dropped
+    node_kind: branch
+    flow_kind: data
+    screen: decision-split-approve
+    mock_data: leafcutter/decisions
+    entities:
+      - Decomposition
+    source: real
+    asof: '2026-10-05'

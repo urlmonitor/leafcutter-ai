@@ -44,3 +44,14 @@ notes: |
   every part unticked, rather than treating it as a rejection. A rejection has different
   consequences per trigger (blocked, or kept whole), so it must be the person's explicit answer,
   never inferred.
+product_truth:
+  - flow: leafcutter/decision-forming
+    node: split-revise
+    node_kind: branch
+    flow_kind: data
+    screen: decision-split-approve
+    mock_data: leafcutter/decisions
+    entities:
+      - Decomposition
+    source: real
+    asof: '2026-10-05'

@@ -47,3 +47,13 @@ implemented_by: []
 notes: |
   Flow branch single-no-capability (PO open point b). A missing ability is never passed off as
   a split.
+product_truth:
+  - flow: leafcutter/decision-forming
+    node: single-no-capability
+    node_kind: branch
+    flow_kind: data
+    screen: null
+    mock_data: leafcutter/decisions
+    entities: []
+    source: real
+    asof: '2026-10-05'

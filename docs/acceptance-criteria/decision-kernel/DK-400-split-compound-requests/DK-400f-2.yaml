@@ -51,3 +51,15 @@ covered_by:
 implemented_by: []
 notes: |
   Flow step split-report. The line texts are those of the mock record.
+product_truth:
+  - flow: leafcutter/decision-forming
+    node: split-report
+    node_kind: step
+    flow_kind: data
+    screen: decision-split-progress
+    mock_data: leafcutter/decisions
+    entities:
+      - Decision
+      - Decomposition
+    source: real
+    asof: '2026-10-05'

@@ -65,3 +65,14 @@ notes: |
   capability on the root work item. Both must reach the same split gate (DK-400d). The check now
   runs on every routed request, so its cost and false-positive rate matter. DK-400a-3 and
   DK-400a-3-i pin the false-positive side.
+product_truth:
+  - flow: leafcutter/decision-forming
+    node: split-detect
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: leafcutter/decisions
+    entities:
+      - Decomposition
+    source: real
+    asof: '2026-10-05'

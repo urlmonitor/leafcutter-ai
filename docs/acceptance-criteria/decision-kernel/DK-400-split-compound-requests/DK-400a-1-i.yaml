@@ -52,3 +52,14 @@ notes: |
   silently, so the ambiguity must not be resolved by running the top candidate on the whole goal.
   A goal whose parts need different capabilities (here one decision part and one research part)
   is a normal split; each part names its own capability (DK-400c-1).
+product_truth:
+  - flow: leafcutter/decision-forming
+    node: split-detect
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: leafcutter/decisions
+    entities:
+      - Decomposition
+    source: real
+    asof: '2026-10-05'

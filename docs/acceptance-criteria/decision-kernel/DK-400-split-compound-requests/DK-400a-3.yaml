@@ -49,3 +49,13 @@ implemented_by: []
 notes: |
   Flow branch split-not-needed. The guard against turning today's working path into a
   gate: a single bounded question must reach the same interactions it reaches today.
+product_truth:
+  - flow: leafcutter/decision-forming
+    node: split-not-needed
+    node_kind: branch
+    flow_kind: data
+    screen: null
+    mock_data: leafcutter/decisions
+    entities: []
+    source: real
+    asof: '2026-10-05'

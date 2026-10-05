@@ -51,3 +51,25 @@ notes: |
   Report side of DK-400e-4. The line texts are those of mock-data v5 record
   dcp-reusable-criteria-partial. The v4 gap this AC waited on (no outcome value for a part that
   ran but did not settle) is closed by the v5 outcome not_settled.
+product_truth:
+  - flow: leafcutter/decision-forming
+    node: split-part-unsettled
+    node_kind: branch
+    flow_kind: data
+    screen: decision-split-progress
+    mock_data: leafcutter/decisions
+    entities:
+      - Decomposition
+    source: real
+    asof: '2026-10-05'
+  - flow: leafcutter/decision-forming
+    node: split-report
+    node_kind: step
+    flow_kind: data
+    screen: decision-split-progress
+    mock_data: leafcutter/decisions
+    entities:
+      - Decision
+      - Decomposition
+    source: real
+    asof: '2026-10-05'

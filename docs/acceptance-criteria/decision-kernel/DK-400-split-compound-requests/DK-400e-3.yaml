@@ -59,3 +59,15 @@ notes: |
   Mock-data invariant: every part decided earlier is considered, not only the parts a later
   part waits for. ADR-060 section 4: precedent is evidence, never authority. The same applicability
   rules apply as for any precedent (configured thresholds).
+product_truth:
+  - flow: leafcutter/decision-forming
+    node: split-run
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: leafcutter/decisions
+    entities:
+      - Decision
+      - Decomposition
+    source: real
+    asof: '2026-10-05'

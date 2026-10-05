@@ -61,3 +61,13 @@ notes: |
   Placed as an L3 under DK-400a-3, because DK-400a is at its 5-L2 cap. The example question
   bundles three questions on purpose: a routed goal like it would be offered a split
   (DK-400a-2), a typed request is not.
+product_truth:
+  - flow: leafcutter/decision-forming
+    node: split-typed-request
+    node_kind: branch
+    flow_kind: data
+    screen: null
+    mock_data: leafcutter/decisions
+    entities: []
+    source: real
+    asof: '2026-10-05'

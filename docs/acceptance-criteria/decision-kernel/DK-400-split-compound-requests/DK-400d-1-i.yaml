@@ -46,3 +46,14 @@ implemented_by: []
 notes: |
   DK-400 SETTLED 2 and ADR-060. The relay case matters because the person answers through
   Claude Code: the relayer is the host, the actor is the person.
+product_truth:
+  - flow: leafcutter/decision-forming
+    node: split-approve
+    node_kind: step
+    flow_kind: data
+    screen: decision-split-approve
+    mock_data: leafcutter/decisions
+    entities:
+      - Decomposition
+    source: real
+    asof: '2026-10-05'

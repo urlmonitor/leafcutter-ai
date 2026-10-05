@@ -52,3 +52,14 @@ notes: |
   Flow v5 branch split-part-unsettled. The mock-data v5 sample is dcp-reusable-criteria-partial
   (state ended_partial, run status partial). The product-truth gaps this AC recorded against v4
   (no branch, no not-settled outcome, no end state) are closed by v5.
+product_truth:
+  - flow: leafcutter/decision-forming
+    node: split-part-unsettled
+    node_kind: branch
+    flow_kind: data
+    screen: decision-split-progress
+    mock_data: leafcutter/decisions
+    entities:
+      - Decomposition
+    source: real
+    asof: '2026-10-05'

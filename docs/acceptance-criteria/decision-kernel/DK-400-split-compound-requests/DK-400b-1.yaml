@@ -54,3 +54,14 @@ notes: |
   request split this way runs research children only. What happens to a host proposal that names
   decision for a part of a research request (refuse and repair, like any malformed host answer,
   or re-label) is for the IT PO.
+product_truth:
+  - flow: leafcutter/decision-forming
+    node: split-detect
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: leafcutter/decisions
+    entities:
+      - Decomposition
+    source: real
+    asof: '2026-10-05'

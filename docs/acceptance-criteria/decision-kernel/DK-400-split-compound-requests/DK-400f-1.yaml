@@ -50,3 +50,15 @@ implemented_by: []
 notes: |
   Flow step split-report (screen decision-split-progress). Hand splits are history only
   (DK-400 Q4): no AC here covers the settled_by_human outcome or the hand-split record.
+product_truth:
+  - flow: leafcutter/decision-forming
+    node: split-report
+    node_kind: step
+    flow_kind: data
+    screen: decision-split-progress
+    mock_data: leafcutter/decisions
+    entities:
+      - Decision
+      - Decomposition
+    source: real
+    asof: '2026-10-05'

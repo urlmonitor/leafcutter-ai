@@ -48,3 +48,14 @@ covered_by: []
 implemented_by: []
 notes: |
   Flow branch split-reject-kept-whole, user decision 2026-10-05 (DK-400 REJECTION).
+product_truth:
+  - flow: leafcutter/decision-forming
+    node: split-reject-kept-whole
+    node_kind: branch
+    flow_kind: data
+    screen: decision-split-progress
+    mock_data: leafcutter/decisions
+    entities:
+      - Decomposition
+    source: real
+    asof: '2026-10-05'

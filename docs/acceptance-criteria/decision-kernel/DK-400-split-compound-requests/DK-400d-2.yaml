@@ -56,3 +56,14 @@ notes: |
   Flow branch split-revise. Edits and a subset combine in one approval (DK-400d CARRY TO L2).
   Left to the IT PO (DK-400 Q7): whether a person may add a new part, or change a part's
   dependencies or capability, at the gate.
+product_truth:
+  - flow: leafcutter/decision-forming
+    node: split-revise
+    node_kind: branch
+    flow_kind: data
+    screen: decision-split-approve
+    mock_data: leafcutter/decisions
+    entities:
+      - Decomposition
+    source: real
+    asof: '2026-10-05'

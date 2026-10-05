@@ -53,3 +53,24 @@ implemented_by: []
 notes: |
   User decision 2026-10-05 (DK-400 REJECTION; the one-line default is confirmed). The line
   texts are those of the mock records.
+product_truth:
+  - flow: leafcutter/decision-forming
+    node: split-reject
+    node_kind: branch
+    flow_kind: data
+    screen: decision-split-progress
+    mock_data: leafcutter/decisions
+    entities:
+      - Decomposition
+    source: real
+    asof: '2026-10-05'
+  - flow: leafcutter/decision-forming
+    node: split-reject-kept-whole
+    node_kind: branch
+    flow_kind: data
+    screen: decision-split-progress
+    mock_data: leafcutter/decisions
+    entities:
+      - Decomposition
+    source: real
+    asof: '2026-10-05'

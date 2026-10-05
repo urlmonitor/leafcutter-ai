@@ -39,3 +39,23 @@ implemented_by: []
 notes: |
   Confirms the DK-400c note "fewer than 2 parts left AFTER dropping: the same rule as fewer
   than 2 should apply". The count is taken after the quote check.
+product_truth:
+  - flow: leafcutter/decision-forming
+    node: split-dropped
+    node_kind: branch
+    flow_kind: data
+    screen: decision-split-approve
+    mock_data: leafcutter/decisions
+    entities:
+      - Decomposition
+    source: real
+    asof: '2026-10-05'
+  - flow: leafcutter/decision-forming
+    node: split-too-few-parts
+    node_kind: branch
+    flow_kind: data
+    screen: null
+    mock_data: leafcutter/decisions
+    entities: []
+    source: real
+    asof: '2026-10-05'

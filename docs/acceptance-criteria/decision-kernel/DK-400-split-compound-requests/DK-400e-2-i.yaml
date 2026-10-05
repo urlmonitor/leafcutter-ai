@@ -40,3 +40,15 @@ covered_by: []
 implemented_by: []
 notes: |
   DK-400e SETTLED: a research part returns findings, not a record.
+product_truth:
+  - flow: leafcutter/decision-forming
+    node: split-run
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: leafcutter/decisions
+    entities:
+      - Decision
+      - Decomposition
+    source: real
+    asof: '2026-10-05'

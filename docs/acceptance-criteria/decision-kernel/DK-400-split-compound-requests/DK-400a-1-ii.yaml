@@ -54,3 +54,23 @@ notes: |
   of a turned-away request, the run still records the capability gap, as today. That case is
   DK-400d-3-i (mock-data v5 capability_gap_recorded). This AC covers the approved case, where no
   gap is recorded for the request.
+product_truth:
+  - flow: leafcutter/decision-forming
+    node: single-no-capability
+    node_kind: branch
+    flow_kind: data
+    screen: null
+    mock_data: leafcutter/decisions
+    entities: []
+    source: real
+    asof: '2026-10-05'
+  - flow: leafcutter/decision-forming
+    node: split-detect
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: leafcutter/decisions
+    entities:
+      - Decomposition
+    source: real
+    asof: '2026-10-05'

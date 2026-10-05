@@ -48,3 +48,14 @@ notes: |
   Flow split-mid-run names both a multi-part decision question and a research request with
   several needs. No mock record shows the mid-run research case; the example request is
   illustrative.
+product_truth:
+  - flow: leafcutter/decision-forming
+    node: split-mid-run
+    node_kind: branch
+    flow_kind: data
+    screen: null
+    mock_data: leafcutter/decisions
+    entities:
+      - Decomposition
+    source: real
+    asof: '2026-10-05'

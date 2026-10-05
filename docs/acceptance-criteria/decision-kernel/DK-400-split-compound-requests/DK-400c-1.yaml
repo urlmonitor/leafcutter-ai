@@ -70,3 +70,14 @@ notes: |
   For the IT PO: the registry entry for the new host operation (ADR-055), the configured bound
   on child work per run, the off switch that restores today's behaviour, and the ADR with a
   pinned number.
+product_truth:
+  - flow: leafcutter/decision-forming
+    node: split-propose
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: leafcutter/decisions
+    entities:
+      - Decomposition
+    source: real
+    asof: '2026-10-05'

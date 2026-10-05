@@ -55,3 +55,14 @@ notes: |
   part (DK-400d-2-ii).
   OPEN for the IT PO: a kept part that waits for a set-aside proposal (its dependency would name a
   part that is not in the split).
+product_truth:
+  - flow: leafcutter/decision-forming
+    node: split-dropped
+    node_kind: branch
+    flow_kind: data
+    screen: decision-split-approve
+    mock_data: leafcutter/decisions
+    entities:
+      - Decomposition
+    source: real
+    asof: '2026-10-05'

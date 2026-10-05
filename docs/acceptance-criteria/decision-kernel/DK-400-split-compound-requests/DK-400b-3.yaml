@@ -53,3 +53,24 @@ implemented_by: []
 notes: |
   DK-400b criteria: "you can see whether a split came from your own request or was found along
   the way". One gate for every subject kind (DK-400b SETTLED).
+product_truth:
+  - flow: leafcutter/decision-forming
+    node: split-approve
+    node_kind: step
+    flow_kind: data
+    screen: decision-split-approve
+    mock_data: leafcutter/decisions
+    entities:
+      - Decomposition
+    source: real
+    asof: '2026-10-05'
+  - flow: leafcutter/decision-forming
+    node: split-mid-run
+    node_kind: branch
+    flow_kind: data
+    screen: null
+    mock_data: leafcutter/decisions
+    entities:
+      - Decomposition
+    source: real
+    asof: '2026-10-05'

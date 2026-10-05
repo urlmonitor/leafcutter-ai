@@ -50,3 +50,13 @@ notes: |
   User decision (DK-400 Q2): fewer than two bounded parts means it was one question after
   all, with no gate. Flow v5 branch split-too-few-parts (more than five parts is
   split-too-many-parts, DK-400c-1-i).
+product_truth:
+  - flow: leafcutter/decision-forming
+    node: split-too-few-parts
+    node_kind: branch
+    flow_kind: data
+    screen: null
+    mock_data: leafcutter/decisions
+    entities: []
+    source: real
+    asof: '2026-10-05'

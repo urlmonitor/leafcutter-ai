@@ -114,7 +114,14 @@
         "Decomposition"
       ],
       "impl_asof": "2026-10-03",
-      "impl_status": "not_started"
+      "impl_status": "not_started",
+      "implements": [
+        "DK-400a-1",
+        "DK-400a-1-i",
+        "DK-400a-1-ii",
+        "DK-400a-2",
+        "DK-400b-1"
+      ]
     },
     {
       "id": "split-propose",
@@ -135,7 +142,11 @@
         "Decomposition"
       ],
       "impl_asof": "2026-10-03",
-      "impl_status": "not_started"
+      "impl_status": "not_started",
+      "implements": [
+        "DK-400c-1",
+        "DK-400c-1-ii"
+      ]
     },
     {
       "id": "split-approve",
@@ -157,7 +168,12 @@
         "Decomposition"
       ],
       "impl_asof": "2026-10-03",
-      "impl_status": "not_started"
+      "impl_status": "not_started",
+      "implements": [
+        "DK-400b-3",
+        "DK-400d-1",
+        "DK-400d-1-i"
+      ]
     },
     {
       "id": "split-run",
@@ -179,7 +195,15 @@
         "Decomposition"
       ],
       "impl_asof": "2026-10-03",
-      "impl_status": "not_started"
+      "impl_status": "not_started",
+      "implements": [
+        "DK-400e-1",
+        "DK-400e-2",
+        "DK-400e-2-i",
+        "DK-400e-2-ii",
+        "DK-400e-3",
+        "DK-400e-3-i"
+      ]
     },
     {
       "id": "precedent",
@@ -359,7 +383,13 @@
         "Decomposition"
       ],
       "impl_asof": "2026-10-03",
-      "impl_status": "not_started"
+      "impl_status": "not_started",
+      "implements": [
+        "DK-400f-1",
+        "DK-400f-1-i",
+        "DK-400f-2",
+        "DK-400f-2-i"
+      ]
     }
   ],
   "branches": [
@@ -465,7 +495,11 @@
       ],
       "outcome_kind": "alternative",
       "impl_asof": "2026-10-03",
-      "impl_status": "not_started"
+      "impl_status": "not_started",
+      "implements": [
+        "DK-400a-3",
+        "DK-400a-3-i"
+      ]
     },
     {
       "id": "single-no-capability",
@@ -479,7 +513,11 @@
       ],
       "outcome_kind": "exit",
       "impl_asof": "2026-10-05",
-      "impl_status": "not_started"
+      "impl_status": "not_started",
+      "implements": [
+        "DK-400a-1-ii",
+        "DK-400a-4"
+      ]
     },
     {
       "id": "split-typed-request",
@@ -493,7 +531,10 @@
       ],
       "outcome_kind": "alternative",
       "impl_asof": "2026-10-05",
-      "impl_status": "not_started"
+      "impl_status": "not_started",
+      "implements": [
+        "DK-400a-3-ii"
+      ]
     },
     {
       "id": "split-mid-run",
@@ -510,7 +551,13 @@
       ],
       "outcome_kind": "alternative",
       "impl_asof": "2026-10-03",
-      "impl_status": "not_started"
+      "impl_status": "not_started",
+      "implements": [
+        "DK-400b-2",
+        "DK-400b-2-i",
+        "DK-400b-2-ii",
+        "DK-400b-3"
+      ]
     },
     {
       "id": "split-dropped",
@@ -534,7 +581,14 @@
       ],
       "outcome_kind": "failure",
       "impl_asof": "2026-10-03",
-      "impl_status": "not_started"
+      "impl_status": "not_started",
+      "implements": [
+        "DK-400b-2-i",
+        "DK-400c-2",
+        "DK-400c-2-i",
+        "DK-400c-3-i",
+        "DK-400d-2-ii"
+      ]
     },
     {
       "id": "split-too-few-parts",
@@ -551,7 +605,11 @@
       ],
       "outcome_kind": "alternative",
       "impl_asof": "2026-10-05",
-      "impl_status": "not_started"
+      "impl_status": "not_started",
+      "implements": [
+        "DK-400c-3",
+        "DK-400c-3-i"
+      ]
     },
     {
       "id": "split-too-many-parts",
@@ -575,7 +633,10 @@
       ],
       "outcome_kind": "alternative",
       "impl_asof": "2026-10-05",
-      "impl_status": "not_started"
+      "impl_status": "not_started",
+      "implements": [
+        "DK-400c-1-i"
+      ]
     },
     {
       "id": "split-revise",
@@ -599,7 +660,12 @@
       ],
       "outcome_kind": "alternative",
       "impl_asof": "2026-10-03",
-      "impl_status": "not_started"
+      "impl_status": "not_started",
+      "implements": [
+        "DK-400d-2",
+        "DK-400d-2-i",
+        "DK-400d-2-ii"
+      ]
     },
     {
       "id": "split-reject",
@@ -623,7 +689,12 @@
       ],
       "outcome_kind": "exit",
       "impl_asof": "2026-10-03",
-      "impl_status": "not_started"
+      "impl_status": "not_started",
+      "implements": [
+        "DK-400d-3",
+        "DK-400d-3-i",
+        "DK-400f-3"
+      ]
     },
     {
       "id": "split-reject-kept-whole",
@@ -647,7 +718,13 @@
       "screen": "decision-split-progress",
       "outcome_kind": "alternative",
       "impl_asof": "2026-10-05",
-      "impl_status": "not_started"
+      "impl_status": "not_started",
+      "implements": [
+        "DK-400d-3",
+        "DK-400d-3-ii",
+        "DK-400d-3-iii",
+        "DK-400f-3"
+      ]
     },
     {
       "id": "split-part-unsettled",
@@ -671,7 +748,11 @@
       ],
       "outcome_kind": "alternative",
       "impl_asof": "2026-10-05",
-      "impl_status": "not_started"
+      "impl_status": "not_started",
+      "implements": [
+        "DK-400e-4",
+        "DK-400f-2-i"
+      ]
     }
   ],
   "acceptance_scenarios": [

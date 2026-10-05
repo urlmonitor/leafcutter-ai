@@ -55,3 +55,15 @@ notes: |
   (answer to BA open question Q4). It matches every sample record. The person's preferred order
   is kept only as words in the gate note.
   For the IT PO: the configured bound on child work per run, and the off switch.
+product_truth:
+  - flow: leafcutter/decision-forming
+    node: split-run
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: leafcutter/decisions
+    entities:
+      - Decision
+      - Decomposition
+    source: real
+    asof: '2026-10-05'

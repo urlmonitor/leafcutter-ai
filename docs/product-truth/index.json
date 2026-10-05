@@ -3028,6 +3028,721 @@
         "asof": "2026-10-02"
       }
     ],
+    "DK-400a-1": [
+      {
+        "flow": "leafcutter/decision-forming",
+        "node": "split-detect",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": "leafcutter/decisions",
+        "entities": [
+          "Decomposition"
+        ],
+        "source": "real",
+        "asof": "2026-10-05"
+      }
+    ],
+    "DK-400a-1-i": [
+      {
+        "flow": "leafcutter/decision-forming",
+        "node": "split-detect",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": "leafcutter/decisions",
+        "entities": [
+          "Decomposition"
+        ],
+        "source": "real",
+        "asof": "2026-10-05"
+      }
+    ],
+    "DK-400a-1-ii": [
+      {
+        "flow": "leafcutter/decision-forming",
+        "node": "single-no-capability",
+        "node_kind": "branch",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": "leafcutter/decisions",
+        "entities": [],
+        "source": "real",
+        "asof": "2026-10-05"
+      },
+      {
+        "flow": "leafcutter/decision-forming",
+        "node": "split-detect",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": "leafcutter/decisions",
+        "entities": [
+          "Decomposition"
+        ],
+        "source": "real",
+        "asof": "2026-10-05"
+      }
+    ],
+    "DK-400a-2": [
+      {
+        "flow": "leafcutter/decision-forming",
+        "node": "split-detect",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": "leafcutter/decisions",
+        "entities": [
+          "Decomposition"
+        ],
+        "source": "real",
+        "asof": "2026-10-05"
+      }
+    ],
+    "DK-400a-3": [
+      {
+        "flow": "leafcutter/decision-forming",
+        "node": "split-not-needed",
+        "node_kind": "branch",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": "leafcutter/decisions",
+        "entities": [],
+        "source": "real",
+        "asof": "2026-10-05"
+      }
+    ],
+    "DK-400a-3-i": [
+      {
+        "flow": "leafcutter/decision-forming",
+        "node": "split-not-needed",
+        "node_kind": "branch",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": "leafcutter/decisions",
+        "entities": [],
+        "source": "real",
+        "asof": "2026-10-05"
+      }
+    ],
+    "DK-400a-3-ii": [
+      {
+        "flow": "leafcutter/decision-forming",
+        "node": "split-typed-request",
+        "node_kind": "branch",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": "leafcutter/decisions",
+        "entities": [],
+        "source": "real",
+        "asof": "2026-10-05"
+      }
+    ],
+    "DK-400a-4": [
+      {
+        "flow": "leafcutter/decision-forming",
+        "node": "single-no-capability",
+        "node_kind": "branch",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": "leafcutter/decisions",
+        "entities": [],
+        "source": "real",
+        "asof": "2026-10-05"
+      }
+    ],
+    "DK-400b-1": [
+      {
+        "flow": "leafcutter/decision-forming",
+        "node": "split-detect",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": "leafcutter/decisions",
+        "entities": [
+          "Decomposition"
+        ],
+        "source": "real",
+        "asof": "2026-10-05"
+      }
+    ],
+    "DK-400b-2": [
+      {
+        "flow": "leafcutter/decision-forming",
+        "node": "split-mid-run",
+        "node_kind": "branch",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": "leafcutter/decisions",
+        "entities": [
+          "Decomposition"
+        ],
+        "source": "real",
+        "asof": "2026-10-05"
+      }
+    ],
+    "DK-400b-2-i": [
+      {
+        "flow": "leafcutter/decision-forming",
+        "node": "split-dropped",
+        "node_kind": "branch",
+        "flow_kind": "data",
+        "screen": "decision-split-approve",
+        "mock_data": "leafcutter/decisions",
+        "entities": [
+          "Decomposition"
+        ],
+        "source": "real",
+        "asof": "2026-10-05"
+      },
+      {
+        "flow": "leafcutter/decision-forming",
+        "node": "split-mid-run",
+        "node_kind": "branch",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": "leafcutter/decisions",
+        "entities": [
+          "Decomposition"
+        ],
+        "source": "real",
+        "asof": "2026-10-05"
+      }
+    ],
+    "DK-400b-2-ii": [
+      {
+        "flow": "leafcutter/decision-forming",
+        "node": "split-mid-run",
+        "node_kind": "branch",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": "leafcutter/decisions",
+        "entities": [
+          "Decomposition"
+        ],
+        "source": "real",
+        "asof": "2026-10-05"
+      }
+    ],
+    "DK-400b-3": [
+      {
+        "flow": "leafcutter/decision-forming",
+        "node": "split-approve",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": "decision-split-approve",
+        "mock_data": "leafcutter/decisions",
+        "entities": [
+          "Decomposition"
+        ],
+        "source": "real",
+        "asof": "2026-10-05"
+      },
+      {
+        "flow": "leafcutter/decision-forming",
+        "node": "split-mid-run",
+        "node_kind": "branch",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": "leafcutter/decisions",
+        "entities": [
+          "Decomposition"
+        ],
+        "source": "real",
+        "asof": "2026-10-05"
+      }
+    ],
+    "DK-400c-1": [
+      {
+        "flow": "leafcutter/decision-forming",
+        "node": "split-propose",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": "leafcutter/decisions",
+        "entities": [
+          "Decomposition"
+        ],
+        "source": "real",
+        "asof": "2026-10-05"
+      }
+    ],
+    "DK-400c-1-i": [
+      {
+        "flow": "leafcutter/decision-forming",
+        "node": "split-too-many-parts",
+        "node_kind": "branch",
+        "flow_kind": "data",
+        "screen": "decision-split-approve",
+        "mock_data": "leafcutter/decisions",
+        "entities": [
+          "Decomposition"
+        ],
+        "source": "real",
+        "asof": "2026-10-05"
+      }
+    ],
+    "DK-400c-1-ii": [
+      {
+        "flow": "leafcutter/decision-forming",
+        "node": "split-propose",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": "leafcutter/decisions",
+        "entities": [
+          "Decomposition"
+        ],
+        "source": "real",
+        "asof": "2026-10-05"
+      }
+    ],
+    "DK-400c-2": [
+      {
+        "flow": "leafcutter/decision-forming",
+        "node": "split-dropped",
+        "node_kind": "branch",
+        "flow_kind": "data",
+        "screen": "decision-split-approve",
+        "mock_data": "leafcutter/decisions",
+        "entities": [
+          "Decomposition"
+        ],
+        "source": "real",
+        "asof": "2026-10-05"
+      }
+    ],
+    "DK-400c-2-i": [
+      {
+        "flow": "leafcutter/decision-forming",
+        "node": "split-dropped",
+        "node_kind": "branch",
+        "flow_kind": "data",
+        "screen": "decision-split-approve",
+        "mock_data": "leafcutter/decisions",
+        "entities": [
+          "Decomposition"
+        ],
+        "source": "real",
+        "asof": "2026-10-05"
+      }
+    ],
+    "DK-400c-3": [
+      {
+        "flow": "leafcutter/decision-forming",
+        "node": "split-too-few-parts",
+        "node_kind": "branch",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": "leafcutter/decisions",
+        "entities": [],
+        "source": "real",
+        "asof": "2026-10-05"
+      }
+    ],
+    "DK-400c-3-i": [
+      {
+        "flow": "leafcutter/decision-forming",
+        "node": "split-dropped",
+        "node_kind": "branch",
+        "flow_kind": "data",
+        "screen": "decision-split-approve",
+        "mock_data": "leafcutter/decisions",
+        "entities": [
+          "Decomposition"
+        ],
+        "source": "real",
+        "asof": "2026-10-05"
+      },
+      {
+        "flow": "leafcutter/decision-forming",
+        "node": "split-too-few-parts",
+        "node_kind": "branch",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": "leafcutter/decisions",
+        "entities": [],
+        "source": "real",
+        "asof": "2026-10-05"
+      }
+    ],
+    "DK-400d-1": [
+      {
+        "flow": "leafcutter/decision-forming",
+        "node": "split-approve",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": "decision-split-approve",
+        "mock_data": "leafcutter/decisions",
+        "entities": [
+          "Decomposition"
+        ],
+        "source": "real",
+        "asof": "2026-10-05"
+      }
+    ],
+    "DK-400d-1-i": [
+      {
+        "flow": "leafcutter/decision-forming",
+        "node": "split-approve",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": "decision-split-approve",
+        "mock_data": "leafcutter/decisions",
+        "entities": [
+          "Decomposition"
+        ],
+        "source": "real",
+        "asof": "2026-10-05"
+      }
+    ],
+    "DK-400d-2": [
+      {
+        "flow": "leafcutter/decision-forming",
+        "node": "split-revise",
+        "node_kind": "branch",
+        "flow_kind": "data",
+        "screen": "decision-split-approve",
+        "mock_data": "leafcutter/decisions",
+        "entities": [
+          "Decomposition"
+        ],
+        "source": "real",
+        "asof": "2026-10-05"
+      }
+    ],
+    "DK-400d-2-i": [
+      {
+        "flow": "leafcutter/decision-forming",
+        "node": "split-revise",
+        "node_kind": "branch",
+        "flow_kind": "data",
+        "screen": "decision-split-approve",
+        "mock_data": "leafcutter/decisions",
+        "entities": [
+          "Decomposition"
+        ],
+        "source": "real",
+        "asof": "2026-10-05"
+      }
+    ],
+    "DK-400d-2-ii": [
+      {
+        "flow": "leafcutter/decision-forming",
+        "node": "split-dropped",
+        "node_kind": "branch",
+        "flow_kind": "data",
+        "screen": "decision-split-approve",
+        "mock_data": "leafcutter/decisions",
+        "entities": [
+          "Decomposition"
+        ],
+        "source": "real",
+        "asof": "2026-10-05"
+      },
+      {
+        "flow": "leafcutter/decision-forming",
+        "node": "split-revise",
+        "node_kind": "branch",
+        "flow_kind": "data",
+        "screen": "decision-split-approve",
+        "mock_data": "leafcutter/decisions",
+        "entities": [
+          "Decomposition"
+        ],
+        "source": "real",
+        "asof": "2026-10-05"
+      }
+    ],
+    "DK-400d-3": [
+      {
+        "flow": "leafcutter/decision-forming",
+        "node": "split-reject",
+        "node_kind": "branch",
+        "flow_kind": "data",
+        "screen": "decision-split-progress",
+        "mock_data": "leafcutter/decisions",
+        "entities": [
+          "Decomposition"
+        ],
+        "source": "real",
+        "asof": "2026-10-05"
+      },
+      {
+        "flow": "leafcutter/decision-forming",
+        "node": "split-reject-kept-whole",
+        "node_kind": "branch",
+        "flow_kind": "data",
+        "screen": "decision-split-progress",
+        "mock_data": "leafcutter/decisions",
+        "entities": [
+          "Decomposition"
+        ],
+        "source": "real",
+        "asof": "2026-10-05"
+      }
+    ],
+    "DK-400d-3-i": [
+      {
+        "flow": "leafcutter/decision-forming",
+        "node": "split-reject",
+        "node_kind": "branch",
+        "flow_kind": "data",
+        "screen": "decision-split-progress",
+        "mock_data": "leafcutter/decisions",
+        "entities": [
+          "Decomposition"
+        ],
+        "source": "real",
+        "asof": "2026-10-05"
+      }
+    ],
+    "DK-400d-3-ii": [
+      {
+        "flow": "leafcutter/decision-forming",
+        "node": "split-reject-kept-whole",
+        "node_kind": "branch",
+        "flow_kind": "data",
+        "screen": "decision-split-progress",
+        "mock_data": "leafcutter/decisions",
+        "entities": [
+          "Decomposition"
+        ],
+        "source": "real",
+        "asof": "2026-10-05"
+      }
+    ],
+    "DK-400d-3-iii": [
+      {
+        "flow": "leafcutter/decision-forming",
+        "node": "split-reject-kept-whole",
+        "node_kind": "branch",
+        "flow_kind": "data",
+        "screen": "decision-split-progress",
+        "mock_data": "leafcutter/decisions",
+        "entities": [
+          "Decomposition"
+        ],
+        "source": "real",
+        "asof": "2026-10-05"
+      }
+    ],
+    "DK-400e-1": [
+      {
+        "flow": "leafcutter/decision-forming",
+        "node": "split-run",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": "leafcutter/decisions",
+        "entities": [
+          "Decision",
+          "Decomposition"
+        ],
+        "source": "real",
+        "asof": "2026-10-05"
+      }
+    ],
+    "DK-400e-2": [
+      {
+        "flow": "leafcutter/decision-forming",
+        "node": "split-run",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": "leafcutter/decisions",
+        "entities": [
+          "Decision",
+          "Decomposition"
+        ],
+        "source": "real",
+        "asof": "2026-10-05"
+      }
+    ],
+    "DK-400e-2-i": [
+      {
+        "flow": "leafcutter/decision-forming",
+        "node": "split-run",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": "leafcutter/decisions",
+        "entities": [
+          "Decision",
+          "Decomposition"
+        ],
+        "source": "real",
+        "asof": "2026-10-05"
+      }
+    ],
+    "DK-400e-2-ii": [
+      {
+        "flow": "leafcutter/decision-forming",
+        "node": "split-run",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": "leafcutter/decisions",
+        "entities": [
+          "Decision",
+          "Decomposition"
+        ],
+        "source": "real",
+        "asof": "2026-10-05"
+      }
+    ],
+    "DK-400e-3": [
+      {
+        "flow": "leafcutter/decision-forming",
+        "node": "split-run",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": "leafcutter/decisions",
+        "entities": [
+          "Decision",
+          "Decomposition"
+        ],
+        "source": "real",
+        "asof": "2026-10-05"
+      }
+    ],
+    "DK-400e-3-i": [
+      {
+        "flow": "leafcutter/decision-forming",
+        "node": "split-run",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": "leafcutter/decisions",
+        "entities": [
+          "Decision",
+          "Decomposition"
+        ],
+        "source": "real",
+        "asof": "2026-10-05"
+      }
+    ],
+    "DK-400e-4": [
+      {
+        "flow": "leafcutter/decision-forming",
+        "node": "split-part-unsettled",
+        "node_kind": "branch",
+        "flow_kind": "data",
+        "screen": "decision-split-progress",
+        "mock_data": "leafcutter/decisions",
+        "entities": [
+          "Decomposition"
+        ],
+        "source": "real",
+        "asof": "2026-10-05"
+      }
+    ],
+    "DK-400f-1": [
+      {
+        "flow": "leafcutter/decision-forming",
+        "node": "split-report",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": "decision-split-progress",
+        "mock_data": "leafcutter/decisions",
+        "entities": [
+          "Decision",
+          "Decomposition"
+        ],
+        "source": "real",
+        "asof": "2026-10-05"
+      }
+    ],
+    "DK-400f-1-i": [
+      {
+        "flow": "leafcutter/decision-forming",
+        "node": "split-report",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": "decision-split-progress",
+        "mock_data": "leafcutter/decisions",
+        "entities": [
+          "Decision",
+          "Decomposition"
+        ],
+        "source": "real",
+        "asof": "2026-10-05"
+      }
+    ],
+    "DK-400f-2": [
+      {
+        "flow": "leafcutter/decision-forming",
+        "node": "split-report",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": "decision-split-progress",
+        "mock_data": "leafcutter/decisions",
+        "entities": [
+          "Decision",
+          "Decomposition"
+        ],
+        "source": "real",
+        "asof": "2026-10-05"
+      }
+    ],
+    "DK-400f-2-i": [
+      {
+        "flow": "leafcutter/decision-forming",
+        "node": "split-part-unsettled",
+        "node_kind": "branch",
+        "flow_kind": "data",
+        "screen": "decision-split-progress",
+        "mock_data": "leafcutter/decisions",
+        "entities": [
+          "Decomposition"
+        ],
+        "source": "real",
+        "asof": "2026-10-05"
+      },
+      {
+        "flow": "leafcutter/decision-forming",
+        "node": "split-report",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": "decision-split-progress",
+        "mock_data": "leafcutter/decisions",
+        "entities": [
+          "Decision",
+          "Decomposition"
+        ],
+        "source": "real",
+        "asof": "2026-10-05"
+      }
+    ],
+    "DK-400f-3": [
+      {
+        "flow": "leafcutter/decision-forming",
+        "node": "split-reject",
+        "node_kind": "branch",
+        "flow_kind": "data",
+        "screen": "decision-split-progress",
+        "mock_data": "leafcutter/decisions",
+        "entities": [
+          "Decomposition"
+        ],
+        "source": "real",
+        "asof": "2026-10-05"
+      },
+      {
+        "flow": "leafcutter/decision-forming",
+        "node": "split-reject-kept-whole",
+        "node_kind": "branch",
+        "flow_kind": "data",
+        "screen": "decision-split-progress",
+        "mock_data": "leafcutter/decisions",
+        "entities": [
+          "Decomposition"
+        ],
+        "source": "real",
+        "asof": "2026-10-05"
+      }
+    ],
     "FIN-100": [
       {
         "flow": "leafcutter/deliver-a-feature",

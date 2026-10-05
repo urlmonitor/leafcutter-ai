@@ -55,3 +55,14 @@ notes: |
   Flow branch split-mid-run. Left to the IT PO: what tells the kernel, partway through, that a
   work item holds several questions (apply the ADR-053 order, as on DK-400a). Also left to the IT
   PO (DK-400 Q6): whether a part of an approved split may itself be split again, and how deep.
+product_truth:
+  - flow: leafcutter/decision-forming
+    node: split-mid-run
+    node_kind: branch
+    flow_kind: data
+    screen: null
+    mock_data: leafcutter/decisions
+    entities:
+      - Decomposition
+    source: real
+    asof: '2026-10-05'

@@ -64,3 +64,14 @@ notes: |
   several. Candidates are a cheap check before any proposal, in ADR-053 order (deterministic
   code, then Jev), or the proposal itself with the fewer-than-two rule (DK-400c-3).
   The ambiguous trigger is DK-400a-1-i; honest gap counts are DK-400a-1-ii.
+product_truth:
+  - flow: leafcutter/decision-forming
+    node: split-detect
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: leafcutter/decisions
+    entities:
+      - Decomposition
+    source: real
+    asof: '2026-10-05'

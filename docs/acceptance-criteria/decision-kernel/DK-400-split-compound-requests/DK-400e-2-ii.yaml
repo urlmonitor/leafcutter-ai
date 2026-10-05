@@ -44,3 +44,15 @@ notes: |
   ADR-060 section 2: only a human approval of the decision itself creates a record. A split
   multiplies the questions a person is asked (DK-400e CARRY TO L2), which matters for the
   bounded-count setting the IT PO owns.
+product_truth:
+  - flow: leafcutter/decision-forming
+    node: split-run
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: leafcutter/decisions
+    entities:
+      - Decision
+      - Decomposition
+    source: real
+    asof: '2026-10-05'
