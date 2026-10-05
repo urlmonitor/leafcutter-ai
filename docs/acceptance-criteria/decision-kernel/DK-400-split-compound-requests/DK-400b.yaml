@@ -1,0 +1,65 @@
+id: DK-400b
+title: "Split questions that surface along the way, not only your opening request"
+component: decision-kernel
+components:
+  - decision_kernel
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_kernel_1_founding
+criteria: |
+  Research requests and questions found mid-run split the same way.
+
+  The same split is available for your opening request, for a research request
+  with several needs, and for a many-sided decision question that only turns up
+  partway through the work. Every one of them comes to you through the same
+  approval step, and you can see whether a split came from your own request or
+  was found along the way.
+depends_on:
+  - DK-400
+doc_links:
+  - path: docs/product-truth/flows/leafcutter/decision-forming.flow.json
+    relationship: specified-by
+    status: exists
+    relevance: "Branch split-mid-run (found_at mid_run, depth 1 or more, no routing trigger, same split gate)."
+  - path: docs/product-truth/mock-data/leafcutter/decisions.mock.json
+    relationship: specified-by
+    status: exists
+    relevance: "subject_kind goal | research_request | decision_question; records dcp-split-bounds-mid-run (decision question found mid-run) and dcp-reuse-threshold-research (research request with three needs)."
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: product-owner
+created: 2026-10-04
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+documentation_triggers:
+  - reference-doc
+notes: |
+  FLOW NODES: split-mid-run (branch). This is the user's "(and other things)":
+  the split is not tied to goals.
+
+  SETTLED: one split gate for every subject kind. A mid-run split is recorded
+  with found_at mid_run, its work-item depth (1 or more) and no routing
+  trigger. found_at routing iff depth 0 iff a trigger is present (mock-data
+  invariant).
+
+  CARRY TO L2 / IT PO:
+    - Nesting. A part of an approved split may itself hold several questions
+      and be split again at a greater depth. Neither the flow nor the mock data
+      bounds that depth. Whether nesting is allowed, and how deep, is a PO open
+      question; the IT PO owns the bound itself.
+    - What tells the kernel, partway through, that a work item holds several
+      questions? The flow names the condition but not who judges it. Apply the
+      ADR-053 order, as on DK-400a.
+    - A research request split this way runs research children only; their
+      outcome is "answered" with findings, not a decision record (see DK-400e).
+
+  DOCS: which kinds of request can be split, and where a split can be found,
+  belong in the same reference entry as DK-400a.

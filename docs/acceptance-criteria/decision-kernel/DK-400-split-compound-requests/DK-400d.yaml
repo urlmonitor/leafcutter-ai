@@ -1,0 +1,80 @@
+id: DK-400d
+title: "Nothing runs until you approve the split"
+component: decision-kernel
+components:
+  - decision_kernel
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_kernel_1_founding
+criteria: |
+  Approve, reword, trim or reject the split before any part runs.
+
+  You see your request as you submitted it beside every proposed part, and you
+  can approve the split as shown, reword a part, leave parts out or reject it;
+  only a person can give that answer, and who gave it and when is kept with the
+  split. A reworded part keeps the original proposal beside it, a left-out part
+  never runs, and a rejected split ends with a plain note that nothing was
+  decided and a hint to ask again as one question.
+depends_on:
+  - DK-400
+doc_links:
+  - path: docs/product-truth/flows/leafcutter/decision-forming.flow.json
+    relationship: specified-by
+    status: exists
+    relevance: "Step split-approve (screen decision-split-approve) and branches split-revise and split-reject."
+  - path: docs/product-truth/mockups/leafcutter/decision-split-approve.mockup.json
+    relationship: specified-by
+    status: exists
+  - path: docs/product-truth/mock-data/leafcutter/decisions.mock.json
+    relationship: specified-by
+    status: exists
+    relevance: "gate_answer, gate_by (human:<name>, never a model), gate_at, gate_note, parts[].review and proposed_text, and the state machine proposed -> approved -> in_progress -> completed, or proposed -> rejected; records dcp-split-bounds-mid-run (edit and subset) and dcp-trace-analyzers-rejected."
+  - path: docs/architecture/adrs/ADR-060-source-of-truth-and-approval-authority.md
+    relationship: constrains
+    status: exists
+  - path: docs/how-to/run-the-decision-kernel.md
+    relationship: related
+    status: exists
+    relevance: "Where a person learns to answer a kernel gate; answering a split belongs beside it."
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: product-owner
+created: 2026-10-04
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+documentation_triggers:
+  - how-to
+  - state-diagram
+notes: |
+  FLOW NODES: split-approve (step), split-revise and split-reject (branches).
+
+  SETTLED: no part runs before a person answers, and the run waits for that
+  answer (run_status waiting_human). Only a person answers, recorded as
+  human:<name> with the time (ADR-060). An approved split keeps at least one
+  part. A rejected split runs nothing, ends the run blocked, and its report says
+  plainly that nothing was decided, with a hint to ask again as one bounded
+  question.
+
+  CARRY TO L2:
+    - The gate offers four answers: approve as shown, edit a part's text, untick
+      parts (a subset), or reject. Edits and a subset can be combined in one
+      approval (dcp-split-bounds-mid-run does both).
+    - A person may add back a dropped proposal's question by editing (flow
+      branch split-dropped). Whether a person may also ADD a new part, or change
+      a part's dependencies or whether it needs a decision or research, is not
+      settled by the flow. It is a PO open question.
+    - Unticking every part is not an approval. Whether the gate forbids it or
+      treats it as a rejection is for the BA to settle.
+    - The gate note (gate_note) keeps the person's words: a rejection reason,
+      why a part was left out, the order picked.
+
+  DOCS: a person answers this gate (how-to). The split has five states with
+  explicit transitions (state-diagram).

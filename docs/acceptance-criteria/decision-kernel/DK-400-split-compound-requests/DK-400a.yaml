@@ -1,0 +1,76 @@
+id: DK-400a
+title: "Spot a request that is really several questions"
+component: decision-kernel
+components:
+  - decision_kernel
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_kernel_1_founding
+criteria: |
+  Bundled questions are recognised; a single question is never split.
+
+  A request that bundles several separate questions, and would otherwise be
+  turned away, is recognised and offered to you as a split. A single question
+  is never split: if it can be handled it goes ahead as one, and if it cannot be
+  handled yet it is still logged as an ability the kernel lacks, exactly as
+  today, so a missing ability is never passed off as a split.
+depends_on:
+  - DK-400
+doc_links:
+  - path: docs/product-truth/flows/leafcutter/decision-forming.flow.json
+    relationship: specified-by
+    status: exists
+    relevance: "Step split-detect and branch split-not-needed. The single-but-unsupported case has no node yet (see notes)."
+  - path: docs/product-truth/mock-data/leafcutter/decisions.mock.json
+    relationship: specified-by
+    status: exists
+    relevance: "Decomposition.found_at routing, work_item_depth 0 and trigger jev_none | ambiguous; records dcp-reusable-criteria-by-hand and dcp-reusable-criteria-proposed."
+  - path: docs/architecture/adrs/ADR-053-intelligence-selection-deterministic-jev-llm-human.md
+    relationship: constrains
+    status: exists
+    relevance: "The cheapest mechanism that can tell one question from several should decide whether a split is attempted."
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: product-owner
+created: 2026-10-04
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+documentation_triggers:
+  - reference-doc
+notes: |
+  FLOW NODES: split-detect (step), split-not-needed (branch).
+
+  ADDED BY THE PO (flow-author open point b): a request that is ONE question the
+  kernel cannot handle yet is a real capability gap, not a split. It must still
+  produce today's gap record and blocked result, and it must not reach the split
+  gate. The flow's split-detect acceptance scenario agrees ("a root goal holding
+  several questions"). Its step text does not: it says that when routing finds
+  no capability "the subject is taken to hold several questions". The flow also
+  has no branch for "one question, no capability". Ask the flow-author to add
+  that branch and correct the step text before the BA back-links L2s to
+  split-detect.
+
+  CARRY TO L2 (left to the BA and IT PO on purpose):
+    - How "one question or several?" is told apart. Candidates: a cheap check
+      before any proposal (ADR-053 order: deterministic code, then Jev), or the
+      proposal itself, where fewer than two bounded parts means it was one
+      question after all (see DK-400c and the PO open question on bounds).
+    - Gap counts stay honest both ways. A request that is split is not counted
+      as a capability gap, and a single unsupported question is not hidden
+      behind a split (phase_kernel_1_founding exit criterion 2).
+    - The trigger in the approved flow is routing failure only. Whether a
+      compound request that routing CAN give to one capability should also be
+      split is a PO open question (the run-5d246775f5e54f11 case behind
+      TICKET-20261001-KernelCompoundGoalSplit). These criteria deliberately do
+      not settle it.
+
+  DOCS: the rule for when a request is split, left whole, or recorded as a gap
+  needs one reference entry. The how-to for answering the split is on DK-400d.

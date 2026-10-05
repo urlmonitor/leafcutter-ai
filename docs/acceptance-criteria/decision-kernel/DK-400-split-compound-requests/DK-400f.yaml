@@ -1,0 +1,70 @@
+id: DK-400f
+title: "See what each part settled, in one place"
+component: decision-kernel
+components:
+  - decision_kernel
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_kernel_1_founding
+criteria: |
+  One view shows every part's outcome, with a link to its answer.
+
+  While the parts are worked through and once the work ends, you see for every
+  part whether it is waiting, decided, answered or not run, with a link to its
+  decision record or research findings, and the final report gives one line per
+  part. A rejected split gets a plain report too, so you never have to piece the
+  outcome together yourself.
+depends_on:
+  - DK-400
+doc_links:
+  - path: docs/product-truth/flows/leafcutter/decision-forming.flow.json
+    relationship: specified-by
+    status: exists
+    relevance: "Step split-report (screen decision-split-progress); branch split-reject for the plain report of a rejected split."
+  - path: docs/product-truth/mockups/leafcutter/decision-split-progress.mockup.json
+    relationship: specified-by
+    status: exists
+  - path: docs/product-truth/mock-data/leafcutter/decisions.mock.json
+    relationship: specified-by
+    status: exists
+    relevance: "report_lines: one line per part, starting with the part id and naming its outcome; [] while the gate is open; plain lines for a rejected split."
+  - path: docs/how-to/run-the-decision-kernel.md
+    relationship: related
+    status: exists
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: product-owner
+created: 2026-10-04
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+documentation_triggers:
+  - how-to
+notes: |
+  FLOW NODES: split-report (step); split-reject (branch) for the plain rejected
+  report.
+
+  SETTLED: outcomes shown are pending, decided, answered and not run, each with a
+  link to its child decision record or research result. The run report's split
+  section has one line per part, starting with the part id and naming its
+  outcome. Edited and left-out parts are visible as such.
+
+  OPEN, for the PO (flow-author open point c): the hand split. The progress
+  mockup and the mock record dcp-reusable-criteria-by-hand show a split made
+  by hand outside the kernel (proposed_by claude_code), including a part
+  "settled by a human". The flow has no node for it. Its report_lines are [],
+  because the run report knows nothing of a split made outside the kernel. The
+  PO recommends treating the hand split as historical evidence only: the kernel
+  does not record hand splits, and settled_by_human is not offered in the kernel
+  path unless the user asks for it. If the user wants hand splits recorded or
+  shown, the flow-author must add a node first.
+
+  DOCS: reading split progress and the report section belongs in the kernel
+  how-to (how-to).
