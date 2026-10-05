@@ -5,7 +5,7 @@ components:
 - decision_kernel
 level: L3
 status: active
-readiness: draft
+readiness: reviewed
 req_status: draft
 priority: medium
 work_status: todo
@@ -22,11 +22,39 @@ depends_on:
 covered_by: []
 implemented_by: []
 assigned_agent: python-coder
-estimated_complexity: null
+estimated_complexity: S
 delivers_to: null
 expects_from:
   ac_id: DK-500b-1
-  contract: Grouping suggestion with broader.
+  contract: Grouping suggestion with broader (category id or null).
+change_target: code
+risk_surface: internal
+it_requirements:
+- 'The broader check runs wherever a broader value can enter a suggestion or a record: when a person sets or changes broader in a review run, and again at publish (DK-500c-2, DK-500c-3-ii).'
+- A loop is detected over the whole broader chain across published records, staged records and the suggestion's own value; the refusal names the full loop path in order.
+- A retired broader target is refused, naming the retired id and its replaced_by ids; the same suggestion naming the live replacement is accepted.
+- The method of dec-a070edfb6465bced makes no broader suggestions itself, so the broader values checked here are person-set; no Jev or LLM call decides broader.
+test_required: true
+test_spec:
+- name: test_broader_loop_not_offered_and_named
+  target_dir: tests/kernel/criteria/
+  framework: pytest
+  type: behavioral
+  angle: criterion
+  description: Making cat-6c3eb4f2af148922 broader of cat-d6ce5f78c181ebd1 is not offered; the reason names cat-d6ce5f78c181ebd1 -> cat-6c3eb4f2af148922 -> cat-d6ce5f78c181ebd1.
+- name: test_retired_broader_not_offered_names_replacement
+  target_dir: tests/kernel/criteria/
+  framework: pytest
+  type: behavioral
+  angle: criterion
+  description: Naming the retired cat-40cc613f737e3323 as broader is not offered; the reason names it and cat-d15d52392d7aa94c.
+- name: test_live_replacement_broader_is_offered
+  target_dir: tests/kernel/criteria/
+  framework: pytest
+  type: behavioral
+  angle: boundary
+  description: The same suggestion naming cat-d15d52392d7aa94c as broader is offered.
+test_rationale: Drive the grouping through its public entry point with a controlled Jev provider that replays recorded probabilities and counts calls, plus a recording host port that fails on any request; assert placements, reasons and call counts, not internal helpers.
 doc_links:
 - path: docs/decisions/dec-93c1c730463c1f3c.yaml
   relationship: governs
@@ -37,9 +65,17 @@ doc_links:
 - path: docs/product-truth/mock-data/leafcutter/criterion-categories.mock.json
   relationship: specified-by
   status: exists
+- path: docs/decisions/dec-a070edfb6465bced.yaml
+  relationship: governs
+  status: exists
+  relevance: 'Grouping method (opt.jev_pick_existing, approved by human:user 2026-10-04): code places exact label or criterion-id matches, then Jev answers one bounded choice per wording over all existing categories plus ''none'' while the library fits one choice question, a merge only at p >= 0.8; leftovers become code-made one-member candidates; no LLM, no broader-link suggestions; in a run one Jev choice per drafted question within the run''s Jev budget. Its question says ''AC DK-300b'', which is DK-500b after the 2026-10-05 renumbering.'
 origin_agent: business-analyst
 created: 2026-10-04
-amended_by: []
+amended_by:
+- reason: it-po-technical-enrichment
+  date: '2026-10-05'
+  by: it-po
+  summary: 'Technical enrichment: assigned_agent confirmed, estimated_complexity, change_target, risk_surface, it_requirements, contracts, doc_links and the test contract set; readiness draft -> reviewed. BA criteria unchanged.'
 superseded_by: null
 notes: |
   Mock invariant: broader is null or names a staged or published category (never a retired one), and following broader never leads back to the start.

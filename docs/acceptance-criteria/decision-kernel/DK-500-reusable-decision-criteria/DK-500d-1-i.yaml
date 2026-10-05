@@ -5,7 +5,7 @@ components:
 - decision_kernel
 level: L3
 status: active
-readiness: draft
+readiness: reviewed
 req_status: draft
 priority: medium
 work_status: todo
@@ -20,11 +20,30 @@ depends_on:
 covered_by: []
 implemented_by: []
 assigned_agent: python-coder
-estimated_complexity: null
+estimated_complexity: S
 delivers_to: null
 expects_from:
   ac_id: DK-500d-1
-  contract: Category lookup by decision_types and components.
+  contract: Category lookup by decision_types and components (fit rule).
+change_target: code
+risk_surface: internal
+it_requirements:
+- The fit rule of DK-500d-1 is one deterministic function used by every caller (reuse here, and the cold-start check of DK-500e-3-i). Component matching uses component registry ids exactly, with no prefix or fuzzy match.
+test_required: true
+test_spec:
+- name: test_other_component_and_type_not_offered
+  target_dir: tests/kernel/capabilities/
+  framework: pytest
+  type: behavioral
+  angle: criterion
+  description: For a design decision scoped to decision_kernel only cat-1dc11c5a2ffa7310 of the three is offered.
+- name: test_matching_component_category_offered
+  target_dir: tests/kernel/capabilities/
+  framework: pytest
+  type: behavioral
+  angle: boundary
+  description: For a design decision scoped to ux_prototyping both cat-1dc11c5a2ffa7310 and the ux_prototyping category are offered.
+test_rationale: Run the decision capability through the public run/resume boundary with a scripted Jev provider and a recording host port over a fixture category library; assert the approval payload, call counts and staged files rather than internal helpers.
 doc_links:
 - path: docs/decisions/dec-93c1c730463c1f3c.yaml
   relationship: governs
@@ -37,7 +56,11 @@ doc_links:
   status: exists
 origin_agent: business-analyst
 created: 2026-10-04
-amended_by: []
+amended_by:
+- reason: it-po-technical-enrichment
+  date: '2026-10-05'
+  by: it-po
+  summary: 'Technical enrichment: assigned_agent confirmed, estimated_complexity, change_target, risk_surface, it_requirements, contracts, doc_links and the test contract set; readiness draft -> reviewed. BA criteria unchanged.'
 superseded_by: null
 notes: |
   The ux_prototyping and planning categories are illustrative (every mock category is design and unlimited). The second clause is the positive control: a filter that offers only unlimited categories passes the first clause.

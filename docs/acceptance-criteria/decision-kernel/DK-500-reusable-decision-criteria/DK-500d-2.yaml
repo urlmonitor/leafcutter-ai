@@ -5,7 +5,7 @@ components:
 - decision_kernel
 level: L2
 status: active
-readiness: draft
+readiness: reviewed
 req_status: draft
 priority: medium
 work_status: todo
@@ -24,11 +24,44 @@ covered_by:
 - DK-500d-2-i
 implemented_by: []
 assigned_agent: python-coder
-estimated_complexity: null
+estimated_complexity: M
 delivers_to: null
 expects_from:
   ac_id: DK-500d-1
-  contract: Reused criteria linked to their category ids.
+  contract: Reused criteria linked to their category ids (DK-500d-1 delivers_to).
+change_target: code
+risk_surface: contract_boundary
+it_requirements:
+- The approval-of-proposals payload marks each reused criterion with its category id, pref_label and reuse kind, set apart from drafted ones, and carries the gap verdict (DK-500e-1) and the in-run grouping suggestions (DK-500b-4). It reuses the existing approve-all, approve-some, edit and add answers.
+- Only approved criteria are researched or assessed. The gate is the existing approval step, and reused criteria have no path around it (ADR-060).
+- The kernel builds the presentation text, and the Claude Code and Codex transport skills stay transport-only. If a skill change proves necessary it is a separate llm-expert AC.
+test_required: true
+test_spec:
+- name: test_reused_marked_with_category_and_set_apart
+  target_dir: tests/kernel/capabilities/
+  framework: pytest
+  type: behavioral
+  angle: criterion
+  description: Each reused criterion is shown with its category id and preferred wording, apart from the drafted criterion.
+- name: test_person_can_approve_some_edit_and_add
+  target_dir: tests/kernel/capabilities/
+  framework: pytest
+  type: behavioral
+  angle: criterion
+  description: The approval accepts approve-all, approve-some, edit and add for reused and drafted criteria alike.
+- name: test_unapproved_reused_criterion_not_researched_or_assessed
+  target_dir: tests/kernel/capabilities/
+  framework: pytest
+  type: behavioral
+  angle: criterion
+  description: Approving only cat-d15d52392d7aa94c's criterion and the drafted one means cat-1dc11c5a2ffa7310's criterion gets no research or assessment call.
+- name: test_no_research_before_approval
+  target_dir: tests/kernel/capabilities/
+  framework: pytest
+  type: behavioral
+  angle: criterion
+  description: No research or assessment call for any reused criterion happens before the approval answer.
+test_rationale: Run the decision capability through the public run/resume boundary with a scripted Jev provider and a recording host port over a fixture category library; assert the approval payload, call counts and staged files rather than internal helpers.
 doc_links:
 - path: docs/decisions/dec-93c1c730463c1f3c.yaml
   relationship: governs
@@ -44,7 +77,11 @@ doc_links:
   status: exists
 origin_agent: business-analyst
 created: 2026-10-04
-amended_by: []
+amended_by:
+- reason: it-po-technical-enrichment
+  date: '2026-10-05'
+  by: it-po
+  summary: 'Technical enrichment: assigned_agent confirmed, estimated_complexity, change_target, risk_surface, it_requirements, contracts, doc_links and the test contract set; readiness draft -> reviewed. BA criteria unchanged.'
 superseded_by: null
 notes: |
   Flow node: decision-forming approve-proposals (edited in flow v3: reused ones are marked with their category; nothing proposed or reused is used until approved). The human approval gate stays; this L1 must not create a path where a reused category skips it (DK-500d notes).

@@ -5,7 +5,7 @@ components:
 - decision_kernel
 level: L2
 status: active
-readiness: draft
+readiness: reviewed
 req_status: draft
 priority: medium
 work_status: todo
@@ -26,13 +26,61 @@ covered_by:
 - DK-500d-1-i
 implemented_by: []
 assigned_agent: python-coder
-estimated_complexity: null
+estimated_complexity: M
 delivers_to:
   agent: python-coder
-  contract: 'Reused criteria: [{category_id, question: pref_label, priority, linked: true}] proposed beside drafted ones; consumed by the gap judgement (DK-500e-1) and the approval of proposals (DK-500d-2).'
+  contract: 'Reused criteria: [{category_id, criterion_id, question: pref_label, priority: required|supporting, kind: evidence_answerable|design_judgement, proposal_status: proposed, reuse: unedited}] plus left_out_count: int, proposed beside drafted ones. Consumed by the gap judgement (DK-500e-1), the approval of proposals (DK-500d-2) and membership staging (DK-500d-3).'
 expects_from:
   ac_id: DK-500c-2
-  contract: Published category records with decision_types and components filters.
+  contract: docs/criteria/index.json entries with decision_types and components filters (DK-500c-2 delivers_to).
+change_target: code
+risk_surface: contract_boundary
+it_requirements:
+- Reuse runs in the decision capability after the findings and before any drafting (flow step reuse-criteria). It reads only published categories, through docs/criteria/index.json with the same sha256 check the decision file backend uses, and never reads Langfuse, the mining store or any run root (ADR-058 section 6).
+- 'Q8 fit rule, IT PO default (confirm with the user): a published, non-retired category fits when its decision_types is empty or contains the decision''s decision_type, and its components is empty or intersects the decision''s scope components. A component-limited category therefore does not fit a repository-wide decision. Candidate, staged and retired categories never fit.'
+- 'Q8 cap and order, IT PO default: at most a configured number of fitting categories is offered (default 8). They are ordered by content-word overlap between the category labels and the decision question, with ties broken by category id. Usage counts and outcomes never enter the order (DK-500f-4). When more categories fit than the cap allows, the approval states how many were left out.'
+- Each reused criterion is a proposal (proposal_status proposed) whose question is the category's pref_label. Its criterion id is the most common member criterion id (ties in lexical order), made unique within the decision; its priority and kind are the majority among the category's member criteria, falling back to the decision record schema defaults on a tie.
+- The reuse link (category id, criterion id, reuse kind unedited, edited or grouped) is kept in run state and in the run's staged area, never as a new field of the decision record. RecordCriterion has additionalProperties false, and the decision record schema stays unchanged (dec-93c1c730463c1f3c, crit.existing_consumers_unchanged).
+- Reuse makes no Jev call.
+test_required: true
+test_spec:
+- name: test_five_published_categories_offered_before_drafting
+  target_dir: tests/kernel/capabilities/
+  framework: pytest
+  type: behavioral
+  angle: criterion
+  description: The five published design categories are offered as starting criteria before any host drafting request.
+- name: test_offered_in_pref_label_with_category_id
+  target_dir: tests/kernel/capabilities/
+  framework: pytest
+  type: behavioral
+  angle: criterion
+  description: Each offered criterion carries its category's preferred wording and category id.
+- name: test_candidate_staged_and_retired_not_offered
+  target_dir: tests/kernel/capabilities/
+  framework: pytest
+  type: behavioral
+  angle: criterion
+  description: cat-73d233fc8b15c735, cat-6c3eb4f2af148922 and cat-40cc613f737e3323 are not offered.
+- name: test_lookup_reads_index_not_run_history
+  target_dir: tests/kernel/capabilities/
+  framework: pytest
+  type: behavioral
+  angle: criterion
+  description: The categories come from docs/criteria/index.json; a failing Langfuse read port is never called.
+- name: test_reused_reach_approval_as_proposals
+  target_dir: tests/kernel/capabilities/
+  framework: pytest
+  type: behavioral
+  angle: criterion
+  description: The reused criteria reach the approval of proposals with proposal_status proposed, never approved.
+- name: test_cap_and_left_out_count
+  target_dir: tests/kernel/capabilities/
+  framework: pytest
+  type: behavioral
+  angle: boundary
+  description: With more fitting categories than the cap, exactly the cap is offered in the stated order and the approval states the left-out count.
+test_rationale: Run the decision capability through the public run/resume boundary with a scripted Jev provider and a recording host port over a fixture category library; assert the approval payload, call counts and staged files rather than internal helpers.
 doc_links:
 - path: docs/decisions/dec-93c1c730463c1f3c.yaml
   relationship: governs
@@ -59,13 +107,18 @@ doc_links:
   status: exists
 origin_agent: business-analyst
 created: 2026-10-04
-amended_by: []
+amended_by:
+- reason: it-po-technical-enrichment
+  date: '2026-10-05'
+  by: it-po
+  summary: 'Technical enrichment: assigned_agent confirmed, estimated_complexity, change_target, risk_surface, it_requirements, contracts, doc_links and the test contract set; readiness draft -> reviewed. BA criteria unchanged.'
 superseded_by: null
 notes: |
   Flow node: decision-forming reuse-criteria (step 7, before judge-gap and propose). DISTINCT FROM PRECEDENT: the precedent step offers an earlier ANSWER; this offers earlier QUESTIONS; both can apply in one run. Reused categories are evidence, never authority (ADR-060).
   OPEN: (1) whether a component-limited category fits a repository-wide decision (all seven published decisions but one are repository_wide with components []); (2) whether there is a cap or a relevance order on how many fitting categories are offered when the library grows (with five categories all fit); (3) decision_type has a pattern in the decision record schema but no declared vocabulary, while the decision's crit.filters_from_declared_vocabularies asks for one.
   FLOW BACK-LINK (for step.implements, to be applied by the store owner): leafcutter/decision-forming: reuse-criteria.
   Authored by the business-analyst stage of /plan-feature (route strategic) under decision dec-93c1c730463c1f3c; readiness draft, no product approval implied.
+  IT PO (2026-10-05), Q8 settled as IT PO defaults to confirm: (1) a component-limited category does not fit a repository-wide decision (precision first); (2) a cap (default 8) with a deterministic order by wording overlap and category id, never by usage or outcomes; (3) decision_type has no declared vocabulary yet, so category decision_types are validated by the same pattern as the decision record's decision_type until one is declared.
 product_truth:
   - flow: leafcutter/decision-forming
     node: reuse-criteria

@@ -27,9 +27,15 @@ depends_on:
 covered_by: []
 implemented_by: []
 assigned_agent: documentation-expert
-estimated_complexity: null
+estimated_complexity: S
 delivers_to: null
 expects_from: null
+change_target: docs
+risk_surface: internal
+it_requirements:
+- 'ENRICHMENT-BLOCKED on a BA amendment: the last Then clause requires the reference to mark the method as pending kernel run run-b5af8c7fae2248ba without describing any method as chosen, but dec-a070edfb6465bced (approved 2026-10-04) has chosen it. Building the page as written would document a false state, so readiness stays draft until the criteria are amended.'
+- 'Once amended: one reference page under docs/reference/ with reference frontmatter. It lists the suggestion fields as built (DK-500b-1 contract), the four settled rules, the invariants, the precision / recall / none-share definitions exactly as the evaluation command computes them (DK-500b-2), the 0.8 threshold with its trial evidence and caveats, the shared normalisation rule, the library-size bound and the cold start.'
+test_required: false
 doc_links:
 - path: docs/decisions/dec-93c1c730463c1f3c.yaml
   relationship: governs
@@ -43,10 +49,19 @@ doc_links:
 - path: docs/architecture/adrs/ADR-053-intelligence-selection-deterministic-jev-llm-human.md
   relationship: constrains
   status: exists
+- path: docs/decisions/dec-a070edfb6465bced.yaml
+  relationship: governs
+  status: exists
+  relevance: 'Grouping method (opt.jev_pick_existing, approved by human:user 2026-10-04): code places exact label or criterion-id matches, then Jev answers one bounded choice per wording over all existing categories plus ''none'' while the library fits one choice question, a merge only at p >= 0.8; leftovers become code-made one-member candidates; no LLM, no broader-link suggestions; in a run one Jev choice per drafted question within the run''s Jev budget. Its question says ''AC DK-300b'', which is DK-500b after the 2026-10-05 renumbering.'
 origin_agent: business-analyst
 created: 2026-10-04
-amended_by: []
+amended_by:
+- reason: it-po-technical-enrichment
+  date: '2026-10-05'
+  by: it-po
+  summary: 'Technical enrichment: assigned_agent confirmed, estimated_complexity, change_target docs, risk_surface, it_requirements and doc_links set; test_required false (documentation only). readiness kept draft: the criteria still require the method to be shown as pending, which dec-a070edfb6465bced contradicts. BA criteria unchanged.'
 superseded_by: null
 notes: |
-  Documentation AC answering DK-500b's reference-doc trigger. Update it when run-b5af8c7fae2248ba settles the method; until then the method section says pending. Its deliverable is the document only.
+  Documentation AC answering DK-500b's reference-doc trigger. Its deliverable is the document only.
+  IT PO (2026-10-05): the method is settled by dec-a070edfb6465bced (run-b5af8c7fae2248ba was cancelled). The last Then clause must be amended by the BA to describe the decided method; until then this AC is enrichment-blocked and stays readiness draft.
   Authored by the business-analyst stage of /plan-feature (route strategic) under decision dec-93c1c730463c1f3c; readiness draft, no product approval implied.

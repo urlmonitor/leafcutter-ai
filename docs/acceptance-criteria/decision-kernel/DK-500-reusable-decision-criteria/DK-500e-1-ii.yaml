@@ -5,7 +5,7 @@ components:
 - decision_kernel
 level: L3
 status: active
-readiness: draft
+readiness: reviewed
 req_status: draft
 priority: medium
 work_status: todo
@@ -20,11 +20,31 @@ depends_on:
 covered_by: []
 implemented_by: []
 assigned_agent: python-coder
-estimated_complexity: null
+estimated_complexity: S
 delivers_to: null
 expects_from:
   ac_id: DK-500e-1
   contract: Gap verdict and the approval of proposals.
+change_target: code
+risk_surface: internal
+it_requirements:
+- 'IT PO answer to the BA''s open point: the disagreement is kept both in the run report (decision report artifact) and as a trace event on the existing tracer (one event per added criterion, with run id, verdict and the added wording). It is not stored in the decision record, whose schema stays unchanged.'
+- It is recorded only. No code path reads it to change Jev's behaviour, because influence is out of scope (ADR-056 section 3).
+test_required: true
+test_spec:
+- name: test_added_after_no_gap_marked_as_disagreement
+  target_dir: tests/kernel/capabilities/
+  framework: pytest
+  type: behavioral
+  angle: criterion
+  description: Adding 'Does it keep secrets out of the published records?' after a no-gap verdict marks it as added by the person after that verdict in the report and the trace events.
+- name: test_no_disagreement_when_nothing_added
+  target_dir: tests/kernel/capabilities/
+  framework: pytest
+  type: behavioral
+  angle: criterion
+  description: A run where the person adds nothing after a no-gap verdict marks no disagreement.
+test_rationale: Run the decision capability through the public run/resume boundary with a scripted Jev provider and a recording host port over a fixture category library; assert the approval payload, the run report, trace events and call counts rather than internal helpers.
 doc_links:
 - path: docs/decisions/dec-93c1c730463c1f3c.yaml
   relationship: governs
@@ -37,7 +57,11 @@ doc_links:
   status: exists
 origin_agent: business-analyst
 created: 2026-10-04
-amended_by: []
+amended_by:
+- reason: it-po-technical-enrichment
+  date: '2026-10-05'
+  by: it-po
+  summary: 'Technical enrichment: assigned_agent confirmed, estimated_complexity, change_target, risk_surface, it_requirements, contracts, doc_links and the test contract set; readiness draft -> reviewed. BA criteria unchanged.'
 superseded_by: null
 notes: |
   DK-500e notes: a sufficiency verdict the person overrules is useful evidence for later calibration. This AC keeps the evidence; using it to change Jev's behaviour is influence and belongs after held-out evaluation (ADR-056 section 3), not here. Where the run's outcome keeps it (report, trace or both) is for the IT PO.

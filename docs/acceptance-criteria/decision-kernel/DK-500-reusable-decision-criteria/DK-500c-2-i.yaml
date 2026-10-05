@@ -5,7 +5,7 @@ components:
 - decision_kernel
 level: L3
 status: active
-readiness: draft
+readiness: reviewed
 req_status: draft
 priority: medium
 work_status: todo
@@ -23,11 +23,44 @@ depends_on:
 covered_by: []
 implemented_by: []
 assigned_agent: python-coder
-estimated_complexity: null
+estimated_complexity: S
 delivers_to: null
 expects_from:
   ac_id: DK-500c-2
   contract: Publish checks over staged category records.
+change_target: code
+risk_surface: internal
+it_requirements:
+- The member check reads the decision record from the published store, or the decision being published in the same publish, and compares criterion id and question using the shared wording rule.
+- 'A refusal names the category id and the (decision id, criterion id) pair, and states which check failed: criterion missing, or question not a label.'
+- A refusal writes nothing, including no partial index regeneration.
+test_required: true
+test_spec:
+- name: test_member_missing_criterion_refused_naming_pair
+  target_dir: tests/kernel/criteria/
+  framework: pytest
+  type: behavioral
+  angle: criterion
+  description: The member (dec-d53e1c52cd47c832, crit.person_authorises) is refused, naming the category id and the pair.
+- name: test_member_question_not_a_label_refused
+  target_dir: tests/kernel/criteria/
+  framework: pytest
+  type: behavioral
+  angle: criterion
+  description: A member whose criterion exists but asks a question that is none of the category's wordings is refused the same way.
+- name: test_nothing_written_on_refusal
+  target_dir: tests/kernel/criteria/
+  framework: pytest
+  type: behavioral
+  angle: criterion
+  description: After a refusal docs/criteria/, its index and docs/decisions/ are unchanged.
+- name: test_corrected_pair_publishes
+  target_dir: tests/kernel/criteria/
+  framework: pytest
+  type: behavioral
+  angle: boundary
+  description: With the pair corrected to (dec-acdfd972fcaca478, crit.person_authorises) the same publish succeeds.
+test_rationale: Exercise the review run and the publish command through their public CLI and RunService boundaries on a temporary repository copy and run root; assert staged files, published files, exit codes and byte-level before/after snapshots of docs/decisions/. Model-level unit tests alone would not prove that nothing is written outside the staged area or that publish is all-or-nothing.
 doc_links:
 - path: docs/decisions/dec-93c1c730463c1f3c.yaml
   relationship: governs
@@ -40,7 +73,11 @@ doc_links:
   status: exists
 origin_agent: business-analyst
 created: 2026-10-04
-amended_by: []
+amended_by:
+- reason: it-po-technical-enrichment
+  date: '2026-10-05'
+  by: it-po
+  summary: 'Technical enrichment: assigned_agent confirmed, estimated_complexity, change_target, risk_surface, it_requirements, contracts, doc_links and the test contract set; readiness draft -> reviewed. BA criteria unchanged.'
 superseded_by: null
 notes: |
   Mock invariants: every member names a published decision whose criteria contain the criterion, and that criterion's question is the category's pref_label or one of its alt_labels. The corrected pair is the positive control.

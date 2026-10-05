@@ -6,7 +6,7 @@ components:
 - knowledge_management
 level: L3
 status: active
-readiness: draft
+readiness: reviewed
 req_status: draft
 priority: medium
 work_status: todo
@@ -23,11 +23,42 @@ depends_on:
 covered_by: []
 implemented_by: []
 assigned_agent: python-coder
-estimated_complexity: null
+estimated_complexity: S
 delivers_to: null
 expects_from:
   ac_id: DK-500g-1
   contract: Generation build with category validation.
+change_target: code
+risk_surface: internal
+it_requirements:
+- A validation failure is reported naming the category id and the offending pair. The build publishes nothing, the active generation pointer is unchanged, and no repository file is written (the importer only reads Git).
+test_required: true
+test_spec:
+- name: test_bad_member_fails_build_naming_category_and_pair
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: behavioral
+  angle: criterion
+  description: A commit where cat-1dc11c5a2ffa7310 lists (dec-d53e1c52cd47c832, crit.no_such_criterion) fails the build, naming the category and the pair.
+- name: test_active_generation_stays_active
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: behavioral
+  angle: criterion
+  description: The previously active generation stays active.
+- name: test_no_repository_file_changes
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: behavioral
+  angle: criterion
+  description: No file in the repository changes.
+- name: test_corrected_member_next_build_publishes
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: behavioral
+  angle: boundary
+  description: With the member corrected in a later commit, the next build publishes a generation including cat-1dc11c5a2ffa7310.
+test_rationale: Build real generations through the knowledge sync and registered-operation entry points from a fixture commit (offline fixture backend), and assert node identities, links and answers against the category records of that commit; a live Neo4j test proves server compatibility. Unit tests of the reader alone would not prove that the Decision kind is unchanged in a full generation.
 doc_links:
 - path: docs/decisions/dec-93c1c730463c1f3c.yaml
   relationship: governs
@@ -37,11 +68,15 @@ doc_links:
   status: exists
 - path: docs/architecture/adrs/ADR-062-standalone-knowledge-retrieval.md
   relationship: constrains
-  status: planned
-  relevance: 'On origin/main since PR #998 (merged from feature/knowledge-retrieval-v01); not yet on this branch. Immutable generations, atomic publication, registered parameterized queries only, finite native reader registry.'
+  status: exists
+  relevance: Immutable generations from one commit, validated and published atomically; a failed build leaves the active generation untouched; registered parameterized queries only; finite native reader registry; disabled, unavailable and stale are distinct from an empty answer. On this branch since the 2026-10-05 merge of origin/main.
 origin_agent: business-analyst
 created: 2026-10-04
-amended_by: []
+amended_by:
+- reason: it-po-technical-enrichment
+  date: '2026-10-05'
+  by: it-po
+  summary: 'Technical enrichment: assigned_agent confirmed, estimated_complexity, change_target, risk_surface, it_requirements, contracts, doc_links and the test contract set; readiness draft -> reviewed. BA criteria unchanged.'
 superseded_by: null
 notes: |
   Flow branch: criteria-library import-fails (outcome failure). Such a record should never pass publish (DK-500c-2-i); the import re-checks because Git can be edited outside the publish path. The corrected build is the positive control.

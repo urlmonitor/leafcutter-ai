@@ -5,7 +5,7 @@ components:
 - decision_kernel
 level: L2
 status: active
-readiness: draft
+readiness: reviewed
 req_status: draft
 priority: medium
 work_status: todo
@@ -27,11 +27,66 @@ covered_by:
 - DK-500a-1-iii
 implemented_by: []
 assigned_agent: python-coder
-estimated_complexity: null
+estimated_complexity: L
 delivers_to:
   agent: python-coder
-  contract: 'Mining result: candidates[] each {proposed_by: criteria_mining, approval_status: proposed, proposed_at, mined_from[] {source: published_record|langfuse_trace, run_id, run_status: string|null, langfuse_trace_id, decision_id: dec id|null, criterion_id, origin: approved|generated|human_edited, wording}}, plus sources_read {published_records: read|unavailable, run_history: read|unavailable} with a reason per unavailable source. Consumed by grouping suggestions (DK-500b-1) and by approval in a kernel run (DK-500c-1).'
+  contract: 'Mining round result, JSON in the mining store (.leafcutter/criteria-mining/): {mining_id, started_at, finished_at, sources_read: {published_records: read|unavailable, run_history: read|unavailable}, source_reasons: {<source>: string}, limitations: [string], sightings: [{source: published_record|langfuse_trace, run_id: string|null, run_status: string|null, langfuse_trace_id: string|null, decision_id: dec id|null, criterion_id: string, origin: approved|generated|human_edited, wording: string}], placements: [{wording, category_id, reason: exact_label|criterion_id|jev, probability: number|null}], candidates: [{id: cat-<16 hex>, proposed_by: criteria_mining, approval_status: proposed, proposed_at, pref_label, alt_labels: [string], broader: null, decision_types: [string], components: [], single_source: published_record|langfuse_trace|null, mined_from: [sighting]}], below_threshold: [{wording, sightings}], not_judged: [wording]}. Consumed by grouping (DK-500b-1 to DK-500b-3) and by the review run (DK-500c-1).'
 expects_from: null
+change_target: code
+risk_surface: contract_boundary
+it_requirements:
+- 'Mining is an offline, person-started kernel CLI command (IT PO default name: python -m kernel criteria mine, beside the existing decisions subcommands). It is never a step of a decision run, never scheduled by the kernel, and never imported by the decision, research, host or scheduler code paths.'
+- 'Published-record sightings come only from the committed decision store (memory.decisions_dir, docs/decisions/), read through its generated index with the same sha256 checks the file backend uses: one sighting per (decision id, criterion id), carrying that record''s provenance run id and Langfuse trace id, run_status null and origin approved.'
+- Run-history sightings come only from Langfuse, read through the observations API with the project's existing Langfuse settings and read-only use of its keys (the legacy get-trace endpoint returns 410 for this organisation). Each carries run id, run status, Langfuse trace id, criterion id, origin generated or human_edited and the wording, plus the decision id only when that run staged a decision that was never published.
+- Langfuse reads are bounded by a configured lookback window and a maximum trace count, paged, each request with a timeout. Reaching a bound is reported in the result as a limitation and is never presented as the whole history.
+- Mining copies only criterion wordings and identifiers out of traces. It never stores other trace input, output or metadata in its result, and never un-redacts a value the tracer redacted.
+- 'Q5, IT PO default (confirm with the user): candidates wait in a machine-local mining store outside both Git and the kernel run root, at .leafcutter/criteria-mining/ (a new kernel config key, beside memory.decisions_dir; .leafcutter/ is already gitignored). It holds the open-candidate pool and one report per mining round. Mining writes nothing under docs/ or under <run_root>/runs/, which keeps the mock invariant that a candidate reaches a run root only after a person approves it.'
+- Every proposed candidate carries proposed_by criteria_mining, approval_status proposed, approved_by, approved_at, run_id, staged_path and record_path null, and a kernel-minted cat-<16 hex> id that is persisted in the pool and never re-minted for the same candidate.
+- 'Q4, IT PO default (config key, default 2): a NEW candidate category is proposed only when its sightings come from at least 2 distinct occurrences. Occurrences are distinct decision ids for published sightings and distinct run ids for run-history sightings; a run whose staged decision was later published counts once, together with that decision. Sightings placed into an existing category are always reported, whatever the threshold. Groups below the threshold are listed in the round report and are not proposed.'
+- Sightings become candidates only through the grouping method of dec-a070edfb6465bced (DK-500b-3). Mining merges wordings by no other rule.
+- Mining calls Jev only for grouping, within a configured per-round Jev call budget. Wordings the budget could not fund are reported as not judged and carried to the next round; they are never turned into candidates and never placed.
+- 'Re-running mining over unchanged sources is idempotent: the same candidate ids, the same pool content and the same report apart from timestamps.'
+- 'The round is logged at INFO (sources read, sighting counts, candidates proposed) and each unavailable source at WARNING. Handle failures per the project error handling policy: catch specific exceptions, log at WARNING with the identifiers involved, and never swallow a failure silently. A failure of one source never aborts the round when the other source was read.'
+- The new CLI subcommand is listed in docs/components.json (decision_kernel.exposed_interfaces, kernel-cli shape) and in docs/architecture/components/decision-kernel.md.
+test_required: true
+test_spec:
+- name: test_published_sightings_name_decision_criterion_and_wording
+  target_dir: tests/kernel/criteria/
+  framework: pytest
+  type: behavioral
+  angle: criterion
+  description: Mining a fixture store with the three crit.small_slice decisions reports exactly three published_record sightings, each with its decision id, criterion id and that decision's wording.
+- name: test_run_history_sightings_name_run_status_and_trace
+  target_dir: tests/kernel/criteria/
+  framework: pytest
+  type: behavioral
+  angle: criterion
+  description: With a controlled Langfuse observations port holding the four runs, mining reports four langfuse_trace sightings, each with run id, run status and trace id.
+- name: test_failed_waiting_and_unpublished_runs_are_mined
+  target_dir: tests/kernel/criteria/
+  framework: pytest
+  type: behavioral
+  angle: criterion
+  description: Sightings from the failed, the waiting and the never-published run are among the reported sightings.
+- name: test_candidates_are_proposals_only
+  target_dir: tests/kernel/criteria/
+  framework: pytest
+  type: behavioral
+  angle: criterion
+  description: Every candidate has proposed_by criteria_mining, approval_status proposed, no approver, no run, no staged or record path, and no file under docs/ or <run_root>/runs/ changes.
+- name: test_mine_command_is_reachable_from_cli
+  target_dir: tests/kernel/criteria/
+  framework: pytest
+  type: integration
+  angle: reachability
+  description: python -m kernel criteria mine against fixture sources prints one JSON document with sources_read and candidates and exits 0.
+- name: test_mining_is_idempotent_on_unchanged_sources
+  target_dir: tests/kernel/criteria/
+  framework: pytest
+  type: behavioral
+  angle: boundary
+  description: Two rounds over unchanged sources yield the same candidate ids and the same pool content.
+test_rationale: Exercise the public mining entry point with a fixture decision store and a controlled Langfuse observations port (no live Langfuse); assert the returned result, the mining store and a before/after snapshot of docs/ and the run root. A unit test of a sighting parser alone would not prove that both sources are read through the real entry point.
 doc_links:
 - path: docs/decisions/dec-93c1c730463c1f3c.yaml
   relationship: governs
@@ -52,9 +107,21 @@ doc_links:
 - path: docs/architecture/components/decision-kernel.md
   relationship: describes
   status: exists
+- path: docs/decisions/dec-a070edfb6465bced.yaml
+  relationship: governs
+  status: exists
+  relevance: 'Grouping method (opt.jev_pick_existing, approved by human:user 2026-10-04): code places exact label or criterion-id matches, then Jev answers one bounded choice per wording over all existing categories plus ''none'' while the library fits one choice question, a merge only at p >= 0.8; leftovers become code-made one-member candidates; no LLM, no broader-link suggestions; in a run one Jev choice per drafted question within the run''s Jev budget. Its question says ''AC DK-300b'', which is DK-500b after the 2026-10-05 renumbering.'
+- path: docs/how-to/inspect-kernel-traces-with-langfuse-mcp.md
+  relationship: related
+  status: exists
+  relevance: Kernel traces are read as observations; the legacy get-trace endpoint returns 410 for this organisation.
 origin_agent: business-analyst
 created: 2026-10-04
-amended_by: []
+amended_by:
+- reason: it-po-technical-enrichment
+  date: '2026-10-05'
+  by: it-po
+  summary: 'Technical enrichment: assigned_agent confirmed, estimated_complexity, change_target, risk_surface, it_requirements, contracts, doc_links and the test contract set; readiness draft -> reviewed. BA criteria unchanged.'
 superseded_by: null
 notes: |
   USER REQUIREMENT (2026-10-02, decided directly by the user; no decision record exists for it): mining reads BOTH published decision records AND the Langfuse run history of kernel runs, including failed, cancelled, waiting and never-published runs. It is an OFFLINE job that produces CANDIDATES only. Do not drop either source.
@@ -63,6 +130,7 @@ notes: |
   Where candidates are kept between the mining run and a person's review is open: the mock data keeps them out of both the run root and Git (run_id, staged_path and record_path are null while candidate).
   FLOW BACK-LINK (for step.implements, to be applied by the store owner): leafcutter/criteria-library: mine.
   Authored by the business-analyst stage of /plan-feature (route strategic) under decision dec-93c1c730463c1f3c; readiness draft, no product approval implied.
+  IT PO (2026-10-05): settled for this AC, as IT PO defaults to confirm with the user: the recurrence threshold (Q4: at least 2 distinct occurrences, config key) and where candidates wait (Q5: the machine-local mining store .leafcutter/criteria-mining/, outside Git and the run root). The trigger stays on demand (python -m kernel criteria mine); no scheduler is added. Grouping of sightings follows dec-a070edfb6465bced.
 product_truth:
   - flow: leafcutter/criteria-library
     node: mine

@@ -5,7 +5,7 @@ components:
 - decision_kernel
 level: L3
 status: active
-readiness: draft
+readiness: reviewed
 req_status: draft
 priority: medium
 work_status: todo
@@ -22,11 +22,38 @@ depends_on:
 covered_by: []
 implemented_by: []
 assigned_agent: python-coder
-estimated_complexity: null
+estimated_complexity: S
 delivers_to: null
 expects_from:
   ac_id: DK-500b-3
   contract: Deterministic placement against category labels, including retired categories' replaced_by.
+change_target: code
+risk_surface: internal
+it_requirements:
+- Exact-match placement resolves a retired category's label through replaced_by to the first non-retired category. A chain is followed to its end, and a cycle in replaced_by is a validation error, never an endless loop.
+- A retired category with more than one replacement yields none, with a reason naming every replacement id; nothing is guessed (precision first).
+- Retired categories are never offered to Jev as options.
+test_required: true
+test_spec:
+- name: test_retired_label_placed_in_live_replacement
+  target_dir: tests/kernel/criteria/
+  framework: pytest
+  type: behavioral
+  angle: criterion
+  description: A sighting with cat-40cc613f737e3323's preferred wording is placed in cat-d15d52392d7aa94c, never in the retired category.
+- name: test_replacement_chain_followed_to_live_category
+  target_dir: tests/kernel/criteria/
+  framework: pytest
+  type: behavioral
+  angle: criterion
+  description: When the replacement is itself retired, placement follows replaced_by to the first non-retired category.
+- name: test_split_retired_label_gets_none_naming_replacements
+  target_dir: tests/kernel/criteria/
+  framework: pytest
+  type: behavioral
+  angle: criterion
+  description: A label of a category split into several replacements gets none, naming the replacements.
+test_rationale: Drive the grouping through its public entry point with a controlled Jev provider that replays recorded probabilities and counts calls, plus a recording host port that fails on any request; assert placements, reasons and call counts, not internal helpers.
 doc_links:
 - path: docs/decisions/dec-93c1c730463c1f3c.yaml
   relationship: governs
@@ -40,9 +67,17 @@ doc_links:
 - path: docs/architecture/adrs/ADR-061-identity-of-declared-and-learned-records.md
   relationship: constrains
   status: exists
+- path: docs/decisions/dec-a070edfb6465bced.yaml
+  relationship: governs
+  status: exists
+  relevance: 'Grouping method (opt.jev_pick_existing, approved by human:user 2026-10-04): code places exact label or criterion-id matches, then Jev answers one bounded choice per wording over all existing categories plus ''none'' while the library fits one choice question, a merge only at p >= 0.8; leftovers become code-made one-member candidates; no LLM, no broader-link suggestions; in a run one Jev choice per drafted question within the run''s Jev budget. Its question says ''AC DK-300b'', which is DK-500b after the 2026-10-05 renumbering.'
 origin_agent: business-analyst
 created: 2026-10-04
-amended_by: []
+amended_by:
+- reason: it-po-technical-enrichment
+  date: '2026-10-05'
+  by: it-po
+  summary: 'Technical enrichment: assigned_agent confirmed, estimated_complexity, change_target, risk_surface, it_requirements, contracts, doc_links and the test contract set; readiness draft -> reviewed. BA criteria unchanged.'
 superseded_by: null
 notes: |
   Labels may repeat between a retired category and its replacement (the mock's uniqueness invariant covers only categories that are not retired), so a deterministic match can hit two records. Precision-first (DK-500b-2): an ambiguous split goes to a person, not to a guess.

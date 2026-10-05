@@ -5,7 +5,7 @@ components:
 - decision_kernel
 level: L2
 status: active
-readiness: draft
+readiness: reviewed
 req_status: draft
 priority: medium
 work_status: todo
@@ -24,13 +24,48 @@ covered_by:
 - DK-500b-1-i
 implemented_by: []
 assigned_agent: python-coder
-estimated_complexity: null
+estimated_complexity: M
 delivers_to:
   agent: python-coder
-  contract: 'Grouping suggestion: {wording_or_candidate, placement: <existing non-retired category id>|none, pref_label, alt_labels[], broader: category id|null, reason}. A suggestion is inert until a person accepts it (DK-500c-1).'
+  contract: 'Grouping suggestion: {suggestion_id, wording: string, sightings: [sighting], placement: <existing non-retired category id>|none, pref_label: string, alt_labels: [string], broader: category id|null, reason: {kind: exact_label|criterion_id|jev|new_candidate, probability: number|null, matched_label: string|null}}. Inert until a person accepts it (DK-500c-1, DK-500b-4).'
 expects_from:
   ac_id: DK-500a-1
   contract: Mining result candidates with mined_from sightings.
+change_target: code
+risk_surface: internal
+it_requirements:
+- A grouping suggestion is an inert proposal held only in the mining store (offline) or in the run's state (in a run). Creating, listing or discarding suggestions writes nothing under docs/, under any run's staged area or to any decision record.
+- 'Each suggestion carries one pref_label, alt_labels that never repeat the pref_label, broader null or one category id, placement (an existing non-retired category id, or none) and a reason: exact_label, criterion_id, jev (with its probability) or new_candidate. Wording equality (''exact match'', ''identical'', ''repeat'', label uniqueness) is one shared rule for every caller (offline grouping, in-run grouping, publish label checks, drafted-repeat removal, edit detection): Unicode NFC, trimmed, internal whitespace collapsed to one space, case-folded; punctuation and word order stay significant. No caller may apply a looser or stricter rule of its own.'
+- Under dec-a070edfb6465bced the method never suggests a broader category, so method-made suggestions carry broader null. A broader value appears only when a person sets one while changing a suggestion; DK-500b-1-i validates it.
+- Label uniqueness against staged and published categories is a deterministic check applied before any suggestion is offered. A wording that is already a label of a live category is placed there by exact match and never suggested into a second category.
+- Suggestions are presented for acceptance only in a review run (DK-500c-1) or at a decision run's approval of proposals (DK-500b-4); nothing applies a suggestion automatically.
+test_required: true
+test_spec:
+- name: test_suggestion_has_one_pref_label_and_no_repeated_alt_label
+  target_dir: tests/kernel/criteria/
+  framework: pytest
+  type: behavioral
+  angle: criterion
+  description: For the three maintainability wordings, each suggestion has one pref_label and alt_labels that do not repeat it.
+- name: test_broader_is_null_or_one_id
+  target_dir: tests/kernel/criteria/
+  framework: pytest
+  type: behavioral
+  angle: criterion
+  description: Every suggestion has broader null or exactly one category id; method-made suggestions have null.
+- name: test_live_label_never_suggested_into_second_category
+  target_dir: tests/kernel/criteria/
+  framework: pytest
+  type: behavioral
+  angle: criterion
+  description: '''Can it be put in place with a small change?'', a label of cat-1dc11c5a2ffa7310, is never suggested into another category.'
+- name: test_nothing_changes_until_accepted
+  target_dir: tests/kernel/criteria/
+  framework: pytest
+  type: behavioral
+  angle: criterion
+  description: Suggesting groupings leaves candidates, docs/criteria/, docs/decisions/ and the run root byte-identical.
+test_rationale: Drive the grouping through its public entry point with a controlled Jev provider that replays recorded probabilities and counts calls, plus a recording host port that fails on any request; assert placements, reasons and call counts, not internal helpers.
 doc_links:
 - path: docs/decisions/dec-93c1c730463c1f3c.yaml
   relationship: governs
@@ -47,13 +82,20 @@ doc_links:
 - path: docs/architecture/adrs/ADR-060-source-of-truth-and-approval-authority.md
   relationship: constrains
   status: exists
+- path: docs/decisions/dec-a070edfb6465bced.yaml
+  relationship: governs
+  status: exists
+  relevance: 'Grouping method (opt.jev_pick_existing, approved by human:user 2026-10-04): code places exact label or criterion-id matches, then Jev answers one bounded choice per wording over all existing categories plus ''none'' while the library fits one choice question, a merge only at p >= 0.8; leftovers become code-made one-member candidates; no LLM, no broader-link suggestions; in a run one Jev choice per drafted question within the run''s Jev budget. Its question says ''AC DK-300b'', which is DK-500b after the 2026-10-05 renumbering.'
 origin_agent: business-analyst
 created: 2026-10-04
-amended_by: []
+amended_by:
+- reason: it-po-technical-enrichment
+  date: '2026-10-05'
+  by: it-po
+  summary: 'Technical enrichment: assigned_agent confirmed, estimated_complexity, change_target, risk_surface, it_requirements, contracts, doc_links and the test contract set; readiness draft -> reviewed. BA criteria unchanged.'
 superseded_by: null
 notes: |
-  PENDING METHOD (DK-500b): the grouping method is being decided in kernel run
-  run-b5af8c7fae2248ba after a Jev trial. This record is method-neutral by design.
+  DECIDED METHOD (replaces the earlier pending-method note, which named the cancelled run run-b5af8c7fae2248ba): dec-a070edfb6465bced, option opt.jev_pick_existing, chosen by human:user on 2026-10-04 in run run-14655bf6d5e84cb3. Its question still says 'AC DK-300b' because the record is append-only; that is DK-500b after the 2026-10-05 renumbering. The method: (1) code places every wording that exactly matches a preferred or other label of an existing category, or shares a criterion id with a member, with no model call; (2) Jev answers one bounded choice per remaining wording over ALL existing non-retired categories (each shown by its preferred and other labels) plus 'none', while the library fits one choice question, and a merge is suggested only at p >= 0.8; (3) wordings left at 'none' become one-member candidate categories made by code, worded as the wording. No LLM anywhere in grouping and no broader-link suggestions. Cold start: no categories, so every wording is its own one-member candidate and Jev is not called. In a decision run: one Jev choice per drafted question within the run's Jev budget. Evidence for p >= 0.8: a live Jev trial on 82 wordings (22 in-category, 56 none, 4 pair probes) measured 100% precision (12/12) and 55% recall (12/22) at p >= 0.8, 94% / 68% at 0.7 and 78% / 82% at 0.5; caveats: LLM-drafted mock gold set approved as mock data, one run at one seed, small sample.
   USER RULE (d), settled: each grouping is a suggestion a person accepts, changes or undoes. USER RULE (b): a wrong merge is worse than a missed merge (DK-500b-2).
   Flow node: criteria-library suggest-grouping. Data: mock records cat-73d233fc8b15c735 (the maintainability wordings) and cat-1dc11c5a2ffa7310.
   Mock invariants carried: pref_label is not one of its own alt_labels; no label belongs to two categories that are not retired.

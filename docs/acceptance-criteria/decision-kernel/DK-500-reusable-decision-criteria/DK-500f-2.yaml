@@ -5,7 +5,7 @@ components:
 - decision_kernel
 level: L2
 status: active
-readiness: draft
+readiness: reviewed
 req_status: draft
 priority: medium
 work_status: todo
@@ -27,11 +27,66 @@ covered_by:
 - DK-500f-2-i
 implemented_by: []
 assigned_agent: python-coder
-estimated_complexity: null
+estimated_complexity: L
 delivers_to: null
 expects_from:
   ac_id: DK-500f-1
-  contract: Generated usage index per category.
+  contract: Generated usage index per category (the per-category sum check).
+change_target: code
+risk_surface: contract_boundary
+it_requirements:
+- Statistics go only through the ColonyMemory port (ADR-065 section 3), with the Neo4j statistics backend chosen once at startup; no second memory port.
+- It uses the same Neo4j and the same LEAFCUTTER_NEO4J_* settings as ADR-062 (A1.3). Aggregate nodes are kept apart from the immutable projection generations (their own label, part of no generation) and are never read by the knowledge projection.
+- 'Triggers (A1.1): after a publish that adds or changes a category or decision record, after a decision''s final outcome is recorded, and on an explicit rebuild command. Each trigger rebuilds every aggregate row in full (A1.2), runs outside any decision run and never blocks one.'
+- 'Rows derive only from published records in Git: the members of published categories joined with each member decision''s final_outcome.status (pending, confirmed, corrected or abandoned) and context (capability from provenance.created_by_capability, task_type null in V0, decision_type, components, repository_wide, repository_id, policy_version null in V0). The key (repository_id, kind, category_id, context) is unique; decision_count is the sum of the four status counts; all rows share one rebuilt_at.'
+- 'When the store is unavailable, the rebuild retries with a bounded backoff (A1.4), then reports and gives up; the next rebuild repairs it. It never raises into publish or into a run. Handle failures per the project error handling policy: catch specific exceptions, log at WARNING with the identifiers involved, and never swallow a failure silently.'
+- Category records never hold outcome or success fields; the record schema rejects them.
+- A live test against a real Neo4j is required before claiming server compatibility (ADR-062); offline tests use a fake backend at the port.
+test_required: true
+test_spec:
+- name: test_rebuild_rebuilds_every_row_keyed_by_category_and_context
+  target_dir: tests/kernel/memory/
+  framework: pytest
+  type: behavioral
+  angle: criterion
+  description: An added item triggers a rebuild that rewrites every aggregate row, each keyed by category id and the full context.
+- name: test_row_counts_3_decisions_all_pending
+  target_dir: tests/kernel/memory/
+  framework: pytest
+  type: behavioral
+  angle: criterion
+  description: 'cat-1dc11c5a2ffa7310''s repository-wide design row has decision_count 3: 0 confirmed, 0 corrected, 0 abandoned, 3 pending.'
+- name: test_row_sums_equal_usage_count
+  target_dir: tests/kernel/memory/
+  framework: pytest
+  type: behavioral
+  angle: criterion
+  description: For each category, the decision counts summed over its rows equal its usage count.
+- name: test_all_rows_share_rebuild_time
+  target_dir: tests/kernel/memory/
+  framework: pytest
+  type: behavioral
+  angle: criterion
+  description: All rows carry the same rebuilt_at.
+- name: test_outcome_change_reflected_after_rebuild
+  target_dir: tests/kernel/memory/
+  framework: pytest
+  type: behavioral
+  angle: criterion
+  description: After dec-acdfd972fcaca478's outcome becomes confirmed and a rebuild runs, the row shows 1 confirmed and 2 pending.
+- name: test_category_records_hold_no_outcome_fields
+  target_dir: tests/kernel/memory/
+  framework: pytest
+  type: behavioral
+  angle: criterion
+  description: A category record with an outcome or success field is rejected by the record schema.
+- name: test_live_neo4j_rebuild
+  target_dir: tests/kernel/live/
+  framework: pytest
+  type: integration
+  angle: deployed
+  description: Against a configured real Neo4j, a rebuild writes the aggregate rows outside every projection generation and reads them back.
+test_rationale: Drive the rebuild through the ColonyMemory port with a fake statistics backend that records rows, over a fixture of published decision and category records; one live test against a real Neo4j proves server compatibility, as ADR-062 requires before claiming it.
 doc_links:
 - path: docs/decisions/dec-93c1c730463c1f3c.yaml
   relationship: governs
@@ -51,15 +106,24 @@ doc_links:
 - path: docs/architecture/components/colony-memory.md
   relationship: describes
   status: exists
+- path: docs/architecture/adrs/ADR-062-standalone-knowledge-retrieval.md
+  relationship: constrains
+  status: exists
+  relevance: Immutable generations from one commit, validated and published atomically; a failed build leaves the active generation untouched; registered parameterized queries only; finite native reader registry; disabled, unavailable and stale are distinct from an empty answer. On this branch since the 2026-10-05 merge of origin/main.
 origin_agent: business-analyst
 created: 2026-10-04
-amended_by: []
+amended_by:
+- reason: it-po-technical-enrichment
+  date: '2026-10-05'
+  by: it-po
+  summary: 'Technical enrichment: assigned_agent confirmed, estimated_complexity, change_target, risk_surface, it_requirements, contracts, doc_links and the test contract set; readiness draft -> reviewed. BA criteria unchanged.'
 superseded_by: null
 notes: |
   This is the user's "also into neo4j" for OUTCOMES. SETTLED (crit.outcomes_left_to_colony_store, ADR-065): outcome statistics are derived, rebuildable Neo4j aggregates keyed by the published category id, never in Git. Mock: CriterionCategoryAggregate rows (task_type and policy_version are null in V0, never omitted; each added item rebuilds all aggregates in full, ADR-065 A1.1/A1.2).
   Component drift: colony_memory belongs in components but is not in the AC schema enum (see DK-500f notes).
   FLOW BACK-LINK (for step.implements, to be applied by the store owner): leafcutter/criteria-library: aggregate-outcomes.
   Authored by the business-analyst stage of /plan-feature (route strategic) under decision dec-93c1c730463c1f3c; readiness draft, no product approval implied.
+  COMPONENT ENUM DRIFT (IT PO, 2026-10-05): this AC also belongs to colony_memory, which docs/components.json lists but the components enum in config/ac_store_schema.json lacks, so the validator would reject it. Tracked as TICKET-20261003-AcSchemaComponentEnumDrift (not present on this branch). Add colony_memory to components once the enum is fixed.
 product_truth:
   - flow: leafcutter/criteria-library
     node: aggregate-outcomes

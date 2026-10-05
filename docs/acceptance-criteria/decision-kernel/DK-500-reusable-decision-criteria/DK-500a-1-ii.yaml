@@ -5,7 +5,7 @@ components:
 - decision_kernel
 level: L3
 status: active
-readiness: draft
+readiness: reviewed
 req_status: draft
 priority: medium
 work_status: todo
@@ -23,11 +23,51 @@ depends_on:
 covered_by: []
 implemented_by: []
 assigned_agent: python-coder
-estimated_complexity: null
+estimated_complexity: M
 delivers_to: null
 expects_from:
   ac_id: DK-500a-1
-  contract: Mining result; plus the published category records it compares against.
+  contract: Mining round result, plus the published category records (docs/criteria/ through its index) and the open-candidate pool it compares against.
+change_target: code
+risk_surface: internal
+it_requirements:
+- 'Before proposing anything, each sighting is compared with every published category, every staged category in the local run root and every open candidate in the mining store, using the shared wording rule. A sighting whose wording is a label of one of them is reported as a sighting for that category, never as a new candidate. Wording equality (''exact match'', ''identical'', ''repeat'', label uniqueness) is one shared rule for every caller (offline grouping, in-run grouping, publish label checks, drafted-repeat removal, edit detection): Unicode NFC, trimmed, internal whitespace collapsed to one space, case-folded; punctuation and word order stay significant. No caller may apply a looser or stricter rule of its own.'
+- Open candidates keep their ids across rounds; a later round extends an open candidate's mined_from with new sightings instead of proposing a second candidate.
+- Mining never writes a published or staged category. A sighting for a published category becomes a review item for the review run (DK-500c-1), not a change.
+- A published-record sighting that is already a member of its category is not reported as new, which keeps both options of DK-500d-3 consistent.
+test_required: true
+test_spec:
+- name: test_no_candidate_from_published_labels
+  target_dir: tests/kernel/criteria/
+  framework: pytest
+  type: behavioral
+  angle: criterion
+  description: A second round proposes no new candidate whose wordings are labels of cat-1dc11c5a2ffa7310.
+- name: test_open_candidate_not_reproposed_under_new_id
+  target_dir: tests/kernel/criteria/
+  framework: pytest
+  type: behavioral
+  angle: criterion
+  description: The open candidate cat-73d233fc8b15c735 is not proposed again under another id.
+- name: test_published_category_unchanged_by_mining
+  target_dir: tests/kernel/criteria/
+  framework: pytest
+  type: behavioral
+  angle: criterion
+  description: The published record of cat-1dc11c5a2ffa7310 is byte-identical before and after the round.
+- name: test_new_published_wording_reported_as_sighting_for_existing_category
+  target_dir: tests/kernel/criteria/
+  framework: pytest
+  type: behavioral
+  angle: criterion
+  description: A newly published decision asking 'Can it be built and verified as one ticket?' is reported as a sighting for cat-1dc11c5a2ffa7310, not as a new candidate.
+- name: test_existing_member_not_reported_again
+  target_dir: tests/kernel/criteria/
+  framework: pytest
+  type: behavioral
+  angle: boundary
+  description: A published-record sighting that is already a member is not reported as a new sighting.
+test_rationale: Exercise the public mining entry point with a fixture decision store and a controlled Langfuse observations port (no live Langfuse); assert the returned result, the mining store and a before/after snapshot of docs/ and the run root. A unit test of a sighting parser alone would not prove that both sources are read through the real entry point.
 doc_links:
 - path: docs/decisions/dec-93c1c730463c1f3c.yaml
   relationship: governs
@@ -44,9 +84,17 @@ doc_links:
 - path: docs/architecture/adrs/ADR-061-identity-of-declared-and-learned-records.md
   relationship: constrains
   status: exists
+- path: docs/decisions/dec-a070edfb6465bced.yaml
+  relationship: governs
+  status: exists
+  relevance: 'Grouping method (opt.jev_pick_existing, approved by human:user 2026-10-04): code places exact label or criterion-id matches, then Jev answers one bounded choice per wording over all existing categories plus ''none'' while the library fits one choice question, a merge only at p >= 0.8; leftovers become code-made one-member candidates; no LLM, no broader-link suggestions; in a run one Jev choice per drafted question within the run''s Jev budget. Its question says ''AC DK-300b'', which is DK-500b after the 2026-10-05 renumbering.'
 origin_agent: business-analyst
 created: 2026-10-04
-amended_by: []
+amended_by:
+- reason: it-po-technical-enrichment
+  date: '2026-10-05'
+  by: it-po
+  summary: 'Technical enrichment: assigned_agent confirmed, estimated_complexity, change_target, risk_surface, it_requirements, contracts, doc_links and the test contract set; readiness draft -> reviewed. BA criteria unchanged.'
 superseded_by: null
 notes: |
   Mining runs repeatedly (it is the feedback loop for DK-500e: drafted and person-added criteria in published decisions become material for the next round). Without this rule every round re-proposes the whole library.

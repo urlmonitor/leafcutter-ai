@@ -5,7 +5,7 @@ components:
 - decision_kernel
 level: L3
 status: active
-readiness: draft
+readiness: reviewed
 req_status: draft
 priority: medium
 work_status: todo
@@ -21,11 +21,38 @@ depends_on:
 covered_by: []
 implemented_by: []
 assigned_agent: python-coder
-estimated_complexity: null
+estimated_complexity: S
 delivers_to: null
 expects_from:
   ac_id: DK-500c-1
-  contract: Approval path for candidates.
+  contract: Approval path for candidates in the criteria.review run.
+change_target: code
+risk_surface: auth
+it_requirements:
+- Approval authority is checked deterministically at the moment of approval and again at staging. Only a human-answer submission whose approver matches ^human(:<name>)?$ may approve. An approval that arrives through the host-result channel, from a Jev output, from the mining job or with any other approver string is refused, naming the refused approver.
+- A refused approval leaves the candidate proposed in the mining store and stages nothing, and it is logged at WARNING.
+- No configuration switch relaxes this rule.
+test_required: true
+test_spec:
+- name: test_mining_jev_and_host_approvals_refused_naming_approver
+  target_dir: tests/kernel/criteria/
+  framework: pytest
+  type: behavioral
+  angle: criterion
+  description: Approvals by criteria_mining, jev and claude_code are each refused, naming the refused approver.
+- name: test_refused_candidate_stays_proposed_and_unstaged
+  target_dir: tests/kernel/criteria/
+  framework: pytest
+  type: behavioral
+  angle: criterion
+  description: After the refusals the candidate is still proposed and nothing is staged for it.
+- name: test_human_approval_in_same_run_stages
+  target_dir: tests/kernel/criteria/
+  framework: pytest
+  type: behavioral
+  angle: boundary
+  description: The same candidate accepted by human:user in the same run is staged.
+test_rationale: Exercise the review run and the publish command through their public CLI and RunService boundaries on a temporary repository copy and run root; assert staged files, published files, exit codes and byte-level before/after snapshots of docs/decisions/. Model-level unit tests alone would not prove that nothing is written outside the staged area or that publish is all-or-nothing.
 doc_links:
 - path: docs/decisions/dec-93c1c730463c1f3c.yaml
   relationship: governs
@@ -41,7 +68,11 @@ doc_links:
   status: exists
 origin_agent: business-analyst
 created: 2026-10-04
-amended_by: []
+amended_by:
+- reason: it-po-technical-enrichment
+  date: '2026-10-05'
+  by: it-po
+  summary: 'Technical enrichment: assigned_agent confirmed, estimated_complexity, change_target, risk_surface, it_requirements, contracts, doc_links and the test contract set; readiness draft -> reviewed. BA criteria unchanged.'
 superseded_by: null
 notes: |
   ADR-060: only a person approves; the mining job and models never do (mock invariant: approved_by matches ^human(:<name>)?$ on every approved record). The last clause is the positive control: an approval path that refuses everyone satisfies the first clauses.

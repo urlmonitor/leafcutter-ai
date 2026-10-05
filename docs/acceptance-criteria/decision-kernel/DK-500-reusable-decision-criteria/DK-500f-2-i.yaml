@@ -5,7 +5,7 @@ components:
 - decision_kernel
 level: L3
 status: active
-readiness: draft
+readiness: reviewed
 req_status: draft
 priority: medium
 work_status: todo
@@ -20,11 +20,30 @@ depends_on:
 covered_by: []
 implemented_by: []
 assigned_agent: python-coder
-estimated_complexity: null
+estimated_complexity: S
 delivers_to: null
 expects_from:
   ac_id: DK-500f-2
   contract: Aggregate rebuild.
+change_target: code
+risk_surface: internal
+it_requirements:
+- Rows are built only for published (not retired) categories, and members moved by a merge count for their new category.
+test_required: true
+test_spec:
+- name: test_no_rows_for_candidate_staged_or_retired
+  target_dir: tests/kernel/memory/
+  framework: pytest
+  type: behavioral
+  angle: criterion
+  description: No aggregate row is keyed by cat-73d233fc8b15c735, cat-6c3eb4f2af148922 or cat-40cc613f737e3323.
+- name: test_merged_category_counts_absorbed_member
+  target_dir: tests/kernel/memory/
+  framework: pytest
+  type: behavioral
+  angle: boundary
+  description: cat-d15d52392d7aa94c's rows count 2 decisions, including dec-acdfd972fcaca478.
+test_rationale: Drive the rebuild through the ColonyMemory port with a fake statistics backend that records rows, over a fixture of published decision and category records; one live test against a real Neo4j proves server compatibility, as ADR-062 requires before claiming it.
 doc_links:
 - path: docs/decisions/dec-93c1c730463c1f3c.yaml
   relationship: governs
@@ -40,12 +59,17 @@ doc_links:
   status: exists
 origin_agent: business-analyst
 created: 2026-10-04
-amended_by: []
+amended_by:
+- reason: it-po-technical-enrichment
+  date: '2026-10-05'
+  by: it-po
+  summary: 'Technical enrichment: assigned_agent confirmed, estimated_complexity, change_target, risk_surface, it_requirements, contracts, doc_links and the test contract set; readiness draft -> reviewed. BA criteria unchanged.'
 superseded_by: null
 notes: |
   Mock invariant: an aggregate's category_id names a published category, never a candidate, staged or retired one. The cat-d15d52392d7aa94c clause is the positive control: a rebuild that drops every merged category passes the first clause.
   FLOW BACK-LINK (for step.implements, to be applied by the store owner): leafcutter/criteria-library: aggregate-outcomes.
   Authored by the business-analyst stage of /plan-feature (route strategic) under decision dec-93c1c730463c1f3c; readiness draft, no product approval implied.
+  COMPONENT ENUM DRIFT (IT PO, 2026-10-05): this AC also belongs to colony_memory, which docs/components.json lists but the components enum in config/ac_store_schema.json lacks, so the validator would reject it. Tracked as TICKET-20261003-AcSchemaComponentEnumDrift (not present on this branch). Add colony_memory to components once the enum is fixed.
 product_truth:
   - flow: leafcutter/criteria-library
     node: aggregate-outcomes

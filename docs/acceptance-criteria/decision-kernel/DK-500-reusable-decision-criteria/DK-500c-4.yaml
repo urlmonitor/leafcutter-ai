@@ -5,7 +5,7 @@ components:
 - decision_kernel
 level: L2
 status: active
-readiness: draft
+readiness: reviewed
 req_status: draft
 priority: medium
 work_status: todo
@@ -25,9 +25,15 @@ depends_on:
 covered_by: []
 implemented_by: []
 assigned_agent: architecture-diagram-author
-estimated_complexity: null
+estimated_complexity: S
 delivers_to: null
 expects_from: null
+change_target: docs
+risk_surface: internal
+it_requirements:
+- A Mermaid stateDiagram-v2 on a new docs/architecture/diagrams/ page with frontmatter, linked from docs/architecture/components/decision-kernel.md and from the criterion category reference (DK-500c-5).
+- 'States and transitions as built: candidate (mining store) to staged (run root) by a person''s approval in a criteria.review run; staged to published by decisions publish; published back to staged on an edit, merge or split, keeping the id; published to retired with replaced_by. Show the rejected exit, and label each transition with its actor and command.'
+test_required: false
 doc_links:
 - path: docs/decisions/dec-93c1c730463c1f3c.yaml
   relationship: governs
@@ -43,7 +49,11 @@ doc_links:
   status: exists
 origin_agent: business-analyst
 created: 2026-10-04
-amended_by: []
+amended_by:
+- reason: it-po-technical-enrichment
+  date: '2026-10-05'
+  by: it-po
+  summary: 'Technical enrichment: assigned_agent confirmed, estimated_complexity, change_target docs, risk_surface, it_requirements and doc_links set; test_required false (documentation only); readiness draft -> reviewed. BA criteria unchanged.'
 superseded_by: null
 notes: |
   Documentation AC answering DK-500c's state-diagram trigger (four lifecycle stages with explicit transitions).

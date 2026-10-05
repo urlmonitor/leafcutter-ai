@@ -6,7 +6,7 @@ components:
 - knowledge_management
 level: L2
 status: active
-readiness: draft
+readiness: reviewed
 req_status: draft
 priority: medium
 work_status: todo
@@ -26,9 +26,14 @@ depends_on:
 covered_by: []
 implemented_by: []
 assigned_agent: documentation-expert
-estimated_complexity: null
+estimated_complexity: S
 delivers_to: null
 expects_from: null
+change_target: docs
+risk_surface: internal
+it_requirements:
+- Extend docs/how-to/run-knowledge-retrieval.md with a section rather than writing a second guide, unless the documentation expert judges otherwise. Use the operation names, request JSON and answer fields as built, with worked examples for dec-d53e1c52cd47c832 and cat-1dc11c5a2ffa7310.
+test_required: false
 doc_links:
 - path: docs/decisions/dec-93c1c730463c1f3c.yaml
   relationship: governs
@@ -38,15 +43,23 @@ doc_links:
   status: exists
 - path: docs/how-to/run-knowledge-retrieval.md
   relationship: related
-  status: planned
-  relevance: 'On origin/main since PR #998; not yet on this branch. How a generation is built and explored.'
+  status: exists
+  relevance: How a generation is built (python -m knowledge sync) and how registered operations such as get_entities and get_ac_descendants are requested and answered.
 - path: docs/architecture/adrs/ADR-062-standalone-knowledge-retrieval.md
   relationship: constrains
-  status: planned
-  relevance: 'On origin/main since PR #998 (merged from feature/knowledge-retrieval-v01); not yet on this branch. Immutable generations, atomic publication, registered parameterized queries only, finite native reader registry.'
+  status: exists
+  relevance: Immutable generations from one commit, validated and published atomically; a failed build leaves the active generation untouched; registered parameterized queries only; finite native reader registry; disabled, unavailable and stale are distinct from an empty answer. On this branch since the 2026-10-05 merge of origin/main.
+- path: docs/architecture/components/knowledge-retrieval.md
+  relationship: describes
+  status: exists
+  relevance: Finite native reader registry (knowledge/native_types/registry.py), generation publication, registered operations and the optional authored query catalog.
 origin_agent: business-analyst
 created: 2026-10-04
-amended_by: []
+amended_by:
+- reason: it-po-technical-enrichment
+  date: '2026-10-05'
+  by: it-po
+  summary: 'Technical enrichment: assigned_agent confirmed, estimated_complexity, change_target docs, risk_surface, it_requirements and doc_links set; test_required false (documentation only); readiness draft -> reviewed. BA criteria unchanged.'
 superseded_by: null
 notes: |
   Documentation AC answering DK-500g's how-to trigger. Extend the existing knowledge-retrieval how-to (on origin/main) rather than writing a second one, if the documentation expert judges that the better home. Its deliverable is the document only.

@@ -5,7 +5,7 @@ components:
 - decision_kernel
 level: L3
 status: active
-readiness: draft
+readiness: reviewed
 req_status: draft
 priority: medium
 work_status: todo
@@ -20,11 +20,31 @@ depends_on:
 covered_by: []
 implemented_by: []
 assigned_agent: python-coder
-estimated_complexity: null
+estimated_complexity: S
 delivers_to: null
 expects_from:
   ac_id: DK-500c-3
-  contract: Merge/split/retire through stage and publish.
+  contract: Merge, split and retire through stage and publish.
+change_target: code
+risk_surface: internal
+it_requirements:
+- Publish refuses any change that would leave a staged or published category whose broader points at a category retired by the same or an earlier change, naming the narrower category and its retired broader.
+- Re-pointing broader to a live replacement, or to none, in the same publish is accepted.
+test_required: true
+test_spec:
+- name: test_retiring_broader_without_repointing_refused
+  target_dir: tests/kernel/criteria/
+  framework: pytest
+  type: behavioral
+  angle: criterion
+  description: Merging or splitting cat-d6ce5f78c181ebd1 without changing cat-6c3eb4f2af148922 is refused, naming both.
+- name: test_repointing_to_replacement_or_none_succeeds
+  target_dir: tests/kernel/criteria/
+  framework: pytest
+  type: behavioral
+  angle: boundary
+  description: The same change that also sets cat-6c3eb4f2af148922's broader to a live replacement, or to none, publishes.
+test_rationale: Exercise the review run and the publish command through their public CLI and RunService boundaries on a temporary repository copy and run root; assert staged files, published files, exit codes and byte-level before/after snapshots of docs/decisions/. Model-level unit tests alone would not prove that nothing is written outside the staged area or that publish is all-or-nothing.
 doc_links:
 - path: docs/decisions/dec-93c1c730463c1f3c.yaml
   relationship: governs
@@ -37,7 +57,11 @@ doc_links:
   status: exists
 origin_agent: business-analyst
 created: 2026-10-04
-amended_by: []
+amended_by:
+- reason: it-po-technical-enrichment
+  date: '2026-10-05'
+  by: it-po
+  summary: 'Technical enrichment: assigned_agent confirmed, estimated_complexity, change_target, risk_surface, it_requirements, contracts, doc_links and the test contract set; readiness draft -> reviewed. BA criteria unchanged.'
 superseded_by: null
 notes: |
   Mock invariant: broader never names a retired category. Without this rule a merge leaves a dangling broader link that the knowledge graph import would then reject (DK-500g-1-i).

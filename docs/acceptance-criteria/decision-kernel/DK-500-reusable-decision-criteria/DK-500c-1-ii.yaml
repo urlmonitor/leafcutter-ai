@@ -5,7 +5,7 @@ components:
 - decision_kernel
 level: L3
 status: active
-readiness: draft
+readiness: reviewed
 req_status: draft
 priority: medium
 work_status: todo
@@ -23,11 +23,44 @@ depends_on:
 covered_by: []
 implemented_by: []
 assigned_agent: python-coder
-estimated_complexity: null
+estimated_complexity: S
 delivers_to: null
 expects_from:
   ac_id: DK-500c-1
-  contract: Approval path for candidates and grouping suggestions.
+  contract: Approval path for candidates and grouping suggestions in the criteria.review run.
+change_target: code
+risk_surface: internal
+it_requirements:
+- A rejection or an undone suggestion stages nothing and leaves every published category byte-identical.
+- 'IT PO default for the BA''s open point (confirm with the user): a rejected candidate is recorded in the mining store as rejected (rejected_by, rejected_at), not deleted, so the next mining round does not propose it again. A sighting that was not part of it at rejection time re-opens it as a review item.'
+- Accepted items in the same run are staged as usual (positive control).
+test_required: true
+test_spec:
+- name: test_rejected_and_undone_stage_nothing
+  target_dir: tests/kernel/criteria/
+  framework: pytest
+  type: behavioral
+  angle: criterion
+  description: No record is staged for the rejected cat-73d233fc8b15c735 or for cat-1dc11c5a2ffa7310 after the undo.
+- name: test_published_category_unchanged_after_undo
+  target_dir: tests/kernel/criteria/
+  framework: pytest
+  type: behavioral
+  angle: criterion
+  description: cat-1dc11c5a2ffa7310 keeps exactly its published wordings and members.
+- name: test_rejected_candidate_not_a_record
+  target_dir: tests/kernel/criteria/
+  framework: pytest
+  type: behavioral
+  angle: criterion
+  description: cat-73d233fc8b15c735 does not become a record in the run root or in docs/criteria/.
+- name: test_accepted_third_candidate_staged
+  target_dir: tests/kernel/criteria/
+  framework: pytest
+  type: behavioral
+  angle: boundary
+  description: The accepted secrets candidate is staged.
+test_rationale: Exercise the review run and the publish command through their public CLI and RunService boundaries on a temporary repository copy and run root; assert staged files, published files, exit codes and byte-level before/after snapshots of docs/decisions/. Model-level unit tests alone would not prove that nothing is written outside the staged area or that publish is all-or-nothing.
 doc_links:
 - path: docs/decisions/dec-93c1c730463c1f3c.yaml
   relationship: governs
@@ -41,9 +74,17 @@ doc_links:
 - path: docs/architecture/adrs/ADR-060-source-of-truth-and-approval-authority.md
   relationship: constrains
   status: exists
+- path: docs/decisions/dec-a070edfb6465bced.yaml
+  relationship: governs
+  status: exists
+  relevance: 'Grouping method (opt.jev_pick_existing, approved by human:user 2026-10-04): code places exact label or criterion-id matches, then Jev answers one bounded choice per wording over all existing categories plus ''none'' while the library fits one choice question, a merge only at p >= 0.8; leftovers become code-made one-member candidates; no LLM, no broader-link suggestions; in a run one Jev choice per drafted question within the run''s Jev budget. Its question says ''AC DK-300b'', which is DK-500b after the 2026-10-05 renumbering.'
 origin_agent: business-analyst
 created: 2026-10-04
-amended_by: []
+amended_by:
+- reason: it-po-technical-enrichment
+  date: '2026-10-05'
+  by: it-po
+  summary: 'Technical enrichment: assigned_agent confirmed, estimated_complexity, change_target, risk_surface, it_requirements, contracts, doc_links and the test contract set; readiness draft -> reviewed. BA criteria unchanged.'
 superseded_by: null
 notes: |
   Flow branch: criteria-library reject-suggestion (outcome exit). The accepted third candidate is the positive control: a stager that stages nothing satisfies every "nothing" clause.

@@ -5,7 +5,7 @@ components:
 - decision_kernel
 level: L2
 status: active
-readiness: draft
+readiness: reviewed
 req_status: draft
 priority: medium
 work_status: todo
@@ -25,11 +25,46 @@ covered_by:
 - DK-500c-3-ii
 implemented_by: []
 assigned_agent: python-coder
-estimated_complexity: null
+estimated_complexity: M
 delivers_to: null
 expects_from:
   ac_id: DK-500c-2
-  contract: Stage-and-publish path for category records.
+  contract: Stage-and-publish path for category records, including base_sha256 conflict refusal.
+change_target: code
+risk_surface: internal
+it_requirements:
+- Merge, split, retire and label edits are person-made proposals in a criteria.review run, staged and published through the same path as new categories (DK-500c-1, DK-500c-2). No merge is ever applied automatically, including from a grouping suggestion.
+- 'Merging A into B stages both records. A gets lifecycle_stage retired, replaced_by [B], members [] and retirement {retired_at, retired_by: human(:<name>), reason}. B gets A''s members and A''s preferred wording as an other wording, plus whichever of A''s other wordings the person keeps. Both are published in one all-or-nothing publish.'
+- Ids never change, and a retired id stays resolvable in the index, in the reuse lookup and in the graph queries.
+- The invariant 'lifecycle_stage retired iff replaced_by is non-empty iff retirement is set' is a publish check.
+- No decision record changes, proven by byte comparison.
+test_required: true
+test_spec:
+- name: test_merge_retires_source_with_replacement_and_retirement_entry
+  target_dir: tests/kernel/criteria/
+  framework: pytest
+  type: behavioral
+  angle: criterion
+  description: After the merge cat-40cc613f737e3323 is retired with replaced_by [cat-d15d52392d7aa94c], no members and a retirement entry naming human:user, the time and the reason.
+- name: test_target_keeps_id_gains_member_and_label
+  target_dir: tests/kernel/criteria/
+  framework: pytest
+  type: behavioral
+  angle: criterion
+  description: cat-d15d52392d7aa94c keeps its id, gains (dec-acdfd972fcaca478, crit.person_authorises) and the retired category's preferred wording.
+- name: test_retired_id_stays_resolvable
+  target_dir: tests/kernel/criteria/
+  framework: pytest
+  type: behavioral
+  angle: criterion
+  description: cat-40cc613f737e3323 is still found by id in the index and resolves to its replacement.
+- name: test_merge_changes_no_decision_record
+  target_dir: tests/kernel/criteria/
+  framework: pytest
+  type: behavioral
+  angle: criterion
+  description: Every file in docs/decisions/ is byte-identical after the merge is published.
+test_rationale: Exercise the review run and the publish command through their public CLI and RunService boundaries on a temporary repository copy and run root; assert staged files, published files, exit codes and byte-level before/after snapshots of docs/decisions/. Model-level unit tests alone would not prove that nothing is written outside the staged area or that publish is all-or-nothing.
 doc_links:
 - path: docs/decisions/dec-93c1c730463c1f3c.yaml
   relationship: governs
@@ -46,9 +81,16 @@ doc_links:
 - path: docs/architecture/adrs/ADR-061-identity-of-declared-and-learned-records.md
   relationship: constrains
   status: exists
+- path: docs/architecture/components/decision-kernel.md
+  relationship: describes
+  status: exists
 origin_agent: business-analyst
 created: 2026-10-04
-amended_by: []
+amended_by:
+- reason: it-po-technical-enrichment
+  date: '2026-10-05'
+  by: it-po
+  summary: 'Technical enrichment: assigned_agent confirmed, estimated_complexity, change_target, risk_surface, it_requirements, contracts, doc_links and the test contract set; readiness draft -> reviewed. BA criteria unchanged.'
 superseded_by: null
 notes: |
   Flow node: criteria-library curate. Data: mock records cat-40cc613f737e3323 (retired) and cat-d15d52392d7aa94c (replaces it), the exact state a merge leaves behind.

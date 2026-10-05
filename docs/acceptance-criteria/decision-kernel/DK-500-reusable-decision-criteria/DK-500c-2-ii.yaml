@@ -5,7 +5,7 @@ components:
 - decision_kernel
 level: L3
 status: active
-readiness: draft
+readiness: reviewed
 req_status: draft
 priority: medium
 work_status: todo
@@ -21,11 +21,38 @@ depends_on:
 covered_by: []
 implemented_by: []
 assigned_agent: python-coder
-estimated_complexity: null
+estimated_complexity: S
 delivers_to: null
 expects_from:
   ac_id: DK-500c-2
   contract: Publish checks over staged category records against the published library.
+change_target: code
+risk_surface: internal
+it_requirements:
+- Uniqueness is checked against every staged record in the publish and every published non-retired category, with the shared wording rule for labels and exact equality for member pairs.
+- Each refusal names both category ids and the shared wording or pair.
+- Retired categories are left out of the label check (their labels resolve through replaced_by); a retired category has no members, so it never conflicts on pairs.
+test_required: true
+test_spec:
+- name: test_shared_wording_refused_naming_both
+  target_dir: tests/kernel/criteria/
+  framework: pytest
+  type: behavioral
+  angle: criterion
+  description: A staged category reusing an other wording of cat-52b16c7b5a23106f is refused, naming both ids and the wording.
+- name: test_shared_member_pair_refused_naming_both
+  target_dir: tests/kernel/criteria/
+  framework: pytest
+  type: behavioral
+  angle: criterion
+  description: A staged category listing (dec-acdfd972fcaca478, crit.git_review_kept) is refused, naming both categories and the pair.
+- name: test_nothing_enters_library_on_refusal
+  target_dir: tests/kernel/criteria/
+  framework: pytest
+  type: behavioral
+  angle: criterion
+  description: After either refusal docs/criteria/ is unchanged.
+test_rationale: Exercise the review run and the publish command through their public CLI and RunService boundaries on a temporary repository copy and run root; assert staged files, published files, exit codes and byte-level before/after snapshots of docs/decisions/. Model-level unit tests alone would not prove that nothing is written outside the staged area or that publish is all-or-nothing.
 doc_links:
 - path: docs/decisions/dec-93c1c730463c1f3c.yaml
   relationship: governs
@@ -38,7 +65,11 @@ doc_links:
   status: exists
 origin_agent: business-analyst
 created: 2026-10-04
-amended_by: []
+amended_by:
+- reason: it-po-technical-enrichment
+  date: '2026-10-05'
+  by: it-po
+  summary: 'Technical enrichment: assigned_agent confirmed, estimated_complexity, change_target, risk_surface, it_requirements, contracts, doc_links and the test contract set; readiness draft -> reviewed. BA criteria unchanged.'
 superseded_by: null
 notes: |
   Mock invariants: no label belongs to two categories that are not retired; a (decision id, criterion id) pair is a member of at most one staged or published category. The flow's publish scenario names the label rule explicitly.

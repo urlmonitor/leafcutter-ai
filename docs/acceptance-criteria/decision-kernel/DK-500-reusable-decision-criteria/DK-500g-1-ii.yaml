@@ -6,7 +6,7 @@ components:
 - knowledge_management
 level: L3
 status: active
-readiness: draft
+readiness: reviewed
 req_status: draft
 priority: medium
 work_status: todo
@@ -22,11 +22,37 @@ depends_on:
 covered_by: []
 implemented_by: []
 assigned_agent: python-coder
-estimated_complexity: null
+estimated_complexity: S
 delivers_to: null
 expects_from:
   ac_id: DK-500g-1
   contract: Generation build from one commit.
+change_target: code
+risk_surface: internal
+it_requirements:
+- 'No write operation for categories exists in the knowledge query surface: the registered category operations are read-only, and serving credentials cannot write.'
+- 'Generations are deterministic: two builds from the same commit produce identical category nodes and links (sync reuses the generation).'
+test_required: true
+test_spec:
+- name: test_graph_offers_no_category_write
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: behavioral
+  angle: criterion
+  description: The registered operation catalog holds no operation that writes a category, and a write attempted with serving credentials is refused.
+- name: test_change_appears_only_after_publish_and_next_build
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: behavioral
+  angle: criterion
+  description: A wording change made through stage and publish appears only in the first generation built after it is committed.
+- name: test_same_commit_builds_identical_category_graph
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: behavioral
+  angle: criterion
+  description: Two builds from the same commit give the same category nodes and links.
+test_rationale: Build real generations through the knowledge sync and registered-operation entry points from a fixture commit (offline fixture backend), and assert node identities, links and answers against the category records of that commit; a live Neo4j test proves server compatibility. Unit tests of the reader alone would not prove that the Decision kind is unchanged in a full generation.
 doc_links:
 - path: docs/decisions/dec-93c1c730463c1f3c.yaml
   relationship: governs
@@ -36,14 +62,18 @@ doc_links:
   status: exists
 - path: docs/architecture/adrs/ADR-062-standalone-knowledge-retrieval.md
   relationship: constrains
-  status: planned
-  relevance: 'On origin/main since PR #998 (merged from feature/knowledge-retrieval-v01); not yet on this branch. Immutable generations, atomic publication, registered parameterized queries only, finite native reader registry.'
+  status: exists
+  relevance: Immutable generations from one commit, validated and published atomically; a failed build leaves the active generation untouched; registered parameterized queries only; finite native reader registry; disabled, unavailable and stale are distinct from an empty answer. On this branch since the 2026-10-05 merge of origin/main.
 - path: docs/architecture/adrs/ADR-059-decision-store-reviewable-yaml-records-now-graph-later.md
   relationship: constrains
   status: exists
 origin_agent: business-analyst
 created: 2026-10-04
-amended_by: []
+amended_by:
+- reason: it-po-technical-enrichment
+  date: '2026-10-05'
+  by: it-po
+  summary: 'Technical enrichment: assigned_agent confirmed, estimated_complexity, change_target, risk_surface, it_requirements, contracts, doc_links and the test contract set; readiness draft -> reviewed. BA criteria unchanged.'
 superseded_by: null
 notes: |
   Flow branch: criteria-library change-in-record. Git stays canonical (ADR-059, ADR-060); ADR-062 allows only registered read queries and excludes arbitrary model-generated Cypher.

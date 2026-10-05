@@ -5,7 +5,7 @@ components:
 - decision_kernel
 level: L3
 status: active
-readiness: draft
+readiness: reviewed
 req_status: draft
 priority: medium
 work_status: todo
@@ -22,11 +22,38 @@ depends_on:
 covered_by: []
 implemented_by: []
 assigned_agent: python-coder
-estimated_complexity: null
+estimated_complexity: S
 delivers_to: null
 expects_from:
   ac_id: DK-500e-1
   contract: Gap verdict with status not_judged and a reason.
+change_target: code
+risk_surface: internal
+it_requirements:
+- not_judged carries reason budget or jev_unavailable and is never rendered as no gap.
+- 'IT PO default for the BA''s open point (confirm with the user): when the gap is not judged, drafting falls back to today''s behaviour (criteria proposed as in a run without the library, minus repeats of reused criteria, DK-500e-2-i), so an unjudged gap never silently suppresses drafting.'
+- 'The run continues to the approval. A Jev failure here is caught and logged at WARNING. Handle failures per the project error handling policy: catch specific exceptions, log at WARNING with the identifiers involved, and never swallow a failure silently.'
+test_required: true
+test_spec:
+- name: test_not_judged_shown_with_reason
+  target_dir: tests/kernel/capabilities/
+  framework: pytest
+  type: behavioral
+  angle: criterion
+  description: With an exhausted budget or an unreachable Jev the approval shows not judged with reason budget or jev_unavailable.
+- name: test_not_judged_never_shown_as_no_gap
+  target_dir: tests/kernel/capabilities/
+  framework: pytest
+  type: behavioral
+  angle: criterion
+  description: The approval never states that nothing is missing in either case.
+- name: test_run_reaches_approval_when_not_judged
+  target_dir: tests/kernel/capabilities/
+  framework: pytest
+  type: behavioral
+  angle: criterion
+  description: The run reaches the approval of proposals instead of stopping.
+test_rationale: Run the decision capability through the public run/resume boundary with a scripted Jev provider and a recording host port over a fixture category library; assert the approval payload, the run report, trace events and call counts rather than internal helpers.
 doc_links:
 - path: docs/decisions/dec-93c1c730463c1f3c.yaml
   relationship: governs
@@ -39,7 +66,11 @@ doc_links:
   status: exists
 origin_agent: business-analyst
 created: 2026-10-04
-amended_by: []
+amended_by:
+- reason: it-po-technical-enrichment
+  date: '2026-10-05'
+  by: it-po
+  summary: 'Technical enrichment: assigned_agent confirmed, estimated_complexity, change_target, risk_surface, it_requirements, contracts, doc_links and the test contract set; readiness draft -> reviewed. BA criteria unchanged.'
 superseded_by: null
 notes: |
   "Not judged" read as "no gap" would quietly withhold drafting exactly when the reused set might be short. OPEN: whether, when the gap is not judged, criteria are still drafted as today (fallback) or only the person may add criteria.

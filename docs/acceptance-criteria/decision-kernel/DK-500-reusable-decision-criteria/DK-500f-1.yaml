@@ -5,7 +5,7 @@ components:
 - decision_kernel
 level: L2
 status: active
-readiness: draft
+readiness: reviewed
 req_status: draft
 priority: medium
 work_status: todo
@@ -24,13 +24,53 @@ depends_on:
 covered_by: []
 implemented_by: []
 assigned_agent: python-coder
-estimated_complexity: null
+estimated_complexity: M
 delivers_to:
   agent: python-coder
-  contract: 'Generated usage index: per published or retired category id, usage_count = distinct member decision ids; freshness-checked like docs/decisions/index.json. Consumed by the outcome aggregates (DK-500f-2).'
+  contract: 'docs/criteria/index.json categories[] entries {id, lifecycle_stage: published|retired, usage_count: int (distinct member decision ids)}, freshness-checked by criteria validate like docs/decisions/index.json. Consumed by the outcome aggregates (DK-500f-2) and cross-checked by the graph query (DK-500g-3).'
 expects_from:
   ac_id: DK-500c-2
-  contract: Published category records with members.
+  contract: Published category records with members in docs/criteria/.
+change_target: code
+risk_surface: internal
+package_surface: false
+it_requirements:
+- docs/criteria/index.json is produced only by the generator (criteria index, and publish). usage_count is the number of distinct decision ids among a category's members, for published and retired categories only; candidates and staged categories are absent from the index.
+- criteria validate fails, naming the category, when the committed index differs from a fresh generation, including a hand-edited count. The same check runs in the test suite over the committed store and in CI, as for the decision index. No pre-commit hook is added, so package_surface is false.
+- 'Generation is deterministic and byte-stable: sorted ids, stable key order, LF line endings.'
+test_required: true
+test_spec:
+- name: test_counts_3_2_0
+  target_dir: tests/kernel/criteria/
+  framework: pytest
+  type: behavioral
+  angle: criterion
+  description: Rebuilding the index gives usage counts 3, 2 and 0 for cat-1dc11c5a2ffa7310, cat-d15d52392d7aa94c and cat-40cc613f737e3323.
+- name: test_same_decision_counted_once
+  target_dir: tests/kernel/criteria/
+  framework: pytest
+  type: behavioral
+  angle: criterion
+  description: A category with two members from one decision counts that decision once.
+- name: test_candidate_and_staged_have_no_count
+  target_dir: tests/kernel/criteria/
+  framework: pytest
+  type: behavioral
+  angle: criterion
+  description: Candidate and staged categories have no entry and no usage count in the index.
+- name: test_hand_edited_count_fails_freshness_naming_category
+  target_dir: tests/kernel/criteria/
+  framework: pytest
+  type: behavioral
+  angle: criterion
+  description: Changing cat-1dc11c5a2ffa7310's count to 4 by hand makes criteria validate fail, naming cat-1dc11c5a2ffa7310.
+- name: test_count_rises_after_new_member_published
+  target_dir: tests/kernel/criteria/
+  framework: pytest
+  type: behavioral
+  angle: criterion
+  description: After a member from a fourth published decision is published into cat-1dc11c5a2ffa7310, the rebuilt count is 4.
+test_rationale: Run the index generator and criteria validate through their CLI over a temporary copy of a fixture store, including a hand-edited index; a pure counting unit test would pass with a hard-coded count.
 doc_links:
 - path: docs/decisions/dec-93c1c730463c1f3c.yaml
   relationship: governs
@@ -47,13 +87,18 @@ doc_links:
   relevance: The stage-then-publish path decision records follow; category records follow it by analogy.
 origin_agent: business-analyst
 created: 2026-10-04
-amended_by: []
+amended_by:
+- reason: it-po-technical-enrichment
+  date: '2026-10-05'
+  by: it-po
+  summary: 'Technical enrichment: assigned_agent confirmed, estimated_complexity, change_target, risk_surface, it_requirements, contracts, doc_links and the test contract set; readiness draft -> reviewed. BA criteria unchanged.'
 superseded_by: null
 notes: |
   SETTLED by dec-93c1c730463c1f3c (crit.usage_generated_not_written): usage counts are produced only by a generator from published records and checked for freshness like docs/decisions/index.json, never hand-written.
   The last clause is the varying-population control: a hardcoded count satisfies the stated counts but not the change.
   FLOW BACK-LINK (for step.implements, to be applied by the store owner): leafcutter/criteria-library: count-usage.
   Authored by the business-analyst stage of /plan-feature (route strategic) under decision dec-93c1c730463c1f3c; readiness draft, no product approval implied.
+  COMPONENT ENUM DRIFT (IT PO, 2026-10-05): this AC also belongs to colony_memory, which docs/components.json lists but the components enum in config/ac_store_schema.json lacks, so the validator would reject it. Tracked as TICKET-20261003-AcSchemaComponentEnumDrift (not present on this branch). Add colony_memory to components once the enum is fixed.
 product_truth:
   - flow: leafcutter/criteria-library
     node: count-usage

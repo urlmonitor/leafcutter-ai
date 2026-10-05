@@ -5,7 +5,7 @@ components:
 - decision_kernel
 level: L3
 status: active
-readiness: draft
+readiness: reviewed
 req_status: draft
 priority: medium
 work_status: todo
@@ -23,11 +23,51 @@ depends_on:
 covered_by: []
 implemented_by: []
 assigned_agent: python-coder
-estimated_complexity: null
+estimated_complexity: S
 delivers_to: null
 expects_from:
   ac_id: DK-500a-1
-  contract: Mining result with sources_read per source and a reason for each unavailable source.
+  contract: Mining round result with sources_read per source and source_reasons for each unavailable source.
+change_target: code
+risk_surface: internal
+it_requirements:
+- 'Unavailable is distinct from empty: a source that could not be read is reported as unavailable with its reason (unreachable, authentication refused, timeout, or a bound reached before the first page); a source read with zero sightings is reported as read.'
+- Candidates resting on one source carry single_source naming that source, and the result never states that both sources were read when either was unavailable.
+- The rule holds in both directions (records unreadable while run history is readable, and the reverse); the tests cover both.
+- 'Unavailability is logged at WARNING. The command exits 0 with a partial result when at least one source was read, and non-zero with an explicit error when neither was. Handle failures per the project error handling policy: catch specific exceptions, log at WARNING with the identifiers involved, and never swallow a failure silently.'
+test_required: true
+test_spec:
+- name: test_unreachable_run_history_reported_with_reason
+  target_dir: tests/kernel/criteria/
+  framework: pytest
+  type: behavioral
+  angle: criterion
+  description: With the Langfuse port unreachable, the result states run_history unavailable and why.
+- name: test_candidates_marked_single_source
+  target_dir: tests/kernel/criteria/
+  framework: pytest
+  type: behavioral
+  angle: criterion
+  description: Candidates rest on published-record sightings only and carry single_source published_record.
+- name: test_never_reports_both_sources_read_when_one_missing
+  target_dir: tests/kernel/criteria/
+  framework: pytest
+  type: behavioral
+  angle: criterion
+  description: The result never states that both sources were read.
+- name: test_both_sources_read_after_recovery
+  target_dir: tests/kernel/criteria/
+  framework: pytest
+  type: behavioral
+  angle: criterion
+  description: Once the run history is reachable again, the next round reports both sources as read.
+- name: test_unreadable_records_reported_symmetrically
+  target_dir: tests/kernel/criteria/
+  framework: pytest
+  type: behavioral
+  angle: failure
+  description: With the decision store unreadable and Langfuse readable, published_records is unavailable with a reason.
+test_rationale: Exercise the public mining entry point with a fixture decision store and a controlled Langfuse observations port (no live Langfuse); assert the returned result, the mining store and a before/after snapshot of docs/ and the run root. A unit test of a sighting parser alone would not prove that both sources are read through the real entry point.
 doc_links:
 - path: docs/decisions/dec-93c1c730463c1f3c.yaml
   relationship: governs
@@ -41,7 +81,11 @@ doc_links:
   relevance: 'Section 6: only an offline job reads Langfuse; the kernel''s hot path never does.'
 origin_agent: business-analyst
 created: 2026-10-04
-amended_by: []
+amended_by:
+- reason: it-po-technical-enrichment
+  date: '2026-10-05'
+  by: it-po
+  summary: 'Technical enrichment: assigned_agent confirmed, estimated_complexity, change_target, risk_surface, it_requirements, contracts, doc_links and the test contract set; readiness draft -> reviewed. BA criteria unchanged.'
 superseded_by: null
 notes: |
   Honest-limit rule, as for the kernel's context enrichment (unavailable is distinct from empty). A mining run that silently reads one source would quietly break the user's requirement that BOTH sources are mined.

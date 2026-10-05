@@ -6,7 +6,7 @@ components:
 - knowledge_management
 level: L2
 status: active
-readiness: draft
+readiness: reviewed
 req_status: draft
 priority: medium
 work_status: todo
@@ -25,9 +25,14 @@ depends_on:
 covered_by: []
 implemented_by: []
 assigned_agent: documentation-expert
-estimated_complexity: null
+estimated_complexity: S
 delivers_to: null
 expects_from: null
+change_target: docs
+risk_surface: internal
+it_requirements:
+- Extend docs/reference/knowledge-retrieval-answers.md, or add a sibling reference page. Field names, link types and non-answers exactly as built; state that the Decision kind is read unchanged.
+test_required: false
 doc_links:
 - path: docs/decisions/dec-93c1c730463c1f3c.yaml
   relationship: governs
@@ -37,15 +42,23 @@ doc_links:
   status: exists
 - path: docs/architecture/adrs/ADR-062-standalone-knowledge-retrieval.md
   relationship: constrains
-  status: planned
-  relevance: 'On origin/main since PR #998 (merged from feature/knowledge-retrieval-v01); not yet on this branch. Immutable generations, atomic publication, registered parameterized queries only, finite native reader registry.'
+  status: exists
+  relevance: Immutable generations from one commit, validated and published atomically; a failed build leaves the active generation untouched; registered parameterized queries only; finite native reader registry; disabled, unavailable and stale are distinct from an empty answer. On this branch since the 2026-10-05 merge of origin/main.
 - path: docs/architecture/components/knowledge-retrieval.md
   relationship: describes
-  status: planned
-  relevance: 'On origin/main since PR #998; not yet on this branch. Native reader registry, generation publication, query catalog.'
+  status: exists
+  relevance: Finite native reader registry (knowledge/native_types/registry.py), generation publication, registered operations and the optional authored query catalog.
+- path: docs/reference/knowledge-retrieval-answers.md
+  relationship: describes
+  status: exists
+  relevance: Answer fields, completeness and the distinct non-answers the two category queries reuse.
 origin_agent: business-analyst
 created: 2026-10-04
-amended_by: []
+amended_by:
+- reason: it-po-technical-enrichment
+  date: '2026-10-05'
+  by: it-po
+  summary: 'Technical enrichment: assigned_agent confirmed, estimated_complexity, change_target docs, risk_surface, it_requirements and doc_links set; test_required false (documentation only); readiness draft -> reviewed. BA criteria unchanged.'
 superseded_by: null
 notes: |
   Documentation AC answering DK-500g's reference-doc trigger. Its deliverable is the document only.

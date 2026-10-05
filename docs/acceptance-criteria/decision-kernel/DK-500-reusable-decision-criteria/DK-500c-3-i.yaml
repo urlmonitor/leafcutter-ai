@@ -5,7 +5,7 @@ components:
 - decision_kernel
 level: L3
 status: active
-readiness: draft
+readiness: reviewed
 req_status: draft
 priority: medium
 work_status: todo
@@ -21,11 +21,37 @@ depends_on:
 covered_by: []
 implemented_by: []
 assigned_agent: python-coder
-estimated_complexity: null
+estimated_complexity: S
 delivers_to: null
 expects_from:
   ac_id: DK-500c-3
-  contract: Merge/split/retire through stage and publish.
+  contract: Merge, split and retire through stage and publish.
+change_target: code
+risk_surface: internal
+it_requirements:
+- A split stages the retired original and each new replacement (kernel-minted ids) and publishes them together; the person assigns every member to exactly one replacement.
+- A split that leaves a member unassigned, or assigns one to two replacements, is refused at staging and again at publish, naming the member.
+test_required: true
+test_spec:
+- name: test_split_retires_with_both_replacements
+  target_dir: tests/kernel/criteria/
+  framework: pytest
+  type: behavioral
+  angle: criterion
+  description: cat-d6ce5f78c181ebd1 is retired with replaced_by naming both new category ids.
+- name: test_each_member_in_exactly_one_replacement
+  target_dir: tests/kernel/criteria/
+  framework: pytest
+  type: behavioral
+  angle: criterion
+  description: Each of its two members is a member of exactly one replacement; none lost, none in both.
+- name: test_unassigned_member_refused_naming_it
+  target_dir: tests/kernel/criteria/
+  framework: pytest
+  type: behavioral
+  angle: criterion
+  description: A split leaving a member without a replacement is refused, naming that member.
+test_rationale: Exercise the review run and the publish command through their public CLI and RunService boundaries on a temporary repository copy and run root; assert staged files, published files, exit codes and byte-level before/after snapshots of docs/decisions/. Model-level unit tests alone would not prove that nothing is written outside the staged area or that publish is all-or-nothing.
 doc_links:
 - path: docs/decisions/dec-93c1c730463c1f3c.yaml
   relationship: governs
@@ -41,7 +67,11 @@ doc_links:
   status: exists
 origin_agent: business-analyst
 created: 2026-10-04
-amended_by: []
+amended_by:
+- reason: it-po-technical-enrichment
+  date: '2026-10-05'
+  by: it-po
+  summary: 'Technical enrichment: assigned_agent confirmed, estimated_complexity, change_target, risk_surface, it_requirements, contracts, doc_links and the test contract set; readiness draft -> reviewed. BA criteria unchanged.'
 superseded_by: null
 notes: |
   The split itself is illustrative (no real category has been split). The two new ids are minted by the kernel (cat-<16 hex>, a mock assumption to confirm).

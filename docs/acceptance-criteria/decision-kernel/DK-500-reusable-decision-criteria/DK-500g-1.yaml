@@ -6,7 +6,7 @@ components:
 - knowledge_management
 level: L2
 status: active
-readiness: draft
+readiness: reviewed
 req_status: draft
 priority: medium
 work_status: todo
@@ -28,13 +28,70 @@ covered_by:
 - DK-500g-1-ii
 implemented_by: []
 assigned_agent: python-coder
-estimated_complexity: null
+estimated_complexity: L
 delivers_to:
   agent: python-coder
-  contract: 'Per generation: one criterion_category node per published or retired category keyed (repository_id, kind, id); membership links decision -> criterion -> category per member pair; REPLACED_BY and BROADER links. Consumed by the two registered queries (DK-500g-2, DK-500g-3).'
+  contract: 'Per generation: one CriterionCategory node per published or retired category keyed (repository_id, criterion_category, id) with name, title (pref_label), lifecycle_stage and authored fields; per member pair Decision -[HAS_CRITERION]-> member criterion (criterion_id, question, priority) -[IN_CATEGORY]-> CriterionCategory; CriterionCategory -[REPLACED_BY]-> CriterionCategory and -[BROADER]-> CriterionCategory. Consumed by the two registered queries (DK-500g-2, DK-500g-3).'
 expects_from:
   ac_id: DK-500c-2
-  contract: Published category records in the category library.
+  contract: Published category records docs/criteria/<id>.yaml at the commit being projected.
+change_target:
+- code
+- schema
+risk_surface: contract_boundary
+it_requirements:
+- 'A new reviewed native kind, criterion_category, is added to the finite native reader registry (knowledge/native_types/registry.py) with its own reader module and pinned schema asset, following the Decision kind''s contract: validate_metadata and extract, strict red and green receipts, mutation checks and a reviewed field inventory at reports/native-fields/code-CriterionCategory.json, as the field report of the Decision kind does for decisions. It reads docs/criteria/*.yaml from the immutable commit only.'
+- Node identity is (repository_id, 'criterion_category', id) for published and retired categories; the readable name is the id and the title is the pref_label; complete authored fields become native properties. The generated index is not imported; its freshness is an upstream check, as for decisions.
+- 'Links: for each member pair, a path Decision -> criterion -> CriterionCategory that carries the criterion id and the decision''s question. IT PO default: a member-criterion entity keyed (repository_id, ''decision_criterion'', ''<decision_id>#<criterion_id>'') with HAS_CRITERION and IN_CATEGORY relationships. A typed relationship carrying criterion_id is acceptable only if the projection''s relationship contract supports properties and both queries'' answer fields stay the same. REPLACED_BY and BROADER link categories; every relationship type is allowlisted uppercase.'
+- 'Cross-record validation inside the build: members name decisions in the same commit whose criteria carry the criterion with a matching question (shared wording rule); replaced_by and broader targets exist; labels and pairs are unique among non-retired categories. Any failure fails the whole generation (DK-500g-1-i).'
+- 'The Decision kind is read exactly as before: every Decision node''s properties are identical to a build without the new kind (metadata_exact and payload_exact, as in the 2026-10-03 Aura decision readback report).'
+- Default imports include the new kind; on an existing published identity, the explicit native refresh performs the scope expansion.
+- A real Neo4j build (tests/knowledge_live) is required before claiming server compatibility.
+test_required: true
+test_spec:
+- name: test_each_category_one_node_keyed_by_repository_kind_id
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: behavioral
+  angle: criterion
+  description: Each of the six committed categories becomes exactly one node keyed by repository id, criterion_category and its id.
+- name: test_member_pairs_link_decision_criterion_category
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: behavioral
+  angle: criterion
+  description: Each member pair links decision, criterion and category; cat-1dc11c5a2ffa7310 has three such links.
+- name: test_replaced_by_and_broader_links
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: behavioral
+  angle: criterion
+  description: cat-40cc613f737e3323 links to cat-d15d52392d7aa94c as REPLACED_BY, and a set broader is linked from the narrower category.
+- name: test_staged_and_candidate_absent
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: behavioral
+  angle: criterion
+  description: cat-6c3eb4f2af148922 and cat-73d233fc8b15c735, which are not in the commit, do not appear.
+- name: test_generation_validated_and_published_whole
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: behavioral
+  angle: criterion
+  description: The generation is validated and published atomically as one generation.
+- name: test_decision_nodes_unchanged_by_categories
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: behavioral
+  angle: criterion
+  description: Every Decision node and its properties equal those of a generation built from the same commit without the new kind.
+- name: test_live_generation_includes_categories
+  target_dir: tests/knowledge_live/
+  framework: pytest
+  type: integration
+  angle: deployed
+  description: Against a real Neo4j, a sync of the fixture commit publishes the category nodes and links and reads them back.
+test_rationale: Build real generations through the knowledge sync and registered-operation entry points from a fixture commit (offline fixture backend), and assert node identities, links and answers against the category records of that commit; a live Neo4j test proves server compatibility. Unit tests of the reader alone would not prove that the Decision kind is unchanged in a full generation.
 doc_links:
 - path: docs/decisions/dec-93c1c730463c1f3c.yaml
   relationship: governs
@@ -47,29 +104,38 @@ doc_links:
   status: exists
 - path: docs/architecture/adrs/ADR-062-standalone-knowledge-retrieval.md
   relationship: constrains
-  status: planned
-  relevance: 'On origin/main since PR #998 (merged from feature/knowledge-retrieval-v01); not yet on this branch. Immutable generations, atomic publication, registered parameterized queries only, finite native reader registry.'
+  status: exists
+  relevance: Immutable generations from one commit, validated and published atomically; a failed build leaves the active generation untouched; registered parameterized queries only; finite native reader registry; disabled, unavailable and stale are distinct from an empty answer. On this branch since the 2026-10-05 merge of origin/main.
 - path: docs/architecture/components/knowledge-retrieval.md
   relationship: describes
-  status: planned
-  relevance: 'On origin/main since PR #998; not yet on this branch. Native reader registry, generation publication, query catalog.'
+  status: exists
+  relevance: Finite native reader registry (knowledge/native_types/registry.py), generation publication, registered operations and the optional authored query catalog.
 - path: docs/architecture/adrs/ADR-059-decision-store-reviewable-yaml-records-now-graph-later.md
   relationship: constrains
   status: exists
 - path: docs/architecture/adrs/ADR-061-identity-of-declared-and-learned-records.md
   relationship: constrains
   status: exists
+- path: docs/how-to/run-knowledge-retrieval.md
+  relationship: related
+  status: exists
+  relevance: How a generation is built (python -m knowledge sync) and how registered operations such as get_entities and get_ac_descendants are requested and answered.
 origin_agent: business-analyst
 created: 2026-10-04
-amended_by: []
+amended_by:
+- reason: it-po-technical-enrichment
+  date: '2026-10-05'
+  by: it-po
+  summary: 'Technical enrichment: assigned_agent confirmed, estimated_complexity, change_target, risk_surface, it_requirements, contracts, doc_links and the test contract set; readiness draft -> reviewed. BA criteria unchanged.'
 superseded_by: null
 notes: |
   USER DECISION (2026-10-03, verbatim): "neo4j fully works. so also add the importer so we can see which decision uses which categories for its decision". DK-500g is in scope now, not deferred.
-  The ADR-062 knowledge projection is on origin/main (PR #998 and later), not yet on this branch. Its native reader registry is finite, so criterion_category needs a new reviewed native kind (dec-93c1c730463c1f3c crit.projectable_as_native_kind; the chosen option scored 0.34 there, so this is the riskiest part of the goal). ADR-062: Git is canonical, a generation is built from one immutable commit, validated and published atomically, and a failed build leaves the active generation untouched.
+  The ADR-062 knowledge projection (knowledge/) is on this branch since the 2026-10-05 merge of origin/main. Its native reader registry is finite, so criterion_category needs a new reviewed native kind (dec-93c1c730463c1f3c crit.projectable_as_native_kind; the chosen option scored 0.34 there, so this is the riskiest part of the goal). ADR-062: Git is canonical, a generation is built from one immutable commit, validated and published atomically, and a failed build leaves the active generation untouched.
   How a criterion is represented in the graph (its own node or a property of the decision node) is for the IT PO; the AC asserts the link decision -> criterion -> category, which the two queries need.
   Note for the IT PO: the BA did not read the importer source (BA scope excludes source code); this AC rests on ADR-062, the knowledge-retrieval component doc and the how-to on origin/main.
   FLOW BACK-LINK (for step.implements, to be applied by the store owner): leafcutter/criteria-library: import-to-graph.
   Authored by the business-analyst stage of /plan-feature (route strategic) under decision dec-93c1c730463c1f3c; readiness draft, no product approval implied.
+  IT PO (2026-10-05): graph target confirmed as the ADR-062 projection, with criterion_category as one new reviewed native kind; knowledge_management is the right second component (its primary_code includes knowledge/). The IT PO did not read source code either (role boundary): these contracts rest on docs/architecture/components/knowledge-retrieval.md, knowledge/README.md, docs/how-to/run-knowledge-retrieval.md and reports/native-fields/code-Decision.json. The coder confirms the relationship representation against the projection's relationship contract.
 product_truth:
   - flow: leafcutter/criteria-library
     node: import-to-graph
