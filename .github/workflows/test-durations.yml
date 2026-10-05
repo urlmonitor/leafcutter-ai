@@ -76,21 +76,47 @@ jobs:
           --store-durations
           --durations-path .github/test_durations.json
 
-      - name: Confirm the run actually recorded something
-        # A refresh that silently wrote nothing would quietly replace a good
-        # file with an empty one and degrade every later shard split. This
-        # repo has shipped three separate checks that passed having inspected
-        # zero files; refuse to be the fourth.
+      - name: Confirm the run actually recorded the whole suite
+        # A refresh that silently wrote a PARTIAL file is worse than one that
+        # wrote nothing: pytest-split assigns every unknown test the average
+        # duration, so the heavy tests cluster onto one shard and the matrix
+        # waits for it -- a balance regression with no error anywhere.
+        #
+        # The threshold is derived from a measured collection, not guessed.
+        # An earlier version of this guard used a round 1000 and a sibling
+        # merge guard used 5000 (from the stale "5318 tests" figure in
+        # CLAUDE.md); the suite actually collects 7604, so that guard PASSED
+        # on a file missing a quarter of the suite -- the exact input it
+        # existed to reject. Compare against the run's own collected count so
+        # the threshold cannot go stale again as the suite grows.
         run: |
           python - <<'PY'
-          import json, sys
+          import json, re, subprocess, sys
+
           with open(".github/test_durations.json") as fh:
               data = json.load(fh)
-          print(f"recorded {len(data)} node ids")
-          if len(data) < 1000:
-              sys.exit(f"Refusing: only {len(data)} durations recorded; "
-                       "the suite has >5000 tests, so this run did not "
-                       "complete enough of it to be worth committing.")
+          recorded = len(data)
+
+          out = subprocess.run(
+              [sys.executable, "-m", "pytest", "tests/", "unit_tests/", "-q",
+               "--collect-only", "--continue-on-collection-errors"],
+              capture_output=True, text=True, encoding="utf-8",
+          ).stdout
+          match = re.search(r"(\d+) tests collected", out)
+          if not match:
+              sys.exit("Refusing: could not read the collected count, so "
+                       "completeness cannot be judged. Not writing a file "
+                       "whose coverage is unknown.")
+          collected = int(match.group(1))
+
+          print(f"recorded {recorded} node ids against {collected} collected")
+          if recorded < collected * 0.95:
+              sys.exit(
+                  f"Refusing: {recorded} durations for {collected} collected "
+                  f"tests ({recorded / collected:.0%}). A partial file "
+                  "mis-balances shards silently; every missing test is "
+                  "assigned the average and the heavy ones cluster."
+              )
           PY
 
       - name: Open a PR with the refreshed durations

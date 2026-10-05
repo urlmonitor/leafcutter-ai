@@ -79,9 +79,9 @@ Two repo-level additions this needs:
 `pytest-split` without a durations file falls back to splitting by **test
 count**. For most suites that is a reasonable approximation. For this one it is
 close to the worst available choice, and the reason is the skew from Part 1 §5:
-**60 of 5,318 tests hold 63% of the wall clock.**
+**60 of 7,604 tests hold 63% of the wall clock.**
 
-Count-based splitting distributes 5,318 tests evenly and the 60 expensive ones
+Count-based splitting distributes 7,604 tests evenly and the 60 expensive ones
 land wherever they fall. At 8 shards the expected count is 7.5 heavy tests per
 shard, but nothing enforces it — an unlucky split putting 15 on one shard and 2
 on another produces a slowest shard roughly 3× the fastest. The matrix finishes
@@ -96,10 +96,35 @@ alternative; it does not preserve test order within a group, which matters only
 if some test in the suite turns out to be order-dependent. Start with the
 default and change it only if measurement says to.)
 
-**Therefore the durations file is part of the change, not a tuning extra.** It
-is produced by one full instrumented run (in flight as this is written, via a
-plugin that accumulates setup+call+teardown per node id and flushes
-incrementally, so an interrupted run still yields usable data).
+**Therefore the durations file is part of the change, not a tuning extra** —
+and it **must be generated on CI, not locally.** That is not a preference; a
+local run structurally cannot produce a correct one:
+
+- Five pinned dev dependencies — `pydantic`, `langgraph`, `langchain`, `neo4j`,
+  `langfuse` — are absent from the local environment, so **163 test modules
+  fail at import** and collect zero tests. CI runs
+  `pip install -r requirements-dev.txt`, so on CI those modules import and
+  their tests run. A local durations file omits the entire kernel/knowledge
+  subsystem — not a few stragglers, whole subsystems that only exist on CI.
+- Even with the dependencies installed, laptop timings are the wrong cost
+  model for balancing shards that execute on 4-core GitHub runners.
+
+This was learned the expensive way. A full local instrumented run was taken to
+63% before being interrupted; a second targeted run covered part of the
+remainder. Merging the two looked like it would do, and the merge was written
+with a guard against a short file. **The guard did not fire** — its threshold
+was set to 5,000 on the strength of the "5,318 tests" figure in `CLAUDE.md`,
+and the merged file passed at 5,525 while still missing a quarter of the suite.
+
+Measuring the collected count instead of trusting the documented one ended it:
+**the suite collects 7,604 tests**, so 5,318 is stale and every percentage
+derived from it understates the denominator. A guard whose threshold is a
+guessed constant cannot fail; this one proved it by passing on exactly the
+input it existed to reject.
+
+`.github/workflows/test-durations.yml` is the mechanism, and its own
+completeness guard is set from the measured 7,604 rather than from a round
+number.
 
 Two consequences worth designing for rather than discovering:
 

@@ -34,11 +34,19 @@
 #                guarded main since that date. The shards PARTITION the
 #                collected set — every test still runs exactly once, nothing is
 #                skipped, deselected, or sampled. Balance comes from the
-#                committed .test_durations; without it pytest-split splits by
-#                test COUNT, which is pathological for this suite (60 of 5318
+#                committed durations file; without it pytest-split splits by
+#                test COUNT, which is pathological for this suite (60 of 7604
 #                tests hold 63% of the clock). fail-fast is off so one shard's
 #                failure cannot cancel the others. NOT YET BLOCKING — see
 #                `test` below.
+#
+#                THE DURATIONS FILE IS NOT YET PRESENT. Until
+#                .github/workflows/test-durations.yml has run once and its PR
+#                is merged, these shards split by count and will be UNEVEN —
+#                degraded balance, never lost coverage. It cannot be generated
+#                locally: pydantic, langgraph, langchain, neo4j and langfuse
+#                are pinned here but absent from a typical dev environment, so
+#                163 modules fail to import locally and run only on CI.
 #
 #   test       — aggregator over test-shard, carrying the stable check name
 #                `Test suite (pytest)` that the required-check list used before
@@ -278,7 +286,7 @@ jobs:
         # --splits/--group come from pytest-split. Balance comes from the
         # committed durations file: WITHOUT it pytest-split falls back to
         # splitting by test COUNT, which is close to the worst choice for this
-        # suite, where 60 of 5318 tests hold 63% of the clock. An unlucky
+        # suite, where 60 of 7604 tests hold 63% of the clock. An unlucky
         # count-split lands most of those 60 on one shard and the matrix waits
         # for it. A stale durations file degrades balance, never correctness.
         #

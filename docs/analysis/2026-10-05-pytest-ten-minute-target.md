@@ -155,9 +155,17 @@ reason for this section.
 
 **Measured, reproducible:**
 
-- 53m33s best observed full CI run. 1:29:47 full local run, 5,318 tests, 63% of
-  clock in 60 tests — **under heavy agent-fleet contention**, so treat it as an
-  upper bound rather than the suite's cost.
+- **The suite collects 7,604 tests**, measured 2026-10-05. The "5,318" figure
+  in `CLAUDE.md` is stale, so every share derived from it understates the
+  denominator: the 60 build-spawning tests are **0.8%** of the suite, not 1.1%.
+- Locally, **163 modules fail to collect** — `pydantic`, `langgraph`,
+  `langchain`, `neo4j` and `langfuse` are pinned in `requirements-dev.txt` but
+  absent from this environment. CI installs them, so those modules run there
+  and nowhere locally. Any local measurement is blind to that whole subsystem.
+- 53m33s best observed full CI run. 1:29:47 full local run, 63% of clock in 60
+  tests — **under heavy agent-fleet contention**, and with those 163 modules
+  never running, so treat it as neither an upper nor a lower bound but a
+  different suite from the one CI runs.
 - 77 `build.py` invocation sites across 52 test files; zero `scope="session"`
   fixtures; **zero** of the 77 migrated to the shared layout.
 - **Two build shapes, ~3.5× apart** (Part 2 §1). Against an empty target — what
@@ -200,8 +208,8 @@ disagreement is visible rather than absorbed.
 
 ## 5. Why this was not visible sooner
 
-The suite's cost profile is extraordinarily skewed: **60 of 5,318 tests hold
-63% of the wall clock.** That is 1.1% of the tests holding two thirds of the
+The suite's cost profile is extraordinarily skewed: **60 of 7,604 tests hold
+63% of the wall clock.** That is 0.8% of the tests holding two thirds of the
 time.
 
 A skew that sharp defeats the normal ways of noticing. Per-directory timings
