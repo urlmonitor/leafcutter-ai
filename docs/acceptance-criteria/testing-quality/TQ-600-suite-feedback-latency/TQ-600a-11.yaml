@@ -1,0 +1,285 @@
+id: TQ-600a-11
+components:
+  - testing_quality
+  - ac_store
+title: "Reading the whole acceptance-criteria store stops costing half a minute every time"
+component: testing-quality
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given the acceptance-criteria store as it stands on disk — 4,635 YAML records,
+    23.8 MB, measured 2026-10-05 — and a single in-process sweep that finds every
+    record, reads its bytes and parses it,
+  And the measured baseline for that sweep on this machine: 0.17 s to find and read
+    the bytes, 24.68 s to parse with the pure-Python safe parser, 1.86 s to parse
+    with the libyaml-backed safe parser that is present in the same installed
+    library, a ratio of 13.25,
+  And the two headline consumers of such a sweep, also measured: the store-wide
+    schema validation that a required pull-request check runs, at 23.16 s, and a
+    ticket-generation dry run, at 24.00 s, both of which spend about 95% of their
+    time inside the parser,
+  When every entry point in the package that reads records from the store resolves
+    its parser through one shared accessor instead of naming the pure-Python safe
+    parser itself,
+  Then a full-store sweep through any of those entry points finishes in at most one
+    fifth of the pure-Python baseline measured on the same machine in the same
+    sitting,
+  And each of the two headline consumers finishes in at most one fifth of its own
+    measured baseline, compared against a baseline taken in the same sitting rather
+    than against the figures quoted above,
+  And no entry point in the package names the pure-Python safe parser directly: an
+    inventory of readers derived mechanically from the source at implementation time
+    lists every one of them, and every one resolves through the shared accessor,
+  And that inventory is derived mechanically rather than copied from this record,
+    because the reader population and the store both keep growing — 76 source files
+    named the pure-Python parser at origin/main d4ee594d, 26 of them under
+    scripts/ac_store/ and 30 under templates/scripts/commit_guardian/, and the store
+    grew from 3,340 records in August to 4,635 in October.
+depends_on:
+  - TQ-600a
+doc_links:
+  - path: scripts/render_effective_prompt.py
+    relationship: describes
+    status: exists
+    relevance: >-
+      THE IN-REPO PRECEDENT, and the reason this is a generalisation rather than an
+      invention. Line 57 already reads
+      `_YAML_LOADER = getattr(yaml, "CSafeLoader", yaml.SafeLoader)` under a comment
+      that states why. It is the only file in the package that does so. Copy the
+      idiom and its rationale into the shared accessor; do not re-derive them.
+  - path: scripts/ac_store/validate_ac_schema.py
+    relationship: modifies
+    status: exists
+    relevance: >-
+      EDIT SURFACE and the highest-value one: this is the script behind the required
+      "AC store valid" pull-request check, measured at 23.16 s over the real store.
+  - path: scripts/ac_store/scan_ac_store.py
+    relationship: modifies
+    status: exists
+    relevance: >-
+      EDIT SURFACE. Sweeps the whole store to answer readiness queries; read by
+      /build-ac on every invocation.
+  - path: scripts/ac_store/_gtfa_store.py
+    relationship: modifies
+    status: exists
+    relevance: >-
+      EDIT SURFACE. The store loader behind generate_ticket_from_ac.py, whose dry
+      run measured 24.00 s.
+  - path: scripts/ac_store/ac_coverage_resolver.py
+    relationship: modifies
+    status: exists
+    relevance: EDIT SURFACE. Store-wide coverage resolution.
+  - path: scripts/ac_store/declared_files.py
+    relationship: modifies
+    status: exists
+    relevance: EDIT SURFACE. Read by the done-proof path.
+  - path: scripts/ac_store/_done_proof_phase_helpers.py
+    relationship: modifies
+    status: exists
+    relevance: >-
+      EDIT SURFACE, and the one that carries the correctness argument: the done-proof
+      gate runs an AC's linked tests under a 60 s budget, so a store sweep inside
+      that budget turns a timeout into a reported coverage failure.
+  - path: templates/scripts/commit_guardian/_ac_store_index.py
+    relationship: modifies
+    status: exists
+    relevance: >-
+      EDIT SURFACE. The shared store index every AC commit hook loads, so this one
+      sits on the pre-commit path of every commit in the repository.
+  - path: templates/scripts/commit_guardian/check_done_proof.py
+    relationship: modifies
+    status: exists
+    relevance: EDIT SURFACE. Blocking hook, runs on every commit that touches an AC.
+  - path: templates/scripts/commit_guardian/check_ac_parent_covered_by.py
+    relationship: modifies
+    status: exists
+    relevance: EDIT SURFACE. Blocking hook on the same path.
+  - path: scripts/build_phases.py
+    relationship: modifies
+    status: exists
+    relevance: >-
+      REQUIRED, NOT OPTIONAL. A new shared helper that a commit-guardian hook imports
+      must be added to the build deploy manifest, or the deployed hook raises
+      ModuleNotFoundError at hook runtime and blocks every merge once the gate is
+      required. This is a documented prior incident (done_proof.py), recorded in
+      CLAUDE.md under "New Hook / Gate Dependencies Must Be in the Build
+      Deploy-Manifest".
+  - path: CLAUDE.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      Carries the deploy-manifest rule above, and the standing reminder that a
+      guard's silence is not a pass.
+  - path: docs/analysis/2026-10-05-slowest-tests-and-what-to-do-about-them-3-the-yaml-parser.md
+    relationship: describes
+    status: planned
+    relevance: >-
+      The measurement this AC is specified against, including the probe used. Marked
+      planned because the document lives on branch ci/shard-pytest-suite and is not
+      yet reachable from main.
+declared_files:
+  - path: scripts/ac_store/validate_ac_schema.py
+    state: existing
+  - path: scripts/ac_store/scan_ac_store.py
+    state: existing
+  - path: scripts/ac_store/_gtfa_store.py
+    state: existing
+  - path: templates/scripts/commit_guardian/_ac_store_index.py
+    state: existing
+  - path: scripts/build_phases.py
+    state: existing
+assigned_agent: python-coder
+estimated_complexity: L
+it_requirements:
+  - >-
+    THE ACCESSOR IS A GUARDED IMPORT, NEVER A HARD ONE. The C parser class is absent
+    whenever PyYAML was built without libyaml, which is a real configuration for
+    adopters of this package. The accessor must take the shape the in-repo precedent
+    already uses — `getattr(yaml, "CSafeLoader", yaml.SafeLoader)`, or the equivalent
+    `try: from yaml import CSafeLoader as _Loader / except ImportError: from yaml
+    import SafeLoader as _Loader`. A bare `from yaml import CSafeLoader` makes the
+    package uninstallable for those adopters, and the failure arrives at import time
+    on an unrelated command.
+  - >-
+    THE INVENTORY IS DERIVED, NOT TRANSCRIBED. Produce the list of readers by
+    searching the source at implementation time. The counts in the criteria (76 files
+    overall, 26 + 30 in the two dense directories) are the figures measured at
+    origin/main d4ee594d on 2026-10-05 and are given so a wildly different count is
+    recognised as a changed population, not as a target to hit. Extend the ticket's
+    files_touched from the derived inventory before the coder phase signs off, or the
+    done-proof surface will be narrower than the change.
+  - >-
+    THE DEPLOY MANIFEST IS PART OF THIS CHANGE. If the accessor lives in a new module
+    that any commit_guardian hook imports, add it to the deploy map in
+    scripts/build_phases.py in the same commit and verify by running the DEPLOYED
+    hook after a build — not the unit tests, which import from the source tree and
+    mask the gap entirely. Consider instead placing the accessor where the hooks
+    already import from, so no new deploy entry is needed; either answer is
+    acceptable, an unverified one is not.
+  - >-
+    GREP FOR PARSER-ERROR STRING ASSERTIONS BEFORE CHANGING ANYTHING. The two parsers
+    raise the same exception family but differ in message text and in some mark
+    positions. Any existing test that asserts on a parser error STRING will change
+    behaviour. Find them first; a surprise at green phase reads as a regression.
+  - >-
+    THE SPEED CLAIM IS COMPARED WITHIN ONE SITTING. This workspace is a shared WSL
+    host under variable agent load, so an absolute second count measured today is not
+    reproducible tomorrow. Take the pure-Python baseline and the accessor figure in
+    the same process or the same script run, and assert the RATIO. A test that pins
+    an absolute wall-clock number will be flaky and will be disabled, which is the
+    same as not having it.
+  - >-
+    DO NOT WIDEN THE SAFETY POSTURE. CSafeLoader is the C implementation of the SAME
+    safe schema; the change must never reach for yaml.load with the unsafe full
+    loader, or for yaml.Loader, as a way to go faster.
+delivers_to:
+  - agent: python-coder
+    ac_id: TQ-600a-11-ii
+    contract: >-
+      The shared parser accessor, as the thing whose output the record-by-record
+      agreement comparison checks against the pure-Python parser's output.
+expects_from: null
+test_spec:
+  - name: test_tq600a_11_store_sweep_is_at_least_five_times_faster_than_the_pure_python_parser
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: real_artifact
+    description: >-
+      Over the REAL on-disk store, in one process, time a full sweep with the
+      pure-Python parser and a full sweep through the shared accessor. The accessor
+      sweep takes at most one fifth of the pure-Python sweep. Assert the ratio, never
+      an absolute number of seconds.
+  - name: test_tq600a_11_no_store_reader_names_the_pure_python_parser_directly
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    angle: seam
+    description: >-
+      Derive the reader inventory from the source and assert each entry resolves its
+      parser through the shared accessor. The one documented exception is
+      scripts/render_effective_prompt.py, which already uses the fast idiom inline;
+      either route it through the accessor too or name it explicitly in the test.
+  - name: test_tq600a_11_the_required_store_validation_check_finishes_within_a_fifth_of_its_baseline
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: deployed
+    description: >-
+      Exercise the store-wide schema validation entry point end to end over the real
+      store, with and without the accessor, in the same sitting. Ratio at most one
+      fifth. This is the required pull-request gate, so the deployed path is the one
+      that matters.
+  - name: test_tq600a_11_the_accessor_is_reachable_from_a_deployed_commit_hook
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: reachability
+    description: >-
+      After a build, import and run a commit-guardian hook that uses the accessor
+      from the DEPLOYED layout. A ModuleNotFoundError here is the documented
+      deploy-manifest failure and must be red before the fix, not discovered when the
+      required gate blocks every merge.
+test_rationale: |
+  Three of the four descriptors exist because the obvious weak test for this change
+  is a unit test that imports the accessor and asserts it returned the C class. That
+  test passes on a change that nobody adopted, on a store of three fixture files, and
+  on a helper that is never deployed — which are precisely the three ways this ships
+  broken.
+
+  So: the speed claim is asserted over the REAL store, because the cost is entirely a
+  function of the store's size and a synthetic fixture reproduces none of it; the
+  adoption claim is asserted against a mechanically derived inventory, because a
+  change applied to three of seventy-six files looks identical to a change applied to
+  all of them from inside any one of them; and the reachability claim is asserted
+  from the deployed layout, because this repository has already shipped a hook whose
+  dependency was absent at hook runtime while every unit test stayed green.
+
+  The ratio form is deliberate. An absolute threshold on a shared host under agent
+  load is a flaky test, and a flaky guard is removed within a month.
+origin_agent: BrainCandy
+created: 2026-10-05
+amended_by: []
+superseded_by: null
+covered_by:
+  - TQ-600a-11-i
+  - TQ-600a-11-ii
+  - TQ-600a-11-iii
+implemented_by: []
+change_target: pipeline
+risk_surface: internal
+notes: |
+  WHY THIS LEVER IS DIFFERENT FROM EVERY OTHER CHILD OF TQ-600a. The rest of this L1
+  is about not repeating an expensive deploy. This one is about a single operation
+  being 13x slower than it needs to be in a library the package already depends on.
+  Three consequences follow, and they are the reason it should be built first:
+
+    - IT DOES NOT DECAY AS THE TQ-600a MIGRATION LANDS. The deploy-sharing levers are
+      worth less as the migration completes. The store is not a build artifact; it
+      only gets bigger. 3,340 records in August, 4,635 in October — a 39% rise in
+      seven weeks. Every month this is deferred, it is worth more.
+    - IT IS PARTLY A CORRECTNESS CONCERN, NOT ONLY A SPEED ONE. The done-proof gate
+      runs an AC's linked tests under a 60 s budget. A test that sweeps the store
+      inside that budget is on a timer, and when it trips, the gate reports every
+      linked test as "not run" — which reads as a COVERAGE FAILURE, not as a timeout.
+      That is a false phantom-done signal produced by a parser. One author already
+      worked around it with a raw-text pre-filter; at 1.86 s a sweep the workaround
+      is unnecessary.
+    - IT PAYS OUTSIDE THE TEST SUITE. The required "AC store valid" pull-request
+      check and the AC pre-commit hooks both pay it, on every pull request and every
+      commit respectively.
+
+  PLACEMENT, STATED HONESTLY. This record and its three children are filed under
+  TQ-600a because TQ-600a is where the suite-cost work lives and the user needs this
+  built now. It is an imperfect fit: TQ-600a's criteria name SHARING as the mechanism
+  ("produced once and shared"), and a parse cannot be shared across operating-system
+  processes — this lever makes the work cheap rather than making it happen once. The
+  natural home is a fourth L1 under TQ-600 along the lines of "the tools stop reading
+  the store the slow way", which only the product owner may author. Re-parenting is
+  two fields (this record's depends_on and the parent's covered_by) and should happen
+  at the next PO pass over the TQ-600 tree.
