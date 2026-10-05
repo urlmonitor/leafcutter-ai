@@ -4,20 +4,22 @@
   "product": "Leafcutter",
   "name": "Forming a decision in a kernel run",
   "level": "pipeline",
-  "summary": "Recognize entity meanings before intent, then research a decision and ask you to approve and choose.",
+  "summary": "The kernel interprets the request, reuses approved criteria, researches it, then asks you to approve and choose.",
   "kind": "data",
   "source": "real",
   "realization": "built",
   "status": "active",
   "readiness": "draft",
   "superseded_by": null,
-  "version": 6,
+  "version": 7,
   "shape_version": 2,
   "tags": [
     "decision-kernel",
     "decision-lifecycle",
     "decision-forming",
-    "pipeline"
+    "pipeline",
+    "criterion-categories",
+    "criteria-reuse"
   ],
   "entities": [
     "Decision"
@@ -1040,10 +1042,515 @@
       }
     },
     {
+      "id": "reuse-criteria",
+      "label": "Start from approved categories",
+      "human": "The approved criterion categories that fit this decision's kind and components are offered first, in their preferred wording, each linked to its category. These are earlier questions, not an earlier answer, and they are proposals like any other.\n\nDesign only: the category binding is the published mock-record design the generated criteria index would be built from, and the reused-criteria list is DK-500d-1's proposed output. Neither is a runtime contract; the step's own input, the index entry and the left-out count are missing bindings.\n\nContract fields and examples (generated)\nConsumes:\n  ILLUSTRATIVE DESIGN: PROPOSED, not implemented: mock-record shape transcribed from docs/product-truth/mock-data/leafcutter/criterion-categories.mock.json (decision dec-93c1c730463c1f3c). The derived views replaces and member_view and the fixture field source appear only because the stored samples carry them. No category reader, writer, index or runtime validation exists.\n  criterion_category/id: string (required)\n  criterion_category/pref_label: string (required)\n  criterion_category/decision_types: array (required)\n  criterion_category/components: array (required)\n  criterion_category/lifecycle_stage: string (required)\n  criterion_category/members: array (required)\n  Schema: [criterion_category](docs/product-truth/schemas/criterion-category.schema.json)\nProduces:\n  ILLUSTRATIVE DESIGN: PROPOSED, not implemented: DK-500d-1 delivers_to design list (docs/acceptance-criteria/decision-kernel/DK-500-reusable-decision-criteria/DK-500d-1.yaml). Not a kernel Criterion; left_out_count has no defined envelope. No runtime payload or validation.\n  reused_criteria: array (required)\n  reused_criteria/*/category_id: string (required)\n  reused_criteria/*/criterion_id: string (required)\n  reused_criteria/*/question: string (required)\n  reused_criteria/*/priority: string (required)\n  reused_criteria/*/kind: string (required)\n  reused_criteria/*/proposal_status: string (required)\n  reused_criteria/*/reuse: string (required)\n  Schema: [reused_criteria](docs/product-truth/schemas/reused-criteria.schema.json)\n\nPROPOSED - missing JSON binding (consumes): Reuse-step input: intent decision, findings, decision type, scope components and question\nDK-500d-1 fits categories by the framed decision's decision_type and scope components and orders them by its question, after intent=decision and the findings. No in-run contract carries decision_type (it first appears in the published DecisionRecord), and no payload hands these values to this new step.\nDesign source: [docs/product-truth/flows/leafcutter/decision-forming.flow.json](docs/product-truth/flows/leafcutter/decision-forming.flow.json)\n\nPROPOSED - missing JSON binding (consumes): Published-category index entry (docs/criteria/index.json)\nReuse reads published categories only through the generated docs/criteria/index.json with a sha256 check (DK-500c-2, DK-500d-1). That index and its entry fields are not defined, so the record design stands in for the filters it would carry.\nDesign source: [docs/product-truth/mock-data/leafcutter/criterion-categories.mock.json](docs/product-truth/mock-data/leafcutter/criterion-categories.mock.json)\n\nPROPOSED - missing JSON binding (produces): Left-out count beside the reused criteria\nDK-500d-1 delivers left_out_count: int beside the list when more categories fit than the cap (default 8), but defines no payload that carries both.\nDesign source: [docs/product-truth/flows/leafcutter/decision-forming.flow.json](docs/product-truth/flows/leafcutter/decision-forming.flow.json)\n\nInput: published CriterionCategory mock record; stored sample, not live data — criterion_category; observed; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"id\": \"cat-1dc11c5a2ffa7310\",\n  \"pref_label\": \"Can it be built and verified as one ticket?\",\n  \"decision_types\": [\n    \"design\"\n  ],\n  \"components\": [],\n  \"lifecycle_stage\": \"published\",\n  \"members\": [\n    {\n      \"decision_id\": \"dec-4673055ef54113d5\",\n      \"criterion_id\": \"crit.small_slice\"\n    },\n    {\n      \"decision_id\": \"dec-acdfd972fcaca478\",\n      \"criterion_id\": \"crit.small_slice\"\n    },\n    {\n      \"decision_id\": \"dec-d53e1c52cd47c832\",\n      \"criterion_id\": \"crit.small_slice\"\n    }\n  ]\n}\nReceipt: [docs/product-truth/mock-data/leafcutter/criterion-categories.mock.json](docs/product-truth/mock-data/leafcutter/criterion-categories.mock.json)/entities/CriterionCategory/records/0\n\nOutput: the five published mock categories offered to a design decision (DK-500d-1 scenario); criterion id, priority and kind follow its rules over the mock members and the published decision records; order not computed — reused_criteria; illustrative; complete payload:\n[\n  {\n    \"category_id\": \"cat-1dc11c5a2ffa7310\",\n    \"criterion_id\": \"crit.small_slice\",\n    \"question\": \"Can it be built and verified as one ticket?\",\n    \"priority\": \"supporting\",\n    \"kind\": \"design_judgement\",\n    \"proposal_status\": \"proposed\",\n    \"reuse\": \"unedited\"\n  },\n  {\n    \"category_id\": \"cat-d15d52392d7aa94c\",\n    \"criterion_id\": \"crit.human_authority\",\n    \"question\": \"Does the option keep the rule that only a human approval creates a decision record and that precedent is evidence, never authority (ADR-060)?\",\n    \"priority\": \"required\",\n    \"kind\": \"design_judgement\",\n    \"proposal_status\": \"proposed\",\n    \"reuse\": \"unedited\"\n  },\n  {\n    \"category_id\": \"cat-52b16c7b5a23106f\",\n    \"criterion_id\": \"crit.git_review_kept\",\n    \"question\": \"Does every change stay reviewable in normal git review?\",\n    \"priority\": \"required\",\n    \"kind\": \"design_judgement\",\n    \"proposal_status\": \"proposed\",\n    \"reuse\": \"unedited\"\n  },\n  {\n    \"category_id\": \"cat-d6ce5f78c181ebd1\",\n    \"criterion_id\": \"crit.cheap_candidate_lookup\",\n    \"question\": \"Can a later run find what it needs by filter, without opening every file?\",\n    \"priority\": \"required\",\n    \"kind\": \"design_judgement\",\n    \"proposal_status\": \"proposed\",\n    \"reuse\": \"unedited\"\n  },\n  {\n    \"category_id\": \"cat-1df63b670163b54e\",\n    \"criterion_id\": \"crit.reuses_conventions\",\n    \"question\": \"Use of existing solution: does it build on something that already exists rather than a new tool from scratch?\",\n    \"priority\": \"supporting\",\n    \"kind\": \"design_judgement\",\n    \"proposal_status\": \"proposed\",\n    \"reuse\": \"unedited\"\n  }\n]",
+      "order": 7,
+      "agent": "kernel criteria reuse step",
+      "consumes": [
+        "criterion_category/id: string (required)",
+        "criterion_category/pref_label: string (required)",
+        "criterion_category/decision_types: array (required)",
+        "criterion_category/components: array (required)",
+        "criterion_category/lifecycle_stage: string (required)",
+        "criterion_category/members: array (required)"
+      ],
+      "produces": [
+        "reused_criteria: array (required)",
+        "reused_criteria/*/category_id: string (required)",
+        "reused_criteria/*/criterion_id: string (required)",
+        "reused_criteria/*/question: string (required)",
+        "reused_criteria/*/priority: string (required)",
+        "reused_criteria/*/kind: string (required)",
+        "reused_criteria/*/proposal_status: string (required)",
+        "reused_criteria/*/reuse: string (required)"
+      ],
+      "reads": [
+        "CriterionCategory"
+      ],
+      "impl_asof": "2026-10-03",
+      "impl_status": "not_started",
+      "io_contracts": {
+        "consumes": [
+          {
+            "contract": "criterion_category",
+            "fields": [
+              {
+                "path": "/id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/pref_label",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/decision_types",
+                "types": [
+                  "array"
+                ],
+                "required": true
+              },
+              {
+                "path": "/components",
+                "types": [
+                  "array"
+                ],
+                "required": true
+              },
+              {
+                "path": "/lifecycle_stage",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/members",
+                "types": [
+                  "array"
+                ],
+                "required": true
+              }
+            ]
+          }
+        ],
+        "produces": [
+          {
+            "contract": "reused_criteria",
+            "fields": [
+              {
+                "path": "",
+                "types": [
+                  "array"
+                ],
+                "required": true
+              },
+              {
+                "path": "/*/category_id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/*/criterion_id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/*/question",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/*/priority",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/*/kind",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/*/proposal_status",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/*/reuse",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              }
+            ]
+          }
+        ],
+        "examples": [
+          {
+            "contract": "criterion_category",
+            "mode": "projection",
+            "origin": "observed",
+            "label": "Input: published CriterionCategory mock record; stored sample, not live data",
+            "value": {
+              "id": "cat-1dc11c5a2ffa7310",
+              "pref_label": "Can it be built and verified as one ticket?",
+              "decision_types": [
+                "design"
+              ],
+              "components": [],
+              "lifecycle_stage": "published",
+              "members": [
+                {
+                  "decision_id": "dec-4673055ef54113d5",
+                  "criterion_id": "crit.small_slice"
+                },
+                {
+                  "decision_id": "dec-acdfd972fcaca478",
+                  "criterion_id": "crit.small_slice"
+                },
+                {
+                  "decision_id": "dec-d53e1c52cd47c832",
+                  "criterion_id": "crit.small_slice"
+                }
+              ]
+            },
+            "source": {
+              "path": "docs/product-truth/mock-data/leafcutter/criterion-categories.mock.json",
+              "pointer": "/entities/CriterionCategory/records/0"
+            }
+          },
+          {
+            "contract": "reused_criteria",
+            "mode": "full",
+            "origin": "illustrative",
+            "label": "Output: the five published mock categories offered to a design decision (DK-500d-1 scenario); criterion id, priority and kind follow its rules over the mock members and the published decision records; order not computed",
+            "value": [
+              {
+                "category_id": "cat-1dc11c5a2ffa7310",
+                "criterion_id": "crit.small_slice",
+                "question": "Can it be built and verified as one ticket?",
+                "priority": "supporting",
+                "kind": "design_judgement",
+                "proposal_status": "proposed",
+                "reuse": "unedited"
+              },
+              {
+                "category_id": "cat-d15d52392d7aa94c",
+                "criterion_id": "crit.human_authority",
+                "question": "Does the option keep the rule that only a human approval creates a decision record and that precedent is evidence, never authority (ADR-060)?",
+                "priority": "required",
+                "kind": "design_judgement",
+                "proposal_status": "proposed",
+                "reuse": "unedited"
+              },
+              {
+                "category_id": "cat-52b16c7b5a23106f",
+                "criterion_id": "crit.git_review_kept",
+                "question": "Does every change stay reviewable in normal git review?",
+                "priority": "required",
+                "kind": "design_judgement",
+                "proposal_status": "proposed",
+                "reuse": "unedited"
+              },
+              {
+                "category_id": "cat-d6ce5f78c181ebd1",
+                "criterion_id": "crit.cheap_candidate_lookup",
+                "question": "Can a later run find what it needs by filter, without opening every file?",
+                "priority": "required",
+                "kind": "design_judgement",
+                "proposal_status": "proposed",
+                "reuse": "unedited"
+              },
+              {
+                "category_id": "cat-1df63b670163b54e",
+                "criterion_id": "crit.reuses_conventions",
+                "question": "Use of existing solution: does it build on something that already exists rather than a new tool from scratch?",
+                "priority": "supporting",
+                "kind": "design_judgement",
+                "proposal_status": "proposed",
+                "reuse": "unedited"
+              }
+            ]
+          }
+        ],
+        "missing_bindings": [
+          {
+            "name": "Reuse-step input: intent decision, findings, decision type, scope components and question",
+            "direction": "consumes",
+            "reason": "DK-500d-1 fits categories by the framed decision's decision_type and scope components and orders them by its question, after intent=decision and the findings. No in-run contract carries decision_type (it first appears in the published DecisionRecord), and no payload hands these values to this new step.",
+            "source": "docs/product-truth/flows/leafcutter/decision-forming.flow.json"
+          },
+          {
+            "name": "Published-category index entry (docs/criteria/index.json)",
+            "direction": "consumes",
+            "reason": "Reuse reads published categories only through the generated docs/criteria/index.json with a sha256 check (DK-500c-2, DK-500d-1). That index and its entry fields are not defined, so the record design stands in for the filters it would carry.",
+            "source": "docs/product-truth/mock-data/leafcutter/criterion-categories.mock.json"
+          },
+          {
+            "name": "Left-out count beside the reused criteria",
+            "direction": "produces",
+            "reason": "DK-500d-1 delivers left_out_count: int beside the list when more categories fit than the cap (default 8), but defines no payload that carries both.",
+            "source": "docs/product-truth/flows/leafcutter/decision-forming.flow.json"
+          }
+        ]
+      },
+      "implements": [
+        "DK-500a-2",
+        "DK-500d-1",
+        "DK-500d-1-i",
+        "DK-500f-4"
+      ]
+    },
+    {
+      "id": "judge-gap",
+      "label": "Judge what the reused criteria miss",
+      "human": "Jev judges whether the reused criteria leave out something this decision needs. Its verdict, gap or no gap, goes with the proposals to the approval gate, so you can see why new criteria were or were not drafted.\n\nJev answers through the existing JevResult transport; the per-concern question, its concern list and the mapping to the verdict are not registered. The reused-criteria input and the verdict are DK-500d-1 and DK-500e-1 design shapes, not runtime contracts.\n\nContract fields and examples (generated)\nConsumes:\n  ILLUSTRATIVE DESIGN: PROPOSED, not implemented: DK-500d-1 delivers_to design list (docs/acceptance-criteria/decision-kernel/DK-500-reusable-decision-criteria/DK-500d-1.yaml). Not a kernel Criterion; left_out_count has no defined envelope. No runtime payload or validation.\n  reused_criteria: array (required)\n  reused_criteria/*/category_id: string (required)\n  reused_criteria/*/criterion_id: string (required)\n  reused_criteria/*/question: string (required)\n  Schema: [reused_criteria](docs/product-truth/schemas/reused-criteria.schema.json)\n  findings/findings: array (optional; default [])\n  Runtime contract: [findings](kernel/contracts/payloads.py)\nProduces:\n  jev_result/answers: object (required)\n  jev_result/model_id: null|string (optional; default null)\n  jev_result/usage: object (required)\n  Runtime contract: [jev_result](kernel/providers/base.py)\n  ILLUSTRATIVE DESIGN: PROPOSED, not implemented: DK-500e-1 delivers_to verdict design (docs/acceptance-criteria/decision-kernel/DK-500-reusable-decision-criteria/DK-500e-1.yaml). No kernel step, payload or validator produces it yet.\n  gap_verdict/status: string (required)\n  gap_verdict/missing_concerns: array (required)\n  gap_verdict/reason: null|string (required)\n  Schema: [gap_verdict](docs/product-truth/schemas/criteria-gap-verdict.schema.json)\n\nPROPOSED - missing JSON binding (both): Concern list and gap Jev question (reused criteria, findings, goal)\nDK-500e-1 fixes a finite concern list from the findings and task constraints before this step and asks one batched Jev question per concern. FindingsPayload has no explicit concern list, and neither that list, the JevBatch question template nor the mapping from answers to the verdict is registered.\nDesign source: [docs/product-truth/flows/leafcutter/decision-forming.flow.json](docs/product-truth/flows/leafcutter/decision-forming.flow.json)\n\nInput: the reused criteria offered by reuse-criteria (illustrative, as above) — reused_criteria; illustrative; complete payload:\n[\n  {\n    \"category_id\": \"cat-1dc11c5a2ffa7310\",\n    \"criterion_id\": \"crit.small_slice\",\n    \"question\": \"Can it be built and verified as one ticket?\",\n    \"priority\": \"supporting\",\n    \"kind\": \"design_judgement\",\n    \"proposal_status\": \"proposed\",\n    \"reuse\": \"unedited\"\n  },\n  {\n    \"category_id\": \"cat-d15d52392d7aa94c\",\n    \"criterion_id\": \"crit.human_authority\",\n    \"question\": \"Does the option keep the rule that only a human approval creates a decision record and that precedent is evidence, never authority (ADR-060)?\",\n    \"priority\": \"required\",\n    \"kind\": \"design_judgement\",\n    \"proposal_status\": \"proposed\",\n    \"reuse\": \"unedited\"\n  },\n  {\n    \"category_id\": \"cat-52b16c7b5a23106f\",\n    \"criterion_id\": \"crit.git_review_kept\",\n    \"question\": \"Does every change stay reviewable in normal git review?\",\n    \"priority\": \"required\",\n    \"kind\": \"design_judgement\",\n    \"proposal_status\": \"proposed\",\n    \"reuse\": \"unedited\"\n  },\n  {\n    \"category_id\": \"cat-d6ce5f78c181ebd1\",\n    \"criterion_id\": \"crit.cheap_candidate_lookup\",\n    \"question\": \"Can a later run find what it needs by filter, without opening every file?\",\n    \"priority\": \"required\",\n    \"kind\": \"design_judgement\",\n    \"proposal_status\": \"proposed\",\n    \"reuse\": \"unedited\"\n  },\n  {\n    \"category_id\": \"cat-1df63b670163b54e\",\n    \"criterion_id\": \"crit.reuses_conventions\",\n    \"question\": \"Use of existing solution: does it build on something that already exists rather than a new tool from scratch?\",\n    \"priority\": \"supporting\",\n    \"kind\": \"design_judgement\",\n    \"proposal_status\": \"proposed\",\n    \"reuse\": \"unedited\"\n  }\n]\n\nInput: illustrative finding raising the knowledge-graph concern of the DK-500e-1 scenario; not a host receipt — findings; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"findings\": [\n    {\n      \"claim\": \"The findings say the record format must be readable into the knowledge graph.\",\n      \"kind\": \"inference\",\n      \"supporting_evidence_ids\": [\n        \"ev-27c8e6023c8b1d02\"\n      ],\n      \"producer\": \"host.synthesize_evidence\"\n    }\n  ]\n}\n\nOutput: illustrative per-concern Jev answer (does any reused criterion cover readability into the knowledge graph?); the question id is a placeholder because no gap question template is registered — jev_result; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"answers\": {\n    \"gap.concern-1\": {\n      \"kind\": \"noul\",\n      \"probability\": 0.06\n    }\n  }\n}\n\nOutput: verdict naming the missing concern (DK-500e-1 scenario) — gap_verdict; illustrative; complete payload:\n{\n  \"status\": \"gap\",\n  \"missing_concerns\": [\n    \"readability into the knowledge graph\"\n  ],\n  \"reason\": null\n}",
+      "order": 8,
+      "agent": "jev",
+      "consumes": [
+        "reused_criteria: array (required)",
+        "reused_criteria/*/category_id: string (required)",
+        "reused_criteria/*/criterion_id: string (required)",
+        "reused_criteria/*/question: string (required)",
+        "findings/findings: array (optional; default [])"
+      ],
+      "produces": [
+        "jev_result/answers: object (required)",
+        "jev_result/model_id: null|string (optional; default null)",
+        "jev_result/usage: object (required)",
+        "gap_verdict/status: string (required)",
+        "gap_verdict/missing_concerns: array (required)",
+        "gap_verdict/reason: null|string (required)"
+      ],
+      "reads": [
+        "CriterionCategory"
+      ],
+      "impl_asof": "2026-10-03",
+      "impl_status": "not_started",
+      "io_contracts": {
+        "consumes": [
+          {
+            "contract": "reused_criteria",
+            "fields": [
+              {
+                "path": "",
+                "types": [
+                  "array"
+                ],
+                "required": true
+              },
+              {
+                "path": "/*/category_id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/*/criterion_id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/*/question",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              }
+            ]
+          },
+          {
+            "contract": "findings",
+            "fields": [
+              {
+                "path": "/findings",
+                "types": [
+                  "array"
+                ],
+                "required": false,
+                "default": []
+              }
+            ]
+          }
+        ],
+        "produces": [
+          {
+            "contract": "jev_result",
+            "fields": [
+              {
+                "path": "/answers",
+                "types": [
+                  "object"
+                ],
+                "required": true
+              },
+              {
+                "path": "/model_id",
+                "types": [
+                  "null",
+                  "string"
+                ],
+                "required": false,
+                "default": null
+              },
+              {
+                "path": "/usage",
+                "types": [
+                  "object"
+                ],
+                "required": true
+              }
+            ]
+          },
+          {
+            "contract": "gap_verdict",
+            "fields": [
+              {
+                "path": "/status",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/missing_concerns",
+                "types": [
+                  "array"
+                ],
+                "required": true
+              },
+              {
+                "path": "/reason",
+                "types": [
+                  "null",
+                  "string"
+                ],
+                "required": true
+              }
+            ]
+          }
+        ],
+        "examples": [
+          {
+            "contract": "reused_criteria",
+            "mode": "full",
+            "origin": "illustrative",
+            "label": "Input: the reused criteria offered by reuse-criteria (illustrative, as above)",
+            "value": [
+              {
+                "category_id": "cat-1dc11c5a2ffa7310",
+                "criterion_id": "crit.small_slice",
+                "question": "Can it be built and verified as one ticket?",
+                "priority": "supporting",
+                "kind": "design_judgement",
+                "proposal_status": "proposed",
+                "reuse": "unedited"
+              },
+              {
+                "category_id": "cat-d15d52392d7aa94c",
+                "criterion_id": "crit.human_authority",
+                "question": "Does the option keep the rule that only a human approval creates a decision record and that precedent is evidence, never authority (ADR-060)?",
+                "priority": "required",
+                "kind": "design_judgement",
+                "proposal_status": "proposed",
+                "reuse": "unedited"
+              },
+              {
+                "category_id": "cat-52b16c7b5a23106f",
+                "criterion_id": "crit.git_review_kept",
+                "question": "Does every change stay reviewable in normal git review?",
+                "priority": "required",
+                "kind": "design_judgement",
+                "proposal_status": "proposed",
+                "reuse": "unedited"
+              },
+              {
+                "category_id": "cat-d6ce5f78c181ebd1",
+                "criterion_id": "crit.cheap_candidate_lookup",
+                "question": "Can a later run find what it needs by filter, without opening every file?",
+                "priority": "required",
+                "kind": "design_judgement",
+                "proposal_status": "proposed",
+                "reuse": "unedited"
+              },
+              {
+                "category_id": "cat-1df63b670163b54e",
+                "criterion_id": "crit.reuses_conventions",
+                "question": "Use of existing solution: does it build on something that already exists rather than a new tool from scratch?",
+                "priority": "supporting",
+                "kind": "design_judgement",
+                "proposal_status": "proposed",
+                "reuse": "unedited"
+              }
+            ]
+          },
+          {
+            "contract": "findings",
+            "mode": "projection",
+            "origin": "illustrative",
+            "label": "Input: illustrative finding raising the knowledge-graph concern of the DK-500e-1 scenario; not a host receipt",
+            "value": {
+              "findings": [
+                {
+                  "claim": "The findings say the record format must be readable into the knowledge graph.",
+                  "kind": "inference",
+                  "supporting_evidence_ids": [
+                    "ev-27c8e6023c8b1d02"
+                  ],
+                  "producer": "host.synthesize_evidence"
+                }
+              ]
+            }
+          },
+          {
+            "contract": "jev_result",
+            "mode": "projection",
+            "origin": "illustrative",
+            "label": "Output: illustrative per-concern Jev answer (does any reused criterion cover readability into the knowledge graph?); the question id is a placeholder because no gap question template is registered",
+            "value": {
+              "answers": {
+                "gap.concern-1": {
+                  "kind": "noul",
+                  "probability": 0.06
+                }
+              }
+            }
+          },
+          {
+            "contract": "gap_verdict",
+            "mode": "full",
+            "origin": "illustrative",
+            "label": "Output: verdict naming the missing concern (DK-500e-1 scenario)",
+            "value": {
+              "status": "gap",
+              "missing_concerns": [
+                "readability into the knowledge graph"
+              ],
+              "reason": null
+            }
+          }
+        ],
+        "missing_bindings": [
+          {
+            "name": "Concern list and gap Jev question (reused criteria, findings, goal)",
+            "direction": "both",
+            "reason": "DK-500e-1 fixes a finite concern list from the findings and task constraints before this step and asks one batched Jev question per concern. FindingsPayload has no explicit concern list, and neither that list, the JevBatch question template nor the mapping from answers to the verdict is registered.",
+            "source": "docs/product-truth/flows/leafcutter/decision-forming.flow.json"
+          }
+        ]
+      },
+      "implements": [
+        "DK-500e-1",
+        "DK-500e-1-i",
+        "DK-500e-1-ii"
+      ]
+    },
+    {
       "id": "propose",
       "label": "Propose options and criteria",
-      "human": "Claude Code, as host, proposes options and criteria (generate_options); options you named in your question are checked against your words and kept as yours.\n\nThe registered generate_options host capability consumes OptionsRequestPayload and returns OptionsPayload. Proposed items enter an approval track, not approved working state.\n\nContract fields and examples (generated)\nConsumes:\n  options_request/problem: string (required)\n  options_request/evidence_ids: array (optional; default [])\n  options_request/findings: array (optional; default [])\n  options_request/propose_criteria: boolean (optional; default false)\n  options_request/require_grounding: boolean (optional; default false)\n  Runtime contract: [options_request](kernel/contracts/payloads.py)\nProduces:\n  options/options: array (optional; default [])\n  options/named_options: array (optional; default [])\n  options/proposed_criteria: array (optional; default [])\n  options/unresolved_feasibility: array (optional; default [])\n  Runtime contract: [options](kernel/contracts/payloads.py)\n\nDecision-record scenario: options_request — options_request; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"problem\": \"Decide how Leafcutter should file decision records as JSON or YAML files under docs/ so later kernel runs can find and reuse them as precedent: which fields a record needs, which classification filters it carries (component, file type or language, repository-wide, roadmap phase), the folder layout and file naming, and how human approval and later corrections are recorded.\",\n  \"evidence_ids\": [\n    \"ev-27c8e6023c8b1d02\"\n  ],\n  \"propose_criteria\": true,\n  \"require_grounding\": true\n}\n\nDecision-record scenario: options — options; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"options\": [\n    {\n      \"id\": \"opt.yaml_files_plus_generated_index\",\n      \"title\": \"One YAML file per decision plus a generated, never hand-edited filter index\",\n      \"proposal_status\": \"proposed\",\n      \"approval_status\": \"proposed\",\n      \"proposed_by\": \"host.generate_options\"\n    }\n  ],\n  \"proposed_criteria\": [\n    {\n      \"id\": \"crit.findable_by_filters\",\n      \"question\": \"Can a later run select precedent by component, roadmap phase, repository-wide flag and file type or language without opening every record?\",\n      \"priority\": \"required\",\n      \"proposal_status\": \"proposed\",\n      \"approval_status\": \"proposed\"\n    }\n  ],\n  \"named_options\": []\n}",
-      "order": 7,
+      "human": "Claude Code, as host, proposes options (generate_options) beside the reused criteria; options you named in your question are checked against your words and kept as yours. It drafts no new criteria unless Jev found a gap or no category fits.\n\nThe registered generate_options host capability consumes OptionsRequestPayload and returns OptionsPayload. Proposed items enter an approval track, not approved working state. The reused criteria and the gap verdict are not yet fields of that request.\n\nContract fields and examples (generated)\nConsumes:\n  options_request/problem: string (required)\n  options_request/evidence_ids: array (optional; default [])\n  options_request/findings: array (optional; default [])\n  options_request/propose_criteria: boolean (optional; default false)\n  options_request/require_grounding: boolean (optional; default false)\n  Runtime contract: [options_request](kernel/contracts/payloads.py)\nProduces:\n  options/options: array (optional; default [])\n  options/named_options: array (optional; default [])\n  options/proposed_criteria: array (optional; default [])\n  options/unresolved_feasibility: array (optional; default [])\n  Runtime contract: [options](kernel/contracts/payloads.py)\n\nPROPOSED - missing JSON binding (consumes): Reused criteria (each linked to its category) and gap verdict\nThe reuse-first design hands generate_options the reused criteria and Jev's gap verdict so that it drafts new criteria only for a gap (DK-500e-2). OptionsRequestPayload carries neither, and no request field marks reused criteria as already covered.\nDesign source: [docs/product-truth/flows/leafcutter/decision-forming.flow.json](docs/product-truth/flows/leafcutter/decision-forming.flow.json)\n\nDecision-record scenario: options_request — options_request; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"problem\": \"Decide how Leafcutter should file decision records as JSON or YAML files under docs/ so later kernel runs can find and reuse them as precedent: which fields a record needs, which classification filters it carries (component, file type or language, repository-wide, roadmap phase), the folder layout and file naming, and how human approval and later corrections are recorded.\",\n  \"evidence_ids\": [\n    \"ev-27c8e6023c8b1d02\"\n  ],\n  \"propose_criteria\": true,\n  \"require_grounding\": true\n}\n\nDecision-record scenario: options — options; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"options\": [\n    {\n      \"id\": \"opt.yaml_files_plus_generated_index\",\n      \"title\": \"One YAML file per decision plus a generated, never hand-edited filter index\",\n      \"proposal_status\": \"proposed\",\n      \"approval_status\": \"proposed\",\n      \"proposed_by\": \"host.generate_options\"\n    }\n  ],\n  \"proposed_criteria\": [\n    {\n      \"id\": \"crit.findable_by_filters\",\n      \"question\": \"Can a later run select precedent by component, roadmap phase, repository-wide flag and file type or language without opening every record?\",\n      \"priority\": \"required\",\n      \"proposal_status\": \"proposed\",\n      \"approval_status\": \"proposed\"\n    }\n  ],\n  \"named_options\": []\n}",
+      "order": 9,
       "agent": "claude_code",
       "consumes": [
         "options_request/problem: string (required)",
@@ -1188,14 +1695,25 @@
               "named_options": []
             }
           }
+        ],
+        "missing_bindings": [
+          {
+            "name": "Reused criteria (each linked to its category) and gap verdict",
+            "direction": "consumes",
+            "reason": "The reuse-first design hands generate_options the reused criteria and Jev's gap verdict so that it drafts new criteria only for a gap (DK-500e-2). OptionsRequestPayload carries neither, and no request field marks reused criteria as already covered.",
+            "source": "docs/product-truth/flows/leafcutter/decision-forming.flow.json"
+          }
         ]
-      }
+      },
+      "implements": [
+        "DK-500e-2"
+      ]
     },
     {
       "id": "approve-proposals",
       "label": "Approve the proposals",
-      "human": "Decision point: you see the proposed options and criteria and approve them, approve only some, edit the criteria, or add options. Nothing proposed is used until you approve it.\n\nThe human supplies approved IDs in HumanAnswerPayload. The kernel applies them to matching objects. This example records a hypothetical answer, not new approval.\n\nContract fields and examples (generated)\nConsumes:\n  options/options: array (optional; default [])\n  options/proposed_criteria: array (optional; default [])\n  Runtime contract: [options](kernel/contracts/payloads.py)\nProduces:\n  human_answer/approved_option_ids: array|null (optional; default null)\n  human_answer/approved_criterion_ids: array|null (optional; default null)\n  human_answer/added_options: array|null (optional; default null)\n  human_answer/edited_criteria: array|null (optional; default null)\n  human_answer/free_text: null|string (optional; default null)\n  Runtime contract: [human_answer](kernel/contracts/payloads.py)\n\nDecision-record scenario: options — options; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"options\": [\n    {\n      \"id\": \"opt.yaml_files_plus_generated_index\",\n      \"title\": \"One YAML file per decision plus a generated, never hand-edited filter index\",\n      \"proposal_status\": \"proposed\",\n      \"approval_status\": \"proposed\",\n      \"proposed_by\": \"host.generate_options\"\n    }\n  ],\n  \"proposed_criteria\": [\n    {\n      \"id\": \"crit.findable_by_filters\",\n      \"question\": \"Can a later run select precedent by component, roadmap phase, repository-wide flag and file type or language without opening every record?\",\n      \"priority\": \"required\",\n      \"proposal_status\": \"proposed\",\n      \"approval_status\": \"proposed\"\n    }\n  ],\n  \"named_options\": []\n}\n\nApprove the displayed proposed option and criterion — human_answer; illustrative; complete payload:\n{\n  \"approved_option_ids\": [\n    \"opt.yaml_files_plus_generated_index\"\n  ],\n  \"approved_criterion_ids\": [\n    \"crit.findable_by_filters\"\n  ]\n}",
-      "order": 8,
+      "human": "Decision point: you see the proposed options and criteria, reused ones marked with their category and Jev's gap verdict beside them, and approve them, approve only some, edit the criteria, or add options. Nothing proposed or reused is used until you approve it.\n\nThe human supplies approved IDs in HumanAnswerPayload. The kernel applies them to matching objects. This example records a hypothetical answer, not new approval.\n\nContract fields and examples (generated)\nConsumes:\n  options/options: array (optional; default [])\n  options/proposed_criteria: array (optional; default [])\n  Runtime contract: [options](kernel/contracts/payloads.py)\nProduces:\n  human_answer/approved_option_ids: array|null (optional; default null)\n  human_answer/approved_criterion_ids: array|null (optional; default null)\n  human_answer/added_options: array|null (optional; default null)\n  human_answer/edited_criteria: array|null (optional; default null)\n  human_answer/free_text: null|string (optional; default null)\n  Runtime contract: [human_answer](kernel/contracts/payloads.py)\n\nPROPOSED - missing JSON binding (consumes): Reuse links and gap verdict shown at the approval\nDK-500d-2 marks each reused criterion with its category id, pref_label and reuse kind at this gate and carries the gap verdict beside the proposals; OptionsPayload's Criterion items carry no category link and no payload brings the verdict to the gate.\nDesign source: [docs/product-truth/flows/leafcutter/decision-forming.flow.json](docs/product-truth/flows/leafcutter/decision-forming.flow.json)\n\nDecision-record scenario: options — options; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"options\": [\n    {\n      \"id\": \"opt.yaml_files_plus_generated_index\",\n      \"title\": \"One YAML file per decision plus a generated, never hand-edited filter index\",\n      \"proposal_status\": \"proposed\",\n      \"approval_status\": \"proposed\",\n      \"proposed_by\": \"host.generate_options\"\n    }\n  ],\n  \"proposed_criteria\": [\n    {\n      \"id\": \"crit.findable_by_filters\",\n      \"question\": \"Can a later run select precedent by component, roadmap phase, repository-wide flag and file type or language without opening every record?\",\n      \"priority\": \"required\",\n      \"proposal_status\": \"proposed\",\n      \"approval_status\": \"proposed\"\n    }\n  ],\n  \"named_options\": []\n}\n\nApprove the displayed proposed option and criterion — human_answer; illustrative; complete payload:\n{\n  \"approved_option_ids\": [\n    \"opt.yaml_files_plus_generated_index\"\n  ],\n  \"approved_criterion_ids\": [\n    \"crit.findable_by_filters\"\n  ]\n}",
+      "order": 10,
       "screen": "decision-approve-proposals",
       "agent": "human (asked through claude_code)",
       "consumes": [
@@ -1329,14 +1847,26 @@
               ]
             }
           }
+        ],
+        "missing_bindings": [
+          {
+            "name": "Reuse links and gap verdict shown at the approval",
+            "direction": "consumes",
+            "reason": "DK-500d-2 marks each reused criterion with its category id, pref_label and reuse kind at this gate and carries the gap verdict beside the proposals; OptionsPayload's Criterion items carry no category link and no payload brings the verdict to the gate.",
+            "source": "docs/product-truth/flows/leafcutter/decision-forming.flow.json"
+          }
         ]
-      }
+      },
+      "implements": [
+        "DK-500d-2",
+        "DK-500d-2-i"
+      ]
     },
     {
       "id": "research-options",
       "label": "Research the options' claims",
       "human": "A targeted research round checks the claims the approved options make and reads the files they cite.\n\nSource: kernel/capabilities/decision/requests.py. Actual option_context and criteria_context are accepted; the projection omits those details rather than inventing them.\n\nContract fields and examples (generated)\nConsumes:\n  research_request/question: string (required)\n  research_request/option_context: array (optional; default [])\n  research_request/criteria_context: array (optional; default [])\n  research_request/existing_evidence_ids: array (optional; default [])\n  research_request/jev_reserve: integer (optional; default 0)\n  Runtime contract: [research_request](kernel/contracts/payloads.py)\nProduces:\n  evidence_bundle/evidence: array (optional; default [])\n  evidence_bundle/evidence_ids: array (optional; default [])\n  evidence_bundle/limitations: array (optional; default [])\n  Runtime contract: [evidence_bundle](kernel/contracts/evidence.py)\n\nDecision-record scenario: research_request — research_request; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"question\": \"Decide how Leafcutter should file decision records as JSON or YAML files under docs/ so later kernel runs can find and reuse them as precedent: which fields a record needs, which classification filters it carries (component, file type or language, repository-wide, roadmap phase), the folder layout and file naming, and how human approval and later corrections are recorded.\",\n  \"existing_evidence_ids\": [],\n  \"expected_coverage\": \"all_required\"\n}\n\nDecision-record scenario: evidence_bundle — evidence_bundle; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"evidence_ids\": [\n    \"ev-27c8e6023c8b1d02\"\n  ],\n  \"evidence\": [\n    {\n      \"id\": \"ev-27c8e6023c8b1d02\",\n      \"category\": \"prior_decisions\",\n      \"content_hash\": \"06845bf5bd25c6e571dc24b27e0b41b474274dcc130da8c0868ab25ec12f9536\",\n      \"source\": {\n        \"locator\": \"docs/analysis/2026-10-01-colony-memory-stage0-delta-2-reuse-and-mvp.md#L43-L74 (§(c) Minimal Neo4j MVP > c.1 Node and edge set)\"\n      },\n      \"verification\": \"source_verified\"\n    }\n  ],\n  \"limitations\": []\n}",
-      "order": 9,
+      "order": 11,
       "agent": "kernel research capability",
       "consumes": [
         "research_request/question: string (required)",
@@ -1472,7 +2002,7 @@
       "id": "assess",
       "label": "Assess every option",
       "human": "Jev judges every option against every criterion (does it satisfy it, is the evidence sufficient) and marks each criterion as evidence-answerable or a design judgement.\n\nJevResult carries literal probability answers. The kernel computes OptionRanking afterward; Jev does not return a final decision.\n\nContract fields and examples (generated)\nConsumes:\n  option/id: string (required)\n  option/title: string (required)\n  option/approval_status: string (optional; default \"not_required\")\n  option/approved_by: null|string (optional; default null)\n  Runtime contract: [option](kernel/contracts/decision.py)\n  criterion/id: string (required)\n  criterion/question: string (required)\n  criterion/kind: string (optional; default \"evidence_answerable\")\n  criterion/kind_source: null|string (optional; default null)\n  Runtime contract: [criterion](kernel/contracts/decision.py)\n  evidence/id: string (required)\n  evidence/source/locator: string (required)\n  evidence/content_hash: string (required)\n  Runtime contract: [evidence](kernel/contracts/evidence.py)\nProduces:\n  jev_result/answers: object (required)\n  jev_result/model_id: null|string (optional; default null)\n  jev_result/usage: object (required)\n  Runtime contract: [jev_result](kernel/providers/base.py)\n\nApproved option enters assessment — option; illustrative; complete payload:\n{\n  \"id\": \"opt.yaml_files_plus_generated_index\",\n  \"title\": \"One YAML file per decision plus a generated, never hand-edited filter index\",\n  \"proposal_status\": \"proposed\",\n  \"approval_status\": \"approved\",\n  \"proposed_by\": \"host.generate_options\",\n  \"approved_by\": \"human:user\"\n}\n\nApproved criterion before kind classification — criterion; illustrative; complete payload:\n{\n  \"id\": \"crit.findable_by_filters\",\n  \"question\": \"Can a later run select precedent by component, roadmap phase, repository-wide flag and file type or language without opening every record?\",\n  \"priority\": \"required\",\n  \"proposal_status\": \"proposed\",\n  \"approval_status\": \"approved\",\n  \"approved_by\": \"human:user\"\n}\n\nDecision-record scenario: jev_result — jev_result; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"answers\": {\n    \"satisfies.crit.findable_by_filters.opt.yaml_files_plus_generated_index\": {\n      \"kind\": \"noul\",\n      \"probability\": 0.88\n    }\n  }\n}",
-      "order": 10,
+      "order": 12,
       "agent": "jev",
       "consumes": [
         "option/id: string (required)",
@@ -1675,7 +2205,7 @@
       "id": "choose",
       "label": "Make the ranked choice",
       "human": "Decision point: you see the options ranked by Jev's per-criterion scores. The ranking is evidence, not a decision; you choose an option, add one, or answer in your own words.\n\nThis example includes the human-added option after reranking. Its reconstructed rank is 2, while the human selects it; ranking is evidence rather than authorization.\n\nContract fields and examples (generated)\nConsumes:\n  option_ranking/option_id: string (required)\n  option_ranking/rank: integer (required)\n  option_ranking/required_passed: integer (required)\n  option_ranking/required_total: integer (required)\n  option_ranking/required_mean: number (required)\n  option_ranking/scores: object (optional; default {})\n  Runtime contract: [option_ranking](kernel/contracts/decision.py)\n  human_question/question: string (required)\n  human_question/choices: array (optional; default [])\n  human_question/free_text_allowed: boolean (optional; default false)\n  human_question/required_actor_kind: string (optional; default \"human\")\n  human_question/state_revision: integer (required)\n  Runtime contract: [human_question](kernel/contracts/interaction.py)\nProduces:\n  human_answer/choice_id: null|string (optional; default null)\n  human_answer/added_options: array|null (optional; default null)\n  human_answer/free_text: null|string (optional; default null)\n  Runtime contract: [human_answer](kernel/contracts/payloads.py)\n\nDecision-record scenario: option_ranking — option_ranking; reconstructed; complete payload:\n{\n  \"option_id\": \"opt.added.1\",\n  \"rank\": 2,\n  \"required_passed\": 0,\n  \"required_total\": 4,\n  \"required_mean\": 0.57,\n  \"scores\": {\n    \"crit.enforced_ids_and_links\": 0.26,\n    \"crit.findable_by_filters\": 0.74,\n    \"crit.knowledge_map_readable\": 0.58,\n    \"crit.provenance_complete\": 0.76,\n    \"crit.reuses_conventions\": 0.37,\n    \"crit.reviewable_diffs\": 0.72\n  }\n}\n\nDecision-record scenario: human_question — human_question; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"question\": \"Choose an option for the decision record format.\",\n  \"choices\": [\n    {\n      \"id\": \"opt.added.1\",\n      \"label\": \"Kernel-contract YAML per decision\"\n    }\n  ],\n  \"free_text_allowed\": true,\n  \"structured_allowed\": true,\n  \"required_actor_kind\": \"human\",\n  \"state_revision\": 1\n}\n\nDecision-record scenario: human_answer — human_answer; illustrative; complete payload:\n{\n  \"choice_id\": \"opt.added.1\"\n}",
-      "order": 11,
+      "order": 13,
       "screen": "decision-ranked-choice",
       "agent": "human (asked through claude_code)",
       "consumes": [
@@ -1883,7 +2413,7 @@
       "id": "resolve",
       "label": "Resolve the decision",
       "human": "The decision resolves with approved_by: human:<id> and approved_at, and report.md is written to the run folder.\n\nThe accepted human answer becomes the internal Decision and public DecisionReportPayload. report.md is a rendering rather than a further JSON payload.\n\nContract fields and examples (generated)\nConsumes:\n  human_answer/choice_id: null|string (optional; default null)\n  Runtime contract: [human_answer](kernel/contracts/payloads.py)\nProduces:\n  decision/status: string (required)\n  decision/selected_option_id: null|string (optional; default null)\n  decision/option_ids: array (optional; default [])\n  decision/approval_status: string (optional; default \"not_required\")\n  decision/approved_by: null|string (optional; default null)\n  decision/approved_at: null|string (optional; default null)\n  Runtime contract: [decision](kernel/contracts/decision.py)\n  decision_report/status: string (required)\n  decision_report/selected_option_id: null|string (optional; default null)\n  decision_report/approval_status: string (optional; default \"not_required\")\n  decision_report/limitations: array (optional; default [])\n  Runtime contract: [decision_report](kernel/contracts/payloads.py)\n\nDecision-record scenario: human_answer — human_answer; illustrative; complete payload:\n{\n  \"choice_id\": \"opt.added.1\"\n}\n\nDecision-record scenario: decision — decision; reconstructed; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"question\": \"Decide how Leafcutter should file decision records as JSON or YAML files under docs/ so later kernel runs can find and reuse them as precedent: which fields a record needs, which classification filters it carries (component, file type or language, repository-wide, roadmap phase), the folder layout and file naming, and how human approval and later corrections are recorded.\",\n  \"option_ids\": [\n    \"opt.yaml_per_decision_component_folders\",\n    \"opt.reuse_ac_store_conventions\",\n    \"opt.yaml_files_plus_generated_index\",\n    \"opt.added.1\"\n  ],\n  \"selected_option_id\": \"opt.added.1\",\n  \"status\": \"resolved\",\n  \"approval_status\": \"approved\",\n  \"approved_by\": \"human:user\",\n  \"approved_at\": \"2026-10-01T14:48:31Z\"\n}\n\nDecision-record scenario: decision_report — decision_report; illustrative; complete payload:\n{\n  \"status\": \"resolved\",\n  \"approval_status\": \"approved\",\n  \"selected_option_id\": \"opt.added.1\"\n}",
-      "order": 12,
+      "order": 14,
       "agent": "kernel decision executor",
       "consumes": [
         "human_answer/choice_id: null|string (optional; default null)"
@@ -2369,6 +2899,311 @@
           }
         ]
       }
+    },
+    {
+      "id": "empty-library",
+      "from": "reuse-criteria",
+      "condition": "no published category fits the decision's kind and components, including when the library is still empty",
+      "label": "No category fits: frame it as today",
+      "human": "Nothing is reused and no gap is judged; options and criteria are proposed exactly as they are today, so an empty library never blocks or slows a decision.\n\nWith no fitting category the reused-criteria list is empty, so no gap Jev call is made and the existing options request goes to generate_options unchanged (DK-500e-3). The empty list is the DK-500d-1 design shape; the request is the registered runtime contract.\n\nContract fields and examples (generated)\nConsumes:\n  ILLUSTRATIVE DESIGN: PROPOSED, not implemented: DK-500d-1 delivers_to design list (docs/acceptance-criteria/decision-kernel/DK-500-reusable-decision-criteria/DK-500d-1.yaml). Not a kernel Criterion; left_out_count has no defined envelope. No runtime payload or validation.\n  reused_criteria: array (required)\n  Schema: [reused_criteria](docs/product-truth/schemas/reused-criteria.schema.json)\nProduces:\n  options_request/problem: string (required)\n  options_request/evidence_ids: array (optional; default [])\n  options_request/findings: array (optional; default [])\n  options_request/propose_criteria: boolean (optional; default false)\n  options_request/require_grounding: boolean (optional; default false)\n  Runtime contract: [options_request](kernel/contracts/payloads.py)\n\nInput: no published category fits, so nothing is reused — reused_criteria; illustrative; complete payload:\n[]\n\nOutput: today's options request, unchanged (decision-record scenario) — options_request; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"problem\": \"Decide how Leafcutter should file decision records as JSON or YAML files under docs/ so later kernel runs can find and reuse them as precedent: which fields a record needs, which classification filters it carries (component, file type or language, repository-wide, roadmap phase), the folder layout and file naming, and how human approval and later corrections are recorded.\",\n  \"evidence_ids\": [\n    \"ev-27c8e6023c8b1d02\"\n  ],\n  \"propose_criteria\": true,\n  \"require_grounding\": true\n}",
+      "agent": "kernel criteria reuse step",
+      "consumes": [
+        "reused_criteria: array (required)"
+      ],
+      "outcome_kind": "alternative",
+      "impl_asof": "2026-10-03",
+      "impl_status": "not_started",
+      "io_contracts": {
+        "consumes": [
+          {
+            "contract": "reused_criteria",
+            "fields": [
+              {
+                "path": "",
+                "types": [
+                  "array"
+                ],
+                "required": true
+              }
+            ]
+          }
+        ],
+        "produces": [
+          {
+            "contract": "options_request",
+            "fields": [
+              {
+                "path": "/problem",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/evidence_ids",
+                "types": [
+                  "array"
+                ],
+                "required": false,
+                "default": []
+              },
+              {
+                "path": "/findings",
+                "types": [
+                  "array"
+                ],
+                "required": false,
+                "default": []
+              },
+              {
+                "path": "/propose_criteria",
+                "types": [
+                  "boolean"
+                ],
+                "required": false,
+                "default": false
+              },
+              {
+                "path": "/require_grounding",
+                "types": [
+                  "boolean"
+                ],
+                "required": false,
+                "default": false
+              }
+            ]
+          }
+        ],
+        "examples": [
+          {
+            "contract": "reused_criteria",
+            "mode": "full",
+            "origin": "illustrative",
+            "label": "Input: no published category fits, so nothing is reused",
+            "value": []
+          },
+          {
+            "contract": "options_request",
+            "mode": "projection",
+            "origin": "illustrative",
+            "label": "Output: today's options request, unchanged (decision-record scenario)",
+            "value": {
+              "problem": "Decide how Leafcutter should file decision records as JSON or YAML files under docs/ so later kernel runs can find and reuse them as precedent: which fields a record needs, which classification filters it carries (component, file type or language, repository-wide, roadmap phase), the folder layout and file naming, and how human approval and later corrections are recorded.",
+              "evidence_ids": [
+                "ev-27c8e6023c8b1d02"
+              ],
+              "propose_criteria": true,
+              "require_grounding": true
+            }
+          }
+        ]
+      },
+      "implements": [
+        "DK-500e-3",
+        "DK-500e-3-i"
+      ],
+      "produces": [
+        "options_request/problem: string (required)",
+        "options_request/evidence_ids: array (optional; default [])",
+        "options_request/findings: array (optional; default [])",
+        "options_request/propose_criteria: boolean (optional; default false)",
+        "options_request/require_grounding: boolean (optional; default false)"
+      ]
+    },
+    {
+      "id": "draft-for-gap",
+      "from": "judge-gap",
+      "condition": "Jev finds that the reused criteria leave out something this decision needs",
+      "label": "Draft criteria for the gap only",
+      "human": "Claude Code, as host, drafts new criteria for that gap alone, beside the reused ones; you can still add your own at the approval gate, and new wordings become material for the next mining round.\n\nThe drafting request travels as the existing generate_options request, and the gap criteria are DK-500e-2's design list; the request fields for the missing concerns and the response field naming each criterion's concern are missing bindings.\n\nContract fields and examples (generated)\nConsumes:\n  ILLUSTRATIVE DESIGN: PROPOSED, not implemented: DK-500e-1 delivers_to verdict design (docs/acceptance-criteria/decision-kernel/DK-500-reusable-decision-criteria/DK-500e-1.yaml). No kernel step, payload or validator produces it yet.\n  gap_verdict/status: string (required)\n  gap_verdict/missing_concerns: array (required)\n  Schema: [gap_verdict](docs/product-truth/schemas/criteria-gap-verdict.schema.json)\n  options_request/problem: string (required)\n  options_request/findings: array (optional; default [])\n  options_request/propose_criteria: boolean (optional; default false)\n  Runtime contract: [options_request](kernel/contracts/payloads.py)\nProduces:\n  ILLUSTRATIVE DESIGN: PROPOSED, not implemented: DK-500e-2 delivers_to design list (docs/acceptance-criteria/decision-kernel/DK-500-reusable-decision-criteria/DK-500e-2.yaml). Not a kernel Criterion; removed_repeats has no defined envelope. No host response or validator implements it.\n  gap_criteria: array (required)\n  gap_criteria/*/wording: string (required)\n  gap_criteria/*/criterion_id: string (required)\n  gap_criteria/*/priority: string (required)\n  gap_criteria/*/kind: string (required)\n  gap_criteria/*/gap_concern: string (required)\n  gap_criteria/*/proposal_status: string (required)\n  Schema: [gap_criteria](docs/product-truth/schemas/gap-criteria.schema.json)\n\nPROPOSED - missing JSON binding (consumes): Gap-drafting request: missing concerns and reused criteria as already covered\nDK-500e-2 asks host.generate_options for criteria for the verdict's missing concerns only and passes the reused criteria as covered; OptionsRequestPayload has no field for either.\nDesign source: [docs/product-truth/flows/leafcutter/decision-forming.flow.json](docs/product-truth/flows/leafcutter/decision-forming.flow.json)\n\nPROPOSED - missing JSON binding (produces): Host response gap_concern and removed_repeats\nCriterion, and so OptionsPayload.proposed_criteria, forbids extra fields, so no implemented response can name a drafted criterion's gap_concern; DK-500e-2's removed_repeats [{wording, category_id}] sits beside the list with no defined envelope.\nDesign source: [docs/product-truth/flows/leafcutter/decision-forming.flow.json](docs/product-truth/flows/leafcutter/decision-forming.flow.json)\n\nInput: verdict naming the missing concern (DK-500e-1 scenario) — gap_verdict; illustrative; complete payload:\n{\n  \"status\": \"gap\",\n  \"missing_concerns\": [\n    \"readability into the knowledge graph\"\n  ],\n  \"reason\": null\n}\n\nInput: the existing options request; it has no field for the missing concerns — options_request; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"problem\": \"Decide how Leafcutter should file decision records as JSON or YAML files under docs/ so later kernel runs can find and reuse them as precedent: which fields a record needs, which classification filters it carries (component, file type or language, repository-wide, roadmap phase), the folder layout and file naming, and how human approval and later corrections are recorded.\",\n  \"propose_criteria\": true\n}\n\nOutput: one criterion drafted for the named concern; wording and id borrowed from crit.knowledge_map_readable in dec-ef8ddcb79d668a67, illustrative — gap_criteria; illustrative; complete payload:\n[\n  {\n    \"wording\": \"Can the existing knowledge-map ingestion (stdlib parser, paths.json surfaces) read each record's id and filter fields without a new parser?\",\n    \"criterion_id\": \"crit.knowledge_map_readable\",\n    \"priority\": \"required\",\n    \"kind\": \"design_judgement\",\n    \"gap_concern\": \"readability into the knowledge graph\",\n    \"proposal_status\": \"proposed\"\n  }\n]",
+      "agent": "claude_code",
+      "consumes": [
+        "gap_verdict/status: string (required)",
+        "gap_verdict/missing_concerns: array (required)",
+        "options_request/problem: string (required)",
+        "options_request/findings: array (optional; default [])",
+        "options_request/propose_criteria: boolean (optional; default false)"
+      ],
+      "produces": [
+        "gap_criteria: array (required)",
+        "gap_criteria/*/wording: string (required)",
+        "gap_criteria/*/criterion_id: string (required)",
+        "gap_criteria/*/priority: string (required)",
+        "gap_criteria/*/kind: string (required)",
+        "gap_criteria/*/gap_concern: string (required)",
+        "gap_criteria/*/proposal_status: string (required)"
+      ],
+      "outcome_kind": "alternative",
+      "impl_asof": "2026-10-03",
+      "impl_status": "not_started",
+      "io_contracts": {
+        "consumes": [
+          {
+            "contract": "gap_verdict",
+            "fields": [
+              {
+                "path": "/status",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/missing_concerns",
+                "types": [
+                  "array"
+                ],
+                "required": true
+              }
+            ]
+          },
+          {
+            "contract": "options_request",
+            "fields": [
+              {
+                "path": "/problem",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/findings",
+                "types": [
+                  "array"
+                ],
+                "required": false,
+                "default": []
+              },
+              {
+                "path": "/propose_criteria",
+                "types": [
+                  "boolean"
+                ],
+                "required": false,
+                "default": false
+              }
+            ]
+          }
+        ],
+        "produces": [
+          {
+            "contract": "gap_criteria",
+            "fields": [
+              {
+                "path": "",
+                "types": [
+                  "array"
+                ],
+                "required": true
+              },
+              {
+                "path": "/*/wording",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/*/criterion_id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/*/priority",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/*/kind",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/*/gap_concern",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/*/proposal_status",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              }
+            ]
+          }
+        ],
+        "examples": [
+          {
+            "contract": "gap_verdict",
+            "mode": "full",
+            "origin": "illustrative",
+            "label": "Input: verdict naming the missing concern (DK-500e-1 scenario)",
+            "value": {
+              "status": "gap",
+              "missing_concerns": [
+                "readability into the knowledge graph"
+              ],
+              "reason": null
+            }
+          },
+          {
+            "contract": "options_request",
+            "mode": "projection",
+            "origin": "illustrative",
+            "label": "Input: the existing options request; it has no field for the missing concerns",
+            "value": {
+              "problem": "Decide how Leafcutter should file decision records as JSON or YAML files under docs/ so later kernel runs can find and reuse them as precedent: which fields a record needs, which classification filters it carries (component, file type or language, repository-wide, roadmap phase), the folder layout and file naming, and how human approval and later corrections are recorded.",
+              "propose_criteria": true
+            }
+          },
+          {
+            "contract": "gap_criteria",
+            "mode": "full",
+            "origin": "illustrative",
+            "label": "Output: one criterion drafted for the named concern; wording and id borrowed from crit.knowledge_map_readable in dec-ef8ddcb79d668a67, illustrative",
+            "value": [
+              {
+                "wording": "Can the existing knowledge-map ingestion (stdlib parser, paths.json surfaces) read each record's id and filter fields without a new parser?",
+                "criterion_id": "crit.knowledge_map_readable",
+                "priority": "required",
+                "kind": "design_judgement",
+                "gap_concern": "readability into the knowledge graph",
+                "proposal_status": "proposed"
+              }
+            ]
+          }
+        ],
+        "missing_bindings": [
+          {
+            "name": "Gap-drafting request: missing concerns and reused criteria as already covered",
+            "direction": "consumes",
+            "reason": "DK-500e-2 asks host.generate_options for criteria for the verdict's missing concerns only and passes the reused criteria as covered; OptionsRequestPayload has no field for either.",
+            "source": "docs/product-truth/flows/leafcutter/decision-forming.flow.json"
+          },
+          {
+            "name": "Host response gap_concern and removed_repeats",
+            "direction": "produces",
+            "reason": "Criterion, and so OptionsPayload.proposed_criteria, forbids extra fields, so no implemented response can name a drafted criterion's gap_concern; DK-500e-2's removed_repeats [{wording, category_id}] sits beside the list with no defined envelope.",
+            "source": "docs/product-truth/flows/leafcutter/decision-forming.flow.json"
+          }
+        ]
+      },
+      "implements": [
+        "DK-500b-4",
+        "DK-500b-4-i",
+        "DK-500e-2",
+        "DK-500e-2-i"
+      ]
     },
     {
       "id": "revise-proposals",
@@ -2885,6 +3720,18 @@
       "then": "every finding cites the retrieved evidence and nothing else"
     },
     {
+      "for": "reuse-criteria",
+      "given": "published categories whose decision_types and components fit a new decision, beside candidate, staged and retired categories that would also fit",
+      "when": "the decision is framed after its findings are written",
+      "then": "only the published categories are offered first as starting criteria, in their preferred wording and each linked to its category id; they are found from the reviewed records in Git by filter and wording, never from Langfuse, and reach the approval gate as proposals, never as approved criteria"
+    },
+    {
+      "for": "judge-gap",
+      "given": "reused criteria and the findings of a decision",
+      "when": "Jev judges whether the reused criteria cover what the decision needs",
+      "then": "a gap verdict states whether something is missing and what it is, and the verdict is shown with the proposals at the approval gate"
+    },
+    {
       "for": "propose",
       "given": "findings and a goal that names some options",
       "when": "Claude Code generates options and criteria",
@@ -2925,6 +3772,18 @@
       "given": "proposed options and criteria",
       "when": "you approve a subset, edit the criteria or add options",
       "then": "the revised set is what is researched and assessed, and free text is recorded as a limitation rather than turned into criteria"
+    },
+    {
+      "for": "empty-library",
+      "given": "no published category fits the decision's kind and components, or the library is empty",
+      "when": "the decision is framed",
+      "then": "options and criteria are proposed exactly as in a run without the library, no gap judgement is spent, and the decision is neither blocked nor slowed"
+    },
+    {
+      "for": "draft-for-gap",
+      "given": "a gap verdict naming a concern the reused criteria leave out",
+      "when": "criteria are drafted",
+      "then": "new criteria are drafted for that concern alone, none repeats a reused criterion, and you can still add your own before approving"
     },
     {
       "for": "budget-reserve",
@@ -3071,14 +3930,26 @@
       "by": "product-truth expert",
       "date": "2026-10-05",
       "note": "Reconciled structured handoffs with merged DK-300 runtime: EntityContext checkpoint replaces old EnrichedContext examples while provider projections and caller/clarification channels remain separate. Retained incoming AC links, scenarios and behavior, restored illustrative-example/wrapper caveats, and preserved historical receipts and approvals. Selected checkpoint examples omit serialized measurements and registry metadata and are labelled illustrative projections. Full model construction with defaults was independently validated; no observed runtime capture is claimed."
+    },
+    {
+      "action": "extended",
+      "by": "flow-author (reusable-criteria-store session)",
+      "date": "2026-10-03",
+      "note": "Added reuse-first criteria (DK-500d) and gap-only drafting (DK-500e) under decision dec-93c1c730463c1f3c: new steps reuse-criteria and judge-gap before propose, and branches empty-library (cold start, behaviour unchanged) and draft-for-gap. The propose and approve-proposals lines now say new criteria are drafted only for a gap and reused criteria are proposals you approve like any other. Steps renumbered, ids kept, implements left empty for the business-analyst. The new nodes describe unbuilt behaviour; the categories they read live in leafcutter/criterion-categories, while mock_data_ref stays leafcutter/decisions. Readiness stays draft."
+    },
+    {
+      "action": "extended",
+      "by": "flow-author (reusable-criteria-store session)",
+      "date": "2026-10-05",
+      "note": "Merged origin/main (JSON contracts) into the reuse-first flow; io_contracts added for the reuse nodes. reuse-criteria, judge-gap, empty-library and draft-for-gap document the DK-500d-1 and DK-500e design shapes (reused criteria, gap verdict, gap criteria) and the CriterionCategory mock-record shape as illustrative_design schemas, beside the runtime findings, JevResult and options_request bindings that genuinely apply; undefined inputs are explicit missing bindings. propose and approve-proposals keep main's checked bindings and add missing bindings for the reused criteria, reuse links and gap verdict that OptionsRequestPayload and OptionsPayload do not carry. Ids, order, implements and scenarios unchanged; readiness stays draft."
     }
   ],
   "impl_summary": {
     "done": 5,
     "in_progress": 0,
-    "not_started": 12,
-    "total": 17,
-    "asof": "2026-10-03"
+    "not_started": 16,
+    "total": 21,
+    "asof": "2026-10-05"
   },
   "contract_definitions": {
     "choice_answer": {
@@ -3143,6 +4014,26 @@
     },
     "entity_context": {
       "model": "entity_context"
+    },
+    "criterion_category": {
+      "schema": "docs/product-truth/schemas/criterion-category.schema.json",
+      "authority": "illustrative_design",
+      "note": "PROPOSED, not implemented: mock-record shape transcribed from docs/product-truth/mock-data/leafcutter/criterion-categories.mock.json (decision dec-93c1c730463c1f3c). The derived views replaces and member_view and the fixture field source appear only because the stored samples carry them. No category reader, writer, index or runtime validation exists."
+    },
+    "reused_criteria": {
+      "schema": "docs/product-truth/schemas/reused-criteria.schema.json",
+      "authority": "illustrative_design",
+      "note": "PROPOSED, not implemented: DK-500d-1 delivers_to design list (docs/acceptance-criteria/decision-kernel/DK-500-reusable-decision-criteria/DK-500d-1.yaml). Not a kernel Criterion; left_out_count has no defined envelope. No runtime payload or validation."
+    },
+    "gap_verdict": {
+      "schema": "docs/product-truth/schemas/criteria-gap-verdict.schema.json",
+      "authority": "illustrative_design",
+      "note": "PROPOSED, not implemented: DK-500e-1 delivers_to verdict design (docs/acceptance-criteria/decision-kernel/DK-500-reusable-decision-criteria/DK-500e-1.yaml). No kernel step, payload or validator produces it yet."
+    },
+    "gap_criteria": {
+      "schema": "docs/product-truth/schemas/gap-criteria.schema.json",
+      "authority": "illustrative_design",
+      "note": "PROPOSED, not implemented: DK-500e-2 delivers_to design list (docs/acceptance-criteria/decision-kernel/DK-500-reusable-decision-criteria/DK-500e-2.yaml). Not a kernel Criterion; removed_repeats has no defined envelope. No host response or validator implements it."
     }
   }
 }

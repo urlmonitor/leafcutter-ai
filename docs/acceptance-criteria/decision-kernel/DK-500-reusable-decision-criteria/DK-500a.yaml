@@ -1,0 +1,81 @@
+id: DK-500a
+title: "Spot the questions your past decisions keep asking"
+component: decision-kernel
+components:
+  - decision_kernel
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_kernel_2_knowledge
+criteria: |
+  Repeat questions are found in past decisions and run history for your review.
+
+  A review of both the decisions you have already published and the recorded
+  history of earlier decision runs, including runs that never ended in a
+  published decision, finds the questions that keep coming back and offers them
+  as candidate categories. The review runs on its own, apart from any decision
+  being made, so making a decision never waits on it, and nothing it finds is
+  used until a person approves it.
+depends_on:
+  - DK-500
+doc_links:
+  - path: docs/decisions/dec-93c1c730463c1f3c.yaml
+    relationship: governs
+    status: exists
+    relevance: "Mined candidates enter only through the approval path the decision names; never created directly from Langfuse or from a mined candidate (criterion crit.approval_unit_and_path)."
+  - path: docs/product-truth/mock-data/leafcutter/criterion-categories.mock.json
+    relationship: specified-by
+    status: exists
+    relevance: "mined_from sightings with source published_record and langfuse_trace; candidate stage awaiting a human."
+  - path: docs/architecture/adrs/ADR-058-langfuse-colony-history-scores-datasets.md
+    relationship: constrains
+    status: exists
+    relevance: "Section 6: the kernel's hot path never queries Langfuse; only an offline job reads it."
+  - path: docs/architecture/adrs/ADR-060-source-of-truth-and-approval-authority.md
+    relationship: constrains
+    status: exists
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: product-owner
+created: 2026-10-03
+amended_by: []
+superseded_by: null
+covered_by:
+  - DK-500a-1
+  - DK-500a-2
+  - DK-500a-3
+  - DK-500a-4
+  - DK-500a-5
+implemented_by: []
+documentation_triggers:
+  - how-to
+  - sequence-diagram
+  - component-diagram
+notes: |
+  USER REQUIREMENT (2026-10-02, decided directly by the user; NO decision record
+  exists for it): mining reads BOTH sources:
+    1. published decision records (docs/decisions/), and
+    2. Langfuse traces of kernel runs, including runs that failed, were
+       cancelled, or were staged and never published.
+  Do not drop either source at L2.
+
+  SETTLED: mining is an OFFLINE job that produces CANDIDATES only. The decision
+  hot path never reads Langfuse (ADR-058 section 6, ADR-056). The mining job
+  never approves anything (ADR-060). "Never waits on it" in the criteria is the
+  customer form of that rule.
+
+  CARRY TO L2 (assumptions in the mock data that the BA and IT PO must settle):
+    - proposed_by takes the value criteria_mining for mined candidates, or
+      human:<name> for a category a person proposes.
+    - A trace sighting is evidence FOR a proposal and never a member. Only
+      published-record sightings can become (decision id, criterion id)
+      membership.
+    - When and how mining runs (on demand or scheduled) is not decided.
+  The new job is a new architectural component, hence component-diagram. A
+  person runs it, hence how-to. It involves Langfuse, the decision store, the
+  job and a reviewing person, hence sequence-diagram.

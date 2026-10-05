@@ -1,0 +1,144 @@
+# Regenerates the per-test duration record that balances the CI test shards.
+#
+# ci.yml's `test-shard` matrix splits the suite with pytest-split, and
+# pytest-split balances groups by DURATION only when it has a durations file.
+# Without one it falls back to splitting by test COUNT, which is pathological
+# for this suite: 60 of 5318 tests hold 63% of the wall clock, so a count-split
+# can land most of them on one shard and the matrix then waits for that shard.
+#
+# The file therefore needs refreshing as tests are added -- an unknown test is
+# assigned a default duration and balance drifts. Drift degrades BALANCE, never
+# correctness: no test is ever lost, the shards just stop being even. So this
+# is maintenance, not a gate, and it is deliberately manual + scheduled rather
+# than wired into every PR.
+#
+# Run it from the Actions tab (workflow_dispatch), or let the monthly schedule
+# fire it. Either way it opens a PR with the refreshed file rather than pushing
+# to main, because main is PR-only under the branch ruleset.
+#
+# Rationale and measurements:
+#   docs/analysis/2026-10-05-pytest-ten-minute-target-4-ci-sharding.md
+
+name: Refresh test durations
+
+on:
+  workflow_dispatch:
+  schedule:
+    # 04:17 on the 1st of each month. Off-the-hour on purpose: :00 is when
+    # every scheduled job on the platform fires at once and gets queued.
+    - cron: "17 4 1 * *"
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  record:
+    name: Record durations over an unsharded run
+    runs-on: ubuntu-latest
+    # The whole point is to time the full suite in one process, so this job is
+    # as slow as the suite is (~52 min at time of writing). Default job timeout
+    # is 360 min, which is ample, but set it explicitly so a hang is bounded.
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install dev dependencies
+        run: pip install -r requirements-dev.txt
+
+      - name: Build — run install_shims to create scripts/ symlinks
+        run: python scripts/build.py --target-dir .
+
+      - name: Fetch the retrieval benchmark's pinned corpus commit
+        run: |
+          PIN=$(python -c "import json; print(json.load(open('tests/kernel/retrieval/benchmark_cases.json'))['corpus_commit'])")
+          git fetch --no-tags --depth=1 origin "$PIN"
+
+      - name: Run the full suite, recording durations
+        env:
+          AC_ENFORCE_STRICT: "1"
+        # --store-durations WRITES the file this records into; no --splits, so
+        # the run is unsharded and every test is timed in the same process.
+        #
+        # continue-on-error: a red suite still produces valid timings, and a
+        # failing test is ci.yml's business to report, not this job's. Letting
+        # a single regression block durations refresh forever is how the file
+        # goes stale without anyone noticing.
+        continue-on-error: true
+        run: >
+          python -m pytest tests/ unit_tests/ -q
+          --continue-on-collection-errors
+          --store-durations
+          --durations-path .github/test_durations.json
+
+      - name: Confirm the run actually recorded the whole suite
+        # A refresh that silently wrote a PARTIAL file is worse than one that
+        # wrote nothing: pytest-split assigns every unknown test the average
+        # duration, so the heavy tests cluster onto one shard and the matrix
+        # waits for it -- a balance regression with no error anywhere.
+        #
+        # The threshold is derived from a measured collection, not guessed.
+        # An earlier version of this guard used a round 1000 and a sibling
+        # merge guard used 5000 (from the stale "5318 tests" figure in
+        # CLAUDE.md); the suite actually collects 7604, so that guard PASSED
+        # on a file missing a quarter of the suite -- the exact input it
+        # existed to reject. Compare against the run's own collected count so
+        # the threshold cannot go stale again as the suite grows.
+        run: |
+          python - <<'PY'
+          import json, re, subprocess, sys
+
+          with open(".github/test_durations.json") as fh:
+              data = json.load(fh)
+          recorded = len(data)
+
+          out = subprocess.run(
+              [sys.executable, "-m", "pytest", "tests/", "unit_tests/", "-q",
+               "--collect-only", "--continue-on-collection-errors"],
+              capture_output=True, text=True, encoding="utf-8",
+          ).stdout
+          match = re.search(r"(\d+) tests collected", out)
+          if not match:
+              sys.exit("Refusing: could not read the collected count, so "
+                       "completeness cannot be judged. Not writing a file "
+                       "whose coverage is unknown.")
+          collected = int(match.group(1))
+
+          print(f"recorded {recorded} node ids against {collected} collected")
+          if recorded < collected * 0.95:
+              sys.exit(
+                  f"Refusing: {recorded} durations for {collected} collected "
+                  f"tests ({recorded / collected:.0%}). A partial file "
+                  "mis-balances shards silently; every missing test is "
+                  "assigned the average and the heavy ones cluster."
+              )
+          PY
+
+      - name: Open a PR with the refreshed durations
+        uses: peter-evans/create-pull-request@v6
+        with:
+          branch: chore/refresh-test-durations
+          title: "chore(ci): refresh test shard durations"
+          commit-message: |
+            chore(ci): refresh test shard durations
+
+            Regenerated by .github/workflows/test-durations.yml over an
+            unsharded full-suite run. Rebalances ci.yml's test-shard matrix;
+            no behaviour change.
+          body: |
+            Automated refresh of `.github/test_durations.json`, which balances
+            the `test-shard` matrix in `ci.yml`.
+
+            Durations drift as tests are added. Drift makes shards **uneven**,
+            never incorrect — no test is lost either way — so this is
+            maintenance rather than a fix.
+
+            Recorded over an unsharded run so every test is timed in one
+            process.
+          add-paths: |
+            .github/test_durations.json
