@@ -1,0 +1,166 @@
+id: UXP-300-2
+title: Example claims are checked at the strength of their declared evidence
+component: ux-prototyping
+components:
+- ux_prototyping
+level: L3
+status: active
+req_status: active
+work_status: done
+readiness: reviewed
+priority: medium
+criteria: 'Given a contract example is labeled full or projection and observed, illustrative or reconstructed,
+
+  When the Product Truth record is checked,
+
+  Then a full example is checked as a complete contract value and a projection still obeys its selected
+  fields'' type, enum and unknown-field constraints,
+
+  And an observed example resolves an existing JSON receipt and matches the claimed value or selected
+  fields with JSON scalar types preserved,
+
+  And the complete receipt and any declared applied payload are checked even when the displayed example
+  is a projection,
+
+  And an invented observed value, invalid full value or invalid projected field is rejected,
+
+  And full runtime-model examples obey model validation while projection validation is not represented
+  as proof of every runtime invariant.'
+depends_on:
+- UXP-300
+doc_links:
+- path: docs/how-to/product-truth-schema-reference.md
+  relationship: specifies
+  status: exists
+- path: docs/architecture/components/ux-prototyping.md
+  relationship: describes
+  status: exists
+assigned_agent: python-coder
+origin_agent: business-analyst
+created: '2026-10-05'
+amended_by:
+- reason: '2026-10-05 business-analyst: recorded source/test traceability and locally verified completion
+    after IT PO review; retained reviewed readiness and existing parent statuses. Hosted CI and merge
+    remain pending.'
+superseded_by: null
+covered_by:
+- unit_tests/product_truth/test_flow_io_contracts.py
+- unit_tests/product_truth/test_flow_io_contract_gate.py
+implemented_by:
+- docs/product-truth/schemas/flow.schema.json
+- docs/product-truth/scripts/product_truth_contracts.py
+- docs/product-truth/scripts/product_truth_contract_sources.py
+- docs/product-truth/scripts/validate_product_truth.py
+notes: 'The test writer verified the Python contract suites: 49 tests plus 16 subtests passed, including
+  full/projection and observed-receipt validation and the configured CLI path.
+
+
+  The user accepted the displayed feature and authorized completing its AC/test coverage and merging after
+  green checks. Readiness remains reviewed: BA and IT PO reviewed these newly authored criteria; no separate
+  individual-AC user sign-off is claimed. Work status records locally verified implementation. Hosted
+  CI and PR merge are pending. This leaf does not claim production retrieval integration or completion
+  of its broader parent.'
+estimated_complexity: L
+change_target:
+- code
+- schema
+risk_surface: contract_boundary
+it_requirements:
+- Receipt pointers and schema references remain bounded to permitted local roots, including after path
+  normalization and symlink resolution. No remote schema or receipt fetching is allowed.
+- 'Observed comparisons preserve JSON scalar types: boolean true and integer one are distinct. Full observed
+  sources remain validated even when only a projection is displayed.'
+- Full runtime model validation includes model-specific invariants. Projection validation relaxes only
+  requiredness at schema locations and must not claim request-bound semantic validation between separate
+  values.
+expects_from:
+  ac_id: UXP-300-1
+  contract: 'Flow JSON at docs/product-truth/flows/**/*.flow.json: contract_definitions is a map from
+    reference label to {schema?: string, model?: string, authority?: runtime|source_reviewed|illustrative_design,
+    note?: string}; each node has io_contracts with consumes/produces arrays of {contract: string, fields:
+    [{path: JSON-pointer string, types: JSON-type string[], required: boolean, default?: JSON value, applies?:
+    string}]}. Optional means absent, not null unless explicitly allowed. Contract labels are not payload
+    wrapper keys.'
+delivers_to:
+  agent: frontend-coder
+  contract: 'The same flow JSON carries io_contracts.examples: [{contract: string, mode: full|projection,
+    origin: observed|illustrative|reconstructed, label: string, value: JSON value, source?: {path: repository-relative
+    string, pointer: JSON-pointer string}}]. Observed requires source. Definition authority/note and node
+    missing_bindings [{name: string, direction: consumes|produces|both, reason: string, source: repository-relative
+    string}] or a genuine not_applicable string remain distinguishable from checked runtime fields.'
+test_spec:
+- name: test_complete_example_cannot_omit_required_nested_data
+  target_dir: unit_tests/product_truth/
+  description: A full example cannot omit required nested fields.
+  framework: unittest
+  type: integration
+  angle: failure
+- name: test_projection_relaxes_required_fields_only
+  target_dir: unit_tests/product_truth/
+  description: Projection validation relaxes requiredness without weakening other schema constraints.
+  framework: unittest
+  type: integration
+  angle: criterion
+- name: test_projection_cannot_hide_unknown_nested_fields
+  target_dir: unit_tests/product_truth/
+  description: Nested unknown projection fields remain invalid.
+  framework: unittest
+  type: integration
+  angle: boundary
+- name: test_projection_still_rejects_wrong_json_types
+  target_dir: unit_tests/product_truth/
+  description: Projection examples still reject incorrect JSON types.
+  framework: unittest
+  type: integration
+  angle: failure
+- name: test_observed_projection_must_match_actual_receipt
+  target_dir: unit_tests/product_truth/
+  description: A claimed observation must match selected values from a real receipt.
+  framework: unittest
+  type: integration
+  angle: real_artifact
+- name: test_observed_projection_cannot_launder_invalid_full_source
+  target_dir: unit_tests/product_truth/
+  description: A valid-looking projection cannot hide an invalid full observed source.
+  framework: unittest
+  type: integration
+  angle: failure
+- name: test_observed_full_example_distinguishes_boolean_from_integer
+  target_dir: unit_tests/product_truth/
+  description: Observed scalar comparison is type-strict.
+  framework: unittest
+  type: integration
+  angle: boundary
+- name: test_runtime_only_request_constraint_is_checked
+  target_dir: unit_tests/product_truth/
+  description: Full model examples obey model-specific validation beyond JSON Schema.
+  framework: unittest
+  type: integration
+  angle: seam
+- name: test_applied_schema_validates_the_nested_example_payload
+  target_dir: unit_tests/product_truth/
+  description: Applied payload validation checks the present nested example value.
+  framework: unittest
+  type: integration
+  angle: seam
+- name: test_cli_checks_visible_example_text_without_repairing_it
+  target_dir: unit_tests/product_truth/
+  description: The canonical validator entry checks example-derived display drift without repairing authored
+    or generated input.
+  framework: unittest
+  type: integration
+  angle: reachability
+test_rationale: Example provenance needs a real serialized receipt and negative mismatches, not a source-path
+  label alone. The same canonical CLI is exercised so these are not merely unreachable helper checks.
+test_required: true
+declares_side_effect: false
+product_truth:
+  - flow: leafcutter/generate-product-truth
+    node: validate
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: null
+    entities: []
+    source: real
+    asof: '2026-10-05'

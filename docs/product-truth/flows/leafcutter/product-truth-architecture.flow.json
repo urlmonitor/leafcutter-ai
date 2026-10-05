@@ -11,7 +11,7 @@
   "status": "active",
   "readiness": "approved",
   "superseded_by": null,
-  "version": 1,
+  "version": 2,
   "tags": [
     "product-truth",
     "architecture",
@@ -23,38 +23,585 @@
     {
       "id": "store",
       "label": "Product-truth store lives beside the AC store",
-      "human": "The product-truth store (flows, mock data, mockups) lives under docs/product-truth, right next to the acceptance-criteria store it links into.",
+      "human": "The product-truth store (flows, mock data, mockups) lives under docs/product-truth, right next to the acceptance-criteria store it links into.\n\nI/O boundary: The store consists of separately schema-checked JSON artifacts, joined by index.json. There is no single combined store DTO; examples show distinct artifact projections.\n\nContract fields and examples (generated)\nConsumes:\n  flow/id: string (required)\n  flow/component: string (required)\n  flow/steps: array (required)\n  flow/readiness: string (required)\n  Schema: [flow](docs/product-truth/schemas/flow.schema.json)\n  mock_data/id: string (required)\n  mock_data/entities: object (required)\n  Schema: [mock_data](docs/product-truth/schemas/mock-data.schema.json)\n  mockup/id: string (required)\n  mockup/screen: string (required)\n  mockup/renders: null|string (required)\n  Schema: [mockup](docs/product-truth/schemas/mockup.schema.json)\nProduces:\n  SOURCE-REVIEWED DOCUMENTATION: Projection of generate_product_truth.py write_index/build_by_ac/build_by_flow. Documents index.json lookups, not a complete runtime validator or automatic source parity.\n  index/artifacts: array (optional)\n  index/by_component: object (optional)\n  index/by_entity: object (optional)\n  index/by_flow: object (optional)\n  index/by_ac: object (optional)\n  Schema: [index](docs/product-truth/schemas/product-truth-index-projection.schema.json)\n\nInput illustrative flow projection; not an execution receipt — flow; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"id\": \"leafcutter/define-a-feature\",\n  \"component\": \"ux-prototyping\",\n  \"readiness\": \"draft\",\n  \"steps\": [\n    {\n      \"id\": \"approve\",\n      \"order\": 1,\n      \"label\": \"Approve the feature\",\n      \"human\": \"Review the proposed behavior.\",\n      \"implements\": [\n        \"UXP-531\"\n      ],\n      \"impl_status\": \"not_started\",\n      \"screen\": \"feature-review\"\n    }\n  ]\n}\n\nInput illustrative mock_data projection; not an execution receipt — mock_data; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"id\": \"leafcutter/feature-review\",\n  \"entities\": {\n    \"Ac\": {\n      \"fields\": {\n        \"id\": \"string; stable acceptance criterion identifier\"\n      },\n      \"records\": [\n        {\n          \"id\": \"ACD-300\"\n        }\n      ]\n    }\n  }\n}\n\nInput illustrative mockup projection; not an execution receipt — mockup; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"id\": \"leafcutter/feature-review\",\n  \"screen\": \"feature-review\",\n  \"renders\": null\n}\n\nOutput illustrative index projection; not an execution receipt — index; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"artifacts\": [\n    {\n      \"id\": \"leafcutter/define-a-feature\",\n      \"type\": \"flow\",\n      \"path\": \"flows/leafcutter/define-a-feature.flow.json\",\n      \"version\": 3\n    }\n  ],\n  \"by_component\": {\n    \"ux-prototyping\": {\n      \"flows\": [\n        \"leafcutter/define-a-feature\"\n      ],\n      \"mock_data\": [],\n      \"mockups\": []\n    }\n  },\n  \"by_entity\": {\n    \"Ac\": {\n      \"canonical_mock_data\": {},\n      \"flows\": {\n        \"ux-prototyping\": [\n          \"leafcutter/define-a-feature\"\n        ]\n      }\n    }\n  },\n  \"by_flow\": {\n    \"leafcutter/define-a-feature\": {\n      \"component\": \"ux-prototyping\",\n      \"path\": \"flows/leafcutter/define-a-feature.flow.json\",\n      \"entities\": [\n        \"Ac\"\n      ],\n      \"expands\": [],\n      \"parents\": [],\n      \"impl_status\": \"not_started\"\n    }\n  },\n  \"by_ac\": {\n    \"ACD-300\": [\n      {\n        \"flow\": \"leafcutter/deliver-a-feature\",\n        \"node\": \"plan\",\n        \"node_kind\": \"step\",\n        \"flow_kind\": \"user\",\n        \"screen\": null,\n        \"mock_data\": null,\n        \"entities\": [],\n        \"source\": \"real\",\n        \"asof\": \"2026-10-03\"\n      }\n    ]\n  }\n}",
       "order": 1,
       "implements": [
         "UXP-420",
         "UXP-420a"
       ],
       "impl_status": "done",
-      "impl_asof": "2026-07-20"
+      "impl_asof": "2026-07-20",
+      "io_contracts": {
+        "consumes": [
+          {
+            "contract": "flow",
+            "fields": [
+              {
+                "path": "/id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/component",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/steps",
+                "types": [
+                  "array"
+                ],
+                "required": true
+              },
+              {
+                "path": "/readiness",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              }
+            ]
+          },
+          {
+            "contract": "mock_data",
+            "fields": [
+              {
+                "path": "/id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/entities",
+                "types": [
+                  "object"
+                ],
+                "required": true
+              }
+            ]
+          },
+          {
+            "contract": "mockup",
+            "fields": [
+              {
+                "path": "/id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/screen",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/renders",
+                "types": [
+                  "null",
+                  "string"
+                ],
+                "required": true
+              }
+            ]
+          }
+        ],
+        "produces": [
+          {
+            "contract": "index",
+            "fields": [
+              {
+                "path": "/artifacts",
+                "types": [
+                  "array"
+                ],
+                "required": false
+              },
+              {
+                "path": "/by_component",
+                "types": [
+                  "object"
+                ],
+                "required": false
+              },
+              {
+                "path": "/by_entity",
+                "types": [
+                  "object"
+                ],
+                "required": false
+              },
+              {
+                "path": "/by_flow",
+                "types": [
+                  "object"
+                ],
+                "required": false
+              },
+              {
+                "path": "/by_ac",
+                "types": [
+                  "object"
+                ],
+                "required": false
+              }
+            ]
+          }
+        ],
+        "examples": [
+          {
+            "contract": "flow",
+            "mode": "projection",
+            "origin": "illustrative",
+            "label": "Input illustrative flow projection; not an execution receipt",
+            "value": {
+              "id": "leafcutter/define-a-feature",
+              "component": "ux-prototyping",
+              "readiness": "draft",
+              "steps": [
+                {
+                  "id": "approve",
+                  "order": 1,
+                  "label": "Approve the feature",
+                  "human": "Review the proposed behavior.",
+                  "implements": [
+                    "UXP-531"
+                  ],
+                  "impl_status": "not_started",
+                  "screen": "feature-review"
+                }
+              ]
+            }
+          },
+          {
+            "contract": "mock_data",
+            "mode": "projection",
+            "origin": "illustrative",
+            "label": "Input illustrative mock_data projection; not an execution receipt",
+            "value": {
+              "id": "leafcutter/feature-review",
+              "entities": {
+                "Ac": {
+                  "fields": {
+                    "id": "string; stable acceptance criterion identifier"
+                  },
+                  "records": [
+                    {
+                      "id": "ACD-300"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          {
+            "contract": "mockup",
+            "mode": "projection",
+            "origin": "illustrative",
+            "label": "Input illustrative mockup projection; not an execution receipt",
+            "value": {
+              "id": "leafcutter/feature-review",
+              "screen": "feature-review",
+              "renders": null
+            }
+          },
+          {
+            "contract": "index",
+            "mode": "projection",
+            "origin": "illustrative",
+            "label": "Output illustrative index projection; not an execution receipt",
+            "value": {
+              "artifacts": [
+                {
+                  "id": "leafcutter/define-a-feature",
+                  "type": "flow",
+                  "path": "flows/leafcutter/define-a-feature.flow.json",
+                  "version": 3
+                }
+              ],
+              "by_component": {
+                "ux-prototyping": {
+                  "flows": [
+                    "leafcutter/define-a-feature"
+                  ],
+                  "mock_data": [],
+                  "mockups": []
+                }
+              },
+              "by_entity": {
+                "Ac": {
+                  "canonical_mock_data": {},
+                  "flows": {
+                    "ux-prototyping": [
+                      "leafcutter/define-a-feature"
+                    ]
+                  }
+                }
+              },
+              "by_flow": {
+                "leafcutter/define-a-feature": {
+                  "component": "ux-prototyping",
+                  "path": "flows/leafcutter/define-a-feature.flow.json",
+                  "entities": [
+                    "Ac"
+                  ],
+                  "expands": [],
+                  "parents": [],
+                  "impl_status": "not_started"
+                }
+              },
+              "by_ac": {
+                "ACD-300": [
+                  {
+                    "flow": "leafcutter/deliver-a-feature",
+                    "node": "plan",
+                    "node_kind": "step",
+                    "flow_kind": "user",
+                    "screen": null,
+                    "mock_data": null,
+                    "entities": [],
+                    "source": "real",
+                    "asof": "2026-10-03"
+                  }
+                ]
+              }
+            }
+          }
+        ]
+      },
+      "consumes": [
+        "flow/id: string (required)",
+        "flow/component: string (required)",
+        "flow/steps: array (required)",
+        "flow/readiness: string (required)",
+        "mock_data/id: string (required)",
+        "mock_data/entities: object (required)",
+        "mockup/id: string (required)",
+        "mockup/screen: string (required)",
+        "mockup/renders: null|string (required)"
+      ],
+      "produces": [
+        "index/artifacts: array (optional)",
+        "index/by_component: object (optional)",
+        "index/by_entity: object (optional)",
+        "index/by_flow: object (optional)",
+        "index/by_ac: object (optional)"
+      ]
     },
     {
       "id": "atlas",
       "label": "The Atlas reads it live and renders flows",
-      "human": "The Leafcutter Atlas reads the product-truth store live and renders its flows, so what you see reflects the current store rather than a snapshot.",
+      "human": "The Leafcutter Atlas reads the product-truth store and renders its flows. Its current getFlows cache persists for the repository root during the server process; edits do not imply automatic polling or immediate freshness, and this preview is restarted after final generation.\n\nI/O boundary: getFlows() reads flow JSON and adapts it into the existing UI view model. The visible browser tree is rendered React/HTML; it is not the flow JSON sent back as a new result. This process caches parsed flows per repository root, so a running preview may need refresh/restart after source changes.\n\nContract fields and examples (generated)\nConsumes:\n  flow/id: string (required)\n  flow/name: string (required)\n  flow/kind: string (required)\n  flow/source: string (required)\n  flow/steps/*/id: string (required)\n  flow/steps/*/label: string (required)\n  flow/steps/*/human: string (required)\n  flow/steps/*/io_contracts: object (optional)\n  Schema: [flow](docs/product-truth/schemas/flow.schema.json)\nProduces:\n  No checked JSON binding documented in this direction.\n\nInput illustrative flow projection; not an execution receipt — flow; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"id\": \"leafcutter/define-a-feature\",\n  \"name\": \"Define a feature\",\n  \"kind\": \"user\",\n  \"source\": \"real\",\n  \"steps\": [\n    {\n      \"id\": \"approve\",\n      \"order\": 1,\n      \"label\": \"Approve the feature\",\n      \"human\": \"Review the proposed behavior.\",\n      \"implements\": [\n        \"UXP-531\"\n      ],\n      \"impl_status\": \"not_started\",\n      \"screen\": \"feature-review\"\n    }\n  ]\n}",
       "order": 2,
       "implements": [
         "UXP-421",
         "UXP-421a"
       ],
       "impl_status": "done",
-      "impl_asof": "2026-07-20"
+      "impl_asof": "2026-07-20",
+      "io_contracts": {
+        "consumes": [
+          {
+            "contract": "flow",
+            "fields": [
+              {
+                "path": "/id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/name",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/kind",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/source",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/steps/*/id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/steps/*/label",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/steps/*/human",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/steps/*/io_contracts",
+                "types": [
+                  "object"
+                ],
+                "required": false
+              }
+            ]
+          }
+        ],
+        "produces": [],
+        "examples": [
+          {
+            "contract": "flow",
+            "mode": "projection",
+            "origin": "illustrative",
+            "label": "Input illustrative flow projection; not an execution receipt",
+            "value": {
+              "id": "leafcutter/define-a-feature",
+              "name": "Define a feature",
+              "kind": "user",
+              "source": "real",
+              "steps": [
+                {
+                  "id": "approve",
+                  "order": 1,
+                  "label": "Approve the feature",
+                  "human": "Review the proposed behavior.",
+                  "implements": [
+                    "UXP-531"
+                  ],
+                  "impl_status": "not_started",
+                  "screen": "feature-review"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "consumes": [
+        "flow/id: string (required)",
+        "flow/name: string (required)",
+        "flow/kind: string (required)",
+        "flow/source: string (required)",
+        "flow/steps/*/id: string (required)",
+        "flow/steps/*/label: string (required)",
+        "flow/steps/*/human: string (required)",
+        "flow/steps/*/io_contracts: object (optional)"
+      ],
+      "produces": []
     },
     {
       "id": "agents",
       "label": "Agents produce & extend the artifacts",
-      "human": "Leafcutter's agents produce and extend the product-truth artifacts — drafting flows, seeding mock data, and generating ACs — keeping the layer alive.",
+      "human": "Leafcutter's agents produce and extend the product-truth artifacts — drafting flows, seeding mock data, and generating ACs — keeping the layer alive.\n\nI/O boundary: Agents author flow JSON and parsed AC YAML. This diagram shows artifact ownership, not automatic implementation or approval.\n\nContract fields and examples (generated)\nConsumes:\n  flow/id: string (required)\n  flow/readiness: string (required)\n  flow/steps: array (required)\n  flow/acceptance_scenarios: array (optional)\n  Schema: [flow](docs/product-truth/schemas/flow.schema.json)\nProduces:\n  flow/id: string (required)\n  flow/version: integer (required)\n  flow/steps: array (required)\n  flow/provenance: array (optional)\n  Schema: [flow](docs/product-truth/schemas/flow.schema.json)\n  ac/id: string (required)\n  ac/criteria: string (required)\n  ac/readiness: string (optional)\n  Schema: [ac](config/ac_store_schema.json)\n\nInput illustrative flow projection; not an execution receipt — flow; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"id\": \"leafcutter/define-a-feature\",\n  \"readiness\": \"draft\",\n  \"steps\": [\n    {\n      \"id\": \"approve\",\n      \"order\": 1,\n      \"label\": \"Approve the feature\",\n      \"human\": \"Review the proposed behavior.\",\n      \"implements\": [\n        \"UXP-531\"\n      ],\n      \"impl_status\": \"not_started\",\n      \"screen\": \"feature-review\"\n    }\n  ],\n  \"acceptance_scenarios\": [\n    {\n      \"given\": \"A feature draft exists\",\n      \"when\": \"The person reviews it\",\n      \"then\": \"Their decision is retained\",\n      \"for\": \"approve\"\n    }\n  ]\n}\n\nOutput illustrative flow projection; not an execution receipt — flow; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"id\": \"leafcutter/define-a-feature\",\n  \"version\": 3,\n  \"steps\": [\n    {\n      \"id\": \"approve\",\n      \"order\": 1,\n      \"label\": \"Approve the feature\",\n      \"human\": \"Review the proposed behavior.\",\n      \"implements\": [\n        \"UXP-531\"\n      ],\n      \"impl_status\": \"not_started\",\n      \"screen\": \"feature-review\"\n    }\n  ]\n}\n\nOutput illustrative ac projection; not an execution receipt — ac; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"id\": \"ACD-300\",\n  \"criteria\": \"Given an approved requirement, When delivery finishes, Then its evidence is recorded.\",\n  \"readiness\": \"approved\"\n}",
       "order": 3,
       "implements": [
         "UXP-422",
         "UXP-422a"
       ],
       "impl_status": "not_started",
-      "impl_asof": "2026-07-20"
+      "impl_asof": "2026-07-20",
+      "io_contracts": {
+        "consumes": [
+          {
+            "contract": "flow",
+            "fields": [
+              {
+                "path": "/id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/readiness",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/steps",
+                "types": [
+                  "array"
+                ],
+                "required": true
+              },
+              {
+                "path": "/acceptance_scenarios",
+                "types": [
+                  "array"
+                ],
+                "required": false
+              }
+            ]
+          }
+        ],
+        "produces": [
+          {
+            "contract": "flow",
+            "fields": [
+              {
+                "path": "/id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/version",
+                "types": [
+                  "integer"
+                ],
+                "required": true
+              },
+              {
+                "path": "/steps",
+                "types": [
+                  "array"
+                ],
+                "required": true
+              },
+              {
+                "path": "/provenance",
+                "types": [
+                  "array"
+                ],
+                "required": false
+              }
+            ]
+          },
+          {
+            "contract": "ac",
+            "fields": [
+              {
+                "path": "/id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/criteria",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/readiness",
+                "types": [
+                  "string"
+                ],
+                "required": false
+              }
+            ]
+          }
+        ],
+        "examples": [
+          {
+            "contract": "flow",
+            "mode": "projection",
+            "origin": "illustrative",
+            "label": "Input illustrative flow projection; not an execution receipt",
+            "value": {
+              "id": "leafcutter/define-a-feature",
+              "readiness": "draft",
+              "steps": [
+                {
+                  "id": "approve",
+                  "order": 1,
+                  "label": "Approve the feature",
+                  "human": "Review the proposed behavior.",
+                  "implements": [
+                    "UXP-531"
+                  ],
+                  "impl_status": "not_started",
+                  "screen": "feature-review"
+                }
+              ],
+              "acceptance_scenarios": [
+                {
+                  "given": "A feature draft exists",
+                  "when": "The person reviews it",
+                  "then": "Their decision is retained",
+                  "for": "approve"
+                }
+              ]
+            }
+          },
+          {
+            "contract": "flow",
+            "mode": "projection",
+            "origin": "illustrative",
+            "label": "Output illustrative flow projection; not an execution receipt",
+            "value": {
+              "id": "leafcutter/define-a-feature",
+              "version": 3,
+              "steps": [
+                {
+                  "id": "approve",
+                  "order": 1,
+                  "label": "Approve the feature",
+                  "human": "Review the proposed behavior.",
+                  "implements": [
+                    "UXP-531"
+                  ],
+                  "impl_status": "not_started",
+                  "screen": "feature-review"
+                }
+              ]
+            }
+          },
+          {
+            "contract": "ac",
+            "mode": "projection",
+            "origin": "illustrative",
+            "label": "Output illustrative ac projection; not an execution receipt",
+            "value": {
+              "id": "ACD-300",
+              "criteria": "Given an approved requirement, When delivery finishes, Then its evidence is recorded.",
+              "readiness": "approved"
+            }
+          }
+        ]
+      },
+      "consumes": [
+        "flow/id: string (required)",
+        "flow/readiness: string (required)",
+        "flow/steps: array (required)",
+        "flow/acceptance_scenarios: array (optional)"
+      ],
+      "produces": [
+        "flow/id: string (required)",
+        "flow/version: integer (required)",
+        "flow/steps: array (required)",
+        "flow/provenance: array (optional)",
+        "ac/id: string (required)",
+        "ac/criteria: string (required)",
+        "ac/readiness: string (optional)"
+      ]
     }
   ],
   "branches": [],
@@ -91,6 +638,31 @@
       "by": "BrainCandy (product-truth Atlas session)",
       "date": "2026-07-10",
       "note": "Real architecture flow describing how product-truth, the Atlas, and agents fit together."
+    },
+    {
+      "action": "extended",
+      "by": "flow-author (agent-led I/O contract migration)",
+      "date": "2026-10-03",
+      "note": "Added source-bound field/type/requiredness/default metadata and explicitly illustrative JSON projections. Preserved topology, actor ownership, realization and AC status. Non-JSON artifacts and genuinely undefined proposed interfaces remain explicit."
     }
-  ]
+  ],
+  "contract_definitions": {
+    "flow": {
+      "schema": "docs/product-truth/schemas/flow.schema.json"
+    },
+    "mock_data": {
+      "schema": "docs/product-truth/schemas/mock-data.schema.json"
+    },
+    "mockup": {
+      "schema": "docs/product-truth/schemas/mockup.schema.json"
+    },
+    "index": {
+      "schema": "docs/product-truth/schemas/product-truth-index-projection.schema.json",
+      "authority": "source_reviewed",
+      "note": "Projection of generate_product_truth.py write_index/build_by_ac/build_by_flow. Documents index.json lookups, not a complete runtime validator or automatic source parity."
+    },
+    "ac": {
+      "schema": "config/ac_store_schema.json"
+    }
+  }
 }

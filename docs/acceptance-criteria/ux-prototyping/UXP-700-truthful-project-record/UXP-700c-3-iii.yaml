@@ -1,0 +1,128 @@
+id: UXP-700c-3-iii
+title: Contract errors reach both commit checks and continuous integration
+component: ux-prototyping
+components:
+- ux_prototyping
+level: L3
+status: active
+req_status: active
+work_status: done
+readiness: reviewed
+priority: medium
+criteria: 'Given a proposed change touches Product Truth or a declared contract, model, receipt or authoring
+  dependency,
+
+  When the configured pre-commit checks run,
+
+  Then the same Product Truth validator used by continuous integration checks the contract metadata and
+  reports its actual failure verdict,
+
+  And a change outside the declared pre-commit scope does not trigger that local contract check,
+
+  And the continuous-integration contract job is not skipped because of the changed filenames,
+
+  And a malformed contract or stale generated field cannot receive a passing contract verdict through
+  either route.
+
+  And continuous integration runs the Atlas contract display regression suite and the full TypeScript
+  type check even when only Atlas UI files change,
+
+  And a failed display regression or type check fails that CI lane.'
+depends_on:
+- UXP-700c-3
+doc_links:
+- path: docs/how-to/product-truth-schema-reference.md
+  relationship: specifies
+  status: exists
+- path: docs/architecture/components/ux-prototyping.md
+  relationship: describes
+  status: exists
+- path: docs/architecture/adrs/ADR-049-record-checker-trigger-scope.md
+  relationship: describes
+  status: exists
+assigned_agent: python-coder
+origin_agent: business-analyst
+created: '2026-10-05'
+amended_by:
+- reason: '2026-10-05 business-analyst: recorded source/test traceability and locally verified completion
+    after IT PO review; retained reviewed readiness and existing parent statuses. Hosted CI and merge
+    remain pending.'
+superseded_by: null
+covered_by:
+- unit_tests/product_truth/test_flow_io_contract_gate.py
+implemented_by:
+- docs/product-truth/scripts/validate_product_truth.py
+- docs/product-truth/scripts/product_truth_trigger_scope.py
+- templates/scripts/commit_guardian/commit_guardian.json
+- .github/workflows/ci.yml
+notes: 'The test writer verified 49 Python contract tests plus 16 subtests, the exact Atlas CI command
+  (20 tests across three suites), and the full TypeScript check. Real temporary Git/pre-commit checks
+  cover staged isolation and out-of-scope skipping; configured CI registration covers both mandatory contract
+  lanes.
+
+
+  The user accepted the displayed feature and authorized completing its AC/test coverage and merging after
+  green checks. Readiness remains reviewed: BA and IT PO reviewed these newly authored criteria; no separate
+  individual-AC user sign-off is claimed. Work status records locally verified implementation. Hosted
+  CI and PR merge are pending. This leaf does not claim production retrieval integration or completion
+  of its broader parent.'
+estimated_complexity: M
+change_target:
+- code
+- pipeline
+- config
+risk_surface: contract_boundary
+it_requirements:
+- Reuse the canonical validator and propagate its failure status through both configured gate routes;
+  a printed failure followed by success is unacceptable.
+- Keep pre-commit trigger scope aligned with the checker-declared bounded dependencies, including schema,
+  model and receipt changes; preserve staged-content isolation and out-of-scope skipping.
+- Maintain canonical hook manifest and deployed configuration parity. The local gate stays scoped while
+  CI contract validation is unconditional.
+- CI must retain full frontend type checking and the focused contract display suites; excluding failing
+  files or using a production-only type configuration does not satisfy this check.
+expects_from:
+  ac_id: UXP-300-3
+  contract: The canonical validator reports contract failure and explicit gap details with a nonzero failure
+    status for malformed metadata; source definitions, receipts and generated presentation are checked
+    together.
+delivers_to: null
+test_spec:
+- name: test_ci_uses_same_validator_and_propagates_schema_only_failure
+  target_dir: unit_tests/product_truth/
+  description: Read the configured CI validator command and demonstrate a source-schema-only failure blocks
+    it.
+  framework: unittest
+  type: integration
+  angle: reachability
+- name: test_real_precommit_checks_staged_schema_despite_unstaged_repair
+  target_dir: unit_tests/product_truth/
+  description: Run the deployed pre-commit path against real staged invalid schema even when the working
+    tree contains an unstaged repair.
+  framework: unittest
+  type: integration
+  angle: deployed
+- name: test_real_precommit_ignores_unstaged_invalid_schema_and_restores_it
+  target_dir: unit_tests/product_truth/
+  description: Valid staged data is checked separately from an unstaged invalid version, which is preserved.
+  framework: unittest
+  type: integration
+  angle: boundary
+- name: test_real_precommit_skips_out_of_scope_changes
+  target_dir: unit_tests/product_truth/
+  description: The configured local gate does not execute for unrelated staged changes.
+  framework: unittest
+  type: integration
+  angle: boundary
+- name: test_atlas_ci_registration_includes_executable_contract_regressions
+  target_dir: unit_tests/product_truth/
+  description: The configured unconditional Atlas CI job dispatches full frontend type checking and the
+    real contract display suites; executable display and type-check results are recorded separately.
+  framework: unittest
+  type: integration
+  angle: criterion
+test_rationale: Actual configured entry commands and a real temporary Git/pre-commit run prove blocking
+  and staging behavior. Configuration labels alone cannot demonstrate that either gate runs or propagates
+  failure.
+test_required: true
+declares_side_effect: false

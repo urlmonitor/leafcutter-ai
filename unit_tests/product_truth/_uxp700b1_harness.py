@@ -31,6 +31,7 @@ if str(_SCRIPTS_DIR) not in sys.path:
 
 import generate_product_truth as gpt  # noqa: E402
 import validate_product_truth as vpt  # noqa: E402
+from product_truth_contract_render import apply_contract_presentation  # noqa: E402
 
 
 # --------------------------------------------------------------------------- #
@@ -111,6 +112,11 @@ def _make_sound_store(store_root: Path, ac_root: Path) -> None:
         "branches": [],
         "impl_summary": {"done": 0, "in_progress": 0, "not_started": 1, "total": 1, "asof": "2026-01-01"},
     }
+    # Classification: test_drift. This visual Widget fixture has no JSON handoff.
+    flow["steps"][0]["io_contracts"] = {
+        "not_applicable": "The user views a Widget screen; this fixture has no serialized handoff."
+    }
+    apply_contract_presentation(flow)
     _write_json(store_root / "flows" / "leafcutter" / "test-flow.flow.json", flow)
 
     mock_data = {

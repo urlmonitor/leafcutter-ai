@@ -1,0 +1,145 @@
+id: UXP-300-1
+title: A documented field must match its declared contract
+component: ux-prototyping
+components:
+- ux_prototyping
+level: L3
+status: active
+req_status: active
+work_status: done
+readiness: reviewed
+priority: medium
+criteria: 'Given a node documents original_question as a required string and context as an optional array
+  with default [] against a declared contract,
+
+  When the Product Truth record is checked,
+
+  Then those matching declarations are accepted,
+
+  And an unknown contract or JSON path, incorrect type, incorrect immediate-container requiredness, or
+  missing or incorrect known deterministic default is reported against its node and field,
+
+  And wildcard paths are checked as each present item or map value rather than as a promise that an item
+  exists,
+
+  And an object field with an applied payload contract retains its object transport type while the payload
+  is checked separately.'
+depends_on:
+- UXP-300
+doc_links:
+- path: docs/how-to/product-truth-schema-reference.md
+  relationship: specifies
+  status: exists
+- path: docs/architecture/components/ux-prototyping.md
+  relationship: describes
+  status: exists
+assigned_agent: python-coder
+origin_agent: business-analyst
+created: '2026-10-05'
+amended_by:
+- reason: '2026-10-05 business-analyst: recorded source/test traceability and locally verified completion
+    after IT PO review; retained reviewed readiness and existing parent statuses. Hosted CI and merge
+    remain pending.'
+superseded_by: null
+covered_by:
+- unit_tests/product_truth/test_flow_io_contracts.py
+- unit_tests/product_truth/test_flow_io_contract_gate.py
+implemented_by:
+- docs/product-truth/schemas/flow.schema.json
+- docs/product-truth/scripts/product_truth_contracts.py
+- docs/product-truth/scripts/product_truth_contract_sources.py
+- docs/product-truth/scripts/validate_product_truth.py
+notes: 'The test writer verified the Python contract suites: 49 tests plus 16 subtests passed, including
+  mutation-based field metadata checks and the configured CLI path.
+
+
+  The user accepted the displayed feature and authorized completing its AC/test coverage and merging after
+  green checks. Readiness remains reviewed: BA and IT PO reviewed these newly authored criteria; no separate
+  individual-AC user sign-off is claimed. Work status records locally verified implementation. Hosted
+  CI and PR merge are pending. This leaf does not claim production retrieval integration or completion
+  of its broader parent.'
+estimated_complexity: L
+change_target:
+- code
+- schema
+risk_surface: contract_boundary
+it_requirements:
+- Resolve schemas and source evidence only within their declared repository roots; external references
+  and arbitrary authored imports must not execute. Runtime models come from the explicit reviewed allowlist.
+- Validation remains deterministic and does not contact providers, databases or remote schemas. Known
+  defaults preserve JSON scalar types and full collection contents.
+- Keep transport field type and applied payload schema as separate assertions; selected metadata is not
+  a claim that the entire boundary mapping or answer meaning has been proven.
+expects_from: null
+delivers_to:
+  agent: frontend-coder
+  contract: 'Flow JSON at docs/product-truth/flows/**/*.flow.json: contract_definitions is a map from
+    reference label to {schema?: string, model?: string, authority?: runtime|source_reviewed|illustrative_design,
+    note?: string}; each node has io_contracts with consumes/produces arrays of {contract: string, fields:
+    [{path: JSON-pointer string, types: JSON-type string[], required: boolean, default?: JSON value, applies?:
+    string}]}. Optional means absent, not null unless explicitly allowed. Contract labels are not payload
+    wrapper keys.'
+test_spec:
+- name: test_unknown_documented_field_cannot_be_a_plausible_badge
+  target_dir: unit_tests/product_truth/
+  description: A plausible-looking unknown field cannot pass contract validation.
+  framework: unittest
+  type: integration
+  angle: failure
+- name: test_schema_type_change_invalidates_unchanged_metadata
+  target_dir: unit_tests/product_truth/
+  description: Changing a source type invalidates stale documented metadata.
+  framework: unittest
+  type: integration
+  angle: criterion
+- name: test_requiredness_change_invalidates_unchanged_metadata
+  target_dir: unit_tests/product_truth/
+  description: Immediate-container requiredness is checked against its contract.
+  framework: unittest
+  type: integration
+  angle: criterion
+- name: test_default_change_invalidates_unchanged_metadata
+  target_dir: unit_tests/product_truth/
+  description: Changing a deterministic default invalidates a stale documented value.
+  framework: unittest
+  type: integration
+  angle: criterion
+- name: test_known_default_cannot_be_hidden_by_deleting_metadata
+  target_dir: unit_tests/product_truth/
+  description: Removing a known default declaration cannot hide a mismatch.
+  framework: unittest
+  type: integration
+  angle: boundary
+- name: test_wildcard_checks_each_present_value_without_requiring_nonempty_array
+  target_dir: unit_tests/product_truth/
+  description: Wildcard validation handles present items without inventing a minimum collection size.
+  framework: unittest
+  type: integration
+  angle: boundary
+- name: test_applied_schema_validates_the_nested_example_payload
+  target_dir: unit_tests/product_truth/
+  description: An applied payload schema validates its nested object independently from the transport
+    field.
+  framework: unittest
+  type: integration
+  angle: seam
+- name: test_ci_uses_same_validator_and_propagates_schema_only_failure
+  target_dir: unit_tests/product_truth/
+  description: The configured canonical CLI rejects source-schema drift through the CI entry command.
+  framework: unittest
+  type: integration
+  angle: reachability
+test_rationale: Source mutations test field/type/required/default rejection rather than restating static
+  metadata. The actual CLI negative path demonstrates that contract validation is reachable and blocking.
+test_required: true
+declares_side_effect: false
+product_truth:
+  - flow: leafcutter/generate-product-truth
+    node: validate
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: null
+    entities: []
+    source: real
+    asof: '2026-10-05'

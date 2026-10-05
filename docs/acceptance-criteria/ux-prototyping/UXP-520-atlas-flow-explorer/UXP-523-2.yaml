@@ -1,0 +1,131 @@
+id: UXP-523-2
+title: Examples and contract authority remain distinguishable from proven runtime behavior
+component: ux-prototyping
+components:
+- ux_prototyping
+level: L3
+status: active
+req_status: active
+work_status: done
+readiness: reviewed
+priority: medium
+criteria: 'Given a node includes a labeled JSON example and a source-reviewed or illustrative-design contract,
+
+  When a person opens the node''s contract details,
+
+  Then the example appears separately as readable JSON without adding the contract name as a payload wrapper,
+
+  And its full or projection mode and observed, illustrative or reconstructed origin are visible,
+
+  And a projection states that omitted required and defaulted fields remain in the linked contract,
+
+  And a source-reviewed or illustrative-design contract retains its authority label and explanatory note,
+
+  And any declared missing binding is shown as proposed with its direction, reason and source rather than
+  presented as an implemented field,
+
+  And a genuine non-JSON action shows its specific explanation.'
+depends_on:
+- UXP-523
+doc_links:
+- path: docs/how-to/product-truth-schema-reference.md
+  relationship: specifies
+  status: exists
+- path: docs/architecture/components/ux-prototyping.md
+  relationship: describes
+  status: exists
+assigned_agent: frontend-coder
+origin_agent: business-analyst
+created: '2026-10-05'
+amended_by:
+- reason: '2026-10-05 business-analyst: recorded source/test traceability and locally verified completion
+    after IT PO review; retained reviewed readiness and existing parent statuses. Hosted CI and merge
+    remain pending.'
+superseded_by: null
+covered_by:
+- leafcutter-web/components/flows/__tests__/flow-drawer.contracts.test.tsx
+- leafcutter-web/components/flows/__tests__/flow-explorer.contracts.test.tsx
+- leafcutter-web/lib/data/__tests__/flows.contracts.test.ts
+implemented_by:
+- leafcutter-web/lib/data/flows.ts
+- leafcutter-web/lib/data/types.ts
+- leafcutter-web/lib/data/flow-contracts.ts
+- leafcutter-web/components/flows/flow-contracts.tsx
+- leafcutter-web/components/flows/flow-drawer.tsx
+notes: 'The test writer verified 20 Atlas contract tests across three suites and the full TypeScript check.
+  A missing projection-obligation explanation was reproduced by a failing test, corrected and retested;
+  actual stored step and branch examples also cross the loader-to-drawer seam.
+
+
+  The user accepted the displayed feature and authorized completing its AC/test coverage and merging after
+  green checks. Readiness remains reviewed: BA and IT PO reviewed these newly authored criteria; no separate
+  individual-AC user sign-off is claimed. Work status records locally verified implementation. Hosted
+  CI and PR merge are pending. This leaf does not claim production retrieval integration or completion
+  of its broader parent.'
+estimated_complexity: M
+change_target:
+- code
+- ui
+risk_surface: contract_boundary
+it_requirements:
+- Render JSON values as inert text; source links identify repository evidence and must not execute authored
+  content.
+- Display authority notes, missing-interface limitations and full/projection provenance from the same
+  metadata delivered by the loader. Display acceptance does not replace canonical schema validation.
+- Preserve the exact example value, including scalar and array roots; omit any invented contract-name
+  wrapper.
+expects_from:
+  ac_id: UXP-300-2
+  contract: 'The same flow JSON carries io_contracts.examples: [{contract: string, mode: full|projection,
+    origin: observed|illustrative|reconstructed, label: string, value: JSON value, source?: {path: repository-relative
+    string, pointer: JSON-pointer string}}]. Observed requires source. Definition authority/note and node
+    missing_bindings [{name: string, direction: consumes|produces|both, reason: string, source: repository-relative
+    string}] or a genuine not_applicable string remain distinguishable from checked runtime fields.'
+delivers_to: null
+test_spec:
+- name: shows one contract heading, readable field table, and each raw example once
+  target_dir: leafcutter-web/components/flows/__tests__/
+  description: Examples remain separate raw JSON values without an invented payload wrapper.
+  framework: vitest
+  type: component
+  angle: criterion
+- name: preserves root arrays, escaped field keys, authority and observed provenance
+  target_dir: leafcutter-web/components/flows/__tests__/
+  description: Source-reviewed authority, notes, full/observed labels and receipt source are visible.
+  framework: vitest
+  type: component
+  angle: boundary
+- name: labels reconstructed projections with the remaining contract obligations
+  target_dir: leafcutter-web/components/flows/__tests__/
+  description: A reconstructed projection discloses its provenance and the omitted required/defaulted
+    obligations.
+  framework: vitest
+  type: component
+  angle: criterion
+- name: shows missing bindings and true non-JSON reasons without generated duplicates
+  target_dir: leafcutter-web/components/flows/__tests__/
+  description: Proposed missing directions, reasons and sources and genuine non-JSON explanations remain
+    visible.
+  framework: vitest
+  type: component
+  angle: failure
+- name: renders actual %s contracts after selecting a graph node
+  target_dir: leafcutter-web/components/flows/__tests__/
+  description: Actual stored step and branch examples survive loader, explorer selection and drawer rendering.
+  framework: vitest
+  type: component
+  angle: reachability
+test_rationale: The tests exercise both display branches and the real stored-flow seam. Projection disclosure
+  and authority labels prevent readable JSON from being mistaken for a complete or observed runtime exchange.
+test_required: true
+declares_side_effect: false
+product_truth:
+  - flow: leafcutter/explore-flows-in-atlas
+    node: inspect
+    node_kind: step
+    flow_kind: user
+    screen: null
+    mock_data: null
+    entities: []
+    source: real
+    asof: '2026-10-05'

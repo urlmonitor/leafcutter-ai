@@ -11,7 +11,7 @@
   "status": "active",
   "readiness": "approved",
   "superseded_by": null,
-  "version": 1,
+  "version": 2,
   "tags": [
     "build-pipeline",
     "python-coder",
@@ -23,74 +23,361 @@
     {
       "id": "conventions",
       "label": "Load conventions",
-      "human": "python-coder loads the project conventions / PROJECT_CONTEXT so it writes code that matches the repo's error-handling, style, and structure rules.",
+      "human": "python-coder loads the project conventions / PROJECT_CONTEXT so it writes code that matches the repo's error-handling, style, and structure rules.\n\nContract fields and examples (generated)\nNo JSON handoff: Input is the Python coder prompt plus Markdown CLAUDE.md/PROJECT_CONTEXT and repository conventions; output is the agent working context. No JSON artifact is authored at this reading step.",
       "order": 1,
       "agent": "python-coder",
       "implements": [
         "BO-2000b"
       ],
       "impl_status": "not_started",
-      "impl_asof": "2026-07-20"
+      "impl_asof": "2026-07-20",
+      "io_contracts": {
+        "not_applicable": "Input is the Python coder prompt plus Markdown CLAUDE.md/PROJECT_CONTEXT and repository conventions; output is the agent working context. No JSON artifact is authored at this reading step."
+      },
+      "consumes": [],
+      "produces": []
     },
     {
       "id": "implement",
       "label": "Implement against red",
-      "human": "python-coder edits only the ticket's files_touched to satisfy the red baseline handed over by test-writer.",
+      "human": "python-coder edits only the ticket's files_touched to satisfy the red baseline handed over by test-writer.\n\nI/O boundary: These JSON projections show the driver-provided scope and test-writer evidence. The coder changes source files; the intermediate diff is a Git artifact, not a serialized implementation DTO.\n\nContract fields and examples (generated)\nConsumes:\n  SOURCE-REVIEWED DOCUMENTATION: Source-reviewed transcription of templates/workflows-js/build-ticket.js planner response schema (also used by build-feature.js); no new runtime registration or automatic JavaScript/schema parity.\n  planner/ticket_path: string (required)\n  planner/files_touched: array (optional)\n  planner/existing_test_files: array (optional)\n  planner/source_ac: array (optional)\n  Schema: [planner](docs/product-truth/schemas/delivery-workflow-planner.schema.json)\n  SOURCE-REVIEWED DOCUMENTATION: Source-reviewed transcription of templates/workflows-js/build-ticket.js phase-result response schema (also used by build-feature.js); no new runtime registration or automatic JavaScript/schema parity.\n  phase-result/tests_written: array (optional)\n  phase-result/red_baseline_verified: boolean (optional)\n  Schema: [phase-result](docs/product-truth/schemas/delivery-workflow-phase-result.schema.json)\nProduces:\n  No checked JSON binding documented in this direction.\n\nInput illustrative planner projection; not an execution receipt — planner; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"ticket_path\": \"tickets/01_todo/feature.md\",\n  \"files_touched\": [\n    \"app/service.py\"\n  ],\n  \"existing_test_files\": [\n    \"tests/test_service.py\"\n  ],\n  \"source_ac\": [\n    \"ACD-300\"\n  ]\n}\n\nInput illustrative phase-result projection; not an execution receipt — phase-result; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"tests_written\": [\n    \"tests/test_service.py\"\n  ],\n  \"red_baseline_verified\": true\n}",
       "order": 2,
       "agent": "python-coder",
       "implements": [
         "BP-1100a"
       ],
       "impl_status": "not_started",
-      "impl_asof": "2026-07-20"
+      "impl_asof": "2026-07-20",
+      "io_contracts": {
+        "consumes": [
+          {
+            "contract": "planner",
+            "fields": [
+              {
+                "path": "/ticket_path",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/files_touched",
+                "types": [
+                  "array"
+                ],
+                "required": false
+              },
+              {
+                "path": "/existing_test_files",
+                "types": [
+                  "array"
+                ],
+                "required": false
+              },
+              {
+                "path": "/source_ac",
+                "types": [
+                  "array"
+                ],
+                "required": false
+              }
+            ]
+          },
+          {
+            "contract": "phase-result",
+            "fields": [
+              {
+                "path": "/tests_written",
+                "types": [
+                  "array"
+                ],
+                "required": false
+              },
+              {
+                "path": "/red_baseline_verified",
+                "types": [
+                  "boolean"
+                ],
+                "required": false
+              }
+            ]
+          }
+        ],
+        "produces": [],
+        "examples": [
+          {
+            "contract": "planner",
+            "mode": "projection",
+            "origin": "illustrative",
+            "label": "Input illustrative planner projection; not an execution receipt",
+            "value": {
+              "ticket_path": "tickets/01_todo/feature.md",
+              "files_touched": [
+                "app/service.py"
+              ],
+              "existing_test_files": [
+                "tests/test_service.py"
+              ],
+              "source_ac": [
+                "ACD-300"
+              ]
+            }
+          },
+          {
+            "contract": "phase-result",
+            "mode": "projection",
+            "origin": "illustrative",
+            "label": "Input illustrative phase-result projection; not an execution receipt",
+            "value": {
+              "tests_written": [
+                "tests/test_service.py"
+              ],
+              "red_baseline_verified": true
+            }
+          }
+        ]
+      },
+      "consumes": [
+        "planner/ticket_path: string (required)",
+        "planner/files_touched: array (optional)",
+        "planner/existing_test_files: array (optional)",
+        "planner/source_ac: array (optional)",
+        "phase-result/tests_written: array (optional)",
+        "phase-result/red_baseline_verified: boolean (optional)"
+      ],
+      "produces": []
     },
     {
       "id": "docenforce",
       "label": "Doc-enforcer",
-      "human": "doc-enforcer runs over the changed .py files to enforce docstring and documentation conventions.",
+      "human": "doc-enforcer runs over the changed .py files to enforce docstring and documentation conventions.\n\nContract fields and examples (generated)\nNo JSON handoff: doc-enforcer consumes changed Python files and documentation conventions and returns diagnostics/code edits under its skill contract. This flow defines no JSON diagnostic envelope; the file diff and command output are the artifacts.",
       "order": 3,
       "agent": "doc-enforcer",
       "implements": [
         "BO-2000b"
       ],
       "impl_status": "not_started",
-      "impl_asof": "2026-07-20"
+      "impl_asof": "2026-07-20",
+      "io_contracts": {
+        "not_applicable": "doc-enforcer consumes changed Python files and documentation conventions and returns diagnostics/code edits under its skill contract. This flow defines no JSON diagnostic envelope; the file diff and command output are the artifacts."
+      },
+      "consumes": [],
+      "produces": []
     },
     {
       "id": "complexity",
       "label": "Complexity reduction",
-      "human": "python-coder runs complexity-reduction to keep the new code within the repo's complexity budget.",
+      "human": "python-coder runs complexity-reduction to keep the new code within the repo's complexity budget.\n\nContract fields and examples (generated)\nNo JSON handoff: The complexity-reduction skill inspects and refactors source files under the existing complexity budget. Its output is a source diff plus measurements/report text, not an invented JSON score DTO.",
       "order": 4,
       "agent": "python-coder",
       "implements": [
         "BO-2000b"
       ],
       "impl_status": "not_started",
-      "impl_asof": "2026-07-20"
+      "impl_asof": "2026-07-20",
+      "io_contracts": {
+        "not_applicable": "The complexity-reduction skill inspects and refactors source files under the existing complexity budget. Its output is a source diff plus measurements/report text, not an invented JSON score DTO."
+      },
+      "consumes": [],
+      "produces": []
     },
     {
       "id": "tests",
       "label": "Run until green",
-      "human": "test-runner runs the suite until every red_baseline test passes.",
+      "human": "test-runner runs the suite until every red_baseline test passes.\n\nI/O boundary: The supervisor-facing response is the phase result. Actual baseline test names and test process output are retained in the ticket evidence, not inferred from this illustrative status.\n\nContract fields and examples (generated)\nConsumes:\n  SOURCE-REVIEWED DOCUMENTATION: Source-reviewed transcription of templates/workflows-js/build-ticket.js phase-result response schema (also used by build-feature.js); no new runtime registration or automatic JavaScript/schema parity.\n  phase-result/tests_written: array (optional)\n  phase-result/red_baseline_verified: boolean (optional)\n  Schema: [phase-result](docs/product-truth/schemas/delivery-workflow-phase-result.schema.json)\nProduces:\n  SOURCE-REVIEWED DOCUMENTATION: Source-reviewed transcription of templates/workflows-js/build-ticket.js phase-result response schema (also used by build-feature.js); no new runtime registration or automatic JavaScript/schema parity.\n  phase-result/status: string (required)\n  phase-result/message: string (optional)\n  Schema: [phase-result](docs/product-truth/schemas/delivery-workflow-phase-result.schema.json)\n\nInput illustrative phase-result projection; not an execution receipt — phase-result; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"tests_written\": [\n    \"tests/test_service.py\"\n  ],\n  \"red_baseline_verified\": true\n}\n\nOutput illustrative phase-result projection; not an execution receipt — phase-result; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"status\": \"ok\",\n  \"message\": \"The assigned phase completed; the ticket retains its evidence.\"\n}",
       "order": 5,
       "agent": "test-runner",
       "implements": [
         "BO-530-2"
       ],
       "impl_status": "not_started",
-      "impl_asof": "2026-07-20"
+      "impl_asof": "2026-07-20",
+      "io_contracts": {
+        "consumes": [
+          {
+            "contract": "phase-result",
+            "fields": [
+              {
+                "path": "/tests_written",
+                "types": [
+                  "array"
+                ],
+                "required": false
+              },
+              {
+                "path": "/red_baseline_verified",
+                "types": [
+                  "boolean"
+                ],
+                "required": false
+              }
+            ]
+          }
+        ],
+        "produces": [
+          {
+            "contract": "phase-result",
+            "fields": [
+              {
+                "path": "/status",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/message",
+                "types": [
+                  "string"
+                ],
+                "required": false
+              }
+            ]
+          }
+        ],
+        "examples": [
+          {
+            "contract": "phase-result",
+            "mode": "projection",
+            "origin": "illustrative",
+            "label": "Input illustrative phase-result projection; not an execution receipt",
+            "value": {
+              "tests_written": [
+                "tests/test_service.py"
+              ],
+              "red_baseline_verified": true
+            }
+          },
+          {
+            "contract": "phase-result",
+            "mode": "projection",
+            "origin": "illustrative",
+            "label": "Output illustrative phase-result projection; not an execution receipt",
+            "value": {
+              "status": "ok",
+              "message": "The assigned phase completed; the ticket retains its evidence."
+            }
+          }
+        ]
+      },
+      "consumes": [
+        "phase-result/tests_written: array (optional)",
+        "phase-result/red_baseline_verified: boolean (optional)"
+      ],
+      "produces": [
+        "phase-result/status: string (required)",
+        "phase-result/message: string (optional)"
+      ]
     },
     {
       "id": "signoff",
       "label": "Record sign-off",
-      "human": "python-coder records the sign-off via the signoff skill, updating the ticket frontmatter and the Sign-offs checklist together.",
+      "human": "python-coder records the sign-off via the signoff skill, updating the ticket frontmatter and the Sign-offs checklist together.\n\nI/O boundary: signoff atomically updates Markdown frontmatter and checklist/comments. The displayed JSON is the later readback contract, not the Markdown file contents or an invented signoff-write API.\n\nContract fields and examples (generated)\nConsumes:\n  SOURCE-REVIEWED DOCUMENTATION: Source-reviewed transcription of templates/workflows-js/build-ticket.js planner response schema (also used by build-feature.js); no new runtime registration or automatic JavaScript/schema parity.\n  planner/ticket_path: string (required)\n  Schema: [planner](docs/product-truth/schemas/delivery-workflow-planner.schema.json)\nProduces:\n  SOURCE-REVIEWED DOCUMENTATION: Source-reviewed transcription of templates/workflows-js/build-ticket.js readback response schema (also used by build-feature.js); no new runtime registration or automatic JavaScript/schema parity.\n  readback/readable: boolean (required)\n  readback/ticket_path: string (optional)\n  readback/signoffs/*/agent: string (optional)\n  readback/signoffs/*/status: string (optional)\n  readback/signed_off_agents: array (optional)\n  Schema: [readback](docs/product-truth/schemas/delivery-workflow-readback.schema.json)\n\nInput illustrative planner projection; not an execution receipt — planner; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"ticket_path\": \"tickets/01_todo/feature.md\"\n}\n\nOutput illustrative readback projection; not an execution receipt — readback; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"readable\": true,\n  \"ticket_path\": \"tickets/01_todo/feature.md\",\n  \"signoffs\": [\n    {\n      \"agent\": \"python-coder\",\n      \"status\": \"passed\"\n    }\n  ],\n  \"signed_off_agents\": [\n    \"python-coder\"\n  ]\n}",
       "order": 6,
       "agent": "python-coder",
       "implements": [
         "BO-2000a"
       ],
       "impl_status": "not_started",
-      "impl_asof": "2026-07-20"
+      "impl_asof": "2026-07-20",
+      "io_contracts": {
+        "consumes": [
+          {
+            "contract": "planner",
+            "fields": [
+              {
+                "path": "/ticket_path",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              }
+            ]
+          }
+        ],
+        "produces": [
+          {
+            "contract": "readback",
+            "fields": [
+              {
+                "path": "/readable",
+                "types": [
+                  "boolean"
+                ],
+                "required": true
+              },
+              {
+                "path": "/ticket_path",
+                "types": [
+                  "string"
+                ],
+                "required": false
+              },
+              {
+                "path": "/signoffs/*/agent",
+                "types": [
+                  "string"
+                ],
+                "required": false
+              },
+              {
+                "path": "/signoffs/*/status",
+                "types": [
+                  "string"
+                ],
+                "required": false
+              },
+              {
+                "path": "/signed_off_agents",
+                "types": [
+                  "array"
+                ],
+                "required": false
+              }
+            ]
+          }
+        ],
+        "examples": [
+          {
+            "contract": "planner",
+            "mode": "projection",
+            "origin": "illustrative",
+            "label": "Input illustrative planner projection; not an execution receipt",
+            "value": {
+              "ticket_path": "tickets/01_todo/feature.md"
+            }
+          },
+          {
+            "contract": "readback",
+            "mode": "projection",
+            "origin": "illustrative",
+            "label": "Output illustrative readback projection; not an execution receipt",
+            "value": {
+              "readable": true,
+              "ticket_path": "tickets/01_todo/feature.md",
+              "signoffs": [
+                {
+                  "agent": "python-coder",
+                  "status": "passed"
+                }
+              ],
+              "signed_off_agents": [
+                "python-coder"
+              ]
+            }
+          }
+        ]
+      },
+      "consumes": [
+        "planner/ticket_path: string (required)"
+      ],
+      "produces": [
+        "readback/readable: boolean (required)",
+        "readback/ticket_path: string (optional)",
+        "readback/signoffs/*/agent: string (optional)",
+        "readback/signoffs/*/status: string (optional)",
+        "readback/signed_off_agents: array (optional)"
+      ]
     }
   ],
   "branches": [],
@@ -114,6 +401,12 @@
       "by": "BrainCandy (product-truth Atlas session)",
       "date": "2026-07-14",
       "note": "Gold agent-internal flow; the drill-down target of the how-acs-are-built code step."
+    },
+    {
+      "action": "extended",
+      "by": "flow-author (agent-led I/O contract migration)",
+      "date": "2026-10-03",
+      "note": "Added source-bound field/type/requiredness/default metadata and explicitly illustrative JSON projections. Preserved topology, actor ownership, realization and AC status. Non-JSON artifacts and genuinely undefined proposed interfaces remain explicit."
     }
   ],
   "impl_summary": {
@@ -122,5 +415,22 @@
     "not_started": 6,
     "total": 6,
     "asof": "2026-07-20"
+  },
+  "contract_definitions": {
+    "planner": {
+      "schema": "docs/product-truth/schemas/delivery-workflow-planner.schema.json",
+      "authority": "source_reviewed",
+      "note": "Source-reviewed transcription of templates/workflows-js/build-ticket.js planner response schema (also used by build-feature.js); no new runtime registration or automatic JavaScript/schema parity."
+    },
+    "phase-result": {
+      "schema": "docs/product-truth/schemas/delivery-workflow-phase-result.schema.json",
+      "authority": "source_reviewed",
+      "note": "Source-reviewed transcription of templates/workflows-js/build-ticket.js phase-result response schema (also used by build-feature.js); no new runtime registration or automatic JavaScript/schema parity."
+    },
+    "readback": {
+      "schema": "docs/product-truth/schemas/delivery-workflow-readback.schema.json",
+      "authority": "source_reviewed",
+      "note": "Source-reviewed transcription of templates/workflows-js/build-ticket.js readback response schema (also used by build-feature.js); no new runtime registration or automatic JavaScript/schema parity."
+    }
   }
 }

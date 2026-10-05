@@ -11,7 +11,7 @@
   "status": "active",
   "readiness": "draft",
   "superseded_by": null,
-  "version": 2,
+  "version": 3,
   "shape_version": 2,
   "tags": [
     "decision-kernel",
@@ -27,28 +27,107 @@
     {
       "id": "ask",
       "label": "Ask the question",
-      "human": "You ask the host a question; it passes your verbatim goal and any explicitly supplied host or conversation context to the kernel.",
+      "human": "You ask the host a question; it passes your verbatim goal and any explicitly supplied host or conversation context to the kernel.\n\nExamples illustrate the existing question/options in docs/decisions/dec-ef8ddcb79d668a67.yaml. They do not claim that every current phase ran in that historical execution.\n\nContract fields and examples (generated)\nConsumes:\n  No checked JSON binding documented in this direction.\nProduces:\n  task_input/goal: string (required)\n  task_input/caller: object (required)\n  task_input/scope: object (required)\n  task_input/context: object (optional)\n  task_input/requested_output_schema: null|string (optional; default null)\n  Runtime contract: [task_input](kernel/contracts/task.py)\n\nDecision-record scenario: task_input — task_input; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"goal\": \"Decide how Leafcutter should file decision records as JSON or YAML files under docs/ so later kernel runs can find and reuse them as precedent: which fields a record needs, which classification filters it carries (component, file type or language, repository-wide, roadmap phase), the folder layout and file naming, and how human approval and later corrections are recorded.\",\n  \"caller\": {\n    \"kind\": \"human\",\n    \"id\": \"user\"\n  },\n  \"scope\": {\n    \"workspace_id\": \"leafcutter-ai\",\n    \"repository_root\": \"C:\\\\Users\\\\Hendrik\\\\Code\\\\leafcutter\\\\worktrees\\\\typed-research-binding-v01\"\n  },\n  \"context\": {\n    \"conversation\": []\n  }\n}",
       "order": 1,
       "agent": "caller host",
       "produces": [
-        "goal",
-        "caller context"
+        "task_input/goal: string (required)",
+        "task_input/caller: object (required)",
+        "task_input/scope: object (required)",
+        "task_input/context: object (optional)",
+        "task_input/requested_output_schema: null|string (optional; default null)"
       ],
       "impl_asof": "2026-10-02",
-      "impl_status": "not_started"
+      "impl_status": "not_started",
+      "io_contracts": {
+        "consumes": [],
+        "produces": [
+          {
+            "contract": "task_input",
+            "fields": [
+              {
+                "path": "/goal",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/caller",
+                "types": [
+                  "object"
+                ],
+                "required": true
+              },
+              {
+                "path": "/scope",
+                "types": [
+                  "object"
+                ],
+                "required": true
+              },
+              {
+                "path": "/context",
+                "types": [
+                  "object"
+                ],
+                "required": false
+              },
+              {
+                "path": "/requested_output_schema",
+                "types": [
+                  "null",
+                  "string"
+                ],
+                "required": false,
+                "default": null
+              }
+            ]
+          }
+        ],
+        "examples": [
+          {
+            "contract": "task_input",
+            "mode": "projection",
+            "origin": "illustrative",
+            "label": "Decision-record scenario: task_input",
+            "value": {
+              "goal": "Decide how Leafcutter should file decision records as JSON or YAML files under docs/ so later kernel runs can find and reuse them as precedent: which fields a record needs, which classification filters it carries (component, file type or language, repository-wide, roadmap phase), the folder layout and file naming, and how human approval and later corrections are recorded.",
+              "caller": {
+                "kind": "human",
+                "id": "user"
+              },
+              "scope": {
+                "workspace_id": "leafcutter-ai",
+                "repository_root": "C:\\Users\\Hendrik\\Code\\leafcutter\\worktrees\\typed-research-binding-v01"
+              },
+              "context": {
+                "conversation": []
+              }
+            }
+          }
+        ]
+      },
+      "consumes": []
     },
     {
       "id": "enrich-context",
       "label": "Enrich the context",
-      "human": "Before intent, one bounded read-only pass combines supplied host and conversation claims, workspace facts and relevant permitted excerpts, retaining provenance and unknowns without asking you or granting authority.",
+      "human": "Before intent, one bounded read-only pass combines supplied host and conversation claims, workspace facts and relevant permitted excerpts, retaining provenance and unknowns without asking you or granting authority.\n\nTaskInput.context is caller-supplied; EnrichedContext is the checkpointed internal result. The no_evidence example has no retrieved evidence and reports its limit.\n\nContract fields and examples (generated)\nConsumes:\n  task_input/goal: string (required)\n  task_input/context: object (optional)\n  task_input/scope: object (required)\n  Runtime contract: [task_input](kernel/contracts/task.py)\nProduces:\n  enriched_context/original_goal: string (required)\n  enriched_context/caller_context: object (optional)\n  enriched_context/status: string (required)\n  enriched_context/evidence: array (optional; default [])\n  enriched_context/limitations: array (optional; default [])\n  enriched_context/truncated: boolean (optional; default false)\n  Runtime contract: [enriched_context](kernel/contracts/context.py)\n\nDecision-record scenario: task_input — task_input; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"goal\": \"Decide how Leafcutter should file decision records as JSON or YAML files under docs/ so later kernel runs can find and reuse them as precedent: which fields a record needs, which classification filters it carries (component, file type or language, repository-wide, roadmap phase), the folder layout and file naming, and how human approval and later corrections are recorded.\",\n  \"caller\": {\n    \"kind\": \"human\",\n    \"id\": \"user\"\n  },\n  \"scope\": {\n    \"workspace_id\": \"leafcutter-ai\",\n    \"repository_root\": \"C:\\\\Users\\\\Hendrik\\\\Code\\\\leafcutter\\\\worktrees\\\\typed-research-binding-v01\"\n  },\n  \"context\": {\n    \"conversation\": []\n  }\n}\n\nDecision-record scenario: enriched_context — enriched_context; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"original_goal\": \"Decide how Leafcutter should file decision records as JSON or YAML files under docs/ so later kernel runs can find and reuse them as precedent: which fields a record needs, which classification filters it carries (component, file type or language, repository-wide, roadmap phase), the folder layout and file naming, and how human approval and later corrections are recorded.\",\n  \"status\": \"no_evidence\",\n  \"evidence\": [],\n  \"limitations\": [\n    \"Illustrative current context pass; not a receipt from the older run.\"\n  ]\n}",
       "order": 2,
       "agent": "kernel.context_enrichment",
       "consumes": [
-        "goal",
-        "caller context"
+        "task_input/goal: string (required)",
+        "task_input/context: object (optional)",
+        "task_input/scope: object (required)"
       ],
       "produces": [
-        "enriched context"
+        "enriched_context/original_goal: string (required)",
+        "enriched_context/caller_context: object (optional)",
+        "enriched_context/status: string (required)",
+        "enriched_context/evidence: array (optional; default [])",
+        "enriched_context/limitations: array (optional; default [])",
+        "enriched_context/truncated: boolean (optional; default false)"
       ],
       "implements": [
         "DK-200a-1",
@@ -77,35 +156,273 @@
         "DK-200d-2-i"
       ],
       "impl_asof": "2026-10-02",
-      "impl_status": "done"
+      "impl_status": "done",
+      "io_contracts": {
+        "consumes": [
+          {
+            "contract": "task_input",
+            "fields": [
+              {
+                "path": "/goal",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/context",
+                "types": [
+                  "object"
+                ],
+                "required": false
+              },
+              {
+                "path": "/scope",
+                "types": [
+                  "object"
+                ],
+                "required": true
+              }
+            ]
+          }
+        ],
+        "produces": [
+          {
+            "contract": "enriched_context",
+            "fields": [
+              {
+                "path": "/original_goal",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/caller_context",
+                "types": [
+                  "object"
+                ],
+                "required": false
+              },
+              {
+                "path": "/status",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/evidence",
+                "types": [
+                  "array"
+                ],
+                "required": false,
+                "default": []
+              },
+              {
+                "path": "/limitations",
+                "types": [
+                  "array"
+                ],
+                "required": false,
+                "default": []
+              },
+              {
+                "path": "/truncated",
+                "types": [
+                  "boolean"
+                ],
+                "required": false,
+                "default": false
+              }
+            ]
+          }
+        ],
+        "examples": [
+          {
+            "contract": "task_input",
+            "mode": "projection",
+            "origin": "illustrative",
+            "label": "Decision-record scenario: task_input",
+            "value": {
+              "goal": "Decide how Leafcutter should file decision records as JSON or YAML files under docs/ so later kernel runs can find and reuse them as precedent: which fields a record needs, which classification filters it carries (component, file type or language, repository-wide, roadmap phase), the folder layout and file naming, and how human approval and later corrections are recorded.",
+              "caller": {
+                "kind": "human",
+                "id": "user"
+              },
+              "scope": {
+                "workspace_id": "leafcutter-ai",
+                "repository_root": "C:\\Users\\Hendrik\\Code\\leafcutter\\worktrees\\typed-research-binding-v01"
+              },
+              "context": {
+                "conversation": []
+              }
+            }
+          },
+          {
+            "contract": "enriched_context",
+            "mode": "projection",
+            "origin": "illustrative",
+            "label": "Decision-record scenario: enriched_context",
+            "value": {
+              "original_goal": "Decide how Leafcutter should file decision records as JSON or YAML files under docs/ so later kernel runs can find and reuse them as precedent: which fields a record needs, which classification filters it carries (component, file type or language, repository-wide, roadmap phase), the folder layout and file naming, and how human approval and later corrections are recorded.",
+              "status": "no_evidence",
+              "evidence": [],
+              "limitations": [
+                "Illustrative current context pass; not a receipt from the older run."
+              ]
+            }
+          }
+        ]
+      }
     },
     {
       "id": "classify",
       "label": "Classify the intent",
-      "human": "Jev classifies the original goal with the gathered context; an explicit output contract still controls routing, and unresolved user intent can still require clarification.",
+      "human": "Jev classifies the original goal with the gathered context; an explicit output contract still controls routing, and unresolved user intent can still require clarification.\n\nSource: kernel/intent/classify.py and step.py. ChoiceAnswer is the provider result; the kernel applies it to root routing. An explicit requested_output_schema can skip inference.\n\nContract fields and examples (generated)\nConsumes:\n  enriched_context/original_goal: string (required)\n  enriched_context/status: string (required)\n  enriched_context/evidence: array (optional; default [])\n  enriched_context/limitations: array (optional; default [])\n  Runtime contract: [enriched_context](kernel/contracts/context.py)\nProduces:\n  choice_answer/question_id: string (optional; default \"\")\n  choice_answer/choice: string (required)\n  choice_answer/probabilities: object (required)\n  choice_answer/confidence: null|number (optional; default null)\n  Runtime contract: [choice_answer](kernel/providers/base.py)\n\nDecision-record scenario: enriched_context — enriched_context; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"original_goal\": \"Decide how Leafcutter should file decision records as JSON or YAML files under docs/ so later kernel runs can find and reuse them as precedent: which fields a record needs, which classification filters it carries (component, file type or language, repository-wide, roadmap phase), the folder layout and file naming, and how human approval and later corrections are recorded.\",\n  \"status\": \"no_evidence\",\n  \"evidence\": [],\n  \"limitations\": [\n    \"Illustrative current context pass; not a receipt from the older run.\"\n  ]\n}\n\nDecision-record scenario: choice_answer — choice_answer; illustrative; complete payload:\n{\n  \"question_id\": \"intent.answer_kind\",\n  \"choice\": \"decision\",\n  \"probabilities\": {\n    \"decision\": 1.0\n  },\n  \"confidence\": 1.0\n}",
       "order": 3,
       "agent": "kernel.intent",
       "consumes": [
-        "goal",
-        "enriched context"
+        "enriched_context/original_goal: string (required)",
+        "enriched_context/status: string (required)",
+        "enriched_context/evidence: array (optional; default [])",
+        "enriched_context/limitations: array (optional; default [])"
       ],
       "produces": [
-        "intent: decision"
+        "choice_answer/question_id: string (optional; default \"\")",
+        "choice_answer/choice: string (required)",
+        "choice_answer/probabilities: object (required)",
+        "choice_answer/confidence: null|number (optional; default null)"
       ],
       "impl_asof": "2026-10-02",
-      "impl_status": "not_started"
+      "impl_status": "not_started",
+      "io_contracts": {
+        "consumes": [
+          {
+            "contract": "enriched_context",
+            "fields": [
+              {
+                "path": "/original_goal",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/status",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/evidence",
+                "types": [
+                  "array"
+                ],
+                "required": false,
+                "default": []
+              },
+              {
+                "path": "/limitations",
+                "types": [
+                  "array"
+                ],
+                "required": false,
+                "default": []
+              }
+            ]
+          }
+        ],
+        "produces": [
+          {
+            "contract": "choice_answer",
+            "fields": [
+              {
+                "path": "/question_id",
+                "types": [
+                  "string"
+                ],
+                "required": false,
+                "default": ""
+              },
+              {
+                "path": "/choice",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/probabilities",
+                "types": [
+                  "object"
+                ],
+                "required": true
+              },
+              {
+                "path": "/confidence",
+                "types": [
+                  "null",
+                  "number"
+                ],
+                "required": false,
+                "default": null
+              }
+            ]
+          }
+        ],
+        "examples": [
+          {
+            "contract": "enriched_context",
+            "mode": "projection",
+            "origin": "illustrative",
+            "label": "Decision-record scenario: enriched_context",
+            "value": {
+              "original_goal": "Decide how Leafcutter should file decision records as JSON or YAML files under docs/ so later kernel runs can find and reuse them as precedent: which fields a record needs, which classification filters it carries (component, file type or language, repository-wide, roadmap phase), the folder layout and file naming, and how human approval and later corrections are recorded.",
+              "status": "no_evidence",
+              "evidence": [],
+              "limitations": [
+                "Illustrative current context pass; not a receipt from the older run."
+              ]
+            }
+          },
+          {
+            "contract": "choice_answer",
+            "mode": "full",
+            "origin": "illustrative",
+            "label": "Decision-record scenario: choice_answer",
+            "value": {
+              "question_id": "intent.answer_kind",
+              "choice": "decision",
+              "probabilities": {
+                "decision": 1.0
+              },
+              "confidence": 1.0
+            }
+          }
+        ]
+      }
     },
     {
       "id": "precedent",
       "label": "Check for precedent",
-      "human": "Earlier published decisions that might apply are looked up and judged; how that works is shown in the precedent sub-flow.",
+      "human": "Earlier published decisions that might apply are looked up and judged; how that works is shown in the precedent sub-flow.\n\nThe memory port returns DecisionHit objects with parsed DecisionRecord values, scores and paths. The example projects the contained record, not a fabricated hit envelope.\n\nContract fields and examples (generated)\nConsumes:\n  decision_query/text: string (required)\n  decision_query/components: array (optional; default [])\n  decision_query/roadmap_phase: array (optional; default [])\n  decision_query/limit: integer (optional; default 3)\n  decision_query/min_score: number (optional; default 0.0)\n  Runtime contract: [decision_query](kernel/memory/port.py)\nProduces:\n  decision_record/id: string (required)\n  decision_record/question: string (required)\n  decision_record/selected_option_id: string (required)\n  decision_record/approval: object (required)\n  decision_record/superseded_by: array (optional; default [])\n  Runtime contract: [decision_record](kernel/memory/models.py)\n\nDecision-record scenario: decision_query — decision_query; illustrative; complete payload:\n{\n  \"text\": \"Decide how Leafcutter should file decision records as JSON or YAML files under docs/ so later kernel runs can find and reuse them as precedent: which fields a record needs, which classification filters it carries (component, file type or language, repository-wide, roadmap phase), the folder layout and file naming, and how human approval and later corrections are recorded.\",\n  \"components\": [\n    \"decision_kernel\"\n  ],\n  \"limit\": 3,\n  \"min_score\": 0.0\n}\n\nDecision-record scenario: decision_record — decision_record; reconstructed; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"id\": \"dec-ef8ddcb79d668a67\",\n  \"title\": \"Kernel-contract YAML per decision\",\n  \"decision_type\": \"design\",\n  \"selected_option_id\": \"opt.added.1\",\n  \"components\": [\n    \"decision_kernel\",\n    \"knowledge_management\"\n  ],\n  \"approval\": {\n    \"approval_status\": \"approved\",\n    \"approved_by\": \"human:user\",\n    \"approved_at\": \"2026-10-01T14:48:31Z\",\n    \"note\": \"approved_at is the decision's updated_at: the kernel Decision had no approved_at field when this decision was approved (added by #KernelDecisionStore).\"\n  },\n  \"provenance\": {\n    \"run_id\": \"run-2fbb4ef43b1345f6\",\n    \"created_at\": \"2026-10-01T14:48:31Z\"\n  }\n}",
       "order": 4,
       "agent": "kernel precedent step",
       "consumes": [
-        "intent: decision"
+        "decision_query/text: string (required)",
+        "decision_query/components: array (optional; default [])",
+        "decision_query/roadmap_phase: array (optional; default [])",
+        "decision_query/limit: integer (optional; default 3)",
+        "decision_query/min_score: number (optional; default 0.0)"
       ],
       "produces": [
-        "prior_decisions evidence"
+        "decision_record/id: string (required)",
+        "decision_record/question: string (required)",
+        "decision_record/selected_option_id: string (required)",
+        "decision_record/approval: object (required)",
+        "decision_record/superseded_by: array (optional; default [])"
       ],
       "reads": [
         "Decision"
@@ -114,142 +431,1430 @@
         "leafcutter/decision-retrieval"
       ],
       "impl_asof": "2026-10-02",
-      "impl_status": "not_started"
+      "impl_status": "not_started",
+      "io_contracts": {
+        "consumes": [
+          {
+            "contract": "decision_query",
+            "fields": [
+              {
+                "path": "/text",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/components",
+                "types": [
+                  "array"
+                ],
+                "required": false,
+                "default": []
+              },
+              {
+                "path": "/roadmap_phase",
+                "types": [
+                  "array"
+                ],
+                "required": false,
+                "default": []
+              },
+              {
+                "path": "/limit",
+                "types": [
+                  "integer"
+                ],
+                "required": false,
+                "default": 3
+              },
+              {
+                "path": "/min_score",
+                "types": [
+                  "number"
+                ],
+                "required": false,
+                "default": 0.0
+              }
+            ]
+          }
+        ],
+        "produces": [
+          {
+            "contract": "decision_record",
+            "fields": [
+              {
+                "path": "/id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/question",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/selected_option_id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/approval",
+                "types": [
+                  "object"
+                ],
+                "required": true
+              },
+              {
+                "path": "/superseded_by",
+                "types": [
+                  "array"
+                ],
+                "required": false,
+                "default": []
+              }
+            ]
+          }
+        ],
+        "examples": [
+          {
+            "contract": "decision_query",
+            "mode": "full",
+            "origin": "illustrative",
+            "label": "Decision-record scenario: decision_query",
+            "value": {
+              "text": "Decide how Leafcutter should file decision records as JSON or YAML files under docs/ so later kernel runs can find and reuse them as precedent: which fields a record needs, which classification filters it carries (component, file type or language, repository-wide, roadmap phase), the folder layout and file naming, and how human approval and later corrections are recorded.",
+              "components": [
+                "decision_kernel"
+              ],
+              "limit": 3,
+              "min_score": 0.0
+            }
+          },
+          {
+            "contract": "decision_record",
+            "mode": "projection",
+            "origin": "reconstructed",
+            "label": "Decision-record scenario: decision_record",
+            "value": {
+              "id": "dec-ef8ddcb79d668a67",
+              "title": "Kernel-contract YAML per decision",
+              "decision_type": "design",
+              "selected_option_id": "opt.added.1",
+              "components": [
+                "decision_kernel",
+                "knowledge_management"
+              ],
+              "approval": {
+                "approval_status": "approved",
+                "approved_by": "human:user",
+                "approved_at": "2026-10-01T14:48:31Z",
+                "note": "approved_at is the decision's updated_at: the kernel Decision had no approved_at field when this decision was approved (added by #KernelDecisionStore)."
+              },
+              "provenance": {
+                "run_id": "run-2fbb4ef43b1345f6",
+                "created_at": "2026-10-01T14:48:31Z"
+              }
+            }
+          }
+        ]
+      }
     },
     {
       "id": "ground",
       "label": "Ground it in the repository",
-      "human": "The research capability retrieves repository evidence with exact, section-aware locators and Jev reranks it; a precedent alone never counts as grounding.",
+      "human": "The research capability retrieves repository evidence with exact, section-aware locators and Jev reranks it; a precedent alone never counts as grounding.\n\nResearchRequestPayload is the registered input; EvidenceBundlePayload is the result. The example evidence path/hash is reconstructed from the existing record, not newly retrieved.\n\nContract fields and examples (generated)\nConsumes:\n  research_request/question: string (required)\n  research_request/existing_evidence_ids: array (optional; default [])\n  research_request/source_restrictions: array (optional; default [])\n  research_request/expected_coverage: string (optional; default \"all_required\")\n  Runtime contract: [research_request](kernel/contracts/payloads.py)\nProduces:\n  evidence_bundle/evidence: array (optional; default [])\n  evidence_bundle/evidence_ids: array (optional; default [])\n  evidence_bundle/limitations: array (optional; default [])\n  evidence_bundle/unknowns: array (optional; default [])\n  Runtime contract: [evidence_bundle](kernel/contracts/evidence.py)\n\nDecision-record scenario: research_request — research_request; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"question\": \"Decide how Leafcutter should file decision records as JSON or YAML files under docs/ so later kernel runs can find and reuse them as precedent: which fields a record needs, which classification filters it carries (component, file type or language, repository-wide, roadmap phase), the folder layout and file naming, and how human approval and later corrections are recorded.\",\n  \"existing_evidence_ids\": [],\n  \"expected_coverage\": \"all_required\"\n}\n\nDecision-record scenario: evidence_bundle — evidence_bundle; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"evidence_ids\": [\n    \"ev-27c8e6023c8b1d02\"\n  ],\n  \"evidence\": [\n    {\n      \"id\": \"ev-27c8e6023c8b1d02\",\n      \"category\": \"prior_decisions\",\n      \"content_hash\": \"06845bf5bd25c6e571dc24b27e0b41b474274dcc130da8c0868ab25ec12f9536\",\n      \"source\": {\n        \"locator\": \"docs/analysis/2026-10-01-colony-memory-stage0-delta-2-reuse-and-mvp.md#L43-L74 (§(c) Minimal Neo4j MVP > c.1 Node and edge set)\"\n      },\n      \"verification\": \"source_verified\"\n    }\n  ],\n  \"limitations\": []\n}",
       "order": 5,
       "agent": "kernel research capability",
       "consumes": [
-        "intent: decision",
-        "enriched context"
+        "research_request/question: string (required)",
+        "research_request/existing_evidence_ids: array (optional; default [])",
+        "research_request/source_restrictions: array (optional; default [])",
+        "research_request/expected_coverage: string (optional; default \"all_required\")"
       ],
       "produces": [
-        "grounding evidence"
+        "evidence_bundle/evidence: array (optional; default [])",
+        "evidence_bundle/evidence_ids: array (optional; default [])",
+        "evidence_bundle/limitations: array (optional; default [])",
+        "evidence_bundle/unknowns: array (optional; default [])"
       ],
       "impl_asof": "2026-10-02",
-      "impl_status": "not_started"
+      "impl_status": "not_started",
+      "io_contracts": {
+        "consumes": [
+          {
+            "contract": "research_request",
+            "fields": [
+              {
+                "path": "/question",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/existing_evidence_ids",
+                "types": [
+                  "array"
+                ],
+                "required": false,
+                "default": []
+              },
+              {
+                "path": "/source_restrictions",
+                "types": [
+                  "array"
+                ],
+                "required": false,
+                "default": []
+              },
+              {
+                "path": "/expected_coverage",
+                "types": [
+                  "string"
+                ],
+                "required": false,
+                "default": "all_required"
+              }
+            ]
+          }
+        ],
+        "produces": [
+          {
+            "contract": "evidence_bundle",
+            "fields": [
+              {
+                "path": "/evidence",
+                "types": [
+                  "array"
+                ],
+                "required": false,
+                "default": []
+              },
+              {
+                "path": "/evidence_ids",
+                "types": [
+                  "array"
+                ],
+                "required": false,
+                "default": []
+              },
+              {
+                "path": "/limitations",
+                "types": [
+                  "array"
+                ],
+                "required": false,
+                "default": []
+              },
+              {
+                "path": "/unknowns",
+                "types": [
+                  "array"
+                ],
+                "required": false,
+                "default": []
+              }
+            ]
+          }
+        ],
+        "examples": [
+          {
+            "contract": "research_request",
+            "mode": "projection",
+            "origin": "illustrative",
+            "label": "Decision-record scenario: research_request",
+            "value": {
+              "question": "Decide how Leafcutter should file decision records as JSON or YAML files under docs/ so later kernel runs can find and reuse them as precedent: which fields a record needs, which classification filters it carries (component, file type or language, repository-wide, roadmap phase), the folder layout and file naming, and how human approval and later corrections are recorded.",
+              "existing_evidence_ids": [],
+              "expected_coverage": "all_required"
+            }
+          },
+          {
+            "contract": "evidence_bundle",
+            "mode": "projection",
+            "origin": "illustrative",
+            "label": "Decision-record scenario: evidence_bundle",
+            "value": {
+              "evidence_ids": [
+                "ev-27c8e6023c8b1d02"
+              ],
+              "evidence": [
+                {
+                  "id": "ev-27c8e6023c8b1d02",
+                  "category": "prior_decisions",
+                  "content_hash": "06845bf5bd25c6e571dc24b27e0b41b474274dcc130da8c0868ab25ec12f9536",
+                  "source": {
+                    "locator": "docs/analysis/2026-10-01-colony-memory-stage0-delta-2-reuse-and-mvp.md#L43-L74 (§(c) Minimal Neo4j MVP > c.1 Node and edge set)"
+                  },
+                  "verification": "source_verified"
+                }
+              ],
+              "limitations": []
+            }
+          }
+        ]
+      }
     },
     {
       "id": "synthesize",
       "label": "Synthesize the findings",
-      "human": "Claude Code, as host, writes findings that cite only the retrieved evidence (synthesize_evidence).",
+      "human": "Claude Code, as host, writes findings that cite only the retrieved evidence (synthesize_evidence).\n\nSynthesisRequestPayload.operation names synthesize_evidence; FindingsPayload is the host response. The example inference is illustrative, with a real evidence id, not an observed host claim.\n\nContract fields and examples (generated)\nConsumes:\n  synthesis_request/operation: string (required)\n  synthesis_request/question: string (required)\n  synthesis_request/evidence_ids: array (optional; default [])\n  synthesis_request/output_requirements: array (optional; default [])\n  Runtime contract: [synthesis_request](kernel/contracts/payloads.py)\nProduces:\n  findings/findings: array (optional; default [])\n  findings/agreements: array (optional; default [])\n  findings/disagreements: array (optional; default [])\n  findings/unknowns: array (optional; default [])\n  Runtime contract: [findings](kernel/contracts/payloads.py)\n\nDecision-record scenario: synthesis_request — synthesis_request; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"operation\": \"synthesize_evidence\",\n  \"question\": \"Decide how Leafcutter should file decision records as JSON or YAML files under docs/ so later kernel runs can find and reuse them as precedent: which fields a record needs, which classification filters it carries (component, file type or language, repository-wide, roadmap phase), the folder layout and file naming, and how human approval and later corrections are recorded.\",\n  \"evidence_ids\": [\n    \"ev-27c8e6023c8b1d02\"\n  ]\n}\n\nDecision-record scenario: findings — findings; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"findings\": [\n    {\n      \"claim\": \"The cited project design describes approval and provenance fields.\",\n      \"kind\": \"inference\",\n      \"supporting_evidence_ids\": [\n        \"ev-27c8e6023c8b1d02\"\n      ],\n      \"producer\": \"host.synthesize_evidence\"\n    }\n  ],\n  \"unknowns\": []\n}",
       "order": 6,
       "agent": "claude_code",
       "consumes": [
-        "grounding evidence",
-        "prior_decisions evidence",
-        "enriched context"
+        "synthesis_request/operation: string (required)",
+        "synthesis_request/question: string (required)",
+        "synthesis_request/evidence_ids: array (optional; default [])",
+        "synthesis_request/output_requirements: array (optional; default [])"
       ],
       "produces": [
-        "findings"
+        "findings/findings: array (optional; default [])",
+        "findings/agreements: array (optional; default [])",
+        "findings/disagreements: array (optional; default [])",
+        "findings/unknowns: array (optional; default [])"
       ],
       "impl_asof": "2026-10-02",
-      "impl_status": "not_started"
+      "impl_status": "not_started",
+      "io_contracts": {
+        "consumes": [
+          {
+            "contract": "synthesis_request",
+            "fields": [
+              {
+                "path": "/operation",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/question",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/evidence_ids",
+                "types": [
+                  "array"
+                ],
+                "required": false,
+                "default": []
+              },
+              {
+                "path": "/output_requirements",
+                "types": [
+                  "array"
+                ],
+                "required": false,
+                "default": []
+              }
+            ]
+          }
+        ],
+        "produces": [
+          {
+            "contract": "findings",
+            "fields": [
+              {
+                "path": "/findings",
+                "types": [
+                  "array"
+                ],
+                "required": false,
+                "default": []
+              },
+              {
+                "path": "/agreements",
+                "types": [
+                  "array"
+                ],
+                "required": false,
+                "default": []
+              },
+              {
+                "path": "/disagreements",
+                "types": [
+                  "array"
+                ],
+                "required": false,
+                "default": []
+              },
+              {
+                "path": "/unknowns",
+                "types": [
+                  "array"
+                ],
+                "required": false,
+                "default": []
+              }
+            ]
+          }
+        ],
+        "examples": [
+          {
+            "contract": "synthesis_request",
+            "mode": "projection",
+            "origin": "illustrative",
+            "label": "Decision-record scenario: synthesis_request",
+            "value": {
+              "operation": "synthesize_evidence",
+              "question": "Decide how Leafcutter should file decision records as JSON or YAML files under docs/ so later kernel runs can find and reuse them as precedent: which fields a record needs, which classification filters it carries (component, file type or language, repository-wide, roadmap phase), the folder layout and file naming, and how human approval and later corrections are recorded.",
+              "evidence_ids": [
+                "ev-27c8e6023c8b1d02"
+              ]
+            }
+          },
+          {
+            "contract": "findings",
+            "mode": "projection",
+            "origin": "illustrative",
+            "label": "Decision-record scenario: findings",
+            "value": {
+              "findings": [
+                {
+                  "claim": "The cited project design describes approval and provenance fields.",
+                  "kind": "inference",
+                  "supporting_evidence_ids": [
+                    "ev-27c8e6023c8b1d02"
+                  ],
+                  "producer": "host.synthesize_evidence"
+                }
+              ],
+              "unknowns": []
+            }
+          }
+        ]
+      }
     },
     {
       "id": "propose",
       "label": "Propose options and criteria",
-      "human": "Claude Code, as host, proposes options and criteria (generate_options); options you named in your question are checked against your words and kept as yours.",
+      "human": "Claude Code, as host, proposes options and criteria (generate_options); options you named in your question are checked against your words and kept as yours.\n\nThe registered generate_options host capability consumes OptionsRequestPayload and returns OptionsPayload. Proposed items enter an approval track, not approved working state.\n\nContract fields and examples (generated)\nConsumes:\n  options_request/problem: string (required)\n  options_request/evidence_ids: array (optional; default [])\n  options_request/findings: array (optional; default [])\n  options_request/propose_criteria: boolean (optional; default false)\n  options_request/require_grounding: boolean (optional; default false)\n  Runtime contract: [options_request](kernel/contracts/payloads.py)\nProduces:\n  options/options: array (optional; default [])\n  options/named_options: array (optional; default [])\n  options/proposed_criteria: array (optional; default [])\n  options/unresolved_feasibility: array (optional; default [])\n  Runtime contract: [options](kernel/contracts/payloads.py)\n\nDecision-record scenario: options_request — options_request; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"problem\": \"Decide how Leafcutter should file decision records as JSON or YAML files under docs/ so later kernel runs can find and reuse them as precedent: which fields a record needs, which classification filters it carries (component, file type or language, repository-wide, roadmap phase), the folder layout and file naming, and how human approval and later corrections are recorded.\",\n  \"evidence_ids\": [\n    \"ev-27c8e6023c8b1d02\"\n  ],\n  \"propose_criteria\": true,\n  \"require_grounding\": true\n}\n\nDecision-record scenario: options — options; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"options\": [\n    {\n      \"id\": \"opt.yaml_files_plus_generated_index\",\n      \"title\": \"One YAML file per decision plus a generated, never hand-edited filter index\",\n      \"proposal_status\": \"proposed\",\n      \"approval_status\": \"proposed\",\n      \"proposed_by\": \"host.generate_options\"\n    }\n  ],\n  \"proposed_criteria\": [\n    {\n      \"id\": \"crit.findable_by_filters\",\n      \"question\": \"Can a later run select precedent by component, roadmap phase, repository-wide flag and file type or language without opening every record?\",\n      \"priority\": \"required\",\n      \"proposal_status\": \"proposed\",\n      \"approval_status\": \"proposed\"\n    }\n  ],\n  \"named_options\": []\n}",
       "order": 7,
       "agent": "claude_code",
       "consumes": [
-        "goal",
-        "findings",
-        "enriched context"
+        "options_request/problem: string (required)",
+        "options_request/evidence_ids: array (optional; default [])",
+        "options_request/findings: array (optional; default [])",
+        "options_request/propose_criteria: boolean (optional; default false)",
+        "options_request/require_grounding: boolean (optional; default false)"
       ],
       "produces": [
-        "proposed options and criteria"
+        "options/options: array (optional; default [])",
+        "options/named_options: array (optional; default [])",
+        "options/proposed_criteria: array (optional; default [])",
+        "options/unresolved_feasibility: array (optional; default [])"
       ],
       "impl_asof": "2026-10-02",
-      "impl_status": "not_started"
+      "impl_status": "not_started",
+      "io_contracts": {
+        "consumes": [
+          {
+            "contract": "options_request",
+            "fields": [
+              {
+                "path": "/problem",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/evidence_ids",
+                "types": [
+                  "array"
+                ],
+                "required": false,
+                "default": []
+              },
+              {
+                "path": "/findings",
+                "types": [
+                  "array"
+                ],
+                "required": false,
+                "default": []
+              },
+              {
+                "path": "/propose_criteria",
+                "types": [
+                  "boolean"
+                ],
+                "required": false,
+                "default": false
+              },
+              {
+                "path": "/require_grounding",
+                "types": [
+                  "boolean"
+                ],
+                "required": false,
+                "default": false
+              }
+            ]
+          }
+        ],
+        "produces": [
+          {
+            "contract": "options",
+            "fields": [
+              {
+                "path": "/options",
+                "types": [
+                  "array"
+                ],
+                "required": false,
+                "default": []
+              },
+              {
+                "path": "/named_options",
+                "types": [
+                  "array"
+                ],
+                "required": false,
+                "default": []
+              },
+              {
+                "path": "/proposed_criteria",
+                "types": [
+                  "array"
+                ],
+                "required": false,
+                "default": []
+              },
+              {
+                "path": "/unresolved_feasibility",
+                "types": [
+                  "array"
+                ],
+                "required": false,
+                "default": []
+              }
+            ]
+          }
+        ],
+        "examples": [
+          {
+            "contract": "options_request",
+            "mode": "projection",
+            "origin": "illustrative",
+            "label": "Decision-record scenario: options_request",
+            "value": {
+              "problem": "Decide how Leafcutter should file decision records as JSON or YAML files under docs/ so later kernel runs can find and reuse them as precedent: which fields a record needs, which classification filters it carries (component, file type or language, repository-wide, roadmap phase), the folder layout and file naming, and how human approval and later corrections are recorded.",
+              "evidence_ids": [
+                "ev-27c8e6023c8b1d02"
+              ],
+              "propose_criteria": true,
+              "require_grounding": true
+            }
+          },
+          {
+            "contract": "options",
+            "mode": "projection",
+            "origin": "illustrative",
+            "label": "Decision-record scenario: options",
+            "value": {
+              "options": [
+                {
+                  "id": "opt.yaml_files_plus_generated_index",
+                  "title": "One YAML file per decision plus a generated, never hand-edited filter index",
+                  "proposal_status": "proposed",
+                  "approval_status": "proposed",
+                  "proposed_by": "host.generate_options"
+                }
+              ],
+              "proposed_criteria": [
+                {
+                  "id": "crit.findable_by_filters",
+                  "question": "Can a later run select precedent by component, roadmap phase, repository-wide flag and file type or language without opening every record?",
+                  "priority": "required",
+                  "proposal_status": "proposed",
+                  "approval_status": "proposed"
+                }
+              ],
+              "named_options": []
+            }
+          }
+        ]
+      }
     },
     {
       "id": "approve-proposals",
       "label": "Approve the proposals",
-      "human": "Decision point: you see the proposed options and criteria and approve them, approve only some, edit the criteria, or add options. Nothing proposed is used until you approve it.",
+      "human": "Decision point: you see the proposed options and criteria and approve them, approve only some, edit the criteria, or add options. Nothing proposed is used until you approve it.\n\nThe human supplies approved IDs in HumanAnswerPayload. The kernel applies them to matching objects. This example records a hypothetical answer, not new approval.\n\nContract fields and examples (generated)\nConsumes:\n  options/options: array (optional; default [])\n  options/proposed_criteria: array (optional; default [])\n  Runtime contract: [options](kernel/contracts/payloads.py)\nProduces:\n  human_answer/approved_option_ids: array|null (optional; default null)\n  human_answer/approved_criterion_ids: array|null (optional; default null)\n  human_answer/added_options: array|null (optional; default null)\n  human_answer/edited_criteria: array|null (optional; default null)\n  human_answer/free_text: null|string (optional; default null)\n  Runtime contract: [human_answer](kernel/contracts/payloads.py)\n\nDecision-record scenario: options — options; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"options\": [\n    {\n      \"id\": \"opt.yaml_files_plus_generated_index\",\n      \"title\": \"One YAML file per decision plus a generated, never hand-edited filter index\",\n      \"proposal_status\": \"proposed\",\n      \"approval_status\": \"proposed\",\n      \"proposed_by\": \"host.generate_options\"\n    }\n  ],\n  \"proposed_criteria\": [\n    {\n      \"id\": \"crit.findable_by_filters\",\n      \"question\": \"Can a later run select precedent by component, roadmap phase, repository-wide flag and file type or language without opening every record?\",\n      \"priority\": \"required\",\n      \"proposal_status\": \"proposed\",\n      \"approval_status\": \"proposed\"\n    }\n  ],\n  \"named_options\": []\n}\n\nApprove the displayed proposed option and criterion — human_answer; illustrative; complete payload:\n{\n  \"approved_option_ids\": [\n    \"opt.yaml_files_plus_generated_index\"\n  ],\n  \"approved_criterion_ids\": [\n    \"crit.findable_by_filters\"\n  ]\n}",
       "order": 8,
       "screen": "decision-approve-proposals",
       "agent": "human (asked through claude_code)",
       "consumes": [
-        "proposed options and criteria"
+        "options/options: array (optional; default [])",
+        "options/proposed_criteria: array (optional; default [])"
       ],
       "produces": [
-        "approved options and criteria"
+        "human_answer/approved_option_ids: array|null (optional; default null)",
+        "human_answer/approved_criterion_ids: array|null (optional; default null)",
+        "human_answer/added_options: array|null (optional; default null)",
+        "human_answer/edited_criteria: array|null (optional; default null)",
+        "human_answer/free_text: null|string (optional; default null)"
       ],
       "impl_asof": "2026-10-02",
-      "impl_status": "not_started"
+      "impl_status": "not_started",
+      "io_contracts": {
+        "consumes": [
+          {
+            "contract": "options",
+            "fields": [
+              {
+                "path": "/options",
+                "types": [
+                  "array"
+                ],
+                "required": false,
+                "default": []
+              },
+              {
+                "path": "/proposed_criteria",
+                "types": [
+                  "array"
+                ],
+                "required": false,
+                "default": []
+              }
+            ]
+          }
+        ],
+        "produces": [
+          {
+            "contract": "human_answer",
+            "fields": [
+              {
+                "path": "/approved_option_ids",
+                "types": [
+                  "array",
+                  "null"
+                ],
+                "required": false,
+                "default": null
+              },
+              {
+                "path": "/approved_criterion_ids",
+                "types": [
+                  "array",
+                  "null"
+                ],
+                "required": false,
+                "default": null
+              },
+              {
+                "path": "/added_options",
+                "types": [
+                  "array",
+                  "null"
+                ],
+                "required": false,
+                "default": null
+              },
+              {
+                "path": "/edited_criteria",
+                "types": [
+                  "array",
+                  "null"
+                ],
+                "required": false,
+                "default": null
+              },
+              {
+                "path": "/free_text",
+                "types": [
+                  "null",
+                  "string"
+                ],
+                "required": false,
+                "default": null
+              }
+            ]
+          }
+        ],
+        "examples": [
+          {
+            "contract": "options",
+            "mode": "projection",
+            "origin": "illustrative",
+            "label": "Decision-record scenario: options",
+            "value": {
+              "options": [
+                {
+                  "id": "opt.yaml_files_plus_generated_index",
+                  "title": "One YAML file per decision plus a generated, never hand-edited filter index",
+                  "proposal_status": "proposed",
+                  "approval_status": "proposed",
+                  "proposed_by": "host.generate_options"
+                }
+              ],
+              "proposed_criteria": [
+                {
+                  "id": "crit.findable_by_filters",
+                  "question": "Can a later run select precedent by component, roadmap phase, repository-wide flag and file type or language without opening every record?",
+                  "priority": "required",
+                  "proposal_status": "proposed",
+                  "approval_status": "proposed"
+                }
+              ],
+              "named_options": []
+            }
+          },
+          {
+            "contract": "human_answer",
+            "mode": "full",
+            "origin": "illustrative",
+            "label": "Approve the displayed proposed option and criterion",
+            "value": {
+              "approved_option_ids": [
+                "opt.yaml_files_plus_generated_index"
+              ],
+              "approved_criterion_ids": [
+                "crit.findable_by_filters"
+              ]
+            }
+          }
+        ]
+      }
     },
     {
       "id": "research-options",
       "label": "Research the options' claims",
-      "human": "A targeted research round checks the claims the approved options make and reads the files they cite.",
+      "human": "A targeted research round checks the claims the approved options make and reads the files they cite.\n\nSource: kernel/capabilities/decision/requests.py. Actual option_context and criteria_context are accepted; the projection omits those details rather than inventing them.\n\nContract fields and examples (generated)\nConsumes:\n  research_request/question: string (required)\n  research_request/option_context: array (optional; default [])\n  research_request/criteria_context: array (optional; default [])\n  research_request/existing_evidence_ids: array (optional; default [])\n  research_request/jev_reserve: integer (optional; default 0)\n  Runtime contract: [research_request](kernel/contracts/payloads.py)\nProduces:\n  evidence_bundle/evidence: array (optional; default [])\n  evidence_bundle/evidence_ids: array (optional; default [])\n  evidence_bundle/limitations: array (optional; default [])\n  Runtime contract: [evidence_bundle](kernel/contracts/evidence.py)\n\nDecision-record scenario: research_request — research_request; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"question\": \"Decide how Leafcutter should file decision records as JSON or YAML files under docs/ so later kernel runs can find and reuse them as precedent: which fields a record needs, which classification filters it carries (component, file type or language, repository-wide, roadmap phase), the folder layout and file naming, and how human approval and later corrections are recorded.\",\n  \"existing_evidence_ids\": [],\n  \"expected_coverage\": \"all_required\"\n}\n\nDecision-record scenario: evidence_bundle — evidence_bundle; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"evidence_ids\": [\n    \"ev-27c8e6023c8b1d02\"\n  ],\n  \"evidence\": [\n    {\n      \"id\": \"ev-27c8e6023c8b1d02\",\n      \"category\": \"prior_decisions\",\n      \"content_hash\": \"06845bf5bd25c6e571dc24b27e0b41b474274dcc130da8c0868ab25ec12f9536\",\n      \"source\": {\n        \"locator\": \"docs/analysis/2026-10-01-colony-memory-stage0-delta-2-reuse-and-mvp.md#L43-L74 (§(c) Minimal Neo4j MVP > c.1 Node and edge set)\"\n      },\n      \"verification\": \"source_verified\"\n    }\n  ],\n  \"limitations\": []\n}",
       "order": 9,
       "agent": "kernel research capability",
       "consumes": [
-        "approved options and criteria",
-        "enriched context"
+        "research_request/question: string (required)",
+        "research_request/option_context: array (optional; default [])",
+        "research_request/criteria_context: array (optional; default [])",
+        "research_request/existing_evidence_ids: array (optional; default [])",
+        "research_request/jev_reserve: integer (optional; default 0)"
       ],
       "produces": [
-        "option evidence"
+        "evidence_bundle/evidence: array (optional; default [])",
+        "evidence_bundle/evidence_ids: array (optional; default [])",
+        "evidence_bundle/limitations: array (optional; default [])"
       ],
       "impl_asof": "2026-10-02",
-      "impl_status": "not_started"
+      "impl_status": "not_started",
+      "io_contracts": {
+        "consumes": [
+          {
+            "contract": "research_request",
+            "fields": [
+              {
+                "path": "/question",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/option_context",
+                "types": [
+                  "array"
+                ],
+                "required": false,
+                "default": []
+              },
+              {
+                "path": "/criteria_context",
+                "types": [
+                  "array"
+                ],
+                "required": false,
+                "default": []
+              },
+              {
+                "path": "/existing_evidence_ids",
+                "types": [
+                  "array"
+                ],
+                "required": false,
+                "default": []
+              },
+              {
+                "path": "/jev_reserve",
+                "types": [
+                  "integer"
+                ],
+                "required": false,
+                "default": 0
+              }
+            ]
+          }
+        ],
+        "produces": [
+          {
+            "contract": "evidence_bundle",
+            "fields": [
+              {
+                "path": "/evidence",
+                "types": [
+                  "array"
+                ],
+                "required": false,
+                "default": []
+              },
+              {
+                "path": "/evidence_ids",
+                "types": [
+                  "array"
+                ],
+                "required": false,
+                "default": []
+              },
+              {
+                "path": "/limitations",
+                "types": [
+                  "array"
+                ],
+                "required": false,
+                "default": []
+              }
+            ]
+          }
+        ],
+        "examples": [
+          {
+            "contract": "research_request",
+            "mode": "projection",
+            "origin": "illustrative",
+            "label": "Decision-record scenario: research_request",
+            "value": {
+              "question": "Decide how Leafcutter should file decision records as JSON or YAML files under docs/ so later kernel runs can find and reuse them as precedent: which fields a record needs, which classification filters it carries (component, file type or language, repository-wide, roadmap phase), the folder layout and file naming, and how human approval and later corrections are recorded.",
+              "existing_evidence_ids": [],
+              "expected_coverage": "all_required"
+            }
+          },
+          {
+            "contract": "evidence_bundle",
+            "mode": "projection",
+            "origin": "illustrative",
+            "label": "Decision-record scenario: evidence_bundle",
+            "value": {
+              "evidence_ids": [
+                "ev-27c8e6023c8b1d02"
+              ],
+              "evidence": [
+                {
+                  "id": "ev-27c8e6023c8b1d02",
+                  "category": "prior_decisions",
+                  "content_hash": "06845bf5bd25c6e571dc24b27e0b41b474274dcc130da8c0868ab25ec12f9536",
+                  "source": {
+                    "locator": "docs/analysis/2026-10-01-colony-memory-stage0-delta-2-reuse-and-mvp.md#L43-L74 (§(c) Minimal Neo4j MVP > c.1 Node and edge set)"
+                  },
+                  "verification": "source_verified"
+                }
+              ],
+              "limitations": []
+            }
+          }
+        ]
+      }
     },
     {
       "id": "assess",
       "label": "Assess every option",
-      "human": "Jev judges every option against every criterion (does it satisfy it, is the evidence sufficient) and marks each criterion as evidence-answerable or a design judgement.",
+      "human": "Jev judges every option against every criterion (does it satisfy it, is the evidence sufficient) and marks each criterion as evidence-answerable or a design judgement.\n\nJevResult carries literal probability answers. The kernel computes OptionRanking afterward; Jev does not return a final decision.\n\nContract fields and examples (generated)\nConsumes:\n  option/id: string (required)\n  option/title: string (required)\n  option/approval_status: string (optional; default \"not_required\")\n  option/approved_by: null|string (optional; default null)\n  Runtime contract: [option](kernel/contracts/decision.py)\n  criterion/id: string (required)\n  criterion/question: string (required)\n  criterion/kind: string (optional; default \"evidence_answerable\")\n  criterion/kind_source: null|string (optional; default null)\n  Runtime contract: [criterion](kernel/contracts/decision.py)\n  evidence/id: string (required)\n  evidence/source/locator: string (required)\n  evidence/content_hash: string (required)\n  Runtime contract: [evidence](kernel/contracts/evidence.py)\nProduces:\n  jev_result/answers: object (required)\n  jev_result/model_id: null|string (optional; default null)\n  jev_result/usage: object (required)\n  Runtime contract: [jev_result](kernel/providers/base.py)\n\nApproved option enters assessment — option; illustrative; complete payload:\n{\n  \"id\": \"opt.yaml_files_plus_generated_index\",\n  \"title\": \"One YAML file per decision plus a generated, never hand-edited filter index\",\n  \"proposal_status\": \"proposed\",\n  \"approval_status\": \"approved\",\n  \"proposed_by\": \"host.generate_options\",\n  \"approved_by\": \"human:user\"\n}\n\nApproved criterion before kind classification — criterion; illustrative; complete payload:\n{\n  \"id\": \"crit.findable_by_filters\",\n  \"question\": \"Can a later run select precedent by component, roadmap phase, repository-wide flag and file type or language without opening every record?\",\n  \"priority\": \"required\",\n  \"proposal_status\": \"proposed\",\n  \"approval_status\": \"approved\",\n  \"approved_by\": \"human:user\"\n}\n\nDecision-record scenario: jev_result — jev_result; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"answers\": {\n    \"satisfies.crit.findable_by_filters.opt.yaml_files_plus_generated_index\": {\n      \"kind\": \"noul\",\n      \"probability\": 0.88\n    }\n  }\n}",
       "order": 10,
       "agent": "jev",
       "consumes": [
-        "approved options and criteria",
-        "grounding evidence",
-        "option evidence",
-        "enriched context"
+        "option/id: string (required)",
+        "option/title: string (required)",
+        "option/approval_status: string (optional; default \"not_required\")",
+        "option/approved_by: null|string (optional; default null)",
+        "criterion/id: string (required)",
+        "criterion/question: string (required)",
+        "criterion/kind: string (optional; default \"evidence_answerable\")",
+        "criterion/kind_source: null|string (optional; default null)",
+        "evidence/id: string (required)",
+        "evidence/source/locator: string (required)",
+        "evidence/content_hash: string (required)"
       ],
       "produces": [
-        "ranked options"
+        "jev_result/answers: object (required)",
+        "jev_result/model_id: null|string (optional; default null)",
+        "jev_result/usage: object (required)"
       ],
       "impl_asof": "2026-10-02",
-      "impl_status": "not_started"
+      "impl_status": "not_started",
+      "io_contracts": {
+        "consumes": [
+          {
+            "contract": "option",
+            "fields": [
+              {
+                "path": "/id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/title",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/approval_status",
+                "types": [
+                  "string"
+                ],
+                "required": false,
+                "default": "not_required"
+              },
+              {
+                "path": "/approved_by",
+                "types": [
+                  "null",
+                  "string"
+                ],
+                "required": false,
+                "default": null
+              }
+            ]
+          },
+          {
+            "contract": "criterion",
+            "fields": [
+              {
+                "path": "/id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/question",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/kind",
+                "types": [
+                  "string"
+                ],
+                "required": false,
+                "default": "evidence_answerable"
+              },
+              {
+                "path": "/kind_source",
+                "types": [
+                  "null",
+                  "string"
+                ],
+                "required": false,
+                "default": null
+              }
+            ]
+          },
+          {
+            "contract": "evidence",
+            "fields": [
+              {
+                "path": "/id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/source/locator",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/content_hash",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              }
+            ]
+          }
+        ],
+        "produces": [
+          {
+            "contract": "jev_result",
+            "fields": [
+              {
+                "path": "/answers",
+                "types": [
+                  "object"
+                ],
+                "required": true
+              },
+              {
+                "path": "/model_id",
+                "types": [
+                  "null",
+                  "string"
+                ],
+                "required": false,
+                "default": null
+              },
+              {
+                "path": "/usage",
+                "types": [
+                  "object"
+                ],
+                "required": true
+              }
+            ]
+          }
+        ],
+        "examples": [
+          {
+            "contract": "option",
+            "mode": "full",
+            "origin": "illustrative",
+            "label": "Approved option enters assessment",
+            "value": {
+              "id": "opt.yaml_files_plus_generated_index",
+              "title": "One YAML file per decision plus a generated, never hand-edited filter index",
+              "proposal_status": "proposed",
+              "approval_status": "approved",
+              "proposed_by": "host.generate_options",
+              "approved_by": "human:user"
+            }
+          },
+          {
+            "contract": "criterion",
+            "mode": "full",
+            "origin": "illustrative",
+            "label": "Approved criterion before kind classification",
+            "value": {
+              "id": "crit.findable_by_filters",
+              "question": "Can a later run select precedent by component, roadmap phase, repository-wide flag and file type or language without opening every record?",
+              "priority": "required",
+              "proposal_status": "proposed",
+              "approval_status": "approved",
+              "approved_by": "human:user"
+            }
+          },
+          {
+            "contract": "jev_result",
+            "mode": "projection",
+            "origin": "illustrative",
+            "label": "Decision-record scenario: jev_result",
+            "value": {
+              "answers": {
+                "satisfies.crit.findable_by_filters.opt.yaml_files_plus_generated_index": {
+                  "kind": "noul",
+                  "probability": 0.88
+                }
+              }
+            }
+          }
+        ]
+      }
     },
     {
       "id": "choose",
       "label": "Make the ranked choice",
-      "human": "Decision point: you see the options ranked by Jev's per-criterion scores. The ranking is evidence, not a decision; you choose an option, add one, or answer in your own words.",
+      "human": "Decision point: you see the options ranked by Jev's per-criterion scores. The ranking is evidence, not a decision; you choose an option, add one, or answer in your own words.\n\nThis example includes the human-added option after reranking. Its reconstructed rank is 2, while the human selects it; ranking is evidence rather than authorization.\n\nContract fields and examples (generated)\nConsumes:\n  option_ranking/option_id: string (required)\n  option_ranking/rank: integer (required)\n  option_ranking/required_passed: integer (required)\n  option_ranking/required_total: integer (required)\n  option_ranking/required_mean: number (required)\n  option_ranking/scores: object (optional; default {})\n  Runtime contract: [option_ranking](kernel/contracts/decision.py)\n  human_question/question: string (required)\n  human_question/choices: array (optional; default [])\n  human_question/free_text_allowed: boolean (optional; default false)\n  human_question/required_actor_kind: string (optional; default \"human\")\n  human_question/state_revision: integer (required)\n  Runtime contract: [human_question](kernel/contracts/interaction.py)\nProduces:\n  human_answer/choice_id: null|string (optional; default null)\n  human_answer/added_options: array|null (optional; default null)\n  human_answer/free_text: null|string (optional; default null)\n  Runtime contract: [human_answer](kernel/contracts/payloads.py)\n\nDecision-record scenario: option_ranking — option_ranking; reconstructed; complete payload:\n{\n  \"option_id\": \"opt.added.1\",\n  \"rank\": 2,\n  \"required_passed\": 0,\n  \"required_total\": 4,\n  \"required_mean\": 0.57,\n  \"scores\": {\n    \"crit.enforced_ids_and_links\": 0.26,\n    \"crit.findable_by_filters\": 0.74,\n    \"crit.knowledge_map_readable\": 0.58,\n    \"crit.provenance_complete\": 0.76,\n    \"crit.reuses_conventions\": 0.37,\n    \"crit.reviewable_diffs\": 0.72\n  }\n}\n\nDecision-record scenario: human_question — human_question; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"question\": \"Choose an option for the decision record format.\",\n  \"choices\": [\n    {\n      \"id\": \"opt.added.1\",\n      \"label\": \"Kernel-contract YAML per decision\"\n    }\n  ],\n  \"free_text_allowed\": true,\n  \"structured_allowed\": true,\n  \"required_actor_kind\": \"human\",\n  \"state_revision\": 1\n}\n\nDecision-record scenario: human_answer — human_answer; illustrative; complete payload:\n{\n  \"choice_id\": \"opt.added.1\"\n}",
       "order": 11,
       "screen": "decision-ranked-choice",
       "agent": "human (asked through claude_code)",
       "consumes": [
-        "ranked options"
+        "option_ranking/option_id: string (required)",
+        "option_ranking/rank: integer (required)",
+        "option_ranking/required_passed: integer (required)",
+        "option_ranking/required_total: integer (required)",
+        "option_ranking/required_mean: number (required)",
+        "option_ranking/scores: object (optional; default {})",
+        "human_question/question: string (required)",
+        "human_question/choices: array (optional; default [])",
+        "human_question/free_text_allowed: boolean (optional; default false)",
+        "human_question/required_actor_kind: string (optional; default \"human\")",
+        "human_question/state_revision: integer (required)"
       ],
       "produces": [
-        "human choice"
+        "human_answer/choice_id: null|string (optional; default null)",
+        "human_answer/added_options: array|null (optional; default null)",
+        "human_answer/free_text: null|string (optional; default null)"
       ],
       "impl_asof": "2026-10-02",
-      "impl_status": "not_started"
+      "impl_status": "not_started",
+      "io_contracts": {
+        "consumes": [
+          {
+            "contract": "option_ranking",
+            "fields": [
+              {
+                "path": "/option_id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/rank",
+                "types": [
+                  "integer"
+                ],
+                "required": true
+              },
+              {
+                "path": "/required_passed",
+                "types": [
+                  "integer"
+                ],
+                "required": true
+              },
+              {
+                "path": "/required_total",
+                "types": [
+                  "integer"
+                ],
+                "required": true
+              },
+              {
+                "path": "/required_mean",
+                "types": [
+                  "number"
+                ],
+                "required": true
+              },
+              {
+                "path": "/scores",
+                "types": [
+                  "object"
+                ],
+                "required": false,
+                "default": {}
+              }
+            ]
+          },
+          {
+            "contract": "human_question",
+            "fields": [
+              {
+                "path": "/question",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/choices",
+                "types": [
+                  "array"
+                ],
+                "required": false,
+                "default": []
+              },
+              {
+                "path": "/free_text_allowed",
+                "types": [
+                  "boolean"
+                ],
+                "required": false,
+                "default": false
+              },
+              {
+                "path": "/required_actor_kind",
+                "types": [
+                  "string"
+                ],
+                "required": false,
+                "default": "human"
+              },
+              {
+                "path": "/state_revision",
+                "types": [
+                  "integer"
+                ],
+                "required": true
+              }
+            ]
+          }
+        ],
+        "produces": [
+          {
+            "contract": "human_answer",
+            "fields": [
+              {
+                "path": "/choice_id",
+                "types": [
+                  "null",
+                  "string"
+                ],
+                "required": false,
+                "default": null
+              },
+              {
+                "path": "/added_options",
+                "types": [
+                  "array",
+                  "null"
+                ],
+                "required": false,
+                "default": null
+              },
+              {
+                "path": "/free_text",
+                "types": [
+                  "null",
+                  "string"
+                ],
+                "required": false,
+                "default": null
+              }
+            ]
+          }
+        ],
+        "examples": [
+          {
+            "contract": "option_ranking",
+            "mode": "full",
+            "origin": "reconstructed",
+            "label": "Decision-record scenario: option_ranking",
+            "value": {
+              "option_id": "opt.added.1",
+              "rank": 2,
+              "required_passed": 0,
+              "required_total": 4,
+              "required_mean": 0.57,
+              "scores": {
+                "crit.enforced_ids_and_links": 0.26,
+                "crit.findable_by_filters": 0.74,
+                "crit.knowledge_map_readable": 0.58,
+                "crit.provenance_complete": 0.76,
+                "crit.reuses_conventions": 0.37,
+                "crit.reviewable_diffs": 0.72
+              }
+            }
+          },
+          {
+            "contract": "human_question",
+            "mode": "projection",
+            "origin": "illustrative",
+            "label": "Decision-record scenario: human_question",
+            "value": {
+              "question": "Choose an option for the decision record format.",
+              "choices": [
+                {
+                  "id": "opt.added.1",
+                  "label": "Kernel-contract YAML per decision"
+                }
+              ],
+              "free_text_allowed": true,
+              "structured_allowed": true,
+              "required_actor_kind": "human",
+              "state_revision": 1
+            }
+          },
+          {
+            "contract": "human_answer",
+            "mode": "full",
+            "origin": "illustrative",
+            "label": "Decision-record scenario: human_answer",
+            "value": {
+              "choice_id": "opt.added.1"
+            }
+          }
+        ]
+      }
     },
     {
       "id": "resolve",
       "label": "Resolve the decision",
-      "human": "The decision resolves with approved_by: human:<id> and approved_at, and report.md is written to the run folder.",
+      "human": "The decision resolves with approved_by: human:<id> and approved_at, and report.md is written to the run folder.\n\nThe accepted human answer becomes the internal Decision and public DecisionReportPayload. report.md is a rendering rather than a further JSON payload.\n\nContract fields and examples (generated)\nConsumes:\n  human_answer/choice_id: null|string (optional; default null)\n  Runtime contract: [human_answer](kernel/contracts/payloads.py)\nProduces:\n  decision/status: string (required)\n  decision/selected_option_id: null|string (optional; default null)\n  decision/option_ids: array (optional; default [])\n  decision/approval_status: string (optional; default \"not_required\")\n  decision/approved_by: null|string (optional; default null)\n  decision/approved_at: null|string (optional; default null)\n  Runtime contract: [decision](kernel/contracts/decision.py)\n  decision_report/status: string (required)\n  decision_report/selected_option_id: null|string (optional; default null)\n  decision_report/approval_status: string (optional; default \"not_required\")\n  decision_report/limitations: array (optional; default [])\n  Runtime contract: [decision_report](kernel/contracts/payloads.py)\n\nDecision-record scenario: human_answer — human_answer; illustrative; complete payload:\n{\n  \"choice_id\": \"opt.added.1\"\n}\n\nDecision-record scenario: decision — decision; reconstructed; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"question\": \"Decide how Leafcutter should file decision records as JSON or YAML files under docs/ so later kernel runs can find and reuse them as precedent: which fields a record needs, which classification filters it carries (component, file type or language, repository-wide, roadmap phase), the folder layout and file naming, and how human approval and later corrections are recorded.\",\n  \"option_ids\": [\n    \"opt.yaml_per_decision_component_folders\",\n    \"opt.reuse_ac_store_conventions\",\n    \"opt.yaml_files_plus_generated_index\",\n    \"opt.added.1\"\n  ],\n  \"selected_option_id\": \"opt.added.1\",\n  \"status\": \"resolved\",\n  \"approval_status\": \"approved\",\n  \"approved_by\": \"human:user\",\n  \"approved_at\": \"2026-10-01T14:48:31Z\"\n}\n\nDecision-record scenario: decision_report — decision_report; illustrative; complete payload:\n{\n  \"status\": \"resolved\",\n  \"approval_status\": \"approved\",\n  \"selected_option_id\": \"opt.added.1\"\n}",
       "order": 12,
       "agent": "kernel decision executor",
       "consumes": [
-        "human choice"
+        "human_answer/choice_id: null|string (optional; default null)"
       ],
       "produces": [
-        "resolved decision (approved_by: human)",
-        "report.md"
+        "decision/status: string (required)",
+        "decision/selected_option_id: null|string (optional; default null)",
+        "decision/option_ids: array (optional; default [])",
+        "decision/approval_status: string (optional; default \"not_required\")",
+        "decision/approved_by: null|string (optional; default null)",
+        "decision/approved_at: null|string (optional; default null)",
+        "decision_report/status: string (required)",
+        "decision_report/selected_option_id: null|string (optional; default null)",
+        "decision_report/approval_status: string (optional; default \"not_required\")",
+        "decision_report/limitations: array (optional; default [])"
       ],
       "writes": [
         "Decision"
       ],
       "impl_asof": "2026-10-02",
-      "impl_status": "not_started"
+      "impl_status": "not_started",
+      "io_contracts": {
+        "consumes": [
+          {
+            "contract": "human_answer",
+            "fields": [
+              {
+                "path": "/choice_id",
+                "types": [
+                  "null",
+                  "string"
+                ],
+                "required": false,
+                "default": null
+              }
+            ]
+          }
+        ],
+        "produces": [
+          {
+            "contract": "decision",
+            "fields": [
+              {
+                "path": "/status",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/selected_option_id",
+                "types": [
+                  "null",
+                  "string"
+                ],
+                "required": false,
+                "default": null
+              },
+              {
+                "path": "/option_ids",
+                "types": [
+                  "array"
+                ],
+                "required": false,
+                "default": []
+              },
+              {
+                "path": "/approval_status",
+                "types": [
+                  "string"
+                ],
+                "required": false,
+                "default": "not_required"
+              },
+              {
+                "path": "/approved_by",
+                "types": [
+                  "null",
+                  "string"
+                ],
+                "required": false,
+                "default": null
+              },
+              {
+                "path": "/approved_at",
+                "types": [
+                  "null",
+                  "string"
+                ],
+                "required": false,
+                "default": null
+              }
+            ]
+          },
+          {
+            "contract": "decision_report",
+            "fields": [
+              {
+                "path": "/status",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/selected_option_id",
+                "types": [
+                  "null",
+                  "string"
+                ],
+                "required": false,
+                "default": null
+              },
+              {
+                "path": "/approval_status",
+                "types": [
+                  "string"
+                ],
+                "required": false,
+                "default": "not_required"
+              },
+              {
+                "path": "/limitations",
+                "types": [
+                  "array"
+                ],
+                "required": false,
+                "default": []
+              }
+            ]
+          }
+        ],
+        "examples": [
+          {
+            "contract": "human_answer",
+            "mode": "full",
+            "origin": "illustrative",
+            "label": "Decision-record scenario: human_answer",
+            "value": {
+              "choice_id": "opt.added.1"
+            }
+          },
+          {
+            "contract": "decision",
+            "mode": "projection",
+            "origin": "reconstructed",
+            "label": "Decision-record scenario: decision",
+            "value": {
+              "question": "Decide how Leafcutter should file decision records as JSON or YAML files under docs/ so later kernel runs can find and reuse them as precedent: which fields a record needs, which classification filters it carries (component, file type or language, repository-wide, roadmap phase), the folder layout and file naming, and how human approval and later corrections are recorded.",
+              "option_ids": [
+                "opt.yaml_per_decision_component_folders",
+                "opt.reuse_ac_store_conventions",
+                "opt.yaml_files_plus_generated_index",
+                "opt.added.1"
+              ],
+              "selected_option_id": "opt.added.1",
+              "status": "resolved",
+              "approval_status": "approved",
+              "approved_by": "human:user",
+              "approved_at": "2026-10-01T14:48:31Z"
+            }
+          },
+          {
+            "contract": "decision_report",
+            "mode": "full",
+            "origin": "illustrative",
+            "label": "Decision-record scenario: decision_report",
+            "value": {
+              "status": "resolved",
+              "approval_status": "approved",
+              "selected_option_id": "opt.added.1"
+            }
+          }
+        ]
+      }
     }
   ],
   "branches": [
@@ -258,14 +1863,17 @@
       "from": "enrich-context",
       "condition": "sources are absent, unreadable or denied, gathering is disabled, or a configured limit is reached",
       "label": "Continue with honest limits",
-      "human": "The kernel records what was gathered and what remains unknown; intent receives that outcome and decides whether it can proceed or needs a user answer.",
+      "human": "The kernel records what was gathered and what remains unknown; intent receives that outcome and decides whether it can proceed or needs a user answer.\n\nThe same EnrichedContext proceeds to intent, with its limits unchanged; no complete-evidence outcome is claimed.\n\nContract fields and examples (generated)\nConsumes:\n  enriched_context/status: string (required)\n  enriched_context/limitations: array (optional; default [])\n  enriched_context/evidence: array (optional; default [])\n  Runtime contract: [enriched_context](kernel/contracts/context.py)\nProduces:\n  enriched_context/status: string (required)\n  enriched_context/limitations: array (optional; default [])\n  enriched_context/evidence: array (optional; default [])\n  Runtime contract: [enriched_context](kernel/contracts/context.py)\n\nDecision-record scenario: enriched_context — enriched_context; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"original_goal\": \"Decide how Leafcutter should file decision records as JSON or YAML files under docs/ so later kernel runs can find and reuse them as precedent: which fields a record needs, which classification filters it carries (component, file type or language, repository-wide, roadmap phase), the folder layout and file naming, and how human approval and later corrections are recorded.\",\n  \"status\": \"no_evidence\",\n  \"evidence\": [],\n  \"limitations\": [\n    \"Illustrative current context pass; not a receipt from the older run.\"\n  ]\n}",
       "agent": "kernel.context_enrichment",
       "consumes": [
-        "goal",
-        "caller context"
+        "enriched_context/status: string (required)",
+        "enriched_context/limitations: array (optional; default [])",
+        "enriched_context/evidence: array (optional; default [])"
       ],
       "produces": [
-        "enriched context"
+        "enriched_context/status: string (required)",
+        "enriched_context/limitations: array (optional; default [])",
+        "enriched_context/evidence: array (optional; default [])"
       ],
       "outcome_kind": "alternative",
       "implements": [
@@ -276,72 +1884,573 @@
         "DK-200c-1-ii"
       ],
       "impl_asof": "2026-10-02",
-      "impl_status": "done"
+      "impl_status": "done",
+      "io_contracts": {
+        "consumes": [
+          {
+            "contract": "enriched_context",
+            "fields": [
+              {
+                "path": "/status",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/limitations",
+                "types": [
+                  "array"
+                ],
+                "required": false,
+                "default": []
+              },
+              {
+                "path": "/evidence",
+                "types": [
+                  "array"
+                ],
+                "required": false,
+                "default": []
+              }
+            ]
+          }
+        ],
+        "produces": [
+          {
+            "contract": "enriched_context",
+            "fields": [
+              {
+                "path": "/status",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/limitations",
+                "types": [
+                  "array"
+                ],
+                "required": false,
+                "default": []
+              },
+              {
+                "path": "/evidence",
+                "types": [
+                  "array"
+                ],
+                "required": false,
+                "default": []
+              }
+            ]
+          }
+        ],
+        "examples": [
+          {
+            "contract": "enriched_context",
+            "mode": "projection",
+            "origin": "illustrative",
+            "label": "Decision-record scenario: enriched_context",
+            "value": {
+              "original_goal": "Decide how Leafcutter should file decision records as JSON or YAML files under docs/ so later kernel runs can find and reuse them as precedent: which fields a record needs, which classification filters it carries (component, file type or language, repository-wide, roadmap phase), the folder layout and file naming, and how human approval and later corrections are recorded.",
+              "status": "no_evidence",
+              "evidence": [],
+              "limitations": [
+                "Illustrative current context pass; not a receipt from the older run."
+              ]
+            }
+          }
+        ]
+      }
     },
     {
       "id": "revise-proposals",
       "from": "approve-proposals",
       "condition": "you approve only some proposals, edit the criteria, or add options",
       "label": "Revise before approving",
-      "human": "Only what you approved, edited or added goes on to research and assessment; a free-text answer is kept as your input and noted as a limitation, never turned into criteria.",
+      "human": "Only what you approved, edited or added goes on to research and assessment; a free-text answer is kept as your input and noted as a limitation, never turned into criteria.\n\nThis structured answer approves only the option and declines other pending criteria. Free text is a separate answer mode and never silently becomes criteria.\n\nContract fields and examples (generated)\nConsumes:\n  options/options: array (optional; default [])\n  options/proposed_criteria: array (optional; default [])\n  Runtime contract: [options](kernel/contracts/payloads.py)\nProduces:\n  human_answer/approved_option_ids: array|null (optional; default null)\n  human_answer/approved_criterion_ids: array|null (optional; default null)\n  human_answer/added_options: array|null (optional; default null)\n  human_answer/edited_criteria: array|null (optional; default null)\n  human_answer/free_text: null|string (optional; default null)\n  Runtime contract: [human_answer](kernel/contracts/payloads.py)\n\nDecision-record scenario: options — options; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"options\": [\n    {\n      \"id\": \"opt.yaml_files_plus_generated_index\",\n      \"title\": \"One YAML file per decision plus a generated, never hand-edited filter index\",\n      \"proposal_status\": \"proposed\",\n      \"approval_status\": \"proposed\",\n      \"proposed_by\": \"host.generate_options\"\n    }\n  ],\n  \"proposed_criteria\": [\n    {\n      \"id\": \"crit.findable_by_filters\",\n      \"question\": \"Can a later run select precedent by component, roadmap phase, repository-wide flag and file type or language without opening every record?\",\n      \"priority\": \"required\",\n      \"proposal_status\": \"proposed\",\n      \"approval_status\": \"proposed\"\n    }\n  ],\n  \"named_options\": []\n}\n\nPartial approval declines the pending criterion — human_answer; illustrative; complete payload:\n{\n  \"approved_option_ids\": [\n    \"opt.yaml_files_plus_generated_index\"\n  ],\n  \"approved_criterion_ids\": []\n}",
       "agent": "human (asked through claude_code)",
       "consumes": [
-        "proposed options and criteria"
+        "options/options: array (optional; default [])",
+        "options/proposed_criteria: array (optional; default [])"
       ],
       "produces": [
-        "approved options and criteria"
+        "human_answer/approved_option_ids: array|null (optional; default null)",
+        "human_answer/approved_criterion_ids: array|null (optional; default null)",
+        "human_answer/added_options: array|null (optional; default null)",
+        "human_answer/edited_criteria: array|null (optional; default null)",
+        "human_answer/free_text: null|string (optional; default null)"
       ],
       "outcome_kind": "alternative",
       "impl_asof": "2026-10-02",
-      "impl_status": "not_started"
+      "impl_status": "not_started",
+      "io_contracts": {
+        "consumes": [
+          {
+            "contract": "options",
+            "fields": [
+              {
+                "path": "/options",
+                "types": [
+                  "array"
+                ],
+                "required": false,
+                "default": []
+              },
+              {
+                "path": "/proposed_criteria",
+                "types": [
+                  "array"
+                ],
+                "required": false,
+                "default": []
+              }
+            ]
+          }
+        ],
+        "produces": [
+          {
+            "contract": "human_answer",
+            "fields": [
+              {
+                "path": "/approved_option_ids",
+                "types": [
+                  "array",
+                  "null"
+                ],
+                "required": false,
+                "default": null
+              },
+              {
+                "path": "/approved_criterion_ids",
+                "types": [
+                  "array",
+                  "null"
+                ],
+                "required": false,
+                "default": null
+              },
+              {
+                "path": "/added_options",
+                "types": [
+                  "array",
+                  "null"
+                ],
+                "required": false,
+                "default": null
+              },
+              {
+                "path": "/edited_criteria",
+                "types": [
+                  "array",
+                  "null"
+                ],
+                "required": false,
+                "default": null
+              },
+              {
+                "path": "/free_text",
+                "types": [
+                  "null",
+                  "string"
+                ],
+                "required": false,
+                "default": null
+              }
+            ]
+          }
+        ],
+        "examples": [
+          {
+            "contract": "options",
+            "mode": "projection",
+            "origin": "illustrative",
+            "label": "Decision-record scenario: options",
+            "value": {
+              "options": [
+                {
+                  "id": "opt.yaml_files_plus_generated_index",
+                  "title": "One YAML file per decision plus a generated, never hand-edited filter index",
+                  "proposal_status": "proposed",
+                  "approval_status": "proposed",
+                  "proposed_by": "host.generate_options"
+                }
+              ],
+              "proposed_criteria": [
+                {
+                  "id": "crit.findable_by_filters",
+                  "question": "Can a later run select precedent by component, roadmap phase, repository-wide flag and file type or language without opening every record?",
+                  "priority": "required",
+                  "proposal_status": "proposed",
+                  "approval_status": "proposed"
+                }
+              ],
+              "named_options": []
+            }
+          },
+          {
+            "contract": "human_answer",
+            "mode": "full",
+            "origin": "illustrative",
+            "label": "Partial approval declines the pending criterion",
+            "value": {
+              "approved_option_ids": [
+                "opt.yaml_files_plus_generated_index"
+              ],
+              "approved_criterion_ids": []
+            }
+          }
+        ]
+      }
     },
     {
       "id": "budget-reserve",
       "from": "assess",
       "condition": "another research round and a final assessment no longer fit in the Jev call budget",
       "label": "Ask early, on limited evidence",
-      "human": "You get the ranked question early, from the last complete assessment, marked plainly as a ranking made on limited evidence.",
+      "human": "You get the ranked question early, from the last complete assessment, marked plainly as a ranking made on limited evidence.\n\nWording is illustrative, not an exact transcript. Source: kernel/capabilities/decision/budget_gate.py. The last complete ranking is retained; no result is invented for an unfinished batch.\n\nContract fields and examples (generated)\nConsumes:\n  option_ranking/option_id: string (required)\n  option_ranking/rank: integer (required)\n  option_ranking/required_mean: number (required)\n  option_ranking/scores: object (optional; default {})\n  Runtime contract: [option_ranking](kernel/contracts/decision.py)\nProduces:\n  human_question/question: string (required)\n  human_question/choices: array (optional; default [])\n  human_question/why_research_cannot_settle: string (optional; default \"\")\n  Runtime contract: [human_question](kernel/contracts/interaction.py)\n\nDecision-record scenario: option_ranking — option_ranking; reconstructed; complete payload:\n{\n  \"option_id\": \"opt.added.1\",\n  \"rank\": 2,\n  \"required_passed\": 0,\n  \"required_total\": 4,\n  \"required_mean\": 0.57,\n  \"scores\": {\n    \"crit.enforced_ids_and_links\": 0.26,\n    \"crit.findable_by_filters\": 0.74,\n    \"crit.knowledge_map_readable\": 0.58,\n    \"crit.provenance_complete\": 0.76,\n    \"crit.reuses_conventions\": 0.37,\n    \"crit.reviewable_diffs\": 0.72\n  }\n}\n\nIllustrative limited-evidence handover wording — human_question; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"question\": \"Choose an option using the last complete ranking; evidence is limited by the reserved budget.\",\n  \"choices\": [\n    {\n      \"id\": \"opt.added.1\",\n      \"label\": \"Kernel-contract YAML per decision\"\n    }\n  ],\n  \"why_research_cannot_settle\": \"The remaining budget is reserved for the decision handover.\"\n}",
       "agent": "kernel budget gate",
       "consumes": [
-        "ranked options"
+        "option_ranking/option_id: string (required)",
+        "option_ranking/rank: integer (required)",
+        "option_ranking/required_mean: number (required)",
+        "option_ranking/scores: object (optional; default {})"
       ],
       "produces": [
-        "ranked options (limited evidence)"
+        "human_question/question: string (required)",
+        "human_question/choices: array (optional; default [])",
+        "human_question/why_research_cannot_settle: string (optional; default \"\")"
       ],
       "outcome_kind": "alternative",
       "impl_asof": "2026-10-02",
-      "impl_status": "not_started"
+      "impl_status": "not_started",
+      "io_contracts": {
+        "consumes": [
+          {
+            "contract": "option_ranking",
+            "fields": [
+              {
+                "path": "/option_id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/rank",
+                "types": [
+                  "integer"
+                ],
+                "required": true
+              },
+              {
+                "path": "/required_mean",
+                "types": [
+                  "number"
+                ],
+                "required": true
+              },
+              {
+                "path": "/scores",
+                "types": [
+                  "object"
+                ],
+                "required": false,
+                "default": {}
+              }
+            ]
+          }
+        ],
+        "produces": [
+          {
+            "contract": "human_question",
+            "fields": [
+              {
+                "path": "/question",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/choices",
+                "types": [
+                  "array"
+                ],
+                "required": false,
+                "default": []
+              },
+              {
+                "path": "/why_research_cannot_settle",
+                "types": [
+                  "string"
+                ],
+                "required": false,
+                "default": ""
+              }
+            ]
+          }
+        ],
+        "examples": [
+          {
+            "contract": "option_ranking",
+            "mode": "full",
+            "origin": "reconstructed",
+            "label": "Decision-record scenario: option_ranking",
+            "value": {
+              "option_id": "opt.added.1",
+              "rank": 2,
+              "required_passed": 0,
+              "required_total": 4,
+              "required_mean": 0.57,
+              "scores": {
+                "crit.enforced_ids_and_links": 0.26,
+                "crit.findable_by_filters": 0.74,
+                "crit.knowledge_map_readable": 0.58,
+                "crit.provenance_complete": 0.76,
+                "crit.reuses_conventions": 0.37,
+                "crit.reviewable_diffs": 0.72
+              }
+            }
+          },
+          {
+            "contract": "human_question",
+            "mode": "projection",
+            "origin": "illustrative",
+            "label": "Illustrative limited-evidence handover wording",
+            "value": {
+              "question": "Choose an option using the last complete ranking; evidence is limited by the reserved budget.",
+              "choices": [
+                {
+                  "id": "opt.added.1",
+                  "label": "Kernel-contract YAML per decision"
+                }
+              ],
+              "why_research_cannot_settle": "The remaining budget is reserved for the decision handover."
+            }
+          }
+        ]
+      }
     },
     {
       "id": "rerank",
       "from": "choose",
       "condition": "you add an option or answer in your own words instead of choosing",
       "label": "Assess and rank again",
-      "human": "What you added changes what is being ranked, so the options are assessed and ranked again before you are asked once more.",
+      "human": "What you added changes what is being ranked, so the options are assessed and ranked again before you are asked once more.\n\nAddedOption contains title/description, not an id. Kernel normalization assigns opt.added.1 for the first addition and marks it human-approved. A fresh assessment must occur before the next ranked-choice question.\n\nContract fields and examples (generated)\nConsumes:\n  human_answer/added_options: array|null (optional; default null)\n  human_answer/free_text: null|string (optional; default null)\n  Runtime contract: [human_answer](kernel/contracts/payloads.py)\nProduces:\n  option/id: string (required)\n  option/title: string (required)\n  option/approval_status: string (optional; default \"not_required\")\n  option/approved_by: null|string (optional; default null)\n  Runtime contract: [option](kernel/contracts/decision.py)\n\nHuman adds the existing record scenario option; kernel assigns its id — human_answer; illustrative; complete payload:\n{\n  \"added_options\": [\n    {\n      \"title\": \"Kernel-contract YAML per decision\"\n    }\n  ]\n}\n\nFirst added option receives opt.added.1 and becomes eligible for assessment — option; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"id\": \"opt.added.1\",\n  \"title\": \"Kernel-contract YAML per decision\",\n  \"proposal_status\": \"supplied\",\n  \"approval_status\": \"approved\",\n  \"approved_by\": \"human:user\"\n}",
       "agent": "kernel decision executor",
       "consumes": [
-        "ranked options"
+        "human_answer/added_options: array|null (optional; default null)",
+        "human_answer/free_text: null|string (optional; default null)"
       ],
       "produces": [
-        "approved options and criteria"
+        "option/id: string (required)",
+        "option/title: string (required)",
+        "option/approval_status: string (optional; default \"not_required\")",
+        "option/approved_by: null|string (optional; default null)"
       ],
       "outcome_kind": "alternative",
       "impl_asof": "2026-10-02",
-      "impl_status": "not_started"
+      "impl_status": "not_started",
+      "io_contracts": {
+        "consumes": [
+          {
+            "contract": "human_answer",
+            "fields": [
+              {
+                "path": "/added_options",
+                "types": [
+                  "array",
+                  "null"
+                ],
+                "required": false,
+                "default": null
+              },
+              {
+                "path": "/free_text",
+                "types": [
+                  "null",
+                  "string"
+                ],
+                "required": false,
+                "default": null
+              }
+            ]
+          }
+        ],
+        "produces": [
+          {
+            "contract": "option",
+            "fields": [
+              {
+                "path": "/id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/title",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/approval_status",
+                "types": [
+                  "string"
+                ],
+                "required": false,
+                "default": "not_required"
+              },
+              {
+                "path": "/approved_by",
+                "types": [
+                  "null",
+                  "string"
+                ],
+                "required": false,
+                "default": null
+              }
+            ]
+          }
+        ],
+        "examples": [
+          {
+            "contract": "human_answer",
+            "mode": "full",
+            "origin": "illustrative",
+            "label": "Human adds the existing record scenario option; kernel assigns its id",
+            "value": {
+              "added_options": [
+                {
+                  "title": "Kernel-contract YAML per decision"
+                }
+              ]
+            }
+          },
+          {
+            "contract": "option",
+            "mode": "projection",
+            "origin": "illustrative",
+            "label": "First added option receives opt.added.1 and becomes eligible for assessment",
+            "value": {
+              "id": "opt.added.1",
+              "title": "Kernel-contract YAML per decision",
+              "proposal_status": "supplied",
+              "approval_status": "approved",
+              "approved_by": "human:user"
+            }
+          }
+        ]
+      }
     },
     {
       "id": "no-answer",
       "from": "choose",
       "condition": "you never answer or you cancel the run",
       "label": "No answer, no record",
-      "human": "The decision never resolves, so no record is staged and nothing reaches docs/decisions/.",
+      "human": "The decision never resolves, so no record is staged and nothing reaches docs/decisions/.\n\nThe durable run remains waiting_human with its saved interaction; the projection omits that full wrapper. No completed decision or staged record is produced.\n\nContract fields and examples (generated)\nConsumes:\n  human_question/question: string (required)\n  human_question/choices: array (optional; default [])\n  human_question/required_actor_kind: string (optional; default \"human\")\n  Runtime contract: [human_question](kernel/contracts/interaction.py)\nProduces:\n  run_envelope/status: string (required)\n  run_envelope/pending_interaction: null|object (optional; default null)\n  Runtime contract: [run_envelope](kernel/contracts/run.py)\n\nDecision-record scenario: human_question — human_question; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"question\": \"Choose an option for the decision record format.\",\n  \"choices\": [\n    {\n      \"id\": \"opt.added.1\",\n      \"label\": \"Kernel-contract YAML per decision\"\n    }\n  ],\n  \"free_text_allowed\": true,\n  \"structured_allowed\": true,\n  \"required_actor_kind\": \"human\",\n  \"state_revision\": 1\n}\n\nDecision-record scenario: run_envelope — run_envelope; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"status\": \"waiting_human\"\n}",
       "agent": "kernel",
       "consumes": [
-        "ranked options"
+        "human_question/question: string (required)",
+        "human_question/choices: array (optional; default [])",
+        "human_question/required_actor_kind: string (optional; default \"human\")"
       ],
       "outcome_kind": "exit",
       "impl_asof": "2026-10-02",
-      "impl_status": "not_started"
+      "impl_status": "not_started",
+      "io_contracts": {
+        "consumes": [
+          {
+            "contract": "human_question",
+            "fields": [
+              {
+                "path": "/question",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/choices",
+                "types": [
+                  "array"
+                ],
+                "required": false,
+                "default": []
+              },
+              {
+                "path": "/required_actor_kind",
+                "types": [
+                  "string"
+                ],
+                "required": false,
+                "default": "human"
+              }
+            ]
+          }
+        ],
+        "produces": [
+          {
+            "contract": "run_envelope",
+            "fields": [
+              {
+                "path": "/status",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/pending_interaction",
+                "types": [
+                  "null",
+                  "object"
+                ],
+                "required": false,
+                "default": null
+              }
+            ]
+          }
+        ],
+        "examples": [
+          {
+            "contract": "human_question",
+            "mode": "projection",
+            "origin": "illustrative",
+            "label": "Decision-record scenario: human_question",
+            "value": {
+              "question": "Choose an option for the decision record format.",
+              "choices": [
+                {
+                  "id": "opt.added.1",
+                  "label": "Kernel-contract YAML per decision"
+                }
+              ],
+              "free_text_allowed": true,
+              "structured_allowed": true,
+              "required_actor_kind": "human",
+              "state_revision": 1
+            }
+          },
+          {
+            "contract": "run_envelope",
+            "mode": "projection",
+            "origin": "illustrative",
+            "label": "Decision-record scenario: run_envelope",
+            "value": {
+              "status": "waiting_human"
+            }
+          }
+        ]
+      },
+      "produces": [
+        "run_envelope/status: string (required)",
+        "run_envelope/pending_interaction: null|object (optional; default null)"
+      ]
     }
   ],
   "acceptance_scenarios": [
@@ -502,6 +2611,12 @@
       "by": "business-analyst and it-po (Claude agent prompts, user-requested review)",
       "date": "2026-10-02",
       "note": "Replaced preliminary DK-100 through DK-104 links with the DK-200 hierarchy: 12 behavioral and 12 edge-case criteria, with 47 exact test links covering 32 test methods. All 32 focused tests and 36 subtests pass. The superseded records retain their original criteria and evidence. Readiness remains draft."
+    },
+    {
+      "action": "extended",
+      "by": "product-truth-expert",
+      "date": "2026-10-03",
+      "note": "Migrated every node to source-backed checked handoffs and labeled examples; preserved runtime, approvals and AC status."
     }
   ],
   "impl_summary": {
@@ -510,5 +2625,70 @@
     "not_started": 15,
     "total": 17,
     "asof": "2026-10-02"
+  },
+  "contract_definitions": {
+    "choice_answer": {
+      "model": "choice_answer"
+    },
+    "criterion": {
+      "model": "criterion"
+    },
+    "decision": {
+      "model": "decision"
+    },
+    "decision_query": {
+      "model": "decision_query"
+    },
+    "decision_record": {
+      "model": "decision_record"
+    },
+    "decision_report": {
+      "model": "decision_report"
+    },
+    "enriched_context": {
+      "model": "enriched_context"
+    },
+    "evidence": {
+      "model": "evidence"
+    },
+    "evidence_bundle": {
+      "model": "evidence_bundle"
+    },
+    "findings": {
+      "model": "findings"
+    },
+    "human_answer": {
+      "model": "human_answer"
+    },
+    "human_question": {
+      "model": "human_question"
+    },
+    "jev_result": {
+      "model": "jev_result"
+    },
+    "option": {
+      "model": "option"
+    },
+    "option_ranking": {
+      "model": "option_ranking"
+    },
+    "options": {
+      "model": "options"
+    },
+    "options_request": {
+      "model": "options_request"
+    },
+    "research_request": {
+      "model": "research_request"
+    },
+    "run_envelope": {
+      "model": "run_envelope"
+    },
+    "synthesis_request": {
+      "model": "synthesis_request"
+    },
+    "task_input": {
+      "model": "task_input"
+    }
   }
 }

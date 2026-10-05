@@ -1,0 +1,43 @@
+{
+  "status": "completed_waiting_host",
+  "scope": "Same two questions with default source policy; existing aggregate budget24,8alreadyused,atmost8pernewcase; stop at wait/failure; no retry or human/host response.",
+  "prior_graph_lane_calls": 8,
+  "maximum_new_calls": 16,
+  "maximum_calls_per_case": 8,
+  "provider": "TypeSafe",
+  "model": "jev-latest",
+  "host": "api.typesafe.ai",
+  "provider_token_cap": null,
+  "no_graph_backend": true,
+  "no_remote_telemetry": true,
+  "permitted_transmission_categories": [
+    "Original questions",
+    "Configured source/research/answer contracts",
+    "Bounded relevant immutable repository excerpts and metadata"
+  ],
+  "actual_transmission_categories": [
+    "Original questions and research need/source descriptions",
+    "Bounded relevant native repository candidate excerpts and context from immutable887c66d3",
+    "Finite reranking/research assessment questions and scoped provenance metadata"
+  ],
+  "consent": "User fresh retest authorization; coordinator explicitly authorized default-source lane within same24-call aggregate.",
+  "actual_calls_by_case": {
+    "RS-02": 5,
+    "RS-03": 5
+  },
+  "actual_calls_this_lane": 10,
+  "actual_calls_aggregate": 18,
+  "resolved_models": [
+    "jev-1.13.0"
+  ],
+  "actual_transmission_basis": "Saved generation names, native evidence citations, input/output token usage and pinned producer code; full outbound payloads not stored by RecordingTracer.",
+  "host_operations_in_usage_are_handoffs": true,
+  "host_model_calls": 0,
+  "resumes": 0,
+  "stop_operations": {
+    "RS-02": "synthesize_evidence",
+    "RS-03": "synthesize_evidence"
+  },
+  "graph_query_executed": false,
+  "completed_at": "2026-10-02T18:20:58.554579+00:00"
+}

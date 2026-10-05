@@ -29,6 +29,7 @@ def step(step_id: str, implements: list, order: int) -> dict:
         "id": step_id,
         "label": step_id,
         "human": f"the actor performs {step_id}",
+        "io_contracts": {"not_applicable": "This actor action tests freshness metadata and has no serialized handoff."},
         "order": order,
         "implements": implements,
     }
@@ -59,6 +60,9 @@ def base_flow(flow_id: str, steps: list, confirmed: dict | None = None) -> dict:
 
 def write_flow(flows_dir: Path, flow: dict) -> Path:
     """Serialise `flow` under flows_dir/<component>/<name>.flow.json."""
+    from product_truth_contract_render import apply_contract_presentation
+
+    apply_contract_presentation(flow)
     component_dir = flows_dir / flow["component"]
     component_dir.mkdir(parents=True, exist_ok=True)
     name = flow["id"].split("/", 1)[1]

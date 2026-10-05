@@ -1,0 +1,492 @@
+{
+  "case_id": "N04",
+  "question": "Where does work_status travel from AC YAML into returned evidence?",
+  "origin": [
+    "RS-12",
+    "CODER-01"
+  ],
+  "human_gold": "Inspect actual code, schema, projection and disclosure handoffs for this field. No canonical ID is supplied or necessary before discovery. Source-file membership is not a proven call graph. Complete inspected chain is ideal; bounded evidence must retain unknown stages.",
+  "result": {
+    "schema_version": "1.0",
+    "original_question": "Where does work_status travel from AC YAML into returned evidence?",
+    "source_scope": {
+      "repository": "leafcutter",
+      "source_revision": "planning-probe-only",
+      "read_roots": [
+        "docs",
+        "kernel",
+        "knowledge",
+        "integrations"
+      ],
+      "allow_retrieval": false
+    },
+    "selections": {
+      "entity_types": [
+        "ac",
+        "source_file"
+      ],
+      "target_ids": [],
+      "required_fields": [
+        "criteria",
+        "work_status",
+        "content",
+        "provenance",
+        "mapping"
+      ],
+      "document_types": [
+        "source_code"
+      ],
+      "relationships": []
+    },
+    "uncertain": {
+      "entity_types": [
+        "test",
+        "schema",
+        "report",
+        "component"
+      ],
+      "target_ids": [],
+      "required_fields": [
+        "test_spec",
+        "status",
+        "parent",
+        "covered_by"
+      ],
+      "document_types": [
+        "ac_yaml",
+        "test_source",
+        "schema",
+        "execution_report"
+      ],
+      "relationships": [
+        "parent_direct",
+        "linked_tests"
+      ]
+    },
+    "rejected": {
+      "entity_types": [
+        "adr"
+      ],
+      "target_ids": [],
+      "required_fields": [
+        "level",
+        "compatibility"
+      ],
+      "document_types": [
+        "adr"
+      ],
+      "relationships": [
+        "children_direct",
+        "all_descendants",
+        "incoming_dependencies_direct"
+      ]
+    },
+    "detail_mode": "fields",
+    "completeness": "single_entity",
+    "hierarchy_scope": "not_applicable",
+    "scope_resolution": "discovery_needed",
+    "unresolved": [
+      "target_ids"
+    ],
+    "status": "needs_resolution",
+    "response": {
+      "schema_version": "1.0",
+      "model_id": "jev-1.13.0",
+      "request_id": "req_01a100c4877b77d59670b34884f2ab91",
+      "answers": {
+        "entity_types.ac": {
+          "schema_version": "1.0",
+          "kind": "noul",
+          "question_id": "entity_types.ac",
+          "probability": 0.72,
+          "confidence": null
+        },
+        "entity_types.source_file": {
+          "schema_version": "1.0",
+          "kind": "noul",
+          "question_id": "entity_types.source_file",
+          "probability": 0.76,
+          "confidence": null
+        },
+        "entity_types.test": {
+          "schema_version": "1.0",
+          "kind": "noul",
+          "question_id": "entity_types.test",
+          "probability": 0.37,
+          "confidence": null
+        },
+        "entity_types.adr": {
+          "schema_version": "1.0",
+          "kind": "noul",
+          "question_id": "entity_types.adr",
+          "probability": 0.15,
+          "confidence": null
+        },
+        "entity_types.schema": {
+          "schema_version": "1.0",
+          "kind": "noul",
+          "question_id": "entity_types.schema",
+          "probability": 0.67,
+          "confidence": null
+        },
+        "entity_types.report": {
+          "schema_version": "1.0",
+          "kind": "noul",
+          "question_id": "entity_types.report",
+          "probability": 0.62,
+          "confidence": null
+        },
+        "entity_types.component": {
+          "schema_version": "1.0",
+          "kind": "noul",
+          "question_id": "entity_types.component",
+          "probability": 0.44,
+          "confidence": null
+        },
+        "required_fields.criteria": {
+          "schema_version": "1.0",
+          "kind": "noul",
+          "question_id": "required_fields.criteria",
+          "probability": 0.76,
+          "confidence": null
+        },
+        "required_fields.test_spec": {
+          "schema_version": "1.0",
+          "kind": "noul",
+          "question_id": "required_fields.test_spec",
+          "probability": 0.67,
+          "confidence": null
+        },
+        "required_fields.work_status": {
+          "schema_version": "1.0",
+          "kind": "noul",
+          "question_id": "required_fields.work_status",
+          "probability": 0.85,
+          "confidence": null
+        },
+        "required_fields.status": {
+          "schema_version": "1.0",
+          "kind": "noul",
+          "question_id": "required_fields.status",
+          "probability": 0.31,
+          "confidence": null
+        },
+        "required_fields.level": {
+          "schema_version": "1.0",
+          "kind": "noul",
+          "question_id": "required_fields.level",
+          "probability": 0.29,
+          "confidence": null
+        },
+        "required_fields.parent": {
+          "schema_version": "1.0",
+          "kind": "noul",
+          "question_id": "required_fields.parent",
+          "probability": 0.34,
+          "confidence": null
+        },
+        "required_fields.covered_by": {
+          "schema_version": "1.0",
+          "kind": "noul",
+          "question_id": "required_fields.covered_by",
+          "probability": 0.55,
+          "confidence": null
+        },
+        "required_fields.content": {
+          "schema_version": "1.0",
+          "kind": "noul",
+          "question_id": "required_fields.content",
+          "probability": 0.82,
+          "confidence": null
+        },
+        "required_fields.provenance": {
+          "schema_version": "1.0",
+          "kind": "noul",
+          "question_id": "required_fields.provenance",
+          "probability": 0.8,
+          "confidence": null
+        },
+        "required_fields.mapping": {
+          "schema_version": "1.0",
+          "kind": "noul",
+          "question_id": "required_fields.mapping",
+          "probability": 0.86,
+          "confidence": null
+        },
+        "required_fields.compatibility": {
+          "schema_version": "1.0",
+          "kind": "noul",
+          "question_id": "required_fields.compatibility",
+          "probability": 0.3,
+          "confidence": null
+        },
+        "document_types.ac_yaml": {
+          "schema_version": "1.0",
+          "kind": "noul",
+          "question_id": "document_types.ac_yaml",
+          "probability": 0.65,
+          "confidence": null
+        },
+        "document_types.source_code": {
+          "schema_version": "1.0",
+          "kind": "noul",
+          "question_id": "document_types.source_code",
+          "probability": 0.71,
+          "confidence": null
+        },
+        "document_types.test_source": {
+          "schema_version": "1.0",
+          "kind": "noul",
+          "question_id": "document_types.test_source",
+          "probability": 0.32,
+          "confidence": null
+        },
+        "document_types.adr": {
+          "schema_version": "1.0",
+          "kind": "noul",
+          "question_id": "document_types.adr",
+          "probability": 0.15,
+          "confidence": null
+        },
+        "document_types.schema": {
+          "schema_version": "1.0",
+          "kind": "noul",
+          "question_id": "document_types.schema",
+          "probability": 0.56,
+          "confidence": null
+        },
+        "document_types.execution_report": {
+          "schema_version": "1.0",
+          "kind": "noul",
+          "question_id": "document_types.execution_report",
+          "probability": 0.34,
+          "confidence": null
+        },
+        "relationships.parent_direct": {
+          "schema_version": "1.0",
+          "kind": "noul",
+          "question_id": "relationships.parent_direct",
+          "probability": 0.32,
+          "confidence": null
+        },
+        "relationships.children_direct": {
+          "schema_version": "1.0",
+          "kind": "noul",
+          "question_id": "relationships.children_direct",
+          "probability": 0.26,
+          "confidence": null
+        },
+        "relationships.all_descendants": {
+          "schema_version": "1.0",
+          "kind": "noul",
+          "question_id": "relationships.all_descendants",
+          "probability": 0.23,
+          "confidence": null
+        },
+        "relationships.incoming_dependencies_direct": {
+          "schema_version": "1.0",
+          "kind": "noul",
+          "question_id": "relationships.incoming_dependencies_direct",
+          "probability": 0.2,
+          "confidence": null
+        },
+        "relationships.linked_tests": {
+          "schema_version": "1.0",
+          "kind": "noul",
+          "question_id": "relationships.linked_tests",
+          "probability": 0.33,
+          "confidence": null
+        },
+        "detail_mode": {
+          "schema_version": "1.0",
+          "kind": "choice",
+          "question_id": "detail_mode",
+          "choice": "fields",
+          "probabilities": {
+            "bounded_context": 0.18,
+            "unknown": 0.03,
+            "full_document": 0.01,
+            "fields": 0.78
+          },
+          "confidence": 0.69
+        },
+        "completeness": {
+          "schema_version": "1.0",
+          "kind": "choice",
+          "question_id": "completeness",
+          "choice": "single_entity",
+          "probabilities": {
+            "exhaustive_set": 0.02,
+            "exhaustive_count": 0.0,
+            "single_entity": 0.7,
+            "unknown": 0.11,
+            "selected_entities": 0.01,
+            "examples": 0.16
+          },
+          "confidence": 0.63
+        },
+        "hierarchy_scope": {
+          "schema_version": "1.0",
+          "kind": "choice",
+          "question_id": "hierarchy_scope",
+          "choice": "not_applicable",
+          "probabilities": {
+            "exclude_root": 0.0,
+            "unknown": 0.02,
+            "exclude_parents": 0.0,
+            "include_root": 0.01,
+            "not_applicable": 0.97
+          },
+          "confidence": 0.96
+        },
+        "scope_resolution": {
+          "schema_version": "1.0",
+          "kind": "choice",
+          "question_id": "scope_resolution",
+          "choice": "discovery_needed",
+          "probabilities": {
+            "unknown": 0.01,
+            "user_choice_missing": 0.0,
+            "discovery_needed": 0.81,
+            "sufficient": 0.17
+          },
+          "confidence": 0.75
+        },
+        "needs_outside_catalog": {
+          "schema_version": "1.0",
+          "kind": "noul",
+          "question_id": "needs_outside_catalog",
+          "probability": 0.23,
+          "confidence": null
+        }
+      },
+      "usage": {
+        "schema_version": "1.0",
+        "provider": "jev",
+        "model_id": "jev-1.13.0",
+        "input_tokens": 2705,
+        "output_tokens": 799,
+        "duration_ms": 530,
+        "cost_usd": null,
+        "cost_provenance": "unavailable",
+        "calls": 1
+      },
+      "latency_ms": 530,
+      "input_fingerprint": "fe3d4174dda44ee9edb3e41add19000dfb26730309c29f59e2668f8e570919bb",
+      "adapter_version": "http-direct/1"
+    },
+    "provider_calls": 1,
+    "max_relation_depth": 3,
+    "limitations": [
+      "Needs interpretation only: no retrieval, availability check, final answer or fulfillment claim.",
+      "Supplied context/known IDs are unverified candidates, not authority or permissions.",
+      "The execution depth bound does not narrow semantic all-descendant requirements."
+    ]
+  },
+  "error": null,
+  "grade": {
+    "passed": false,
+    "checks": [
+      {
+        "name": "one_actual_http_request",
+        "passed": true,
+        "actual": 1,
+        "expected": 1
+      },
+      {
+        "name": "original_question_unchanged",
+        "passed": true,
+        "actual": "Where does work_status travel from AC YAML into returned evidence?",
+        "expected": "Where does work_status travel from AC YAML into returned evidence?"
+      },
+      {
+        "name": "include.entity_types",
+        "passed": true,
+        "actual": [
+          "ac",
+          "source_file"
+        ],
+        "expected": [
+          "source_file"
+        ]
+      },
+      {
+        "name": "include.document_types",
+        "passed": true,
+        "actual": [
+          "source_code"
+        ],
+        "expected": [
+          "source_code"
+        ]
+      },
+      {
+        "name": "exclude.target_ids",
+        "passed": true,
+        "actual": [],
+        "expected": {
+          "forbidden": []
+        }
+      },
+      {
+        "name": "detail_mode",
+        "passed": true,
+        "actual": "fields",
+        "expected": [
+          "fields",
+          "full_document",
+          "bounded_context"
+        ]
+      },
+      {
+        "name": "completeness",
+        "passed": false,
+        "actual": "single_entity",
+        "expected": [
+          "examples",
+          "exhaustive_set"
+        ]
+      },
+      {
+        "name": "hierarchy_scope",
+        "passed": true,
+        "actual": "not_applicable",
+        "expected": [
+          "not_applicable"
+        ]
+      },
+      {
+        "name": "status",
+        "passed": false,
+        "actual": "needs_resolution",
+        "expected": [
+          "decided"
+        ]
+      },
+      {
+        "name": "required_fields_when_projecting",
+        "passed": true,
+        "actual": [
+          "criteria",
+          "work_status",
+          "content",
+          "provenance",
+          "mapping"
+        ],
+        "expected": [
+          "content",
+          "mapping"
+        ]
+      },
+      {
+        "name": "no_unoffered_id",
+        "passed": true,
+        "actual": [],
+        "expected": "literal or independently supplied observed candidate"
+      }
+    ]
+  },
+  "physical_http_calls": 1,
+  "wire_questions": 34,
+  "elapsed_seconds": 0.731
+}

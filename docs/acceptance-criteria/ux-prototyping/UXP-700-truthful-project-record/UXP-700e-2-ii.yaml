@@ -1,0 +1,116 @@
+id: UXP-700e-2-ii
+title: Compatibility contract text is regenerated from the authored metadata
+component: ux-prototyping
+components:
+- ux_prototyping
+level: L3
+status: active
+req_status: active
+work_status: done
+readiness: reviewed
+priority: medium
+criteria: 'Given a node''s structured contract metadata is authoritative and its human explanation precedes
+  the generated contract marker,
+
+  When the Product Truth generator runs after a field or example changes,
+
+  Then the updated flow artifact is written with compatibility input and output labels and the generated
+  narrative section derived from that metadata,
+
+  And the authored narrative is preserved,
+
+  And a second generation without a source change leaves the generated content unchanged,
+
+  And the validator rejects a hand-edited compatibility label or generated narrative section that disagrees
+  with the canonical rendering.'
+depends_on:
+- UXP-700e-2
+doc_links:
+- path: docs/how-to/product-truth-schema-reference.md
+  relationship: specifies
+  status: exists
+- path: docs/architecture/components/ux-prototyping.md
+  relationship: describes
+  status: exists
+assigned_agent: python-coder
+origin_agent: business-analyst
+created: '2026-10-05'
+amended_by:
+- reason: '2026-10-05 business-analyst: recorded source/test traceability and locally verified completion
+    after IT PO review; retained reviewed readiness and existing parent statuses. Hosted CI and merge
+    remain pending.'
+superseded_by: null
+covered_by:
+- unit_tests/product_truth/test_flow_io_contract_gate.py
+implemented_by:
+- docs/product-truth/scripts/generate_product_truth.py
+- docs/product-truth/scripts/product_truth_flow_fields.py
+- docs/product-truth/scripts/product_truth_contract_render.py
+- docs/product-truth/scripts/product_truth_contracts.py
+notes: 'The test writer verified the Python contract suites: 49 tests plus 16 subtests passed. Real generator-to-file
+  checks prove source preservation and repeated-generation stability; the CLI rejects generated-label
+  and example drift without repairing it.
+
+
+  The user accepted the displayed feature and authorized completing its AC/test coverage and merging after
+  green checks. Readiness remains reviewed: BA and IT PO reviewed these newly authored criteria; no separate
+  individual-AC user sign-off is claimed. Work status records locally verified implementation. Hosted
+  CI and PR merge are pending. This leaf does not claim production retrieval integration or completion
+  of its broader parent.'
+declares_side_effect: true
+estimated_complexity: M
+change_target:
+- code
+- schema
+risk_surface: contract_boundary
+it_requirements:
+- Generate compatibility labels and narrative from the same checked metadata used by the validator; repeated
+  generation without changed sources must be byte-stable.
+- Preserve authored narrative, contract metadata and unrelated flow fields while updating only generator-owned
+  representations. Validation must report drift without silently repairing it.
+expects_from:
+  ac_id: UXP-300-1
+  contract: 'Flow JSON at docs/product-truth/flows/**/*.flow.json: contract_definitions is a map from
+    reference label to {schema?: string, model?: string, authority?: runtime|source_reviewed|illustrative_design,
+    note?: string}; each node has io_contracts with consumes/produces arrays of {contract: string, fields:
+    [{path: JSON-pointer string, types: JSON-type string[], required: boolean, default?: JSON value, applies?:
+    string}]}. Optional means absent, not null unless explicitly allowed. Contract labels are not payload
+    wrapper keys.'
+delivers_to:
+  agent: frontend-coder
+  contract: The canonical generator derives node consumes/produces string arrays and the human suffix
+    starting with Contract fields and examples (generated) from io_contracts, preserving authored prose
+    before that marker; Atlas may omit those derived copies only when it can display the structured metadata.
+test_spec:
+- name: test_generator_repairs_only_derived_contract_presentation_and_is_idempotent
+  target_dir: unit_tests/product_truth/
+  description: Run the real generator after source metadata changes, read the serialized flow, verify
+    authored content survives and a second run is byte-stable.
+  framework: unittest
+  type: integration
+  angle: reachability
+- name: test_cli_checks_visible_labels_and_is_read_only
+  target_dir: unit_tests/product_truth/
+  description: The canonical validator rejects edited compatibility labels without rewriting the record.
+  framework: unittest
+  type: integration
+  angle: failure
+- name: test_cli_checks_visible_example_text_without_repairing_it
+  target_dir: unit_tests/product_truth/
+  description: The canonical validator rejects edited generated example text without rewriting it.
+  framework: unittest
+  type: integration
+  angle: failure
+test_rationale: The real generator-to-file-to-validator round trip covers criterion, seam and real-artifact
+  obligations together. It distinguishes canonical derivation from a second manually synchronized copy.
+test_required: true
+product_truth:
+  - flow: leafcutter/generate-product-truth
+    node: derive
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: null
+    entities: []
+    source: real
+    asof: '2026-10-05'
