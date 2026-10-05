@@ -3,7 +3,7 @@
   "component": "decision_kernel",
   "screen": "decision-split-approve",
   "title": "Approve the proposed split",
-  "summary": "The human gate for a compound goal, research request or multi-part decision question that the kernel offers to split: when routing turns it away, when routing would accept it as one, or when a work item holds several questions mid-run. Shows the subject as submitted, each proposed part with the verbatim span it covers, its dependencies and the capability that will run it, one proposal that was dropped, and the answers: approve, edit a part, pick a subset, or reject. The reject label depends on the trigger: run ends blocked for jev_none or ambiguous, keep it whole for bundled_accepted or mid-run. Populated from dcp-reusable-criteria-proposed (trigger jev_none).",
+  "summary": "The human gate for a bundled goal, research request or multi-part question that the kernel offers to split. Two samples: a jev_none goal (reject ends the run blocked) and a bundled_accepted goal of seven parts, where five are offered and two are listed read-only as not covered, ask again (reject keeps it whole). Shows each part with its verbatim span, dependencies and capability, one dropped proposal, and the answers: approve, edit, pick a subset, reject.",
   "entities": [
     "Decision",
     "Decomposition"
@@ -14,7 +14,7 @@
   "status": "active",
   "superseded_by": null,
   "readiness": "draft",
-  "version": 2,
+  "version": 3,
   "shape_version": 1,
   "tags": [
     "decision-kernel",
@@ -36,7 +36,13 @@
       "action": "extended",
       "by": "mockup-author",
       "date": "2026-10-05",
-      "note": "Decisions v4: split also offered when routing would accept the request (bundled_accepted); reject depends on the trigger (blocked, or kept whole)."
+      "note": "Decisions v4: split also offered when routing would accept the request (bundled_accepted); reject depends on the trigger."
+    },
+    {
+      "action": "extended",
+      "by": "mockup-author",
+      "date": "2026-10-05",
+      "note": "Decisions v5: seven-part bundled_accepted gate sample with read-only not-covered parts; partial-run card (budget stop, dependants not run)."
     }
   ]
 }

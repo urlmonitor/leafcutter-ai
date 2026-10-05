@@ -138,6 +138,48 @@
 <label class="small" for="note">Your note (optional): a reason, why a part is left out, or the order you want</label>
 <textarea id="note" class="edit"></textarea>
 <div class="row" style="margin-top:12px"><button class="btn primary">Send answer</button><span class="small">Answered as <span class="mono">human:user</span>. Only a human answer starts child runs.</span></div></div>
+<div class="panel" style="margin-top:24px"><div class="eyebrow">Second sample / trigger bundled_accepted</div><h2>Routing would have accepted this as one decision. A split is offered anyway.</h2>
+<p class="sub">The host proposed 7 parts; the gate offers the first 5. Parts beyond the five-part cap are listed read-only below.</p>
+<div class="row" style="margin-top:8px"><span class="badge warning">waiting for you</span><span class="badge plain">goal</span><span class="badge plain">trigger <span class="mono">bundled_accepted</span></span><span class="badge plain mono">run-6b2d…5f38</span></div>
+<p style="font-size:14px;line-height:1.6;margin-top:10px">Decide how Leafcutter should file decision records as JSON or YAML files under docs/ so later kernel runs can find and reuse them as precedent: which fields a record needs, which classification filters it carries (component, file type or language, repository-wide, roadmap phase), the folder layout and file naming, and how human approval and later corrections are recorded.</p></div>
+<div class="panel"><h2>Proposed parts (offered)</h2>
+<div class="part"><div class="rank">p1</div><div>
+<div class="row between"><label class="row" style="gap:8px"><input type="checkbox" checked aria-label="Run part p1"><h3>Decide whether decision records are JSON or YAML files</h3></label><span class="badge info">decision capability</span></div>
+<div class="span">&ldquo;as JSON or YAML files&rdquo;</div>
+<p class="small">Depends on: none (can run first)</p></div></div>
+<div class="part"><div class="rank">p2</div><div>
+<div class="row between"><label class="row" style="gap:8px"><input type="checkbox" checked aria-label="Run part p2"><h3>Decide which fields a decision record needs</h3></label><span class="badge info">decision capability</span></div>
+<div class="span">&ldquo;which fields a record needs&rdquo;</div>
+<p class="small">Depends on: none (can run first)</p></div></div>
+<div class="part"><div class="rank">p3</div><div>
+<div class="row between"><label class="row" style="gap:8px"><input type="checkbox" checked aria-label="Run part p3"><h3>Decide which classification filters a record carries (component, file type or language, repository-wide, roadmap phase)</h3></label><span class="badge info">decision capability</span></div>
+<div class="span">&ldquo;which classification filters it carries (component, file type or language, repository-wide, roadmap phase)&rdquo;</div>
+<p class="small">Depends on: p2</p></div></div>
+<div class="part"><div class="rank">p4</div><div>
+<div class="row between"><label class="row" style="gap:8px"><input type="checkbox" checked aria-label="Run part p4"><h3>Decide the folder layout for decision records under docs/</h3></label><span class="badge info">decision capability</span></div>
+<div class="span">&ldquo;the folder layout&rdquo;</div>
+<p class="small">Depends on: none (can run first)</p></div></div>
+<div class="part"><div class="rank">p5</div><div>
+<div class="row between"><label class="row" style="gap:8px"><input type="checkbox" checked aria-label="Run part p5"><h3>Decide how decision record files are named</h3></label><span class="badge info">decision capability</span></div>
+<div class="span">&ldquo;file naming&rdquo;</div>
+<p class="small">Depends on: p1, p4</p></div></div>
+</div>
+<div class="panel"><h2>Not covered by this split, ask again</h2><p class="small">Read-only. These cannot be ticked, edited or run here. Ask each again as a request of its own.</p>
+<div class="part off"><div class="rank">p6</div><div>
+<div class="row between"><h3>Decide how human approval of a record is recorded</h3><span class="badge plain">not covered</span></div>
+<div class="span">&ldquo;how human approval&rdquo;</div>
+<p class="small">Reason: beyond the five-part cap.</p></div></div>
+<div class="part off"><div class="rank">p7</div><div>
+<div class="row between"><h3>Decide how later corrections to a record are recorded</h3><span class="badge plain">not covered</span></div>
+<div class="span">&ldquo;later corrections are recorded&rdquo;</div>
+<p class="small">Reason: beyond the five-part cap.</p></div></div>
+</div>
+<div class="panel"><h2>Your answer</h2>
+<div class="choice sel"><span class="dot"></span><div><h3>Approve</h3><p class="small">Run the five offered parts, in dependency order.</p></div></div>
+<div class="choice"><span class="dot"></span><div><h3>Approve with edits</h3><p class="small">Run them with the text you changed.</p></div></div>
+<div class="choice"><span class="dot"></span><div><h3>Pick a subset</h3><p class="small">Untick the offered parts you do not want run.</p></div></div>
+<div class="choice"><span class="dot"></span><div><h3>Reject, keep it whole</h3><p class="small">Shown for this sample (trigger <span class="mono">bundled_accepted</span>). No part runs; the goal goes ahead as ONE decision and the run is not blocked. The report keeps one plain line saying a split was offered and rejected.</p></div></div>
+<div class="row" style="margin-top:12px"><button class="btn primary">Send answer</button></div></div>
 </main>
 </body>
 </html>

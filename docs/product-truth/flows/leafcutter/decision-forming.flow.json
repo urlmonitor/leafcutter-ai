@@ -11,7 +11,7 @@
   "status": "active",
   "readiness": "draft",
   "superseded_by": null,
-  "version": 4,
+  "version": 5,
   "shape_version": 2,
   "tags": [
     "decision-kernel",
@@ -482,6 +482,20 @@
       "impl_status": "not_started"
     },
     {
+      "id": "split-typed-request",
+      "from": "split-detect",
+      "condition": "the caller supplied a decision request (leafcutter.decision_request.v1) that names its own question, options and criteria",
+      "label": "Typed request, never split",
+      "human": "The request is never checked for bundling or split: the run goes ahead as the one decision the caller named.",
+      "agent": "kernel routing",
+      "consumes": [
+        "goal"
+      ],
+      "outcome_kind": "alternative",
+      "impl_asof": "2026-10-05",
+      "impl_status": "not_started"
+    },
+    {
       "id": "split-mid-run",
       "from": "split-detect",
       "condition": "a work item below the root holds a multi-part decision question or a research request with several needs",
@@ -523,6 +537,47 @@
       "impl_status": "not_started"
     },
     {
+      "id": "split-too-few-parts",
+      "from": "split-propose",
+      "condition": "the proposal holds fewer than 2 parts, also when counted after parts whose quote is not in the subject are set aside",
+      "label": "Fewer than two parts",
+      "human": "No gate is shown and the request is treated as one question: a bundled_accepted request goes ahead as one decision, an item found mid-run goes ahead as one, and a jev_none or ambiguous request has its capability gap recorded and the run ends blocked.",
+      "agent": "kernel",
+      "consumes": [
+        "proposed split"
+      ],
+      "produces": [
+        "one question (no split)"
+      ],
+      "outcome_kind": "alternative",
+      "impl_asof": "2026-10-05",
+      "impl_status": "not_started"
+    },
+    {
+      "id": "split-too-many-parts",
+      "from": "split-propose",
+      "condition": "more than 5 parts are proposed",
+      "label": "More than five parts",
+      "human": "The gate offers the first five parts. The rest are listed read-only as not covered by this split, with their quotes, and can be asked again as a request of their own; they can be neither ticked nor run.",
+      "screen": "decision-split-approve",
+      "agent": "kernel",
+      "consumes": [
+        "proposed split"
+      ],
+      "produces": [
+        "parts not covered (read-only)"
+      ],
+      "reads": [
+        "Decomposition"
+      ],
+      "writes": [
+        "Decomposition"
+      ],
+      "outcome_kind": "alternative",
+      "impl_asof": "2026-10-05",
+      "impl_status": "not_started"
+    },
+    {
       "id": "split-revise",
       "from": "split-approve",
       "condition": "you edit a part's text or untick some parts before approving",
@@ -551,7 +606,7 @@
       "from": "split-approve",
       "condition": "you reject a split offered because routing turned the subject away (trigger jev_none or ambiguous)",
       "label": "Reject, run ends blocked",
-      "human": "No part runs. The run ends blocked, and its report says plainly that the split was rejected and nothing was decided, with a hint to ask again as one bounded question.",
+      "human": "No part runs. The run ends blocked and still records the capability gap, as today; its report says plainly that the split was rejected and nothing was decided, with a hint to ask again as one bounded question.",
       "screen": "decision-split-progress",
       "agent": "kernel",
       "consumes": [
@@ -590,6 +645,30 @@
         "Decomposition"
       ],
       "screen": "decision-split-progress",
+      "outcome_kind": "alternative",
+      "impl_asof": "2026-10-05",
+      "impl_status": "not_started"
+    },
+    {
+      "id": "split-part-unsettled",
+      "from": "split-run",
+      "condition": "an approved part runs but does not settle (budget stop, blocked, capability gap or cancelled)",
+      "label": "A part does not settle",
+      "human": "The part is shown as not settled, with why. Parts that wait for it are not run, each naming the part it waited for; parts that do not wait for it carry on. The run ends partial, never completed, and the split ends ended_partial.",
+      "screen": "decision-split-progress",
+      "agent": "kernel scheduler",
+      "consumes": [
+        "approved split"
+      ],
+      "produces": [
+        "split ended partial"
+      ],
+      "reads": [
+        "Decomposition"
+      ],
+      "writes": [
+        "Decomposition"
+      ],
       "outcome_kind": "alternative",
       "impl_asof": "2026-10-05",
       "impl_status": "not_started"
@@ -741,6 +820,12 @@
       "then": "no split is started: the run records the capability gap exactly as today and is never sent to the split gate"
     },
     {
+      "for": "split-typed-request",
+      "given": "a caller-supplied decision request (leafcutter.decision_request.v1) that names its own question, options and criteria, even one whose question bundles several questions",
+      "when": "routing runs on the run's root",
+      "then": "it is never checked for bundling, no split is offered and no Decomposition is written, and the run goes ahead as the one decision the caller named"
+    },
+    {
       "for": "split-mid-run",
       "given": "a work item below the run's root that holds a multi-part decision question or a research request with several needs",
       "when": "the run reaches that work item",
@@ -753,6 +838,18 @@
       "then": "that part is left out of the parts and shown at the gate read-only with its reason, and it cannot be approved or run"
     },
     {
+      "for": "split-too-few-parts",
+      "given": "a request offered for a split",
+      "when": "the host's proposal holds fewer than 2 parts, counted after any part whose quote is not in the request is set aside",
+      "then": "no split gate is shown and no part is created, and the request goes on as a single question: with trigger bundled_accepted it goes ahead as one decision, found mid-run the item goes ahead as one, and with trigger jev_none or ambiguous the run records the capability gap and ends blocked"
+    },
+    {
+      "for": "split-too-many-parts",
+      "given": "a bundled goal for which the host proposes seven parts, each quoting its words from the goal",
+      "when": "the proposal is turned into the split",
+      "then": "the split gate offers the first five parts for approval and lists the other two read-only as not covered by this split, each with its text and quote, to be asked again as a request of their own, and they can be neither ticked nor run"
+    },
+    {
       "for": "split-revise",
       "given": "a proposed split shown on the split gate",
       "when": "you edit a part's text or untick some parts, then approve",
@@ -762,13 +859,19 @@
       "for": "split-reject",
       "given": "a proposed split of a root goal that routing turned away (trigger jev_none or ambiguous), shown on the split gate",
       "when": "you reject it",
-      "then": "no part runs, the run ends blocked, and its report says plainly that the split was rejected and nothing was decided"
+      "then": "no part runs, the run ends blocked and records the capability gap as it does today, and its report says plainly that the split was rejected and nothing was decided"
     },
     {
       "for": "split-reject-kept-whole",
       "given": "a proposed split shown on the split gate, offered for a root goal routing would have accepted as one decision (trigger bundled_accepted) or for a work item found mid-run",
       "when": "you reject it",
       "then": "no part runs, the subject or item goes ahead as one decision or research step exactly as without a split, the run is not blocked, and the report keeps one plain line saying a split was offered and rejected"
+    },
+    {
+      "for": "split-part-unsettled",
+      "given": "an approved split whose parts p2 and p3 wait for p1 and whose part p4 waits for none",
+      "when": "p1 runs but does not settle (it reaches its budget stop, ends blocked, hits a capability gap or is cancelled)",
+      "then": "p1 is shown as not settled with its stop reason, p2 and p3 are not run and each names p1 as the part it waited for, p4 still runs, and the run ends partial with the split ended_partial, never completed"
     },
     {
       "for": "revise-proposals",
@@ -843,13 +946,19 @@
       "by": "flow-author (split-compound-goals plan-feature session)",
       "date": "2026-10-05",
       "note": "Still v4 (same uncommitted amendment). User decision: how a rejected split ends depends on why it was offered. split-reject is scoped to a subject routing turned away (trigger jev_none or ambiguous): the run ends blocked and nothing is decided. New alternative branch split-reject-kept-whole: rejecting a split of a subject routing would have accepted as one (trigger bundled_accepted), or of an item found mid-run, keeps it whole; it goes ahead as one decision or research step and the run is not blocked. Matches leafcutter/decisions v4 state rejected_kept_whole (whole_decision_id), sample dcp-decision-records-bundled. One acceptance scenario; no ACs linked."
+    },
+    {
+      "action": "extended",
+      "by": "flow-author (split-compound-goals plan-feature session)",
+      "date": "2026-10-05",
+      "note": "v5: nodes for the cases the business-analyst's DK-400 ACs (ccd51a52) need, plus user rules of 2026-10-05, wired to leafcutter/decisions v5. New branches: split-part-unsettled (from split-run: a part that does not settle stops its dependants, which name it in waited_for, independent parts carry on, and the run ends partial; sample dcp-reusable-criteria-partial), split-too-few-parts (from split-propose: fewer than 2 parts, also after unquoted ones are set aside, is one question with no gate), split-too-many-parts (from split-propose: the gate offers five and lists the rest as not covered; sample dcp-decision-records-seven-parts) and split-typed-request (from split-detect: a caller-supplied leafcutter.decision_request.v1 is never checked for bundling or split, user rule c). split-reject now says the run still records the capability gap, as today (user rule a, capability_gap_recorded). One acceptance scenario per new branch; implements is left for the business-analyst's back-links."
     }
   ],
   "impl_summary": {
     "done": 2,
     "in_progress": 0,
-    "not_started": 27,
-    "total": 29,
+    "not_started": 31,
+    "total": 33,
     "asof": "2026-10-05"
   }
 }

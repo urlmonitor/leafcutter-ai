@@ -146,6 +146,28 @@ p3 not run: left out at the split</pre></div>
 <h3 style="margin-top:12px">Run report: split section</h3><pre class="mono">p1 answered: kernel/config_memory.py loads memory.reuse_threshold; kernel/memory/precedent.py offers reuse at that value or above
 p2 answered: tests/kernel/memory/test_precedent_units.py and tests/kernel/memory/test_decision_precedent.py cover the reuse offer
 p3 answered: no ADR fixes 0.8; ADR-060 leaves the value to configuration</pre></div>
+<div class="panel"><div class="row between"><div><div class="eyebrow">goal / run-9c40…93e0</div><h2>Reusable criteria: one part hit its budget stop</h2></div><div class="row"><span class="badge warning">ended partial</span></div></div>
+<p class="small">Split found at routing; proposed by <span class="mono">host.decompose_goal</span>; answered by <span class="mono">human:user</span> at 2026-10-05T10:05:51Z.</p>
+<div class="note"><strong>The run ended partial, not completed.</strong> p1 did not settle (budget stop). p2 and p3 waited for it and were not run. p4 waited for nothing, so it still ran and was decided.</div><div class="part"><div class="rank">p4</div><div>
+<div class="row between"><h3>Decide whether to mine the reusable categories from Langfuse as a start</h3><span class="badge success">decided</span></div>
+<p class="small"><span class="badge plain">decision capability</span> no dependency &middot; settled 1</p>
+<div class="span">&ldquo;As a start we can probably mine them from langfuse&rdquo;</div><p class="trace">Child decision record: <a class="mono" href="#" style="color:hsl(var(--primary))">dec-a41c…1d62</a> <span class="small">(staged in run-9c40…93e0, awaiting publish)</span></p></div></div>
+<div class="part"><div class="rank">p1</div><div>
+<div class="row between"><h3>Decide which new file type the reusable categories are put into (needs evaluation)</h3><span class="badge destructive">not settled</span></div>
+<p class="small"><span class="badge plain">decision capability</span> no dependency &middot; not settled</p>
+<div class="span">&ldquo;we can should put them into a new file type (needs evaluation)&rdquo;</div><p class="small">Not settled. Reason: <strong>budget stop</strong>. Parts that waited for it were not run.</p></div></div>
+<div class="part off"><div class="rank">p2</div><div>
+<div class="row between"><h3>Decide how the reusable categories are then also put into Neo4j</h3><span class="badge plain">not run</span></div>
+<p class="small"><span class="badge plain">decision capability</span> after p1 &middot; not settled</p>
+<div class="span">&ldquo;and then also into neo4j&rdquo;</div><p class="small">Not run: waited for p1, which was not settled.</p></div></div>
+<div class="part off"><div class="rank">p3</div><div>
+<div class="row between"><h3>Decide how the reusable categories are clustered</h3><span class="badge plain">not run</span></div>
+<p class="small"><span class="badge plain">decision capability</span> after p1 &middot; not settled</p>
+<div class="span">&ldquo;we must make sure that we are able to cluster them somehow&rdquo;</div><p class="small">Not run: waited for p1, which was not settled.</p></div></div>
+<h3 style="margin-top:12px">Run report: split section</h3><pre class="mono">p1 not settled: its decision reached its budget stop
+p2 not run: waits for p1, which was not settled (budget stop)
+p3 not run: waits for p1, which was not settled (budget stop)
+p4 decided: Mine from both Langfuse traces and published decision records (dec-a41c07e9b35a1d62, staged)</pre></div>
 <div class="panel"><div class="row between"><div><div class="eyebrow">goal / run-3e8a…9a40</div><h2>Decision records: split rejected, goal kept whole</h2></div><div class="row"><span class="badge info">rejected, kept whole</span></div></div>
 <p class="small">Split found at routing; proposed by <span class="mono">host.decompose_goal</span>; answered by <span class="mono">human:user</span> at 2026-10-05T09:14:26Z.</p>
 <p class="small">Gate note: &ldquo;Keep it whole: one record format covers all five, so decide it as one.&rdquo;</p>

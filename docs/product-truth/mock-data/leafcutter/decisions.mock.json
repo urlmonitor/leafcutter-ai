@@ -4,7 +4,7 @@
   "status": "active",
   "readiness": "draft",
   "superseded_by": null,
-  "version": 4,
+  "version": 5,
   "shape_version": 2,
   "reusable": true,
   "realization": "built",
@@ -37,7 +37,13 @@
     "Decomposition.state == 'rejected' iff gate_answer == 'rejected' and trigger in {jev_none, ambiguous}; such a record has every part.review == 'rejected', every outcome 'not_run', run_status == 'blocked' and report_lines saying plainly that nothing was decided (only these rejected splits end the run blocked)",
     "Decomposition.state == 'rejected_kept_whole' iff gate_answer == 'rejected' and (trigger == 'bundled_accepted' or found_at == 'mid_run'): rejecting the split keeps the subject or work item whole. Such a record has every part.review == 'rejected' and every outcome 'not_run'. The subject or item goes ahead as ONE decision or research step, exactly as without a split, so run_status is never 'blocked' because of the split. A Decision record may result: whole_decision_id names it once formed. report_lines say plainly that it was kept whole",
     "Decomposition.whole_decision_id != null implies state == 'rejected_kept_whole'; it resolves to a Decision record in this dataset whose question == subject_text and run_id == the record's run_id, and whose split_part == null (no part decided it)",
-    "Decomposition.gate_answer == 'approved' implies every part.review in {kept, edited, left_out}, with at least one part not left_out; state == 'approved' when no part that was not left out is settled, 'in_progress' when some are, 'completed' when all are",
+    "Decomposition.gate_answer == 'approved' implies every part.review in {kept, edited, left_out}, with at least one part not left_out. Among the parts not left out: state == 'approved' when all are still pending; 'in_progress' when some have an outcome and some are still pending; 'completed' when all are settled; 'ended_partial' when none is pending and at least one did not settle (not_settled, or not_run because it waited for one)",
+    "Decomposition.state == 'ended_partial' implies run_status == 'partial': when an approved part cannot settle, the parts that do not wait for it still run, and the run ends partial, never completed (user rule, 2026-10-05)",
+    "Decomposition.parts[].outcome == 'not_settled' iff stop_reason != null (budget_stop, blocked, capability_gap or cancelled). Such a part ran: its run_id == the record's run_id. It has decision_id == null, result_ref == null and settled_order == null",
+    "Decomposition.parts[].waited_for != null iff the part is kept or edited, its outcome is 'not_run', and the run went past it. waited_for names a part in its own depends_on whose outcome is not_settled, or not_run for the same reason, so a chain of dependants each names the part it waited for. Otherwise an approved part is never not_run",
+    "Decomposition.not_covered[] lists proposals beyond the five-part cap: each covers is a verbatim substring of subject_text, reason == 'beyond the five-part cap', and its id differs from every part id. not_covered != [] only when parts has exactly 5 entries. Such entries are shown at the gate read-only and are never approved or run",
+    "Decomposition.capability_gap_recorded == true iff state == 'rejected' or proposed_by == 'claude_code'. A rejected split of a turned-away request (jev_none or ambiguous) still records the capability gap, as today (user rule, 2026-10-05). The hand split's run recorded its gap before any split existed. A split the kernel offered and that was approved, kept whole or not yet answered records no gap for the subject",
+    "No Decomposition has as its subject a caller-supplied decision request (input_payload_schema leafcutter.decision_request.v1, which names its own question, options and criteria): such a request is never checked for bundling or split (user rule, 2026-10-05)",
     "Decomposition.gate_by matches ^human(:<name>)?$ iff Decomposition.gate_answer != null (only a human answers a split; never a model)",
     "Decomposition.parts[].review == 'edited' iff proposed_text != null; a part whose review is proposed, left_out or rejected has outcome 'not_run'",
     "Decomposition.parts[].outcome == 'decided' iff decision_id != null; that Decision record has question == the part's text and split_part == {decomposition: the record's id, part: the part's id}",
@@ -45,7 +51,7 @@
     "Decomposition.parts[].outcome == 'settled_by_human' iff human_answer != null; such a part has run_id == null and decision_id == null (the human answered directly, so no record exists)",
     "Decomposition.parts[].settled_order != null iff outcome in {decided, answered, settled_by_human}; within a record the orders are 1..n without gaps, and a part settled in a run comes after every part it depends on (children run in dependency order)",
     "Decomposition.proposed_by == 'host.decompose_goal' implies every part with a run_id has run_id == the record's run_id (children are work items of the run that split), and each decided part's Decision.precedents_considered names the decision_id of every part decided before it (an earlier child's result is precedent evidence; its applicability still sets the action)",
-    "Decomposition.proposed_by == 'host.decompose_goal' and state in {in_progress, completed} implies report_lines holds one line per part, starting with the part id and naming its outcome",
+    "Decomposition.proposed_by == 'host.decompose_goal' and state in {in_progress, completed, ended_partial} implies report_lines holds one line per part, starting with the part id and naming its outcome; a not_settled part's line names its stop_reason, and a waiting part's line names the part it waited for",
     "Decomposition.proposed_by == 'claude_code' implies report_lines == [] (the run report knows nothing of a split made outside the kernel), and each part settled in a run ran as its own run, started by hand"
   ],
   "entities": {
@@ -516,6 +522,51 @@
           "publish_command": "python -m kernel decisions publish --run-id run-1d9c6e0b57a24f83",
           "split_part": { "decomposition": "dcp-split-bounds-mid-run", "part": "p2" },
           "source": "illustrative: the second child decision of dcp-split-bounds-mid-run, formed after p1 and citing p1's record as precedent evidence; its question is the human's edited text. Both children are staged in the one run that split"
+        },
+        {
+          "id": "dec-a41c07e9b35a1d62",
+          "title": "Mine from both Langfuse traces and published decision records",
+          "question": "Decide whether to mine the reusable categories from Langfuse as a start",
+          "decision_type": "design",
+          "lifecycle_stage": "staged",
+          "review_state": "not-published",
+          "publish_pr": null,
+          "assessment_basis": "kernel_ranking",
+          "criteria": [
+            { "id": "crit.covers_unpublished_runs", "priority": "required", "question": "Does the source include decision bases from runs whose records were never published?" },
+            { "id": "crit.reviewed_basis", "priority": "required", "question": "Does the source include criteria a human has already approved and published?" },
+            { "id": "crit.candidates_not_records", "priority": "required", "question": "Do mined categories enter the store only as candidates a human approves, never directly from a trace (ADR-060)?" },
+            { "id": "crit.no_new_infrastructure", "priority": "supporting", "question": "Can a first pass run on the existing Langfuse read API and docs/decisions without new infrastructure?" }
+          ],
+          "options": [
+            { "id": "opt.both_sources", "title": "Mine from both Langfuse traces and published decision records", "proposed_by": "host.generate_options", "kernel_rank": 1, "required_mean": 0.83, "required_passed": 3, "required_total": 3 },
+            { "id": "opt.langfuse_only", "title": "Mine from Langfuse traces only", "proposed_by": "caller_goal", "kernel_rank": 2, "required_mean": 0.61, "required_passed": 2, "required_total": 3 },
+            { "id": "opt.records_only", "title": "Mine from published decision records only", "proposed_by": "host.generate_options", "kernel_rank": 3, "required_mean": 0.57, "required_passed": 2, "required_total": 3 }
+          ],
+          "selected_option_id": "opt.both_sources",
+          "selected_option_title": "Mine from both Langfuse traces and published decision records",
+          "selected_rank": 1,
+          "confidence": 0.83,
+          "approval_status": "approved",
+          "approved_by": "human:user",
+          "approved_at": "2026-10-05T10:42:18Z",
+          "staged_at": "2026-10-05T10:42:18Z",
+          "precedents_considered": [],
+          "considered_by": [],
+          "related": [],
+          "supersedes": [],
+          "superseded_by": [],
+          "corrections": [],
+          "components": ["decision_kernel"],
+          "roadmap_phase": ["phase_kernel_1_founding"],
+          "repository_wide": false,
+          "run_id": "run-9c40e2b7a15d93e0",
+          "langfuse_trace_id": "1e7c3a90d4b26f5e8a1c07d39b4e6f21",
+          "staged_path": "<run_root>/runs/<run_id>/staged/decisions/dec-a41c07e9b35a1d62.yaml",
+          "record_path": null,
+          "publish_command": "python -m kernel decisions publish --run-id run-9c40e2b7a15d93e0",
+          "split_part": { "decomposition": "dcp-reusable-criteria-partial", "part": "p4" },
+          "source": "illustrative: the one decided part (p4) of dcp-reusable-criteria-partial. Its choice matches the real answer the user gave for G3 of the hand split ('we mine from both langfuse and records'). Langfuse-only was proposed by the caller's goal"
         }
       ]
     },
@@ -525,20 +576,22 @@
         "subject_kind": "enum: goal | research_request | decision_question — what was split: a caller's goal, a research request holding several needs, or a multi-part decision question met inside a run. The split is not tied to goals",
         "subject_text": "string — the compound item as submitted, verbatim (whitespace normalised); each part quotes the span it covers from it",
         "found_at": "enum: routing | mid_run — routing == noticed when the run's root was routed: no capability fit the compound subject (jev_none, ambiguous), or one fit but the subject bundles several decisions (bundled_accepted); mid_run == a work item below the root held several questions",
-        "trigger": "enum: jev_none | ambiguous | bundled_accepted | null — what started the split at routing. jev_none == no_match with reason jev_none; ambiguous == an ambiguous gap; bundled_accepted == routing accepted the subject as one decision, but it bundles several decisions, so the split is offered anyway (user decision, 2026-10-04). null when found mid_run. Only a compound subject is split: a single bounded question that no capability can handle gets no Decomposition and stays a capability gap",
+        "trigger": "enum: jev_none | ambiguous | bundled_accepted | null — what started the split at routing. jev_none == no_match with reason jev_none; ambiguous == an ambiguous gap; bundled_accepted == routing accepted the subject as one decision, but it bundles several decisions, so the split is offered anyway (user decision, 2026-10-04). null when found mid_run. Only a compound subject is split: a single bounded question that no capability can handle gets no Decomposition and stays a capability gap. A caller-supplied decision request (leafcutter.decision_request.v1) is never checked for bundling or split",
         "work_item_depth": "integer — depth of the work item holding the subject: 0 for the root (found_at routing), 1 or more mid_run",
         "run_id": "string — the kernel run holding the subject (run-<16 hex>)",
-        "run_status": "enum: waiting_human | waiting_host | blocked | completed — that run's status as this sample shows it (kernel RunStatus)",
+        "run_status": "enum: waiting_human | waiting_host | blocked | partial | completed — that run's status as this sample shows it (kernel RunStatus); partial == some approved part did not settle",
         "langfuse_trace_id": "string — that run's Langfuse trace id",
         "proposed_by": "enum: claude_code | host.decompose_goal — claude_code == drafted by hand by the orchestrating Claude Code session, outside the kernel. That is the only real path on 2026-10-02. host.decompose_goal == the kernel's host operation from the KernelDecomposeMultiPartGoal ticket. It is not built yet",
         "gate_answer": "enum: approved | rejected | null — the human's answer to the proposed split; null while the gate is open. Edits and a picked subset show per part (review), under approved. What rejected leads to depends on where the split came from: a jev_none or ambiguous subject ends the run blocked; a bundled_accepted subject or a mid-run item is kept whole and goes ahead as one decision or research step (user decisions, 2026-10-05)",
         "gate_by": "string | null — human:<name> who answered; never a model",
         "gate_at": "string | null — ISO-8601 UTC time of the answer; null while open, or when a hand split left no time",
         "gate_note": "string | null — the human's words at the gate (a rejection reason, why a part was left out, the order picked)",
-        "state": "enum: proposed | approved | in_progress | completed | rejected | rejected_kept_whole — proposed == awaiting the human; approved == accepted, no part settled yet; in_progress == some approved parts settled; completed == every approved part settled; rejected == the human turned down the split of a jev_none or ambiguous subject, and the run ended blocked; rejected_kept_whole == the human turned down the split of a bundled_accepted subject or a mid-run item, and it goes ahead as one decision or research step",
+        "state": "enum: proposed | approved | in_progress | completed | ended_partial | rejected | rejected_kept_whole — proposed == awaiting the human; approved == accepted, no part has an outcome yet; in_progress == some approved parts have an outcome, others are pending; completed == every approved part settled; ended_partial == no part is pending, and at least one approved part did not settle (not_settled, or not_run because it waited for one), so the run ended partial; rejected == the human turned down the split of a jev_none or ambiguous subject, and the run ended blocked; rejected_kept_whole == the human turned down the split of a bundled_accepted subject or a mid-run item, and it goes ahead as one decision or research step",
         "whole_decision_id": "dec id | null — the Decision record the subject or item was decided as after a rejected_kept_whole split; null in every other state, while that one decision is not formed yet, and when the item went ahead as a research step",
-        "parts": "array of { id, text, proposed_text: string | null, covers, depends_on: [part ids], child_capability: decision | research, review: proposed | kept | edited | left_out | rejected, outcome: not_run | pending | decided | answered | settled_by_human, settled_order: integer | null, run_id: string | null, decision_id: dec id | null, result_ref: string | null, findings: string | null, human_answer: string | null } — 2 to 5 bounded parts in proposed order. text == the bounded sub-question or need, in the caller's words where possible (after any human edit); proposed_text == the text as proposed, kept only when the human edited it; covers == the span of subject_text the part covers, quoted verbatim; pending == approved, not settled yet; decided == a child decision staged a record (decision_id); answered == a research child returned findings (result_ref, findings); result_ref == the research child's invocation id (inv-<16 hex>), whose result lives at <run_root>/runs/<run_id>/artifacts/result-<result_ref>.json; settled_by_human == the human answered it directly outside any run, so no record exists (human_answer, verbatim); not_run == never run (left out, or the split is still proposed or was rejected); settled_order == 1 for the part settled first; run_id == the run that settled it",
+        "capability_gap_recorded": "boolean — the run recorded a capability gap for the subject itself (not for a part). true when the person rejected the split of a turned-away request (jev_none or ambiguous): the run still records the gap, as today (user rule, 2026-10-05). Also true for the hand split, whose run recorded its gap before any split existed. false otherwise: a split is not counted as a capability gap",
+        "parts": "array of { id, text, proposed_text: string | null, covers, depends_on: [part ids], child_capability: decision | research, review: proposed | kept | edited | left_out | rejected, outcome: not_run | pending | decided | answered | settled_by_human | not_settled, settled_order: integer | null, run_id: string | null, decision_id: dec id | null, result_ref: string | null, findings: string | null, human_answer: string | null, stop_reason: budget_stop | blocked | capability_gap | cancelled | null, waited_for: part id | null } — 2 to 5 bounded parts in proposed order. text == the bounded sub-question or need, in the caller's words where possible (after any human edit); proposed_text == the text as proposed, kept only when the human edited it; covers == the span of subject_text the part covers, quoted verbatim; pending == approved, not settled yet; decided == a child decision staged a record (decision_id); answered == a research child returned findings (result_ref, findings); result_ref == the research child's invocation id (inv-<16 hex>), whose result lives at <run_root>/runs/<run_id>/artifacts/result-<result_ref>.json; settled_by_human == the human answered it directly outside any run, so no record exists (human_answer, verbatim); not_settled == the part ran but did not settle; stop_reason says why (its decision reached its budget stop, ended blocked, hit a capability gap, or was cancelled); not_run == never started (left out, the split is still proposed or was rejected, or the part waited for a part that did not settle, which waited_for names); settled_order == 1 for the part settled first; run_id == the run that settled it",
         "dropped": "array of { text, covers, reason } — proposals the conversion dropped because their quote is not found in subject_text. They are shown at the gate read-only, each with its reason; they cannot be approved or run (always [] for a hand split)",
+        "not_covered": "array of { id, text, covers, reason } — proposals beyond the five-part cap. Unlike dropped[], their quotes ARE in subject_text. Only five parts are offered; these are shown at the gate read-only as not covered by this split, with reason 'beyond the five-part cap', can be asked again as a request of their own, and are never approved or run",
         "report_lines": "array of string — the run report's split section: one line per part naming its outcome, or the plain lines of a rejected split; [] while the gate is open, and for a hand split (the run report knows nothing of a split made outside the kernel)",
         "source": "string — real (the hand split of 2026-10-02) or illustrative (host.decompose_goal is not built yet)"
       },
@@ -560,12 +613,14 @@
           "gate_note": "picked \"format first\"",
           "state": "in_progress",
           "whole_decision_id": null,
+          "capability_gap_recorded": true,
           "parts": [
-            { "id": "G1", "text": "Decide the storage format for reusable decision criteria (the decision basis the kernel reuses across decisions). Today each run's criteria are generated per decision and stored only inside docs/decisions/dec-*.yaml records. The format must be Git-reviewable, projectable into Neo4j, and carry what clustering and reuse need.", "proposed_text": null, "covers": "we can should put them into a new file type (needs evaluation)", "depends_on": [], "child_capability": "decision", "review": "kept", "outcome": "decided", "settled_order": 1, "run_id": "run-3bba494c7c9b48ce", "decision_id": "dec-93c1c730463c1f3c", "result_ref": null, "findings": null, "human_answer": null },
-            { "id": "G2", "text": "Decide the clustering method for reusable criteria", "proposed_text": null, "covers": "we must make sure that we are able to cluster them somehow", "depends_on": [], "child_capability": "decision", "review": "kept", "outcome": "pending", "settled_order": null, "run_id": null, "decision_id": null, "result_ref": null, "findings": null, "human_answer": null },
-            { "id": "G3", "text": "Decide the mining source for reusable criteria: Langfuse traces, published decision records, or both", "proposed_text": null, "covers": "As a start we can probably mine them from langfuse", "depends_on": [], "child_capability": "decision", "review": "kept", "outcome": "settled_by_human", "settled_order": 2, "run_id": null, "decision_id": null, "result_ref": null, "findings": null, "human_answer": "we mine from both langfuse and records" }
+            { "id": "G1", "text": "Decide the storage format for reusable decision criteria (the decision basis the kernel reuses across decisions). Today each run's criteria are generated per decision and stored only inside docs/decisions/dec-*.yaml records. The format must be Git-reviewable, projectable into Neo4j, and carry what clustering and reuse need.", "proposed_text": null, "covers": "we can should put them into a new file type (needs evaluation)", "depends_on": [], "child_capability": "decision", "review": "kept", "outcome": "decided", "settled_order": 1, "run_id": "run-3bba494c7c9b48ce", "decision_id": "dec-93c1c730463c1f3c", "result_ref": null, "findings": null, "human_answer": null, "stop_reason": null, "waited_for": null },
+            { "id": "G2", "text": "Decide the clustering method for reusable criteria", "proposed_text": null, "covers": "we must make sure that we are able to cluster them somehow", "depends_on": [], "child_capability": "decision", "review": "kept", "outcome": "pending", "settled_order": null, "run_id": null, "decision_id": null, "result_ref": null, "findings": null, "human_answer": null, "stop_reason": null, "waited_for": null },
+            { "id": "G3", "text": "Decide the mining source for reusable criteria: Langfuse traces, published decision records, or both", "proposed_text": null, "covers": "As a start we can probably mine them from langfuse", "depends_on": [], "child_capability": "decision", "review": "kept", "outcome": "settled_by_human", "settled_order": 2, "run_id": null, "decision_id": null, "result_ref": null, "findings": null, "human_answer": "we mine from both langfuse and records", "stop_reason": null, "waited_for": null }
           ],
           "dropped": [],
+          "not_covered": [],
           "report_lines": [],
           "source": "real: run-40d2159630bb48bd (2026-10-02) was blocked at routing (no_match, reason jev_none; gap unsupported) because the decision capability takes one bounded question. The orchestrating Claude Code session split the goal by hand into G1-G3 outside the kernel and the user picked \"format first\". G1 ran as run-3bba494c7c9b48ce and staged dec-93c1c730463c1f3c; the user later settled G3 directly; G2 is still open. 'and then also into neo4j' got no part of its own: G1's question carries it as a constraint. The hand split recorded no dependencies and no quotes: the covers quotes were added for this sample, and the gate time is unknown"
         },
@@ -586,15 +641,17 @@
           "gate_note": null,
           "state": "proposed",
           "whole_decision_id": null,
+          "capability_gap_recorded": false,
           "parts": [
-            { "id": "p1", "text": "Decide which new file type the reusable categories are put into (needs evaluation)", "proposed_text": null, "covers": "we can should put them into a new file type (needs evaluation)", "depends_on": [], "child_capability": "decision", "review": "proposed", "outcome": "not_run", "settled_order": null, "run_id": null, "decision_id": null, "result_ref": null, "findings": null, "human_answer": null },
-            { "id": "p2", "text": "Decide how the reusable categories are then also put into Neo4j", "proposed_text": null, "covers": "and then also into neo4j", "depends_on": ["p1"], "child_capability": "decision", "review": "proposed", "outcome": "not_run", "settled_order": null, "run_id": null, "decision_id": null, "result_ref": null, "findings": null, "human_answer": null },
-            { "id": "p3", "text": "Decide how the reusable categories are clustered", "proposed_text": null, "covers": "we must make sure that we are able to cluster them somehow", "depends_on": ["p1"], "child_capability": "decision", "review": "proposed", "outcome": "not_run", "settled_order": null, "run_id": null, "decision_id": null, "result_ref": null, "findings": null, "human_answer": null },
-            { "id": "p4", "text": "Decide whether to mine the reusable categories from Langfuse as a start", "proposed_text": null, "covers": "As a start we can probably mine them from langfuse", "depends_on": [], "child_capability": "decision", "review": "proposed", "outcome": "not_run", "settled_order": null, "run_id": null, "decision_id": null, "result_ref": null, "findings": null, "human_answer": null }
+            { "id": "p1", "text": "Decide which new file type the reusable categories are put into (needs evaluation)", "proposed_text": null, "covers": "we can should put them into a new file type (needs evaluation)", "depends_on": [], "child_capability": "decision", "review": "proposed", "outcome": "not_run", "settled_order": null, "run_id": null, "decision_id": null, "result_ref": null, "findings": null, "human_answer": null, "stop_reason": null, "waited_for": null },
+            { "id": "p2", "text": "Decide how the reusable categories are then also put into Neo4j", "proposed_text": null, "covers": "and then also into neo4j", "depends_on": ["p1"], "child_capability": "decision", "review": "proposed", "outcome": "not_run", "settled_order": null, "run_id": null, "decision_id": null, "result_ref": null, "findings": null, "human_answer": null, "stop_reason": null, "waited_for": null },
+            { "id": "p3", "text": "Decide how the reusable categories are clustered", "proposed_text": null, "covers": "we must make sure that we are able to cluster them somehow", "depends_on": ["p1"], "child_capability": "decision", "review": "proposed", "outcome": "not_run", "settled_order": null, "run_id": null, "decision_id": null, "result_ref": null, "findings": null, "human_answer": null, "stop_reason": null, "waited_for": null },
+            { "id": "p4", "text": "Decide whether to mine the reusable categories from Langfuse as a start", "proposed_text": null, "covers": "As a start we can probably mine them from langfuse", "depends_on": [], "child_capability": "decision", "review": "proposed", "outcome": "not_run", "settled_order": null, "run_id": null, "decision_id": null, "result_ref": null, "findings": null, "human_answer": null, "stop_reason": null, "waited_for": null }
           ],
           "dropped": [
             { "text": "Decide when an LLM may generate further categories", "covers": "generate new categories only when Jev finds some missing", "reason": "quote not found in the goal (the goal says \"generate further categories if jev thinks some are missing\")" }
           ],
+          "not_covered": [],
           "report_lines": [],
           "source": "illustrative: the same goal as dcp-reusable-criteria-by-hand, as host.decompose_goal would propose it. That operation comes from the KernelDecomposeMultiPartGoal ticket and is not built yet. The split waits at the human gate (approve, edit, pick a subset or reject). It gives the Neo4j projection a part of its own. The conversion dropped one proposal: its quote paraphrases the goal instead of quoting it"
         },
@@ -615,12 +672,14 @@
           "gate_note": "p2: count every split in the run. p3 left out: parallel children are out of scope; children run one after another.",
           "state": "completed",
           "whole_decision_id": null,
+          "capability_gap_recorded": false,
           "parts": [
-            { "id": "p1", "text": "Decide how many sub-questions one split may propose", "proposed_text": null, "covers": "how many sub-questions one split may propose", "depends_on": [], "child_capability": "decision", "review": "kept", "outcome": "decided", "settled_order": 1, "run_id": "run-1d9c6e0b57a24f83", "decision_id": "dec-2c8e5a7f19d04b36", "result_ref": null, "findings": null, "human_answer": null },
-            { "id": "p2", "text": "Decide how many child decisions one run may start, counting every split in the run", "proposed_text": "Decide how many child decisions one run may start", "covers": "how many child decisions one run may start", "depends_on": ["p1"], "child_capability": "decision", "review": "edited", "outcome": "decided", "settled_order": 2, "run_id": "run-1d9c6e0b57a24f83", "decision_id": "dec-6f31b0d84ae72c95", "result_ref": null, "findings": null, "human_answer": null },
-            { "id": "p3", "text": "Decide whether children may run in parallel", "proposed_text": null, "covers": "whether children may run in parallel", "depends_on": [], "child_capability": "decision", "review": "left_out", "outcome": "not_run", "settled_order": null, "run_id": null, "decision_id": null, "result_ref": null, "findings": null, "human_answer": null }
+            { "id": "p1", "text": "Decide how many sub-questions one split may propose", "proposed_text": null, "covers": "how many sub-questions one split may propose", "depends_on": [], "child_capability": "decision", "review": "kept", "outcome": "decided", "settled_order": 1, "run_id": "run-1d9c6e0b57a24f83", "decision_id": "dec-2c8e5a7f19d04b36", "result_ref": null, "findings": null, "human_answer": null, "stop_reason": null, "waited_for": null },
+            { "id": "p2", "text": "Decide how many child decisions one run may start, counting every split in the run", "proposed_text": "Decide how many child decisions one run may start", "covers": "how many child decisions one run may start", "depends_on": ["p1"], "child_capability": "decision", "review": "edited", "outcome": "decided", "settled_order": 2, "run_id": "run-1d9c6e0b57a24f83", "decision_id": "dec-6f31b0d84ae72c95", "result_ref": null, "findings": null, "human_answer": null, "stop_reason": null, "waited_for": null },
+            { "id": "p3", "text": "Decide whether children may run in parallel", "proposed_text": null, "covers": "whether children may run in parallel", "depends_on": [], "child_capability": "decision", "review": "left_out", "outcome": "not_run", "settled_order": null, "run_id": null, "decision_id": null, "result_ref": null, "findings": null, "human_answer": null, "stop_reason": null, "waited_for": null }
           ],
           "dropped": [],
+          "not_covered": [],
           "report_lines": [
             "p1 decided: Two to five sub-questions per split (dec-2c8e5a7f19d04b36, staged)",
             "p2 decided: At most five child decisions per run (dec-6f31b0d84ae72c95, staged; p1's record cited as precedent)",
@@ -645,12 +704,14 @@
           "gate_note": null,
           "state": "completed",
           "whole_decision_id": null,
+          "capability_gap_recorded": false,
           "parts": [
-            { "id": "p1", "text": "Find where the kernel reads memory.reuse_threshold", "proposed_text": null, "covers": "where the kernel reads memory.reuse_threshold", "depends_on": [], "child_capability": "research", "review": "kept", "outcome": "answered", "settled_order": 1, "run_id": "run-c47a0e93d18b2f65", "decision_id": null, "result_ref": "inv-4b9e1d07c2a35f68", "findings": "kernel/config_memory.py loads memory.reuse_threshold and rejects a value below applies_threshold; kernel/memory/precedent.py offers reuse at that value or above; the default 0.8 is set in config/kernel_config.default.json", "human_answer": null },
-            { "id": "p2", "text": "Find which tests cover the reuse offer", "proposed_text": null, "covers": "which tests cover the reuse offer", "depends_on": ["p1"], "child_capability": "research", "review": "kept", "outcome": "answered", "settled_order": 2, "run_id": "run-c47a0e93d18b2f65", "decision_id": null, "result_ref": "inv-91c6f2a8d05e7b34", "findings": "tests/kernel/memory/test_precedent_units.py pins the thresholds at 0.5 and 0.8 and checks that a precedent at the reuse threshold is offered; tests/kernel/memory/test_decision_precedent.py checks that one below it is evidence only", "human_answer": null },
-            { "id": "p3", "text": "Find whether an ADR fixes the 0.8 value", "proposed_text": null, "covers": "whether an ADR fixes the 0.8 value", "depends_on": [], "child_capability": "research", "review": "kept", "outcome": "answered", "settled_order": 3, "run_id": "run-c47a0e93d18b2f65", "decision_id": null, "result_ref": "inv-d27a5c3e8f1b9046", "findings": "No ADR fixes 0.8: ADR-060 names the reuse threshold as configuration (memory.reuse_threshold) without giving a value", "human_answer": null }
+            { "id": "p1", "text": "Find where the kernel reads memory.reuse_threshold", "proposed_text": null, "covers": "where the kernel reads memory.reuse_threshold", "depends_on": [], "child_capability": "research", "review": "kept", "outcome": "answered", "settled_order": 1, "run_id": "run-c47a0e93d18b2f65", "decision_id": null, "result_ref": "inv-4b9e1d07c2a35f68", "findings": "kernel/config_memory.py loads memory.reuse_threshold and rejects a value below applies_threshold; kernel/memory/precedent.py offers reuse at that value or above; the default 0.8 is set in config/kernel_config.default.json", "human_answer": null, "stop_reason": null, "waited_for": null },
+            { "id": "p2", "text": "Find which tests cover the reuse offer", "proposed_text": null, "covers": "which tests cover the reuse offer", "depends_on": ["p1"], "child_capability": "research", "review": "kept", "outcome": "answered", "settled_order": 2, "run_id": "run-c47a0e93d18b2f65", "decision_id": null, "result_ref": "inv-91c6f2a8d05e7b34", "findings": "tests/kernel/memory/test_precedent_units.py pins the thresholds at 0.5 and 0.8 and checks that a precedent at the reuse threshold is offered; tests/kernel/memory/test_decision_precedent.py checks that one below it is evidence only", "human_answer": null, "stop_reason": null, "waited_for": null },
+            { "id": "p3", "text": "Find whether an ADR fixes the 0.8 value", "proposed_text": null, "covers": "whether an ADR fixes the 0.8 value", "depends_on": [], "child_capability": "research", "review": "kept", "outcome": "answered", "settled_order": 3, "run_id": "run-c47a0e93d18b2f65", "decision_id": null, "result_ref": "inv-d27a5c3e8f1b9046", "findings": "No ADR fixes 0.8: ADR-060 names the reuse threshold as configuration (memory.reuse_threshold) without giving a value", "human_answer": null, "stop_reason": null, "waited_for": null }
           ],
           "dropped": [],
+          "not_covered": [],
           "report_lines": [
             "p1 answered: kernel/config_memory.py loads memory.reuse_threshold; kernel/memory/precedent.py offers reuse at that value or above",
             "p2 answered: tests/kernel/memory/test_precedent_units.py and tests/kernel/memory/test_decision_precedent.py cover the reuse offer",
@@ -675,11 +736,13 @@
           "gate_note": "One question, not two: how often they run follows from which traces they read. I will ask it again as one question.",
           "state": "rejected",
           "whole_decision_id": null,
+          "capability_gap_recorded": true,
           "parts": [
-            { "id": "p1", "text": "Decide which recent kernel traces the trace analyzers read", "proposed_text": null, "covers": "which recent kernel traces the trace analyzers read", "depends_on": [], "child_capability": "decision", "review": "rejected", "outcome": "not_run", "settled_order": null, "run_id": null, "decision_id": null, "result_ref": null, "findings": null, "human_answer": null },
-            { "id": "p2", "text": "Decide how often the trace analyzers run", "proposed_text": null, "covers": "how often they run", "depends_on": ["p1"], "child_capability": "decision", "review": "rejected", "outcome": "not_run", "settled_order": null, "run_id": null, "decision_id": null, "result_ref": null, "findings": null, "human_answer": null }
+            { "id": "p1", "text": "Decide which recent kernel traces the trace analyzers read", "proposed_text": null, "covers": "which recent kernel traces the trace analyzers read", "depends_on": [], "child_capability": "decision", "review": "rejected", "outcome": "not_run", "settled_order": null, "run_id": null, "decision_id": null, "result_ref": null, "findings": null, "human_answer": null, "stop_reason": null, "waited_for": null },
+            { "id": "p2", "text": "Decide how often the trace analyzers run", "proposed_text": null, "covers": "how often they run", "depends_on": ["p1"], "child_capability": "decision", "review": "rejected", "outcome": "not_run", "settled_order": null, "run_id": null, "decision_id": null, "result_ref": null, "findings": null, "human_answer": null, "stop_reason": null, "waited_for": null }
           ],
           "dropped": [],
+          "not_covered": [],
           "report_lines": [
             "The proposed split was rejected by human:user; nothing was decided.",
             "Try rephrasing as one bounded question, for example: \"Decide which recent kernel traces the trace analyzers read and on what schedule.\""
@@ -703,18 +766,89 @@
           "gate_note": "Keep it whole: one record format covers all five, so decide it as one.",
           "state": "rejected_kept_whole",
           "whole_decision_id": null,
+          "capability_gap_recorded": false,
           "parts": [
-            { "id": "p1", "text": "Decide which fields a decision record needs", "proposed_text": null, "covers": "which fields a record needs", "depends_on": [], "child_capability": "decision", "review": "rejected", "outcome": "not_run", "settled_order": null, "run_id": null, "decision_id": null, "result_ref": null, "findings": null, "human_answer": null },
-            { "id": "p2", "text": "Decide which classification filters a record carries (component, file type or language, repository-wide, roadmap phase)", "proposed_text": null, "covers": "which classification filters it carries (component, file type or language, repository-wide, roadmap phase)", "depends_on": ["p1"], "child_capability": "decision", "review": "rejected", "outcome": "not_run", "settled_order": null, "run_id": null, "decision_id": null, "result_ref": null, "findings": null, "human_answer": null },
-            { "id": "p3", "text": "Decide the folder layout for decision records under docs/", "proposed_text": null, "covers": "the folder layout", "depends_on": [], "child_capability": "decision", "review": "rejected", "outcome": "not_run", "settled_order": null, "run_id": null, "decision_id": null, "result_ref": null, "findings": null, "human_answer": null },
-            { "id": "p4", "text": "Decide how decision record files are named", "proposed_text": null, "covers": "file naming", "depends_on": ["p3"], "child_capability": "decision", "review": "rejected", "outcome": "not_run", "settled_order": null, "run_id": null, "decision_id": null, "result_ref": null, "findings": null, "human_answer": null },
-            { "id": "p5", "text": "Decide how human approval and later corrections are recorded", "proposed_text": null, "covers": "how human approval and later corrections are recorded", "depends_on": ["p1"], "child_capability": "decision", "review": "rejected", "outcome": "not_run", "settled_order": null, "run_id": null, "decision_id": null, "result_ref": null, "findings": null, "human_answer": null }
+            { "id": "p1", "text": "Decide which fields a decision record needs", "proposed_text": null, "covers": "which fields a record needs", "depends_on": [], "child_capability": "decision", "review": "rejected", "outcome": "not_run", "settled_order": null, "run_id": null, "decision_id": null, "result_ref": null, "findings": null, "human_answer": null, "stop_reason": null, "waited_for": null },
+            { "id": "p2", "text": "Decide which classification filters a record carries (component, file type or language, repository-wide, roadmap phase)", "proposed_text": null, "covers": "which classification filters it carries (component, file type or language, repository-wide, roadmap phase)", "depends_on": ["p1"], "child_capability": "decision", "review": "rejected", "outcome": "not_run", "settled_order": null, "run_id": null, "decision_id": null, "result_ref": null, "findings": null, "human_answer": null, "stop_reason": null, "waited_for": null },
+            { "id": "p3", "text": "Decide the folder layout for decision records under docs/", "proposed_text": null, "covers": "the folder layout", "depends_on": [], "child_capability": "decision", "review": "rejected", "outcome": "not_run", "settled_order": null, "run_id": null, "decision_id": null, "result_ref": null, "findings": null, "human_answer": null, "stop_reason": null, "waited_for": null },
+            { "id": "p4", "text": "Decide how decision record files are named", "proposed_text": null, "covers": "file naming", "depends_on": ["p3"], "child_capability": "decision", "review": "rejected", "outcome": "not_run", "settled_order": null, "run_id": null, "decision_id": null, "result_ref": null, "findings": null, "human_answer": null, "stop_reason": null, "waited_for": null },
+            { "id": "p5", "text": "Decide how human approval and later corrections are recorded", "proposed_text": null, "covers": "how human approval and later corrections are recorded", "depends_on": ["p1"], "child_capability": "decision", "review": "rejected", "outcome": "not_run", "settled_order": null, "run_id": null, "decision_id": null, "result_ref": null, "findings": null, "human_answer": null, "stop_reason": null, "waited_for": null }
           ],
           "dropped": [],
+          "not_covered": [],
           "report_lines": [
             "The proposed split was rejected by human:user; the goal is kept whole and runs as one decision."
           ],
           "source": "illustrative, on a real goal. The subject is the goal of run-5d246775f5e54f11 (2026-10-01), as quoted in docs/analysis/2026-10-01-kernel-trace-review-decision-records-run.md. Routing accepted it as one decision (Jev, probability 1.0). Finding 5 notes that it bundles five sub-decisions into one pick-one-of-N: fields, filters, layout, naming, approval and corrections. Under the user's decision of 2026-10-04 the kernel offers the split anyway. Under the decision of 2026-10-05, rejecting it keeps the goal whole. This sample shows that outcome: the human rejected the split, and the run goes on as one decision, as the real run did. Like the real run when it was read, it has not reached a decision yet (waiting_host), so whole_decision_id is null. The run id, trace id, gate time, part texts and dependencies are illustrative. The same question was later decided as one decision in dec-ef8ddcb79d668a67 (run-2fbb4ef43b1345f6), a separate run"
+        },
+        {
+          "id": "dcp-reusable-criteria-partial",
+          "subject_kind": "goal",
+          "subject_text": "For the kernel we often use similar decision basis and we should also reuse them. So it would be cool to not only store decisions, but also to be able to reuse categories. As a start we can probably mine them from langfuse, and we can should put them into a new file type (needs evaluation), and then also into neo4j. And we must make sure that we are able to cluster them somehow. That way we only need LLMs to generate further categories if jev thinks some are missing to make better decision",
+          "found_at": "routing",
+          "trigger": "jev_none",
+          "work_item_depth": 0,
+          "run_id": "run-9c40e2b7a15d93e0",
+          "run_status": "partial",
+          "langfuse_trace_id": "1e7c3a90d4b26f5e8a1c07d39b4e6f21",
+          "proposed_by": "host.decompose_goal",
+          "gate_answer": "approved",
+          "gate_by": "human:user",
+          "gate_at": "2026-10-05T10:05:51Z",
+          "gate_note": null,
+          "state": "ended_partial",
+          "whole_decision_id": null,
+          "capability_gap_recorded": false,
+          "parts": [
+            { "id": "p1", "text": "Decide which new file type the reusable categories are put into (needs evaluation)", "proposed_text": null, "covers": "we can should put them into a new file type (needs evaluation)", "depends_on": [], "child_capability": "decision", "review": "kept", "outcome": "not_settled", "settled_order": null, "run_id": "run-9c40e2b7a15d93e0", "decision_id": null, "result_ref": null, "findings": null, "human_answer": null, "stop_reason": "budget_stop", "waited_for": null },
+            { "id": "p2", "text": "Decide how the reusable categories are then also put into Neo4j", "proposed_text": null, "covers": "and then also into neo4j", "depends_on": ["p1"], "child_capability": "decision", "review": "kept", "outcome": "not_run", "settled_order": null, "run_id": null, "decision_id": null, "result_ref": null, "findings": null, "human_answer": null, "stop_reason": null, "waited_for": "p1" },
+            { "id": "p3", "text": "Decide how the reusable categories are clustered", "proposed_text": null, "covers": "we must make sure that we are able to cluster them somehow", "depends_on": ["p1"], "child_capability": "decision", "review": "kept", "outcome": "not_run", "settled_order": null, "run_id": null, "decision_id": null, "result_ref": null, "findings": null, "human_answer": null, "stop_reason": null, "waited_for": "p1" },
+            { "id": "p4", "text": "Decide whether to mine the reusable categories from Langfuse as a start", "proposed_text": null, "covers": "As a start we can probably mine them from langfuse", "depends_on": [], "child_capability": "decision", "review": "kept", "outcome": "decided", "settled_order": 1, "run_id": "run-9c40e2b7a15d93e0", "decision_id": "dec-a41c07e9b35a1d62", "result_ref": null, "findings": null, "human_answer": null, "stop_reason": null, "waited_for": null }
+          ],
+          "dropped": [
+            { "text": "Decide when an LLM may generate further categories", "covers": "generate new categories only when Jev finds some missing", "reason": "quote not found in the goal (the goal says \"generate further categories if jev thinks some are missing\")" }
+          ],
+          "not_covered": [],
+          "report_lines": [
+            "p1 not settled: its decision reached its budget stop",
+            "p2 not run: waits for p1, which was not settled (budget stop)",
+            "p3 not run: waits for p1, which was not settled (budget stop)",
+            "p4 decided: Mine from both Langfuse traces and published decision records (dec-a41c07e9b35a1d62, staged)"
+          ],
+          "source": "illustrative, for DK-400e-4: the proposal of dcp-reusable-criteria-proposed, approved as proposed in a run of its own. p1 ran first, and its decision reached its budget stop. p2 and p3 wait for p1, so they were not run. p4 waits for no part, so it still ran and was decided. The run ended partial, not completed. The run id, trace id, gate time and the budget stop are illustrative"
+        },
+        {
+          "id": "dcp-decision-records-seven-parts",
+          "subject_kind": "goal",
+          "subject_text": "Decide how Leafcutter should file decision records as JSON or YAML files under docs/ so later kernel runs can find and reuse them as precedent: which fields a record needs, which classification filters it carries (component, file type or language, repository-wide, roadmap phase), the folder layout and file naming, and how human approval and later corrections are recorded.",
+          "found_at": "routing",
+          "trigger": "bundled_accepted",
+          "work_item_depth": 0,
+          "run_id": "run-6b2d91e40c7a5f38",
+          "run_status": "waiting_human",
+          "langfuse_trace_id": "8f2a6d0c3e91b7a4d5c08e2f6a1b3d97",
+          "proposed_by": "host.decompose_goal",
+          "gate_answer": null,
+          "gate_by": null,
+          "gate_at": null,
+          "gate_note": null,
+          "state": "proposed",
+          "whole_decision_id": null,
+          "capability_gap_recorded": false,
+          "parts": [
+            { "id": "p1", "text": "Decide whether decision records are JSON or YAML files", "proposed_text": null, "covers": "as JSON or YAML files", "depends_on": [], "child_capability": "decision", "review": "proposed", "outcome": "not_run", "settled_order": null, "run_id": null, "decision_id": null, "result_ref": null, "findings": null, "human_answer": null, "stop_reason": null, "waited_for": null },
+            { "id": "p2", "text": "Decide which fields a decision record needs", "proposed_text": null, "covers": "which fields a record needs", "depends_on": [], "child_capability": "decision", "review": "proposed", "outcome": "not_run", "settled_order": null, "run_id": null, "decision_id": null, "result_ref": null, "findings": null, "human_answer": null, "stop_reason": null, "waited_for": null },
+            { "id": "p3", "text": "Decide which classification filters a record carries (component, file type or language, repository-wide, roadmap phase)", "proposed_text": null, "covers": "which classification filters it carries (component, file type or language, repository-wide, roadmap phase)", "depends_on": ["p2"], "child_capability": "decision", "review": "proposed", "outcome": "not_run", "settled_order": null, "run_id": null, "decision_id": null, "result_ref": null, "findings": null, "human_answer": null, "stop_reason": null, "waited_for": null },
+            { "id": "p4", "text": "Decide the folder layout for decision records under docs/", "proposed_text": null, "covers": "the folder layout", "depends_on": [], "child_capability": "decision", "review": "proposed", "outcome": "not_run", "settled_order": null, "run_id": null, "decision_id": null, "result_ref": null, "findings": null, "human_answer": null, "stop_reason": null, "waited_for": null },
+            { "id": "p5", "text": "Decide how decision record files are named", "proposed_text": null, "covers": "file naming", "depends_on": ["p1", "p4"], "child_capability": "decision", "review": "proposed", "outcome": "not_run", "settled_order": null, "run_id": null, "decision_id": null, "result_ref": null, "findings": null, "human_answer": null, "stop_reason": null, "waited_for": null }
+          ],
+          "dropped": [],
+          "not_covered": [
+            { "id": "p6", "text": "Decide how human approval of a record is recorded", "covers": "how human approval", "reason": "beyond the five-part cap" },
+            { "id": "p7", "text": "Decide how later corrections to a record are recorded", "covers": "later corrections are recorded", "reason": "beyond the five-part cap" }
+          ],
+          "report_lines": [],
+          "source": "illustrative, for DK-400c-1-i: the same real goal as dcp-decision-records-bundled (the goal of run-5d246775f5e54f11), here proposed as seven parts. The gate offers p1 to p5 and lists p6 and p7 read-only as not covered by this split; they can be asked again as a request of their own. It also shows a bundled_accepted split still waiting at the gate. The run id, trace id, part texts and dependencies are illustrative"
         }
       ]
     }
@@ -735,6 +869,7 @@
     { "action": "extended", "by": "flow-author", "date": "2026-10-02", "note": "used_by.flows now lists the four decision-lifecycle sub-flows (decision-forming, decision-staging, decision-publishing, decision-retrieval) beside the parent decision-lifecycle; each sets mock_data_ref to this dataset. No records or fields changed." },
     { "action": "extended", "by": "mock-data-author", "date": "2026-10-02", "note": "Extended in place for splitting a compound item into bounded parts. The item may be a goal, a research request with several needs, or a multi-part decision question met inside a run. Parts run in dependency order (KernelDecomposeMultiPartGoal ticket). New entity Decomposition, with five records. One is real: the hand split of the goal of run-40d2159630bb48bd (G1 decided, G3 settled by the human, G2 open). Four are illustrative, one per state host.decompose_goal would produce: proposed at the gate, with one proposal dropped for a missing quote; a mid-run decision question approved with an edit and a subset, then completed; a research request completed; a rejected split that ends the run blocked. Three Decision records added: the real staged dec-93c1c730463c1f3c (G1) and two illustrative child decisions. The later child cites the earlier as precedent. Decision gains split_part, a derived reverse view that is null on every earlier record. options[].proposed_by now also admits claude_code[:<role>] and null, as dec-93c1c730463c1f3c records them. Same id, version 2 -> 3." },
     { "action": "extended", "by": "mock-data-author", "date": "2026-10-05", "note": "User decision of 2026-10-04: a bundled request is also offered as a split when routing would accept it as one decision. Decomposition.trigger gains bundled_accepted, a routing-time trigger at depth 0. The found_at and trigger descriptions and the found_at invariant now say so. They also state that a single bounded question no capability can handle gets no Decomposition and stays a capability gap. One illustrative record added: dcp-decision-records-bundled, on the real goal of run-5d246775f5e54f11 (Finding 5 of docs/analysis/2026-10-01-kernel-trace-review-decision-records-run.md), proposed at the gate. No existing record changed. The version stays 3 because this branch has not shipped v3 yet." },
-    { "action": "extended", "by": "mock-data-author", "date": "2026-10-05", "note": "User decisions of 2026-10-05: rejecting the split of a bundled_accepted subject, or of an item found mid-run, keeps it whole. It goes ahead as one decision or research step, and the run is not blocked. Only a rejected jev_none or ambiguous split still ends the run blocked. The state enum gains rejected_kept_whole, and the rejected invariant is now scoped to the jev_none and ambiguous triggers. New field Decomposition.whole_decision_id links the one Decision that may result; it is null on every record. run_status gains waiting_host. dcp-decision-records-bundled moved from proposed to rejected_kept_whole. Version 3 -> 4." }
+    { "action": "extended", "by": "mock-data-author", "date": "2026-10-05", "note": "User decisions of 2026-10-05: rejecting the split of a bundled_accepted subject, or of an item found mid-run, keeps it whole. It goes ahead as one decision or research step, and the run is not blocked. Only a rejected jev_none or ambiguous split still ends the run blocked. The state enum gains rejected_kept_whole, and the rejected invariant is now scoped to the jev_none and ambiguous triggers. New field Decomposition.whole_decision_id links the one Decision that may result; it is null on every record. run_status gains waiting_host. dcp-decision-records-bundled moved from proposed to rejected_kept_whole. Version 3 -> 4." },
+    { "action": "extended", "by": "mock-data-author", "date": "2026-10-05", "note": "Gaps the BA found in v4 (ccd51a52, DK-400a to DK-400f), plus three user rules of 2026-10-05. parts[].outcome gains not_settled, for a part that ran but did not settle, with stop_reason (budget_stop, blocked, capability_gap, cancelled). not_run stays for parts that never started; a dependant of an unsettled part names it in waited_for. State gains ended_partial, and run_status gains partial: the other parts still run. New not_covered[] holds proposals beyond the five-part cap, whose quotes are in the subject. New capability_gap_recorded is true for a rejected split of a turned-away request (and for the hand split), false otherwise. New invariant: a caller-supplied leafcutter.decision_request.v1 is never checked for bundling or split. Every existing record gained the new fields (null, false, [], or true where a gap was recorded). Added dcp-reusable-criteria-partial (DK-400e-4) with its decided part dec-a41c07e9b35a1d62, and dcp-decision-records-seven-parts (DK-400c-1-i). Version 4 -> 5." }
   ]
 }
