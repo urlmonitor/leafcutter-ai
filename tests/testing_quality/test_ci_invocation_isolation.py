@@ -10,13 +10,42 @@ BUSINESS CONTEXT: The -x flag short-circuits the collection-isolation guarantee 
     Removing -x and adding --continue-on-collection-errors ensures every error — both
     collection failures and genuine assertion failures — surfaces in one run.
 ARCHITECTURE: Two-pronged regression guard:
-    1. A static assertion reads .github/workflows/ci.yml and verifies the pytest
-       invocation that targets tests/ unit_tests/ has no -x flag and includes
-       --continue-on-collection-errors.  This fires immediately if someone re-adds -x.
+    1. A static assertion parses .github/workflows/ci.yml as YAML, locates the
+       'test-shard' job (the matrix job that runs the real pytest invocation
+       over tests/ + unit_tests/ since the suite was re-enabled as an 8-way
+       shard matrix on ci/shard-pytest-suite — the 'test' job is now only a
+       thin aggregator over it, with no pytest step of its own), and verifies
+       that job's pytest step has no -x flag and includes
+       --continue-on-collection-errors.  This fires immediately if someone
+       re-adds -x.
     2. A behavioral subprocess test runs pytest with the post-fix CI flags explicitly
        (no -x, with --continue-on-collection-errors -q) against a synthetic tree
        containing one unimportable file, one genuinely failing test, and one healthy
        passing test, then asserts all three outcomes surface in a single run.
+
+DECISION HISTORY
+- 2026-10-05 [ci/shard-pytest-suite] (classification: test_drift): the static
+  assertion used to scan ci.yml line-by-line for a single 'run:' line
+  containing all three of "pytest", "tests/" and "unit_tests/". That matcher
+  had a latent bug this split exposed: the substring "tests/" is itself
+  contained inside "unit_tests/", so the check `"tests/" in line and
+  "unit_tests/" in line` is satisfied by ANY line that merely contains
+  "unit_tests/" — no second root required. While the real suite ran as one
+  job with a single-line `run:`, this never mattered, because that one line
+  was the first (and only) line matching "pytest" + "unit_tests/". Once the
+  suite moved to 'test-shard' and became a multi-line folded `run: >` block,
+  no single physical line any longer contained "pytest", "tests/" AND
+  "unit_tests/" together, so the loop fell through to the next line earlier
+  in the file that happened to contain "pytest" and "unit_tests/" by
+  accident — the product-truth job's unrelated
+  `pytest unit_tests/product_truth/test_flow_io_contract*.py -q` line — and
+  asserted against *that* line's flags instead. The AC (CI's real pytest
+  invocation over tests/+unit_tests/ must lack -x and carry
+  --continue-on-collection-errors) is unchanged and still true of
+  'test-shard'; only the job owning that invocation moved, and the line-
+  scanning approach was never robust to a multi-line command. Rewritten to
+  parse the YAML and read the 'test-shard' job's own step directly, which is
+  also immune to the false-substring-match bug regardless of job topology.
 """
 
 from __future__ import annotations
@@ -28,8 +57,17 @@ import textwrap
 import unittest
 from pathlib import Path
 
+import yaml
+
 _REPO_ROOT = Path(__file__).resolve().parent.parent.parent
 _CI_YML = _REPO_ROOT / ".github" / "workflows" / "ci.yml"
+_SHARD_JOB = "test-shard"
+
+
+def _load_ci() -> dict:
+    """Parse ci.yml and return the workflow mapping."""
+    with _CI_YML.open(encoding="utf-8") as fh:
+        return yaml.safe_load(fh)
 
 
 class TestCIInvocationIsolation(unittest.TestCase):
@@ -143,66 +181,83 @@ class TestCIInvocationIsolation(unittest.TestCase):
         # covers: TQ-100a-1
         """CI yml guard: pytest invocation must lack -x and carry --continue-on-collection-errors.
 
-        This test reads .github/workflows/ci.yml, locates the pytest command that targets
-        ``tests/`` and ``unit_tests/``, and asserts two properties of that command:
+        This test parses .github/workflows/ci.yml as YAML, locates the real pytest
+        step on the 'test-shard' job (the matrix job that runs tests/ + unit_tests/
+        since the suite was re-enabled as an 8-way shard matrix — see the module
+        DECISION HISTORY), and asserts two properties of that step's run command:
 
           1. The ``-x`` flag is absent.
           2. ``--continue-on-collection-errors`` is present.
 
         This test FAILS immediately if someone re-adds ``-x`` to the CI command, making
         it a direct regression guard for the Fix H-1 change.
+
+        Deliberately does NOT scan the raw YAML text line-by-line: that approach's
+        "does this one physical line contain pytest, tests/, and unit_tests/" check
+        is fooled by the substring "tests/" being contained inside "unit_tests/"
+        itself, and breaks outright once the real command becomes a multi-line
+        folded `run: >` block (as it is now) with no single line containing all
+        three substrings. Parsing the YAML and reading the job's own step is
+        immune to both failure modes.
         """
         self.assertTrue(
             _CI_YML.exists(),
             msg=f"CI workflow file not found at {_CI_YML}",
         )
-        content = _CI_YML.read_text(encoding="utf-8")
+        workflow = _load_ci()
+        jobs = workflow.get("jobs", {})
+        self.assertIn(
+            _SHARD_JOB,
+            jobs,
+            msg=f"No '{_SHARD_JOB}' job found in ci.yml — shard matrix job missing.",
+        )
+        shard_job = jobs[_SHARD_JOB]
+        steps = shard_job.get("steps", [])
 
-        # Locate the main test-suite invocation line (targets tests/ and unit_tests/).
-        # Skip comment lines (lines whose first non-whitespace character is '#') — the
-        # YAML file header describes the test job in prose that also contains the words
-        # "tests/" and "unit_tests/", so the matcher must look only at run: lines.
-        test_suite_line: str | None = None
-        for line in content.splitlines():
-            stripped = line.strip()
+        # Locate the step that actually runs pytest over tests/ + unit_tests/.
+        # yaml.safe_load folds a `run: >` block scalar into a single string with
+        # newlines replaced by spaces, so this is one string regardless of how
+        # many physical lines the step spans in the file.
+        pytest_cmd: str | None = None
+        for step in steps:
+            run_cmd = str(step.get("run", "")) if isinstance(step, dict) else ""
             if (
-                not stripped.startswith("#")
-                and "pytest" in stripped
-                and "tests/" in stripped
-                and "unit_tests/" in stripped
+                "pytest" in run_cmd
+                and "tests/" in run_cmd
+                and "unit_tests/" in run_cmd
             ):
-                test_suite_line = stripped
+                pytest_cmd = run_cmd
                 break
 
         self.assertIsNotNone(
-            test_suite_line,
+            pytest_cmd,
             msg=(
-                "Could not find a pytest invocation targeting 'tests/' and 'unit_tests/' "
-                f"in {_CI_YML}. Full content:\n{content}"
+                f"Could not find a pytest invocation targeting 'tests/' and "
+                f"'unit_tests/' in the '{_SHARD_JOB}' job's steps. Job: {shard_job!r}"
             ),
         )
 
         # The -x flag must NOT be present as a standalone flag.
         # Pattern: -x surrounded by whitespace (or start/end of string) so that
         # longer options such as --extra-foo are not falsely matched.
-        has_x_flag = bool(re.search(r"(?<!\S)-x(?!\S)", test_suite_line))  # type: ignore[arg-type]
+        has_x_flag = bool(re.search(r"(?<!\S)-x(?!\S)", pytest_cmd))  # type: ignore[arg-type]
         self.assertFalse(
             has_x_flag,
             msg=(
                 "CI pytest invocation contains the -x flag, which stops pytest after "
                 "the first failure and breaks the collection-isolation guarantee. "
-                f"Remove -x from the CI command.\nOffending line: {test_suite_line}"
+                f"Remove -x from the CI command.\nOffending command: {pytest_cmd}"
             ),
         )
 
         # --continue-on-collection-errors MUST be present.
         self.assertIn(
             "--continue-on-collection-errors",
-            test_suite_line,  # type: ignore[arg-type]
+            pytest_cmd,  # type: ignore[arg-type]
             msg=(
                 "CI pytest invocation is missing --continue-on-collection-errors. "
                 "Add this flag so collection errors do not abort the session.\n"
-                f"Current line: {test_suite_line}"
+                f"Current command: {pytest_cmd}"
             ),
         )
 

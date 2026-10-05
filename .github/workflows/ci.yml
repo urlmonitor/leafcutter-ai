@@ -309,6 +309,20 @@ jobs:
         group: [1, 2, 3, 4, 5, 6, 7, 8]
     steps:
       - uses: actions/checkout@v4
+        with:
+          # FULL HISTORY, not the default depth-1 shallow clone. Several
+          # tests/knowledge/ tests read repository history through
+          # knowledge/adapters/git_source.py, which shells out to `git -C`.
+          # Against a shallow clone those resolve nothing and the fixture dies
+          # with `fatal: Needed a single revision`, surfacing as 27 "ERROR at
+          # setup" entries plus a handful of failures.
+          #
+          # This is NOT caused by sharding and is not new: the single `test`
+          # job used the same bare checkout, so it would have hit this the
+          # moment it was re-enabled. It stayed invisible only because that job
+          # has been disabled since 2026-10-02. Verified by reproducing the
+          # same tests green on a full local clone of the same commit.
+          fetch-depth: 0
 
       - name: Set up Python
         uses: actions/setup-python@v5
