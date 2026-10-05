@@ -1,5 +1,5 @@
 id: DK-400d
-title: "Nothing runs until you approve the split"
+title: "No part runs until you approve the split"
 component: decision-kernel
 components:
   - decision_kernel
@@ -16,16 +16,19 @@ criteria: |
   You see your request as you submitted it beside every proposed part, and you
   can approve the split as shown, reword a part, leave parts out or reject it;
   only a person can give that answer, and who gave it and when is kept with the
-  split. A reworded part keeps the original proposal beside it, a left-out part
-  never runs, and a rejected split ends with a plain note that nothing was
-  decided and a hint to ask again as one question.
+  split. A reworded part keeps the original proposal beside it and a left-out
+  part never runs. If you reject the split of a request that could have been
+  taken on as one question, it goes ahead as one decision, exactly as today; if
+  you reject the split of a request that would have been turned away, the work
+  ends with a plain note that nothing was decided and a hint to ask again as
+  one question.
 depends_on:
   - DK-400
 doc_links:
   - path: docs/product-truth/flows/leafcutter/decision-forming.flow.json
     relationship: specified-by
     status: exists
-    relevance: "Step split-approve (screen decision-split-approve) and branches split-revise and split-reject."
+    relevance: "Step split-approve (screen decision-split-approve) and branches split-revise and split-reject. split-reject covers only the blocked ending so far (see notes)."
   - path: docs/product-truth/mockups/leafcutter/decision-split-approve.mockup.json
     relationship: specified-by
     status: exists
@@ -46,7 +49,9 @@ delivers_to: null
 expects_from: null
 origin_agent: product-owner
 created: 2026-10-04
-amended_by: []
+amended_by:
+  - reason: "2026-10-05 PO, user decision: rejecting the split of a request the kernel would have accepted as one decision lets it go ahead as one decision, exactly as today; rejecting the split of a request the kernel turned away still ends with the plain nothing-was-decided note. Title narrowed from 'Nothing runs' to 'No part runs' accordingly."
+  - reason: "2026-10-05 PO, user decision: a rejected split found mid-run also goes ahead as one; only a split of a turned-away request ends blocked when rejected. The open-question hold on L2 work was removed."
 superseded_by: null
 covered_by: []
 implemented_by: []
@@ -59,9 +64,44 @@ notes: |
   SETTLED: no part runs before a person answers, and the run waits for that
   answer (run_status waiting_human). Only a person answers, recorded as
   human:<name> with the time (ADR-060). An approved split keeps at least one
-  part. A rejected split runs nothing, ends the run blocked, and its report says
-  plainly that nothing was decided, with a hint to ask again as one bounded
-  question.
+  part. A rejected split runs no part.
+
+  REJECTION, BY WHY THE SPLIT WAS OFFERED (user decisions 2026-10-05, recorded
+  in DK-400 "DECISIONS AT THE PO GATE"). Only a turned-away request ends
+  blocked:
+    - trigger bundled_accepted (routing would have accepted the request as one
+      decision): the request goes ahead as ONE decision, exactly as today, from
+      the precedent step. The run is not blocked, and no part or child work
+      item is created.
+    - found_at mid_run (no trigger): DECIDED, the same go-ahead. The work item
+      that held the many-sided question goes ahead as one, because the run had
+      already taken it on. The run is not blocked, and no part or child work
+      item is created.
+    - trigger jev_none or ambiguous (routing turned the request away): the run
+      ends blocked, and its report says plainly that the split was rejected
+      and nothing was decided, with a hint to ask again as one bounded
+      question.
+  In every case the report keeps one plain line saying a split was offered and
+  rejected (DK-400f).
+
+  PRODUCT-TRUTH FOLLOW-UP (before the BA back-links L2s to split-reject):
+    - Flow decision-forming: split-reject's scenario and branch still say only
+      "no part runs, the run ends blocked", including in the uncommitted v4. It
+      needs the go-ahead ending for bundled_accepted and for mid_run. That can
+      be a condition on split-reject or a second branch that continues as one
+      decision.
+    - Mock data decisions: the rejection invariants are being rewritten,
+      uncommitted and in progress, by the mock-data author; they will be
+      committed together with these ACs. As drafted on 2026-10-05:
+      - trigger bundled_accepted is added;
+      - a rejected bundled_accepted split is recorded as kept whole (working
+        name rejected_kept_whole, with whole_decision_id), and its run is
+        never blocked by the split;
+      - only jev_none and ambiguous rejections require run_status blocked;
+      - one sample record (dcp-decision-records-bundled) is added.
+      The draft keys the kept-whole ending on bundled_accepted only. The
+      mid-run go-ahead decided above must be covered too; check this when
+      the mock data is committed.
 
   CARRY TO L2:
     - The gate offers four answers: approve as shown, edit a part's text, untick
@@ -70,7 +110,8 @@ notes: |
     - A person may add back a dropped proposal's question by editing (flow
       branch split-dropped). Whether a person may also ADD a new part, or change
       a part's dependencies or whether it needs a decision or research, is not
-      settled by the flow. It is a PO open question.
+      settled by the flow. Left to the IT PO (DK-400 "DECISIONS AT THE PO
+      GATE", Q7).
     - Unticking every part is not an approval. Whether the gate forbids it or
       treats it as a rejection is for the BA to settle.
     - The gate note (gate_note) keeps the person's words: a rejection reason,

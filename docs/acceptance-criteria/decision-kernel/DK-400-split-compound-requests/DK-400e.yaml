@@ -66,19 +66,20 @@ notes: |
   file, so published decision records keep their shape.
 
   CARRY TO L2 / IT PO:
-    - FAILURE IS NOT IN THE FLOW. If a part cannot be settled (its own decision
-      is blocked, a gap, a budget stop, or cancelled), what happens to the
-      parts that wait on it, and to the parts that do not? The mock data allows
-      the outcome "not run". The flow has no branch for a part that fails. This
-      is a PO open question; the PO recommends that dependants are marked not
-      run with the reason, independent parts carry on, and the report says which
-      is which.
+    - FAILURE IS NOT IN THE FLOW. A part may fail to settle: its own decision
+      is blocked, hits a gap or a budget stop, or is cancelled. DECIDED on
+      2026-10-05: the PO recommendation is the default the BA uses (see DK-400
+      "DECISIONS AT THE PO GATE", Q5). The parts that depend on it are marked
+      not run with the reason, independent parts carry on, and the report says
+      which is which. The mock data allows the outcome "not run", but the flow
+      has no branch for a part that fails yet; the flow-author should add one.
     - Each child decision still goes through its own approval steps (options,
       criteria, the final choice). A split multiplies the questions a person is
       asked, which matters for the bounded-count setting the IT PO owns.
     - settled_by_human (a person answers a part directly) exists in the mock
-      data only for the hand split. Whether the kernel path offers it is a PO
-      open question (see DK-400f).
+      data only for the hand split. DECIDED on 2026-10-05 (DK-400 "DECISIONS AT
+      THE PO GATE", Q4): hand splits are history only, so the kernel path does
+      not offer settled_by_human (see DK-400f).
 
   DOCS: the kernel, its child work items and the person's gates interact in
   order (sequence-diagram).

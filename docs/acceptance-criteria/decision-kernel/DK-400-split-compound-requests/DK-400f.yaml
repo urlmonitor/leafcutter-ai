@@ -16,8 +16,9 @@ criteria: |
   While the parts are worked through and once the work ends, you see for every
   part whether it is waiting, decided, answered or not run, with a link to its
   decision record or research findings, and the final report gives one line per
-  part. A rejected split gets a plain report too, so you never have to piece the
-  outcome together yourself.
+  part. If you reject a split, the report says so in one plain line, whether
+  your request went ahead as one decision or nothing was decided, so you never
+  have to piece the outcome together yourself.
 depends_on:
   - DK-400
 doc_links:
@@ -41,7 +42,8 @@ delivers_to: null
 expects_from: null
 origin_agent: product-owner
 created: 2026-10-04
-amended_by: []
+amended_by:
+  - reason: "2026-10-05 PO, user decisions on rejection: the rejected-split sentence now covers both endings (went ahead as one decision, or nothing decided), with one plain report line saying a split was offered and rejected confirmed as the default."
 superseded_by: null
 covered_by: []
 implemented_by: []
@@ -56,15 +58,29 @@ notes: |
   section has one line per part, starting with the part id and naming its
   outcome. Edited and left-out parts are visible as such.
 
-  OPEN, for the PO (flow-author open point c): the hand split. The progress
-  mockup and the mock record dcp-reusable-criteria-by-hand show a split made
-  by hand outside the kernel (proposed_by claude_code), including a part
-  "settled by a human". The flow has no node for it. Its report_lines are [],
-  because the run report knows nothing of a split made outside the kernel. The
-  PO recommends treating the hand split as historical evidence only: the kernel
-  does not record hand splits, and settled_by_human is not offered in the kernel
-  path unless the user asks for it. If the user wants hand splits recorded or
-  shown, the flow-author must add a node first.
+  DECIDED on 2026-10-05 (flow-author open point c; see DK-400 "DECISIONS AT THE
+  PO GATE", Q4, which wins over this note): the hand split is history only. The
+  progress mockup and the mock record dcp-reusable-criteria-by-hand show a
+  split made by hand outside the kernel (proposed_by claude_code), including a
+  part "settled by a human". The flow has no node for it, and its report_lines
+  are [], because the run report knows nothing of a split made outside the
+  kernel. The kernel does not record hand splits, and settled_by_human is not
+  offered in the kernel path. Build no L2 for either. The hand-split record
+  stays in the mock data as real-world evidence only.
+
+  REJECTED SPLITS (user decisions 2026-10-05; see DK-400d and DK-400 "DECISIONS
+  AT THE PO GATE"):
+    - Turned-away request (trigger jev_none or ambiguous): the run ends blocked,
+      and the plain report says the split was rejected and nothing was decided,
+      with a hint to ask again as one question.
+    - Request that could have been taken on as one (trigger bundled_accepted),
+      or a split found mid-run: it goes ahead as one decision. The report still
+      carries one plain line saying a split was offered and rejected, so the
+      person can see why there is no per-part section. This was the PO
+      recommendation and is now confirmed as the default.
+    - The mock data's report_lines rules for both endings are being drafted,
+      uncommitted and in progress, by the mock-data author; they will be
+      committed together with these ACs (see DK-400d).
 
   DOCS: reading split progress and the report section belongs in the kernel
   how-to (how-to).

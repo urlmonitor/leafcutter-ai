@@ -62,20 +62,20 @@ notes: |
   Each part names the parts it depends on, with no cycles.
 
   ADDED BY THE PO (flow-author open point a): "not forced into a split: you are
-  told so plainly". This is the customer stance; the mechanism is open. Which
-  case is which is a PO open question:
-    - Fewer than 2 bounded parts: recommended to treat the request as one
-      question after all. It goes ahead as one if it can be handled, or is
-      recorded as a capability gap (DK-400a), and no split gate is shown.
-    - More than 5 parts: options are (1) refuse and ask the person to narrow
-      the request, (2) offer five parts and list the remainder as not covered,
-      read-only, like dropped proposals, or (3) group the request into at most
-      five parts. The PO recommends (1) or (2); never drop the remainder
-      silently.
+  told so plainly". This is the customer stance. The bounds below were
+  DECIDED on 2026-10-05: the PO recommendation is the default the BA uses (see
+  DK-400 "DECISIONS AT THE PO GATE", Q2, which wins over this note).
+    - Fewer than 2 bounded parts: the request was one question after all. It
+      goes ahead as one if it can be handled, or is recorded as a capability
+      gap (DK-400a), and no split gate is shown.
+    - More than 5 parts: either ask the person to narrow the request, or offer
+      five parts and list the rest read-only as not covered, like dropped
+      proposals. Never drop the rest silently. Grouping the request into at
+      most five parts is not one of the chosen defaults.
     - Fewer than 2 parts left AFTER dropping (for example 3 proposed, 2
       dropped): the same rule as fewer than 2 should apply. Confirm at L2.
   The flow and the mock data cover none of these cases yet. The flow-author
-  should add a branch once the answer is chosen.
+  should add a branch for them.
 
   DOCS: host.decompose_goal is a new host operation (component-diagram). The
   kernel, the host, the person and the child work all take part in a split
