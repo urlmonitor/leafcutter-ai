@@ -672,7 +672,7 @@
       "path": "mockups/leafcutter/decision-split-approve.mockup.json",
       "status": "active",
       "readiness": "draft",
-      "version": 3,
+      "version": 4,
       "entities": [
         "Decision",
         "Decomposition"
@@ -698,7 +698,7 @@
       "path": "mockups/leafcutter/decision-split-progress.mockup.json",
       "status": "active",
       "readiness": "draft",
-      "version": 3,
+      "version": 4,
       "entities": [
         "Decision",
         "Decomposition"
@@ -908,7 +908,7 @@
       "path": "flows/leafcutter/decision-forming.flow.json",
       "status": "active",
       "readiness": "draft",
-      "version": 5,
+      "version": 6,
       "entities": [
         "Decision",
         "Decomposition"
@@ -917,8 +917,8 @@
       "impl_summary": {
         "done": 2,
         "in_progress": 0,
-        "not_started": 31,
-        "total": 33,
+        "not_started": 32,
+        "total": 34,
         "asof": "2026-10-05"
       },
       "tags": [
@@ -1029,7 +1029,7 @@
       "path": "mock-data/leafcutter/decisions.mock.json",
       "status": "active",
       "readiness": "draft",
-      "version": 5,
+      "version": 6,
       "entities": [
         "Decision",
         "Decomposition"
@@ -1562,8 +1562,8 @@
       "impl_summary": {
         "done": 2,
         "in_progress": 0,
-        "not_started": 31,
-        "total": 33,
+        "not_started": 32,
+        "total": 34,
         "asof": "2026-10-05"
       },
       "expands": [
@@ -3396,6 +3396,35 @@
         "asof": "2026-10-05"
       }
     ],
+    "DK-400d-1-ii": [
+      {
+        "flow": "leafcutter/decision-forming",
+        "node": "split-approve",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": "decision-split-approve",
+        "mock_data": "leafcutter/decisions",
+        "entities": [
+          "Decomposition"
+        ],
+        "source": "real",
+        "asof": "2026-10-05"
+      },
+      {
+        "flow": "leafcutter/decision-forming",
+        "node": "split-report",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": "decision-split-progress",
+        "mock_data": "leafcutter/decisions",
+        "entities": [
+          "Decision",
+          "Decomposition"
+        ],
+        "source": "real",
+        "asof": "2026-10-05"
+      }
+    ],
     "DK-400d-2": [
       {
         "flow": "leafcutter/decision-forming",
@@ -3470,6 +3499,19 @@
       },
       {
         "flow": "leafcutter/decision-forming",
+        "node": "split-reject-clarify",
+        "node_kind": "branch",
+        "flow_kind": "data",
+        "screen": "decision-split-progress",
+        "mock_data": "leafcutter/decisions",
+        "entities": [
+          "Decomposition"
+        ],
+        "source": "real",
+        "asof": "2026-10-05"
+      },
+      {
+        "flow": "leafcutter/decision-forming",
         "node": "split-reject-kept-whole",
         "node_kind": "branch",
         "flow_kind": "data",
@@ -3486,6 +3528,19 @@
       {
         "flow": "leafcutter/decision-forming",
         "node": "split-reject",
+        "node_kind": "branch",
+        "flow_kind": "data",
+        "screen": "decision-split-progress",
+        "mock_data": "leafcutter/decisions",
+        "entities": [
+          "Decomposition"
+        ],
+        "source": "real",
+        "asof": "2026-10-05"
+      },
+      {
+        "flow": "leafcutter/decision-forming",
+        "node": "split-reject-clarify",
         "node_kind": "branch",
         "flow_kind": "data",
         "screen": "decision-split-progress",
@@ -3719,6 +3774,19 @@
       {
         "flow": "leafcutter/decision-forming",
         "node": "split-reject",
+        "node_kind": "branch",
+        "flow_kind": "data",
+        "screen": "decision-split-progress",
+        "mock_data": "leafcutter/decisions",
+        "entities": [
+          "Decomposition"
+        ],
+        "source": "real",
+        "asof": "2026-10-05"
+      },
+      {
+        "flow": "leafcutter/decision-forming",
+        "node": "split-reject-clarify",
         "node_kind": "branch",
         "flow_kind": "data",
         "screen": "decision-split-progress",

@@ -7,8 +7,8 @@ level: L3
 status: active
 req_status: draft
 work_status: todo
-readiness: reviewed
-priority: medium
+readiness: approved
+priority: high
 roadmap_phase: phase_kernel_1_founding
 criteria: |
   Given a run whose root goal is "Decide the storage format for reusable decision criteria,
@@ -58,6 +58,12 @@ it_requirements:
   - 'For a bundled ambiguous root the split replaces today''s clarification question: no human question opens before
     the host''s proposal, and no ambiguous gap is recorded at detection.'
   - A not-bundled ambiguous root keeps today's clarification path unchanged.
+  - 'If that split is rejected or its proposal leaves fewer than two parts, the root falls back to today''s insufficient_context
+    path, unchanged: with routing.on_insufficient_context ''human'' today''s clarification question is opened (the
+    same template and choices as today) and the run is waiting_human; follow-ups count against intent.max_clarifications;
+    today''s ambiguous gap is recorded only if the request ends unresolved (the person cannot be asked, or the follow-up
+    limit is reached), and only then does the run end blocked (DK-400d-3-i, DK-400c-3); it is never offered a split
+    again in the same run.'
 change_target: code
 risk_surface: contract_boundary
 test_required: true
@@ -86,6 +92,10 @@ amended_by:
     summary: 'Technical enrichment: assigned_agent confirmed, estimated_complexity, change_target, risk_surface,
       it_requirements, delivers_to/expects_from contracts, doc_links and the test contract set; readiness draft
       -> reviewed. BA criteria and product_truth unchanged.'
+  - reason: it-po-final-gate-re-enrichment
+    date: '2026-10-05'
+    by: it-po
+    summary: Added the final-gate ambiguous fallback (today's clarification path) to it_requirements.
 superseded_by: null
 covered_by: []
 implemented_by: []

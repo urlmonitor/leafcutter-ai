@@ -7,8 +7,8 @@ level: L2
 status: active
 req_status: draft
 work_status: todo
-readiness: reviewed
-priority: medium
+readiness: approved
+priority: high
 roadmap_phase: phase_kernel_1_founding
 criteria: |
   Given a run whose root went ahead as one decision,
@@ -71,9 +71,11 @@ it_requirements:
     of DK-400e-1 (completed only if every part not left out settled, partial otherwise) and whose result is the
     split record; a parent that cannot use that result treats it as a failed required child (existing rule), never
     as a fabricated single answer.
-  - 'Known reachability gap: no capability in today''s kernel proposes a semantically routed capability child below
-    the root, so tests inject one through a scripted test capability, and in production the path stays dormant until
-    such a producer exists.'
+  - 'Built now and dormant (user decision at the final gate, 2026-10-05): the mid-run path ships with no production
+    producer wired, because no capability in today''s kernel proposes a semantically routed capability child below
+    the root. It is exercised only through an injected test producer (a scripted capability registered in test code
+    under tests/kernel/, never in config/capability_registry.json or the composition root). split.enabled alone
+    does not activate it: with split.enabled true and the shipped registry, no run ever starts a mid_run split.'
 change_target: code
 risk_surface: contract_boundary
 test_required: true
@@ -83,9 +85,9 @@ test_spec:
     framework: pytest
     type: integration
     angle: reachability
-    description: A scripted root capability proposes a capability child holding the split-bounds question; with
-      bundle 0.9 the child gets a split with subject_kind decision_question, found_at mid_run, depth 1, trigger
-      null and the child's own question as subject, and the child does not execute.
+    description: Through an injected test producer (a scripted capability that proposes a capability child holding
+      the split-bounds question), with bundle 0.9 the child gets a split with subject_kind decision_question, found_at
+      mid_run, depth 1, trigger null and the child's own question as subject, and the child does not execute.
   - name: test_split_parts_are_never_checked_for_bundling
     target_dir: tests/kernel/split/
     framework: pytest
@@ -99,8 +101,16 @@ test_spec:
     type: integration
     angle: boundary
     description: Evidence, options, synthesis and human children of a decision carry no bundle question.
-test_rationale: Mid-run detection has no production producer today, so the reachability test injects a depth-1 capability
-  child through a scripted capability and drives it through the real scheduler.
+  - name: test_mid_run_path_dormant_without_injected_producer
+    target_dir: tests/kernel/split/
+    framework: pytest
+    type: integration
+    angle: failure
+    description: With split.enabled true, the shipped config/capability_registry.json and no injected producer,
+      a full decision run creates no capability child below the root and records no mid_run split.
+test_rationale: Mid-run detection has no production producer, so the reachability test injects a depth-1 capability
+  child through a scripted test capability and drives it through the real scheduler, and a dormancy test proves
+  that split.enabled alone never starts a mid-run split.
 origin_agent: business-analyst
 created: 2026-10-05
 amended_by:
@@ -110,6 +120,11 @@ amended_by:
     summary: 'Technical enrichment: assigned_agent confirmed, estimated_complexity, change_target, risk_surface,
       it_requirements, delivers_to/expects_from contracts, doc_links and the test contract set; readiness draft
       -> reviewed. BA criteria and product_truth unchanged.'
+  - reason: it-po-final-gate-re-enrichment
+    date: '2026-10-05'
+    by: it-po
+    summary: Mid-run path made explicit as built now, dormant and tested through an injected test producer (user
+      decision); added the dormancy test.
 superseded_by: null
 covered_by:
   - DK-400b-2-i

@@ -7,8 +7,8 @@ level: L2
 status: active
 req_status: draft
 work_status: todo
-readiness: reviewed
-priority: medium
+readiness: approved
+priority: high
 roadmap_phase: phase_kernel_1_founding
 criteria: |
   Given a request offered for a split,
@@ -16,8 +16,9 @@ criteria: |
   Then no split gate is shown and no part is created,
   And the request goes on exactly as a single question would: with trigger bundled_accepted it goes
     ahead as one decision from the precedent step; when it was found mid-run, the work item goes
-    ahead as one decision or research step; with trigger jev_none or ambiguous, the run records the
-    capability gap and ends blocked, as it does today,
+    ahead as one decision or research step; with trigger jev_none, the run records the capability
+    gap and ends blocked, as it does today; with trigger ambiguous, the run asks the person the
+    clarification question it asks today for an ambiguous request, instead of ending blocked,
   And the run's report has no split section.
 depends_on:
   - DK-400c
@@ -54,11 +55,18 @@ it_requirements:
     with a run event and a limitation naming why.
   - 'The request then goes on by its trigger, deterministically: bundled_accepted resumes from kept_routing as one
     decision from the precedent step; mid_run resumes the item as one decision or research step from its own routing
-    result; jev_none or ambiguous records today''s capability gap (DK-400a-1-ii) and ends blocked with today''s
-    blocked report.'
-  - No second decomposition is requested for the same item.
-  - For trigger ambiguous, ending blocked with the ambiguous gap follows the user's rule for a turned-away request;
-    today's clarification question is not asked (see the caveat raised to the user).
+    result; jev_none records today''s capability gap (DK-400a-1-ii) and ends blocked with today''s blocked report;
+    ambiguous falls back to today''s insufficient_context path, unchanged: with routing.on_insufficient_context
+    ''human'' today''s clarification question is opened (the same template and choices as today) and the run is
+    waiting_human; follow-ups count against intent.max_clarifications; today''s ambiguous gap is recorded only if
+    the request ends unresolved (the person cannot be asked, or the follow-up limit is reached), and only then does
+    the run end blocked.'
+  - 'No second decomposition is requested for the same item. A request that falls back to the clarification question
+    after a rejected or too-small ambiguous split is never offered a split again in the same run: the item keeps
+    its closed split record, so the bundle check is skipped for it even after the person''s answer changes its effective
+    goal, and it routes normally from there. This holds even when the clarification answer itself bundles several
+    questions: the user chose today''s clarification, and today''s clarification path never splits; the person can
+    start a new run to get a split.'
 change_target: code
 risk_surface: contract_boundary
 test_required: true
@@ -68,14 +76,23 @@ test_spec:
     framework: pytest
     type: integration
     angle: criterion
-    description: 'Parametrised over bundled_accepted, mid_run, jev_none and ambiguous: a one-part or empty proposal
-      opens no gate; the first two go ahead as one, the last two record today''s gap and end blocked.'
+    description: 'Parametrised over bundled_accepted, mid_run (injected test producer), jev_none and ambiguous:
+      a one-part or empty proposal opens no gate. bundled_accepted and mid_run go ahead as one; jev_none records
+      today''s gap and ends blocked; ambiguous opens today''s clarification question, the run is waiting_human and
+      no gap is recorded.'
   - name: test_too_few_parts_requests_no_second_decomposition
     target_dir: tests/kernel/split/
     framework: pytest
     type: integration
     angle: boundary
     description: After a too-few-parts outcome no second decompose_goal interaction is opened for the item.
+  - name: test_clarified_ambiguous_request_not_offered_split_again
+    target_dir: tests/kernel/split/
+    framework: pytest
+    type: integration
+    angle: boundary
+    description: 'After an ambiguous too-few-parts fallback, a clarification answer that is itself bundled (bundle
+      0.9) is routed normally: no bundle question is asked for the item and no second split starts.'
   - name: test_too_few_parts_report_has_no_split_section
     target_dir: tests/kernel/split/
     framework: pytest
@@ -93,6 +110,16 @@ amended_by:
     summary: 'Technical enrichment: assigned_agent confirmed, estimated_complexity, change_target, risk_surface,
       it_requirements, delivers_to/expects_from contracts, doc_links and the test contract set; readiness draft
       -> reviewed. BA criteria and product_truth unchanged.'
+  - reason: ba-user-gate-amendment
+    date: '2026-10-05'
+    by: business-analyst
+    summary: "User rule at the final gate: an ambiguous request whose proposal holds fewer than two parts falls back to today's clarification question; only jev_none ends blocked with the capability gap. Withdrawn wording: 'with trigger jev_none or ambiguous, the run records the capability gap and ends blocked, as it does today,'. Replaced by separate jev_none and ambiguous endings. IT PO fields were not edited; the it_requirements and test_spec entries that still end ambiguous blocked need IT PO re-enrichment."
+  - reason: it-po-final-gate-re-enrichment
+    date: '2026-10-05'
+    by: it-po
+    summary: 'Ambiguous too-few-parts case re-enriched to today''s clarification path (not blocked + gap); added
+      the no-split-again rule and its test; withdrew the earlier caveat line. Coordinator default for Q4: the no-second-split
+      rule now carries its rationale.'
 superseded_by: null
 covered_by:
   - DK-400c-3-i
@@ -101,6 +128,8 @@ notes: |
   User decision (DK-400 Q2): fewer than two bounded parts means it was one question after
   all, with no gate. Flow v5 branch split-too-few-parts (more than five parts is
   split-too-many-parts, DK-400c-1-i).
+  User rule at the final gate (2026-10-05): an ambiguous request falls back to today's
+  clarification question; only jev_none ends blocked with the capability gap recorded.
 product_truth:
   - flow: leafcutter/decision-forming
     node: split-too-few-parts

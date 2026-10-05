@@ -7,8 +7,8 @@ level: L1
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
-priority: medium
+readiness: approved
+priority: high
 roadmap_phase: phase_kernel_1_founding
 criteria: |
   Bundled questions are recognised; a single question is never split.
@@ -29,7 +29,7 @@ doc_links:
   - path: docs/product-truth/mock-data/leafcutter/decisions.mock.json
     relationship: specified-by
     status: exists
-    relevance: "Decomposition.found_at routing, work_item_depth 0 and trigger jev_none | ambiguous; records dcp-reusable-criteria-by-hand and dcp-reusable-criteria-proposed. Trigger bundled_accepted for the accepted-as-one case is being added (uncommitted, in progress by the mock-data author, to be committed together with these ACs)."
+    relevance: "Mock v5 (v6 in preparation): Decomposition.found_at routing, work_item_depth 0 and trigger jev_none | ambiguous | bundled_accepted. A single unsupported question gets no Decomposition, and a caller-supplied leafcutter.decision_request.v1 is never checked for bundling. Records: dcp-reusable-criteria-by-hand, dcp-reusable-criteria-proposed and dcp-decision-records-bundled (the accepted-as-one case)."
   - path: docs/analysis/2026-10-01-kernel-trace-review-decision-records-run.md
     relationship: related
     status: exists
@@ -58,17 +58,19 @@ implemented_by: []
 documentation_triggers:
   - reference-doc
 notes: |
-  FLOW NODES: split-detect (step), split-not-needed (branch).
+  FLOW NODES: split-detect (step); split-not-needed, single-no-capability and
+  split-typed-request (branches).
 
   ADDED BY THE PO (flow-author open point b): a request that is ONE question the
   kernel cannot handle yet is a real capability gap, not a split. It must still
   produce today's gap record and blocked result, and it must not reach the split
-  gate. The flow's split-detect acceptance scenario agrees ("a root goal holding
-  several questions"). Its step text does not: it says that when routing finds
-  no capability "the subject is taken to hold several questions". The flow also
-  has no branch for "one question, no capability". Ask the flow-author to add
-  that branch and correct the step text before the BA back-links L2s to
-  split-detect.
+  gate. RESOLVED in the flow:
+    - since v4, split-detect's step text says "a no-match alone does not make a
+      subject compound";
+    - the branch single-no-capability carries this rule.
+  Flow v5 also adds split-typed-request: a caller-supplied
+  leafcutter.decision_request.v1 is never checked for bundling. At the final
+  gate this was made the ONLY exemption (DK-400 FINAL GATE).
 
   SETTLED BY THE USER (2026-10-05, answer to PO open question 1): a bundled
   request is offered as a split in BOTH cases:
@@ -81,35 +83,30 @@ notes: |
   "A single question is never split" and "an unhandled single question stays a
   capability gap" are unchanged.
 
-  PRODUCT-TRUTH FOLLOW-UP (must land before the BA back-links L2s to
-  split-detect):
-    - Flow decision-forming: v4 makes these changes. On 2026-10-05 it was in the
-      working tree, not yet committed, by the flow-author session; confirm it
-      lands.
+  PRODUCT-TRUTH FOLLOW-UP: RESOLVED. Both changes are committed:
+    - Flow decision-forming v5:
       - split-detect fires on a bundled subject whether routing found no
-        capability or would accept it as one decision. A no-match alone no
-        longer counts as compound.
-      - split-not-needed now reads "a single question that routing can give to
-        one capability".
-      - A new branch, single-no-capability, covers point b above.
-      Until v4 is committed, the point-b paragraph above describes the
-      committed flow.
-    - Mock data decisions: in progress. It is uncommitted and being written by
-      the mock-data author, and will be committed together with these ACs. As
-      drafted on 2026-10-05:
-      - Decomposition.trigger gains bundled_accepted, a routing-time trigger at
-        depth 0 for case 2;
-      - the found_at invariant now names all three routing triggers;
-      - a single unsupported question gets no Decomposition and stays a
-        capability gap;
-      - one illustrative record of case 2 is added (dcp-decision-records-bundled,
-        the run-5d246775f5e54f11 goal).
-      Confirm these land as drafted.
+        capability or would accept it as one decision;
+      - split-not-needed reads "a single question that routing can give to one
+        capability";
+      - single-no-capability and split-typed-request exist.
+    - Mock data decisions v5 (v6 in preparation):
+      - Decomposition.trigger includes bundled_accepted, and the found_at
+        invariant names all three routing triggers;
+      - a single unsupported question gets no Decomposition;
+      - record dcp-decision-records-bundled covers the run-5d246775f5e54f11
+        goal.
 
   DEFAULT FOR THE BA (the PO recommendation for open question 2, accepted
-  2026-10-05): fewer than two bounded parts means the request was one question
-  after all. It goes ahead as one, or is recorded as a capability gap, and no
-  split gate is shown.
+  2026-10-05; flow branch split-too-few-parts): fewer than two bounded parts
+  means the request was one question after all, and no split gate is shown.
+  How it continues depends on the trigger:
+    - bundled_accepted or mid-run: it goes ahead as one;
+    - ambiguous: it falls back to today's clarification question, and the run
+      is not blocked (final-gate decision, DK-400 FINAL GATE);
+    - jev_none: it is recorded as a capability gap, and the run ends blocked.
+  Flow v5 and mock v5 still treat ambiguous like jev_none here; see the
+  follow-up in DK-400d.
 
   CARRY TO L2 (left to the BA and IT PO on purpose):
     - How "one question or several?" is told apart. Candidates: a cheap check

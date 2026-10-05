@@ -7,8 +7,8 @@ level: L2
 status: active
 req_status: draft
 work_status: todo
-readiness: reviewed
-priority: medium
+readiness: approved
+priority: high
 roadmap_phase: phase_kernel_1_founding
 criteria: |
   Given the reusable-criteria split waiting at the split gate with parts p1 to p4,
@@ -88,6 +88,9 @@ it_requirements:
   - 'Handle failures per the project error handling policy: catch specific exceptions, log at WARNING with the run,
     work item and split ids involved, and never swallow a failure silently; a rejected submission leaves run state
     unchanged.'
+  - 'ADR-067 pins the split-answer schema id: either a new leafcutter.split_answer.v1 or an extension of leafcutter.human_answer.v1,
+    decided in the ADR. DK-400d-1-ii''s example-validation test binds to whatever id the ADR names. ADR-067 is already
+    a precondition of DK-400c-1.'
 change_target:
   - code
   - schema
@@ -141,9 +144,14 @@ amended_by:
     summary: 'Technical enrichment: assigned_agent confirmed, estimated_complexity, change_target, risk_surface,
       it_requirements, delivers_to/expects_from contracts, doc_links and the test contract set; readiness draft
       -> reviewed. BA criteria and product_truth unchanged.'
+  - reason: it-po-final-gate-re-enrichment
+    date: '2026-10-05'
+    by: it-po
+    summary: 'Coordinator default for Q3: added the ADR-067 split-answer schema id line.'
 superseded_by: null
 covered_by:
   - DK-400d-1-i
+  - DK-400d-1-ii
 implemented_by: []
 notes: |
   Flow step split-approve. Who answered and when are kept with the split (ADR-060: only a

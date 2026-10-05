@@ -7,8 +7,8 @@ level: L2
 status: active
 req_status: draft
 work_status: todo
-readiness: reviewed
-priority: medium
+readiness: approved
+priority: high
 roadmap_phase: phase_kernel_1_founding
 criteria: |
   Given a reader who wants to know what the kernel does with a request that may hold several
@@ -20,6 +20,10 @@ criteria: |
     recorded as a capability gap,
   And it states that a request proposed as fewer than two parts is treated as one question with
     no split gate,
+  And it states what happens when the person rejects the split of a request routing turned away,
+    or fewer than two parts come back for it: a request no capability could meet (jev_none) ends
+    blocked with its capability gap recorded, while an ambiguous request falls back to the
+    clarification question the kernel asks today,
   And it states that a request that is split is not counted as a capability gap, while a single
     question no capability can meet still is.
 depends_on:
@@ -61,6 +65,9 @@ it_requirements:
   - 'The reference entry states only behaviour the built kernel has: the four routing-time outcomes, the fewer-than-two
     rule and gap accounting, using the trigger values and terms of ADR-067 and of the run report (jev_none, ambiguous,
     bundled_accepted).'
+  - 'States both fallbacks of a turned-away request as built, for a rejected split and for fewer than two parts
+    alike: jev_none ends blocked with today''s capability gap recorded; ambiguous falls back to today''s clarification
+    question, with the ambiguous gap recorded only if the request ends unresolved.'
   - It follows the docs frontmatter rules for type reference, is reachable from docs/INDEX.md and the kernel how-to,
     and links ADR-067 and the decision-kernel component overview.
   - If the documentation-expert places it elsewhere than docs/reference/decision-kernel-splits.md, the doc_links
@@ -76,6 +83,14 @@ amended_by:
     summary: 'Technical enrichment: assigned_agent confirmed, estimated_complexity, change_target, risk_surface,
       it_requirements, delivers_to/expects_from contracts, doc_links and the test contract set; readiness draft
       -> reviewed. BA criteria and product_truth unchanged.'
+  - reason: ba-user-gate-amendment
+    date: '2026-10-05'
+    by: business-analyst
+    summary: "User rule at the final gate: the reference entry must state the two fallbacks of a turned-away request (jev_none ends blocked with the capability gap recorded; ambiguous falls back to today's clarification question), for both a rejected split and fewer than two parts. Added that clause; no clause was withdrawn. IT PO fields were not edited."
+  - reason: it-po-final-gate-re-enrichment
+    date: '2026-10-05'
+    by: it-po
+    summary: Added an it_requirements line for the BA's new fallback clause.
 superseded_by: null
 covered_by: []
 implemented_by: []

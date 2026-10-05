@@ -7,8 +7,8 @@ level: L3
 status: active
 req_status: draft
 work_status: todo
-readiness: reviewed
-priority: medium
+readiness: approved
+priority: high
 roadmap_phase: phase_kernel_1_founding
 criteria: |
   Given a research request raised at work-item depth 1 below the run's root, holding three
@@ -48,6 +48,7 @@ it_requirements:
     allows only research parts (DK-400b-1 rule).
   - The research item runs no research (no research planning Jev batch, no retrieval child) while its split is proposed
     and unanswered.
+  - Reached only through the injected test producer of DK-400b-2; the mid-run path is dormant in production.
 change_target: code
 risk_surface: contract_boundary
 test_required: true
@@ -57,9 +58,9 @@ test_spec:
     framework: pytest
     type: integration
     angle: criterion
-    description: An injected depth-1 research request with bundle 0.9 gets a split with subject_kind research_request,
-      found_at mid_run, depth 1 and trigger null; every gate part names research; no research batch or retrieval
-      child exists before the answer.
+    description: A depth-1 research request injected through the test producer of DK-400b-2, with bundle 0.9, gets
+      a split with subject_kind research_request, found_at mid_run, depth 1 and trigger null; every gate part names
+      research; no research batch or retrieval child exists before the answer.
 test_rationale: Uses the injected depth-1 producer of DK-400b-2, the only way to reach this path today.
 origin_agent: business-analyst
 created: 2026-10-05
@@ -70,6 +71,10 @@ amended_by:
     summary: 'Technical enrichment: assigned_agent confirmed, estimated_complexity, change_target, risk_surface,
       it_requirements, delivers_to/expects_from contracts, doc_links and the test contract set; readiness draft
       -> reviewed. BA criteria and product_truth unchanged.'
+  - reason: it-po-final-gate-re-enrichment
+    date: '2026-10-05'
+    by: it-po
+    summary: Mid-run test pinned to the injected test producer of DK-400b-2.
 superseded_by: null
 covered_by: []
 implemented_by: []

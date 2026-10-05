@@ -7,8 +7,8 @@ level: L0
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
-priority: medium
+readiness: approved
+priority: high
 roadmap_phase: phase_kernel_1_founding
 criteria: |
   Ask a many-sided question and get every part answered, with you in charge.
@@ -26,11 +26,11 @@ doc_links:
   - path: docs/product-truth/flows/leafcutter/decision-forming.flow.json
     relationship: specified-by
     status: exists
-    relevance: "v2: steps split-detect, split-propose, split-approve, split-run, split-report and branches split-not-needed, split-mid-run, split-dropped, split-revise, split-reject, each with an acceptance scenario."
+    relevance: "v5. Steps: split-detect, split-propose, split-approve, split-run and split-report. Branches: split-not-needed, single-no-capability, split-typed-request, split-mid-run, split-dropped, split-too-few-parts, split-too-many-parts, split-revise, split-reject, split-reject-kept-whole and split-part-unsettled. Each has an acceptance scenario. The ambiguous fallback of 2026-10-05 is not in v5 yet (see notes)."
   - path: docs/product-truth/mock-data/leafcutter/decisions.mock.json
     relationship: specified-by
     status: exists
-    relevance: "v3: the Decomposition entity, its invariants and five records (one real hand split, four illustrative: proposed with a dropped part, mid-run decision question, research request, rejected)."
+    relevance: "v5, with v6 in preparation. The Decomposition entity has triggers jev_none, ambiguous and bundled_accepted; seven states (proposed, approved, in_progress, completed, ended_partial, rejected, rejected_kept_whole); not_covered[]; not_settled parts with stop_reason and waited_for; and capability_gap_recorded. Its eight records are one real hand split and seven illustrative ones."
   - path: docs/product-truth/mockups/leafcutter/decision-split-approve.mockup.json
     relationship: specified-by
     status: exists
@@ -66,6 +66,7 @@ amended_by:
   - reason: "2026-10-05 PO, after the user approved the framing at the PO gate: widened to bundled requests the kernel would accept as one choice (user answer to PO open question 1), marked both earlier tickets as superseded, and recorded the user's answers to the other PO open questions in notes."
   - reason: "2026-10-05 PO, user decision on rejection: a rejected split of a request the kernel would have accepted goes ahead as one decision; a rejected split of a turned-away request still ends blocked. Recorded in notes (DECISIONS AT THE PO GATE) and in DK-400d."
   - reason: "2026-10-05 PO, user decision: a rejected split found mid-run also goes ahead as one; the one-line rejected-split report line is confirmed as the default (DK-400f); mock-data status updated to in progress rather than missing."
+  - reason: "2026-10-05 PO, after the user's final-gate approval: recorded the final-gate decisions in notes. An ambiguous request's rejected or too-small split falls back to today's clarification question, and only jev_none ends blocked. The IT PO defaults, the skills AC DK-400d-1-ii and dormant mid-run splits are recorded too. Product-truth versions refreshed to flow v5 and mock v5 (v6 in preparation). Readiness and priority are left to the coordinator."
 superseded_by: null
 covered_by:
   - DK-400a
@@ -80,17 +81,21 @@ notes: |
   so that we have a way to split goals (and other things), then have PO, BA and
   IT PO file the respective ACs to enable this."
   The product truth is approved and committed on ac-authoring/split-compound-goals:
-  decisions.mock.json v3 (Decomposition), the mockups decision-split-approve and
-  decision-split-progress, and decision-forming.flow.json v2.
+  decisions.mock.json v5 (Decomposition; v6 in preparation by the mock-data
+  author), the mockups decision-split-approve and decision-split-progress, and
+  decision-forming.flow.json v5. The first approved versions were mock v3 and
+  flow v2.
 
   LIVE CASE. Run run-40d2159630bb48bd (2026-10-02) was blocked at routing
   (no_match, reason jev_none; gap unsupported), because the decision capability
   takes one bounded question and the goal held four decisions. The orchestrating
   Claude Code session split it by hand outside the kernel into G1-G3, and the
   user picked "format first". G1 ran as run-3bba494c7c9b48ce and staged
-  dec-93c1c730463c1f3c, the storage decision the DK-300 tree rests on. G3 was
-  settled by the user directly, and G2 (clustering method) is still open. Mock
-  record: dcp-reusable-criteria-by-hand.
+  dec-93c1c730463c1f3c, the storage decision the DK-500 tree rests on. That
+  reusable-criteria tree was first numbered DK-300. The old name still appears
+  in published decision records, which are append-only. G3 was settled by the
+  user directly, and G2 (clustering method) is still open. Mock record:
+  dcp-reusable-criteria-by-hand.
 
   SUPERSESSION. Both earlier tickets are superseded by this tree. Neither is
   edited here; retire both as superseded once these ACs merge.
@@ -121,10 +126,12 @@ notes: |
     Q5 (PO recommendation, default; DK-400e): when a part cannot be settled,
        the parts that depend on it are marked not run with the reason, and
        independent parts carry on.
-    Q6 and Q7 (left to the IT PO): how deep nested splits may go, and whether
-       a person may add new parts or change a part's dependencies or kind at
-       the gate.
-    Q8: priority is set at the final gate.
+    Q6 and Q7 (settled by the IT PO, approved at the final gate): splits do
+       not nest. Parts of an approved split are never split again (depth 1;
+       DK-400b-2). At the gate a person may keep, reword or leave out parts, or
+       reject, but may not add parts or change a part's dependencies or kind
+       (DK-400d-1).
+    Q8: priority was set at the final gate (see FINAL GATE below).
     REJECTION (the user, directly, 2026-10-05; DK-400d, DK-400f):
        - When the person rejects the split of a request the kernel would have
          accepted as one decision (trigger bundled_accepted, the "squeezed
@@ -133,12 +140,39 @@ notes: |
        - When the person rejects a split found mid-run (found_at mid_run, no
          trigger), the work item goes ahead as one, like bundled_accepted
          (the user, directly, 2026-10-05).
-       - Only a rejected split of a request the kernel turned away (trigger
-         jev_none or ambiguous) ends the run blocked, with the plain note
-         that nothing was decided.
+       - When the person rejects the split of an AMBIGUOUS request (trigger
+         ambiguous), it falls back to today's clarification question. The run
+         is not blocked. This was decided at the final gate; it replaces the
+         earlier "jev_none or ambiguous ends blocked".
+       - Only a rejected split of a request no capability can handle (trigger
+         jev_none) ends the run blocked, with the plain note that nothing was
+         decided.
        - In every case the report keeps one plain line saying a split was
          offered and rejected (the PO recommendation, confirmed as the
          default; DK-400f).
+
+  FINAL GATE (the user, 2026-10-05). These win over anything earlier in these
+  notes or in the L1 notes:
+    - The DK-400 tree is approved at priority high. The coordinator sets
+      readiness and priority on the records; the PO does not.
+    - Approved with the IT PO defaults:
+      - only a caller-supplied leafcutter.decision_request.v1 is exempt from
+        the bundling check (flow branch split-typed-request);
+      - per-part budgets, and at most 5 parts per run;
+      - split.enabled defaults to on;
+      - the output schema is leafcutter.decomposition.v1;
+      - ADR-067 is written by adr-author before DK-400c-1 is built;
+      - decision_question parts run as decision children only.
+    - A skills AC is added: DK-400d-1-ii, written by the BA now.
+    - Mid-run splits are built now but stay dormant. They are tested through
+      an injected producer (DK-400b).
+    - AMBIGUOUS FALLBACK. When an ambiguous request's split is rejected, or
+      its proposal is too small (fewer than 2 parts), the request falls back
+      to today's clarification question and the run is not blocked. Only
+      jev_none ends blocked, in both cases. This supersedes the "jev_none or
+      ambiguous" wording in flow v5 (split-reject, split-too-few-parts) and in
+      mock v5 (state rejected, capability_gap_recorded). See PRODUCT-TRUTH
+      FOLLOW-UP in DK-400d.
 
   SETTLED. Do not re-open these at L2:
     1. Proposing the split is generative work done by the host (Claude Code),
@@ -155,7 +189,11 @@ notes: |
 
   WORDING MAP FOR BA / IT PO (customer word -> record or flow term):
     - "request" -> the subject (Decomposition.subject_text, subject_kind)
-    - "turned away" -> routing no_match with reason jev_none, or an ambiguous gap
+    - "turned away" -> routing could not take the request as it stands:
+      no_match with reason jev_none ("nothing could handle it"), or ambiguous
+      ("the request was unclear", which today is answered with a
+      clarification question). The two end differently when a split is
+      rejected or comes out too small (FINAL GATE).
     - "squeezed into one choice" -> routing matched one capability (decision)
       for a subject that holds several questions. split-detect covers it
       since flow v4 (now v5), and the mock data records it as trigger
@@ -168,9 +206,12 @@ notes: |
     - "set aside" -> dropped[] (read-only, with reason)
     - "approval step" -> the split gate, screen decision-split-approve
     - "reword" -> review edited, with proposed_text kept;
-      "leave out" -> review left_out; "reject" -> gate_answer rejected, with
-      run_status blocked only for a turned-away request (jev_none, ambiguous);
-      a rejected bundled_accepted or mid_run split "goes ahead as one"
+      "leave out" -> review left_out; "reject" -> gate_answer rejected. The
+      run ends blocked (state rejected) only for jev_none ("nothing could
+      handle it"). An ambiguous request falls back to today's clarification
+      question ("the clarifying question you would get today"). A rejected
+      bundled_accepted or mid_run split "goes ahead as one" (state
+      rejected_kept_whole).
     - "found along the way" -> found_at mid_run, work_item_depth 1 or more
     - "decision record linked back" -> Decision.split_part (a derived reverse view)
     - "one view" -> screen decision-split-progress;
@@ -184,17 +225,20 @@ notes: |
   counted as a gap, and a real gap is not hidden behind a split). No roadmap
   change is proposed.
 
-  FOR THE IT PO (how safely; the PO adds no constraint here): the
-  KernelDecomposeMultiPartGoal ticket also asks for a configured bound on child
-  work per run, an off switch that restores today's behaviour, and an ADR with a
-  pinned number (requires_adr: true; dispatch adr-author directly). ADR-055 may
-  apply if the new host operation needs a registry entry. Cost: with Q1 widened,
-  every routed request, not only every jev_none, now needs a "one question or
-  several?" check. ADR-053's order (deterministic code, then Jev, before any
-  generative call) matters more as a result.
+  FOR THE IT PO (how safely; the PO adds no constraint here). This is now
+  settled by the IT PO defaults approved at the final gate (see FINAL GATE).
+  The KernelDecomposeMultiPartGoal ticket's asks are covered there: per-part
+  budgets and at most 5 parts per run, split.enabled (on by default) as the
+  off switch, and ADR-067, written by adr-author before DK-400c-1 is built.
+  The cost note still stands: since Q1 was widened, every routed request needs
+  a "one question or several?" check, not only every jev_none, and ADR-053's
+  order (deterministic code, then Jev, before any generative call) applies.
 
   NAMESPACE AND BRANCH BASE. decision-kernel (DK). DK-100..DK-104 and DK-200 are
-  on main, and DK-300 is on ac-authoring/reusable-criteria-store, so the root is
+  on main. The reusable-criteria tree is DK-500, on
+  ac-authoring/reusable-criteria-store (PR #1010). It was renumbered from DK-300
+  on 2026-10-05, because main gained an unrelated DK-300 tree; the old name still
+  appears in published decision records, which are append-only. The root here is
   DK-400. The branch was cut before PR #994 registered the decision-kernel
   namespace and the decision_kernel components enum value. Resolved by merge
   5ff24d60 (origin/main into ac-authoring/split-compound-goals).

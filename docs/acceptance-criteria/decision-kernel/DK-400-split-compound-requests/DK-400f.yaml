@@ -7,8 +7,8 @@ level: L1
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
-priority: medium
+readiness: approved
+priority: high
 roadmap_phase: phase_kernel_1_founding
 criteria: |
   One view shows every part's outcome, with a link to its answer.
@@ -17,22 +17,23 @@ criteria: |
   part whether it is waiting, decided, answered or not run, with a link to its
   decision record or research findings, and the final report gives one line per
   part. If you reject a split, the report says so in one plain line, whether
-  your request went ahead as one decision or nothing was decided, so you never
-  have to piece the outcome together yourself.
+  your request went ahead as one decision, came back to you as a clarifying
+  question, or ended with nothing decided, so you never have to piece the
+  outcome together yourself.
 depends_on:
   - DK-400
 doc_links:
   - path: docs/product-truth/flows/leafcutter/decision-forming.flow.json
     relationship: specified-by
     status: exists
-    relevance: "Step split-report (screen decision-split-progress); branch split-reject for the plain report of a rejected split."
+    relevance: "Flow v5: step split-report (screen decision-split-progress); branches split-reject and split-reject-kept-whole for the plain line of a rejected split, and split-part-unsettled for parts that did not settle or were not run."
   - path: docs/product-truth/mockups/leafcutter/decision-split-progress.mockup.json
     relationship: specified-by
     status: exists
   - path: docs/product-truth/mock-data/leafcutter/decisions.mock.json
     relationship: specified-by
     status: exists
-    relevance: "report_lines: one line per part, starting with the part id and naming its outcome; [] while the gate is open; plain lines for a rejected split."
+    relevance: "Mock v5 (v6 in preparation) report_lines: one line per part, starting with the part id and naming its outcome; [] while the gate is open; plain lines for a rejected split (nothing decided) and for a kept-whole one (rejected_kept_whole)."
   - path: docs/how-to/run-the-decision-kernel.md
     relationship: related
     status: exists
@@ -44,6 +45,7 @@ origin_agent: product-owner
 created: 2026-10-04
 amended_by:
   - reason: "2026-10-05 PO, user decisions on rejection: the rejected-split sentence now covers both endings (went ahead as one decision, or nothing decided), with one plain report line saying a split was offered and rejected confirmed as the default."
+  - reason: "2026-10-05 PO, user's final-gate decision: an ambiguous request's rejected split falls back to today's clarification question, so the rejected-split sentence now names three endings (went ahead as one decision, came back as a clarifying question, or ended with nothing decided). Notes refreshed to flow v5 and mock v5."
 superseded_by: null
 covered_by:
   - DK-400f-1
@@ -54,13 +56,18 @@ implemented_by: []
 documentation_triggers:
   - how-to
 notes: |
-  FLOW NODES: split-report (step); split-reject (branch) for the plain rejected
-  report.
+  FLOW NODES: split-report (step); split-reject and split-reject-kept-whole
+  (branches) for the plain rejected line; split-part-unsettled (branch) for
+  parts that did not settle.
 
   SETTLED: outcomes shown are pending, decided, answered and not run, each with a
   link to its child decision record or research result. The run report's split
   section has one line per part, starting with the part id and naming its
-  outcome. Edited and left-out parts are visible as such.
+  outcome. Edited and left-out parts are visible as such. Since flow v5 and
+  mock v5 there is one more outcome, not_settled. It has a stop reason, and a
+  dependant names the part it waited for (DK-400e). The criteria's "waiting,
+  decided, answered or not run" stays the customer summary; the BA shows
+  not_settled as well.
 
   DECIDED on 2026-10-05 (flow-author open point c; see DK-400 "DECISIONS AT THE
   PO GATE", Q4, which wins over this note): the hand split is history only. The
@@ -73,18 +80,23 @@ notes: |
   stays in the mock data as real-world evidence only.
 
   REJECTED SPLITS (user decisions 2026-10-05; see DK-400d and DK-400 "DECISIONS
-  AT THE PO GATE"):
-    - Turned-away request (trigger jev_none or ambiguous): the run ends blocked,
+  AT THE PO GATE" and "FINAL GATE"):
+    - Request nothing could handle (trigger jev_none): the run ends blocked,
       and the plain report says the split was rejected and nothing was decided,
       with a hint to ask again as one question.
+    - Unclear request (trigger ambiguous): it falls back to today's
+      clarification question, and the run is not blocked. This was decided at
+      the final gate; it replaces the earlier "jev_none or ambiguous" blocked
+      ending.
     - Request that could have been taken on as one (trigger bundled_accepted),
-      or a split found mid-run: it goes ahead as one decision. The report still
-      carries one plain line saying a split was offered and rejected, so the
-      person can see why there is no per-part section. This was the PO
-      recommendation and is now confirmed as the default.
-    - The mock data's report_lines rules for both endings are being drafted,
-      uncommitted and in progress, by the mock-data author; they will be
-      committed together with these ACs (see DK-400d).
+      or a split found mid-run: it goes ahead as one decision.
+    - In all three cases the report carries one plain line saying a split was
+      offered and rejected, so the person can see why there is no per-part
+      section. This was the PO recommendation and is now confirmed as the
+      default.
+    - Mock v5 carries the report_lines rules for the blocked and kept-whole
+      endings. The ambiguous fallback is not in mock v5 or flow v5 yet; the
+      mock-data author is preparing v6 (see DK-400d).
 
   DOCS: reading split progress and the report section belongs in the kernel
   how-to (how-to).

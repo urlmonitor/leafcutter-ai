@@ -7,8 +7,8 @@ level: L3
 status: active
 req_status: draft
 work_status: todo
-readiness: reviewed
-priority: medium
+readiness: approved
+priority: high
 roadmap_phase: phase_kernel_1_founding
 criteria: |
   Given the split-bounds decision question found mid-run at work-item depth 1, offered as
@@ -47,7 +47,7 @@ it_requirements:
     step; the run carries on with its other work and is not blocked by the rejection.
   - For a research item the split names no decision record (whole_decision_id stays null) and the item returns its
     evidence bundle to its parent as today.
-  - Reachability uses the injected depth-1 producer of DK-400b-2.
+  - Reachability uses the injected test producer of DK-400b-2; the mid-run path is dormant in production.
 change_target: code
 risk_surface: contract_boundary
 test_required: true
@@ -77,6 +77,10 @@ amended_by:
     summary: 'Technical enrichment: assigned_agent confirmed, estimated_complexity, change_target, risk_surface,
       it_requirements, delivers_to/expects_from contracts, doc_links and the test contract set; readiness draft
       -> reviewed. BA criteria and product_truth unchanged.'
+  - reason: it-po-final-gate-re-enrichment
+    date: '2026-10-05'
+    by: it-po
+    summary: Mid-run reachability wording aligned with the dormant, injected-producer rule.
 superseded_by: null
 covered_by: []
 implemented_by: []

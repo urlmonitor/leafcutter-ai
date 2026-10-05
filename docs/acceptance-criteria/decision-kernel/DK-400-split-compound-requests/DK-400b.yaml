@@ -7,8 +7,8 @@ level: L1
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
-priority: medium
+readiness: approved
+priority: high
 roadmap_phase: phase_kernel_1_founding
 criteria: |
   Research requests and questions found mid-run split the same way.
@@ -54,11 +54,14 @@ notes: |
   trigger. found_at routing iff depth 0 iff a trigger is present (mock-data
   invariant).
 
+  FINAL GATE (the user, 2026-10-05; see DK-400 FINAL GATE): mid-run splits are
+  built now but stay dormant. They are tested through an injected producer.
+  When a rejected mid-run split, or one with fewer than 2 parts, goes ahead as
+  one, that follows DK-400d and the flow branch split-reject-kept-whole.
+
   CARRY TO L2 / IT PO:
-    - Nesting. A part of an approved split may itself hold several questions
-      and be split again at a greater depth. Neither the flow nor the mock data
-      bounds that depth. Whether nesting is allowed, and how deep, is a PO open
-      question; the IT PO owns the bound itself.
+    - Nesting: SETTLED by the IT PO (DK-400 Q6, approved at the final gate).
+      Parts of an approved split are never split again (depth 1; DK-400b-2).
     - What tells the kernel, partway through, that a work item holds several
       questions? The flow names the condition but not who judges it. Apply the
       ADR-053 order, as on DK-400a.

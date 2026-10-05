@@ -93,7 +93,7 @@
 <main>
   <div class="topbar"><span class="eyebrow" style="margin:0">Decision kernel / Split progress and report</span><span class="badge warning">mock mode</span></div>
 <div class="panel"><div class="eyebrow">After the gate</div><h1>Where each part of the split stands</h1>
-<p class="sub">Each approved part runs as a child of its run, in dependency order. Every part shows its outcome and links to its child decision record. A rejected split gets a plain report: blocked when routing had turned the request away, kept whole (the run goes on) otherwise.</p>
+<p class="sub">Each approved part runs as a child of its run, in dependency order. Every part shows its outcome and links to its child decision record. A rejected split gets a plain report, and what follows depends on the trigger: the run ends blocked when no capability matched (jev_none); the request falls back to today&#x27;s clarification question and the run waits for your answer when routing could not choose one capability (ambiguous); the request is kept whole and the run goes on for bundled_accepted or a mid-run item.</p>
 <div class="row" style="margin-top:8px"><span class="badge success">decided</span><span class="badge success">answered</span><span class="badge warning">pending</span><span class="badge info">settled by a human</span><span class="badge plain">not run</span></div></div>
 <div class="panel"><div class="row between"><div><div class="eyebrow">goal / run-40d2…48bd</div><h2>Reusable decision criteria: a goal split by hand</h2></div><div class="row"><span class="badge warning">in progress</span></div></div>
 <p class="small">Split found at routing; proposed by <span class="mono">claude_code</span>; answered by <span class="mono">human:user</span> (time not recorded: a hand split).</p>
@@ -191,6 +191,20 @@ p4 decided: Mine from both Langfuse traces and published decision records (dec-a
 <div class="row between"><h3>Decide how human approval and later corrections are recorded</h3><span class="badge plain">not run</span></div>
 <p class="small"><span class="badge plain">decision capability</span> after p1 &middot; not settled</p>
 <div class="span">&ldquo;how human approval and later corrections are recorded&rdquo;</div><p class="small">Rejected with the split.</p></div></div>
+</details></div>
+<div class="panel"><div class="row between"><div><div class="eyebrow">goal / run-2d7f…4b68</div><h2>Decision criteria format: split rejected, clarification asked</h2></div><div class="row"><span class="badge warning">rejected, asks to clarify</span><span class="badge warning">waiting for you</span></div></div>
+<p class="small">Split found at routing (trigger <span class="mono">ambiguous</span>); proposed by <span class="mono">host.decompose_goal</span>; answered by <span class="mono">human:user</span> at 2026-10-05T11:20:37Z.<span class="ill">illustrative</span></p>
+<p class="small">Gate note: &ldquo;Not two requests: I only need the format decided; the repeated criteria are context for it.&rdquo;</p>
+<div class="span">&ldquo;Decide the storage format for reusable decision criteria, and find which published decision records already repeat the same criteria&rdquo;</div>
+<div class="note"><strong>Waiting for your answer. The run is not blocked and nothing is decided yet.</strong> Routing could not choose one capability (decision and research fit equally), so rejecting the split falls back to today&#x27;s clarification question. No capability gap is recorded unless the request later ends unresolved.</div><h3 style="margin-top:12px">Run report</h3><pre class="mono">The proposed split was rejected by human:user; the request falls back to today&#x27;s clarification question, and nothing is decided yet.
+Question asked: I am not sure how to handle this request: &quot;Decide the storage format for reusable decision criteria, and find which published decision records already repeat the same criteria&quot;. Which of these fits best? You can also say it in your own words.</pre><dl class="kv"><dt>Run status</dt><dd>waiting_human</dd><dt>Capability gap recorded</dt><dd>no (only if the request later ends unresolved)</dd></dl><details style="margin-top:8px"><summary class="small">Parts that were proposed (none ran)</summary><div class="part off"><div class="rank">p1</div><div>
+<div class="row between"><h3>Decide the storage format for reusable decision criteria</h3><span class="badge plain">not run</span></div>
+<p class="small"><span class="badge plain">decision capability</span> no dependency &middot; not settled</p>
+<div class="span">&ldquo;Decide the storage format for reusable decision criteria&rdquo;</div><p class="small">Rejected with the split.</p></div></div>
+<div class="part off"><div class="rank">p2</div><div>
+<div class="row between"><h3>Find which published decision records already repeat the same criteria</h3><span class="badge plain">not run</span></div>
+<p class="small"><span class="badge plain">research capability</span> no dependency &middot; not settled</p>
+<div class="span">&ldquo;find which published decision records already repeat the same criteria&rdquo;</div><p class="small">Rejected with the split.</p></div></div>
 </details></div>
 <div class="panel"><div class="row between"><div><div class="eyebrow">goal / run-5f08…c714</div><h2>Trace analyzers: split rejected</h2></div><div class="row"><span class="badge destructive">rejected, run blocked</span></div></div>
 <p class="small">Split found at routing; proposed by <span class="mono">host.decompose_goal</span>; answered by <span class="mono">human:user</span> at 2026-10-02T16:33:10Z.</p>

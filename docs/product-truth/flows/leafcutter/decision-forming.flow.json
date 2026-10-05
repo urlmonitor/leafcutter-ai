@@ -11,7 +11,7 @@
   "status": "active",
   "readiness": "draft",
   "superseded_by": null,
-  "version": 5,
+  "version": 6,
   "shape_version": 2,
   "tags": [
     "decision-kernel",
@@ -101,7 +101,7 @@
     {
       "id": "split-detect",
       "label": "Spot a compound subject",
-      "human": "At routing, the subject is checked for several separate questions bundled together. A bundled subject is offered as a split whether routing found no single capability for it (jev_none or ambiguous) or would accept it as one decision. A no-match alone does not make a subject compound.",
+      "human": "At routing, the subject is checked for several separate questions bundled together. A bundled subject is offered as a split whether no capability matched it (jev_none), routing could not choose one capability for it (ambiguous), or routing would accept it as one decision (bundled_accepted). A no-match alone does not make a subject compound.",
       "order": 4,
       "agent": "kernel routing",
       "consumes": [
@@ -172,7 +172,8 @@
       "implements": [
         "DK-400b-3",
         "DK-400d-1",
-        "DK-400d-1-i"
+        "DK-400d-1-i",
+        "DK-400d-1-ii"
       ]
     },
     {
@@ -388,7 +389,8 @@
         "DK-400f-1",
         "DK-400f-1-i",
         "DK-400f-2",
-        "DK-400f-2-i"
+        "DK-400f-2-i",
+        "DK-400d-1-ii"
       ]
     }
   ],
@@ -593,9 +595,9 @@
     {
       "id": "split-too-few-parts",
       "from": "split-propose",
-      "condition": "the proposal holds fewer than 2 parts, also when counted after parts whose quote is not in the subject are set aside",
+      "condition": "the proposal holds fewer than 2 parts, also when counted after parts whose quote is not in the subject are set aside; what follows depends on why the split was offered (trigger jev_none, trigger ambiguous, or trigger bundled_accepted or found mid-run)",
       "label": "Fewer than two parts",
-      "human": "No gate is shown and the request is treated as one question: a bundled_accepted request goes ahead as one decision, an item found mid-run goes ahead as one, and a jev_none or ambiguous request has its capability gap recorded and the run ends blocked.",
+      "human": "No gate is shown and the request is treated as one question, as without a split. A jev_none request has its capability gap recorded and the run ends blocked, as today. An ambiguous request falls back to today's clarification question and the run waits for your answer; as today, a gap is recorded only if the request ends unresolved. A bundled_accepted request goes ahead as one decision, and an item found mid-run goes ahead as one.",
       "agent": "kernel",
       "consumes": [
         "proposed split"
@@ -670,9 +672,9 @@
     {
       "id": "split-reject",
       "from": "split-approve",
-      "condition": "you reject a split offered because routing turned the subject away (trigger jev_none or ambiguous)",
+      "condition": "you reject a split offered because no capability matched the subject (trigger jev_none)",
       "label": "Reject, run ends blocked",
-      "human": "No part runs. The run ends blocked and still records the capability gap, as today; its report says plainly that the split was rejected and nothing was decided, with a hint to ask again as one bounded question.",
+      "human": "No part runs. No capability matched the subject, so the run ends blocked and still records the capability gap, as today; its report says plainly that the split was rejected and nothing was decided, with a hint to ask again as one bounded question.",
       "screen": "decision-split-progress",
       "agent": "kernel",
       "consumes": [
@@ -695,6 +697,35 @@
         "DK-400d-3-i",
         "DK-400f-3"
       ]
+    },
+    {
+      "id": "split-reject-clarify",
+      "from": "split-approve",
+      "condition": "you reject a split offered because routing could not choose one capability for the subject (trigger ambiguous: insufficient_context, reason jev_needs_context or low_confidence)",
+      "label": "Reject, ask today's clarification",
+      "human": "No part runs and the run does not end blocked. The request falls back to today's clarification question (\"I am not sure how to handle this request: ... Which of these fits best? You can also say it in your own words.\") and the run waits for your answer. As today, a capability gap is recorded only if the request ends unresolved: you cannot be asked, or the follow-up limit is reached. The report keeps one plain line saying a split was offered and rejected.",
+      "screen": "decision-split-progress",
+      "agent": "kernel routing",
+      "consumes": [
+        "proposed split"
+      ],
+      "produces": [
+        "clarification question (run waiting_human)"
+      ],
+      "reads": [
+        "Decomposition"
+      ],
+      "writes": [
+        "Decomposition"
+      ],
+      "outcome_kind": "alternative",
+      "implements": [
+        "DK-400d-3",
+        "DK-400d-3-i",
+        "DK-400f-3"
+      ],
+      "impl_asof": "2026-10-05",
+      "impl_status": "not_started"
     },
     {
       "id": "split-reject-kept-whole",
@@ -806,7 +837,7 @@
     },
     {
       "for": "split-detect",
-      "given": "a root goal that bundles several separate questions, whether routing finds no single capability for it (jev_none or ambiguous) or would accept it as one decision",
+      "given": "a root goal that bundles several separate questions, whether no capability matched it (jev_none), routing could not choose one capability for it (ambiguous), or routing would accept it as one decision (bundled_accepted)",
       "when": "routing runs on the run's root",
       "then": "a split is offered for it instead of one decision being formed, recording the goal verbatim with found_at routing, work_item_depth 0 and the routing result"
     },
@@ -922,7 +953,7 @@
       "for": "split-too-few-parts",
       "given": "a request offered for a split",
       "when": "the host's proposal holds fewer than 2 parts, counted after any part whose quote is not in the request is set aside",
-      "then": "no split gate is shown and no part is created, and the request goes on as a single question: with trigger bundled_accepted it goes ahead as one decision, found mid-run the item goes ahead as one, and with trigger jev_none or ambiguous the run records the capability gap and ends blocked"
+      "then": "no split gate is shown and no part is created, and the request goes on as a single question according to why the split was offered: with trigger jev_none the run records the capability gap and ends blocked, as today; with trigger ambiguous today's clarification question is asked and the run is waiting_human for the person's answer, with no capability gap recorded unless the request ends unresolved; with trigger bundled_accepted it goes ahead as one decision, and found mid-run the item goes ahead as one"
     },
     {
       "for": "split-too-many-parts",
@@ -938,9 +969,15 @@
     },
     {
       "for": "split-reject",
-      "given": "a proposed split of a root goal that routing turned away (trigger jev_none or ambiguous), shown on the split gate",
+      "given": "a proposed split of a root goal for which no capability matched (trigger jev_none), shown on the split gate",
       "when": "you reject it",
       "then": "no part runs, the run ends blocked and records the capability gap as it does today, and its report says plainly that the split was rejected and nothing was decided"
+    },
+    {
+      "for": "split-reject-clarify",
+      "given": "a proposed split of a root goal for which routing could not choose one capability (trigger ambiguous), shown on the split gate",
+      "when": "you reject it",
+      "then": "no part runs and the run does not end blocked: today's clarification question is asked (\"I am not sure how to handle this request: ... Which of these fits best? You can also say it in your own words.\"), the run is waiting_human for your answer, no capability gap is recorded unless the request ends unresolved (you cannot be asked, or the follow-up limit is reached), and the report keeps one plain line saying a split was offered and rejected"
     },
     {
       "for": "split-reject-kept-whole",
@@ -1026,20 +1063,26 @@
       "action": "extended",
       "by": "flow-author (split-compound-goals plan-feature session)",
       "date": "2026-10-05",
-      "note": "Still v4 (same uncommitted amendment). User decision: how a rejected split ends depends on why it was offered. split-reject is scoped to a subject routing turned away (trigger jev_none or ambiguous): the run ends blocked and nothing is decided. New alternative branch split-reject-kept-whole: rejecting a split of a subject routing would have accepted as one (trigger bundled_accepted), or of an item found mid-run, keeps it whole; it goes ahead as one decision or research step and the run is not blocked. Matches leafcutter/decisions v4 state rejected_kept_whole (whole_decision_id), sample dcp-decision-records-bundled. One acceptance scenario; no ACs linked."
+      "note": "Still v4 (same uncommitted amendment). User decision: how a rejected split ends depends on why it was offered. split-reject is scoped to a subject routing turned away (trigger jev_none or ambiguous): the run ends blocked and nothing is decided. New alternative branch split-reject-kept-whole: rejecting a split of a subject routing would have accepted as one (trigger bundled_accepted), or of an item found mid-run, keeps it whole; it goes ahead as one decision or research step and the run is not blocked. Matches leafcutter/decisions v4 state rejected_kept_whole (whole_decision_id), sample dcp-decision-records-bundled. One acceptance scenario; no ACs linked. [Superseded in v6 for trigger ambiguous: only a rejected jev_none split now ends blocked; a rejected ambiguous split falls back to today's clarification question (branch split-reject-clarify).]"
     },
     {
       "action": "extended",
       "by": "flow-author (split-compound-goals plan-feature session)",
       "date": "2026-10-05",
       "note": "v5: nodes for the cases the business-analyst's DK-400 ACs (ccd51a52) need, plus user rules of 2026-10-05, wired to leafcutter/decisions v5. New branches: split-part-unsettled (from split-run: a part that does not settle stops its dependants, which name it in waited_for, independent parts carry on, and the run ends partial; sample dcp-reusable-criteria-partial), split-too-few-parts (from split-propose: fewer than 2 parts, also after unquoted ones are set aside, is one question with no gate), split-too-many-parts (from split-propose: the gate offers five and lists the rest as not covered; sample dcp-decision-records-seven-parts) and split-typed-request (from split-detect: a caller-supplied leafcutter.decision_request.v1 is never checked for bundling or split, user rule c). split-reject now says the run still records the capability gap, as today (user rule a, capability_gap_recorded). One acceptance scenario per new branch; implements is left for the business-analyst's back-links."
+    },
+    {
+      "action": "extended",
+      "by": "flow-author (split-compound-goals plan-feature session)",
+      "date": "2026-10-05",
+      "note": "v6, user decision of 2026-10-05, wired to leafcutter/decisions v6. A split offered for a request routing could not choose one capability for (trigger ambiguous: insufficient_context, reason jev_needs_context or low_confidence) no longer ends blocked when it is rejected or yields fewer than two parts: the request falls back to today's clarification question and the run is waiting_human. As today (_unclear in kernel/scheduler/nodes_route.py), a capability gap is recorded only if the request ends unresolved (the person cannot be asked, or the follow-up limit is reached). split-reject is narrowed to trigger jev_none (blocked, gap recorded, nothing decided). New alternative branch split-reject-clarify from split-approve, matching state rejected_clarify, sample dcp-format-and-repeats-clarify; it is a separate branch because split-reject and split-reject-kept-whole already model one rejection outcome per branch. split-too-few-parts now names its three outcomes (jev_none blocked, ambiguous clarification, bundled_accepted or mid-run goes ahead as one). split-reject-kept-whole is unchanged. split-detect's human line and scenario now separate no capability matched (jev_none) from routing could not choose one capability (ambiguous), as the v6 found_at description does. Existing AC back-links are kept; split-reject-clarify starts with none."
     }
   ],
   "impl_summary": {
     "done": 2,
     "in_progress": 0,
-    "not_started": 31,
-    "total": 33,
+    "not_started": 32,
+    "total": 34,
     "asof": "2026-10-05"
   }
 }

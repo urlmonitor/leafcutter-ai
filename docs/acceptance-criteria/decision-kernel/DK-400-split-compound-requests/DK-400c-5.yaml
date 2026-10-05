@@ -7,8 +7,8 @@ level: L2
 status: active
 req_status: draft
 work_status: todo
-readiness: reviewed
-priority: medium
+readiness: approved
+priority: high
 roadmap_phase: phase_kernel_1_founding
 criteria: |
   Given a reader who wants to follow one split from its start to the gate,
@@ -18,8 +18,9 @@ criteria: |
     request, the person's answer at the split gate, and the kernel releasing the approved parts,
   And it shows the run waiting on the host and then on the person, with no part run before the
     person's answer,
-  And it shows the three endings of the gate as distinct: approved, rejected and ended blocked,
-    and rejected and kept whole.
+  And it shows the four endings of the gate as distinct: approved; rejected and ended blocked,
+    when no capability could meet the request; rejected and back to today's clarification
+    question, when routing found the request ambiguous; and rejected and kept whole.
 depends_on:
   - DK-400c
   - DK-400c-1
@@ -62,9 +63,10 @@ it_requirements:
     never as new containers.
   - 'Uses the names of the built code and of ADR-067: host.decompose_goal, leafcutter.goal_decomposition_request.v1,
     leafcutter.goal_decomposition.v1, the split record and its states, and the run statuses waiting_host and waiting_human.'
-  - Shows the run statuses waiting_host then waiting_human, the deterministic conversion steps in their fixed order
-    (DK-400c-1), and the three gate endings as distinct terminations; it stops at the gate (running the parts is
-    DK-400e-5).
+  - 'Shows the run statuses waiting_host then waiting_human, the deterministic conversion steps in their fixed order
+    (DK-400c-1), and the four gate endings as distinct terminations: approved; rejected with the run blocked (jev_none);
+    rejected_clarify with today''s clarification question and the run waiting_human (ambiguous); rejected_kept_whole
+    (bundled_accepted or mid_run). It stops at the gate (running the parts is DK-400e-5).'
 risk_surface: internal
 test_required: false
 origin_agent: business-analyst
@@ -76,6 +78,14 @@ amended_by:
     summary: 'Technical enrichment: assigned_agent confirmed, estimated_complexity, change_target, risk_surface,
       it_requirements, delivers_to/expects_from contracts, doc_links and the test contract set; readiness draft
       -> reviewed. BA criteria and product_truth unchanged.'
+  - reason: ba-user-gate-amendment
+    date: '2026-10-05'
+    by: business-analyst
+    summary: "User rule at the final gate: a rejected split of an ambiguous request falls back to today's clarification question. Withdrawn wording: 'And it shows the three endings of the gate as distinct: approved, rejected and ended blocked, and rejected and kept whole.' Replaced by four endings, adding rejected and back to today's clarification question. IT PO fields were not edited; its it_requirements entry still says three gate endings."
+  - reason: it-po-final-gate-re-enrichment
+    date: '2026-10-05'
+    by: it-po
+    summary: Three gate endings became four (rejected_clarify added).
 superseded_by: null
 covered_by: []
 implemented_by: []

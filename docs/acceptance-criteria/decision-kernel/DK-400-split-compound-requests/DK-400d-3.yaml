@@ -7,8 +7,8 @@ level: L2
 status: active
 req_status: draft
 work_status: todo
-readiness: reviewed
-priority: medium
+readiness: approved
+priority: high
 roadmap_phase: phase_kernel_1_founding
 criteria: |
   Given a split waiting at the split gate, whatever the reason it was offered,
@@ -17,9 +17,10 @@ criteria: |
   And every part is recorded as rejected and not run,
   And the split records the answer rejected, given by human:user at that time, with the note word
     for word,
-  And how the work goes on is set by why the split was offered: a request routing turned away ends
-    blocked, while a request routing would have accepted, or a work item found mid-run, is kept
-    whole.
+  And how the work goes on is set by why the split was offered: a request no capability could meet
+    (trigger jev_none) ends blocked; a request routing found ambiguous falls back to the
+    clarification question the kernel asks today; and a request routing would have accepted, or a
+    work item found mid-run, is kept whole.
 depends_on:
   - DK-400d
   - DK-400d-1
@@ -51,10 +52,12 @@ delivers_to:
   agent: python-coder
   contract: 'Rejected split: gate_answer ''rejected'' with gate_by, gate_at and gate_note verbatim; every part review
     ''rejected'' and outcome ''not_run''; no part work item. Ending keyed deterministically on trigger and found_at:
-    jev_none | ambiguous -> state ''rejected'', run status ''blocked'', capability_gap_recorded true and today''s
-    gap observation stored; bundled_accepted or found_at mid_run -> state ''rejected_kept_whole'', the subject resumes
-    from kept_routing as one decision or research step, whole_decision_id set once that decision''s record is staged
-    (null for a research step). Consumed by DK-400f-3 (report line) and DK-400d-3-i, -ii, -iii.'
+    jev_none -> state ''rejected'', run status ''blocked'', capability_gap_recorded true and today''s unsupported
+    gap observation stored; ambiguous -> state ''rejected_clarify'', today''s clarification question opened, run
+    status ''waiting_human'', capability_gap_recorded false while it is open (true, with today''s ambiguous gap
+    and run ''blocked'', only if the request ends unresolved); bundled_accepted or found_at mid_run -> state ''rejected_kept_whole'',
+    the subject resumes from kept_routing as one decision or research step, whole_decision_id set once that decision''s
+    record is staged (null for a research step). Consumed by DK-400f-3 (report lines) and DK-400d-3-i, -ii, -iii.'
 expects_from:
   ac_id: DK-400d-1
   contract: "The gate answer path, here with the answer rejected."
@@ -62,9 +65,16 @@ it_requirements:
   - 'A rejection is recorded atomically with the answer: gate_answer rejected, gate_by, gate_at, the note word for
     word, every part review rejected and outcome not_run, and no part work item ever created.'
   - 'The ending is chosen deterministically from the split record (trigger, found_at), never by a model: jev_none
-    or ambiguous -> state rejected and run blocked (DK-400d-3-i); bundled_accepted or mid_run -> state rejected_kept_whole
-    and the subject resumes as one (DK-400d-3-ii, DK-400d-3-iii).'
+    -> state rejected and run blocked (DK-400d-3-i); ambiguous -> state rejected_clarify and today''s insufficient_context
+    path, unchanged: with routing.on_insufficient_context ''human'' today''s clarification question is opened (the
+    same template and choices as today) and the run is waiting_human; follow-ups count against intent.max_clarifications;
+    today''s ambiguous gap is recorded only if the request ends unresolved (the person cannot be asked, or the follow-up
+    limit is reached), and only then does the run end blocked (DK-400d-3-i); bundled_accepted or mid_run -> state
+    rejected_kept_whole and the subject resumes as one (DK-400d-3-ii, DK-400d-3-iii).'
   - A rejection is never inferred from another answer (DK-400d-2-i).
+  - 'A request that falls back to the clarification question after a rejected or too-small ambiguous split is never
+    offered a split again in the same run: the item keeps its closed split record, so the bundle check is skipped
+    for it even after the person''s answer changes its effective goal, and it routes normally from there.'
 change_target: code
 risk_surface: contract_boundary
 test_required: true
@@ -81,10 +91,11 @@ test_spec:
     framework: pytest
     type: integration
     angle: boundary
-    description: Parametrised over jev_none, ambiguous, bundled_accepted and mid_run, the rejection ends in state
-      rejected (blocked) for the first two and rejected_kept_whole for the last two.
-test_rationale: One rule fans out to three endings; the parametrised test pins the mapping, the criterion test pins
-  what is recorded.
+    description: 'Parametrised over jev_none, ambiguous, bundled_accepted and mid_run: the rejection ends in state
+      rejected with the run blocked for jev_none, rejected_clarify with the run waiting_human on today''s clarification
+      question for ambiguous, and rejected_kept_whole for bundled_accepted and mid_run.'
+test_rationale: One rule fans out to three rejection endings (rejected, rejected_clarify, rejected_kept_whole);
+  the parametrised test pins the mapping, the criterion test pins what is recorded.
 origin_agent: business-analyst
 created: 2026-10-05
 amended_by:
@@ -94,6 +105,15 @@ amended_by:
     summary: 'Technical enrichment: assigned_agent confirmed, estimated_complexity, change_target, risk_surface,
       it_requirements, delivers_to/expects_from contracts, doc_links and the test contract set; readiness draft
       -> reviewed. BA criteria and product_truth unchanged.'
+  - reason: ba-user-gate-amendment
+    date: '2026-10-05'
+    by: business-analyst
+    summary: "User rule at the final gate: a rejected split of an ambiguous request falls back to today's clarification question; only jev_none ends blocked. Withdrawn wording: 'a request routing turned away ends blocked, while a request routing would have accepted, or a work item found mid-run, is kept whole.' Replaced by three endings (jev_none blocked, ambiguous back to today's clarification question, accepted or mid-run kept whole). IT PO fields were not edited; delivers_to, it_requirements and test_spec still map ambiguous to blocked and need IT PO re-enrichment."
+  - reason: it-po-final-gate-re-enrichment
+    date: '2026-10-05'
+    by: it-po
+    summary: 'Rejection endings remapped per the final-gate rule: jev_none -> rejected/blocked, ambiguous -> rejected_clarify/waiting_human,
+      bundled_accepted or mid_run -> rejected_kept_whole; delivers_to, it_requirements and the trigger test updated.'
 superseded_by: null
 covered_by:
   - DK-400d-3-i
@@ -102,11 +122,23 @@ covered_by:
 implemented_by: []
 notes: |
   The rule common to both rejection branches. Its endings are the L3s: turned away
-  (DK-400d-3-i, flow split-reject), accepted as one (DK-400d-3-ii) and found mid-run
-  (DK-400d-3-iii), both flow split-reject-kept-whole. The report line for each is DK-400f-3.
+  (DK-400d-3-i, flow split-reject; jev_none ends blocked, ambiguous falls back to today's
+  clarification question, user rule at the final gate 2026-10-05), accepted as one (DK-400d-3-ii)
+  and found mid-run (DK-400d-3-iii), both flow split-reject-kept-whole. The report line for each
+  is DK-400f-3.
 product_truth:
   - flow: leafcutter/decision-forming
     node: split-reject
+    node_kind: branch
+    flow_kind: data
+    screen: decision-split-progress
+    mock_data: leafcutter/decisions
+    entities:
+      - Decomposition
+    source: real
+    asof: '2026-10-05'
+  - flow: leafcutter/decision-forming
+    node: split-reject-clarify
     node_kind: branch
     flow_kind: data
     screen: decision-split-progress

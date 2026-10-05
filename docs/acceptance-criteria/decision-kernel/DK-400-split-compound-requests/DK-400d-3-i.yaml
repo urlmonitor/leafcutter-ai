@@ -1,5 +1,5 @@
 id: DK-400d-3-i
-title: "Rejecting the split of a request routing turned away ends the run blocked, with nothing decided and the capability gap recorded"
+title: "Rejecting the split of a turned-away request: with no capability the run ends blocked with the gap recorded; when ambiguous it falls back to today's clarification question"
 component: decision-kernel
 components:
   - decision_kernel
@@ -7,8 +7,8 @@ level: L3
 status: active
 req_status: draft
 work_status: todo
-readiness: reviewed
-priority: medium
+readiness: approved
+priority: high
 roadmap_phase: phase_kernel_1_founding
 criteria: |
   Given the trace-analyzers goal "Decide which recent kernel traces the trace analyzers read and
@@ -20,18 +20,26 @@ criteria: |
   And the run records the same capability gap for the goal that it records today when routing
     turns a request away,
   And nothing is decided and no decision record is staged,
-  And the split's state is rejected.
+  And the split's state is rejected,
+  And when the same split had been offered because routing found the goal ambiguous (trigger
+    ambiguous) instead, the rejection does not end the run blocked: the run asks the person the
+    clarification question it asks today for an ambiguous request and waits for the answer, the
+    split's state is rejected and back to clarification (rejected_clarify), and no capability gap
+    is recorded for the goal while that question is open.
 depends_on:
   - DK-400d-3
 doc_links:
   - path: docs/product-truth/flows/leafcutter/decision-forming.flow.json
     relationship: implements
     status: exists
-    relevance: "Flow v5 node(s) split-reject, with their acceptance scenarios (the run still records the capability gap, as today)."
+    relevance: Flow v5 node(s) split-reject, with their acceptance scenarios (the run still records the capability
+      gap, as today).
   - path: docs/product-truth/mock-data/leafcutter/decisions.mock.json
     relationship: specified-by
     status: exists
-    relevance: "v5 invariants: state rejected iff rejected with trigger jev_none or ambiguous, run_status blocked; capability_gap_recorded true iff state rejected (or a hand split); record dcp-trace-analyzers-rejected."
+    relevance: 'v6 invariants: state rejected iff rejected with trigger jev_none, run_status blocked; state rejected_clarify
+      iff rejected with trigger ambiguous, run_status waiting_human and capability_gap_recorded false while the
+      clarification is open; records dcp-trace-analyzers-rejected and dcp-format-and-repeats-clarify.'
   - path: docs/analysis/2026-09-30-decision-kernel-design-4-jev-and-capabilities.md
     relationship: describes
     status: exists
@@ -45,20 +53,47 @@ expects_from:
 it_requirements:
   - The run ends blocked with today's capability gap for the goal (the same gap_key and fields as the split.enabled
     false run of the same goal), capability_gap_recorded true, no decision and no staged record.
-  - For trigger ambiguous the same ending applies with the gap type routing would record (ambiguous) and no clarification
-    question (see the caveat raised to the user).
+  - 'For trigger ambiguous the rejection does not end the run blocked: the split''s state is rejected_clarify and
+    the request falls back to today''s insufficient_context path, unchanged: with routing.on_insufficient_context
+    ''human'' today''s clarification question is opened (the same template and choices as today) and the run is
+    waiting_human; follow-ups count against intent.max_clarifications; today''s ambiguous gap is recorded only if
+    the request ends unresolved (the person cannot be asked, or the follow-up limit is reached), and only then does
+    the run end blocked. capability_gap_recorded stays false while the question is open and becomes true only with
+    that unresolved ending.'
+  - 'A request that falls back to the clarification question after a rejected or too-small ambiguous split is never
+    offered a split again in the same run: the item keeps its closed split record, so the bundle check is skipped
+    for it even after the person''s answer changes its effective goal, and it routes normally from there. This holds
+    even when the clarification answer itself bundles several questions: the user chose today''s clarification,
+    and today''s clarification path never splits; the person can start a new run to get a split.'
 change_target: code
 risk_surface: contract_boundary
 test_required: true
 test_spec:
-  - name: test_rejected_turned_away_split_blocks_and_records_todays_gap
+  - name: test_rejected_jev_none_split_blocks_and_records_todays_gap
     target_dir: tests/kernel/split/
     framework: pytest
     type: integration
     angle: criterion
-    description: Rejecting the trace-analyzers split ends the run blocked with one gap observation equal to the
-      split.enabled false run's, no decision and no staged record, and split state rejected.
-test_rationale: Compares the stored gap observation with the off-switch run, the precise meaning of 'as today'.
+    description: Rejecting the trace-analyzers (jev_none) split ends the run blocked with one gap observation equal
+      to the split.enabled false run's, no decision and no staged record, and split state rejected.
+  - name: test_rejected_ambiguous_split_asks_todays_clarification
+    target_dir: tests/kernel/split/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: Rejecting the split of the ambiguous format-and-repeats goal sets state rejected_clarify; the run
+      is waiting_human on today's capability clarification question (same template and choices as the split.enabled
+      false run), and no gap observation exists while it is open.
+  - name: test_rejected_ambiguous_split_records_gap_only_if_unresolved
+    target_dir: tests/kernel/split/
+    framework: pytest
+    type: integration
+    angle: failure
+    description: When the follow-up limit (intent.max_clarifications) is reached without a usable answer, today's
+      ambiguous gap is recorded, capability_gap_recorded becomes true and the run ends blocked.
+test_rationale: 'Both endings are compared with the off-switch run of the same goal (the precise meaning of ''as
+  today''): the stored gap observation for jev_none, and the clarification question and the absence of a gap for
+  ambiguous; the unresolved ending is driven to the follow-up limit.'
 origin_agent: business-analyst
 created: 2026-10-05
 amended_by:
@@ -69,18 +104,39 @@ amended_by:
     summary: 'Technical enrichment: assigned_agent confirmed, estimated_complexity, change_target, risk_surface,
       it_requirements, delivers_to/expects_from contracts, doc_links and the test contract set; readiness draft
       -> reviewed. BA criteria and product_truth unchanged.'
+  - reason: ba-user-gate-amendment
+    date: '2026-10-05'
+    by: business-analyst
+    summary: "User rule at the final gate: a rejected split of an ambiguous request falls back to today's clarification question instead of ending blocked; only jev_none keeps 'ends blocked and records the capability gap'. Added the closing clause for trigger ambiguous (state rejected_clarify and run waiting for the answer, as in mock-data v6, uncommitted in this worktree; today's ambiguous gap only if the clarification later ends unresolved); the jev_none clauses are unchanged ('And the split's state is rejected.' now ends with a comma). Title changed from 'Rejecting the split of a request routing turned away ends the run blocked, with nothing decided and the capability gap recorded'. IT PO fields were not edited; the it_requirements entry giving ambiguous the same blocked ending, and the single jev_none test_spec, need IT PO re-enrichment."
+  - reason: it-po-final-gate-re-enrichment
+    date: '2026-10-05'
+    by: it-po
+    summary: 'Ambiguous rejection re-enriched to rejected_clarify with today''s clarification question; added its
+      test and the gap-only-if-unresolved test; mock-data doc_link relevance refreshed to v6. Coordinator default
+      for Q4: the no-second-split rule now carries its rationale.'
 superseded_by: null
 covered_by: []
 implemented_by: []
 notes: |
-  Flow branch split-reject. Only this rejection ends the run blocked (user decision
-  2026-10-05). The capability gap is still recorded, as today (user answer to BA open question
-  Q1, 2026-10-05; mock-data v5 field capability_gap_recorded). This keeps gap counts honest in
-  both directions together with DK-400a-1-ii: an approved split records no gap for the request,
-  and a rejected split of a turned-away request does.
+  Flow branch split-reject. Only a rejection with trigger jev_none ends the run blocked (user
+  decisions 2026-10-05, including the final-gate rule that an ambiguous request falls back to
+  today's clarification question). For jev_none the capability gap is still recorded, as today
+  (user answer to BA open question Q1; mock-data v5 field capability_gap_recorded). This keeps
+  gap counts honest in both directions together with DK-400a-1-ii: an approved split records no
+  gap for the request, and a rejected split of a request no capability could meet does.
 product_truth:
   - flow: leafcutter/decision-forming
     node: split-reject
+    node_kind: branch
+    flow_kind: data
+    screen: decision-split-progress
+    mock_data: leafcutter/decisions
+    entities:
+      - Decomposition
+    source: real
+    asof: '2026-10-05'
+  - flow: leafcutter/decision-forming
+    node: split-reject-clarify
     node_kind: branch
     flow_kind: data
     screen: decision-split-progress

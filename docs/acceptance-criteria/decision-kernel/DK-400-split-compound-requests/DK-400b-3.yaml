@@ -7,8 +7,8 @@ level: L2
 status: active
 req_status: draft
 work_status: todo
-readiness: reviewed
-priority: medium
+readiness: approved
+priority: high
 roadmap_phase: phase_kernel_1_founding
 criteria: |
   Given three proposed splits: the reusable-criteria goal (found at routing, trigger jev_none),
@@ -71,9 +71,10 @@ test_spec:
     framework: pytest
     type: integration
     angle: criterion
-    description: For the reusable-criteria, reuse-threshold and split-bounds splits the gate packets offer the same
-      four answers, name a goal, a research request and a decision question, and state the origin as the person's
-      request twice and found along the way at work-item depth 1 once.
+    description: For the reusable-criteria and reuse-threshold splits (routing) and the split-bounds split (mid-run,
+      through the injected test producer of DK-400b-2) the gate packets offer the same four answers, name a goal,
+      a research request and a decision question, and state the origin as the person's request twice and found along
+      the way at work-item depth 1 once.
   - name: test_progress_view_shows_same_origin_as_gate
     target_dir: tests/kernel/split/
     framework: pytest
@@ -92,6 +93,10 @@ amended_by:
     summary: 'Technical enrichment: assigned_agent confirmed, estimated_complexity, change_target, risk_surface,
       it_requirements, delivers_to/expects_from contracts, doc_links and the test contract set; readiness draft
       -> reviewed. BA criteria and product_truth unchanged.'
+  - reason: it-po-final-gate-re-enrichment
+    date: '2026-10-05'
+    by: it-po
+    summary: The mid-run sample of the gate test now uses the injected test producer of DK-400b-2.
 superseded_by: null
 covered_by: []
 implemented_by: []
