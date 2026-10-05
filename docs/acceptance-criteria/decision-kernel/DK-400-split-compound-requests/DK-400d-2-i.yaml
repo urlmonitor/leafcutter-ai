@@ -7,7 +7,7 @@ level: L3
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
+readiness: reviewed
 priority: medium
 roadmap_phase: phase_kernel_1_founding
 criteria: |
@@ -27,15 +27,43 @@ doc_links:
     relationship: specified-by
     status: exists
     relevance: "Invariant: an approved split has at least one part not left_out."
+  - path: docs/analysis/2026-09-30-decision-kernel-design-5-client-observability.md
+    relationship: describes
+    status: exists
+    relevance: RunService resume validation, the RunEnvelope, report.md, tracing and redaction.
 assigned_agent: python-coder
-estimated_complexity: null
+estimated_complexity: S
 delivers_to: null
 expects_from:
   ac_id: DK-400d-2
   contract: "The subset answer whose lower bound this case enforces."
+it_requirements:
+  - An approval with every offered part left out is refused before any state change (exit 3) with an error message
+    saying that at least one part must stay in or that the split can be rejected instead; the interaction stays
+    pending at the same state revision.
+  - Such an answer is never converted into a rejection.
+change_target: code
+risk_surface: contract_boundary
+test_required: true
+test_spec:
+  - name: test_unticking_every_part_is_refused_not_rejected
+    target_dir: tests/kernel/split/
+    framework: pytest
+    type: integration
+    angle: failure
+    description: Approving the trace-analyzers split with p1 and p2 unticked is refused with the stay-in-or-reject
+      message; nothing is recorded as approved or rejected and no part runs.
+test_rationale: A refusal must leave state unchanged, which the test checks on the run's state revision after the
+  rejected submission.
 origin_agent: business-analyst
 created: 2026-10-05
-amended_by: []
+amended_by:
+  - reason: it-po-technical-enrichment
+    date: '2026-10-05'
+    by: it-po
+    summary: 'Technical enrichment: assigned_agent confirmed, estimated_complexity, change_target, risk_surface,
+      it_requirements, delivers_to/expects_from contracts, doc_links and the test contract set; readiness draft
+      -> reviewed. BA criteria and product_truth unchanged.'
 superseded_by: null
 covered_by: []
 implemented_by: []

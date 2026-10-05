@@ -7,7 +7,7 @@ level: L3
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
+readiness: reviewed
 priority: medium
 roadmap_phase: phase_kernel_1_founding
 criteria: |
@@ -32,15 +32,43 @@ doc_links:
     relationship: specified-by
     status: exists
     relevance: "Invariant: every parts[].covers is a verbatim substring of subject_text."
+  - path: docs/analysis/2026-09-30-decision-kernel-design-4-jev-and-capabilities.md
+    relationship: describes
+    status: exists
+    relevance: Jev template rules, host operations and their conversion, capability gaps, the precedent node.
 assigned_agent: python-coder
-estimated_complexity: null
+estimated_complexity: S
 delivers_to: null
 expects_from:
   ac_id: DK-400c-2
   contract: "The quote check that sets proposals aside, applied here to the mid-run subject."
+it_requirements:
+  - The quote check compares against the split's own subject_text (the work item's question) and nothing else; it
+    never falls back to the root goal, the task's original goal or any parent's text.
+  - 'The set-aside reason is template text by subject kind: ''quote not found in the goal'', ''quote not found in
+    the request'' (research request) or ''quote not found in the question'' (decision question).'
+change_target: code
+risk_surface: contract_boundary
+test_required: true
+test_spec:
+  - name: test_mid_run_quote_of_root_goal_is_set_aside
+    target_dir: tests/kernel/split/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: With the split-bounds work item as subject, p3 quoting words found only in the root goal is set
+      aside with the question reason while p1 and p2 are kept.
+test_rationale: The trap is which text the check reads, so the test runs a mid-run split whose root goal contains
+  the quote.
 origin_agent: business-analyst
 created: 2026-10-05
-amended_by: []
+amended_by:
+  - reason: it-po-technical-enrichment
+    date: '2026-10-05'
+    by: it-po
+    summary: 'Technical enrichment: assigned_agent confirmed, estimated_complexity, change_target, risk_surface,
+      it_requirements, delivers_to/expects_from contracts, doc_links and the test contract set; readiness draft
+      -> reviewed. BA criteria and product_truth unchanged.'
 superseded_by: null
 covered_by: []
 implemented_by: []

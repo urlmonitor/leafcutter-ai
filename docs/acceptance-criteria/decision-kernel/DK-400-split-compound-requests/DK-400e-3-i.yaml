@@ -7,7 +7,7 @@ level: L3
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
+readiness: reviewed
 priority: medium
 roadmap_phase: phase_kernel_1_founding
 criteria: |
@@ -26,15 +26,40 @@ doc_links:
   - path: docs/product-truth/flows/leafcutter/decision-retrieval.flow.json
     relationship: related
     status: exists
+  - path: docs/analysis/2026-09-30-decision-kernel-design-4-jev-and-capabilities.md
+    relationship: describes
+    status: exists
+    relevance: Jev template rules, host operations and their conversion, capability gaps, the precedent node.
 assigned_agent: python-coder
-estimated_complexity: null
+estimated_complexity: S
 delivers_to: null
 expects_from:
   ac_id: DK-400e-3
   contract: "The precedent offer and Jev's applicability judgment."
+it_requirements:
+  - Below memory.applies_threshold the earlier part's record is listed in precedents_considered with action not_applicable
+    and contributes no evidence id to options, criteria or the assessment.
+change_target: code
+risk_surface: contract_boundary
+test_required: true
+test_spec:
+  - name: test_not_applicable_earlier_part_kept_out_of_evidence
+    target_dir: tests/kernel/memory/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: With p1 judged below the applicability threshold for p4, p4's record lists p1 as not_applicable
+      and no evidence id of p1 appears in p4's options, criteria or assessment.
+test_rationale: Checks the evidence ids actually used, not only the recorded action.
 origin_agent: business-analyst
 created: 2026-10-05
-amended_by: []
+amended_by:
+  - reason: it-po-technical-enrichment
+    date: '2026-10-05'
+    by: it-po
+    summary: 'Technical enrichment: assigned_agent confirmed, estimated_complexity, change_target, risk_surface,
+      it_requirements, delivers_to/expects_from contracts, doc_links and the test contract set; readiness draft
+      -> reviewed. BA criteria and product_truth unchanged.'
 superseded_by: null
 covered_by: []
 implemented_by: []

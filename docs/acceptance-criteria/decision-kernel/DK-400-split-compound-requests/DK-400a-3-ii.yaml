@@ -7,7 +7,7 @@ level: L3
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
+readiness: reviewed
 priority: medium
 roadmap_phase: phase_kernel_1_founding
 criteria: |
@@ -42,15 +42,50 @@ doc_links:
     relationship: constrains
     status: exists
     relevance: "Telling a typed request apart is an exact check, so it runs before any Jev or host judgment about bundling."
+  - path: docs/analysis/2026-09-30-decision-kernel-design-3-kernel-scheduler.md
+    relationship: describes
+    status: exists
+    relevance: Route node and batched Jev routing, intent step, guards and budgets, root completion, gap recording,
+      resume and restart.
 assigned_agent: python-coder
-estimated_complexity: null
+estimated_complexity: S
 delivers_to: null
 expects_from:
   ac_id: DK-400a-3
   contract: "The no-split path that a caller-supplied decision request takes without any bundling check."
+it_requirements:
+  - 'The typed-request exemption is an exact check on the item''s input payload schema id (leafcutter.decision_request.v1),
+    evaluated before any Jev question is assembled: no bundle question for that item appears in any Jev batch.'
+  - The caller's question, options and criteria reach the decision capability unchanged, as today.
+  - The exemption is driven by the payload schema, never by goal wording.
+change_target: code
+risk_surface: contract_boundary
+test_required: true
+test_spec:
+  - name: test_typed_decision_request_never_checked_for_bundling
+    target_dir: tests/kernel/split/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: A decision_request.v1 run whose question bundles three questions has no bundle question in any
+      recorded Jev batch, no split record and no split interaction.
+  - name: test_typed_decision_request_payload_reaches_decision_unchanged
+    target_dir: tests/kernel/split/
+    framework: pytest
+    type: integration
+    angle: seam
+    description: The decision invocation receives the caller's question, two options and three criteria unchanged.
+test_rationale: The exemption must hold before Jev is asked, so the test inspects the recorded Jev batches of a
+  real run, not a predicate in isolation.
 origin_agent: business-analyst
 created: 2026-10-05
-amended_by: []
+amended_by:
+  - reason: it-po-technical-enrichment
+    date: '2026-10-05'
+    by: it-po
+    summary: 'Technical enrichment: assigned_agent confirmed, estimated_complexity, change_target, risk_surface,
+      it_requirements, delivers_to/expects_from contracts, doc_links and the test contract set; readiness draft
+      -> reviewed. BA criteria and product_truth unchanged.'
 superseded_by: null
 covered_by: []
 implemented_by: []

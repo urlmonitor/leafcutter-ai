@@ -7,7 +7,7 @@ level: L3
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
+readiness: reviewed
 priority: medium
 roadmap_phase: phase_kernel_1_founding
 criteria: |
@@ -32,16 +32,43 @@ doc_links:
     relationship: specified-by
     status: exists
     relevance: "v5 invariants: state rejected iff rejected with trigger jev_none or ambiguous, run_status blocked; capability_gap_recorded true iff state rejected (or a hand split); record dcp-trace-analyzers-rejected."
+  - path: docs/analysis/2026-09-30-decision-kernel-design-4-jev-and-capabilities.md
+    relationship: describes
+    status: exists
+    relevance: Jev template rules, host operations and their conversion, capability gaps, the precedent node.
 assigned_agent: python-coder
-estimated_complexity: null
+estimated_complexity: M
 delivers_to: null
 expects_from:
   ac_id: DK-400d-3
   contract: "The recorded rejection and the trigger it reads."
+it_requirements:
+  - The run ends blocked with today's capability gap for the goal (the same gap_key and fields as the split.enabled
+    false run of the same goal), capability_gap_recorded true, no decision and no staged record.
+  - For trigger ambiguous the same ending applies with the gap type routing would record (ambiguous) and no clarification
+    question (see the caveat raised to the user).
+change_target: code
+risk_surface: contract_boundary
+test_required: true
+test_spec:
+  - name: test_rejected_turned_away_split_blocks_and_records_todays_gap
+    target_dir: tests/kernel/split/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: Rejecting the trace-analyzers split ends the run blocked with one gap observation equal to the
+      split.enabled false run's, no decision and no staged record, and split state rejected.
+test_rationale: Compares the stored gap observation with the off-switch run, the precise meaning of 'as today'.
 origin_agent: business-analyst
 created: 2026-10-05
 amended_by:
   - reason: "2026-10-05 BA, user answer to BA open question Q1: a rejected split of a turned-away request still records the capability gap, as today. Added the clause 'And the run records the same capability gap for the goal that it records today when routing turns a request away'; no earlier clause was withdrawn. Title widened from 'Rejecting the split of a request routing turned away ends the run blocked with nothing decided'. doc_links relevance refreshed to flow v5 and mock data v5."
+  - reason: it-po-technical-enrichment
+    date: '2026-10-05'
+    by: it-po
+    summary: 'Technical enrichment: assigned_agent confirmed, estimated_complexity, change_target, risk_surface,
+      it_requirements, delivers_to/expects_from contracts, doc_links and the test contract set; readiness draft
+      -> reviewed. BA criteria and product_truth unchanged.'
 superseded_by: null
 covered_by: []
 implemented_by: []

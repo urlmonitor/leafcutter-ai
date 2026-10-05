@@ -7,7 +7,7 @@ level: L3
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
+readiness: reviewed
 priority: medium
 roadmap_phase: phase_kernel_1_founding
 criteria: |
@@ -28,15 +28,41 @@ doc_links:
     relationship: specified-by
     status: exists
     relevance: "Decision.staged_path and lifecycle_stage staged."
+  - path: docs/analysis/2026-09-30-decision-kernel-design-5-client-observability.md
+    relationship: describes
+    status: exists
+    relevance: RunService resume validation, the RunEnvelope, report.md, tracing and redaction.
 assigned_agent: python-coder
-estimated_complexity: null
+estimated_complexity: S
 delivers_to: null
 expects_from:
   ac_id: DK-400f-1
   contract: "The part link shown in the progress view."
+it_requirements:
+  - A decided part's progress entry says that the record is staged and that a person publishes it, with the existing
+    publish command text; the kernel never runs publish, and docs/decisions/ is unchanged by the run (ADR-060 section
+    3).
+change_target: code
+risk_surface: auth
+test_required: true
+test_spec:
+  - name: test_decided_part_link_opens_staged_record_and_says_unpublished
+    target_dir: tests/kernel/split/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: p1's link opens its staged record in the run, the entry says staged and names the publish command,
+      and the run leaves docs/decisions/ untouched.
+test_rationale: A before-and-after snapshot of docs/decisions/ proves the kernel did not publish.
 origin_agent: business-analyst
 created: 2026-10-05
-amended_by: []
+amended_by:
+  - reason: it-po-technical-enrichment
+    date: '2026-10-05'
+    by: it-po
+    summary: 'Technical enrichment: assigned_agent confirmed, estimated_complexity, change_target, risk_surface,
+      it_requirements, delivers_to/expects_from contracts, doc_links and the test contract set; readiness draft
+      -> reviewed. BA criteria and product_truth unchanged.'
 superseded_by: null
 covered_by: []
 implemented_by: []

@@ -7,7 +7,7 @@ level: L3
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
+readiness: reviewed
 priority: medium
 roadmap_phase: phase_kernel_1_founding
 criteria: |
@@ -35,15 +35,78 @@ doc_links:
     relationship: context
     status: exists
     relevance: "Run statuses, gap records, resume answers and the run report as they are today."
+  - path: docs/analysis/2026-09-30-decision-kernel-design-4-jev-and-capabilities.md
+    relationship: describes
+    status: exists
+    relevance: Jev template rules, host operations and their conversion, capability gaps, the precedent node.
+  - path: docs/analysis/2026-09-30-decision-kernel-design-3-kernel-scheduler.md
+    relationship: describes
+    status: exists
+    relevance: Route node and batched Jev routing, intent step, guards and budgets, root completion, gap recording,
+      resume and restart.
 assigned_agent: python-coder
-estimated_complexity: null
+estimated_complexity: M
 delivers_to: null
 expects_from:
   ac_id: DK-400a-1
-  contract: "The split start that replaces today's gap record for a bundled, turned-away request."
+  contract: The split record's trigger and capability_gap_recorded (false at detection), and the deferred gap decision
+    that the gate outcome of DK-400d-3 completes.
+it_requirements:
+  - 'Gap accounting for a split subject is decided when the split''s outcome is known, never at detection: approved
+    -> no unsupported or ambiguous gap observation for the subject; rejected with trigger jev_none or ambiguous
+    -> exactly today''s observation for the subject (same gap_key, gap_type and fields, fallback_outcome blocked)
+    and capability_gap_recorded true; too few parts or an abandoned proposal (DK-400c-3, DK-400c-1-ii) with trigger
+    jev_none or ambiguous -> today''s observation; bundled_accepted or mid_run -> never a gap for the subject; run
+    cancelled before the gate answer -> no gap for the subject (mock-data invariant on capability_gap_recorded).'
+  - 'The host.decompose_goal operation records no host_only gap observation: it is the split''s coordination step,
+    not a build opportunity, and recording it would list the subject''s goal tokens as a build opportunity.'
+  - Gap observations from a part's own work (its research, options or synthesis host operations, a no_match of a
+    part's child) are recorded exactly as a stand-alone run of that part would record them, attributed to the part's
+    request and never to the split subject.
+  - A single question no capability can meet produces today's gap observation unchanged (gap_key, gap_type, normalized_need,
+    fallback_outcome), so occurrence counts across runs stay comparable before and after this feature.
+change_target: code
+risk_surface: contract_boundary
+test_required: true
+test_spec:
+  - name: test_approved_split_records_no_gap_for_its_subject
+    target_dir: tests/kernel/split/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: Run A (jev_none, split approved, parts scripted to settle) leaves no gap observation whose request
+      is the run's root, and its goal is absent from the gaps build opportunities.
+  - name: test_single_unsupported_request_records_todays_gap
+    target_dir: tests/kernel/split/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: Run B records one unsupported gap observation equal in every field to the split.enabled false run
+      of the same request.
+  - name: test_gap_list_across_runs_counts_only_run_b
+    target_dir: tests/kernel/split/
+    framework: pytest
+    type: integration
+    angle: reachability
+    description: list_gaps (and python -m kernel gaps) over a run root holding runs A and B returns exactly one
+      gap row, from run B.
+  - name: test_decompose_goal_answer_records_no_host_only_gap
+    target_dir: tests/kernel/split/
+    framework: pytest
+    type: integration
+    angle: seam
+    description: Accepting a goal_decomposition.v1 host answer appends nothing to gaps/observations.jsonl.
+test_rationale: Gap counts are read across runs through the gap store, so the tests aggregate real stored observations
+  from two service runs; an in-memory flag would not prove phase_kernel_1_founding exit criterion 2.
 origin_agent: business-analyst
 created: 2026-10-05
-amended_by: []
+amended_by:
+  - reason: it-po-technical-enrichment
+    date: '2026-10-05'
+    by: it-po
+    summary: 'Technical enrichment: assigned_agent confirmed, estimated_complexity, change_target, risk_surface,
+      it_requirements, delivers_to/expects_from contracts, doc_links and the test contract set; readiness draft
+      -> reviewed. BA criteria and product_truth unchanged.'
 superseded_by: null
 covered_by: []
 implemented_by: []

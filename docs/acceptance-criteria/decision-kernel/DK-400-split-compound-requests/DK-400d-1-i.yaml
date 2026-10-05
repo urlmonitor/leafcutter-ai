@@ -7,7 +7,7 @@ level: L3
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
+readiness: reviewed
 priority: medium
 roadmap_phase: phase_kernel_1_founding
 criteria: |
@@ -31,15 +31,50 @@ doc_links:
     relationship: context
     status: exists
     relevance: "Run statuses, gap records, resume answers and the run report as they are today."
+  - path: docs/analysis/2026-09-30-decision-kernel-design-5-client-observability.md
+    relationship: describes
+    status: exists
+    relevance: RunService resume validation, the RunEnvelope, report.md, tracing and redaction.
 assigned_agent: python-coder
-estimated_complexity: null
+estimated_complexity: S
 delivers_to: null
 expects_from:
   ac_id: DK-400d-1
   contract: "The gate answer path whose actor this case checks."
+it_requirements:
+  - Only a submission whose actor.kind is human answers the split gate. An actor of kind host or service, or an
+    id naming the host, the kernel or a model (claude_code, codex, kernel, jev), is refused with the existing kind_mismatch
+    rejection; the split records no answer and the interaction stays pending.
+  - A relayed answer (relayed_by claude_code, actor human:user) is recorded with gate_by human:user; the relayer
+    appears only as relayed_by.
+  - A bare human id is normalised to human:<id>, the same rule the decision-record staging gate applies.
+change_target: code
+risk_surface: auth
+test_required: true
+test_spec:
+  - name: test_host_actor_answer_refused_at_split_gate
+    target_dir: tests/kernel/split/
+    framework: pytest
+    type: integration
+    angle: failure
+    description: An answer whose actor is the host, the kernel or a model is refused with state unchanged and the
+      run still waiting_human.
+  - name: test_relayed_human_answer_recorded_as_the_person
+    target_dir: tests/kernel/split/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: The same answer relayed by claude_code for human:user is accepted with gate_by human:user.
+test_rationale: The actor check lives in resume validation, so both cases go through RunService.resume_run.
 origin_agent: business-analyst
 created: 2026-10-05
-amended_by: []
+amended_by:
+  - reason: it-po-technical-enrichment
+    date: '2026-10-05'
+    by: it-po
+    summary: 'Technical enrichment: assigned_agent confirmed, estimated_complexity, change_target, risk_surface,
+      it_requirements, delivers_to/expects_from contracts, doc_links and the test contract set; readiness draft
+      -> reviewed. BA criteria and product_truth unchanged.'
 superseded_by: null
 covered_by: []
 implemented_by: []

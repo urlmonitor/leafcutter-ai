@@ -7,7 +7,7 @@ level: L2
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
+readiness: reviewed
 priority: medium
 roadmap_phase: phase_kernel_1_founding
 criteria: |
@@ -38,15 +38,60 @@ doc_links:
     relationship: specified-by
     status: exists
     relevance: "Screen decision-split-progress (v2)."
+  - path: docs/architecture/diagrams/c3-014-decision-kernel-flows-request-handoff.md
+    relationship: describes
+    status: exists
+    relevance: Host or human handoff, validated resume, repair and finalize as built.
+  - path: docs/analysis/2026-09-30-decision-kernel-design-5-client-observability.md
+    relationship: describes
+    status: exists
+    relevance: RunService resume validation, the RunEnvelope, report.md, tracing and redaction.
 assigned_agent: python-coder
-estimated_complexity: null
+estimated_complexity: M
 delivers_to: null
 expects_from:
   ac_id: DK-400b-2
-  contract: "found_at and work_item_depth on the split record, which the gate and progress view show."
+  contract: found_at, work_item_depth and subject_kind on the split record, which the gate packet and the progress
+    view render.
+it_requirements:
+  - 'The split gate interaction is built deterministically from the split record (template text, no host wording):
+    it names the subject kind in words (a goal, a research request, a decision question) and the origin: from the
+    person''s own request for found_at routing, found along the way at work-item depth N for mid_run.'
+  - Every gate offers the same four answers whatever the subject kind or origin, validated by the same answer schema
+    (DK-400d-1).
+  - The progress view (DK-400f-1) shows the same subject kind and origin, read from the same record fields.
+  - 'Companion surface outside this AC: the host skills relay the gate and progress unchanged (recommended llm-expert
+    follow-up on kernel/adapters/claude_code/SKILL.md and kernel/adapters/codex/SKILL.md).'
+change_target: code
+risk_surface: contract_boundary
+test_required: true
+test_spec:
+  - name: test_gate_names_subject_kind_and_origin_for_three_splits
+    target_dir: tests/kernel/split/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: For the reusable-criteria, reuse-threshold and split-bounds splits the gate packets offer the same
+      four answers, name a goal, a research request and a decision question, and state the origin as the person's
+      request twice and found along the way at work-item depth 1 once.
+  - name: test_progress_view_shows_same_origin_as_gate
+    target_dir: tests/kernel/split/
+    framework: pytest
+    type: integration
+    angle: seam
+    description: The envelope's split progress for each run carries the same subject kind, found_at and depth as
+      its gate packet.
+test_rationale: Gate and progress must agree because both read one record; the seam test checks the two real outputs
+  against each other.
 origin_agent: business-analyst
 created: 2026-10-05
-amended_by: []
+amended_by:
+  - reason: it-po-technical-enrichment
+    date: '2026-10-05'
+    by: it-po
+    summary: 'Technical enrichment: assigned_agent confirmed, estimated_complexity, change_target, risk_surface,
+      it_requirements, delivers_to/expects_from contracts, doc_links and the test contract set; readiness draft
+      -> reviewed. BA criteria and product_truth unchanged.'
 superseded_by: null
 covered_by: []
 implemented_by: []

@@ -7,7 +7,7 @@ level: L2
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
+readiness: reviewed
 priority: medium
 roadmap_phase: phase_kernel_1_founding
 criteria: |
@@ -32,16 +32,63 @@ doc_links:
     relationship: specified-by
     status: exists
     relevance: "v5: parts[].outcome not_settled with stop_reason, waited_for on each dependant, state ended_partial (implies run_status partial); record dcp-reusable-criteria-partial."
+  - path: docs/analysis/2026-09-30-decision-kernel-design-3-kernel-scheduler.md
+    relationship: describes
+    status: exists
+    relevance: Route node and batched Jev routing, intent step, guards and budgets, root completion, gap recording,
+      resume and restart.
 assigned_agent: python-coder
-estimated_complexity: null
-delivers_to: null
+estimated_complexity: M
+delivers_to:
+  agent: python-coder
+  contract: Parts with outcome not_settled and stop_reason, dependants not_run with waited_for, split state ended_partial
+    and run status partial; consumed by DK-400f-2-i (report lines).
 expects_from:
   ac_id: DK-400e-1
   contract: "The dependency-ordered run of the parts."
+it_requirements:
+  - 'A part whose work ends without settling is not_settled with stop_reason mapped deterministically: a budget
+    or limit guard (Jev calls, host operations, work items, active time) -> budget_stop; blocked, failed, no-progress
+    or partial -> blocked; a capability gap that blocked it -> capability_gap; cancellation -> cancelled.'
+  - Its dependants, transitively, are not_run with waited_for naming their direct dependency that did not settle
+    or was not run for the same reason; independent parts still run in order.
+  - The run ends partial, never completed, and the split ended_partial once no approved part is pending.
+  - No dependant starts before its dependency's outcome is known.
+change_target: code
+risk_surface: contract_boundary
+test_required: true
+test_spec:
+  - name: test_unsettled_part_blocks_dependants_and_run_ends_partial
+    target_dir: tests/kernel/split/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: With p1 scripted to reach its budget stop, p1 is not_settled (budget_stop), p2 and p3 are not_run
+      waiting for p1, p4 runs and settles, the run ends partial and the split ended_partial.
+  - name: test_waited_for_chain_names_direct_dependency
+    target_dir: tests/kernel/split/
+    framework: pytest
+    type: integration
+    angle: boundary
+    description: A part waiting for p2 is not_run with waited_for p2.
+  - name: test_stop_reason_mapping
+    target_dir: tests/kernel/split/
+    framework: pytest
+    type: unit
+    angle: boundary
+    description: Each ending of a part's work maps to the stop_reason listed in this AC.
+test_rationale: Failure propagation is a scheduler outcome, so the criterion test runs the whole split with a scripted
+  budget stop; the mapping is pinned by a unit test.
 origin_agent: business-analyst
 created: 2026-10-05
 amended_by:
   - reason: "2026-10-05 BA, user answer to BA open question Q3: when an approved part cannot settle, the run ends partial. Withdrawn clause: 'And the run does not end as completed while any approved part is unsettled.' Replaced by 'And the run ends partial, never completed, and the split ends ended_partial.' Added 'Then p1's outcome is not settled, with the stop reason budget stop' to match flow v5 split-part-unsettled and mock-data v5 outcome not_settled. The former Then clause is now an And clause, unchanged. Title extended with 'and the run ends partial'. doc_links relevance refreshed to flow v5 and mock data v5."
+  - reason: it-po-technical-enrichment
+    date: '2026-10-05'
+    by: it-po
+    summary: 'Technical enrichment: assigned_agent confirmed, estimated_complexity, change_target, risk_surface,
+      it_requirements, delivers_to/expects_from contracts, doc_links and the test contract set; readiness draft
+      -> reviewed. BA criteria and product_truth unchanged.'
 superseded_by: null
 covered_by: []
 implemented_by: []

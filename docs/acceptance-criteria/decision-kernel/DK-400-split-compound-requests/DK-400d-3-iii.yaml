@@ -7,7 +7,7 @@ level: L3
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
+readiness: reviewed
 priority: medium
 roadmap_phase: phase_kernel_1_founding
 criteria: |
@@ -31,15 +31,52 @@ doc_links:
     relationship: specified-by
     status: exists
     relevance: "Invariant: rejected_kept_whole iff rejected and (bundled_accepted or found_at mid_run); whole_decision_id null for a research step."
+  - path: docs/analysis/2026-09-30-decision-kernel-design-3-kernel-scheduler.md
+    relationship: describes
+    status: exists
+    relevance: Route node and batched Jev routing, intent step, guards and budgets, root completion, gap recording,
+      resume and restart.
 assigned_agent: python-coder
-estimated_complexity: null
+estimated_complexity: M
 delivers_to: null
 expects_from:
   ac_id: DK-400b-2
   contract: "The mid-run split record whose work item goes ahead as one."
+it_requirements:
+  - A rejected mid-run split resumes the work item from its own kept routing result as one decision or research
+    step; the run carries on with its other work and is not blocked by the rejection.
+  - For a research item the split names no decision record (whole_decision_id stays null) and the item returns its
+    evidence bundle to its parent as today.
+  - Reachability uses the injected depth-1 producer of DK-400b-2.
+change_target: code
+risk_surface: contract_boundary
+test_required: true
+test_spec:
+  - name: test_rejected_mid_run_decision_split_kept_whole
+    target_dir: tests/kernel/split/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: Rejecting the injected split-bounds split lets the depth-1 item go ahead as one decision while
+      the run continues and is not blocked; state rejected_kept_whole.
+  - name: test_rejected_mid_run_research_split_runs_one_research_step
+    target_dir: tests/kernel/split/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: Rejecting an injected mid-run research split runs one research step that returns findings, with
+      whole_decision_id null.
+test_rationale: Mid-run has no production producer today, so both cases inject a depth-1 item through a scripted
+  capability and run the real scheduler.
 origin_agent: business-analyst
 created: 2026-10-05
-amended_by: []
+amended_by:
+  - reason: it-po-technical-enrichment
+    date: '2026-10-05'
+    by: it-po
+    summary: 'Technical enrichment: assigned_agent confirmed, estimated_complexity, change_target, risk_surface,
+      it_requirements, delivers_to/expects_from contracts, doc_links and the test contract set; readiness draft
+      -> reviewed. BA criteria and product_truth unchanged.'
 superseded_by: null
 covered_by: []
 implemented_by: []

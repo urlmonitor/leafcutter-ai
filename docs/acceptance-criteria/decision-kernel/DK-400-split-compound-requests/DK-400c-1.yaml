@@ -7,7 +7,7 @@ level: L2
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
+readiness: reviewed
 priority: medium
 roadmap_phase: phase_kernel_1_founding
 criteria: |
@@ -47,17 +47,144 @@ doc_links:
     relationship: constrains
     status: exists
     relevance: "Host proposes (generative), Jev only judges, a person approves; cheapest mechanism first."
+  - path: docs/analysis/2026-09-30-decision-kernel-design-4-jev-and-capabilities.md
+    relationship: describes
+    status: exists
+    relevance: Jev template rules, host operations and their conversion, capability gaps, the precedent node.
+  - path: docs/analysis/2026-09-30-decision-kernel-design-2-contracts-registry-config.md
+    relationship: describes
+    status: exists
+    relevance: Contracts, the payload schema catalog, the capability registry entry shape and the kernel configuration.
+  - path: docs/architecture/adrs/ADR-055-capability-registry-starts-empty.md
+    relationship: constrains
+    status: exists
+    relevance: host.decompose_goal enters config/capability_registry.json only with an admission record.
+  - path: docs/architecture/diagrams/c3-014-decision-kernel-flows-request-handoff.md
+    relationship: describes
+    status: exists
+    relevance: Host or human handoff, validated resume, repair and finalize as built.
+  - path: docs/architecture/adrs/ADR-067-kernel-splits-bundled-requests-into-approved-parts.md
+    relationship: describes
+    status: planned
+    relevance: Pinned ADR for splitting a bundled request; adr-author dispatched directly with this number and filename.
+      Re-verify the number is free before dispatch.
 assigned_agent: python-coder
-estimated_complexity: null
+estimated_complexity: L
 delivers_to:
   agent: python-coder
-  contract: "A proposed split (2 to 5 parts with text, verbatim quote, dependencies, capability) that the gate (DK-400d-1) offers and the scheduler (DK-400e-1) runs."
+  contract: 'Split record after conversion of the host''s leafcutter.goal_decomposition.v1 answer: state ''proposed'';
+    parts: 2 to split.max_parts objects in proposed order {id: string (unique), text: string, proposed_text: null,
+    covers: string (span of subject_text, verbatim after whitespace normalisation), depends_on: [part id, only ids
+    of offered parts], child_capability: ''decision'' | ''research'', review: ''proposed'', outcome: ''not_run'',
+    settled_order: null, run_id: null, decision_id: null, result_ref: null, findings: null, stop_reason: null, waited_for:
+    null}; dropped: [{text: string, covers: string, reason: string}]; not_covered: [{id: string, text: string, covers:
+    string, reason: ''beyond the five-part cap''}] (non-empty only when parts holds split.max_parts entries); one_question_rewording:
+    string | null (host suggestion, never run); run status waiting_human with one split-gate interaction that names
+    the split id. Consumed by DK-400d-1 (gate) and DK-400e-1 (scheduler).'
 expects_from:
   ac_id: DK-400a-1
-  contract: "A split record whose subject text the proposal quotes from."
+  contract: Split record of DK-400a-1 (subject_text, subject_kind, found_at, trigger) with the pending decompose_goal
+    interaction; allowed_capabilities follow from subject_kind (DK-400b-1).
+it_requirements:
+  - 'New host operation host.decompose_goal on the pattern of host.generate_options, host.synthesize and host.formulate_question:
+    a deterministically compiled and fingerprinted HostWorkRequest (ADR-052) with operation decompose_goal, allowed
+    operations read_supplied_artifacts and propose_split, the standard forbidden operations, and no repository access
+    (permissions_required empty; the input artifact carries only the subject text, its kind and the proposal rules).'
+  - 'Two catalog payload schemas, registered in SCHEMA_CATALOG with exported kernel/schemas/<id>.schema.json files
+    and valid and invalid fixtures, kept in sync by the existing catalog test: leafcutter.goal_decomposition_request.v1
+    {split_id, subject_kind, subject_text, allowed_capabilities: [decision | research], min_parts: 2, max_parts}
+    and leafcutter.goal_decomposition.v1 {parts: [{id, text, covers, depends_on: [id], child_capability: decision
+    | research}], one_question_rewording: string | null}. The proposal schema accepts 0 parts up to a configured
+    ceiling above split.max_parts (more than five parts is a legal proposal, see DK-400c-1-i). Both names serve
+    all three subject kinds.'
+  - 'Registry entry per ADR-055 in config/capability_registry.json: id host.decompose_goal, execution_mode host_handoff,
+    routing fixed (never offered to Jev), request_kinds [capability], operations [decompose_goal], accepts [leafcutter.goal_decomposition_request.v1],
+    produces [leafcutter.goal_decomposition.v1], side_effect_class none, permissions_required [], admission native_registration
+    with decision_ref ADR-067; its binding is registered at the composition root. It is never chosen as a no_match
+    fallback and never eligible for any other request.'
+  - 'ADR-067 (pinned number, file docs/architecture/adrs/ADR-067-kernel-splits-bundled-requests-into-approved-parts.md)
+    must exist before this AC''s registry entry lands. Dispatch adr-author directly with the number and filename
+    pinned. It records the decisions settled in this tree''s it_requirements: detection order and cost, where bundled_accepted
+    is caught, no nesting, the gate answer limits, the five-part cut, repair exhaustion, dependency release, per-part
+    budgets, the split root''s output, gap accounting, config and the off switch.'
+  - Proposing is host (LLM) work only. Jev is never asked to write, merge, reword, order or judge parts, and every
+    conversion check is deterministic code (ADR-053 sections 2 and 5).
+  - 'Conversion order is fixed: schema validation; dependency validation over all proposed ids (DK-400c-1-ii); allowed-capability
+    check (DK-400b-1); quote check and set-aside (DK-400c-2); release of dependencies on set-aside proposals; part
+    count (DK-400c-3); five-part cut and per-run allowance (DK-400c-1-i); then state proposed, and the split gate
+    opens with run status waiting_human. Conversion is total: any failure refuses the answer or abandons the split,
+    never yields a partial split.'
+  - A kept part whose depends_on names a set-aside proposal has that dependency released, so it may start without
+    it; the release is shown beside the part at the gate and recorded as a run event, and it never leaves a part
+    waiting for something that can never settle.
+  - The decomposition is one host operation charged to the root's budget, and it records no host_only gap observation
+    (DK-400a-1-ii).
+  - 'config/capability_registry.json is not one of the package registries watched by check-package-surface-declaration,
+    and the kernel is not shipped to adopter projects, so this AC declares package_surface: false.'
+  - 'Handle failures per the project error handling policy: catch specific exceptions, log at WARNING with the run,
+    work item and split ids involved, and never swallow a failure silently; a rejected submission leaves run state
+    unchanged.'
+change_target:
+  - code
+  - schema
+  - config
+risk_surface: contract_boundary
+package_surface: false
+test_required: true
+test_spec:
+  - name: test_proposal_for_reusable_goal_opens_gate_with_four_parts
+    target_dir: tests/kernel/split/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: A scripted host answer of p1 to p4 is converted and the gate offers p1 to p4 in that order with
+      quote, dependencies and capability; the run is waiting_human and every part is not_run.
+  - name: test_no_jev_batch_writes_or_judges_parts
+    target_dir: tests/kernel/split/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: No Jev batch is recorded between the decompose_goal answer and the opening of the split gate.
+  - name: test_goal_decomposition_schemas_registered_and_exported
+    target_dir: tests/kernel/contracts/
+    framework: pytest
+    type: unit
+    angle: real_artifact
+    description: Both schema ids validate through validate_payload and the committed kernel/schemas files equal
+      export_json_schemas output.
+  - name: test_decompose_goal_registry_entry_admitted_and_fixed
+    target_dir: tests/kernel/registry/
+    framework: pytest
+    type: unit
+    angle: real_artifact
+    description: load_registry on the real config/capability_registry.json accepts host.decompose_goal with native_registration
+      and decision_ref ADR-067; filter_candidates never offers it for a root goal or as a no_match fallback.
+  - name: test_decompose_packet_has_no_repository_access
+    target_dir: tests/kernel/capabilities/
+    framework: pytest
+    type: unit
+    angle: failure
+    description: The compiled packet allows only read_supplied_artifacts and propose_split, forbids the standard
+      operations, and its input artifact carries only the subject and the rules.
+  - name: test_dependency_on_set_aside_proposal_released
+    target_dir: tests/kernel/split/
+    framework: pytest
+    type: integration
+    angle: boundary
+    description: A kept part that waited for a set-aside proposal is offered with that dependency released, and
+      a split.dependency_released event is recorded.
+test_rationale: The contract crosses the host boundary, so the tests submit real host answers through RunService
+  and read the resulting gate packet, while the schema and registry tests load the committed artifacts the kernel
+  actually reads.
 origin_agent: business-analyst
 created: 2026-10-05
-amended_by: []
+amended_by:
+  - reason: it-po-technical-enrichment
+    date: '2026-10-05'
+    by: it-po
+    summary: 'Technical enrichment: assigned_agent confirmed, estimated_complexity, change_target, risk_surface,
+      it_requirements, delivers_to/expects_from contracts, doc_links and the test contract set; readiness draft
+      -> reviewed. BA criteria and product_truth unchanged.'
 superseded_by: null
 covered_by:
   - DK-400c-1-i
@@ -70,6 +197,9 @@ notes: |
   For the IT PO: the registry entry for the new host operation (ADR-055), the configured bound
   on child work per run, the off switch that restores today's behaviour, and the ADR with a
   pinned number.
+  IT PO (2026-10-05): host.decompose_goal is a fixed, host_handoff capability (registry entry, two
+  schemas, decision_ref ADR-067). Conversion order, dependency release for set-aside proposals and
+  the no-gap rule for the decomposition step are settled here; see it_requirements.
 product_truth:
   - flow: leafcutter/decision-forming
     node: split-propose

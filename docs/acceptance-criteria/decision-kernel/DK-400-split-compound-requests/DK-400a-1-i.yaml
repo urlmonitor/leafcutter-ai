@@ -7,7 +7,7 @@ level: L3
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
+readiness: reviewed
 priority: medium
 roadmap_phase: phase_kernel_1_founding
 criteria: |
@@ -35,15 +35,57 @@ doc_links:
     relationship: constrains
     status: exists
     relevance: "Host proposes (generative), Jev only judges, a person approves; cheapest mechanism first."
+  - path: docs/analysis/2026-09-30-decision-kernel-design-3-kernel-scheduler.md
+    relationship: describes
+    status: exists
+    relevance: Route node and batched Jev routing, intent step, guards and budgets, root completion, gap recording,
+      resume and restart.
+  - path: docs/architecture/components/decision-kernel.md
+    relationship: describes
+    status: exists
+    relevance: 'Kernel containers: routing, scheduler, host handoffs, run root.'
 assigned_agent: python-coder
-estimated_complexity: null
+estimated_complexity: S
 delivers_to: null
 expects_from:
   ac_id: DK-400a-1
-  contract: "The routing-time split start that this case reuses with a different trigger value."
+  contract: The split record of DK-400a-1 with trigger 'ambiguous' instead of 'jev_none'; every other field and
+    the waiting_host handoff are the same.
+it_requirements:
+  - trigger ambiguous applies when the root's intent or routing assessment ends insufficient_context (the needs-context
+    answer, or an answer below the configured probability or confidence) and the bundle answer is at or above split.bundle_threshold;
+    the top candidate is never bound.
+  - 'For a bundled ambiguous root the split replaces today''s clarification question: no human question opens before
+    the host''s proposal, and no ambiguous gap is recorded at detection.'
+  - A not-bundled ambiguous root keeps today's clarification path unchanged.
+change_target: code
+risk_surface: contract_boundary
+test_required: true
+test_spec:
+  - name: test_ambiguous_bundled_goal_starts_split_with_trigger_ambiguous
+    target_dir: tests/kernel/split/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: Scripted routing with decision and research equally fitting (needs-context) and bundle 0.9 ends
+      waiting_host on decompose_goal with trigger ambiguous; no capability is bound and no human question is opened.
+  - name: test_ambiguous_single_question_keeps_clarification
+    target_dir: tests/kernel/split/
+    framework: pytest
+    type: integration
+    angle: failure
+    description: The same routing answer with bundle 0.2 opens today's clarification question and starts no split.
+test_rationale: The ambiguity comes from a real routing or intent assessment, so the test drives the route node
+  with scripted Jev answers rather than calling the detector directly.
 origin_agent: business-analyst
 created: 2026-10-05
-amended_by: []
+amended_by:
+  - reason: it-po-technical-enrichment
+    date: '2026-10-05'
+    by: it-po
+    summary: 'Technical enrichment: assigned_agent confirmed, estimated_complexity, change_target, risk_surface,
+      it_requirements, delivers_to/expects_from contracts, doc_links and the test contract set; readiness draft
+      -> reviewed. BA criteria and product_truth unchanged.'
 superseded_by: null
 covered_by: []
 implemented_by: []

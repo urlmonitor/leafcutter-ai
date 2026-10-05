@@ -7,7 +7,7 @@ level: L3
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
+readiness: reviewed
 priority: medium
 roadmap_phase: phase_kernel_1_founding
 criteria: |
@@ -27,15 +27,53 @@ doc_links:
     relationship: specified-by
     status: exists
     relevance: "subject_text is verbatim with whitespace normalised; covers is a verbatim substring."
+  - path: docs/analysis/2026-09-30-decision-kernel-design-4-jev-and-capabilities.md
+    relationship: describes
+    status: exists
+    relevance: Jev template rules, host operations and their conversion, capability gaps, the precedent node.
 assigned_agent: python-coder
-estimated_complexity: null
+estimated_complexity: S
 delivers_to: null
 expects_from:
   ac_id: DK-400c-2
   contract: "The quote check that sets proposals aside."
+it_requirements:
+  - One shared normalisation helper is used for subject_text and for every quote (also by DK-400a-1). Line breaks,
+    tabs and repeated spaces are treated alike; letter case and words are not.
+  - No fuzzy, token-set or edit-distance match may let a quote pass.
+change_target: code
+risk_surface: contract_boundary
+test_required: true
+test_spec:
+  - name: test_quote_check_treats_line_break_as_space
+    target_dir: tests/kernel/split/
+    framework: pytest
+    type: unit
+    angle: boundary
+    description: A quote with one space where the goal breaks the line is kept.
+  - name: test_quote_check_rejects_changed_word
+    target_dir: tests/kernel/split/
+    framework: pytest
+    type: unit
+    angle: boundary
+    description: A quote reading 'file kind' where the goal says 'file type' is set aside with 'quote not found
+      in the goal'.
+  - name: test_quote_check_is_case_sensitive
+    target_dir: tests/kernel/split/
+    framework: pytest
+    type: unit
+    angle: boundary
+    description: A quote that differs from the goal only in letter case is set aside.
+test_rationale: The rule is pure and exact, so unit tests of the shared helper pin both sides of it.
 origin_agent: business-analyst
 created: 2026-10-05
-amended_by: []
+amended_by:
+  - reason: it-po-technical-enrichment
+    date: '2026-10-05'
+    by: it-po
+    summary: 'Technical enrichment: assigned_agent confirmed, estimated_complexity, change_target, risk_surface,
+      it_requirements, delivers_to/expects_from contracts, doc_links and the test contract set; readiness draft
+      -> reviewed. BA criteria and product_truth unchanged.'
 superseded_by: null
 covered_by: []
 implemented_by: []

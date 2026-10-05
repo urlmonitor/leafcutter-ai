@@ -7,7 +7,7 @@ level: L2
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
+readiness: reviewed
 priority: medium
 roadmap_phase: phase_kernel_1_founding
 criteria: |
@@ -38,21 +38,67 @@ doc_links:
     relationship: specified-by
     status: exists
     relevance: "Screen decision-split-progress (v2)."
+  - path: docs/analysis/2026-09-30-decision-kernel-design-5-client-observability.md
+    relationship: describes
+    status: exists
+    relevance: RunService resume validation, the RunEnvelope, report.md, tracing and redaction.
 assigned_agent: python-coder
-estimated_complexity: null
+estimated_complexity: M
 delivers_to: null
 expects_from:
   ac_id: DK-400d-3
-  contract: "The recorded rejection and its trigger."
+  contract: The recorded rejection, its gate_by and the trigger and found_at that pick the ending (DK-400d-3 delivers_to
+    shape).
+it_requirements:
+  - 'A rejected split''s report carries exactly one plain line and no per-part section: ''The proposed split was
+    rejected by <gate_by>; nothing was decided.'' for state rejected; ''The proposed split was rejected by <gate_by>;
+    the goal is kept whole and runs as one decision.'' above that decision''s own report for a bundled_accepted
+    kept-whole split; and for a mid-run split a line naming the work item kept whole.'
+  - The rephrasing hint after a turned-away rejection uses the host's optional one_question_rewording from the proposal
+    when present, shown as a suggestion and never run; otherwise today's template rephrasing hint.
+  - The line names gate_by exactly as recorded.
+change_target: code
+risk_surface: contract_boundary
+test_required: true
+test_spec:
+  - name: test_rejected_turned_away_report_line_and_hint
+    target_dir: tests/kernel/split/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: The trace-analyzers rejection writes the nothing-was-decided line followed by a rephrasing hint
+      with an example rewording, and no per-part section.
+  - name: test_rejected_bundled_report_line_above_one_decision
+    target_dir: tests/kernel/split/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: The decision-records rejection writes the kept-whole line above the report of the one decision.
+  - name: test_rejected_mid_run_line_names_kept_whole_item
+    target_dir: tests/kernel/split/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: A rejected mid-run split writes one line naming the work item kept whole.
+test_rationale: Each ending writes a different report; the tests read the written report.md of each.
 origin_agent: business-analyst
 created: 2026-10-05
-amended_by: []
+amended_by:
+  - reason: it-po-technical-enrichment
+    date: '2026-10-05'
+    by: it-po
+    summary: 'Technical enrichment: assigned_agent confirmed, estimated_complexity, change_target, risk_surface,
+      it_requirements, delivers_to/expects_from contracts, doc_links and the test contract set; readiness draft
+      -> reviewed. BA criteria and product_truth unchanged.'
 superseded_by: null
 covered_by: []
 implemented_by: []
 notes: |
   User decision 2026-10-05 (DK-400 REJECTION; the one-line default is confirmed). The line
   texts are those of the mock records.
+  IT PO (2026-10-05): the example rewording in the rejected report is generative text, so it comes
+  from the host's proposal (optional one_question_rewording in leafcutter.goal_decomposition.v1),
+  never from Jev or a template guess; when absent, today's template hint is used.
 product_truth:
   - flow: leafcutter/decision-forming
     node: split-reject

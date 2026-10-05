@@ -7,7 +7,7 @@ level: L2
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
+readiness: reviewed
 priority: medium
 roadmap_phase: phase_kernel_1_founding
 criteria: |
@@ -34,13 +34,57 @@ doc_links:
     relationship: context
     status: exists
     relevance: "Run statuses, gap records, resume answers and the run report as they are today."
+  - path: docs/analysis/2026-09-30-decision-kernel-design-4-jev-and-capabilities.md
+    relationship: describes
+    status: exists
+    relevance: Jev template rules, host operations and their conversion, capability gaps, the precedent node.
+  - path: docs/analysis/2026-09-30-decision-kernel-design-3-kernel-scheduler.md
+    relationship: describes
+    status: exists
+    relevance: Route node and batched Jev routing, intent step, guards and budgets, root completion, gap recording,
+      resume and restart.
 assigned_agent: python-coder
-estimated_complexity: null
+estimated_complexity: S
 delivers_to: null
-expects_from: null
+expects_from:
+  ac_id: DK-400a-1
+  contract: 'The detection gate of DK-400a-1: a bundle answer below split.bundle_threshold leaves the no_match path
+    untouched.'
+it_requirements:
+  - 'A single question that routing gives no capability records today''s capability gap and blocked report unchanged.
+    ''Today'' is pinned by the same run with split.enabled false: same gap fields, same report.md text, same envelope
+    status and limitations.'
+  - 'A deterministic no_match (no candidate matched kind or schema, so routing makes no Jev call) is never checked
+    for bundling: no Jev question is added only to check.'
+  - The split gate is never opened, and report.md has no split section and no rejected-split line.
+change_target: code
+risk_surface: contract_boundary
+test_required: true
+test_spec:
+  - name: test_single_unsupported_request_matches_split_disabled_outcome
+    target_dir: tests/kernel/split/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: The release-notes request with route __NONE__ and bundle 0.1 yields the same gap observation and
+      report.md as the split.enabled false run, and no split record.
+  - name: test_deterministic_no_match_adds_no_jev_call
+    target_dir: tests/kernel/split/
+    framework: pytest
+    type: integration
+    angle: boundary
+    description: A root whose requested output no capability produces makes no Jev call with split enabled, as today.
+test_rationale: Equality with the off-switch run is the precise meaning of 'as it does today' and keeps the test
+  independent of today's report wording.
 origin_agent: business-analyst
 created: 2026-10-05
-amended_by: []
+amended_by:
+  - reason: it-po-technical-enrichment
+    date: '2026-10-05'
+    by: it-po
+    summary: 'Technical enrichment: assigned_agent confirmed, estimated_complexity, change_target, risk_surface,
+      it_requirements, delivers_to/expects_from contracts, doc_links and the test contract set; readiness draft
+      -> reviewed. BA criteria and product_truth unchanged.'
 superseded_by: null
 covered_by: []
 implemented_by: []

@@ -7,7 +7,7 @@ level: L2
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
+readiness: reviewed
 priority: medium
 roadmap_phase: phase_kernel_1_founding
 criteria: |
@@ -38,17 +38,109 @@ doc_links:
     relationship: constrains
     status: exists
     relevance: "Only a person answers a gate and approves a decision; precedent is evidence, never authority."
+  - path: docs/architecture/diagrams/c3-014-decision-kernel-flows-request-handoff.md
+    relationship: describes
+    status: exists
+    relevance: Host or human handoff, validated resume, repair and finalize as built.
+  - path: docs/analysis/2026-09-30-decision-kernel-design-5-client-observability.md
+    relationship: describes
+    status: exists
+    relevance: RunService resume validation, the RunEnvelope, report.md, tracing and redaction.
+  - path: docs/architecture/adrs/ADR-067-kernel-splits-bundled-requests-into-approved-parts.md
+    relationship: describes
+    status: planned
+    relevance: Pinned ADR for splitting a bundled request; adr-author dispatched directly with this number and filename.
+      Re-verify the number is free before dispatch.
 assigned_agent: python-coder
-estimated_complexity: null
+estimated_complexity: L
 delivers_to:
   agent: python-coder
-  contract: "An approved split (each part kept, edited or left out, with gate_by and gate_at) that the scheduler (DK-400e-1) runs."
+  contract: 'Split record after a person''s accepted gate answer: gate_answer ''approved'' | ''rejected''; gate_by:
+    string matching ^human(:<name>)?$ taken from the submission''s human actor, never from relayed_by; gate_at:
+    UTC ISO-8601 string from the kernel runtime clock at acceptance; gate_note: string | null (verbatim). Approved:
+    every part.review in ''kept'' | ''edited'' | ''left_out'' with at least one not left_out; an edited part has
+    text (the person''s words) and proposed_text (the host''s words) with covers unchanged; kept and edited parts
+    have outcome ''pending'', left-out parts ''not_run''; dependencies on left-out parts are released; state ''approved''.
+    Rejected: every part.review ''rejected'' and outcome ''not_run'', no part work item; state per DK-400d-3. Consumed
+    by DK-400e-1 (scheduler), DK-400d-3 (rejection endings) and DK-400f-1 (progress).'
 expects_from:
   ac_id: DK-400c-1
-  contract: "The proposed split the gate offers."
+  contract: The proposed split (DK-400c-1 delivers_to shape) with its open split-gate interaction.
+it_requirements:
+  - 'The split gate is a persisted human interaction (run status waiting_human) built deterministically from the
+    split record: the subject verbatim, then each offered part in proposed order with its id, text, quote, dependencies
+    and child capability, set-aside proposals and not-covered parts read-only, and the four answers.'
+  - 'The answer is validated by a registered catalog schema before any state changes: answer approved or rejected,
+    a review per offered part (kept, edited with the person''s text, left_out) and an optional note. Unknown fields
+    or part ids, edits of set-aside or not-covered entries, a text on a part not marked edited, and any field that
+    adds a part or changes depends_on or child_capability are refused (exit 3, state unchanged). The person may
+    not add parts or change dependencies or capability at the gate (DK-400 Q7, settled by the IT PO).'
+  - gate_by is the submission's human actor id (actor.kind human); gate_at is the kernel runtime clock at acceptance,
+    in UTC; relayed_by is kept separately and never becomes gate_by (ADR-060).
+  - On approval the parts are released to the scheduler (DK-400e-1) in the same integrate pass; no part work item
+    exists before the answer is accepted.
+  - 'Resume idempotency: a duplicate identical answer returns the current envelope; a restart immediately before
+    or after the submission ledger write neither loses nor duplicates the answer or any part (restart tests on sqlite,
+    as for the other interactions).'
+  - 'Companion surface outside this AC: presenting the split gate and relaying a person''s structured split answer
+    through kernel/adapters/claude_code/SKILL.md and kernel/adapters/codex/SKILL.md is llm-expert work (recommended
+    follow-up AC); the kernel side here must not depend on host wording.'
+  - 'Handle failures per the project error handling policy: catch specific exceptions, log at WARNING with the run,
+    work item and split ids involved, and never swallow a failure silently; a rejected submission leaves run state
+    unchanged.'
+change_target:
+  - code
+  - schema
+risk_surface: auth
+test_required: true
+test_spec:
+  - name: test_approve_as_shown_keeps_every_part_and_records_answer
+    target_dir: tests/kernel/split/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: With the runtime clock pinned to 2026-10-05T09:30:00Z, human:user approving as shown records every
+      part kept, gate_answer approved, gate_by human:user and gate_at 2026-10-05T09:30:00Z, and releases the parts
+      in dependency order.
+  - name: test_gate_packet_shows_subject_beside_parts
+    target_dir: tests/kernel/split/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: The split-gate packet carries the goal exactly as submitted and every part with its quote, dependencies
+      and capability.
+  - name: test_no_part_work_item_before_answer
+    target_dir: tests/kernel/split/
+    framework: pytest
+    type: integration
+    angle: reachability
+    description: Before the answer no work item exists for any part; after it the first free part is the only one
+      started.
+  - name: test_split_answer_survives_restart_around_ledger_write
+    target_dir: tests/kernel/interaction/
+    framework: pytest
+    type: integration
+    angle: failure
+    description: A restart immediately before and immediately after the submission ledger write yields one recorded
+      answer and one set of part work items.
+  - name: test_gate_answer_cannot_add_part_or_change_dependencies
+    target_dir: tests/kernel/split/
+    framework: pytest
+    type: integration
+    angle: failure
+    description: An answer that adds a part, or changes a part's depends_on or child_capability, is refused with
+      state unchanged.
+test_rationale: Approval authority is enforced at the submission boundary, so the tests resume real runs with real
+  submissions and a pinned clock, including the restart points the interaction suite already covers for other gates.
 origin_agent: business-analyst
 created: 2026-10-05
-amended_by: []
+amended_by:
+  - reason: it-po-technical-enrichment
+    date: '2026-10-05'
+    by: it-po
+    summary: 'Technical enrichment: assigned_agent confirmed, estimated_complexity, change_target, risk_surface,
+      it_requirements, delivers_to/expects_from contracts, doc_links and the test contract set; readiness draft
+      -> reviewed. BA criteria and product_truth unchanged.'
 superseded_by: null
 covered_by:
   - DK-400d-1-i
@@ -56,6 +148,9 @@ implemented_by: []
 notes: |
   Flow step split-approve. Who answered and when are kept with the split (ADR-060: only a
   person approves).
+  IT PO (2026-10-05): settled DK-400 Q7: at the gate a person may keep, reword or leave out parts
+  and reject, but may not add parts or change a part's dependencies or capability; a question that
+  is missing is added by rewording a part (DK-400d-2-ii) or asked again as its own request.
 product_truth:
   - flow: leafcutter/decision-forming
     node: split-approve

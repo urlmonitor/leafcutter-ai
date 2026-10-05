@@ -7,7 +7,7 @@ level: L3
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
+readiness: reviewed
 priority: medium
 roadmap_phase: phase_kernel_1_founding
 criteria: |
@@ -32,15 +32,41 @@ doc_links:
     relationship: specified-by
     status: exists
     relevance: "Screen decision-split-approve (v2)."
+  - path: docs/analysis/2026-09-30-decision-kernel-design-4-jev-and-capabilities.md
+    relationship: describes
+    status: exists
+    relevance: Jev template rules, host operations and their conversion, capability gaps, the precedent node.
 assigned_agent: python-coder
-estimated_complexity: null
+estimated_complexity: S
 delivers_to: null
 expects_from:
   ac_id: DK-400c-2
   contract: "The set-aside proposal shown read-only at the gate."
+it_requirements:
+  - The quote check applies to host proposals only; a person's edited text may contain any words, including a set-aside
+    proposal's question.
+  - The set-aside proposal stays in dropped[] unchanged and never gets a work item.
+change_target: code
+risk_surface: contract_boundary
+test_required: true
+test_spec:
+  - name: test_reworded_part_may_absorb_set_aside_question
+    target_dir: tests/kernel/split/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: p3 reworded to include the set-aside question is recorded edited with its proposed text and original
+      quote, and runs with the person's words; the set-aside entry is unchanged and never runs.
+test_rationale: Proves the quote rule is applied to host proposals only, through the real gate path.
 origin_agent: business-analyst
 created: 2026-10-05
-amended_by: []
+amended_by:
+  - reason: it-po-technical-enrichment
+    date: '2026-10-05'
+    by: it-po
+    summary: 'Technical enrichment: assigned_agent confirmed, estimated_complexity, change_target, risk_surface,
+      it_requirements, delivers_to/expects_from contracts, doc_links and the test contract set; readiness draft
+      -> reviewed. BA criteria and product_truth unchanged.'
 superseded_by: null
 covered_by: []
 implemented_by: []

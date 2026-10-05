@@ -7,7 +7,7 @@ level: L3
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
+readiness: reviewed
 priority: medium
 roadmap_phase: phase_kernel_1_founding
 criteria: |
@@ -34,15 +34,70 @@ doc_links:
     relationship: context
     status: exists
     relevance: "Run statuses, gap records, resume answers and the run report as they are today."
+  - path: docs/architecture/diagrams/c3-014-decision-kernel-flows-request-handoff.md
+    relationship: describes
+    status: exists
+    relevance: Host or human handoff, validated resume, repair and finalize as built.
+  - path: docs/analysis/2026-09-30-decision-kernel-design-4-jev-and-capabilities.md
+    relationship: describes
+    status: exists
+    relevance: Jev template rules, host operations and their conversion, capability gaps, the precedent node.
 assigned_agent: python-coder
-estimated_complexity: null
+estimated_complexity: M
 delivers_to: null
 expects_from:
   ac_id: DK-400c-1
   contract: "The proposal-to-split conversion that validates dependencies."
+it_requirements:
+  - Dependency validation runs over the whole proposal before the quote check. A cycle (a self-dependency included)
+    or a dependency on an id the proposal does not contain refuses the host answer with a message naming the cycle
+    as 'p1 -> p2 -> p1' (ids in cycle order, first id repeated) or the unknown id; state is unchanged and the decompose_goal
+    interaction stays pending. Duplicate part ids are refused the same way.
+  - 'Repairs follow the existing host repair rule: host.max_repair_attempts, with the packet returned in error.details.pending_interaction.'
+  - 'When the repair attempts run out the split is abandoned, never failed: no gate and no part; the subject goes
+    on exactly as for fewer than two parts (DK-400c-3) by its trigger; the run''s limitations name the refused proposal
+    and why; no host_only gap observation is recorded for the decomposition.'
+change_target: code
+risk_surface: contract_boundary
+test_required: true
+test_spec:
+  - name: test_cyclic_proposal_refused_naming_chain
+    target_dir: tests/kernel/split/
+    framework: pytest
+    type: integration
+    angle: failure
+    description: p1 and p2 waiting for each other are refused with 'p1 -> p2 -> p1'; the interaction stays pending
+      and no gate opens.
+  - name: test_unknown_dependency_refused_naming_id
+    target_dir: tests/kernel/split/
+    framework: pytest
+    type: integration
+    angle: failure
+    description: p3 waiting for p9, which the proposal does not contain, is refused naming p9.
+  - name: test_corrected_proposal_after_refusal_accepted
+    target_dir: tests/kernel/split/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: A corrected answer within host.max_repair_attempts is accepted and opens the gate.
+  - name: test_exhausted_repairs_abandon_split_by_trigger
+    target_dir: tests/kernel/split/
+    framework: pytest
+    type: integration
+    angle: failure
+    description: After the repair attempts run out, a bundled_accepted goal goes ahead as one decision and a jev_none
+      goal records today's gap and ends blocked; neither opens the gate.
+test_rationale: Refusal, repair and exhaustion are all host-submission outcomes, so they are driven through RunService.resume_run
+  with scripted host answers.
 origin_agent: business-analyst
 created: 2026-10-05
-amended_by: []
+amended_by:
+  - reason: it-po-technical-enrichment
+    date: '2026-10-05'
+    by: it-po
+    summary: 'Technical enrichment: assigned_agent confirmed, estimated_complexity, change_target, risk_surface,
+      it_requirements, delivers_to/expects_from contracts, doc_links and the test contract set; readiness draft
+      -> reviewed. BA criteria and product_truth unchanged.'
 superseded_by: null
 covered_by: []
 implemented_by: []
@@ -51,6 +106,9 @@ notes: |
   host answer that fails its contract may be repaired today (the how-to: repair attempts are
   configured). What happens when the repair attempts run out is for the IT PO; reported as an
   open question.
+  IT PO (2026-10-05): settled what happens when the repairs run out: the split is abandoned and the
+  request goes on exactly as for fewer than two parts, by its trigger, so a bad proposal is never
+  worse than today.
 product_truth:
   - flow: leafcutter/decision-forming
     node: split-propose

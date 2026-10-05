@@ -7,7 +7,7 @@ level: L2
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
+readiness: reviewed
 priority: medium
 roadmap_phase: phase_kernel_1_founding
 criteria: |
@@ -42,15 +42,60 @@ doc_links:
     relationship: constrains
     status: exists
     relevance: "Only a person answers a gate and approves a decision; precedent is evidence, never authority."
+  - path: docs/analysis/2026-09-30-decision-kernel-design-4-jev-and-capabilities.md
+    relationship: describes
+    status: exists
+    relevance: Jev template rules, host operations and their conversion, capability gaps, the precedent node.
 assigned_agent: python-coder
-estimated_complexity: null
+estimated_complexity: M
 delivers_to: null
 expects_from:
   ac_id: DK-400e-2
   contract: "Earlier parts' decision records."
+it_requirements:
+  - Every earlier decided part's staged record in the same run is a precedent candidate for each later part (whether
+    or not it waits for it), in addition to published records, and is never displaced by memory.max_precedents or
+    memory.min_candidate_score.
+  - Applicability is judged by Jev through the existing precedent path (precedent questions riding the existing
+    batch, no extra provider call) with the configured memory thresholds; the record's precedents_considered names
+    each earlier part's record with its applicability and action.
+  - 'Precedent is evidence, never authority: at or above memory.reuse_threshold the existing reuse-or-decide-anew
+    question is asked, and a later part''s choice always needs a person''s approval (ADR-060 section 4).'
+  - The prior_decisions evidence carries the earlier record's approver and approval time.
+change_target: code
+risk_surface: contract_boundary
+test_required: true
+test_spec:
+  - name: test_earlier_part_record_offered_as_precedent
+    target_dir: tests/kernel/memory/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: p2's decision is offered p1's staged record with approver and date, Jev's applicability question
+      rides the existing batch, and p2's record lists p1 in precedents_considered with its action.
+  - name: test_independent_later_part_also_offered_earlier_record
+    target_dir: tests/kernel/memory/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: A part that runs after p1 without waiting for it is also offered p1's record.
+  - name: test_earlier_part_never_displaced_by_precedent_cap
+    target_dir: tests/kernel/memory/
+    framework: pytest
+    type: integration
+    angle: boundary
+    description: With memory.max_precedents 1 and a stronger published precedent, p1's staged record is still considered.
+test_rationale: Staged records are not in the published store the precedent search reads today, so the tests prove
+  the earlier part's staged record actually reaches the later part's precedent node.
 origin_agent: business-analyst
 created: 2026-10-05
-amended_by: []
+amended_by:
+  - reason: it-po-technical-enrichment
+    date: '2026-10-05'
+    by: it-po
+    summary: 'Technical enrichment: assigned_agent confirmed, estimated_complexity, change_target, risk_surface,
+      it_requirements, delivers_to/expects_from contracts, doc_links and the test contract set; readiness draft
+      -> reviewed. BA criteria and product_truth unchanged.'
 superseded_by: null
 covered_by:
   - DK-400e-3-i

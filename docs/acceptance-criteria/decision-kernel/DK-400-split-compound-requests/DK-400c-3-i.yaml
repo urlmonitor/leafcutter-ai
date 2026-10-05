@@ -7,7 +7,7 @@ level: L3
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
+readiness: reviewed
 priority: medium
 roadmap_phase: phase_kernel_1_founding
 criteria: |
@@ -24,15 +24,40 @@ doc_links:
     relationship: implements
     status: exists
     relevance: "Flow v5 node(s) split-dropped, split-too-few-parts, with their acceptance scenarios."
+  - path: docs/analysis/2026-09-30-decision-kernel-design-4-jev-and-capabilities.md
+    relationship: describes
+    status: exists
+    relevance: Jev template rules, host operations and their conversion, capability gaps, the precedent node.
 assigned_agent: python-coder
-estimated_complexity: null
+estimated_complexity: S
 delivers_to: null
 expects_from:
   ac_id: DK-400c-2
   contract: "The quote check, applied before the part count is taken."
+it_requirements:
+  - 'The count is taken after the quote check: three proposals with two set aside leave one part, so no gate.'
+  - The two set-aside proposals appear only in the run's limitations and events, never as offered parts.
+change_target: code
+risk_surface: contract_boundary
+test_required: true
+test_spec:
+  - name: test_two_of_three_set_aside_means_one_question
+    target_dir: tests/kernel/split/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: For the bundled_accepted decision-records goal, a proposal of three with two unquoted goes ahead
+      as one decision from the precedent step with no gate and no part.
+test_rationale: Pins the ordering of the two conversion steps through the real conversion path.
 origin_agent: business-analyst
 created: 2026-10-05
-amended_by: []
+amended_by:
+  - reason: it-po-technical-enrichment
+    date: '2026-10-05'
+    by: it-po
+    summary: 'Technical enrichment: assigned_agent confirmed, estimated_complexity, change_target, risk_surface,
+      it_requirements, delivers_to/expects_from contracts, doc_links and the test contract set; readiness draft
+      -> reviewed. BA criteria and product_truth unchanged.'
 superseded_by: null
 covered_by: []
 implemented_by: []

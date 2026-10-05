@@ -7,7 +7,7 @@ level: L2
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
+readiness: reviewed
 priority: medium
 roadmap_phase: phase_kernel_1_founding
 criteria: |
@@ -33,15 +33,66 @@ doc_links:
     relationship: specified-by
     status: exists
     relevance: "parts has 2 to 5 entries."
+  - path: docs/analysis/2026-09-30-decision-kernel-design-3-kernel-scheduler.md
+    relationship: describes
+    status: exists
+    relevance: Route node and batched Jev routing, intent step, guards and budgets, root completion, gap recording,
+      resume and restart.
+  - path: docs/analysis/2026-09-30-decision-kernel-design-4-jev-and-capabilities.md
+    relationship: describes
+    status: exists
+    relevance: Jev template rules, host operations and their conversion, capability gaps, the precedent node.
 assigned_agent: python-coder
-estimated_complexity: null
+estimated_complexity: M
 delivers_to: null
 expects_from:
   ac_id: DK-400c-1
   contract: "The host's proposal and its part count."
+it_requirements:
+  - The part count is taken after set-aside (DK-400c-3-i) and before the five-part cut. Fewer than 2 means no gate,
+    no part, no Decomposition in the run's output and no split section in report.md; the split record is closed
+    with a run event and a limitation naming why.
+  - 'The request then goes on by its trigger, deterministically: bundled_accepted resumes from kept_routing as one
+    decision from the precedent step; mid_run resumes the item as one decision or research step from its own routing
+    result; jev_none or ambiguous records today''s capability gap (DK-400a-1-ii) and ends blocked with today''s
+    blocked report.'
+  - No second decomposition is requested for the same item.
+  - For trigger ambiguous, ending blocked with the ambiguous gap follows the user's rule for a turned-away request;
+    today's clarification question is not asked (see the caveat raised to the user).
+change_target: code
+risk_surface: contract_boundary
+test_required: true
+test_spec:
+  - name: test_one_part_proposal_goes_ahead_by_trigger
+    target_dir: tests/kernel/split/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: 'Parametrised over bundled_accepted, mid_run, jev_none and ambiguous: a one-part or empty proposal
+      opens no gate; the first two go ahead as one, the last two record today''s gap and end blocked.'
+  - name: test_too_few_parts_requests_no_second_decomposition
+    target_dir: tests/kernel/split/
+    framework: pytest
+    type: integration
+    angle: boundary
+    description: After a too-few-parts outcome no second decompose_goal interaction is opened for the item.
+  - name: test_too_few_parts_report_has_no_split_section
+    target_dir: tests/kernel/split/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: report.md of each run has no split section.
+test_rationale: Each trigger leads to a different existing path, so one parametrised service-level test proves every
+  ending is reached.
 origin_agent: business-analyst
 created: 2026-10-05
-amended_by: []
+amended_by:
+  - reason: it-po-technical-enrichment
+    date: '2026-10-05'
+    by: it-po
+    summary: 'Technical enrichment: assigned_agent confirmed, estimated_complexity, change_target, risk_surface,
+      it_requirements, delivers_to/expects_from contracts, doc_links and the test contract set; readiness draft
+      -> reviewed. BA criteria and product_truth unchanged.'
 superseded_by: null
 covered_by:
   - DK-400c-3-i

@@ -7,7 +7,7 @@ level: L3
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
+readiness: reviewed
 priority: medium
 roadmap_phase: phase_kernel_1_founding
 criteria: |
@@ -29,14 +29,36 @@ doc_links:
     status: exists
     relevance: "Flow v5 node(s) split-run, with their acceptance scenarios; see also step resolve."
 assigned_agent: python-coder
-estimated_complexity: null
+estimated_complexity: S
 delivers_to: null
 expects_from:
   ac_id: DK-400e-2
   contract: "The per-part decision record path."
+it_requirements:
+  - 'The split gate''s answer never satisfies a part''s own approval: each decided part pauses on its own final-choice
+    question, and its record''s approver and approval time are those of that answer.'
+  - No code path copies gate_by or gate_at into a part's decision or record.
+change_target: code
+risk_surface: auth
+test_required: true
+test_spec:
+  - name: test_split_approval_does_not_approve_part_decision
+    target_dir: tests/kernel/split/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: After human:user approves the split, p1's decision still pauses for its own choice; no record exists
+      until that choice is approved, and the record's approval time is that answer's time.
+test_rationale: Pins the authority boundary between the two approvals with distinct pinned clock times.
 origin_agent: business-analyst
 created: 2026-10-05
-amended_by: []
+amended_by:
+  - reason: it-po-technical-enrichment
+    date: '2026-10-05'
+    by: it-po
+    summary: 'Technical enrichment: assigned_agent confirmed, estimated_complexity, change_target, risk_surface,
+      it_requirements, delivers_to/expects_from contracts, doc_links and the test contract set; readiness draft
+      -> reviewed. BA criteria and product_truth unchanged.'
 superseded_by: null
 covered_by: []
 implemented_by: []

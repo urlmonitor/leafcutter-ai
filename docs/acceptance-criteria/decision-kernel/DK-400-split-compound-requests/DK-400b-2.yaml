@@ -7,7 +7,7 @@ level: L2
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
+readiness: reviewed
 priority: medium
 roadmap_phase: phase_kernel_1_founding
 criteria: |
@@ -37,15 +37,79 @@ doc_links:
     relationship: constrains
     status: exists
     relevance: "Host proposes (generative), Jev only judges, a person approves; cheapest mechanism first."
+  - path: docs/analysis/2026-09-30-decision-kernel-design-3-kernel-scheduler.md
+    relationship: describes
+    status: exists
+    relevance: Route node and batched Jev routing, intent step, guards and budgets, root completion, gap recording,
+      resume and restart.
+  - path: docs/architecture/components/decision-kernel.md
+    relationship: describes
+    status: exists
+    relevance: 'Kernel containers: routing, scheduler, host handoffs, run root.'
 assigned_agent: python-coder
-estimated_complexity: null
+estimated_complexity: M
 delivers_to:
   agent: python-coder
-  contract: "A mid-run split record (found_at mid_run, depth, null trigger) that the proposal step and the kept-whole rejection (DK-400d-3-iii) read."
-expects_from: null
+  contract: Split record (DK-400a-1 shape) with found_at 'mid_run', work_item_depth >= 1, trigger null, subject_text
+    == the item's own question and kept_routing == the item's own routing result; consumed by DK-400b-3 (origin
+    shown), DK-400b-2-i (quote check) and DK-400d-3-iii (kept whole).
+expects_from:
+  ac_id: DK-400a-1
+  contract: The detection gates, bundle question and split record of DK-400a-1, applied to a non-root work item.
+it_requirements:
+  - Mid-run detection runs in the same route pass and Jev batch as routing for any non-root work item that is routed
+    semantically (request kind capability) and passes the DK-400a-1 gates. Kernel-internal typed children (evidence
+    requests with planned needs, options, synthesis, human and retrieval requests) are never checked.
+  - Parts of an approved split are bound deterministically to their approved child capability and are never checked
+    for bundling, so splits do not nest (nesting depth 1). A part that still bundles questions is reworded or left
+    out at the gate, or asked again as its own request.
+  - The mid-run split's subject_text is the work item's own question normalised by the shared whitespace helper;
+    the root goal is never used as subject or for quotes.
+  - 'While its split is open the item is waiting: it is neither routed again nor executed as one, and its parent
+    stays waiting on it.'
+  - A split item below the root reports to its parent one child outcome whose status follows the part-derived rule
+    of DK-400e-1 (completed only if every part not left out settled, partial otherwise) and whose result is the
+    split record; a parent that cannot use that result treats it as a failed required child (existing rule), never
+    as a fabricated single answer.
+  - 'Known reachability gap: no capability in today''s kernel proposes a semantically routed capability child below
+    the root, so tests inject one through a scripted test capability, and in production the path stays dormant until
+    such a producer exists.'
+change_target: code
+risk_surface: contract_boundary
+test_required: true
+test_spec:
+  - name: test_mid_run_decision_question_starts_split_at_depth_one
+    target_dir: tests/kernel/split/
+    framework: pytest
+    type: integration
+    angle: reachability
+    description: A scripted root capability proposes a capability child holding the split-bounds question; with
+      bundle 0.9 the child gets a split with subject_kind decision_question, found_at mid_run, depth 1, trigger
+      null and the child's own question as subject, and the child does not execute.
+  - name: test_split_parts_are_never_checked_for_bundling
+    target_dir: tests/kernel/split/
+    framework: pytest
+    type: integration
+    angle: boundary
+    description: Approved parts are bound to their child capability without a routing Jev call and no bundle question
+      is asked for them.
+  - name: test_internal_typed_children_never_checked
+    target_dir: tests/kernel/split/
+    framework: pytest
+    type: integration
+    angle: boundary
+    description: Evidence, options, synthesis and human children of a decision carry no bundle question.
+test_rationale: Mid-run detection has no production producer today, so the reachability test injects a depth-1 capability
+  child through a scripted capability and drives it through the real scheduler.
 origin_agent: business-analyst
 created: 2026-10-05
-amended_by: []
+amended_by:
+  - reason: it-po-technical-enrichment
+    date: '2026-10-05'
+    by: it-po
+    summary: 'Technical enrichment: assigned_agent confirmed, estimated_complexity, change_target, risk_surface,
+      it_requirements, delivers_to/expects_from contracts, doc_links and the test contract set; readiness draft
+      -> reviewed. BA criteria and product_truth unchanged.'
 superseded_by: null
 covered_by:
   - DK-400b-2-i
@@ -55,6 +119,10 @@ notes: |
   Flow branch split-mid-run. Left to the IT PO: what tells the kernel, partway through, that a
   work item holds several questions (apply the ADR-053 order, as on DK-400a). Also left to the IT
   PO (DK-400 Q6): whether a part of an approved split may itself be split again, and how deep.
+  IT PO (2026-10-05): settled nesting (DK-400 Q6): parts of an approved split are never split again
+  (nesting depth 1). Mid-run detection rides the same routing batch for semantically routed non-root
+  items; today no capability produces such an item, so the path is reached in tests through an
+  injected producer.
 product_truth:
   - flow: leafcutter/decision-forming
     node: split-mid-run

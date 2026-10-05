@@ -7,7 +7,7 @@ level: L2
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
+readiness: reviewed
 priority: medium
 roadmap_phase: phase_kernel_1_founding
 criteria: |
@@ -37,16 +37,39 @@ doc_links:
     relationship: related
     status: exists
     relevance: "Existing host-handoff diagram the new host operation sits beside."
+  - path: docs/architecture/adrs/ADR-067-kernel-splits-bundled-requests-into-approved-parts.md
+    relationship: describes
+    status: planned
+    relevance: Pinned ADR for splitting a bundled request; adr-author dispatched directly with this number and filename.
+      Re-verify the number is free before dispatch.
 assigned_agent: architecture-diagram-author
-estimated_complexity: null
+estimated_complexity: S
 delivers_to: null
 expects_from:
   ac_id: DK-400c-1
-  contract: "The proposal step and its host operation, which the diagram places."
+  contract: The built host operation, its two schemas and registry entry, and the conversion pieces (quote check,
+    gate, scheduler hand-off) that the diagram places.
 change_target: docs
+it_requirements:
+  - Authored with the write-c4-diagram skill; the file number comes from the diagram sequence tool; parent docs/architecture/diagrams/c2-007-decision-kernel-flows-overview.md,
+    whose child list gains the new diagram in the same change.
+  - Every container shown matches a container of docs/architecture/components/decision-kernel.md; split pieces are
+    drawn inside existing containers (kernel scheduler, host handoffs, run root, RunService and CLI, host skill),
+    never as new containers.
+  - 'Uses the names of the built code and of ADR-067: host.decompose_goal, leafcutter.goal_decomposition_request.v1,
+    leafcutter.goal_decomposition.v1, the split record and its states, and the run statuses waiting_host and waiting_human.'
+  - Shows the split record in the run root and its derived links to the parts' staged decision records.
+risk_surface: internal
+test_required: false
 origin_agent: business-analyst
 created: 2026-10-05
-amended_by: []
+amended_by:
+  - reason: it-po-technical-enrichment
+    date: '2026-10-05'
+    by: it-po
+    summary: 'Technical enrichment: assigned_agent confirmed, estimated_complexity, change_target, risk_surface,
+      it_requirements, delivers_to/expects_from contracts, doc_links and the test contract set; readiness draft
+      -> reviewed. BA criteria and product_truth unchanged.'
 superseded_by: null
 covered_by: []
 implemented_by: []

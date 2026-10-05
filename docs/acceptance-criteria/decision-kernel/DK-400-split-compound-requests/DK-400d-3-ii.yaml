@@ -7,7 +7,7 @@ level: L3
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
+readiness: reviewed
 priority: medium
 roadmap_phase: phase_kernel_1_founding
 criteria: |
@@ -34,15 +34,56 @@ doc_links:
     relationship: specified-by
     status: exists
     relevance: "State rejected_kept_whole and whole_decision_id; record dcp-decision-records-bundled."
+  - path: docs/analysis/2026-09-30-decision-kernel-design-3-kernel-scheduler.md
+    relationship: describes
+    status: exists
+    relevance: Route node and batched Jev routing, intent step, guards and budgets, root completion, gap recording,
+      resume and restart.
+  - path: docs/architecture/adrs/ADR-059-decision-store-reviewable-yaml-records-now-graph-later.md
+    relationship: constrains
+    status: exists
+    relevance: One YAML record per approved decision; published records keep their shape.
 assigned_agent: python-coder
-estimated_complexity: null
+estimated_complexity: M
 delivers_to: null
 expects_from:
   ac_id: DK-400a-2
   contract: "The kept routing result (decision capability) the goal resumes with."
+it_requirements:
+  - The goal resumes from kept_routing (the same capability id and version, no re-routing and no second bundle question)
+    as one decision from the precedent step, exactly as the split.enabled false run continues after routing.
+  - The run is never blocked because of the split; the state is rejected_kept_whole and no part has a work item.
+  - Once that decision's record is staged, whole_decision_id names it; the record's question is the goal as submitted
+    and no part links to it (split_part null).
+change_target: code
+risk_surface: contract_boundary
+test_required: true
+test_spec:
+  - name: test_rejected_bundled_split_goes_ahead_as_one_decision
+    target_dir: tests/kernel/split/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: Rejecting the decision-records split resumes the goal at the decision's precedent step with the
+      kept routing result and the run not blocked.
+  - name: test_kept_whole_record_named_on_split_and_unlinked_to_parts
+    target_dir: tests/kernel/split/
+    framework: pytest
+    type: integration
+    angle: seam
+    description: After the one decision is approved, whole_decision_id names its staged record, whose question is
+      the goal and whose split_part is null.
+test_rationale: The kept-whole path re-enters today's decision flow, so the test checks both the resume point and
+  the record that flow stages.
 origin_agent: business-analyst
 created: 2026-10-05
-amended_by: []
+amended_by:
+  - reason: it-po-technical-enrichment
+    date: '2026-10-05'
+    by: it-po
+    summary: 'Technical enrichment: assigned_agent confirmed, estimated_complexity, change_target, risk_surface,
+      it_requirements, delivers_to/expects_from contracts, doc_links and the test contract set; readiness draft
+      -> reviewed. BA criteria and product_truth unchanged.'
 superseded_by: null
 covered_by: []
 implemented_by: []
