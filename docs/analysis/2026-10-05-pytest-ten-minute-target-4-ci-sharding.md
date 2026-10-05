@@ -141,29 +141,37 @@ Two consequences worth designing for rather than discovering:
 
 This is the part the arithmetic alone gets wrong, and it sets the shard count.
 
-A pull request today already starts roughly **12–14 concurrent jobs**: about
-ten from `ci.yml` (with `test` disabled and `ac-store-valid-whole-store` being
-push-only), plus `schema_diff`, `agent-evals`, and `fixture-drift`'s two.
+Counted from the merged `ci.yml` rather than estimated: a pull request starts
+**21 job slots from `ci.yml`** (13 non-shard jobs, since
+`ac-store-valid-whole-store` is push-only, plus the 8 shards), and
+`schema_diff`, `agent-evals` and `fixture-drift` add 4 more — **25 concurrent
+at peak**.
 
-Add a 10-shard matrix and the run wants ~22–24 concurrent jobs. GitHub caps
-concurrent jobs per account by plan — 20 for GitHub Free. Above the cap, jobs
-**queue** rather than fail, so the consequence is that the last shards start
-only as earlier ones finish, and measured wall clock lands well short of the
-N× the arithmetic promises.
+GitHub caps concurrent jobs per account by plan; 20 for GitHub Free. Above the
+cap jobs **queue** rather than fail, so the consequence is silent: later shards
+start only as earlier jobs finish, and measured wall clock lands short of the
+N× the arithmetic promises, with no error anywhere to explain it.
 
-So:
+So 8 shards does exceed the cap, and this ships anyway. The reason is the
+*shape* of the overflow rather than its size: of the 13 non-shard `ci.yml`
+jobs, all but `consumer-install-sim` are static checks finishing in seconds to
+a couple of minutes. They clear early and hand their slots to the shards. The
+five-job overflow is therefore absorbed in the first minute or two, not carried
+across the whole run.
 
-| shards | concurrent jobs on a PR | fits under a 20-job cap? |
-|---|---|---|
-| 6 | ~18–20 | yes, at the edge |
-| 8 | ~20–22 | marginal |
-| 10 | ~22–24 | no — expect queueing |
+What would be genuinely wrong is sizing the matrix as though the cap did not
+exist. The honest expectation is **~7 minutes plus a short start-up stagger**,
+not a clean 1/8 of 53 minutes.
 
-**Recommendation: start at 8, and measure the real wall clock before raising
-it.** Eight is where the arithmetic still gives a comfortable margin against
-the ten-minute target while staying near the ceiling rather than over it. The
-account's actual plan should be confirmed before assuming 20 — it changes the
-answer and it is one lookup.
+**An earlier draft of this section put the base load at 12–14 jobs and
+concluded 8 "fits, marginally".** That count predated `origin/main` adding
+`product-truth-valid` and `atlas-contracts` in `6ae01413`, and it was an
+estimate rather than a count. Re-counting from the file changed the conclusion
+from "fits" to "overflows but drains" — the recommendation survived, the
+reasoning behind it did not.
+
+**Confirm the account's actual plan before raising 8.** It is one lookup and it
+changes the answer.
 
 This also explains why "just use 20 shards" does not work, and why per-shard
 `pytest-xdist` (`-n`) is the more promising second axis: it adds parallelism

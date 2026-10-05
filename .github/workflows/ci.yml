@@ -60,11 +60,18 @@
 #                never invalidates the required-check name. Still
 #                INFORMATIONAL until the owner promotes it.
 #
-#                Shard count is bounded by CONCURRENCY, not by arithmetic: a PR
-#                already starts ~12-14 jobs across this file plus schema_diff,
-#                agent-evals and fixture-drift, and GitHub caps concurrent jobs
-#                per account by plan (20 on Free). Above the cap jobs queue, so
-#                a bigger matrix yields less than N×. Measure before raising 8.
+#                Shard count is bounded by CONCURRENCY, not by arithmetic. A PR
+#                starts 21 slots from this file (13 non-shard jobs, since
+#                ac-store-valid-whole-store is push-only, plus the 8 shards)
+#                and 4 more from schema_diff, agent-evals and fixture-drift —
+#                25 at peak, against a per-account cap set by plan (20 on
+#                Free). Above the cap jobs QUEUE rather than fail, so the
+#                effect is silent: later shards start only as earlier jobs
+#                finish. Accepted here because 12 of the 13 non-shard jobs are
+#                static checks that clear in seconds and hand their slots over,
+#                so the overflow drains in the first minutes rather than
+#                persisting. Expect ~7 min plus a short start-up stagger, not a
+#                clean 1/8 of 53 min. Confirm the plan before raising 8.
 #                Full rationale and measurements:
 #                docs/analysis/2026-10-05-pytest-ten-minute-target-4-ci-sharding.md
 #
@@ -293,11 +300,12 @@ jobs:
       # — strictly less information than the old single job produced.
       fail-fast: false
       matrix:
-        # Eight, not ten: a PR already starts ~12-14 concurrent jobs across
-        # ci.yml, schema_diff, agent-evals and fixture-drift, and GitHub caps
-        # concurrent jobs per account by plan (20 on Free). Over the cap jobs
-        # QUEUE rather than fail, so a larger matrix buys less wall clock than
-        # the arithmetic suggests. Raise only after measuring a real run.
+        # Eight, not ten. With these 8, a PR peaks at 25 concurrent jobs
+        # against a per-account cap of 20 on GitHub Free, so some queueing is
+        # expected and accepted — see the header note for why it drains fast.
+        # Over the cap jobs QUEUE rather than fail, so a larger matrix buys
+        # less wall clock than the arithmetic suggests, silently. Raise only
+        # after measuring a real run.
         group: [1, 2, 3, 4, 5, 6, 7, 8]
     steps:
       - uses: actions/checkout@v4
