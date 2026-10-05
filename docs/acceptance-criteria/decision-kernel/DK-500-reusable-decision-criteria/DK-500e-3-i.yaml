@@ -1,0 +1,82 @@
+id: DK-500e-3-i
+title: A library of only unpublished, retired or non-fitting categories counts as empty
+component: decision-kernel
+components:
+- decision_kernel
+level: L3
+status: active
+readiness: approved
+req_status: draft
+priority: high
+work_status: todo
+roadmap_phase: phase_kernel_2_knowledge
+criteria: |
+  Given the library holds only the candidate cat-73d233fc8b15c735, the staged cat-6c3eb4f2af148922 and the retired cat-40cc613f737e3323, all for decision type design,
+  When a design decision is framed,
+  Then nothing is reused, no gap judgement is made, and the decision is framed as with an empty library,
+  And the same holds when published categories exist but none fits the decision's type or components.
+depends_on:
+- DK-500e-3
+covered_by: []
+implemented_by: []
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: DK-500e-3
+  contract: Empty-library framing.
+change_target: code
+risk_surface: internal
+it_requirements:
+- '''Empty'' is evaluated after the fit rule of DK-500d-1: only published, non-retired, fitting categories count. Candidates (mining store) and staged records (run roots) are invisible to a decision run.'
+test_required: true
+test_spec:
+- name: test_only_unpublished_or_retired_counts_as_empty
+  target_dir: tests/kernel/capabilities/
+  framework: pytest
+  type: behavioral
+  angle: criterion
+  description: A library of only a candidate, a staged and a retired category frames the decision as with an empty library.
+- name: test_non_fitting_published_counts_as_empty
+  target_dir: tests/kernel/capabilities/
+  framework: pytest
+  type: behavioral
+  angle: criterion
+  description: Published categories that do not fit the decision's type or components also count as empty.
+test_rationale: Run the decision capability through the public run/resume boundary with a scripted Jev provider and a recording host port over a fixture category library; assert the approval payload, the run report, trace events and call counts rather than internal helpers.
+doc_links:
+- path: docs/decisions/dec-93c1c730463c1f3c.yaml
+  relationship: governs
+  status: exists
+- path: docs/product-truth/flows/leafcutter/decision-forming.flow.json
+  relationship: implements
+  status: exists
+- path: docs/product-truth/mock-data/leafcutter/criterion-categories.mock.json
+  relationship: specified-by
+  status: exists
+- path: docs/decisions/dec-a070edfb6465bced.yaml
+  relationship: governs
+  status: exists
+  relevance: 'Grouping method (opt.jev_pick_existing, approved by human:user 2026-10-04): code places exact label or criterion-id matches, then Jev answers one bounded choice per wording over all existing categories plus ''none'' while the library fits one choice question, a merge only at p >= 0.8; leftovers become code-made one-member candidates; no LLM, no broader-link suggestions; in a run one Jev choice per drafted question within the run''s Jev budget. Its question says ''AC DK-300b'', which is DK-500b after the 2026-10-05 renumbering.'
+origin_agent: business-analyst
+created: 2026-10-04
+amended_by:
+- reason: it-po-technical-enrichment
+  date: '2026-10-05'
+  by: it-po
+  summary: 'Technical enrichment: assigned_agent confirmed, estimated_complexity, change_target, risk_surface, it_requirements, contracts, doc_links and the test contract set; readiness draft -> reviewed. BA criteria unchanged.'
+superseded_by: null
+notes: |
+  Flow branch condition: "no published category fits the decision's kind and components, including when the library is still empty".
+  FLOW BACK-LINK (for step.implements, to be applied by the store owner): leafcutter/decision-forming: empty-library.
+  Authored by the business-analyst stage of /plan-feature (route strategic) under decision dec-93c1c730463c1f3c; readiness draft, no product approval implied.
+product_truth:
+  - flow: leafcutter/decision-forming
+    node: empty-library
+    node_kind: branch
+    flow_kind: data
+    screen: null
+    mock_data: leafcutter/decisions
+    entities: []
+    source: real
+    asof: '2026-10-04'
