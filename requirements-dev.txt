@@ -47,3 +47,6 @@ langchain==1.4.3
 langchain-typesafe==0.0.1a3
 langfuse==4.16.0
 pydantic==2.13.5
+
+# Real Neo4j acceptance checks are part of the knowledge proof-of-done gate.
+neo4j==6.0.3

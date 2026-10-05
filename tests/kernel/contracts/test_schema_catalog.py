@@ -46,7 +46,7 @@ class TestCatalog(unittest.TestCase):
 
     def test_catalog_keys_equal_known_ids(self) -> None:
         self.assertEqual(set(SCHEMA_CATALOG), set(sid.KNOWN_SCHEMA_IDS))
-        self.assertEqual(len(SCHEMA_CATALOG), 12)
+        self.assertEqual(len(SCHEMA_CATALOG), 16)
 
     def test_every_schema_id_has_valid_and_invalid_fixtures(self) -> None:
         for kind in ("valid", "invalid"):
@@ -93,7 +93,7 @@ class TestSchemaExport(unittest.TestCase):
     def test_export_writes_deterministic_files(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             written = export_json_schemas(Path(tmp))
-            self.assertEqual(len(written), 12)
+            self.assertEqual(len(written), 16)
             for path in written:
                 self.assertEqual(path.read_text(encoding="utf-8"),
                                  render_json_schema(path.name.removesuffix(".schema.json")))

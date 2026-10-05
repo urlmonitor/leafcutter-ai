@@ -39,7 +39,7 @@ from kernel.contracts.base import fail
 from kernel.contracts.work import Binding
 from kernel.observability.tracer import TraceState
 from kernel.registry.eligibility import filter_candidates
-from kernel.intent.classify import KIND_SCHEMA
+from kernel.intent.roots import root_contract_bound
 from kernel.intent.questions import capability_question, repeated_message, unclear_message
 from kernel.intent.step import IntentStep
 from kernel.interaction.formulation import (
@@ -288,8 +288,7 @@ class _Router(IntentStep):
         """Route the whole agenda and return the state update."""
         state, draft = self.state, self.draft
         await self.resolve_intent()
-        root_id = state["task"].root_work_item_id
-        bound = (self.task_update or state["task"]).intent in KIND_SCHEMA
+        task = self.task_update or state["task"]
         entries: list[RouteEntry] = []
         for item_id in state.get("agenda", []):
             item = draft.items[item_id]
@@ -307,7 +306,7 @@ class _Router(IntentStep):
                                            operation=request.operation)
                 entries.append(RouteEntry(item.id, request, report,
                                           [a.text for a in self.answers_of(item)],
-                                          intent_bound=bound and item.id == root_id))
+                                          intent_bound=root_contract_bound(task, request, item.id)))
         results: dict[str, RouteResult | None] = {
             e.item_id: deterministic_result(e.report, e.intent_bound) for e in entries}
         semantic = [e for e in entries if results[e.item_id] is None]
@@ -366,6 +365,7 @@ def _packet(state: KernelState, invocation_id: str, shares: dict[str, int]) -> d
     return {"invocation": invocation,
             "descriptor": state["registry"].get(invocation.capability_id),
             "evidence": dict(state.get("evidence", {})), "scope": state["task"].scope,
+            "context_enrichment": state.get("context_enrichment"),
             "constraints": constraint_texts(state), "shares": dict(shares)}
 
 
@@ -396,4 +396,5 @@ def _packet(state: KernelState, invocation_id: str, shares: dict[str, int]) -> d
 # - 2026-10-01 10:00 [python-coder]: build_invocation prefers the runtime's current segment trace
 #   over state["trace"], so invocations and host packets created after a resume nest under the
 #   resuming segment (bug D). (#KernelBootstrapV0/P7)
+# - 2026-10-02 16:54 [python-coder]: Bind typed research only after eligibility. (#KM-500a/2)
 # ====================================================================

@@ -445,25 +445,447 @@
       ]
     },
     {
+      "id": "fern-and-fig/catalog",
+      "type": "mock_data",
+      "title": "Fern & Fig catalog",
+      "summary": "The canonical Plant / Customer / Order / Payment dataset for the plant-shop sample.",
+      "component": "ux-prototyping",
+      "path": "mock-data/fern-and-fig/catalog.mock.json",
+      "status": "active",
+      "readiness": "approved",
+      "version": 3,
+      "entities": [
+        "Plant",
+        "Customer",
+        "Order",
+        "Payment"
+      ],
+      "tags": [
+        "catalog",
+        "checkout",
+        "payment"
+      ]
+    },
+    {
+      "id": "fern-and-fig/plant-listing",
+      "type": "mockup",
+      "title": "Plant listing",
+      "summary": "The Fern & Fig catalogue landing screen â€” a grid of plant cards with price + stock badge, populated from the catalog Plant records. THE gold-reference mockup.",
+      "screen": "plant-listing",
+      "source": "mock",
+      "component": "ux-prototyping",
+      "path": "mockups/fern-and-fig/plant-listing.mockup.json",
+      "status": "active",
+      "readiness": "approved",
+      "version": 1,
+      "entities": [
+        "Plant"
+      ],
+      "mock_data_ref": "fern-and-fig/catalog",
+      "tags": [
+        "catalog",
+        "listing",
+        "gold-reference"
+      ]
+    },
+    {
+      "id": "fern-and-fig/plant-detail",
+      "type": "mockup",
+      "title": "Plant detail",
+      "summary": "STUB â€” one plant's photo, price and stock with add-to-cart. Registered so the buy-a-plant flow's detail step resolves; HTML not yet drawn.",
+      "screen": "plant-detail",
+      "source": "mock",
+      "component": "ux-prototyping",
+      "path": "mockups/fern-and-fig/plant-detail.mockup.json",
+      "status": "active",
+      "readiness": "reviewed",
+      "version": 2,
+      "entities": [
+        "Plant"
+      ],
+      "mock_data_ref": "fern-and-fig/catalog",
+      "tags": [
+        "catalog",
+        "stub"
+      ]
+    },
+    {
+      "id": "fern-and-fig/cart",
+      "type": "mockup",
+      "title": "Cart",
+      "summary": "STUB â€” plant, quantity, unit price and running total before payment. Registered so the buy-a-plant flow's cart step resolves; HTML not yet drawn.",
+      "screen": "cart",
+      "source": "mock",
+      "component": "ux-prototyping",
+      "path": "mockups/fern-and-fig/cart.mockup.json",
+      "status": "active",
+      "readiness": "reviewed",
+      "version": 2,
+      "entities": [
+        "Order",
+        "Plant"
+      ],
+      "mock_data_ref": "fern-and-fig/catalog",
+      "tags": [
+        "checkout",
+        "stub"
+      ]
+    },
+    {
+      "id": "fern-and-fig/checkout",
+      "type": "mockup",
+      "title": "Checkout",
+      "summary": "STUB â€” confirm details and pay, creating an Order. Registered so the buy-a-plant flow's checkout step resolves; HTML not yet drawn.",
+      "screen": "checkout",
+      "source": "mock",
+      "component": "ux-prototyping",
+      "path": "mockups/fern-and-fig/checkout.mockup.json",
+      "status": "active",
+      "readiness": "reviewed",
+      "version": 2,
+      "entities": [
+        "Customer",
+        "Order"
+      ],
+      "mock_data_ref": "fern-and-fig/catalog",
+      "tags": [
+        "checkout",
+        "stub"
+      ]
+    },
+    {
+      "id": "fern-and-fig/order-confirmation",
+      "type": "mockup",
+      "title": "Order confirmation",
+      "summary": "The confirmation screen after a captured payment: paid order number, payment reference, and paid line items. Populated from the paid Order 1042 + captured Payment. The `confirmed` step of both the buy-a-plant journey and the checkout-and-pay child flow.",
+      "screen": "order-confirmation",
+      "source": "mock",
+      "component": "ux-prototyping",
+      "path": "mockups/fern-and-fig/order-confirmation.mockup.json",
+      "status": "active",
+      "readiness": "reviewed",
+      "version": 2,
+      "entities": [
+        "Order",
+        "Payment"
+      ],
+      "mock_data_ref": "fern-and-fig/catalog",
+      "tags": [
+        "checkout",
+        "payment"
+      ]
+    },
+    {
+      "id": "fern-and-fig/notify-me",
+      "type": "mockup",
+      "title": "Notify me",
+      "summary": "STUB â€” notify-me action for an out-of-stock plant. Registered so the buy-a-plant flow's notify branch resolves; HTML not yet drawn.",
+      "screen": "notify-me",
+      "source": "mock",
+      "component": "ux-prototyping",
+      "path": "mockups/fern-and-fig/notify-me.mockup.json",
+      "status": "active",
+      "readiness": "draft",
+      "version": 1,
+      "entities": [
+        "Customer",
+        "Plant"
+      ],
+      "mock_data_ref": "fern-and-fig/catalog",
+      "tags": [
+        "catalog",
+        "stub"
+      ]
+    },
+    {
+      "id": "fern-and-fig/orders-list",
+      "type": "mockup",
+      "title": "My orders",
+      "summary": "STUB â€” list of past orders with number, item, total and status. Registered so the track-an-order flow's orders step resolves; HTML not yet drawn.",
+      "screen": "orders-list",
+      "source": "mock",
+      "component": "ux-prototyping",
+      "path": "mockups/fern-and-fig/orders-list.mockup.json",
+      "status": "active",
+      "readiness": "draft",
+      "version": 1,
+      "entities": [
+        "Customer",
+        "Order"
+      ],
+      "mock_data_ref": "fern-and-fig/catalog",
+      "tags": [
+        "orders",
+        "stub"
+      ]
+    },
+    {
+      "id": "fern-and-fig/order-detail",
+      "type": "mockup",
+      "title": "Order detail",
+      "summary": "STUB â€” one order's item, quantity, total, payment status and date. Registered so the track-an-order flow's orderDetail step resolves; HTML not yet drawn.",
+      "screen": "order-detail",
+      "source": "mock",
+      "component": "ux-prototyping",
+      "path": "mockups/fern-and-fig/order-detail.mockup.json",
+      "status": "active",
+      "readiness": "draft",
+      "version": 1,
+      "entities": [
+        "Order"
+      ],
+      "mock_data_ref": "fern-and-fig/catalog",
+      "tags": [
+        "orders",
+        "stub"
+      ]
+    },
+    {
+      "id": "fern-and-fig/shipment-tracking",
+      "type": "mockup",
+      "title": "Track shipment",
+      "summary": "STUB â€” current delivery stage for an order. Registered so the track-an-order flow's track step resolves; HTML not yet drawn.",
+      "screen": "shipment-tracking",
+      "source": "mock",
+      "component": "ux-prototyping",
+      "path": "mockups/fern-and-fig/shipment-tracking.mockup.json",
+      "status": "active",
+      "readiness": "draft",
+      "version": 1,
+      "entities": [
+        "Order"
+      ],
+      "mock_data_ref": "fern-and-fig/catalog",
+      "tags": [
+        "orders",
+        "stub"
+      ]
+    },
+    {
+      "id": "leafcutter/decision-split-approve",
+      "type": "mockup",
+      "title": "Approve the proposed split",
+      "summary": "The human gate for a compound goal, research request or multi-part decision question the kernel could not route to one capability. Shows the subject as submitted, each proposed part with the verbatim span it covers, its dependencies and the capability that will run it, one proposal that was dropped, and the answers: approve, edit a part, pick a subset, or reject. Populated from dcp-reusable-criteria-proposed.",
+      "screen": "decision-split-approve",
+      "source": "mock",
+      "component": "decision_kernel",
+      "path": "mockups/leafcutter/decision-split-approve.mockup.json",
+      "status": "active",
+      "readiness": "draft",
+      "version": 1,
+      "entities": [
+        "Decision",
+        "Decomposition"
+      ],
+      "mock_data_ref": "leafcutter/decisions",
+      "tags": [
+        "decision-kernel",
+        "decision-lifecycle",
+        "approval",
+        "split",
+        "decomposition",
+        "human-gate"
+      ]
+    },
+    {
+      "id": "leafcutter/decision-split-progress",
+      "type": "mockup",
+      "title": "Split progress and report",
+      "summary": "What happens after the split gate. Each part shows its outcome (decided, answered, pending, settled by a human, not run), its link to the child decision record or research result, and its dependency order, including an edited part and a left-out part. A rejected split gets a plain report. Populated from the hand split, the mid-run split, the research split and the rejected split.",
+      "screen": "decision-split-progress",
+      "source": "mock",
+      "component": "decision_kernel",
+      "path": "mockups/leafcutter/decision-split-progress.mockup.json",
+      "status": "active",
+      "readiness": "draft",
+      "version": 1,
+      "entities": [
+        "Decision",
+        "Decomposition"
+      ],
+      "mock_data_ref": "leafcutter/decisions",
+      "tags": [
+        "decision-kernel",
+        "decision-lifecycle",
+        "split",
+        "decomposition",
+        "progress",
+        "report"
+      ]
+    },
+    {
+      "id": "leafcutter/retrieve-project-knowledge",
+      "type": "flow",
+      "title": "Ask a question. Get an answer with sources.",
+      "summary": "Ask a question; Jev chooses retrieval, evaluates evidence and returns an answer or a bounded next step.",
+      "kind": "data",
+      "source": "real",
+      "component": "knowledge-management",
+      "path": "flows/leafcutter/retrieve-project-knowledge.flow.json",
+      "status": "active",
+      "readiness": "draft",
+      "version": 3,
+      "entities": [],
+      "tags": [
+        "retrieval",
+        "target-design"
+      ],
+      "impl_summary": {
+        "done": 0,
+        "in_progress": 0,
+        "not_started": 28,
+        "total": 28,
+        "asof": "2026-10-02"
+      }
+    },
+    {
+      "id": "leafcutter/retrieval-registered-query",
+      "type": "flow",
+      "title": "Choose and execute a registered query",
+      "summary": "Jev selects an offered query; delegated preparation and system validation produce executable inputs.",
+      "kind": "data",
+      "source": "real",
+      "component": "knowledge-management",
+      "path": "flows/leafcutter/retrieval-registered-query.flow.json",
+      "status": "active",
+      "readiness": "draft",
+      "version": 2,
+      "entities": [],
+      "tags": [
+        "retrieval",
+        "target-design"
+      ],
+      "impl_summary": {
+        "done": 0,
+        "in_progress": 0,
+        "not_started": 8,
+        "total": 8,
+        "asof": "2026-10-02"
+      }
+    },
+    {
+      "id": "leafcutter/retrieval-search-preparation",
+      "type": "flow",
+      "title": "Prepare and run candidate searches",
+      "summary": "Gather terms, optionally generate five, then run bounded searches and return separate attributable attempts.",
+      "kind": "data",
+      "source": "real",
+      "component": "knowledge-management",
+      "path": "flows/leafcutter/retrieval-search-preparation.flow.json",
+      "status": "active",
+      "readiness": "draft",
+      "version": 2,
+      "entities": [],
+      "tags": [
+        "retrieval",
+        "target-design"
+      ],
+      "impl_summary": {
+        "done": 0,
+        "in_progress": 0,
+        "not_started": 11,
+        "total": 11,
+        "asof": "2026-10-02"
+      }
+    },
+    {
+      "id": "leafcutter/retrieval-query-build",
+      "type": "flow",
+      "title": "Build once, verify, reuse",
+      "summary": "A proven query gap may produce a reusable capability; unsupported data is not fixed by inventing a query.",
+      "kind": "data",
+      "source": "real",
+      "component": "knowledge-management",
+      "path": "flows/leafcutter/retrieval-query-build.flow.json",
+      "status": "active",
+      "readiness": "draft",
+      "version": 2,
+      "entities": [],
+      "tags": [
+        "retrieval",
+        "target-design"
+      ],
+      "impl_summary": {
+        "done": 0,
+        "in_progress": 0,
+        "not_started": 6,
+        "total": 6,
+        "asof": "2026-10-02"
+      }
+    },
+    {
+      "id": "leafcutter/retrieval-current-baseline",
+      "type": "flow",
+      "title": "Current implementation and measured proof",
+      "summary": "Current retrieval mechanisms and measured evidence, with the pending decision-store candidate labeled separately.",
+      "kind": "data",
+      "source": "real",
+      "component": "knowledge-management",
+      "path": "flows/leafcutter/retrieval-current-baseline.flow.json",
+      "status": "active",
+      "readiness": "draft",
+      "version": 1,
+      "entities": [],
+      "tags": [
+        "retrieval",
+        "research",
+        "knowledge",
+        "current-behavior",
+        "retrieval-reference"
+      ],
+      "impl_summary": {
+        "done": 13,
+        "in_progress": 14,
+        "not_started": 0,
+        "total": 27,
+        "asof": "2026-10-02"
+      }
+    },
+    {
+      "id": "leafcutter/retrieval-source-traversal",
+      "type": "flow",
+      "path": "flows/leafcutter/retrieval-source-traversal.flow.json",
+      "kind": "data",
+      "source": "real",
+      "component": "knowledge-management",
+      "status": "active",
+      "readiness": "draft",
+      "version": 1,
+      "entities": [],
+      "tags": [
+        "retrieval",
+        "target-design"
+      ],
+      "title": "Navigate nodes, folders and files",
+      "impl_summary": {
+        "done": 0,
+        "in_progress": 0,
+        "not_started": 11,
+        "total": 11,
+        "asof": "2026-10-02"
+      },
+      "summary": "Jev chooses observed navigation candidates; the system reads bounded sources and retains the path and evidence."
+    },
+    {
       "id": "leafcutter/decision-lifecycle",
       "type": "flow",
       "title": "How a decision is formed, saved, stored and reused",
-      "summary": "How a decision is formed in a kernel run, staged as a record, published to docs/decisions/, and reused as precedent.",
+      "summary": "A request is enriched, formed into a human-approved decision, staged, published and later reused as precedent.",
       "kind": "data",
       "source": "real",
       "component": "decision_kernel",
       "path": "flows/leafcutter/decision-lifecycle.flow.json",
       "status": "active",
       "readiness": "draft",
-      "version": 1,
+      "version": 2,
       "entities": [
         "Decision"
       ],
       "mock_data_ref": "leafcutter/decisions",
       "impl_summary": {
         "done": 0,
-        "in_progress": 0,
-        "not_started": 4,
+        "in_progress": 1,
+        "not_started": 3,
         "total": 4,
         "asof": "2026-10-02"
       },
@@ -479,25 +901,25 @@
       "id": "leafcutter/decision-forming",
       "type": "flow",
       "title": "Forming a decision in a kernel run",
-      "summary": "A kernel run researches your question, splitting a compound one into parts you approve; you then make the ranked choice.",
+      "summary": "The kernel enriches the request, splits a compound one into approved parts, researches it, then you choose.",
       "kind": "data",
       "source": "real",
       "component": "decision_kernel",
       "path": "flows/leafcutter/decision-forming.flow.json",
       "status": "active",
       "readiness": "draft",
-      "version": 2,
+      "version": 3,
       "entities": [
         "Decision",
         "Decomposition"
       ],
       "mock_data_ref": "leafcutter/decisions",
       "impl_summary": {
-        "done": 0,
+        "done": 2,
         "in_progress": 0,
         "not_started": 25,
-        "total": 25,
-        "asof": "2026-10-03"
+        "total": 27,
+        "asof": "2026-10-04"
       },
       "tags": [
         "decision-kernel",
@@ -596,28 +1018,6 @@
         "decision-lifecycle",
         "precedent",
         "pipeline"
-      ]
-    },
-    {
-      "id": "fern-and-fig/catalog",
-      "type": "mock_data",
-      "title": "Fern & Fig catalog",
-      "summary": "The canonical Plant / Customer / Order / Payment dataset for the plant-shop sample.",
-      "component": "ux-prototyping",
-      "path": "mock-data/fern-and-fig/catalog.mock.json",
-      "status": "active",
-      "readiness": "approved",
-      "version": 3,
-      "entities": [
-        "Plant",
-        "Customer",
-        "Order",
-        "Payment"
-      ],
-      "tags": [
-        "catalog",
-        "checkout",
-        "payment"
       ]
     },
     {
@@ -761,253 +1161,6 @@
         "review",
         "supersession"
       ]
-    },
-    {
-      "id": "fern-and-fig/plant-listing",
-      "type": "mockup",
-      "title": "Plant listing",
-      "summary": "The Fern & Fig catalogue landing screen — a grid of plant cards with price + stock badge, populated from the catalog Plant records. THE gold-reference mockup.",
-      "screen": "plant-listing",
-      "source": "mock",
-      "component": "ux-prototyping",
-      "path": "mockups/fern-and-fig/plant-listing.mockup.json",
-      "status": "active",
-      "readiness": "approved",
-      "version": 1,
-      "entities": [
-        "Plant"
-      ],
-      "mock_data_ref": "fern-and-fig/catalog",
-      "tags": [
-        "catalog",
-        "listing",
-        "gold-reference"
-      ]
-    },
-    {
-      "id": "fern-and-fig/plant-detail",
-      "type": "mockup",
-      "title": "Plant detail",
-      "summary": "STUB — one plant's photo, price and stock with add-to-cart. Registered so the buy-a-plant flow's detail step resolves; HTML not yet drawn.",
-      "screen": "plant-detail",
-      "source": "mock",
-      "component": "ux-prototyping",
-      "path": "mockups/fern-and-fig/plant-detail.mockup.json",
-      "status": "active",
-      "readiness": "reviewed",
-      "version": 2,
-      "entities": [
-        "Plant"
-      ],
-      "mock_data_ref": "fern-and-fig/catalog",
-      "tags": [
-        "catalog",
-        "stub"
-      ]
-    },
-    {
-      "id": "fern-and-fig/cart",
-      "type": "mockup",
-      "title": "Cart",
-      "summary": "STUB — plant, quantity, unit price and running total before payment. Registered so the buy-a-plant flow's cart step resolves; HTML not yet drawn.",
-      "screen": "cart",
-      "source": "mock",
-      "component": "ux-prototyping",
-      "path": "mockups/fern-and-fig/cart.mockup.json",
-      "status": "active",
-      "readiness": "reviewed",
-      "version": 2,
-      "entities": [
-        "Order",
-        "Plant"
-      ],
-      "mock_data_ref": "fern-and-fig/catalog",
-      "tags": [
-        "checkout",
-        "stub"
-      ]
-    },
-    {
-      "id": "fern-and-fig/checkout",
-      "type": "mockup",
-      "title": "Checkout",
-      "summary": "STUB — confirm details and pay, creating an Order. Registered so the buy-a-plant flow's checkout step resolves; HTML not yet drawn.",
-      "screen": "checkout",
-      "source": "mock",
-      "component": "ux-prototyping",
-      "path": "mockups/fern-and-fig/checkout.mockup.json",
-      "status": "active",
-      "readiness": "reviewed",
-      "version": 2,
-      "entities": [
-        "Customer",
-        "Order"
-      ],
-      "mock_data_ref": "fern-and-fig/catalog",
-      "tags": [
-        "checkout",
-        "stub"
-      ]
-    },
-    {
-      "id": "fern-and-fig/order-confirmation",
-      "type": "mockup",
-      "title": "Order confirmation",
-      "summary": "The confirmation screen after a captured payment: paid order number, payment reference, and paid line items. Populated from the paid Order 1042 + captured Payment. The `confirmed` step of both the buy-a-plant journey and the checkout-and-pay child flow.",
-      "screen": "order-confirmation",
-      "source": "mock",
-      "component": "ux-prototyping",
-      "path": "mockups/fern-and-fig/order-confirmation.mockup.json",
-      "status": "active",
-      "readiness": "reviewed",
-      "version": 2,
-      "entities": [
-        "Order",
-        "Payment"
-      ],
-      "mock_data_ref": "fern-and-fig/catalog",
-      "tags": [
-        "checkout",
-        "payment"
-      ]
-    },
-    {
-      "id": "fern-and-fig/notify-me",
-      "type": "mockup",
-      "title": "Notify me",
-      "summary": "STUB — notify-me action for an out-of-stock plant. Registered so the buy-a-plant flow's notify branch resolves; HTML not yet drawn.",
-      "screen": "notify-me",
-      "source": "mock",
-      "component": "ux-prototyping",
-      "path": "mockups/fern-and-fig/notify-me.mockup.json",
-      "status": "active",
-      "readiness": "draft",
-      "version": 1,
-      "entities": [
-        "Customer",
-        "Plant"
-      ],
-      "mock_data_ref": "fern-and-fig/catalog",
-      "tags": [
-        "catalog",
-        "stub"
-      ]
-    },
-    {
-      "id": "fern-and-fig/orders-list",
-      "type": "mockup",
-      "title": "My orders",
-      "summary": "STUB — list of past orders with number, item, total and status. Registered so the track-an-order flow's orders step resolves; HTML not yet drawn.",
-      "screen": "orders-list",
-      "source": "mock",
-      "component": "ux-prototyping",
-      "path": "mockups/fern-and-fig/orders-list.mockup.json",
-      "status": "active",
-      "readiness": "draft",
-      "version": 1,
-      "entities": [
-        "Customer",
-        "Order"
-      ],
-      "mock_data_ref": "fern-and-fig/catalog",
-      "tags": [
-        "orders",
-        "stub"
-      ]
-    },
-    {
-      "id": "fern-and-fig/order-detail",
-      "type": "mockup",
-      "title": "Order detail",
-      "summary": "STUB — one order's item, quantity, total, payment status and date. Registered so the track-an-order flow's orderDetail step resolves; HTML not yet drawn.",
-      "screen": "order-detail",
-      "source": "mock",
-      "component": "ux-prototyping",
-      "path": "mockups/fern-and-fig/order-detail.mockup.json",
-      "status": "active",
-      "readiness": "draft",
-      "version": 1,
-      "entities": [
-        "Order"
-      ],
-      "mock_data_ref": "fern-and-fig/catalog",
-      "tags": [
-        "orders",
-        "stub"
-      ]
-    },
-    {
-      "id": "fern-and-fig/shipment-tracking",
-      "type": "mockup",
-      "title": "Track shipment",
-      "summary": "STUB — current delivery stage for an order. Registered so the track-an-order flow's track step resolves; HTML not yet drawn.",
-      "screen": "shipment-tracking",
-      "source": "mock",
-      "component": "ux-prototyping",
-      "path": "mockups/fern-and-fig/shipment-tracking.mockup.json",
-      "status": "active",
-      "readiness": "draft",
-      "version": 1,
-      "entities": [
-        "Order"
-      ],
-      "mock_data_ref": "fern-and-fig/catalog",
-      "tags": [
-        "orders",
-        "stub"
-      ]
-    },
-    {
-      "id": "leafcutter/decision-split-approve",
-      "type": "mockup",
-      "title": "Approve the proposed split",
-      "summary": "The human gate for a compound goal, research request or multi-part decision question the kernel could not route to one capability. Shows the subject as submitted, each proposed part with the verbatim span it covers, its dependencies and the capability that will run it, one proposal that was dropped, and the answers: approve, edit a part, pick a subset, or reject. Populated from dcp-reusable-criteria-proposed.",
-      "screen": "decision-split-approve",
-      "source": "mock",
-      "component": "decision_kernel",
-      "path": "mockups/leafcutter/decision-split-approve.mockup.json",
-      "status": "active",
-      "readiness": "draft",
-      "version": 1,
-      "entities": [
-        "Decision",
-        "Decomposition"
-      ],
-      "mock_data_ref": "leafcutter/decisions",
-      "tags": [
-        "decision-kernel",
-        "decision-lifecycle",
-        "approval",
-        "split",
-        "decomposition",
-        "human-gate"
-      ]
-    },
-    {
-      "id": "leafcutter/decision-split-progress",
-      "type": "mockup",
-      "title": "Split progress and report",
-      "summary": "What happens after the split gate. Each part shows its outcome (decided, answered, pending, settled by a human, not run), its link to the child decision record or research result, and its dependency order, including an edited part and a left-out part. A rejected split gets a plain report. Populated from the hand split, the mid-run split, the research split and the rejected split.",
-      "screen": "decision-split-progress",
-      "source": "mock",
-      "component": "decision_kernel",
-      "path": "mockups/leafcutter/decision-split-progress.mockup.json",
-      "status": "active",
-      "readiness": "draft",
-      "version": 1,
-      "entities": [
-        "Decision",
-        "Decomposition"
-      ],
-      "mock_data_ref": "leafcutter/decisions",
-      "tags": [
-        "decision-kernel",
-        "decision-lifecycle",
-        "split",
-        "decomposition",
-        "progress",
-        "report"
-      ]
     }
   ],
   "by_component": {
@@ -1048,6 +1201,18 @@
         "leafcutter/decision-split-approve",
         "leafcutter/decision-split-progress"
       ]
+    },
+    "knowledge-management": {
+      "flows": [
+        "leafcutter/retrieval-current-baseline",
+        "leafcutter/retrieval-query-build",
+        "leafcutter/retrieval-registered-query",
+        "leafcutter/retrieval-search-preparation",
+        "leafcutter/retrieval-source-traversal",
+        "leafcutter/retrieve-project-knowledge"
+      ],
+      "mock_data": [],
+      "mockups": []
     },
     "ux-prototyping": {
       "flows": [
@@ -1393,13 +1558,13 @@
       ],
       "mock_data_ref": "leafcutter/decisions",
       "path": "flows/leafcutter/decision-forming.flow.json",
-      "impl_status": "not_started",
+      "impl_status": "in_progress",
       "impl_summary": {
-        "done": 0,
+        "done": 2,
         "in_progress": 0,
         "not_started": 25,
-        "total": 25,
-        "asof": "2026-10-03"
+        "total": 27,
+        "asof": "2026-10-04"
       },
       "expands": [
         "leafcutter/decision-retrieval"
@@ -1419,11 +1584,11 @@
       ],
       "mock_data_ref": "leafcutter/decisions",
       "path": "flows/leafcutter/decision-lifecycle.flow.json",
-      "impl_status": "not_started",
+      "impl_status": "in_progress",
       "impl_summary": {
         "done": 0,
-        "in_progress": 0,
-        "not_started": 4,
+        "in_progress": 1,
+        "not_started": 3,
         "total": 4,
         "asof": "2026-10-02"
       },
@@ -1698,6 +1863,127 @@
           "step": "code"
         }
       ]
+    },
+    "leafcutter/retrieval-current-baseline": {
+      "component": "knowledge-management",
+      "level": "journey",
+      "entities": [],
+      "path": "flows/leafcutter/retrieval-current-baseline.flow.json",
+      "impl_status": "in_progress",
+      "impl_summary": {
+        "done": 13,
+        "in_progress": 14,
+        "not_started": 0,
+        "total": 27,
+        "asof": "2026-10-02"
+      },
+      "expands": [],
+      "parents": []
+    },
+    "leafcutter/retrieval-query-build": {
+      "component": "knowledge-management",
+      "level": "journey",
+      "entities": [],
+      "path": "flows/leafcutter/retrieval-query-build.flow.json",
+      "impl_status": "not_started",
+      "impl_summary": {
+        "done": 0,
+        "in_progress": 0,
+        "not_started": 6,
+        "total": 6,
+        "asof": "2026-10-02"
+      },
+      "expands": [],
+      "parents": [
+        {
+          "flow": "leafcutter/retrieve-project-knowledge",
+          "step": "retrieve"
+        }
+      ]
+    },
+    "leafcutter/retrieval-registered-query": {
+      "component": "knowledge-management",
+      "level": "journey",
+      "entities": [],
+      "path": "flows/leafcutter/retrieval-registered-query.flow.json",
+      "impl_status": "not_started",
+      "impl_summary": {
+        "done": 0,
+        "in_progress": 0,
+        "not_started": 8,
+        "total": 8,
+        "asof": "2026-10-02"
+      },
+      "expands": [],
+      "parents": [
+        {
+          "flow": "leafcutter/retrieve-project-knowledge",
+          "step": "retrieve"
+        }
+      ]
+    },
+    "leafcutter/retrieval-search-preparation": {
+      "component": "knowledge-management",
+      "level": "journey",
+      "entities": [],
+      "path": "flows/leafcutter/retrieval-search-preparation.flow.json",
+      "impl_status": "not_started",
+      "impl_summary": {
+        "done": 0,
+        "in_progress": 0,
+        "not_started": 11,
+        "total": 11,
+        "asof": "2026-10-02"
+      },
+      "expands": [],
+      "parents": [
+        {
+          "flow": "leafcutter/retrieve-project-knowledge",
+          "step": "retrieve"
+        }
+      ]
+    },
+    "leafcutter/retrieval-source-traversal": {
+      "component": "knowledge-management",
+      "level": "journey",
+      "entities": [],
+      "path": "flows/leafcutter/retrieval-source-traversal.flow.json",
+      "impl_status": "not_started",
+      "impl_summary": {
+        "done": 0,
+        "in_progress": 0,
+        "not_started": 11,
+        "total": 11,
+        "asof": "2026-10-02"
+      },
+      "expands": [],
+      "parents": [
+        {
+          "flow": "leafcutter/retrieve-project-knowledge",
+          "step": "retrieve"
+        }
+      ]
+    },
+    "leafcutter/retrieve-project-knowledge": {
+      "component": "knowledge-management",
+      "level": "journey",
+      "entities": [],
+      "path": "flows/leafcutter/retrieve-project-knowledge.flow.json",
+      "impl_status": "not_started",
+      "impl_summary": {
+        "done": 0,
+        "in_progress": 0,
+        "not_started": 28,
+        "total": 28,
+        "asof": "2026-10-02"
+      },
+      "expands": [
+        "leafcutter/retrieval-query-build",
+        "leafcutter/retrieval-registered-query",
+        "leafcutter/retrieval-search-preparation",
+        "leafcutter/retrieval-source-traversal"
+      ],
+      "parents": []
     }
   },
   "by_ac": {
@@ -2375,6 +2661,373 @@
         "asof": "2026-07-20"
       }
     ],
+    "DK-200a-1": [
+      {
+        "flow": "leafcutter/decision-forming",
+        "node": "enrich-context",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": "leafcutter/decisions",
+        "entities": [],
+        "source": "real",
+        "asof": "2026-10-02"
+      }
+    ],
+    "DK-200a-1-i": [
+      {
+        "flow": "leafcutter/decision-forming",
+        "node": "enrich-context",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": "leafcutter/decisions",
+        "entities": [],
+        "source": "real",
+        "asof": "2026-10-02"
+      }
+    ],
+    "DK-200a-2": [
+      {
+        "flow": "leafcutter/decision-forming",
+        "node": "enrich-context",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": "leafcutter/decisions",
+        "entities": [],
+        "source": "real",
+        "asof": "2026-10-02"
+      }
+    ],
+    "DK-200a-3": [
+      {
+        "flow": "leafcutter/decision-forming",
+        "node": "enrich-context",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": "leafcutter/decisions",
+        "entities": [],
+        "source": "real",
+        "asof": "2026-10-02"
+      }
+    ],
+    "DK-200a-3-i": [
+      {
+        "flow": "leafcutter/decision-forming",
+        "node": "enrich-context",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": "leafcutter/decisions",
+        "entities": [],
+        "source": "real",
+        "asof": "2026-10-02"
+      }
+    ],
+    "DK-200a-3-ii": [
+      {
+        "flow": "leafcutter/decision-forming",
+        "node": "enrich-context",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": "leafcutter/decisions",
+        "entities": [],
+        "source": "real",
+        "asof": "2026-10-02"
+      }
+    ],
+    "DK-200a-4": [
+      {
+        "flow": "leafcutter/decision-forming",
+        "node": "enrich-context",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": "leafcutter/decisions",
+        "entities": [],
+        "source": "real",
+        "asof": "2026-10-02"
+      }
+    ],
+    "DK-200b-1": [
+      {
+        "flow": "leafcutter/decision-forming",
+        "node": "enrich-context",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": "leafcutter/decisions",
+        "entities": [],
+        "source": "real",
+        "asof": "2026-10-02"
+      }
+    ],
+    "DK-200b-2": [
+      {
+        "flow": "leafcutter/decision-forming",
+        "node": "enrich-context",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": "leafcutter/decisions",
+        "entities": [],
+        "source": "real",
+        "asof": "2026-10-02"
+      },
+      {
+        "flow": "leafcutter/decision-forming",
+        "node": "limited-context",
+        "node_kind": "branch",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": "leafcutter/decisions",
+        "entities": [],
+        "source": "real",
+        "asof": "2026-10-02"
+      }
+    ],
+    "DK-200b-2-i": [
+      {
+        "flow": "leafcutter/decision-forming",
+        "node": "enrich-context",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": "leafcutter/decisions",
+        "entities": [],
+        "source": "real",
+        "asof": "2026-10-02"
+      },
+      {
+        "flow": "leafcutter/decision-forming",
+        "node": "limited-context",
+        "node_kind": "branch",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": "leafcutter/decisions",
+        "entities": [],
+        "source": "real",
+        "asof": "2026-10-02"
+      }
+    ],
+    "DK-200b-3": [
+      {
+        "flow": "leafcutter/decision-forming",
+        "node": "enrich-context",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": "leafcutter/decisions",
+        "entities": [],
+        "source": "real",
+        "asof": "2026-10-02"
+      }
+    ],
+    "DK-200b-3-i": [
+      {
+        "flow": "leafcutter/decision-forming",
+        "node": "enrich-context",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": "leafcutter/decisions",
+        "entities": [],
+        "source": "real",
+        "asof": "2026-10-02"
+      }
+    ],
+    "DK-200b-4": [
+      {
+        "flow": "leafcutter/decision-forming",
+        "node": "enrich-context",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": "leafcutter/decisions",
+        "entities": [],
+        "source": "real",
+        "asof": "2026-10-02"
+      }
+    ],
+    "DK-200b-4-i": [
+      {
+        "flow": "leafcutter/decision-forming",
+        "node": "enrich-context",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": "leafcutter/decisions",
+        "entities": [],
+        "source": "real",
+        "asof": "2026-10-02"
+      }
+    ],
+    "DK-200b-4-ii": [
+      {
+        "flow": "leafcutter/decision-forming",
+        "node": "enrich-context",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": "leafcutter/decisions",
+        "entities": [],
+        "source": "real",
+        "asof": "2026-10-02"
+      }
+    ],
+    "DK-200c-1": [
+      {
+        "flow": "leafcutter/decision-forming",
+        "node": "enrich-context",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": "leafcutter/decisions",
+        "entities": [],
+        "source": "real",
+        "asof": "2026-10-02"
+      },
+      {
+        "flow": "leafcutter/decision-forming",
+        "node": "limited-context",
+        "node_kind": "branch",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": "leafcutter/decisions",
+        "entities": [],
+        "source": "real",
+        "asof": "2026-10-02"
+      }
+    ],
+    "DK-200c-1-i": [
+      {
+        "flow": "leafcutter/decision-forming",
+        "node": "enrich-context",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": "leafcutter/decisions",
+        "entities": [],
+        "source": "real",
+        "asof": "2026-10-02"
+      },
+      {
+        "flow": "leafcutter/decision-forming",
+        "node": "limited-context",
+        "node_kind": "branch",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": "leafcutter/decisions",
+        "entities": [],
+        "source": "real",
+        "asof": "2026-10-02"
+      }
+    ],
+    "DK-200c-1-ii": [
+      {
+        "flow": "leafcutter/decision-forming",
+        "node": "enrich-context",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": "leafcutter/decisions",
+        "entities": [],
+        "source": "real",
+        "asof": "2026-10-02"
+      },
+      {
+        "flow": "leafcutter/decision-forming",
+        "node": "limited-context",
+        "node_kind": "branch",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": "leafcutter/decisions",
+        "entities": [],
+        "source": "real",
+        "asof": "2026-10-02"
+      }
+    ],
+    "DK-200c-2": [
+      {
+        "flow": "leafcutter/decision-forming",
+        "node": "enrich-context",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": "leafcutter/decisions",
+        "entities": [],
+        "source": "real",
+        "asof": "2026-10-02"
+      }
+    ],
+    "DK-200c-2-i": [
+      {
+        "flow": "leafcutter/decision-forming",
+        "node": "enrich-context",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": "leafcutter/decisions",
+        "entities": [],
+        "source": "real",
+        "asof": "2026-10-02"
+      }
+    ],
+    "DK-200c-2-ii": [
+      {
+        "flow": "leafcutter/decision-forming",
+        "node": "enrich-context",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": "leafcutter/decisions",
+        "entities": [],
+        "source": "real",
+        "asof": "2026-10-02"
+      }
+    ],
+    "DK-200d-1": [
+      {
+        "flow": "leafcutter/decision-forming",
+        "node": "enrich-context",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": "leafcutter/decisions",
+        "entities": [],
+        "source": "real",
+        "asof": "2026-10-02"
+      }
+    ],
+    "DK-200d-2": [
+      {
+        "flow": "leafcutter/decision-forming",
+        "node": "enrich-context",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": "leafcutter/decisions",
+        "entities": [],
+        "source": "real",
+        "asof": "2026-10-02"
+      }
+    ],
+    "DK-200d-2-i": [
+      {
+        "flow": "leafcutter/decision-forming",
+        "node": "enrich-context",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": "leafcutter/decisions",
+        "entities": [],
+        "source": "real",
+        "asof": "2026-10-02"
+      }
+    ],
     "FIN-100": [
       {
         "flow": "leafcutter/deliver-a-feature",
@@ -2451,6 +3104,878 @@
         "entities": [],
         "source": "real",
         "asof": "2026-07-20"
+      }
+    ],
+    "KM-400b-3": [
+      {
+        "flow": "leafcutter/retrieval-current-baseline",
+        "node": "pin",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [],
+        "source": "real",
+        "asof": "2026-10-02"
+      }
+    ],
+    "KM-400d-1": [
+      {
+        "flow": "leafcutter/retrieval-current-baseline",
+        "node": "retrieve",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [],
+        "source": "real",
+        "asof": "2026-10-02"
+      }
+    ],
+    "KM-400d-2": [
+      {
+        "flow": "leafcutter/retrieval-current-baseline",
+        "node": "retrieve",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [],
+        "source": "real",
+        "asof": "2026-10-02"
+      }
+    ],
+    "KM-400d-3": [
+      {
+        "flow": "leafcutter/retrieval-current-baseline",
+        "node": "pin",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [],
+        "source": "real",
+        "asof": "2026-10-02"
+      }
+    ],
+    "KM-400e-1": [
+      {
+        "flow": "leafcutter/retrieval-current-baseline",
+        "node": "direct",
+        "node_kind": "branch",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [],
+        "source": "real",
+        "asof": "2026-10-02"
+      }
+    ],
+    "KM-400e-3": [
+      {
+        "flow": "leafcutter/retrieval-current-baseline",
+        "node": "native",
+        "node_kind": "branch",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [],
+        "source": "real",
+        "asof": "2026-10-02"
+      },
+      {
+        "flow": "leafcutter/retrieval-current-baseline",
+        "node": "native-2",
+        "node_kind": "branch",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [],
+        "source": "real",
+        "asof": "2026-10-02"
+      },
+      {
+        "flow": "leafcutter/retrieval-current-baseline",
+        "node": "native-3",
+        "node_kind": "branch",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [],
+        "source": "real",
+        "asof": "2026-10-02"
+      }
+    ],
+    "KM-400e-4": [
+      {
+        "flow": "leafcutter/retrieval-current-baseline",
+        "node": "unavailable",
+        "node_kind": "branch",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [],
+        "source": "real",
+        "asof": "2026-10-02"
+      }
+    ],
+    "KM-500a-1": [
+      {
+        "flow": "leafcutter/retrieval-current-baseline",
+        "node": "clarify",
+        "node_kind": "branch",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [],
+        "source": "real",
+        "asof": "2026-10-02"
+      },
+      {
+        "flow": "leafcutter/retrieval-current-baseline",
+        "node": "clarify-2",
+        "node_kind": "branch",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [],
+        "source": "real",
+        "asof": "2026-10-02"
+      },
+      {
+        "flow": "leafcutter/retrieval-current-baseline",
+        "node": "clarify-3",
+        "node_kind": "branch",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [],
+        "source": "real",
+        "asof": "2026-10-02"
+      },
+      {
+        "flow": "leafcutter/retrieval-current-baseline",
+        "node": "understand",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [],
+        "source": "real",
+        "asof": "2026-10-02"
+      }
+    ],
+    "KM-500a-2": [
+      {
+        "flow": "leafcutter/retrieval-current-baseline",
+        "node": "bind",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [],
+        "source": "real",
+        "asof": "2026-10-02"
+      },
+      {
+        "flow": "leafcutter/retrieval-current-baseline",
+        "node": "select",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [],
+        "source": "real",
+        "asof": "2026-10-02"
+      },
+      {
+        "flow": "leafcutter/retrieval-current-baseline",
+        "node": "skip",
+        "node_kind": "branch",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [],
+        "source": "real",
+        "asof": "2026-10-02"
+      }
+    ],
+    "KM-500a-3": [
+      {
+        "flow": "leafcutter/retrieval-current-baseline",
+        "node": "fit",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [],
+        "source": "real",
+        "asof": "2026-10-02"
+      },
+      {
+        "flow": "leafcutter/retrieval-current-baseline",
+        "node": "unavailable",
+        "node_kind": "branch",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [],
+        "source": "real",
+        "asof": "2026-10-02"
+      }
+    ],
+    "KM-500b-1": [
+      {
+        "flow": "leafcutter/retrieval-current-baseline",
+        "node": "bind",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [],
+        "source": "real",
+        "asof": "2026-10-02"
+      },
+      {
+        "flow": "leafcutter/retrieval-current-baseline",
+        "node": "build",
+        "node_kind": "branch",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [],
+        "source": "real",
+        "asof": "2026-10-02"
+      },
+      {
+        "flow": "leafcutter/retrieval-current-baseline",
+        "node": "build-2",
+        "node_kind": "branch",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [],
+        "source": "real",
+        "asof": "2026-10-02"
+      },
+      {
+        "flow": "leafcutter/retrieval-current-baseline",
+        "node": "select",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [],
+        "source": "real",
+        "asof": "2026-10-02"
+      }
+    ],
+    "KM-500b-2": [
+      {
+        "flow": "leafcutter/retrieval-current-baseline",
+        "node": "build",
+        "node_kind": "branch",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [],
+        "source": "real",
+        "asof": "2026-10-02"
+      },
+      {
+        "flow": "leafcutter/retrieval-current-baseline",
+        "node": "build-2",
+        "node_kind": "branch",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [],
+        "source": "real",
+        "asof": "2026-10-02"
+      }
+    ],
+    "KM-500b-3": [
+      {
+        "flow": "leafcutter/retrieval-current-baseline",
+        "node": "build",
+        "node_kind": "branch",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [],
+        "source": "real",
+        "asof": "2026-10-02"
+      },
+      {
+        "flow": "leafcutter/retrieval-current-baseline",
+        "node": "build-2",
+        "node_kind": "branch",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [],
+        "source": "real",
+        "asof": "2026-10-02"
+      }
+    ],
+    "KM-500c-1": [
+      {
+        "flow": "leafcutter/retrieval-current-baseline",
+        "node": "build",
+        "node_kind": "branch",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [],
+        "source": "real",
+        "asof": "2026-10-02"
+      },
+      {
+        "flow": "leafcutter/retrieval-current-baseline",
+        "node": "build-2",
+        "node_kind": "branch",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [],
+        "source": "real",
+        "asof": "2026-10-02"
+      },
+      {
+        "flow": "leafcutter/retrieval-current-baseline",
+        "node": "clarify",
+        "node_kind": "branch",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [],
+        "source": "real",
+        "asof": "2026-10-02"
+      },
+      {
+        "flow": "leafcutter/retrieval-current-baseline",
+        "node": "clarify-2",
+        "node_kind": "branch",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [],
+        "source": "real",
+        "asof": "2026-10-02"
+      },
+      {
+        "flow": "leafcutter/retrieval-current-baseline",
+        "node": "clarify-3",
+        "node_kind": "branch",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [],
+        "source": "real",
+        "asof": "2026-10-02"
+      },
+      {
+        "flow": "leafcutter/retrieval-current-baseline",
+        "node": "pin",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [],
+        "source": "real",
+        "asof": "2026-10-02"
+      },
+      {
+        "flow": "leafcutter/retrieval-current-baseline",
+        "node": "return",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [],
+        "source": "real",
+        "asof": "2026-10-02"
+      },
+      {
+        "flow": "leafcutter/retrieval-current-baseline",
+        "node": "synthesis",
+        "node_kind": "branch",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [],
+        "source": "real",
+        "asof": "2026-10-02"
+      },
+      {
+        "flow": "leafcutter/retrieval-current-baseline",
+        "node": "synthesis-2",
+        "node_kind": "branch",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [],
+        "source": "real",
+        "asof": "2026-10-02"
+      },
+      {
+        "flow": "leafcutter/retrieval-current-baseline",
+        "node": "synthesis-3",
+        "node_kind": "branch",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [],
+        "source": "real",
+        "asof": "2026-10-02"
+      }
+    ],
+    "KM-500c-2": [
+      {
+        "flow": "leafcutter/retrieval-current-baseline",
+        "node": "assess",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [],
+        "source": "real",
+        "asof": "2026-10-02"
+      },
+      {
+        "flow": "leafcutter/retrieval-current-baseline",
+        "node": "judge-coverage",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [],
+        "source": "real",
+        "asof": "2026-10-02"
+      },
+      {
+        "flow": "leafcutter/retrieval-current-baseline",
+        "node": "partial",
+        "node_kind": "branch",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [],
+        "source": "real",
+        "asof": "2026-10-02"
+      },
+      {
+        "flow": "leafcutter/retrieval-current-baseline",
+        "node": "synthesis",
+        "node_kind": "branch",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [],
+        "source": "real",
+        "asof": "2026-10-02"
+      },
+      {
+        "flow": "leafcutter/retrieval-current-baseline",
+        "node": "synthesis-2",
+        "node_kind": "branch",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [],
+        "source": "real",
+        "asof": "2026-10-02"
+      },
+      {
+        "flow": "leafcutter/retrieval-current-baseline",
+        "node": "synthesis-3",
+        "node_kind": "branch",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [],
+        "source": "real",
+        "asof": "2026-10-02"
+      }
+    ],
+    "KM-500c-3": [
+      {
+        "flow": "leafcutter/retrieval-current-baseline",
+        "node": "assess",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [],
+        "source": "real",
+        "asof": "2026-10-02"
+      },
+      {
+        "flow": "leafcutter/retrieval-current-baseline",
+        "node": "judge-coverage",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [],
+        "source": "real",
+        "asof": "2026-10-02"
+      },
+      {
+        "flow": "leafcutter/retrieval-current-baseline",
+        "node": "partial",
+        "node_kind": "branch",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [],
+        "source": "real",
+        "asof": "2026-10-02"
+      },
+      {
+        "flow": "leafcutter/retrieval-current-baseline",
+        "node": "skip",
+        "node_kind": "branch",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [],
+        "source": "real",
+        "asof": "2026-10-02"
+      }
+    ],
+    "KM-500e-1": [
+      {
+        "flow": "leafcutter/retrieval-current-baseline",
+        "node": "clarify",
+        "node_kind": "branch",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [],
+        "source": "real",
+        "asof": "2026-10-02"
+      },
+      {
+        "flow": "leafcutter/retrieval-current-baseline",
+        "node": "clarify-2",
+        "node_kind": "branch",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [],
+        "source": "real",
+        "asof": "2026-10-02"
+      },
+      {
+        "flow": "leafcutter/retrieval-current-baseline",
+        "node": "clarify-3",
+        "node_kind": "branch",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [],
+        "source": "real",
+        "asof": "2026-10-02"
+      },
+      {
+        "flow": "leafcutter/retrieval-current-baseline",
+        "node": "request",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [],
+        "source": "real",
+        "asof": "2026-10-02"
+      },
+      {
+        "flow": "leafcutter/retrieval-current-baseline",
+        "node": "understand",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [],
+        "source": "real",
+        "asof": "2026-10-02"
+      }
+    ],
+    "KM-500e-2": [
+      {
+        "flow": "leafcutter/retrieval-current-baseline",
+        "node": "data-gap",
+        "node_kind": "branch",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [],
+        "source": "real",
+        "asof": "2026-10-02"
+      },
+      {
+        "flow": "leafcutter/retrieval-current-baseline",
+        "node": "retrieve",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [],
+        "source": "real",
+        "asof": "2026-10-02"
+      }
+    ],
+    "KM-500e-3": [
+      {
+        "flow": "leafcutter/retrieval-current-baseline",
+        "node": "partial",
+        "node_kind": "branch",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [],
+        "source": "real",
+        "asof": "2026-10-02"
+      },
+      {
+        "flow": "leafcutter/retrieval-current-baseline",
+        "node": "retrieve",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [],
+        "source": "real",
+        "asof": "2026-10-02"
+      }
+    ],
+    "KM-500e-4": [
+      {
+        "flow": "leafcutter/retrieval-current-baseline",
+        "node": "data-gap",
+        "node_kind": "branch",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [],
+        "source": "real",
+        "asof": "2026-10-02"
+      },
+      {
+        "flow": "leafcutter/retrieval-current-baseline",
+        "node": "fit",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [],
+        "source": "real",
+        "asof": "2026-10-02"
+      }
+    ],
+    "KM-500e-5": [
+      {
+        "flow": "leafcutter/retrieval-current-baseline",
+        "node": "direct",
+        "node_kind": "branch",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [],
+        "source": "real",
+        "asof": "2026-10-02"
+      },
+      {
+        "flow": "leafcutter/retrieval-current-baseline",
+        "node": "request",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [],
+        "source": "real",
+        "asof": "2026-10-02"
+      }
+    ],
+    "KM-500f-1": [
+      {
+        "flow": "leafcutter/retrieval-current-baseline",
+        "node": "retrieve",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [],
+        "source": "real",
+        "asof": "2026-10-02"
+      }
+    ],
+    "KM-500f-2": [
+      {
+        "flow": "leafcutter/retrieval-current-baseline",
+        "node": "assess",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [],
+        "source": "real",
+        "asof": "2026-10-02"
+      },
+      {
+        "flow": "leafcutter/retrieval-current-baseline",
+        "node": "judge-coverage",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [],
+        "source": "real",
+        "asof": "2026-10-02"
+      }
+    ],
+    "KM-500f-3": [
+      {
+        "flow": "leafcutter/retrieval-current-baseline",
+        "node": "assess",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [],
+        "source": "real",
+        "asof": "2026-10-02"
+      },
+      {
+        "flow": "leafcutter/retrieval-current-baseline",
+        "node": "judge-coverage",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [],
+        "source": "real",
+        "asof": "2026-10-02"
+      }
+    ],
+    "KM-500f-4": [
+      {
+        "flow": "leafcutter/retrieval-current-baseline",
+        "node": "assess",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [],
+        "source": "real",
+        "asof": "2026-10-02"
+      },
+      {
+        "flow": "leafcutter/retrieval-current-baseline",
+        "node": "judge-coverage",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [],
+        "source": "real",
+        "asof": "2026-10-02"
+      }
+    ],
+    "KM-500f-5": [
+      {
+        "flow": "leafcutter/retrieval-current-baseline",
+        "node": "assess",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [],
+        "source": "real",
+        "asof": "2026-10-02"
+      },
+      {
+        "flow": "leafcutter/retrieval-current-baseline",
+        "node": "judge-coverage",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [],
+        "source": "real",
+        "asof": "2026-10-02"
+      }
+    ],
+    "KM-500g-1": [
+      {
+        "flow": "leafcutter/retrieval-current-baseline",
+        "node": "observation-loss",
+        "node_kind": "branch",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [],
+        "source": "real",
+        "asof": "2026-10-02"
+      },
+      {
+        "flow": "leafcutter/retrieval-current-baseline",
+        "node": "return",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [],
+        "source": "real",
+        "asof": "2026-10-02"
+      }
+    ],
+    "KM-500g-1-i": [
+      {
+        "flow": "leafcutter/retrieval-current-baseline",
+        "node": "observation-loss",
+        "node_kind": "branch",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [],
+        "source": "real",
+        "asof": "2026-10-02"
+      },
+      {
+        "flow": "leafcutter/retrieval-current-baseline",
+        "node": "return",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [],
+        "source": "real",
+        "asof": "2026-10-02"
+      }
+    ],
+    "KM-500g-2": [
+      {
+        "flow": "leafcutter/retrieval-current-baseline",
+        "node": "observation-loss",
+        "node_kind": "branch",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [],
+        "source": "real",
+        "asof": "2026-10-02"
+      },
+      {
+        "flow": "leafcutter/retrieval-current-baseline",
+        "node": "return",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [],
+        "source": "real",
+        "asof": "2026-10-02"
       }
     ],
     "UXP-210a": [

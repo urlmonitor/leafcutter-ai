@@ -1,0 +1,281 @@
+{
+  "id": "leafcutter/retrieval-search-preparation",
+  "component": "knowledge-management",
+  "product": "Leafcutter",
+  "name": "Prepare and run candidate searches",
+  "level": "journey",
+  "summary": "Gather terms, optionally generate five, then run bounded searches and return separate attributable attempts.",
+  "kind": "data",
+  "source": "real",
+  "realization": "spec",
+  "status": "active",
+  "readiness": "draft",
+  "version": 2,
+  "tags": [
+    "retrieval",
+    "target-design"
+  ],
+  "entities": [],
+  "steps": [
+    {
+      "id": "strategy",
+      "label": "Choose the search approach",
+      "agent": "Jev",
+      "human": "Choose one or more compatible offered keyword/vector search contracts for the original question, within the main plan and remaining budget. Select useful known component filters. This is not an instruction to run all methods or to execute them concurrently. Unsupported vector readiness excludes that method.",
+      "order": 1,
+      "implements": [],
+      "consumes": [
+        "Original question, trusted context, offered contracts and compatible strategy advice"
+      ],
+      "produces": [
+        "Selected search contracts and required inputs"
+      ],
+      "impl_asof": "2026-10-02",
+      "impl_status": "not_started"
+    },
+    {
+      "id": "terms",
+      "label": "Gather supplied or known terms",
+      "agent": "System",
+      "human": "Collect useful caller keywords and terms in permitted context. Retain their origin and pass them to the separate sufficiency decision; do not generate terms or broaden scope. Prepare each selected contract separately. Reuse terms only where that contract accepts their meaning and scope; preserve their binding to query/version/source.",
+      "order": 2,
+      "implements": [],
+      "consumes": [
+        "Selected search contracts and required inputs"
+      ],
+      "produces": [
+        "Known terms grouped by selected contract"
+      ],
+      "impl_asof": "2026-10-02",
+      "impl_status": "not_started"
+    },
+    {
+      "id": "decide-terms",
+      "label": "Decide whether terms suffice",
+      "agent": "Jev",
+      "human": "Choose known-term bypass or optional generation from the selected input contract. Do not author search terms. Judge each selected contract independently; accepting terms for one does not bind them to every method.",
+      "order": 3,
+      "implements": [],
+      "consumes": [
+        "Known terms grouped by selected contract"
+      ],
+      "produces": [
+        "Per-contract bypass or generation decisions"
+      ],
+      "impl_asof": "2026-10-02",
+      "impl_status": "not_started"
+    },
+    {
+      "id": "request-terms",
+      "label": "Request optional term generation",
+      "agent": "System",
+      "human": "Only after the generation decision, construct the proposed typed request and persist kernel host handoff. Bind original question, approved context and selected query/version/source. Otherwise route directly to search. Each request is bound to its own contract/query/version/source. Compatible term reuse remains explicit and validated, not a global unbound input set.",
+      "order": 4,
+      "implements": [],
+      "consumes": [
+        "Per-contract bypass or generation decisions"
+      ],
+      "produces": [
+        "Typed per-contract requests or known-term bypasses"
+      ],
+      "impl_asof": "2026-10-02",
+      "impl_status": "not_started"
+    },
+    {
+      "id": "generate",
+      "label": "Optionally generate five terms",
+      "agent": "Host LLM",
+      "human": "Generate exactly five distinct nonempty search suggestions. The model is interchangeable. Terms are not facts. This proposed operation uses existing typed host transport. This optional action repeats only for the selected contracts that need generation, within the same cumulative budget.",
+      "order": 5,
+      "implements": [],
+      "consumes": [
+        "One typed contract-bound term request"
+      ],
+      "produces": [
+        "Five candidate terms"
+      ],
+      "impl_asof": "2026-10-02",
+      "impl_status": "not_started"
+    },
+    {
+      "id": "validate-terms",
+      "label": "Validate term output",
+      "agent": "System",
+      "human": "Validate matching resume and exactly five distinct nonempty terms. Invalid results follow bounded correction or an explicit limitation without searching.",
+      "order": 6,
+      "implements": [],
+      "consumes": [
+        "Five candidate terms"
+      ],
+      "produces": [
+        "Structurally valid terms"
+      ],
+      "impl_asof": "2026-10-02",
+      "impl_status": "not_started"
+    },
+    {
+      "id": "judge-terms",
+      "label": "Judge term usefulness",
+      "agent": "Jev",
+      "human": "Choose accept, correction, clarification or stop against the original question. Known-term bypass skips these generation-only actions.",
+      "order": 7,
+      "implements": [],
+      "consumes": [
+        "Structurally valid terms"
+      ],
+      "produces": [
+        "Accepted terms or preparation outcome"
+      ],
+      "impl_asof": "2026-10-02",
+      "impl_status": "not_started"
+    },
+    {
+      "id": "search",
+      "label": "Run separate retrieval attempts",
+      "agent": "System",
+      "human": "Execute the permitted bounded searches once. Keep each attempt separate: original question, method/query/version, terms, component filters, source/revision, model/version where relevant, budget, evidence locators, coverage and outcome. Do not combine candidates yet. Empty evidence, denied access, outage, missing mapping and partial coverage remain distinct. Structurally valid but semantically rejected terms do not execute. Preserve the main attempt history and cumulative budget; selecting multiple searches does not imply parallel execution. Return useful evidence even if another attempt fails. Use only the inputs validated and accepted for that specific method/query contract.",
+      "order": 8,
+      "implements": [],
+      "consumes": [
+        "Per-contract Jev-accepted terms or explicit sufficient-known/no-term bypass"
+      ],
+      "produces": [
+        "Separate attributable retrieval attempts"
+      ],
+      "impl_asof": "2026-10-02",
+      "impl_status": "not_started"
+    },
+    {
+      "id": "return-attempts",
+      "label": "Return separate search outcomes",
+      "agent": "System",
+      "human": "Return each method/query attempt with its original question, terms, filters, source/version, evidence and limitations. Keep empty, partial, denied, unsupported and failed outcomes distinct. Do not compare or combine here; join [the shared comparison](docs/product-truth/flows/leafcutter/retrieve-project-knowledge.flow.json#compare) once.",
+      "order": 9,
+      "implements": [],
+      "consumes": [
+        "Separate attributable retrieval attempts"
+      ],
+      "produces": [
+        "Retained attributable attempt results"
+      ],
+      "impl_asof": "2026-10-02",
+      "impl_status": "not_started"
+    }
+  ],
+  "branches": [
+    {
+      "id": "known-terms",
+      "label": "Useful terms already available — skip LLM",
+      "condition": "Known terms suffice for the selected contract, or the method needs no terms",
+      "human": "From term collection, bypass optional generation and proceed directly to search with validated known terms. A method needing no terms also bypasses generation.",
+      "agent": "System",
+      "outcome_kind": "alternative",
+      "implements": [],
+      "from": "decide-terms",
+      "impl_asof": "2026-10-02",
+      "impl_status": "not_started"
+    },
+    {
+      "id": "search-alternative",
+      "from": "return-attempts",
+      "label": "An attempt was unhelpful",
+      "agent": "System",
+      "condition": "One selected search is empty, incomplete or fails",
+      "human": "Return the explicit outcome to [shared comparison](docs/product-truth/flows/leafcutter/retrieve-project-knowledge.flow.json#compare). Jev may choose a different permitted method or traversal; do not erase useful prior evidence or repeat the unchanged failed plan.",
+      "outcome_kind": "alternative",
+      "implements": [],
+      "impl_asof": "2026-10-02",
+      "impl_status": "not_started"
+    }
+  ],
+  "acceptance_scenarios": [
+    {
+      "given": "Original question, trusted context, offered contracts and compatible strategy advice",
+      "when": "Choose the search approach",
+      "then": "Selected search contracts and required inputs",
+      "for": "strategy"
+    },
+    {
+      "given": "Selected search contracts and required inputs",
+      "when": "Gather supplied or known terms",
+      "then": "Known terms grouped by selected contract",
+      "for": "terms"
+    },
+    {
+      "given": "Known terms grouped by selected contract",
+      "when": "Decide whether terms suffice",
+      "then": "Per-contract bypass or generation decisions",
+      "for": "decide-terms"
+    },
+    {
+      "given": "Per-contract bypass or generation decisions",
+      "when": "Request optional term generation",
+      "then": "Typed per-contract requests or known-term bypasses",
+      "for": "request-terms"
+    },
+    {
+      "given": "One typed contract-bound term request",
+      "when": "Optionally generate five terms",
+      "then": "Five candidate terms",
+      "for": "generate"
+    },
+    {
+      "given": "Five candidate terms",
+      "when": "Validate term output",
+      "then": "Structurally valid terms",
+      "for": "validate-terms"
+    },
+    {
+      "given": "Structurally valid terms",
+      "when": "Judge term usefulness",
+      "then": "Accepted terms or preparation outcome",
+      "for": "judge-terms"
+    },
+    {
+      "given": "Per-contract Jev-accepted terms or explicit sufficient-known/no-term bypass",
+      "when": "Run separate retrieval attempts",
+      "then": "Separate attributable retrieval attempts",
+      "for": "search"
+    },
+    {
+      "given": "Separate attributable retrieval attempts",
+      "when": "Return separate search outcomes",
+      "then": "Retained attributable attempt results",
+      "for": "return-attempts"
+    },
+    {
+      "given": "Known terms suffice for the selected contract, or the method needs no terms",
+      "when": "Useful terms already available — skip LLM",
+      "then": "From term collection, bypass optional generation and proceed directly to search with validated known terms. A method needing no terms also bypasses generation.",
+      "for": "known-terms"
+    },
+    {
+      "given": "One selected search is empty, incomplete or fails",
+      "when": "An attempt was unhelpful",
+      "then": "Return the explicit outcome to [shared comparison](docs/product-truth/flows/leafcutter/retrieve-project-knowledge.flow.json#compare). Jev may choose a different permitted method or traversal; do not erase useful prior evidence or repeat the unchanged failed plan.",
+      "for": "search-alternative"
+    }
+  ],
+  "provenance": [
+    {
+      "action": "authored",
+      "by": "product-owner/business-analyst/flow-author",
+      "date": "2026-10-02",
+      "note": "Target design — not a delivery claim\nUser-requested question-first design. This flow is spec/draft; existing runtime and test evidence do not establish this full contract. Existing acceptance criteria are context pending behavioral mapping, not new completion proof."
+    },
+    {
+      "action": "extended",
+      "by": "flow-author",
+      "date": "2026-10-02",
+      "note": "Traversal and multiple-method design extension\nAdded bounded method selection/return routes and a shared attempt-comparison handoff. Target specification only; no runtime or acceptance-status change."
+    }
+  ],
+  "impl_summary": {
+    "done": 0,
+    "in_progress": 0,
+    "not_started": 11,
+    "total": 11,
+    "asof": "2026-10-02"
+  },
+  "shape_version": 2
+}

@@ -16,13 +16,10 @@ from collections.abc import Mapping
 from typing import Any
 
 from kernel.contracts.capability import ErrorInfo, Usage
-from kernel.contracts.enums import ObservabilityStatus, RunStatus
+from kernel.contracts.enums import ObservabilityStatus, RunStatus, WorkItemStatus
+from kernel.contracts import schema_ids, validate_payload, validate_semantics, SemanticContext
 from kernel.contracts.run import (
-    CapabilityGap,
-    RunEnvelope,
-    TraceRefs,
-    UsageSummary,
-    with_trace_refs,
+    CapabilityGap, OutputRef, RunEnvelope, TraceRefs, UsageSummary, with_trace_refs,
 )
 from kernel.interaction import pending_packet
 from kernel.observability.tracer import TraceState
@@ -33,7 +30,15 @@ TERMINAL = frozenset({RunStatus.COMPLETED, RunStatus.PARTIAL, RunStatus.BLOCKED,
 
 
 def effective_status(record: RunRecord, values: Mapping[str, Any]) -> RunStatus:
-    """Return the status to report, following the precedence in the module docstring."""
+    """Return the status to report, following the precedence in the module docstring.
+
+    Args:
+        record: Durable run status and cancellation record.
+        values: Actual checkpointed graph values.
+
+    Returns:
+        Effective run status without success promotion.
+    """
     if record.cancel is not None:
         return RunStatus.CANCELLED
     graph_status = values.get("status")
@@ -49,6 +54,12 @@ def _usage(values: Mapping[str, Any]) -> UsageSummary:
 
     `usage` has one row per provider and model with its known cost; a cost that is not known for
     every call of a row stays null.
+
+    Args:
+        values: Checkpointed budget and provider usage counters.
+
+    Returns:
+        Attributed usage totals with unknown values preserved.
     """
     budgets = values.get("budgets")
     if budgets is None:
@@ -89,14 +100,15 @@ def build_envelope(record: RunRecord, values: Mapping[str, Any], *,
     Args:
         record: The run.json record (status, revision, cancellation).
         values: The checkpointed graph state values (empty before the first superstep).
-        trace: This process's trace identity, else the one stored in the record.
-        observability: Export health after the segment closed.
-        diagnostics: Extra limitation lines (for example a tripped recursion limit).
-        report_path: Absolute path of the rendered report; replaces the artifact name in
-            `report_ref` so a client can open it without knowing the run layout.
-        stored_gaps: The gap store's aggregated gaps; the envelope shows those for this run's gap
-            keys so it agrees with the store (first sighting, occurrence count).
-        observability_reason: Why export is degraded; shown as a limitation line.
+
+    Keyword-only trace: This process's trace identity, else the one stored in the record.
+    Keyword-only observability: Export health after the segment closed.
+    Keyword-only diagnostics: Extra limitation lines (for example a tripped recursion limit).
+    Keyword-only report_path: Absolute path of the rendered report; replaces the artifact name in
+        `report_ref` so a client can open it without knowing the run layout.
+    Keyword-only stored_gaps: The gap store's aggregated gaps; the envelope shows those for this run's gap
+        keys so it agrees with the store (first sighting, occurrence count).
+    Keyword-only observability_reason: Why export is degraded; shown as a limitation line.
 
     Returns:
         RunEnvelope: A valid envelope; waiting statuses carry their packet, terminal ones none.
@@ -114,11 +126,10 @@ def build_envelope(record: RunRecord, values: Mapping[str, Any], *,
     shown = trace or record.trace
     refs = TraceRefs(trace_id=shown.trace_id if shown else None,
                      trace_url=shown.trace_url if shown else None, observability=observability)
-    output = outcome.output if outcome and status is RunStatus.COMPLETED else None
     return RunEnvelope(
         run_id=record.run_id, root_task_id=values.get("root_task_id") or record.root_task_id,
         state_revision=values.get("state_revision", record.state_revision), status=status,
-        output=with_trace_refs(output, refs),
+        output=with_trace_refs(_visible_output(status, outcome, values), refs),
         report_ref=(report_path or outcome.report_ref) if outcome else None,
         decision_ids=sorted(values.get("decisions", {})),
         evidence_ids=sorted(values.get("evidence", {})),
@@ -128,6 +139,38 @@ def build_envelope(record: RunRecord, values: Mapping[str, Any], *,
         gaps=reconcile_gaps(list(values.get("gaps", {}).values()), stored_gaps or []),
         usage_summary=_usage(values), errors=errors,
         trace_refs=refs)
+
+
+def _visible_output(status: RunStatus, outcome: Any, values: Mapping[str, Any]) -> OutputRef | None:
+    """Expose validated partial research evidence without claiming successful completion.
+
+    Args:
+        status: Effective externally visible run status.
+        outcome: Persisted root outcome, if produced.
+        values: Actual checkpointed task and work-item state.
+
+    Returns:
+        Completed output or a validated partial root evidence bundle; otherwise None.
+    """
+    if outcome is None or outcome.output is None:
+        return None
+    if status is RunStatus.COMPLETED:
+        return outcome.output
+    task = values.get("task")
+    root = values.get("work_items", {}).get(task.root_work_item_id) if task else None
+    if (status is not RunStatus.PARTIAL or task is None or root is None
+        or root.status is not WorkItemStatus.PARTIAL
+        or task.requested_output_schema != schema_ids.EVIDENCE_BUNDLE
+        or outcome.output.schema_id != schema_ids.EVIDENCE_BUNDLE):
+        return None
+    try:
+        bundle = validate_payload(schema_ids.EVIDENCE_BUNDLE, outcome.output.payload)
+        validate_semantics(schema_ids.EVIDENCE_BUNDLE, bundle, SemanticContext(
+            known_evidence_ids=frozenset(values.get("evidence", {})),
+            known_finding_ids=frozenset(values.get("findings", {}))))
+    except ValueError:
+        return None
+    return outcome.output
 
 
 def _failure_errors(diagnostics: list[str] | None) -> list[ErrorInfo]:
@@ -156,3 +199,5 @@ def _failure_errors(diagnostics: list[str] | None) -> list[ErrorInfo]:
 #   status so a run the service stopped (recursion limit) stays blocked even though the graph
 #   never reached finalize. (#KernelBootstrapV0/P7)
 # ====================================================================
+
+# - 2026-10-01 23:00 [python-coder]: Expose validated partial root evidence without a completed-status claim. (#EPIC-RepositoryResearchAnswers/TICKET-20261001-KM-500f-2)

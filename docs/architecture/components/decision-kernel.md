@@ -7,10 +7,11 @@ flight_level: L2-Container
 diagram_type: container
 root: true
 created: 2026-09-30
-last_updated: 2026-10-01
+last_updated: 2026-10-02
 components:
   - decision_kernel
 related_docs:
+  - docs/architecture/adrs/ADR-064-persona-discovery-before-feature-planning.md
   - docs/analysis/2026-09-30-decision-kernel-design.md
   - docs/analysis/2026-09-30-decision-kernel-design-3-kernel-scheduler.md
   - docs/analysis/2026-09-30-leafcutter-kernel-spec-rev3.md
@@ -43,11 +44,32 @@ tags:
 
 # Decision Kernel — Container Overview
 
-The decision kernel is a small, resumable runtime. It takes a free-form engineering goal and
-routes it to a registered capability using Jev's bounded judgments. It gathers evidence through
+The decision kernel is a small, resumable runtime. It takes a free-form engineering goal,
+enriches its context in one bounded read-only pass, and routes it to a registered capability
+using Jev's bounded judgments. It gathers evidence through
 native decision and research capabilities. Generative or human work goes out as explicit,
 checkpointed handoffs. Every run ends in a typed terminal state with evidence and a Langfuse
 trace.
+
+Initial enrichment precedes intent, including on runs with an explicit output contract. The
+`kernel.context_enrichment.gather_context` boundary combines explicitly supplied caller context,
+workspace identity, registered capability ids and relevant allowed repository excerpts. It keeps
+the original goal verbatim, caller claims separate from evidence, and provenance and limitations
+on the result. It makes no Jev calls, performs no host work, and cannot authorize actions or choose
+user preferences. The checkpointed result and `context.enriched` event precede intent assessment;
+resumes reuse that context. Missing sources, disabled gathering and exhausted bounds remain
+explicit outcomes rather than invented facts. Intent can still ask a human after consuming the
+context. The [forming flow](../../product-truth/flows/leafcutter/decision-forming.flow.json) is the
+canonical product truth. The [DK-200 context-enrichment requirements](../../acceptance-criteria/decision-kernel/DK-200-context-enrichment/DK-200.yaml)
+contain the BA behavioral decomposition and IT PO test contracts; they supersede the preliminary DK-100 through DK-104 records.
+
+That saved context also reaches native capability judgments, later repository query hints and
+redacted host input artifacts. `kernel.enrichment_projection` adds explicit trust boundaries and
+fits optional context into each Jev batch's remaining payload allowance. It never enlarges the
+configured limit or rewrites the base request; trimming or omission is reported, while the full
+snapshot remains checkpointed. Data policy can withhold repository excerpts from Jev. The
+[running guide](../../how-to/run-the-decision-kernel.md#context-before-intent) describes both the
+isolated context eval and the paired live intent probe, including their limits.
 
 It lives only in leafcutter-ai, as the top-level package `kernel/`. It is **not**
 shipped to adopter projects.

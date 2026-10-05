@@ -4,14 +4,14 @@
   "product": "Leafcutter",
   "name": "Forming a decision in a kernel run",
   "level": "pipeline",
-  "summary": "A kernel run researches your question, splitting a compound one into parts you approve; you then make the ranked choice.",
+  "summary": "The kernel enriches the request, splits a compound one into approved parts, researches it, then you choose.",
   "kind": "data",
   "source": "real",
   "realization": "built",
   "status": "active",
   "readiness": "draft",
   "superseded_by": null,
-  "version": 2,
+  "version": 3,
   "shape_version": 2,
   "tags": [
     "decision-kernel",
@@ -30,23 +30,67 @@
     {
       "id": "ask",
       "label": "Ask the question",
-      "human": "You ask Claude Code a question; it hands the goal to the kernel through the /leafcutter skill or python -m kernel run.",
+      "human": "You ask the host a question; it passes your verbatim goal and any explicitly supplied host or conversation context to the kernel.",
       "order": 1,
-      "agent": "claude_code",
+      "agent": "caller host",
       "produces": [
-        "goal"
+        "goal",
+        "caller context"
       ],
       "impl_asof": "2026-10-02",
       "impl_status": "not_started"
     },
     {
+      "id": "enrich-context",
+      "label": "Enrich the context",
+      "human": "Before intent, one bounded read-only pass combines supplied host and conversation claims, workspace facts and relevant permitted excerpts, retaining provenance and unknowns without asking you or granting authority.",
+      "order": 2,
+      "agent": "kernel.context_enrichment",
+      "consumes": [
+        "goal",
+        "caller context"
+      ],
+      "produces": [
+        "enriched context"
+      ],
+      "implements": [
+        "DK-200a-1",
+        "DK-200a-1-i",
+        "DK-200a-2",
+        "DK-200a-3",
+        "DK-200a-3-i",
+        "DK-200a-3-ii",
+        "DK-200a-4",
+        "DK-200b-1",
+        "DK-200b-2",
+        "DK-200b-2-i",
+        "DK-200b-3",
+        "DK-200b-3-i",
+        "DK-200b-4",
+        "DK-200b-4-i",
+        "DK-200b-4-ii",
+        "DK-200c-1",
+        "DK-200c-1-i",
+        "DK-200c-1-ii",
+        "DK-200c-2",
+        "DK-200c-2-i",
+        "DK-200c-2-ii",
+        "DK-200d-1",
+        "DK-200d-2",
+        "DK-200d-2-i"
+      ],
+      "impl_asof": "2026-10-02",
+      "impl_status": "done"
+    },
+    {
       "id": "classify",
       "label": "Classify the intent",
-      "human": "The kernel asks Jev one question to tell whether the goal is a decision, a request for evidence, for ideas, for a change, or out of its domain.",
-      "order": 2,
+      "human": "Jev classifies the original goal with the gathered context; an explicit output contract still controls routing, and unresolved user intent can still require clarification.",
+      "order": 3,
       "agent": "kernel.intent",
       "consumes": [
-        "goal"
+        "goal",
+        "enriched context"
       ],
       "produces": [
         "intent: decision"
@@ -58,7 +102,7 @@
       "id": "split-detect",
       "label": "Spot a compound subject",
       "human": "Routing looks for one capability to take the subject. When it finds none (no match with reason jev_none, or an ambiguous gap), the subject is taken to hold several questions and a split starts.",
-      "order": 3,
+      "order": 4,
       "agent": "kernel routing",
       "consumes": [
         "goal"
@@ -76,7 +120,7 @@
       "id": "split-propose",
       "label": "Propose the parts",
       "human": "Claude Code, as host, proposes 2 to 5 bounded parts (host.decompose_goal). Each part quotes the words of the subject it covers, names the parts it waits for, and says whether a decision or a research child runs it.",
-      "order": 4,
+      "order": 5,
       "agent": "claude_code",
       "consumes": [
         "compound subject"
@@ -97,7 +141,7 @@
       "id": "split-approve",
       "label": "Approve the split",
       "human": "Decision point: you see the subject as submitted, each proposed part with its quote, its dependencies and the capability that will run it, and any dropped proposal. You approve, edit a part, pick a subset, or reject. Nothing runs until you answer.",
-      "order": 5,
+      "order": 6,
       "screen": "decision-split-approve",
       "agent": "human (asked through claude_code)",
       "consumes": [
@@ -119,7 +163,7 @@
       "id": "split-run",
       "label": "Run the parts in order",
       "human": "The approved parts run one at a time as children of this run, in dependency order. A decision part goes through the steps that follow, from precedent to resolve; a research part runs as a research child. An earlier part's result is precedent for the later ones.",
-      "order": 6,
+      "order": 7,
       "agent": "kernel scheduler",
       "consumes": [
         "approved split"
@@ -141,7 +185,7 @@
       "id": "precedent",
       "label": "Check for precedent",
       "human": "Earlier published decisions that might apply are looked up and judged; how that works is shown in the precedent sub-flow.",
-      "order": 7,
+      "order": 8,
       "agent": "kernel precedent step",
       "consumes": [
         "intent: decision"
@@ -162,10 +206,11 @@
       "id": "ground",
       "label": "Ground it in the repository",
       "human": "The research capability retrieves repository evidence with exact, section-aware locators and Jev reranks it; a precedent alone never counts as grounding.",
-      "order": 8,
+      "order": 9,
       "agent": "kernel research capability",
       "consumes": [
-        "intent: decision"
+        "intent: decision",
+        "enriched context"
       ],
       "produces": [
         "grounding evidence"
@@ -177,11 +222,12 @@
       "id": "synthesize",
       "label": "Synthesize the findings",
       "human": "Claude Code, as host, writes findings that cite only the retrieved evidence (synthesize_evidence).",
-      "order": 9,
+      "order": 10,
       "agent": "claude_code",
       "consumes": [
         "grounding evidence",
-        "prior_decisions evidence"
+        "prior_decisions evidence",
+        "enriched context"
       ],
       "produces": [
         "findings"
@@ -193,11 +239,12 @@
       "id": "propose",
       "label": "Propose options and criteria",
       "human": "Claude Code, as host, proposes options and criteria (generate_options); options you named in your question are checked against your words and kept as yours.",
-      "order": 10,
+      "order": 11,
       "agent": "claude_code",
       "consumes": [
         "goal",
-        "findings"
+        "findings",
+        "enriched context"
       ],
       "produces": [
         "proposed options and criteria"
@@ -209,7 +256,7 @@
       "id": "approve-proposals",
       "label": "Approve the proposals",
       "human": "Decision point: you see the proposed options and criteria and approve them, approve only some, edit the criteria, or add options. Nothing proposed is used until you approve it.",
-      "order": 11,
+      "order": 12,
       "screen": "decision-approve-proposals",
       "agent": "human (asked through claude_code)",
       "consumes": [
@@ -225,10 +272,11 @@
       "id": "research-options",
       "label": "Research the options' claims",
       "human": "A targeted research round checks the claims the approved options make and reads the files they cite.",
-      "order": 12,
+      "order": 13,
       "agent": "kernel research capability",
       "consumes": [
-        "approved options and criteria"
+        "approved options and criteria",
+        "enriched context"
       ],
       "produces": [
         "option evidence"
@@ -240,12 +288,13 @@
       "id": "assess",
       "label": "Assess every option",
       "human": "Jev judges every option against every criterion (does it satisfy it, is the evidence sufficient) and marks each criterion as evidence-answerable or a design judgement.",
-      "order": 13,
+      "order": 14,
       "agent": "jev",
       "consumes": [
         "approved options and criteria",
         "grounding evidence",
-        "option evidence"
+        "option evidence",
+        "enriched context"
       ],
       "produces": [
         "ranked options"
@@ -257,7 +306,7 @@
       "id": "choose",
       "label": "Make the ranked choice",
       "human": "Decision point: you see the options ranked by Jev's per-criterion scores. The ranking is evidence, not a decision; you choose an option, add one, or answer in your own words.",
-      "order": 14,
+      "order": 15,
       "screen": "decision-ranked-choice",
       "agent": "human (asked through claude_code)",
       "consumes": [
@@ -273,7 +322,7 @@
       "id": "resolve",
       "label": "Resolve the decision",
       "human": "The decision resolves with approved_by: human:<id> and approved_at, and report.md is written to the run folder.",
-      "order": 15,
+      "order": 16,
       "agent": "kernel decision executor",
       "consumes": [
         "human choice"
@@ -292,7 +341,7 @@
       "id": "split-report",
       "label": "Report the split",
       "human": "You see where each part stands (pending, decided, answered or not run), with a link to its child decision record or research result; the run report's split section has one line per part.",
-      "order": 16,
+      "order": 17,
       "screen": "decision-split-progress",
       "agent": "kernel",
       "consumes": [
@@ -314,6 +363,96 @@
     }
   ],
   "branches": [
+    {
+      "id": "limited-context",
+      "from": "enrich-context",
+      "condition": "sources are absent, unreadable or denied, gathering is disabled, or a configured limit is reached",
+      "label": "Continue with honest limits",
+      "human": "The kernel records what was gathered and what remains unknown; intent receives that outcome and decides whether it can proceed or needs a user answer.",
+      "agent": "kernel.context_enrichment",
+      "consumes": [
+        "goal",
+        "caller context"
+      ],
+      "produces": [
+        "enriched context"
+      ],
+      "outcome_kind": "alternative",
+      "implements": [
+        "DK-200b-2",
+        "DK-200b-2-i",
+        "DK-200c-1",
+        "DK-200c-1-i",
+        "DK-200c-1-ii"
+      ],
+      "impl_asof": "2026-10-02",
+      "impl_status": "done"
+    },
+    {
+      "id": "revise-proposals",
+      "from": "approve-proposals",
+      "condition": "you approve only some proposals, edit the criteria, or add options",
+      "label": "Revise before approving",
+      "human": "Only what you approved, edited or added goes on to research and assessment; a free-text answer is kept as your input and noted as a limitation, never turned into criteria.",
+      "agent": "human (asked through claude_code)",
+      "consumes": [
+        "proposed options and criteria"
+      ],
+      "produces": [
+        "approved options and criteria"
+      ],
+      "outcome_kind": "alternative",
+      "impl_asof": "2026-10-02",
+      "impl_status": "not_started"
+    },
+    {
+      "id": "budget-reserve",
+      "from": "assess",
+      "condition": "another research round and a final assessment no longer fit in the Jev call budget",
+      "label": "Ask early, on limited evidence",
+      "human": "You get the ranked question early, from the last complete assessment, marked plainly as a ranking made on limited evidence.",
+      "agent": "kernel budget gate",
+      "consumes": [
+        "ranked options"
+      ],
+      "produces": [
+        "ranked options (limited evidence)"
+      ],
+      "outcome_kind": "alternative",
+      "impl_asof": "2026-10-02",
+      "impl_status": "not_started"
+    },
+    {
+      "id": "rerank",
+      "from": "choose",
+      "condition": "you add an option or answer in your own words instead of choosing",
+      "label": "Assess and rank again",
+      "human": "What you added changes what is being ranked, so the options are assessed and ranked again before you are asked once more.",
+      "agent": "kernel decision executor",
+      "consumes": [
+        "ranked options"
+      ],
+      "produces": [
+        "approved options and criteria"
+      ],
+      "outcome_kind": "alternative",
+      "impl_asof": "2026-10-02",
+      "impl_status": "not_started"
+    },
+    {
+      "id": "no-answer",
+      "from": "choose",
+      "condition": "you never answer or you cancel the run",
+      "label": "No answer, no record",
+      "human": "The decision never resolves, so no record is staged and nothing reaches docs/decisions/.",
+      "agent": "kernel",
+      "consumes": [
+        "ranked options"
+      ],
+      "outcome_kind": "exit",
+      "impl_asof": "2026-10-02",
+      "impl_status": "not_started"
+    },
     {
       "id": "split-not-needed",
       "from": "split-detect",
@@ -416,85 +555,56 @@
       "outcome_kind": "exit",
       "impl_asof": "2026-10-03",
       "impl_status": "not_started"
-    },
-    {
-      "id": "revise-proposals",
-      "from": "approve-proposals",
-      "condition": "you approve only some proposals, edit the criteria, or add options",
-      "label": "Revise before approving",
-      "human": "Only what you approved, edited or added goes on to research and assessment; a free-text answer is kept as your input and noted as a limitation, never turned into criteria.",
-      "agent": "human (asked through claude_code)",
-      "consumes": [
-        "proposed options and criteria"
-      ],
-      "produces": [
-        "approved options and criteria"
-      ],
-      "outcome_kind": "alternative",
-      "impl_asof": "2026-10-02",
-      "impl_status": "not_started"
-    },
-    {
-      "id": "budget-reserve",
-      "from": "assess",
-      "condition": "another research round and a final assessment no longer fit in the Jev call budget",
-      "label": "Ask early, on limited evidence",
-      "human": "You get the ranked question early, from the last complete assessment, marked plainly as a ranking made on limited evidence.",
-      "agent": "kernel budget gate",
-      "consumes": [
-        "ranked options"
-      ],
-      "produces": [
-        "ranked options (limited evidence)"
-      ],
-      "outcome_kind": "alternative",
-      "impl_asof": "2026-10-02",
-      "impl_status": "not_started"
-    },
-    {
-      "id": "rerank",
-      "from": "choose",
-      "condition": "you add an option or answer in your own words instead of choosing",
-      "label": "Assess and rank again",
-      "human": "What you added changes what is being ranked, so the options are assessed and ranked again before you are asked once more.",
-      "agent": "kernel decision executor",
-      "consumes": [
-        "ranked options"
-      ],
-      "produces": [
-        "approved options and criteria"
-      ],
-      "outcome_kind": "alternative",
-      "impl_asof": "2026-10-02",
-      "impl_status": "not_started"
-    },
-    {
-      "id": "no-answer",
-      "from": "choose",
-      "condition": "you never answer or you cancel the run",
-      "label": "No answer, no record",
-      "human": "The decision never resolves, so no record is staged and nothing reaches docs/decisions/.",
-      "agent": "kernel",
-      "consumes": [
-        "ranked options"
-      ],
-      "outcome_kind": "exit",
-      "impl_asof": "2026-10-02",
-      "impl_status": "not_started"
     }
   ],
   "acceptance_scenarios": [
     {
       "for": "ask",
-      "given": "a question asked in Claude Code",
-      "when": "Claude Code invokes the /leafcutter skill or python -m kernel run",
-      "then": "the kernel receives the question as the goal of a new run"
+      "given": "a question asked through a caller host",
+      "when": "the host starts a kernel run",
+      "then": "the kernel receives the verbatim goal and any explicitly supplied caller context as separate input"
+    },
+    {
+      "for": "enrich-context",
+      "given": "the goal Can you use leafcutter now? I mean run the kernel and know about it?, supplied host context and relevant permitted repository documentation",
+      "when": "a new run starts",
+      "then": "one bounded pass keeps the goal verbatim, distinguishes caller claims from sourced excerpts, records locators and hashes, and checkpoints and traces context before intent; documentation alone never proves live availability"
+    },
+    {
+      "for": "enrich-context",
+      "given": "an explicit output contract or a resumed human or host interaction",
+      "when": "intake or resume proceeds",
+      "then": "every new task gets the initial pass without changing its explicit contract, while a resumed task reuses its checkpointed context"
+    },
+    {
+      "for": "enrich-context",
+      "given": "denied paths, narrow read roots, sensitive values, irrelevant files and configured source, file, excerpt, character and time limits",
+      "when": "gathering searches the allowed sources",
+      "then": "scope and redaction policy hold, bounds are enforced, exclusions and truncation remain honest, and no Jev call, repository mutation or human interaction occurs in this step"
+    },
+    {
+      "for": "enrich-context",
+      "given": "a question requiring a user preference or an unavailable live-runtime fact, and retrieved text instructing the kernel to act",
+      "when": "context enrichment finishes",
+      "then": "the preference and unobserved runtime fact remain unknown, retrieved instructions are evidence without authority, and intent receives the context before any clarification"
+    },
+    {
+      "for": "enrich-context",
+      "given": "a labelled enrichment-only corpus with relevant and irrelevant sources and adversarial cases",
+      "when": "the isolated evaluation invokes production gathering",
+      "then": "case-level checks measure relevance, provenance, request fidelity, safety, bounds and honest unknowns without downstream intent or final-answer grading"
+    },
+    {
+      "for": "limited-context",
+      "given": "missing, unreadable or denied sources, disabled gathering or an exhausted limit",
+      "when": "the single initial pass ends",
+      "then": "gathered, no_evidence, partial, unavailable or disabled status and limitations describe the actual outcome; intent receives that outcome rather than a fabricated fact or an enrichment-owned human pause"
     },
     {
       "for": "classify",
-      "given": "a goal received by the kernel",
+      "given": "the original goal and the checkpointed initial enrichment outcome",
       "when": "kernel.intent asks Jev to classify it",
-      "then": "the goal is classed as decision, evidence, ideas, change or out of domain with one Jev question, and a decision goal starts the decision graph"
+      "then": "the classifier consumes both before choosing decision, evidence, ideas, change or out of domain, or asking about unresolved intent; an explicit contract still wins"
     },
     {
       "for": "split-detect",
@@ -633,6 +743,18 @@
       "given": "the ranked-choice question",
       "when": "you never answer or you cancel",
       "then": "the decision does not resolve and no decision record is staged"
+    },
+    {
+      "for": "enrich-context",
+      "given": "a request whose referent is supplied in the conversation context",
+      "when": "intent routes the task onward to research, decision judgments or host work",
+      "then": "the saved context and its trust boundaries reach native judgments and host input artifacts, conversation and observations inform later repository query hints, and the original goal is unchanged"
+    },
+    {
+      "for": "enrich-context",
+      "given": "saved enrichment that would exceed the remaining provider payload budget or repository excerpts forbidden by data policy",
+      "when": "a consumer builds its Jev batch",
+      "then": "optional context is trimmed with a limitation or omitted with a warning if no marker fits, forbidden excerpts are withheld, and the base request and full checkpointed context remain intact"
     }
   ],
   "provenance": [
@@ -644,16 +766,28 @@
     },
     {
       "action": "extended",
+      "by": "Codex (user-requested context enrichment)",
+      "date": "2026-10-02",
+      "note": "Extended the canonical flow with the implemented initial context pass before intent. DK-100 through DK-104 link implementation and evaluation. The isolated report records 10/10 cases; the separate paired live intent report records 5/5 expected enriched labels with ten Jev calls, without claiming general improvement. Readiness stays draft; no persona approval is claimed."
+    },
+    {
+      "action": "extended",
+      "by": "business-analyst and it-po (Claude agent prompts, user-requested review)",
+      "date": "2026-10-02",
+      "note": "Replaced preliminary DK-100 through DK-104 links with the DK-200 hierarchy: 12 behavioral and 12 edge-case criteria, with 47 exact test links covering 32 test methods. All 32 focused tests and 36 subtests pass. The superseded records retain their original criteria and evidence. Readiness remains draft."
+    },
+    {
+      "action": "extended",
       "by": "flow-author (split-compound-goals plan-feature session)",
       "date": "2026-10-03",
       "note": "v2: extended in place with the split path for a compound subject (a goal, a research request with several needs, or a multi-part decision question), not a new flow. Four steps after classify (split-detect, split-propose, split-approve on screen decision-split-approve, split-run) and one after resolve (split-report on screen decision-split-progress), plus five branches (split-not-needed, split-mid-run, split-dropped, split-revise, split-reject), each with one acceptance scenario. Existing steps keep their ids and content; from precedent on their order moves up by 4. Wired to leafcutter/decisions v3 (Decomposition). The split nodes describe host.decompose_goal (KernelDecomposeMultiPartGoal ticket), which is not built yet: they are spec inside this built flow and carry no ACs until the business-analyst back-links them."
     }
   ],
   "impl_summary": {
-    "done": 0,
+    "done": 2,
     "in_progress": 0,
     "not_started": 25,
-    "total": 25,
-    "asof": "2026-10-03"
+    "total": 27,
+    "asof": "2026-10-04"
   }
 }

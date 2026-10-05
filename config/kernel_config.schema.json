@@ -1,5 +1,77 @@
 {
   "$defs": {
+    "ContextEnrichmentConfig": {
+      "additionalProperties": false,
+      "description": "Read, time and payload bounds independent of the later research capability.",
+      "properties": {
+        "enabled": {
+          "title": "Enabled",
+          "type": "boolean"
+        },
+        "max_chars": {
+          "maximum": 20000,
+          "minimum": 1,
+          "title": "Max Chars",
+          "type": "integer"
+        },
+        "max_context_chars": {
+          "maximum": 12000,
+          "minimum": 1,
+          "title": "Max Context Chars",
+          "type": "integer"
+        },
+        "max_evidence": {
+          "maximum": 32,
+          "minimum": 1,
+          "title": "Max Evidence",
+          "type": "integer"
+        },
+        "max_excerpt_chars": {
+          "maximum": 4000,
+          "minimum": 1,
+          "title": "Max Excerpt Chars",
+          "type": "integer"
+        },
+        "max_files": {
+          "maximum": 1000,
+          "minimum": 1,
+          "title": "Max Files",
+          "type": "integer"
+        },
+        "max_seconds": {
+          "exclusiveMinimum": 0,
+          "maximum": 30,
+          "title": "Max Seconds",
+          "type": "number"
+        },
+        "max_sources": {
+          "maximum": 32,
+          "minimum": 1,
+          "title": "Max Sources",
+          "type": "integer"
+        },
+        "source_ids": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Source Ids",
+          "type": "array"
+        }
+      },
+      "required": [
+        "enabled",
+        "source_ids",
+        "max_files",
+        "max_sources",
+        "max_evidence",
+        "max_chars",
+        "max_context_chars",
+        "max_excerpt_chars",
+        "max_seconds"
+      ],
+      "title": "ContextEnrichmentConfig",
+      "type": "object"
+    },
     "DataPolicyConfig": {
       "additionalProperties": false,
       "description": "What may leave the process (Jev, Langfuse).",
@@ -264,6 +336,122 @@
         "price_per_input_token_usd"
       ],
       "title": "JevConfig",
+      "type": "object"
+    },
+    "KnowledgeBindingConfig": {
+      "additionalProperties": false,
+      "properties": {
+        "backend": {
+          "title": "Backend",
+          "type": "string"
+        },
+        "database": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Database"
+        },
+        "embedding_dimensions": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Embedding Dimensions"
+        },
+        "embedding_endpoint_env": {
+          "title": "Embedding Endpoint Env",
+          "type": "string"
+        },
+        "embedding_model": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Embedding Model"
+        },
+        "embedding_token_env": {
+          "title": "Embedding Token Env",
+          "type": "string"
+        },
+        "embeddings_enabled": {
+          "title": "Embeddings Enabled",
+          "type": "boolean"
+        },
+        "neo4j_password_env": {
+          "title": "Neo4J Password Env",
+          "type": "string"
+        },
+        "neo4j_uri_env": {
+          "title": "Neo4J Uri Env",
+          "type": "string"
+        },
+        "neo4j_username_env": {
+          "title": "Neo4J Username Env",
+          "type": "string"
+        },
+        "query_catalog_root": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Query Catalog Root"
+        },
+        "query_timeout": {
+          "exclusiveMinimum": 0,
+          "maximum": 30,
+          "title": "Query Timeout",
+          "type": "number"
+        },
+        "repository_id": {
+          "title": "Repository Id",
+          "type": "string"
+        },
+        "repository_root": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Repository Root"
+        }
+      },
+      "required": [
+        "backend",
+        "repository_id",
+        "repository_root",
+        "query_catalog_root",
+        "neo4j_uri_env",
+        "neo4j_username_env",
+        "neo4j_password_env",
+        "database",
+        "embeddings_enabled",
+        "embedding_endpoint_env",
+        "embedding_token_env",
+        "embedding_model",
+        "embedding_dimensions",
+        "query_timeout"
+      ],
+      "title": "KnowledgeBindingConfig",
       "type": "object"
     },
     "LangfuseConfig": {
@@ -833,6 +1021,7 @@
           "enum": [
             "repo_text",
             "knowledge_map",
+            "graph_query",
             "host_research"
           ],
           "title": "Kind",
@@ -880,6 +1069,9 @@
   "additionalProperties": false,
   "description": "Complete kernel configuration.",
   "properties": {
+    "context_enrichment": {
+      "$ref": "#/$defs/ContextEnrichmentConfig"
+    },
     "data_policy": {
       "$ref": "#/$defs/DataPolicyConfig"
     },
@@ -894,6 +1086,9 @@
     },
     "jev": {
       "$ref": "#/$defs/JevConfig"
+    },
+    "knowledge": {
+      "$ref": "#/$defs/KnowledgeBindingConfig"
     },
     "langfuse": {
       "$ref": "#/$defs/LangfuseConfig"
@@ -925,10 +1120,12 @@
     }
   },
   "required": [
+    "knowledge",
     "paths",
     "limits",
     "routing",
     "intent",
+    "context_enrichment",
     "decision",
     "research",
     "retrieval",

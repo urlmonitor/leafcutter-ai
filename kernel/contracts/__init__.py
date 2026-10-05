@@ -17,11 +17,13 @@ from types import ModuleType
 from kernel.contracts import (
     base,
     capability,
+    context,
     decision,
     enums,
     evidence,
     interaction,
     payloads,
+    query,
     run,
     schema_ids,  # noqa: F401
     task,
@@ -111,8 +113,10 @@ from kernel.contracts.work import (  # noqa: F401
     WorkItem,
 )
 
-_MODULES: tuple[ModuleType, ...] = (base, capability, decision, enums, evidence, interaction,
-                                    payloads, run, task, work)
+from kernel.contracts.context import CallerContext, ContextExcerpt, EnrichedContext  # noqa: F401
+
+_MODULES: tuple[ModuleType, ...] = (base, capability, context, decision, enums, evidence, interaction,
+                                    payloads, query, run, task, work)
 
 
 def _collect_types() -> tuple[type, ...]:

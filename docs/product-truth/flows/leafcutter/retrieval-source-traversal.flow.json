@@ -1,0 +1,263 @@
+{
+  "id": "leafcutter/retrieval-source-traversal",
+  "component": "knowledge-management",
+  "product": "Leafcutter",
+  "name": "Navigate nodes, folders and files",
+  "level": "journey",
+  "summary": "Jev chooses observed navigation candidates; the system reads bounded sources and retains the path and evidence.",
+  "kind": "data",
+  "source": "real",
+  "realization": "spec",
+  "status": "active",
+  "readiness": "draft",
+  "version": 1,
+  "shape_version": 2,
+  "tags": [
+    "retrieval",
+    "target-design"
+  ],
+  "entities": [],
+  "steps": [
+    {
+      "id": "offer",
+      "label": "Offer a scoped starting frontier",
+      "agent": "System",
+      "human": "Expose permitted observed starting nodes/relationships or repository folders/files from the selected plan and pinned source. Include identifiers, types, path/edge meaning and source locators. Do not infer a complete call graph from file existence. Bind reads to immutable revision bytes/materialization, or explicitly identify working-tree bytes with content hashes. A commit label alone does not pin changing filesystem content. Do not conflate these modes.",
+      "order": 1,
+      "implements": [],
+      "consumes": [
+        "Selected traversal mode, original question, pinned scope and prior history"
+      ],
+      "produces": [
+        "Observed scoped frontier and remaining budget"
+      ],
+      "impl_asof": "2026-10-02",
+      "impl_status": "not_started"
+    },
+    {
+      "id": "frontier",
+      "label": "Choose the next navigation step",
+      "agent": "Jev",
+      "human": "Choose one or more offered node/edge neighbours, directories, files or bounded excerpts that may answer the ORIGINAL question. Choose continue, return evidence, switch method, clarify or stop. Never invent candidate IDs/paths or perform reads.\n\nGraph navigation and repository navigation are distinct offered modes. Select among observed candidates; no arbitrary Cypher or unrestricted filesystem exploration.",
+      "order": 2,
+      "implements": [],
+      "consumes": [
+        "Observed scoped frontier and remaining budget"
+      ],
+      "produces": [
+        "Bounded frontier selection or return decision"
+      ],
+      "impl_asof": "2026-10-02",
+      "impl_status": "not_started"
+    },
+    {
+      "id": "validate",
+      "label": "Validate the selected frontier",
+      "agent": "System",
+      "human": "Check selected IDs/paths against observed candidates, pinned revision, allowed relationships/read roots and remaining limits. Apply visited/attempt history to prevent cycles and identical no-progress reads. Reject escaped, unavailable or stale candidates without broadening scope. Enforce configured scan-entry, depth, elapsed-time, read-count and byte bounds, not merely a returned-candidate cap. Graph relation/mapping availability must come from the actual serving manifest. A valid return/switch/clarify/stop decision bypasses reading and goes to retention, preserving its original decision and history.",
+      "order": 3,
+      "implements": [],
+      "consumes": [
+        "Bounded frontier selection or return decision"
+      ],
+      "produces": [
+        "Validated read selection, validated non-reading decision or explicit refusal"
+      ],
+      "impl_asof": "2026-10-02",
+      "impl_status": "not_started"
+    },
+    {
+      "id": "read",
+      "label": "Read nodes or code locations",
+      "agent": "System",
+      "human": "For an accepted selection, enumerate the bounded next graph neighbours or folder entries, or read the selected node/file excerpt. Preserve edge direction/path, source/revision, locator, limit/truncation and execution outcome. This is actual system traversal, not Jev generation.\n\nCharge each read to the existing run budget and record visited identities; matching resume must not repeat completed reads. A file/folder relationship is navigation evidence, not proof of a semantic dependency. Returned subsets do not prove full folder/graph coverage, absence or exact counts; disclose truncation and unresolved boundaries.",
+      "order": 4,
+      "implements": [],
+      "consumes": [
+        "Validated read selection only"
+      ],
+      "produces": [
+        "Attributable traversal attempt and observed next frontier"
+      ],
+      "impl_asof": "2026-10-02",
+      "impl_status": "not_started"
+    },
+    {
+      "id": "judge",
+      "label": "Judge progress on the question",
+      "agent": "Jev",
+      "human": "Judge returned evidence and frontier against the original need. Choose another observed frontier, a different/complementary method, return useful evidence, focused clarification or stop. Empty, denied, unavailable and truncated results have different meanings; none may silently erase useful earlier evidence.",
+      "order": 5,
+      "implements": [],
+      "consumes": [
+        "Attributable traversal attempt and observed next frontier"
+      ],
+      "produces": [
+        "Continue, switch, return, clarify or stop decision"
+      ],
+      "impl_asof": "2026-10-02",
+      "impl_status": "not_started"
+    },
+    {
+      "id": "retain",
+      "label": "Retain history and return or resume",
+      "agent": "System",
+      "human": "Checkpoint visited/frontier identities, attempts, evidence and remaining budget with the same question/scope/source. Route the bounded decision: continue at [frontier selection](docs/product-truth/flows/leafcutter/retrieval-source-traversal.flow.json#frontier); otherwise return separate outcomes to [shared comparison](docs/product-truth/flows/leafcutter/retrieve-project-knowledge.flow.json#compare). After comparison and advisory recording, a method switch returns to [main planning](docs/product-truth/flows/leafcutter/retrieve-project-knowledge.flow.json#plan), not an untracked recursive search.",
+      "order": 6,
+      "implements": [],
+      "consumes": [
+        "Validated non-reading decision or post-read continue/switch/return/clarify/stop decision"
+      ],
+      "produces": [
+        "Retained attributable attempt results or matching continuation"
+      ],
+      "impl_asof": "2026-10-02",
+      "impl_status": "not_started"
+    }
+  ],
+  "branches": [
+    {
+      "id": "continue",
+      "from": "retain",
+      "label": "Continue through observed candidates",
+      "agent": "System",
+      "condition": "Jev selected an unvisited useful frontier and budget remains",
+      "human": "Return to [frontier selection](docs/product-truth/flows/leafcutter/retrieval-source-traversal.flow.json#frontier) with the actual observed candidates, visited history and cumulative budget; do not recreate the starting state.",
+      "outcome_kind": "alternative",
+      "implements": [],
+      "impl_asof": "2026-10-02",
+      "impl_status": "not_started"
+    },
+    {
+      "id": "fallback",
+      "from": "retain",
+      "label": "Switch or add a method",
+      "agent": "System",
+      "condition": "Jev selected an alternative/complementary method after limited progress",
+      "human": "Return outcomes to [comparison and advisory recording](docs/product-truth/flows/leafcutter/retrieve-project-knowledge.flow.json#compare), then [method selection](docs/product-truth/flows/leafcutter/retrieve-project-knowledge.flow.json#plan). Preserve useful evidence; the next plan may use another method or both compatible methods.",
+      "outcome_kind": "alternative",
+      "implements": [],
+      "impl_asof": "2026-10-02",
+      "impl_status": "not_started"
+    },
+    {
+      "id": "exhausted",
+      "from": "validate",
+      "label": "No permitted next read",
+      "agent": "System",
+      "condition": "No useful unvisited candidate remains, the budget is exhausted, or the selected read is refused",
+      "human": "Skip reading and retain an explicit bounded outcome. Join [shared comparison](docs/product-truth/flows/leafcutter/retrieve-project-knowledge.flow.json#compare); if no other permitted useful method remains, finish partial/blocked without an identical retry.",
+      "outcome_kind": "exit",
+      "implements": [],
+      "impl_asof": "2026-10-02",
+      "impl_status": "not_started"
+    },
+    {
+      "id": "clarify",
+      "from": "judge",
+      "label": "Clarify intent or authority",
+      "agent": "Jev",
+      "condition": "Observed evidence exposes a material ambiguity that cannot be resolved safely",
+      "human": "Choose the bounded clarification outcome without authoring question prose. Pass this decision to [System retention](docs/product-truth/flows/leafcutter/retrieval-source-traversal.flow.json#retain), then [shared attempt comparison](docs/product-truth/flows/leafcutter/retrieve-project-knowledge.flow.json#compare) and advisory recording before main clarification dispatch. Preserve evidence and history; do not invent the missing fact.",
+      "outcome_kind": "alternative",
+      "implements": [],
+      "impl_asof": "2026-10-02",
+      "impl_status": "not_started"
+    },
+    {
+      "id": "nonreading",
+      "from": "validate",
+      "label": "Retain a decision without reading",
+      "agent": "System",
+      "condition": "Jev chose return, switch, clarification or stop instead of a read",
+      "human": "Validate the bounded non-reading action and route directly to [System retention](docs/product-truth/flows/leafcutter/retrieval-source-traversal.flow.json#retain). Skip both read and post-read judgment; retain the existing attempts, evidence, frontier and budget. Only an accepted read selection reaches the read step.",
+      "outcome_kind": "alternative",
+      "implements": [],
+      "impl_asof": "2026-10-02",
+      "impl_status": "not_started"
+    }
+  ],
+  "provenance": [
+    {
+      "action": "authored",
+      "by": "flow-author",
+      "date": "2026-10-02",
+      "note": "Proposed adaptive traversal — not built\nThis dedicated method refines the existing retrieval journey. It describes Jev frontier choice and System traversal with multi-method return routes. Existing bounded graph operations and native repository retrieval are reusable primitives, not proof that this adaptive node/folder navigation loop is wired. No runtime, provider or source publication occurs in this design task.\n\nArchitecture evidence: existing graph neighbour/recipe operations and native allowlisted file enumeration/locators are primitives. No public Jev frontier-navigation or directory-listing contract is currently exposed. A proposed typed enumerate-frontier/read-selected adapter must preserve visited IDs and scan bounds. Native worktree reads are not immutable Git reads merely because a revision label is attached. This draft does not claim a complete code/call/import graph."
+    }
+  ],
+  "acceptance_scenarios": [
+    {
+      "given": "Selected traversal mode, original question, pinned scope and prior history",
+      "when": "Offer a scoped starting frontier",
+      "then": "Observed scoped frontier and remaining budget",
+      "for": "offer"
+    },
+    {
+      "given": "Observed scoped frontier and remaining budget",
+      "when": "Choose the next navigation step",
+      "then": "Bounded frontier selection or return decision",
+      "for": "frontier"
+    },
+    {
+      "given": "Bounded frontier selection or return decision",
+      "when": "Validate the selected frontier",
+      "then": "Validated read selection, validated non-reading decision or explicit refusal",
+      "for": "validate"
+    },
+    {
+      "given": "Validated read selection only",
+      "when": "Read nodes or code locations",
+      "then": "Attributable traversal attempt and observed next frontier",
+      "for": "read"
+    },
+    {
+      "given": "Attributable traversal attempt and observed next frontier",
+      "when": "Judge progress on the question",
+      "then": "Continue, switch, return, clarify or stop decision",
+      "for": "judge"
+    },
+    {
+      "given": "Validated non-reading decision or post-read continue/switch/return/clarify/stop decision",
+      "when": "Retain history and return or resume",
+      "then": "Retained attributable attempt results or matching continuation",
+      "for": "retain"
+    },
+    {
+      "given": "Jev selected an unvisited useful frontier and budget remains",
+      "when": "Continue through observed candidates",
+      "then": "Return to [frontier selection](docs/product-truth/flows/leafcutter/retrieval-source-traversal.flow.json#frontier) with the actual observed candidates, visited history and cumulative budget; do not recreate the starting state.",
+      "for": "continue"
+    },
+    {
+      "given": "Jev selected an alternative/complementary method after limited progress",
+      "when": "Switch or add a method",
+      "then": "Return outcomes to [comparison and advisory recording](docs/product-truth/flows/leafcutter/retrieve-project-knowledge.flow.json#compare), then [method selection](docs/product-truth/flows/leafcutter/retrieve-project-knowledge.flow.json#plan). Preserve useful evidence; the next plan may use another method or both compatible methods.",
+      "for": "fallback"
+    },
+    {
+      "given": "No useful unvisited candidate remains, the budget is exhausted, or the selected read is refused",
+      "when": "No permitted next read",
+      "then": "Skip reading and retain an explicit bounded outcome. Join [shared comparison](docs/product-truth/flows/leafcutter/retrieve-project-knowledge.flow.json#compare); if no other permitted useful method remains, finish partial/blocked without an identical retry.",
+      "for": "exhausted"
+    },
+    {
+      "given": "Observed evidence exposes a material ambiguity that cannot be resolved safely",
+      "when": "Clarify intent or authority",
+      "then": "Choose the bounded clarification outcome without authoring question prose. Pass this decision to [System retention](docs/product-truth/flows/leafcutter/retrieval-source-traversal.flow.json#retain), then [shared attempt comparison](docs/product-truth/flows/leafcutter/retrieve-project-knowledge.flow.json#compare) and advisory recording before main clarification dispatch. Preserve evidence and history; do not invent the missing fact.",
+      "for": "clarify"
+    },
+    {
+      "given": "Jev chose return, switch, clarification or stop instead of a read",
+      "when": "Retain a decision without reading",
+      "then": "Validate the bounded non-reading action and route directly to [System retention](docs/product-truth/flows/leafcutter/retrieval-source-traversal.flow.json#retain). Skip both read and post-read judgment; retain the existing attempts, evidence, frontier and budget. Only an accepted read selection reaches the read step.",
+      "for": "nonreading"
+    }
+  ],
+  "impl_summary": {
+    "done": 0,
+    "in_progress": 0,
+    "not_started": 11,
+    "total": 11,
+    "asof": "2026-10-02"
+  }
+}

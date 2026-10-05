@@ -20,7 +20,9 @@ from typing import Annotated, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, ValidationError, model_validator
 
+from integrations.knowledge_config import KnowledgeBindingConfig
 from kernel.config_memory import MemoryConfig
+from kernel.config_context import ContextEnrichmentConfig
 from kernel.contracts.base import fail
 from kernel.contracts.enums import EvidenceCategory
 
@@ -36,7 +38,12 @@ class ConfigError(Exception):
     """The kernel configuration could not be read or failed validation."""
 
     def __init__(self, source: Path | str, detail: str) -> None:
-        """Build the message from the config source and detail."""
+        """Build the message from the config source and detail.
+
+        Args:
+            source: Configured evidence source or failing configuration path.
+            detail: Human-readable failure detail.
+        """
         super().__init__(f"invalid kernel config {source}: {detail}")
         self.source = str(source)
         self.detail = detail
@@ -211,7 +218,7 @@ class SourceConfig(_Section):
     """One entry of the source catalog (where evidence may come from)."""
 
     id: str
-    kind: Literal["repo_text", "knowledge_map", "host_research"]
+    kind: Literal["repo_text", "knowledge_map", "graph_query", "host_research"]
     categories: list[EvidenceCategory] = Field(min_length=1)
     roots: list[str] = Field(default_factory=list)
     surfaces: list[str] = Field(default_factory=list)
@@ -261,10 +268,12 @@ class LangfuseConfig(_Section):
 class KernelConfig(_Section):
     """Complete kernel configuration."""
 
+    knowledge: KnowledgeBindingConfig
     paths: PathsConfig
     limits: LimitsConfig
     routing: RoutingConfig
     intent: IntentConfig
+    context_enrichment: ContextEnrichmentConfig
     decision: DecisionConfig
     research: ResearchConfig
     retrieval: RetrievalConfig
@@ -295,7 +304,14 @@ def default_config_path() -> Path:
 
 
 def _read_object(path: Path) -> dict:
-    """Read a JSON object from path, raising ConfigError on IO or parse problems."""
+    """Read a JSON object from path, raising ConfigError on IO or parse problems.
+
+    Args:
+        path: Configuration file path.
+
+    Returns:
+        dict: Result of the documented operation.
+    """
     try:
         data = json.loads(path.read_text(encoding="utf-8"))
     except OSError as exc:
@@ -310,7 +326,15 @@ def _read_object(path: Path) -> dict:
 
 
 def deep_merge(base: Mapping, override: Mapping) -> dict:
-    """Return base with override merged in; nested objects merge, everything else replaces."""
+    """Return base with override merged in; nested objects merge, everything else replaces.
+
+    Args:
+        base: Default configuration object.
+        override: Configuration overrides to merge.
+
+    Returns:
+        dict: Result of the documented operation.
+    """
     merged = dict(base)
     for key, value in override.items():
         if isinstance(value, Mapping) and isinstance(merged.get(key), Mapping):
@@ -324,10 +348,11 @@ def load_kernel_config(override: Path | None = None, *, env: Mapping[str, str] |
                        default_path: Path | None = None) -> KernelConfig:
     """Load defaults, merge the optional override and validate.
 
+    Keyword options: env supplies an environment mapping (default os.environ);
+    default_path selects an alternative defaults file for tests.
+
     Args:
         override: Override file; falls back to the LEAFCUTTER_KERNEL_CONFIG env var.
-        env: Environment mapping (defaults to os.environ).
-        default_path: Alternative defaults file (tests).
 
     Returns:
         KernelConfig: The validated, frozen configuration.
@@ -398,3 +423,5 @@ def write_config_schema(path: Path) -> None:
 #   the only place a threshold value exists; max_cost_usd and price use null for unknown.
 #   (#KernelBootstrapV0/P1)
 # ====================================================================
+
+# - 2026-10-01 20:00 [python-coder]: Bind optional knowledge through existing scoped retrieval contracts. (#TICKET-20261001-KM-400e-3)

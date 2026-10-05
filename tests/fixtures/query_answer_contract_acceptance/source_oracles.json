@@ -1,0 +1,28 @@
+{
+  "source_revision": "9d11594782abfb417d0f3a826bfb1f91f3a523ac",
+  "derivation": "Independent git show and YAML parse; expectations only, never supplied as response backfill.",
+  "records": {
+    "TQ-500f-2": {
+      "path": "docs/acceptance-criteria/testing-quality/TQ-500-checks-that-can-fail/TQ-500f-2.yaml",
+      "source_sha256": "c29fe38077176f0dccdd8d5ebc9c30a21658b81182c81cdc10312e4ec5da0f94",
+      "id": "TQ-500f-2",
+      "level": "L2",
+      "status": "active",
+      "work_status": "todo",
+      "req_status": "draft",
+      "readiness": "approved",
+      "criteria": "Given a requirement whose test plan has two entries —\n    entry 1: name: test_retry_gate_runs_when_both_conditions_due\n             must_catch:\n               - \"revert the fix\"\n               - \"drop the second gate condition (retry_due)\"\n               - \"new column cvd_delta_30 left NULL\"\n    entry 2: name: test_retry_gate_idle_when_nothing_due\n             (no must_catch)\nWhen the requirement store's validator checks the requirement,\n  And work is generated from it,\nThen the validator accepts the requirement,\n  And the generated work's test requirements entry for\n    test_retry_gate_runs_when_both_conditions_due carries must_catch with\n    exactly those three strings, in that order, character for character —\n    not reworded, not merged, not reordered, not trimmed,\n  And the generated work's test requirements entry for\n    test_retry_gate_idle_when_nothing_due carries no must_catch at all —\n    nothing is invented for an entry whose requirement named none,\n  And the generated test requirements, including the must_catch list,\n    conform to the schema that governs generated test requirements,\n  And the test writer, reading the generated work, sees the three named\n    wrong versions against the test they belong to.\n"
+    },
+    "KM-500c-2": {
+      "path": "docs/acceptance-criteria/knowledge-management/KM-500-research-capability-growth/KM-500c-2.yaml",
+      "source_sha256": "cb60eb902205c4ec5fbb884ad5dac7540944eb04ea3cf7ec4702e561a6d48d43",
+      "id": "KM-500c-2",
+      "level": "L2",
+      "status": "active",
+      "work_status": "done",
+      "req_status": "active",
+      "readiness": "approved",
+      "criteria": "Given the original research has obtained results from an existing or newly verified query\nWhen its existing evidence evaluation decides whether the question can be answered\nThen the answer or evidence bundle cites the actual source revision and retrieved items and states which required needs remain unsatisfied\nAnd a successful build, successful query execution and successful answer assessment remain separate recorded outcomes\nAnd zero matches, contradictory evidence and insufficient evidence remain distinguishable with their limitations intact\nAnd any bounded synthesis or follow-up uses the existing research policy rather than silently treating query availability as answer quality.\n"
+    }
+  }
+}

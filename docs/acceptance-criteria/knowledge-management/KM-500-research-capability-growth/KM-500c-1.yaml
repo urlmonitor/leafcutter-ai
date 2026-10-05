@@ -1,0 +1,195 @@
+id: KM-500c-1
+title: Resume the waiting research only after its query becomes usable
+component: knowledge-management
+components:
+- knowledge_management
+level: L2
+status: active
+req_status: active
+readiness: approved
+priority: medium
+work_status: done
+parent: KM-500c
+criteria: 'Given research is waiting on an attributable query-build child
+
+  When a matching verified activation receipt is delivered through the existing continuation path
+
+  Then the original run, question and evidence need resume with the newly available catalog version selected at
+  that continuation boundary
+
+  And the original repository, pinned source revision, input answers and remaining budget are preserved
+
+  And the resumed research invokes the new registered query at most once for that completed build delivery
+
+  And a foreign, stale, duplicate or self-certified child result cannot resume unrelated research or execute an
+  unverified candidate
+
+  And building or registering a query does not itself count as retrieved evidence or an answered question.
+
+  '
+depends_on:
+- KM-500c
+doc_links:
+- path: docs/acceptance-criteria/knowledge-management/KM-400-trustworthy-project-knowledge/KM-400.yaml
+  relationship: context
+  status: exists
+  relevance: Reuse standalone retrieval, canonical provenance, budget limits and honest result statuses; this extension
+    does not replace completed KM-400 behavior.
+- path: docs/architecture/adrs/ADR-053-intelligence-selection-deterministic-jev-llm-human.md
+  relationship: context
+  status: exists
+  relevance: Deterministic eligibility before bounded semantic judgment; clarification and no-progress remain existing
+    mechanisms.
+- path: docs/architecture/adrs/ADR-056-colony-memory-evidence-reinforcement.md
+  relationship: context
+  status: exists
+  relevance: Reuse canonical capability gaps and verified registration; provider failures and ambiguity are not
+    capability-growth evidence.
+origin_agent: business-analyst
+created: '2026-10-01'
+amended_by:
+- '2026-10-02: Replace automatic hosted-Aura coverage with repeatable real local-Neo4j public-kernel admission, resume and reuse proof; retain the hosted harness and receipt as manual historical deployment evidence. Scripted Jev and host actors do not establish live semantic quality. Criteria and lifecycle unchanged.'
+superseded_by: null
+covered_by:
+- tests/knowledge/test_query_growth_kernel.py::TestQueryGrowthRun::test_verified_build_resumes_same_research_and_fresh_run_reuses_catalog
+- tests/knowledge/test_query_growth_adversarial.py::test_resume_rejects_other_verified_version_of_same_operation
+- tests/knowledge/test_query_growth_adversarial.py::test_scalar_clarification_preserves_pins_and_cannot_override_scope
+- tests/kernel/interaction/test_restart_resume.py::TestKilledAroundTheLedgerWrite::test_kill_mid_resume_then_replay_finishes_the_run_without_reapplying
+- tests/knowledge_live/query_growth_local_checks.py::test_local_query_growth_public_proof
+implemented_by:
+- tickets/00_inbox/TICKET-20261001-KM-500c-1.md
+- integrations/query_growth.py
+- integrations/query_planning.py
+- integrations/query_activation.py
+- integrations/query_contracts.py
+- kernel/contracts/query.py
+- kernel/capabilities/host/query_build.py
+change_target: code
+risk_surface: contract_boundary
+notes: 'User explicitly authorized implementation of this research/query capability-growth loop. PO reviewed the
+  separate KM-500 product boundary. Approval records scope authorization, not completed work. IT PO supplies technical
+  constraints and test contracts; canonical tickets precede implementation. 2026-10-01 independent BA reconciliation:
+  actual public tests linked; local Neo4j proof is synthetic graph execution, scheduler proof uses scripted Jev/Cypher.
+  This checkpoint was superseded by the final acceptance below. Final independent acceptance:
+  bounded implemented behavior passes linked criterion tests and actual Neo4j/Aura artifacts where promised; live
+  external Jev remains not run pending explicit provider approval. See docs/analysis/2026-10-01-query-growth-acceptance.md.
+  Commit/release status is separate.'
+assigned_agent: python-coder
+estimated_complexity: L
+it_requirements:
+- Retrieval continuation phases clarification/build/admission/execution preserve original goal, evidence need, trusted
+  scope, immutable source revision, selected arguments and budget state.
+- Validate activation receipt against requested repository/source/operation/digest; execute through the registered
+  retrieval binding and retain canonical Evidence/SourceVersion provenance.
+test_required: true
+test_rationale: Prove observable behavior at the public service/kernel or trusted real-backend admission boundary.
+  Provider and host doubles are labeled; no helper-only proof substitutes for the persisted end-to-end flow.
+test_spec:
+- name: test_km500_c_1_behavior
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: integration
+  angle: criterion
+  description: Complete real KernelService missing-query host handoff, verified activation and retrieval in the
+    same research, reopen checkpoint, then prove fresh-run reuse without a build handoff.
+  covers:
+  - KM-500c-1
+  requires_db: false
+expects_from:
+  ac_id: KM-400e-3
+  contract: Existing scoped retrieval, canonical evidence, optional bootstrap and checkpoint lifecycle remain compatible.
+delivers_to:
+  agent: python-coder
+  contract: Implement KM-500c-1 at tests/knowledge/test_query_growth_kernel.py public test seam; neutral query catalog/admission
+    and kernel integration share versioned descriptors and digest-bound activation receipts.
+product_truth:
+  - flow: leafcutter/retrieval-current-baseline
+    node: build
+    node_kind: branch
+    flow_kind: data
+    screen: null
+    mock_data: null
+    entities: []
+    source: real
+    asof: '2026-10-02'
+  - flow: leafcutter/retrieval-current-baseline
+    node: build-2
+    node_kind: branch
+    flow_kind: data
+    screen: null
+    mock_data: null
+    entities: []
+    source: real
+    asof: '2026-10-02'
+  - flow: leafcutter/retrieval-current-baseline
+    node: clarify
+    node_kind: branch
+    flow_kind: data
+    screen: null
+    mock_data: null
+    entities: []
+    source: real
+    asof: '2026-10-02'
+  - flow: leafcutter/retrieval-current-baseline
+    node: clarify-2
+    node_kind: branch
+    flow_kind: data
+    screen: null
+    mock_data: null
+    entities: []
+    source: real
+    asof: '2026-10-02'
+  - flow: leafcutter/retrieval-current-baseline
+    node: clarify-3
+    node_kind: branch
+    flow_kind: data
+    screen: null
+    mock_data: null
+    entities: []
+    source: real
+    asof: '2026-10-02'
+  - flow: leafcutter/retrieval-current-baseline
+    node: pin
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: null
+    entities: []
+    source: real
+    asof: '2026-10-02'
+  - flow: leafcutter/retrieval-current-baseline
+    node: return
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: null
+    entities: []
+    source: real
+    asof: '2026-10-02'
+  - flow: leafcutter/retrieval-current-baseline
+    node: synthesis
+    node_kind: branch
+    flow_kind: data
+    screen: null
+    mock_data: null
+    entities: []
+    source: real
+    asof: '2026-10-02'
+  - flow: leafcutter/retrieval-current-baseline
+    node: synthesis-2
+    node_kind: branch
+    flow_kind: data
+    screen: null
+    mock_data: null
+    entities: []
+    source: real
+    asof: '2026-10-02'
+  - flow: leafcutter/retrieval-current-baseline
+    node: synthesis-3
+    node_kind: branch
+    flow_kind: data
+    screen: null
+    mock_data: null
+    entities: []
+    source: real
+    asof: '2026-10-02'

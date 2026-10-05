@@ -1,0 +1,66 @@
+[
+  {
+    "path": "knowledge/projection/canonical_loader.py",
+    "active_sha256": "d6c8717676f31829f79b12a8c2bb5017923ced47e0fba645695b96e966e35c48",
+    "active_matches_git_head": true,
+    "new_sha256": "15983ea39c2077e2e757a454ffd03d7ab9711a791c408ed4579c98c6cd109f38"
+  },
+  {
+    "path": "knowledge/projection/validation.py",
+    "active_sha256": "17a09c17d811c20b7976aa12bd8745e086f75cf84fa2506a54d07b2344f84d17",
+    "active_matches_git_head": true,
+    "new_sha256": "b53a58831f3e920c96412e58957a075db6d23af7faba1ba18c4506c112629c96"
+  },
+  {
+    "path": "knowledge/cli_sync.py",
+    "active_sha256": "3a36907e5ff1aa43c6522534b8abd3fac7716ce33acf4426e40f4ff92830ef15",
+    "active_matches_git_head": true,
+    "new_sha256": "14cf1e0b7051f11baa6f682f6a9d29d946b4f229a9966198a1c2d379d9187e9a"
+  },
+  {
+    "path": "knowledge/adapters/neo4j_backend.py",
+    "active_sha256": "290aeae708b2c0aab1aa8d806b4f36df368550e4d7259f83945be0e2be316837",
+    "active_matches_git_head": false,
+    "new_sha256": "8d1f4068aec29641270ee0aa7b388ccddc999064c42aa0a935a1b4026ba9307c"
+  },
+  {
+    "path": "knowledge/adapters/domain_schema.py",
+    "active_sha256": "56c368d2af202e34f6ad8d19c3adc52e6426c21a02c8740025659a68f3493af7",
+    "active_matches_git_head": false,
+    "new_sha256": "1a22b9f253af794261da02e7693f4c5cf8024f780ad540a3dc6edf83c41a5b50"
+  },
+  {
+    "path": "knowledge/adapters/neo4j_domain_build.py",
+    "active_sha256": "01b981bf9e1b27602bf9ee9fa156ca3ef345dc78022e5e28bb06bfa1aef36e72",
+    "active_matches_git_head": false,
+    "new_sha256": "3e6a52539d2d78f91a4bc4c1c9b68856ab6314af7b20dcf673ebbd8d1c81498a"
+  },
+  {
+    "path": "knowledge/README.md",
+    "active_sha256": "23280952010d435f36be7c7ec1fcc4b726840e6d84fad76dd2b8644908186ff9",
+    "active_matches_git_head": false,
+    "new_sha256": "ecae9df5e425791d5f45010c2edfedc8aba0046eeddbadfc2502c559f287b9d3"
+  },
+  {
+    "path": "docs/how-to/run-knowledge-retrieval.md",
+    "active_sha256": "a4ca29395efeb4a47f91030e635e8ec6cd6407a3f056c06cbe761c7f5c038842",
+    "active_matches_git_head": false,
+    "new_sha256": "b55a72cf232c94b697f5f5e64d4e9d75cf3bbe74d683871174ad75ad5871ebe4"
+  },
+  {
+    "path": "docs/architecture/components/knowledge-retrieval.md",
+    "active_sha256": "846755085e0c69738275efb457fb065cbdd0d20b0a8d66304a851b6b3f2bbcb9",
+    "active_matches_git_head": false,
+    "new_sha256": "d4e492fc7cd193b107bfaff95e9d5e4415c48d1db2c96359441e1a73335c5b3e"
+  },
+  {
+    "path": "docs/acceptance-criteria/knowledge-management/KM-400-trustworthy-project-knowledge/KM-400a-3-i.yaml",
+    "active_sha256": "946e31e0ae4e75225f4fdf70e8c5b916c4f5f5a2cda8755e27a23c06467a55b1",
+    "active_matches_git_head": false
+  },
+  {
+    "path": "tickets/00_inbox/TICKET-20261002-KM-400a-3-i.md",
+    "active_sha256": "b420d7de5d76172231d719ea8374a9bcfe72253cd2dd59b1ac3ea6070a8c05f5",
+    "active_matches_git_head": false
+  }
+]

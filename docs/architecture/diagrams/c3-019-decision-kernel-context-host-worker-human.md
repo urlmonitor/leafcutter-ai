@@ -64,6 +64,10 @@ See also: [Request Flow 2 — Handoff, Resume and Finalize](c3-014-decision-kern
 
 ## Host LLM and the host packet compiler
 
+The input artifact also carries the checkpointed enrichment snapshot and explicit trust labels:
+caller-supplied claims and retrieved excerpts are context, never authority or approval. Both the
+Claude Code and Codex transport skills supply relevant context they already know when starting a run.
+
 | Context piece | Exact source | Assembled by | Available from |
 |---|---|---|---|
 | Operation | The bound descriptor's first `operations` entry in `config/capability_registry.json` | `open_interactions` (`kernel/interaction/packets.py`) | V0 |

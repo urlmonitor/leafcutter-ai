@@ -9,6 +9,8 @@ ARCHITECTURE: TaskInput is the external boundary (unknown fields rejected); Task
 
 from __future__ import annotations
 
+from kernel.contracts.verbatim import VerbatimJson
+
 from pathlib import Path, PurePosixPath, PureWindowsPath
 
 from pydantic import Field, JsonValue, field_validator, model_validator
@@ -17,6 +19,7 @@ from kernel.contracts import schema_ids
 from kernel.contracts.base import KernelModel, PersistedModel, StableId, fail
 from kernel.contracts.enums import ActorKind, ApprovalStatus, ConstraintSeverity
 from kernel.contracts.evidence import EvidenceInput
+from kernel.contracts.context import CallerContext
 
 _ORIGINS = frozenset({"caller", "policy", "human", "host"})
 
@@ -59,7 +62,14 @@ class Scope(KernelModel):
     @field_validator("read_roots")
     @classmethod
     def _relative_roots(cls, value: list[str]) -> list[str]:
-        """Read roots must be relative and stay inside the repository root."""
+        """Read roots must be relative and stay inside the repository root.
+
+        Args:
+            value: Caller-supplied repository-relative read roots.
+
+        Returns:
+            Validated relative roots within the repository.
+        """
         for root in value:
             posix, win = PurePosixPath(root), PureWindowsPath(root)
             if posix.is_absolute() or win.is_absolute() or win.drive:
@@ -111,8 +121,9 @@ class TaskInput(KernelModel):
     #: None means "not chosen by the caller": intake classifies the goal (Rev 3 section 7.11).
     requested_output_schema: str | None = None
     input_payload_schema: str | None = None
-    input_payload: dict[str, JsonValue] | None = None
+    input_payload: dict[str, VerbatimJson] | None = None
     initial_evidence: list[EvidenceInput] = Field(default_factory=list)
+    context: CallerContext = Field(default_factory=CallerContext)
     constraints: list[Constraint] = Field(default_factory=list)
     permissions: list[str] = Field(default_factory=lambda: ["read_repo"])
 
