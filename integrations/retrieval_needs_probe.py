@@ -5,7 +5,7 @@ ARCHITECTURE: One isolated LangGraph node uses the existing TypeSafe adapter wit
 """
 from __future__ import annotations
 
-from typing import Any, TypedDict
+from typing import Any, NotRequired, TypedDict
 
 from langgraph.graph import END, START, StateGraph
 
@@ -50,7 +50,7 @@ class _ProbeState(TypedDict):
     """Only the immutable request and typed result enter the isolated graph."""
 
     request: NeedsRequest
-    result: NeedsProbeResult
+    result: NotRequired[NeedsProbeResult]
 
 
 def _selections(batch: JevBatch, result: JevResult, limits: ProbeLimits) -> tuple[Selections, Selections, Selections]:
@@ -121,7 +121,10 @@ def _result(request: NeedsRequest, batch: JevBatch, response: JevResult, calls: 
     choices = {identifier: _choice(response, identifier, limits) for identifier in CHOICES}
     unresolved = _unresolved(selected, choices, response, limits)
     return NeedsProbeResult(original_question=request.original_question, source_scope=request.source_scope,
-        selections=selected, uncertain=uncertain, rejected=rejected, **choices, unresolved=unresolved,
+        selections=selected, uncertain=uncertain, rejected=rejected,
+        detail_mode=choices["detail_mode"], completeness=choices["completeness"],
+        hierarchy_scope=choices["hierarchy_scope"], scope_resolution=choices["scope_resolution"],
+        unresolved=unresolved,
         status="needs_resolution" if unresolved else "decided", response=response, provider_calls=calls,
         max_relation_depth=limits.max_relation_depth,
         limitations=["Needs interpretation only: no retrieval, availability check, final answer or fulfillment claim.",
@@ -154,10 +157,12 @@ async def run_needs_probe(request: NeedsRequest, transport: JevTransport, *, lim
     graph.add_node("determine_needs", determine_needs)
     graph.add_edge(START, "determine_needs")
     graph.add_edge("determine_needs", END)
-    result = await graph.compile().ainvoke({"request": request})
+    initial_state: _ProbeState = {"request": request}
+    result = await graph.compile().ainvoke(initial_state)
     return result["result"]
 
 
 # DECISION HISTORY
 # ================================================================================
 # - 2026-10-03 00:00 [python-coder]: Enforce one physical send in an isolated LangGraph experiment. (#TICKETLESS reason=user-requested-standalone-experiment)
+# - 2026-10-05 06:33 [python-coder]: Type the pre-result graph state and explicit result choices without changing probe decisions. (#TICKETLESS reason=user-authorized-release-typecheck-repair)

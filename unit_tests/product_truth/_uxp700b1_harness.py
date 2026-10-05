@@ -21,6 +21,7 @@ import json
 import shutil
 import sys
 from pathlib import Path
+from typing import Any
 from unittest import mock
 
 _PT_SRC = Path(__file__).resolve().parents[2] / "docs" / "product-truth"
@@ -83,7 +84,7 @@ def _make_sound_store(store_root: Path, ac_root: Path) -> None:
     (store_root / "classifier" / "eval.jsonl").write_text("", encoding="utf-8")
     ac_root.mkdir(parents=True, exist_ok=True)
 
-    flow = {
+    flow: dict[str, Any] = {
         "id": "leafcutter/test-flow",
         "component": "leafcutter",
         "name": "Test Flow",

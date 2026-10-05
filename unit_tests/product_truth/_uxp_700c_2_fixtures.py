@@ -139,7 +139,7 @@ def build_freshness_cli_store(tmp: Path, ac_work_status: str, confirmed_signatur
         flow_step["impl_status"] = "not_started"
     write_flow(pt_root / "flows", flow)
 
-    common_entry_fields = {
+    common_entry_fields: dict[str, object] = {
         "flow_kind": "user",
         "screen": None,
         "mock_data": None,
@@ -181,7 +181,7 @@ def expected_ac_signature(work_status: str) -> str:
     mirror the recipe pinned in test_uxp_700c_2.py's module docstring
     byte-for-byte: {work_status, product_truth, implemented_by, covered_by}
     (no `path`), sha256 of json.dumps(..., sort_keys=True, default=str)."""
-    record = {
+    record: dict[str, object] = {
         "work_status": work_status,
         "product_truth": [
             {

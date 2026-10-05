@@ -261,6 +261,8 @@ class TestBacklinkYamlBoundaries(unittest.TestCase):
     def setUp(self) -> None:
         scripts = PT_SOURCE / "scripts"
         spec = importlib.util.spec_from_file_location("uxp300_yaml_generator", scripts / "generate_product_truth.py")
+        if spec is None or spec.loader is None:
+            raise ImportError("Product Truth generator module has no importable loader")
         self.generator = importlib.util.module_from_spec(spec)
         sys.path.insert(0, str(scripts))
         try:

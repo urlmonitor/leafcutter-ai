@@ -11,3 +11,5 @@ description: "Migrated all 26 Product Truth flows to explicit contract fields/ex
 ---
 
 The declared missing bindings remain planning work. Saved semantic evaluations are historical evidence, not new evaluations of the merged release. The upstream entity-context behavior is retained when integrating main.
+
+Release checks also exposed an artifact-evaluation dependency gap and failed model invocations being counted as valid all-false labels. The evaluation repair copies bounded declared dependencies, checks the target contract independently of unrelated baseline errors, and records missing model outputs as failures without changing score thresholds. Atlas production-build lint and changed-file Python typing findings were corrected.

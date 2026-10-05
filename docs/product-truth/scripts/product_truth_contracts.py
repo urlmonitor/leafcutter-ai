@@ -1,4 +1,5 @@
-"""Check authored JSON handoffs and their generated presentation.
+"""MODULE: product_truth_contracts.py
+Check authored JSON handoffs and their generated presentation.
 
 GOAL: Fail the existing truth gate on stale fields, types, defaults or examples.
 BUSINESS CONTEXT: Reviewers need concrete, source-checked inputs and outputs in Atlas.
@@ -115,14 +116,46 @@ def _check_node(flow, node, contracts, root, report, presentation):
     return used
 
 
-def check_contracts(flows, repo_root, *, check_presentation=True):
+def _contract_scope(flows, root, only_flow_ids, report):
+    """Select explicit targets while preserving full-store and selected-target pinning."""
+    selected = set(flows) if only_flow_ids is None else set(only_flow_ids)
+    for missing_id in sorted(selected - set(flows)):
+        report["errors"].append(f"contracts: requested flow is missing: {missing_id}")
+    pinned = (root / CAPABILITY_MARKER).is_file() and (only_flow_ids is None or PINNED_FLOW in selected)
+    if pinned and PINNED_FLOW not in flows:
+        report["errors"].append("contracts: retrieval-needs runtime exists but its required flow is missing")
+    return {key: value for key, value in flows.items() if key in selected}, pinned
+
+
+def _required_node_models(flow_id, node_id, definitions, used, pinned):
+    """Reject replacing required runtime handoffs with weaker or missing model bindings."""
+    if not pinned or flow_id != PINNED_FLOW or node_id not in PINNED_MODELS:
+        return
+    models = {definitions[name].get("model") for name in used}
+    missing = PINNED_MODELS[node_id] - models
+    if missing:
+        raise ValueError("required wire handoff models missing: " + ", ".join(sorted(missing)))
+
+
+def _required_flow_shape(flow_id, nodes, definitions, seen, pinned, report):
+    """Keep required runtime steps and full request/output examples in the chosen scope."""
+    if not pinned or flow_id != PINNED_FLOW:
+        return
+    missing = set(PINNED_MODELS) - seen
+    if missing:
+        report["errors"].append("contracts: required retrieval-needs steps missing: " + ", ".join(sorted(missing)))
+    full_models = {definitions.get(e.get("contract"), {}).get("model") for n in nodes
+                   for e in n.get("io_contracts", {}).get("examples", []) if e.get("mode") == "full"}
+    if not {"retrieval_needs_request", "retrieval_needs_output"} <= full_models:
+        report["errors"].append("contracts: retrieval-needs requires complete request and output examples")
+
+
+def check_contracts(flows, repo_root, *, check_presentation=True, only_flow_ids=None):
     """Return errors/warnings and honest migration counts; does not mutate inputs."""
     root = Path(repo_root)
     report = dict(errors=[], warnings=[], checked_flows=0, legacy_flows=0, checked_nodes=0, fields=0, examples=0, missing_bindings=0, nodes_with_missing_bindings=0, binding_gaps=[])
-    pinned = (root / CAPABILITY_MARKER).is_file()
-    if pinned and PINNED_FLOW not in flows:
-        report["errors"].append("contracts: retrieval-needs runtime exists but its required flow is missing")
-    for flow_id, flow in flows.items():
+    selected, pinned = _contract_scope(flows, root, only_flow_ids, report)
+    for flow_id, flow in selected.items():
         nodes = flow.get("steps", []) + flow.get("branches", [])
         report["checked_flows"] += 1
         definitions = flow.get("contract_definitions", {})
@@ -141,21 +174,10 @@ def check_contracts(flows, repo_root, *, check_presentation=True):
                 if "io_contracts" not in node:
                     raise ValueError("missing io_contracts; document JSON handoff or explicit non-wire reason")
                 used = _check_node(flow, node, contracts, root, report, check_presentation)
-                if pinned and flow_id == PINNED_FLOW and node_id in PINNED_MODELS:
-                    models = {definitions[name].get("model") for name in used}
-                    missing = PINNED_MODELS[node_id] - models
-                    if missing:
-                        raise ValueError("required wire handoff models missing: " + ", ".join(sorted(missing)))
+                _required_node_models(flow_id, node_id, definitions, used, pinned)
             except (OSError, ValueError, TypeError, KeyError, IndexError, ImportError, jsonschema.ValidationError, jsonschema.SchemaError, Unresolvable) as exc:
                 report["errors"].append(f"contracts {flow_id}#{node_id}: {exc}")
-        if pinned and flow_id == PINNED_FLOW:
-            missing = set(PINNED_MODELS) - seen
-            if missing:
-                report["errors"].append("contracts: required retrieval-needs steps missing: " + ", ".join(sorted(missing)))
-            full_models = {definitions.get(e.get("contract"), {}).get("model") for n in nodes
-                           for e in n.get("io_contracts", {}).get("examples", []) if e.get("mode") == "full"}
-            if not {"retrieval_needs_request", "retrieval_needs_output"} <= full_models:
-                report["errors"].append("contracts: retrieval-needs requires complete request and output examples")
+        _required_flow_shape(flow_id, nodes, definitions, seen, pinned, report)
     return report
 
 
@@ -168,16 +190,20 @@ def contract_summary(report):
 
 
 def main():
+    """Validate all flows, or explicitly selected targets, without modifying the store."""
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--repo-root", type=Path, default=Path(__file__).resolve().parents[3])
     parser.add_argument("--check", action="store_true", help="read-only check (also the default)")
+    parser.add_argument("--flow-id", action="append", help="Validate only this flow ID; repeat for multiple explicit targets")
     args = parser.parse_args()
     try:
         flows = {}
         for path in (args.repo_root / "docs/product-truth/flows").rglob("*.flow.json"):
             flow = json.loads(path.read_text(encoding="utf-8"))
+            if flow["id"] in flows:
+                raise ValueError(f"duplicate flow id prevents unambiguous validation: {flow['id']}")
             flows[flow["id"]] = flow
-        report = check_contracts(flows, args.repo_root)
+        report = check_contracts(flows, args.repo_root, only_flow_ids=args.flow_id)
     except (OSError, ValueError, ImportError, KeyError) as exc:
         print(json.dumps({"errors": [str(exc)], "unavailable": True}))
         return 2
@@ -187,3 +213,7 @@ def main():
 
 if __name__ == "__main__":
     raise SystemExit(main())
+
+# DECISION HISTORY
+# ================================================================================
+# - 2026-10-05 06:37 [python-coder]: Permit explicit eval targets without suppressing their errors as baseline noise. (#TICKETLESS reason=user-authorized-evaluation-repair)
