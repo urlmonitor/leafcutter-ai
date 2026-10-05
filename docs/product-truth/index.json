@@ -43,7 +43,7 @@
       "path": "flows/fern-and-fig/customer-buys-a-plant.flow.json",
       "status": "active",
       "readiness": "approved",
-      "version": 3,
+      "version": 4,
       "entities": [
         "Plant",
         "Customer",
@@ -74,7 +74,7 @@
       "path": "flows/fern-and-fig/checkout-and-pay.flow.json",
       "status": "active",
       "readiness": "reviewed",
-      "version": 1,
+      "version": 2,
       "entities": [
         "Customer",
         "Order",
@@ -106,7 +106,7 @@
       "path": "flows/fern-and-fig/track-an-order.flow.json",
       "status": "active",
       "readiness": "approved",
-      "version": 2,
+      "version": 3,
       "entities": [
         "Order",
         "Customer"
@@ -135,7 +135,7 @@
       "path": "flows/leafcutter/define-a-feature.flow.json",
       "status": "active",
       "readiness": "approved",
-      "version": 2,
+      "version": 3,
       "entities": [
         "MockData",
         "Mockup",
@@ -159,14 +159,14 @@
       "id": "leafcutter/flow-render-pipeline",
       "type": "flow",
       "title": "How a flow renders in the Atlas",
-      "summary": "The data pipeline that turns a stored flow into the picture you see on the Atlas /flows page: the loader reads the flow file and the store index as JSON, each step is resolved to its acceptance…",
+      "summary": "Atlas walks stored flow JSON, resolves live AC status while normalizing each record, and sends serializable props to its graph view. It does not read product-truth index.json for this path.",
       "kind": "data",
       "source": "real",
       "component": "ux-prototyping",
       "path": "flows/leafcutter/flow-render-pipeline.flow.json",
       "status": "active",
       "readiness": "approved",
-      "version": 1,
+      "version": 3,
       "entities": [],
       "impl_summary": {
         "done": 3,
@@ -193,7 +193,7 @@
       "path": "flows/leafcutter/generate-product-truth.flow.json",
       "status": "active",
       "readiness": "approved",
-      "version": 1,
+      "version": 3,
       "entities": [],
       "impl_summary": {
         "done": 0,
@@ -220,7 +220,7 @@
       "path": "flows/leafcutter/explore-flows-in-atlas.flow.json",
       "status": "active",
       "readiness": "approved",
-      "version": 1,
+      "version": 4,
       "entities": [],
       "impl_summary": {
         "done": 5,
@@ -247,7 +247,7 @@
       "path": "flows/leafcutter/product-truth-architecture.flow.json",
       "status": "active",
       "readiness": "approved",
-      "version": 1,
+      "version": 2,
       "entities": [],
       "impl_summary": {
         "done": 2,
@@ -274,7 +274,7 @@
       "path": "flows/leafcutter/ac-lifecycle.flow.json",
       "status": "active",
       "readiness": "approved",
-      "version": 1,
+      "version": 2,
       "entities": [
         "Request",
         "Ac",
@@ -306,7 +306,7 @@
       "path": "flows/leafcutter/how-acs-are-built.flow.json",
       "status": "active",
       "readiness": "approved",
-      "version": 1,
+      "version": 2,
       "entities": [
         "Ticket",
         "Ac",
@@ -341,7 +341,7 @@
       "path": "flows/leafcutter/author-product-truth.flow.json",
       "status": "active",
       "readiness": "approved",
-      "version": 1,
+      "version": 3,
       "entities": [
         "Request",
         "MockData",
@@ -351,10 +351,10 @@
       ],
       "impl_summary": {
         "done": 4,
-        "in_progress": 2,
-        "not_started": 4,
+        "in_progress": 3,
+        "not_started": 3,
         "total": 10,
-        "asof": "2026-07-20"
+        "asof": "2026-10-05"
       },
       "tags": [
         "product-truth",
@@ -375,7 +375,7 @@
       "path": "flows/leafcutter/deliver-a-feature.flow.json",
       "status": "active",
       "readiness": "approved",
-      "version": 1,
+      "version": 2,
       "entities": [],
       "impl_summary": {
         "done": 0,
@@ -402,7 +402,7 @@
       "path": "flows/leafcutter/finalize-feature.flow.json",
       "status": "active",
       "readiness": "approved",
-      "version": 1,
+      "version": 2,
       "entities": [],
       "impl_summary": {
         "done": 0,
@@ -429,7 +429,7 @@
       "path": "flows/leafcutter/python-coder-internal.flow.json",
       "status": "active",
       "readiness": "approved",
-      "version": 1,
+      "version": 2,
       "entities": [],
       "impl_summary": {
         "done": 0,
@@ -673,7 +673,7 @@
       "path": "flows/leafcutter/retrieve-project-knowledge.flow.json",
       "status": "active",
       "readiness": "draft",
-      "version": 3,
+      "version": 6,
       "entities": [],
       "tags": [
         "retrieval",
@@ -682,9 +682,9 @@
       "impl_summary": {
         "done": 0,
         "in_progress": 0,
-        "not_started": 28,
-        "total": 28,
-        "asof": "2026-10-02"
+        "not_started": 29,
+        "total": 29,
+        "asof": "2026-10-03"
       }
     },
     {
@@ -698,7 +698,7 @@
       "path": "flows/leafcutter/retrieval-registered-query.flow.json",
       "status": "active",
       "readiness": "draft",
-      "version": 2,
+      "version": 3,
       "entities": [],
       "tags": [
         "retrieval",
@@ -723,7 +723,7 @@
       "path": "flows/leafcutter/retrieval-search-preparation.flow.json",
       "status": "active",
       "readiness": "draft",
-      "version": 2,
+      "version": 3,
       "entities": [],
       "tags": [
         "retrieval",
@@ -748,7 +748,7 @@
       "path": "flows/leafcutter/retrieval-query-build.flow.json",
       "status": "active",
       "readiness": "draft",
-      "version": 2,
+      "version": 3,
       "entities": [],
       "tags": [
         "retrieval",
@@ -773,7 +773,7 @@
       "path": "flows/leafcutter/retrieval-current-baseline.flow.json",
       "status": "active",
       "readiness": "draft",
-      "version": 1,
+      "version": 3,
       "entities": [],
       "tags": [
         "retrieval",
@@ -799,7 +799,7 @@
       "component": "knowledge-management",
       "status": "active",
       "readiness": "draft",
-      "version": 1,
+      "version": 2,
       "entities": [],
       "tags": [
         "retrieval",
@@ -826,7 +826,7 @@
       "path": "flows/leafcutter/decision-lifecycle.flow.json",
       "status": "active",
       "readiness": "draft",
-      "version": 4,
+      "version": 6,
       "entities": [
         "Decision"
       ],
@@ -836,7 +836,7 @@
         "in_progress": 1,
         "not_started": 3,
         "total": 4,
-        "asof": "2026-10-03"
+        "asof": "2026-10-02"
       },
       "tags": [
         "decision-kernel",
@@ -857,7 +857,7 @@
       "path": "flows/leafcutter/decision-forming.flow.json",
       "status": "active",
       "readiness": "draft",
-      "version": 5,
+      "version": 7,
       "entities": [
         "Decision"
       ],
@@ -889,7 +889,7 @@
       "path": "flows/leafcutter/decision-staging.flow.json",
       "status": "active",
       "readiness": "draft",
-      "version": 1,
+      "version": 2,
       "entities": [
         "Decision"
       ],
@@ -919,7 +919,7 @@
       "path": "flows/leafcutter/decision-publishing.flow.json",
       "status": "active",
       "readiness": "draft",
-      "version": 1,
+      "version": 2,
       "entities": [
         "Decision"
       ],
@@ -949,7 +949,7 @@
       "path": "flows/leafcutter/decision-retrieval.flow.json",
       "status": "active",
       "readiness": "draft",
-      "version": 1,
+      "version": 2,
       "entities": [
         "Decision"
       ],
@@ -969,39 +969,6 @@
       ]
     },
     {
-      "id": "leafcutter/criteria-library",
-      "type": "flow",
-      "title": "Building and curating the criteria library",
-      "summary": "Mined repeat questions become person-approved categories, counted from the records and explorable in Neo4j.",
-      "kind": "data",
-      "source": "mock",
-      "component": "decision_kernel",
-      "path": "flows/leafcutter/criteria-library.flow.json",
-      "status": "active",
-      "readiness": "draft",
-      "version": 1,
-      "entities": [
-        "CriterionCategory",
-        "CriterionCategoryAggregate"
-      ],
-      "mock_data_ref": "leafcutter/criterion-categories",
-      "tags": [
-        "decision-kernel",
-        "decision-criteria",
-        "criterion-categories",
-        "criteria-mining",
-        "knowledge-graph",
-        "journey"
-      ],
-      "impl_summary": {
-        "done": 0,
-        "in_progress": 0,
-        "not_started": 14,
-        "total": 14,
-        "asof": "2026-10-05"
-      }
-    },
-    {
       "id": "leafcutter/decisions",
       "type": "mock_data",
       "title": "Leafcutter decision records",
@@ -1018,28 +985,6 @@
         "decision-kernel",
         "decision-lifecycle",
         "decision-records",
-        "precedent"
-      ]
-    },
-    {
-      "id": "leafcutter/criterion-categories",
-      "type": "mock_data",
-      "title": "Leafcutter criterion categories",
-      "summary": "The canonical CriterionCategory dataset: reusable decision-criteria categories mined from published decision records and Langfuse traces, across candidate, staged, published and retired stages, plus the separate Neo4j outcome aggregates keyed by category id.",
-      "component": "decision_kernel",
-      "path": "mock-data/leafcutter/criterion-categories.mock.json",
-      "status": "active",
-      "readiness": "draft",
-      "version": 1,
-      "entities": [
-        "CriterionCategory",
-        "CriterionCategoryAggregate"
-      ],
-      "tags": [
-        "decision-kernel",
-        "decision-criteria",
-        "criterion-categories",
-        "criteria-mining",
         "precedent"
       ]
     },
@@ -1161,6 +1106,88 @@
         "review",
         "supersession"
       ]
+    },
+    {
+      "id": "leafcutter/retrieval-needs-interpretation",
+      "type": "flow",
+      "title": "Interpret what a retrieval question needs",
+      "summary": "An isolated host LLM interprets a question into typed information needs; production retrieval does not call it.",
+      "kind": "data",
+      "source": "real",
+      "component": "knowledge-management",
+      "path": "flows/leafcutter/retrieval-needs-interpretation.flow.json",
+      "status": "active",
+      "readiness": "draft",
+      "version": 6,
+      "entities": [],
+      "tags": [
+        "retrieval",
+        "retrieval-needs",
+        "host-llm",
+        "isolated-experiment"
+      ],
+      "impl_summary": {
+        "done": 0,
+        "in_progress": 0,
+        "not_started": 16,
+        "total": 16,
+        "asof": "2026-10-03"
+      }
+    },
+    {
+      "id": "leafcutter/criteria-library",
+      "type": "flow",
+      "title": "Building and curating the criteria library",
+      "summary": "Mined repeat questions become person-approved categories, counted from the records and explorable in Neo4j.",
+      "kind": "data",
+      "source": "mock",
+      "component": "decision_kernel",
+      "path": "flows/leafcutter/criteria-library.flow.json",
+      "status": "active",
+      "readiness": "draft",
+      "version": 2,
+      "entities": [
+        "CriterionCategory",
+        "CriterionCategoryAggregate"
+      ],
+      "mock_data_ref": "leafcutter/criterion-categories",
+      "tags": [
+        "decision-kernel",
+        "decision-criteria",
+        "criterion-categories",
+        "criteria-mining",
+        "knowledge-graph",
+        "journey"
+      ],
+      "impl_summary": {
+        "done": 0,
+        "in_progress": 0,
+        "not_started": 14,
+        "total": 14,
+        "asof": "2026-10-05"
+      }
+    },
+    {
+      "id": "leafcutter/criterion-categories",
+      "type": "mock_data",
+      "title": "Leafcutter criterion categories",
+      "summary": "The canonical CriterionCategory dataset: reusable decision-criteria categories mined from published decision records and Langfuse traces, across candidate, staged, published and retired stages, plus the separate Neo4j outcome aggregates keyed by category id.",
+      "component": "decision_kernel",
+      "path": "mock-data/leafcutter/criterion-categories.mock.json",
+      "status": "active",
+      "readiness": "draft",
+      "version": 1,
+      "entities": [
+        "CriterionCategory",
+        "CriterionCategoryAggregate"
+      ],
+      "tags": [
+        "decision-kernel",
+        "decision-criteria",
+        "criterion-categories",
+        "criteria-mining",
+        "precedent"
+      ]
     }
   ],
   "by_component": {
@@ -1205,6 +1232,7 @@
     "knowledge-management": {
       "flows": [
         "leafcutter/retrieval-current-baseline",
+        "leafcutter/retrieval-needs-interpretation",
         "leafcutter/retrieval-query-build",
         "leafcutter/retrieval-registered-query",
         "leafcutter/retrieval-search-preparation",
@@ -1551,10 +1579,10 @@
       "impl_status": "in_progress",
       "impl_summary": {
         "done": 4,
-        "in_progress": 2,
-        "not_started": 4,
+        "in_progress": 3,
+        "not_started": 3,
         "total": 10,
-        "asof": "2026-07-20"
+        "asof": "2026-10-05"
       },
       "expands": [],
       "parents": []
@@ -1619,7 +1647,7 @@
         "in_progress": 1,
         "not_started": 3,
         "total": 4,
-        "asof": "2026-10-03"
+        "asof": "2026-10-02"
       },
       "expands": [
         "leafcutter/decision-forming",
@@ -1909,6 +1937,27 @@
       "expands": [],
       "parents": []
     },
+    "leafcutter/retrieval-needs-interpretation": {
+      "component": "knowledge-management",
+      "level": "pipeline",
+      "entities": [],
+      "path": "flows/leafcutter/retrieval-needs-interpretation.flow.json",
+      "impl_status": "not_started",
+      "impl_summary": {
+        "done": 0,
+        "in_progress": 0,
+        "not_started": 16,
+        "total": 16,
+        "asof": "2026-10-03"
+      },
+      "expands": [],
+      "parents": [
+        {
+          "flow": "leafcutter/retrieve-project-knowledge",
+          "step": "interpret-needs"
+        }
+      ]
+    },
     "leafcutter/retrieval-query-build": {
       "component": "knowledge-management",
       "level": "journey",
@@ -2002,11 +2051,12 @@
       "impl_summary": {
         "done": 0,
         "in_progress": 0,
-        "not_started": 28,
-        "total": 28,
-        "asof": "2026-10-02"
+        "not_started": 29,
+        "total": 29,
+        "asof": "2026-10-03"
       },
       "expands": [
+        "leafcutter/retrieval-needs-interpretation",
         "leafcutter/retrieval-query-build",
         "leafcutter/retrieval-registered-query",
         "leafcutter/retrieval-search-preparation",
@@ -2700,7 +2750,7 @@
         "mock_data": "leafcutter/decisions",
         "entities": [],
         "source": "real",
-        "asof": "2026-10-03"
+        "asof": "2026-10-05"
       }
     ],
     "DK-300a-1-i": [
@@ -2713,7 +2763,7 @@
         "mock_data": "leafcutter/decisions",
         "entities": [],
         "source": "real",
-        "asof": "2026-10-03"
+        "asof": "2026-10-05"
       }
     ],
     "DK-300a-2": [
@@ -2726,7 +2776,7 @@
         "mock_data": "leafcutter/decisions",
         "entities": [],
         "source": "real",
-        "asof": "2026-10-03"
+        "asof": "2026-10-05"
       }
     ],
     "DK-300a-2-i": [
@@ -2739,7 +2789,7 @@
         "mock_data": "leafcutter/decisions",
         "entities": [],
         "source": "real",
-        "asof": "2026-10-03"
+        "asof": "2026-10-05"
       }
     ],
     "DK-300a-3": [
@@ -2752,7 +2802,7 @@
         "mock_data": "leafcutter/decisions",
         "entities": [],
         "source": "real",
-        "asof": "2026-10-03"
+        "asof": "2026-10-05"
       }
     ],
     "DK-300a-3-i": [
@@ -2765,7 +2815,7 @@
         "mock_data": "leafcutter/decisions",
         "entities": [],
         "source": "real",
-        "asof": "2026-10-03"
+        "asof": "2026-10-05"
       }
     ],
     "DK-300b-1": [
@@ -2778,7 +2828,7 @@
         "mock_data": "leafcutter/decisions",
         "entities": [],
         "source": "real",
-        "asof": "2026-10-03"
+        "asof": "2026-10-05"
       },
       {
         "flow": "leafcutter/decision-forming",
@@ -2789,7 +2839,7 @@
         "mock_data": "leafcutter/decisions",
         "entities": [],
         "source": "real",
-        "asof": "2026-10-03"
+        "asof": "2026-10-05"
       }
     ],
     "DK-300b-1-i": [
@@ -2802,7 +2852,7 @@
         "mock_data": "leafcutter/decisions",
         "entities": [],
         "source": "real",
-        "asof": "2026-10-03"
+        "asof": "2026-10-05"
       },
       {
         "flow": "leafcutter/decision-forming",
@@ -2813,7 +2863,7 @@
         "mock_data": "leafcutter/decisions",
         "entities": [],
         "source": "real",
-        "asof": "2026-10-03"
+        "asof": "2026-10-05"
       }
     ],
     "DK-300b-2": [
@@ -2826,7 +2876,7 @@
         "mock_data": "leafcutter/decisions",
         "entities": [],
         "source": "real",
-        "asof": "2026-10-03"
+        "asof": "2026-10-05"
       }
     ],
     "DK-300b-2-i": [
@@ -2839,7 +2889,7 @@
         "mock_data": "leafcutter/decisions",
         "entities": [],
         "source": "real",
-        "asof": "2026-10-03"
+        "asof": "2026-10-05"
       }
     ],
     "DK-300b-3": [
@@ -2852,7 +2902,7 @@
         "mock_data": "leafcutter/decisions",
         "entities": [],
         "source": "real",
-        "asof": "2026-10-03"
+        "asof": "2026-10-05"
       }
     ],
     "DK-300b-3-i": [
@@ -2865,7 +2915,7 @@
         "mock_data": "leafcutter/decisions",
         "entities": [],
         "source": "real",
-        "asof": "2026-10-03"
+        "asof": "2026-10-05"
       },
       {
         "flow": "leafcutter/decision-forming",
@@ -2876,7 +2926,7 @@
         "mock_data": "leafcutter/decisions",
         "entities": [],
         "source": "real",
-        "asof": "2026-10-03"
+        "asof": "2026-10-05"
       }
     ],
     "DK-300c-1": [
@@ -2889,7 +2939,7 @@
         "mock_data": "leafcutter/decisions",
         "entities": [],
         "source": "real",
-        "asof": "2026-10-03"
+        "asof": "2026-10-05"
       }
     ],
     "DK-300c-1-i": [
@@ -2902,7 +2952,7 @@
         "mock_data": "leafcutter/decisions",
         "entities": [],
         "source": "real",
-        "asof": "2026-10-03"
+        "asof": "2026-10-05"
       },
       {
         "flow": "leafcutter/decision-forming",
@@ -2913,7 +2963,7 @@
         "mock_data": "leafcutter/decisions",
         "entities": [],
         "source": "real",
-        "asof": "2026-10-03"
+        "asof": "2026-10-05"
       }
     ],
     "DK-300c-2": [
@@ -2926,7 +2976,7 @@
         "mock_data": "leafcutter/decisions",
         "entities": [],
         "source": "real",
-        "asof": "2026-10-03"
+        "asof": "2026-10-05"
       }
     ],
     "DK-300c-3": [
@@ -2939,7 +2989,7 @@
         "mock_data": "leafcutter/decisions",
         "entities": [],
         "source": "real",
-        "asof": "2026-10-03"
+        "asof": "2026-10-05"
       }
     ],
     "DK-300c-3-i": [
@@ -2952,7 +3002,7 @@
         "mock_data": "leafcutter/decisions",
         "entities": [],
         "source": "real",
-        "asof": "2026-10-03"
+        "asof": "2026-10-05"
       },
       {
         "flow": "leafcutter/decision-forming",
@@ -2963,7 +3013,7 @@
         "mock_data": "leafcutter/decisions",
         "entities": [],
         "source": "real",
-        "asof": "2026-10-03"
+        "asof": "2026-10-05"
       }
     ],
     "DK-300d-1": [
@@ -2976,7 +3026,7 @@
         "mock_data": "leafcutter/decisions",
         "entities": [],
         "source": "real",
-        "asof": "2026-10-03"
+        "asof": "2026-10-05"
       },
       {
         "flow": "leafcutter/decision-forming",
@@ -2987,7 +3037,7 @@
         "mock_data": "leafcutter/decisions",
         "entities": [],
         "source": "real",
-        "asof": "2026-10-03"
+        "asof": "2026-10-05"
       },
       {
         "flow": "leafcutter/decision-lifecycle",
@@ -3000,7 +3050,7 @@
           "Decision"
         ],
         "source": "real",
-        "asof": "2026-10-03"
+        "asof": "2026-10-05"
       }
     ],
     "DK-300d-1-i": [
@@ -3013,7 +3063,7 @@
         "mock_data": "leafcutter/decisions",
         "entities": [],
         "source": "real",
-        "asof": "2026-10-03"
+        "asof": "2026-10-05"
       },
       {
         "flow": "leafcutter/decision-forming",
@@ -3024,7 +3074,7 @@
         "mock_data": "leafcutter/decisions",
         "entities": [],
         "source": "real",
-        "asof": "2026-10-03"
+        "asof": "2026-10-05"
       }
     ],
     "DK-300d-2": [
@@ -3037,7 +3087,7 @@
         "mock_data": "leafcutter/decisions",
         "entities": [],
         "source": "real",
-        "asof": "2026-10-03"
+        "asof": "2026-10-05"
       },
       {
         "flow": "leafcutter/decision-forming",
@@ -3048,7 +3098,7 @@
         "mock_data": "leafcutter/decisions",
         "entities": [],
         "source": "real",
-        "asof": "2026-10-03"
+        "asof": "2026-10-05"
       }
     ],
     "DK-300d-2-i": [
@@ -3061,7 +3111,7 @@
         "mock_data": "leafcutter/decisions",
         "entities": [],
         "source": "real",
-        "asof": "2026-10-03"
+        "asof": "2026-10-05"
       },
       {
         "flow": "leafcutter/decision-forming",
@@ -3072,7 +3122,7 @@
         "mock_data": "leafcutter/decisions",
         "entities": [],
         "source": "real",
-        "asof": "2026-10-03"
+        "asof": "2026-10-05"
       }
     ],
     "DK-300d-3": [
@@ -3085,7 +3135,7 @@
         "mock_data": "leafcutter/decisions",
         "entities": [],
         "source": "real",
-        "asof": "2026-10-03"
+        "asof": "2026-10-05"
       },
       {
         "flow": "leafcutter/decision-lifecycle",
@@ -3098,7 +3148,7 @@
           "Decision"
         ],
         "source": "real",
-        "asof": "2026-10-03"
+        "asof": "2026-10-05"
       }
     ],
     "DK-300d-3-i": [
@@ -3111,7 +3161,7 @@
         "mock_data": "leafcutter/decisions",
         "entities": [],
         "source": "real",
-        "asof": "2026-10-03"
+        "asof": "2026-10-05"
       },
       {
         "flow": "leafcutter/decision-lifecycle",
@@ -3124,7 +3174,7 @@
           "Decision"
         ],
         "source": "real",
-        "asof": "2026-10-03"
+        "asof": "2026-10-05"
       }
     ],
     "DK-300d-4": [
@@ -3137,7 +3187,7 @@
         "mock_data": "leafcutter/decisions",
         "entities": [],
         "source": "real",
-        "asof": "2026-10-03"
+        "asof": "2026-10-05"
       }
     ],
     "DK-300d-4-i": [
@@ -3150,7 +3200,7 @@
         "mock_data": "leafcutter/decisions",
         "entities": [],
         "source": "real",
-        "asof": "2026-10-03"
+        "asof": "2026-10-05"
       }
     ],
     "DK-300d-4-ii": [
@@ -3163,7 +3213,7 @@
         "mock_data": "leafcutter/decisions",
         "entities": [],
         "source": "real",
-        "asof": "2026-10-03"
+        "asof": "2026-10-05"
       }
     ],
     "DK-300d-5": [
@@ -3176,7 +3226,7 @@
         "mock_data": "leafcutter/decisions",
         "entities": [],
         "source": "real",
-        "asof": "2026-10-03"
+        "asof": "2026-10-05"
       }
     ],
     "DK-300d-5-i": [
@@ -3189,7 +3239,7 @@
         "mock_data": "leafcutter/decisions",
         "entities": [],
         "source": "real",
-        "asof": "2026-10-03"
+        "asof": "2026-10-05"
       }
     ],
     "DK-300e-1": [
@@ -3202,7 +3252,7 @@
         "mock_data": "leafcutter/decisions",
         "entities": [],
         "source": "real",
-        "asof": "2026-10-03"
+        "asof": "2026-10-05"
       }
     ],
     "DK-300e-2": [
@@ -3215,7 +3265,7 @@
         "mock_data": "leafcutter/decisions",
         "entities": [],
         "source": "real",
-        "asof": "2026-10-03"
+        "asof": "2026-10-05"
       }
     ],
     "DK-300e-2-i": [
@@ -3228,7 +3278,7 @@
         "mock_data": "leafcutter/decisions",
         "entities": [],
         "source": "real",
-        "asof": "2026-10-03"
+        "asof": "2026-10-05"
       }
     ],
     "DK-500a-1": [
@@ -5264,6 +5314,45 @@
         "asof": "2026-07-20"
       }
     ],
+    "UXP-300-1": [
+      {
+        "flow": "leafcutter/generate-product-truth",
+        "node": "validate",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [],
+        "source": "real",
+        "asof": "2026-10-05"
+      }
+    ],
+    "UXP-300-2": [
+      {
+        "flow": "leafcutter/generate-product-truth",
+        "node": "validate",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [],
+        "source": "real",
+        "asof": "2026-10-05"
+      }
+    ],
+    "UXP-300-3": [
+      {
+        "flow": "leafcutter/generate-product-truth",
+        "node": "validate",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [],
+        "source": "real",
+        "asof": "2026-10-05"
+      }
+    ],
     "UXP-400": [
       {
         "flow": "leafcutter/define-a-feature",
@@ -5730,6 +5819,58 @@
         "asof": "2026-07-20"
       }
     ],
+    "UXP-523-1": [
+      {
+        "flow": "leafcutter/explore-flows-in-atlas",
+        "node": "inspect",
+        "node_kind": "step",
+        "flow_kind": "user",
+        "screen": null,
+        "mock_data": null,
+        "entities": [],
+        "source": "real",
+        "asof": "2026-10-05"
+      }
+    ],
+    "UXP-523-2": [
+      {
+        "flow": "leafcutter/explore-flows-in-atlas",
+        "node": "inspect",
+        "node_kind": "step",
+        "flow_kind": "user",
+        "screen": null,
+        "mock_data": null,
+        "entities": [],
+        "source": "real",
+        "asof": "2026-10-05"
+      }
+    ],
+    "UXP-523-3": [
+      {
+        "flow": "leafcutter/explore-flows-in-atlas",
+        "node": "inspect",
+        "node_kind": "step",
+        "flow_kind": "user",
+        "screen": null,
+        "mock_data": null,
+        "entities": [],
+        "source": "real",
+        "asof": "2026-10-05"
+      }
+    ],
+    "UXP-523-4": [
+      {
+        "flow": "leafcutter/explore-flows-in-atlas",
+        "node": "inspect",
+        "node_kind": "step",
+        "flow_kind": "user",
+        "screen": null,
+        "mock_data": null,
+        "entities": [],
+        "source": "real",
+        "asof": "2026-10-05"
+      }
+    ],
     "UXP-524": [
       {
         "flow": "leafcutter/explore-flows-in-atlas",
@@ -5806,6 +5947,23 @@
         "asof": "2026-07-20"
       }
     ],
+    "UXP-542-1": [
+      {
+        "flow": "leafcutter/author-product-truth",
+        "node": "flow",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [
+          "Flow",
+          "MockData",
+          "Mockup"
+        ],
+        "source": "real",
+        "asof": "2026-10-05"
+      }
+    ],
     "UXP-543": [
       {
         "flow": "leafcutter/author-product-truth",
@@ -5850,6 +6008,19 @@
         "entities": [],
         "source": "real",
         "asof": "2026-07-20"
+      }
+    ],
+    "UXP-700e-2-ii": [
+      {
+        "flow": "leafcutter/generate-product-truth",
+        "node": "derive",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [],
+        "source": "real",
+        "asof": "2026-10-05"
       }
     ]
   }

@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "PROPOSED criteria gap verdict",
+  "description": "Design-only verdict transcribed from the DK-500e-1 delivers_to contract {status: gap|no_gap|not_judged, missing_concerns: [string], reason: string|null} (docs/acceptance-criteria/decision-kernel/DK-500-reusable-decision-criteria/DK-500e-1.yaml). The missing concerns are concerns from a finite list fixed before the judgement, copied verbatim; Jev never writes concern text. No kernel step, payload or validator implements this verdict yet; the verdict is evidence, never approval.",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "status": {
+      "type": "string",
+      "enum": ["gap", "no_gap", "not_judged"],
+      "description": "gap: a concern is missing; no_gap: nothing is missing; not_judged: the judgement was not made (never shown as no_gap)"
+    },
+    "missing_concerns": {
+      "type": "array",
+      "items": {"type": "string"},
+      "description": "the concerns no reused criterion covers, verbatim from the fixed concern list"
+    },
+    "reason": {
+      "type": ["string", "null"],
+      "description": "why the gap was not judged; DK-500e-1 and DK-500e-1-i name no_concerns_listed, budget and jev_unavailable"
+    }
+  },
+  "required": ["status", "missing_concerns", "reason"]
+}

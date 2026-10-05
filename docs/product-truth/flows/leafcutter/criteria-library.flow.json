@@ -11,7 +11,7 @@
   "status": "active",
   "readiness": "draft",
   "superseded_by": null,
-  "version": 1,
+  "version": 2,
   "shape_version": 2,
   "tags": [
     "decision-kernel",
@@ -30,12 +30,16 @@
     {
       "id": "mine",
       "label": "Mine repeat questions",
-      "human": "An offline mining job, run apart from any decision, reads the published decision records and the Langfuse history of kernel runs, including failed, cancelled and never-published ones, and proposes the questions that keep coming back as candidate categories.",
+      "human": "An offline mining job, run apart from any decision, reads the published decision records and the Langfuse history of kernel runs, including failed, cancelled and never-published ones, and proposes the questions that keep coming back as candidate categories.\n\nPublished decision records bind the runtime DecisionRecord contract; candidate categories use the proposed mock-record design. The Langfuse trace read and the job's own invocation and candidate store are not defined.\n\nContract fields and examples (generated)\nConsumes:\n  decision_record/id: string (required)\n  decision_record/criteria: array (optional; default [])\n  decision_record/criteria/*/id: string (required)\n  decision_record/criteria/*/question: string (required)\n  decision_record/provenance/run_id: string (required)\n  decision_record/provenance/langfuse_trace_id: null|string (optional; default null)\n  Runtime contract: [decision_record](kernel/memory/models.py)\nProduces:\n  ILLUSTRATIVE DESIGN: PROPOSED, not implemented: mock-record shape transcribed from docs/product-truth/mock-data/leafcutter/criterion-categories.mock.json (decision dec-93c1c730463c1f3c). The derived views replaces and member_view and the fixture field source appear only because the stored samples carry them. No category reader, writer, index or runtime validation exists.\n  criterion_category/id: string (required)\n  criterion_category/lifecycle_stage: string (required)\n  criterion_category/approval_status: string (required)\n  criterion_category/proposed_by: string (required)\n  criterion_category/approved_by: null|string (required)\n  criterion_category/mined_from: array (required)\n  Schema: [criterion_category](docs/product-truth/schemas/criterion-category.schema.json)\n\nPROPOSED - missing JSON binding (consumes): Langfuse trace history of kernel runs\nThe job also reads Langfuse traces of earlier runs, including failed, cancelled and never-published ones. No trace query or trace-sighting input contract is defined; the dataset's langfuse_trace sightings stand in for it.\nDesign source: [docs/product-truth/mock-data/leafcutter/criterion-categories.mock.json](docs/product-truth/mock-data/leafcutter/criterion-categories.mock.json)\n\nPROPOSED - missing JSON binding (produces): Mining job invocation and candidate store\nThe offline job's command, schedule and the store where candidates wait for a person (the mining store DK-500d-1 keeps away from decision runs) are not defined; only the candidate record design exists.\nDesign source: [docs/product-truth/flows/leafcutter/criteria-library.flow.json](docs/product-truth/flows/leafcutter/criteria-library.flow.json)\n\nInput: reconstructed projection of docs/decisions/dec-5e7445182eaec1f2.yaml (criterion ids, questions and provenance ids only) — decision_record; reconstructed; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"id\": \"dec-5e7445182eaec1f2\",\n  \"criteria\": [\n    {\n      \"id\": \"crit.end_to_end\",\n      \"question\": \"Can a reviewer follow forming, staging, publishing and retrieval as one connected journey in the Atlas, including the hand-offs between them (the staged file, the published record and index)?\"\n    },\n    {\n      \"id\": \"crit.stage_actors_visible\",\n      \"question\": \"Does each stage keep its own actor and trigger visible (a kernel run with a human choice, automatic staging, a human-run publish with git review, a later run's precedent lookup) so it can be reviewed and linked to its own acceptance criteria?\"\n    },\n    {\n      \"id\": \"crit.schema_fit\",\n      \"question\": \"Can the option be expressed with the current flow schema and validator (steps, branches, screens resolving to registered mockups) without changing the schema?\"\n    },\n    {\n      \"id\": \"crit.decision_points\",\n      \"question\": \"Does the option give the human decision points (criteria approval, the ranked choice, reuse or decide anew) a visible place of their own?\"\n    },\n    {\n      \"id\": \"crit.small_to_maintain\",\n      \"question\": \"Does the option keep the number of artifacts small enough that one change to the lifecycle touches few files?\"\n    }\n  ],\n  \"provenance\": {\n    \"run_id\": \"run-7c7d6474612b438b\",\n    \"langfuse_trace_id\": \"b08d45b4f4d504ead065df9d2e5232a0\"\n  }\n}\n\nOutput: mined candidate CriterionCategory mock record; stored sample, not live data — criterion_category; observed; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"id\": \"cat-73d233fc8b15c735\",\n  \"lifecycle_stage\": \"candidate\",\n  \"approval_status\": \"proposed\",\n  \"proposed_by\": \"criteria_mining\",\n  \"approved_by\": null,\n  \"mined_from\": [\n    {\n      \"source\": \"published_record\",\n      \"run_id\": \"run-7c7d6474612b438b\",\n      \"origin\": \"approved\",\n      \"wording\": \"Does the option keep the number of artifacts small enough that one change to the lifecycle touches few files?\"\n    },\n    {\n      \"source\": \"langfuse_trace\",\n      \"run_id\": \"run-49c4f5e97f2d41d6\",\n      \"origin\": \"human_edited\",\n      \"wording\": \"Maintainability: does it keep working with little upkeep as the kernel and its traces evolve?\"\n    },\n    {\n      \"source\": \"langfuse_trace\",\n      \"run_id\": \"run-1dec9568f85745e4\",\n      \"origin\": \"generated\",\n      \"wording\": \"Maintainability: does it keep working with little upkeep as decisions, components and the harness evolve?\"\n    },\n    {\n      \"source\": \"langfuse_trace\",\n      \"run_id\": \"run-35ecc5ce9780442d\",\n      \"origin\": \"generated\",\n      \"wording\": \"Maintainability: does it keep working with little upkeep as decisions and the harness evolve?\"\n    },\n    {\n      \"source\": \"langfuse_trace\",\n      \"run_id\": \"run-57d16125a4a94de0\",\n      \"origin\": \"generated\",\n      \"wording\": \"Maintainability: does it keep working with little upkeep as the kernel and its traces evolve?\"\n    },\n    {\n      \"source\": \"langfuse_trace\",\n      \"run_id\": \"run-5bd2023780654292\",\n      \"origin\": \"generated\",\n      \"wording\": \"Maintainability: does it keep working with little upkeep as decisions and the harness evolve?\"\n    },\n    {\n      \"source\": \"langfuse_trace\",\n      \"run_id\": \"run-de1c989117414c1c\",\n      \"origin\": \"generated\",\n      \"wording\": \"Maintainability: does it keep working with little upkeep as decisions and the harness evolve?\"\n    }\n  ]\n}\nReceipt: [docs/product-truth/mock-data/leafcutter/criterion-categories.mock.json](docs/product-truth/mock-data/leafcutter/criterion-categories.mock.json)/entities/CriterionCategory/records/7",
       "order": 1,
       "agent": "criteria_mining (offline job)",
       "produces": [
-        "candidate categories (proposed_by criteria_mining)",
-        "mined_from sightings"
+        "criterion_category/id: string (required)",
+        "criterion_category/lifecycle_stage: string (required)",
+        "criterion_category/approval_status: string (required)",
+        "criterion_category/proposed_by: string (required)",
+        "criterion_category/approved_by: null|string (required)",
+        "criterion_category/mined_from: array (required)"
       ],
       "reads": [
         "Decision"
@@ -45,27 +49,253 @@
       ],
       "impl_asof": "2026-10-03",
       "impl_status": "not_started",
+      "io_contracts": {
+        "consumes": [
+          {
+            "contract": "decision_record",
+            "fields": [
+              {
+                "path": "/id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/criteria",
+                "types": [
+                  "array"
+                ],
+                "required": false,
+                "default": []
+              },
+              {
+                "path": "/criteria/*/id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/criteria/*/question",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/provenance/run_id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/provenance/langfuse_trace_id",
+                "types": [
+                  "null",
+                  "string"
+                ],
+                "required": false,
+                "default": null
+              }
+            ]
+          }
+        ],
+        "produces": [
+          {
+            "contract": "criterion_category",
+            "fields": [
+              {
+                "path": "/id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/lifecycle_stage",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/approval_status",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/proposed_by",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/approved_by",
+                "types": [
+                  "null",
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/mined_from",
+                "types": [
+                  "array"
+                ],
+                "required": true
+              }
+            ]
+          }
+        ],
+        "examples": [
+          {
+            "contract": "decision_record",
+            "mode": "projection",
+            "origin": "reconstructed",
+            "label": "Input: reconstructed projection of docs/decisions/dec-5e7445182eaec1f2.yaml (criterion ids, questions and provenance ids only)",
+            "value": {
+              "id": "dec-5e7445182eaec1f2",
+              "criteria": [
+                {
+                  "id": "crit.end_to_end",
+                  "question": "Can a reviewer follow forming, staging, publishing and retrieval as one connected journey in the Atlas, including the hand-offs between them (the staged file, the published record and index)?"
+                },
+                {
+                  "id": "crit.stage_actors_visible",
+                  "question": "Does each stage keep its own actor and trigger visible (a kernel run with a human choice, automatic staging, a human-run publish with git review, a later run's precedent lookup) so it can be reviewed and linked to its own acceptance criteria?"
+                },
+                {
+                  "id": "crit.schema_fit",
+                  "question": "Can the option be expressed with the current flow schema and validator (steps, branches, screens resolving to registered mockups) without changing the schema?"
+                },
+                {
+                  "id": "crit.decision_points",
+                  "question": "Does the option give the human decision points (criteria approval, the ranked choice, reuse or decide anew) a visible place of their own?"
+                },
+                {
+                  "id": "crit.small_to_maintain",
+                  "question": "Does the option keep the number of artifacts small enough that one change to the lifecycle touches few files?"
+                }
+              ],
+              "provenance": {
+                "run_id": "run-7c7d6474612b438b",
+                "langfuse_trace_id": "b08d45b4f4d504ead065df9d2e5232a0"
+              }
+            }
+          },
+          {
+            "contract": "criterion_category",
+            "mode": "projection",
+            "origin": "observed",
+            "label": "Output: mined candidate CriterionCategory mock record; stored sample, not live data",
+            "value": {
+              "id": "cat-73d233fc8b15c735",
+              "lifecycle_stage": "candidate",
+              "approval_status": "proposed",
+              "proposed_by": "criteria_mining",
+              "approved_by": null,
+              "mined_from": [
+                {
+                  "source": "published_record",
+                  "run_id": "run-7c7d6474612b438b",
+                  "origin": "approved",
+                  "wording": "Does the option keep the number of artifacts small enough that one change to the lifecycle touches few files?"
+                },
+                {
+                  "source": "langfuse_trace",
+                  "run_id": "run-49c4f5e97f2d41d6",
+                  "origin": "human_edited",
+                  "wording": "Maintainability: does it keep working with little upkeep as the kernel and its traces evolve?"
+                },
+                {
+                  "source": "langfuse_trace",
+                  "run_id": "run-1dec9568f85745e4",
+                  "origin": "generated",
+                  "wording": "Maintainability: does it keep working with little upkeep as decisions, components and the harness evolve?"
+                },
+                {
+                  "source": "langfuse_trace",
+                  "run_id": "run-35ecc5ce9780442d",
+                  "origin": "generated",
+                  "wording": "Maintainability: does it keep working with little upkeep as decisions and the harness evolve?"
+                },
+                {
+                  "source": "langfuse_trace",
+                  "run_id": "run-57d16125a4a94de0",
+                  "origin": "generated",
+                  "wording": "Maintainability: does it keep working with little upkeep as the kernel and its traces evolve?"
+                },
+                {
+                  "source": "langfuse_trace",
+                  "run_id": "run-5bd2023780654292",
+                  "origin": "generated",
+                  "wording": "Maintainability: does it keep working with little upkeep as decisions and the harness evolve?"
+                },
+                {
+                  "source": "langfuse_trace",
+                  "run_id": "run-de1c989117414c1c",
+                  "origin": "generated",
+                  "wording": "Maintainability: does it keep working with little upkeep as decisions and the harness evolve?"
+                }
+              ]
+            },
+            "source": {
+              "path": "docs/product-truth/mock-data/leafcutter/criterion-categories.mock.json",
+              "pointer": "/entities/CriterionCategory/records/7"
+            }
+          }
+        ],
+        "missing_bindings": [
+          {
+            "name": "Langfuse trace history of kernel runs",
+            "direction": "consumes",
+            "reason": "The job also reads Langfuse traces of earlier runs, including failed, cancelled and never-published ones. No trace query or trace-sighting input contract is defined; the dataset's langfuse_trace sightings stand in for it.",
+            "source": "docs/product-truth/mock-data/leafcutter/criterion-categories.mock.json"
+          },
+          {
+            "name": "Mining job invocation and candidate store",
+            "direction": "produces",
+            "reason": "The offline job's command, schedule and the store where candidates wait for a person (the mining store DK-500d-1 keeps away from decision runs) are not defined; only the candidate record design exists.",
+            "source": "docs/product-truth/flows/leafcutter/criteria-library.flow.json"
+          }
+        ]
+      },
       "implements": [
         "DK-500a-1",
         "DK-500a-1-i",
         "DK-500a-1-ii",
         "DK-500a-1-iii",
         "DK-500a-2"
+      ],
+      "consumes": [
+        "decision_record/id: string (required)",
+        "decision_record/criteria: array (optional; default [])",
+        "decision_record/criteria/*/id: string (required)",
+        "decision_record/criteria/*/question: string (required)",
+        "decision_record/provenance/run_id: string (required)",
+        "decision_record/provenance/langfuse_trace_id: null|string (optional; default null)"
       ]
     },
     {
       "id": "suggest-grouping",
       "label": "Suggest groupings",
-      "human": "Wordings that ask the same thing are suggested as one category with one preferred wording and its other wordings, optionally under a broader category. The grouping method is still being decided, so every grouping is only a suggestion.",
+      "human": "Wordings that ask the same thing are suggested as one category with one preferred wording and its other wordings, optionally under a broader category. The grouping method is still being decided, so every grouping is only a suggestion.\n\nCandidates use the proposed mock-record design. Because the grouping method is still being decided, no suggestion output is defined.\n\nContract fields and examples (generated)\nConsumes:\n  ILLUSTRATIVE DESIGN: PROPOSED, not implemented: mock-record shape transcribed from docs/product-truth/mock-data/leafcutter/criterion-categories.mock.json (decision dec-93c1c730463c1f3c). The derived views replaces and member_view and the fixture field source appear only because the stored samples carry them. No category reader, writer, index or runtime validation exists.\n  criterion_category/id: string (required)\n  criterion_category/pref_label: string (required)\n  criterion_category/alt_labels: array (required)\n  criterion_category/broader: null|string (required)\n  criterion_category/lifecycle_stage: string (required)\n  criterion_category/mined_from: array (required)\n  Schema: [criterion_category](docs/product-truth/schemas/criterion-category.schema.json)\nProduces:\n  No checked JSON binding documented in this direction.\n\nPROPOSED - missing JSON binding (produces): Suggested grouping (pref_label, alt_labels, broader)\nKernel run run-b5af8c7fae2248ba is still choosing the grouping method (see the Jev criterion-to-category trial), so no suggestion payload exists; a suggestion is not yet a category record.\nDesign source: [docs/analysis/2026-10-03-jev-trial-criteria-grouping/summary.md](docs/analysis/2026-10-03-jev-trial-criteria-grouping/summary.md)\n\nInput: mined candidate CriterionCategory mock record; stored sample, not live data — criterion_category; observed; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"id\": \"cat-73d233fc8b15c735\",\n  \"pref_label\": \"Maintainability: does it keep working with little upkeep as decisions and the harness evolve?\",\n  \"alt_labels\": [\n    \"Maintainability: does it keep working with little upkeep as the kernel and its traces evolve?\",\n    \"Maintainability: does it keep working with little upkeep as decisions, components and the harness evolve?\",\n    \"Does the option keep the number of artifacts small enough that one change to the lifecycle touches few files?\"\n  ],\n  \"broader\": null,\n  \"lifecycle_stage\": \"candidate\",\n  \"mined_from\": [\n    {\n      \"source\": \"published_record\",\n      \"wording\": \"Does the option keep the number of artifacts small enough that one change to the lifecycle touches few files?\"\n    },\n    {\n      \"source\": \"langfuse_trace\",\n      \"wording\": \"Maintainability: does it keep working with little upkeep as the kernel and its traces evolve?\"\n    },\n    {\n      \"source\": \"langfuse_trace\",\n      \"wording\": \"Maintainability: does it keep working with little upkeep as decisions, components and the harness evolve?\"\n    },\n    {\n      \"source\": \"langfuse_trace\",\n      \"wording\": \"Maintainability: does it keep working with little upkeep as decisions and the harness evolve?\"\n    },\n    {\n      \"source\": \"langfuse_trace\",\n      \"wording\": \"Maintainability: does it keep working with little upkeep as the kernel and its traces evolve?\"\n    },\n    {\n      \"source\": \"langfuse_trace\",\n      \"wording\": \"Maintainability: does it keep working with little upkeep as decisions and the harness evolve?\"\n    },\n    {\n      \"source\": \"langfuse_trace\",\n      \"wording\": \"Maintainability: does it keep working with little upkeep as decisions and the harness evolve?\"\n    }\n  ]\n}\nReceipt: [docs/product-truth/mock-data/leafcutter/criterion-categories.mock.json](docs/product-truth/mock-data/leafcutter/criterion-categories.mock.json)/entities/CriterionCategory/records/7",
       "order": 2,
       "agent": "grouping method (being decided in kernel run run-b5af8c7fae2248ba)",
       "consumes": [
-        "candidate categories (proposed_by criteria_mining)",
-        "mined_from sightings"
+        "criterion_category/id: string (required)",
+        "criterion_category/pref_label: string (required)",
+        "criterion_category/alt_labels: array (required)",
+        "criterion_category/broader: null|string (required)",
+        "criterion_category/lifecycle_stage: string (required)",
+        "criterion_category/mined_from: array (required)"
       ],
-      "produces": [
-        "suggested groupings (pref_label, alt_labels, broader)"
-      ],
+      "produces": [],
       "reads": [
         "CriterionCategory"
       ],
@@ -74,6 +304,120 @@
       ],
       "impl_asof": "2026-10-03",
       "impl_status": "not_started",
+      "io_contracts": {
+        "consumes": [
+          {
+            "contract": "criterion_category",
+            "fields": [
+              {
+                "path": "/id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/pref_label",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/alt_labels",
+                "types": [
+                  "array"
+                ],
+                "required": true
+              },
+              {
+                "path": "/broader",
+                "types": [
+                  "null",
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/lifecycle_stage",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/mined_from",
+                "types": [
+                  "array"
+                ],
+                "required": true
+              }
+            ]
+          }
+        ],
+        "produces": [],
+        "examples": [
+          {
+            "contract": "criterion_category",
+            "mode": "projection",
+            "origin": "observed",
+            "label": "Input: mined candidate CriterionCategory mock record; stored sample, not live data",
+            "value": {
+              "id": "cat-73d233fc8b15c735",
+              "pref_label": "Maintainability: does it keep working with little upkeep as decisions and the harness evolve?",
+              "alt_labels": [
+                "Maintainability: does it keep working with little upkeep as the kernel and its traces evolve?",
+                "Maintainability: does it keep working with little upkeep as decisions, components and the harness evolve?",
+                "Does the option keep the number of artifacts small enough that one change to the lifecycle touches few files?"
+              ],
+              "broader": null,
+              "lifecycle_stage": "candidate",
+              "mined_from": [
+                {
+                  "source": "published_record",
+                  "wording": "Does the option keep the number of artifacts small enough that one change to the lifecycle touches few files?"
+                },
+                {
+                  "source": "langfuse_trace",
+                  "wording": "Maintainability: does it keep working with little upkeep as the kernel and its traces evolve?"
+                },
+                {
+                  "source": "langfuse_trace",
+                  "wording": "Maintainability: does it keep working with little upkeep as decisions, components and the harness evolve?"
+                },
+                {
+                  "source": "langfuse_trace",
+                  "wording": "Maintainability: does it keep working with little upkeep as decisions and the harness evolve?"
+                },
+                {
+                  "source": "langfuse_trace",
+                  "wording": "Maintainability: does it keep working with little upkeep as the kernel and its traces evolve?"
+                },
+                {
+                  "source": "langfuse_trace",
+                  "wording": "Maintainability: does it keep working with little upkeep as decisions and the harness evolve?"
+                },
+                {
+                  "source": "langfuse_trace",
+                  "wording": "Maintainability: does it keep working with little upkeep as decisions and the harness evolve?"
+                }
+              ]
+            },
+            "source": {
+              "path": "docs/product-truth/mock-data/leafcutter/criterion-categories.mock.json",
+              "pointer": "/entities/CriterionCategory/records/7"
+            }
+          }
+        ],
+        "missing_bindings": [
+          {
+            "name": "Suggested grouping (pref_label, alt_labels, broader)",
+            "direction": "produces",
+            "reason": "Kernel run run-b5af8c7fae2248ba is still choosing the grouping method (see the Jev criterion-to-category trial), so no suggestion payload exists; a suggestion is not yet a category record.",
+            "source": "docs/analysis/2026-10-03-jev-trial-criteria-grouping/summary.md"
+          }
+        ]
+      },
       "implements": [
         "DK-500b-1",
         "DK-500b-1-i",
@@ -88,15 +432,19 @@
     {
       "id": "approve",
       "label": "Approve a category",
-      "human": "Decision point: you see each suggested category with its wordings and where they were seen, and accept it, change it or undo the grouping. Only your approval turns a candidate into a category record; the mining job and models never approve.",
+      "human": "Decision point: you see each suggested category with its wordings and where they were seen, and accept it, change it or undo the grouping. Only your approval turns a candidate into a category record; the mining job and models never approve.\n\nThe person sees the candidate's mock-record fields. The approval question and answer for a category are not defined in a kernel run, and the design has no lifecycle stage between approval and staging.\n\nContract fields and examples (generated)\nConsumes:\n  ILLUSTRATIVE DESIGN: PROPOSED, not implemented: mock-record shape transcribed from docs/product-truth/mock-data/leafcutter/criterion-categories.mock.json (decision dec-93c1c730463c1f3c). The derived views replaces and member_view and the fixture field source appear only because the stored samples carry them. No category reader, writer, index or runtime validation exists.\n  criterion_category/id: string (required)\n  criterion_category/pref_label: string (required)\n  criterion_category/alt_labels: array (required)\n  criterion_category/broader: null|string (required)\n  criterion_category/mined_from: array (required)\n  criterion_category/lifecycle_stage: string (required)\n  criterion_category/approval_status: string (required)\n  Schema: [criterion_category](docs/product-truth/schemas/criterion-category.schema.json)\nProduces:\n  No checked JSON binding documented in this direction.\n\nPROPOSED - missing JSON binding (both): Category-approval question and answer\nApproval happens in a kernel run, but no HumanQuestion/HumanAnswer payload for accepting, changing or undoing a suggested category is registered, and the approved-but-unstaged in-run state has no defined shape.\nDesign source: [docs/product-truth/flows/leafcutter/criteria-library.flow.json](docs/product-truth/flows/leafcutter/criteria-library.flow.json)\n\nInput: candidate shown for approval; CriterionCategory mock record, stored sample, not live data — criterion_category; observed; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"id\": \"cat-73d233fc8b15c735\",\n  \"pref_label\": \"Maintainability: does it keep working with little upkeep as decisions and the harness evolve?\",\n  \"alt_labels\": [\n    \"Maintainability: does it keep working with little upkeep as the kernel and its traces evolve?\",\n    \"Maintainability: does it keep working with little upkeep as decisions, components and the harness evolve?\",\n    \"Does the option keep the number of artifacts small enough that one change to the lifecycle touches few files?\"\n  ],\n  \"broader\": null,\n  \"mined_from\": [\n    {\n      \"source\": \"published_record\",\n      \"decision_id\": \"dec-5e7445182eaec1f2\",\n      \"wording\": \"Does the option keep the number of artifacts small enough that one change to the lifecycle touches few files?\"\n    },\n    {\n      \"source\": \"langfuse_trace\",\n      \"decision_id\": \"dec-36c4cb109225a1c8\",\n      \"wording\": \"Maintainability: does it keep working with little upkeep as the kernel and its traces evolve?\"\n    },\n    {\n      \"source\": \"langfuse_trace\",\n      \"decision_id\": null,\n      \"wording\": \"Maintainability: does it keep working with little upkeep as decisions, components and the harness evolve?\"\n    },\n    {\n      \"source\": \"langfuse_trace\",\n      \"decision_id\": \"dec-e4c6a3e133b9694b\",\n      \"wording\": \"Maintainability: does it keep working with little upkeep as decisions and the harness evolve?\"\n    },\n    {\n      \"source\": \"langfuse_trace\",\n      \"decision_id\": \"dec-bb94d1090cd89b09\",\n      \"wording\": \"Maintainability: does it keep working with little upkeep as the kernel and its traces evolve?\"\n    },\n    {\n      \"source\": \"langfuse_trace\",\n      \"decision_id\": null,\n      \"wording\": \"Maintainability: does it keep working with little upkeep as decisions and the harness evolve?\"\n    },\n    {\n      \"source\": \"langfuse_trace\",\n      \"decision_id\": null,\n      \"wording\": \"Maintainability: does it keep working with little upkeep as decisions and the harness evolve?\"\n    }\n  ],\n  \"lifecycle_stage\": \"candidate\",\n  \"approval_status\": \"proposed\"\n}\nReceipt: [docs/product-truth/mock-data/leafcutter/criterion-categories.mock.json](docs/product-truth/mock-data/leafcutter/criterion-categories.mock.json)/entities/CriterionCategory/records/7",
       "order": 3,
       "agent": "human (in a kernel run)",
       "consumes": [
-        "suggested groupings (pref_label, alt_labels, broader)"
+        "criterion_category/id: string (required)",
+        "criterion_category/pref_label: string (required)",
+        "criterion_category/alt_labels: array (required)",
+        "criterion_category/broader: null|string (required)",
+        "criterion_category/mined_from: array (required)",
+        "criterion_category/lifecycle_stage: string (required)",
+        "criterion_category/approval_status: string (required)"
       ],
-      "produces": [
-        "approved category (approved_by human)"
-      ],
+      "produces": [],
       "reads": [
         "CriterionCategory"
       ],
@@ -105,6 +453,135 @@
       ],
       "impl_asof": "2026-10-03",
       "impl_status": "not_started",
+      "io_contracts": {
+        "consumes": [
+          {
+            "contract": "criterion_category",
+            "fields": [
+              {
+                "path": "/id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/pref_label",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/alt_labels",
+                "types": [
+                  "array"
+                ],
+                "required": true
+              },
+              {
+                "path": "/broader",
+                "types": [
+                  "null",
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/mined_from",
+                "types": [
+                  "array"
+                ],
+                "required": true
+              },
+              {
+                "path": "/lifecycle_stage",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/approval_status",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              }
+            ]
+          }
+        ],
+        "produces": [],
+        "examples": [
+          {
+            "contract": "criterion_category",
+            "mode": "projection",
+            "origin": "observed",
+            "label": "Input: candidate shown for approval; CriterionCategory mock record, stored sample, not live data",
+            "value": {
+              "id": "cat-73d233fc8b15c735",
+              "pref_label": "Maintainability: does it keep working with little upkeep as decisions and the harness evolve?",
+              "alt_labels": [
+                "Maintainability: does it keep working with little upkeep as the kernel and its traces evolve?",
+                "Maintainability: does it keep working with little upkeep as decisions, components and the harness evolve?",
+                "Does the option keep the number of artifacts small enough that one change to the lifecycle touches few files?"
+              ],
+              "broader": null,
+              "mined_from": [
+                {
+                  "source": "published_record",
+                  "decision_id": "dec-5e7445182eaec1f2",
+                  "wording": "Does the option keep the number of artifacts small enough that one change to the lifecycle touches few files?"
+                },
+                {
+                  "source": "langfuse_trace",
+                  "decision_id": "dec-36c4cb109225a1c8",
+                  "wording": "Maintainability: does it keep working with little upkeep as the kernel and its traces evolve?"
+                },
+                {
+                  "source": "langfuse_trace",
+                  "decision_id": null,
+                  "wording": "Maintainability: does it keep working with little upkeep as decisions, components and the harness evolve?"
+                },
+                {
+                  "source": "langfuse_trace",
+                  "decision_id": "dec-e4c6a3e133b9694b",
+                  "wording": "Maintainability: does it keep working with little upkeep as decisions and the harness evolve?"
+                },
+                {
+                  "source": "langfuse_trace",
+                  "decision_id": "dec-bb94d1090cd89b09",
+                  "wording": "Maintainability: does it keep working with little upkeep as the kernel and its traces evolve?"
+                },
+                {
+                  "source": "langfuse_trace",
+                  "decision_id": null,
+                  "wording": "Maintainability: does it keep working with little upkeep as decisions and the harness evolve?"
+                },
+                {
+                  "source": "langfuse_trace",
+                  "decision_id": null,
+                  "wording": "Maintainability: does it keep working with little upkeep as decisions and the harness evolve?"
+                }
+              ],
+              "lifecycle_stage": "candidate",
+              "approval_status": "proposed"
+            },
+            "source": {
+              "path": "docs/product-truth/mock-data/leafcutter/criterion-categories.mock.json",
+              "pointer": "/entities/CriterionCategory/records/7"
+            }
+          }
+        ],
+        "missing_bindings": [
+          {
+            "name": "Category-approval question and answer",
+            "direction": "both",
+            "reason": "Approval happens in a kernel run, but no HumanQuestion/HumanAnswer payload for accepting, changing or undoing a suggested category is registered, and the approved-but-unstaged in-run state has no defined shape.",
+            "source": "docs/product-truth/flows/leafcutter/criteria-library.flow.json"
+          }
+        ]
+      },
       "implements": [
         "DK-500c-1",
         "DK-500c-1-i"
@@ -113,20 +590,126 @@
     {
       "id": "stage",
       "label": "Stage the record",
-      "human": "The approved category is written beside the run that approved it, under <run_root>/runs/<run_id>/staged/criterion_categories/<id>.yaml, and never into the repository.",
+      "human": "The approved category is written beside the run that approved it, under <run_root>/runs/<run_id>/staged/criterion_categories/<id>.yaml, and never into the repository.\n\nThe staged record uses the proposed mock-record design; how the approved category reaches the run's staging is not defined.\n\nContract fields and examples (generated)\nConsumes:\n  No checked JSON binding documented in this direction.\nProduces:\n  ILLUSTRATIVE DESIGN: PROPOSED, not implemented: mock-record shape transcribed from docs/product-truth/mock-data/leafcutter/criterion-categories.mock.json (decision dec-93c1c730463c1f3c). The derived views replaces and member_view and the fixture field source appear only because the stored samples carry them. No category reader, writer, index or runtime validation exists.\n  criterion_category/id: string (required)\n  criterion_category/lifecycle_stage: string (required)\n  criterion_category/approval_status: string (required)\n  criterion_category/approved_by: null|string (required)\n  criterion_category/approved_at: null|string (required)\n  criterion_category/run_id: null|string (required)\n  criterion_category/staged_path: null|string (required)\n  criterion_category/record_path: null|string (required)\n  Schema: [criterion_category](docs/product-truth/schemas/criterion-category.schema.json)\n\nPROPOSED - missing JSON binding (consumes): Approved in-run category\nStaging writes the category the run approved, but no in-run representation between the approval and the staged YAML is defined; the dataset's lifecycle has no approved-but-unstaged stage.\nDesign source: [docs/product-truth/mock-data/leafcutter/criterion-categories.mock.json](docs/product-truth/mock-data/leafcutter/criterion-categories.mock.json)\n\nOutput: staged CriterionCategory mock record; stored sample, not live data — criterion_category; observed; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"id\": \"cat-6c3eb4f2af148922\",\n  \"lifecycle_stage\": \"staged\",\n  \"approval_status\": \"approved\",\n  \"approved_by\": \"human:user\",\n  \"approved_at\": \"2026-10-08T15:04:27Z\",\n  \"run_id\": \"run-8e11d78d6e2a6c2e\",\n  \"staged_path\": \"<run_root>/runs/run-8e11d78d6e2a6c2e/staged/criterion_categories/cat-6c3eb4f2af148922.yaml\",\n  \"record_path\": null\n}\nReceipt: [docs/product-truth/mock-data/leafcutter/criterion-categories.mock.json](docs/product-truth/mock-data/leafcutter/criterion-categories.mock.json)/entities/CriterionCategory/records/5",
       "order": 4,
       "agent": "kernel (approving run)",
-      "consumes": [
-        "approved category (approved_by human)"
-      ],
+      "consumes": [],
       "produces": [
-        "staged category record"
+        "criterion_category/id: string (required)",
+        "criterion_category/lifecycle_stage: string (required)",
+        "criterion_category/approval_status: string (required)",
+        "criterion_category/approved_by: null|string (required)",
+        "criterion_category/approved_at: null|string (required)",
+        "criterion_category/run_id: null|string (required)",
+        "criterion_category/staged_path: null|string (required)",
+        "criterion_category/record_path: null|string (required)"
       ],
       "writes": [
         "CriterionCategory"
       ],
       "impl_asof": "2026-10-03",
       "impl_status": "not_started",
+      "io_contracts": {
+        "consumes": [],
+        "produces": [
+          {
+            "contract": "criterion_category",
+            "fields": [
+              {
+                "path": "/id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/lifecycle_stage",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/approval_status",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/approved_by",
+                "types": [
+                  "null",
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/approved_at",
+                "types": [
+                  "null",
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/run_id",
+                "types": [
+                  "null",
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/staged_path",
+                "types": [
+                  "null",
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/record_path",
+                "types": [
+                  "null",
+                  "string"
+                ],
+                "required": true
+              }
+            ]
+          }
+        ],
+        "examples": [
+          {
+            "contract": "criterion_category",
+            "mode": "projection",
+            "origin": "observed",
+            "label": "Output: staged CriterionCategory mock record; stored sample, not live data",
+            "value": {
+              "id": "cat-6c3eb4f2af148922",
+              "lifecycle_stage": "staged",
+              "approval_status": "approved",
+              "approved_by": "human:user",
+              "approved_at": "2026-10-08T15:04:27Z",
+              "run_id": "run-8e11d78d6e2a6c2e",
+              "staged_path": "<run_root>/runs/run-8e11d78d6e2a6c2e/staged/criterion_categories/cat-6c3eb4f2af148922.yaml",
+              "record_path": null
+            },
+            "source": {
+              "path": "docs/product-truth/mock-data/leafcutter/criterion-categories.mock.json",
+              "pointer": "/entities/CriterionCategory/records/5"
+            }
+          }
+        ],
+        "missing_bindings": [
+          {
+            "name": "Approved in-run category",
+            "direction": "consumes",
+            "reason": "Staging writes the category the run approved, but no in-run representation between the approval and the staged YAML is defined; the dataset's lifecycle has no approved-but-unstaged stage.",
+            "source": "docs/product-truth/mock-data/leafcutter/criterion-categories.mock.json"
+          }
+        ]
+      },
       "implements": [
         "DK-500c-1"
       ]
@@ -134,14 +717,24 @@
     {
       "id": "publish",
       "label": "Publish to the library",
-      "human": "You publish the staged record: it is checked, written to docs/criteria/<id>.yaml (folder name still to be confirmed), and reviewed and merged like any other change. Published decision records are never edited.",
+      "human": "You publish the staged record: it is checked, written to docs/criteria/<id>.yaml (folder name still to be confirmed), and reviewed and merged like any other change. Published decision records are never edited.\n\nThe staged and published records use the proposed mock-record design, and the member check reads the runtime DecisionRecord. The output is an illustrative after-publish view of the same staged sample. The publish command and its result are not defined.\n\nContract fields and examples (generated)\nConsumes:\n  ILLUSTRATIVE DESIGN: PROPOSED, not implemented: mock-record shape transcribed from docs/product-truth/mock-data/leafcutter/criterion-categories.mock.json (decision dec-93c1c730463c1f3c). The derived views replaces and member_view and the fixture field source appear only because the stored samples carry them. No category reader, writer, index or runtime validation exists.\n  criterion_category/id: string (required)\n  criterion_category/pref_label: string (required)\n  criterion_category/alt_labels: array (required)\n  criterion_category/lifecycle_stage: string (required)\n  criterion_category/staged_path: null|string (required)\n  criterion_category/members: array (required)\n  Schema: [criterion_category](docs/product-truth/schemas/criterion-category.schema.json)\n  decision_record/id: string (required)\n  decision_record/criteria/*/id: string (required)\n  decision_record/criteria/*/question: string (required)\n  Runtime contract: [decision_record](kernel/memory/models.py)\nProduces:\n  ILLUSTRATIVE DESIGN: PROPOSED, not implemented: mock-record shape transcribed from docs/product-truth/mock-data/leafcutter/criterion-categories.mock.json (decision dec-93c1c730463c1f3c). The derived views replaces and member_view and the fixture field source appear only because the stored samples carry them. No category reader, writer, index or runtime validation exists.\n  criterion_category/id: string (required)\n  criterion_category/lifecycle_stage: string (required)\n  criterion_category/record_path: null|string (required)\n  Schema: [criterion_category](docs/product-truth/schemas/criterion-category.schema.json)\n\nPROPOSED - missing JSON binding (both): Publish command and result\nThe human-run publish command is not yet defined: its invocation, its validation result and the docs/criteria/ folder name (still to be confirmed) have no contract.\nDesign source: [docs/product-truth/flows/leafcutter/criteria-library.flow.json](docs/product-truth/flows/leafcutter/criteria-library.flow.json)\n\nInput: staged CriterionCategory mock record; stored sample, not live data — criterion_category; observed; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"id\": \"cat-6c3eb4f2af148922\",\n  \"pref_label\": \"Do the filter fields take their values only from declared vocabularies that validation enforces?\",\n  \"alt_labels\": [\n    \"Are category, decision_type and components top-level plain-YAML fields whose values come from declared vocabularies that validation enforces, with the category list itself a reviewed vocabulary (ADR-061 section 4)?\"\n  ],\n  \"lifecycle_stage\": \"staged\",\n  \"staged_path\": \"<run_root>/runs/run-8e11d78d6e2a6c2e/staged/criterion_categories/cat-6c3eb4f2af148922.yaml\",\n  \"members\": [\n    {\n      \"decision_id\": \"dec-93c1c730463c1f3c\",\n      \"criterion_id\": \"crit.filters_from_declared_vocabularies\"\n    }\n  ]\n}\nReceipt: [docs/product-truth/mock-data/leafcutter/criterion-categories.mock.json](docs/product-truth/mock-data/leafcutter/criterion-categories.mock.json)/entities/CriterionCategory/records/5\n\nInput: reconstructed projection of docs/decisions/dec-93c1c730463c1f3c.yaml (criterion ids and questions only); it carries the staged member crit.filters_from_declared_vocabularies — decision_record; reconstructed; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"id\": \"dec-93c1c730463c1f3c\",\n  \"criteria\": [\n    {\n      \"id\": \"crit.approval_unit_and_path\",\n      \"question\": \"Does the option name the unit a human approves (a category, a criterion, or a criterion's membership in a category) and give it a path like decision records have: staged in the run root, entered into Git only by a human-run publish command, and never created directly from Langfuse or from a mined candidate (ADR-060, ADR-058)?\"\n    },\n    {\n      \"id\": \"crit.filters_from_declared_vocabularies\",\n      \"question\": \"Are category, decision_type and components top-level plain-YAML fields whose values come from declared vocabularies that validation enforces, with the category list itself a reviewed vocabulary (ADR-061 section 4)?\"\n    },\n    {\n      \"id\": \"crit.projectable_as_native_kind\",\n      \"question\": \"Can the ADR-062 projector read the store as one reviewed native kind with canonical ids, without changing how the existing Decision kind is read (its filename rule and pinned schema)?\"\n    },\n    {\n      \"id\": \"crit.regroup_without_rewrites\",\n      \"question\": \"Is category membership kept in one place outside the published decision records, so that merging, splitting or moving a criterion edits only category data, and retired ids stay resolvable through a recorded replaced-by link?\"\n    },\n    {\n      \"id\": \"crit.outcomes_left_to_colony_store\",\n      \"question\": \"Does the format keep outcome and success statistics out of Git and expose only stable criterion or category ids that ADR-065's derived Neo4j aggregates can key on?\"\n    },\n    {\n      \"id\": \"crit.stable_identity\",\n      \"question\": \"Does every stored criterion or category get a repository-unique, stable id with a declared kind under ADR-061's (repository_id, kind, id) key, with validation that rejects duplicate ids and dangling references, given that decision-local criterion ids already collide today?\"\n    },\n    {\n      \"id\": \"crit.usage_generated_not_written\",\n      \"question\": \"Are usage counts (how many published decisions used a criterion or category) produced only by a generator from published records and checked for freshness like docs/decisions/index.json?\"\n    },\n    {\n      \"id\": \"crit.existing_consumers_unchanged\",\n      \"question\": \"Do the existing readers of docs/decisions (validate and index in kernel/memory, the file precedent backend, the knowledge-map docs surface and the ADR-062 Decision projector) keep working without a change?\"\n    },\n    {\n      \"id\": \"crit.cheap_candidate_lookup\",\n      \"question\": \"Can a later run find candidate criteria or categories by filter and by criterion wording, not only by a decision's question and title, without opening every file?\"\n    },\n    {\n      \"id\": \"crit.no_new_package_surface\",\n      \"question\": \"Can the format ship without a new config/paths.json surface or pre-commit hook, which would need an acceptance criterion with package_surface: true?\"\n    }\n  ]\n}\n\nOutput: illustrative after-publish projection of the same record (record_path per the dataset invariant); not a stored sample — criterion_category; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"id\": \"cat-6c3eb4f2af148922\",\n  \"lifecycle_stage\": \"published\",\n  \"record_path\": \"docs/criteria/cat-6c3eb4f2af148922.yaml\"\n}",
       "order": 5,
       "agent": "human-run publish (command not yet defined)",
       "consumes": [
-        "staged category record"
+        "criterion_category/id: string (required)",
+        "criterion_category/pref_label: string (required)",
+        "criterion_category/alt_labels: array (required)",
+        "criterion_category/lifecycle_stage: string (required)",
+        "criterion_category/staged_path: null|string (required)",
+        "criterion_category/members: array (required)",
+        "decision_record/id: string (required)",
+        "decision_record/criteria/*/id: string (required)",
+        "decision_record/criteria/*/question: string (required)"
       ],
       "produces": [
-        "published category record (docs/criteria/<id>.yaml)"
+        "criterion_category/id: string (required)",
+        "criterion_category/lifecycle_stage: string (required)",
+        "criterion_category/record_path: null|string (required)"
       ],
       "reads": [
         "CriterionCategory",
@@ -152,6 +745,210 @@
       ],
       "impl_asof": "2026-10-03",
       "impl_status": "not_started",
+      "io_contracts": {
+        "consumes": [
+          {
+            "contract": "criterion_category",
+            "fields": [
+              {
+                "path": "/id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/pref_label",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/alt_labels",
+                "types": [
+                  "array"
+                ],
+                "required": true
+              },
+              {
+                "path": "/lifecycle_stage",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/staged_path",
+                "types": [
+                  "null",
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/members",
+                "types": [
+                  "array"
+                ],
+                "required": true
+              }
+            ]
+          },
+          {
+            "contract": "decision_record",
+            "fields": [
+              {
+                "path": "/id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/criteria/*/id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/criteria/*/question",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              }
+            ]
+          }
+        ],
+        "produces": [
+          {
+            "contract": "criterion_category",
+            "fields": [
+              {
+                "path": "/id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/lifecycle_stage",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/record_path",
+                "types": [
+                  "null",
+                  "string"
+                ],
+                "required": true
+              }
+            ]
+          }
+        ],
+        "examples": [
+          {
+            "contract": "criterion_category",
+            "mode": "projection",
+            "origin": "observed",
+            "label": "Input: staged CriterionCategory mock record; stored sample, not live data",
+            "value": {
+              "id": "cat-6c3eb4f2af148922",
+              "pref_label": "Do the filter fields take their values only from declared vocabularies that validation enforces?",
+              "alt_labels": [
+                "Are category, decision_type and components top-level plain-YAML fields whose values come from declared vocabularies that validation enforces, with the category list itself a reviewed vocabulary (ADR-061 section 4)?"
+              ],
+              "lifecycle_stage": "staged",
+              "staged_path": "<run_root>/runs/run-8e11d78d6e2a6c2e/staged/criterion_categories/cat-6c3eb4f2af148922.yaml",
+              "members": [
+                {
+                  "decision_id": "dec-93c1c730463c1f3c",
+                  "criterion_id": "crit.filters_from_declared_vocabularies"
+                }
+              ]
+            },
+            "source": {
+              "path": "docs/product-truth/mock-data/leafcutter/criterion-categories.mock.json",
+              "pointer": "/entities/CriterionCategory/records/5"
+            }
+          },
+          {
+            "contract": "decision_record",
+            "mode": "projection",
+            "origin": "reconstructed",
+            "label": "Input: reconstructed projection of docs/decisions/dec-93c1c730463c1f3c.yaml (criterion ids and questions only); it carries the staged member crit.filters_from_declared_vocabularies",
+            "value": {
+              "id": "dec-93c1c730463c1f3c",
+              "criteria": [
+                {
+                  "id": "crit.approval_unit_and_path",
+                  "question": "Does the option name the unit a human approves (a category, a criterion, or a criterion's membership in a category) and give it a path like decision records have: staged in the run root, entered into Git only by a human-run publish command, and never created directly from Langfuse or from a mined candidate (ADR-060, ADR-058)?"
+                },
+                {
+                  "id": "crit.filters_from_declared_vocabularies",
+                  "question": "Are category, decision_type and components top-level plain-YAML fields whose values come from declared vocabularies that validation enforces, with the category list itself a reviewed vocabulary (ADR-061 section 4)?"
+                },
+                {
+                  "id": "crit.projectable_as_native_kind",
+                  "question": "Can the ADR-062 projector read the store as one reviewed native kind with canonical ids, without changing how the existing Decision kind is read (its filename rule and pinned schema)?"
+                },
+                {
+                  "id": "crit.regroup_without_rewrites",
+                  "question": "Is category membership kept in one place outside the published decision records, so that merging, splitting or moving a criterion edits only category data, and retired ids stay resolvable through a recorded replaced-by link?"
+                },
+                {
+                  "id": "crit.outcomes_left_to_colony_store",
+                  "question": "Does the format keep outcome and success statistics out of Git and expose only stable criterion or category ids that ADR-065's derived Neo4j aggregates can key on?"
+                },
+                {
+                  "id": "crit.stable_identity",
+                  "question": "Does every stored criterion or category get a repository-unique, stable id with a declared kind under ADR-061's (repository_id, kind, id) key, with validation that rejects duplicate ids and dangling references, given that decision-local criterion ids already collide today?"
+                },
+                {
+                  "id": "crit.usage_generated_not_written",
+                  "question": "Are usage counts (how many published decisions used a criterion or category) produced only by a generator from published records and checked for freshness like docs/decisions/index.json?"
+                },
+                {
+                  "id": "crit.existing_consumers_unchanged",
+                  "question": "Do the existing readers of docs/decisions (validate and index in kernel/memory, the file precedent backend, the knowledge-map docs surface and the ADR-062 Decision projector) keep working without a change?"
+                },
+                {
+                  "id": "crit.cheap_candidate_lookup",
+                  "question": "Can a later run find candidate criteria or categories by filter and by criterion wording, not only by a decision's question and title, without opening every file?"
+                },
+                {
+                  "id": "crit.no_new_package_surface",
+                  "question": "Can the format ship without a new config/paths.json surface or pre-commit hook, which would need an acceptance criterion with package_surface: true?"
+                }
+              ]
+            }
+          },
+          {
+            "contract": "criterion_category",
+            "mode": "projection",
+            "origin": "illustrative",
+            "label": "Output: illustrative after-publish projection of the same record (record_path per the dataset invariant); not a stored sample",
+            "value": {
+              "id": "cat-6c3eb4f2af148922",
+              "lifecycle_stage": "published",
+              "record_path": "docs/criteria/cat-6c3eb4f2af148922.yaml"
+            }
+          }
+        ],
+        "missing_bindings": [
+          {
+            "name": "Publish command and result",
+            "direction": "both",
+            "reason": "The human-run publish command is not yet defined: its invocation, its validation result and the docs/criteria/ folder name (still to be confirmed) have no contract.",
+            "source": "docs/product-truth/flows/leafcutter/criteria-library.flow.json"
+          }
+        ]
+      },
       "implements": [
         "DK-500c-2",
         "DK-500c-2-i",
@@ -162,14 +959,17 @@
     {
       "id": "count-usage",
       "label": "Count usage from the records",
-      "human": "How many published decisions used each category is generated from the records into a freshness-checked index, never written by hand. Being used often never counts as proof that a category is good.",
+      "human": "How many published decisions used each category is generated from the records into a freshness-checked index, never written by hand. Being used often never counts as proof that a category is good.\n\nusage_count is shown on the proposed mock-record design; the generated, freshness-checked index entry that would hold it is not defined.\n\nContract fields and examples (generated)\nConsumes:\n  ILLUSTRATIVE DESIGN: PROPOSED, not implemented: mock-record shape transcribed from docs/product-truth/mock-data/leafcutter/criterion-categories.mock.json (decision dec-93c1c730463c1f3c). The derived views replaces and member_view and the fixture field source appear only because the stored samples carry them. No category reader, writer, index or runtime validation exists.\n  criterion_category/id: string (required)\n  criterion_category/lifecycle_stage: string (required)\n  criterion_category/members: array (required)\n  Schema: [criterion_category](docs/product-truth/schemas/criterion-category.schema.json)\nProduces:\n  ILLUSTRATIVE DESIGN: PROPOSED, not implemented: mock-record shape transcribed from docs/product-truth/mock-data/leafcutter/criterion-categories.mock.json (decision dec-93c1c730463c1f3c). The derived views replaces and member_view and the fixture field source appear only because the stored samples carry them. No category reader, writer, index or runtime validation exists.\n  criterion_category/id: string (required)\n  criterion_category/usage_count: integer|null (required)\n  Schema: [criterion_category](docs/product-truth/schemas/criterion-category.schema.json)\n\nPROPOSED - missing JSON binding (produces): Generated criteria index entry (docs/criteria/index.json)\nThe count is generated into a freshness-checked index like docs/decisions/index.json, but that index, its entry fields and its freshness check are not defined.\nDesign source: [docs/product-truth/mock-data/leafcutter/criterion-categories.mock.json](docs/product-truth/mock-data/leafcutter/criterion-categories.mock.json)\n\nInput: published CriterionCategory mock record; stored sample, not live data — criterion_category; observed; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"id\": \"cat-1dc11c5a2ffa7310\",\n  \"lifecycle_stage\": \"published\",\n  \"members\": [\n    {\n      \"decision_id\": \"dec-4673055ef54113d5\",\n      \"criterion_id\": \"crit.small_slice\"\n    },\n    {\n      \"decision_id\": \"dec-acdfd972fcaca478\",\n      \"criterion_id\": \"crit.small_slice\"\n    },\n    {\n      \"decision_id\": \"dec-d53e1c52cd47c832\",\n      \"criterion_id\": \"crit.small_slice\"\n    }\n  ]\n}\nReceipt: [docs/product-truth/mock-data/leafcutter/criterion-categories.mock.json](docs/product-truth/mock-data/leafcutter/criterion-categories.mock.json)/entities/CriterionCategory/records/0\n\nOutput: usage_count of that record (three distinct member decisions); stored sample, not live data — criterion_category; observed; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"id\": \"cat-1dc11c5a2ffa7310\",\n  \"usage_count\": 3\n}\nReceipt: [docs/product-truth/mock-data/leafcutter/criterion-categories.mock.json](docs/product-truth/mock-data/leafcutter/criterion-categories.mock.json)/entities/CriterionCategory/records/0",
       "order": 6,
       "agent": "generated criteria index (like docs/decisions/index.json)",
       "consumes": [
-        "published category record (docs/criteria/<id>.yaml)"
+        "criterion_category/id: string (required)",
+        "criterion_category/lifecycle_stage: string (required)",
+        "criterion_category/members: array (required)"
       ],
       "produces": [
-        "usage_count per category"
+        "criterion_category/id: string (required)",
+        "criterion_category/usage_count: integer|null (required)"
       ],
       "reads": [
         "CriterionCategory",
@@ -177,6 +977,110 @@
       ],
       "impl_asof": "2026-10-03",
       "impl_status": "not_started",
+      "io_contracts": {
+        "consumes": [
+          {
+            "contract": "criterion_category",
+            "fields": [
+              {
+                "path": "/id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/lifecycle_stage",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/members",
+                "types": [
+                  "array"
+                ],
+                "required": true
+              }
+            ]
+          }
+        ],
+        "produces": [
+          {
+            "contract": "criterion_category",
+            "fields": [
+              {
+                "path": "/id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/usage_count",
+                "types": [
+                  "integer",
+                  "null"
+                ],
+                "required": true
+              }
+            ]
+          }
+        ],
+        "examples": [
+          {
+            "contract": "criterion_category",
+            "mode": "projection",
+            "origin": "observed",
+            "label": "Input: published CriterionCategory mock record; stored sample, not live data",
+            "value": {
+              "id": "cat-1dc11c5a2ffa7310",
+              "lifecycle_stage": "published",
+              "members": [
+                {
+                  "decision_id": "dec-4673055ef54113d5",
+                  "criterion_id": "crit.small_slice"
+                },
+                {
+                  "decision_id": "dec-acdfd972fcaca478",
+                  "criterion_id": "crit.small_slice"
+                },
+                {
+                  "decision_id": "dec-d53e1c52cd47c832",
+                  "criterion_id": "crit.small_slice"
+                }
+              ]
+            },
+            "source": {
+              "path": "docs/product-truth/mock-data/leafcutter/criterion-categories.mock.json",
+              "pointer": "/entities/CriterionCategory/records/0"
+            }
+          },
+          {
+            "contract": "criterion_category",
+            "mode": "projection",
+            "origin": "observed",
+            "label": "Output: usage_count of that record (three distinct member decisions); stored sample, not live data",
+            "value": {
+              "id": "cat-1dc11c5a2ffa7310",
+              "usage_count": 3
+            },
+            "source": {
+              "path": "docs/product-truth/mock-data/leafcutter/criterion-categories.mock.json",
+              "pointer": "/entities/CriterionCategory/records/0"
+            }
+          }
+        ],
+        "missing_bindings": [
+          {
+            "name": "Generated criteria index entry (docs/criteria/index.json)",
+            "direction": "produces",
+            "reason": "The count is generated into a freshness-checked index like docs/decisions/index.json, but that index, its entry fields and its freshness check are not defined.",
+            "source": "docs/product-truth/mock-data/leafcutter/criterion-categories.mock.json"
+          }
+        ]
+      },
       "implements": [
         "DK-500f-1",
         "DK-500f-4"
@@ -185,15 +1089,29 @@
     {
       "id": "aggregate-outcomes",
       "label": "Keep outcomes as Neo4j aggregates",
-      "human": "Where the optional Neo4j learning store is set up, how the decisions behind each published category turned out is rebuilt in full as aggregates keyed by category id and context. None of it is written into Git or used to choose what is offered.",
+      "human": "Where the optional Neo4j learning store is set up, how the decisions behind each published category turned out is rebuilt in full as aggregates keyed by category id and context. None of it is written into Git or used to choose what is offered.\n\nCategory and aggregate rows use the proposed mock designs; member outcomes and context come from the runtime DecisionRecord. The Neo4j write and the rebuild trigger are not defined.\n\nContract fields and examples (generated)\nConsumes:\n  ILLUSTRATIVE DESIGN: PROPOSED, not implemented: mock-record shape transcribed from docs/product-truth/mock-data/leafcutter/criterion-categories.mock.json (decision dec-93c1c730463c1f3c). The derived views replaces and member_view and the fixture field source appear only because the stored samples carry them. No category reader, writer, index or runtime validation exists.\n  criterion_category/id: string (required)\n  criterion_category/lifecycle_stage: string (required)\n  criterion_category/members: array (required)\n  criterion_category/usage_count: integer|null (required)\n  Schema: [criterion_category](docs/product-truth/schemas/criterion-category.schema.json)\n  decision_record/id: string (required)\n  decision_record/decision_type: string (required)\n  decision_record/components: array (optional; default [])\n  decision_record/repository_wide: boolean (optional; default false)\n  decision_record/final_outcome/status: string (optional; default \"pending\")\n  Runtime contract: [decision_record](kernel/memory/models.py)\nProduces:\n  ILLUSTRATIVE DESIGN: PROPOSED, not implemented: mock-row shape transcribed from docs/product-truth/mock-data/leafcutter/criterion-categories.mock.json; ADR-065 leaves the aggregate model open. Derived Neo4j rows, never written into Git; no store writer or reader exists.\n  criterion_category_aggregate/category_id: string (required)\n  criterion_category_aggregate/context: object (required)\n  criterion_category_aggregate/decision_count: integer (required)\n  criterion_category_aggregate/confirmed_count: integer (required)\n  criterion_category_aggregate/corrected_count: integer (required)\n  criterion_category_aggregate/abandoned_count: integer (required)\n  criterion_category_aggregate/pending_count: integer (required)\n  criterion_category_aggregate/rebuilt_at: string (required)\n  Schema: [criterion_category_aggregate](docs/product-truth/schemas/criterion-category-aggregate.schema.json)\n\nPROPOSED - missing JSON binding (produces): Neo4j aggregate write and rebuild trigger\nADR-065 leaves the aggregate model open; how an added item triggers a full rebuild and how the rows are written to the learning store has no defined interface.\nDesign source: [docs/product-truth/mock-data/leafcutter/criterion-categories.mock.json](docs/product-truth/mock-data/leafcutter/criterion-categories.mock.json)\n\nInput: published CriterionCategory mock record; stored sample, not live data — criterion_category; observed; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"id\": \"cat-1dc11c5a2ffa7310\",\n  \"lifecycle_stage\": \"published\",\n  \"members\": [\n    {\n      \"decision_id\": \"dec-4673055ef54113d5\",\n      \"criterion_id\": \"crit.small_slice\"\n    },\n    {\n      \"decision_id\": \"dec-acdfd972fcaca478\",\n      \"criterion_id\": \"crit.small_slice\"\n    },\n    {\n      \"decision_id\": \"dec-d53e1c52cd47c832\",\n      \"criterion_id\": \"crit.small_slice\"\n    }\n  ],\n  \"usage_count\": 3\n}\nReceipt: [docs/product-truth/mock-data/leafcutter/criterion-categories.mock.json](docs/product-truth/mock-data/leafcutter/criterion-categories.mock.json)/entities/CriterionCategory/records/0\n\nInput: reconstructed projection of docs/decisions/dec-d53e1c52cd47c832.yaml, one of its member decisions (context fields and final outcome only) — decision_record; reconstructed; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"id\": \"dec-d53e1c52cd47c832\",\n  \"decision_type\": \"design\",\n  \"components\": [],\n  \"repository_wide\": true,\n  \"final_outcome\": {\n    \"status\": \"pending\"\n  }\n}\n\nOutput: CriterionCategoryAggregate mock row for that category; stored sample, not live data — criterion_category_aggregate; observed; complete payload:\n{\n  \"id\": \"cat-1dc11c5a2ffa7310@repository_wide\",\n  \"repository_id\": \"leafcutter-ai\",\n  \"kind\": \"criterion_category\",\n  \"category_id\": \"cat-1dc11c5a2ffa7310\",\n  \"context\": {\n    \"capability\": \"decision\",\n    \"task_type\": null,\n    \"decision_type\": \"design\",\n    \"components\": [],\n    \"repository_wide\": true,\n    \"repository_id\": \"leafcutter-ai\",\n    \"policy_version\": null\n  },\n  \"decision_count\": 3,\n  \"confirmed_count\": 0,\n  \"corrected_count\": 0,\n  \"abandoned_count\": 0,\n  \"pending_count\": 3,\n  \"rebuilt_at\": \"2026-10-07T09:02:16Z\",\n  \"rebuilt_after\": \"publish of run-d6a7c493a5e1ebd5 (cat-40cc613f737e3323 merged into cat-d15d52392d7aa94c)\",\n  \"source\": \"illustrative shape (ADR-065 leaves the aggregate model open; statistics start with COLLECT); the counts are computed from the real final_outcome of dec-4673055ef54113d5, dec-acdfd972fcaca478, dec-d53e1c52cd47c832 — all pending on 2026-10-02\"\n}\nReceipt: [docs/product-truth/mock-data/leafcutter/criterion-categories.mock.json](docs/product-truth/mock-data/leafcutter/criterion-categories.mock.json)/entities/CriterionCategoryAggregate/records/0",
       "order": 7,
       "agent": "colony memory store (Neo4j, ADR-065)",
       "consumes": [
-        "published category record (docs/criteria/<id>.yaml)",
-        "usage_count per category"
+        "criterion_category/id: string (required)",
+        "criterion_category/lifecycle_stage: string (required)",
+        "criterion_category/members: array (required)",
+        "criterion_category/usage_count: integer|null (required)",
+        "decision_record/id: string (required)",
+        "decision_record/decision_type: string (required)",
+        "decision_record/components: array (optional; default [])",
+        "decision_record/repository_wide: boolean (optional; default false)",
+        "decision_record/final_outcome/status: string (optional; default \"pending\")"
       ],
       "produces": [
-        "CriterionCategoryAggregate rows"
+        "criterion_category_aggregate/category_id: string (required)",
+        "criterion_category_aggregate/context: object (required)",
+        "criterion_category_aggregate/decision_count: integer (required)",
+        "criterion_category_aggregate/confirmed_count: integer (required)",
+        "criterion_category_aggregate/corrected_count: integer (required)",
+        "criterion_category_aggregate/abandoned_count: integer (required)",
+        "criterion_category_aggregate/pending_count: integer (required)",
+        "criterion_category_aggregate/rebuilt_at: string (required)"
       ],
       "reads": [
         "CriterionCategory",
@@ -204,6 +1122,237 @@
       ],
       "impl_asof": "2026-10-03",
       "impl_status": "not_started",
+      "io_contracts": {
+        "consumes": [
+          {
+            "contract": "criterion_category",
+            "fields": [
+              {
+                "path": "/id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/lifecycle_stage",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/members",
+                "types": [
+                  "array"
+                ],
+                "required": true
+              },
+              {
+                "path": "/usage_count",
+                "types": [
+                  "integer",
+                  "null"
+                ],
+                "required": true
+              }
+            ]
+          },
+          {
+            "contract": "decision_record",
+            "fields": [
+              {
+                "path": "/id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/decision_type",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/components",
+                "types": [
+                  "array"
+                ],
+                "required": false,
+                "default": []
+              },
+              {
+                "path": "/repository_wide",
+                "types": [
+                  "boolean"
+                ],
+                "required": false,
+                "default": false
+              },
+              {
+                "path": "/final_outcome/status",
+                "types": [
+                  "string"
+                ],
+                "required": false,
+                "default": "pending"
+              }
+            ]
+          }
+        ],
+        "produces": [
+          {
+            "contract": "criterion_category_aggregate",
+            "fields": [
+              {
+                "path": "/category_id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/context",
+                "types": [
+                  "object"
+                ],
+                "required": true
+              },
+              {
+                "path": "/decision_count",
+                "types": [
+                  "integer"
+                ],
+                "required": true
+              },
+              {
+                "path": "/confirmed_count",
+                "types": [
+                  "integer"
+                ],
+                "required": true
+              },
+              {
+                "path": "/corrected_count",
+                "types": [
+                  "integer"
+                ],
+                "required": true
+              },
+              {
+                "path": "/abandoned_count",
+                "types": [
+                  "integer"
+                ],
+                "required": true
+              },
+              {
+                "path": "/pending_count",
+                "types": [
+                  "integer"
+                ],
+                "required": true
+              },
+              {
+                "path": "/rebuilt_at",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              }
+            ]
+          }
+        ],
+        "examples": [
+          {
+            "contract": "criterion_category",
+            "mode": "projection",
+            "origin": "observed",
+            "label": "Input: published CriterionCategory mock record; stored sample, not live data",
+            "value": {
+              "id": "cat-1dc11c5a2ffa7310",
+              "lifecycle_stage": "published",
+              "members": [
+                {
+                  "decision_id": "dec-4673055ef54113d5",
+                  "criterion_id": "crit.small_slice"
+                },
+                {
+                  "decision_id": "dec-acdfd972fcaca478",
+                  "criterion_id": "crit.small_slice"
+                },
+                {
+                  "decision_id": "dec-d53e1c52cd47c832",
+                  "criterion_id": "crit.small_slice"
+                }
+              ],
+              "usage_count": 3
+            },
+            "source": {
+              "path": "docs/product-truth/mock-data/leafcutter/criterion-categories.mock.json",
+              "pointer": "/entities/CriterionCategory/records/0"
+            }
+          },
+          {
+            "contract": "decision_record",
+            "mode": "projection",
+            "origin": "reconstructed",
+            "label": "Input: reconstructed projection of docs/decisions/dec-d53e1c52cd47c832.yaml, one of its member decisions (context fields and final outcome only)",
+            "value": {
+              "id": "dec-d53e1c52cd47c832",
+              "decision_type": "design",
+              "components": [],
+              "repository_wide": true,
+              "final_outcome": {
+                "status": "pending"
+              }
+            }
+          },
+          {
+            "contract": "criterion_category_aggregate",
+            "mode": "full",
+            "origin": "observed",
+            "label": "Output: CriterionCategoryAggregate mock row for that category; stored sample, not live data",
+            "value": {
+              "id": "cat-1dc11c5a2ffa7310@repository_wide",
+              "repository_id": "leafcutter-ai",
+              "kind": "criterion_category",
+              "category_id": "cat-1dc11c5a2ffa7310",
+              "context": {
+                "capability": "decision",
+                "task_type": null,
+                "decision_type": "design",
+                "components": [],
+                "repository_wide": true,
+                "repository_id": "leafcutter-ai",
+                "policy_version": null
+              },
+              "decision_count": 3,
+              "confirmed_count": 0,
+              "corrected_count": 0,
+              "abandoned_count": 0,
+              "pending_count": 3,
+              "rebuilt_at": "2026-10-07T09:02:16Z",
+              "rebuilt_after": "publish of run-d6a7c493a5e1ebd5 (cat-40cc613f737e3323 merged into cat-d15d52392d7aa94c)",
+              "source": "illustrative shape (ADR-065 leaves the aggregate model open; statistics start with COLLECT); the counts are computed from the real final_outcome of dec-4673055ef54113d5, dec-acdfd972fcaca478, dec-d53e1c52cd47c832 — all pending on 2026-10-02"
+            },
+            "source": {
+              "path": "docs/product-truth/mock-data/leafcutter/criterion-categories.mock.json",
+              "pointer": "/entities/CriterionCategoryAggregate/records/0"
+            }
+          }
+        ],
+        "missing_bindings": [
+          {
+            "name": "Neo4j aggregate write and rebuild trigger",
+            "direction": "produces",
+            "reason": "ADR-065 leaves the aggregate model open; how an added item triggers a full rebuild and how the rows are written to the learning store has no defined interface.",
+            "source": "docs/product-truth/mock-data/leafcutter/criterion-categories.mock.json"
+          }
+        ]
+      },
       "implements": [
         "DK-500f-2",
         "DK-500f-2-i"
@@ -212,22 +1361,155 @@
     {
       "id": "import-to-graph",
       "label": "Import categories into the knowledge graph",
-      "human": "After publish, the knowledge importer reads the published category records as a new native kind through the ADR-062 reader registry and projects each category, its replaced-by links and its membership edges between decisions, criteria and categories into the next Neo4j generation.",
+      "human": "After publish, the knowledge importer reads the published category records as a new native kind through the ADR-062 reader registry and projects each category, its replaced-by links and its membership edges between decisions, criteria and categories into the next Neo4j generation.\n\nThe importer reads the proposed category record design and the runtime DecisionRecord. Its output is a new projection generation, but criterion_category is not yet a registered native kind, so the category nodes and membership edges have no defined shape.\n\nContract fields and examples (generated)\nConsumes:\n  ILLUSTRATIVE DESIGN: PROPOSED, not implemented: mock-record shape transcribed from docs/product-truth/mock-data/leafcutter/criterion-categories.mock.json (decision dec-93c1c730463c1f3c). The derived views replaces and member_view and the fixture field source appear only because the stored samples carry them. No category reader, writer, index or runtime validation exists.\n  criterion_category/repository_id: string (required)\n  criterion_category/kind: string (required)\n  criterion_category/id: string (required)\n  criterion_category/replaced_by: array (required)\n  criterion_category/members: array (required)\n  Schema: [criterion_category](docs/product-truth/schemas/criterion-category.schema.json)\n  decision_record/id: string (required)\n  decision_record/criteria/*/id: string (required)\n  Runtime contract: [decision_record](kernel/memory/models.py)\nProduces:\n  No checked JSON binding documented in this direction.\n\nPROPOSED - missing JSON binding (produces): Category nodes and membership edges in the new generation\nThe ADR-062 importer publishes generations as a ProjectionSnapshot, but criterion_category is not a registered reader kind: node properties, replaced-by links and the decision-criterion-category membership edges are undefined.\nDesign source: [docs/product-truth/flows/leafcutter/criteria-library.flow.json](docs/product-truth/flows/leafcutter/criteria-library.flow.json)\n\nInput: published CriterionCategory mock record; stored sample, not live data — criterion_category; observed; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"repository_id\": \"leafcutter-ai\",\n  \"kind\": \"criterion_category\",\n  \"id\": \"cat-1dc11c5a2ffa7310\",\n  \"replaced_by\": [],\n  \"members\": [\n    {\n      \"decision_id\": \"dec-4673055ef54113d5\",\n      \"criterion_id\": \"crit.small_slice\"\n    },\n    {\n      \"decision_id\": \"dec-acdfd972fcaca478\",\n      \"criterion_id\": \"crit.small_slice\"\n    },\n    {\n      \"decision_id\": \"dec-d53e1c52cd47c832\",\n      \"criterion_id\": \"crit.small_slice\"\n    }\n  ]\n}\nReceipt: [docs/product-truth/mock-data/leafcutter/criterion-categories.mock.json](docs/product-truth/mock-data/leafcutter/criterion-categories.mock.json)/entities/CriterionCategory/records/0\n\nInput: reconstructed projection of docs/decisions/dec-d53e1c52cd47c832.yaml (criterion ids only) — decision_record; reconstructed; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"id\": \"dec-d53e1c52cd47c832\",\n  \"criteria\": [\n    {\n      \"id\": \"crit.direct_impact\"\n    },\n    {\n      \"id\": \"crit.outside_caller\"\n    },\n    {\n      \"id\": \"crit.human_authority\"\n    },\n    {\n      \"id\": \"crit.feeds_store\"\n    },\n    {\n      \"id\": \"crit.small_slice\"\n    }\n  ]\n}",
       "order": 8,
       "agent": "knowledge importer (ADR-062 native-type reader registry)",
       "consumes": [
-        "published category record (docs/criteria/<id>.yaml)"
+        "criterion_category/repository_id: string (required)",
+        "criterion_category/kind: string (required)",
+        "criterion_category/id: string (required)",
+        "criterion_category/replaced_by: array (required)",
+        "criterion_category/members: array (required)",
+        "decision_record/id: string (required)",
+        "decision_record/criteria/*/id: string (required)"
       ],
-      "produces": [
-        "CriterionCategory nodes",
-        "decision-criterion-category membership edges"
-      ],
+      "produces": [],
       "reads": [
         "CriterionCategory",
         "Decision"
       ],
       "impl_asof": "2026-10-03",
       "impl_status": "not_started",
+      "io_contracts": {
+        "consumes": [
+          {
+            "contract": "criterion_category",
+            "fields": [
+              {
+                "path": "/repository_id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/kind",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/replaced_by",
+                "types": [
+                  "array"
+                ],
+                "required": true
+              },
+              {
+                "path": "/members",
+                "types": [
+                  "array"
+                ],
+                "required": true
+              }
+            ]
+          },
+          {
+            "contract": "decision_record",
+            "fields": [
+              {
+                "path": "/id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/criteria/*/id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              }
+            ]
+          }
+        ],
+        "produces": [],
+        "examples": [
+          {
+            "contract": "criterion_category",
+            "mode": "projection",
+            "origin": "observed",
+            "label": "Input: published CriterionCategory mock record; stored sample, not live data",
+            "value": {
+              "repository_id": "leafcutter-ai",
+              "kind": "criterion_category",
+              "id": "cat-1dc11c5a2ffa7310",
+              "replaced_by": [],
+              "members": [
+                {
+                  "decision_id": "dec-4673055ef54113d5",
+                  "criterion_id": "crit.small_slice"
+                },
+                {
+                  "decision_id": "dec-acdfd972fcaca478",
+                  "criterion_id": "crit.small_slice"
+                },
+                {
+                  "decision_id": "dec-d53e1c52cd47c832",
+                  "criterion_id": "crit.small_slice"
+                }
+              ]
+            },
+            "source": {
+              "path": "docs/product-truth/mock-data/leafcutter/criterion-categories.mock.json",
+              "pointer": "/entities/CriterionCategory/records/0"
+            }
+          },
+          {
+            "contract": "decision_record",
+            "mode": "projection",
+            "origin": "reconstructed",
+            "label": "Input: reconstructed projection of docs/decisions/dec-d53e1c52cd47c832.yaml (criterion ids only)",
+            "value": {
+              "id": "dec-d53e1c52cd47c832",
+              "criteria": [
+                {
+                  "id": "crit.direct_impact"
+                },
+                {
+                  "id": "crit.outside_caller"
+                },
+                {
+                  "id": "crit.human_authority"
+                },
+                {
+                  "id": "crit.feeds_store"
+                },
+                {
+                  "id": "crit.small_slice"
+                }
+              ]
+            }
+          }
+        ],
+        "missing_bindings": [
+          {
+            "name": "Category nodes and membership edges in the new generation",
+            "direction": "produces",
+            "reason": "The ADR-062 importer publishes generations as a ProjectionSnapshot, but criterion_category is not a registered reader kind: node properties, replaced-by links and the decision-criterion-category membership edges are undefined.",
+            "source": "docs/product-truth/flows/leafcutter/criteria-library.flow.json"
+          }
+        ]
+      },
       "implements": [
         "DK-500g-1"
       ]
@@ -235,23 +1517,27 @@
     {
       "id": "explore",
       "label": "Explore which decisions share which questions",
-      "human": "You ask the graph which categories a decision's criteria used and which decisions used a category, and follow a question across every decision that asked it.",
+      "human": "You ask the graph which categories a decision's criteria used and which decisions used a category, and follow a question across every decision that asked it.\n\nNo category query is registered yet, so no checked request or result is documented.\n\nContract fields and examples (generated)\nConsumes:\n  No checked JSON binding documented in this direction.\nProduces:\n  No checked JSON binding documented in this direction.\n\nPROPOSED - missing JSON binding (both): Registered category queries (categories per decision, decisions per category)\nExploration goes through registered parameterized knowledge queries pinned to one generation. The KnowledgeRetrievalRequest/Result transport exists, but no category operation, arguments or result rows are registered.\nDesign source: [docs/product-truth/flows/leafcutter/criteria-library.flow.json](docs/product-truth/flows/leafcutter/criteria-library.flow.json)",
       "order": 9,
       "agent": "human (through registered knowledge queries)",
-      "consumes": [
-        "CriterionCategory nodes",
-        "decision-criterion-category membership edges"
-      ],
-      "produces": [
-        "categories per decision",
-        "decisions per category"
-      ],
+      "consumes": [],
+      "produces": [],
       "reads": [
         "CriterionCategory",
         "Decision"
       ],
       "impl_asof": "2026-10-03",
       "impl_status": "not_started",
+      "io_contracts": {
+        "missing_bindings": [
+          {
+            "name": "Registered category queries (categories per decision, decisions per category)",
+            "direction": "both",
+            "reason": "Exploration goes through registered parameterized knowledge queries pinned to one generation. The KnowledgeRetrievalRequest/Result transport exists, but no category operation, arguments or result rows are registered.",
+            "source": "docs/product-truth/flows/leafcutter/criteria-library.flow.json"
+          }
+        ]
+      },
       "implements": [
         "DK-500g-2",
         "DK-500g-2-i",
@@ -262,15 +1548,23 @@
     {
       "id": "curate",
       "label": "Merge, split or retire categories",
-      "human": "Later you merge, split or retire published categories through the same stage and publish path. Ids never change, members move to the replacement, the retired category points to it with a replaced-by link, and no decision record is touched.",
+      "human": "Later you merge, split or retire published categories through the same stage and publish path. Ids never change, members move to the replacement, the retired category points to it with a replaced-by link, and no decision record is touched.\n\nRecords use the proposed mock-record design. The input is an illustrative before-merge view of the retired sample; the outputs are its stored retired state and the replacement that received its member. The merge, split or retire question and answer are not defined.\n\nContract fields and examples (generated)\nConsumes:\n  ILLUSTRATIVE DESIGN: PROPOSED, not implemented: mock-record shape transcribed from docs/product-truth/mock-data/leafcutter/criterion-categories.mock.json (decision dec-93c1c730463c1f3c). The derived views replaces and member_view and the fixture field source appear only because the stored samples carry them. No category reader, writer, index or runtime validation exists.\n  criterion_category/id: string (required)\n  criterion_category/lifecycle_stage: string (required)\n  criterion_category/replaced_by: array (required)\n  criterion_category/retirement: null|object (required)\n  criterion_category/members: array (required)\n  Schema: [criterion_category](docs/product-truth/schemas/criterion-category.schema.json)\nProduces:\n  ILLUSTRATIVE DESIGN: PROPOSED, not implemented: mock-record shape transcribed from docs/product-truth/mock-data/leafcutter/criterion-categories.mock.json (decision dec-93c1c730463c1f3c). The derived views replaces and member_view and the fixture field source appear only because the stored samples carry them. No category reader, writer, index or runtime validation exists.\n  criterion_category/id: string (required)\n  criterion_category/lifecycle_stage: string (required)\n  criterion_category/replaced_by: array (required)\n  criterion_category/retirement: null|object (required)\n  criterion_category/members: array (required)\n  criterion_category/record_path: null|string (required)\n  Schema: [criterion_category](docs/product-truth/schemas/criterion-category.schema.json)\n\nPROPOSED - missing JSON binding (both): Merge, split or retire question and answer\nCuration runs in a kernel run and then the stage and publish path, but no HumanQuestion/HumanAnswer payload for merging, splitting or retiring a category is defined.\nDesign source: [docs/product-truth/flows/leafcutter/criteria-library.flow.json](docs/product-truth/flows/leafcutter/criteria-library.flow.json)\n\nInput: illustrative before-merge projection of cat-40cc613f737e3323, reconstructed from its retirement reason and its replacement's members; not a stored sample — criterion_category; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"id\": \"cat-40cc613f737e3323\",\n  \"lifecycle_stage\": \"published\",\n  \"replaced_by\": [],\n  \"retirement\": null,\n  \"members\": [\n    {\n      \"decision_id\": \"dec-acdfd972fcaca478\",\n      \"criterion_id\": \"crit.person_authorises\"\n    }\n  ]\n}\n\nOutput: retired CriterionCategory mock record after the merge; stored sample, not live data — criterion_category; observed; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"id\": \"cat-40cc613f737e3323\",\n  \"lifecycle_stage\": \"retired\",\n  \"replaced_by\": [\n    \"cat-d15d52392d7aa94c\"\n  ],\n  \"retirement\": {\n    \"retired_at\": \"2026-10-07T08:31:09Z\",\n    \"retired_by\": \"human:user\",\n    \"reason\": \"Merged into cat-d15d52392d7aa94c: it asks the same question as crit.human_authority in dec-d53e1c52cd47c832 (only a person's approval creates a record; a precedent never does). Its one member moved there; this id stays resolvable through replaced_by.\"\n  },\n  \"members\": [],\n  \"record_path\": \"docs/criteria/cat-40cc613f737e3323.yaml\"\n}\nReceipt: [docs/product-truth/mock-data/leafcutter/criterion-categories.mock.json](docs/product-truth/mock-data/leafcutter/criterion-categories.mock.json)/entities/CriterionCategory/records/2\n\nOutput: the replacement CriterionCategory mock record holding the moved member; stored sample, not live data — criterion_category; observed; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"id\": \"cat-d15d52392d7aa94c\",\n  \"lifecycle_stage\": \"published\",\n  \"replaced_by\": [],\n  \"members\": [\n    {\n      \"decision_id\": \"dec-d53e1c52cd47c832\",\n      \"criterion_id\": \"crit.human_authority\"\n    },\n    {\n      \"decision_id\": \"dec-acdfd972fcaca478\",\n      \"criterion_id\": \"crit.person_authorises\"\n    }\n  ],\n  \"record_path\": \"docs/criteria/cat-d15d52392d7aa94c.yaml\"\n}\nReceipt: [docs/product-truth/mock-data/leafcutter/criterion-categories.mock.json](docs/product-truth/mock-data/leafcutter/criterion-categories.mock.json)/entities/CriterionCategory/records/1",
       "order": 10,
       "agent": "human (in a kernel run)",
       "consumes": [
-        "published category record (docs/criteria/<id>.yaml)"
+        "criterion_category/id: string (required)",
+        "criterion_category/lifecycle_stage: string (required)",
+        "criterion_category/replaced_by: array (required)",
+        "criterion_category/retirement: null|object (required)",
+        "criterion_category/members: array (required)"
       ],
       "produces": [
-        "retired category (replaced_by set)",
-        "updated published categories"
+        "criterion_category/id: string (required)",
+        "criterion_category/lifecycle_stage: string (required)",
+        "criterion_category/replaced_by: array (required)",
+        "criterion_category/retirement: null|object (required)",
+        "criterion_category/members: array (required)",
+        "criterion_category/record_path: null|string (required)"
       ],
       "reads": [
         "CriterionCategory"
@@ -280,6 +1574,180 @@
       ],
       "impl_asof": "2026-10-03",
       "impl_status": "not_started",
+      "io_contracts": {
+        "consumes": [
+          {
+            "contract": "criterion_category",
+            "fields": [
+              {
+                "path": "/id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/lifecycle_stage",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/replaced_by",
+                "types": [
+                  "array"
+                ],
+                "required": true
+              },
+              {
+                "path": "/retirement",
+                "types": [
+                  "null",
+                  "object"
+                ],
+                "required": true
+              },
+              {
+                "path": "/members",
+                "types": [
+                  "array"
+                ],
+                "required": true
+              }
+            ]
+          }
+        ],
+        "produces": [
+          {
+            "contract": "criterion_category",
+            "fields": [
+              {
+                "path": "/id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/lifecycle_stage",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/replaced_by",
+                "types": [
+                  "array"
+                ],
+                "required": true
+              },
+              {
+                "path": "/retirement",
+                "types": [
+                  "null",
+                  "object"
+                ],
+                "required": true
+              },
+              {
+                "path": "/members",
+                "types": [
+                  "array"
+                ],
+                "required": true
+              },
+              {
+                "path": "/record_path",
+                "types": [
+                  "null",
+                  "string"
+                ],
+                "required": true
+              }
+            ]
+          }
+        ],
+        "examples": [
+          {
+            "contract": "criterion_category",
+            "mode": "projection",
+            "origin": "illustrative",
+            "label": "Input: illustrative before-merge projection of cat-40cc613f737e3323, reconstructed from its retirement reason and its replacement's members; not a stored sample",
+            "value": {
+              "id": "cat-40cc613f737e3323",
+              "lifecycle_stage": "published",
+              "replaced_by": [],
+              "retirement": null,
+              "members": [
+                {
+                  "decision_id": "dec-acdfd972fcaca478",
+                  "criterion_id": "crit.person_authorises"
+                }
+              ]
+            }
+          },
+          {
+            "contract": "criterion_category",
+            "mode": "projection",
+            "origin": "observed",
+            "label": "Output: retired CriterionCategory mock record after the merge; stored sample, not live data",
+            "value": {
+              "id": "cat-40cc613f737e3323",
+              "lifecycle_stage": "retired",
+              "replaced_by": [
+                "cat-d15d52392d7aa94c"
+              ],
+              "retirement": {
+                "retired_at": "2026-10-07T08:31:09Z",
+                "retired_by": "human:user",
+                "reason": "Merged into cat-d15d52392d7aa94c: it asks the same question as crit.human_authority in dec-d53e1c52cd47c832 (only a person's approval creates a record; a precedent never does). Its one member moved there; this id stays resolvable through replaced_by."
+              },
+              "members": [],
+              "record_path": "docs/criteria/cat-40cc613f737e3323.yaml"
+            },
+            "source": {
+              "path": "docs/product-truth/mock-data/leafcutter/criterion-categories.mock.json",
+              "pointer": "/entities/CriterionCategory/records/2"
+            }
+          },
+          {
+            "contract": "criterion_category",
+            "mode": "projection",
+            "origin": "observed",
+            "label": "Output: the replacement CriterionCategory mock record holding the moved member; stored sample, not live data",
+            "value": {
+              "id": "cat-d15d52392d7aa94c",
+              "lifecycle_stage": "published",
+              "replaced_by": [],
+              "members": [
+                {
+                  "decision_id": "dec-d53e1c52cd47c832",
+                  "criterion_id": "crit.human_authority"
+                },
+                {
+                  "decision_id": "dec-acdfd972fcaca478",
+                  "criterion_id": "crit.person_authorises"
+                }
+              ],
+              "record_path": "docs/criteria/cat-d15d52392d7aa94c.yaml"
+            },
+            "source": {
+              "path": "docs/product-truth/mock-data/leafcutter/criterion-categories.mock.json",
+              "pointer": "/entities/CriterionCategory/records/1"
+            }
+          }
+        ],
+        "missing_bindings": [
+          {
+            "name": "Merge, split or retire question and answer",
+            "direction": "both",
+            "reason": "Curation runs in a kernel run and then the stage and publish path, but no HumanQuestion/HumanAnswer payload for merging, splitting or retiring a category is defined.",
+            "source": "docs/product-truth/flows/leafcutter/criteria-library.flow.json"
+          }
+        ]
+      },
       "implements": [
         "DK-500c-3",
         "DK-500c-3-i",
@@ -293,69 +1761,251 @@
       "from": "approve",
       "condition": "you reject the candidate or undo its suggested grouping",
       "label": "Reject or undo: nothing staged",
-      "human": "The candidate stays a proposal or is dropped; no record is staged and no published category changes.",
+      "human": "The candidate stays a proposal or is dropped; no record is staged and no published category changes.\n\nThe candidate keeps its proposed mock-record state: no run, staged path or record path is set.\n\nContract fields and examples (generated)\nConsumes:\n  ILLUSTRATIVE DESIGN: PROPOSED, not implemented: mock-record shape transcribed from docs/product-truth/mock-data/leafcutter/criterion-categories.mock.json (decision dec-93c1c730463c1f3c). The derived views replaces and member_view and the fixture field source appear only because the stored samples carry them. No category reader, writer, index or runtime validation exists.\n  criterion_category/id: string (required)\n  criterion_category/lifecycle_stage: string (required)\n  criterion_category/approval_status: string (required)\n  criterion_category/approved_by: null|string (required)\n  criterion_category/run_id: null|string (required)\n  criterion_category/staged_path: null|string (required)\n  criterion_category/record_path: null|string (required)\n  Schema: [criterion_category](docs/product-truth/schemas/criterion-category.schema.json)\nProduces:\n  No checked JSON binding documented in this direction.\n\nPROPOSED - missing JSON binding (consumes): Reject or undo answer for a suggested category\nNo HumanAnswer field or question for rejecting a candidate or undoing its grouping is defined, and dropping a candidate from the mining store has no interface.\nDesign source: [docs/product-truth/flows/leafcutter/criteria-library.flow.json](docs/product-truth/flows/leafcutter/criteria-library.flow.json)\n\nInput: candidate CriterionCategory mock record that stays a candidate; stored sample, not live data — criterion_category; observed; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"id\": \"cat-73d233fc8b15c735\",\n  \"lifecycle_stage\": \"candidate\",\n  \"approval_status\": \"proposed\",\n  \"approved_by\": null,\n  \"run_id\": null,\n  \"staged_path\": null,\n  \"record_path\": null\n}\nReceipt: [docs/product-truth/mock-data/leafcutter/criterion-categories.mock.json](docs/product-truth/mock-data/leafcutter/criterion-categories.mock.json)/entities/CriterionCategory/records/7",
       "agent": "human (in a kernel run)",
       "consumes": [
-        "suggested groupings (pref_label, alt_labels, broader)"
+        "criterion_category/id: string (required)",
+        "criterion_category/lifecycle_stage: string (required)",
+        "criterion_category/approval_status: string (required)",
+        "criterion_category/approved_by: null|string (required)",
+        "criterion_category/run_id: null|string (required)",
+        "criterion_category/staged_path: null|string (required)",
+        "criterion_category/record_path: null|string (required)"
       ],
       "outcome_kind": "exit",
       "impl_asof": "2026-10-03",
       "impl_status": "not_started",
+      "io_contracts": {
+        "consumes": [
+          {
+            "contract": "criterion_category",
+            "fields": [
+              {
+                "path": "/id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/lifecycle_stage",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/approval_status",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/approved_by",
+                "types": [
+                  "null",
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/run_id",
+                "types": [
+                  "null",
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/staged_path",
+                "types": [
+                  "null",
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/record_path",
+                "types": [
+                  "null",
+                  "string"
+                ],
+                "required": true
+              }
+            ]
+          }
+        ],
+        "produces": [],
+        "examples": [
+          {
+            "contract": "criterion_category",
+            "mode": "projection",
+            "origin": "observed",
+            "label": "Input: candidate CriterionCategory mock record that stays a candidate; stored sample, not live data",
+            "value": {
+              "id": "cat-73d233fc8b15c735",
+              "lifecycle_stage": "candidate",
+              "approval_status": "proposed",
+              "approved_by": null,
+              "run_id": null,
+              "staged_path": null,
+              "record_path": null
+            },
+            "source": {
+              "path": "docs/product-truth/mock-data/leafcutter/criterion-categories.mock.json",
+              "pointer": "/entities/CriterionCategory/records/7"
+            }
+          }
+        ],
+        "missing_bindings": [
+          {
+            "name": "Reject or undo answer for a suggested category",
+            "direction": "consumes",
+            "reason": "No HumanAnswer field or question for rejecting a candidate or undoing its grouping is defined, and dropping a candidate from the mining store has no interface.",
+            "source": "docs/product-truth/flows/leafcutter/criteria-library.flow.json"
+          }
+        ]
+      },
       "implements": [
         "DK-500c-1-ii"
-      ]
+      ],
+      "produces": []
     },
     {
       "id": "no-learning-store",
       "from": "aggregate-outcomes",
       "condition": "no Neo4j learning store is configured, or LEAFCUTTER_SELF_LEARNING is false",
       "label": "No learning store: outcomes off",
-      "human": "Outcome statistics are simply off; usage counts, reuse and every decision work exactly the same.",
+      "human": "Outcome statistics are simply off; usage counts, reuse and every decision work exactly the same.\n\nContract fields and examples (generated)\nNo JSON handoff: Configuration gate: with no Neo4j learning store configured, or LEAFCUTTER_SELF_LEARNING=false, no aggregate row is built and nothing is serialized. Published category records and usage counts pass on unchanged; their handoffs are documented on publish and count-usage.",
       "agent": "colony memory store (Neo4j, ADR-065)",
-      "consumes": [
-        "published category record (docs/criteria/<id>.yaml)"
-      ],
+      "consumes": [],
       "outcome_kind": "alternative",
       "impl_asof": "2026-10-03",
       "impl_status": "not_started",
+      "io_contracts": {
+        "not_applicable": "Configuration gate: with no Neo4j learning store configured, or LEAFCUTTER_SELF_LEARNING=false, no aggregate row is built and nothing is serialized. Published category records and usage counts pass on unchanged; their handoffs are documented on publish and count-usage."
+      },
       "implements": [
         "DK-500f-3"
-      ]
+      ],
+      "produces": []
     },
     {
       "id": "import-fails",
       "from": "import-to-graph",
       "condition": "a category record fails validation, for example a member names a criterion its decision does not carry, or the build fails",
       "label": "Import fails: graph unchanged",
-      "human": "The new generation is not published; the active graph stays as it was, the failing record is named, and nothing changes in Git.",
+      "human": "The new generation is not published; the active graph stays as it was, the failing record is named, and nothing changes in Git.\n\nThe example is an illustrative record that breaks the membership rule on purpose. The failure report naming that record has no defined shape.\n\nContract fields and examples (generated)\nConsumes:\n  ILLUSTRATIVE DESIGN: PROPOSED, not implemented: mock-record shape transcribed from docs/product-truth/mock-data/leafcutter/criterion-categories.mock.json (decision dec-93c1c730463c1f3c). The derived views replaces and member_view and the fixture field source appear only because the stored samples carry them. No category reader, writer, index or runtime validation exists.\n  criterion_category/id: string (required)\n  criterion_category/lifecycle_stage: string (required)\n  criterion_category/members: array (required)\n  criterion_category/members/*/decision_id: string (required)\n  criterion_category/members/*/criterion_id: string (required)\n  Schema: [criterion_category](docs/product-truth/schemas/criterion-category.schema.json)\nProduces:\n  No checked JSON binding documented in this direction.\n\nPROPOSED - missing JSON binding (produces): Import failure diagnostic\nThe failed build must name the failing record and leave the active generation untouched, but no importer diagnostic or failure result is defined for category records.\nDesign source: [docs/product-truth/flows/leafcutter/criteria-library.flow.json](docs/product-truth/flows/leafcutter/criteria-library.flow.json)\n\nInput: illustrative failing variant of cat-d15d52392d7aa94c whose member names crit.person_authorises under dec-d53e1c52cd47c832, which does not carry it; not a stored sample — criterion_category; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"id\": \"cat-d15d52392d7aa94c\",\n  \"lifecycle_stage\": \"published\",\n  \"members\": [\n    {\n      \"decision_id\": \"dec-d53e1c52cd47c832\",\n      \"criterion_id\": \"crit.human_authority\"\n    },\n    {\n      \"decision_id\": \"dec-d53e1c52cd47c832\",\n      \"criterion_id\": \"crit.person_authorises\"\n    }\n  ]\n}",
       "agent": "knowledge importer (ADR-062 native-type reader registry)",
       "consumes": [
-        "published category record (docs/criteria/<id>.yaml)"
+        "criterion_category/id: string (required)",
+        "criterion_category/lifecycle_stage: string (required)",
+        "criterion_category/members: array (required)",
+        "criterion_category/members/*/decision_id: string (required)",
+        "criterion_category/members/*/criterion_id: string (required)"
       ],
       "outcome_kind": "failure",
       "impl_asof": "2026-10-03",
       "impl_status": "not_started",
+      "io_contracts": {
+        "consumes": [
+          {
+            "contract": "criterion_category",
+            "fields": [
+              {
+                "path": "/id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/lifecycle_stage",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/members",
+                "types": [
+                  "array"
+                ],
+                "required": true
+              },
+              {
+                "path": "/members/*/decision_id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/members/*/criterion_id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              }
+            ]
+          }
+        ],
+        "produces": [],
+        "examples": [
+          {
+            "contract": "criterion_category",
+            "mode": "projection",
+            "origin": "illustrative",
+            "label": "Input: illustrative failing variant of cat-d15d52392d7aa94c whose member names crit.person_authorises under dec-d53e1c52cd47c832, which does not carry it; not a stored sample",
+            "value": {
+              "id": "cat-d15d52392d7aa94c",
+              "lifecycle_stage": "published",
+              "members": [
+                {
+                  "decision_id": "dec-d53e1c52cd47c832",
+                  "criterion_id": "crit.human_authority"
+                },
+                {
+                  "decision_id": "dec-d53e1c52cd47c832",
+                  "criterion_id": "crit.person_authorises"
+                }
+              ]
+            }
+          }
+        ],
+        "missing_bindings": [
+          {
+            "name": "Import failure diagnostic",
+            "direction": "produces",
+            "reason": "The failed build must name the failing record and leave the active generation untouched, but no importer diagnostic or failure result is defined for category records.",
+            "source": "docs/product-truth/flows/leafcutter/criteria-library.flow.json"
+          }
+        ]
+      },
       "implements": [
         "DK-500g-1-i"
-      ]
+      ],
+      "produces": []
     },
     {
       "id": "change-in-record",
       "from": "explore",
       "condition": "you want to rename, merge, split or retire a category you found in the graph",
       "label": "Change it in the record, not the graph",
-      "human": "The graph is a rebuildable view, never the place a category changes: the change is made in the category record, goes through stage and publish, and the next generation shows it.",
+      "human": "The graph is a rebuildable view, never the place a category changes: the change is made in the category record, goes through stage and publish, and the next generation shows it.\n\nContract fields and examples (generated)\nNo JSON handoff: Human redirect with no serialized handoff: the graph has no write path, so this branch only sends the person back to the category record. The change then travels through curate, stage and publish, whose handoffs are documented on those steps.",
       "agent": "human",
-      "consumes": [
-        "categories per decision",
-        "decisions per category"
-      ],
+      "consumes": [],
       "outcome_kind": "alternative",
       "impl_asof": "2026-10-03",
       "impl_status": "not_started",
+      "io_contracts": {
+        "not_applicable": "Human redirect with no serialized handoff: the graph has no write path, so this branch only sends the person back to the category record. The change then travels through curate, stage and publish, whose handoffs are documented on those steps."
+      },
       "implements": [
         "DK-500g-1-ii"
-      ]
+      ],
+      "produces": []
     }
   ],
   "acceptance_scenarios": [
@@ -450,6 +2100,12 @@
       "by": "flow-author (reusable-criteria-store session)",
       "date": "2026-10-03",
       "note": "Journey for building and curating the reusable criteria library (DK-500a, b, c, f and g) under decision dec-93c1c730463c1f3c, populated from leafcutter/criterion-categories. Created new because no existing flow covers CriterionCategory records; reuse inside a decision run extends leafcutter/decision-forming instead. Mining reads both published records and Langfuse traces as an offline job (user decision 2026-10-02). The grouping step is method-neutral while a kernel run decides the clustering method. The importer (DK-500g, in scope since the ADR-062 knowledge retrieval merged on main in PR #998) projects categories and membership through the native-type reader registry; the graph is a rebuildable view. No mockups exist, so no screens are wired. implements left empty for the business-analyst."
+    },
+    {
+      "action": "extended",
+      "by": "flow-author (reusable-criteria-store session)",
+      "date": "2026-10-05",
+      "note": "Merged origin/main (JSON contracts): io_contracts documented on all 14 nodes. Category records and aggregate rows use new illustrative_design schemas transcribed from leafcutter/criterion-categories, with stored samples cited from the dataset by pointer; published decision records bind the runtime DecisionRecord model with reconstructed projections. Undefined interfaces (Langfuse read, mining store, grouping output, approval, reject and curation answers, publish command, criteria index, Neo4j write, graph nodes and edges, category queries, import diagnostic) are explicit missing bindings; no-learning-store and change-in-record are not_applicable. Ids, order, implements and scenarios unchanged; readiness stays draft."
     }
   ],
   "impl_summary": {
@@ -458,5 +2114,20 @@
     "not_started": 14,
     "total": 14,
     "asof": "2026-10-03"
+  },
+  "contract_definitions": {
+    "criterion_category": {
+      "schema": "docs/product-truth/schemas/criterion-category.schema.json",
+      "authority": "illustrative_design",
+      "note": "PROPOSED, not implemented: mock-record shape transcribed from docs/product-truth/mock-data/leafcutter/criterion-categories.mock.json (decision dec-93c1c730463c1f3c). The derived views replaces and member_view and the fixture field source appear only because the stored samples carry them. No category reader, writer, index or runtime validation exists."
+    },
+    "criterion_category_aggregate": {
+      "schema": "docs/product-truth/schemas/criterion-category-aggregate.schema.json",
+      "authority": "illustrative_design",
+      "note": "PROPOSED, not implemented: mock-row shape transcribed from docs/product-truth/mock-data/leafcutter/criterion-categories.mock.json; ADR-065 leaves the aggregate model open. Derived Neo4j rows, never written into Git; no store writer or reader exists."
+    },
+    "decision_record": {
+      "model": "decision_record"
+    }
   }
 }
