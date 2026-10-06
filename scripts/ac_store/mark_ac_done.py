@@ -12,7 +12,11 @@ ARCHITECTURE: Standalone CLI script. Two modes:
     In both modes: validates the AC exists and has status: active.
     Logs to stdout; errors to stderr.
     Exit codes: 0 (success or no-op), 1 (AC not found, no source_ac, unreadable
-    file), 2 (AC has status != active — refuse to mark done).
+    file), 2 (AC has status != active — refuse to mark done), 3 (coverage gate
+    refuses, or an already-done composite has unproven children).
+    BO-202: an AC whose covered_by lists AC-id children is composite. It goes
+    done only when every child is done and proven; otherwise todo/in_progress
+    becomes in_progress (exit 0, children named) and a done one is refused.
 """
 from __future__ import annotations
 
@@ -24,6 +28,12 @@ from pathlib import Path
 from typing import Optional
 
 import yaml
+
+from _done_proof_composite import (
+    _collect_all_covered_ids,
+    _composite_child_ids,
+    _unproven_composite_children,
+)
 
 
 # ---------------------------------------------------------------------------
@@ -83,6 +93,62 @@ def _read_ticket_source_ac(ticket_path: Path) -> Optional[str]:
 # ---------------------------------------------------------------------------
 
 
+def _composite_verdict(
+    ac_id: str, ac_root: Path, test_root: Optional[Path], dry_run: bool, ctx: str
+) -> Optional[int]:
+    """Apply the BO-202 composite rule; ``None`` means "not blocked, go on".
+
+    Leaves, unreadable records and composites whose children are all proven
+    return ``None`` so the ordinary gate-and-done path runs unchanged. Without
+    *test_root* no covers tags are collected, so no child is ever proven.
+
+    Args:
+        ac_id: The AC identifier string.
+        ac_root: Directory holding the AC YAML store.
+        test_root: Optional test tree scanned for ``# covers:`` tags.
+        dry_run: When True, report the in_progress write without making it.
+        ctx: Ticket log context suffix for messages.
+
+    Returns:
+        ``None`` to continue, else the exit code (0 in_progress or no-op,
+        2 status not active, 3 already-done composite refused, 1 write error).
+    """
+    ac_file = _find_ac_file(ac_root, ac_id)
+    try:
+        data = yaml.safe_load(ac_file.read_text(encoding="utf-8")) if ac_file else None
+    except (yaml.YAMLError, OSError):
+        return None
+    if not isinstance(data, dict) or not _composite_child_ids(data.get("covered_by")):
+        return None
+    covered = _collect_all_covered_ids(test_root) if test_root else set()
+    unproven = _unproven_composite_children(data, ac_root, covered)
+    if not unproven:
+        return None
+    names = ", ".join(unproven)
+    current = data.get("work_status")
+    if current == "done":
+        print(
+            f"REFUSED: {ac_id} is work_status=done but composite children are "
+            f"not done and proven: {names}",
+            file=sys.stderr,
+        )
+        return 3
+    if data.get("status", "") != "active":
+        print(f"ERROR: AC {ac_id} has status={data.get('status', '')!r} (not active)", file=sys.stderr)
+        return 2
+    if current == "in_progress" or dry_run:
+        verb = "no-op" if current == "in_progress" else "[dry-run] would mark"
+        print(f"{verb} {ac_id} work_status=in_progress{ctx} (unfinished children: {names})")
+        return 0
+    try:
+        _set_work_status(ac_file, "in_progress")
+    except (OSError, ValueError, yaml.YAMLError) as exc:
+        print(f"ERROR: Cannot mark AC file {ac_file} in_progress: {exc}", file=sys.stderr)
+        return 1
+    print(f"marked {ac_id} work_status=in_progress{ctx} (unfinished children: {names})")
+    return 0
+
+
 def mark_ac_done(
     ac_id: str,
     ac_root: Path,
@@ -113,6 +179,11 @@ def mark_ac_done(
         2 when AC status is not ``active``, 3 when the coverage gate refuses
         (AC not eligible: no linked test or a linked test is not passing).
     """
+    ctx = f" (from ticket {ticket_path.name})" if ticket_path else ""
+    composite_exit = _composite_verdict(ac_id, ac_root, test_root, dry_run, ctx)
+    if composite_exit is not None:
+        return composite_exit
+
     if test_root is not None:
         from test_enforcement import verify_done_eligible  # noqa: PLC0415
 
@@ -168,7 +239,7 @@ def mark_ac_done(
     # Targeted single-field update of the column-0 work_status key only
     # (ACS-200f-3); every other byte, including line endings, is preserved.
     try:
-        _set_work_status_done(ac_file)
+        _set_work_status(ac_file, "done")
     except (OSError, ValueError, yaml.YAMLError) as exc:
         print(f"ERROR: Cannot mark AC file {ac_file} done: {exc}", file=sys.stderr)
         return 1
@@ -229,8 +300,8 @@ def _atomic_write(target: Path, text: str) -> None:
         raise
 
 
-def _set_work_status_done(ac_file: Path) -> None:
-    """Set the top-level ``work_status`` key of *ac_file* to ``done``.
+def _set_work_status(ac_file: Path, value: str) -> None:
+    """Set the top-level ``work_status`` key of *ac_file* to *value*.
 
     Only a line starting at column 0 with ``work_status:`` is treated as the
     key, so prose inside a block scalar that quotes ``work_status: todo`` is
@@ -240,11 +311,12 @@ def _set_work_status_done(ac_file: Path) -> None:
 
     Args:
         ac_file: Path to the AC YAML record.
+        value: New ``work_status`` (``done`` or ``in_progress``).
 
     Raises:
         OSError: The file could not be read or written.
         ValueError: More than one column-0 ``work_status:`` line exists, or
-            the re-parsed record does not read ``work_status: done``.
+            the re-parsed record does not read ``work_status: <value>``.
         yaml.YAMLError: The written record no longer parses.
     """
     with ac_file.open(encoding="utf-8", newline="") as fh:
@@ -258,20 +330,20 @@ def _set_work_status_done(ac_file: Path) -> None:
 
     if matches:
         index = matches[0]
-        lines[index] = f"work_status: done{_line_ending(lines[index])}"
+        lines[index] = f"work_status: {value}{_line_ending(lines[index])}"
     else:
         # Key absent: append it, reusing the file's own line ending.
         ending = next((_line_ending(ln) for ln in lines if _line_ending(ln)), "\n")
         if lines and not _line_ending(lines[-1]):
             lines[-1] += ending
-        lines.append(f"work_status: done{ending}")
+        lines.append(f"work_status: {value}{ending}")
 
     _atomic_write(ac_file, "".join(lines))
 
     with ac_file.open(encoding="utf-8", newline="") as fh:
         written = yaml.safe_load(fh.read())
-    if not isinstance(written, dict) or written.get("work_status") != "done":
-        msg = "work_status did not read 'done' after writing"
+    if not isinstance(written, dict) or written.get("work_status") != value:
+        msg = f"work_status did not read {value!r} after writing"
         raise ValueError(msg)
 
 
@@ -379,3 +451,11 @@ if __name__ == "__main__":
 #   Rejected alternative: keep the substring branch and add a re-parse check —
 #   that turns the silent success into a failure but still edits prose.
 #   [ACS-200f-3]
+#
+# - 2026-10-06 [python-coder]: BO-202 composite rule. mark_ac_done classifies
+#   with the ONE helper check_done_proof also uses (_done_proof_composite),
+#   so a composite goes in_progress (never done) until every child is done
+#   and proven, and an already-done unproven composite is refused (exit 3),
+#   with or without --test-root. _set_work_status_done became
+#   _set_work_status(value) so the in_progress write stays anchored/atomic.
+#   (ticket 06 EPIC-BuildToolingRunsThrough)
