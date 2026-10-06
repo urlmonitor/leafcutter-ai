@@ -37,20 +37,22 @@ doc_links:
   - path: docs/reference/decision-kernel-splits.md
     relationship: describes
     status: planned
-    relevance: "Planned reference page for kernel splits; DK-400b-4 adds to the same entry. The documentation-expert may place it elsewhere and update this link."
+    relevance: Planned reference page for kernel splits; DK-400b-4 adds to the same entry. The documentation-expert
+      may place it elsewhere and update this link.
   - path: docs/architecture/components/decision-kernel.md
     relationship: describes
     status: exists
-    relevance: "Kernel containers: routing, scheduler, host handoffs, run root."
+    relevance: 'Kernel containers: routing, scheduler, host handoffs, run root.'
   - path: docs/product-truth/flows/leafcutter/decision-forming.flow.json
     relationship: implements
     status: exists
-    relevance: "Flow v5 node(s) split-detect, split-not-needed, single-no-capability, split-too-few-parts, with their acceptance scenarios."
+    relevance: Flow v5 node(s) split-detect, split-not-needed, single-no-capability, split-too-few-parts, with their
+      acceptance scenarios.
   - path: docs/architecture/adrs/ADR-067-kernel-splits-bundled-requests-into-approved-parts.md
     relationship: describes
-    status: planned
-    relevance: Pinned ADR for splitting a bundled request; adr-author dispatched directly with this number and filename.
-      Re-verify the number is free before dispatch.
+    status: exists
+    relevance: 'ADR-067 (Accepted): the kernel splits a bundled request into parts a person approves; binding source
+      for the four schema ids (goal_decomposition_request.v1, goal_decomposition.v1, split_answer.v1, decomposition.v1).'
 assigned_agent: documentation-expert
 estimated_complexity: S
 delivers_to:
@@ -91,6 +93,11 @@ amended_by:
     date: '2026-10-05'
     by: it-po
     summary: Added an it_requirements line for the BA's new fallback clause.
+  - reason: it-po-adr067-alignment
+    date: '2026-10-05'
+    by: it-po
+    summary: 'Aligned with ADR-067 (Accepted, docs/architecture/adrs/ADR-067-kernel-splits-bundled-requests-into-approved-parts.md):
+      ADR-067 doc_link set to exists.'
 superseded_by: null
 covered_by: []
 implemented_by: []

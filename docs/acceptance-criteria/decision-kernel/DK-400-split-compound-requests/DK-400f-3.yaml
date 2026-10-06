@@ -68,6 +68,9 @@ it_requirements:
   - The rephrasing hint after a jev_none rejection (state rejected) uses the host's optional one_question_rewording
     from the proposal when present, shown as a suggestion and never run; otherwise today's template rephrasing hint.
   - The line names gate_by exactly as recorded.
+  - 'Tests enable splitting explicitly: split.enabled true through a config override (false only where a test compares
+    with the off switch). None relies on the shipped default: batch order inside E3 does not guarantee that DK-400e-1''s
+    flip lands first, and a later default change must not silently flip a test (dec-9925ebf1895222f4).'
 change_target: code
 risk_surface: contract_boundary
 test_required: true
@@ -117,6 +120,11 @@ amended_by:
     by: it-po
     summary: 'Added the ambiguous rejection''s report lines and their test. Coordinator default for Q2: added the
       envelope-as-report-surface line (no interim report.md).'
+  - reason: it-po-build-slice-amendment
+    date: '2026-10-05'
+    by: it-po
+    summary: 'Build-slice amendment (dec-9925ebf1895222f4): its tests enable splitting explicitly and never depend
+      on the shipped default of split.enabled.'
 superseded_by: null
 covered_by: []
 implemented_by: []

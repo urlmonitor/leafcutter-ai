@@ -70,9 +70,9 @@ doc_links:
     relevance: RunService resume validation, the RunEnvelope, report.md, tracing and redaction.
   - path: docs/architecture/adrs/ADR-067-kernel-splits-bundled-requests-into-approved-parts.md
     relationship: describes
-    status: planned
-    relevance: Pinned ADR for splitting a bundled request; adr-author dispatched directly with this number and filename.
-      Re-verify the number is free before dispatch.
+    status: exists
+    relevance: 'ADR-067 (Accepted): the kernel splits a bundled request into parts a person approves; binding source
+      for the four schema ids (goal_decomposition_request.v1, goal_decomposition.v1, split_answer.v1, decomposition.v1).'
   - path: docs/architecture/diagrams/c3-019-decision-kernel-context-host-worker-human.md
     relationship: describes
     status: exists
@@ -88,8 +88,9 @@ expects_from:
   ac_id: DK-400d-1
   contract: The split-gate HumanQuestion in the waiting_human envelope (subject_text verbatim; offered parts with
     id, text, covers, depends_on and child_capability in proposed order; dropped[] and not_covered[] read-only with
-    reasons; the four answers) and the registered split-answer schema (answer approved | rejected, per-part review
-    kept | edited with text | left_out, note | null). The status progress block comes from DK-400f-1.
+    reasons; the four answers) and leafcutter.split_answer.v1, which the gate declares as its response schema (answer
+    approved | rejected; parts one per offered part on approval, empty on rejection; note | null). The status progress
+    block comes from DK-400f-1.
 change_target: prompt
 risk_surface: contract_boundary
 it_requirements:
@@ -106,12 +107,16 @@ it_requirements:
     question widget cannot hold every part or answer (Claude Code AskUserQuestion has a small option limit), the
     skill shows all of them in the question text and collects the answer over more than one question; it never drops,
     merges or summarises a part to fit.'
-  - 'The relayed answer uses the kernel''s registered split-answer schema (DK-400d-1) exactly: approved or rejected,
-    a review per offered part (kept, edited with the person''s own words, left_out) and the note verbatim; actor
-    {kind: human, id: human:<name>}, relayed_by the host id. Not-covered and set-aside entries are never named in
-    the answer.'
-  - Each skill carries one complete split-answer submission example (JSON) that a test validates against the kernel's
-    split-answer schema, so the prompt and the contract cannot drift apart.
+  - 'The relayed answer uses leafcutter.split_answer.v1 (ADR-067 §4.4, DK-400d-1) exactly: response_schema_id leafcutter.split_answer.v1;
+    answer approved or rejected; parts with exactly one {id, review kept | edited | left_out, text only when edited,
+    in the person''s own words} per offered part on approval and an empty list on rejection; the note verbatim;
+    no other field; actor {kind: human, id: human:<name>}, relayed_by the host id. Not-covered and set-aside entries
+    are never named in the answer.'
+  - Each skill takes response_schema_id from the pending HumanQuestion's declared response schema (leafcutter.split_answer.v1
+    at the split gate; leafcutter.human_answer.v1, the default, everywhere else) instead of hard-coding leafcutter.human_answer.v1
+    for every human answer.
+  - Each skill carries one complete split-answer submission example (JSON) that a test validates against leafcutter.split_answer.v1,
+    so the prompt and the contract cannot drift apart.
   - On a kernel refusal of a split answer (exit 3), the skill shows the kernel's message to the person and asks
     again; it never repairs a human answer on the person's behalf (the one-repair rule is for host work only).
   - 'For status, the skill shows the envelope''s split progress block (DK-400f-1): each part with its outcome and
@@ -139,14 +144,15 @@ test_spec:
     angle: criterion
     description: Both rendered skills state that the split answer is relayed unchanged (approve, per-part edit,
       left out, reject, note) with actor human:<name> and the host only as relayed_by, and that the skill never
-      answers the gate or chooses a default.
+      answers the gate or chooses a default, and that response_schema_id is taken from the pending question's declared
+      schema.
   - name: test_skill_split_answer_example_validates_against_kernel_schema
     target_dir: tests/kernel/adapters/host_skills/
     framework: pytest
     type: unit
     angle: seam
     description: The split-answer submission example in each rendered skill parses as JSON and validates through
-      the kernel's registered split-answer schema, and an example naming a not-covered entry is refused.
+      leafcutter.split_answer.v1, and an example naming a not-covered entry is refused.
   - name: test_skills_show_split_progress_on_status
     target_dir: tests/kernel/adapters/host_skills/
     framework: pytest
@@ -163,8 +169,8 @@ test_spec:
       text.
 test_rationale: This is a prompt-only change, so its executable proof is a skill-contract test over the skills as
   install-skill renders them (the installed artifact, not the template source) plus a seam test that the skill's
-  own example answer validates against the kernel's split-answer schema. Whether a live host obeys the text cannot
-  be asserted offline; that stays a manual check with a real /leafcutter run.
+  own example answer validates against leafcutter.split_answer.v1. Whether a live host obeys the text cannot be
+  asserted offline; that stays a manual check with a real /leafcutter run.
 origin_agent: business-analyst
 created: 2026-10-05
 amended_by:
@@ -174,6 +180,12 @@ amended_by:
     summary: 'Full technical enrichment of the new skills AC: estimated_complexity, it_requirements, contracts,
       doc_links, package_surface false and a skill-contract test contract; change_target prompt and risk_surface
       contract_boundary confirmed; readiness and priority untouched.'
+  - reason: it-po-adr067-alignment
+    date: '2026-10-05'
+    by: it-po
+    summary: 'Aligned with ADR-067 (Accepted, docs/architecture/adrs/ADR-067-kernel-splits-bundled-requests-into-approved-parts.md):
+      named leafcutter.split_answer.v1; skills take response_schema_id from the question''s declared schema; ADR-067
+      doc_link set to exists.'
 superseded_by: null
 covered_by: []
 implemented_by: []
