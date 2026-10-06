@@ -34,6 +34,7 @@ from kernel.contracts.enums import (
     RunStatus,
 )
 from kernel.contracts.interaction import HostWorkRequest, HumanQuestion
+from kernel.contracts.split import Decomposition
 
 MAX_EXAMPLE_RUNS = 5
 _TERMINAL = frozenset({RunStatus.COMPLETED, RunStatus.PARTIAL, RunStatus.BLOCKED,
@@ -167,6 +168,7 @@ class RunEnvelope(KernelModel):
     pending_interaction: HostWorkRequest | HumanQuestion | None = None
     limitations: list[str] = Field(default_factory=list)
     gaps: list[CapabilityGap] = Field(default_factory=list)
+    splits: list[Decomposition] = Field(default_factory=list)
     usage_summary: UsageSummary = Field(default_factory=UsageSummary)
     trace_refs: TraceRefs = Field(default_factory=TraceRefs)
     errors: list[ErrorInfo] = Field(default_factory=list)
@@ -199,4 +201,5 @@ class RunEnvelope(KernelModel):
 #   (#KernelBootstrapV0/INTENT)
 # - 2026-09-30 22:00 [python-coder]: compute_gap_key lives with the gap contract so P4 and P9
 #   share one dedup definition. (#KernelBootstrapV0/P1)
+# - 2026-10-06 18:00 [python-coder]: Expose split records in run state. (#TICKET-20261006-DK-400a-1)
 # ====================================================================

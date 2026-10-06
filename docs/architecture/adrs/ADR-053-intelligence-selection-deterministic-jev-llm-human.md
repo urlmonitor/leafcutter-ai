@@ -12,6 +12,7 @@ components:
 related_docs:
   - docs/architecture/adrs/ADR-052-capabilities-replace-agents-prompts-are-compiled.md
   - docs/architecture/adrs/ADR-054-process-representation-and-maturity-model.md
+  - docs/architecture/adrs/ADR-067-kernel-splits-bundled-requests-into-approved-parts.md
   - docs/architecture/components/decision-kernel.md
   - docs/analysis/2026-09-30-decision-kernel-design-4-jev-and-capabilities.md
   - docs/analysis/2026-09-30-leafcutter-kernel-spec-rev3-3-contracts.md
@@ -278,11 +279,13 @@ The flow is specified in [design part 4][design4].
   PRE-CHECK / POST-CHECK lifecycle whose checks declare the executors fixed in §7.
 - [ADR-054: Process representation and maturity model][adr054]. The companion "process" ADR:
   workflow, policy or checklist, or LLM-guided work, and maturity levels 0–4.
+- [ADR-067: Kernel splits bundled requests into approved parts][adr067]. Applies this ADR's escalation order to the bundled-request check: deterministic gates first, one Jev judgement against a configured threshold, the host proposes the parts and a person approves (first built in DK-400a-1).
 - [Decision Kernel component][kernel], [kernel design part 4][design4], and the kernel spec
   [part 3][spec3] (contracts, §7.6 and §7.7) and [part 4][spec4] (Jev and capabilities, §8–§10).
 
 [adr052]: ADR-052-capabilities-replace-agents-prompts-are-compiled.md
 [adr054]: ADR-054-process-representation-and-maturity-model.md
+[adr067]: ADR-067-kernel-splits-bundled-requests-into-approved-parts.md
 [kernel]: ../components/decision-kernel.md
 [design4]: ../../analysis/2026-09-30-decision-kernel-design-4-jev-and-capabilities.md
 [spec3]: ../../analysis/2026-09-30-leafcutter-kernel-spec-rev3-3-contracts.md

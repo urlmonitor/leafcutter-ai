@@ -1,0 +1,71 @@
+{
+  "$defs": {
+    "SubjectKind": {
+      "description": "What a split's subject is.",
+      "enum": [
+        "goal",
+        "research_request",
+        "decision_question"
+      ],
+      "title": "SubjectKind",
+      "type": "string"
+    }
+  },
+  "$id": "leafcutter.goal_decomposition_request.v1",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "leafcutter.goal_decomposition_request.v1: what the host is asked to split.",
+  "properties": {
+    "allowed_capabilities": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Allowed Capabilities",
+      "type": "array"
+    },
+    "max_parts": {
+      "minimum": 2,
+      "title": "Max Parts",
+      "type": "integer"
+    },
+    "min_parts": {
+      "default": 2,
+      "minimum": 2,
+      "title": "Min Parts",
+      "type": "integer"
+    },
+    "schema_version": {
+      "const": "1.0",
+      "default": "1.0",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "split_id": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Split Id"
+    },
+    "subject_kind": {
+      "$ref": "#/$defs/SubjectKind"
+    },
+    "subject_text": {
+      "minLength": 1,
+      "title": "Subject Text",
+      "type": "string"
+    }
+  },
+  "required": [
+    "subject_text",
+    "subject_kind",
+    "max_parts"
+  ],
+  "title": "GoalDecompositionRequestPayload",
+  "type": "object"
+}

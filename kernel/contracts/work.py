@@ -106,6 +106,10 @@ class WorkItem(PersistedModel):
     result_ref: str | None = None
     routing_ref: str | None = None
     interaction_ref: str | None = None
+    #: True once the "one question or several?" judgement was asked for this item (never twice).
+    split_checked: bool = False
+    #: Jev's probability that the item holds several separate questions (None: not asked).
+    bundle_probability: float | None = Field(default=None, ge=0.0, le=1.0)
     limitations: list[str] = Field(default_factory=list)
     updated_revision: int = Field(default=0, ge=0)
 
@@ -155,4 +159,5 @@ class CapabilityInvocation(PersistedModel):
 # - 2026-09-30 22:00 [python-coder]: Request and RequestProposal share RequestBody so the
 #   identity-free proposal cannot drift from the registered request. (#KernelBootstrapV0/P1)
 # - 2026-10-03 15:10 [python-coder]: Preserve verbatim goals and separate meaning, caller and clarification channels. (#DK-300/entity-context)
+# - 2026-10-06 18:00 [python-coder]: Add the split_checked flag to work items. (#TICKET-20261006-DK-400a-1)
 # ====================================================================

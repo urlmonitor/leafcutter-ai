@@ -50,8 +50,10 @@ from kernel.interaction.formulation import (
     formulation_proposal,
 )
 from kernel.scheduler import guards
-from kernel.scheduler.context import KernelRuntime, constraint_texts, run_corr, sequential_node
+from kernel.scheduler.context import (
+    KernelRuntime, constraint_texts, run_corr, scope_revision, sequential_node)
 from kernel.scheduler.merge import Draft, child_outcomes, create_children, plan_proposals
+from kernel.scheduler.nodes_split import SplitStep
 from kernel.scheduler.routing import RouteEntry, RouteResult, deterministic_result, route_semantic
 from kernel.scheduler.state import KernelState
 
@@ -61,12 +63,6 @@ KERNEL_CAP_REV = "1.0.0"
 #: Routing failures that mean the provider failed (item fails) rather than "cannot run" (blocks).
 PROVIDER_FAILURES = frozenset({"provider_unavailable", "invalid_provider_response",
                                "payload_too_large"})
-
-
-def _scope_revision(state: KernelState) -> dict[str, Any] | None:
-    """Return the task scope revision as a plain dict (or None)."""
-    revision = state["task"].scope.revision
-    return revision.model_dump() if revision else None
 
 
 def build_invocation(draft: Draft, state: KernelState, item: WorkItem, binding: Binding,
@@ -105,7 +101,7 @@ def build_invocation(draft: Draft, state: KernelState, item: WorkItem, binding: 
                            correlation=corr))
 
 
-class _Router(IntentStep):
+class _Router(SplitStep, IntentStep):
     """One routing pass: collects decisions, applies them to a Draft and builds the plan."""
 
     def __init__(self, state: KernelState, runtime: Runtime[KernelRuntime]) -> None:
@@ -116,9 +112,10 @@ class _Router(IntentStep):
         self.plan: dict[str, Any] = {"native": [], "interaction": [], "gap": []}
         self.invocations: dict[str, CapabilityInvocation] = {}
         self.assessments: dict[str, RoutingAssessment] = {}
-        self.scope_rev = _scope_revision(state)
+        self.scope_rev = scope_revision(state)
         self.task_update: Any = None
         self.gaps: dict[str, Any] = {}
+        self.splits: dict[str, Any] = {}
 
     def _set(self, item: WorkItem, status: WorkItemStatus, *limits: str, **changes: Any) -> None:
         """Change an item's status and append limitation texts."""
@@ -243,7 +240,7 @@ class _Router(IntentStep):
 
     def _record(self, entry: RouteEntry, result: RouteResult) -> RoutingAssessment:
         """Persist the RoutingAssessment for an entry."""
-        report = entry.report
+        report, item = entry.report, self.draft.items[entry.item_id]
         assessment = RoutingAssessment(
             id=new_id("ra"), created_at=self.draft.now, updated_at=self.draft.now,
             work_item_id=entry.item_id, eligible_candidate_ids=report.eligible_ids,
@@ -254,7 +251,8 @@ class _Router(IntentStep):
             model_id=result.model_id, outcome=result.outcome, reason_codes=result.reason_codes,
             thresholds={"min_selected_probability": self.cfg.routing.min_selected_probability,
                         "min_confidence": self.cfg.routing.min_confidence},
-            jev_called=result.jev_called)
+            jev_called=result.jev_called, bundle_probability=item.bundle_probability,
+            bundle_threshold=self.bundle_threshold_for(item.bundle_probability))
         self.assessments[assessment.id] = assessment
         self.ctx.tracer.event("routing.assessed", run_corr(self.state, work_item_id=entry.item_id),
                               payload={"outcome": result.outcome.value,
@@ -272,8 +270,7 @@ class _Router(IntentStep):
             descriptor = self.state["registry"].get(str(result.selected))
             self._bind_descriptor(item, descriptor or fail("selected capability not in the registry"), ref)
         elif outcome is RoutingOutcome.NO_MATCH:
-            self.draft.put_item(item, status=WorkItemStatus.DISPATCHED, routing_ref=ref)
-            self.plan["gap"].append(item.id)
+            self.no_match(entry, result, ref)
         elif outcome is RoutingOutcome.UNAVAILABLE:
             codes = ", ".join(result.reason_codes) or "unspecified"
             failed = result.failure in PROVIDER_FAILURES
@@ -305,7 +302,8 @@ class _Router(IntentStep):
                                            operation=request.operation)
                 entries.append(RouteEntry(item.id, request, report,
                                           [a.text for a in self.answers_of(item)],
-                                          intent_bound=root_contract_bound(task, request, item.id)))
+                                          intent_bound=root_contract_bound(task, request, item.id),
+                                          check_bundle=self.wants_bundle(item)))
         return entries
 
     async def run(self) -> dict[str, Any]:
@@ -331,6 +329,7 @@ class _Router(IntentStep):
             result = results[entry.item_id]
             if result is None:
                 fail("a semantic routing entry came back without a result")
+            self.note_bundle(draft.items[entry.item_id], result.bundle_probability)
             self._apply(entry, result, self._record(entry, result).id)
         native = len(self.plan["native"])
         if native:
@@ -339,7 +338,8 @@ class _Router(IntentStep):
                 "work_item": max(0, self.cfg.limits.max_work_items
                                  - draft.budgets.work_items_created) // native}
         update = draft.update()
-        update.update(invocations=self.invocations, routing=self.assessments, dispatch=self.plan)
+        update.update(invocations=self.invocations, routing=self.assessments, dispatch=self.plan,
+                      splits=self.splits)
         if self.task_update is not None:
             update["task"] = self.task_update
         if self.gaps:
@@ -409,4 +409,5 @@ def _packet(state: KernelState, invocation_id: str, shares: dict[str, int]) -> d
 #   resuming segment (bug D). (#KernelBootstrapV0/P7)
 # - 2026-10-02 16:54 [python-coder]: Bind typed research only after eligibility. (#KM-500a/2)
 # - 2026-10-03 15:10 [python-coder]: Preserve verbatim goals and separate meaning, caller and clarification channels. (#DK-300/entity-context)
+# - 2026-10-06 18:00 [python-coder]: Start a split instead of ending a bundled jev_none root as a gap. (#TICKET-20261006-DK-400a-1)
 # ====================================================================

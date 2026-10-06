@@ -137,6 +137,7 @@ def build_envelope(record: RunRecord, values: Mapping[str, Any], *,
         pending_interaction=pending_packet(values) if waiting else None,
         limitations=limitations,
         gaps=reconcile_gaps(list(values.get("gaps", {}).values()), stored_gaps or []),
+        splits=sorted(values.get("splits", {}).values(), key=lambda s: s.id),
         usage_summary=_usage(values), errors=errors,
         trace_refs=refs)
 
@@ -201,3 +202,4 @@ def _failure_errors(diagnostics: list[str] | None) -> list[ErrorInfo]:
 # ====================================================================
 
 # - 2026-10-01 23:00 [python-coder]: Expose validated partial root evidence without a completed-status claim. (#EPIC-RepositoryResearchAnswers/TICKET-20261001-KM-500f-2)
+# - 2026-10-06 18:00 [python-coder]: Expose splits in the run envelope. (#TICKET-20261006-DK-400a-1)

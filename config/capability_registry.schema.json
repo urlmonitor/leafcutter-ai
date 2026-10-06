@@ -52,7 +52,9 @@
         "leafcutter.query_build_request.v1",
         "leafcutter.query_candidate.v1",
         "leafcutter.query_activation_request.v1",
-        "leafcutter.query_activation_receipt.v1"
+        "leafcutter.query_activation_receipt.v1",
+        "leafcutter.goal_decomposition_request.v1",
+        "leafcutter.goal_decomposition.v1"
       ]
     },
     "admission": {

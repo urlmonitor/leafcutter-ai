@@ -222,5 +222,11 @@
     "reuse_threshold": 0.8,
     "criterion_evidence_max": 5,
     "criterion_evidence_min_overlap": 2
+  },
+  "split": {
+    "enabled": false,
+    "bundle_threshold": 0.8,
+    "max_parts": 5,
+    "max_parts_per_run": 8
   }
 }

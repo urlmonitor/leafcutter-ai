@@ -1,0 +1,13 @@
+{
+  "parts": [
+    {
+      "title": "Storage format",
+      "quote": "the storage format"
+    },
+    {
+      "title": "Clustering",
+      "quote": "the clustering method",
+      "depends_on": []
+    }
+  ]
+}

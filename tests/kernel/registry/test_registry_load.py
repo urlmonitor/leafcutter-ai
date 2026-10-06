@@ -51,7 +51,7 @@ class TestCommittedRegistry(unittest.TestCase):
     def test_committed_registry_is_valid_and_lists_the_v0_capabilities(self) -> None:
         snapshot = load_registry(CONFIG / "capability_registry.json")
         self.assertEqual([d.id for d in snapshot.descriptors], [
-            "decision", "host.formulate_question", "host.generate_options", "host.query_build", "host.research",
+            "decision", "host.decompose_goal", "host.formulate_question", "host.generate_options", "host.query_build", "host.research",
             "host.synthesize", "knowledge.activate_query", "research", "retrieve.repository"])
         self.assertEqual(snapshot.registry_id, "leafcutter.capabilities")
 

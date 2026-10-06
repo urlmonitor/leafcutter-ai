@@ -1,0 +1,70 @@
+{
+  "$defs": {
+    "PartProposal": {
+      "additionalProperties": false,
+      "description": "One proposed part: a title, a verbatim quote of the subject and its dependencies.",
+      "properties": {
+        "depends_on": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Depends On",
+          "type": "array"
+        },
+        "quote": {
+          "minLength": 1,
+          "title": "Quote",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": "1.0",
+          "default": "1.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "title": {
+          "minLength": 1,
+          "title": "Title",
+          "type": "string"
+        }
+      },
+      "required": [
+        "title",
+        "quote"
+      ],
+      "title": "PartProposal",
+      "type": "object"
+    }
+  },
+  "$id": "leafcutter.goal_decomposition.v1",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "leafcutter.goal_decomposition.v1: the parts the host proposes (a proposal, never a fact).",
+  "properties": {
+    "parts": {
+      "items": {
+        "$ref": "#/$defs/PartProposal"
+      },
+      "minItems": 1,
+      "title": "Parts",
+      "type": "array"
+    },
+    "schema_kind": {
+      "const": "proposal",
+      "default": "proposal",
+      "title": "Schema Kind",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": "1.0",
+      "default": "1.0",
+      "title": "Schema Version",
+      "type": "string"
+    }
+  },
+  "required": [
+    "parts"
+  ],
+  "title": "GoalDecompositionPayload",
+  "type": "object"
+}

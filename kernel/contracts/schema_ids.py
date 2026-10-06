@@ -26,6 +26,8 @@ QUERY_ACTIVATION_REQUEST = "leafcutter.query_activation_request.v1"
 QUERY_ACTIVATION_RECEIPT = "leafcutter.query_activation_receipt.v1"
 RETRIEVAL_NEEDS_REQUEST = "leafcutter.retrieval_needs_request.v1"
 RETRIEVAL_NEEDS_OUTPUT = "leafcutter.retrieval_needs_output.v1"
+GOAL_DECOMPOSITION_REQUEST = "leafcutter.goal_decomposition_request.v1"
+GOAL_DECOMPOSITION = "leafcutter.goal_decomposition.v1"
 
 KNOWN_SCHEMA_IDS: frozenset[str] = frozenset({
     GOAL_REQUEST, DECISION_REQUEST, DECISION_REPORT, RESEARCH_REQUEST, RETRIEVAL_REQUEST,
@@ -33,6 +35,7 @@ KNOWN_SCHEMA_IDS: frozenset[str] = frozenset({
     HUMAN_QUESTION_REQUEST, HUMAN_ANSWER,
     QUERY_BUILD_REQUEST, QUERY_CANDIDATE, QUERY_ACTIVATION_REQUEST, QUERY_ACTIVATION_RECEIPT,
     RETRIEVAL_NEEDS_REQUEST, RETRIEVAL_NEEDS_OUTPUT,
+    GOAL_DECOMPOSITION_REQUEST, GOAL_DECOMPOSITION,
 })
 
 # ====================================================================
@@ -42,3 +45,4 @@ KNOWN_SCHEMA_IDS: frozenset[str] = frozenset({
 #   a test asserts the catalog keys equal KNOWN_SCHEMA_IDS. (#KernelBootstrapV0/P1)
 # ====================================================================
 # - 2026-10-03 00:00 [python-coder]: Add typed host-needs support without activating production retrieval. (#TICKETLESS reason=user-requested-isolated-host-experiment)
+# - 2026-10-06 18:00 [python-coder]: Add the two goal decomposition schema ids. (#TICKET-20261006-DK-400a-1)
