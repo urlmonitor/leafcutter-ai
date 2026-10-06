@@ -25,6 +25,8 @@ from kernel.contracts import (
     Decision,
     ErrorInfo,
     Evidence,
+    EnrichedContext,
+    EntityContext,
     Finding,
     HostWorkRequest,
     HumanQuestion,
@@ -214,6 +216,8 @@ class KernelState(TypedDict, total=False):
     root_task_id: str
     task_input: TaskInput
     task: Task
+    context_enrichment: EnrichedContext
+    entity_context: EntityContext | None
     registry: RegistrySnapshot
     permissions: list[str]
     requests: Annotated[dict[str, Request], merge_map]
@@ -278,4 +282,5 @@ def new_event(run_id: str, at: datetime, kind: str, detail: str = "", **refs: st
 #   `events_flushed` to the design's key list: route must tell its conditional edge what to
 #   dispatch, schedule must tell finalize why it stopped, and the run permissions are not in
 #   Task. (#KernelBootstrapV0/P4)
+# - 2026-10-03 15:10 [python-coder]: Preserve verbatim goals and separate meaning, caller and clarification channels. (#DK-300/entity-context)
 # ====================================================================

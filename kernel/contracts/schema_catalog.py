@@ -36,11 +36,21 @@ from kernel.contracts.payloads import (
     SynthesisRequestPayload,
 )
 
+from kernel.contracts.query import (QueryBuildRequest, QueryCandidate,
+                                    QueryActivationRequest, QueryActivationReceipt)
+from kernel.contracts.retrieval_needs import RetrievalNeedsRequest, RetrievalNeedsOutput
+
 logger = logging.getLogger(__name__)
 
 JSON_SCHEMA_DIALECT = "https://json-schema.org/draft/2020-12/schema"
 
 SCHEMA_CATALOG: dict[str, type[KernelModel]] = {
+    sid.RETRIEVAL_NEEDS_REQUEST: RetrievalNeedsRequest,
+    sid.RETRIEVAL_NEEDS_OUTPUT: RetrievalNeedsOutput,
+    sid.QUERY_BUILD_REQUEST: QueryBuildRequest,
+    sid.QUERY_CANDIDATE: QueryCandidate,
+    sid.QUERY_ACTIVATION_REQUEST: QueryActivationRequest,
+    sid.QUERY_ACTIVATION_RECEIPT: QueryActivationReceipt,
     sid.GOAL_REQUEST: GoalRequestPayload,
     sid.DECISION_REQUEST: DecisionRequestPayload,
     sid.DECISION_REPORT: DecisionReportPayload,
@@ -60,7 +70,11 @@ class UnknownSchemaError(ValueError):
     """The schema id is not registered in SCHEMA_CATALOG."""
 
     def __init__(self, schema_id: str) -> None:
-        """Build the message from the offending id."""
+        """Build the message from the offending id.
+
+        Args:
+            schema_id: Registered payload schema identity.
+        """
         super().__init__(f"unknown schema id: {schema_id}")
         self.schema_id = schema_id
 
@@ -69,7 +83,12 @@ class PayloadValidationError(ValueError):
     """A payload failed structural validation against its registered schema."""
 
     def __init__(self, schema_id: str, detail: str) -> None:
-        """Build the message from the schema id and Pydantic detail."""
+        """Build the message from the schema id and Pydantic detail.
+
+        Args:
+            schema_id: Registered payload schema identity.
+            detail: Validation failure details.
+        """
         super().__init__(f"payload invalid for {schema_id}: {detail}")
         self.schema_id = schema_id
         self.detail = detail
@@ -79,7 +98,12 @@ class SemanticValidationError(ValueError):
     """A structurally valid payload violated a reference rule."""
 
     def __init__(self, schema_id: str, violations: list[str]) -> None:
-        """Build the message from the violations (kept on .violations)."""
+        """Build the message from the violations (kept on .violations).
+
+        Args:
+            schema_id: Registered payload schema identity.
+            violations: Detected semantic contract violations.
+        """
         super().__init__(f"semantic check failed for {schema_id}: {'; '.join(violations)}")
         self.schema_id = schema_id
         self.violations = violations
@@ -121,13 +145,30 @@ class SemanticContext:
 
 
 def _missing(cited: Iterable[str], known: Iterable[str], what: str) -> list[str]:
-    """Return one violation per cited id that is not known."""
+    """Return one violation per cited id that is not known.
+
+    Args:
+        cited: Input to the documented operation.
+        known: Input to the documented operation.
+        what: Input to the documented operation.
+
+    Returns:
+        list[str]: Result of the documented contract operation.
+    """
     known_set = set(known)
     return [f"{what} {c} does not exist" for c in sorted(set(cited) - known_set)]
 
 
 def _report_violations(p: DecisionReportPayload, ctx: SemanticContext) -> list[str]:
-    """Semantic checks for decision_report.v1."""
+    """Semantic checks for decision_report.v1.
+
+    Args:
+        p: Validated payload whose references are checked.
+        ctx: Trusted runtime scope, budgets and services.
+
+    Returns:
+        list[str]: Result of the documented contract operation.
+    """
     cited = [*p.supporting_evidence_ids, *p.contradicting_evidence_ids,
              *(e for a in p.criterion_assessments for e in a.evidence_ids)]
     out = _missing(cited, ctx.known_evidence_ids, "evidence")
@@ -137,7 +178,15 @@ def _report_violations(p: DecisionReportPayload, ctx: SemanticContext) -> list[s
 
 
 def _bundle_violations(p: EvidenceBundlePayload, ctx: SemanticContext) -> list[str]:
-    """Semantic checks for evidence_bundle.v1 (inline items count as known)."""
+    """Semantic checks for evidence_bundle.v1 (inline items count as known).
+
+    Args:
+        p: Validated payload whose references are checked.
+        ctx: Trusted runtime scope, budgets and services.
+
+    Returns:
+        list[str]: Result of the documented contract operation.
+    """
     inline_ev = {e.id for e in p.evidence}
     inline_fi = {f.id for f in p.findings}
     out = _missing(p.evidence_ids, ctx.known_evidence_ids | inline_ev, "evidence")
@@ -149,7 +198,15 @@ def _bundle_violations(p: EvidenceBundlePayload, ctx: SemanticContext) -> list[s
 
 
 def _answer_violations(p: HumanAnswerPayload, ctx: SemanticContext) -> list[str]:
-    """Semantic checks for a structured human answer: cited ids must be the question's subjects."""
+    """Semantic checks for a structured human answer: cited ids must be the question's subjects.
+
+    Args:
+        p: Validated payload whose references are checked.
+        ctx: Trusted runtime scope, budgets and services.
+
+    Returns:
+        list[str]: Result of the documented contract operation.
+    """
     if ctx.subject_ids is None:
         return []
     cited = [*(p.approved_option_ids or []), *(p.approved_criterion_ids or []),
@@ -162,6 +219,13 @@ def _options_violations(p: OptionsPayload, ctx: SemanticContext) -> list[str]:
 
     `named_options` is refused only on a host submission: the kernel creates it after verifying
     the host's claims against the goal, so a kernel-built payload may carry it.
+
+    Args:
+        p: Validated payload whose references are checked.
+        ctx: Trusted provenance identifying a kernel-built payload.
+
+    Returns:
+        Detected option and criterion approval violations.
     """
     if p.named_options and not ctx.kernel_built:
         return ["named_options is set by the kernel only: return named options in `options` "
@@ -214,7 +278,14 @@ def validate_semantics(schema_id: str, payload: KernelModel, ctx: SemanticContex
 
 
 def json_schema_for(schema_id: str) -> dict:
-    """Return the JSON Schema (draft 2020-12) of a registered payload, with $id and $schema."""
+    """Return the JSON Schema (draft 2020-12) of a registered payload, with $id and $schema.
+
+    Args:
+        schema_id: Registered payload schema identity.
+
+    Returns:
+        dict: Result of the documented contract operation.
+    """
     model = SCHEMA_CATALOG.get(schema_id)
     if model is None:
         raise UnknownSchemaError(schema_id)
@@ -223,7 +294,14 @@ def json_schema_for(schema_id: str) -> dict:
 
 
 def render_json_schema(schema_id: str) -> str:
-    """Return the deterministic text committed for a schema id."""
+    """Return the deterministic text committed for a schema id.
+
+    Args:
+        schema_id: Registered payload schema identity.
+
+    Returns:
+        str: Result of the documented contract operation.
+    """
     return json.dumps(json_schema_for(schema_id), indent=2, sort_keys=True) + "\n"
 
 
@@ -265,3 +343,4 @@ def export_json_schemas(directory: Path) -> list[Path]:
 #   resume path can map them to semantic_invalid without catching exceptions.
 #   (#KernelBootstrapV0/P1)
 # ====================================================================
+# - 2026-10-03 00:00 [python-coder]: Add typed host-needs support without activating production retrieval. (#TICKETLESS reason=user-requested-isolated-host-experiment)

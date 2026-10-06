@@ -47,6 +47,7 @@ def base_flow(flow_id: str, behind: dict | None = None, confirmed: dict | None =
                 "id": "browse",
                 "label": "browse",
                 "human": "the actor performs browse",
+                "io_contracts": {"not_applicable": "This browse action tests durable freshness marks and exchanges no JSON."},
                 "order": 1,
                 "implements": ["AC-REAL-1"],
             }

@@ -1,0 +1,100 @@
+id: UXP-542-1
+title: Authors have one explicit standard for fields, examples and proposed interfaces
+component: ux-prototyping
+components:
+- ux_prototyping
+level: L3
+status: active
+req_status: active
+work_status: done
+readiness: reviewed
+priority: medium
+criteria: 'Given an agent or person follows the Product Truth authoring prompt, how-to guide and schema
+  reference,
+
+  When they prepare a flow for review,
+
+  Then the instructions agree that every step and branch declares exact JSON field paths, types, immediate-container
+  requiredness and known defaults with labeled examples,
+
+  And a worked example distinguishes a contract name from a JSON wrapper and full values from projections,
+
+  And the instructions distinguish runtime, source-reviewed and illustrative-design authority, genuine
+  non-JSON actions and proposed missing bindings,
+
+  And they require existing source evidence for observed examples and review of real boundary mappings,
+
+  And they instruct the author to regenerate derived compatibility text and indexes and run validation
+  instead of editing derived copies,
+
+  And they state that a schema-valid record neither approves ACs nor proves runtime integration or semantic
+  answer quality.'
+depends_on:
+- UXP-542
+doc_links:
+- path: docs/how-to/product-truth-schema-reference.md
+  relationship: specifies
+  status: exists
+- path: docs/architecture/components/ux-prototyping.md
+  relationship: describes
+  status: exists
+assigned_agent: llm-expert
+origin_agent: business-analyst
+created: '2026-10-05'
+amended_by:
+- reason: '2026-10-05 business-analyst: recorded source/test traceability and locally verified completion
+    after IT PO review; retained reviewed readiness and existing parent statuses. Hosted CI and merge had not yet run at that local verification.'
+superseded_by: null
+covered_by: []
+implemented_by:
+- templates/agents/flow-author.md
+- docs/how-to/authoring-product-truth-artifacts.md
+- docs/how-to/product-truth-schema-reference.md
+- docs/architecture/components/ux-prototyping.md
+notes: 'BA and IT PO manually reviewed the authoring prompt, how-to, schema reference and architecture
+  description on 2026-10-05. They consistently explain exact fields/examples, authority and gaps, generated
+  ownership and validation limits; the alias-versus-JSON-wrapper explanation is explicit. This documentation-only
+  leaf intentionally requires no automated tests.
+
+
+  The user accepted the displayed feature and authorized completing its AC/test coverage and merging after
+  green checks. Readiness remains reviewed: BA and IT PO reviewed these newly authored criteria; no separate
+  individual-AC user sign-off is claimed. Work status records locally verified implementation. At the local verification recorded on 2026-10-05,
+  hosted CI and merge had not yet run. GitHub PR checks and merge status track release completion. This leaf does not claim production retrieval integration or completion
+  of its broader parent.'
+estimated_complexity: S
+change_target:
+- prompt
+- docs
+risk_surface: contract_boundary
+it_requirements:
+- Keep the author prompt, guide, schema reference and architecture description consistent about source
+  authority, generated ownership and read-only Atlas presentation.
+- The standards must distinguish reference aliases from JSON wrappers, immediate-container requiredness
+  from existence of a wildcard item, and full runtime validation from projected documentation.
+- Do not imply that reviewing this authoring standard implements the broader authoring workflow or integrates
+  the isolated retrieval-needs capability into production.
+expects_from:
+  ac_id: UXP-300-3
+  contract: The published structured-contract standard defines checked bindings, example provenance, contract
+    authority, genuine non-JSON reasons and proposed missing bindings, with the generator and validator
+    ownership boundaries.
+delivers_to: null
+test_required: false
+test_rationale: This leaf owns prose and prompt instructions only. Review the same worked example and
+  checklist across the author prompt, guide, schema reference and architecture document; executable schema
+  and display behavior is covered by the companion code ACs.
+declares_side_effect: false
+product_truth:
+  - flow: leafcutter/author-product-truth
+    node: flow
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: null
+    entities:
+      - Flow
+      - MockData
+      - Mockup
+    source: real
+    asof: '2026-10-05'

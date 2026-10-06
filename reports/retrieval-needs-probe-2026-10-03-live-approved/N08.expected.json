@@ -1,0 +1,26 @@
+{
+  "expected": {
+    "include": {
+      "entity_types": [
+        "ac"
+      ],
+      "document_types": [
+        "ac_yaml"
+      ]
+    },
+    "required_fields_if_fields": [
+      "criteria"
+    ],
+    "completeness": [
+      "examples",
+      "exhaustive_set"
+    ],
+    "hierarchy_scope": [
+      "not_applicable"
+    ],
+    "status": [
+      "decided"
+    ]
+  },
+  "human_gold": "Find canonical relevant criteria without demanding a target ID. No invented canonical identifier. Relevant ADRs or schemas may supplement but cannot replace criteria. Claiming no such specification later requires coverage proof."
+}

@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="1" skipped="0" tests="1" time="18.206" timestamp="2026-10-02T09:29:59.507646+00:00" hostname="BrainDesk"><testcase classname="tests.knowledge.test_native_test" name="test_test_reference_exposes_complete_contract_and_future_fields" time="0.007"><failure message="AssertionError: assert 'tests/feature/test_case.py' == 'test-reference:stable-id'&#10;  &#10;  - test-reference:stable-id&#10;  + tests/feature/test_case.py">tests\knowledge\test_native_test.py:60: in test_test_reference_exposes_complete_contract_and_future_fields
+    assert record.native_id == "test-reference:stable-id" != entity.source.path
+E   AssertionError: assert 'tests/feature/test_case.py' == 'test-reference:stable-id'
+E     
+E     - test-reference:stable-id
+E     + tests/feature/test_case.py</failure></testcase></testsuite></testsuites>

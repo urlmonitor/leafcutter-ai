@@ -1,0 +1,58 @@
+{
+  "type": "object",
+  "properties": {
+    "status": {
+      "type": "string",
+      "enum": [
+        "ok",
+        "blocker",
+        "failed",
+        "question",
+        "handoff",
+        "undetermined"
+      ]
+    },
+    "result_status": {
+      "type": "string"
+    },
+    "message": {
+      "type": "string"
+    },
+    "handoff_target": {
+      "type": "string",
+      "description": "REQUIRED when status is 'handoff': the name of the phase agent that must act before this phase can proceed, exactly as it appears in phaseOrder (e.g. 'test-writer', 'python-coder'). Absent, empty, or not a recognised phase agent causes the driver to refuse the handoff and halt rather than guess a re-dispatch target."
+    },
+    "tests_written": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Paths of test files this phase created or extended. Non-empty is the evidence that tests exist for the ticket."
+    },
+    "red_baseline_verified": {
+      "type": "boolean",
+      "description": "True when the phase ran the new tests and confirmed they fail (non-zero exit) before any implementation work."
+    }
+  },
+  "required": [
+    "status"
+  ],
+  "if": {
+    "required": [
+      "status"
+    ],
+    "properties": {
+      "status": {
+        "const": "handoff"
+      }
+    }
+  },
+  "then": {
+    "required": [
+      "handoff_target"
+    ]
+  },
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Source-reviewed PHASE_RESULT_SCHEMA",
+  "description": "Documentation transcription of templates/workflows-js/build-ticket.js::PHASE_RESULT_SCHEMA. This is the existing source shape, not a new runtime registration; automatic source/schema parity is not asserted."
+}

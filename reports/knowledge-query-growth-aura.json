@@ -1,0 +1,19 @@
+{
+  "status": "passed",
+  "source_sha": "9f70de80ebcafe59ff55cce6732deb92069f9541",
+  "repository_id": "leafcutter",
+  "backend": "Aura",
+  "jev": "scripted; real provider payload authorization pending",
+  "host_candidate": "BA-authored reviewed recipe",
+  "built_this_run": true,
+  "selected_operation": "get_component_tests",
+  "persistent_catalog": "C:\\Users\\Hendrik\\AppData\\Local\\Leafcutter\\query-catalog-km500\\14f901a2-8798-4f4c-9539-6a40fbffa626",
+  "evidence_count": 3,
+  "checkpoint_reopened": true,
+  "fresh_run_reused": true,
+  "database_writes": false,
+  "external_provider_calls": 0,
+  "embedding_calls": 0,
+  "first_run_status": "partial",
+  "fresh_run_status": "partial"
+}

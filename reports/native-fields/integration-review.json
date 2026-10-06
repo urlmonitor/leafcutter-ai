@@ -1,0 +1,64 @@
+{
+  "review": "shared native metadata integration before Aura publication",
+  "mode": "read-only source review and bounded process-only probes; report is the only written artifact",
+  "scope": [
+    "knowledge/native_properties.py",
+    "knowledge/projection/native_metadata.py",
+    "knowledge/projection/canonical_loader.py",
+    "knowledge/projection/validation.py",
+    "knowledge/adapters/domain_schema.py",
+    "knowledge/adapters/neo4j_domain_build.py",
+    "knowledge/adapters/native_verification.py",
+    "knowledge/native_refresh.py"
+  ],
+  "findings": [
+    {
+      "id": "native-review-1",
+      "priority": "P2",
+      "file": "knowledge/native_properties.py",
+      "line": 164,
+      "title": "Keep big integers encoded as strings for physical writes",
+      "description": "encode() stores an integer outside Neo4j's signed 64-bit range as a string, but restore_types() calls _restore(..., 'big_integer') and converts it back before display_properties() supplies the write row. Thus a supported native metadata value cannot be published.",
+      "probe": "restore_types(encode({'example': 2**63}))['example'] is int; neo4j._codec.packstream.v1.Packer.pack raises OverflowError: Integer 9223372036854775808 out of range",
+      "scope": "Any authored scalar or nested integer outside signed 64-bit range; no claim that the current Aura source contains such a value.",
+      "remedy": "Limit physical restore_types to driver-compatible temporal restoration; reconstruct big integers only in decode()."
+    },
+    {
+      "id": "native-review-2",
+      "priority": "P2",
+      "file": "knowledge/adapters/domain_schema.py",
+      "line": 85,
+      "related_location": "knowledge/projection/native_metadata.py:115",
+      "title": "Do not silently erase declared component filter values when targets are absent",
+      "description": "The physical components property comes exclusively from resolved edges. An explicitly selected new surface such as docs does not collect Component records, so a Document with components=['finalize'] gets components=[] even though its authored /components remains ['finalize']. No unresolved-membership diagnostic is produced. The ordinary Aura component filter therefore misses the record.",
+      "probe": "enrich an empty snapshot with kinds={'Document'} and one NativeRecord whose metadata is {'components':['finalize']}; display_properties returns components=[], /components=['finalize'], zero edges, and only native_metadata_counts diagnostics.",
+      "scope": "New explicit native-surface selections omitting components, or authored component names absent from the loaded graph. The default all-surface Aura run includes Component records and is unaffected for resolved component names.",
+      "remedy": "Preserve literal declared component filter values independently of edge resolution and report unresolved component targets explicitly. Do not infer ownership."
+    },
+    {
+      "id": "native-review-3",
+      "priority": "P2",
+      "file": "knowledge/native_refresh.py",
+      "line": 65,
+      "related_location": "knowledge/adapters/neo4j_domain_migration.py:51",
+      "title": "Allow native refresh to recover its inactive staging generation",
+      "description": "The refresh starts with migration inspect(), which rejects every generation whose status is not ready. publish() deliberately leaves a building or failed inactive Snapshot on an interrupted or failed stage, and otherwise supports resuming it. Retrying this command cannot reach that resume path because its initial inspection fails first.",
+      "probe": "A process-only fake database returning a failed Snapshot to inspect() raises ValueError('generation identity or readiness mismatch') before any node reads.",
+      "scope": "Retry after interrupted, failed, or CAS-refused native refresh staging. Existing current data remain safe, but a normal command retry is blocked.",
+      "remedy": "Inspect retained ready generations separately from strictly scoped inactive staging state, then validate/resume the intended stage, or provide an explicit guarded recovery path. Do not weaken ready-generation evidence validation."
+    }
+  ],
+  "other_reviewed_boundaries": {
+    "reserved_property_collisions": "No additional concrete regression found in the reviewed path.",
+    "retained_payloads": "New generation publication does not rewrite retained entity or relation payloads; fingerprints check the retained payloads and endpoints.",
+    "identity_and_provenance": "Existing entities retain canonical identity and SourceReference in apply_record; new native types use kind-scoped IDs and immutable source hashes.",
+    "query_digest_and_disclosure": "Storage label adaptation remains outside catalog compilation; native metadata stays outside the disclosure SAFE_PROPERTIES allowlist.",
+    "decision_guard": "Native Decision validation requires approved metadata plus matching canonical/native IDs and canonical source path.",
+    "sourcefile_test_dispatch": "Dispatch was pending during review and is outside this review's conclusions."
+  },
+  "limitations": [
+    "No Aura writes or network database reads.",
+    "No wide corpus run.",
+    "This report records findings before parent-agent repairs; it is not a post-repair approval."
+  ]
+}

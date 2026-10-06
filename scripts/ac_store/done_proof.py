@@ -57,8 +57,8 @@ ARCHITECTURE: Subprocess-invoking utility.  Scans the test tree for covers tags
             │       └── [composite] _verify_composite_eligible(...)
             │               └── _resolve_all_child_ids(covered_by, ac_status_map)
             │               └── _collect_linked_tests(child_id, all_tags)
-            │               └── _run_pytest_and_parse(test_files)
-            │               └── _classify_outcomes(child_tests, pytest_results)
+            │               └── _split_linked_tests_by_language(child_tests)
+            │               └── _run_python_test_phase / _run_ts_test_phase
             └── _split_linked_tests_by_language(linked_tests) → py_linked, ts_linked
             └── _maybe_reachability_verdict(reachability_spec, py_linked, ...)
             │       └── _check_reachability_for_linked_tests(...)
@@ -201,6 +201,7 @@ from _done_proof_phase_helpers import (
     is_covers_tag_waived,  # noqa: F401  # BP-100n-4-ii-ii: re-exported, see module docstring
 )
 from _done_proof_entry_point_gate import _apply_entry_point_reachability_gate  # BO-2900a-1
+from _done_proof_composite import _verify_composite_eligible  # noqa: F401  # re-exported for phase helpers
 from _done_proof_automation_gate import (  # BO-2900a-3 rework
     build_no_entry_point_refusal,
     unit_is_invoked_by_automation,
@@ -235,10 +236,6 @@ from _done_proof_automation_gate import (  # BO-2900a-3 rework
 # ---------------------------------------------------------------------------
 _COMMIT_GUARDIAN_DIR = Path(__file__).resolve().parent.parent / "commit_guardian"
 
-# ---------------------------------------------------------------------------
-# Constants
-# ---------------------------------------------------------------------------
-
 # Matches a pytest -v result line: <nodeid> <OUTCOME>
 # Handles relative and absolute paths including "../" prefixes.
 # Outcomes: PASSED, FAILED, XFAIL, XPASS, SKIPPED, ERROR.
@@ -247,8 +244,8 @@ _PYTEST_RESULT_RE = re.compile(
     re.MULTILINE,
 )
 
-# Matches a function definition whose name starts with "test_".
-_TEST_DEF_RE = re.compile(r"^\s*def\s+(test_\w+)")
+# Matches synchronous and asynchronous test definitions; both carry coverage tags.
+_TEST_DEF_RE = re.compile(r"^\s*(?:async\s+)?def\s+(test_\w+)")
 
 # BP-1100g-3: matches the SECOND tag axis on a test function -- "which kind
 # of proof this test was written to give" -- mirroring COVERS_TAG_RE's own
@@ -824,14 +821,12 @@ def run_vitest_and_parse(
     }
 
 
-# ---------------------------------------------------------------------------
-# Internal helpers — I/O layer
+# Internal helpers - I/O layer
 #
 # BP-100n-4-ii-ii: _build_ac_status_map itself now lives in
 # _done_proof_phase_helpers.py (re-exported below, same pattern as
 # is_covers_tag_waived) — see this module's own docstring "Second relocation"
 # paragraph for why.
-# ---------------------------------------------------------------------------
 
 
 def _is_excluded_path(path: Path) -> bool:
@@ -1722,115 +1717,6 @@ def _classify_outcomes(
 
 
 # ---------------------------------------------------------------------------
-# Internal helpers — composite eligibility layer (I/O via _run_pytest_and_parse)
-# ---------------------------------------------------------------------------
-
-
-def _verify_composite_eligible(
-    ac_id: str,
-    covered_by: list[str],
-    *,
-    ac_status_map: dict[str, dict],
-    all_tags: list[dict],
-    dangling_tags: list[dict],
-) -> dict:
-    """Derive a composite AC's eligibility verdict from its covered children.
-
-    Per BO-2500a-6, a composite (an AC whose own ``covered_by`` is non-empty)
-    does NOT require a direct ``# covers:`` tag of its own — its proof of
-    done is derived from its children instead.  It is satisfied when every
-    leaf descendant reachable through *covered_by* (see
-    :func:`_resolve_all_child_ids`, which also handles a child that is
-    itself a composite) has at least one covers-tagged test and every such
-    test passes.  A child with zero linked tests makes the composite
-    ineligible — the exemption only removes the requirement for the
-    composite's OWN id, it does not let an uncovered child pass silently.
-
-    Args:
-        ac_id: The composite AC's own identifier (used only for the reason
-            string; its id is never looked up in *all_tags*).
-        covered_by: The composite's direct child AC ids (already known
-            non-empty by the caller).
-        ac_status_map: Mapping ``{ac_id: {"status": ..., "covered_by": [...]}}``
-            from the AC store.
-        all_tags: All covers tag dicts produced by the scanner.
-        dangling_tags: Dangling-tag entries computed once by the caller,
-            passed through unchanged (composite resolution does not add or
-            remove dangling tags).
-
-    Returns:
-        A verdict dict with the same shape as :func:`verify_done_eligible`.
-    """
-    leaf_child_ids = _resolve_all_child_ids(covered_by, ac_status_map)
-    if not leaf_child_ids:
-        return {
-            "eligible": False,
-            "reason": f"composite {ac_id} has no coverable children",
-            "passing_tests": [],
-            "failing_tests": [],
-            "dangling_tags": dangling_tags,
-        }
-
-    per_child_tests = {
-        child_id: _collect_linked_tests(child_id, all_tags) for child_id in leaf_child_ids
-    }
-    uncovered_children = sorted(
-        child_id for child_id, tests in per_child_tests.items() if not tests
-    )
-    if uncovered_children:
-        return {
-            "eligible": False,
-            "reason": (
-                f"composite {ac_id} has uncovered children: "
-                + ", ".join(uncovered_children)
-            ),
-            "passing_tests": [],
-            "failing_tests": [],
-            "dangling_tags": dangling_tags,
-        }
-
-    all_child_tests = [test for tests in per_child_tests.values() for test in tests]
-    test_files = list({t["file"] for t in all_child_tests})
-    pytest_results = _run_pytest_and_parse(test_files)
-    incomplete_reason = _pytest_incomplete_run_reason(ac_id, pytest_results)
-    if incomplete_reason is not None:
-        return {
-            "eligible": False,
-            "reason": incomplete_reason,
-            "passing_tests": [],
-            "failing_tests": [],
-            "dangling_tags": dangling_tags,
-        }
-
-    passing_tests: list[str] = []
-    failing_tests: list[str] = []
-    for tests in per_child_tests.values():
-        child_passing, child_failing = _classify_outcomes(tests, pytest_results)
-        passing_tests.extend(child_passing)
-        failing_tests.extend(child_failing)
-
-    if failing_tests:
-        reasons = [
-            _describe_non_passing(nid, pytest_results) for nid in failing_tests
-        ]
-        return {
-            "eligible": False,
-            "reason": "; ".join(reasons),
-            "passing_tests": passing_tests,
-            "failing_tests": failing_tests,
-            "dangling_tags": dangling_tags,
-        }
-
-    return {
-        "eligible": True,
-        "reason": "",
-        "passing_tests": passing_tests,
-        "failing_tests": [],
-        "dangling_tags": dangling_tags,
-    }
-
-
-# ---------------------------------------------------------------------------
 # Internal helpers — reachability gate (BO-2900d-1)
 #
 # A criterion's covers-tagged test can PASS while the code it proves is
@@ -2137,7 +2023,7 @@ def _apply_reachability_gate(
 
     exemptions: list[dict] = []
     exempt_verdict = False
-    collected_invocations = None
+    invocation_collector = None
     if str(_COMMIT_GUARDIAN_DIR) not in sys.path:
         sys.path.insert(0, str(_COMMIT_GUARDIAN_DIR))
     try:
@@ -2160,11 +2046,11 @@ def _apply_reachability_gate(
             print(
                 f"WARNING: done_proof: cannot load {registry_path}: {exc}", file=sys.stderr,
             )
-        exempt_verdict = is_exempt(unit, exemptions)
+        exempt_verdict, invocation_collector = is_exempt(unit, exemptions), collected_invocations
 
     # BO-2900a-3 condition (3): a unit run as a program by real automation
     # does not satisfy "no automation runs it" -- verdict unchanged.
-    if unit_is_invoked_by_automation(unit, project_root, test_root, collected_invocations):
+    if unit_is_invoked_by_automation(unit, project_root, test_root, invocation_collector):
         return verdict
 
     if exempt_verdict:
@@ -2530,3 +2416,7 @@ def verify_done_eligible(
 #   fixing a spurious collection FileNotFoundError from the prior unset cwd.
 #   (#EPIC-AProofThatReachedTheCodeByDirectImport/02, BO-2900a-3)
 # - 2026-09-28 00:31 [python-coder/BO-2900a-3 rework]: CI regression on PR #925 (Linux): "pytest run unfinished: 2 file(s), returncode 4" for BO-2900a-1 and BO-2900a-3. The 2026-09-25 cwd= fix above anchored the child unconditionally to *test_files*' own common ancestor, but this repo's own pytest.ini (addopts -p scripts.ac_store.pytest_ac_enforcement) lives several directories ABOVE unit_tests/ac_store, so that addopts plugin became unimportable from the anchored cwd -- python -m pytest only puts the subprocess's OWN cwd on sys.path, not the ini's directory. Fixed entirely inside the sibling module's _resolve_pytest_run_cwd() (ratchet: fixed there, see its own DECISION HISTORY entry for the full mechanism); this file's only change is this docstring paragraph. No call site or return contract changed. (#EPIC-AProofThatReachedTheCodeByDirectImport/02, BO-2900a-3)
+# - 2026-10-05 07:01 UTC [python-coder]: Move composite orchestration to its own
+#   sibling and reuse Python/TypeScript phases. Child coverage stays mandatory;
+#   TS children no longer enter pytest. Keep the re-export and runner seams.
+#   (#TICKETLESS reason=user-authorized-composite-proof-ci-repair)

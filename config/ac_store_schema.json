@@ -586,6 +586,7 @@
                     "changelog",
                     "commit_guardian",
                     "config_loader",
+                    "decision_kernel",
                     "doc_compliance",
                     "documentation_system",
                     "feedback_collector",

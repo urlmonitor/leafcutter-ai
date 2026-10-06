@@ -28,35 +28,16 @@ import { Badge } from "@/components/ui/kit";
 import { cn, humanize } from "@/lib/utils";
 import { WORK_STATUS_TONE, WORK_STATUS_PLAIN } from "@/lib/status";
 import { RealizationBadge } from "./realization-badge";
+import { FlowContracts } from "./flow-contracts";
+import { CONTRACT_PRESENTATION_MARKER, parseIoContracts } from "@/lib/data/flow-contracts";
+import type { StepView } from "./flow-step-view";
+export type { StepView } from "./flow-step-view";
 import type {
   AcRef,
-  FlowRealization,
-  FlowScenario,
   MockData,
   MockEntity,
-  WorkStatus,
 } from "@/lib/data/types";
 
-export interface StepView {
-  id: string;
-  label: string;
-  human: string;
-  screen: string | null;
-  screenTitle?: string | null;    // resolved mockup title for the screen slug
-  realization?: FlowRealization;  // does the parent flow's system exist yet
-  variant: "step" | "branch";
-  condition?: string;
-  status: WorkStatus;
-  agent?: string | null;
-  produces?: string[];
-  consumes?: string[];
-  reads: string[];
-  writes: string[];
-  acs: AcRef[];
-  scenarios: FlowScenario[];
-  expandsTo?: string | null;      // child flow id this step drills into
-  expandsToName?: string | null;  // resolved child flow name (null if unresolved)
-}
 
 function Section({
   icon,
@@ -220,6 +201,8 @@ export function FlowDrawer({
   const st = step
     ? WORK_STATUS_TONE[step.status] ?? WORK_STATUS_TONE.unknown
     : WORK_STATUS_TONE.unknown;
+  const contracts = parseIoContracts(step?.ioContracts, step?.contractDefinitions);
+  const narrative = contracts ? step?.human.split(CONTRACT_PRESENTATION_MARKER)[0] : step?.human;
 
   return (
     <AnimatePresence>
@@ -288,9 +271,9 @@ export function FlowDrawer({
                 </button>
               )}
 
-              {step.human && (
-                <p className="text-sm leading-relaxed text-foreground/90">
-                  {step.human}
+              {narrative && (
+                <p className="whitespace-pre-wrap break-words text-sm leading-relaxed text-foreground/90">
+                  {narrative}
                 </p>
               )}
 
@@ -330,7 +313,9 @@ export function FlowDrawer({
                 </Section>
               )}
 
-              {step.consumes && step.consumes.length > 0 && (
+              {contracts && <FlowContracts contracts={contracts} definitions={step.contractDefinitions ?? {}} />}
+
+              {!contracts && step.consumes && step.consumes.length > 0 && (
                 <Section icon={<LogIn className="h-3 w-3" />} title="Consumes (handoff in)">
                   <div className="flex flex-wrap gap-1.5">
                     {step.consumes.map((c) => (
@@ -345,7 +330,7 @@ export function FlowDrawer({
                 </Section>
               )}
 
-              {step.produces && step.produces.length > 0 && (
+              {!contracts && step.produces && step.produces.length > 0 && (
                 <Section icon={<LogOut className="h-3 w-3" />} title="Produces (handoff out)">
                   <div className="flex flex-wrap gap-1.5">
                     {step.produces.map((p) => (

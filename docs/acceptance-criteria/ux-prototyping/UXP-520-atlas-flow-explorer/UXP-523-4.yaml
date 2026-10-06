@@ -1,0 +1,119 @@
+id: UXP-523-4
+title: Older or unusable contract metadata does not erase readable node detail
+component: ux-prototyping
+components:
+- ux_prototyping
+level: L3
+status: active
+req_status: active
+work_status: done
+readiness: reviewed
+priority: medium
+criteria: 'Given a node has no structured contract metadata or has metadata the Atlas display guard cannot
+  use,
+
+  When a person opens that node,
+
+  Then the readable narrative and compatibility input and output detail remain available through the fallback
+  display,
+
+  And Atlas does not show an empty structured panel in place of that existing detail,
+
+  And this display fallback does not certify the record as valid or exempt it from the repository''s Product
+  Truth checks.'
+depends_on:
+- UXP-523
+doc_links:
+- path: docs/how-to/product-truth-schema-reference.md
+  relationship: specifies
+  status: exists
+- path: docs/architecture/components/ux-prototyping.md
+  relationship: describes
+  status: exists
+assigned_agent: frontend-coder
+origin_agent: business-analyst
+created: '2026-10-05'
+amended_by:
+- reason: '2026-10-05 business-analyst: recorded source/test traceability and locally verified completion
+    after IT PO review; retained reviewed readiness and existing parent statuses. Hosted CI and merge had not yet run at that local verification.'
+superseded_by: null
+covered_by:
+- leafcutter-web/components/flows/__tests__/flow-drawer.contracts.test.tsx
+- unit_tests/product_truth/test_flow_io_contract_migration.py
+implemented_by:
+- leafcutter-web/lib/data/flows.ts
+- leafcutter-web/lib/data/types.ts
+- leafcutter-web/lib/data/flow-contracts.ts
+- leafcutter-web/components/flows/flow-contracts.tsx
+- leafcutter-web/components/flows/flow-drawer.tsx
+- docs/product-truth/scripts/product_truth_contract_policy.py
+notes: 'The test writer verified 20 Atlas contract tests and 49 Python contract tests plus 16 subtests.
+  Malformed and absent display metadata retain fallback text; removing metadata from existing flow identities
+  still fails the repository validator.
+
+
+  The user accepted the displayed feature and authorized completing its AC/test coverage and merging after
+  green checks. Readiness remains reviewed: BA and IT PO reviewed these newly authored criteria; no separate
+  individual-AC user sign-off is claimed. Work status records locally verified implementation. At the local verification recorded on 2026-10-05,
+  hosted CI and merge had not yet run. GitHub PR checks and merge status track release completion. This leaf does not claim production retrieval integration or completion
+  of its broader parent.'
+estimated_complexity: S
+change_target:
+- code
+- ui
+risk_surface: contract_boundary
+it_requirements:
+- The display guard must reject malformed or incomplete shapes without coercing strings into booleans
+  or discarding the existing narrative.
+- Fallback is a display compatibility policy only; it must not introduce exemptions or convert canonical
+  validator errors into approval.
+expects_from:
+  ac_id: UXP-300-3
+  contract: 'The same flow JSON carries io_contracts.examples: [{contract: string, mode: full|projection,
+    origin: observed|illustrative|reconstructed, label: string, value: JSON value, source?: {path: repository-relative
+    string, pointer: JSON-pointer string}}]. Observed requires source. Definition authority/note and node
+    missing_bindings [{name: string, direction: consumes|produces|both, reason: string, source: repository-relative
+    string}] or a genuine not_applicable string remain distinguishable from checked runtime fields.'
+delivers_to: null
+test_spec:
+- name: keeps the legacy readable fallback when structured metadata is absent or unusable
+  target_dir: leafcutter-web/components/flows/__tests__/
+  description: Absent or unusable metadata retains narrative and compatibility detail and does not render
+    an empty structured replacement.
+  framework: vitest
+  type: component
+  angle: criterion
+- name: rejects coerced %s values and preserves the legacy fallback
+  target_dir: leafcutter-web/components/flows/__tests__/
+  description: Invalid scalar metadata never passes by coercion or hides readable legacy details.
+  framework: vitest
+  type: component
+  angle: boundary
+- name: rejects incomplete contract shapes without hiding legacy details
+  target_dir: leafcutter-web/components/flows/__tests__/
+  description: Incomplete shape variants retain all readable fallback content.
+  framework: vitest
+  type: component
+  angle: failure
+- name: test_existing_flow_id_cannot_bypass_contracts_after_migration
+  target_dir: unit_tests/product_truth/
+  description: The canonical record gate still rejects metadata removal from real flow identities regardless
+    of UI fallback.
+  framework: unittest
+  type: integration
+  angle: reachability
+test_rationale: Positive structured-display tests accompany the fallback cases, so an implementation that
+  always falls back cannot pass. Separate canonical-gate coverage proves UI tolerance does not waive the
+  record standard.
+test_required: true
+declares_side_effect: false
+product_truth:
+  - flow: leafcutter/explore-flows-in-atlas
+    node: inspect
+    node_kind: step
+    flow_kind: user
+    screen: null
+    mock_data: null
+    entities: []
+    source: real
+    asof: '2026-10-05'

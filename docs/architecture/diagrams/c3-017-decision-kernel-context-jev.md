@@ -46,7 +46,9 @@ request flow. The research capability's Jev calls are on the
 
 ```mermaid
 flowchart LR
-  TI["TaskInput goal, component ids, clarification answers"] --> IN["intake intent - kernel.intent v1"]
+  TI["TaskInput goal, component ids, clarification answers"] --> IN["intake intent - kernel.intent v2"]
+  CTX["Saved pre-intent context - caller claims and permitted repo excerpts"] --> IN
+  CTX --> LD
   TI --> RT["route node - kernel.route v1"]
   RQ["Request being routed"] --> RT
   REG[("Pinned registry snapshot")] --> EF["filter_candidates - deterministic eligibility"]
@@ -70,6 +72,9 @@ See also: [Context map](c3-016-decision-kernel-context-map.md) and
 
 ## Intake intent Jev call
 
+The saved context also reaches native capability Jev batches through `make_batch`, subject to
+the same payload cap and repository-excerpt policy. Explicit output contracts still gather context.
+
 **When.** On the first `route` pass, only when the root's contract is still open: no
 `requested_output_schema` and no typed `input_payload` (either makes the intent `explicit`). A
 classified root with exactly one eligible candidate is then selected without the routing question
@@ -80,7 +85,8 @@ classified root with exactly one eligible candidate is then selected without the
 | Effective goal | `TaskInput.goal`; after a clarification, the human's answer first, then the original request | `kernel/intent/classify.py` (`build_batch`) | V0 |
 | Component ids | `TaskInput.scope.component_ids` | Same | V0 |
 | Clarifications | Answers to the intent clarification question, at most `intent.max_clarifications` (2) | Same | V0 |
-| Choices | `decision`, `evidence`, `ideas`, `change`, `out_of_domain` and `__NEEDS_CONTEXT__`, each with a one-line criterion | Template `kernel.intent`, version 1 | V0 |
+| Enriched context | Saved workspace and registry context, bounded caller claims and repository excerpts with provenance and limitations; projected within `jev.max_state_chars` and data policy | `enrich_context`, then `kernel/enrichment_projection.py` | V0 |
+| Choices | `decision`, `evidence`, `ideas`, `change`, `out_of_domain` and `__NEEDS_CONTEXT__`, classified by requested answer kind without confusing unknown facts with unclear intent | Template `kernel.intent`, version 2 | V0 |
 | Thresholds (kept away from Jev) | `intent.min_selected_probability` 0.7, `min_confidence` 0.5 | Code | V0 |
 
 `change` is declined (`out_of_scope_write`) and `out_of_domain` is declined and recorded as a gap.

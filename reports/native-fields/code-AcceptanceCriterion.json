@@ -1,0 +1,36 @@
+{
+  "kind": "AcceptanceCriterion",
+  "date": "2026-10-02",
+  "implementation": "knowledge/native_types/acceptance_criterion.py",
+  "entrypoint": "extract(root: Path) -> list[NativeRecord]",
+  "schema": "config/ac_store_schema.json",
+  "validator": "knowledge.projection.validation.validate_acs",
+  "field_policy": "Keep every authored, validated field and nested value. No allowlist, default insertion, trimming, sorting, normalization, inferred parent, or date-to-string conversion.",
+  "provenance": {
+    "selection": "config/paths.json surfaces.acs.path",
+    "source_path": "Repository-relative validated YAML file path",
+    "locator": "/criteria",
+    "native_id": "Exact source id",
+    "title": "Exact source title",
+    "description": "Empty: the AC schema has no description field; full criteria remains metadata.criteria. This preserves existing progressive-disclosure summary semantics."
+  },
+  "validation": {
+    "baseline": {"report": "reports/native-fields/ac-red.xml", "failed": 10, "reason": "New extractor module absent before implementation"},
+    "green": {"report": "reports/native-fields/ac-green.xml", "passed": 10},
+    "schema_comparison": {"declared_fields": 47, "fixture_fields": 47, "missing": [], "extra": [], "assertion": "Full authored fixture equals extracted metadata after YAML safe_dump and canonical source validation"},
+    "negative_control": {"mutation": "Remove criteria from extracted metadata in memory", "result": "Full-field source fidelity test raises AssertionError", "source_files_modified": false},
+    "lint": "ruff check passed; ruff format applied",
+    "controls": [
+      "All 47 authored scalar, list, object, and nullable fields survive exact extraction",
+      "Nested list-object correlation, duplicate array entries, whitespace, false, zero, null, empty list and empty object survive",
+      "Bare YAML date remains date and quoted date-like text remains string",
+      "Absent optional fields and schema defaults stay absent",
+      "Configured custom source path is used and index/scaffolding mappings are excluded",
+      "Invalid criteria, undeclared fields, unknown components, and unresolved required AC dependencies fail existing validation",
+      "Duplicate AC ids fail rather than collapse",
+      "Resolved source paths outside supplied snapshot are rejected before validation reads",
+      "Fresh extraction cannot inherit mutations to previous result metadata"
+    ]
+  },
+  "integration_boundary": "Shared native-property encoding, graph publication, immutable source pinning, and Aura verification are performed by the parent integration task. This module performs no Neo4j writes."
+}

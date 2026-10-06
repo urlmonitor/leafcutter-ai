@@ -1,0 +1,112 @@
+id: DK-400b-2-i
+title: "A mid-run split's quotes are checked against the work item's own words, not the root goal"
+component: decision-kernel
+components:
+  - decision_kernel
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_kernel_1_founding
+criteria: |
+  Given the mid-run split of the split-bounds decision question at work-item depth 1,
+  And the root goal's text contains the words "children are counted per run", which the work
+    item's question does not contain,
+  When the host proposes part p1 quoting "how many sub-questions one split may propose", part p2
+    quoting "whether children may run in parallel" and part p3 quoting "children are counted per
+    run",
+  Then p1 and p2 are kept, because their quotes are in the work item's question,
+  And p3 is set aside read-only with the reason that its quote is not found in the subject,
+    although its words appear in the root goal.
+depends_on:
+  - DK-400b-2
+  - DK-400c-2
+doc_links:
+  - path: docs/product-truth/flows/leafcutter/decision-forming.flow.json
+    relationship: implements
+    status: exists
+    relevance: "Flow v5 node(s) split-mid-run, split-dropped, with their acceptance scenarios."
+  - path: docs/product-truth/mock-data/leafcutter/decisions.mock.json
+    relationship: specified-by
+    status: exists
+    relevance: "Invariant: every parts[].covers is a verbatim substring of subject_text."
+  - path: docs/analysis/2026-09-30-decision-kernel-design-4-jev-and-capabilities.md
+    relationship: describes
+    status: exists
+    relevance: Jev template rules, host operations and their conversion, capability gaps, the precedent node.
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: DK-400c-2
+  contract: "The quote check that sets proposals aside, applied here to the mid-run subject."
+it_requirements:
+  - The quote check compares against the split's own subject_text (the work item's question) and nothing else; it
+    never falls back to the root goal, the task's original goal or any parent's text.
+  - 'The set-aside reason is template text by subject kind: ''quote not found in the goal'', ''quote not found in
+    the request'' (research request) or ''quote not found in the question'' (decision question).'
+  - Reached only through the injected test producer of DK-400b-2; the mid-run path is dormant in production.
+  - 'Tests enable splitting explicitly: split.enabled true through a config override (false only where a test compares
+    with the off switch). None relies on the shipped default, which stays false until E3 merges (dec-9925ebf1895222f4,
+    see DK-400a-1). A test asserting that no split starts must run with splitting on, or it passes for the wrong
+    reason.'
+change_target: code
+risk_surface: contract_boundary
+test_required: true
+test_spec:
+  - name: test_mid_run_quote_of_root_goal_is_set_aside
+    target_dir: tests/kernel/split/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: Through the injected test producer of DK-400b-2, with the split-bounds work item as subject, p3
+      quoting words found only in the root goal is set aside with the question reason while p1 and p2 are kept.
+test_rationale: The trap is which text the check reads, so the test runs a mid-run split whose root goal contains
+  the quote.
+origin_agent: business-analyst
+created: 2026-10-05
+amended_by:
+  - reason: it-po-technical-enrichment
+    date: '2026-10-05'
+    by: it-po
+    summary: 'Technical enrichment: assigned_agent confirmed, estimated_complexity, change_target, risk_surface,
+      it_requirements, delivers_to/expects_from contracts, doc_links and the test contract set; readiness draft
+      -> reviewed. BA criteria and product_truth unchanged.'
+  - reason: it-po-final-gate-re-enrichment
+    date: '2026-10-05'
+    by: it-po
+    summary: Mid-run test pinned to the injected test producer of DK-400b-2.
+  - reason: it-po-build-slice-amendment
+    date: '2026-10-05'
+    by: it-po
+    summary: 'Build-slice amendment (dec-9925ebf1895222f4): its tests enable splitting explicitly, because split.enabled
+      ships false in E1 and E2.'
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Non-obvious: the subject of a mid-run split is the work item, so a quote of the root goal is
+  not a quote of the subject.
+product_truth:
+  - flow: leafcutter/decision-forming
+    node: split-dropped
+    node_kind: branch
+    flow_kind: data
+    screen: decision-split-approve
+    mock_data: leafcutter/decisions
+    entities:
+      - Decomposition
+    source: real
+    asof: '2026-10-05'
+  - flow: leafcutter/decision-forming
+    node: split-mid-run
+    node_kind: branch
+    flow_kind: data
+    screen: null
+    mock_data: leafcutter/decisions
+    entities:
+      - Decomposition
+    source: real
+    asof: '2026-10-05'
