@@ -1,10 +1,11 @@
-"""Bootstrap's build.py run must leave tracked files byte-identical to HEAD.
+"""Bootstrap's build.py must be idempotent and keep generated text LF-only.
 
 Ticket TICKET-20261002-WorktreeBootstrapLeavesTrackedFilesDirty. The build is run
 exactly as ``setup_ticket_worktree._bootstrap`` runs it, in a throwaway clone.
 Implementation needed: build.py writes generated text with newline="\n" and
 committed generated files match current build output.
 """
+import hashlib
 import subprocess
 import sys
 import tempfile
@@ -20,18 +21,37 @@ def _git(cwd, *args):
                           text=True, check=True).stdout
 
 
+def _clone_head(clone: Path) -> None:
+    subprocess.run(["git", "clone", "--no-local", "-q", str(REPO_ROOT), str(clone)],
+                   check=True, capture_output=True)
+
+
+def _run_build(clone: Path) -> None:
+    subprocess.run([sys.executable, str(clone / "scripts" / "build.py"),
+                    "--target-dir", str(clone)],
+                   cwd=str(clone), check=True, capture_output=True)
+
+
 def _built_clone() -> Path:
     if "clone" not in _STATE:
         tmp = tempfile.TemporaryDirectory()
         _STATE["tmp"] = tmp
         clone = Path(tmp.name) / "clone"
-        subprocess.run(["git", "clone", "--no-local", "-q", str(REPO_ROOT), str(clone)],
-                       check=True, capture_output=True)
-        subprocess.run([sys.executable, str(clone / "scripts" / "build.py"),
-                        "--target-dir", str(clone)],
-                       cwd=str(clone), check=True, capture_output=True)
+        _clone_head(clone)
+        _run_build(clone)
         _STATE["clone"] = clone
     return _STATE["clone"]
+
+
+def _snapshot_tracked(clone: Path) -> dict:
+    """Map each tracked path to the sha256 of its bytes (None when missing)."""
+    names = _git(clone, "ls-files", "-z").split("\0")
+    snap = {}
+    for rel in filter(None, names):
+        path = clone / rel
+        snap[rel] = (hashlib.sha256(path.read_bytes()).hexdigest()
+                     if path.is_file() else None)
+    return snap
 
 
 def tearDownModule():
@@ -41,15 +61,27 @@ def tearDownModule():
 
 
 class TestBuildLeavesTrackedFilesClean(unittest.TestCase):
-    def test_build_on_a_clean_checkout_leaves_tracked_files_unchanged(self):
+    def test_a_second_build_on_a_clean_checkout_changes_nothing(self):
         # covers: TICKET-20261002-WorktreeBootstrapLeavesTrackedFilesDirty
         # angle: criterion
-        """Build in a fresh clone must leave `git status` clean."""
-        clone = _built_clone()
-        out = _git(clone, "status", "--porcelain", "--untracked-files=no").strip()
+        """A repeat build must leave every tracked file byte-identical.
+
+        Pins byte stability (no CRLF flip-flop) and machine independence (a
+        deployed copy cannot change links between runs). Freshness of the
+        committed generated files is out of scope for this test.
+        """
+        with tempfile.TemporaryDirectory() as tmp:
+            clone = Path(tmp) / "clone"
+            _clone_head(clone)
+            _run_build(clone)
+            first = _snapshot_tracked(clone)
+            _run_build(clone)
+            second = _snapshot_tracked(clone)
+        changed = sorted(k for k in first.keys() | second.keys()
+                         if first.get(k) != second.get(k))
         self.assertEqual(
-            out, "",
-            "build.py modified tracked files:\n" + out,
+            changed, [],
+            "a second build.py run changed tracked files:" + chr(10) + chr(10).join(changed),
         )
 
     def test_generated_text_outputs_keep_lf_line_endings(self):

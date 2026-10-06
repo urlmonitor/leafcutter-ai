@@ -61,21 +61,23 @@ modified tracked files.
 
 ## Out of Scope
 - The base-branch choice of `create-only`, handled separately (BO-4100a-1 / epic BO-4300).
+- Keeping committed generated files (agent cards, docs/INDEX.md) fresh as main's ACs change, moved to TICKET-20261006-GeneratedAgentCardsVsFileSizeRatchet (user decision 2026-10-06).
 
 ## Test Requirements
 
 ```yaml
 tests:
-  - name: test_build_on_a_clean_checkout_leaves_tracked_files_unchanged
+  - name: test_a_second_build_on_a_clean_checkout_changes_nothing
     location: unit_tests/build_guards/test_build_leaves_tracked_files_clean.py
     type: integration
     covers: TICKET-20261002-WorktreeBootstrapLeavesTrackedFilesDirty
     description: |
       Make a throwaway clone of the repository at HEAD (git clone --no-local into a temp dir),
-      run `python scripts/build.py --target-dir .` in it the way _bootstrap does, then assert
-      `git status --porcelain --untracked-files=no` is empty. If it is not empty, the message
-      must list each changed file. It is red today on Windows, where 61 files change. May be
-      marked slow if the repo's marker convention requires it.
+      run `python scripts/build.py --target-dir .` once, snapshot the content hash of every
+      tracked file, run the build again, and assert nothing changed between the two snapshots;
+      the failure message names each changed file. This pins byte stability across platforms
+      (the CRLF defect) and machine independence. Freshness of committed generated files moved
+      to TICKET-20261006-GeneratedAgentCardsVsFileSizeRatchet by user decision on 2026-10-06.
 
   - name: test_generated_text_outputs_keep_lf_line_endings
     location: unit_tests/build_guards/test_build_leaves_tracked_files_clean.py
@@ -187,3 +189,10 @@ Relocated unit_tests/build/test_build_leaves_tracked_files_clean.py to unit_test
 unit_tests/build/__init__.py. That package shadowed scripts/build.py on `import build` and caused 57 CI failures
 on PR #1021 (guarded by unit_tests/build_guards/test_no_build_package_shadow.py). Same 4 tests, unchanged;
 earlier comments keep the old path as written.
+
+### 2026-10-06 12:00 — test-writer (status: ok)
+feedback-id: fb_2026-10-06_3e102f9f
+Per user decision, replaced test_build_on_a_clean_checkout_leaves_tracked_files_unchanged with
+test_a_second_build_on_a_clean_checkout_changes_nothing (build twice in a HEAD clone, compare content
+hashes of all tracked files, name each changed file). Freshness of committed generated files moved to
+TICKET-20261006-GeneratedAgentCardsVsFileSizeRatchet. The other three tests are unchanged.
