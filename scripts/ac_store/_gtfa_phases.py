@@ -29,6 +29,8 @@ from pathlib import Path
 
 import yaml
 
+from yaml_safe_loader import get_safe_yaml_loader
+
 # See the "Sibling wiring" note in generate_ticket_from_ac.py for why the
 # sibling package prefix is derived from __name__ rather than hard-coded.
 _PKG = __name__.rpartition(".")[0]
@@ -107,7 +109,7 @@ def _load_phase_deferral(path: Path) -> dict[str, list[str]]:
     """
     try:
         with open(path, encoding="utf-8") as fh:
-            data = yaml.safe_load(fh)
+            data = yaml.load(fh, Loader=get_safe_yaml_loader())
     except (OSError, yaml.YAMLError) as exc:
         raise PhaseDeferralDeclarationError(
             f"could not load phase deferral declaration at {path}: {exc}"

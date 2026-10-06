@@ -9,6 +9,7 @@ import ast
 import json
 import os
 import shutil
+import sys
 from pathlib import Path, PurePosixPath
 
 STORE = "docs/product-truth"
@@ -169,6 +170,10 @@ def _copy_acs(source: Path, destination: Path, required: set[str]) -> None:
     if not required:
         return
     import yaml
+
+    sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+    from ac_store.yaml_safe_loader import get_safe_yaml_loader
+
     candidates: dict[str, list[Path]] = {}
     for path in ac_root.rglob("*.yaml"):
         if path.stem in required:
@@ -179,7 +184,7 @@ def _copy_acs(source: Path, destination: Path, required: set[str]) -> None:
             raise ValueError(f"AC {ac_id}: expected one source record, found {len(matches)}")
         relative = matches[0].relative_to(source).as_posix()
         path = checked_path(source, relative, ("docs/acceptance-criteria/",))
-        record = yaml.safe_load(path.read_text(encoding="utf-8"))
+        record = yaml.load(path.read_text(encoding="utf-8"), Loader=get_safe_yaml_loader())
         if not isinstance(record, dict) or record.get("id") != ac_id:
             raise ValueError(f"AC {ac_id}: filename and record identity disagree")
         _copy_file(source, destination, relative)

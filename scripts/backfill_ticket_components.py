@@ -58,6 +58,9 @@ from pathlib import Path
 
 import yaml
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from ac_store.yaml_safe_loader import get_safe_yaml_loader  # noqa: E402
+
 _SCRIPT_DIR = Path(__file__).resolve().parent
 _REPO_ROOT = _SCRIPT_DIR.parent
 _DEFAULT_TICKETS_DIR = _REPO_ROOT / "tickets"
@@ -120,7 +123,7 @@ def _load_registry(index_path: Path) -> tuple[set[str], dict[str, str], dict[str
         (registry_ids, prefix_to_id, id_to_patterns). All empty on error.
     """
     try:
-        data = yaml.safe_load(index_path.read_text(encoding="utf-8"))
+        data = yaml.load(index_path.read_text(encoding="utf-8"), Loader=get_safe_yaml_loader())
     except (OSError, yaml.YAMLError) as exc:
         print(f"ERROR: cannot read registry {index_path}: {exc}", file=sys.stderr)
         return set(), {}, {}
@@ -406,7 +409,7 @@ def _backfill_file(
 
     fm_text = content[3:fm_end].strip()
     try:
-        fm = yaml.safe_load(fm_text)
+        fm = yaml.load(fm_text, Loader=get_safe_yaml_loader())
     except yaml.YAMLError as exc:
         print(f"WARNING: cannot parse frontmatter in {path}: {exc}", file=sys.stderr)
         return "error"

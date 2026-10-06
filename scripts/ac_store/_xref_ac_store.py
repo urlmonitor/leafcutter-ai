@@ -25,6 +25,8 @@ from typing import Any
 
 import yaml
 
+from yaml_safe_loader import get_safe_yaml_loader
+
 _log = logging.getLogger(__name__)
 
 # AC `status` values meaning the record is retired (config/ac_store_schema.json).
@@ -45,7 +47,7 @@ def _load_ac_yamls(ac_root: Path) -> list[dict[str, Any]]:
     for yaml_path in sorted(ac_root.rglob("*.yaml")):
         try:
             with open(yaml_path, encoding="utf-8") as fh:
-                data = yaml.safe_load(fh)
+                data = yaml.load(fh, Loader=get_safe_yaml_loader())
             if not isinstance(data, dict):
                 _log.warning("Skipping non-dict YAML: %s", yaml_path)
                 continue

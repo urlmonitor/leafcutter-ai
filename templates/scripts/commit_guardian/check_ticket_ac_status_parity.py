@@ -31,6 +31,11 @@ from pathlib import Path
 
 import yaml
 
+from _ac_store_locator import ensure_ac_store_on_syspath
+
+ensure_ac_store_on_syspath()
+from yaml_safe_loader import get_safe_yaml_loader
+
 from _resolve_root import find_project_root
 
 # Default AC store root, relative to project root.
@@ -110,7 +115,7 @@ def _parse_frontmatter(path: Path) -> dict | None:
         return None
 
     try:
-        data = yaml.safe_load(parts[1])
+        data = yaml.load(parts[1], Loader=get_safe_yaml_loader())
     except yaml.YAMLError as exc:
         print(
             f"WARNING: check_ticket_ac_status_parity: YAML error in {path}: {exc}",
@@ -158,7 +163,7 @@ def _read_ac_work_status(ac_path: Path) -> str | None:
     """
     try:
         with open(ac_path, encoding="utf-8") as fh:
-            data = yaml.safe_load(fh)
+            data = yaml.load(fh, Loader=get_safe_yaml_loader())
     except (OSError, yaml.YAMLError) as exc:
         print(
             f"WARNING: check_ticket_ac_status_parity: cannot read {ac_path}: {exc}",

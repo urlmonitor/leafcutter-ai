@@ -35,6 +35,11 @@ import re
 
 import yaml
 
+from _ac_store_locator import ensure_ac_store_on_syspath
+
+ensure_ac_store_on_syspath()
+from yaml_safe_loader import get_safe_yaml_loader
+
 # ---------------------------------------------------------------------------
 # Raw-text block extraction
 # ---------------------------------------------------------------------------
@@ -118,7 +123,7 @@ def _parse_seam_answer_occurrence(
 
     text = "cross_layer_seam_answer:\n" + "\n".join(body_lines)
     try:
-        parsed = yaml.safe_load(text)
+        parsed = yaml.load(text, Loader=get_safe_yaml_loader())
     except yaml.YAMLError:
         return {}
     if not isinstance(parsed, dict):

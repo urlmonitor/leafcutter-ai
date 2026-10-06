@@ -75,7 +75,8 @@ from pathlib import Path
 from typing import Any
 
 try:
-    import yaml  # type: ignore[import]
+    import yaml
+    from yaml_safe_loader import get_safe_yaml_loader  # type: ignore[import]
     _YAML_AVAILABLE = True
 except ImportError:
     _YAML_AVAILABLE = False
@@ -142,7 +143,7 @@ def _load_ac(path: Path) -> AcRecord | None:
 
     if _YAML_AVAILABLE:
         try:
-            data = yaml.safe_load(content)
+            data = yaml.load(content, Loader=get_safe_yaml_loader())
         except yaml.YAMLError as exc:
             print(f"ERROR: {path}: YAML parse error: {exc}", file=sys.stderr)
             return None

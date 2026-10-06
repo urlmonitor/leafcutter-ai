@@ -168,11 +168,14 @@ def _parse_hook_entries_yaml(precommit_path: Path) -> list[str]:
     text = precommit_path.read_text(encoding="utf-8")
     try:
         import yaml  # type: ignore[import-untyped]
+
+        sys.path.insert(0, str(Path(__file__).resolve().parent))
+        from ac_store.yaml_safe_loader import get_safe_yaml_loader
     except ImportError:
         _log.debug("PyYAML not available; falling back to regex scan.")
         return re.findall(r"^\s*entry:\s*(.+)$", text, re.MULTILINE)
     try:
-        data = yaml.safe_load(text) or {}
+        data = yaml.load(text, Loader=get_safe_yaml_loader()) or {}
         entries: list[str] = []
         for repo in data.get("repos", []):
             for hook in repo.get("hooks", []):

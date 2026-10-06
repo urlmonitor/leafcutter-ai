@@ -152,7 +152,11 @@ def _parse_frontmatter_description(text: str) -> str:
     fm_text = text[3:end].strip()
     try:
         import yaml  # noqa: PLC0415
-        fm = yaml.safe_load(fm_text) or {}
+
+        sys.path.insert(0, str(Path(__file__).resolve().parent))
+        from ac_store.yaml_safe_loader import get_safe_yaml_loader  # noqa: PLC0415
+
+        fm = yaml.load(fm_text, Loader=get_safe_yaml_loader()) or {}
         return fm.get("description", "") or ""
     except Exception:  # noqa: BLE001
         return ""

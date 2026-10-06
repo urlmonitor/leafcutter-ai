@@ -10,8 +10,11 @@ BUSINESS CONTEXT: After a ticket-linked merge lands, the source AC in the AC
     field in its YAML frontmatter.
     Non-fatal: any per-ticket failure is logged and skipped so the hook never
     blocks a merge (exit code is always 0).
-ARCHITECTURE: Standalone post-merge hook script with no leafcutter-internal
-    imports. Supports LEAFCUTTER_FAKE_GIT_DIFF env var for test injection of
+ARCHITECTURE: Reaches the shared fast-vs-pure-Python YAML parser accessor
+    (scripts/ac_store/yaml_safe_loader.py) via the same sibling-directory
+    sys.path wiring check_done_proof.py uses (_ac_store_locator, one
+    directory up from this hooks/ subfolder) -- otherwise standalone, no
+    other leafcutter-internal imports. Supports LEAFCUTTER_FAKE_GIT_DIFF env var for test injection of
     diff output, and LEAFCUTTER_AC_ROOT env var for AC root directory override.
     Changed ticket paths are read from the diff; each is parsed for status and
     source_ac frontmatter fields. Qualifying tickets are processed by invoking
@@ -31,6 +34,12 @@ import sys
 from pathlib import Path
 
 import yaml
+
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+from _ac_store_locator import ensure_ac_store_on_syspath  # noqa: E402
+
+ensure_ac_store_on_syspath()
+from yaml_safe_loader import get_safe_yaml_loader  # noqa: E402
 
 _HOOK_NAME = "check-ac-done-on-merge"
 
@@ -94,7 +103,7 @@ def _read_ticket_frontmatter(ticket_path: Path) -> dict:
         return {}
 
     try:
-        data = yaml.safe_load(parts[1])
+        data = yaml.load(parts[1], Loader=get_safe_yaml_loader())
     except yaml.YAMLError as exc:
         print(
             f"[{_HOOK_NAME}] WARNING: Cannot parse frontmatter in {ticket_path}: {exc}",

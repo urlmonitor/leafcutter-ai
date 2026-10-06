@@ -31,6 +31,8 @@ from pathlib import Path
 
 import yaml
 
+from yaml_safe_loader import get_safe_yaml_loader
+
 from epic_runtime import get_logger
 
 # ---------------------------------------------------------------------------
@@ -58,7 +60,7 @@ def _index_store_by_ac_id(store_root: Path) -> dict[str, Path]:
         for yaml_path in store_root.rglob("*.yaml"):
             try:
                 with open(yaml_path, encoding="utf-8") as fh:
-                    data = yaml.safe_load(fh)
+                    data = yaml.load(fh, Loader=get_safe_yaml_loader())
             except (yaml.YAMLError, OSError) as exc:
                 _log.warning("Skipping unreadable YAML %s: %s", yaml_path, exc)
                 continue
@@ -86,7 +88,7 @@ def _read_readiness(yaml_path: Path) -> str:
     """
     try:
         with open(yaml_path, encoding="utf-8") as fh:
-            data = yaml.safe_load(fh)
+            data = yaml.load(fh, Loader=get_safe_yaml_loader())
     except (yaml.YAMLError, OSError):
         return "unknown"
     if isinstance(data, dict):

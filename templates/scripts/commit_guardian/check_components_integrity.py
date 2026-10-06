@@ -88,6 +88,11 @@ from pathlib import Path
 
 import yaml
 
+from _ac_store_locator import ensure_ac_store_on_syspath
+
+ensure_ac_store_on_syspath()
+from yaml_safe_loader import get_safe_yaml_loader
+
 # ---------------------------------------------------------------------------
 # Constants
 # ---------------------------------------------------------------------------
@@ -615,7 +620,7 @@ def _extract_flight_level(doc_path: Path) -> str | None:
 
     fm_text = text[3:end]
     try:
-        fm = yaml.safe_load(fm_text)
+        fm = yaml.load(fm_text, Loader=get_safe_yaml_loader())
         if isinstance(fm, dict):
             return fm.get("flight_level")
     except yaml.YAMLError:

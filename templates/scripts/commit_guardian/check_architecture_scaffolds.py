@@ -29,6 +29,12 @@ from pathlib import Path
 
 try:
     import yaml  # type: ignore[import]
+
+    from _ac_store_locator import ensure_ac_store_on_syspath
+
+    ensure_ac_store_on_syspath()
+    from yaml_safe_loader import get_safe_yaml_loader
+
     _YAML_AVAILABLE = True
 except ImportError:
     _YAML_AVAILABLE = False
@@ -111,7 +117,7 @@ def _parse_frontmatter(content: str) -> dict | None:
     fm_text = "\n".join(lines[1:end])
     if _YAML_AVAILABLE:
         try:
-            return yaml.safe_load(fm_text) or {}
+            return yaml.load(fm_text, Loader=get_safe_yaml_loader()) or {}
         except yaml.YAMLError:
             return None
     # Minimal fallback: parse simple key: value lines only.

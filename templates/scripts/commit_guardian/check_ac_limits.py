@@ -171,9 +171,14 @@ def _load_yaml_data(path: Path) -> dict | None:
     try:
         import yaml  # type: ignore[import]
 
+        from _ac_store_locator import ensure_ac_store_on_syspath
+
+        ensure_ac_store_on_syspath()
+        from yaml_safe_loader import get_safe_yaml_loader
+
         try:
             with path.open(encoding="utf-8") as fh:
-                data = yaml.safe_load(fh)
+                data = yaml.load(fh, Loader=get_safe_yaml_loader())
         except (OSError, yaml.YAMLError) as exc:
             print(f"[check-ac-limits] WARNING: cannot parse {path}: {exc}", file=sys.stderr)
             return None

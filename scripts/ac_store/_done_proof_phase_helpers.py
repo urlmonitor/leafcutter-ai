@@ -63,6 +63,8 @@ from pathlib import Path
 
 import yaml
 
+from yaml_safe_loader import get_safe_yaml_loader
+
 # ---------------------------------------------------------------------------
 # AC-store status map + shared BO-2500a-1-ii predicate (BP-100n-4-ii-ii
 # relocation from done_proof.py -- pure move, no behaviour change; see
@@ -102,7 +104,7 @@ def _build_ac_status_map(ac_root: Path) -> dict[str, dict]:
     for yaml_path in sorted(ac_root.rglob("*.yaml")):
         try:
             with open(yaml_path, encoding="utf-8") as fh:
-                data = yaml.safe_load(fh)
+                data = yaml.load(fh, Loader=get_safe_yaml_loader())
         except (yaml.YAMLError, OSError) as exc:
             print(
                 f"WARNING: done_proof: cannot read {yaml_path}: {exc}",

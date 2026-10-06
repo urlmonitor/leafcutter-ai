@@ -81,7 +81,10 @@ def _parse_frontmatter(content: str) -> dict | None:
     try:
         import yaml
 
-        parsed = yaml.safe_load(yaml_block)
+        sys.path.insert(0, str(Path(__file__).resolve().parent))
+        from ac_store.yaml_safe_loader import get_safe_yaml_loader
+
+        parsed = yaml.load(yaml_block, Loader=get_safe_yaml_loader())
         if not isinstance(parsed, dict):
             return None
         return parsed

@@ -37,6 +37,12 @@ from pathlib import Path
 
 try:
     import yaml as _yaml
+
+    from _ac_store_locator import ensure_ac_store_on_syspath
+
+    ensure_ac_store_on_syspath()
+    from yaml_safe_loader import get_safe_yaml_loader
+
     _YAML_AVAILABLE = True
 except ImportError:
     _YAML_AVAILABLE = False
@@ -89,7 +95,7 @@ def _parse_frontmatter(fm_body: str) -> dict | None:
     if not _YAML_AVAILABLE:
         return None
     try:
-        parsed = _yaml.safe_load(fm_body)
+        parsed = _yaml.load(fm_body, Loader=get_safe_yaml_loader())
     except _yaml.YAMLError as exc:
         print(
             f"[transform-description-field] WARNING: YAML parse failed: {exc}",

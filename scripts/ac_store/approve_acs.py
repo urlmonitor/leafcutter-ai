@@ -50,6 +50,8 @@ from typing import Optional
 
 import yaml
 
+from yaml_safe_loader import get_safe_yaml_loader
+
 
 # Matches the amended_by key line itself, including any inline value such as
 # "[]". Deliberately does NOT try to also match the continuation lines of a
@@ -83,7 +85,7 @@ def _find_ac_file(ac_root: Path, ac_id: str) -> Optional[Path]:
     """
     for candidate in ac_root.rglob("*.yaml"):
         try:
-            data = yaml.safe_load(candidate.read_text(encoding="utf-8"))
+            data = yaml.load(candidate.read_text(encoding="utf-8"), Loader=get_safe_yaml_loader())
         except (yaml.YAMLError, OSError):
             continue
         if isinstance(data, dict) and data.get("id") == ac_id:
@@ -187,7 +189,7 @@ def _promote_leaf(ac_file: Path, dry_run: bool = False) -> int:
     """
     try:
         raw_text = ac_file.read_text(encoding="utf-8")
-        data = yaml.safe_load(raw_text)
+        data = yaml.load(raw_text, Loader=get_safe_yaml_loader())
     except (OSError, yaml.YAMLError) as exc:
         print(f"ERROR: Cannot read AC file {ac_file}: {exc}", file=sys.stderr)
         return 1
@@ -257,7 +259,7 @@ def _promote_leaf(ac_file: Path, dry_run: bool = False) -> int:
     # its own output is valid must not report success for it.
     try:
         written_text = ac_file.read_text(encoding="utf-8")
-        yaml.safe_load(written_text)
+        yaml.load(written_text, Loader=get_safe_yaml_loader())
     except (OSError, yaml.YAMLError) as exc:
         try:
             ac_file.write_text(raw_text, encoding="utf-8")
@@ -306,7 +308,7 @@ def _do_approve_goal(goal_ac_id: str, ac_root: Path, dry_run: bool = False) -> i
         return 1
 
     try:
-        goal_data = yaml.safe_load(goal_file.read_text(encoding="utf-8"))
+        goal_data = yaml.load(goal_file.read_text(encoding="utf-8"), Loader=get_safe_yaml_loader())
     except (OSError, yaml.YAMLError) as exc:
         print(
             f"ERROR: Cannot read goal AC file {goal_file}: {exc}",

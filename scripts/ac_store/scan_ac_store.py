@@ -41,6 +41,8 @@ from typing import Any
 
 import yaml
 
+from yaml_safe_loader import get_safe_yaml_loader
+
 
 # ---------------------------------------------------------------------------
 # Constants
@@ -123,7 +125,7 @@ def _load_ac(path: Path) -> AcRecord | None:
     """
     try:
         with open(path, encoding="utf-8") as fh:
-            data = yaml.safe_load(fh)
+            data = yaml.load(fh, Loader=get_safe_yaml_loader())
         if not isinstance(data, dict):
             print(f"ERROR: {path}: expected a YAML mapping, got {type(data).__name__}", file=sys.stderr)
             return None

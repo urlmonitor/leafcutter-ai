@@ -17,6 +17,11 @@ from typing import Any
 
 import yaml
 
+from _ac_store_locator import ensure_ac_store_on_syspath
+
+ensure_ac_store_on_syspath()
+from yaml_safe_loader import get_safe_yaml_loader
+
 from config import (
     DOC_FM_ALLOWED_STATUSES,
     DOC_FM_FLIGHT_LEVEL_VALUES,
@@ -79,7 +84,7 @@ def extract_frontmatter(content: str) -> tuple[dict[str, Any] | None, str]:
     body = content[end_idx + 3:].strip()
 
     try:
-        parsed = yaml.safe_load(raw_yaml)
+        parsed = yaml.load(raw_yaml, Loader=get_safe_yaml_loader())
     except yaml.YAMLError:
         return None, content
 

@@ -57,6 +57,11 @@ from pathlib import Path
 
 import yaml
 
+from _ac_store_locator import ensure_ac_store_on_syspath
+
+ensure_ac_store_on_syspath()
+from yaml_safe_loader import get_safe_yaml_loader
+
 # ---------------------------------------------------------------------------
 # Constants
 # ---------------------------------------------------------------------------
@@ -117,7 +122,7 @@ def _extract_frontmatter(path: Path) -> dict:
     if end == -1:
         return {}
     try:
-        fm = yaml.safe_load(text[3:end])
+        fm = yaml.load(text[3:end], Loader=get_safe_yaml_loader())
         return fm if isinstance(fm, dict) else {}
     except yaml.YAMLError:
         return {}

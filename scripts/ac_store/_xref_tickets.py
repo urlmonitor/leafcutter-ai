@@ -22,6 +22,8 @@ from typing import Any
 
 import yaml
 
+from yaml_safe_loader import get_safe_yaml_loader
+
 _log = logging.getLogger(__name__)
 
 # Lifecycle folders whose tickets are considered "done" even without status: done
@@ -40,7 +42,7 @@ def _is_done_ticket(ticket_path: Path, ticket_text: str) -> bool:
         if end != -1:
             fm_text = ticket_text[3:end]
             try:
-                fm = yaml.safe_load(fm_text)
+                fm = yaml.load(fm_text, Loader=get_safe_yaml_loader())
                 if isinstance(fm, dict) and fm.get("status") == "done":
                     return True
             except yaml.YAMLError:
@@ -54,7 +56,7 @@ def _extract_ticket_frontmatter(ticket_text: str) -> dict[str, Any]:
         end = ticket_text.find("\n---", 3)
         if end != -1:
             try:
-                fm = yaml.safe_load(ticket_text[3:end])
+                fm = yaml.load(ticket_text[3:end], Loader=get_safe_yaml_loader())
                 return fm if isinstance(fm, dict) else {}
             except yaml.YAMLError:
                 pass

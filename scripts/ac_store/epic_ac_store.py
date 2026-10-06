@@ -31,6 +31,8 @@ from pathlib import Path
 
 import yaml
 
+from yaml_safe_loader import get_safe_yaml_loader
+
 from epic_runtime import get_logger
 
 # ---------------------------------------------------------------------------
@@ -51,7 +53,7 @@ def _get_ac_title(ac_id: str, ac_store_root: Path) -> str:
     for yaml_path in sorted(ac_store_root.rglob("*.yaml")):
         try:
             with open(yaml_path, encoding="utf-8") as fh:
-                data = yaml.safe_load(fh)
+                data = yaml.load(fh, Loader=get_safe_yaml_loader())
         except (yaml.YAMLError, OSError):
             continue
         else:
@@ -76,7 +78,7 @@ def _find_ac_yaml_path(ac_id: str, store_root: Path) -> Path | None:
     for yaml_path in sorted(store_root.rglob("*.yaml")):
         try:
             with open(yaml_path, encoding="utf-8") as fh:
-                data = yaml.safe_load(fh)
+                data = yaml.load(fh, Loader=get_safe_yaml_loader())
         except (yaml.YAMLError, OSError):
             continue
         else:
@@ -96,7 +98,7 @@ def _read_target_epic_from_file(yaml_path: Path) -> str | None:
     """
     try:
         with open(yaml_path, encoding="utf-8") as fh:
-            data = yaml.safe_load(fh)
+            data = yaml.load(fh, Loader=get_safe_yaml_loader())
     except (yaml.YAMLError, OSError):
         return None
     else:

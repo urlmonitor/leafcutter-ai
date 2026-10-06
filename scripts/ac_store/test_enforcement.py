@@ -46,6 +46,8 @@ from pathlib import Path
 
 import yaml
 
+from yaml_safe_loader import get_safe_yaml_loader
+
 # ---------------------------------------------------------------------------
 # Constants
 # ---------------------------------------------------------------------------
@@ -90,7 +92,7 @@ def build_ac_work_status_cache(ac_store_root: str | Path) -> dict[str, str]:
     for yaml_path in sorted(root.rglob("*.yaml")):
         try:
             with open(yaml_path, encoding="utf-8") as fh:
-                data = yaml.safe_load(fh)
+                data = yaml.load(fh, Loader=get_safe_yaml_loader())
         except yaml.YAMLError as exc:
             print(
                 f"WARNING: test_enforcement: YAML parse error in {yaml_path}: {exc}",

@@ -25,6 +25,8 @@ from typing import Optional
 
 import yaml
 
+from yaml_safe_loader import get_safe_yaml_loader
+
 
 # ---------------------------------------------------------------------------
 # AC lookup helpers
@@ -43,7 +45,7 @@ def _find_ac_file(ac_root: Path, ac_id: str) -> Optional[Path]:
     """
     for candidate in ac_root.rglob("*.yaml"):
         try:
-            data = yaml.safe_load(candidate.read_text(encoding="utf-8"))
+            data = yaml.load(candidate.read_text(encoding="utf-8"), Loader=get_safe_yaml_loader())
         except (yaml.YAMLError, OSError):
             continue
         if isinstance(data, dict) and data.get("id") == ac_id:
@@ -72,7 +74,7 @@ def _read_ticket_source_ac(ticket_path: Path) -> Optional[str]:
     if len(parts) < 3:
         return None
     frontmatter_text = parts[1]
-    data = yaml.safe_load(frontmatter_text)
+    data = yaml.load(frontmatter_text, Loader=get_safe_yaml_loader())
     if not isinstance(data, dict):
         return None
     return data.get("source_ac")
@@ -135,7 +137,7 @@ def mark_ac_done(
         return 1
 
     try:
-        data = yaml.safe_load(ac_file.read_text(encoding="utf-8"))
+        data = yaml.load(ac_file.read_text(encoding="utf-8"), Loader=get_safe_yaml_loader())
     except (yaml.YAMLError, OSError) as exc:
         print(f"ERROR: Cannot read AC file {ac_file}: {exc}", file=sys.stderr)
         return 1
@@ -269,7 +271,7 @@ def _set_work_status_done(ac_file: Path) -> None:
     _atomic_write(ac_file, "".join(lines))
 
     with ac_file.open(encoding="utf-8", newline="") as fh:
-        written = yaml.safe_load(fh.read())
+        written = yaml.load(fh.read(), Loader=get_safe_yaml_loader())
     if not isinstance(written, dict) or written.get("work_status") != "done":
         msg = "work_status did not read 'done' after writing"
         raise ValueError(msg)

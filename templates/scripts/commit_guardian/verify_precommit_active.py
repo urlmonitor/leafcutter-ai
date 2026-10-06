@@ -108,6 +108,11 @@ def check_b_config() -> bool:
     """
     import yaml  # noqa: PLC0415
 
+    from _ac_store_locator import ensure_ac_store_on_syspath
+
+    ensure_ac_store_on_syspath()
+    from yaml_safe_loader import get_safe_yaml_loader
+
     cwd = Path.cwd()
     config_path = _resolve_config_path(cwd)
     if config_path is None:
@@ -121,7 +126,7 @@ def check_b_config() -> bool:
         return False
 
     try:
-        parsed = yaml.safe_load(content)
+        parsed = yaml.load(content, Loader=get_safe_yaml_loader())
     except yaml.YAMLError as exc:
         _log.warning("check_b_config: YAML parse error in %s: %s", config_path, exc)
         return False

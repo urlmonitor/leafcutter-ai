@@ -17,6 +17,11 @@ from pathlib import Path
 
 import yaml
 
+from _ac_store_locator import ensure_ac_store_on_syspath
+
+ensure_ac_store_on_syspath()
+from yaml_safe_loader import get_safe_yaml_loader
+
 from _resolve_root import find_project_root
 
 _project_root = find_project_root()
@@ -216,7 +221,7 @@ def _parse_frontmatter(content: str) -> dict | None:
         return None
     raw = content[3:end].strip()
     try:
-        parsed = yaml.safe_load(raw)
+        parsed = yaml.load(raw, Loader=get_safe_yaml_loader())
     except yaml.YAMLError:
         return None
     return parsed if isinstance(parsed, dict) else None

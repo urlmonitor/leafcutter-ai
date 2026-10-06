@@ -27,6 +27,7 @@ from __future__ import annotations
 
 import logging
 import re
+import sys
 from pathlib import Path
 from typing import Any
 
@@ -39,6 +40,9 @@ from typing import Any
 # written: N" and exiting 0. See KI-BP-019. Let the ImportError propagate with
 # Python's own clear message naming the missing dependency rather than mask it.
 import yaml
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from ac_store.yaml_safe_loader import get_safe_yaml_loader  # noqa: E402
 
 from injection_builders import (  # noqa: E402
     _load_registry,  # noqa: F401  # re-exported; consumed by build_phases / build_helpers
@@ -120,7 +124,7 @@ def parse_frontmatter(text: str) -> tuple[dict[str, Any], str]:
     body = text[end + 4:].lstrip("\n")
 
     try:
-        fm = yaml.safe_load(fm_text) or {}
+        fm = yaml.load(fm_text, Loader=get_safe_yaml_loader()) or {}
     except yaml.YAMLError:
         fm = {}
 

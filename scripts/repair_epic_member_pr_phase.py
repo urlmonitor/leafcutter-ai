@@ -40,6 +40,9 @@ from pathlib import Path
 
 import yaml
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from ac_store.yaml_safe_loader import get_safe_yaml_loader  # noqa: E402
+
 logger = logging.getLogger(__name__)
 
 _EPIC_PATH_SEGMENT = "00_inbox/epics/"
@@ -102,7 +105,7 @@ def _parse_frontmatter(text: str) -> dict:
         raise ValueError("no YAML frontmatter block found (missing '---' delimiters)")
     raw = match.group(1)
     try:
-        data = yaml.safe_load(raw)
+        data = yaml.load(raw, Loader=get_safe_yaml_loader())
     except yaml.YAMLError as exc:
         raise ValueError(f"invalid YAML frontmatter: {exc}") from exc
     if not isinstance(data, dict):

@@ -71,6 +71,9 @@ from pathlib import Path
 
 import yaml
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from ac_store.yaml_safe_loader import get_safe_yaml_loader  # noqa: E402
+
 _SCRIPT_DIR = Path(__file__).resolve().parent
 _REPO_ROOT = _SCRIPT_DIR.parent
 _DEFAULT_DOCS_DIR = _REPO_ROOT / "docs"
@@ -224,7 +227,7 @@ def _extract_frontmatter(content: str) -> dict | None:
         return None
     raw_yaml = content[3:end_idx].strip()
     try:
-        parsed = yaml.safe_load(raw_yaml)
+        parsed = yaml.load(raw_yaml, Loader=get_safe_yaml_loader())
     except yaml.YAMLError:
         return None
     return parsed if isinstance(parsed, dict) else None

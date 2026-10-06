@@ -73,6 +73,8 @@ from typing import Any
 
 import yaml
 
+from yaml_safe_loader import get_safe_yaml_loader
+
 from _declared_files_path_form import load_build_definition, path_form_errors  # noqa: E402,F401
 
 # scripts/ac_store/declared_files.py -> repo root is two parents up.
@@ -306,7 +308,7 @@ def _load_store_records(store_root: Path) -> list[tuple[str, dict[str, Any]]]:
             print(f"declared_files: WARNING: cannot read {path}: {exc}", file=sys.stderr)
             continue
         try:
-            data = yaml.safe_load(content)
+            data = yaml.load(content, Loader=get_safe_yaml_loader())
         except yaml.YAMLError as exc:
             print(f"declared_files: WARNING: cannot parse {path}: {exc}", file=sys.stderr)
             continue

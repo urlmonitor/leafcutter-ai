@@ -120,6 +120,7 @@ from _staged_ac_yaml_paths import (  # noqa: E402
 )
 
 ensure_ac_store_on_syspath()
+from yaml_safe_loader import get_safe_yaml_loader  # noqa: E402
 
 # ---------------------------------------------------------------------------
 # BO-2900d-2: shared reachability-exemption seam (same module BO-2900d-1's
@@ -368,7 +369,7 @@ def _load_ac_yaml_or_none(path: Path) -> dict | None:
     """
     try:
         with open(path, encoding="utf-8") as fh:
-            data = yaml.safe_load(fh)
+            data = yaml.load(fh, Loader=get_safe_yaml_loader())
     except (yaml.YAMLError, OSError) as exc:
         print(
             f"WARNING: check_done_proof: cannot read {path}: {exc}",
@@ -635,7 +636,7 @@ def check_staged_done_proofs(
     for yaml_path in staged_yaml_paths:
         try:
             with open(yaml_path, encoding="utf-8") as fh:
-                data = yaml.safe_load(fh)
+                data = yaml.load(fh, Loader=get_safe_yaml_loader())
         except (yaml.YAMLError, OSError) as exc:
             print(
                 f"WARNING: check_done_proof: cannot read {yaml_path}: {exc}",
@@ -733,7 +734,7 @@ def check_all_done_acs(
     for yaml_path in yaml_files:
         try:
             with open(yaml_path, encoding="utf-8") as fh:
-                data = yaml.safe_load(fh)
+                data = yaml.load(fh, Loader=get_safe_yaml_loader())
         except (yaml.YAMLError, OSError) as exc:
             print(
                 f"WARNING: check_done_proof: cannot read {yaml_path}: {exc}",
@@ -808,7 +809,7 @@ def check_changed_done_acs(
     for yaml_path in changed_yaml_paths:
         try:
             with open(yaml_path, encoding="utf-8") as fh:
-                data = yaml.safe_load(fh)
+                data = yaml.load(fh, Loader=get_safe_yaml_loader())
         except (yaml.YAMLError, OSError) as exc:
             print(
                 f"WARNING: check_done_proof: cannot read {yaml_path}: {exc}",

@@ -35,6 +35,8 @@ from pathlib import Path
 
 import yaml
 
+from yaml_safe_loader import get_safe_yaml_loader
+
 from epic_errors import ZeroLeafError
 from epic_naming import _to_pascal_case
 from epic_runtime import get_logger
@@ -214,7 +216,7 @@ def _read_ac_record(yaml_path: Path) -> tuple[str, dict] | None:
         return None
 
     try:
-        data = yaml.safe_load(content)
+        data = yaml.load(content, Loader=get_safe_yaml_loader())
     except yaml.YAMLError as exc:
         _log.warning("YAML parse error in %s: %s", yaml_path, exc)
         return None

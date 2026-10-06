@@ -28,6 +28,11 @@ from pathlib import Path
 
 import yaml
 
+from _ac_store_locator import ensure_ac_store_on_syspath
+
+ensure_ac_store_on_syspath()
+from yaml_safe_loader import get_safe_yaml_loader
+
 
 # ---------------------------------------------------------------------------
 # Bundled fallback shim template
@@ -106,7 +111,7 @@ def collect_stages(repo_root: Path) -> list[str]:
     """
     config_path = repo_root / ".pre-commit-config.yaml"
     with config_path.open(encoding="utf-8") as fh:
-        config = yaml.safe_load(fh)
+        config = yaml.load(fh, Loader=get_safe_yaml_loader())
 
     stages: set[str] = set()
     for repo_entry in config.get("repos", []):

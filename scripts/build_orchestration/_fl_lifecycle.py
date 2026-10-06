@@ -29,6 +29,7 @@ from pathlib import Path
 import yaml
 
 from _fl_common import _LOG, _load_ac, _walk_ac_yamls
+from yaml_safe_loader import get_safe_yaml_loader
 
 # ---------------------------------------------------------------------------
 # Lifecycle helpers (BO-2400f-7 through BO-2400f-10)
@@ -312,7 +313,7 @@ def claim_build_set(
 
         try:
             with yaml_path.open(encoding="utf-8") as fh:
-                record = yaml.safe_load(fh)
+                record = yaml.load(fh, Loader=get_safe_yaml_loader())
         except OSError as exc:
             _LOG.warning("claim_build_set: cannot read %s: %s", yaml_path, exc)
             error = f"Cannot read {ac_id!r} from {yaml_path}: {exc}"
@@ -444,7 +445,7 @@ def filter_already_claimed(
 
         try:
             with yaml_path.open(encoding="utf-8") as fh:
-                record = yaml.safe_load(fh)
+                record = yaml.load(fh, Loader=get_safe_yaml_loader())
         except OSError as exc:
             _LOG.warning("filter_already_claimed: cannot read %s: %s", yaml_path, exc)
             to_build.append(ac_id)
@@ -553,7 +554,7 @@ def check_no_stale_todo(
 
         try:
             with yaml_path.open(encoding="utf-8") as fh:
-                record = yaml.safe_load(fh)
+                record = yaml.load(fh, Loader=get_safe_yaml_loader())
         except OSError as exc:
             _LOG.warning("check_no_stale_todo: cannot read %s: %s", yaml_path, exc)
             stale.append(ac_id)

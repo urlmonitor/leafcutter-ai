@@ -183,11 +183,16 @@ def read_declaration(record_path: Path) -> bool | None:
     """
     try:
         import yaml  # noqa: PLC0415
+
+        from _ac_store_locator import ensure_ac_store_on_syspath
+
+        ensure_ac_store_on_syspath()
+        from yaml_safe_loader import get_safe_yaml_loader
     except ImportError:
         return None
 
     try:
-        data = yaml.safe_load(record_path.read_text(encoding="utf-8"))
+        data = yaml.load(record_path.read_text(encoding="utf-8"), Loader=get_safe_yaml_loader())
     except (OSError, yaml.YAMLError):
         return None
 

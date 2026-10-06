@@ -76,9 +76,14 @@ def load_yaml(path: Path) -> Any:  # noqa: ANN401
     """
     import yaml  # type: ignore[import]
 
+    from _ac_store_locator import ensure_ac_store_on_syspath
+
+    ensure_ac_store_on_syspath()
+    from yaml_safe_loader import get_safe_yaml_loader
+
     try:
         with open(path, encoding="utf-8") as fh:
-            return yaml.safe_load(fh)
+            return yaml.load(fh, Loader=get_safe_yaml_loader())
     except OSError as exc:
         print(f"Warning: cannot read {path}: {exc}", file=sys.stderr)
         raise
@@ -122,8 +127,13 @@ def load_yaml_from_string(content: str, source_label: str) -> dict | None:
     try:
         import yaml  # type: ignore[import]
 
+        from _ac_store_locator import ensure_ac_store_on_syspath
+
+        ensure_ac_store_on_syspath()
+        from yaml_safe_loader import get_safe_yaml_loader
+
         try:
-            data = yaml.safe_load(content)
+            data = yaml.load(content, Loader=get_safe_yaml_loader())
             return data if isinstance(data, dict) else None
         except yaml.YAMLError as exc:
             print(

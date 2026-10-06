@@ -137,6 +137,11 @@ from _uniqueness_types import Finding, NamespaceVerdict  # type: ignore[import]
 try:
     import yaml  # type: ignore[import]
 
+    from _ac_store_locator import ensure_ac_store_on_syspath
+
+    ensure_ac_store_on_syspath()
+    from yaml_safe_loader import get_safe_yaml_loader
+
     _YAML_AVAILABLE = True
 except ImportError:
     _YAML_AVAILABLE = False
@@ -196,7 +201,7 @@ def _parse_yaml_dict(content: str, source_label: Path) -> dict | None:
     if not _YAML_AVAILABLE:
         return _parse_yaml_minimal(content)
     try:
-        data = yaml.safe_load(content)
+        data = yaml.load(content, Loader=get_safe_yaml_loader())
     except yaml.YAMLError as exc:
         print(
             f"{_HOOK_PREFIX} WARNING: YAML parse error in {source_label}: {exc}",
@@ -332,7 +337,7 @@ def _is_document_separator_line(raw_line: str, *, is_last_line: bool) -> bool:
       - ``...`` (document-end): the grammatical sibling of ``---``, but NOT
         symmetric in when it forces a decline. A lone ``...`` terminating
         the LAST line of an otherwise single, well-formed document is legal
-        YAML (``yaml.safe_load("id: GE-1\\n...\\n")`` cleanly returns
+        YAML (parsing ``"id: GE-1\\n...\\n"`` cleanly returns
         ``{'id': 'GE-1'}``, no raise) -- declining there would be a
         needless fallback on ordinary, correctly-parsing content. A ``...``
         that is NOT the last line, however, means at least one more line of

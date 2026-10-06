@@ -26,6 +26,9 @@ from pathlib import Path
 
 import yaml
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from ac_store.yaml_safe_loader import get_safe_yaml_loader  # noqa: E402
+
 # ---------------------------------------------------------------------------
 # Path resolution
 # ---------------------------------------------------------------------------
@@ -59,7 +62,7 @@ def _insert_fields(fm_text: str, fields: dict) -> str:
     Appends new fields at the end of the frontmatter.
     """
     try:
-        fm = yaml.safe_load(fm_text.strip()) or {}
+        fm = yaml.load(fm_text.strip(), Loader=get_safe_yaml_loader()) or {}
     except yaml.YAMLError:
         fm = {}
 
@@ -163,7 +166,7 @@ def main() -> int:
             continue
 
         try:
-            proposal = yaml.safe_load(pf.read_text(encoding="utf-8"))
+            proposal = yaml.load(pf.read_text(encoding="utf-8"), Loader=get_safe_yaml_loader())
         except yaml.YAMLError as exc:
             print(f"  ERROR loading {pf.name}: {exc}", file=sys.stderr)
             continue

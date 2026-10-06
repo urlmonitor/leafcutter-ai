@@ -36,6 +36,8 @@ from pathlib import Path
 
 import yaml
 
+from yaml_safe_loader import get_safe_yaml_loader
+
 from _ac_components import load_registry_ids
 
 _SCRIPT_DIR = Path(__file__).resolve().parent
@@ -112,7 +114,7 @@ def _backfill_file(
     """
     try:
         content = path.read_text(encoding="utf-8")
-        data = yaml.safe_load(content)
+        data = yaml.load(content, Loader=get_safe_yaml_loader())
     except (yaml.YAMLError, OSError) as exc:
         print(f"WARNING: cannot read {path}: {exc}", file=sys.stderr)
         return "error"

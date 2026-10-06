@@ -28,6 +28,7 @@ from pathlib import Path
 
 try:
     import yaml
+    from yaml_safe_loader import get_safe_yaml_loader
 except ImportError:
     print("ERROR: PyYAML is required. Install with: pip install pyyaml", file=sys.stderr)
     sys.exit(2)
@@ -122,7 +123,7 @@ def _patch_covered_by(file_path: Path, children_to_add: list[str]) -> bool:
         else:
             # Fallback: load with PyYAML, modify, dump
             try:
-                data = yaml.safe_load(original)
+                data = yaml.load(original, Loader=get_safe_yaml_loader())
             except yaml.YAMLError:
                 print(f"  WARNING: cannot parse {file_path} for patching", file=sys.stderr)
                 return False

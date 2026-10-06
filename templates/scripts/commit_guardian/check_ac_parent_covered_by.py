@@ -256,8 +256,13 @@ def _load_yaml_safe(content: str, source_label: str) -> dict | None:
     try:
         import yaml  # type: ignore[import]
 
+        from _ac_store_locator import ensure_ac_store_on_syspath
+
+        ensure_ac_store_on_syspath()
+        from yaml_safe_loader import get_safe_yaml_loader
+
         try:
-            data = yaml.safe_load(content)
+            data = yaml.load(content, Loader=get_safe_yaml_loader())
             return data if isinstance(data, dict) else None
         except yaml.YAMLError as exc:
             print(

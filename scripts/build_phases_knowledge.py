@@ -68,6 +68,9 @@ from typing import Any
 
 import yaml
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from ac_store.yaml_safe_loader import get_safe_yaml_loader  # noqa: E402
+
 _log = logging.getLogger(__name__)
 
 
@@ -491,8 +494,9 @@ def check_knowledge_routing_wiring_guard(output_root: Path) -> int:
         return 0
 
     try:
-        guardrail_config = yaml.safe_load(
-            guardrail_config_path.read_text(encoding="utf-8")
+        guardrail_config = yaml.load(
+            guardrail_config_path.read_text(encoding="utf-8"),
+            Loader=get_safe_yaml_loader(),
         ) or {}
     except (OSError, yaml.YAMLError) as exc:
         print(

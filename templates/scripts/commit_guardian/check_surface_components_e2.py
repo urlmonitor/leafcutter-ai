@@ -232,7 +232,12 @@ def _extract_frontmatter(content: str) -> dict | None:
     try:
         import yaml  # type: ignore[import]
 
-        data = yaml.safe_load(match.group(1))
+        from _ac_store_locator import ensure_ac_store_on_syspath
+
+        ensure_ac_store_on_syspath()
+        from yaml_safe_loader import get_safe_yaml_loader
+
+        data = yaml.load(match.group(1), Loader=get_safe_yaml_loader())
         return data if isinstance(data, dict) else None
     except (ImportError, Exception):  # noqa: BLE001
         # PyYAML unavailable or parse error — skip the file (fail-open)

@@ -10,7 +10,11 @@ BUSINESS CONTEXT: An agent that declares requires_verification: true commits
     template leads to runtime failures that are difficult to diagnose.  This hook
     catches the contradiction at commit time and names both fixes so the author
     can resolve it before the offending template reaches the main branch.
-ARCHITECTURE: Standalone script (no leafcutter-internal imports). Scans STAGED
+ARCHITECTURE: Reaches the shared fast-vs-pure-Python YAML parser accessor
+    (scripts/ac_store/yaml_safe_loader.py) via the same sibling-directory
+    sys.path wiring check_done_proof.py uses (_ac_store_locator, one
+    directory up from this hooks/ subfolder) -- otherwise standalone, no
+    other leafcutter-internal imports. Scans STAGED
     templates/agents/*.md files by file identity only (git diff --cached
     --name-only). For each staged agent template, reads its content via
     _read_staged_file() (patchable for unit tests) and parses YAML frontmatter.
@@ -27,8 +31,15 @@ from __future__ import annotations
 
 import subprocess
 import sys
+from pathlib import Path
 
 import yaml
+
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+from _ac_store_locator import ensure_ac_store_on_syspath  # noqa: E402
+
+ensure_ac_store_on_syspath()
+from yaml_safe_loader import get_safe_yaml_loader  # noqa: E402
 
 _AGENT_TEMPLATE_PREFIX = "templates/agents/"
 _EDIT_CAPABLE_TOOLS: frozenset[str] = frozenset({"Edit", "Write"})
@@ -130,7 +141,7 @@ def _parse_frontmatter(content: str) -> dict | None:
 
     fm_text = "\n".join(lines[1:end_idx])
     try:
-        parsed = yaml.safe_load(fm_text)
+        parsed = yaml.load(fm_text, Loader=get_safe_yaml_loader())
     except yaml.YAMLError:
         return None
 

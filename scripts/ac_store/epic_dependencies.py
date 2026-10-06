@@ -31,6 +31,8 @@ from pathlib import Path
 
 import yaml
 
+from yaml_safe_loader import get_safe_yaml_loader
+
 from epic_errors import CyclicDependencyError
 
 # ---------------------------------------------------------------------------
@@ -56,7 +58,7 @@ def _build_depends_on_index(ac_store_root: Path) -> dict[str, list[str]]:
     for yaml_path in sorted(ac_store_root.rglob("*.yaml")):
         try:
             with open(yaml_path, encoding="utf-8") as fh:
-                data = yaml.safe_load(fh)
+                data = yaml.load(fh, Loader=get_safe_yaml_loader())
         except (yaml.YAMLError, OSError):
             continue
         else:

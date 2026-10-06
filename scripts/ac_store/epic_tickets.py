@@ -36,6 +36,8 @@ from pathlib import Path
 
 import yaml
 
+from yaml_safe_loader import get_safe_yaml_loader
+
 from epic_runtime import get_logger
 
 # This module always lives in ``ac_store/`` — in the source tree at
@@ -100,7 +102,7 @@ def _read_ticket_frontmatter(ticket_path: Path) -> dict:
 
     yaml_text = "\n".join(lines[1:end_idx])
     try:
-        data = yaml.safe_load(yaml_text)
+        data = yaml.load(yaml_text, Loader=get_safe_yaml_loader())
     except yaml.YAMLError as exc:
         get_logger().warning("YAML parse error in %s: %s", ticket_path, exc)
         return {}
@@ -274,7 +276,7 @@ def _translate_ticket_depends_on(
 
     yaml_text = "".join(lines[1:end_idx])
     try:
-        fm = yaml.safe_load(yaml_text)
+        fm = yaml.load(yaml_text, Loader=get_safe_yaml_loader())
     except yaml.YAMLError as exc:
         _log.warning("YAML parse error in %s: %s", ticket_file, exc)
         return

@@ -37,6 +37,8 @@ from typing import TYPE_CHECKING
 
 import yaml
 
+from yaml_safe_loader import get_safe_yaml_loader
+
 # See the "Sibling wiring" note in generate_ticket_from_ac.py for why the
 # sibling package prefix is derived from __name__ rather than hard-coded.
 _PKG = __name__.rpartition(".")[0]
@@ -79,7 +81,7 @@ def _find_ac_by_id(ac_root: Path, ac_id: str) -> tuple[Path, AcRecord] | None:
     for yaml_path in sorted(ac_root.rglob("*.yaml")):
         try:
             with open(yaml_path, encoding="utf-8") as fh:
-                data = yaml.safe_load(fh)
+                data = yaml.load(fh, Loader=get_safe_yaml_loader())
         except (yaml.YAMLError, OSError) as exc:
             print(f"WARNING: {yaml_path}: could not read: {exc}", file=sys.stderr)
             continue
@@ -115,7 +117,7 @@ def _find_existing_ticket(tickets_root: Path, ac_id: str) -> Path | None:
         if len(parts) < 3:
             continue
         try:
-            fm = yaml.safe_load(parts[1])
+            fm = yaml.load(parts[1], Loader=get_safe_yaml_loader())
         except yaml.YAMLError:
             continue
         else:

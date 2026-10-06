@@ -29,6 +29,8 @@ from pathlib import Path
 
 import yaml
 
+from yaml_safe_loader import get_safe_yaml_loader
+
 # See the "Sibling wiring" note in generate_ticket_from_ac.py for why the
 # sibling package prefix is derived from __name__ rather than hard-coded.
 _PKG = __name__.rpartition(".")[0]
@@ -99,7 +101,7 @@ def _read_ac_implemented_by(ac_path: Path) -> tuple[str, list[str]]:
         logger.warning("Cannot read AC YAML %s: %s", ac_path, exc)
         raise
     try:
-        data = yaml.safe_load(content)
+        data = yaml.load(content, Loader=get_safe_yaml_loader())
     except yaml.YAMLError as exc:
         logger.warning("Cannot parse AC YAML %s: %s", ac_path, exc)
         raise

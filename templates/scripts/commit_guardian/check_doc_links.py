@@ -35,6 +35,11 @@ from typing import Any
 
 import yaml
 
+from _ac_store_locator import ensure_ac_store_on_syspath
+
+ensure_ac_store_on_syspath()
+from yaml_safe_loader import get_safe_yaml_loader
+
 from _resolve_root import find_project_root
 
 project_root = find_project_root()
@@ -170,7 +175,7 @@ def parse_frontmatter_related_code(md_content: str) -> list[str]:
 
     raw_yaml = md_content[3:end_idx].strip()
     try:
-        parsed = yaml.safe_load(raw_yaml)
+        parsed = yaml.load(raw_yaml, Loader=get_safe_yaml_loader())
     except yaml.YAMLError:
         return []
 

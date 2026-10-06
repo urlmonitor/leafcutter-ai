@@ -95,6 +95,11 @@ from pathlib import Path
 
 import yaml
 
+from _ac_store_locator import ensure_ac_store_on_syspath
+
+ensure_ac_store_on_syspath()
+from yaml_safe_loader import get_safe_yaml_loader
+
 # BO-2900b-1/BO-2900b-3/BO-2900c seam: Invocation and collected_invocations()
 # are implemented in the sibling module (file-size split, NOT a second
 # collector -- see that module's docstring and this module's ARCHITECTURE
@@ -149,7 +154,7 @@ def load_exemptions(registry_path: Path) -> list[dict]:
             f"cannot read reachability exemption registry {registry_path}: {exc}"
         ) from exc
     try:
-        data = yaml.safe_load(raw)
+        data = yaml.load(raw, Loader=get_safe_yaml_loader())
     except yaml.YAMLError as exc:
         raise ReachabilityRegistryError(  # noqa: TRY003
             f"cannot parse reachability exemption registry {registry_path}: {exc}"

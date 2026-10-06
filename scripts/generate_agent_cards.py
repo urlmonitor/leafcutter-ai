@@ -11,7 +11,8 @@ ARCHITECTURE: Single public entry point `generate_card()` returns a complete
     card markdown string for one agent. Section-rendering helpers (one per
     card section) encapsulate the rendering logic for each block. A top-level
     `build_agent_cards()` function drives the full-tree pass for `build.py`.
-    YAML frontmatter is parsed with `yaml.safe_load()`. All file I/O is
+    YAML frontmatter is parsed through the shared fast-vs-pure-Python
+    accessor (scripts/ac_store/yaml_safe_loader.py). All file I/O is
     wrapped in `try/except OSError`. Hyperlink helpers convert doc_links and
     knowledge_channel sources that resolve to real files into relative Markdown
     links from the card output path. doc_links entries that reference files not
@@ -25,11 +26,15 @@ import datetime
 import json
 import logging
 import os
+import sys
 from datetime import date
 from pathlib import Path
 from typing import Any
 
 import yaml
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from ac_store.yaml_safe_loader import get_safe_yaml_loader  # noqa: E402
 
 _log = logging.getLogger(__name__)
 
@@ -90,7 +95,7 @@ def _parse_frontmatter(template_text: str) -> dict[str, Any]:
         return {}
     fm_text = "\n".join(lines[1:end_idx])
     try:
-        parsed = yaml.safe_load(fm_text)
+        parsed = yaml.load(fm_text, Loader=get_safe_yaml_loader())
     except yaml.YAMLError as exc:
         _log.warning("YAML parse error in frontmatter: %s", exc)
         return {}
@@ -696,7 +701,7 @@ def _scan_ac_assignments(
                 _log.warning("Cannot read AC file %s: %s", filepath, exc)
                 continue
             try:
-                data = yaml.safe_load(text)
+                data = yaml.load(text, Loader=get_safe_yaml_loader())
             except yaml.YAMLError as exc:
                 _log.warning("YAML parse error in %s: %s", filepath, exc)
                 continue
@@ -753,7 +758,7 @@ def _scan_all_ac_assignments(
                 _log.warning("Cannot read AC file %s: %s", filepath, exc)
                 continue
             try:
-                data = yaml.safe_load(text)
+                data = yaml.load(text, Loader=get_safe_yaml_loader())
             except yaml.YAMLError as exc:
                 _log.warning("YAML parse error in %s: %s", filepath, exc)
                 continue

@@ -57,6 +57,8 @@ from typing import Any
 
 import yaml
 
+from yaml_safe_loader import get_safe_yaml_loader
+
 import generate_ticket_from_ac as _gtfac
 
 logger = logging.getLogger(__name__)
@@ -114,7 +116,7 @@ def _read_ticket_frontmatter(ticket_path: Path) -> dict[str, Any]:
         )
 
     try:
-        frontmatter = yaml.safe_load(text[3:end])
+        frontmatter = yaml.load(text[3:end], Loader=get_safe_yaml_loader())
     except yaml.YAMLError as exc:
         raise FrontmatterParseError(
             f"Ticket file {ticket_path} frontmatter is invalid YAML: {exc}"
@@ -136,7 +138,7 @@ def _load_ac_record(ac_yaml_path: Path) -> dict[str, Any] | None:
     """
     try:
         with open(ac_yaml_path, encoding="utf-8") as fh:
-            data = yaml.safe_load(fh)
+            data = yaml.load(fh, Loader=get_safe_yaml_loader())
     except (OSError, yaml.YAMLError) as exc:
         logger.warning(
             "ac_coverage_resolver: cannot load AC YAML %s: %s", ac_yaml_path, exc

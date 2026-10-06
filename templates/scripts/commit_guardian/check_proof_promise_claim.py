@@ -85,6 +85,11 @@ from pathlib import Path
 
 import yaml
 
+from _ac_store_locator import ensure_ac_store_on_syspath
+
+ensure_ac_store_on_syspath()
+from yaml_safe_loader import get_safe_yaml_loader
+
 _HERE = Path(__file__).resolve().parent
 
 from _resolve_root import find_project_root  # noqa: E402
@@ -197,7 +202,7 @@ def extract_promised_kinds(ticket_content: str) -> list[dict]:
     if not yaml_block.strip():
         return []
     try:
-        parsed = yaml.safe_load(yaml_block)
+        parsed = yaml.load(yaml_block, Loader=get_safe_yaml_loader())
     except yaml.YAMLError as exc:
         print(
             f"WARNING: check_proof_promise_claim: cannot parse Test "
@@ -265,7 +270,7 @@ def _read_ticket_lifecycle_status(ticket_content: str) -> str | None:
         return None
     frontmatter_yaml = match.group(1)
     try:
-        parsed = yaml.safe_load(frontmatter_yaml)
+        parsed = yaml.load(frontmatter_yaml, Loader=get_safe_yaml_loader())
     except yaml.YAMLError as exc:
         print(
             f"WARNING: check_proof_promise_claim: cannot parse ticket "

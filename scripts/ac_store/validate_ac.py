@@ -57,6 +57,8 @@ from typing import Any
 
 import yaml
 
+from yaml_safe_loader import get_safe_yaml_loader
+
 
 # ---------------------------------------------------------------------------
 # Public constants
@@ -279,7 +281,7 @@ def _validate_file(
     """
     try:
         content = path.read_text(encoding="utf-8")
-        data = yaml.safe_load(content)
+        data = yaml.load(content, Loader=get_safe_yaml_loader())
     except yaml.YAMLError as exc:
         return [f"{path}: YAML parse error — {exc}"]
     except OSError as exc:

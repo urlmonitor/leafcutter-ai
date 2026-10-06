@@ -52,6 +52,9 @@ from pathlib import Path
 
 import yaml
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from ac_store.yaml_safe_loader import get_safe_yaml_loader  # noqa: E402
+
 _SCRIPT_DIR = Path(__file__).resolve().parent
 _REPO_ROOT = _SCRIPT_DIR.parent
 _FRONTMATTER_RE = re.compile(r"^---\n(.*?)\n---", re.DOTALL)
@@ -115,7 +118,9 @@ def _check_file(repo_root: Path, rel: str, registry: set[str]) -> list[str]:
 
     if rel.startswith(_AC_PREFIX) and rel.endswith(".yaml") and not rel.endswith("index.yaml"):
         try:
-            return _check_yaml_doc(yaml.safe_load(p.read_text(encoding="utf-8")), registry)
+            return _check_yaml_doc(
+                yaml.load(p.read_text(encoding="utf-8"), Loader=get_safe_yaml_loader()), registry
+            )
         except (OSError, yaml.YAMLError):
             return []
 
@@ -128,7 +133,7 @@ def _check_file(repo_root: Path, rel: str, registry: set[str]) -> list[str]:
         if not m:
             return []
         try:
-            return _check_yaml_doc(yaml.safe_load(m.group(1)), registry)
+            return _check_yaml_doc(yaml.load(m.group(1), Loader=get_safe_yaml_loader()), registry)
         except yaml.YAMLError:
             return []
 

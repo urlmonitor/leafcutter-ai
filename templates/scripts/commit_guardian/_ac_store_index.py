@@ -112,8 +112,9 @@ def _load_one_yaml_file(yaml_file: Path) -> dict[str, Any] | None:
         return _load_yaml_minimal(yaml_file)
 
     # Attempt PyYAML path via load_yaml.
-    # _ac_schema_validators.load_yaml calls yaml.safe_load() and only catches
-    # OSError; yaml.YAMLError (malformed YAML) propagates uncaught from it.
+    # _ac_schema_validators.load_yaml parses through the shared fast-vs-pure
+    # accessor and only catches OSError; yaml.YAMLError (malformed YAML)
+    # propagates uncaught from it.
     # We must catch it here to preserve the long-standing fail-open behaviour
     # (warn + skip the file, never crash the hook).
     try:
@@ -173,7 +174,12 @@ def _load_yaml_minimal(yaml_file: Path) -> dict[str, Any] | None:
     try:
         import yaml  # type: ignore[import]
 
-        data = yaml.safe_load(content)
+        from _ac_store_locator import ensure_ac_store_on_syspath
+
+        ensure_ac_store_on_syspath()
+        from yaml_safe_loader import get_safe_yaml_loader
+
+        data = yaml.load(content, Loader=get_safe_yaml_loader())
         return data if isinstance(data, dict) else None
     except ImportError:
         pass

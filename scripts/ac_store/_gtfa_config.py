@@ -33,6 +33,8 @@ from typing import Any
 
 import yaml
 
+from yaml_safe_loader import get_safe_yaml_loader
+
 # See the "Sibling wiring" note in generate_ticket_from_ac.py for why the
 # sibling package prefix is derived from __name__ rather than hard-coded.
 _PKG = __name__.rpartition(".")[0]
@@ -62,7 +64,7 @@ def _load_guardrail_gates(guardrail_config_path: Path) -> dict[str, Any]:
     """
     try:
         with open(guardrail_config_path, encoding="utf-8") as fh:
-            data = yaml.safe_load(fh)
+            data = yaml.load(fh, Loader=get_safe_yaml_loader())
     except (yaml.YAMLError, OSError) as exc:
         print(
             f"ERROR: could not load guardrail config {guardrail_config_path}: {exc}",

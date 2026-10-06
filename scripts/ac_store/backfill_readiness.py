@@ -25,6 +25,8 @@ from pathlib import Path
 
 import yaml
 
+from yaml_safe_loader import get_safe_yaml_loader
+
 
 # ---------------------------------------------------------------------------
 # Repo root discovery
@@ -59,7 +61,7 @@ def _file_is_ac(path: Path) -> bool:
     """Return True if the YAML file contains an 'id:' field (looks like an AC)."""
     try:
         content = path.read_text(encoding="utf-8")
-        data = yaml.safe_load(content)
+        data = yaml.load(content, Loader=get_safe_yaml_loader())
         return isinstance(data, dict) and "id" in data
     except (yaml.YAMLError, OSError):
         return False
@@ -100,7 +102,7 @@ def _backfill_file(path: Path, dry_run: bool) -> bool:
     """
     try:
         content = path.read_text(encoding="utf-8")
-        data = yaml.safe_load(content)
+        data = yaml.load(content, Loader=get_safe_yaml_loader())
     except (yaml.YAMLError, OSError) as exc:
         print(f"WARNING: Cannot read {path}: {exc}", file=sys.stderr)
         return False
