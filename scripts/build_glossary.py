@@ -103,7 +103,7 @@ def build_glossary_seed_files(
             continue
 
         dst.parent.mkdir(parents=True, exist_ok=True)
-        dst.write_text(src.read_text(encoding="utf-8"), encoding="utf-8")
+        dst.write_text(src.read_text(encoding="utf-8"), encoding="utf-8", newline="\n")
         print(f"  glossary: created docs/{filename}")
         written += 1
 
@@ -171,7 +171,7 @@ def build_glossary_hook_registration(
 
     target_cg.write_text(
         json.dumps(cg_data, indent=4, ensure_ascii=False) + "\n",
-        encoding="utf-8",
+        encoding="utf-8", newline="\n",
     )
     print(f"  glossary: added {_GLOSSARY_HOOK_ID} hook to commit_guardian.json")
     return 1
@@ -268,7 +268,7 @@ def wire_glossary_claude_md(target_root: Path, dry_run: bool, config: dict | Non
             return 1
         docs_root = cfg.get("docs_root", "docs/")
         new_content = existing.rstrip() + "\n\n" + _glossary_section_template(docs_root)
-        claude_md.write_text(new_content, encoding="utf-8")
+        claude_md.write_text(new_content, encoding="utf-8", newline="\n")
         print("  glossary: appended glossary section to CLAUDE.md")
         return 1
 
@@ -296,7 +296,7 @@ def wire_glossary_claude_md(target_root: Path, dry_run: bool, config: dict | Non
     if dry_run:
         print("  [DRY-RUN] would create CLAUDE.md from template with glossary section")
         return 1
-    claude_md.write_text(full_content, encoding="utf-8")
+    claude_md.write_text(full_content, encoding="utf-8", newline="\n")
     src = "template" if template_path.exists() else "stub"
     print(f"  glossary: created CLAUDE.md from {src}")
     return 1

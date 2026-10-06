@@ -36,18 +36,14 @@ import yaml
 sys.path.insert(0, str(Path(__file__).resolve().parent / "ac_store"))
 from yaml_safe_loader import get_safe_yaml_loader  # noqa: E402
 
+from agent_card_source_resolver import _is_git_ignored, _resolve_source_to_path  # noqa: E402, F401
+
 _log = logging.getLogger(__name__)
 
 _PACKAGE_ROOT = Path(__file__).resolve().parent.parent
 _TEMPLATES_DIR = _PACKAGE_ROOT / "templates"
 _REGISTRY_PATH = _PACKAGE_ROOT / "config" / "agent_registry.json"
 
-# File extensions and path patterns considered "file-like" sources in
-# knowledge_channels.  A source string matching any of these is a candidate
-# for hyperlink conversion when the file exists on disk.
-_FILE_EXTENSIONS = frozenset(
-    {".md", ".py", ".yaml", ".yml", ".json", ".sh", ".toml", ".txt"}
-)
 
 
 # ---------------------------------------------------------------------------
@@ -189,88 +185,6 @@ def make_relative_link(
     # Normalise path separators to POSIX forward-slashes for Markdown.
     rel_posix = Path(rel).as_posix()
     return f"[{label}]({rel_posix})"
-
-
-def _resolve_source_to_path(
-    source: str,
-    package_root: Path,
-) -> Path | None:
-    """Attempt to resolve a knowledge-channel source string to a real file.
-
-    Tries the following strategies in order and returns the first match:
-
-    1. Treat *source* as a path relative to *package_root*.
-    2. When the source token has a directory-hinting prefix word (e.g.
-       ``"signoff SKILL.md"``), look for a file at
-       ``<any-dir-containing-prefix-word>/<filename>`` within the package tree.
-    3. Walk the package tree looking for any file whose name matches the
-       filename component of *source* (shallow search — only 4 levels deep).
-
-    Args:
-        source: Raw source string from a knowledge_channels entry, e.g.
-            ``"Root CLAUDE.md"`` or ``"signoff SKILL.md"``.
-        package_root: Absolute path to the package root (repo root).
-
-    Returns:
-        Resolved :class:`~pathlib.Path` if found on disk, else ``None``.
-    """
-    # Strategy 1: direct relative path.
-    candidate = package_root / source
-    if candidate.exists():
-        return candidate
-
-    # Extract filename token (last word that carries a known extension).
-    tokens = source.split()
-    filename: str | None = None
-    filename_idx: int = -1
-    for i, token in reversed(list(enumerate(tokens))):
-        if Path(token).suffix in _FILE_EXTENSIONS:
-            filename = token
-            filename_idx = i
-            break
-
-    if filename is None:
-        return None
-
-    # Strategy 2: directory-hint match.  When there is a word before the
-    # filename token, treat that word as a hint for the parent directory name.
-    if filename_idx > 0:
-        hint = tokens[filename_idx - 1].lower()
-        for root_dir, _dirs, files in os.walk(package_root):
-            root_path = Path(root_dir)
-            try:
-                rel_depth = len(root_path.relative_to(package_root).parts)
-            except ValueError:
-                continue
-            if rel_depth > 5:
-                _dirs.clear()
-                continue
-            # Parent directory name must contain the hint word.
-            if hint in root_path.name.lower() and filename in files:
-                return root_path / filename
-
-    # Strategy 3: filename-only match (up to 4 levels deep).
-    # Collect ALL matches; resolve only when exactly one unique path is found.
-    # An ambiguous match (multiple locations share the same basename) returns None
-    # so that the caller's missing-doc / plain-text fallback applies rather than
-    # producing a non-deterministic hyperlink.
-    matches: list[Path] = []
-    for root_dir, _dirs, files in os.walk(package_root):
-        root_path = Path(root_dir)
-        try:
-            rel_depth = len(root_path.relative_to(package_root).parts)
-        except ValueError:
-            continue
-        if rel_depth > 4:
-            _dirs.clear()  # prune deeper subtrees
-            continue
-        if filename in files:
-            matches.append(root_path / filename)
-
-    unique_matches = sorted(set(matches))
-    if len(unique_matches) == 1:
-        return unique_matches[0]
-    return None
 
 
 # ---------------------------------------------------------------------------
@@ -1144,7 +1058,7 @@ def build_agent_cards(
 
         try:
             cards_dir.mkdir(parents=True, exist_ok=True)
-            card_path.write_text(card_content, encoding="utf-8")
+            card_path.write_text(card_content, encoding="utf-8", newline="\n")
             print(f"  docs/agents/cards/{agent_id}.card.md")
             written += 1
         except OSError as exc:
