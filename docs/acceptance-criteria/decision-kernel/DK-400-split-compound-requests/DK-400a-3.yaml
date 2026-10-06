@@ -53,8 +53,13 @@ it_requirements:
   - 'A not-bundled single question reaches exactly today''s interactions: the same envelope sequence and the same
     Jev batches apart from the one added bundle question, no split record, and no split section in report.md.'
   - The check adds no provider call and no host operation to this run (see DK-400a-1).
-  - The no-split outcome is recorded once per item and the bundle question is never asked again on a continuation
-    or retry of the same item.
+  - 'The no-split outcome is recorded once per item: the item''s split_checked flag (DK-400c-3, ADR-067 Open Question
+    1) is set when its bundle question is asked, so the question is never asked again on a continuation or retry
+    of the same item.'
+  - 'Tests enable splitting explicitly: split.enabled true through a config override (false only where a test compares
+    with the off switch). None relies on the shipped default, which stays false until E3 merges (dec-9925ebf1895222f4,
+    see DK-400a-1). A test asserting that no split starts must run with splitting on, or it passes for the wrong
+    reason.'
 change_target: code
 risk_surface: contract_boundary
 test_required: true
@@ -89,6 +94,16 @@ amended_by:
     summary: 'Technical enrichment: assigned_agent confirmed, estimated_complexity, change_target, risk_surface,
       it_requirements, delivers_to/expects_from contracts, doc_links and the test contract set; readiness draft
       -> reviewed. BA criteria and product_truth unchanged.'
+  - reason: it-po-build-slice-amendment
+    date: '2026-10-05'
+    by: it-po
+    summary: 'Build-slice amendment (dec-9925ebf1895222f4): its tests enable splitting explicitly, because split.enabled
+      ships false in E1 and E2.'
+  - reason: it-po-adr067-alignment
+    date: '2026-10-05'
+    by: it-po
+    summary: 'Aligned with ADR-067 (Accepted, docs/architecture/adrs/ADR-067-kernel-splits-bundled-requests-into-approved-parts.md):
+      ask-once rule tied to the split_checked flag (Open Question 1).'
 superseded_by: null
 covered_by:
   - DK-400a-3-i

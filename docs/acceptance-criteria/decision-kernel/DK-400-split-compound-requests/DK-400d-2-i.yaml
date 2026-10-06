@@ -38,10 +38,14 @@ expects_from:
   ac_id: DK-400d-2
   contract: "The subset answer whose lower bound this case enforces."
 it_requirements:
-  - An approval with every offered part left out is refused before any state change (exit 3) with an error message
-    saying that at least one part must stay in or that the split can be rejected instead; the interaction stays
-    pending at the same state revision.
+  - An approval with every offered part left out is refused by the semantic check of leafcutter.split_answer.v1
+    (ADR-067 §4.4) before any state change (exit 3) with an error message saying that at least one part must stay
+    in or that the split can be rejected instead; the interaction stays pending at the same state revision.
   - Such an answer is never converted into a rejection.
+  - 'Tests enable splitting explicitly: split.enabled true through a config override (false only where a test compares
+    with the off switch). None relies on the shipped default, which stays false until E3 merges (dec-9925ebf1895222f4,
+    see DK-400a-1). A test asserting that no split starts must run with splitting on, or it passes for the wrong
+    reason.'
 change_target: code
 risk_surface: contract_boundary
 test_required: true
@@ -64,6 +68,16 @@ amended_by:
     summary: 'Technical enrichment: assigned_agent confirmed, estimated_complexity, change_target, risk_surface,
       it_requirements, delivers_to/expects_from contracts, doc_links and the test contract set; readiness draft
       -> reviewed. BA criteria and product_truth unchanged.'
+  - reason: it-po-build-slice-amendment
+    date: '2026-10-05'
+    by: it-po
+    summary: 'Build-slice amendment (dec-9925ebf1895222f4): its tests enable splitting explicitly, because split.enabled
+      ships false in E1 and E2.'
+  - reason: it-po-adr067-alignment
+    date: '2026-10-05'
+    by: it-po
+    summary: 'Aligned with ADR-067 (Accepted, docs/architecture/adrs/ADR-067-kernel-splits-bundled-requests-into-approved-parts.md):
+      refusal named as leafcutter.split_answer.v1''s semantic check.'
 superseded_by: null
 covered_by: []
 implemented_by: []

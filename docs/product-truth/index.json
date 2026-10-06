@@ -858,7 +858,7 @@
       "path": "flows/leafcutter/decision-forming.flow.json",
       "status": "active",
       "readiness": "draft",
-      "version": 8,
+      "version": 9,
       "entities": [
         "Decision",
         "Decomposition"
@@ -981,7 +981,7 @@
       "path": "mock-data/leafcutter/decisions.mock.json",
       "status": "active",
       "readiness": "draft",
-      "version": 6,
+      "version": 7,
       "entities": [
         "Decision",
         "Decomposition"

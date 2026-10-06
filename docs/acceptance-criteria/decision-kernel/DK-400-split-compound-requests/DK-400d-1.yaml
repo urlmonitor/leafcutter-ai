@@ -25,19 +25,19 @@ doc_links:
   - path: docs/product-truth/flows/leafcutter/decision-forming.flow.json
     relationship: implements
     status: exists
-    relevance: "Flow v5 node(s) split-approve, with their acceptance scenarios."
+    relevance: Flow v5 node(s) split-approve, with their acceptance scenarios.
   - path: docs/product-truth/mock-data/leafcutter/decisions.mock.json
     relationship: specified-by
     status: exists
-    relevance: "gate_answer, gate_by (human:<name>), gate_at; parts[].review kept; state proposed -> approved."
+    relevance: gate_answer, gate_by (human:<name>), gate_at; parts[].review kept; state proposed -> approved.
   - path: docs/product-truth/mockups/leafcutter/decision-split-approve.mockup.json
     relationship: specified-by
     status: exists
-    relevance: "Screen decision-split-approve (v2)."
+    relevance: Screen decision-split-approve (v2).
   - path: docs/architecture/adrs/ADR-060-source-of-truth-and-approval-authority.md
     relationship: constrains
     status: exists
-    relevance: "Only a person answers a gate and approves a decision; precedent is evidence, never authority."
+    relevance: Only a person answers a gate and approves a decision; precedent is evidence, never authority.
   - path: docs/architecture/diagrams/c3-014-decision-kernel-flows-request-handoff.md
     relationship: describes
     status: exists
@@ -48,9 +48,9 @@ doc_links:
     relevance: RunService resume validation, the RunEnvelope, report.md, tracing and redaction.
   - path: docs/architecture/adrs/ADR-067-kernel-splits-bundled-requests-into-approved-parts.md
     relationship: describes
-    status: planned
-    relevance: Pinned ADR for splitting a bundled request; adr-author dispatched directly with this number and filename.
-      Re-verify the number is free before dispatch.
+    status: exists
+    relevance: 'ADR-067 (Accepted): the kernel splits a bundled request into parts a person approves; binding source
+      for the four schema ids (goal_decomposition_request.v1, goal_decomposition.v1, split_answer.v1, decomposition.v1).'
 assigned_agent: python-coder
 estimated_complexity: L
 delivers_to:
@@ -70,11 +70,20 @@ it_requirements:
   - 'The split gate is a persisted human interaction (run status waiting_human) built deterministically from the
     split record: the subject verbatim, then each offered part in proposed order with its id, text, quote, dependencies
     and child capability, set-aside proposals and not-covered parts read-only, and the four answers.'
-  - 'The answer is validated by a registered catalog schema before any state changes: answer approved or rejected,
-    a review per offered part (kept, edited with the person''s text, left_out) and an optional note. Unknown fields
-    or part ids, edits of set-aside or not-covered entries, a text on a part not marked edited, and any field that
-    adds a part or changes depends_on or child_capability are refused (exit 3, state unchanged). The person may
-    not add parts or change dependencies or capability at the gate (DK-400 Q7, settled by the IT PO).'
+  - 'The answer is validated against leafcutter.split_answer.v1 (ADR-067 §4.4): answer approved | rejected; parts:
+    exactly one {id, review kept | edited | left_out, text iff edited, 1 to 4000 characters}} per offered part on
+    approval, empty on rejection; note string | null; no other field, before any state changes. This AC registers
+    leafcutter.split_answer.v1 in SCHEMA_CATALOG and KNOWN_SCHEMA_IDS with its exported schema file and fixtures;
+    leafcutter.human_answer.v1 is not extended. Unknown fields or part ids, edits of set-aside or not-covered entries,
+    a text on a part not marked edited, and any field that adds a part or changes depends_on or child_capability
+    are refused (exit 3, state unchanged). The person may not add parts or change dependencies or capability at
+    the gate (DK-400 Q7, settled by the IT PO).'
+  - 'Declared response schema (ADR-067 §4.4): the split-gate HumanQuestion declares leafcutter.split_answer.v1 as
+    the response schema it accepts. Every other HumanQuestion keeps the default leafcutter.human_answer.v1, so existing
+    questions and persisted checkpoints keep their meaning. The submission check expects the declared schema for
+    a HumanQuestion, keeps the actor kind human (ADR-060), and applies the human_answer.v1 answer checks only to
+    human_answer.v1 answers. A human_answer.v1 submission to the split gate, or a split_answer.v1 submission to
+    another question, is refused with state unchanged.'
   - gate_by is the submission's human actor id (actor.kind human); gate_at is the kernel runtime clock at acceptance,
     in UTC; relayed_by is kept separately and never becomes gate_by (ADR-060).
   - On approval the parts are released to the scheduler (DK-400e-1) in the same integrate pass; no part work item
@@ -88,9 +97,12 @@ it_requirements:
   - 'Handle failures per the project error handling policy: catch specific exceptions, log at WARNING with the run,
     work item and split ids involved, and never swallow a failure silently; a rejected submission leaves run state
     unchanged.'
-  - 'ADR-067 pins the split-answer schema id: either a new leafcutter.split_answer.v1 or an extension of leafcutter.human_answer.v1,
-    decided in the ADR. DK-400d-1-ii''s example-validation test binds to whatever id the ADR names. ADR-067 is already
-    a precondition of DK-400c-1.'
+  - ADR-067 §4.4 pins leafcutter.split_answer.v1 (a new schema; human_answer.v1 is not extended). DK-400d-1-ii's
+    example-validation test binds to it.
+  - 'Tests enable splitting explicitly: split.enabled true through a config override (false only where a test compares
+    with the off switch). None relies on the shipped default, which stays false until E3 merges (dec-9925ebf1895222f4,
+    see DK-400a-1). A test asserting that no split starts must run with splitting on, or it passes for the wrong
+    reason.'
 change_target:
   - code
   - schema
@@ -133,6 +145,13 @@ test_spec:
     angle: failure
     description: An answer that adds a part, or changes a part's depends_on or child_capability, is refused with
       state unchanged.
+  - name: test_split_gate_declares_split_answer_schema
+    target_dir: tests/kernel/interaction/
+    framework: pytest
+    type: integration
+    angle: seam
+    description: The split-gate packet declares leafcutter.split_answer.v1. A human_answer.v1 choice submitted to
+      it is refused with state unchanged, and an existing criteria-approval question still accepts human_answer.v1.
 test_rationale: Approval authority is enforced at the submission boundary, so the tests resume real runs with real
   submissions and a pinned clock, including the restart points the interaction suite already covers for other gates.
 origin_agent: business-analyst
@@ -148,6 +167,17 @@ amended_by:
     date: '2026-10-05'
     by: it-po
     summary: 'Coordinator default for Q3: added the ADR-067 split-answer schema id line.'
+  - reason: it-po-build-slice-amendment
+    date: '2026-10-05'
+    by: it-po
+    summary: 'Build-slice amendment (dec-9925ebf1895222f4): its tests enable splitting explicitly, because split.enabled
+      ships false in E1 and E2.'
+  - reason: it-po-adr067-alignment
+    date: '2026-10-05'
+    by: it-po
+    summary: 'Aligned with ADR-067 (Accepted, docs/architecture/adrs/ADR-067-kernel-splits-bundled-requests-into-approved-parts.md):
+      leafcutter.split_answer.v1 named with its fields; declared-response-schema mechanism; new seam test; ADR-067
+      doc_link set to exists.'
 superseded_by: null
 covered_by:
   - DK-400d-1-i

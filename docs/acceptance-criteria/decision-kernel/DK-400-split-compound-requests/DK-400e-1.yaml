@@ -26,15 +26,16 @@ doc_links:
   - path: docs/product-truth/flows/leafcutter/decision-forming.flow.json
     relationship: implements
     status: exists
-    relevance: "Flow v5 node(s) split-run, with their acceptance scenarios."
+    relevance: Flow v5 node(s) split-run, with their acceptance scenarios.
   - path: docs/product-truth/mock-data/leafcutter/decisions.mock.json
     relationship: specified-by
     status: exists
-    relevance: "Invariants on settled_order (1..n, after every dependency) and parts[].run_id (children of the run that split)."
+    relevance: Invariants on settled_order (1..n, after every dependency) and parts[].run_id (children of the run
+      that split).
   - path: docs/architecture/components/decision-kernel.md
     relationship: describes
     status: exists
-    relevance: "Kernel containers: routing, scheduler, host handoffs, run root."
+    relevance: 'Kernel containers: routing, scheduler, host handoffs, run root.'
   - path: docs/analysis/2026-09-30-decision-kernel-design-3-kernel-scheduler.md
     relationship: describes
     status: exists
@@ -42,9 +43,9 @@ doc_links:
       resume and restart.
   - path: docs/architecture/adrs/ADR-067-kernel-splits-bundled-requests-into-approved-parts.md
     relationship: describes
-    status: planned
-    relevance: Pinned ADR for splitting a bundled request; adr-author dispatched directly with this number and filename.
-      Re-verify the number is free before dispatch.
+    status: exists
+    relevance: 'ADR-067 (Accepted): the kernel splits a bundled request into parts a person approves; binding source
+      for the four schema ids (goal_decomposition_request.v1, goal_decomposition.v1, split_answer.v1, decomposition.v1).'
 assigned_agent: python-coder
 estimated_complexity: L
 delivers_to:
@@ -79,14 +80,32 @@ it_requirements:
     own.
   - 'The split item''s terminal status is derived from its parts: completed iff every part not left out settled,
     partial otherwise. finalize''s root-completion rule is extended for a split root only: its output is the split
-    record under a registered output schema named in ADR-067 (IT PO recommendation: leafcutter.decomposition.v1),
-    and the envelope''s decision_ids list every decided part''s record. No decision_report.v1 is produced for the
-    bundle as a whole.'
+    record under leafcutter.decomposition.v1 (ADR-067 §4.3, §9), and the envelope''s decision_ids list every decided
+    part''s record. No decision_report.v1 is produced for the bundle as a whole.'
   - 'Restart and cancellation safety: a restart between parts neither re-runs a settled part nor skips a pending
     one; cancelling stops at the next safe point and the running part ends not_settled with stop_reason cancelled.'
   - 'Handle failures per the project error handling policy: catch specific exceptions, log at WARNING with the run,
     work item and split ids involved, and never swallow a failure silently; a rejected submission leaves run state
     unchanged.'
+  - 'Carries the build-slice flip (dec-9925ebf1895222f4): split.enabled returns to its approved default on, in config/kernel_config.default.json
+    and as the config model''s default, with config/kernel_config.schema.json regenerated. E3 merges as one unit,
+    so main turns splitting on only once the whole DK-400 tree is in; E1 and E2 ship it false (DK-400a-1).'
+  - 'Tests enable splitting explicitly: split.enabled true through a config override (false only where a test compares
+    with the off switch). None relies on the shipped default except test_shipped_split_default_is_on, which pins
+    it: batch order inside E3 does not guarantee that DK-400e-1''s flip lands first, and a later default change
+    must not silently flip a test (dec-9925ebf1895222f4).'
+  - leafcutter.decomposition.v1 (ADR-067 §4.3, §9) is registered in SCHEMA_CATALOG and KNOWN_SCHEMA_IDS, with its
+    exported schema file and fixtures, by this AC. It is the output of a split root or split item, and it carries
+    none of the mock dataset's hand-split-only values (proposed_by claude_code, the outcome settled_by_human, the
+    part field human_answer), confirming ADR-067 §4.3 (Open Question 6a).
+  - 'Part payload (ADR-067 Open Question 5, settled by the IT PO): each approved part''s work item carries exactly
+    what a stand-alone run of its question would carry. That is a leafcutter.goal_request.v1 payload whose goal
+    is the part''s text as approved, request kind capability, requested_output_schema leafcutter.decision_report.v1
+    for a decision part or leafcutter.evidence_bundle.v1 for a research part, and a binding pinned at creation to
+    the approved child_capability from the run''s pinned registry snapshot, so the part is never routed, intent-classified
+    or bundle-checked. It is not a typed leafcutter.decision_request.v1 (a part has no caller options or criteria)
+    or leafcutter.research_request.v1 (research plans the needs, as for a stand-alone goal). This matches the per-part
+    budget rule (a part is treated as a stand-alone run of its question).'
 change_target:
   - code
   - config
@@ -126,6 +145,13 @@ test_spec:
     type: integration
     angle: failure
     description: A process restart after p1 settles resumes with p2 and never re-runs p1.
+  - name: test_shipped_split_default_is_on
+    target_dir: tests/kernel/config/
+    framework: pytest
+    type: unit
+    angle: real_artifact
+    description: load_kernel_config() with no override has split.enabled true, and the committed config/kernel_config.default.json
+      and config/kernel_config.schema.json both show true.
 test_rationale: Ordering, budgets and root completion are scheduler behaviour, so the tests run whole split runs
   through RunService with scripted Jev and host answers and read the event timeline.
 origin_agent: business-analyst
@@ -137,6 +163,18 @@ amended_by:
     summary: 'Technical enrichment: assigned_agent confirmed, estimated_complexity, change_target, risk_surface,
       it_requirements, delivers_to/expects_from contracts, doc_links and the test contract set; readiness draft
       -> reviewed. BA criteria and product_truth unchanged.'
+  - reason: it-po-build-slice-amendment
+    date: '2026-10-05'
+    by: it-po
+    summary: 'Build-slice amendment (dec-9925ebf1895222f4): carries the E3 flip of split.enabled back to on, with
+      a test pinning the shipped default. Its other tests also enable splitting explicitly, so none depends on the
+      shipped default.'
+  - reason: it-po-adr067-alignment
+    date: '2026-10-05'
+    by: it-po
+    summary: 'Aligned with ADR-067 (Accepted, docs/architecture/adrs/ADR-067-kernel-splits-bundled-requests-into-approved-parts.md):
+      output schema pinned to leafcutter.decomposition.v1 and registered here (Open Question 6a); part payload settled
+      (Open Question 5); ADR-067 doc_link set to exists.'
 superseded_by: null
 covered_by: []
 implemented_by: []

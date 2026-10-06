@@ -63,10 +63,22 @@ it_requirements:
     the run end blocked.'
   - 'No second decomposition is requested for the same item. A request that falls back to the clarification question
     after a rejected or too-small ambiguous split is never offered a split again in the same run: the item keeps
-    its closed split record, so the bundle check is skipped for it even after the person''s answer changes its effective
-    goal, and it routes normally from there. This holds even when the clarification answer itself bundles several
-    questions: the user chose today''s clarification, and today''s clarification path never splits; the person can
-    start a new run to get a split.'
+    its split_checked flag (see the closed-split marker below), so the bundle check is skipped for it even after
+    the person''s answer changes its effective goal, and it routes normally from there. This holds even when the
+    clarification answer itself bundles several questions: the user chose today''s clarification, and today''s clarification
+    path never splits; the person can start a new run to get a split.'
+  - 'Tests enable splitting explicitly: split.enabled true through a config override (false only where a test compares
+    with the off switch). None relies on the shipped default, which stays false until E3 merges (dec-9925ebf1895222f4,
+    see DK-400a-1). A test asserting that no split starts must run with splitting on, or it passes for the wrong
+    reason.'
+  - 'Closed-split marker (ADR-067 Open Question 1, settled by the IT PO): the WorkItem carries a split_checked flag
+    (IT PO default name), set in the route pass that asks the item''s bundle question, whatever the answer, and
+    checkpointed with the item; it defaults to false, so existing checkpoints load unchanged. While a proposal is
+    pending, the open split record (state null) in run state holds the item''s split, and the flag is already set.
+    When the proposal leaves fewer than two parts or is abandoned, the split record is not kept as a Decomposition
+    (it never reaches the envelope, the output or report.md); a run event and a limitation keep the trace, and the
+    flag stays set. The flag is not a product state, so product truth keeps its eight user-visible states. The bundle
+    check is skipped for every item whose flag is set.'
 change_target: code
 risk_surface: contract_boundary
 test_required: true
@@ -120,6 +132,16 @@ amended_by:
     summary: 'Ambiguous too-few-parts case re-enriched to today''s clarification path (not blocked + gap); added
       the no-split-again rule and its test; withdrew the earlier caveat line. Coordinator default for Q4: the no-second-split
       rule now carries its rationale.'
+  - reason: it-po-build-slice-amendment
+    date: '2026-10-05'
+    by: it-po
+    summary: 'Build-slice amendment (dec-9925ebf1895222f4): its tests enable splitting explicitly, because split.enabled
+      ships false in E1 and E2.'
+  - reason: it-po-adr067-alignment
+    date: '2026-10-05'
+    by: it-po
+    summary: 'Aligned with ADR-067 (Accepted, docs/architecture/adrs/ADR-067-kernel-splits-bundled-requests-into-approved-parts.md):
+      closed-split marker split_checked (Open Question 1).'
 superseded_by: null
 covered_by:
   - DK-400c-3-i

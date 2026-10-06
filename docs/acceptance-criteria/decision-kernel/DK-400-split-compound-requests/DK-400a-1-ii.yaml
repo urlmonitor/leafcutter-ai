@@ -68,6 +68,10 @@ it_requirements:
     and never to the split subject.'
   - A single question no capability can meet produces today's gap observation unchanged (gap_key, gap_type, normalized_need,
     fallback_outcome), so occurrence counts across runs stay comparable before and after this feature.
+  - 'Tests enable splitting explicitly: split.enabled true through a config override (false only where a test compares
+    with the off switch). None relies on the shipped default, which stays false until E3 merges (dec-9925ebf1895222f4,
+    see DK-400a-1). A test asserting that no split starts must run with splitting on, or it passes for the wrong
+    reason.'
 change_target: code
 risk_surface: contract_boundary
 test_required: true
@@ -120,6 +124,11 @@ amended_by:
     by: it-po
     summary: Gap rule aligned with the final-gate ambiguous fallback (gap only if the clarification ends unresolved)
       and with the BA's 'for the request itself' wording; first test description updated.
+  - reason: it-po-build-slice-amendment
+    date: '2026-10-05'
+    by: it-po
+    summary: 'Build-slice amendment (dec-9925ebf1895222f4): its tests enable splitting explicitly, because split.enabled
+      ships false in E1 and E2.'
 superseded_by: null
 covered_by: []
 implemented_by: []
