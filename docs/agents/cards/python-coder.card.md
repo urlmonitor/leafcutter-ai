@@ -48,7 +48,7 @@ new Python files (excluding .sql files — defer those to sql-coder).**
 | 2 | Per-folder README.md | on-demand | Module-level context when cwd overlaps edited module folder |
 | 5 | [signoff SKILL.md](../../../templates/skills/signoff/SKILL.md); [doc-enforcer SKILL.md](../../../templates/skills/doc-enforcer/SKILL.md); complexity-reduction; collector-enforcer | on-demand | Sign-off protocol, docstring enforcement, complexity scoring, collector pattern enforcement |
 | 6 | Agent frontmatter | spawn-scoped | Model: sonnet, tools: Bash/Read/Edit/Write/Agent, signoff: true, config_keys, portable: true |
-| 7 | skills_config.json + settings.json | spawn-scoped | test_command, collector_enforcer_paths, file_size_limit_py |
+| 7 | [skills_config.json + settings.json](../../../templates/settings.json) | spawn-scoped | test_command, collector_enforcer_paths, file_size_limit_py |
 | 8 | Ticket frontmatter | ticket-scoped | Agents map, files_touched, depends_on, ACs, Agent Contracts section |
 | 9 | Auto-memory (memory/*.md) | always | Persistent cross-session learnings |
 | 10 | MCP server prompts + tool descriptions | always | Available tool surface and usage guidance |
@@ -335,6 +335,7 @@ flowchart TD
 - ACD-2100a-1: The worktree step runs the copy of the setup script that belongs to the repository being worked on
 - ACD-2100a-2: The setup step finds the repository it operates on even when the script itself lives outside it
 - ACD-2100a-2-i: An ambiguous repository location stops the setup step instead of being guessed
+- ACD-2100a-2-ii: Every worktree-creating subcommand uses the same repository resolution, not just create-only
 - ACD-2100a-3: The startup charter check finds the agent registry when the run starts inside a worktree
 - ACD-2100a-4: A pause record written from inside a worktree is found again by the run that resumes
 - ACD-2100a-5: A run reaches its first question to the user from any working directory
@@ -603,6 +604,7 @@ flowchart TD
 - ACS-400c-1: New AC creation records origin_agent identifying the author
 - ACS-400c-2: Criteria amendment appends the author to amended_by
 - ACS-400c-2-i: Criteria change with stale amended_by entry is rejected
+- ACS-400c-2-ii: A record taken verbatim from a merge parent is not treated as an amendment
 - ACS-400d-1: Governance rules appear in deployed agent instructions after build
 - ACS-400d-2: Governance rules are included by default with no opt-in required
 - ACS-400d-2-i: Projects without an AC store are not affected by governance rules
@@ -941,6 +943,7 @@ flowchart TD
 - BO-2300a-1-ii: The pause record is written and read by an agent chartered to run commands, so a pause never fails on a scope refusal
 - BO-2400a-1-ii: A command output too large to relay is handed over as a file in the run's workspace, named by path and hash, and checked by whoever reads it
 - BO-2400a-1-iii: The registry schema defines step_kinds once, and the registry gate that actually runs rejects an unknown kind by name
+- BO-2400a-1-v: The fast lane's claim command is run by the dedicated command-step executor, and a refusal to run it cannot be mistaken for the store reporting a hold
 - BO-2400a-2: Batch AC selection is done by a deterministic script, not an agent
 - BO-2400a-2-i: Selection truncates a batch that exceeds the cohesion cap
 - BO-2400a-3-ii: Newly-added covering tests are derived from git at test-function granularity
@@ -998,6 +1001,7 @@ flowchart TD
 - BO-2400f-5-ii: A lane step that names an agent not chartered for it fails a structural check before any run can reach it
 - BO-2400f-5-iii: A step whose agent declines ends the run as a declined step, naming the step, the agent and its reason, and is never read as that step's result
 - BO-2400f-7-iii: The claim is attempted by something permitted to make it, and a refusal to attempt it is never reported as contention
+- BO-2400f-7-iv: A claim that succeeded is never reported as never attempted, and a reply is judged against the contract the run actually declared
 - BO-2400g-1: Work built the fast way is asked for the same proof-of-wiring as work built the thorough way
 - BO-2400g-1-i: Every requirement the run picked up is asked for the proof, not just the one that was named
 - BO-2500a-1: An AC with no linked covers test cannot be marked done
@@ -1038,7 +1042,13 @@ flowchart TD
 - BO-2700a-4: The epic batch call site opts into PR deferral; the single-ticket call site does not
 - BO-2900a-1: A proof that reached the code by direct import does not make a criterion done when the code has a real way in
 - BO-2900a-1-i: Entering the way in without reaching the code under proof does not make a criterion done
+- BO-2900a-1-ii: A reachability rule that cannot watch the proof shape the project asks for reports its finding instead of refusing
+- BO-2900a-1-iii: A refusal is armed only after the rule has been shown to return the right verdict on every proof shape the store already contains
+- BO-2900a-1-iv: A reachability judgement is about the unit the criterion's own record names as implementing it
 - BO-2900a-2: Whether the proof went in the real way is decided by watching the run, never by reading the test's text
+- BO-2900a-2-i: A proof that drives the way in as a separate program it launches is watched, not invisible
+- BO-2900a-2-ii: A run the observation could not watch is reported as unwatched, never as unreached and never as reached
+- BO-2900a-2-iii: The observation is asked which code is under proof, and an unnamed question is answered with no answer rather than a negative one
 - BO-2900a-3: Code that no way of running the product can reach cannot be marked done, however many tests pass
 - BO-2900b-1: A registered capability that no automation runs is reported and refuses the change
 - BO-2900b-1-i: A capability introduced together with its caller passes; one introduced alone is refused with both ways forward named
@@ -1166,6 +1176,7 @@ flowchart TD
 - BO-4000d: Repository facts that come back wrapped in a second reply envelope are still read, so a fact the helper reported correctly never counts as unavailable
 - BO-4000e: Once a worktree is established, nothing the drive dispatches names a location inside the main checkout
 - BO-4000f: The worktree step asks about the repository using a reference drawn from the target it resolved, so a healthy worktree is never called unavailable because of where the run was launched
+- BO-4000g: A repository reference that names a file is answered from the folder holding it, so a single-ticket build finds its repository as surely as an epic build does
 - BO-400a-2-ii: A ticket the drive carried to completion is recorded done in the ticket's own record
 - BO-400a-2-iii: A ticket with any needed phase skipped, blocked or unrecorded is never recorded done
 - BO-400a-2-iv: A completion decision reached with no phase required of the ticket never records it done
@@ -1208,6 +1219,7 @@ flowchart TD
 - BO-4100d-2: A kind that cannot be honoured is refused, never quietly swapped for one that can
 - BO-4100d-3: The account of the workspace is read back off what exists, not repeated from the request
 - BO-4100d-3-i: A name that had to be altered is reported as altered, and as the altered name
+- BO-4100d-4: A workspace is created in the tool's own repository, whichever copy of the tool was invoked
 - BO-4100e-1: A workspace with no registration entry is still shown in the list
 - BO-4100e-1-i: Ordinary directories are not reported as leftover workspaces
 - BO-4100e-2: A leftover that was never registered can still be cleared away
@@ -1419,7 +1431,7 @@ flowchart TD
 - BP-1100e-1-v: Declared file lists parse from the ticket store's real YAML serialization forms (column-0 block, indented block, and flow-sequence)
 - BP-1100e-1-vi: Multi-ticket commits reconcile against the UNION of every staged done ticket's declared scope (no cross-ticket false flags)
 - BP-1100e-1-vii: A done ticket is detected regardless of status-value quoting; a quoted status is never silently skipped
-- BP-1100e-2: The reconciliation is advisory and fails open by default; strict blocking is opt-in
+- BP-1100e-2: The reconciliation blocks by default and fails open on its own errors; advisory-only reporting is opt-in
 - BP-1100e-2-a: Fail-open covers a valid-JSON-but-wrong-shape config and a missing git binary, not only missing/corrupt config
 - BP-1100f-4: The workflow test harness raises a contract violation on an instruction-less dispatch
 - BP-1100f-4-i: The harness raises even when the mock is set to return success for the instruction-less call
@@ -1462,6 +1474,7 @@ flowchart TD
 - BP-1400c-1: A blocking route-render check headlessly loads every web-app route and fails on a non-200 or a console/render error
 - BP-1400c-1-i: The /about route is loaded headlessly and a non-200 or render error on it blocks the pull request
 - BP-1401: next_diagram_seq.py scans docs/architecture/ recursively so it sees diagrams in the diagrams/ subdirectory
+- BP-1500a-1: The build writes the documentation map from the same docs folder it writes the map into, and never replaces a populated map with an empty one
 - BP-1500b-1: An installed artifact the package can no longer produce is removed, named in the report, and no longer reachable
 - BP-1500b-1-i: The sweep reaps the installed tree being rebuilt, in every layout, and never a second tree on the same machine
 - BP-1500b-2: Orphans are derived from the package's current sources, never from a maintained list of known-stale names
@@ -1789,6 +1802,7 @@ flowchart TD
 - GE-120d-3: The set-up path locates its own helper scripts through the shared resolution facility
 - GE-120e-1: A check that works out its own change set works out the author's change, not everything the staged tree happens to hold
 - GE-120e-1-i: An empty authored change set is inspected as empty, never widened back to the whole staged tree
+- GE-120e-1-ii: A path is only an addition when the change actually introduced it, so editing an existing root file is not read as adding one
 - GE-120e-2: Which checks work out their own change set is read from the manifest, not from the two that were caught
 - GE-120e-4: Undoing or replaying someone else's recorded change is treated the same way as merging it in
 - GE-120e-4-i: Reworking a merge after the operation record is gone still attributes only the author's part
@@ -1809,6 +1823,7 @@ flowchart TD
 - GE-120h-2: The advertised checks already left unrun are carried as a quantity that can only fall, so the change that adds one is refused and the change that fixes one is required to say so
 - GE-120h-3: Five checks the package has always presented as protecting you begin to run on an ordinary commit, and none of them refuses work the same repository accepted the day before
 - GE-120h-3-i: A check that works out for itself what to examine is switched on without a condition it never reads, because a filter the check ignores is a promise nothing keeps
+- GE-120h-5: A refusal from the crowded-directory check names only help the author can actually get to, and naming nothing is better than naming something that is not there
 - GE-122a-1: A whole-collection pass reports every number claimed by two artifacts
 - GE-122a-1-i: A collision is found even when only one claimant is in the current change set
 - GE-122a-1-ii: Excusing a merged-in decision record must not excuse the author's own record claiming the same number
@@ -2316,7 +2331,7 @@ flowchart TD
 - TQ-100e-1-i: Report-only mode surfaces results but never fails the run
 - TQ-100e-1-ii: With no explicit config, enforcement defaults to the safe non-blocking mode
 - TQ-200a-1: Every in-scope agent has an eval set of {id, input, expected} rows
-- TQ-200a-1-i: The producer and AC-authoring agents are in scope for eval coverage
+- TQ-200a-1-i: The producer, AC-authoring and test-writing agents are in scope for eval coverage
 - TQ-200a-1-ii: Deterministic gate agents are excluded from eval coverage
 - TQ-200a-2: An eval result is scored by the output type the agent produces
 - TQ-200a-2-i: LABEL output is scored by exact label match with precision/recall per routing axis
@@ -2337,6 +2352,11 @@ flowchart TD
 - TQ-200c-4: A judged proof that was asked for becomes a scorable row in the harness that already exists
 - TQ-200c-4-i: A row that exists but that no run would ever reach is a gap, not coverage
 - TQ-200c-5: A proof the pipeline cannot honour is announced, and never reported as a success
+- TQ-200d-1: The test writer has an eval set built from the incidents where its green tests let a wrong version through
+- TQ-200d-1-i: The refresh-gate row is scored by running the produced test against the wrong version, not by a judge's opinion of it
+- TQ-200d-2: The database test writer has an eval set that checks it never claims a run it did not make
+- TQ-200d-3: The test designer has an eval set that checks it names wrong versions for fixes and gates, and does not force them on new behaviour
+- TQ-200d-4: The test writer and the test runner are scored on using your project's database setting and on saying when it is missing
 - TQ-300a-1: Registry loading and top-level validation are covered by tests
 - TQ-300a-2: Spawn bidirectionality checking is covered by tests
 - TQ-300a-3: Registry injection into templates is covered by tests
@@ -2394,6 +2414,19 @@ flowchart TD
 - TQ-500f-3-i: The red-baseline check refuses absence-only red for a test that names wrong versions to catch
 - TQ-500f-3-ii: The /build-feature path runs the same red-baseline reader the fast lane uses, and does not take the test writer's word for it
 - TQ-500f-3-iii: A covering tag is matched to the one test it sits on, so two tests sharing a name never lend each other their result
+- TQ-500g-1: Once the code passes, each wrong version its guarding tests name is applied, run and undone, and one that survives stops the work
+- TQ-500g-1-i: The shared runner holds each guarding test to the wrong versions its own entry names, and a sibling's catch never covers for it
+- TQ-500g-1-ii: A wrong version counts as caught only when the test reached the code, so a version that will not load or changes nothing never passes as caught
+- TQ-500g-1-iii: The code is put back exactly after a wrong-version run, even when the run is cut short
+- TQ-500g-1-v: The fast lane makes the wrong-version runs before it commits, as a guard added beside its two existing checks
+- TQ-500g-1-vi: /build-feature and the single-ticket route make the same wrong-version runs before commit, and a resumed ticket makes them again
+- TQ-500g-1-viii: On /build-epic, a ticket cannot be committed until both gate verdicts are on record for it, and a missing or unreadable one stops the commit
+- TQ-500g-2-i: A database run in which the suite quietly re-installs the correct code is caught, and never counts as the test noticing
+- TQ-500g-2-ii: Database tests are in the wrong-version runs, on your configured test database only, and a missing database never reads as a catch
+- TQ-500g-3-i: An edit to an existing test that the sweep list does not name stops the work
+- TQ-500g-3-ii: An existing test that ran before the work and is now skipped, expected to fail, or gone stops the work
+- TQ-500g-4: A test that failed in any of its cases is read as failed by every check that reads a test run
+- TQ-500g-4-i: A run that reports failure overall but shows no failing test is inconclusive, never a clean pass
 - TQ-600a-1: The reference layout is produced once for the whole run, and shared across workers rather than rebuilt by each
 - TQ-600a-1-i: Nobody pays for the shared layout when nobody asked for it
 - TQ-600a-1-ii: When the one shared deploy fails, every waiting test says so and none of them passes
@@ -2402,6 +2435,7 @@ flowchart TD
 - TQ-600a-4: Every converted test gives the same answer it gave when it deployed its own copy
 - TQ-600a-5: A test that has not said which kind it is gets the safe kind
 - TQ-600a-6: The run says how many times it really deployed the package, and that figure is bounded by the tests that needed their own copy
+- TQ-600a-8: No test still deploys its own copy merely to read it, and one that does is named and fails the examination
 - TQ-600b-1: The many-worker run and the one-at-a-time run agree test by test, or the disagreement is named
 - TQ-600b-1-i: The equivalence comparison is shown disagreeing before it is trusted agreeing
 - TQ-600b-2: No test keeps its scratch work at a fixed address two workers can both reach
