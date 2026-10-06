@@ -177,6 +177,7 @@ def build_epic_from_ids(
     *,
     store_root: Path,
     inbox_dir: Path,
+    dry_run: bool = False,
 ) -> Path:
     """Assemble a dependency-ordered EPIC folder from EXACTLY the provided leaf AC ids.
 
@@ -199,6 +200,8 @@ def build_epic_from_ids(
              Should follow the ``<worktree>/tickets/00_inbox`` convention so the
              worktree root can be derived by path math for repo-relative path
              computation (BO-2600a-5 hygiene fix a).
+        dry_run: When True, print the build order and the would-create line, write
+             nothing, and return the path a real run would create.
 
     Returns:
         Absolute path to the created EPIC folder.
@@ -224,6 +227,14 @@ def build_epic_from_ids(
 
     # Step 3 — Derive epic name from the first id's AC title (store lookup).
     epic_name = _derive_epic_name(_get_ac_title(ids[0], store_root)) if ids else "FromIdsList"
+
+    if dry_run:
+        epic_folder = (inbox_dir / "epics" / f"EPIC-{epic_name}").resolve()
+        print(f"Build order ({len(topo_order)} ticket(s)):")
+        for leaf_id in topo_order:
+            print(f"  {leaf_id}")
+        print(f"Dry-run: would create {epic_folder}")
+        return epic_folder
 
     # Step 4 — Generate one ticket per id in topological order.
     ticket_paths = generate_tickets_for_leaves(topo_order, store_root, inbox_dir)
@@ -312,5 +323,9 @@ DECISION HISTORY
   epic_phases._wire_epic_depends_on, a different function, so the shadowing is
   impossible rather than merely avoided by naming discipline.
   (#TICKETLESS reason=file-size-decomposition-refactor)
+- 2026-10-06 18:00 [ACD-1200a-3-iii]: build_epic_from_ids takes keyword-only
+  dry_run. A dry run returns after the graph, topological sort and name
+  derivation, before any write, printing the build order and a last line
+  'Dry-run: would create <epic path>'. (EPIC-BuildToolingRunsThrough/07)
 ====================================================================
 """
