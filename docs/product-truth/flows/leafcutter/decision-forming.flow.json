@@ -11,7 +11,7 @@
   "status": "active",
   "readiness": "draft",
   "superseded_by": null,
-  "version": 10,
+  "version": 11,
   "shape_version": 2,
   "tags": [
     "decision-kernel",
@@ -2227,7 +2227,7 @@
     {
       "id": "approve-proposals",
       "label": "Approve the proposals",
-      "human": "Decision point: you see the proposed options and criteria, reused ones marked with their category and Jev's gap verdict beside them, and approve them, approve only some, edit the criteria, or add options. Nothing proposed or reused is used until you approve it.\n\nThe human supplies approved IDs in HumanAnswerPayload. The kernel applies them to matching objects. This example records a hypothetical answer, not new approval.\n\nContract fields and examples (generated)\nConsumes:\n  options/options: array (optional; default [])\n  options/proposed_criteria: array (optional; default [])\n  Runtime contract: [options](kernel/contracts/payloads.py)\nProduces:\n  human_answer/approved_option_ids: array|null (optional; default null)\n  human_answer/approved_criterion_ids: array|null (optional; default null)\n  human_answer/added_options: array|null (optional; default null)\n  human_answer/edited_criteria: array|null (optional; default null)\n  human_answer/free_text: null|string (optional; default null)\n  Runtime contract: [human_answer](kernel/contracts/payloads.py)\n\nPROPOSED - missing JSON binding (consumes): Reuse links and gap verdict shown at the approval\nDK-500d-2 marks each reused criterion with its category id, pref_label and reuse kind at this gate and carries the gap verdict beside the proposals; OptionsPayload's Criterion items carry no category link and no payload brings the verdict to the gate.\nDesign source: [docs/product-truth/flows/leafcutter/decision-forming.flow.json](docs/product-truth/flows/leafcutter/decision-forming.flow.json)\n\nDecision-record scenario: options — options; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"options\": [\n    {\n      \"id\": \"opt.yaml_files_plus_generated_index\",\n      \"title\": \"One YAML file per decision plus a generated, never hand-edited filter index\",\n      \"proposal_status\": \"proposed\",\n      \"approval_status\": \"proposed\",\n      \"proposed_by\": \"host.generate_options\"\n    }\n  ],\n  \"proposed_criteria\": [\n    {\n      \"id\": \"crit.findable_by_filters\",\n      \"question\": \"Can a later run select precedent by component, roadmap phase, repository-wide flag and file type or language without opening every record?\",\n      \"priority\": \"required\",\n      \"proposal_status\": \"proposed\",\n      \"approval_status\": \"proposed\"\n    }\n  ],\n  \"named_options\": []\n}\n\nApprove the displayed proposed option and criterion — human_answer; illustrative; complete payload:\n{\n  \"approved_option_ids\": [\n    \"opt.yaml_files_plus_generated_index\"\n  ],\n  \"approved_criterion_ids\": [\n    \"crit.findable_by_filters\"\n  ]\n}",
+      "human": "Decision point: you see the proposed options and criteria, reused ones marked with their category and Jev's gap verdict beside them, and approve them, approve them with a condition, approve only some, edit the criteria, or add options. Nothing proposed or reused is used until you approve it. The question allows free text, so \"approve\" can carry a condition (choice_id approve plus free_text in one answer): everything pending is approved as proposed and the text is kept verbatim in the decision's conditions. Jev's assessment sees it as a constraint labelled \"human-stated: \", every rationale written for the decision afterwards ends with \"Condition stated by the human: <text>\" (see resolve), and the staged record lists it in task_context.constraints. An unrecognised choice approves nothing, keeps no text and records the limitation \"unrecognised approval answer '<id>'\".\n\nThe human supplies approved IDs in HumanAnswerPayload. The kernel applies them to matching objects. This example records a hypothetical answer, not new approval. Source: kernel/capabilities/decision/approvals.py (_apply_approval, _keep_condition). The condition in the approve-with-a-condition example is illustrative.\n\nContract fields and examples (generated)\nConsumes:\n  options/options: array (optional; default [])\n  options/proposed_criteria: array (optional; default [])\n  Runtime contract: [options](kernel/contracts/payloads.py)\nProduces:\n  human_answer/choice_id: null|string (optional; default null)\n  human_answer/approved_option_ids: array|null (optional; default null)\n  human_answer/approved_criterion_ids: array|null (optional; default null)\n  human_answer/added_options: array|null (optional; default null)\n  human_answer/edited_criteria: array|null (optional; default null)\n  human_answer/free_text: null|string (optional; default null)\n  Schema: [human_answer](kernel/schemas/leafcutter.human_answer.v1.schema.json)\n\nPROPOSED - missing JSON binding (consumes): Reuse links and gap verdict shown at the approval\nDK-500d-2 marks each reused criterion with its category id, pref_label and reuse kind at this gate and carries the gap verdict beside the proposals; OptionsPayload's Criterion items carry no category link and no payload brings the verdict to the gate.\nDesign source: [docs/product-truth/flows/leafcutter/decision-forming.flow.json](docs/product-truth/flows/leafcutter/decision-forming.flow.json)\n\nDecision-record scenario: options — options; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"options\": [\n    {\n      \"id\": \"opt.yaml_files_plus_generated_index\",\n      \"title\": \"One YAML file per decision plus a generated, never hand-edited filter index\",\n      \"proposal_status\": \"proposed\",\n      \"approval_status\": \"proposed\",\n      \"proposed_by\": \"host.generate_options\"\n    }\n  ],\n  \"proposed_criteria\": [\n    {\n      \"id\": \"crit.findable_by_filters\",\n      \"question\": \"Can a later run select precedent by component, roadmap phase, repository-wide flag and file type or language without opening every record?\",\n      \"priority\": \"required\",\n      \"proposal_status\": \"proposed\",\n      \"approval_status\": \"proposed\"\n    }\n  ],\n  \"named_options\": []\n}\n\nApprove the displayed proposed option and criterion — human_answer; illustrative; complete payload:\n{\n  \"approved_option_ids\": [\n    \"opt.yaml_files_plus_generated_index\"\n  ],\n  \"approved_criterion_ids\": [\n    \"crit.findable_by_filters\"\n  ]\n}\n\nApprove as proposed with a condition — human_answer; illustrative; complete payload:\n{\n  \"choice_id\": \"approve\",\n  \"free_text\": \"provided the record format stays readable without the kernel installed\"\n}",
       "order": 14,
       "screen": "decision-approve-proposals",
       "agent": "human (asked through claude_code)",
@@ -2236,6 +2236,7 @@
         "options/proposed_criteria: array (optional; default [])"
       ],
       "produces": [
+        "human_answer/choice_id: null|string (optional; default null)",
         "human_answer/approved_option_ids: array|null (optional; default null)",
         "human_answer/approved_criterion_ids: array|null (optional; default null)",
         "human_answer/added_options: array|null (optional; default null)",
@@ -2272,6 +2273,15 @@
           {
             "contract": "human_answer",
             "fields": [
+              {
+                "path": "/choice_id",
+                "types": [
+                  "null",
+                  "string"
+                ],
+                "required": false,
+                "default": null
+              },
               {
                 "path": "/approved_option_ids",
                 "types": [
@@ -2360,6 +2370,16 @@
               "approved_criterion_ids": [
                 "crit.findable_by_filters"
               ]
+            }
+          },
+          {
+            "contract": "human_answer",
+            "mode": "full",
+            "origin": "illustrative",
+            "label": "Approve as proposed with a condition",
+            "value": {
+              "choice_id": "approve",
+              "free_text": "provided the record format stays readable without the kernel installed"
             }
           }
         ],
@@ -2728,7 +2748,7 @@
     {
       "id": "choose",
       "label": "Make the ranked choice",
-      "human": "Decision point: you see the options ranked by Jev's per-criterion scores. The ranking is evidence, not a decision; you choose an option, add one, or answer in your own words. The question says why research stopped, and that reason is kept as the decision's design_reason: design_judgement, no_progress, research_cap (only when the research-round limit was really reached), no_research_targets (nothing was targeted to research), design_round_done (the one targeted round already ran below the limit) or budget_reserve.\n\nThis example includes the human-added option after reranking. Its reconstructed rank is 2, while the human selects it; ranking is evidence rather than authorization.\n\nContract fields and examples (generated)\nConsumes:\n  option_ranking/option_id: string (required)\n  option_ranking/rank: integer (required)\n  option_ranking/required_passed: integer (required)\n  option_ranking/required_total: integer (required)\n  option_ranking/required_mean: number (required)\n  option_ranking/scores: object (optional; default {})\n  Runtime contract: [option_ranking](kernel/contracts/decision.py)\n  human_question/question: string (required)\n  human_question/choices: array (optional; default [])\n  human_question/free_text_allowed: boolean (optional; default false)\n  human_question/why_research_cannot_settle: string (optional; default \"\")\n  human_question/required_actor_kind: string (optional; default \"human\")\n  human_question/state_revision: integer (required)\n  Runtime contract: [human_question](kernel/contracts/interaction.py)\nProduces:\n  human_answer/choice_id: null|string (optional; default null)\n  human_answer/added_options: array|null (optional; default null)\n  human_answer/free_text: null|string (optional; default null)\n  Runtime contract: [human_answer](kernel/contracts/payloads.py)\n\nDecision-record scenario: option_ranking — option_ranking; reconstructed; complete payload:\n{\n  \"option_id\": \"opt.added.1\",\n  \"rank\": 2,\n  \"required_passed\": 0,\n  \"required_total\": 4,\n  \"required_mean\": 0.57,\n  \"scores\": {\n    \"crit.enforced_ids_and_links\": 0.26,\n    \"crit.findable_by_filters\": 0.74,\n    \"crit.knowledge_map_readable\": 0.58,\n    \"crit.provenance_complete\": 0.76,\n    \"crit.reuses_conventions\": 0.37,\n    \"crit.reviewable_diffs\": 0.72\n  }\n}\n\nDecision-record scenario: human_question — human_question; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"question\": \"Choose an option for the decision record format.\",\n  \"choices\": [\n    {\n      \"id\": \"opt.added.1\",\n      \"label\": \"Kernel-contract YAML per decision\"\n    }\n  ],\n  \"free_text_allowed\": true,\n  \"structured_allowed\": true,\n  \"required_actor_kind\": \"human\",\n  \"state_revision\": 1\n}\n\nDecision-record scenario: human_answer — human_answer; illustrative; complete payload:\n{\n  \"choice_id\": \"opt.added.1\"\n}",
+      "human": "Decision point: you see the options ranked by Jev's per-criterion scores. The ranking is evidence, not a decision; you choose an option, choose one and add a condition in your own words, add an option, or answer in your own words only. The question says why research stopped, and that reason is kept as the decision's design_reason: design_judgement, no_progress, research_cap (only when the research-round limit was really reached), no_research_targets (nothing was targeted to research), design_round_done (the one targeted round already ran below the limit) or budget_reserve. A choice made at an escalation records human_ruling instead (escalation-ruling).\n\nleafcutter.human_answer.v1 takes one answer mode: choice_id, free_text or the structured fields (here added_options). The pair choice_id plus free_text is also one mode, a choice with a condition, accepted wherever the question allows free text (the proposals approval, this ranked choice and an escalation; the decision-approval and precedent questions allow none and reject the pair at submission as semantic_invalid): the choice is authoritative and resolves the decision, and the text is kept verbatim as its condition (see resolve). Every other mix (a choice or free text together with a structured field such as added_options, all three, or none) is rejected, and so is any free text where free_text_allowed is false. A choice that is not a usable option resolves nothing, keeps neither a condition nor an input (its text is dropped) and records the limitation \"answer '<id>' is not a usable option\". Source: kernel/contracts/payloads.py (HumanAnswerPayload), kernel/interaction/submissions.py (_answer_problem) and kernel/capabilities/decision/approvals.py (_apply_design_choice, _keep_condition).\n\nThis example includes the human-added option after reranking. Its reconstructed rank is 2, while the human selects it; ranking is evidence rather than authorization. The condition in the pair example is illustrative.\n\nContract fields and examples (generated)\nConsumes:\n  option_ranking/option_id: string (required)\n  option_ranking/rank: integer (required)\n  option_ranking/required_passed: integer (required)\n  option_ranking/required_total: integer (required)\n  option_ranking/required_mean: number (required)\n  option_ranking/scores: object (optional; default {})\n  Runtime contract: [option_ranking](kernel/contracts/decision.py)\n  human_question/question: string (required)\n  human_question/choices: array (optional; default [])\n  human_question/free_text_allowed: boolean (optional; default false)\n  human_question/why_research_cannot_settle: string (optional; default \"\")\n  human_question/required_actor_kind: string (optional; default \"human\")\n  human_question/state_revision: integer (required)\n  Runtime contract: [human_question](kernel/contracts/interaction.py)\nProduces:\n  human_answer/choice_id: null|string (optional; default null)\n  human_answer/added_options: array|null (optional; default null)\n  human_answer/free_text: null|string (optional; default null)\n  Schema: [human_answer](kernel/schemas/leafcutter.human_answer.v1.schema.json)\n\nDecision-record scenario: option_ranking — option_ranking; reconstructed; complete payload:\n{\n  \"option_id\": \"opt.added.1\",\n  \"rank\": 2,\n  \"required_passed\": 0,\n  \"required_total\": 4,\n  \"required_mean\": 0.57,\n  \"scores\": {\n    \"crit.enforced_ids_and_links\": 0.26,\n    \"crit.findable_by_filters\": 0.74,\n    \"crit.knowledge_map_readable\": 0.58,\n    \"crit.provenance_complete\": 0.76,\n    \"crit.reuses_conventions\": 0.37,\n    \"crit.reviewable_diffs\": 0.72\n  }\n}\n\nDecision-record scenario: human_question — human_question; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"question\": \"Choose an option for the decision record format.\",\n  \"choices\": [\n    {\n      \"id\": \"opt.added.1\",\n      \"label\": \"Kernel-contract YAML per decision\"\n    }\n  ],\n  \"free_text_allowed\": true,\n  \"structured_allowed\": true,\n  \"required_actor_kind\": \"human\",\n  \"state_revision\": 1\n}\n\nDecision-record scenario: human_answer — human_answer; illustrative; complete payload:\n{\n  \"choice_id\": \"opt.added.1\"\n}\n\nChoice with a condition: the choice resolves, the text is kept verbatim — human_answer; illustrative; complete payload:\n{\n  \"choice_id\": \"opt.added.1\",\n  \"free_text\": \"provided each record is validated against the kernel contract before it is published\"\n}",
       "order": 17,
       "screen": "decision-ranked-choice",
       "agent": "human (asked through claude_code)",
@@ -2938,6 +2958,16 @@
             "value": {
               "choice_id": "opt.added.1"
             }
+          },
+          {
+            "contract": "human_answer",
+            "mode": "full",
+            "origin": "illustrative",
+            "label": "Choice with a condition: the choice resolves, the text is kept verbatim",
+            "value": {
+              "choice_id": "opt.added.1",
+              "free_text": "provided each record is validated against the kernel contract before it is published"
+            }
           }
         ]
       }
@@ -2945,11 +2975,12 @@
     {
       "id": "resolve",
       "label": "Resolve the decision",
-      "human": "The decision resolves with approved_by: human:<id> and approved_at, and report.md is written to the run folder.\n\nThe accepted human answer becomes the internal Decision and public DecisionReportPayload. report.md is a rendering rather than a further JSON payload.\n\nContract fields and examples (generated)\nConsumes:\n  human_answer/choice_id: null|string (optional; default null)\n  Runtime contract: [human_answer](kernel/contracts/payloads.py)\nProduces:\n  decision/status: string (required)\n  decision/selected_option_id: null|string (optional; default null)\n  decision/option_ids: array (optional; default [])\n  decision/approval_status: string (optional; default \"not_required\")\n  decision/approved_by: null|string (optional; default null)\n  decision/approved_at: null|string (optional; default null)\n  Runtime contract: [decision](kernel/contracts/decision.py)\n  decision_report/status: string (required)\n  decision_report/selected_option_id: null|string (optional; default null)\n  decision_report/approval_status: string (optional; default \"not_required\")\n  decision_report/limitations: array (optional; default [])\n  Runtime contract: [decision_report](kernel/contracts/payloads.py)\n\nDecision-record scenario: human_answer — human_answer; illustrative; complete payload:\n{\n  \"choice_id\": \"opt.added.1\"\n}\n\nDecision-record scenario: decision — decision; reconstructed; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"question\": \"Decide how Leafcutter should file decision records as JSON or YAML files under docs/ so later kernel runs can find and reuse them as precedent: which fields a record needs, which classification filters it carries (component, file type or language, repository-wide, roadmap phase), the folder layout and file naming, and how human approval and later corrections are recorded.\",\n  \"option_ids\": [\n    \"opt.yaml_per_decision_component_folders\",\n    \"opt.reuse_ac_store_conventions\",\n    \"opt.yaml_files_plus_generated_index\",\n    \"opt.added.1\"\n  ],\n  \"selected_option_id\": \"opt.added.1\",\n  \"status\": \"resolved\",\n  \"approval_status\": \"approved\",\n  \"approved_by\": \"human:user\",\n  \"approved_at\": \"2026-10-01T14:48:31Z\"\n}\n\nDecision-record scenario: decision_report — decision_report; illustrative; complete payload:\n{\n  \"status\": \"resolved\",\n  \"approval_status\": \"approved\",\n  \"selected_option_id\": \"opt.added.1\"\n}",
+      "human": "The decision resolves with approved_by: human:<id> and approved_at, and report.md is written to the run folder. A condition you stated, with your choice here or with \"approve\" at the proposals approval, is kept verbatim: every rationale written after it ends with \"Condition stated by the human: <text>\", one sentence per condition in the order given. That holds for the ranked choice, a human ruling at an escalation (escalation-ruling), a decision the kernel's gate resolves after your approval (\"Option [<id>] <title> satisfies the required criteria [...] according to evidence [...].\") and a precedent reuse, in the decision and in the report. The evidence item recorded for your answer reads \"<choice label>. Condition: <text>\", and the staged record (decision-staging) lists every condition in task_context.constraints. Only the choice selects the option; a condition never changes which option resolves.\n\nThe accepted human answer becomes the internal Decision and public DecisionReportPayload. report.md is a rendering rather than a further JSON payload. Source: kernel/capabilities/decision/design_ending.py (condition_suffix, choice_rationale), emit.py (resolved_result, precedent_resolved_result), kernel/interaction/results.py (answer_text) and kernel/memory/staging.py (stage_decision_record, conditions). The ranked-choice rationale example is the recorded rationale of dec-ef8ddcb79d668a67 with an illustrative condition appended; that record carries no condition. The gate example reuses the scenario's option, criterion and evidence id, but no such gate resolution was recorded and its condition is illustrative.\n\nContract fields and examples (generated)\nConsumes:\n  human_answer/choice_id: null|string (optional; default null)\n  human_answer/free_text: null|string (optional; default null)\n  Schema: [human_answer](kernel/schemas/leafcutter.human_answer.v1.schema.json)\nProduces:\n  decision/status: string (required)\n  decision/selected_option_id: null|string (optional; default null)\n  decision/option_ids: array (optional; default [])\n  decision/approval_status: string (optional; default \"not_required\")\n  decision/approved_by: null|string (optional; default null)\n  decision/approved_at: null|string (optional; default null)\n  decision/design_reason: null|string (optional; default null)\n  decision/rationale: null|object (optional; default null)\n  decision/rationale/text: string (required)\n  Runtime contract: [decision](kernel/contracts/decision.py)\n  decision_report/status: string (required)\n  decision_report/selected_option_id: null|string (optional; default null)\n  decision_report/approval_status: string (optional; default \"not_required\")\n  decision_report/limitations: array (optional; default [])\n  Runtime contract: [decision_report](kernel/contracts/payloads.py)\n\nDecision-record scenario: human_answer — human_answer; illustrative; complete payload:\n{\n  \"choice_id\": \"opt.added.1\"\n}\n\nChoice with a condition — human_answer; illustrative; complete payload:\n{\n  \"choice_id\": \"opt.added.1\",\n  \"free_text\": \"provided each record is validated against the kernel contract before it is published\"\n}\n\nDecision-record scenario: decision — decision; reconstructed; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"question\": \"Decide how Leafcutter should file decision records as JSON or YAML files under docs/ so later kernel runs can find and reuse them as precedent: which fields a record needs, which classification filters it carries (component, file type or language, repository-wide, roadmap phase), the folder layout and file naming, and how human approval and later corrections are recorded.\",\n  \"option_ids\": [\n    \"opt.yaml_per_decision_component_folders\",\n    \"opt.reuse_ac_store_conventions\",\n    \"opt.yaml_files_plus_generated_index\",\n    \"opt.added.1\"\n  ],\n  \"selected_option_id\": \"opt.added.1\",\n  \"status\": \"resolved\",\n  \"approval_status\": \"approved\",\n  \"approved_by\": \"human:user\",\n  \"approved_at\": \"2026-10-01T14:48:31Z\"\n}\n\nRanked choice with a condition: the condition ends the rationale — decision; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"status\": \"resolved\",\n  \"selected_option_id\": \"opt.added.1\",\n  \"approval_status\": \"approved\",\n  \"approved_by\": \"human:user\",\n  \"design_reason\": \"design_judgement\",\n  \"rationale\": {\n    \"text\": \"Design decision settled by a human. Kernel ranking (Jev's per-criterion judgement, evidence not authority; stopped researching because design_judgement after 1 research round(s)): 1. [opt.yaml_files_plus_generated_index] One YAML file per decision plus a generated, never hand-edited filter index (required mean 0.58, 1/4 passed); 2. [opt.added.1] Kernel-contract YAML per decision (required mean 0.57, 0/4 passed); 3. [opt.reuse_ac_store_conventions] Reuse the AC store's YAML conventions and id minting (required mean 0.56, 0/4 passed); 4. [opt.yaml_per_decision_component_folders] One YAML file per decision in component-scoped folders, with a schema in config/ (required mean 0.47, 0/4 passed). human:user chose option [opt.added.1] Kernel-contract YAML per decision (kernel rank 2 of 4). Condition stated by the human: provided each record is validated against the kernel contract before it is published\",\n    \"origin\": \"template\"\n  }\n}\n\nGate-resolved after an approval with a condition: the condition ends the gate rationale — decision; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"status\": \"resolved\",\n  \"selected_option_id\": \"opt.yaml_files_plus_generated_index\",\n  \"approval_status\": \"approved\",\n  \"approved_by\": \"human:user\",\n  \"rationale\": {\n    \"text\": \"Option [opt.yaml_files_plus_generated_index] One YAML file per decision plus a generated, never hand-edited filter index satisfies the required criteria ['crit.findable_by_filters'] according to evidence ['ev-27c8e6023c8b1d02']. Condition stated by the human: provided the record format stays readable without the kernel installed\",\n    \"origin\": \"template\"\n  }\n}\n\nDecision-record scenario: decision_report — decision_report; illustrative; complete payload:\n{\n  \"status\": \"resolved\",\n  \"approval_status\": \"approved\",\n  \"selected_option_id\": \"opt.added.1\"\n}",
       "order": 18,
       "agent": "kernel decision executor",
       "consumes": [
-        "human_answer/choice_id: null|string (optional; default null)"
+        "human_answer/choice_id: null|string (optional; default null)",
+        "human_answer/free_text: null|string (optional; default null)"
       ],
       "produces": [
         "decision/status: string (required)",
@@ -2958,6 +2989,9 @@
         "decision/approval_status: string (optional; default \"not_required\")",
         "decision/approved_by: null|string (optional; default null)",
         "decision/approved_at: null|string (optional; default null)",
+        "decision/design_reason: null|string (optional; default null)",
+        "decision/rationale: null|object (optional; default null)",
+        "decision/rationale/text: string (required)",
         "decision_report/status: string (required)",
         "decision_report/selected_option_id: null|string (optional; default null)",
         "decision_report/approval_status: string (optional; default \"not_required\")",
@@ -2975,6 +3009,15 @@
             "fields": [
               {
                 "path": "/choice_id",
+                "types": [
+                  "null",
+                  "string"
+                ],
+                "required": false,
+                "default": null
+              },
+              {
+                "path": "/free_text",
                 "types": [
                   "null",
                   "string"
@@ -3038,6 +3081,31 @@
                 ],
                 "required": false,
                 "default": null
+              },
+              {
+                "path": "/design_reason",
+                "types": [
+                  "null",
+                  "string"
+                ],
+                "required": false,
+                "default": null
+              },
+              {
+                "path": "/rationale",
+                "types": [
+                  "null",
+                  "object"
+                ],
+                "required": false,
+                "default": null
+              },
+              {
+                "path": "/rationale/text",
+                "types": [
+                  "string"
+                ],
+                "required": true
               }
             ]
           },
@@ -3090,6 +3158,16 @@
             }
           },
           {
+            "contract": "human_answer",
+            "mode": "full",
+            "origin": "illustrative",
+            "label": "Choice with a condition",
+            "value": {
+              "choice_id": "opt.added.1",
+              "free_text": "provided each record is validated against the kernel contract before it is published"
+            }
+          },
+          {
             "contract": "decision",
             "mode": "projection",
             "origin": "reconstructed",
@@ -3107,6 +3185,39 @@
               "approval_status": "approved",
               "approved_by": "human:user",
               "approved_at": "2026-10-01T14:48:31Z"
+            }
+          },
+          {
+            "contract": "decision",
+            "mode": "projection",
+            "origin": "illustrative",
+            "label": "Ranked choice with a condition: the condition ends the rationale",
+            "value": {
+              "status": "resolved",
+              "selected_option_id": "opt.added.1",
+              "approval_status": "approved",
+              "approved_by": "human:user",
+              "design_reason": "design_judgement",
+              "rationale": {
+                "text": "Design decision settled by a human. Kernel ranking (Jev's per-criterion judgement, evidence not authority; stopped researching because design_judgement after 1 research round(s)): 1. [opt.yaml_files_plus_generated_index] One YAML file per decision plus a generated, never hand-edited filter index (required mean 0.58, 1/4 passed); 2. [opt.added.1] Kernel-contract YAML per decision (required mean 0.57, 0/4 passed); 3. [opt.reuse_ac_store_conventions] Reuse the AC store's YAML conventions and id minting (required mean 0.56, 0/4 passed); 4. [opt.yaml_per_decision_component_folders] One YAML file per decision in component-scoped folders, with a schema in config/ (required mean 0.47, 0/4 passed). human:user chose option [opt.added.1] Kernel-contract YAML per decision (kernel rank 2 of 4). Condition stated by the human: provided each record is validated against the kernel contract before it is published",
+                "origin": "template"
+              }
+            }
+          },
+          {
+            "contract": "decision",
+            "mode": "projection",
+            "origin": "illustrative",
+            "label": "Gate-resolved after an approval with a condition: the condition ends the gate rationale",
+            "value": {
+              "status": "resolved",
+              "selected_option_id": "opt.yaml_files_plus_generated_index",
+              "approval_status": "approved",
+              "approved_by": "human:user",
+              "rationale": {
+                "text": "Option [opt.yaml_files_plus_generated_index] One YAML file per decision plus a generated, never hand-edited filter index satisfies the required criteria ['crit.findable_by_filters'] according to evidence ['ev-27c8e6023c8b1d02']. Condition stated by the human: provided the record format stays readable without the kernel installed",
+                "origin": "template"
+              }
             }
           },
           {
@@ -3607,7 +3718,7 @@
       "from": "approve-proposals",
       "condition": "you approve only some proposals, edit the criteria, or add options",
       "label": "Revise before approving",
-      "human": "Only what you approved, edited or added goes on to research and assessment; a free-text answer is kept as your input and noted as a limitation, never turned into criteria.\n\nThis structured answer approves only the option and declines other pending criteria. Free text is a separate answer mode and never silently becomes criteria.\n\nContract fields and examples (generated)\nConsumes:\n  options/options: array (optional; default [])\n  options/proposed_criteria: array (optional; default [])\n  Runtime contract: [options](kernel/contracts/payloads.py)\nProduces:\n  human_answer/approved_option_ids: array|null (optional; default null)\n  human_answer/approved_criterion_ids: array|null (optional; default null)\n  human_answer/added_options: array|null (optional; default null)\n  human_answer/edited_criteria: array|null (optional; default null)\n  human_answer/free_text: null|string (optional; default null)\n  Runtime contract: [human_answer](kernel/contracts/payloads.py)\n\nDecision-record scenario: options — options; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"options\": [\n    {\n      \"id\": \"opt.yaml_files_plus_generated_index\",\n      \"title\": \"One YAML file per decision plus a generated, never hand-edited filter index\",\n      \"proposal_status\": \"proposed\",\n      \"approval_status\": \"proposed\",\n      \"proposed_by\": \"host.generate_options\"\n    }\n  ],\n  \"proposed_criteria\": [\n    {\n      \"id\": \"crit.findable_by_filters\",\n      \"question\": \"Can a later run select precedent by component, roadmap phase, repository-wide flag and file type or language without opening every record?\",\n      \"priority\": \"required\",\n      \"proposal_status\": \"proposed\",\n      \"approval_status\": \"proposed\"\n    }\n  ],\n  \"named_options\": []\n}\n\nPartial approval declines the pending criterion — human_answer; illustrative; complete payload:\n{\n  \"approved_option_ids\": [\n    \"opt.yaml_files_plus_generated_index\"\n  ],\n  \"approved_criterion_ids\": []\n}",
+      "human": "Only what you approved, edited or added goes on to research and assessment; a free-text answer is kept as your input and noted as a limitation, never turned into criteria.\n\nThis structured answer approves only the option and declines other pending criteria. Free text is a separate answer mode and never silently becomes criteria.\n\nContract fields and examples (generated)\nConsumes:\n  options/options: array (optional; default [])\n  options/proposed_criteria: array (optional; default [])\n  Runtime contract: [options](kernel/contracts/payloads.py)\nProduces:\n  human_answer/approved_option_ids: array|null (optional; default null)\n  human_answer/approved_criterion_ids: array|null (optional; default null)\n  human_answer/added_options: array|null (optional; default null)\n  human_answer/edited_criteria: array|null (optional; default null)\n  human_answer/free_text: null|string (optional; default null)\n  Schema: [human_answer](kernel/schemas/leafcutter.human_answer.v1.schema.json)\n\nDecision-record scenario: options — options; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"options\": [\n    {\n      \"id\": \"opt.yaml_files_plus_generated_index\",\n      \"title\": \"One YAML file per decision plus a generated, never hand-edited filter index\",\n      \"proposal_status\": \"proposed\",\n      \"approval_status\": \"proposed\",\n      \"proposed_by\": \"host.generate_options\"\n    }\n  ],\n  \"proposed_criteria\": [\n    {\n      \"id\": \"crit.findable_by_filters\",\n      \"question\": \"Can a later run select precedent by component, roadmap phase, repository-wide flag and file type or language without opening every record?\",\n      \"priority\": \"required\",\n      \"proposal_status\": \"proposed\",\n      \"approval_status\": \"proposed\"\n    }\n  ],\n  \"named_options\": []\n}\n\nPartial approval declines the pending criterion — human_answer; illustrative; complete payload:\n{\n  \"approved_option_ids\": [\n    \"opt.yaml_files_plus_generated_index\"\n  ],\n  \"approved_criterion_ids\": []\n}",
       "agent": "human (asked through claude_code)",
       "consumes": [
         "options/options: array (optional; default [])",
@@ -4266,11 +4377,322 @@
       "impl_status": "not_started"
     },
     {
+      "id": "escalation-ruling",
+      "from": "assess",
+      "condition": "the assessment ends in an escalation that is not a ranked question: a tie, an unstated preference, a conflict or an uncertainty that synthesis could not settle, so you are asked directly (phase awaiting_human) with usable options as choices",
+      "label": "Rule on an escalation",
+      "human": "When several options pass every required criterion (tie), a preference or requirement is not stated (preference), the evidence contradicts itself (conflict) or the answer stays uncertain after synthesis (uncertain), the kernel asks you directly. The question names the escalation, offers the tied options (otherwise every usable option) as choices and allows free text. A task fact no source supplies (missing_task_fact) is asked the same way. Choosing a usable option resolves the decision as your ruling, without another Jev call: you are the approver (approved_by, approved_at), design_reason is human_ruling and the rationale reads \"Human ruling: <who> chose option [<id>] <title> when the kernel could not settle the decision itself.\" You may add a condition in the same answer (choice_id plus free_text): the choice stays authoritative and the text is kept verbatim, appended to the rationale as \"Condition stated by the human: <text>\", in the evidence item for your answer as \"<choice label>. Condition: <text>\" and in the staged record's task_context.constraints. Free text alone is kept as your input, reaches Jev's next assessment as a constraint labelled \"human-stated: \", and marks a tie or preference as answered (a conflict as resolved) before the options are assessed again. A choice that is not a usable option resolves nothing, keeps neither a condition nor an input (its text is dropped) and records the limitation \"answer '<id>' is not a usable option\". An unidentified gap with no usable option offers no choices, so only free text answers it.\n\nSource: kernel/capabilities/decision/approvals.py (_apply_escalation, HUMAN_RULING), emit.py (_human_followup, _HUMAN_TEXT, design_resolved_result), requests.py (escalation_request), design_ending.py (choice_rationale), executor.py (_load, _stage) and kernel/memory/staging.py. The report's limitations name the ruling, not a kernel ranking: \"human ruling: <approver> chose [<id>] at a <pending reason> escalation\", followed by the staging notice. As current behaviour, the staged record's assessment basis is kernel_ranking with an empty ranking, because no ranking was shown; a basis value for a ruling is a separate follow-up, and until then design_reason human_ruling and the rationale tell a ruling apart from a ranked choice. The question projection quotes the exact tie wording; the tie between these two options, the actor, the times, the condition and the staging path placeholders are illustrative.\n\nContract fields and examples (generated)\nConsumes:\n  human_question/question: string (required)\n  human_question/choices: array (optional; default [])\n  human_question/choices/*/id: string (required)\n  human_question/free_text_allowed: boolean (optional; default false)\n  human_question/why_research_cannot_settle: string (optional; default \"\")\n  human_question/state_revision: integer (required)\n  Runtime contract: [human_question](kernel/contracts/interaction.py)\n  human_answer/choice_id: null|string (optional; default null)\n  human_answer/free_text: null|string (optional; default null)\n  Schema: [human_answer](kernel/schemas/leafcutter.human_answer.v1.schema.json)\nProduces:\n  decision/status: string (required)\n  decision/selected_option_id: null|string (optional; default null)\n  decision/approval_status: string (optional; default \"not_required\")\n  decision/approved_by: null|string (optional; default null)\n  decision/approved_at: null|string (optional; default null)\n  decision/design_reason: null|string (optional; default null)\n  decision/rationale: null|object (optional; default null)\n  decision/rationale/text: string (required)\n  Runtime contract: [decision](kernel/contracts/decision.py)\n  decision_report/status: string (required)\n  decision_report/selected_option_id: null|string (optional; default null)\n  decision_report/approval_status: string (optional; default \"not_required\")\n  decision_report/limitations: array (optional; default [])\n  decision_report/rationale: null|object (optional; default null)\n  Runtime contract: [decision_report](kernel/contracts/payloads.py)\n\nTie escalation offering the two tied options — human_question; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"question\": \"Several options satisfy every required criterion. Which do you prefer?\",\n  \"choices\": [\n    {\n      \"id\": \"opt.yaml_files_plus_generated_index\",\n      \"label\": \"One YAML file per decision plus a generated, never hand-edited filter index\"\n    },\n    {\n      \"id\": \"opt.added.1\",\n      \"label\": \"Kernel-contract YAML per decision\"\n    }\n  ],\n  \"free_text_allowed\": true,\n  \"why_research_cannot_settle\": \"Escalated: tie; evidence and Jev cannot settle it.\",\n  \"subject_ids\": [\n    \"opt.yaml_files_plus_generated_index\",\n    \"opt.added.1\"\n  ],\n  \"state_revision\": 3\n}\n\nRuling with a condition — human_answer; illustrative; complete payload:\n{\n  \"choice_id\": \"opt.added.1\",\n  \"free_text\": \"provided each record is validated against the kernel contract before it is published\"\n}\n\nDecision resolved as a human ruling — decision; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"status\": \"resolved\",\n  \"selected_option_id\": \"opt.added.1\",\n  \"approval_status\": \"approved\",\n  \"approved_by\": \"human:user\",\n  \"approved_at\": \"2026-10-06T09:30:00Z\",\n  \"design_reason\": \"human_ruling\",\n  \"rationale\": {\n    \"text\": \"Human ruling: human:user chose option [opt.added.1] Kernel-contract YAML per decision when the kernel could not settle the decision itself. Condition stated by the human: provided each record is validated against the kernel contract before it is published\",\n    \"origin\": \"template\"\n  }\n}\n\nReport of the ruling (limitations of a run with no earlier limitation) — decision_report; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"status\": \"resolved\",\n  \"selected_option_id\": \"opt.added.1\",\n  \"approval_status\": \"approved\",\n  \"limitations\": [\n    \"human ruling: human:user chose [opt.added.1] at a tie escalation\",\n    \"decision record staged: <run_root>/runs/<run_id>/staged/decisions/<decision id>.yaml; publish it for review with: python -m kernel decisions publish --run-id <run_id>\"\n  ],\n  \"rationale\": {\n    \"text\": \"Human ruling: human:user chose option [opt.added.1] Kernel-contract YAML per decision when the kernel could not settle the decision itself. Condition stated by the human: provided each record is validated against the kernel contract before it is published\",\n    \"origin\": \"template\"\n  }\n}",
+      "agent": "kernel decision executor",
+      "writes": [
+        "Decision"
+      ],
+      "outcome_kind": "alternative",
+      "io_contracts": {
+        "consumes": [
+          {
+            "contract": "human_question",
+            "fields": [
+              {
+                "path": "/question",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/choices",
+                "types": [
+                  "array"
+                ],
+                "required": false,
+                "default": []
+              },
+              {
+                "path": "/choices/*/id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/free_text_allowed",
+                "types": [
+                  "boolean"
+                ],
+                "required": false,
+                "default": false
+              },
+              {
+                "path": "/why_research_cannot_settle",
+                "types": [
+                  "string"
+                ],
+                "required": false,
+                "default": ""
+              },
+              {
+                "path": "/state_revision",
+                "types": [
+                  "integer"
+                ],
+                "required": true
+              }
+            ]
+          },
+          {
+            "contract": "human_answer",
+            "fields": [
+              {
+                "path": "/choice_id",
+                "types": [
+                  "null",
+                  "string"
+                ],
+                "required": false,
+                "default": null
+              },
+              {
+                "path": "/free_text",
+                "types": [
+                  "null",
+                  "string"
+                ],
+                "required": false,
+                "default": null
+              }
+            ]
+          }
+        ],
+        "produces": [
+          {
+            "contract": "decision",
+            "fields": [
+              {
+                "path": "/status",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/selected_option_id",
+                "types": [
+                  "null",
+                  "string"
+                ],
+                "required": false,
+                "default": null
+              },
+              {
+                "path": "/approval_status",
+                "types": [
+                  "string"
+                ],
+                "required": false,
+                "default": "not_required"
+              },
+              {
+                "path": "/approved_by",
+                "types": [
+                  "null",
+                  "string"
+                ],
+                "required": false,
+                "default": null
+              },
+              {
+                "path": "/approved_at",
+                "types": [
+                  "null",
+                  "string"
+                ],
+                "required": false,
+                "default": null
+              },
+              {
+                "path": "/design_reason",
+                "types": [
+                  "null",
+                  "string"
+                ],
+                "required": false,
+                "default": null
+              },
+              {
+                "path": "/rationale",
+                "types": [
+                  "null",
+                  "object"
+                ],
+                "required": false,
+                "default": null
+              },
+              {
+                "path": "/rationale/text",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              }
+            ]
+          },
+          {
+            "contract": "decision_report",
+            "fields": [
+              {
+                "path": "/status",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/selected_option_id",
+                "types": [
+                  "null",
+                  "string"
+                ],
+                "required": false,
+                "default": null
+              },
+              {
+                "path": "/approval_status",
+                "types": [
+                  "string"
+                ],
+                "required": false,
+                "default": "not_required"
+              },
+              {
+                "path": "/limitations",
+                "types": [
+                  "array"
+                ],
+                "required": false,
+                "default": []
+              },
+              {
+                "path": "/rationale",
+                "types": [
+                  "null",
+                  "object"
+                ],
+                "required": false,
+                "default": null
+              }
+            ]
+          }
+        ],
+        "examples": [
+          {
+            "contract": "human_question",
+            "mode": "projection",
+            "origin": "illustrative",
+            "label": "Tie escalation offering the two tied options",
+            "value": {
+              "question": "Several options satisfy every required criterion. Which do you prefer?",
+              "choices": [
+                {
+                  "id": "opt.yaml_files_plus_generated_index",
+                  "label": "One YAML file per decision plus a generated, never hand-edited filter index"
+                },
+                {
+                  "id": "opt.added.1",
+                  "label": "Kernel-contract YAML per decision"
+                }
+              ],
+              "free_text_allowed": true,
+              "why_research_cannot_settle": "Escalated: tie; evidence and Jev cannot settle it.",
+              "subject_ids": [
+                "opt.yaml_files_plus_generated_index",
+                "opt.added.1"
+              ],
+              "state_revision": 3
+            }
+          },
+          {
+            "contract": "human_answer",
+            "mode": "full",
+            "origin": "illustrative",
+            "label": "Ruling with a condition",
+            "value": {
+              "choice_id": "opt.added.1",
+              "free_text": "provided each record is validated against the kernel contract before it is published"
+            }
+          },
+          {
+            "contract": "decision",
+            "mode": "projection",
+            "origin": "illustrative",
+            "label": "Decision resolved as a human ruling",
+            "value": {
+              "status": "resolved",
+              "selected_option_id": "opt.added.1",
+              "approval_status": "approved",
+              "approved_by": "human:user",
+              "approved_at": "2026-10-06T09:30:00Z",
+              "design_reason": "human_ruling",
+              "rationale": {
+                "text": "Human ruling: human:user chose option [opt.added.1] Kernel-contract YAML per decision when the kernel could not settle the decision itself. Condition stated by the human: provided each record is validated against the kernel contract before it is published",
+                "origin": "template"
+              }
+            }
+          },
+          {
+            "contract": "decision_report",
+            "mode": "projection",
+            "origin": "illustrative",
+            "label": "Report of the ruling (limitations of a run with no earlier limitation)",
+            "value": {
+              "status": "resolved",
+              "selected_option_id": "opt.added.1",
+              "approval_status": "approved",
+              "limitations": [
+                "human ruling: human:user chose [opt.added.1] at a tie escalation",
+                "decision record staged: <run_root>/runs/<run_id>/staged/decisions/<decision id>.yaml; publish it for review with: python -m kernel decisions publish --run-id <run_id>"
+              ],
+              "rationale": {
+                "text": "Human ruling: human:user chose option [opt.added.1] Kernel-contract YAML per decision when the kernel could not settle the decision itself. Condition stated by the human: provided each record is validated against the kernel contract before it is published",
+                "origin": "template"
+              }
+            }
+          }
+        ]
+      },
+      "consumes": [
+        "human_question/question: string (required)",
+        "human_question/choices: array (optional; default [])",
+        "human_question/choices/*/id: string (required)",
+        "human_question/free_text_allowed: boolean (optional; default false)",
+        "human_question/why_research_cannot_settle: string (optional; default \"\")",
+        "human_question/state_revision: integer (required)",
+        "human_answer/choice_id: null|string (optional; default null)",
+        "human_answer/free_text: null|string (optional; default null)"
+      ],
+      "produces": [
+        "decision/status: string (required)",
+        "decision/selected_option_id: null|string (optional; default null)",
+        "decision/approval_status: string (optional; default \"not_required\")",
+        "decision/approved_by: null|string (optional; default null)",
+        "decision/approved_at: null|string (optional; default null)",
+        "decision/design_reason: null|string (optional; default null)",
+        "decision/rationale: null|object (optional; default null)",
+        "decision/rationale/text: string (required)",
+        "decision_report/status: string (required)",
+        "decision_report/selected_option_id: null|string (optional; default null)",
+        "decision_report/approval_status: string (optional; default \"not_required\")",
+        "decision_report/limitations: array (optional; default [])",
+        "decision_report/rationale: null|object (optional; default null)"
+      ],
+      "impl_asof": "2026-10-06",
+      "impl_status": "not_started"
+    },
+    {
       "id": "rerank",
       "from": "choose",
       "condition": "you add an option or answer in your own words instead of choosing",
       "label": "Assess and rank again",
-      "human": "What you added changes what is being ranked, so the options are assessed and ranked again before you are asked once more.\n\nAddedOption contains title/description, not an id. Kernel normalization assigns opt.added.1 for the first addition and marks it human-approved. A fresh assessment must occur before the next ranked-choice question.\n\nContract fields and examples (generated)\nConsumes:\n  human_answer/added_options: array|null (optional; default null)\n  human_answer/free_text: null|string (optional; default null)\n  Runtime contract: [human_answer](kernel/contracts/payloads.py)\nProduces:\n  option/id: string (required)\n  option/title: string (required)\n  option/approval_status: string (optional; default \"not_required\")\n  option/approved_by: null|string (optional; default null)\n  Runtime contract: [option](kernel/contracts/decision.py)\n\nHuman adds the existing record scenario option; kernel assigns its id — human_answer; illustrative; complete payload:\n{\n  \"added_options\": [\n    {\n      \"title\": \"Kernel-contract YAML per decision\"\n    }\n  ]\n}\n\nFirst added option receives opt.added.1 and becomes eligible for assessment — option; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"id\": \"opt.added.1\",\n  \"title\": \"Kernel-contract YAML per decision\",\n  \"proposal_status\": \"supplied\",\n  \"approval_status\": \"approved\",\n  \"approved_by\": \"human:user\"\n}",
+      "human": "What you added changes what is being ranked, so the options are assessed and ranked again before you are asked once more. Words you give instead of a choice are kept as your input and reach Jev's next assessment as a constraint labelled \"human-stated: \"; words given together with a usable choice are that choice's condition instead, and words given with a choice that is not a usable option are not kept (see choose and resolve).\n\nAddedOption contains title/description, not an id. Kernel normalization assigns opt.added.1 for the first addition and marks it human-approved. A fresh assessment must occur before the next ranked-choice question. The human-stated label is added in kernel/capabilities/decision/assess.py (_state, HUMAN_STATED).\n\nContract fields and examples (generated)\nConsumes:\n  human_answer/added_options: array|null (optional; default null)\n  human_answer/free_text: null|string (optional; default null)\n  Schema: [human_answer](kernel/schemas/leafcutter.human_answer.v1.schema.json)\nProduces:\n  option/id: string (required)\n  option/title: string (required)\n  option/approval_status: string (optional; default \"not_required\")\n  option/approved_by: null|string (optional; default null)\n  Runtime contract: [option](kernel/contracts/decision.py)\n\nHuman adds the existing record scenario option; kernel assigns its id — human_answer; illustrative; complete payload:\n{\n  \"added_options\": [\n    {\n      \"title\": \"Kernel-contract YAML per decision\"\n    }\n  ]\n}\n\nFirst added option receives opt.added.1 and becomes eligible for assessment — option; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"id\": \"opt.added.1\",\n  \"title\": \"Kernel-contract YAML per decision\",\n  \"proposal_status\": \"supplied\",\n  \"approval_status\": \"approved\",\n  \"approved_by\": \"human:user\"\n}",
       "agent": "kernel decision executor",
       "consumes": [
         "human_answer/added_options: array|null (optional; default null)",
@@ -6281,6 +6703,12 @@
       "then": "you get the ranked design-choice question naming research_cap only when the round limit was reached, no_progress when the scores did not move, design_round_done when the one targeted round already ran, and otherwise no_research_targets with \"No research round is due\", never the blind unidentified_gap question"
     },
     {
+      "for": "escalation-ruling",
+      "given": "an escalation at phase awaiting_human (a tie, an unstated preference, a conflict or an uncertainty synthesis could not settle) whose question offers usable options",
+      "when": "you choose one of the offered options, with or without a condition in free text",
+      "then": "the decision resolves as your ruling: you are the approver, design_reason is human_ruling and the rationale says the kernel could not settle it; a condition is kept verbatim in the rationale and the staged record's task_context.constraints, and a choice that is not a usable option resolves nothing and keeps no text"
+    },
+    {
       "for": "rerank",
       "given": "the ranked-choice question",
       "when": "you add an option or answer in free text",
@@ -6587,13 +7015,19 @@
       "by": "flow-author (kernel-research-before-blind-escalation session)",
       "date": "2026-10-06",
       "note": "v10: PR #1001 (TICKET-20261002-KernelResearchBeforeBlindEscalation). An unidentified gap with usable options no longer escalates blindly. New branches from assess: unidentified-gap-research (the targeted design round when due) and unidentified-gap-ranked (the ranked design-choice question; reason research_cap only at the real cap, no_progress, the new design_round_done when the one targeted round already ran, otherwise the new no_research_targets). propose and research-options say that unresolved feasibility facts join the research gaps (deduplicated, at most MAX_GAPS_KEPT = 6), and research-options documents research_request /gaps. choose names the six design reasons and documents human_question /why_research_cannot_settle. The new branches carry no implements: the ticket has no acceptance criteria by user decision. No existing node id, order, implements list or acceptance scenario changed."
+    },
+    {
+      "action": "extended",
+      "by": "flow-author (kernel-choice-with-condition session)",
+      "date": "2026-10-06",
+      "note": "v11: PR #1003 (TICKET-20261002-KernelChoiceWithCondition). leafcutter.human_answer.v1 also accepts the pair {choice_id, free_text}, a choice with a condition, wherever free text is allowed (the proposals approval, the ranked choice, an escalation); other mixes stay rejected, and the decision-approval and precedent questions reject the pair at submission. A condition is kept only for an applied choice. approve-proposals: \"approve\" plus free text keeps the text in the decision's conditions, an unrecognised choice records \"unrecognised approval answer '<id>'\" and keeps no text; adds human_answer /choice_id and an illustrative example. choose documents the answer modes, the unusable-choice limitation \"answer '<id>' is not a usable option\" (no condition, no input kept) and adds an illustrative pair example. resolve documents where conditions land: \"Condition stated by the human: <text>\" ends every rationale written afterwards (ranked choice, human ruling, kernel gate, precedent reuse), the answer evidence reads \"<label>. Condition: <text>\" and the staged task_context.constraints list them; adds human_answer /free_text, decision /design_reason, /rationale and /rationale/text, and ranked-choice and gate examples. rerank says free text reaches Jev labelled \"human-stated: \". New branch escalation-ruling from assess: the awaiting_human escalation (tie, preference, conflict, uncertain) was not modelled; a choice of a usable option there resolves the decision as a human ruling (human approver, design_reason human_ruling, report limitation \"human ruling: <approver> chose [<id>] at a <pending reason> escalation\"), where before it only recorded a preference; the staged basis is currently kernel_ranking with an empty ranking (basis vocabulary is a separate follow-up). The human_answer definition also binds the committed schema kernel/schemas/leafcutter.human_answer.v1.schema.json. The new branch carries no implements: the ticket has no acceptance criteria by user decision. No existing node id, order, implements list or acceptance scenario changed."
     }
   ],
   "impl_summary": {
     "done": 5,
     "in_progress": 0,
-    "not_started": 35,
-    "total": 40,
+    "not_started": 36,
+    "total": 41,
     "asof": "2026-10-06"
   },
   "contract_definitions": {
@@ -6625,7 +7059,8 @@
       "model": "findings"
     },
     "human_answer": {
-      "model": "human_answer"
+      "model": "human_answer",
+      "schema": "kernel/schemas/leafcutter.human_answer.v1.schema.json"
     },
     "human_question": {
       "model": "human_question"

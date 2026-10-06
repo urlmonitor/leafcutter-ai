@@ -97,18 +97,34 @@ def _stamp(work: Working, actor: str) -> None:
     work.cont = work.cont.model_copy(update={"approved_by": actor, "approved_at": stamp})
 
 
+def _keep_condition(work: Working, answer: HumanAnswerPayload) -> None:
+    """Keep the answer's free text verbatim as a condition of the choice that was just applied.
+
+    Call this only on the path where the choice was applied: a condition qualifies a choice, so an
+    unusable choice keeps nothing.
+    """
+    text = (answer.free_text or "").strip()
+    if text:
+        work.cont = work.cont.model_copy(update={"conditions": [*work.cont.conditions, text]})
+
+
 def _apply_approval(work: Working, answer: HumanAnswerPayload, actor: str) -> None:
     """Approve all pending proposals, apply a structured answer, or record a free-text fallback.
 
-    Free text is kept as a human input and a limitation; it is never turned into criteria.
+    Free text with the approve choice is a condition of the approval. Free text alone is kept as
+    a human input and a limitation; it is never turned into criteria. An unrecognised choice keeps
+    no text.
     """
     if answer.choice_id == APPROVE or answer.is_structured:
         _stamp(work, actor)
     if answer.choice_id == APPROVE:
         work.options = [_approve(o, actor) if is_pending(o) else o for o in work.options]
         work.criteria = [_approve(c, actor) if is_pending(c) else c for c in work.criteria]
+        _keep_condition(work, answer)
     elif answer.is_structured:
         _apply_structured(work, answer, actor)
+    elif answer.choice_id:
+        work.limitations.append(f"unrecognised approval answer {answer.choice_id!r}")
     elif answer.free_text:
         work.cont = work.cont.model_copy(update={
             "human_inputs": [*work.cont.human_inputs, answer.free_text.strip()]})
@@ -134,7 +150,8 @@ def _apply_escalation(work: Working, answer: HumanAnswerPayload, actor: str) -> 
     """Record a human ruling on a tie, conflict, preference or unidentified gap.
 
     A choice of a usable option settles the decision with the human as approver; free text
-    that accompanies it is a verbatim condition.
+    that accompanies it is a verbatim condition. An unusable choice records its limitation and
+    keeps nothing, the text included.
     """
     cont = work.cont
     updates: dict[str, object] = {}
@@ -149,7 +166,7 @@ def _apply_escalation(work: Working, answer: HumanAnswerPayload, actor: str) -> 
                        design_reason=HUMAN_RULING)
         if text:
             updates["conditions"] = [*cont.conditions, text]
-        text = ""
+        text = ""  # a condition qualifies the choice; it is not a free-standing human input
     if text:
         updates["human_inputs"] = [*cont.human_inputs, text]
     reason = cont.pending_reason
@@ -163,23 +180,24 @@ def _apply_escalation(work: Working, answer: HumanAnswerPayload, actor: str) -> 
 def _apply_design_choice(work: Working, answer: HumanAnswerPayload, actor: str) -> None:
     """Record a human's answer to the ranked-options question: a choice, added options or words.
 
-    A choice of a usable option settles the decision (the human is the approver). Added options
-    and free text change what the kernel ranks, so the decision is assessed and ranked again.
+    A choice of a usable option settles the decision (the human is the approver), and free text
+    with it is a condition; an unusable choice keeps no text. Added options and free text alone
+    change what the kernel ranks, so the decision is assessed and ranked again.
     """
     cont = work.cont
     if answer.added_options:
         work.options = [*work.options, *_added_options(work, answer, actor)]
-    if answer.free_text and answer.free_text.strip():
-        key = "human_inputs" if answer.choice_id is None else "conditions"
-        work.cont = cont.model_copy(update={
-            key: [*getattr(cont, key), answer.free_text.strip()]})
+    text = (answer.free_text or "").strip()
     if answer.choice_id is None:
+        if text:
+            work.cont = cont.model_copy(update={"human_inputs": [*cont.human_inputs, text]})
         return
-    if answer.choice_id in {o.id for o in work.usable_options}:
-        _stamp(work, actor)
-        work.cont = work.cont.model_copy(update={"design_choice_id": answer.choice_id})
-    else:
+    if answer.choice_id not in {o.id for o in work.usable_options}:
         work.limitations.append(f"answer {answer.choice_id!r} is not a usable option")
+        return  # an unusable choice keeps nothing: a condition qualifies an applied choice
+    _stamp(work, actor)
+    work.cont = work.cont.model_copy(update={"design_choice_id": answer.choice_id})
+    _keep_condition(work, answer)
 
 
 def _apply_precedent_choice(work: Working, answer: HumanAnswerPayload, actor: str) -> None:
@@ -223,6 +241,11 @@ def apply_human_answer(work: Working, answer: HumanAnswerPayload, actor: str | N
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-06 [python-coder]: A condition is kept only when the choice it qualifies is applied: the
+#   approve choice now keeps its text in cont.conditions (it was dropped), and an unusable choice
+#   keeps nothing at an escalation, a design choice or an approval. The decision approval and
+#   precedent questions allow no free text, so the pair is already rejected at submission there.
+#   (#KernelChoiceWithCondition)
 # - 2026-10-02 [python-coder]: A choice of a usable option at an escalation settles the decision
 #   (human approver, design_reason human_ruling); free text with a choice is a verbatim condition.
 #   (#KernelChoiceWithCondition)

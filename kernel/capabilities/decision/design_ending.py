@@ -172,11 +172,16 @@ def ranking_text(work: Working, ranking: list[OptionRanking]) -> str:
                      f"{r.required_total} passed)" for r in ranking)
 
 
+def condition_suffix(conditions: list[str]) -> str:
+    """Return the rationale suffix naming each condition a human stated, in order ("" if none)."""
+    return "".join(f" Condition stated by the human: {c}" for c in conditions)
+
+
 def choice_rationale(work: Working) -> str:
     """Return the rationale that records the kernel ranking and the human's choice."""
     cont = work.cont
     ranking = cont.design_ranking
-    condition = "".join(f" Condition stated by the human: {c}" for c in cont.conditions)
+    condition = condition_suffix(cont.conditions)
     if cont.design_reason == "human_ruling":
         title = next(o.title for o in work.options if o.id == cont.design_choice_id)
         return (f"Human ruling: {cont.approved_by or 'human'} chose option "
@@ -214,6 +219,8 @@ def ranking_assessments(work: Working, cfg: DecisionConfig) -> list[CriterionAss
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-06 [python-coder]: The condition suffix is one helper, `condition_suffix`, shared by
+#   every rationale written after a human stated a condition. (#KernelChoiceWithCondition)
 # - 2026-10-01 [python-coder]: The recorded per-option assessments cite the evidence relevant to
 #   each criterion and option instead of all evidence (round 8 defect e). (#KernelDecisionStore)
 # - 2026-10-01 [python-coder]: Criteria are classified only once the decision has evidence beyond

@@ -49,6 +49,15 @@ In order that "pick option X, but with condition Y" can be answered as said, we 
 - Tests: the pair is accepted where free text is allowed and rejected where not; the condition lands in the constraints, rationale and staged record; a choice at unidentified_gap completes the decision.
 - (Added 2026-10-02 by the orchestrator, reachability) The Claude Code and Codex skill texts tell the host it may send {choice_id, free_text} when the user picks a choice and adds a condition, and free text is allowed.
 
+## Implementation Tasks
+
+### test-writer
+- [x] tests/kernel/capabilities/test_choice_with_condition.py: an approval at awaiting_approval with {choice_id: "approve", free_text: CONDITION} lands the text in cont.conditions, the rationale and the staged record's task_context.constraints (approvals._apply_approval now keeps it).
+- [x] Same file: an unusable choice keeps no condition at awaiting_human (tie) and at awaiting_design_choice (RankedGapCase): the text is in neither conditions nor human_inputs, the limitation "answer 'nope' is not a usable option" is recorded (the design-choice case used to keep the text as a condition).
+- [x] Same file: a tie ruling's limitations contain "human ruling: human:ada chose [A] at a tie escalation" and not "ranked by the kernel"; the staged record's assessment.basis stays kernel_ranking (the basis enum is a pinned vocabulary, see comment) with an empty ranking.
+- [x] tests/kernel/interaction/test_submissions.py: no change needed (decision approval and precedent questions have free_text_allowed false, so the pair is already rejected there); add one assertion only if no test covers that rejection.
+- Fixtures: any dict with more than 5 keys or parametrize table with more than 3 rows goes to tests/fixtures/ via load_fixture() (docs/testing/README.md).
+
 ## Sign-offs
 - [x] test-writer — 2026-10-02 14:32
 - [x] python-coder — 2026-10-02 16:00
@@ -142,3 +151,50 @@ Skill reachability: Claude Code and Codex SKILL.md now tell the host it may send
 feedback-id: fb_2026-10-02_48ad6bb8
 Tests retargeted after merging #1001 (research-before-blind-escalation). An unidentified_gap with usable options now ends in the ranked design-choice question (phase awaiting_design_choice, pending_reason research_cap), not awaiting_human. Condition and ranked-choice tests (RankedGapCase) renamed and re-described honestly; the human-ruling coverage of approvals._apply_escalation moved to a tie (TieCase: awaiting_human, reason tie): choice completes with the human as approver, rationale says "Human ruling" not "Kernel ranking", choice plus condition is staged. Non-usable choice does not resolve in both. Only the test file changed; capabilities/contracts/interaction/decision_research/memory 552 passed, ruff clean.
 Observed, not fixed: the ranked rationale reads "stopped researching because research_cap after 0 research round(s)". The count is true, but the reason is the fallback label: loop_reason was None (0 rounds < max_research_rounds 2) and design_round_due was false because has_targets() found nothing to aim at, so research was skipped, not capped.
+
+### 2026-10-06 12:00 — python-coder (status: handoff)
+feedback-id: fb_2026-10-06_c37f167b
+handoff_target: test-writer
+Condition and ruling honesty. (1) approvals._apply_approval keeps the text of {approve, free_text} in cont.conditions; decision approval and precedent questions allow no free text, so the pair is already rejected at submission there. (2) A condition is kept only when its choice is applied: _apply_design_choice no longer keeps text with an unusable choice (escalation already kept nothing); an unrecognised choice at approval keeps nothing. (3) design_resolved_result: for design_reason human_ruling the limitation is "human ruling: <approver> chose [<id>] at a <pending_reason> escalation". basis stays kernel_ranking: config/decision_record.schema.json is generated from kernel/memory/models.py but is duplicated as the hash-pinned trusted asset knowledge/native_types/decision_schema.json (tests/knowledge/test_native_decision.py pins its sha256), so a new value needs a reviewed re-pin; needs its own ticket. (4) Decision.design_reason comment lists human_ruling. Existing tests unchanged and green: capabilities/contracts/interaction/memory/decision_research 553 passed, 1 failed (test_host_operations has_an_operation, host.retrieval_needs, also fails on main). ruff clean, ast.parse ok. New tests not written (python-coder does not author tests): see Implementation Tasks / test-writer.
+
+### 2026-10-06 13:00 — test-writer (status: ok)
+feedback-id: fb_2026-10-06_96124dd2
+Tests for the 2026-10-06 python-coder handoff added to tests/kernel/capabilities/test_choice_with_condition.py (19 tests, all green against the staged fix). New: TestApprovalWithACondition (approve + free text lands in cont.conditions and the staged record's constraints; blank text keeps none; unrecognised choice "maybe" records "unrecognised approval answer 'maybe'" and keeps no text), TestUnusableChoiceKeepsNothingAtATie and ...AtTheRankedQuestion (no conditions/human_inputs, limitation "answer 'nope' is not a usable option", not resolved), TestATieRulingDoesNotClaimAKernelRanking (limitation "human ruling: human:ada chose [A] at a tie escalation", no "ranked by the kernel"; staged basis stays kernel_ranking with empty ranking, commented as the basis-vocabulary follow-up), and TestConditionIsRecorded gained the exact "Condition stated by the human: <text>" rationale-suffix test. Note: the rationale suffix exists only on the ranked-choice ending (design_ending.choice_rationale); an approval resolution carries the approve condition in cont.conditions, Jev constraints and the staged record, not in the rationale, so the approval test asserts the record. Coupling: with HEAD's approvals.py and emit.py swapped in, 5 tests fail (approve condition x2, unrecognised approval, ranked unusable choice, tie limitation); restored byte-identical (cmp), 19 pass again. The tie-unusable, suffix and basis tests pass on HEAD too (behaviour already correct there; they pin it). Run: tests/kernel/capabilities+interaction+memory 428 passed, 1 failed (test_host_operations ...has_an_operation, host.retrieval_needs, fails on main). ruff clean.
+red_baseline:
+  - test_name: test_ac1_approve_with_free_text_keeps_the_text_as_a_condition
+    file: tests/kernel/capabilities/test_choice_with_condition.py
+    error: "AssertionError: [] != ['but Jev should be able to decide based on some criteria'] (against HEAD approvals.py)"
+completion_manifest:
+  tests_written: true
+  red_baseline_verified: true
+  cross_layer_seam_answer:
+    result: covered
+    producing_side: "approvals.apply_human_answer / emit.design_resolved_result via DecisionExecutor"
+    consuming_side: "DecisionReportPayload limitations, decision rationale and the staged record's task_context.constraints"
+  reachability_entry_point_answer:
+    result: resolved
+    entry_point: "DecisionExecutor.ainvoke resumed with a leafcutter.human_answer.v1 child (run_decision rig)"
+
+### 2026-10-06 14:00 — python-coder (status: handoff)
+A condition stated at the proposals approval now ends every rationale written afterwards. New helper `condition_suffix(conditions)` in kernel/capabilities/decision/design_ending.py (one " Condition stated by the human: <text>" per condition, in order) is used by `choice_rationale` and by emit.py `resolved_result` (gate-resolved, basis resolved_gate) and `precedent_resolved_result` (approval may precede the precedent reuse). Run: tests/kernel/capabilities+interaction+memory 428 passed, 1 failed (test_host_operations ...has_an_operation, host.retrieval_needs, fails on main); ruff clean, ast.parse ok.
+feedback-id: fb_2026-10-06_9c534176
+handoff_target: test-writer
+Test needed: an approve with free text at awaiting_approval that then resolves through the gate (resolved_result) gives a decision rationale text ending with " Condition stated by the human: <text>" (and the report payload's rationale likewise); two conditions give two suffixes in order; with no condition the rationale is unchanged. Optionally the same for the precedent-reuse path.
+
+### 2026-10-06 14:30 — test-writer (status: ok)
+feedback-id: fb_2026-10-06_da421b22
+Condition-suffix tests for the 14:00 python-coder handoff, in tests/kernel/capabilities/test_choice_with_condition.py (24 tests, all green). TestApprovalWithACondition now asserts the gate rationale (and the report payload's rationale) ends with " Condition stated by the human: <text>", two conditions give two suffixes in order, and no condition leaves the gate rationale exactly "Option [A] Use sqlite satisfies the required criteria ['p1', 'p2'] according to evidence [...]."; new TestPrecedentReuseWithACondition covers the reuse rationale with and without a condition. The earlier condition is seeded on the waiting continuation_state (conditions) since one approval answer yields one condition. Coupling: with HEAD's design_ending.py and emit.py (the pre-fix staged state is not separately recoverable, the index already holds the fix) 5 fail: the three approval suffix tests, the precedent reuse suffix test, and the tie limitation test (that last one only because HEAD also lacks the earlier human-ruling note); restored byte-identical, 24 pass. Run: capabilities+interaction+memory 433 passed, 1 failed (test_host_operations ...has_an_operation, host.retrieval_needs, fails on main). ruff clean.
+red_baseline:
+  - test_name: test_the_reuse_rationale_ends_with_the_condition
+    file: tests/kernel/capabilities/test_choice_with_condition.py
+    error: "AssertionError: rationale lacks the suffix (against HEAD emit.py)"
+completion_manifest:
+  tests_written: true
+  red_baseline_verified: true
+  cross_layer_seam_answer:
+    result: covered
+    producing_side: "emit.resolved_result / precedent_resolved_result with design_ending.condition_suffix"
+    consuming_side: "decision rationale and DecisionReportPayload rationale read back through DecisionExecutor"
+  reachability_entry_point_answer:
+    result: resolved
+    entry_point: "DecisionExecutor.ainvoke resumed with a leafcutter.human_answer.v1 child (run_decision rig)"

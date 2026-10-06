@@ -17,16 +17,18 @@ from __future__ import annotations
 
 from dataclasses import replace
 
+from kernel.capabilities.decision.loading import load_working
 from kernel.capabilities.decision.ranking import NO_RESEARCH_TARGETS
 from kernel.contracts import schema_ids
 from kernel.contracts.enums import ApprovalStatus, DecisionStatus, RequestKind, ResultStatus
-from kernel.contracts.payloads import DecisionReportPayload
+from kernel.contracts.payloads import DecisionReportPayload, OptionsPayload
 from tests.kernel.capabilities.test_design_ending import DesignCase
-from tests.kernel.capabilities.support import child, resume
+from tests.kernel.capabilities.support import child, decision_payload, proposed_criteria, resume
 from tests.kernel.helpers import as_json, narrow
 from tests.kernel.memory.test_decision_precedent import PrecedentCase
 
 CONDITION = "but Jev should be able to decide based on some criteria"
+SUFFIX = " Condition stated by the human: {}"
 
 
 class RankedGapCase(PrecedentCase):
@@ -151,6 +153,14 @@ class TestConditionIsRecorded(RankedGapCase):
         self.assertEqual(done.decisions[0].selected_option_id, "A")
         self.assertIn(CONDITION, narrow(done.decisions[0].rationale).text)
 
+    def test_the_rationale_ends_with_the_condition_stated_by_the_human(self) -> None:
+        # covers: UNKNOWN
+        # angle: criterion
+        inv, ctx, waiting = self.ask()
+        done = self.answer(inv, ctx, waiting, self.PAIR, actor="human:ada")
+        text = narrow(done.decisions[0].rationale).text
+        self.assertTrue(text.endswith(f"Condition stated by the human: {CONDITION}"), text)
+
     def test_the_staged_record_carries_the_condition_in_its_constraints(self) -> None:
         # covers: UNKNOWN
         # angle: seam
@@ -192,3 +202,170 @@ class TestDesignChoiceWithACondition(PrecedentCase, DesignCase):
         self.assertIn(CONDITION, narrow(done.decisions[0].rationale).text)
         (record,) = self.staged(self.ctx_)
         self.assertIn(CONDITION, record.task_context.constraints)
+
+
+
+def kept_after(case: PrecedentCase, inv, ctx, waiting, response):  # noqa: ANN001, ANN201
+    """Apply a human answer to the waiting decision and return the working continuation."""
+    out = child(ctx, RequestKind.HUMAN, schema_ids.HUMAN_ANSWER, response)
+    return load_working(resume(inv, waiting, [out]), ctx).cont
+
+
+class TestApprovalWithACondition(PrecedentCase):
+    """The approve answer at awaiting_approval carries free text: it is a condition of the approval."""
+
+    def asked(self):  # noqa: ANN201
+        inv, ctx, waiting = self.first(decision_payload(criteria=False))
+        proposals = OptionsPayload(proposed_criteria=proposed_criteria())
+        out = child(ctx, RequestKind.OPTIONS, schema_ids.OPTIONS,
+                    proposals.model_dump(mode="json"))
+        asked = self.run_decision(resume(inv, waiting, [out]), ctx)
+        self.assertEqual(asked.continuation_state["phase"], "awaiting_approval")
+        self.params["satisfies"] = {("p1", "A"): 0.95, ("p2", "A"): 0.95}
+        return inv, ctx, asked
+
+    def test_ac1_approve_with_free_text_keeps_the_text_as_a_condition(self) -> None:
+        # covers: UNKNOWN
+        # angle: criterion
+        inv, ctx, asked = self.asked()
+        cont = kept_after(self, inv, ctx, asked, {"choice_id": "approve", "free_text": CONDITION})
+        self.assertEqual(cont.conditions, [CONDITION])
+        self.assertEqual(cont.human_inputs, [])
+
+    def test_ac1_the_approval_condition_reaches_the_rationale_and_the_staged_record(self) -> None:
+        # covers: UNKNOWN
+        # angle: seam
+        inv, ctx, asked = self.asked()
+        done = self.answer(inv, ctx, asked, {"choice_id": "approve", "free_text": CONDITION},
+                           actor="human:ada")
+        self.assertEqual(done.status, ResultStatus.COMPLETED)
+        text = narrow(done.decisions[0].rationale).text
+        self.assertTrue(text.endswith(SUFFIX.format(CONDITION)), text)
+        (record,) = self.staged(ctx)
+        self.assertIn(CONDITION, record.task_context.constraints)
+
+    def test_an_approval_without_text_keeps_no_condition(self) -> None:
+        # covers: UNKNOWN
+        # angle: boundary
+        inv, ctx, asked = self.asked()
+        cont = kept_after(self, inv, ctx, asked, {"choice_id": "approve", "free_text": "  "})
+        self.assertEqual(cont.conditions, [])
+
+    def test_two_conditions_give_two_suffixes_in_order(self) -> None:
+        # covers: UNKNOWN
+        # angle: boundary
+        # A first condition is already on the continuation (as an earlier answer would leave it).
+        inv, ctx, asked = self.asked()
+        state = {**asked.continuation_state, "conditions": ["first condition"]}
+        asked = asked.model_copy(update={"continuation_state": state})
+        done = self.answer(inv, ctx, asked, {"choice_id": "approve", "free_text": CONDITION})
+        text = narrow(done.decisions[0].rationale).text
+        self.assertTrue(
+            text.endswith(SUFFIX.format("first condition") + SUFFIX.format(CONDITION)), text)
+
+    def test_no_condition_leaves_the_gate_rationale_unchanged(self) -> None:
+        # covers: UNKNOWN
+        # angle: discrimination
+        inv, ctx, asked = self.asked()
+        done = self.answer(inv, ctx, asked, {"choice_id": "approve"})
+        text = narrow(done.decisions[0].rationale).text
+        self.assertEqual(text, "Option [A] Use sqlite satisfies the required criteria "
+                               f"['p1', 'p2'] according to evidence {[e.id for e in self.evidence]}.")
+
+    def test_the_report_rationale_carries_the_suffix_too(self) -> None:
+        # covers: UNKNOWN
+        # angle: seam
+        inv, ctx, asked = self.asked()
+        done = self.answer(inv, ctx, asked, {"choice_id": "approve", "free_text": CONDITION})
+        report = DecisionReportPayload.model_validate(done.output_payload)
+        text = narrow(report.rationale).text
+        self.assertTrue(text.endswith(SUFFIX.format(CONDITION)), text)
+
+    def test_an_unrecognised_approval_choice_is_recorded_and_keeps_no_text(self) -> None:
+        # covers: UNKNOWN
+        # angle: failure
+        inv, ctx, asked = self.asked()
+        response = {"choice_id": "maybe", "free_text": CONDITION}
+        cont = kept_after(self, inv, ctx, asked, response)
+        self.assertEqual((cont.conditions, cont.human_inputs), ([], []))
+        done = self.answer(inv, ctx, asked, response)
+        self.assertNotEqual(done.status, ResultStatus.COMPLETED)
+        self.assertIn("unrecognised approval answer 'maybe'", done.limitations)
+
+
+class TestUnusableChoiceKeepsNothingAtATie(TieCase):
+    """A choice that is not a usable option keeps neither its text nor a ruling at awaiting_human."""
+
+    def test_the_text_is_kept_nowhere_and_the_limitation_is_recorded(self) -> None:
+        # covers: UNKNOWN
+        # angle: discrimination
+        inv, ctx, waiting = self.ask()
+        response = {"choice_id": "nope", "free_text": CONDITION}
+        cont = kept_after(self, inv, ctx, waiting, response)
+        self.assertEqual((cont.conditions, cont.human_inputs), ([], []))
+        done = self.answer(inv, ctx, waiting, response)
+        self.assertNotEqual(done.decisions[0].status, DecisionStatus.RESOLVED)
+        self.assertIn("answer 'nope' is not a usable option", done.limitations)
+
+
+class TestUnusableChoiceKeepsNothingAtTheRankedQuestion(RankedGapCase):
+    """The same at awaiting_design_choice, where the text used to be kept as a condition."""
+
+    def test_the_text_is_kept_nowhere_and_the_limitation_is_recorded(self) -> None:
+        # covers: UNKNOWN
+        # angle: discrimination
+        inv, ctx, waiting = self.ask()
+        response = {"choice_id": "nope", "free_text": CONDITION}
+        cont = kept_after(self, inv, ctx, waiting, response)
+        self.assertEqual((cont.conditions, cont.human_inputs), ([], []))
+        done = self.answer(inv, ctx, waiting, response)
+        self.assertNotEqual(done.decisions[0].status, DecisionStatus.RESOLVED)
+        self.assertIn("answer 'nope' is not a usable option", done.limitations)
+
+
+class TestATieRulingDoesNotClaimAKernelRanking(TieCase):
+    """No ranking was shown at a tie, so the report must say a human ruled, not that it ranked."""
+
+    def test_the_limitation_names_the_human_ruling_and_not_a_kernel_ranking(self) -> None:
+        # covers: UNKNOWN
+        # angle: discrimination
+        inv, ctx, waiting = self.ask()
+        done = self.answer(inv, ctx, waiting, {"choice_id": "A"}, actor="human:ada")
+        limitations = DecisionReportPayload.model_validate(done.output_payload).limitations
+        self.assertIn("human ruling: human:ada chose [A] at a tie escalation", limitations)
+        self.assertFalse([x for x in limitations if "ranked by the kernel" in x], limitations)
+
+    def test_the_staged_basis_stays_kernel_ranking_with_an_empty_ranking(self) -> None:
+        # covers: UNKNOWN
+        # angle: boundary
+        # Current, documented behaviour: assessment.basis is a pinned vocabulary (the schema is a
+        # hash-pinned trusted asset), so a human ruling is still staged as kernel_ranking. A basis
+        # value for it needs a reviewed re-pin: the basis-vocabulary follow-up ticket.
+        inv, ctx, waiting = self.ask()
+        self.answer(inv, ctx, waiting, {"choice_id": "A"}, actor="human:ada")
+        (record,) = self.staged(ctx)
+        self.assertEqual(record.assessment.basis, "kernel_ranking")
+        self.assertEqual(list(record.assessment.ranking), [])
+
+
+class TestPrecedentReuseWithACondition(PrecedentCase):
+    """A condition stated earlier still ends the rationale when a precedent is then reused."""
+
+    def test_the_reuse_rationale_ends_with_the_condition(self) -> None:
+        # covers: UNKNOWN
+        # angle: seam
+        inv, ctx, waiting = self.goal()
+        self.assertEqual(waiting.continuation_state["phase"], "awaiting_precedent")
+        state = {**waiting.continuation_state, "conditions": [CONDITION]}
+        waiting = waiting.model_copy(update={"continuation_state": state})
+        done = self.answer(inv, ctx, waiting, {"choice_id": "reuse"}, actor="human:ada")
+        self.assertEqual(done.status, ResultStatus.COMPLETED)
+        text = narrow(done.decisions[0].rationale).text
+        self.assertTrue(text.endswith(SUFFIX.format(CONDITION)), text)
+
+    def test_no_condition_leaves_the_reuse_rationale_without_a_suffix(self) -> None:
+        # covers: UNKNOWN
+        # angle: boundary
+        inv, ctx, waiting = self.goal()
+        done = self.answer(inv, ctx, waiting, {"choice_id": "reuse"}, actor="human:ada")
+        self.assertNotIn("Condition stated", narrow(done.decisions[0].rationale).text)
