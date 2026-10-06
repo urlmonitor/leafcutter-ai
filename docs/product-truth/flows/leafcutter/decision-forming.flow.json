@@ -2749,7 +2749,7 @@
         "human_answer/free_text: null|string (optional; default null)"
       ],
       "impl_asof": "2026-10-06",
-      "impl_status": "in_progress",
+      "impl_status": "done",
       "io_contracts": {
         "consumes": [
           {
@@ -3617,7 +3617,7 @@
       ],
       "outcome_kind": "alternative",
       "impl_asof": "2026-10-06",
-      "impl_status": "in_progress",
+      "impl_status": "done",
       "io_contracts": {
         "consumes": [
           {
@@ -3892,7 +3892,7 @@
       ],
       "outcome_kind": "alternative",
       "impl_asof": "2026-10-06",
-      "impl_status": "in_progress",
+      "impl_status": "done",
       "io_contracts": {
         "consumes": [
           {
@@ -4005,7 +4005,7 @@
       ],
       "outcome_kind": "exit",
       "impl_asof": "2026-10-06",
-      "impl_status": "in_progress",
+      "impl_status": "done",
       "io_contracts": {
         "consumes": [
           {
@@ -6181,8 +6181,8 @@
     }
   ],
   "impl_summary": {
-    "done": 9,
-    "in_progress": 8,
+    "done": 13,
+    "in_progress": 4,
     "not_started": 21,
     "total": 38,
     "asof": "2026-10-06"

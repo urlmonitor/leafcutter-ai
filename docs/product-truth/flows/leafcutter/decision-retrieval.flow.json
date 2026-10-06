@@ -203,7 +203,7 @@
         "jev_result/usage: object (required)"
       ],
       "impl_asof": "2026-10-06",
-      "impl_status": "in_progress",
+      "impl_status": "done",
       "io_contracts": {
         "consumes": [
           {
@@ -342,7 +342,7 @@
         "Decision"
       ],
       "impl_asof": "2026-10-06",
-      "impl_status": "in_progress",
+      "impl_status": "done",
       "io_contracts": {
         "consumes": [
           {
@@ -776,7 +776,7 @@
         "leafcutter/decision-staging"
       ],
       "impl_asof": "2026-10-06",
-      "impl_status": "in_progress",
+      "impl_status": "done",
       "io_contracts": {
         "consumes": [
           {
@@ -1139,7 +1139,7 @@
       ],
       "outcome_kind": "alternative",
       "impl_asof": "2026-10-06",
-      "impl_status": "in_progress",
+      "impl_status": "done",
       "io_contracts": {
         "consumes": [
           {
@@ -1598,8 +1598,8 @@
     }
   ],
   "impl_summary": {
-    "done": 2,
-    "in_progress": 6,
+    "done": 6,
+    "in_progress": 2,
     "not_started": 0,
     "total": 8,
     "asof": "2026-10-06"

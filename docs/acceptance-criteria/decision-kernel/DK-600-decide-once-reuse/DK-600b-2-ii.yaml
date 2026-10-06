@@ -6,7 +6,7 @@ components:
 level: L3
 status: active
 req_status: draft
-work_status: in_progress
+work_status: done
 readiness: reviewed
 priority: medium
 roadmap_phase: phase_kernel_1_founding
@@ -62,20 +62,17 @@ test_spec:
     framework: unittest
     type: unit
     angle: criterion
-    description: 'TO WRITE (in tests/kernel/capabilities/test_design_ending.py): a free_text answer
-      to the ranked question leads to a new decision.assess call with the words among Jev''s constraints
-      and a new ranked question (phase awaiting_design_choice)'
+    description: 'EXISTS (tests/kernel/capabilities/test_design_ending.py::TestHumanChoiceResolves::test_a_words_answer_at_the_ranked_question_is_reassessed_and_ranked_again): a free_text answer to the ranked question leads to a second decision.assess call with the words among the Jev constraints and a new ranked question (phase awaiting_design_choice)'
     covers:
-      - DK-600b-2-ii
+    - DK-600b-2-ii
   - name: test_a_words_answer_never_resolves_the_decision
     target_dir: tests/kernel/capabilities/
     framework: unittest
     type: unit
     angle: failure
-    description: 'TO WRITE (in tests/kernel/capabilities/test_design_ending.py): ''pick the first
-      one, but only if ...'' leaves the decision unresolved and stages nothing'
+    description: 'EXISTS (tests/kernel/capabilities/test_design_ending.py::TestHumanChoiceResolves::test_a_words_answer_never_resolves_the_decision): ''pick the first one, but only if ...'' leaves the decision needs_human with nothing selected and no approver'
     covers:
-      - DK-600b-2-ii
+    - DK-600b-2-ii
 test_rationale: The behaviour is a property of the whole decision graph (revision change, re-assessment,
   new follow-up key), so the test drives the graph like TestHumanChoiceResolves does; a unit test
   of approvals.py alone would only show the text is stored.
@@ -111,8 +108,18 @@ amended_by:
       e89f0f74 (kernel/ and tests/kernel/ identical to origin/main). The evidence phase verifies each
       and adds the `# covers:` tags before anything is marked done.
     complexity_basis: 'remaining work: one graph-level test; a kernel change only if the test fails'
+  - reason: tests-written
+    by: python-coder
+    date: '2026-10-06'
+    ticket: tickets/00_inbox/TICKET-20261002-DecisionKernelACTestGaps.md
+    build_status: built_and_tested
+    test_pointers:
+    - tests/kernel/capabilities/test_design_ending.py::TestHumanChoiceResolves::test_a_words_answer_at_the_ranked_question_is_reassessed_and_ranked_again
+    - tests/kernel/capabilities/test_design_ending.py::TestHumanChoiceResolves::test_a_words_answer_never_resolves_the_decision
 superseded_by: null
-covered_by: []
+covered_by:
+  - tests/kernel/capabilities/test_design_ending.py::TestHumanChoiceResolves::test_a_words_answer_at_the_ranked_question_is_reassessed_and_ranked_again
+  - tests/kernel/capabilities/test_design_ending.py::TestHumanChoiceResolves::test_a_words_answer_never_resolves_the_decision
 implemented_by:
   - kernel/capabilities/decision/approvals.py#_apply_design_choice
   - kernel/capabilities/decision/state.py#Working.revision

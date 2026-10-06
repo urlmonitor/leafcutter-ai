@@ -236,7 +236,7 @@
         "leafcutter/decision-staging"
       ],
       "impl_asof": "2026-10-06",
-      "impl_status": "in_progress",
+      "impl_status": "done",
       "io_contracts": {
         "consumes": [
           {
@@ -420,7 +420,7 @@
         "leafcutter/decision-publishing"
       ],
       "impl_asof": "2026-10-06",
-      "impl_status": "in_progress",
+      "impl_status": "done",
       "io_contracts": {
         "consumes": [
           {
@@ -875,8 +875,8 @@
     }
   ],
   "impl_summary": {
-    "done": 0,
-    "in_progress": 4,
+    "done": 2,
+    "in_progress": 2,
     "not_started": 0,
     "total": 4,
     "asof": "2026-10-06"

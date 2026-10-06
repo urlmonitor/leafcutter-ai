@@ -6,7 +6,7 @@ components:
 level: L3
 status: active
 req_status: draft
-work_status: in_progress
+work_status: done
 readiness: reviewed
 priority: medium
 roadmap_phase: phase_kernel_1_founding
@@ -58,38 +58,33 @@ test_spec:
     framework: unittest
     type: unit
     angle: failure
-    description: 'EXISTS (tests/kernel/memory/test_publish_cli.py::TestPublish::test_an_invalid_staged_record_writes_nothing):
-      an unknown component: refused, nothing written'
+    description: 'EXISTS (tests/kernel/memory/test_publish_cli.py::TestPublish::test_an_invalid_staged_record_writes_nothing): an unknown component: refused, nothing written'
     covers:
-      - DK-600d-2-ii
+    - DK-600d-2-ii
   - name: test_a_filter_outside_the_vocabularies_is_reported
     target_dir: tests/kernel/memory/
     framework: unittest
     type: unit
     angle: failure
-    description: 'EXISTS (tests/kernel/memory/test_validate.py::TestRefusals::test_a_filter_outside_the_vocabularies_is_reported):
-      an unknown filter value is reported'
+    description: 'EXISTS (tests/kernel/memory/test_validate.py::TestRefusals::test_a_filter_outside_the_vocabularies_is_reported): an unknown filter value is reported'
     covers:
-      - DK-600d-2-ii
+    - DK-600d-2-ii
   - name: test_index_regenerates_the_index_and_refuses_an_invalid_record
     target_dir: tests/kernel/memory/
     framework: unittest
     type: unit
     angle: failure
-    description: 'EXISTS (tests/kernel/memory/test_publish_cli.py::TestCli::test_index_regenerates_the_index_and_refuses_an_invalid_record):
-      the index command exits 3 on an unknown component'
+    description: 'EXISTS (tests/kernel/memory/test_publish_cli.py::TestCli::test_index_regenerates_the_index_and_refuses_an_invalid_record): the index command exits 3 on an unknown component'
     covers:
-      - DK-600d-2-ii
-  - name: test_publish_names_an_unknown_phase_exits_3_and_succeeds_once_fixed
+    - DK-600d-2-ii
+  - name: test_an_unknown_filter_value_exits_3_names_it_and_the_fixed_record_publishes
     target_dir: tests/kernel/memory/
     framework: unittest
     type: unit
     angle: failure
-    description: 'TO WRITE (in tests/kernel/memory/test_publish_cli.py): CLI publish with roadmap_phase
-      phase_no_such_phase exits 3 naming the value, writes nothing, and the same command exits 0 after
-      the staged record names a known phase'
+    description: 'EXISTS (tests/kernel/memory/test_publish_cli.py::TestCli::test_an_unknown_filter_value_exits_3_names_it_and_the_fixed_record_publishes): CLI publish of a record naming no_such_component, then phase_no_such_phase: exit 3, the message names the value, docs/decisions is untouched, and the same command exits 0 once the record names known values'
     covers:
-      - DK-600d-2-ii
+    - DK-600d-2-ii
 delivers_to: null
 expects_from: null
 origin_agent: business-analyst
@@ -117,8 +112,22 @@ amended_by:
       e89f0f74 (kernel/ and tests/kernel/ identical to origin/main). The evidence phase verifies each
       and adds the `# covers:` tags before anything is marked done.
     complexity_basis: remaining work only (evidence, covers tags, gap closure)
+  - reason: tests-written
+    by: python-coder
+    date: '2026-10-06'
+    ticket: tickets/00_inbox/TICKET-20261002-DecisionKernelACTestGaps.md
+    build_status: built_and_tested
+    test_pointers:
+    - tests/kernel/memory/test_publish_cli.py::TestPublish::test_an_invalid_staged_record_writes_nothing
+    - tests/kernel/memory/test_validate.py::TestRefusals::test_a_filter_outside_the_vocabularies_is_reported
+    - tests/kernel/memory/test_publish_cli.py::TestCli::test_index_regenerates_the_index_and_refuses_an_invalid_record
+    - tests/kernel/memory/test_publish_cli.py::TestCli::test_an_unknown_filter_value_exits_3_names_it_and_the_fixed_record_publishes
 superseded_by: null
-covered_by: []
+covered_by:
+  - tests/kernel/memory/test_publish_cli.py::TestPublish::test_an_invalid_staged_record_writes_nothing
+  - tests/kernel/memory/test_validate.py::TestRefusals::test_a_filter_outside_the_vocabularies_is_reported
+  - tests/kernel/memory/test_publish_cli.py::TestCli::test_index_regenerates_the_index_and_refuses_an_invalid_record
+  - tests/kernel/memory/test_publish_cli.py::TestCli::test_an_unknown_filter_value_exits_3_names_it_and_the_fixed_record_publishes
 implemented_by:
   - kernel/memory/vocab.py#Vocabulary.unknown
   - kernel/memory/validate.py#semantic_problems

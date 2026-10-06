@@ -6,7 +6,7 @@ components:
 level: L3
 status: active
 req_status: draft
-work_status: in_progress
+work_status: done
 readiness: reviewed
 priority: medium
 roadmap_phase: phase_kernel_1_founding
@@ -68,48 +68,41 @@ test_spec:
     framework: unittest
     type: unit
     angle: criterion
-    description: 'EXISTS (tests/kernel/capabilities/test_decision_criteria_proposals.py::TestOptionsAndCriteriaProposals::test_subset_approval_declines_the_unlisted_proposal):
-      an unlisted proposal is declined and not assessed'
+    description: 'EXISTS (tests/kernel/capabilities/test_decision_criteria_proposals.py::TestOptionsAndCriteriaProposals::test_subset_approval_declines_the_unlisted_proposal): an unlisted proposal is declined and not assessed'
     covers:
-      - DK-600b-1-i
+    - DK-600b-1-i
   - name: test_edited_criteria_replace_the_proposals
     target_dir: tests/kernel/capabilities/
     framework: unittest
     type: unit
     angle: criterion
-    description: 'EXISTS (tests/kernel/capabilities/test_decision_criteria_proposals.py::TestOptionsAndCriteriaProposals::test_edited_criteria_replace_the_proposals):
-      edited criteria are assessed in the human''s wording'
+    description: 'EXISTS (tests/kernel/capabilities/test_decision_criteria_proposals.py::TestOptionsAndCriteriaProposals::test_edited_criteria_replace_the_proposals): edited criteria are assessed in the human''s wording'
     covers:
-      - DK-600b-1-i
+    - DK-600b-1-i
   - name: test_edited_criteria_are_approved_by_the_answering_actor
     target_dir: tests/kernel/capabilities/
     framework: unittest
     type: unit
     angle: criterion
-    description: 'EXISTS (tests/kernel/capabilities/test_decision_criteria_proposals.py::TestOptionsAndCriteriaProposals::test_edited_criteria_are_approved_by_the_answering_actor):
-      edited criteria are supplied and approved by the answering actor'
+    description: 'EXISTS (tests/kernel/capabilities/test_decision_criteria_proposals.py::TestOptionsAndCriteriaProposals::test_edited_criteria_are_approved_by_the_answering_actor): edited criteria are supplied and approved by the answering actor'
     covers:
-      - DK-600b-1-i
+    - DK-600b-1-i
   - name: test_a_human_adds_an_option_at_approval
     target_dir: tests/kernel/grounding/
     framework: unittest
     type: integration
     angle: criterion
-    description: 'EXISTS (tests/kernel/grounding/test_round5.py::TestAddedOptionsEndToEnd::test_a_human_adds_an_option_at_approval):
-      an option added at approval reaches the assessment'
+    description: 'EXISTS (tests/kernel/grounding/test_round5.py::TestAddedOptionsEndToEnd::test_a_human_adds_an_option_at_approval): an option added at approval reaches the assessment'
     covers:
-      - DK-600b-1-i
-  - name: test_a_revised_approval_researches_and_assesses_only_the_revised_set
+    - DK-600b-1-i
+  - name: test_one_answer_applies_a_subset_a_reworded_criterion_and_an_added_option
     target_dir: tests/kernel/capabilities/
     framework: unittest
     type: unit
     angle: criterion
-    description: 'TO WRITE (in tests/kernel/capabilities/test_decision_criteria_proposals.py): one
-      answer approving 3 of 4 options, rewording one criterion and adding an option: the added option
-      is opt.added.1 proposed_by the human, and the declined option is in neither the research request
-      nor the assessment batch'
+    description: 'EXISTS (tests/kernel/capabilities/test_decision_criteria_proposals.py::TestOptionsAndCriteriaProposals::test_one_answer_applies_a_subset_a_reworded_criterion_and_an_added_option): one answer approves 3 of 4 options, rewords crit.small_slice (listing all 5 criteria) and adds an option: the added option is opt.added.1 proposed_by human:user, and the declined option is in neither the research request nor the assessment batch'
     covers:
-      - DK-600b-1-i
+    - DK-600b-1-i
 delivers_to: null
 expects_from: null
 origin_agent: business-analyst
@@ -146,8 +139,30 @@ amended_by:
       e89f0f74 (kernel/ and tests/kernel/ identical to origin/main). The evidence phase verifies each
       and adds the `# covers:` tags before anything is marked done.
     complexity_basis: remaining work only (evidence, covers tags, gap closure)
+  - reason: tests-written
+    by: python-coder
+    date: '2026-10-06'
+    ticket: tickets/00_inbox/TICKET-20261002-DecisionKernelACTestGaps.md
+    build_status: built_and_tested
+    test_pointers:
+    - tests/kernel/capabilities/test_decision_criteria_proposals.py::TestOptionsAndCriteriaProposals::test_subset_approval_declines_the_unlisted_proposal
+    - tests/kernel/capabilities/test_decision_criteria_proposals.py::TestOptionsAndCriteriaProposals::test_edited_criteria_replace_the_proposals
+    - tests/kernel/capabilities/test_decision_criteria_proposals.py::TestOptionsAndCriteriaProposals::test_edited_criteria_are_approved_by_the_answering_actor
+    - tests/kernel/grounding/test_round5.py::TestAddedOptionsEndToEnd::test_a_human_adds_an_option_at_approval
+    - tests/kernel/interaction/test_criteria_approval.py::TestStructuredApproval::test_subset_approval_makes_only_the_listed_criteria_usable
+    - tests/kernel/interaction/test_criteria_approval.py::TestStructuredApproval::test_edited_criteria_become_human_supplied_and_approved_by_the_human
+    - tests/kernel/decision_research/test_design_round.py::TestOneTargetedRoundBeforeRanking::test_a_human_added_option_has_its_claims_checked_in_that_round
+    - tests/kernel/capabilities/test_decision_criteria_proposals.py::TestOptionsAndCriteriaProposals::test_one_answer_applies_a_subset_a_reworded_criterion_and_an_added_option
 superseded_by: null
-covered_by: []
+covered_by:
+  - tests/kernel/capabilities/test_decision_criteria_proposals.py::TestOptionsAndCriteriaProposals::test_subset_approval_declines_the_unlisted_proposal
+  - tests/kernel/capabilities/test_decision_criteria_proposals.py::TestOptionsAndCriteriaProposals::test_edited_criteria_replace_the_proposals
+  - tests/kernel/capabilities/test_decision_criteria_proposals.py::TestOptionsAndCriteriaProposals::test_edited_criteria_are_approved_by_the_answering_actor
+  - tests/kernel/grounding/test_round5.py::TestAddedOptionsEndToEnd::test_a_human_adds_an_option_at_approval
+  - tests/kernel/interaction/test_criteria_approval.py::TestStructuredApproval::test_subset_approval_makes_only_the_listed_criteria_usable
+  - tests/kernel/interaction/test_criteria_approval.py::TestStructuredApproval::test_edited_criteria_become_human_supplied_and_approved_by_the_human
+  - tests/kernel/decision_research/test_design_round.py::TestOneTargetedRoundBeforeRanking::test_a_human_added_option_has_its_claims_checked_in_that_round
+  - tests/kernel/capabilities/test_decision_criteria_proposals.py::TestOptionsAndCriteriaProposals::test_one_answer_applies_a_subset_a_reworded_criterion_and_an_added_option
 implemented_by:
   - kernel/capabilities/decision/approvals.py#_apply_structured
   - kernel/capabilities/decision/approvals.py#_added_options

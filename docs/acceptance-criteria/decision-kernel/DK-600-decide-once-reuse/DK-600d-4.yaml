@@ -6,7 +6,7 @@ components:
 level: L2
 status: active
 req_status: draft
-work_status: in_progress
+work_status: done
 readiness: reviewed
 priority: medium
 roadmap_phase: phase_kernel_1_founding
@@ -85,37 +85,49 @@ test_spec:
     framework: unittest
     type: integration
     angle: criterion
-    description: 'EXISTS (tests/kernel/memory/test_learning_loop_e2e.py::TestRunTwoReusesThePrecedent::test_the_same_goal_reuses_the_precedent_with_far_fewer_calls_and_no_host_work):
-      a published record is found by a later run''s lookup'
+    description: 'EXISTS (tests/kernel/memory/test_learning_loop_e2e.py::TestRunTwoReusesThePrecedent::test_the_same_goal_reuses_the_precedent_with_far_fewer_calls_and_no_host_work): a published record is found by a later run''s lookup'
     covers:
-      - DK-600d-4
+    - DK-600d-4
   - name: test_the_first_record_is_the_decision_that_chose_the_format
     target_dir: tests/kernel/memory/
     framework: unittest
     type: unit
     angle: real_artifact
-    description: 'EXISTS (tests/kernel/memory/test_committed_store.py::TestCommittedStore::test_the_first_record_is_the_decision_that_chose_the_format):
-      dec-ef8ddcb79d668a67, merged with PR #978, is in the committed store'
+    description: 'EXISTS (tests/kernel/memory/test_committed_store.py::TestCommittedStore::test_the_first_record_is_the_decision_that_chose_the_format): dec-ef8ddcb79d668a67, merged with PR #978, is in the committed store'
     covers:
-      - DK-600d-4
+    - DK-600d-4
   - name: test_the_committed_store_validates_and_its_index_is_current
     target_dir: tests/kernel/memory/
     framework: unittest
     type: unit
     angle: real_artifact
-    description: 'EXISTS (tests/kernel/memory/test_committed_store.py::TestCommittedStore::test_the_committed_store_validates_and_its_index_is_current):
-      the merged store and its index validate'
+    description: 'EXISTS (tests/kernel/memory/test_committed_store.py::TestCommittedStore::test_the_committed_store_validates_and_its_index_is_current): the merged store and its index validate'
     covers:
-      - DK-600d-4
-  - name: test_publish_makes_no_git_call
+    - DK-600d-4
+  - name: test_publish_changes_only_the_record_and_the_index_and_no_git_state
+    target_dir: tests/kernel/memory/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: 'EXISTS (tests/kernel/memory/test_publish_cli.py::TestPublishChangesOnlyTheStoreAndLeavesGitAlone::test_publish_changes_only_the_record_and_the_index_and_no_git_state): in a real git checkout publish changes only docs/decisions/<id>.yaml and index.json; HEAD, the staging area and every ref are unchanged'
+    covers:
+    - DK-600d-4
+  - name: test_kernel_memory_imports_no_subprocess_or_git_and_makes_no_shell_call
     target_dir: tests/kernel/memory/
     framework: unittest
     type: unit
     angle: failure
-    description: 'TO WRITE (in tests/kernel/memory/test_publish_cli.py): with subprocess.run patched
-      to fail on any call, publish succeeds: no commit, push or merge'
+    description: 'EXISTS (tests/kernel/memory/test_publish_cli.py::TestPublishChangesOnlyTheStoreAndLeavesGitAlone::test_kernel_memory_imports_no_subprocess_or_git_and_makes_no_shell_call): kernel/memory/ imports no subprocess or git module and makes no os.system or popen call'
     covers:
-      - DK-600d-4
+    - DK-600d-4
+  - name: test_a_published_record_is_found_by_a_later_lookup_through_the_index
+    target_dir: tests/kernel/memory/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: 'EXISTS (tests/kernel/memory/test_publish_cli.py::TestPublishChangesOnlyTheStoreAndLeavesGitAlone::test_a_published_record_is_found_by_a_later_lookup_through_the_index): a store produced by publish is read through docs/decisions/index.json and the record is returned as a precedent candidate'
+    covers:
+    - DK-600d-4
 delivers_to: null
 expects_from: null
 origin_agent: business-analyst
@@ -158,8 +170,26 @@ amended_by:
     by: business-analyst
     ticket: tickets/00_inbox/TICKET-20261002-DecisionLifecycleACs.md
     pr: '#1004'
+  - reason: tests-written
+    by: python-coder
+    date: '2026-10-06'
+    ticket: tickets/00_inbox/TICKET-20261002-DecisionKernelACTestGaps.md
+    build_status: built_and_tested
+    test_pointers:
+    - tests/kernel/memory/test_learning_loop_e2e.py::TestRunTwoReusesThePrecedent::test_the_same_goal_reuses_the_precedent_with_far_fewer_calls_and_no_host_work
+    - tests/kernel/memory/test_committed_store.py::TestCommittedStore::test_the_first_record_is_the_decision_that_chose_the_format
+    - tests/kernel/memory/test_committed_store.py::TestCommittedStore::test_the_committed_store_validates_and_its_index_is_current
+    - tests/kernel/memory/test_publish_cli.py::TestPublishChangesOnlyTheStoreAndLeavesGitAlone::test_publish_changes_only_the_record_and_the_index_and_no_git_state
+    - tests/kernel/memory/test_publish_cli.py::TestPublishChangesOnlyTheStoreAndLeavesGitAlone::test_kernel_memory_imports_no_subprocess_or_git_and_makes_no_shell_call
+    - tests/kernel/memory/test_publish_cli.py::TestPublishChangesOnlyTheStoreAndLeavesGitAlone::test_a_published_record_is_found_by_a_later_lookup_through_the_index
 superseded_by: null
-covered_by: []
+covered_by:
+  - tests/kernel/memory/test_learning_loop_e2e.py::TestRunTwoReusesThePrecedent::test_the_same_goal_reuses_the_precedent_with_far_fewer_calls_and_no_host_work
+  - tests/kernel/memory/test_committed_store.py::TestCommittedStore::test_the_first_record_is_the_decision_that_chose_the_format
+  - tests/kernel/memory/test_committed_store.py::TestCommittedStore::test_the_committed_store_validates_and_its_index_is_current
+  - tests/kernel/memory/test_publish_cli.py::TestPublishChangesOnlyTheStoreAndLeavesGitAlone::test_publish_changes_only_the_record_and_the_index_and_no_git_state
+  - tests/kernel/memory/test_publish_cli.py::TestPublishChangesOnlyTheStoreAndLeavesGitAlone::test_kernel_memory_imports_no_subprocess_or_git_and_makes_no_shell_call
+  - tests/kernel/memory/test_publish_cli.py::TestPublishChangesOnlyTheStoreAndLeavesGitAlone::test_a_published_record_is_found_by_a_later_lookup_through_the_index
 implemented_by:
   - kernel/memory/publish.py#publish
   - kernel/memory/file_store.py#FileColonyMemory.find_decisions

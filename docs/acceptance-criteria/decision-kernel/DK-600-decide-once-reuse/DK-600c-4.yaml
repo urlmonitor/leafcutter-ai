@@ -6,7 +6,7 @@ components:
 level: L2
 status: active
 req_status: draft
-work_status: in_progress
+work_status: done
 readiness: reviewed
 priority: medium
 roadmap_phase: phase_kernel_1_founding
@@ -71,39 +71,33 @@ test_spec:
     framework: unittest
     type: integration
     angle: criterion
-    description: 'EXISTS (tests/kernel/memory/test_learning_loop_e2e.py::TestRunOneStagesARecordThatPublishFiles::test_a_human_choice_stages_a_record_and_nothing_is_written_to_the_repository):
-      the envelope limitation starts ''decision record staged:'' and names ''python -m kernel decisions
-      publish --run-id <run>'''
+    description: 'EXISTS (tests/kernel/memory/test_learning_loop_e2e.py::TestRunOneStagesARecordThatPublishFiles::test_a_human_choice_stages_a_record_and_nothing_is_written_to_the_repository): the envelope limitation starts ''decision record staged:'' and names ''python -m kernel decisions publish --run-id <run>'''
     covers:
-      - DK-600c-4
+    - DK-600c-4
   - name: test_reuse_stages_a_new_record_citing_the_precedent
     target_dir: tests/kernel/memory/
     framework: unittest
     type: unit
     angle: criterion
-    description: 'EXISTS (tests/kernel/memory/test_decision_precedent.py::TestAMatchingPrecedentBeforeAnyBasis::test_reuse_stages_a_new_record_citing_the_precedent):
-      exactly one staged-note limitation, also in the report'
+    description: 'EXISTS (tests/kernel/memory/test_decision_precedent.py::TestAMatchingPrecedentBeforeAnyBasis::test_reuse_stages_a_new_record_citing_the_precedent): exactly one staged-note limitation, also in the report'
     covers:
-      - DK-600c-4
+    - DK-600c-4
   - name: test_bash_is_limited_to_run_resume_and_status
     target_dir: tests/kernel/adapters/
     framework: unittest
     type: unit
     angle: failure
-    description: 'EXISTS (tests/kernel/adapters/test_skill_scope.py::TestAllowedToolsScope::test_bash_is_limited_to_run_resume_and_status):
-      the /leafcutter skill cannot run decisions publish unprompted'
+    description: 'EXISTS (tests/kernel/adapters/test_skill_scope.py::TestAllowedToolsScope::test_bash_is_limited_to_run_resume_and_status): the /leafcutter skill cannot run decisions publish unprompted'
     covers:
-      - DK-600c-4
-  - name: test_the_leafcutter_skill_shows_but_never_runs_the_publish_command
+    - DK-600c-4
+  - name: test_both_skills_tell_the_host_to_show_the_publish_command_and_not_run_it
     target_dir: tests/kernel/adapters/host_skills/
     framework: unittest
     type: unit
     angle: criterion
-    description: 'TO WRITE (in tests/kernel/adapters/host_skills/test_render_hosts.py): the rendered
-      Claude Code skill contains the ''decision record staged'' rule, ''Do NOT run it'' and ''decisions
-      publish'' among the user''s commands (the Codex skill already has this test)'
+    description: 'EXISTS (tests/kernel/adapters/host_skills/test_render_hosts.py::TestSkillsShowTheStagedRecordCommandAndNeverRunIt::test_both_skills_tell_the_host_to_show_the_publish_command_and_not_run_it): the rendered Claude Code and Codex skills carry the ''decision record staged'' rule: tell the user the record is ready, show the command, Do NOT run it'
     covers:
-      - DK-600c-4
+    - DK-600c-4
 delivers_to: null
 expects_from:
   ac_id: DK-600c-3
@@ -138,8 +132,24 @@ amended_by:
       e89f0f74 (kernel/ and tests/kernel/ identical to origin/main). The evidence phase verifies each
       and adds the `# covers:` tags before anything is marked done.
     complexity_basis: remaining work only (evidence, covers tags, gap closure)
+  - reason: tests-written
+    by: python-coder
+    date: '2026-10-06'
+    ticket: tickets/00_inbox/TICKET-20261002-DecisionKernelACTestGaps.md
+    build_status: built_and_tested
+    test_pointers:
+    - tests/kernel/memory/test_learning_loop_e2e.py::TestRunOneStagesARecordThatPublishFiles::test_a_human_choice_stages_a_record_and_nothing_is_written_to_the_repository
+    - tests/kernel/memory/test_decision_precedent.py::TestAMatchingPrecedentBeforeAnyBasis::test_reuse_stages_a_new_record_citing_the_precedent
+    - tests/kernel/adapters/test_skill_scope.py::TestAllowedToolsScope::test_bash_is_limited_to_run_resume_and_status
+    - tests/kernel/adapters/host_skills/test_render_hosts.py::TestCodexSkill::test_keeps_the_transport_rules
+    - tests/kernel/adapters/host_skills/test_render_hosts.py::TestSkillsShowTheStagedRecordCommandAndNeverRunIt::test_both_skills_tell_the_host_to_show_the_publish_command_and_not_run_it
 superseded_by: null
-covered_by: []
+covered_by:
+  - tests/kernel/memory/test_learning_loop_e2e.py::TestRunOneStagesARecordThatPublishFiles::test_a_human_choice_stages_a_record_and_nothing_is_written_to_the_repository
+  - tests/kernel/memory/test_decision_precedent.py::TestAMatchingPrecedentBeforeAnyBasis::test_reuse_stages_a_new_record_citing_the_precedent
+  - tests/kernel/adapters/test_skill_scope.py::TestAllowedToolsScope::test_bash_is_limited_to_run_resume_and_status
+  - tests/kernel/adapters/host_skills/test_render_hosts.py::TestCodexSkill::test_keeps_the_transport_rules
+  - tests/kernel/adapters/host_skills/test_render_hosts.py::TestSkillsShowTheStagedRecordCommandAndNeverRunIt::test_both_skills_tell_the_host_to_show_the_publish_command_and_not_run_it
 implemented_by:
   - kernel/capabilities/decision/executor.py#_stage
   - kernel/adapters/claude_code/SKILL.md

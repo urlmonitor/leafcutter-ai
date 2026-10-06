@@ -1,6 +1,6 @@
 ---
 title: "Decision kernel: tests for the 12 partly-tested ACs and DK-600b-2-ii, so each can be marked done"
-status: todo
+status: done
 components:
   - decision_kernel
 created: 2026-10-02
@@ -15,10 +15,11 @@ tags:
   - decision-kernel
   - acceptance-criteria
   - tests
-last_updated: 2026-10-02
+last_updated: 2026-10-06
 agents:
-  test-writer: needed
-  commit: needed
+  python-coder: signed_off
+  test-writer: not_needed
+  commit: not_needed
 ---
 
 # Decision kernel: tests for the 12 partly-tested ACs and DK-600b-2-ii, so each can be marked done
@@ -51,4 +52,28 @@ One test (or small group) per AC:
 - `DK-600a-3` and `DK-600e-3-i`: they are partly built, not only untested (`TICKET-20261002-KernelSynthesisCitationCheck`, `TICKET-20261002-KernelSupersedePublishCorrect`).
 - The documentation ACs.
 
+## Sign-offs
+
+- [x] python-coder — 2026-10-06 06:39
+
 ## Comments
+
+### 2026-10-06 06:39 — python-coder (status: ok)
+feedback-id: fb_2026-10-06_00b44d28
+Wrote the missing tests for the DK-600 decision-lifecycle ACs against the real kernel rigs (nothing committed, no kernel code changed). Deviation: the dispatch asked python-coder to author the tests directly, so `test-writer` is `not_needed`; `commit` is `not_needed` because the user commits.
+- **Tests written** (each carries `# covers: <id>`; the existing it-po cited tests were tagged too, comment-only):
+  - b-1-i: test_decision_criteria_proposals::test_one_answer_applies_a_subset_a_reworded_criterion_and_an_added_option
+  - b-2-ii: test_design_ending::test_a_words_answer_at_the_ranked_question_is_reassessed_and_ranked_again, ::test_a_words_answer_never_resolves_the_decision
+  - b-2-iii: test_learning_loop_e2e::test_cancelling_at_the_ranked_question_stages_no_record
+  - c-2-i: test_builder::test_the_refusal_names_the_failed_condition, ::test_a_named_human_and_the_bare_human_actor_are_both_built
+  - c-2: test_decision_precedent::test_the_staged_record_names_model_kernel_and_repository_versions
+  - c-3: test_learning_loop_e2e::test_a_staging_run_leaves_git_status_unchanged
+  - c-4 and d-1: test_render_hosts (five tests: staged rule in both skills, publish named as the user's command, Claude Code allowed-tools, Codex rules file, Codex how-to)
+  - d-1-i: test_publish_cli::test_a_staged_record_that_is_not_published_is_never_found, test_learning_loop_e2e::test_a_record_kept_staged_is_never_found_as_precedent
+  - d-2-ii: test_publish_cli::test_an_unknown_filter_value_exits_3_names_it_and_the_fixed_record_publishes
+  - d-4: test_publish_cli (git checkout unchanged but for record and index, kernel/memory imports no subprocess or git, lookup after publish)
+  - e-2 and e-3-ii: test_precedent_units (0.5, overridden threshold, 0.79) and the new test_precedent_thresholds (executor level, max_precedents)
+- **Marked done through `mark_ac_done.py --test-root tests` (16):** DK-600b-1-i, b-2-ii, b-2-iii, c-2-i, c-2, c-3, c-4, d-1-i, d-1, d-2-ii, d-4, e-3-ii and the composites b-1, b-2, d-2.
+- **Held back, `in_progress`:** DK-600e-2. Thresholds, the exact 0.5 edge, an overridden threshold and the max_precedents bound are tested, but the criteria quote the literal Jev question "does this earlier decision apply here?" and the kernel asks "Does the previous decision in `precedents.<id>` apply to the current `question` in its context?". Needs the business-analyst to reword the criterion (as for DK-600d-1 and DK-600d-4), or a kernel change; no kernel code was touched here.
+- **Behaviour checked, matched the criteria:** DK-600b-2-ii (the words are a Jev constraint, a second assessment runs, a new ranked question follows, nothing is selected). Docs still say otherwise: `docs/how-to/run-the-decision-kernel.md` calls a words answer "recorded only" (see TICKET-20261002-RunKernelHowToFreeTextReRank).
+- **Baseline:** the 18 previously done ACs' cited tests were re-run after the merge with main (all green) and their `implemented_by` symbols re-resolved. The two failures in `tests/kernel` (`test_host_operations::test_every_host_capability_of_the_design_has_an_operation`, `test_retrieval_live_misses::test_the_design_folder_is_fully_considered_and_the_record_part_is_found`) are not cited by any DK-600 AC and come from main.

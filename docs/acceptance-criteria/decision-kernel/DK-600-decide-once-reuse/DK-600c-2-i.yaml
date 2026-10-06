@@ -6,7 +6,7 @@ components:
 level: L3
 status: active
 req_status: draft
-work_status: in_progress
+work_status: done
 readiness: reviewed
 priority: medium
 roadmap_phase: phase_kernel_1_founding
@@ -59,55 +59,57 @@ test_spec:
     framework: unittest
     type: unit
     angle: failure
-    description: 'EXISTS (tests/kernel/memory/test_builder.py::TestRefusesWhatAHumanDidNotApprove::test_a_host_or_model_approver_is_refused):
-      jev, host and other machine approvers refused'
+    description: 'EXISTS (tests/kernel/memory/test_builder.py::TestRefusesWhatAHumanDidNotApprove::test_a_host_or_model_approver_is_refused): jev, host and other machine approvers refused'
     covers:
-      - DK-600c-2-i
+    - DK-600c-2-i
   - name: test_a_missing_approval_time_is_refused
     target_dir: tests/kernel/memory/
     framework: unittest
     type: unit
     angle: failure
-    description: 'EXISTS (tests/kernel/memory/test_builder.py::TestRefusesWhatAHumanDidNotApprove::test_a_missing_approval_time_is_refused):
-      no approved_at is refused'
+    description: 'EXISTS (tests/kernel/memory/test_builder.py::TestRefusesWhatAHumanDidNotApprove::test_a_missing_approval_time_is_refused): no approved_at is refused'
     covers:
-      - DK-600c-2-i
+    - DK-600c-2-i
   - name: test_the_record_is_valid_by_the_schema_and_carries_the_approval
     target_dir: tests/kernel/memory/
     framework: unittest
     type: unit
     angle: criterion
-    description: 'EXISTS (tests/kernel/memory/test_builder.py::TestBuildsFromAHumanApprovedDecision::test_the_record_is_valid_by_the_schema_and_carries_the_approval):
-      human:<id> with approved_at is built'
+    description: 'EXISTS (tests/kernel/memory/test_builder.py::TestBuildsFromAHumanApprovedDecision::test_the_record_is_valid_by_the_schema_and_carries_the_approval): human:<id> with approved_at is built'
     covers:
-      - DK-600c-2-i
+    - DK-600c-2-i
   - name: test_a_bare_actor_id_becomes_a_human_actor
     target_dir: tests/kernel/memory/
     framework: unittest
     type: unit
     angle: criterion
-    description: 'EXISTS (tests/kernel/memory/test_builder.py::TestHelpers::test_a_bare_actor_id_becomes_a_human_actor):
-      the bare actor ''human'' is accepted as an approver'
+    description: 'EXISTS (tests/kernel/memory/test_builder.py::TestHelpers::test_a_bare_actor_id_becomes_a_human_actor): the bare actor ''human'' is accepted as an approver'
     covers:
-      - DK-600c-2-i
+    - DK-600c-2-i
   - name: test_a_non_human_approver_is_refused
     target_dir: tests/kernel/memory/
     framework: unittest
     type: unit
     angle: failure
-    description: 'EXISTS (tests/kernel/memory/test_record_model.py::TestRecordConsistency::test_a_non_human_approver_is_refused):
-      the record model refuses a non-human approver'
+    description: 'EXISTS (tests/kernel/memory/test_record_model.py::TestRecordConsistency::test_a_non_human_approver_is_refused): the record model refuses a non-human approver'
     covers:
-      - DK-600c-2-i
+    - DK-600c-2-i
   - name: test_the_refusal_names_the_failed_condition
     target_dir: tests/kernel/memory/
     framework: unittest
     type: unit
     angle: failure
-    description: 'TO WRITE (in tests/kernel/memory/test_builder.py): the NotApproved reason distinguishes
-      ''no human approver'' from ''no approved_at time'''
+    description: 'EXISTS (tests/kernel/memory/test_builder.py::TestRefusesWhatAHumanDidNotApprove::test_the_refusal_names_the_failed_condition): the NotApproved reason names ''no human approver'' for jev and host and ''approved_at'' for a missing approval time, never both'
     covers:
-      - DK-600c-2-i
+    - DK-600c-2-i
+  - name: test_a_named_human_and_the_bare_human_actor_are_both_built
+    target_dir: tests/kernel/memory/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: 'EXISTS (tests/kernel/memory/test_builder.py::TestRefusesWhatAHumanDidNotApprove::test_a_named_human_and_the_bare_human_actor_are_both_built): human:user and the bare actor human, each with approved_at, are built through build_decision_record and validate against the schema'
+    covers:
+    - DK-600c-2-i
 delivers_to: null
 expects_from: null
 origin_agent: business-analyst
@@ -138,8 +140,28 @@ amended_by:
       e89f0f74 (kernel/ and tests/kernel/ identical to origin/main). The evidence phase verifies each
       and adds the `# covers:` tags before anything is marked done.
     complexity_basis: remaining work only (evidence, covers tags, gap closure)
+  - reason: tests-written
+    by: python-coder
+    date: '2026-10-06'
+    ticket: tickets/00_inbox/TICKET-20261002-DecisionKernelACTestGaps.md
+    build_status: built_and_tested
+    test_pointers:
+    - tests/kernel/memory/test_builder.py::TestRefusesWhatAHumanDidNotApprove::test_a_host_or_model_approver_is_refused
+    - tests/kernel/memory/test_builder.py::TestRefusesWhatAHumanDidNotApprove::test_a_missing_approval_time_is_refused
+    - tests/kernel/memory/test_builder.py::TestBuildsFromAHumanApprovedDecision::test_the_record_is_valid_by_the_schema_and_carries_the_approval
+    - tests/kernel/memory/test_builder.py::TestHelpers::test_a_bare_actor_id_becomes_a_human_actor
+    - tests/kernel/memory/test_record_model.py::TestRecordConsistency::test_a_non_human_approver_is_refused
+    - tests/kernel/memory/test_builder.py::TestRefusesWhatAHumanDidNotApprove::test_the_refusal_names_the_failed_condition
+    - tests/kernel/memory/test_builder.py::TestRefusesWhatAHumanDidNotApprove::test_a_named_human_and_the_bare_human_actor_are_both_built
 superseded_by: null
-covered_by: []
+covered_by:
+  - tests/kernel/memory/test_builder.py::TestRefusesWhatAHumanDidNotApprove::test_a_host_or_model_approver_is_refused
+  - tests/kernel/memory/test_builder.py::TestRefusesWhatAHumanDidNotApprove::test_a_missing_approval_time_is_refused
+  - tests/kernel/memory/test_builder.py::TestBuildsFromAHumanApprovedDecision::test_the_record_is_valid_by_the_schema_and_carries_the_approval
+  - tests/kernel/memory/test_builder.py::TestHelpers::test_a_bare_actor_id_becomes_a_human_actor
+  - tests/kernel/memory/test_record_model.py::TestRecordConsistency::test_a_non_human_approver_is_refused
+  - tests/kernel/memory/test_builder.py::TestRefusesWhatAHumanDidNotApprove::test_the_refusal_names_the_failed_condition
+  - tests/kernel/memory/test_builder.py::TestRefusesWhatAHumanDidNotApprove::test_a_named_human_and_the_bare_human_actor_are_both_built
 implemented_by:
   - kernel/memory/builder.py#_approval
   - kernel/memory/builder.py#NotApproved

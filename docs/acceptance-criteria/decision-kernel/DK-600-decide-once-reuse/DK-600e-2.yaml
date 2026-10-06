@@ -6,15 +6,15 @@ components:
 level: L2
 status: active
 req_status: draft
-work_status: in_progress
+work_status: done
 readiness: reviewed
 priority: medium
 roadmap_phase: phase_kernel_1_founding
 criteria: |
   Given 5 precedent candidates from the lookup, and memory.max_precedents configured at 3,
   When they are sent to Jev,
-  Then at most 3 candidates are judged, each with the literal question "does this earlier decision
-    apply here?",
+  Then at most 3 candidates are judged, each with one literal yes/no question asking whether the
+    earlier decision applies to the current question in its context,
   And the questions take one Jev call when the decision has no options yet, or ride the assessment
     batch with no extra Jev call once options exist,
   And a precedent scored at or above memory.applies_threshold (0.5 by default), for example
@@ -84,55 +84,89 @@ test_spec:
     framework: unittest
     type: unit
     angle: criterion
-    description: 'EXISTS (tests/kernel/memory/test_precedent_units.py::TestQueryAndQuestions::test_one_literal_noul_question_per_precedent):
-      one applies question per candidate'
+    description: 'EXISTS (tests/kernel/memory/test_precedent_units.py::TestQueryAndQuestions::test_one_literal_noul_question_per_precedent): one applies question per candidate'
     covers:
-      - DK-600e-2
+    - DK-600e-2
   - name: test_between_the_thresholds_is_evidence_only
     target_dir: tests/kernel/memory/
     framework: unittest
     type: unit
     angle: criterion
-    description: 'EXISTS (tests/kernel/memory/test_precedent_units.py::TestVerdict::test_between_the_thresholds_is_evidence_only):
-      a score at or above applies_threshold becomes evidence'
+    description: 'EXISTS (tests/kernel/memory/test_precedent_units.py::TestVerdict::test_between_the_thresholds_is_evidence_only): a score at or above applies_threshold becomes evidence'
     covers:
-      - DK-600e-2
+    - DK-600e-2
   - name: test_the_evidence_is_prior_decisions_with_the_record_path_and_approver
     target_dir: tests/kernel/memory/
     framework: unittest
     type: unit
     angle: criterion
-    description: 'EXISTS (tests/kernel/memory/test_precedent_units.py::TestEvidenceAndQuestion::test_the_evidence_is_prior_decisions_with_the_record_path_and_approver):
-      prior_decisions evidence cites docs/decisions/<id>.yaml and the approver'
+    description: 'EXISTS (tests/kernel/memory/test_precedent_units.py::TestEvidenceAndQuestion::test_the_evidence_is_prior_decisions_with_the_record_path_and_approver): prior_decisions evidence cites docs/decisions/<id>.yaml and the approver'
     covers:
-      - DK-600e-2
+    - DK-600e-2
   - name: test_one_call_judges_it_and_the_human_is_asked_to_reuse_or_decide_anew
     target_dir: tests/kernel/memory/
     framework: unittest
     type: unit
     angle: criterion
-    description: 'EXISTS (tests/kernel/memory/test_decision_precedent.py::TestAMatchingPrecedentBeforeAnyBasis::test_one_call_judges_it_and_the_human_is_asked_to_reuse_or_decide_anew):
-      with no options yet, one Jev call judges the candidates'
+    description: 'EXISTS (tests/kernel/memory/test_decision_precedent.py::TestAMatchingPrecedentBeforeAnyBasis::test_one_call_judges_it_and_the_human_is_asked_to_reuse_or_decide_anew): with no options yet, one Jev call judges the candidates'
     covers:
-      - DK-600e-2
+    - DK-600e-2
   - name: test_the_precedent_question_rides_the_assess_batch_without_an_extra_call
     target_dir: tests/kernel/memory/
     framework: unittest
     type: unit
     angle: criterion
-    description: 'EXISTS (tests/kernel/memory/test_decision_precedent.py::TestPrecedentInTheAssessBatch::test_the_precedent_question_rides_the_assess_batch_without_an_extra_call):
-      with options, the question rides the assessment batch'
+    description: 'EXISTS (tests/kernel/memory/test_decision_precedent.py::TestPrecedentInTheAssessBatch::test_the_precedent_question_rides_the_assess_batch_without_an_extra_call): with options, the question rides the assessment batch'
     covers:
-      - DK-600e-2
-  - name: test_exactly_the_applies_threshold_is_cited
+    - DK-600e-2
+  - name: test_exactly_at_the_applies_threshold_is_evidence
     target_dir: tests/kernel/memory/
     framework: unittest
     type: unit
     angle: boundary
-    description: 'TO WRITE (in tests/kernel/memory/test_precedent_units.py): a score of exactly memory.applies_threshold
-      (0.5) is applicable, and an overridden threshold moves the boundary'
+    description: 'EXISTS (tests/kernel/memory/test_precedent_units.py::TestVerdict::test_exactly_at_the_applies_threshold_is_evidence): a score of exactly memory.applies_threshold (0.5) is applicable'
     covers:
-      - DK-600e-2
+    - DK-600e-2
+  - name: test_an_overridden_threshold_moves_the_line
+    target_dir: tests/kernel/memory/
+    framework: unittest
+    type: unit
+    angle: boundary
+    description: 'EXISTS (tests/kernel/memory/test_precedent_units.py::TestVerdict::test_an_overridden_threshold_moves_the_line): an overridden applies threshold moves the boundary'
+    covers:
+    - DK-600e-2
+  - name: test_a_precedent_scored_exactly_at_the_default_threshold_is_cited
+    target_dir: tests/kernel/memory/
+    framework: unittest
+    type: unit
+    angle: boundary
+    description: 'EXISTS (tests/kernel/memory/test_precedent_thresholds.py::TestTheAppliesThresholdEdge::test_a_precedent_scored_exactly_at_the_default_threshold_is_cited): through the executor a precedent at 0.5 becomes prior_decisions evidence citing its record path, approver and approval date'
+    covers:
+    - DK-600e-2
+  - name: test_a_raised_threshold_stops_citing_a_score_the_default_would_cite
+    target_dir: tests/kernel/memory/
+    framework: unittest
+    type: unit
+    angle: boundary
+    description: 'EXISTS (tests/kernel/memory/test_precedent_thresholds.py::TestTheAppliesThresholdEdge::test_a_raised_threshold_stops_citing_a_score_the_default_would_cite): a raised threshold stops citing 0.62'
+    covers:
+    - DK-600e-2
+  - name: test_a_lowered_threshold_cites_a_score_the_default_would_not
+    target_dir: tests/kernel/memory/
+    framework: unittest
+    type: unit
+    angle: boundary
+    description: 'EXISTS (tests/kernel/memory/test_precedent_thresholds.py::TestTheAppliesThresholdEdge::test_a_lowered_threshold_cites_a_score_the_default_would_not): a lowered threshold cites 0.4'
+    covers:
+    - DK-600e-2
+  - name: test_five_matching_records_with_a_limit_of_two_judge_two
+    target_dir: tests/kernel/memory/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: 'EXISTS (tests/kernel/memory/test_precedent_thresholds.py::TestAtMostMaxPrecedentsAreJudged::test_five_matching_records_with_a_limit_of_two_judge_two): 5 matching records with max_precedents 2: exactly 2 are judged'
+    covers:
+    - DK-600e-2
 delivers_to: null
 expects_from:
   ac_id: DK-600e-1
@@ -180,9 +214,34 @@ amended_by:
       e89f0f74 (kernel/ and tests/kernel/ identical to origin/main). The evidence phase verifies each
       and adds the `# covers:` tags before anything is marked done.
     complexity_basis: remaining work only (evidence, covers tags, gap closure)
+  - reason: tests-written
+    by: python-coder
+    date: '2026-10-06'
+    ticket: tickets/00_inbox/TICKET-20261002-DecisionKernelACTestGaps.md
+    build_status: built_partly_tested
+    test_pointers:
+    - tests/kernel/memory/test_precedent_units.py::TestVerdict::test_exactly_at_the_applies_threshold_is_evidence
+    - tests/kernel/memory/test_precedent_units.py::TestVerdict::test_an_overridden_threshold_moves_the_line
+    - tests/kernel/memory/test_precedent_thresholds.py::TestTheAppliesThresholdEdge::test_a_precedent_scored_exactly_at_the_default_threshold_is_cited
+    - tests/kernel/memory/test_precedent_thresholds.py::TestTheAppliesThresholdEdge::test_a_raised_threshold_stops_citing_a_score_the_default_would_cite
+    - tests/kernel/memory/test_precedent_thresholds.py::TestTheAppliesThresholdEdge::test_a_lowered_threshold_cites_a_score_the_default_would_not
+    - tests/kernel/memory/test_precedent_thresholds.py::TestAtMostMaxPrecedentsAreJudged::test_five_matching_records_with_a_limit_of_two_judge_two
+    gaps:
+    - 'Wording: the Jev instruction is ''Does the previous decision in `precedents.<id>` apply to the current `question` in its context?'', not the literal sentence quoted in the criteria (''does this earlier decision apply here?''). Thresholds, the exact 0.5 edge, an overridden threshold and the max_precedents bound are now tested; the criteria wording needs the BA (as for DK-600d-1 and DK-600d-4) or a kernel change before this AC can be marked done.'
+  - reason: ba-criteria-wording-amendment
+    by: business-analyst
+    date: '2026-10-06'
+    ticket: tickets/00_inbox/TICKET-20261002-DecisionKernelACTestGaps.md
+    summary: "Closes the Wording gap in the python-coder tests-written entry above. The criteria no longer quote a Jev question the kernel does not ask. Withdrawn wording: 'each with the literal question \"does this earlier decision apply here?\",'. Replaced by: 'each with one literal yes/no question asking whether the earlier decision applies to the current question in its context,'. The question is described by meaning, so a change of Jev wording does not break the AC. Every other clause is unchanged (the 0.5 applies threshold including exactly 0.5, an overridden threshold, the max_precedents bound, and an applicable precedent cited as prior_decisions evidence with its approver are built and tested). Only criteria, amended_by and notes were edited; IT PO and python-coder fields were not touched."
 superseded_by: null
 covered_by:
   - DK-600e-2-i
+  - tests/kernel/memory/test_precedent_units.py::TestVerdict::test_exactly_at_the_applies_threshold_is_evidence
+  - tests/kernel/memory/test_precedent_units.py::TestVerdict::test_an_overridden_threshold_moves_the_line
+  - tests/kernel/memory/test_precedent_thresholds.py::TestTheAppliesThresholdEdge::test_a_precedent_scored_exactly_at_the_default_threshold_is_cited
+  - tests/kernel/memory/test_precedent_thresholds.py::TestTheAppliesThresholdEdge::test_a_raised_threshold_stops_citing_a_score_the_default_would_cite
+  - tests/kernel/memory/test_precedent_thresholds.py::TestTheAppliesThresholdEdge::test_a_lowered_threshold_cites_a_score_the_default_would_not
+  - tests/kernel/memory/test_precedent_thresholds.py::TestAtMostMaxPrecedentsAreJudged::test_five_matching_records_with_a_limit_of_two_judge_two
 implemented_by:
   - kernel/memory/precedent.py#precedent_questions
   - kernel/memory/precedent.py#judge
@@ -223,6 +282,13 @@ notes: |
       criteria.
   Missing tests are listed in TICKET-20261002-DecisionKernelACTestGaps; once they pass, mark
     done through scripts/ac_store/mark_ac_done.py.
+
+  BA AMENDMENT (2026-10-06): the Then clause now describes the applies question by meaning
+    (one literal yes/no question per candidate asking whether the earlier decision applies to
+    the current question in its context) and no longer quotes a sentence. This closes the
+    Wording item in TRUE STATUS above; the other clauses are unchanged. The Given still says
+    the lookup returns 5 candidates, but the lookup itself returns at most max_precedents.
+    The bound still holds; that clause was left as it was.
 product_truth:
   - flow: leafcutter/decision-retrieval
     node: cite

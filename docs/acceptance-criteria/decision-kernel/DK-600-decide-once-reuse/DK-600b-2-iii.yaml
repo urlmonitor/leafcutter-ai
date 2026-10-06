@@ -6,7 +6,7 @@ components:
 level: L3
 status: active
 req_status: draft
-work_status: in_progress
+work_status: done
 readiness: reviewed
 priority: medium
 roadmap_phase: phase_kernel_1_founding
@@ -62,38 +62,33 @@ test_spec:
     framework: unittest
     type: unit
     angle: criterion
-    description: 'EXISTS (tests/kernel/memory/test_decision_precedent.py::TestOnlyHumanApprovalStagesARecord::test_an_unanswered_decision_leaves_no_record):
-      a decision waiting on its question stages nothing'
+    description: 'EXISTS (tests/kernel/memory/test_decision_precedent.py::TestOnlyHumanApprovalStagesARecord::test_an_unanswered_decision_leaves_no_record): a decision waiting on its question stages nothing'
     covers:
-      - DK-600b-2-iii
+    - DK-600b-2-iii
   - name: test_cancel_while_waiting_human_cancels_the_question
     target_dir: tests/kernel/integration/
     framework: unittest
     type: integration
     angle: criterion
-    description: 'EXISTS (tests/kernel/integration/test_cancel.py::TestCancelWhileWaiting::test_cancel_while_waiting_human_cancels_the_question):
-      cancel at a human question ends the run cancelled'
+    description: 'EXISTS (tests/kernel/integration/test_cancel.py::TestCancelWhileWaiting::test_cancel_while_waiting_human_cancels_the_question): cancel at a human question ends the run cancelled'
     covers:
-      - DK-600b-2-iii
+    - DK-600b-2-iii
   - name: test_cancel_then_resume_is_refused
     target_dir: tests/kernel/adapters/
     framework: unittest
     type: integration
     angle: criterion
-    description: 'EXISTS (tests/kernel/adapters/test_cli.py::TestCancel::test_cancel_then_resume_is_refused):
-      python -m kernel cancel --run-id R --actor human:demo, then resume exits 3'
+    description: 'EXISTS (tests/kernel/adapters/test_cli.py::TestCancel::test_cancel_then_resume_is_refused): python -m kernel cancel --run-id R --actor human:demo, then resume exits 3'
     covers:
-      - DK-600b-2-iii
+    - DK-600b-2-iii
   - name: test_cancelling_at_the_ranked_question_stages_no_record
-    target_dir: tests/kernel/integration/
+    target_dir: tests/kernel/memory/
     framework: unittest
     type: integration
     angle: criterion
-    description: 'TO WRITE (in tests/kernel/integration/test_cancel.py): cancel while the ranked-choice
-      question is open: unresolved, the run''s staged/decisions folder is empty and docs/decisions/
-      unchanged'
+    description: 'EXISTS (tests/kernel/memory/test_learning_loop_e2e.py::TestRunOneStagesARecordThatPublishFiles::test_cancelling_at_the_ranked_question_stages_no_record): real service, scripted Jev, fake host: cancel while the ranked-choice question is open; the run is cancelled, its staged/decisions folder is empty and docs/decisions/ does not exist'
     covers:
-      - DK-600b-2-iii
+    - DK-600b-2-iii
 delivers_to: null
 expects_from: null
 origin_agent: business-analyst
@@ -122,8 +117,22 @@ amended_by:
       e89f0f74 (kernel/ and tests/kernel/ identical to origin/main). The evidence phase verifies each
       and adds the `# covers:` tags before anything is marked done.
     complexity_basis: remaining work only (evidence, covers tags, gap closure)
+  - reason: tests-written
+    by: python-coder
+    date: '2026-10-06'
+    ticket: tickets/00_inbox/TICKET-20261002-DecisionKernelACTestGaps.md
+    build_status: built_and_tested
+    test_pointers:
+    - tests/kernel/memory/test_decision_precedent.py::TestOnlyHumanApprovalStagesARecord::test_an_unanswered_decision_leaves_no_record
+    - tests/kernel/integration/test_cancel.py::TestCancelWhileWaiting::test_cancel_while_waiting_human_cancels_the_question
+    - tests/kernel/adapters/test_cli.py::TestCancel::test_cancel_then_resume_is_refused
+    - tests/kernel/memory/test_learning_loop_e2e.py::TestRunOneStagesARecordThatPublishFiles::test_cancelling_at_the_ranked_question_stages_no_record
 superseded_by: null
-covered_by: []
+covered_by:
+  - tests/kernel/memory/test_decision_precedent.py::TestOnlyHumanApprovalStagesARecord::test_an_unanswered_decision_leaves_no_record
+  - tests/kernel/integration/test_cancel.py::TestCancelWhileWaiting::test_cancel_while_waiting_human_cancels_the_question
+  - tests/kernel/adapters/test_cli.py::TestCancel::test_cancel_then_resume_is_refused
+  - tests/kernel/memory/test_learning_loop_e2e.py::TestRunOneStagesARecordThatPublishFiles::test_cancelling_at_the_ranked_question_stages_no_record
 implemented_by:
   - kernel/capabilities/decision/executor.py#_stage
   - kernel/service.py#KernelService.cancel_run

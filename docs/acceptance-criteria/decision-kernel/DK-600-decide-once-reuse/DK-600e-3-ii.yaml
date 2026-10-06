@@ -6,7 +6,7 @@ components:
 level: L3
 status: active
 req_status: draft
-work_status: in_progress
+work_status: done
 readiness: reviewed
 priority: medium
 roadmap_phase: phase_kernel_1_founding
@@ -67,28 +67,41 @@ test_spec:
     framework: unittest
     type: unit
     angle: criterion
-    description: 'EXISTS (tests/kernel/memory/test_precedent_units.py::TestVerdict::test_between_the_thresholds_is_evidence_only):
-      0.6: evidence, no offer'
+    description: 'EXISTS (tests/kernel/memory/test_precedent_units.py::TestVerdict::test_between_the_thresholds_is_evidence_only): 0.6: evidence, no offer'
     covers:
-      - DK-600e-3-ii
+    - DK-600e-3-ii
   - name: test_an_applicable_precedent_below_the_reuse_threshold_is_evidence_only
     target_dir: tests/kernel/memory/
     framework: unittest
     type: unit
     angle: criterion
-    description: 'EXISTS (tests/kernel/memory/test_decision_precedent.py::TestAMatchingPrecedentBeforeAnyBasis::test_an_applicable_precedent_below_the_reuse_threshold_is_evidence_only):
-      no reuse question; the forming flow continues to research'
+    description: 'EXISTS (tests/kernel/memory/test_decision_precedent.py::TestAMatchingPrecedentBeforeAnyBasis::test_an_applicable_precedent_below_the_reuse_threshold_is_evidence_only): no reuse question; the forming flow continues to research'
     covers:
-      - DK-600e-3-ii
-  - name: test_just_below_the_reuse_threshold_is_not_offered
+    - DK-600e-3-ii
+  - name: test_just_under_the_reuse_threshold_is_evidence_only
     target_dir: tests/kernel/memory/
     framework: unittest
     type: unit
     angle: boundary
-    description: 'TO WRITE (in tests/kernel/memory/test_precedent_units.py): 0.79 with reuse_threshold
-      0.8 is evidence only'
+    description: 'EXISTS (tests/kernel/memory/test_precedent_units.py::TestVerdict::test_just_under_the_reuse_threshold_is_evidence_only): 0.79 with reuse_threshold 0.8 is evidence only'
     covers:
-      - DK-600e-3-ii
+    - DK-600e-3-ii
+  - name: test_a_precedent_scored_0_79_is_cited_without_a_reuse_question
+    target_dir: tests/kernel/memory/
+    framework: unittest
+    type: unit
+    angle: boundary
+    description: 'EXISTS (tests/kernel/memory/test_precedent_thresholds.py::TestJustUnderTheReuseThreshold::test_a_precedent_scored_0_79_is_cited_without_a_reuse_question): through the executor 0.79 is cited as evidence, no reuse question, the flow continues to research'
+    covers:
+    - DK-600e-3-ii
+  - name: test_a_precedent_scored_0_8_is_offered_so_0_79_is_the_boundary
+    target_dir: tests/kernel/memory/
+    framework: unittest
+    type: unit
+    angle: boundary
+    description: 'EXISTS (tests/kernel/memory/test_precedent_thresholds.py::TestJustUnderTheReuseThreshold::test_a_precedent_scored_0_8_is_offered_so_0_79_is_the_boundary): 0.8 is offered, so 0.79 is the boundary partner'
+    covers:
+    - DK-600e-3-ii
 delivers_to: null
 expects_from: null
 origin_agent: business-analyst
@@ -112,8 +125,24 @@ amended_by:
       e89f0f74 (kernel/ and tests/kernel/ identical to origin/main). The evidence phase verifies each
       and adds the `# covers:` tags before anything is marked done.
     complexity_basis: remaining work only (evidence, covers tags, gap closure)
+  - reason: tests-written
+    by: python-coder
+    date: '2026-10-06'
+    ticket: tickets/00_inbox/TICKET-20261002-DecisionKernelACTestGaps.md
+    build_status: built_and_tested
+    test_pointers:
+    - tests/kernel/memory/test_precedent_units.py::TestVerdict::test_between_the_thresholds_is_evidence_only
+    - tests/kernel/memory/test_decision_precedent.py::TestAMatchingPrecedentBeforeAnyBasis::test_an_applicable_precedent_below_the_reuse_threshold_is_evidence_only
+    - tests/kernel/memory/test_precedent_units.py::TestVerdict::test_just_under_the_reuse_threshold_is_evidence_only
+    - tests/kernel/memory/test_precedent_thresholds.py::TestJustUnderTheReuseThreshold::test_a_precedent_scored_0_79_is_cited_without_a_reuse_question
+    - tests/kernel/memory/test_precedent_thresholds.py::TestJustUnderTheReuseThreshold::test_a_precedent_scored_0_8_is_offered_so_0_79_is_the_boundary
 superseded_by: null
-covered_by: []
+covered_by:
+  - tests/kernel/memory/test_precedent_units.py::TestVerdict::test_between_the_thresholds_is_evidence_only
+  - tests/kernel/memory/test_decision_precedent.py::TestAMatchingPrecedentBeforeAnyBasis::test_an_applicable_precedent_below_the_reuse_threshold_is_evidence_only
+  - tests/kernel/memory/test_precedent_units.py::TestVerdict::test_just_under_the_reuse_threshold_is_evidence_only
+  - tests/kernel/memory/test_precedent_thresholds.py::TestJustUnderTheReuseThreshold::test_a_precedent_scored_0_79_is_cited_without_a_reuse_question
+  - tests/kernel/memory/test_precedent_thresholds.py::TestJustUnderTheReuseThreshold::test_a_precedent_scored_0_8_is_offered_so_0_79_is_the_boundary
 implemented_by:
   - kernel/memory/precedent.py#judge
   - kernel/capabilities/decision/executor.py#_apply_precedents

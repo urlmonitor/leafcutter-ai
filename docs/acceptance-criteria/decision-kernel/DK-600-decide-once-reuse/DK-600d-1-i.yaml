@@ -6,7 +6,7 @@ components:
 level: L3
 status: active
 req_status: draft
-work_status: in_progress
+work_status: done
 readiness: reviewed
 priority: medium
 roadmap_phase: phase_kernel_1_founding
@@ -69,29 +69,33 @@ test_spec:
     framework: unittest
     type: unit
     angle: criterion
-    description: 'EXISTS (tests/kernel/memory/test_store.py::TestFind::test_a_missing_index_gives_no_precedent):
-      only the index yields candidates'
+    description: 'EXISTS (tests/kernel/memory/test_store.py::TestFind::test_a_missing_index_gives_no_precedent): only the index yields candidates'
     covers:
-      - DK-600d-1-i
+    - DK-600d-1-i
   - name: test_nothing_is_written_until_publish_runs
     target_dir: tests/kernel/memory/
     framework: unittest
     type: unit
     angle: criterion
-    description: 'EXISTS (tests/kernel/memory/test_publish_cli.py::TestPublish::test_nothing_is_written_until_publish_runs):
-      a staged record stays out of docs/decisions/'
+    description: 'EXISTS (tests/kernel/memory/test_publish_cli.py::TestPublish::test_nothing_is_written_until_publish_runs): a staged record stays out of docs/decisions/'
     covers:
-      - DK-600d-1-i
+    - DK-600d-1-i
+  - name: test_a_staged_record_that_is_not_published_is_never_found
+    target_dir: tests/kernel/memory/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: 'EXISTS (tests/kernel/memory/test_publish_cli.py::TestAStagedRecordIsNotPrecedent::test_a_staged_record_that_is_not_published_is_never_found): a staged, unpublished record has no file or index entry in docs/decisions and the precedent lookup never returns it, for its own or any other question; once published it is found'
+    covers:
+    - DK-600d-1-i
   - name: test_a_record_kept_staged_is_never_found_as_precedent
     target_dir: tests/kernel/memory/
     framework: unittest
     type: integration
     angle: criterion
-    description: 'TO WRITE (in tests/kernel/memory/test_learning_loop_e2e.py): run 1 stages and does
-      not publish; run 2 with the same goal asks no reuse question and its evidence has no locator
-      under the run root'
+    description: 'EXISTS (tests/kernel/memory/test_learning_loop_e2e.py::TestRunOneStagesARecordThatPublishFiles::test_a_record_kept_staged_is_never_found_as_precedent): real service: run 1 stages and nobody publishes; a later run with the same goal judges no precedent, asks no reuse question and cites no record as evidence'
     covers:
-      - DK-600d-1-i
+    - DK-600d-1-i
 delivers_to: null
 expects_from: null
 origin_agent: business-analyst
@@ -118,8 +122,24 @@ amended_by:
       e89f0f74 (kernel/ and tests/kernel/ identical to origin/main). The evidence phase verifies each
       and adds the `# covers:` tags before anything is marked done.
     complexity_basis: remaining work only (evidence, covers tags, gap closure)
+  - reason: tests-written
+    by: python-coder
+    date: '2026-10-06'
+    ticket: tickets/00_inbox/TICKET-20261002-DecisionKernelACTestGaps.md
+    build_status: built_and_tested
+    test_pointers:
+    - tests/kernel/memory/test_store.py::TestFind::test_a_missing_index_gives_no_precedent
+    - tests/kernel/memory/test_publish_cli.py::TestPublish::test_nothing_is_written_until_publish_runs
+    - tests/kernel/memory/test_committed_store.py::TestCommittedStore::test_the_index_lists_every_record_file
+    - tests/kernel/memory/test_publish_cli.py::TestAStagedRecordIsNotPrecedent::test_a_staged_record_that_is_not_published_is_never_found
+    - tests/kernel/memory/test_learning_loop_e2e.py::TestRunOneStagesARecordThatPublishFiles::test_a_record_kept_staged_is_never_found_as_precedent
 superseded_by: null
-covered_by: []
+covered_by:
+  - tests/kernel/memory/test_store.py::TestFind::test_a_missing_index_gives_no_precedent
+  - tests/kernel/memory/test_publish_cli.py::TestPublish::test_nothing_is_written_until_publish_runs
+  - tests/kernel/memory/test_committed_store.py::TestCommittedStore::test_the_index_lists_every_record_file
+  - tests/kernel/memory/test_publish_cli.py::TestAStagedRecordIsNotPrecedent::test_a_staged_record_that_is_not_published_is_never_found
+  - tests/kernel/memory/test_learning_loop_e2e.py::TestRunOneStagesARecordThatPublishFiles::test_a_record_kept_staged_is_never_found_as_precedent
 implemented_by:
   - kernel/memory/file_store.py#FileColonyMemory.find_decisions
   - kernel/memory/file_store.py#staged_dir
