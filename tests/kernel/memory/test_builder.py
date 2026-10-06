@@ -107,12 +107,12 @@ class TestRefusesWhatAHumanDidNotApprove(unittest.TestCase):
             build(human_decision(approval=ApprovalStatus.NOT_REQUIRED))
 
     def test_a_missing_approver_is_refused(self) -> None:
-        # covers: DK-300c-1-i
+        # covers: DK-600c-1-i
         with self.assertRaises(NotApproved):
             build(human_decision(approved_by=None))
 
     def test_a_host_or_model_approver_is_refused(self) -> None:
-        # covers: DK-300c-1-i
+        # covers: DK-600c-1-i
         for actor in ("host:fake", "jev", "kernel", "model:gpt", "service:x"):
             with self.assertRaises(NotApproved, msg=actor):
                 build(human_decision(approved_by=actor))
@@ -139,7 +139,7 @@ class TestHelpers(unittest.TestCase):
         self.assertEqual(one_line(text, 12), "alpha beta ...")
 
     def test_approved_at_is_formatted_in_utc(self) -> None:
-        # covers: DK-300b-3
+        # covers: DK-600b-3
         when = datetime(2026, 10, 1, 12, 30, 5, tzinfo=UTC)
         decision = human_decision().model_copy(update={"approved_at": when})
         self.assertEqual(build(decision).approval.approved_at, "2026-10-01T12:30:05Z")

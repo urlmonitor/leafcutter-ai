@@ -30,7 +30,7 @@
       "human": "At the end of the run, the decision executor sees a completed decision that a human approved.",
       "order": 1,
       "implements": [
-        "DK-300c-1"
+        "DK-600c-1"
       ],
       "agent": "kernel decision executor",
       "consumes": [
@@ -51,8 +51,8 @@
       "human": "The record builder collects the question, options, criteria, evidence references (locators and hashes, no text), the ranking you saw, the precedents considered, and provenance: run id, Langfuse trace id, repository revision and versions. It refuses an approver who is not human or a missing approved_at.",
       "order": 2,
       "implements": [
-        "DK-300c-2-i",
-        "DK-300c-2"
+        "DK-600c-2-i",
+        "DK-600c-2"
       ],
       "agent": "kernel record builder",
       "consumes": [
@@ -76,7 +76,7 @@
       "human": "The file backend writes the YAML to <run_root>/runs/<run_id>/staged/decisions/<id>.yaml, never into the repository: during a run the kernel only reads the repository (ADR-060).",
       "order": 3,
       "implements": [
-        "DK-300c-3"
+        "DK-600c-3"
       ],
       "agent": "kernel memory file backend",
       "consumes": [
@@ -97,7 +97,7 @@
       "human": "The run's result says \"decision record staged: <path>\" and gives the command python -m kernel decisions publish --run-id R. The /leafcutter skill shows you this and never publishes by itself.",
       "order": 4,
       "implements": [
-        "DK-300c-4"
+        "DK-600c-4"
       ],
       "screen": "decision-record-staged",
       "agent": "/leafcutter skill (claude_code)",
@@ -127,7 +127,7 @@
       ],
       "outcome_kind": "exit",
       "implements": [
-        "DK-300c-1-i"
+        "DK-600c-1-i"
       ],
       "impl_asof": "2026-10-02",
       "impl_status": "done"

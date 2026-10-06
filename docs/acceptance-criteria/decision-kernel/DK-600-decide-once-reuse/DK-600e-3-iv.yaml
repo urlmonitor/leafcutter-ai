@@ -1,0 +1,140 @@
+id: DK-600e-3-iv
+title: "A decision that already has options of its own gets no reuse question"
+component: decision-kernel
+components:
+  - decision_kernel
+level: L3
+status: active
+req_status: draft
+work_status: done
+readiness: reviewed
+priority: medium
+roadmap_phase: phase_kernel_1_founding
+criteria: |
+  Given the precedent dec-ef8ddcb79d668a67 scored 0.95, on a decision whose task already supplies
+    its own options,
+  When the precedent step finishes,
+  Then the precedent stays as cited prior_decisions evidence,
+  And you are not asked whether to reuse it,
+  And the decision goes on to assess its own options.
+depends_on:
+  - DK-600e-3
+doc_links:
+  - path: docs/product-truth/flows/leafcutter/decision-retrieval.flow.json
+    relationship: implemented-by-step
+    status: exists
+    relevance: >-
+      Derived from leafcutter/decision-retrieval branch evidence-only (from cite), own-options
+      case. Add this AC id to each named node's implements list.
+  - path: docs/how-to/file-and-reuse-decisions-with-the-kernel.md
+    relationship: describes
+    status: exists
+  - path: docs/how-to/run-the-decision-kernel.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/components/decision-kernel.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-060-source-of-truth-and-approval-authority.md
+    relationship: describes
+    status: exists
+    relevance: Git canonical; only a human approval creates a record; read-only runs; precedent never
+      authority; append-only corrections.
+  - path: docs/analysis/2026-09-30-decision-kernel-design-4-jev-and-capabilities.md
+    relationship: describes
+    status: exists
+    relevance: Decision, research and retrieval capabilities, host operations, human interaction;
+      'As built' sections.
+assigned_agent: python-coder
+estimated_complexity: XS
+it_requirements:
+  - 'Precedent is evidence, never authority (ADR-060): no score, however high, resolves a decision,
+    changes routing or changes a threshold.'
+  - 'Done-marking evidence (KI-ACS-004, done_proof): implemented_by names an existing kernel/... file
+    plus symbol, and every covering test under tests/kernel/ carries a `# covers: <this AC id>` tag
+    and passes under pytest. No kernel test carries a DK covers tag yet, so tagging comes before any
+    done-marking.'
+test_spec:
+  - name: test_no_reuse_question_when_the_decision_has_options_of_its_own
+    target_dir: tests/kernel/memory/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: 'EXISTS (tests/kernel/memory/test_decision_precedent.py::TestPrecedentInTheAssessBatch::test_no_reuse_question_when_the_decision_has_options_of_its_own):
+      a typed request with options: no reuse question, the options are assessed'
+    covers:
+      - DK-600e-3-iv
+  - name: test_nothing_is_offered_when_the_decision_has_options_or_the_record_is_superseded
+    target_dir: tests/kernel/memory/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: 'EXISTS (tests/kernel/memory/test_precedent_units.py::TestVerdict::test_nothing_is_offered_when_the_decision_has_options_or_the_record_is_superseded):
+      can_reuse false: no offer'
+    covers:
+      - DK-600e-3-iv
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst
+created: 2026-10-02
+created_by_ticket: tickets/00_inbox/TICKET-20261002-DecisionLifecycleACs.md
+amended_by:
+  - reason: it-po-technical-enrichment
+    by: it-po
+    date: '2026-10-02'
+    ticket: tickets/00_inbox/TICKET-20261002-DecisionLifecycleACs.md
+    build_status: built_and_tested
+    implementation_pointers:
+      - kernel/memory/precedent.py#judge
+      - kernel/capabilities/decision/executor.py#_apply_precedents
+      - kernel/capabilities/decision/executor.py#_precedent
+    test_pointers:
+      - tests/kernel/memory/test_decision_precedent.py::TestPrecedentInTheAssessBatch::test_no_reuse_question_when_the_decision_has_options_of_its_own
+      - tests/kernel/memory/test_precedent_units.py::TestVerdict::test_nothing_is_offered_when_the_decision_has_options_or_the_record_is_superseded
+    gaps:
+      - 'BA''s open question, answered from the code: options a goal merely NAMES are not the decision''s
+        own when the precedent is judged. They become usable only after host.generate_options returns,
+        and the precedent is judged before that (can_reuse = not work.usable_options), so a goal that
+        names options can still get the reuse question.'
+    pointer_note: Unverified candidates for implemented_by / covered_by, read from the worktree at
+      e89f0f74 (kernel/ and tests/kernel/ identical to origin/main). The evidence phase verifies each
+      and adds the `# covers:` tags before anything is marked done.
+    complexity_basis: remaining work only (evidence, covers tags, gap closure)
+superseded_by: null
+covered_by:
+  - tests/kernel/memory/test_decision_precedent.py::TestPrecedentInTheAssessBatch::test_no_reuse_question_when_the_decision_has_options_of_its_own
+  - tests/kernel/memory/test_precedent_units.py::TestVerdict::test_nothing_is_offered_when_the_decision_has_options_or_the_record_is_superseded
+implemented_by:
+  - kernel/memory/precedent.py#judge
+  - kernel/capabilities/decision/executor.py#_apply_precedents
+  - kernel/capabilities/decision/executor.py#_precedent
+change_target: code
+risk_surface: internal
+notes: |
+  FLOW BACK-LINKS (add this AC id to each node's implements list):
+    leafcutter/decision-retrieval  branch  evidence-only
+
+  DERIVATION. Branch evidence-only, condition "the new decision already has
+  options". "Supplies its own options" covers a typed decision request with
+  options (docs/how-to/run-the-decision-kernel.md, Step 3). Whether options a goal
+  merely NAMES count as the decision's own at the time the precedent is judged is
+  not fixed by the flow; raised as a question in the BA sign-off.
+
+  IT-PO BUILD STATUS (2026-10-02, unverified): built and tested for options supplied in
+  a typed request. Goal-named options do not count: they are not known when the
+  precedent is judged, so the reuse question can still appear.
+
+  BA QUESTION 2, ANSWERED (2026-10-02): only options supplied with the task count as the own
+    options of the decision. Options a goal merely names do not count when the precedent is
+    judged, so the reuse question can still appear for such a goal. This matches what is
+    built.
+product_truth:
+  - flow: leafcutter/decision-retrieval
+    node: evidence-only
+    node_kind: branch
+    flow_kind: data
+    screen: null
+    mock_data: leafcutter/decisions
+    entities: []
+    source: real
+    asof: '2026-10-02'

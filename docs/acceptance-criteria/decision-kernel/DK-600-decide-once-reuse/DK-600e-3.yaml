@@ -1,0 +1,215 @@
+id: DK-600e-3
+title: "A close match asks you once: reuse it, or decide anew?"
+component: decision-kernel
+components:
+  - decision_kernel
+level: L2
+status: active
+req_status: draft
+work_status: in_progress
+readiness: reviewed
+priority: medium
+roadmap_phase: phase_kernel_1_founding
+criteria: |
+  Given the precedent dec-ef8ddcb79d668a67 scored 0.95, at or above memory.reuse_threshold
+    (0.8 by default), not superseded, on a decision with no options of its own,
+  When the precedent step finishes,
+  Then you are asked once, in plain words, "Reuse it, or decide anew?", naming the earlier
+    decision, who approved it and when, and the option it chose,
+  And the decision waits for your answer and does not resolve on the precedent's score,
+  And a precedent scored exactly 0.8 under the same conditions is offered the same way.
+depends_on:
+  - DK-600e
+doc_links:
+  - path: docs/product-truth/flows/leafcutter/decision-retrieval.flow.json
+    relationship: implemented-by-step
+    status: exists
+    relevance: >-
+      Derived from leafcutter/decision-retrieval step offer-reuse. Add this AC id to each
+      named node's implements list.
+  - path: docs/product-truth/flows/leafcutter/decision-lifecycle.flow.json
+    relationship: implemented-by-step
+    status: exists
+    relevance: >-
+      Derived from leafcutter/decision-lifecycle step reuse (its 'never resolves a decision on
+      its own' clause). Add this AC id to each named node's implements list.
+  - path: docs/how-to/file-and-reuse-decisions-with-the-kernel.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-060-source-of-truth-and-approval-authority.md
+    relationship: related
+    status: exists
+    relevance: >-
+      Standing rules: only a human approval creates a record, nothing is written into the
+      repository during a run, precedent is evidence and never authority, corrections are
+      append-only.
+  - path: docs/product-truth/mock-data/leafcutter/decisions.mock.json
+    relationship: related
+    status: exists
+    relevance: >-
+      Source of the concrete ids and values in the criteria (dec-... records, options,
+      criteria, applicability scores, run ids).
+  - path: docs/architecture/components/decision-kernel.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-053-intelligence-selection-deterministic-jev-llm-human.md
+    relationship: describes
+    status: exists
+    relevance: 'Which mechanism answers each check: code, Jev, an LLM host or a human.'
+  - path: docs/analysis/2026-09-30-decision-kernel-design-4-jev-and-capabilities.md
+    relationship: describes
+    status: exists
+    relevance: Decision, research and retrieval capabilities, host operations, human interaction;
+      'As built' sections.
+assigned_agent: python-coder
+estimated_complexity: XS
+it_requirements:
+  - 'Precedent is evidence, never authority (ADR-060): no score, however high, resolves a decision,
+    changes routing or changes a threshold.'
+  - 'Only a human answer may approve, choose or reuse (ADR-053, ADR-060): no path may let Jev, a host
+    or the kernel resolve or approve on a person''s behalf.'
+  - Thresholds, caps and limits are read from the kernel configuration by key (config/kernel_config.default.json);
+    no number quoted in the criteria is hard-coded, and a test that pins a default also shows the
+    behaviour follows an overridden value.
+  - The reuse question is asked at most once per decision and only for the strongest offerable precedent.
+  - 'This L2 has L3 children, so done_proof treats it as a composite unless it carries its own covers
+    tag: tag the tests of its own clauses so it proves itself, not only through its children.'
+  - 'Done-marking evidence (KI-ACS-004, done_proof): implemented_by names an existing kernel/... file
+    plus symbol, and every covering test under tests/kernel/ carries a `# covers: <this AC id>` tag
+    and passes under pytest. No kernel test carries a DK covers tag yet, so tagging comes before any
+    done-marking.'
+test_spec:
+  - name: test_at_the_reuse_threshold_it_is_offered
+    target_dir: tests/kernel/memory/
+    framework: unittest
+    type: unit
+    angle: boundary
+    description: 'EXISTS (tests/kernel/memory/test_precedent_units.py::TestVerdict::test_at_the_reuse_threshold_it_is_offered):
+      exactly 0.8 is offered'
+    covers:
+      - DK-600e-3
+  - name: test_the_confirm_question_and_choices_are_literal
+    target_dir: tests/kernel/memory/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: 'EXISTS (tests/kernel/memory/test_precedent_units.py::TestEvidenceAndQuestion::test_the_confirm_question_and_choices_are_literal):
+      the question names the record, approver, date and chosen option and ends ''Reuse it, or decide
+      anew?'''
+    covers:
+      - DK-600e-3
+  - name: test_the_precedent_alone_resolves_nothing
+    target_dir: tests/kernel/memory/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: 'EXISTS (tests/kernel/memory/test_decision_precedent.py::TestAMatchingPrecedentBeforeAnyBasis::test_the_precedent_alone_resolves_nothing):
+      the decision waits for the answer'
+    covers:
+      - DK-600e-3
+  - name: test_nothing_resolves_until_the_human_answers
+    target_dir: tests/kernel/memory/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: 'EXISTS (tests/kernel/memory/test_learning_loop_e2e.py::TestRunTwoReusesThePrecedent::test_nothing_resolves_until_the_human_answers):
+      end to end: waiting_human, nothing selected or staged'
+    covers:
+      - DK-600e-3
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst
+created: 2026-10-02
+created_by_ticket: tickets/00_inbox/TICKET-20261002-DecisionLifecycleACs.md
+amended_by:
+  - reason: it-po-technical-enrichment
+    by: it-po
+    date: '2026-10-02'
+    ticket: tickets/00_inbox/TICKET-20261002-DecisionLifecycleACs.md
+    build_status: built_and_tested
+    implementation_pointers:
+      - kernel/memory/precedent.py#judge
+      - kernel/memory/precedent.py#confirm_text
+      - kernel/memory/precedent.py#confirm_choices
+      - kernel/capabilities/decision/requests.py#precedent_request
+      - kernel/capabilities/decision/executor.py#_apply_precedents
+    test_pointers:
+      - tests/kernel/memory/test_precedent_units.py::TestVerdict::test_at_the_reuse_threshold_it_is_offered
+      - tests/kernel/memory/test_precedent_units.py::TestEvidenceAndQuestion::test_the_confirm_question_and_choices_are_literal
+      - tests/kernel/memory/test_decision_precedent.py::TestAMatchingPrecedentBeforeAnyBasis::test_the_precedent_alone_resolves_nothing
+      - tests/kernel/memory/test_learning_loop_e2e.py::TestRunTwoReusesThePrecedent::test_nothing_resolves_until_the_human_answers
+      - tests/kernel/memory/test_decision_precedent.py::TestAMatchingPrecedentBeforeAnyBasis::test_one_call_judges_it_and_the_human_is_asked_to_reuse_or_decide_anew
+      - tests/kernel/memory/test_precedent_units.py::TestVerdict::test_the_strongest_applicable_precedent_is_the_one_offered
+    gaps:
+      - None found. The question text is 'Decision <id> (approved by <actor> on <date>) chose <option
+        title> for a matching question. Reuse it, or decide anew?'.
+    pointer_note: Unverified candidates for implemented_by / covered_by, read from the worktree at
+      e89f0f74 (kernel/ and tests/kernel/ identical to origin/main). The evidence phase verifies each
+      and adds the `# covers:` tags before anything is marked done.
+    complexity_basis: remaining work only (evidence, covers tags, gap closure)
+superseded_by: null
+covered_by:
+  - DK-600e-3-i
+  - DK-600e-3-ii
+  - DK-600e-3-iii
+  - DK-600e-3-iv
+  - tests/kernel/memory/test_precedent_units.py::TestVerdict::test_at_the_reuse_threshold_it_is_offered
+  - tests/kernel/memory/test_precedent_units.py::TestEvidenceAndQuestion::test_the_confirm_question_and_choices_are_literal
+  - tests/kernel/memory/test_decision_precedent.py::TestAMatchingPrecedentBeforeAnyBasis::test_the_precedent_alone_resolves_nothing
+  - tests/kernel/memory/test_learning_loop_e2e.py::TestRunTwoReusesThePrecedent::test_nothing_resolves_until_the_human_answers
+  - tests/kernel/memory/test_decision_precedent.py::TestAMatchingPrecedentBeforeAnyBasis::test_one_call_judges_it_and_the_human_is_asked_to_reuse_or_decide_anew
+  - tests/kernel/memory/test_precedent_units.py::TestVerdict::test_the_strongest_applicable_precedent_is_the_one_offered
+implemented_by:
+  - kernel/memory/precedent.py#judge
+  - kernel/memory/precedent.py#confirm_text
+  - kernel/memory/precedent.py#confirm_choices
+  - kernel/capabilities/decision/requests.py#precedent_request
+  - kernel/capabilities/decision/executor.py#_apply_precedents
+change_target: code
+risk_surface: internal
+notes: |
+  FLOW BACK-LINKS (add this AC id to each node's implements list):
+    leafcutter/decision-retrieval  step    offer-reuse
+    leafcutter/decision-lifecycle  step    reuse
+
+  DERIVATION. Scenario offer-reuse (a decision point; screen
+  decision-reuse-or-decide-anew), and the "never resolves a decision on its own"
+  clause of the journey scenario decision-lifecycle/reuse. 0.95 is the score at
+  which dec-ef8ddcb79d668a67 was reused by dec-7cdc61ea41a206e0.
+
+  PLACEMENT OF THE evidence-only BRANCH. Branch evidence-only leaves from step cite,
+  but its three conditions are exactly the cases in which this question is NOT
+  asked, so its L3s (DK-600e-3-ii, -iii, -iv) sit here, beside the question they
+  suppress. The back-links in those files still name the branch.
+
+  STANDING RULE carried from DK-600e (ADR-060 section 4): precedent is evidence,
+  never authority; auto-reusing a high-scoring precedent is a rejected alternative.
+
+  IT-PO BUILD STATUS (2026-10-02, unverified): built and tested, including the exact-0.8
+  boundary. Pointers: amended_by.
+
+  TRUE STATUS (2026-10-02): work_status in_progress. Its own clauses are built and its own
+    tests carry # covers: DK-600e-3 tags and pass, but a composite is done only when every direct
+    child is done (the L0 rule, enforced by check-done-proof). Not yet done: DK-600e-3-i, DK-600e-3-ii. Mark it done
+    through scripts/ac_store/mark_ac_done.py once they are.
+product_truth:
+  - flow: leafcutter/decision-lifecycle
+    node: reuse
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: leafcutter/decisions
+    entities:
+      - Decision
+    source: real
+    asof: '2026-10-02'
+  - flow: leafcutter/decision-retrieval
+    node: offer-reuse
+    node_kind: step
+    flow_kind: data
+    screen: decision-reuse-or-decide-anew
+    mock_data: leafcutter/decisions
+    entities:
+      - Decision
+    source: real
+    asof: '2026-10-02'

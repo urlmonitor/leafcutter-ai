@@ -1,0 +1,145 @@
+id: DK-600e-3-ii
+title: "An applicable precedent below the reuse threshold is cited without a reuse question"
+component: decision-kernel
+components:
+  - decision_kernel
+level: L3
+status: active
+req_status: draft
+work_status: in_progress
+readiness: reviewed
+priority: medium
+roadmap_phase: phase_kernel_1_founding
+criteria: |
+  Given the precedent dec-ef8ddcb79d668a67 scored 0.62, at or above memory.applies_threshold (0.5)
+    and below memory.reuse_threshold (0.8), on a decision with no options of its own,
+  When the precedent step finishes,
+  Then the precedent stays as cited prior_decisions evidence,
+  And you are not asked whether to reuse it, and the forming flow continues without waiting for
+    you,
+  And a precedent scored 0.79 under the same conditions is treated the same way.
+depends_on:
+  - DK-600e-3
+doc_links:
+  - path: docs/product-truth/flows/leafcutter/decision-retrieval.flow.json
+    relationship: implemented-by-step
+    status: exists
+    relevance: >-
+      Derived from leafcutter/decision-retrieval branch evidence-only (from cite), below-0.8
+      case. Add this AC id to each named node's implements list.
+  - path: docs/how-to/file-and-reuse-decisions-with-the-kernel.md
+    relationship: describes
+    status: exists
+  - path: docs/product-truth/mock-data/leafcutter/decisions.mock.json
+    relationship: related
+    status: exists
+    relevance: >-
+      Source of the concrete ids and values in the criteria (dec-... records, options,
+      criteria, applicability scores, run ids).
+  - path: docs/architecture/components/decision-kernel.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-060-source-of-truth-and-approval-authority.md
+    relationship: describes
+    status: exists
+    relevance: Git canonical; only a human approval creates a record; read-only runs; precedent never
+      authority; append-only corrections.
+  - path: docs/analysis/2026-09-30-decision-kernel-design-4-jev-and-capabilities.md
+    relationship: describes
+    status: exists
+    relevance: Decision, research and retrieval capabilities, host operations, human interaction;
+      'As built' sections.
+assigned_agent: python-coder
+estimated_complexity: XS
+it_requirements:
+  - 'Precedent is evidence, never authority (ADR-060): no score, however high, resolves a decision,
+    changes routing or changes a threshold.'
+  - Thresholds, caps and limits are read from the kernel configuration by key (config/kernel_config.default.json);
+    no number quoted in the criteria is hard-coded, and a test that pins a default also shows the
+    behaviour follows an overridden value.
+  - 'Done-marking evidence (KI-ACS-004, done_proof): implemented_by names an existing kernel/... file
+    plus symbol, and every covering test under tests/kernel/ carries a `# covers: <this AC id>` tag
+    and passes under pytest. No kernel test carries a DK covers tag yet, so tagging comes before any
+    done-marking.'
+test_spec:
+  - name: test_between_the_thresholds_is_evidence_only
+    target_dir: tests/kernel/memory/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: 'EXISTS (tests/kernel/memory/test_precedent_units.py::TestVerdict::test_between_the_thresholds_is_evidence_only):
+      0.6: evidence, no offer'
+    covers:
+      - DK-600e-3-ii
+  - name: test_an_applicable_precedent_below_the_reuse_threshold_is_evidence_only
+    target_dir: tests/kernel/memory/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: 'EXISTS (tests/kernel/memory/test_decision_precedent.py::TestAMatchingPrecedentBeforeAnyBasis::test_an_applicable_precedent_below_the_reuse_threshold_is_evidence_only):
+      no reuse question; the forming flow continues to research'
+    covers:
+      - DK-600e-3-ii
+  - name: test_just_below_the_reuse_threshold_is_not_offered
+    target_dir: tests/kernel/memory/
+    framework: unittest
+    type: unit
+    angle: boundary
+    description: 'TO WRITE (in tests/kernel/memory/test_precedent_units.py): 0.79 with reuse_threshold
+      0.8 is evidence only'
+    covers:
+      - DK-600e-3-ii
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst
+created: 2026-10-02
+created_by_ticket: tickets/00_inbox/TICKET-20261002-DecisionLifecycleACs.md
+amended_by:
+  - reason: it-po-technical-enrichment
+    by: it-po
+    date: '2026-10-02'
+    ticket: tickets/00_inbox/TICKET-20261002-DecisionLifecycleACs.md
+    build_status: built_partly_tested
+    implementation_pointers:
+      - kernel/memory/precedent.py#judge
+      - kernel/capabilities/decision/executor.py#_apply_precedents
+    test_pointers:
+      - tests/kernel/memory/test_precedent_units.py::TestVerdict::test_between_the_thresholds_is_evidence_only
+      - tests/kernel/memory/test_decision_precedent.py::TestAMatchingPrecedentBeforeAnyBasis::test_an_applicable_precedent_below_the_reuse_threshold_is_evidence_only
+    gaps:
+      - The 0.79 boundary partner is not tested.
+    pointer_note: Unverified candidates for implemented_by / covered_by, read from the worktree at
+      e89f0f74 (kernel/ and tests/kernel/ identical to origin/main). The evidence phase verifies each
+      and adds the `# covers:` tags before anything is marked done.
+    complexity_basis: remaining work only (evidence, covers tags, gap closure)
+superseded_by: null
+covered_by: []
+implemented_by:
+  - kernel/memory/precedent.py#judge
+  - kernel/capabilities/decision/executor.py#_apply_precedents
+change_target: code
+risk_surface: internal
+notes: |
+  FLOW BACK-LINKS (add this AC id to each node's implements list):
+    leafcutter/decision-retrieval  branch  evidence-only
+
+  DERIVATION. Branch evidence-only, condition "the score is below 0.8". 0.79 is the
+  boundary partner of DK-600e-3's exact-0.8 clause.
+
+  IT-PO BUILD STATUS (2026-10-02, unverified): built; the 0.79 boundary is untested.
+
+  TRUE STATUS (2026-10-02): work_status in_progress; the it-po verified build status is
+    built_partly_tested.
+    - The 0.79 boundary partner is not tested.
+  Missing tests are listed in TICKET-20261002-DecisionKernelACTestGaps; once they pass, mark
+    done through scripts/ac_store/mark_ac_done.py.
+product_truth:
+  - flow: leafcutter/decision-retrieval
+    node: evidence-only
+    node_kind: branch
+    flow_kind: data
+    screen: null
+    mock_data: leafcutter/decisions
+    entities: []
+    source: real
+    asof: '2026-10-02'

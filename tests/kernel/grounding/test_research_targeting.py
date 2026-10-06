@@ -177,7 +177,7 @@ class TestTargetedNeeds(TargetingCase):
                          ["need.gap.1", "need.gap.2"])
 
     def test_a_human_added_option_has_its_claims_researched(self) -> None:
-        # covers: DK-300b-2-i
+        # covers: DK-600b-2-i
         added = OptionContext(option_id="opt.added.1", title="Kernel-contract YAML per decision",
                               description="ids are kernel-minted and validated at commit",
                               cited_refs=["kernel/contracts/decision.py"], human_added=True)

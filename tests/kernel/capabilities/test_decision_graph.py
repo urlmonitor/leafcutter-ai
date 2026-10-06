@@ -92,7 +92,7 @@ class TestResolvedGate(DecisionTestCase):
         self.assertTrue(all(narrow(a.provider_answer).probabilities for a in raw))
 
     def test_one_jev_call_per_assessment_with_atomic_questions(self) -> None:
-        # covers: DK-300a-4
+        # covers: DK-600a-4
         self.params["satisfies"] = {("c1", "A"): 0.95}
         self.first()
         asked = self.jev.questions_asked("decision.assess")

@@ -221,7 +221,7 @@ class TestTheBudgetIsReserved(Round6Case):
     max_jev_calls = 14  # funds the grounding and the first assessment (7 calls), not a round more
 
     async def test_the_run_asks_the_ranked_question_instead_of_blocking(self) -> None:
-        # covers: DK-300a-4-i
+        # covers: DK-600a-4-i
         final = await self.play()
         self.assertEqual(final.status, RunStatus.WAITING_HUMAN, final.status)
         question = as_type(narrow(final.pending_interaction), HumanQuestion)

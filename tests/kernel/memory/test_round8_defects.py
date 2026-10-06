@@ -89,7 +89,7 @@ class TestA_AHumanAddedOptionCitesItsClaimEvidence(DesignCase):
         return self.question(done)
 
     def test_the_ranked_packet_cites_the_evidence_the_claims_were_researched_against(self) -> None:
-        # covers: DK-300b-2-i
+        # covers: DK-600b-2-i
         question = self.ranked_after_the_claim_round(linked=True)
         choice = next(c for c in question.choices if c.id == "opt.added.1")
         self.assertIn("docs/more.md#L1-L2", choice.consequences)

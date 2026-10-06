@@ -1,0 +1,192 @@
+id: DK-600b-1-i
+title: "Only what you approved, edited or added goes on to research and assessment"
+component: decision-kernel
+components:
+  - decision_kernel
+level: L3
+status: active
+req_status: draft
+work_status: in_progress
+readiness: reviewed
+priority: medium
+roadmap_phase: phase_kernel_1_founding
+criteria: |
+  Given proposed options opt.kernel_entry_point, opt.consult_precedent, opt.session_records and
+    opt.trace_analyzers, and 5 proposed criteria including crit.small_slice,
+  When you approve opt.kernel_entry_point, opt.consult_precedent and opt.session_records, reword
+    crit.small_slice, and add an option of your own,
+  Then research and assessment run on those 3 options plus your added option, which is recorded as
+    proposed by you (proposed_by human:user, with an id such as opt.added.1),
+  And crit.small_slice is assessed in your wording,
+  And opt.trace_analyzers is neither researched nor assessed.
+depends_on:
+  - DK-600b-1
+doc_links:
+  - path: docs/product-truth/flows/leafcutter/decision-forming.flow.json
+    relationship: implemented-by-step
+    status: exists
+    relevance: >-
+      Derived from leafcutter/decision-forming branch revise-proposals (from
+      approve-proposals). Add this AC id to each named node's implements list.
+  - path: docs/how-to/run-the-decision-kernel.md
+    relationship: describes
+    status: exists
+  - path: docs/product-truth/mock-data/leafcutter/decisions.mock.json
+    relationship: related
+    status: exists
+    relevance: >-
+      Source of the concrete ids and values in the criteria (dec-... records, options,
+      criteria, applicability scores, run ids).
+  - path: docs/architecture/components/decision-kernel.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-053-intelligence-selection-deterministic-jev-llm-human.md
+    relationship: describes
+    status: exists
+    relevance: 'Which mechanism answers each check: code, Jev, an LLM host or a human.'
+  - path: docs/analysis/2026-09-30-decision-kernel-design-4-jev-and-capabilities.md
+    relationship: describes
+    status: exists
+    relevance: Decision, research and retrieval capabilities, host operations, human interaction;
+      'As built' sections.
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - 'Only a human answer may approve, choose or reuse (ADR-053, ADR-060): no path may let Jev, a host
+    or the kernel resolve or approve on a person''s behalf.'
+  - Items a human adds or rewords are recorded as human-supplied and approved by that human (proposed_by
+    and approved_by are the answering actor); new ids never collide with existing ones.
+  - A declined proposal stays in the list as rejected and is never researched, assessed or brought
+    back as pending on a later resume.
+  - 'Done-marking evidence (KI-ACS-004, done_proof): implemented_by names an existing kernel/... file
+    plus symbol, and every covering test under tests/kernel/ carries a `# covers: <this AC id>` tag
+    and passes under pytest. No kernel test carries a DK covers tag yet, so tagging comes before any
+    done-marking.'
+test_spec:
+  - name: test_subset_approval_declines_the_unlisted_proposal
+    target_dir: tests/kernel/capabilities/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: 'EXISTS (tests/kernel/capabilities/test_decision_criteria_proposals.py::TestOptionsAndCriteriaProposals::test_subset_approval_declines_the_unlisted_proposal):
+      an unlisted proposal is declined and not assessed'
+    covers:
+      - DK-600b-1-i
+  - name: test_edited_criteria_replace_the_proposals
+    target_dir: tests/kernel/capabilities/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: 'EXISTS (tests/kernel/capabilities/test_decision_criteria_proposals.py::TestOptionsAndCriteriaProposals::test_edited_criteria_replace_the_proposals):
+      edited criteria are assessed in the human''s wording'
+    covers:
+      - DK-600b-1-i
+  - name: test_edited_criteria_are_approved_by_the_answering_actor
+    target_dir: tests/kernel/capabilities/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: 'EXISTS (tests/kernel/capabilities/test_decision_criteria_proposals.py::TestOptionsAndCriteriaProposals::test_edited_criteria_are_approved_by_the_answering_actor):
+      edited criteria are supplied and approved by the answering actor'
+    covers:
+      - DK-600b-1-i
+  - name: test_a_human_adds_an_option_at_approval
+    target_dir: tests/kernel/grounding/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: 'EXISTS (tests/kernel/grounding/test_round5.py::TestAddedOptionsEndToEnd::test_a_human_adds_an_option_at_approval):
+      an option added at approval reaches the assessment'
+    covers:
+      - DK-600b-1-i
+  - name: test_a_revised_approval_researches_and_assesses_only_the_revised_set
+    target_dir: tests/kernel/capabilities/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: 'TO WRITE (in tests/kernel/capabilities/test_decision_criteria_proposals.py): one
+      answer approving 3 of 4 options, rewording one criterion and adding an option: the added option
+      is opt.added.1 proposed_by the human, and the declined option is in neither the research request
+      nor the assessment batch'
+    covers:
+      - DK-600b-1-i
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst
+created: 2026-10-02
+created_by_ticket: tickets/00_inbox/TICKET-20261002-DecisionLifecycleACs.md
+amended_by:
+  - reason: it-po-technical-enrichment
+    by: it-po
+    date: '2026-10-02'
+    ticket: tickets/00_inbox/TICKET-20261002-DecisionLifecycleACs.md
+    build_status: built_partly_tested
+    implementation_pointers:
+      - kernel/capabilities/decision/approvals.py#_apply_structured
+      - kernel/capabilities/decision/approvals.py#_added_options
+      - kernel/capabilities/decision/approvals.py#_edited_criteria
+      - kernel/capabilities/decision/approvals.py#_decide
+      - kernel/capabilities/decision/state.py#ADDED_OPTION_PREFIX
+    test_pointers:
+      - tests/kernel/capabilities/test_decision_criteria_proposals.py::TestOptionsAndCriteriaProposals::test_subset_approval_declines_the_unlisted_proposal
+      - tests/kernel/capabilities/test_decision_criteria_proposals.py::TestOptionsAndCriteriaProposals::test_edited_criteria_replace_the_proposals
+      - tests/kernel/capabilities/test_decision_criteria_proposals.py::TestOptionsAndCriteriaProposals::test_edited_criteria_are_approved_by_the_answering_actor
+      - tests/kernel/grounding/test_round5.py::TestAddedOptionsEndToEnd::test_a_human_adds_an_option_at_approval
+      - tests/kernel/interaction/test_criteria_approval.py::TestStructuredApproval::test_subset_approval_makes_only_the_listed_criteria_usable
+      - tests/kernel/interaction/test_criteria_approval.py::TestStructuredApproval::test_edited_criteria_become_human_supplied_and_approved_by_the_human
+      - tests/kernel/decision_research/test_design_round.py::TestOneTargetedRoundBeforeRanking::test_a_human_added_option_has_its_claims_checked_in_that_round
+    gaps:
+      - No single test applies an option subset, a reworded criterion and an added option in one answer,
+        or asserts the declined option is absent from the research request.
+      - 'As built, edited_criteria replaces the whole proposed criteria set: every pending criterion
+        not listed is declined, and approved_criterion_ids is ignored when edited_criteria is present.
+        Rewording one criterion while keeping four means listing all five (with their ids). The how-to
+        (DK-600b-4) must say so.'
+    pointer_note: Unverified candidates for implemented_by / covered_by, read from the worktree at
+      e89f0f74 (kernel/ and tests/kernel/ identical to origin/main). The evidence phase verifies each
+      and adds the `# covers:` tags before anything is marked done.
+    complexity_basis: remaining work only (evidence, covers tags, gap closure)
+superseded_by: null
+covered_by: []
+implemented_by:
+  - kernel/capabilities/decision/approvals.py#_apply_structured
+  - kernel/capabilities/decision/approvals.py#_added_options
+  - kernel/capabilities/decision/approvals.py#_edited_criteria
+  - kernel/capabilities/decision/approvals.py#_decide
+  - kernel/capabilities/decision/state.py#ADDED_OPTION_PREFIX
+change_target: code
+risk_surface: internal
+notes: |
+  FLOW BACK-LINKS (add this AC id to each node's implements list):
+    leafcutter/decision-forming    branch  revise-proposals
+
+  DERIVATION. Branch revise-proposals, first half of its scenario: the revised set
+  is what is researched and assessed. Option and criterion ids are those of
+  dec-d53e1c52cd47c832; opt.added.1 / human:user follow dec-ef8ddcb79d668a67. The
+  free-text half of the same scenario is DK-600b-1-ii.
+
+  IT-PO BUILD STATUS (2026-10-02, unverified): built, tested in parts. Subset approval,
+  edited criteria and added options each have tests; no test combines them as the
+  criteria do. Caveat: edited_criteria replaces the whole criteria set (unlisted pending
+  criteria are declined), so rewording one criterion means resubmitting all five.
+
+  TRUE STATUS (2026-10-02): work_status in_progress; the it-po verified build status is
+    built_partly_tested.
+    - No single test applies an option subset, a reworded criterion and an added option in
+      one answer, or asserts the declined option is absent from the research request.
+    - As built, edited_criteria replaces the whole proposed criteria set: every pending
+      criterion not listed is declined, and approved_criterion_ids is ignored when
+      edited_criteria is present. Rewording one criterion while keeping four means listing
+      all five (with their ids). The how-to (DK-600b-4) must say so.
+  Missing tests are listed in TICKET-20261002-DecisionKernelACTestGaps; once they pass, mark
+    done through scripts/ac_store/mark_ac_done.py.
+product_truth:
+  - flow: leafcutter/decision-forming
+    node: revise-proposals
+    node_kind: branch
+    flow_kind: data
+    screen: null
+    mock_data: leafcutter/decisions
+    entities: []
+    source: real
+    asof: '2026-10-02'

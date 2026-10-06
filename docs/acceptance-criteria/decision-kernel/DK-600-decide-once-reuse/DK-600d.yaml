@@ -1,0 +1,90 @@
+id: DK-600d
+title: "Decisions join your project's record only after a normal review"
+component: decision-kernel
+components:
+  - decision_kernel
+level: L1
+status: active
+req_status: draft
+work_status: in_progress
+readiness: draft
+priority: medium
+roadmap_phase: phase_kernel_1_founding
+criteria: |
+  Every published decision is checked first and reviewed like any change.
+
+  Before a decision becomes part of your project's shared record it is checked for
+  completeness and consistency, stopped with a clear reason if anything is wrong,
+  and put through the same review and approval as any other change; a decision you
+  choose not to publish stays with the work that produced it. A later decision can
+  correct an earlier one without rewriting it, so the history of what was decided,
+  and why, stays intact.
+depends_on:
+  - DK-600
+doc_links:
+  - path: docs/product-truth/flows/leafcutter/decision-publishing.flow.json
+    relationship: implemented-by-step
+    status: exists
+  - path: docs/architecture/adrs/ADR-060-source-of-truth-and-approval-authority.md
+    relationship: related
+    status: exists
+    relevance: >-
+      Git is canonical for published decisions, a person runs publish, and a
+      correction is written only through publish and is append-only.
+  - path: tickets/00_inbox/TICKET-20261002-KernelGatedDirectPublish.md
+    relationship: related
+    status: exists
+    relevance: >-
+      FENCED OFF. Gated direct publishing carries no ACs by user decision and is
+      not built. Nothing under this L1 specifies it, and nothing here may be
+      marked done on its account.
+delivers_to: null
+expects_from: null
+documentation_triggers:
+  - how-to
+  - sequence-diagram
+  - state-diagram
+origin_agent: BrainCandy
+created: 2026-10-02
+created_by_ticket: tickets/00_inbox/TICKET-20261002-DecisionLifecycleACs.md
+amended_by: []
+superseded_by: null
+covered_by:
+  - DK-600d-1
+  - DK-600d-2
+  - DK-600d-3
+  - DK-600d-4
+  - DK-600d-5
+implemented_by: []
+change_target: code
+risk_surface: internal
+notes: |
+  DERIVED FROM leafcutter/decision-publishing (all 10 scenarios):
+    steps    decide-to-publish, check-record, write-published, check-store,
+             review, merge
+    branches keep-staged, no-staged-record, unknown-filter, correct-older
+  Also the journey step decision-lifecycle/publish.
+
+  WORDED TO SURVIVE GATED DIRECT PUBLISHING. The built flow has a person decide
+  to publish and run the command. The tagline and first clause deliberately
+  promise "checked, and reviewed like any change" rather than "you publish each
+  one by hand", because the queued direct-publishing change
+  (TICKET-20261002-KernelGatedDirectPublish, no ACs) keeps the check and the PR
+  review but removes the per-decision human trigger for low-risk records. The
+  decide-to-publish and keep-staged L2s will need amending when that ships. This
+  L1 should not.
+
+  STANDING RULES TO CARRY INTO L2. Validation runs before anything is written. A
+  run with no staged record, or a record naming a component or roadmap phase the
+  project does not know, stops with exit code 3 and writes nothing. The store
+  validator passes after a publish. A correction appends to the older record and
+  changes none of its existing content. Publishing is the only writer of the
+  published decision store.
+
+  Docs: a how-to for publishing and correcting a decision, a sequence diagram for
+  publish through review and merge, and a state diagram for a record moving from
+  staged to published, kept staged, or corrected and superseded.
+
+  TRUE STATUS (2026-10-02): work_status in_progress, derived from the direct children by the
+    rule above: done only when every direct child is done; todo only when none has started;
+    otherwise in_progress.

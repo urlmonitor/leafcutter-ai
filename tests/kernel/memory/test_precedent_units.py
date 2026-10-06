@@ -51,7 +51,7 @@ class TestQueryAndQuestions(unittest.TestCase):
     """What is asked of the store and of Jev."""
 
     def test_the_query_carries_components_phase_limit_and_minimum_score(self) -> None:
-        # covers: DK-300e-1
+        # covers: DK-600e-1
         scope = Scope(workspace_id="ws", repository_root=str(CHECKOUT), component_ids=["decision_kernel"])
         query = precedent_query("How?", scope, ["[hard] roadmap_phase: phase_1"], CFG)
         self.assertEqual((query.components, query.roadmap_phase, query.limit, query.min_score),
@@ -83,7 +83,7 @@ class TestQueryAndQuestions(unittest.TestCase):
         self.assertLessEqual(len(summary(hit())), 900)
 
     def test_a_superseded_precedent_says_so(self) -> None:
-        # covers: DK-300e-3-iii
+        # covers: DK-600e-3-iii
         self.assertIn("Superseded by dec-3333333333333333",
                       summary(hit(superseded=("dec-3333333333333333",))))
 
@@ -95,7 +95,7 @@ class TestVerdict(unittest.TestCase):
         self.assertEqual((CFG.applies_threshold, CFG.reuse_threshold), (0.5, 0.8))
 
     def test_below_the_applies_threshold_is_not_applicable(self) -> None:
-        # covers: DK-300e-2-i
+        # covers: DK-600e-2-i
         verdict = judge([hit()], {FIRST: 0.49}, CFG, can_reuse=True)
         self.assertEqual((verdict.applicable, verdict.offer), ([], None))
         self.assertEqual([n.action for n in verdict.notes], ["not_applicable"])
@@ -107,21 +107,21 @@ class TestVerdict(unittest.TestCase):
         self.assertEqual([n.action for n in verdict.notes], ["used_as_evidence"])
 
     def test_at_the_reuse_threshold_it_is_offered(self) -> None:
-        # covers: DK-300e-3
+        # covers: DK-600e-3
         verdict = judge([hit()], {FIRST: 0.8}, CFG, can_reuse=True)
         self.assertEqual(narrow_id(verdict.offer), FIRST)
         self.assertEqual([n.action for n in verdict.notes], ["offered_for_reuse"])
 
     def test_nothing_is_offered_when_the_decision_has_options_or_the_record_is_superseded(self
                                                                                           ) -> None:
-        # covers: DK-300e-3-iii
-        # covers: DK-300e-3-iv
+        # covers: DK-600e-3-iii
+        # covers: DK-600e-3-iv
         self.assertIsNone(judge([hit()], {FIRST: 0.99}, CFG, can_reuse=False).offer)
         old = hit(superseded=("dec-3333333333333333",))
         self.assertIsNone(judge([old], {FIRST: 0.99}, CFG, can_reuse=True).offer)
 
     def test_the_strongest_applicable_precedent_is_the_one_offered(self) -> None:
-        # covers: DK-300e-3
+        # covers: DK-600e-3
         other = "dec-1111111111111111"
         verdict = judge([hit(), hit(other)], {FIRST: 0.85, other: 0.95}, CFG, can_reuse=True)
         self.assertEqual(narrow_id(verdict.offer), other)
@@ -148,7 +148,7 @@ class TestEvidenceAndQuestion(unittest.TestCase):
         self.assertEqual(a.id, b.id)
 
     def test_the_confirm_question_and_choices_are_literal(self) -> None:
-        # covers: DK-300e-3
+        # covers: DK-600e-3
         record = make_record()
         self.assertEqual(confirm_text(record), (
             "Decision dec-0123456789abcdef (approved by human:tester on 2026-10-01) chose "
@@ -182,7 +182,7 @@ class TestFinalLinks(unittest.TestCase):
         self.assertIn("chose a different option", final[0].note)
 
     def test_a_precedent_judged_not_applicable_is_not_related(self) -> None:
-        # covers: DK-300e-2-i
+        # covers: DK-600e-2-i
         supersedes, related, _ = final_links(
             self.notes("not_applicable"), offer_id=None, offer_title=None, choice=None,
             selected_title="x")

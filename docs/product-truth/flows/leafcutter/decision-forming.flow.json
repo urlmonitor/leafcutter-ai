@@ -37,7 +37,7 @@
       "impl_asof": "2026-10-02",
       "impl_status": "done",
       "implements": [
-        "DK-300a-1"
+        "DK-600a-1"
       ]
     },
     {
@@ -98,7 +98,7 @@
       "impl_asof": "2026-10-02",
       "impl_status": "done",
       "implements": [
-        "DK-300a-1"
+        "DK-600a-1"
       ]
     },
     {
@@ -122,7 +122,7 @@
       "impl_asof": "2026-10-02",
       "impl_status": "in_progress",
       "implements": [
-        "DK-300e-1"
+        "DK-600e-1"
       ]
     },
     {
@@ -141,8 +141,8 @@
       "impl_asof": "2026-10-02",
       "impl_status": "done",
       "implements": [
-        "DK-300a-2-i",
-        "DK-300a-2"
+        "DK-600a-2-i",
+        "DK-600a-2"
       ]
     },
     {
@@ -162,7 +162,7 @@
       "impl_asof": "2026-10-02",
       "impl_status": "in_progress",
       "implements": [
-        "DK-300a-3"
+        "DK-600a-3"
       ]
     },
     {
@@ -182,7 +182,7 @@
       "impl_asof": "2026-10-02",
       "impl_status": "in_progress",
       "implements": [
-        "DK-300a-3"
+        "DK-600a-3"
       ]
     },
     {
@@ -201,7 +201,7 @@
       "impl_asof": "2026-10-02",
       "impl_status": "in_progress",
       "implements": [
-        "DK-300b-1"
+        "DK-600b-1"
       ]
     },
     {
@@ -220,7 +220,7 @@
       "impl_asof": "2026-10-02",
       "impl_status": "done",
       "implements": [
-        "DK-300a-4"
+        "DK-600a-4"
       ]
     },
     {
@@ -241,7 +241,7 @@
       "impl_asof": "2026-10-02",
       "impl_status": "done",
       "implements": [
-        "DK-300a-4"
+        "DK-600a-4"
       ]
     },
     {
@@ -260,7 +260,7 @@
       "impl_asof": "2026-10-02",
       "impl_status": "in_progress",
       "implements": [
-        "DK-300b-2"
+        "DK-600b-2"
       ]
     },
     {
@@ -282,7 +282,7 @@
       "impl_asof": "2026-10-02",
       "impl_status": "done",
       "implements": [
-        "DK-300b-3"
+        "DK-600b-3"
       ]
     }
   ],
@@ -329,8 +329,8 @@
       "impl_asof": "2026-10-02",
       "impl_status": "in_progress",
       "implements": [
-        "DK-300b-1-i",
-        "DK-300b-1-ii"
+        "DK-600b-1-i",
+        "DK-600b-1-ii"
       ]
     },
     {
@@ -350,7 +350,7 @@
       "impl_asof": "2026-10-02",
       "impl_status": "done",
       "implements": [
-        "DK-300a-4-i"
+        "DK-600a-4-i"
       ]
     },
     {
@@ -370,8 +370,8 @@
       "impl_asof": "2026-10-02",
       "impl_status": "in_progress",
       "implements": [
-        "DK-300b-2-i",
-        "DK-300b-2-ii"
+        "DK-600b-2-i",
+        "DK-600b-2-ii"
       ]
     },
     {
@@ -388,7 +388,7 @@
       "impl_asof": "2026-10-02",
       "impl_status": "in_progress",
       "implements": [
-        "DK-300b-2-iii"
+        "DK-600b-2-iii"
       ]
     }
   ],

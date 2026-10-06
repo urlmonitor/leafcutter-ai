@@ -1,0 +1,168 @@
+id: DK-600b-1
+title: "Nothing proposed is used until you approve it"
+component: decision-kernel
+components:
+  - decision_kernel
+level: L2
+status: active
+req_status: draft
+work_status: in_progress
+readiness: reviewed
+priority: medium
+roadmap_phase: phase_kernel_1_founding
+criteria: |
+  Given proposed options and criteria, for example 4 options and 5 criteria,
+  When you are asked to approve them and you approve all of them,
+  Then exactly those 4 options and 5 criteria go on to the option research round and the
+    assessment,
+  And no proposed option or criterion is researched or assessed before your approval is recorded.
+depends_on:
+  - DK-600b
+doc_links:
+  - path: docs/product-truth/flows/leafcutter/decision-forming.flow.json
+    relationship: implemented-by-step
+    status: exists
+    relevance: >-
+      Derived from leafcutter/decision-forming step approve-proposals. Add this AC id to each
+      named node's implements list.
+  - path: docs/how-to/run-the-decision-kernel.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-060-source-of-truth-and-approval-authority.md
+    relationship: related
+    status: exists
+    relevance: >-
+      Standing rules: only a human approval creates a record, nothing is written into the
+      repository during a run, precedent is evidence and never authority, corrections are
+      append-only.
+  - path: docs/architecture/components/decision-kernel.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-053-intelligence-selection-deterministic-jev-llm-human.md
+    relationship: describes
+    status: exists
+    relevance: 'Which mechanism answers each check: code, Jev, an LLM host or a human.'
+  - path: docs/analysis/2026-09-30-decision-kernel-design-4-jev-and-capabilities.md
+    relationship: describes
+    status: exists
+    relevance: Decision, research and retrieval capabilities, host operations, human interaction;
+      'As built' sections.
+assigned_agent: python-coder
+estimated_complexity: XS
+it_requirements:
+  - 'Only a human answer may approve, choose or reuse (ADR-053, ADR-060): no path may let Jev, a host
+    or the kernel resolve or approve on a person''s behalf.'
+  - Proposed options and criteria are excluded from research requests and from every Jev batch until
+    a human approval is recorded; only usable (supplied or approved) items are quoted to Jev.
+  - A host can never approve what it generated; generated items must arrive as proposals.
+  - 'This L2 has L3 children, so done_proof treats it as a composite unless it carries its own covers
+    tag: tag the tests of its own clauses so it proves itself, not only through its children.'
+  - 'Done-marking evidence (KI-ACS-004, done_proof): implemented_by names an existing kernel/... file
+    plus symbol, and every covering test under tests/kernel/ carries a `# covers: <this AC id>` tag
+    and passes under pytest. No kernel test carries a DK covers tag yet, so tagging comes before any
+    done-marking.'
+test_spec:
+  - name: test_proposed_criteria_go_to_human_approval_before_jev
+    target_dir: tests/kernel/capabilities/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: 'EXISTS (tests/kernel/capabilities/test_decision_criteria_proposals.py::TestOptionsAndCriteriaProposals::test_proposed_criteria_go_to_human_approval_before_jev):
+      proposals go to the human approval question with no Jev call'
+    covers:
+      - DK-600b-1
+  - name: test_jev_decides_against_approved_criteria_only
+    target_dir: tests/kernel/capabilities/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: 'EXISTS (tests/kernel/capabilities/test_decision_criteria_proposals.py::TestOptionsAndCriteriaProposals::test_jev_decides_against_approved_criteria_only):
+      after approve-all exactly the approved criteria reach the assessment'
+    covers:
+      - DK-600b-1
+  - name: test_generated_options_are_proposals_until_approved
+    target_dir: tests/kernel/capabilities/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: 'EXISTS (tests/kernel/capabilities/test_decision_criteria_proposals.py::TestOptionsAndCriteriaProposals::test_generated_options_are_proposals_until_approved):
+      generated options are subjects of the approval question, nothing assessed'
+    covers:
+      - DK-600b-1
+  - name: test_a_host_cannot_approve_the_proposals_it_generated
+    target_dir: tests/kernel/interaction/
+    framework: unittest
+    type: integration
+    angle: failure
+    description: 'EXISTS (tests/kernel/interaction/test_criteria_approval.py::TestStructuredApproval::test_a_host_cannot_approve_the_proposals_it_generated):
+      a host answer to the approval question is rejected'
+    covers:
+      - DK-600b-1
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst
+created: 2026-10-02
+created_by_ticket: tickets/00_inbox/TICKET-20261002-DecisionLifecycleACs.md
+amended_by:
+  - reason: it-po-technical-enrichment
+    by: it-po
+    date: '2026-10-02'
+    ticket: tickets/00_inbox/TICKET-20261002-DecisionLifecycleACs.md
+    build_status: built_and_tested
+    implementation_pointers:
+      - kernel/capabilities/decision/basis.py#validate_basis
+      - kernel/capabilities/decision/approvals.py#_apply_approval
+      - kernel/capabilities/decision/state.py#is_usable
+      - kernel/capabilities/decision/requests.py#approval_request
+    test_pointers:
+      - tests/kernel/capabilities/test_decision_criteria_proposals.py::TestOptionsAndCriteriaProposals::test_proposed_criteria_go_to_human_approval_before_jev
+      - tests/kernel/capabilities/test_decision_criteria_proposals.py::TestOptionsAndCriteriaProposals::test_jev_decides_against_approved_criteria_only
+      - tests/kernel/capabilities/test_decision_criteria_proposals.py::TestOptionsAndCriteriaProposals::test_generated_options_are_proposals_until_approved
+      - tests/kernel/interaction/test_criteria_approval.py::TestStructuredApproval::test_a_host_cannot_approve_the_proposals_it_generated
+      - tests/kernel/interaction/test_criteria_approval.py::TestStructuredApproval::test_the_approval_question_offers_a_structured_answer_over_the_proposals
+    gaps:
+      - None found.
+    pointer_note: Unverified candidates for implemented_by / covered_by, read from the worktree at
+      e89f0f74 (kernel/ and tests/kernel/ identical to origin/main). The evidence phase verifies each
+      and adds the `# covers:` tags before anything is marked done.
+    complexity_basis: remaining work only (evidence, covers tags, gap closure)
+superseded_by: null
+covered_by:
+  - DK-600b-1-i
+  - DK-600b-1-ii
+  - tests/kernel/capabilities/test_decision_criteria_proposals.py::TestOptionsAndCriteriaProposals::test_proposed_criteria_go_to_human_approval_before_jev
+  - tests/kernel/capabilities/test_decision_criteria_proposals.py::TestOptionsAndCriteriaProposals::test_jev_decides_against_approved_criteria_only
+  - tests/kernel/capabilities/test_decision_criteria_proposals.py::TestOptionsAndCriteriaProposals::test_generated_options_are_proposals_until_approved
+  - tests/kernel/interaction/test_criteria_approval.py::TestStructuredApproval::test_a_host_cannot_approve_the_proposals_it_generated
+  - tests/kernel/interaction/test_criteria_approval.py::TestStructuredApproval::test_the_approval_question_offers_a_structured_answer_over_the_proposals
+implemented_by:
+  - kernel/capabilities/decision/basis.py#validate_basis
+  - kernel/capabilities/decision/approvals.py#_apply_approval
+  - kernel/capabilities/decision/state.py#is_usable
+  - kernel/capabilities/decision/requests.py#approval_request
+change_target: code
+risk_surface: internal
+notes: |
+  FLOW BACK-LINKS (add this AC id to each node's implements list):
+    leafcutter/decision-forming    step    approve-proposals
+
+  DERIVATION. Scenario approve-proposals: only approved options and criteria are
+  used for research and assessment. Screen: decision-approve-proposals.
+
+  IT-PO BUILD STATUS (2026-10-02, unverified): built and tested. validate_basis puts
+  pending approvals first and Jev only ever sees usable items. Pointers: amended_by.
+
+  TRUE STATUS (2026-10-02): work_status in_progress. Its own clauses are built and its own
+    tests carry # covers: DK-600b-1 tags and pass, but a composite is done only when every direct
+    child is done (the L0 rule, enforced by check-done-proof). Not yet done: DK-600b-1-i. Mark it done
+    through scripts/ac_store/mark_ac_done.py once they are.
+product_truth:
+  - flow: leafcutter/decision-forming
+    node: approve-proposals
+    node_kind: step
+    flow_kind: data
+    screen: decision-approve-proposals
+    mock_data: leafcutter/decisions
+    entities: []
+    source: real
+    asof: '2026-10-02'

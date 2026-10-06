@@ -69,10 +69,10 @@ In order for the Atlas to show the decision-lifecycle flows' real state instead 
 ### 2026-10-02 15:33 — python-coder (status: ok)
 feedback-id: fb_2026-10-02_e5ac0d41
 Marked the decision-kernel ACs with their true status and wired them into the flows (nothing committed).
-- **done (18):** DK-300a-1, a-2-i, a-2, a-4-i, a-4, b-1-ii, b-2-i, b-3, c-1-i, c-1, d-2-i, d-3-i, d-3, e-1, e-2-i, e-3-iii, e-3-iv, e-4. Each has `implemented_by` (it-po pointers) and `covered_by` (test pointers), `# covers: <id>` tags on the 104 cited existing tests (comment-only, 28 files in tests/kernel/), all cited tests run green, and `mark_ac_done.py --test-root tests` accepted each.
+- **done (18):** DK-600a-1, a-2-i, a-2, a-4-i, a-4, b-1-ii, b-2-i, b-3, c-1-i, c-1, d-2-i, d-3-i, d-3, e-1, e-2-i, e-3-iii, e-3-iv, e-4. Each has `implemented_by` (it-po pointers) and `covered_by` (test pointers), `# covers: <id>` tags on the 104 cited existing tests (comment-only, 28 files in tests/kernel/), all cited tests run green, and `mark_ac_done.py --test-root tests` accepted each.
 - **in_progress (30) / todo (6):** gaps are in each AC's notes; the L1s and the L0 are in_progress (derived from their children).
-- **Deviation from the 22 built_and_tested:** DK-300b-1, b-2, d-2 and e-3 are L2 composites whose own tests pass and are tagged, but `check-done-proof` refuses a done composite with a child that is not done. They were marked done, then reverted to in_progress; they flip to done once their L3 children are done.
+- **Deviation from the 22 built_and_tested:** DK-600b-1, b-2, d-2 and e-3 are L2 composites whose own tests pass and are tagged, but `check-done-proof` refuses a done composite with a child that is not done. They were marked done, then reverted to in_progress; they flip to done once their L3 children are done.
 - **Flows:** `implements` filled on all 30 steps and 12 branches; generator write, `--check` and validator pass.
-- **BA questions:** Q1 (hash mismatch skips with a warning) noted in DK-300e-1; Q2 (only options supplied with the task count) in DK-300e-3-iv; Q3 (journey steps link L2s) in DK-300.
+- **BA questions:** Q1 (hash mismatch skips with a warning) noted in DK-600e-1; Q2 (only options supplied with the task count) in DK-600e-3-iv; Q3 (journey steps link L2s) in DK-600.
 - **Follow-up tickets:** KernelSynthesisCitationCheck, KernelSupersedePublishCorrect, DecisionKernelACTestGaps, RunKernelHowToFreeTextReRank. KernelPrecedentSkipsGrounding set to done.
 

@@ -31,7 +31,7 @@ class TestDesignDecisionThroughTheService(ScenarioCase):
                        ("c1", "B"): 0.67, ("c2", "B"): 0.65})
 
     async def test_ranked_question_then_the_humans_choice_resolves_the_run(self) -> None:
-        # covers: DK-300b-2
+        # covers: DK-600b-2
         paused = await self.service().start_run(self.task("primary", known_basis=True))
         self.assertEqual(paused.status, RunStatus.WAITING_HUMAN)
         question = as_type(paused.pending_interaction, HumanQuestion)

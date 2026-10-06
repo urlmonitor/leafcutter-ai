@@ -30,7 +30,7 @@
       "human": "Decision point: you run python -m kernel decisions publish --run-id R yourself, or ask Claude Code to run it and open a PR.",
       "order": 1,
       "implements": [
-        "DK-300d-1"
+        "DK-600d-1"
       ],
       "agent": "human (or claude_code on request)",
       "consumes": [
@@ -52,7 +52,7 @@
       "human": "The command checks the record's schema, its links, and its filter values against docs/components.json and docs/roadmap.json.",
       "order": 2,
       "implements": [
-        "DK-300d-2"
+        "DK-600d-2"
       ],
       "agent": "python -m kernel decisions publish",
       "consumes": [
@@ -74,7 +74,7 @@
       "human": "The command writes docs/decisions/<id>.yaml and regenerates docs/decisions/index.json.",
       "order": 3,
       "implements": [
-        "DK-300d-3"
+        "DK-600d-3"
       ],
       "agent": "python -m kernel decisions publish",
       "consumes": [
@@ -96,7 +96,7 @@
       "human": "python -m kernel decisions validate passes over the whole decision store.",
       "order": 4,
       "implements": [
-        "DK-300d-3"
+        "DK-600d-3"
       ],
       "agent": "python -m kernel decisions validate",
       "consumes": [
@@ -118,7 +118,7 @@
       "human": "The new record and index are committed, and a PR is opened and reviewed like any other change; git is the canonical store.",
       "order": 5,
       "implements": [
-        "DK-300d-4"
+        "DK-600d-4"
       ],
       "screen": "decision-record-published",
       "agent": "git review (commit and PR)",
@@ -142,7 +142,7 @@
       "human": "The PR merges to main, and from then on every later run can find the record (for example dec-ef8ddcb79d668a67).",
       "order": 6,
       "implements": [
-        "DK-300d-4"
+        "DK-600d-4"
       ],
       "agent": "git (merge to main)",
       "consumes": [
@@ -171,7 +171,7 @@
       ],
       "outcome_kind": "exit",
       "implements": [
-        "DK-300d-1-i"
+        "DK-600d-1-i"
       ],
       "impl_asof": "2026-10-02",
       "impl_status": "in_progress"
@@ -188,7 +188,7 @@
       ],
       "outcome_kind": "failure",
       "implements": [
-        "DK-300d-2-i"
+        "DK-600d-2-i"
       ],
       "impl_asof": "2026-10-02",
       "impl_status": "done"
@@ -205,7 +205,7 @@
       ],
       "outcome_kind": "failure",
       "implements": [
-        "DK-300d-2-ii"
+        "DK-600d-2-ii"
       ],
       "impl_asof": "2026-10-02",
       "impl_status": "in_progress"
@@ -231,7 +231,7 @@
       ],
       "outcome_kind": "alternative",
       "implements": [
-        "DK-300d-3-i"
+        "DK-600d-3-i"
       ],
       "impl_asof": "2026-10-02",
       "impl_status": "done"
