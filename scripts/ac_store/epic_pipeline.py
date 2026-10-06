@@ -159,7 +159,7 @@ def run(
         f"inter-ticket dependencies derived from the AC depends_on graph."
     )
     master_plan_path = _write_master_plan_safely(
-        epic_folder, topo_order, dep_graph, ac_id, goal_summary, epic_name
+        epic_folder, topo_order, dep_graph, ac_id, goal_summary, epic_name, ac_title
     )
     if master_plan_path is not None:
         print(f"Master_Plan.md written: {master_plan_path}")
@@ -270,7 +270,7 @@ def build_epic_from_ids(
     )
     master_plan_path = _write_master_plan_safely(
         epic_folder, topo_order, dep_graph, ids[0] if ids else "unknown",
-        goal_summary, epic_name,
+        goal_summary, epic_name, _get_ac_title(ids[0], store_root) if ids else "",
     )
     if master_plan_path is not None:
         get_logger().info("Master_Plan.md written: %s", master_plan_path)
@@ -282,6 +282,9 @@ def build_epic_from_ids(
 ====================================================================
 DECISION HISTORY
 ====================================================================
+- 2026-10-06 [EPIC-BuildToolingRunsThrough/09]: Both entrypoints pass the goal title. (#ACD-1200a-8-i)
+  run() passes ac_title and build_epic_from_ids() the first id's AC title to
+  _write_master_plan_safely so the plan carries title: "EPIC: <goal title>".
 - 2026-08-12 [BO-2600a-5]: Explicit id-list entrypoint and two hygiene fixes.
   Implements BO-2600a-5: adds build_epic_from_ids(ids, *, store_root, inbox_dir)
   and a matching --ids CLI mode so fast_lane.resolve_connected_build_set() can
