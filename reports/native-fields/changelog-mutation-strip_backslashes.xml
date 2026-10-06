@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="1" skipped="0" tests="1" time="17.565" timestamp="2026-10-02T09:14:04.374146+00:00" hostname="BrainDesk"><testcase classname="tests.knowledge.test_native_changelog_entry" name="test_changelog_recovers_only_failing_literal_description" time="0.013"><failure message="assert {'title': 'Re...nd tail', ...} == {'title': 'Re...\\\tail', ...}&#10;  &#10;  Omitting 4 identical items, use -vv to show&#10;  Differing items:&#10;  {'description': 'Regex .yaml and C:newtest, with &quot;quotes&quot; and tail'} != {'description': 'Regex \\.yaml and C:\\new\\test, with &quot;quotes&quot; and \\\\tail'}&#10;  Use -v to get more diff">tmp_path = WindowsPath('C:/Users/Hendrik/AppData/Local/Temp/pytest-of-Hendrik/pytest-3067/test_changelog_recovers_only_f0')
+
+    def test_changelog_recovers_only_failing_literal_description(tmp_path):
+        # covers: KM-400a-3-i
+        # angle: boundary
+        description = r'Regex \.yaml and C:\new\test, with "quotes" and \\tail'
+        fragment = 'description: "' + description.replace('"', '\\"') + '"\n'
+        raw = "title: Recovered\ntime: 12:15\npr: null\n" + fragment + "commits: [123456, abcdef]\n"
+        _write(tmp_path, "changelogs/escaped.md", raw)
+        (record,) = _extract(tmp_path)
+&gt;       assert record.metadata == {
+            "title": "Recovered",
+            "time": 735,
+            "pr": None,
+            "description": description,
+            "commits": [123456, "abcdef"],
+        }
+E       assert {'title': 'Re...nd tail', ...} == {'title': 'Re...\\\tail', ...}
+E         
+E         Omitting 4 identical items, use -vv to show
+E         Differing items:
+E         {'description': 'Regex .yaml and C:newtest, with "quotes" and tail'} != {'description': 'Regex \\.yaml and C:\\new\\test, with "quotes" and \\\\tail'}
+E         Use -v to get more diff
+
+tests\knowledge\test_native_changelog_entry.py:144: AssertionError</failure></testcase></testsuite></testsuites>

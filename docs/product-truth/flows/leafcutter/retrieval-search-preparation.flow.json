@@ -1,0 +1,1101 @@
+{
+  "id": "leafcutter/retrieval-search-preparation",
+  "component": "knowledge-management",
+  "product": "Leafcutter",
+  "name": "Prepare and run candidate searches",
+  "level": "journey",
+  "summary": "Gather terms, optionally generate five, then run bounded searches and return separate attributable attempts.",
+  "kind": "data",
+  "source": "real",
+  "realization": "spec",
+  "status": "active",
+  "readiness": "draft",
+  "version": 3,
+  "tags": [
+    "retrieval",
+    "target-design"
+  ],
+  "entities": [],
+  "steps": [
+    {
+      "id": "strategy",
+      "label": "Choose the search approach",
+      "agent": "Jev",
+      "human": "Choose one or more compatible offered keyword/vector search contracts for the original question, within the main plan and remaining budget. Select useful known component filters. This is not an instruction to run all methods or to execute them concurrently. Unsupported vector readiness excludes that method.\n\nI/O boundary: Known needs and trusted kernel scope are reusable inputs. Needs source_scope is semantic metadata and never broadens Scope authority.\n\nContract fields and examples (generated)\nConsumes:\n  retrieval_needs_output/original_question: string (required)\n  retrieval_needs_output/selections: object (required)\n  retrieval_needs_output/detail_mode: string (required)\n  retrieval_needs_output/completeness: string (required)\n  Runtime contract: [retrieval_needs_output](kernel/contracts/retrieval_needs.py)\n  scope/component_ids: array (optional; default [])\n  scope/source_ids: array (optional; default [])\n  scope/read_roots: array (optional; default [])\n  Runtime contract: [scope](kernel/contracts/task.py)\nProduces:\n  No checked JSON binding documented in this direction.\n\nPROPOSED - missing JSON binding (both): Multi-method search plan\nNo target schema defines the selected compatible keyword/vector contracts, source/model readiness, per-contract inputs and accumulated budget.\nDesign source: [docs/product-truth/flows/leafcutter/retrieval-search-preparation.flow.json](docs/product-truth/flows/leafcutter/retrieval-search-preparation.flow.json)\n\nInput illustrative retrieval_needs_output projection; not an execution receipt — retrieval_needs_output; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"original_question\": \"For KM-500c-2, what must tests demonstrate?\",\n  \"selections\": {\n    \"entity_types\": [\n      \"AcceptanceCriterion\"\n    ],\n    \"target_ids\": [\n      \"KM-500c-2\"\n    ],\n    \"required_fields\": [\n      \"criteria\",\n      \"test_required\"\n    ],\n    \"document_types\": [\n      \"acceptance_criterion\"\n    ],\n    \"relationships\": []\n  },\n  \"detail_mode\": \"fields\",\n  \"completeness\": \"single_entity\"\n}\n\nInput illustrative scope projection; not an execution receipt — scope; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"component_ids\": [\n    \"knowledge-retrieval\"\n  ],\n  \"read_roots\": [\n    \"docs/acceptance-criteria\"\n  ],\n  \"source_ids\": [\n    \"repository\"\n  ]\n}",
+      "order": 1,
+      "implements": [],
+      "consumes": [
+        "retrieval_needs_output/original_question: string (required)",
+        "retrieval_needs_output/selections: object (required)",
+        "retrieval_needs_output/detail_mode: string (required)",
+        "retrieval_needs_output/completeness: string (required)",
+        "scope/component_ids: array (optional; default [])",
+        "scope/source_ids: array (optional; default [])",
+        "scope/read_roots: array (optional; default [])"
+      ],
+      "produces": [],
+      "impl_asof": "2026-10-02",
+      "impl_status": "not_started",
+      "io_contracts": {
+        "consumes": [
+          {
+            "contract": "retrieval_needs_output",
+            "fields": [
+              {
+                "path": "/original_question",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/selections",
+                "types": [
+                  "object"
+                ],
+                "required": true
+              },
+              {
+                "path": "/detail_mode",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/completeness",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              }
+            ]
+          },
+          {
+            "contract": "scope",
+            "fields": [
+              {
+                "path": "/component_ids",
+                "types": [
+                  "array"
+                ],
+                "required": false,
+                "default": []
+              },
+              {
+                "path": "/source_ids",
+                "types": [
+                  "array"
+                ],
+                "required": false,
+                "default": []
+              },
+              {
+                "path": "/read_roots",
+                "types": [
+                  "array"
+                ],
+                "required": false,
+                "default": []
+              }
+            ]
+          }
+        ],
+        "produces": [],
+        "examples": [
+          {
+            "contract": "retrieval_needs_output",
+            "mode": "projection",
+            "origin": "illustrative",
+            "label": "Input illustrative retrieval_needs_output projection; not an execution receipt",
+            "value": {
+              "original_question": "For KM-500c-2, what must tests demonstrate?",
+              "selections": {
+                "entity_types": [
+                  "AcceptanceCriterion"
+                ],
+                "target_ids": [
+                  "KM-500c-2"
+                ],
+                "required_fields": [
+                  "criteria",
+                  "test_required"
+                ],
+                "document_types": [
+                  "acceptance_criterion"
+                ],
+                "relationships": []
+              },
+              "detail_mode": "fields",
+              "completeness": "single_entity"
+            }
+          },
+          {
+            "contract": "scope",
+            "mode": "projection",
+            "origin": "illustrative",
+            "label": "Input illustrative scope projection; not an execution receipt",
+            "value": {
+              "component_ids": [
+                "knowledge-retrieval"
+              ],
+              "read_roots": [
+                "docs/acceptance-criteria"
+              ],
+              "source_ids": [
+                "repository"
+              ]
+            }
+          }
+        ],
+        "missing_bindings": [
+          {
+            "name": "Multi-method search plan",
+            "direction": "both",
+            "reason": "No target schema defines the selected compatible keyword/vector contracts, source/model readiness, per-contract inputs and accumulated budget.",
+            "source": "docs/product-truth/flows/leafcutter/retrieval-search-preparation.flow.json"
+          }
+        ]
+      }
+    },
+    {
+      "id": "terms",
+      "label": "Gather supplied or known terms",
+      "agent": "System",
+      "human": "Collect useful caller keywords and terms in permitted context. Retain their origin and pass them to the separate sufficiency decision; do not generate terms or broaden scope. Prepare each selected contract separately. Reuse terms only where that contract accepts their meaning and scope; preserve their binding to query/version/source.\n\nContract fields and examples (generated)\nConsumes:\n  No checked JSON binding documented in this direction.\nProduces:\n  No checked JSON binding documented in this direction.\n\nPROPOSED - missing JSON binding (both): Known terms grouped by selected contract\nThe proposed per-query/version/source term grouping and term provenance have no runtime DTO; a global free keyword array would lose the binding.\nDesign source: [docs/product-truth/flows/leafcutter/retrieval-search-preparation.flow.json](docs/product-truth/flows/leafcutter/retrieval-search-preparation.flow.json)",
+      "order": 2,
+      "implements": [],
+      "consumes": [],
+      "produces": [],
+      "impl_asof": "2026-10-02",
+      "impl_status": "not_started",
+      "io_contracts": {
+        "missing_bindings": [
+          {
+            "name": "Known terms grouped by selected contract",
+            "direction": "both",
+            "reason": "The proposed per-query/version/source term grouping and term provenance have no runtime DTO; a global free keyword array would lose the binding.",
+            "source": "docs/product-truth/flows/leafcutter/retrieval-search-preparation.flow.json"
+          }
+        ]
+      }
+    },
+    {
+      "id": "decide-terms",
+      "label": "Decide whether terms suffice",
+      "agent": "Jev",
+      "human": "Choose known-term bypass or optional generation from the selected input contract. Do not author search terms. Judge each selected contract independently; accepting terms for one does not bind them to every method.\n\nContract fields and examples (generated)\nConsumes:\n  No checked JSON binding documented in this direction.\nProduces:\n  No checked JSON binding documented in this direction.\n\nPROPOSED - missing JSON binding (both): Per-contract bypass/generation decisions\nOne selected contract can accept known terms while another needs generation. No typed per-contract choice record or question template is registered.\nDesign source: [docs/product-truth/flows/leafcutter/retrieval-search-preparation.flow.json](docs/product-truth/flows/leafcutter/retrieval-search-preparation.flow.json)",
+      "order": 3,
+      "implements": [],
+      "consumes": [],
+      "produces": [],
+      "impl_asof": "2026-10-02",
+      "impl_status": "not_started",
+      "io_contracts": {
+        "missing_bindings": [
+          {
+            "name": "Per-contract bypass/generation decisions",
+            "direction": "both",
+            "reason": "One selected contract can accept known terms while another needs generation. No typed per-contract choice record or question template is registered.",
+            "source": "docs/product-truth/flows/leafcutter/retrieval-search-preparation.flow.json"
+          }
+        ]
+      }
+    },
+    {
+      "id": "request-terms",
+      "label": "Request optional term generation",
+      "agent": "System",
+      "human": "Only after the generation decision, construct the proposed typed request and persist kernel host handoff. Bind original question, approved context and selected query/version/source. Otherwise route directly to search. Each request is bound to its own contract/query/version/source. Compatible term reuse remains explicit and validated, not a global unbound input set.\n\nI/O boundary: Transport is real; the requested operation and output schema registration remain missing. No synthesis or retrieval-needs operation is substituted.\n\nContract fields and examples (generated)\nConsumes:\n  No checked JSON binding documented in this direction.\nProduces:\n  host_work_request/goal: string (required)\n  host_work_request/input_artifact_refs: array (optional; default [])\n  host_work_request/state_revision: integer (required)\n  host_work_request/context_limits: object (optional)\n  Runtime contract: [host_work_request](kernel/contracts/interaction.py)\n\nPROPOSED - missing JSON binding (both): Term-generation host request binding\nThe reusable HostWorkRequest has no registered term-generation operation or contract-bound payload carrying original question, approved context and selected query/version/source.\nDesign source: [docs/product-truth/flows/leafcutter/retrieval-search-preparation.flow.json](docs/product-truth/flows/leafcutter/retrieval-search-preparation.flow.json)\n\nOutput illustrative host_work_request projection; not an execution receipt — host_work_request; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"goal\": \"For KM-500c-2, what must tests demonstrate?\",\n  \"input_artifact_refs\": [\n    \"artifacts/example-request.json\"\n  ],\n  \"state_revision\": 1\n}",
+      "order": 4,
+      "implements": [],
+      "consumes": [],
+      "produces": [
+        "host_work_request/goal: string (required)",
+        "host_work_request/input_artifact_refs: array (optional; default [])",
+        "host_work_request/state_revision: integer (required)",
+        "host_work_request/context_limits: object (optional)"
+      ],
+      "impl_asof": "2026-10-02",
+      "impl_status": "not_started",
+      "io_contracts": {
+        "consumes": [],
+        "produces": [
+          {
+            "contract": "host_work_request",
+            "fields": [
+              {
+                "path": "/goal",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/input_artifact_refs",
+                "types": [
+                  "array"
+                ],
+                "required": false,
+                "default": []
+              },
+              {
+                "path": "/state_revision",
+                "types": [
+                  "integer"
+                ],
+                "required": true
+              },
+              {
+                "path": "/context_limits",
+                "types": [
+                  "object"
+                ],
+                "required": false
+              }
+            ]
+          }
+        ],
+        "examples": [
+          {
+            "contract": "host_work_request",
+            "mode": "projection",
+            "origin": "illustrative",
+            "label": "Output illustrative host_work_request projection; not an execution receipt",
+            "value": {
+              "goal": "For KM-500c-2, what must tests demonstrate?",
+              "input_artifact_refs": [
+                "artifacts/example-request.json"
+              ],
+              "state_revision": 1
+            }
+          }
+        ],
+        "missing_bindings": [
+          {
+            "name": "Term-generation host request binding",
+            "direction": "both",
+            "reason": "The reusable HostWorkRequest has no registered term-generation operation or contract-bound payload carrying original question, approved context and selected query/version/source.",
+            "source": "docs/product-truth/flows/leafcutter/retrieval-search-preparation.flow.json"
+          }
+        ]
+      }
+    },
+    {
+      "id": "generate",
+      "label": "Optionally generate five terms",
+      "agent": "Host LLM",
+      "human": "Generate exactly five distinct nonempty search suggestions. The model is interchangeable. Terms are not facts. This proposed operation uses existing typed host transport. This optional action repeats only for the selected contracts that need generation, within the same cumulative budget.\n\nI/O boundary: PROPOSED output: exactly five distinct nonempty strings. Suggestions are query vocabulary, not repository facts; no particular model is mandated.\n\nContract fields and examples (generated)\nConsumes:\n  host_work_request/goal: string (required)\n  host_work_request/input_artifact_refs: array (optional; default [])\n  Runtime contract: [host_work_request](kernel/contracts/interaction.py)\nProduces:\n  ILLUSTRATIVE DESIGN: PROPOSED, not implemented: source specification retrieval-search-preparation#generate requires exactly five distinct nonempty suggestions. This design schema does not register a host operation or prove model quality.\n  terms: array (required)\n  Schema: [terms](docs/product-truth/schemas/retrieval-search-terms-proposal.schema.json)\n\nPROPOSED - missing JSON binding (both): Term-generation operation registration\nThe output requirement is specified below as a design-only JSON array. Its host operation and matching request/output schema IDs are not registered.\nDesign source: [docs/product-truth/flows/leafcutter/retrieval-search-preparation.flow.json](docs/product-truth/flows/leafcutter/retrieval-search-preparation.flow.json)\n\nInput illustrative host_work_request projection; not an execution receipt — host_work_request; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"goal\": \"For KM-500c-2, what must tests demonstrate?\",\n  \"input_artifact_refs\": [\n    \"artifacts/example-request.json\"\n  ]\n}\n\nOutput illustrative terms projection; not an execution receipt — terms; illustrative; selected fields only; full required/defaulted fields in linked contract:\n[\n  \"test writing\",\n  \"test-writer\",\n  \"RED baseline\",\n  \"test requirements\",\n  \"behavioral tests\"\n]",
+      "order": 5,
+      "implements": [],
+      "consumes": [
+        "host_work_request/goal: string (required)",
+        "host_work_request/input_artifact_refs: array (optional; default [])"
+      ],
+      "produces": [
+        "terms: array (required)"
+      ],
+      "impl_asof": "2026-10-02",
+      "impl_status": "not_started",
+      "io_contracts": {
+        "consumes": [
+          {
+            "contract": "host_work_request",
+            "fields": [
+              {
+                "path": "/goal",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/input_artifact_refs",
+                "types": [
+                  "array"
+                ],
+                "required": false,
+                "default": []
+              }
+            ]
+          }
+        ],
+        "produces": [
+          {
+            "contract": "terms",
+            "fields": [
+              {
+                "path": "",
+                "types": [
+                  "array"
+                ],
+                "required": true
+              }
+            ]
+          }
+        ],
+        "examples": [
+          {
+            "contract": "host_work_request",
+            "mode": "projection",
+            "origin": "illustrative",
+            "label": "Input illustrative host_work_request projection; not an execution receipt",
+            "value": {
+              "goal": "For KM-500c-2, what must tests demonstrate?",
+              "input_artifact_refs": [
+                "artifacts/example-request.json"
+              ]
+            }
+          },
+          {
+            "contract": "terms",
+            "mode": "projection",
+            "origin": "illustrative",
+            "label": "Output illustrative terms projection; not an execution receipt",
+            "value": [
+              "test writing",
+              "test-writer",
+              "RED baseline",
+              "test requirements",
+              "behavioral tests"
+            ]
+          }
+        ],
+        "missing_bindings": [
+          {
+            "name": "Term-generation operation registration",
+            "direction": "both",
+            "reason": "The output requirement is specified below as a design-only JSON array. Its host operation and matching request/output schema IDs are not registered.",
+            "source": "docs/product-truth/flows/leafcutter/retrieval-search-preparation.flow.json"
+          }
+        ]
+      }
+    },
+    {
+      "id": "validate-terms",
+      "label": "Validate term output",
+      "agent": "System",
+      "human": "Validate matching resume and exactly five distinct nonempty terms. Invalid results follow bounded correction or an explicit limitation without searching.\n\nI/O boundary: Structural validation of five strings is distinct from Jev usefulness. These illustrative values do not establish that a model or search was run.\n\nContract fields and examples (generated)\nConsumes:\n  ILLUSTRATIVE DESIGN: PROPOSED, not implemented: source specification retrieval-search-preparation#generate requires exactly five distinct nonempty suggestions. This design schema does not register a host operation or prove model quality.\n  terms: array (required)\n  Schema: [terms](docs/product-truth/schemas/retrieval-search-terms-proposal.schema.json)\n  interaction_submission/run_id: string (required)\n  interaction_submission/interaction_id: string (required)\n  interaction_submission/expected_state_revision: integer (required)\n  interaction_submission/actor: object (required)\n  Runtime contract: [interaction_submission](kernel/contracts/interaction.py)\nProduces:\n  ILLUSTRATIVE DESIGN: PROPOSED, not implemented: source specification retrieval-search-preparation#generate requires exactly five distinct nonempty suggestions. This design schema does not register a host operation or prove model quality.\n  terms: array (required)\n  Schema: [terms](docs/product-truth/schemas/retrieval-search-terms-proposal.schema.json)\n\nPROPOSED - missing JSON binding (both): Term-response submission binding\nArray constraints can be checked against the design schema; the kernel cannot yet validate a registered term-generation response schema/interaction because that operation is absent.\nDesign source: [docs/product-truth/flows/leafcutter/retrieval-search-preparation.flow.json](docs/product-truth/flows/leafcutter/retrieval-search-preparation.flow.json)\n\nInput illustrative terms projection; not an execution receipt — terms; illustrative; selected fields only; full required/defaulted fields in linked contract:\n[\n  \"test writing\",\n  \"test-writer\",\n  \"RED baseline\",\n  \"test requirements\",\n  \"behavioral tests\"\n]\n\nInput illustrative interaction_submission projection; not an execution receipt — interaction_submission; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"run_id\": \"run-example\",\n  \"interaction_id\": \"interaction-example\",\n  \"expected_state_revision\": 1,\n  \"actor\": {\n    \"kind\": \"human\",\n    \"id\": \"reviewer\"\n  }\n}\n\nOutput illustrative terms projection; not an execution receipt — terms; illustrative; selected fields only; full required/defaulted fields in linked contract:\n[\n  \"test writing\",\n  \"test-writer\",\n  \"RED baseline\",\n  \"test requirements\",\n  \"behavioral tests\"\n]",
+      "order": 6,
+      "implements": [],
+      "consumes": [
+        "terms: array (required)",
+        "interaction_submission/run_id: string (required)",
+        "interaction_submission/interaction_id: string (required)",
+        "interaction_submission/expected_state_revision: integer (required)",
+        "interaction_submission/actor: object (required)"
+      ],
+      "produces": [
+        "terms: array (required)"
+      ],
+      "impl_asof": "2026-10-02",
+      "impl_status": "not_started",
+      "io_contracts": {
+        "consumes": [
+          {
+            "contract": "terms",
+            "fields": [
+              {
+                "path": "",
+                "types": [
+                  "array"
+                ],
+                "required": true
+              }
+            ]
+          },
+          {
+            "contract": "interaction_submission",
+            "fields": [
+              {
+                "path": "/run_id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/interaction_id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/expected_state_revision",
+                "types": [
+                  "integer"
+                ],
+                "required": true
+              },
+              {
+                "path": "/actor",
+                "types": [
+                  "object"
+                ],
+                "required": true
+              }
+            ]
+          }
+        ],
+        "produces": [
+          {
+            "contract": "terms",
+            "fields": [
+              {
+                "path": "",
+                "types": [
+                  "array"
+                ],
+                "required": true
+              }
+            ]
+          }
+        ],
+        "examples": [
+          {
+            "contract": "terms",
+            "mode": "projection",
+            "origin": "illustrative",
+            "label": "Input illustrative terms projection; not an execution receipt",
+            "value": [
+              "test writing",
+              "test-writer",
+              "RED baseline",
+              "test requirements",
+              "behavioral tests"
+            ]
+          },
+          {
+            "contract": "interaction_submission",
+            "mode": "projection",
+            "origin": "illustrative",
+            "label": "Input illustrative interaction_submission projection; not an execution receipt",
+            "value": {
+              "run_id": "run-example",
+              "interaction_id": "interaction-example",
+              "expected_state_revision": 1,
+              "actor": {
+                "kind": "human",
+                "id": "reviewer"
+              }
+            }
+          },
+          {
+            "contract": "terms",
+            "mode": "projection",
+            "origin": "illustrative",
+            "label": "Output illustrative terms projection; not an execution receipt",
+            "value": [
+              "test writing",
+              "test-writer",
+              "RED baseline",
+              "test requirements",
+              "behavioral tests"
+            ]
+          }
+        ],
+        "missing_bindings": [
+          {
+            "name": "Term-response submission binding",
+            "direction": "both",
+            "reason": "Array constraints can be checked against the design schema; the kernel cannot yet validate a registered term-generation response schema/interaction because that operation is absent.",
+            "source": "docs/product-truth/flows/leafcutter/retrieval-search-preparation.flow.json"
+          }
+        ]
+      }
+    },
+    {
+      "id": "judge-terms",
+      "label": "Judge term usefulness",
+      "agent": "Jev",
+      "human": "Choose accept, correction, clarification or stop against the original question. Known-term bypass skips these generation-only actions.\n\nI/O boundary: The proposed acceptance decision uses the existing ChoiceAnswer transport shape; it is not a registered term-evaluation classifier.\n\nContract fields and examples (generated)\nConsumes:\n  ILLUSTRATIVE DESIGN: PROPOSED, not implemented: source specification retrieval-search-preparation#generate requires exactly five distinct nonempty suggestions. This design schema does not register a host operation or prove model quality.\n  terms: array (required)\n  Schema: [terms](docs/product-truth/schemas/retrieval-search-terms-proposal.schema.json)\nProduces:\n  choice_answer/question_id: string (optional; default \"\")\n  choice_answer/choice: string (required)\n  choice_answer/probabilities: object (required)\n  choice_answer/confidence: null|number (optional; default null)\n  Runtime contract: [choice_answer](kernel/providers/base.py)\n\nPROPOSED - missing JSON binding (both): Term acceptance question binding\nAccept/correction/clarification/stop is specified behavior, but the scoped Jev question/template and persisted outcome binding are absent.\nDesign source: [docs/product-truth/flows/leafcutter/retrieval-search-preparation.flow.json](docs/product-truth/flows/leafcutter/retrieval-search-preparation.flow.json)\n\nInput illustrative terms projection; not an execution receipt — terms; illustrative; selected fields only; full required/defaulted fields in linked contract:\n[\n  \"test writing\",\n  \"test-writer\",\n  \"RED baseline\",\n  \"test requirements\",\n  \"behavioral tests\"\n]\n\nOutput illustrative choice_answer projection; not an execution receipt — choice_answer; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"question_id\": \"terms\",\n  \"choice\": \"accept\",\n  \"probabilities\": {\n    \"accept\": 0.9,\n    \"correction\": 0.03333333333333333,\n    \"clarify\": 0.03333333333333333,\n    \"stop\": 0.03333333333333333\n  },\n  \"confidence\": 0.9\n}",
+      "order": 7,
+      "implements": [],
+      "consumes": [
+        "terms: array (required)"
+      ],
+      "produces": [
+        "choice_answer/question_id: string (optional; default \"\")",
+        "choice_answer/choice: string (required)",
+        "choice_answer/probabilities: object (required)",
+        "choice_answer/confidence: null|number (optional; default null)"
+      ],
+      "impl_asof": "2026-10-02",
+      "impl_status": "not_started",
+      "io_contracts": {
+        "consumes": [
+          {
+            "contract": "terms",
+            "fields": [
+              {
+                "path": "",
+                "types": [
+                  "array"
+                ],
+                "required": true
+              }
+            ]
+          }
+        ],
+        "produces": [
+          {
+            "contract": "choice_answer",
+            "fields": [
+              {
+                "path": "/question_id",
+                "types": [
+                  "string"
+                ],
+                "required": false,
+                "default": ""
+              },
+              {
+                "path": "/choice",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/probabilities",
+                "types": [
+                  "object"
+                ],
+                "required": true
+              },
+              {
+                "path": "/confidence",
+                "types": [
+                  "null",
+                  "number"
+                ],
+                "required": false,
+                "default": null
+              }
+            ]
+          }
+        ],
+        "examples": [
+          {
+            "contract": "terms",
+            "mode": "projection",
+            "origin": "illustrative",
+            "label": "Input illustrative terms projection; not an execution receipt",
+            "value": [
+              "test writing",
+              "test-writer",
+              "RED baseline",
+              "test requirements",
+              "behavioral tests"
+            ]
+          },
+          {
+            "contract": "choice_answer",
+            "mode": "projection",
+            "origin": "illustrative",
+            "label": "Output illustrative choice_answer projection; not an execution receipt",
+            "value": {
+              "question_id": "terms",
+              "choice": "accept",
+              "probabilities": {
+                "accept": 0.9,
+                "correction": 0.03333333333333333,
+                "clarify": 0.03333333333333333,
+                "stop": 0.03333333333333333
+              },
+              "confidence": 0.9
+            }
+          }
+        ],
+        "missing_bindings": [
+          {
+            "name": "Term acceptance question binding",
+            "direction": "both",
+            "reason": "Accept/correction/clarification/stop is specified behavior, but the scoped Jev question/template and persisted outcome binding are absent.",
+            "source": "docs/product-truth/flows/leafcutter/retrieval-search-preparation.flow.json"
+          }
+        ]
+      }
+    },
+    {
+      "id": "search",
+      "label": "Run separate retrieval attempts",
+      "agent": "System",
+      "human": "Execute the permitted bounded searches once. Keep each attempt separate: original question, method/query/version, terms, component filters, source/revision, model/version where relevant, budget, evidence locators, coverage and outcome. Do not combine candidates yet. Empty evidence, denied access, outage, missing mapping and partial coverage remain distinct. Structurally valid but semantically rejected terms do not execute. Preserve the main attempt history and cumulative budget; selecting multiple searches does not imply parallel execution. Return useful evidence even if another attempt fails. Use only the inputs validated and accepted for that specific method/query contract.\n\nI/O boundary: Known per-operation output fields are shown as a reference. This recipe result example is not a keyword/vector receipt or evidence that the new five-term fanout executes.\n\nContract fields and examples (generated)\nConsumes:\n  No checked JSON binding documented in this direction.\nProduces:\n  knowledge_result/status: string (required)\n  knowledge_result/operation: string (optional; default \"\")\n  knowledge_result/operation_version: string (optional; default \"1\")\n  knowledge_result/source_sha: null|string (optional; default null)\n  knowledge_result/generation_id: null|string (optional; default null)\n  knowledge_result/evidence: array (optional; default [])\n  knowledge_result/warnings: array (optional; default [])\n  Runtime contract: [knowledge_result](knowledge/contracts.py)\n\nPROPOSED - missing JSON binding (both): Per-contract multi-search attempt envelope\nThe target needs terms, filters, method/query/version/model, actual pinned source, budget, evidence and outcome per attempt. Neutral KnowledgeRetrievalResult covers one operation, not that planned aggregate.\nDesign source: [docs/product-truth/flows/leafcutter/retrieval-search-preparation.flow.json](docs/product-truth/flows/leafcutter/retrieval-search-preparation.flow.json)\n\nOutput illustrative knowledge_result projection; not an execution receipt — knowledge_result; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"status\": \"partial\",\n  \"operation\": \"example_ac_requirements\",\n  \"operation_version\": \"1\",\n  \"source_sha\": \"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\n  \"generation_id\": \"example-generation\",\n  \"evidence\": [\n    {\n      \"entity\": {\n        \"canonical_id\": \"KM-500c-2\",\n        \"kind\": \"AcceptanceCriterion\",\n        \"title\": \"Illustrative AC title\",\n        \"source\": {\n          \"repository_id\": \"leafcutter\",\n          \"source_sha\": \"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\n          \"path\": \"docs/acceptance-criteria/knowledge-retrieval/KM-500c-2.yaml\",\n          \"locator\": \"criteria\"\n        },\n        \"properties\": {\n          \"criteria\": \"Illustrative acceptance clause; no real requirement text is asserted.\"\n        }\n      },\n      \"content\": \"Illustrative acceptance clause; no real requirement text is asserted.\",\n      \"field_availability\": {\n        \"test_required\": \"unknown\"\n      },\n      \"limitations\": [\n        \"The requested test_required field is not available in this illustrative result.\"\n      ]\n    }\n  ],\n  \"warnings\": [\n    \"The test_required field is unresolved.\"\n  ]\n}",
+      "order": 8,
+      "implements": [],
+      "consumes": [],
+      "produces": [
+        "knowledge_result/status: string (required)",
+        "knowledge_result/operation: string (optional; default \"\")",
+        "knowledge_result/operation_version: string (optional; default \"1\")",
+        "knowledge_result/source_sha: null|string (optional; default null)",
+        "knowledge_result/generation_id: null|string (optional; default null)",
+        "knowledge_result/evidence: array (optional; default [])",
+        "knowledge_result/warnings: array (optional; default [])"
+      ],
+      "impl_asof": "2026-10-02",
+      "impl_status": "not_started",
+      "io_contracts": {
+        "consumes": [],
+        "produces": [
+          {
+            "contract": "knowledge_result",
+            "fields": [
+              {
+                "path": "/status",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/operation",
+                "types": [
+                  "string"
+                ],
+                "required": false,
+                "default": ""
+              },
+              {
+                "path": "/operation_version",
+                "types": [
+                  "string"
+                ],
+                "required": false,
+                "default": "1"
+              },
+              {
+                "path": "/source_sha",
+                "types": [
+                  "null",
+                  "string"
+                ],
+                "required": false,
+                "default": null
+              },
+              {
+                "path": "/generation_id",
+                "types": [
+                  "null",
+                  "string"
+                ],
+                "required": false,
+                "default": null
+              },
+              {
+                "path": "/evidence",
+                "types": [
+                  "array"
+                ],
+                "required": false,
+                "default": []
+              },
+              {
+                "path": "/warnings",
+                "types": [
+                  "array"
+                ],
+                "required": false,
+                "default": []
+              }
+            ]
+          }
+        ],
+        "examples": [
+          {
+            "contract": "knowledge_result",
+            "mode": "projection",
+            "origin": "illustrative",
+            "label": "Output illustrative knowledge_result projection; not an execution receipt",
+            "value": {
+              "status": "partial",
+              "operation": "example_ac_requirements",
+              "operation_version": "1",
+              "source_sha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+              "generation_id": "example-generation",
+              "evidence": [
+                {
+                  "entity": {
+                    "canonical_id": "KM-500c-2",
+                    "kind": "AcceptanceCriterion",
+                    "title": "Illustrative AC title",
+                    "source": {
+                      "repository_id": "leafcutter",
+                      "source_sha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+                      "path": "docs/acceptance-criteria/knowledge-retrieval/KM-500c-2.yaml",
+                      "locator": "criteria"
+                    },
+                    "properties": {
+                      "criteria": "Illustrative acceptance clause; no real requirement text is asserted."
+                    }
+                  },
+                  "content": "Illustrative acceptance clause; no real requirement text is asserted.",
+                  "field_availability": {
+                    "test_required": "unknown"
+                  },
+                  "limitations": [
+                    "The requested test_required field is not available in this illustrative result."
+                  ]
+                }
+              ],
+              "warnings": [
+                "The test_required field is unresolved."
+              ]
+            }
+          }
+        ],
+        "missing_bindings": [
+          {
+            "name": "Per-contract multi-search attempt envelope",
+            "direction": "both",
+            "reason": "The target needs terms, filters, method/query/version/model, actual pinned source, budget, evidence and outcome per attempt. Neutral KnowledgeRetrievalResult covers one operation, not that planned aggregate.",
+            "source": "docs/product-truth/flows/leafcutter/retrieval-search-preparation.flow.json"
+          }
+        ]
+      }
+    },
+    {
+      "id": "return-attempts",
+      "label": "Return separate search outcomes",
+      "agent": "System",
+      "human": "Return each method/query attempt with its original question, terms, filters, source/version, evidence and limitations. Keep empty, partial, denied, unsupported and failed outcomes distinct. Do not compare or combine here; join [the shared comparison](docs/product-truth/flows/leafcutter/retrieve-project-knowledge.flow.json#compare) once.\n\nI/O boundary: Existing result fields retain limits; the new list/identity wrapper remains a declared gap.\n\nContract fields and examples (generated)\nConsumes:\n  knowledge_result/status: string (required)\n  knowledge_result/evidence: array (optional; default [])\n  knowledge_result/warnings: array (optional; default [])\n  Runtime contract: [knowledge_result](knowledge/contracts.py)\nProduces:\n  No checked JSON binding documented in this direction.\n\nPROPOSED - missing JSON binding (both): Shared retained attempt list\nNo typed aggregate binds separate attempts and cumulative history for the main comparison loop; merging raw evidence here would erase required attribution.\nDesign source: [docs/product-truth/flows/leafcutter/retrieval-search-preparation.flow.json](docs/product-truth/flows/leafcutter/retrieval-search-preparation.flow.json)\n\nInput illustrative knowledge_result projection; not an execution receipt — knowledge_result; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"status\": \"partial\",\n  \"evidence\": [\n    {\n      \"entity\": {\n        \"canonical_id\": \"KM-500c-2\",\n        \"kind\": \"AcceptanceCriterion\",\n        \"title\": \"Illustrative AC title\",\n        \"source\": {\n          \"repository_id\": \"leafcutter\",\n          \"source_sha\": \"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\n          \"path\": \"docs/acceptance-criteria/knowledge-retrieval/KM-500c-2.yaml\",\n          \"locator\": \"criteria\"\n        },\n        \"properties\": {\n          \"criteria\": \"Illustrative acceptance clause; no real requirement text is asserted.\"\n        }\n      },\n      \"content\": \"Illustrative acceptance clause; no real requirement text is asserted.\",\n      \"field_availability\": {\n        \"test_required\": \"unknown\"\n      },\n      \"limitations\": [\n        \"The requested test_required field is not available in this illustrative result.\"\n      ]\n    }\n  ],\n  \"warnings\": [\n    \"The test_required field is unresolved.\"\n  ]\n}",
+      "order": 9,
+      "implements": [],
+      "consumes": [
+        "knowledge_result/status: string (required)",
+        "knowledge_result/evidence: array (optional; default [])",
+        "knowledge_result/warnings: array (optional; default [])"
+      ],
+      "produces": [],
+      "impl_asof": "2026-10-02",
+      "impl_status": "not_started",
+      "io_contracts": {
+        "consumes": [
+          {
+            "contract": "knowledge_result",
+            "fields": [
+              {
+                "path": "/status",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/evidence",
+                "types": [
+                  "array"
+                ],
+                "required": false,
+                "default": []
+              },
+              {
+                "path": "/warnings",
+                "types": [
+                  "array"
+                ],
+                "required": false,
+                "default": []
+              }
+            ]
+          }
+        ],
+        "produces": [],
+        "examples": [
+          {
+            "contract": "knowledge_result",
+            "mode": "projection",
+            "origin": "illustrative",
+            "label": "Input illustrative knowledge_result projection; not an execution receipt",
+            "value": {
+              "status": "partial",
+              "evidence": [
+                {
+                  "entity": {
+                    "canonical_id": "KM-500c-2",
+                    "kind": "AcceptanceCriterion",
+                    "title": "Illustrative AC title",
+                    "source": {
+                      "repository_id": "leafcutter",
+                      "source_sha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+                      "path": "docs/acceptance-criteria/knowledge-retrieval/KM-500c-2.yaml",
+                      "locator": "criteria"
+                    },
+                    "properties": {
+                      "criteria": "Illustrative acceptance clause; no real requirement text is asserted."
+                    }
+                  },
+                  "content": "Illustrative acceptance clause; no real requirement text is asserted.",
+                  "field_availability": {
+                    "test_required": "unknown"
+                  },
+                  "limitations": [
+                    "The requested test_required field is not available in this illustrative result."
+                  ]
+                }
+              ],
+              "warnings": [
+                "The test_required field is unresolved."
+              ]
+            }
+          }
+        ],
+        "missing_bindings": [
+          {
+            "name": "Shared retained attempt list",
+            "direction": "both",
+            "reason": "No typed aggregate binds separate attempts and cumulative history for the main comparison loop; merging raw evidence here would erase required attribution.",
+            "source": "docs/product-truth/flows/leafcutter/retrieval-search-preparation.flow.json"
+          }
+        ]
+      }
+    }
+  ],
+  "branches": [
+    {
+      "id": "known-terms",
+      "label": "Useful terms already available — skip LLM",
+      "condition": "Known terms suffice for the selected contract, or the method needs no terms",
+      "human": "From term collection, bypass optional generation and proceed directly to search with validated known terms. A method needing no terms also bypasses generation.\n\nContract fields and examples (generated)\nConsumes:\n  No checked JSON binding documented in this direction.\nProduces:\n  No checked JSON binding documented in this direction.\n\nPROPOSED - missing JSON binding (both): Known-term bypass provenance\nBypass must carry query/version/source-bound known inputs. No current target record preserves those origins through search; it is not the generated five-term output contract.\nDesign source: [docs/product-truth/flows/leafcutter/retrieval-search-preparation.flow.json](docs/product-truth/flows/leafcutter/retrieval-search-preparation.flow.json)",
+      "agent": "System",
+      "outcome_kind": "alternative",
+      "implements": [],
+      "from": "decide-terms",
+      "impl_asof": "2026-10-02",
+      "impl_status": "not_started",
+      "io_contracts": {
+        "missing_bindings": [
+          {
+            "name": "Known-term bypass provenance",
+            "direction": "both",
+            "reason": "Bypass must carry query/version/source-bound known inputs. No current target record preserves those origins through search; it is not the generated five-term output contract.",
+            "source": "docs/product-truth/flows/leafcutter/retrieval-search-preparation.flow.json"
+          }
+        ]
+      },
+      "consumes": [],
+      "produces": []
+    },
+    {
+      "id": "search-alternative",
+      "from": "return-attempts",
+      "label": "An attempt was unhelpful",
+      "agent": "System",
+      "condition": "One selected search is empty, incomplete or fails",
+      "human": "Return the explicit outcome to [shared comparison](docs/product-truth/flows/leafcutter/retrieve-project-knowledge.flow.json#compare). Jev may choose a different permitted method or traversal; do not erase useful prior evidence or repeat the unchanged failed plan.\n\nI/O boundary: Partial and unavailable must remain different; the shown partial result does not discard useful evidence.\n\nContract fields and examples (generated)\nConsumes:\n  knowledge_result/status: string (required)\n  knowledge_result/evidence: array (optional; default [])\n  knowledge_result/warnings: array (optional; default [])\n  Runtime contract: [knowledge_result](knowledge/contracts.py)\nProduces:\n  No checked JSON binding documented in this direction.\n\nPROPOSED - missing JSON binding (both): Alternative-search continuation\nThe proposed main loop needs a nonrepeated failed-plan identity, useful earlier evidence and remaining budget; its continuation binding is undefined.\nDesign source: [docs/product-truth/flows/leafcutter/retrieval-search-preparation.flow.json](docs/product-truth/flows/leafcutter/retrieval-search-preparation.flow.json)\n\nInput illustrative knowledge_result projection; not an execution receipt — knowledge_result; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"status\": \"partial\",\n  \"evidence\": [\n    {\n      \"entity\": {\n        \"canonical_id\": \"KM-500c-2\",\n        \"kind\": \"AcceptanceCriterion\",\n        \"title\": \"Illustrative AC title\",\n        \"source\": {\n          \"repository_id\": \"leafcutter\",\n          \"source_sha\": \"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\n          \"path\": \"docs/acceptance-criteria/knowledge-retrieval/KM-500c-2.yaml\",\n          \"locator\": \"criteria\"\n        },\n        \"properties\": {\n          \"criteria\": \"Illustrative acceptance clause; no real requirement text is asserted.\"\n        }\n      },\n      \"content\": \"Illustrative acceptance clause; no real requirement text is asserted.\",\n      \"field_availability\": {\n        \"test_required\": \"unknown\"\n      },\n      \"limitations\": [\n        \"The requested test_required field is not available in this illustrative result.\"\n      ]\n    }\n  ],\n  \"warnings\": [\n    \"The test_required field is unresolved.\"\n  ]\n}",
+      "outcome_kind": "alternative",
+      "implements": [],
+      "impl_asof": "2026-10-02",
+      "impl_status": "not_started",
+      "io_contracts": {
+        "consumes": [
+          {
+            "contract": "knowledge_result",
+            "fields": [
+              {
+                "path": "/status",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/evidence",
+                "types": [
+                  "array"
+                ],
+                "required": false,
+                "default": []
+              },
+              {
+                "path": "/warnings",
+                "types": [
+                  "array"
+                ],
+                "required": false,
+                "default": []
+              }
+            ]
+          }
+        ],
+        "produces": [],
+        "examples": [
+          {
+            "contract": "knowledge_result",
+            "mode": "projection",
+            "origin": "illustrative",
+            "label": "Input illustrative knowledge_result projection; not an execution receipt",
+            "value": {
+              "status": "partial",
+              "evidence": [
+                {
+                  "entity": {
+                    "canonical_id": "KM-500c-2",
+                    "kind": "AcceptanceCriterion",
+                    "title": "Illustrative AC title",
+                    "source": {
+                      "repository_id": "leafcutter",
+                      "source_sha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+                      "path": "docs/acceptance-criteria/knowledge-retrieval/KM-500c-2.yaml",
+                      "locator": "criteria"
+                    },
+                    "properties": {
+                      "criteria": "Illustrative acceptance clause; no real requirement text is asserted."
+                    }
+                  },
+                  "content": "Illustrative acceptance clause; no real requirement text is asserted.",
+                  "field_availability": {
+                    "test_required": "unknown"
+                  },
+                  "limitations": [
+                    "The requested test_required field is not available in this illustrative result."
+                  ]
+                }
+              ],
+              "warnings": [
+                "The test_required field is unresolved."
+              ]
+            }
+          }
+        ],
+        "missing_bindings": [
+          {
+            "name": "Alternative-search continuation",
+            "direction": "both",
+            "reason": "The proposed main loop needs a nonrepeated failed-plan identity, useful earlier evidence and remaining budget; its continuation binding is undefined.",
+            "source": "docs/product-truth/flows/leafcutter/retrieval-search-preparation.flow.json"
+          }
+        ]
+      },
+      "consumes": [
+        "knowledge_result/status: string (required)",
+        "knowledge_result/evidence: array (optional; default [])",
+        "knowledge_result/warnings: array (optional; default [])"
+      ],
+      "produces": []
+    }
+  ],
+  "acceptance_scenarios": [
+    {
+      "given": "Original question, trusted context, offered contracts and compatible strategy advice",
+      "when": "Choose the search approach",
+      "then": "Selected search contracts and required inputs",
+      "for": "strategy"
+    },
+    {
+      "given": "Selected search contracts and required inputs",
+      "when": "Gather supplied or known terms",
+      "then": "Known terms grouped by selected contract",
+      "for": "terms"
+    },
+    {
+      "given": "Known terms grouped by selected contract",
+      "when": "Decide whether terms suffice",
+      "then": "Per-contract bypass or generation decisions",
+      "for": "decide-terms"
+    },
+    {
+      "given": "Per-contract bypass or generation decisions",
+      "when": "Request optional term generation",
+      "then": "Typed per-contract requests or known-term bypasses",
+      "for": "request-terms"
+    },
+    {
+      "given": "One typed contract-bound term request",
+      "when": "Optionally generate five terms",
+      "then": "Five candidate terms",
+      "for": "generate"
+    },
+    {
+      "given": "Five candidate terms",
+      "when": "Validate term output",
+      "then": "Structurally valid terms",
+      "for": "validate-terms"
+    },
+    {
+      "given": "Structurally valid terms",
+      "when": "Judge term usefulness",
+      "then": "Accepted terms or preparation outcome",
+      "for": "judge-terms"
+    },
+    {
+      "given": "Per-contract Jev-accepted terms or explicit sufficient-known/no-term bypass",
+      "when": "Run separate retrieval attempts",
+      "then": "Separate attributable retrieval attempts",
+      "for": "search"
+    },
+    {
+      "given": "Separate attributable retrieval attempts",
+      "when": "Return separate search outcomes",
+      "then": "Retained attributable attempt results",
+      "for": "return-attempts"
+    },
+    {
+      "given": "Known terms suffice for the selected contract, or the method needs no terms",
+      "when": "Useful terms already available — skip LLM",
+      "then": "From term collection, bypass optional generation and proceed directly to search with validated known terms. A method needing no terms also bypasses generation.",
+      "for": "known-terms"
+    },
+    {
+      "given": "One selected search is empty, incomplete or fails",
+      "when": "An attempt was unhelpful",
+      "then": "Return the explicit outcome to [shared comparison](docs/product-truth/flows/leafcutter/retrieve-project-knowledge.flow.json#compare). Jev may choose a different permitted method or traversal; do not erase useful prior evidence or repeat the unchanged failed plan.",
+      "for": "search-alternative"
+    }
+  ],
+  "provenance": [
+    {
+      "action": "authored",
+      "by": "product-owner/business-analyst/flow-author",
+      "date": "2026-10-02",
+      "note": "Target design — not a delivery claim\nUser-requested question-first design. This flow is spec/draft; existing runtime and test evidence do not establish this full contract. Existing acceptance criteria are context pending behavioral mapping, not new completion proof."
+    },
+    {
+      "action": "extended",
+      "by": "flow-author",
+      "date": "2026-10-02",
+      "note": "Traversal and multiple-method design extension\nAdded bounded method selection/return routes and a shared attempt-comparison handoff. Target specification only; no runtime or acceptance-status change."
+    },
+    {
+      "action": "extended",
+      "by": "flow-author (agent-led I/O contract migration)",
+      "date": "2026-10-03",
+      "note": "Added source-bound field/type/requiredness/default metadata and explicitly illustrative JSON projections. Preserved topology, actor ownership, realization and AC status. Non-JSON artifacts and genuinely undefined proposed interfaces remain explicit."
+    }
+  ],
+  "impl_summary": {
+    "done": 0,
+    "in_progress": 0,
+    "not_started": 11,
+    "total": 11,
+    "asof": "2026-10-02"
+  },
+  "shape_version": 2,
+  "contract_definitions": {
+    "retrieval_needs_output": {
+      "model": "retrieval_needs_output"
+    },
+    "scope": {
+      "model": "scope"
+    },
+    "host_work_request": {
+      "model": "host_work_request"
+    },
+    "terms": {
+      "schema": "docs/product-truth/schemas/retrieval-search-terms-proposal.schema.json",
+      "authority": "illustrative_design",
+      "note": "PROPOSED, not implemented: source specification retrieval-search-preparation#generate requires exactly five distinct nonempty suggestions. This design schema does not register a host operation or prove model quality."
+    },
+    "interaction_submission": {
+      "model": "interaction_submission"
+    },
+    "choice_answer": {
+      "model": "choice_answer"
+    },
+    "knowledge_result": {
+      "model": "knowledge_result"
+    }
+  }
+}

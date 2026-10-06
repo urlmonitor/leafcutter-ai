@@ -1,0 +1,101 @@
+id: DK-500a-1-i
+title: A run-history sighting supports a proposal but never makes a member
+component: decision-kernel
+components:
+- decision_kernel
+level: L3
+status: active
+readiness: approved
+req_status: draft
+priority: high
+work_status: todo
+roadmap_phase: phase_kernel_2_knowledge
+criteria: |
+  Given a candidate category whose sightings are the three published crit.small_slice criteria of dec-4673055ef54113d5, dec-acdfd972fcaca478 and dec-d53e1c52cd47c832 and four run-history sightings of "Can it be put in place with a small change?" (crit-small-change),
+  And one of those runs, run-35ecc5ce9780442d, staged the decision dec-e4c6a3e133b9694b, which was never published,
+  When the candidate's proposed members are listed,
+  Then exactly the three pairs (dec-4673055ef54113d5, crit.small_slice), (dec-acdfd972fcaca478, crit.small_slice) and (dec-d53e1c52cd47c832, crit.small_slice) are proposed as members,
+  And no run-history sighting is proposed as a member, including (dec-e4c6a3e133b9694b, crit-small-change),
+  And all seven sightings stay listed as evidence for the proposal,
+  And once dec-e4c6a3e133b9694b is published carrying crit-small-change, the next mining run proposes (dec-e4c6a3e133b9694b, crit-small-change) as a member.
+depends_on:
+- DK-500a-1
+covered_by: []
+implemented_by: []
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: DK-500a-1
+  contract: Mining round result with sightings carrying source, decision_id, run_status and wording (DK-500a-1 delivers_to).
+change_target: code
+risk_surface: internal
+it_requirements:
+- 'Membership proposals depend on publication state, never on a sighting''s source: a pair is proposed as a member only when its decision is published in the committed store at mining time and that record''s criteria carry the criterion id with that wording.'
+- A run-history sighting stays evidence (mined_from) and never becomes a member, including when it names a staged decision id.
+- The member check is re-evaluated every round, so a decision published after an earlier round yields its pair in the next round with no manual step.
+test_required: true
+test_spec:
+- name: test_only_published_pairs_are_proposed_members
+  target_dir: tests/kernel/criteria/
+  framework: pytest
+  type: behavioral
+  angle: criterion
+  description: Exactly the three published (decision id, crit.small_slice) pairs are proposed as members.
+- name: test_trace_sighting_naming_staged_decision_is_not_a_member
+  target_dir: tests/kernel/criteria/
+  framework: pytest
+  type: behavioral
+  angle: criterion
+  description: (dec-e4c6a3e133b9694b, crit-small-change) from the never-published run is not proposed as a member.
+- name: test_all_seven_sightings_stay_evidence
+  target_dir: tests/kernel/criteria/
+  framework: pytest
+  type: behavioral
+  angle: criterion
+  description: All three published and four run-history sightings remain listed in mined_from.
+- name: test_pair_proposed_after_decision_is_published
+  target_dir: tests/kernel/criteria/
+  framework: pytest
+  type: behavioral
+  angle: boundary
+  description: After dec-e4c6a3e133b9694b is published carrying crit-small-change, the next round proposes that pair as a member.
+test_rationale: Exercise the public mining entry point with a fixture decision store and a controlled Langfuse observations port (no live Langfuse); assert the returned result, the mining store and a before/after snapshot of docs/ and the run root. A unit test of a sighting parser alone would not prove that both sources are read through the real entry point.
+doc_links:
+- path: docs/decisions/dec-93c1c730463c1f3c.yaml
+  relationship: governs
+  status: exists
+- path: docs/product-truth/flows/leafcutter/criteria-library.flow.json
+  relationship: implements
+  status: exists
+- path: docs/product-truth/mock-data/leafcutter/criterion-categories.mock.json
+  relationship: specified-by
+  status: exists
+- path: docs/architecture/adrs/ADR-060-source-of-truth-and-approval-authority.md
+  relationship: constrains
+  status: exists
+origin_agent: business-analyst
+created: 2026-10-04
+amended_by:
+- reason: it-po-technical-enrichment
+  date: '2026-10-05'
+  by: it-po
+  summary: 'Technical enrichment: assigned_agent confirmed, estimated_complexity, change_target, risk_surface, it_requirements, contracts, doc_links and the test contract set; readiness draft -> reviewed. BA criteria unchanged.'
+superseded_by: null
+notes: |
+  Mock invariant: "A trace sighting is evidence for a proposal, never a member"; only published-record sightings can become (decision id, criterion id) membership.
+  The last clause is the positive control: the rule keys on whether the decision is PUBLISHED, not on which source the sighting came from. Mutation it must catch: proposing every sighting that names a decision id as a member (that turns the dec-e4c6a3e133b9694b clause red while the published case stays green).
+  FLOW BACK-LINK (for step.implements, to be applied by the store owner): leafcutter/criteria-library: mine.
+  Authored by the business-analyst stage of /plan-feature (route strategic) under decision dec-93c1c730463c1f3c; readiness draft, no product approval implied.
+product_truth:
+  - flow: leafcutter/criteria-library
+    node: mine
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: leafcutter/criterion-categories
+    entities:
+      - CriterionCategory
+      - Decision
+    source: mock
+    asof: '2026-10-04'

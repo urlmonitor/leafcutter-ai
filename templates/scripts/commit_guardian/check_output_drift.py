@@ -89,6 +89,40 @@ ARCHITECTURE: Reads the ``output_mappings`` section of the
     missing=<X> unreadable=<Y>`` (``unreadable`` appended last so existing
     positional parsers of the earlier fields are unaffected).
 
+    DRIFT-EXEMPT REPORTING: an output_mappings key that IS present, IS
+    readable, and WAS hash-compared, but whose hash no longer matches, is
+    normally a drift violation. When that same key carries a valid entry in
+    ``drift_gate_exemption_registry``, it is reported as ``DIRECT-DRIFT:
+    EXEMPT <key> ground=<ground>`` and counted in ``uncomparable`` (and so in
+    the derived ``exempt`` field) instead of in ``violations`` — leaving
+    ``gaps`` untouched, so it does not block. The label is deliberately NOT
+    ``UNCOMPARABLE: EXEMPT``: that form names an UNREGISTERED artifact (a
+    registration question), whereas this one names a registered artifact
+    whose comparison ran and failed (a content question).
+
+    Two trade-offs this branch knowingly accepts, recorded here because the
+    2026-10-05 DECISION HISTORY entry points at this section for them:
+
+    1. It WIDENS what a registry entry can excuse. Before it, an entry could
+       only excuse an UNREGISTERED artifact, because Pass 1 and Pass 2 key
+       sets are disjoint by construction; the same entry now also excuses
+       that key's drift once build.py starts recording it. The
+       ``__drift_gate_exemption_registry_doc`` block in commit_guardian.json
+       warns the registry "is not a way to silence a finding the gate got
+       right" — the per-key scoping and the non-blank-ground requirement are
+       what keep this narrow rather than a blanket drift switch.
+    2. It counts the exempted artifact in BOTH ``verified`` and
+       ``uncomparable``, which ``ScanResult``'s own docstring says never
+       happens ("verified ... Never includes uncomparable artifacts (AC-4)";
+       "uncomparable: Count of artifacts neither found in the manifest ...
+       nor validly declared exempt" — a drift-exempt key IS in the
+       manifest). The precedent-following alternative is a separate
+       ``drift_exempt`` field on ``ScanResult`` plus its own RESULT column,
+       the way ``unreadable`` was added in B-2 for exactly this "belongs in
+       no existing bucket" reason. Left as-is pending that decision; the
+       ``uncomparable == gaps + exempt`` identity every consumer computes
+       off still holds either way.
+
     An empty ``output_mappings`` section is NOT itself treated as a clean
     run (B-1): the ``verified == 0`` floor in ``check_output_drift()`` fires
     whether the manifest recorded zero mappings outright or recorded some
@@ -445,7 +479,13 @@ def _scan_output_files(
         expected_hash = entry.get("expected_output_hash", "") if isinstance(entry, dict) else ""
         template_key = entry.get("template", "<unknown>") if isinstance(entry, dict) else "<unknown>"
         if current_hash != expected_hash:
-            violations.append((out_key, template_key))
+            # See DRIFT-EXEMPT REPORTING in the module docstring.
+            ground = exemptions.get(out_key)
+            if ground:
+                uncomparable += 1
+                print(f"DIRECT-DRIFT: EXEMPT {out_key} ground={ground}", file=sys.stderr)
+            else:
+                violations.append((out_key, template_key))
 
     return _ScanResult(
         verified=verified,
@@ -958,4 +998,8 @@ if __name__ == "__main__":
 #   was dropped entirely (nothing in this file called it directly). No
 #   behaviour change: verified by re-running this file's full existing test
 #   suite before and after the extraction with identical pass counts.
+# - 2026-10-05 [manual patch, no ticket/AC]: Pass 2's hash-mismatch branch now
+#   consults the exemption registry before recording a violation — see
+#   DRIFT-EXEMPT REPORTING in the module docstring for the contract, the
+#   registry-widening it implies, and the open counting question.
 # ====================================================================

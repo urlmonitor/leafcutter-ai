@@ -48,7 +48,11 @@
         "leafcutter.synthesis_request.v1",
         "leafcutter.findings.v1",
         "leafcutter.human_question_request.v1",
-        "leafcutter.human_answer.v1"
+        "leafcutter.human_answer.v1",
+        "leafcutter.query_build_request.v1",
+        "leafcutter.query_candidate.v1",
+        "leafcutter.query_activation_request.v1",
+        "leafcutter.query_activation_receipt.v1"
       ]
     },
     "admission": {
@@ -234,7 +238,8 @@
             "read_only",
             "run_artifacts",
             "repo_write",
-            "external_write"
+            "external_write",
+            "catalog_write"
           ]
         },
         "permissions_required": {

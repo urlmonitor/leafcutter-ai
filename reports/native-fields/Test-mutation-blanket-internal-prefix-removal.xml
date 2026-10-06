@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="1" skipped="0" tests="1" time="18.785" timestamp="2026-10-02T09:29:19.107899+00:00" hostname="BrainDesk"><testcase classname="tests.knowledge.test_native_test" name="test_test_reference_removes_only_exact_adapter_keys" time="0.007"><failure message="AssertionError: assert {'nested': {'...manufactured'} == {'_native_fut...manufactured'}&#10;  &#10;  Omitting 2 identical items, use -vv to show&#10;  Right contains 2 more items:&#10;  {'_native_future': {'field': True}, '_native_projection_extra': False}&#10;  Use -v to get more diff">tests\knowledge\test_native_test.py:169: in test_test_reference_removes_only_exact_adapter_keys
+    assert record.metadata["properties"] == {
+E   AssertionError: assert {'nested': {'...manufactured'} == {'_native_fut...manufactured'}
+E     
+E     Omitting 2 identical items, use -vv to show
+E     Right contains 2 more items:
+E     {'_native_future': {'field': True}, '_native_projection_extra': False}
+E     Use -v to get more diff</failure></testcase></testsuite></testsuites>

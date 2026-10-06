@@ -1,0 +1,35 @@
+{
+  "expected": {
+    "include": {
+      "entity_types": [
+        "source_file"
+      ],
+      "document_types": [
+        "source_code"
+      ]
+    },
+    "exclude": {
+      "target_ids": []
+    },
+    "required_fields_if_fields": [
+      "content",
+      "mapping"
+    ],
+    "detail_mode": [
+      "fields",
+      "full_document",
+      "bounded_context"
+    ],
+    "completeness": [
+      "examples",
+      "exhaustive_set"
+    ],
+    "hierarchy_scope": [
+      "not_applicable"
+    ],
+    "status": [
+      "decided"
+    ]
+  },
+  "human_gold": "Inspect actual code, schema, projection and disclosure handoffs for this field. No canonical ID is supplied or necessary before discovery. Source-file membership is not a proven call graph. Complete inspected chain is ideal; bounded evidence must retain unknown stages."
+}

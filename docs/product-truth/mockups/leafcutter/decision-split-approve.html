@@ -1,0 +1,185 @@
+<!doctype html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Leafcutter decision lifecycle - Approve the proposed split</title>
+  <!--
+    MOCKUP. Populated from docs/product-truth/mock-data/leafcutter/decisions.mock.json (entity Decomposition).
+    Styled from the Atlas design system via docs/ui-context.md pointers (globals.css, tailwind.config.ts, layout.tsx).
+    Self-contained, no external assets. Ids are shortened with an ellipsis for display.
+  -->
+  <style>
+    /* Tokens read live from leafcutter-web/app/globals.css (:root); fonts from app/layout.tsx (IBM Plex Sans / Mono). */
+    :root {
+      --background: 158 16% 7%; --foreground: 150 6% 98%;
+      --card: 158 12% 13%; --primary: 150 64% 56%; --primary-foreground: 160 40% 6%;
+      --secondary: 156 12% 19%; --muted: 156 12% 18%; --muted-foreground: 155 7% 80%;
+      --accent: 168 55% 46%; --destructive: 356 78% 64%; --warning: 38 94% 60%;
+      --success: 150 62% 52%; --info: 205 82% 64%;
+      --border: 155 10% 30%; --input: 155 10% 32%; --ring: 150 64% 56%;
+      --radius: 0.75rem;
+      --font-sans: "IBM Plex Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+      --font-mono: "IBM Plex Mono", ui-monospace, monospace;
+    }
+    * { box-sizing: border-box; border-color: hsl(var(--border)); }
+    body { margin: 0; font-family: var(--font-sans); background-color: hsl(var(--background)); color: hsl(var(--foreground));
+      -webkit-font-smoothing: antialiased; font-feature-settings: "cv11", "ss01";
+      background-image: radial-gradient(1200px 800px at 85% -10%, hsl(150 64% 52% / 0.06), transparent 60%), radial-gradient(900px 700px at -10% 110%, hsl(168 60% 46% / 0.05), transparent 55%);
+      background-attachment: fixed; }
+    ::selection { background: hsl(var(--primary) / 0.28); }
+    main { max-width: 1000px; margin: 0 auto; padding: 32px 24px 64px; }
+    .panel { border-radius: calc(var(--radius) + 0.25rem); border: 1px solid hsl(var(--border)); background: hsl(var(--card) / 0.95); padding: 20px; margin-bottom: 16px;
+      box-shadow: 0 1px 0 0 hsl(150 40% 90% / 0.04) inset, 0 20px 40px -24px hsl(0 0% 0% / 0.6); }
+    .panel.pick { border-color: hsl(var(--primary) / 0.6); }
+    .eyebrow { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.16em; color: hsl(var(--muted-foreground)); margin-bottom: 6px; }
+    h1 { font-size: 24px; font-weight: 600; letter-spacing: -0.01em; margin: 0 0 8px; text-wrap: balance; }
+    h2 { font-size: 18px; font-weight: 600; letter-spacing: -0.01em; margin: 0 0 4px; }
+    h3 { font-size: 15px; font-weight: 600; margin: 0; }
+    p { margin: 4px 0; }
+    .sub { font-size: 14px; color: hsl(var(--muted-foreground)); max-width: 46rem; }
+    .small { font-size: 12px; color: hsl(var(--muted-foreground)); }
+    .mono { font-family: var(--font-mono); font-size: 12.5px; }
+    code.mono { background: hsl(var(--muted) / 0.6); border: 1px solid hsl(var(--border)); border-radius: calc(var(--radius) - 4px); padding: 1px 6px; word-break: break-all; }
+    pre.mono { background: hsl(var(--background)); border: 1px solid hsl(var(--border)); border-radius: calc(var(--radius) - 2px); padding: 12px 14px; overflow-x: auto; margin: 8px 0; }
+    .topbar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
+    .badge { display: inline-flex; align-items: center; gap: 6px; border-radius: 999px; border: 1px solid hsl(var(--border)); background: hsl(var(--muted) / 0.4); color: hsl(var(--muted-foreground)); padding: 2px 8px; font-size: 12px; font-weight: 500; white-space: nowrap; }
+    .badge::before { content: ""; width: 6px; height: 6px; border-radius: 999px; background: currentColor; }
+    .badge.success { color: hsl(var(--success)); background: hsl(var(--success) / 0.1); border-color: hsl(var(--success) / 0.3); }
+    .badge.warning { color: hsl(var(--warning)); background: hsl(var(--warning) / 0.1); border-color: hsl(var(--warning) / 0.3); }
+    .badge.destructive { color: hsl(var(--destructive)); background: hsl(var(--destructive) / 0.1); border-color: hsl(var(--destructive) / 0.3); }
+    .badge.info { color: hsl(var(--info)); background: hsl(var(--info) / 0.1); border-color: hsl(var(--info) / 0.3); }
+    .badge.plain::before { display: none; }
+    .row { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+    .between { justify-content: space-between; align-items: flex-start; }
+    .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    @media (max-width: 720px) { .grid2 { grid-template-columns: 1fr; } }
+    ul.list { list-style: none; margin: 10px 0 0; padding: 0; }
+    ul.list li { border-top: 1px solid hsl(var(--border) / 0.6); padding: 10px 0; }
+    ul.list li:first-child { border-top: 0; }
+    .btn { font: inherit; font-size: 14px; font-weight: 500; border-radius: calc(var(--radius) - 2px); border: 1px solid hsl(var(--input)); background: hsl(var(--secondary)); color: hsl(var(--foreground)); padding: 8px 14px; cursor: pointer; }
+    .btn.primary { background: hsl(var(--primary)); color: hsl(var(--primary-foreground)); border-color: hsl(var(--primary)); }
+    .btn:focus-visible { outline: 2px solid hsl(var(--ring)); outline-offset: 2px; }
+    .note { border-left: 3px solid hsl(var(--warning)); background: hsl(var(--warning) / 0.08); border-radius: 0 calc(var(--radius) - 2px) calc(var(--radius) - 2px) 0; padding: 10px 14px; font-size: 14px; }
+    .note.info { border-left-color: hsl(var(--info)); background: hsl(var(--info) / 0.08); }
+    .note.ok { border-left-color: hsl(var(--success)); background: hsl(var(--success) / 0.08); }
+    dl.kv { display: grid; grid-template-columns: 170px 1fr; gap: 8px 16px; margin: 12px 0 0; font-size: 14px; }
+    dl.kv dt { color: hsl(var(--muted-foreground)); } dl.kv dd { margin: 0; word-break: break-word; }
+    .opt { display: flex; gap: 12px; align-items: flex-start; }
+    .rank { flex: none; width: 34px; height: 34px; border-radius: 999px; border: 1px solid hsl(var(--border)); display: grid; place-items: center; font-weight: 600; background: hsl(var(--muted) / 0.5); }
+    .pick .rank { border-color: hsl(var(--primary)); color: hsl(var(--primary)); }
+    .bar { height: 6px; border-radius: 999px; background: hsl(var(--muted)); overflow: hidden; width: 90px; display: inline-block; vertical-align: middle; }
+    .bar > i { display: block; height: 100%; background: hsl(var(--primary)); }
+    .crit { display: grid; grid-template-columns: 1fr auto; gap: 4px 12px; font-size: 13.5px; padding: 8px 0; border-top: 1px dashed hsl(var(--border) / 0.7); }
+    .crit .ev { grid-column: 1 / -1; }
+    .choice { display: flex; gap: 10px; align-items: flex-start; border: 1px solid hsl(var(--border)); border-radius: calc(var(--radius) - 2px); padding: 12px; margin-bottom: 10px; background: hsl(var(--background) / 0.4); }
+    .choice .dot { flex: none; width: 16px; height: 16px; border-radius: 999px; border: 2px solid hsl(var(--input)); margin-top: 3px; }
+    .choice.sel .dot { border-color: hsl(var(--primary)); background: radial-gradient(hsl(var(--primary)) 40%, transparent 45%); }
+    table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+    th { text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: 0.12em; color: hsl(var(--muted-foreground)); font-weight: 600; padding: 6px 8px; border-bottom: 1px solid hsl(var(--border)); }
+    td { padding: 8px; border-bottom: 1px solid hsl(var(--border) / 0.5); vertical-align: top; }
+    .ill { font-size: 11px; color: hsl(var(--warning)); border: 1px solid hsl(var(--warning) / 0.4); border-radius: 999px; padding: 0 6px; margin-left: 6px; white-space: nowrap; }
+  .span { font-family: var(--font-mono); font-size: 12.5px; border-left: 3px solid hsl(var(--primary) / 0.7); background: hsl(var(--primary) / 0.08); padding: 4px 10px; border-radius: 0 calc(var(--radius) - 4px) calc(var(--radius) - 4px) 0; margin: 6px 0; }
+    mark { background: hsl(var(--primary) / 0.28); color: inherit; border-radius: 3px; padding: 0 2px; }
+    .part { display: grid; grid-template-columns: 38px 1fr; gap: 12px; padding: 14px 0; border-top: 1px solid hsl(var(--border) / 0.6); }
+    .part.off { opacity: 0.65; }
+    .dim { text-decoration: line-through; color: hsl(var(--muted-foreground)); }
+    textarea.edit { width: 100%; font: inherit; font-size: 14px; color: hsl(var(--foreground)); background: hsl(var(--background)); border: 1px solid hsl(var(--input)); border-radius: calc(var(--radius) - 2px); padding: 8px 10px; min-height: 52px; margin-top: 6px; }
+    textarea.edit:focus-visible { outline: 2px solid hsl(var(--ring)); outline-offset: 2px; }
+    .trace { font-size: 12.5px; }
+  </style>
+</head>
+<body>
+<main>
+  <div class="topbar"><span class="eyebrow" style="margin:0">Decision kernel / Approve the proposed split</span><span class="badge warning">mock mode</span></div>
+<div class="panel"><div class="eyebrow">Human gate / split proposal</div><h1>This goal holds several questions. Approve the split?</h1>
+<p class="sub">The kernel offers a split for any bundled request: when routing turns it away, when routing would accept it as one, and when a work item holds several questions mid-run. Here routing found no single capability for it (trigger <span class="mono">jev_none</span>), so it proposes 4 bounded parts. Nothing runs until you answer.</p>
+<div class="row" style="margin-top:8px"><span class="badge warning">waiting for you</span><span class="badge plain">goal</span><span class="badge plain">found at routing</span><span class="badge plain">proposed by <span class="mono">host.decompose_goal</span></span><span class="badge plain mono">run-8b52…4f06</span></div></div>
+<div class="panel"><div class="eyebrow">The compound goal, as submitted</div>
+<p style="font-size:14px;line-height:1.6">For the kernel we often use similar decision basis and we should also reuse them. So it would be cool to not only store decisions, but also to be able to reuse categories. As a start we can probably mine them from langfuse, and we can should put them into a new file type (needs evaluation), and then also into neo4j. And we must make sure that we are able to cluster them somehow. That way we only need LLMs to generate further categories if jev thinks some are missing to make better decision</p>
+<p class="small">Each part below quotes the span of this text it covers.</p></div>
+<div class="panel"><h2>Proposed parts</h2><p class="small">Tick the parts to run. Edit a part's text before approving. A part waits for the parts it depends on.</p>
+<div class="part"><div class="rank">p1</div><div>
+<div class="row between"><label class="row" style="gap:8px"><input type="checkbox" checked aria-label="Run part p1"><h3>Decide which new file type the reusable categories are put into (needs evaluation)</h3></label><span class="badge info">decision capability</span></div>
+<div class="span" title="verbatim span of the goal">&ldquo;we can should put them into a new file type (needs evaluation)&rdquo;</div>
+<dl class="kv" style="grid-template-columns:130px 1fr;margin-top:6px"><dt>Depends on</dt><dd>none (can run first)</dd><dt>Will run as</dt><dd>a child of run-8b52…4f06, one at a time in dependency order</dd></dl>
+<textarea class="edit" aria-label="Edit text of part p1">Decide which new file type the reusable categories are put into (needs evaluation)</textarea>
+<p class="small">Edit the text to change the question the child is asked; the original is kept in the record.</p>
+</div></div>
+<div class="part"><div class="rank">p2</div><div>
+<div class="row between"><label class="row" style="gap:8px"><input type="checkbox" checked aria-label="Run part p2"><h3>Decide how the reusable categories are then also put into Neo4j</h3></label><span class="badge info">decision capability</span></div>
+<div class="span" title="verbatim span of the goal">&ldquo;and then also into neo4j&rdquo;</div>
+<dl class="kv" style="grid-template-columns:130px 1fr;margin-top:6px"><dt>Depends on</dt><dd>p1</dd><dt>Will run as</dt><dd>a child of run-8b52…4f06, one at a time in dependency order</dd></dl>
+<textarea class="edit" aria-label="Edit text of part p2">Decide how the reusable categories are then also put into Neo4j</textarea>
+<p class="small">Edit the text to change the question the child is asked; the original is kept in the record.</p>
+</div></div>
+<div class="part"><div class="rank">p3</div><div>
+<div class="row between"><label class="row" style="gap:8px"><input type="checkbox" checked aria-label="Run part p3"><h3>Decide how the reusable categories are clustered</h3></label><span class="badge info">decision capability</span></div>
+<div class="span" title="verbatim span of the goal">&ldquo;we must make sure that we are able to cluster them somehow&rdquo;</div>
+<dl class="kv" style="grid-template-columns:130px 1fr;margin-top:6px"><dt>Depends on</dt><dd>p1</dd><dt>Will run as</dt><dd>a child of run-8b52…4f06, one at a time in dependency order</dd></dl>
+<textarea class="edit" aria-label="Edit text of part p3">Decide how the reusable categories are clustered</textarea>
+<p class="small">Edit the text to change the question the child is asked; the original is kept in the record.</p>
+</div></div>
+<div class="part"><div class="rank">p4</div><div>
+<div class="row between"><label class="row" style="gap:8px"><input type="checkbox" checked aria-label="Run part p4"><h3>Decide whether to mine the reusable categories from Langfuse as a start</h3></label><span class="badge info">decision capability</span></div>
+<div class="span" title="verbatim span of the goal">&ldquo;As a start we can probably mine them from langfuse&rdquo;</div>
+<dl class="kv" style="grid-template-columns:130px 1fr;margin-top:6px"><dt>Depends on</dt><dd>none (can run first)</dd><dt>Will run as</dt><dd>a child of run-8b52…4f06, one at a time in dependency order</dd></dl>
+<textarea class="edit" aria-label="Edit text of part p4">Decide whether to mine the reusable categories from Langfuse as a start</textarea>
+<p class="small">Edit the text to change the question the child is asked; the original is kept in the record.</p>
+</div></div>
+</div>
+<div class="note"><strong>One proposal was dropped before it reached you.</strong> &ldquo;Decide when an LLM may generate further categories&rdquo; is not part of this split: quote not found in the goal (the goal says &quot;generate further categories if jev thinks some are missing&quot;). Add it with an edit if you want it covered.</div>
+<div class="panel" style="margin-top:16px"><h2>Your answer</h2>
+<div class="choice sel"><span class="dot"></span><div><h3>Approve</h3><p class="small">Run all ticked parts as shown, in dependency order.</p></div></div>
+<div class="choice"><span class="dot"></span><div><h3>Approve with edits</h3><p class="small">Run the parts with the text you changed above.</p></div></div>
+<div class="choice"><span class="dot"></span><div><h3>Pick a subset</h3><p class="small">Untick the parts you do not want run; they are recorded as left out, not run.</p></div></div>
+<div class="choice"><span class="dot"></span><div><h3>Reject, run ends blocked</h3><p class="small">Shown for this sample (trigger <span class="mono">jev_none</span>). Routing turned the whole request away, so rejecting the split ends the run blocked with a plain report and nothing is decided. Add a reason so you can ask it again as one question.</p></div></div>
+<div class="note info" style="margin-bottom:10px"><strong>The reject answer depends on why the split was offered.</strong> There are three outcomes by trigger. <span class="mono">jev_none</span> (no capability matched): &ldquo;Reject, run ends blocked&rdquo; (as above), and the capability gap is recorded. <span class="mono">ambiguous</span> (routing could not choose one capability): &ldquo;Reject, ask today&#x27;s clarification&rdquo;: no part runs, the run does not end blocked, and the request falls back to today&#x27;s question &ldquo;I am not sure how to handle this request ... Which of these fits best? You can also say it in your own words.&rdquo; The run waits for your answer, and a gap is recorded only if the request later ends unresolved. <span class="mono">bundled_accepted</span> (routing would have accepted it as one) or a split found mid-run: &ldquo;Reject, keep it whole&rdquo;: no part runs, the subject goes ahead as ONE decision or research step, and the run is not blocked. In every case the report keeps one plain line saying a split was offered and rejected.</div>
+<label class="small" for="note">Your note (optional): a reason, why a part is left out, or the order you want</label>
+<textarea id="note" class="edit"></textarea>
+<div class="row" style="margin-top:12px"><button class="btn primary">Send answer</button><span class="small">Answered as <span class="mono">human:user</span>. Only a human answer starts child runs.</span></div></div>
+<div class="panel" style="margin-top:24px"><div class="eyebrow">Second sample / trigger bundled_accepted</div><h2>Routing would have accepted this as one decision. A split is offered anyway.</h2>
+<p class="sub">The host proposed 7 parts; the gate offers the first 5. Parts beyond the five-part cap are listed read-only below.</p>
+<div class="row" style="margin-top:8px"><span class="badge warning">waiting for you</span><span class="badge plain">goal</span><span class="badge plain">trigger <span class="mono">bundled_accepted</span></span><span class="badge plain mono">run-6b2d…5f38</span></div>
+<p style="font-size:14px;line-height:1.6;margin-top:10px">Decide how Leafcutter should file decision records as JSON or YAML files under docs/ so later kernel runs can find and reuse them as precedent: which fields a record needs, which classification filters it carries (component, file type or language, repository-wide, roadmap phase), the folder layout and file naming, and how human approval and later corrections are recorded.</p></div>
+<div class="panel"><h2>Proposed parts (offered)</h2>
+<div class="part"><div class="rank">p1</div><div>
+<div class="row between"><label class="row" style="gap:8px"><input type="checkbox" checked aria-label="Run part p1"><h3>Decide whether decision records are JSON or YAML files</h3></label><span class="badge info">decision capability</span></div>
+<div class="span">&ldquo;as JSON or YAML files&rdquo;</div>
+<p class="small">Depends on: none (can run first)</p></div></div>
+<div class="part"><div class="rank">p2</div><div>
+<div class="row between"><label class="row" style="gap:8px"><input type="checkbox" checked aria-label="Run part p2"><h3>Decide which fields a decision record needs</h3></label><span class="badge info">decision capability</span></div>
+<div class="span">&ldquo;which fields a record needs&rdquo;</div>
+<p class="small">Depends on: none (can run first)</p></div></div>
+<div class="part"><div class="rank">p3</div><div>
+<div class="row between"><label class="row" style="gap:8px"><input type="checkbox" checked aria-label="Run part p3"><h3>Decide which classification filters a record carries (component, file type or language, repository-wide, roadmap phase)</h3></label><span class="badge info">decision capability</span></div>
+<div class="span">&ldquo;which classification filters it carries (component, file type or language, repository-wide, roadmap phase)&rdquo;</div>
+<p class="small">Depends on: p2</p></div></div>
+<div class="part"><div class="rank">p4</div><div>
+<div class="row between"><label class="row" style="gap:8px"><input type="checkbox" checked aria-label="Run part p4"><h3>Decide the folder layout for decision records under docs/</h3></label><span class="badge info">decision capability</span></div>
+<div class="span">&ldquo;the folder layout&rdquo;</div>
+<p class="small">Depends on: none (can run first)</p></div></div>
+<div class="part"><div class="rank">p5</div><div>
+<div class="row between"><label class="row" style="gap:8px"><input type="checkbox" checked aria-label="Run part p5"><h3>Decide how decision record files are named</h3></label><span class="badge info">decision capability</span></div>
+<div class="span">&ldquo;file naming&rdquo;</div>
+<p class="small">Depends on: p1, p4</p></div></div>
+</div>
+<div class="panel"><h2>Not covered by this split, ask again</h2><p class="small">Read-only. These cannot be ticked, edited or run here. Ask each again as a request of its own.</p>
+<div class="part off"><div class="rank">p6</div><div>
+<div class="row between"><h3>Decide how human approval of a record is recorded</h3><span class="badge plain">not covered</span></div>
+<div class="span">&ldquo;how human approval&rdquo;</div>
+<p class="small">Reason: beyond the five-part cap.</p></div></div>
+<div class="part off"><div class="rank">p7</div><div>
+<div class="row between"><h3>Decide how later corrections to a record are recorded</h3><span class="badge plain">not covered</span></div>
+<div class="span">&ldquo;later corrections are recorded&rdquo;</div>
+<p class="small">Reason: beyond the five-part cap.</p></div></div>
+</div>
+<div class="panel"><h2>Your answer</h2>
+<div class="choice sel"><span class="dot"></span><div><h3>Approve</h3><p class="small">Run the five offered parts, in dependency order.</p></div></div>
+<div class="choice"><span class="dot"></span><div><h3>Approve with edits</h3><p class="small">Run them with the text you changed.</p></div></div>
+<div class="choice"><span class="dot"></span><div><h3>Pick a subset</h3><p class="small">Untick the offered parts you do not want run.</p></div></div>
+<div class="choice"><span class="dot"></span><div><h3>Reject, keep it whole</h3><p class="small">Shown for this sample (trigger <span class="mono">bundled_accepted</span>). No part runs; the goal goes ahead as ONE decision and the run is not blocked. The report keeps one plain line saying a split was offered and rejected.</p></div></div>
+<div class="row" style="margin-top:12px"><button class="btn primary">Send answer</button></div></div>
+</main>
+</body>
+</html>

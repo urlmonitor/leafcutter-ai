@@ -20,6 +20,8 @@ from kernel.config import KernelConfig
 from kernel.contracts.base import CorrelationIds
 from kernel.contracts.capability import CapabilityDescriptor, CapabilityResult
 from kernel.contracts.evidence import Evidence
+from kernel.contracts.context import EnrichedContext
+from kernel.contracts.entity_context import EntityContext
 from kernel.contracts.task import Scope
 from kernel.contracts.work import CapabilityInvocation
 from kernel.memory.port import ColonyMemory, NullColonyMemory
@@ -83,6 +85,9 @@ class ExecutionContext:
     constraints: tuple[str, ...] = ()
     #: Approved-decision memory: read precedent, stage a record (never written to the repository).
     memory: ColonyMemory = field(default_factory=NullColonyMemory)
+    context_enrichment: EnrichedContext | None = None
+    entity_context: EntityContext | None = None
+    clarifications: tuple[str, ...] = ()
 
     def evidence(self, ids: Sequence[str]) -> list[Evidence]:
         """Return the evidence items for ids (unknown ids are omitted), in the given order."""
@@ -117,4 +122,5 @@ class CapabilityExecutor(Protocol):
 # - 2026-09-30 22:00 [python-coder]: BudgetPort.reserve returns a bool instead of raising so
 #   guards can turn a refusal into a recorded budget_exhausted outcome; BudgetExhausted is
 #   provided for callers that prefer to raise. (#KernelBootstrapV0/P1)
+# - 2026-10-03 15:10 [python-coder]: Preserve verbatim goals and separate meaning, caller and clarification channels. (#DK-300/entity-context)
 # ====================================================================

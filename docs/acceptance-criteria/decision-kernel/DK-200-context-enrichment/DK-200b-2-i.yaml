@@ -1,0 +1,56 @@
+id: DK-200b-2-i
+title: "An exhausted time allowance prevents further discovery and reports the limitation"
+component: decision-kernel
+components: [decision_kernel]
+level: L3
+status: active
+readiness: draft
+req_status: draft
+priority: high
+work_status: done
+criteria: |
+  Given the initial gathering time allowance is exhausted before source searching begins,
+  When enrichment considers the sources still awaiting examination,
+  Then those sources are not searched,
+  And the result reports the exhausted time allowance without claiming those sources were examined.
+depends_on: [DK-200b-2]
+covered_by:
+  - "tests/kernel/enrichment/test_context_enrichment.py::TestContextEnrichmentBoundaries::test_expired_budget_prevents_search_and_reports_what_was_not_examined"
+implemented_by:
+  - "kernel/context_enrichment.py"
+  - "kernel/enrichment_sources.py"
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "The elapsed-time allowance must constrain discovery before each remaining source is searched."
+  - "An expired allowance must be reported separately from a completed search with no matches."
+delivers_to: null
+expects_from: null
+test_required: true
+test_spec:
+  - name: test_expired_budget_prevents_search_and_reports_what_was_not_examined
+    target_dir: tests/kernel/enrichment/
+    framework: pytest
+    type: unit
+    angle: boundary
+    description: "An exhausted monotonic deadline yields zero examined files and evidence, with truncation and an explicit time-budget limitation."
+test_rationale: "A controlled deadline makes the no-search boundary repeatable without relying on machine speed or a wall-clock sleep."
+doc_links:
+  - path: docs/product-truth/flows/leafcutter/decision-forming.flow.json
+    relationship: implements
+    status: exists
+  - path: docs/architecture/components/decision-kernel.md
+    relationship: describes
+    status: exists
+  - path: docs/how-to/run-the-decision-kernel.md
+    relationship: context
+    status: exists
+origin_agent: business-analyst
+created: 2026-10-02
+amended_by:
+  - reason: "IT PO technical enrichment and verified test mapping on 2026-10-02; BA criteria and draft readiness preserved."
+superseded_by: null
+notes: |
+  Decomposed from the user-authorized context-enrichment scope and existing
+  DK-100 through DK-104. IT PO technical constraints and exact behavioral test
+  links are recorded. Readiness remains draft; no product approval is implied.

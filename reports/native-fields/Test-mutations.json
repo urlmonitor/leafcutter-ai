@@ -1,0 +1,106 @@
+{
+  "mutations": [
+    {
+      "mutation": "filesystem-observation",
+      "test": "tests/knowledge/test_native_test.py::test_test_reference_never_observes_current_filesystem",
+      "injected_into": "C:\\Users\\Hendrik\\Code\\leafcutter\\worktrees\\aura-domain-graph\\knowledge\\native_types\\test.py",
+      "process_only": true,
+      "expected_exit": 1,
+      "actual_exit": 1,
+      "caught": true,
+      "junit": "reports/native-fields/Test-mutation-filesystem-observation.xml"
+    },
+    {
+      "mutation": "invent-derived-outcome",
+      "test": "tests/knowledge/test_native_test.py::test_test_reference_preserves_existing_classification_without_invention",
+      "injected_into": "C:\\Users\\Hendrik\\Code\\leafcutter\\worktrees\\aura-domain-graph\\knowledge\\native_types\\test.py",
+      "process_only": true,
+      "expected_exit": 1,
+      "actual_exit": 1,
+      "caught": true,
+      "junit": "reports/native-fields/Test-mutation-invent-derived-outcome.xml"
+    },
+    {
+      "mutation": "blanket-internal-prefix-removal",
+      "test": "tests/knowledge/test_native_test.py::test_test_reference_removes_only_exact_adapter_keys",
+      "injected_into": "C:\\Users\\Hendrik\\Code\\leafcutter\\worktrees\\aura-domain-graph\\knowledge\\native_types\\test.py",
+      "process_only": true,
+      "expected_exit": 1,
+      "actual_exit": 1,
+      "caught": true,
+      "junit": "reports/native-fields/Test-mutation-blanket-internal-prefix-removal.xml"
+    },
+    {
+      "mutation": "drop-summary",
+      "test": "tests/knowledge/test_native_test.py::test_test_reference_exposes_complete_contract_and_future_fields",
+      "injected_into": "C:\\Users\\Hendrik\\Code\\leafcutter\\worktrees\\aura-domain-graph\\knowledge\\native_types\\test.py",
+      "process_only": true,
+      "expected_exit": 1,
+      "actual_exit": 1,
+      "caught": true,
+      "junit": "reports/native-fields/Test-mutation-drop-summary.xml"
+    },
+    {
+      "mutation": "replace-native-identity",
+      "test": "tests/knowledge/test_native_test.py::test_test_reference_exposes_complete_contract_and_future_fields",
+      "injected_into": "C:\\Users\\Hendrik\\Code\\leafcutter\\worktrees\\aura-domain-graph\\knowledge\\native_types\\test.py",
+      "process_only": true,
+      "expected_exit": 1,
+      "actual_exit": 1,
+      "caught": true,
+      "junit": "reports/native-fields/Test-mutation-replace-native-identity.xml"
+    },
+    {
+      "mutation": "skip-kind-validation",
+      "test": "tests/knowledge/test_native_test.py::test_test_reference_rejects_other_kinds_without_path_reclassification",
+      "injected_into": "C:\\Users\\Hendrik\\Code\\leafcutter\\worktrees\\aura-domain-graph\\knowledge\\native_types\\test.py",
+      "process_only": true,
+      "expected_exit": 1,
+      "actual_exit": 1,
+      "caught": true,
+      "junit": "reports/native-fields/Test-mutation-skip-kind-validation.xml"
+    },
+    {
+      "mutation": "skip-source-validation",
+      "test": "tests/knowledge/test_native_test.py::test_test_reference_revalidates_source_paths_without_repair",
+      "injected_into": "C:\\Users\\Hendrik\\Code\\leafcutter\\worktrees\\aura-domain-graph\\knowledge\\native_types\\test.py",
+      "process_only": true,
+      "expected_exit": 1,
+      "actual_exit": 1,
+      "caught": true,
+      "junit": "reports/native-fields/Test-mutation-skip-source-validation.xml"
+    },
+    {
+      "mutation": "alias-nested-properties",
+      "test": "tests/knowledge/test_native_test.py::test_test_reference_copies_nested_data_in_both_directions",
+      "injected_into": "C:\\Users\\Hendrik\\Code\\leafcutter\\worktrees\\aura-domain-graph\\knowledge\\native_types\\test.py",
+      "process_only": true,
+      "expected_exit": 1,
+      "actual_exit": 1,
+      "caught": true,
+      "junit": "reports/native-fields/Test-mutation-alias-nested-properties.xml"
+    },
+    {
+      "mutation": "replace-pinned-hash",
+      "test": "tests/knowledge/test_native_test.py::test_test_reference_never_observes_current_filesystem",
+      "injected_into": "C:\\Users\\Hendrik\\Code\\leafcutter\\worktrees\\aura-domain-graph\\knowledge\\native_types\\test.py",
+      "process_only": true,
+      "expected_exit": 1,
+      "actual_exit": 1,
+      "caught": true,
+      "junit": "reports/native-fields/Test-mutation-replace-pinned-hash.xml"
+    },
+    {
+      "mutation": "materialize-absent-flags",
+      "test": "tests/knowledge/test_native_test.py::test_test_reference_absent_empty_null_and_false_remain_distinct",
+      "injected_into": "C:\\Users\\Hendrik\\Code\\leafcutter\\worktrees\\aura-domain-graph\\knowledge\\native_types\\test.py",
+      "process_only": true,
+      "expected_exit": 1,
+      "actual_exit": 1,
+      "caught": true,
+      "junit": "reports/native-fields/Test-mutation-materialize-absent-flags.xml"
+    }
+  ],
+  "count": 10,
+  "all_caught": true
+}
