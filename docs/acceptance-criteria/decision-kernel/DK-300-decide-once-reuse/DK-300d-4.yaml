@@ -11,13 +11,23 @@ readiness: reviewed
 priority: medium
 roadmap_phase: phase_kernel_1_founding
 criteria: |
-  Given the published record dec-ef8ddcb79d668a67 and the regenerated index in the working tree,
-  When the change is committed,
-  Then it reaches main only through a PR that is reviewed like any other change, for example
-    PR #978,
-  And the publish command itself made no commit, no push and no merge,
-  And once the PR is merged, a later decision run's precedent lookup through
-    docs/decisions/index.json returns dec-ef8ddcb79d668a67 for a matching question.
+  Scenario: Publish only writes under docs/decisions/ and makes no commit, push or merge
+    Given run run-2fbb4ef43b1345f6 staged the decision record dec-ef8ddcb79d668a67, and a git
+      checkout whose docs/decisions/ does not yet hold that record,
+    When a person runs python -m kernel decisions publish --run-id run-2fbb4ef43b1345f6 in that
+      checkout,
+    Then the only files created or changed in the checkout are
+      docs/decisions/dec-ef8ddcb79d668a67.yaml and the regenerated docs/decisions/index.json,
+    And publish makes no commit, no push and no merge: the branch head, the git staging area and
+      every remote branch are the same before and after.
+
+  Scenario: A record in the checkout's docs/decisions/ is found by a later run through the index
+    Given docs/decisions/dec-ef8ddcb79d668a67.yaml and a docs/decisions/index.json that lists it
+      are in the checkout,
+    When a later decision run in that checkout looks up precedent for the same question that
+      dec-ef8ddcb79d668a67 records,
+    Then the lookup reads docs/decisions/index.json and returns dec-ef8ddcb79d668a67 as a
+      precedent candidate.
 depends_on:
   - DK-300d
 doc_links:
@@ -133,6 +143,21 @@ amended_by:
       e89f0f74 (kernel/ and tests/kernel/ identical to origin/main). The evidence phase verifies each
       and adds the `# covers:` tags before anything is marked done.
     complexity_basis: remaining work only (evidence, covers tags, gap closure)
+  - reason: "amend: criteria cut to the clauses a test can prove, resolving the it-po gap that
+      'reviewed like any change' is enforced by the PR process and no test can assert it. Kept as
+      two scenarios: publish makes no commit, push or merge and only writes the record under
+      docs/decisions/ plus the regenerated index; once the record is in the checkout's
+      docs/decisions/, a later run's precedent lookup finds it through the index (a temporary
+      repository satisfies this, so the lookup no longer has to run against the merged main
+      store). Moved out of the criteria into notes as process context: 'it then goes through git
+      review like any change' (PR review and merge, e.g. PR #978). Concrete run id
+      run-2fbb4ef43b1345f6 taken from the mock data record for dec-ef8ddcb79d668a67. Title,
+      doc_links, it_requirements, test_spec, readiness, work_status, implemented_by and
+      covered_by unchanged."
+    date: '2026-10-06'
+    by: business-analyst
+    ticket: tickets/00_inbox/TICKET-20261002-DecisionLifecycleACs.md
+    pr: '#1004'
 superseded_by: null
 covered_by: []
 implemented_by:
@@ -166,6 +191,16 @@ notes: |
       repository after publish, not against the merged main store.
   Missing tests are listed in TICKET-20261002-DecisionKernelACTestGaps; once they pass, mark
     done through scripts/ac_store/mark_ac_done.py.
+
+  PROCESS CONTEXT, NOT A CRITERION (BA amendment 2026-10-06): after publish, the new
+  record and the regenerated index are an ordinary uncommitted change in the checkout.
+  It then goes through git review like any change: a person commits it, opens a PR, and
+  it reaches main only when that PR is reviewed and merged under the repository's branch
+  protection (dec-ef8ddcb79d668a67 reached main this way with PR #978). The kernel takes
+  no part in that review and no kernel test can prove it, so it is recorded here and
+  not in the criteria. The flow steps review and merge stay back-linked to this AC for
+  its kernel-checkable parts: publish makes no git change, and a record in the
+  checkout's docs/decisions/ is found through the index.
 product_truth:
   - flow: leafcutter/decision-publishing
     node: merge

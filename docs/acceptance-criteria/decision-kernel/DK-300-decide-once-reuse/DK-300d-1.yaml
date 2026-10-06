@@ -11,13 +11,24 @@ readiness: reviewed
 priority: medium
 roadmap_phase: phase_kernel_1_founding
 criteria: |
-  Given a staged decision record for run run-f0f15b38791a428f and the publish instruction that run
-    gave,
-  When you decide to publish,
-  Then you run python -m kernel decisions publish --run-id run-f0f15b38791a428f yourself, or Claude
-    Code runs exactly that command at your request and opens a PR,
-  And until you make that request, neither the kernel nor the /leafcutter skill runs the publish
-    command.
+  Scenario: Nothing reaches docs/decisions/ until a person runs publish
+    Given run run-f0f15b38791a428f completed with the decision record dec-d53e1c52cd47c832 staged
+      and reported the command python -m kernel decisions publish --run-id run-f0f15b38791a428f,
+    When no person has run that command yet,
+    Then no file under docs/decisions/ has been created or changed, and docs/decisions/index.json
+      has no entry for dec-d53e1c52cd47c832,
+    And once a person runs that command, docs/decisions/dec-d53e1c52cd47c832.yaml is written.
+
+  Scenario: The kernel skill shows the publish command and never runs it
+    Given the kernel skill as installed for Claude Code (/leafcutter) and for Codex ($leafcutter),
+    When a run the skill drives ends with the limitation "decision record staged: <path>; publish
+      with: python -m kernel decisions publish --run-id run-f0f15b38791a428f",
+    Then the skill's instructions direct it to tell the user the record is ready, show that
+      command, and not run it,
+    And the skill's instructions name decisions publish as a command for the user to run, never
+      for the skill,
+    And neither skill pre-approves decisions publish: the only kernel commands either skill
+      pre-approves are run, resume and status.
 depends_on:
   - DK-300d
 doc_links:
@@ -133,6 +144,20 @@ amended_by:
       e89f0f74 (kernel/ and tests/kernel/ identical to origin/main). The evidence phase verifies each
       and adds the `# covers:` tags before anything is marked done.
     complexity_basis: remaining work only (evidence, covers tags, gap closure)
+  - reason: "amend: criteria restated as today's built behaviour, resolving the it-po CONTRADICTION
+      gap in favour of the shipped skill text and ADR-060 section 3. Nothing reaches docs/decisions/
+      until a person runs python -m kernel decisions publish for the run; the kernel skill (Claude
+      Code /leafcutter and Codex $leafcutter) shows that command, never runs it, and pre-approves
+      only run, resume and status. Dropped: 'Claude Code runs exactly that command at your request
+      and opens a PR' -- the shipped skill forbids running publish and the kernel has no PR step.
+      The TICKET-20261002-KernelGatedDirectPublish doc_link and note are kept: that ticket amends
+      this AC when gated direct publishing ships. Title, doc_links, it_requirements, test_spec,
+      readiness, work_status, implemented_by and covered_by unchanged; notes gain one dated BA
+      paragraph (earlier paragraphs kept as history)."
+    date: '2026-10-06'
+    by: business-analyst
+    ticket: tickets/00_inbox/TICKET-20261002-DecisionLifecycleACs.md
+    pr: '#1004'
 superseded_by: null
 covered_by:
   - DK-300d-1-i
@@ -170,6 +195,15 @@ notes: |
     - TICKET-20261002-KernelGatedDirectPublish would change this AC.
   Missing tests are listed in TICKET-20261002-DecisionKernelACTestGaps; once they pass, mark
     done through scripts/ac_store/mark_ac_done.py.
+
+  BA AMENDMENT (2026-10-06): the CONTRADICTION above is resolved. The criteria now state
+  what is built: a staged record reaches docs/decisions/ only when a person runs
+  `decisions publish` for the run, and the kernel skill (Claude Code and Codex) shows the
+  command and never runs it (ADR-060 section 3; the skill's 'Never' section and its
+  pre-approved commands). The 'Claude Code runs it at your request and opens a PR' path
+  is not part of this AC: a person asking a host outside the kernel skill to run a
+  command is ordinary host behaviour, and the kernel has no PR step. When gated direct
+  publishing ships, TICKET-20261002-KernelGatedDirectPublish amends this AC again.
 product_truth:
   - flow: leafcutter/decision-publishing
     node: decide-to-publish
