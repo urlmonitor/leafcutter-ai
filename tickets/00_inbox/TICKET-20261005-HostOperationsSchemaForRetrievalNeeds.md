@@ -1,6 +1,6 @@
 ---
 title: "Kernel tests: the host-operation test tables include host.retrieval_needs"
-status: todo
+status: done
 components:
   - decision_kernel
 created: 2026-10-05
@@ -22,7 +22,7 @@ agents:
   test-runner: signed_off
   pr-reviewer: signed_off
   commit: signed_off
-  pull-request: needed
+  pull-request: signed_off
 ---
 
 # Kernel tests: the host-operation test tables include host.retrieval_needs
@@ -118,6 +118,14 @@ completion_manifest:
   commit_message_valid: true
   ticket_staged: true
 Auto-authorized commit gate: subject "test(kernel): add host.retrieval_needs to host-operation test tables"; staged files: host_support.py, test_host_operations.py, host_rigs.py, this ticket.
+
+### 2026-10-06 14:30 — pull-request (status: ok)
+feedback-id: (submit-failed)
+completion_manifest:
+  branch_pushed: true
+  pr_created: true
+  pr_body_complete: true
+PR opened: https://github.com/urlmonitor/leafcutter-ai/pull/1019. Opened under the standing user rule that PRs in leafcutter-ai need no confirmation; used the keyring login (env -u GH_TOKEN).
 
 ## Implementation Tasks
 ### python-coder
