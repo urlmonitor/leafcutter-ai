@@ -5,7 +5,7 @@ type: reference
 category: reference
 status: active
 created: '2026-08-26'
-last_updated: '2026-08-26'
+last_updated: '2026-10-06'
 components:
   - changelog
 related_docs:
@@ -22,8 +22,8 @@ related_docs:
 
 - **Severity:** medium
 - **Status:** open
-- **Occurrences:** 1
-- **First seen:** 2026-08-26 · **Last seen:** 2026-08-26
+- **Occurrences:** 2 (see Occurrence 2 below)
+- **First seen:** 2026-08-26 · **Last seen:** 2026-10-06
 - **Where:** `scripts/changelog/emit_entry.py:361` (the emitted body);
   `.github/workflows/ci.yml:268-295` (the `changelog-presence` job);
   `scripts/release/check_changelog_presence.py` (`_has_added_changelog`);
@@ -96,3 +96,32 @@ fixes it will touch all three.
 existence, and the only real validator runs before the artefact exists.
 
 ---
+
+## Occurrence 2 — 2026-10-06, an empty file instead of an empty body (PR #1015)
+
+`changelogs/2026-10-05-1602-changelog-5d5d0792-ee022375-2026-10-05.md` reached `main` as a
+**0-byte file**. It had no frontmatter and no body. It was added in `deb626b44` on branch
+`spec/suite-speed-levers` and merged in PR #1015. The commit message says it was "written by the
+changelog agent via the repo's emitter". `emit_entry.py:361-363` always writes frontmatter plus
+`## Entry`, so the empty file did not come from a normal emitter run. The record does not show
+how it was produced.
+
+This is the same gap with nothing at all inside the file. The blocking `changelog-presence` job
+counted the added file and passed it. No pre-commit hook opened it. `emit_entry.py`'s payload
+check cannot see a file that was emptied after it ran.
+
+It surfaced elsewhere. The knowledge reader (`knowledge/native_types/changelog_entry.py`)
+treated the missing frontmatter as an empty map, so the file became an empty `ChangelogEntry`
+record. The real-corpus test's oracle (`yaml.safe_load('')` is `None`) would have rejected it.
+A pinned entry count failed first and hid that failure. Found on 2026-10-06 while fixing those
+tests.
+
+Handled under `TICKET-20261006-KnowledgeRealCorpusTestsDeriveCensus`:
+- The entry was written from the commits in its range (`0cd7b471f` and the merge
+  `ee0223758`).
+- The knowledge reader now fails on a changelog with no frontmatter block, or an empty one,
+  naming the file and the reason.
+
+This does not close this issue. The presence gate and pre-commit still do not check an entry's
+shape. The fix direction above stands, and its first assertion (the frontmatter parses) would
+have caught this occurrence.

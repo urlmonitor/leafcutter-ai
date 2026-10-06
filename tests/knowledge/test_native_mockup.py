@@ -121,7 +121,9 @@ def test_mockup_real_canonical_population_includes_unregistered_and_null_renders
     root = Path(__file__).resolve().parents[2]
     records = _extract(root)
     paths = list((root / "docs/product-truth/mockups").rglob("*.mockup.json"))
-    assert len(records) == len(paths) == 15
+    before = {p: p.read_bytes() for p in paths}
+    assert paths
+    assert len(records) == len(paths)
     assert {record.source_path for record in records} == {
         p.relative_to(root).as_posix() for p in paths
     }
@@ -129,10 +131,12 @@ def test_mockup_real_canonical_population_includes_unregistered_and_null_renders
     registered = {
         entry["id"]: entry for entry in manifest["artifacts"] if entry["type"] == "mockup"
     }
-    assert sum(record.derived["manifest_registered"] for record in records) == 14
-    assert sum("render_body" in record.derived for record in records) == 10
-    assert sum("shape_version" in record.metadata for record in records) == 5
-    assert sum("realization" in record.metadata for record in records) == 5
+    null_renders = {
+        source["id"]
+        for source in (json.loads(data.decode("utf-8-sig")) for data in before.values())
+        if source["renders"] is None
+    }
+    assert null_renders
     for record in records:
         original = json.loads((root / record.source_path).read_text(encoding="utf-8-sig"))
         assert record.metadata == original
@@ -149,10 +153,20 @@ def test_mockup_real_canonical_population_includes_unregistered_and_null_renders
             assert ("render_body" in record.derived) == render.is_file()
             if render.is_file():
                 assert record.derived["render_body"] == render.read_bytes().decode("utf-8-sig")
+    # Reviewed anchors (KM-400a-1-xi): an unregistered canonical Mockup stays visible, and a
+    # registration with a different summary cannot replace the authored one.
+    assert "fern-and-fig/sign-in" not in registered
     sign_in = next(record for record in records if record.native_id == "fern-and-fig/sign-in")
     assert sign_in.derived["manifest_registered"] is False
     cart = next(record for record in records if record.native_id == "fern-and-fig/cart")
+    assert registered["fern-and-fig/cart"]["summary"] != cart.metadata["summary"]
     assert cart.metadata["summary"] != cart.derived["manifest_record"]["summary"]
+    assert all(
+        not any(key.startswith("render_") for key in record.derived)
+        for record in records
+        if record.native_id in null_renders
+    )
+    assert all(p.read_bytes() == data for p, data in before.items())
 
 
 def test_mockup_missing_store_and_absent_optional_fields_are_not_manufactured(tmp_path):
