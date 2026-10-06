@@ -1,0 +1,302 @@
+{
+  "destination": "C:\\Users\\Hendrik\\Code\\leafcutter\\worktrees\\knowledge-retrieval-v01",
+  "backup": "C:\\Users\\Hendrik\\Code\\leafcutter\\_backups\\native-fields-install-752339991f",
+  "git_index_and_merge_state_unchanged": true,
+  "files": [
+    {
+      "path": "knowledge/projection/canonical_loader.py",
+      "sha256": "15983ea39c2077e2e757a454ffd03d7ab9711a791c408ed4579c98c6cd109f38",
+      "previous_sha256": "d6c8717676f31829f79b12a8c2bb5017923ced47e0fba645695b96e966e35c48"
+    },
+    {
+      "path": "knowledge/projection/validation.py",
+      "sha256": "38b98bbde39dfc27590d980d80a381b008a6a1b127b0901fcfb0ffdb94aa773f",
+      "previous_sha256": "17a09c17d811c20b7976aa12bd8745e086f75cf84fa2506a54d07b2344f84d17"
+    },
+    {
+      "path": "knowledge/cli_sync.py",
+      "sha256": "14cf1e0b7051f11baa6f682f6a9d29d946b4f229a9966198a1c2d379d9187e9a",
+      "previous_sha256": "3a36907e5ff1aa43c6522534b8abd3fac7716ce33acf4426e40f4ff92830ef15"
+    },
+    {
+      "path": "knowledge/adapters/neo4j_backend.py",
+      "sha256": "8d1f4068aec29641270ee0aa7b388ccddc999064c42aa0a935a1b4026ba9307c",
+      "previous_sha256": "290aeae708b2c0aab1aa8d806b4f36df368550e4d7259f83945be0e2be316837"
+    },
+    {
+      "path": "knowledge/adapters/domain_schema.py",
+      "sha256": "9107b186c919562e4c7bcd9b031b43977e2863b86c7712f63cf7447901410024",
+      "previous_sha256": "56c368d2af202e34f6ad8d19c3adc52e6426c21a02c8740025659a68f3493af7"
+    },
+    {
+      "path": "knowledge/adapters/neo4j_domain_build.py",
+      "sha256": "3e6a52539d2d78f91a4bc4c1c9b68856ab6314af7b20dcf673ebbd8d1c81498a",
+      "previous_sha256": "01b981bf9e1b27602bf9ee9fa156ca3ef345dc78022e5e28bb06bfa1aef36e72"
+    },
+    {
+      "path": "knowledge/README.md",
+      "sha256": "ecae9df5e425791d5f45010c2edfedc8aba0046eeddbadfc2502c559f287b9d3",
+      "previous_sha256": "23280952010d435f36be7c7ec1fcc4b726840e6d84fad76dd2b8644908186ff9"
+    },
+    {
+      "path": "docs/how-to/run-knowledge-retrieval.md",
+      "sha256": "3f61e21d42edf63e5650c19d486d565eacee8467474845c44cb25a4edcb4e195",
+      "previous_sha256": "a4ca29395efeb4a47f91030e635e8ec6cd6407a3f056c06cbe761c7f5c038842"
+    },
+    {
+      "path": "docs/architecture/components/knowledge-retrieval.md",
+      "sha256": "d4e492fc7cd193b107bfaff95e9d5e4415c48d1db2c96359441e1a73335c5b3e",
+      "previous_sha256": "846755085e0c69738275efb457fb065cbdd0d20b0a8d66304a851b6b3f2bbcb9"
+    },
+    {
+      "path": "docs/acceptance-criteria/knowledge-management/KM-400-trustworthy-project-knowledge/KM-400a-3-i.yaml",
+      "sha256": "a480358bdd09d5c55ea4f9986716468da7078c0b04e1c6ea423caf33e39c1c91",
+      "previous_sha256": "946e31e0ae4e75225f4fdf70e8c5b916c4f5f5a2cda8755e27a23c06467a55b1"
+    },
+    {
+      "path": "tickets/00_inbox/TICKET-20261002-KM-400a-3-i.md",
+      "sha256": "033c50e448c9dba5fab3fdec5748229e26fc5a94b2dad046b4616980ebf0f682",
+      "previous_sha256": "b420d7de5d76172231d719ea8374a9bcfe72253cd2dd59b1ac3ea6070a8c05f5"
+    },
+    {
+      "path": "knowledge/native_types/acceptance_criterion.py",
+      "sha256": "1587b71e07dbc5659812b87991352409153fee2c60c7a93c71eeafed2179d61b",
+      "previous_sha256": null
+    },
+    {
+      "path": "knowledge/native_types/adr.py",
+      "sha256": "1d22af5ab2535dcd9b276ff5b449ebf6c7d2077fce86280d49e8215dbe598523",
+      "previous_sha256": null
+    },
+    {
+      "path": "knowledge/native_types/agent.py",
+      "sha256": "eeabb30f1658fc5dd121f6e66ea8e82b02bbd017c66df82a5de24a6e907eade9",
+      "previous_sha256": null
+    },
+    {
+      "path": "knowledge/native_types/capability.py",
+      "sha256": "a8c1341062d8f725c1e85406e3fda90ed36a047a1a25f7dfbfb7ce0b73d973fd",
+      "previous_sha256": null
+    },
+    {
+      "path": "knowledge/native_types/changelog_entry.py",
+      "sha256": "839f7b95b039c5eac694c72cf81c2a14c05888285baca01180d4450fea7143ed",
+      "previous_sha256": null
+    },
+    {
+      "path": "knowledge/native_types/common.py",
+      "sha256": "5ea70a9d674e89a01ffbcc9ff65be2e5fdbd6ffbfe3d9463fe5ad4711d6e604a",
+      "previous_sha256": null
+    },
+    {
+      "path": "knowledge/native_types/component.py",
+      "sha256": "1d6da0c37b7776cae167fb899ecc40eba4e1a3fd14a6d67e709679887b9604cd",
+      "previous_sha256": null
+    },
+    {
+      "path": "knowledge/native_types/decision.py",
+      "sha256": "6184cc5054fd52e3b2cfe06729406e3e9d696f817685de2261965e9ca5a4b19a",
+      "previous_sha256": null
+    },
+    {
+      "path": "knowledge/native_types/document.py",
+      "sha256": "d7d643c6c0122438fe14c0961700537334f7dbeea50fe226396c826fb7747928",
+      "previous_sha256": null
+    },
+    {
+      "path": "knowledge/native_types/flow.py",
+      "sha256": "d7d047ffb48d2163a658fe08506dad3989bd959ff491aab9cdf4391f185e125c",
+      "previous_sha256": null
+    },
+    {
+      "path": "knowledge/native_types/glossary_term.py",
+      "sha256": "464a68204915e39c55275d9358dc2ef4988f355ca80ea02d69c83b731f9ecd88",
+      "previous_sha256": null
+    },
+    {
+      "path": "knowledge/native_types/mockup.py",
+      "sha256": "a1c76d5d836f9e0e520165885a34bdcd2333329b418b65f82697e149b3b22667",
+      "previous_sha256": null
+    },
+    {
+      "path": "knowledge/native_types/mock_data.py",
+      "sha256": "a24a4c8ac28ee788309e7def05e5e9371594d423a38a928ece4802bd318cb55f",
+      "previous_sha256": null
+    },
+    {
+      "path": "knowledge/native_types/registry.py",
+      "sha256": "77ac73042cc340f09a82d562a79f42be9e3a84394de5b9a071fe3e6e0a9c05ea",
+      "previous_sha256": null
+    },
+    {
+      "path": "knowledge/native_types/roadmap_phase.py",
+      "sha256": "6b17a1bb542aabf140979d125054491895d542c5fb848e02cf5a1953a8835412",
+      "previous_sha256": null
+    },
+    {
+      "path": "knowledge/native_types/skill.py",
+      "sha256": "e84ddcf2fd3a565f6c807186978f504c2e0be9e4616eb5e01c0330a80a9e7043",
+      "previous_sha256": null
+    },
+    {
+      "path": "knowledge/native_types/source_file.py",
+      "sha256": "181fefe5219598b3eeb411a99527cd0bb65b97af4f37858f1bf48f5bab3be530",
+      "previous_sha256": null
+    },
+    {
+      "path": "knowledge/native_types/test.py",
+      "sha256": "1d5c36cac7c16ed587e48e52c80b592201bbc0ad9be065602ddcfe718650679a",
+      "previous_sha256": null
+    },
+    {
+      "path": "knowledge/native_types/ticket.py",
+      "sha256": "cb726c8d61f186067479e10999afb9759bf2c010a4737e6b5acd31770931130e",
+      "previous_sha256": null
+    },
+    {
+      "path": "knowledge/native_types/__init__.py",
+      "sha256": "28982073f81425a7f3171d5802d0d106fc06e7628f33019ac0b3bf5b3fd9e7b8",
+      "previous_sha256": null
+    },
+    {
+      "path": "knowledge/native_types/decision_schema.json",
+      "sha256": "84471651010968540a902a3ea8dd83d7c1e5bdc71d3834201393a44c8880e1c3",
+      "previous_sha256": null
+    },
+    {
+      "path": "tests/knowledge/test_native_acceptance_criterion.py",
+      "sha256": "5e75a6daf1e96fab3abf6fc2fbba7777d5613a25fa9622cef2a65d32defc1e57",
+      "previous_sha256": null
+    },
+    {
+      "path": "tests/knowledge/test_native_adr.py",
+      "sha256": "78e4562d018b7f341d82ad48239cbd883efb29f1912bde9e1f01a31c9c7a3db5",
+      "previous_sha256": null
+    },
+    {
+      "path": "tests/knowledge/test_native_agent.py",
+      "sha256": "e60ce22c6e5f698137e816cff1f50e037c3dc820eb8e14f30fa2021ee5753bb7",
+      "previous_sha256": null
+    },
+    {
+      "path": "tests/knowledge/test_native_capability.py",
+      "sha256": "974403fc5721558e6db422ab393c2e42f277ba9a7bbbe826983cfa6ecb99bf37",
+      "previous_sha256": null
+    },
+    {
+      "path": "tests/knowledge/test_native_changelog_entry.py",
+      "sha256": "8021bfd7f7ce9d9c43210eaaf02c176f1d1b0894464748858c23be958ff1412a",
+      "previous_sha256": null
+    },
+    {
+      "path": "tests/knowledge/test_native_component.py",
+      "sha256": "ce6ac9e60b74113889ac079b89164ac34b5f91c3834f27cae35ee781fd312956",
+      "previous_sha256": null
+    },
+    {
+      "path": "tests/knowledge/test_native_decision.py",
+      "sha256": "8346345a9976500eaf2f4d9c28314bfb06e58aa2bdabec3e1a821aaf2c486694",
+      "previous_sha256": null
+    },
+    {
+      "path": "tests/knowledge/test_native_document.py",
+      "sha256": "51431ff925a0bc64dbe28232f5991bb830ce86ec06cc98944546ceff832abd1b",
+      "previous_sha256": null
+    },
+    {
+      "path": "tests/knowledge/test_native_flow.py",
+      "sha256": "5f05a831e8e4a5ae9ba34eebae7f285ea7cbbfe03229570b0f211e2ab6d16924",
+      "previous_sha256": null
+    },
+    {
+      "path": "tests/knowledge/test_native_glossary_term.py",
+      "sha256": "5a4f33d39cd02087c5d70648bf8ae2ffb7bd8baf9062b67f2acfc5c78768a7f9",
+      "previous_sha256": null
+    },
+    {
+      "path": "tests/knowledge/test_native_metadata_integration.py",
+      "sha256": "df11ebef8393a55392f3e16808c5bc159dee7200ceb93c9b91a1a8341d9d1882",
+      "previous_sha256": null
+    },
+    {
+      "path": "tests/knowledge/test_native_mockup.py",
+      "sha256": "ce88851a7f01e58718ec2c33885bf55765fc6900a34bf7f2213a5f62f0cd8493",
+      "previous_sha256": null
+    },
+    {
+      "path": "tests/knowledge/test_native_mock_data.py",
+      "sha256": "c9ee9186d1d397c8d18974b405c219c1caceb798ac169d754d9f4b001affa1f3",
+      "previous_sha256": null
+    },
+    {
+      "path": "tests/knowledge/test_native_properties.py",
+      "sha256": "632e72431fcdc89d9a4bfd2dbce0d794f7e24bf16ab7bb6d55fc333368771098",
+      "previous_sha256": null
+    },
+    {
+      "path": "tests/knowledge/test_native_refresh_recovery.py",
+      "sha256": "1b6070f112fdadc496224d66af8d5811f8cb2d0844ff140e2209495318735fae",
+      "previous_sha256": null
+    },
+    {
+      "path": "tests/knowledge/test_native_roadmap_phase.py",
+      "sha256": "a4944651705caca098ddc150ae481a80a6cf2c2fc55e2862240ea3355ad0077e",
+      "previous_sha256": null
+    },
+    {
+      "path": "tests/knowledge/test_native_skill.py",
+      "sha256": "2f5cdaef11f4414609e492b38dfc636eba1421f7352497e603658d7e1c995799",
+      "previous_sha256": null
+    },
+    {
+      "path": "tests/knowledge/test_native_source_file.py",
+      "sha256": "a086e59087d8246b218c92eab6002e41203bea6c961d1d6cb5ef16405b442375",
+      "previous_sha256": null
+    },
+    {
+      "path": "tests/knowledge/test_native_test.py",
+      "sha256": "de72b98e29886ff3b9768956d3d61bc863ab1958e0a452b3e5e503b8baafa784",
+      "previous_sha256": null
+    },
+    {
+      "path": "tests/knowledge/test_native_ticket.py",
+      "sha256": "08e7b4286b536341c841fa9e55bd6b2050b8a60936885937f221501e1907552f",
+      "previous_sha256": null
+    },
+    {
+      "path": "tests/knowledge_live/native_metadata_checks.py",
+      "sha256": "f1da90d0cd0918291c3a3a51e74fff8aca7e3d11eca63ca761a8b48b3a9224ef",
+      "previous_sha256": null
+    },
+    {
+      "path": "tests/knowledge_live/native_refresh_recovery_checks.py",
+      "sha256": "df899050fd3e38d95ef1391c35ca4d0fa53b8e5d460624cdce240479bc0058c2",
+      "previous_sha256": null
+    },
+    {
+      "path": "knowledge/native_properties.py",
+      "sha256": "19fb7677fe4d4eb134e9ad5c58af5438724674d05bf1396a2acafd0fd7a55efb",
+      "previous_sha256": null
+    },
+    {
+      "path": "knowledge/native_refresh.py",
+      "sha256": "373a31197596ab8ed98b1cce0328f4aeb68d6cd926ce4300e28b8d982266eb57",
+      "previous_sha256": null
+    },
+    {
+      "path": "knowledge/projection/native_metadata.py",
+      "sha256": "bb635c40651196214f1609073ee23098eb0d536c53b539c71f24d1ac8a1374fd",
+      "previous_sha256": null
+    },
+    {
+      "path": "knowledge/adapters/native_verification.py",
+      "sha256": "fd711b48d49f860823724b79dbcfbb44af2c255e4a518b4e8db0a39e7b718b78",
+      "previous_sha256": null
+    }
+  ],
+  "final_documentation_updates": [
+    "docs/how-to/run-knowledge-retrieval.md",
+    "docs/acceptance-criteria/knowledge-management/KM-400-trustworthy-project-knowledge/KM-400a-3-i.yaml",
+    "tickets/00_inbox/TICKET-20261002-KM-400a-3-i.md"
+  ]
+}

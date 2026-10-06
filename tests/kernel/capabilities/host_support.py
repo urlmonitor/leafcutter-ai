@@ -45,9 +45,23 @@ QUESTION_REQUEST = {"question": "Which store?", "free_text_allowed": False,
                                 {"id": "files", "label": "Plain files"}]}
 REQUESTS: dict[str, dict[str, Any]] = {"host.generate_options": OPTIONS_REQUEST, "host.synthesize": SYNTHESIS_REQUEST,
             "host.research": RESEARCH_REQUEST, "host.formulate_question": QUESTION_REQUEST}
+REQUESTS["host.query_build"] = {"question":"Which tests cover a component?",
+    "repository_id":"repo","source_sha":"a"*40,"generation_id":"g1",
+    "component_ids":["component"],"need_id":"need.tests","attempt_id":"attempt1"}
+REQUESTS["host.retrieval_needs"] = {"original_question": "Which tests cover CMP-1?",
+    "catalog": {"entity_types": {"test": "A test case."}, "target_ids": {"CMP-1": "A component."},
+                "required_fields": {"name": "The test name."},
+                "document_types": {"source": "A source file."},
+                "relationships": {"covers": "A test covers a component."}}}
+# Operations the code table binds but config/capability_registry.json deliberately omits: the
+# retrieval-needs interpreter is exposed only by explicitly supplied experiment registries.
+EXPERIMENT_ONLY = frozenset({"host.retrieval_needs"})
 FAKE_HASH = "f" * 64
 ANSWER_AFTER = timedelta(milliseconds=1500)
 SCHEMAS = {
+    "host.retrieval_needs": (schema_ids.RETRIEVAL_NEEDS_REQUEST,
+                             schema_ids.RETRIEVAL_NEEDS_OUTPUT),
+    "host.query_build": (schema_ids.QUERY_BUILD_REQUEST,schema_ids.QUERY_CANDIDATE),
     "host.generate_options": (schema_ids.OPTIONS_REQUEST, schema_ids.OPTIONS),
     "host.synthesize": (schema_ids.SYNTHESIS_REQUEST, schema_ids.FINDINGS),
     "host.research": (schema_ids.RETRIEVAL_REQUEST, schema_ids.EVIDENCE_BUNDLE),

@@ -1,0 +1,1718 @@
+{
+  "dependency_pages": [
+    {
+      "contract_version": "1",
+      "request_id": "impact-9d115947",
+      "retrieval_id": "041f34eb-b3ce-49a3-8913-5096c8418bda",
+      "status": "partial",
+      "requested_mode": "graph",
+      "executed_mode": "graph",
+      "operation": "get_declared_dependents",
+      "operation_version": "1",
+      "source_sha": "9d11594782abfb417d0f3a826bfb1f91f3a523ac",
+      "generation_id": "6b24591259549ca25ae16d2bfff92cc34ae41359d7685e259a15e9b4323aaeb3",
+      "evidence": [
+        {
+          "entity": {
+            "canonical_id": "TQ-500f-2-i",
+            "kind": "AcceptanceCriterion",
+            "title": "An empty or malformed wrong-versions list is refused, and the fallback route never invents one",
+            "summary": "",
+            "source": {
+              "repository_id": "independent-answer-qa-a9a29716a5d6",
+              "source_sha": "9d11594782abfb417d0f3a826bfb1f91f3a523ac",
+              "path": "docs/acceptance-criteria/testing-quality/TQ-500-checks-that-can-fail/TQ-500f-2-i.yaml",
+              "locator": "/criteria",
+              "content_hash": "9979c6f46ac018c287e8fdb3dc005c3ca98c04af8d126b3ca5529be285c92121"
+            },
+            "properties": {
+              "status": "active",
+              "req_status": "draft",
+              "work_status": "done",
+              "readiness": "approved",
+              "priority": "high",
+              "level": "L3",
+              "covered_by": [],
+              "implemented_by": [],
+              "depends_on": [
+                "TQ-500f-2"
+              ],
+              "has_children": false,
+              "structural_parent": "TQ-500f-2",
+              "structural_parent_locator": "/id"
+            }
+          },
+          "evidence_id": "knowledge-5c001cddab98dd965de78b3b7f5ace5c4c769298cb2f0ebad83a5a9ef1ed0e88",
+          "content": null,
+          "disclosure_level": 1,
+          "signals": {},
+          "seed_id": null,
+          "path": [
+            {
+              "source": {
+                "repository_id": "independent-answer-qa-a9a29716a5d6",
+                "source_sha": "9d11594782abfb417d0f3a826bfb1f91f3a523ac",
+                "path": "docs/acceptance-criteria/testing-quality/TQ-500-checks-that-can-fail/TQ-500f-2-i.yaml",
+                "locator": "/depends_on",
+                "content_hash": "9979c6f46ac018c287e8fdb3dc005c3ca98c04af8d126b3ca5529be285c92121"
+              },
+              "source_id": "TQ-500f-2-i",
+              "target_id": "TQ-500f-2",
+              "edge_type": "depends_on",
+              "locator": "/depends_on"
+            }
+          ],
+          "limitations": [],
+          "relationships": [],
+          "field_availability": {
+            "canonical_id": "present"
+          },
+          "field_locators": {},
+          "field_derivations": {},
+          "related": []
+        },
+        {
+          "entity": {
+            "canonical_id": "TQ-500f-2-ii",
+            "kind": "AcceptanceCriterion",
+            "title": "Bug-fix and gate requirements arrive at the test writer with their wrong versions already named",
+            "summary": "",
+            "source": {
+              "repository_id": "independent-answer-qa-a9a29716a5d6",
+              "source_sha": "9d11594782abfb417d0f3a826bfb1f91f3a523ac",
+              "path": "docs/acceptance-criteria/testing-quality/TQ-500-checks-that-can-fail/TQ-500f-2-ii.yaml",
+              "locator": "/criteria",
+              "content_hash": "047233b38c07b25dabffa3aba4137efb7cdb4b0441fe7ce5563ab5ad5e4ebdba"
+            },
+            "properties": {
+              "status": "active",
+              "req_status": "draft",
+              "work_status": "todo",
+              "readiness": "approved",
+              "priority": "high",
+              "level": "L3",
+              "covered_by": [],
+              "implemented_by": [],
+              "depends_on": [
+                "TQ-500f-2",
+                "ACD-2500c",
+                "ACD-2500d-5"
+              ],
+              "test_required": false,
+              "has_children": false,
+              "structural_parent": "TQ-500f-2",
+              "structural_parent_locator": "/id"
+            }
+          },
+          "evidence_id": "knowledge-9aba81818007e3c6b1f969ac22ddb4625b52aeba159b34c5779a6707b7ac2eea",
+          "content": null,
+          "disclosure_level": 1,
+          "signals": {},
+          "seed_id": null,
+          "path": [
+            {
+              "source": {
+                "repository_id": "independent-answer-qa-a9a29716a5d6",
+                "source_sha": "9d11594782abfb417d0f3a826bfb1f91f3a523ac",
+                "path": "docs/acceptance-criteria/testing-quality/TQ-500-checks-that-can-fail/TQ-500f-2-ii.yaml",
+                "locator": "/depends_on",
+                "content_hash": "047233b38c07b25dabffa3aba4137efb7cdb4b0441fe7ce5563ab5ad5e4ebdba"
+              },
+              "source_id": "TQ-500f-2-ii",
+              "target_id": "TQ-500f-2",
+              "edge_type": "depends_on",
+              "locator": "/depends_on"
+            }
+          ],
+          "limitations": [],
+          "relationships": [],
+          "field_availability": {
+            "canonical_id": "present"
+          },
+          "field_locators": {},
+          "field_derivations": {},
+          "related": []
+        }
+      ],
+      "warnings": [],
+      "errors": [],
+      "continuation": "[REDACTED_CONTINUATION_TOKEN]",
+      "truncated": true,
+      "stats": {
+        "mapper_version": "6",
+        "population": {
+          "population": "declared_dependents",
+          "root_id": "TQ-500f-2",
+          "levels": null,
+          "inclusion": null,
+          "relation": "depends_on",
+          "direction": "incoming",
+          "depth": 1,
+          "complete": true,
+          "limitations": [
+            "direct declared dependencies only; transitive and code-consumer impact uninspected"
+          ]
+        },
+        "candidates": 5,
+        "estimator_version": "utf8-bytes-div4-v1",
+        "round": 1,
+        "candidate_work": 6,
+        "duration_ms": 31.364,
+        "estimated_tokens": 1240
+      },
+      "answer": {
+        "status": "partial",
+        "original_question": "Which ACs directly depend on TQ-500f-2?",
+        "required_fields": [
+          "canonical_id"
+        ],
+        "scope": {
+          "population": "declared_dependents",
+          "root_id": "TQ-500f-2",
+          "levels": null,
+          "inclusion": null
+        },
+        "missing_fields": [],
+        "completeness": {
+          "complete": false,
+          "known_count": 2,
+          "exact_total": null,
+          "limitations": [
+            "execution is partial",
+            "enumeration or disclosure is incomplete"
+          ]
+        },
+        "work_status_counts": null,
+        "known_work_status_counts": {},
+        "limitations": [
+          "execution is partial",
+          "enumeration or disclosure is incomplete"
+        ]
+      },
+      "assessment": null,
+      "observation": {
+        "state": "disabled"
+      }
+    },
+    {
+      "contract_version": "1",
+      "request_id": "impact-9d115947",
+      "retrieval_id": "677cd789-4b39-4f78-8995-878d43155405",
+      "status": "partial",
+      "requested_mode": "graph",
+      "executed_mode": "graph",
+      "operation": "get_declared_dependents",
+      "operation_version": "1",
+      "source_sha": "9d11594782abfb417d0f3a826bfb1f91f3a523ac",
+      "generation_id": "6b24591259549ca25ae16d2bfff92cc34ae41359d7685e259a15e9b4323aaeb3",
+      "evidence": [
+        {
+          "entity": {
+            "canonical_id": "TQ-500f-3-i",
+            "kind": "AcceptanceCriterion",
+            "title": "The red-baseline check refuses absence-only red for a test that names wrong versions to catch",
+            "summary": "",
+            "source": {
+              "repository_id": "independent-answer-qa-a9a29716a5d6",
+              "source_sha": "9d11594782abfb417d0f3a826bfb1f91f3a523ac",
+              "path": "docs/acceptance-criteria/testing-quality/TQ-500-checks-that-can-fail/TQ-500f-3-i.yaml",
+              "locator": "/criteria",
+              "content_hash": "fc775fe8646a55fdbb8436819a78a318afe50570565190fda3a07ac934ac3b07"
+            },
+            "properties": {
+              "status": "active",
+              "req_status": "draft",
+              "work_status": "done",
+              "readiness": "approved",
+              "priority": "high",
+              "level": "L3",
+              "covered_by": [],
+              "implemented_by": [],
+              "depends_on": [
+                "TQ-500f-3",
+                "TQ-500f-1",
+                "TQ-500f-2"
+              ],
+              "has_children": false,
+              "structural_parent": "TQ-500f-3",
+              "structural_parent_locator": "/id"
+            }
+          },
+          "evidence_id": "knowledge-91f6df94d016259ff0a3cc7c4513dd57fb8ebfaacf45439934cb762d2d9ea7c7",
+          "content": null,
+          "disclosure_level": 1,
+          "signals": {},
+          "seed_id": null,
+          "path": [
+            {
+              "source": {
+                "repository_id": "independent-answer-qa-a9a29716a5d6",
+                "source_sha": "9d11594782abfb417d0f3a826bfb1f91f3a523ac",
+                "path": "docs/acceptance-criteria/testing-quality/TQ-500-checks-that-can-fail/TQ-500f-3-i.yaml",
+                "locator": "/depends_on",
+                "content_hash": "fc775fe8646a55fdbb8436819a78a318afe50570565190fda3a07ac934ac3b07"
+              },
+              "source_id": "TQ-500f-3-i",
+              "target_id": "TQ-500f-2",
+              "edge_type": "depends_on",
+              "locator": "/depends_on"
+            }
+          ],
+          "limitations": [],
+          "relationships": [],
+          "field_availability": {
+            "canonical_id": "present"
+          },
+          "field_locators": {},
+          "field_derivations": {},
+          "related": []
+        },
+        {
+          "entity": {
+            "canonical_id": "TQ-500f-5",
+            "kind": "AcceptanceCriterion",
+            "title": "Reference guidance names the discrimination-shaped failure family, its catalogue, the new test kind and the wrong-versions field",
+            "summary": "",
+            "source": {
+              "repository_id": "independent-answer-qa-a9a29716a5d6",
+              "source_sha": "9d11594782abfb417d0f3a826bfb1f91f3a523ac",
+              "path": "docs/acceptance-criteria/testing-quality/TQ-500-checks-that-can-fail/TQ-500f-5.yaml",
+              "locator": "/criteria",
+              "content_hash": "38b63e91583ea4ed24b6d44d674ad698b54ef994f1f59141bfea2ba168d7a6fe"
+            },
+            "properties": {
+              "status": "active",
+              "req_status": "draft",
+              "work_status": "todo",
+              "readiness": "approved",
+              "priority": "high",
+              "level": "L2",
+              "covered_by": [],
+              "implemented_by": [],
+              "depends_on": [
+                "TQ-500f",
+                "TQ-500f-1",
+                "TQ-500f-2"
+              ],
+              "test_required": false,
+              "has_children": false,
+              "structural_parent": "TQ-500f",
+              "structural_parent_locator": "/id"
+            }
+          },
+          "evidence_id": "knowledge-853580e2a5c666be4e56921f15c7e5272ebe49d1b49bc672255a6318a4ff3b80",
+          "content": null,
+          "disclosure_level": 1,
+          "signals": {},
+          "seed_id": null,
+          "path": [
+            {
+              "source": {
+                "repository_id": "independent-answer-qa-a9a29716a5d6",
+                "source_sha": "9d11594782abfb417d0f3a826bfb1f91f3a523ac",
+                "path": "docs/acceptance-criteria/testing-quality/TQ-500-checks-that-can-fail/TQ-500f-5.yaml",
+                "locator": "/depends_on",
+                "content_hash": "38b63e91583ea4ed24b6d44d674ad698b54ef994f1f59141bfea2ba168d7a6fe"
+              },
+              "source_id": "TQ-500f-5",
+              "target_id": "TQ-500f-2",
+              "edge_type": "depends_on",
+              "locator": "/depends_on"
+            }
+          ],
+          "limitations": [],
+          "relationships": [],
+          "field_availability": {
+            "canonical_id": "present"
+          },
+          "field_locators": {},
+          "field_derivations": {},
+          "related": []
+        }
+      ],
+      "warnings": [],
+      "errors": [],
+      "continuation": "[REDACTED_CONTINUATION_TOKEN]",
+      "truncated": true,
+      "stats": {
+        "mapper_version": "6",
+        "population": {
+          "population": "declared_dependents",
+          "root_id": "TQ-500f-2",
+          "levels": null,
+          "inclusion": null,
+          "relation": "depends_on",
+          "direction": "incoming",
+          "depth": 1,
+          "complete": false,
+          "limitations": [
+            "direct declared dependencies only; transitive and code-consumer impact uninspected"
+          ],
+          "page_offset": 2
+        },
+        "candidates": 5,
+        "estimator_version": "utf8-bytes-div4-v1",
+        "round": 2,
+        "candidate_work": 6,
+        "duration_ms": 27.115,
+        "estimated_tokens": 1306
+      },
+      "answer": {
+        "status": "partial",
+        "original_question": "Which ACs directly depend on TQ-500f-2?",
+        "required_fields": [
+          "canonical_id"
+        ],
+        "scope": {
+          "population": "declared_dependents",
+          "root_id": "TQ-500f-2",
+          "levels": null,
+          "inclusion": null
+        },
+        "missing_fields": [],
+        "completeness": {
+          "complete": false,
+          "known_count": 2,
+          "exact_total": null,
+          "limitations": [
+            "execution is partial",
+            "enumeration or disclosure is incomplete",
+            "continuation page is not an aggregate population",
+            "complete population enumeration is not established"
+          ]
+        },
+        "work_status_counts": null,
+        "known_work_status_counts": {},
+        "limitations": [
+          "execution is partial",
+          "enumeration or disclosure is incomplete",
+          "continuation page is not an aggregate population",
+          "complete population enumeration is not established"
+        ]
+      },
+      "assessment": null,
+      "observation": {
+        "state": "disabled"
+      }
+    },
+    {
+      "contract_version": "1",
+      "request_id": "impact-9d115947",
+      "retrieval_id": "0563266e-479b-4e79-b6a0-3c3d8c58af43",
+      "status": "ok",
+      "requested_mode": "graph",
+      "executed_mode": "graph",
+      "operation": "get_declared_dependents",
+      "operation_version": "1",
+      "source_sha": "9d11594782abfb417d0f3a826bfb1f91f3a523ac",
+      "generation_id": "6b24591259549ca25ae16d2bfff92cc34ae41359d7685e259a15e9b4323aaeb3",
+      "evidence": [
+        {
+          "entity": {
+            "canonical_id": "TQ-500f-6",
+            "kind": "AcceptanceCriterion",
+            "title": "A how-to: write a test that catches the plausible wrong version",
+            "summary": "",
+            "source": {
+              "repository_id": "independent-answer-qa-a9a29716a5d6",
+              "source_sha": "9d11594782abfb417d0f3a826bfb1f91f3a523ac",
+              "path": "docs/acceptance-criteria/testing-quality/TQ-500-checks-that-can-fail/TQ-500f-6.yaml",
+              "locator": "/criteria",
+              "content_hash": "827dc2dc0d45a485f6c5ad016abe91c777ef9b44108e40839192b667c77e9ec5"
+            },
+            "properties": {
+              "status": "active",
+              "req_status": "draft",
+              "work_status": "todo",
+              "readiness": "approved",
+              "priority": "high",
+              "level": "L2",
+              "covered_by": [],
+              "implemented_by": [],
+              "depends_on": [
+                "TQ-500f",
+                "TQ-500f-2",
+                "TQ-500f-3",
+                "TQ-500f-4"
+              ],
+              "test_required": false,
+              "has_children": false,
+              "structural_parent": "TQ-500f",
+              "structural_parent_locator": "/id"
+            }
+          },
+          "evidence_id": "knowledge-3340f609b6029ffa6ca7066ba40a4dcf11546c3046fb5209f17d6dcd6121505a",
+          "content": null,
+          "disclosure_level": 1,
+          "signals": {},
+          "seed_id": null,
+          "path": [
+            {
+              "source": {
+                "repository_id": "independent-answer-qa-a9a29716a5d6",
+                "source_sha": "9d11594782abfb417d0f3a826bfb1f91f3a523ac",
+                "path": "docs/acceptance-criteria/testing-quality/TQ-500-checks-that-can-fail/TQ-500f-6.yaml",
+                "locator": "/depends_on",
+                "content_hash": "827dc2dc0d45a485f6c5ad016abe91c777ef9b44108e40839192b667c77e9ec5"
+              },
+              "source_id": "TQ-500f-6",
+              "target_id": "TQ-500f-2",
+              "edge_type": "depends_on",
+              "locator": "/depends_on"
+            }
+          ],
+          "limitations": [],
+          "relationships": [],
+          "field_availability": {
+            "canonical_id": "present"
+          },
+          "field_locators": {},
+          "field_derivations": {},
+          "related": []
+        }
+      ],
+      "warnings": [],
+      "errors": [],
+      "continuation": null,
+      "truncated": false,
+      "stats": {
+        "mapper_version": "6",
+        "population": {
+          "population": "declared_dependents",
+          "root_id": "TQ-500f-2",
+          "levels": null,
+          "inclusion": null,
+          "relation": "depends_on",
+          "direction": "incoming",
+          "depth": 1,
+          "complete": false,
+          "limitations": [
+            "direct declared dependencies only; transitive and code-consumer impact uninspected"
+          ],
+          "page_offset": 4
+        },
+        "candidates": 5,
+        "estimator_version": "utf8-bytes-div4-v1",
+        "round": 3,
+        "candidate_work": 6,
+        "duration_ms": 32.815,
+        "estimated_tokens": 768
+      },
+      "answer": {
+        "status": "partial",
+        "original_question": "Which ACs directly depend on TQ-500f-2?",
+        "required_fields": [
+          "canonical_id"
+        ],
+        "scope": {
+          "population": "declared_dependents",
+          "root_id": "TQ-500f-2",
+          "levels": null,
+          "inclusion": null
+        },
+        "missing_fields": [],
+        "completeness": {
+          "complete": false,
+          "known_count": 1,
+          "exact_total": null,
+          "limitations": [
+            "continuation page is not an aggregate population",
+            "complete population enumeration is not established"
+          ]
+        },
+        "work_status_counts": null,
+        "known_work_status_counts": {},
+        "limitations": [
+          "continuation page is not an aggregate population",
+          "complete population enumeration is not established"
+        ]
+      },
+      "assessment": null,
+      "observation": {
+        "state": "disabled"
+      }
+    }
+  ],
+  "source_revision_before": "9f70de80ebcafe59ff55cce6732deb92069f9541",
+  "source_revision_after": "9d11594782abfb417d0f3a826bfb1f91f3a523ac",
+  "source_oracles": {
+    "before": {
+      "TQ-500f-2-i": "docs/acceptance-criteria/testing-quality/TQ-500-checks-that-can-fail/TQ-500f-2-i.yaml",
+      "TQ-500f-2-ii": "docs/acceptance-criteria/testing-quality/TQ-500-checks-that-can-fail/TQ-500f-2-ii.yaml",
+      "TQ-500f-3-i": "docs/acceptance-criteria/testing-quality/TQ-500-checks-that-can-fail/TQ-500f-3-i.yaml",
+      "TQ-500f-5": "docs/acceptance-criteria/testing-quality/TQ-500-checks-that-can-fail/TQ-500f-5.yaml",
+      "TQ-500f-6": "docs/acceptance-criteria/testing-quality/TQ-500-checks-that-can-fail/TQ-500f-6.yaml"
+    },
+    "after": {
+      "TQ-500f-2-i": "docs/acceptance-criteria/testing-quality/TQ-500-checks-that-can-fail/TQ-500f-2-i.yaml",
+      "TQ-500f-2-ii": "docs/acceptance-criteria/testing-quality/TQ-500-checks-that-can-fail/TQ-500f-2-ii.yaml",
+      "TQ-500f-3-i": "docs/acceptance-criteria/testing-quality/TQ-500-checks-that-can-fail/TQ-500f-3-i.yaml",
+      "TQ-500f-5": "docs/acceptance-criteria/testing-quality/TQ-500-checks-that-can-fail/TQ-500f-5.yaml",
+      "TQ-500f-6": "docs/acceptance-criteria/testing-quality/TQ-500-checks-that-can-fail/TQ-500f-6.yaml"
+    }
+  },
+  "mapper_version": "6",
+  "actual_boundaries": [
+    "Git archive YAML oracle",
+    "canonical mapper",
+    "local Neo4j server",
+    "KnowledgeService",
+    "public assess"
+  ],
+  "before": {
+    "contract_version": "1",
+    "request_id": "impact-9f70de80",
+    "retrieval_id": "3b04c9cc-12be-4f00-b862-00777302b13c",
+    "status": "ok",
+    "requested_mode": "graph",
+    "executed_mode": "graph",
+    "operation": "get_declared_dependents",
+    "operation_version": "1",
+    "source_sha": "9f70de80ebcafe59ff55cce6732deb92069f9541",
+    "generation_id": "7c3abe81082f378adbd09eb59fa5134eb280ff621d5b8510d29f2de5be91911a",
+    "evidence": [
+      {
+        "entity": {
+          "canonical_id": "TQ-500f-2-i",
+          "kind": "AcceptanceCriterion",
+          "title": "An empty or malformed wrong-versions list is refused, and the fallback route never invents one",
+          "summary": "",
+          "source": {
+            "repository_id": "independent-answer-qa-a9a29716a5d6",
+            "source_sha": "9f70de80ebcafe59ff55cce6732deb92069f9541",
+            "path": "docs/acceptance-criteria/testing-quality/TQ-500-checks-that-can-fail/TQ-500f-2-i.yaml",
+            "locator": "/criteria",
+            "content_hash": "9979c6f46ac018c287e8fdb3dc005c3ca98c04af8d126b3ca5529be285c92121"
+          },
+          "properties": {
+            "status": "active",
+            "req_status": "draft",
+            "work_status": "done",
+            "readiness": "approved",
+            "priority": "high",
+            "level": "L3",
+            "covered_by": [],
+            "implemented_by": [],
+            "depends_on": [
+              "TQ-500f-2"
+            ],
+            "has_children": false,
+            "structural_parent": "TQ-500f-2",
+            "structural_parent_locator": "/id"
+          }
+        },
+        "evidence_id": "knowledge-b389819cbaa2a8fb74f44bff930574d0350bd9cc39ff4e7a37d24bb105eaf741",
+        "content": null,
+        "disclosure_level": 1,
+        "signals": {},
+        "seed_id": null,
+        "path": [
+          {
+            "source": {
+              "repository_id": "independent-answer-qa-a9a29716a5d6",
+              "source_sha": "9f70de80ebcafe59ff55cce6732deb92069f9541",
+              "path": "docs/acceptance-criteria/testing-quality/TQ-500-checks-that-can-fail/TQ-500f-2-i.yaml",
+              "locator": "/depends_on",
+              "content_hash": "9979c6f46ac018c287e8fdb3dc005c3ca98c04af8d126b3ca5529be285c92121"
+            },
+            "source_id": "TQ-500f-2-i",
+            "target_id": "TQ-500f-2",
+            "edge_type": "depends_on",
+            "locator": "/depends_on"
+          }
+        ],
+        "limitations": [],
+        "relationships": [],
+        "field_availability": {
+          "canonical_id": "present"
+        },
+        "field_locators": {},
+        "field_derivations": {},
+        "related": []
+      },
+      {
+        "entity": {
+          "canonical_id": "TQ-500f-2-ii",
+          "kind": "AcceptanceCriterion",
+          "title": "Bug-fix and gate requirements arrive at the test writer with their wrong versions already named",
+          "summary": "",
+          "source": {
+            "repository_id": "independent-answer-qa-a9a29716a5d6",
+            "source_sha": "9f70de80ebcafe59ff55cce6732deb92069f9541",
+            "path": "docs/acceptance-criteria/testing-quality/TQ-500-checks-that-can-fail/TQ-500f-2-ii.yaml",
+            "locator": "/criteria",
+            "content_hash": "047233b38c07b25dabffa3aba4137efb7cdb4b0441fe7ce5563ab5ad5e4ebdba"
+          },
+          "properties": {
+            "status": "active",
+            "req_status": "draft",
+            "work_status": "todo",
+            "readiness": "approved",
+            "priority": "high",
+            "level": "L3",
+            "covered_by": [],
+            "implemented_by": [],
+            "depends_on": [
+              "TQ-500f-2",
+              "ACD-2500c",
+              "ACD-2500d-5"
+            ],
+            "test_required": false,
+            "has_children": false,
+            "structural_parent": "TQ-500f-2",
+            "structural_parent_locator": "/id"
+          }
+        },
+        "evidence_id": "knowledge-88fcf9c2afc2a5733002e031222edd3a4e49c32a3ce10e5c4dfe44f7dcdab111",
+        "content": null,
+        "disclosure_level": 1,
+        "signals": {},
+        "seed_id": null,
+        "path": [
+          {
+            "source": {
+              "repository_id": "independent-answer-qa-a9a29716a5d6",
+              "source_sha": "9f70de80ebcafe59ff55cce6732deb92069f9541",
+              "path": "docs/acceptance-criteria/testing-quality/TQ-500-checks-that-can-fail/TQ-500f-2-ii.yaml",
+              "locator": "/depends_on",
+              "content_hash": "047233b38c07b25dabffa3aba4137efb7cdb4b0441fe7ce5563ab5ad5e4ebdba"
+            },
+            "source_id": "TQ-500f-2-ii",
+            "target_id": "TQ-500f-2",
+            "edge_type": "depends_on",
+            "locator": "/depends_on"
+          }
+        ],
+        "limitations": [],
+        "relationships": [],
+        "field_availability": {
+          "canonical_id": "present"
+        },
+        "field_locators": {},
+        "field_derivations": {},
+        "related": []
+      },
+      {
+        "entity": {
+          "canonical_id": "TQ-500f-3-i",
+          "kind": "AcceptanceCriterion",
+          "title": "The red-baseline check refuses absence-only red for a test that names wrong versions to catch",
+          "summary": "",
+          "source": {
+            "repository_id": "independent-answer-qa-a9a29716a5d6",
+            "source_sha": "9f70de80ebcafe59ff55cce6732deb92069f9541",
+            "path": "docs/acceptance-criteria/testing-quality/TQ-500-checks-that-can-fail/TQ-500f-3-i.yaml",
+            "locator": "/criteria",
+            "content_hash": "fc775fe8646a55fdbb8436819a78a318afe50570565190fda3a07ac934ac3b07"
+          },
+          "properties": {
+            "status": "active",
+            "req_status": "draft",
+            "work_status": "done",
+            "readiness": "approved",
+            "priority": "high",
+            "level": "L3",
+            "covered_by": [],
+            "implemented_by": [],
+            "depends_on": [
+              "TQ-500f-3",
+              "TQ-500f-1",
+              "TQ-500f-2"
+            ],
+            "has_children": false,
+            "structural_parent": "TQ-500f-3",
+            "structural_parent_locator": "/id"
+          }
+        },
+        "evidence_id": "knowledge-8f1cd49ea225faaa3bbca1f4ee74eee64004dc250f3983ffaee2cec32e1b3f64",
+        "content": null,
+        "disclosure_level": 1,
+        "signals": {},
+        "seed_id": null,
+        "path": [
+          {
+            "source": {
+              "repository_id": "independent-answer-qa-a9a29716a5d6",
+              "source_sha": "9f70de80ebcafe59ff55cce6732deb92069f9541",
+              "path": "docs/acceptance-criteria/testing-quality/TQ-500-checks-that-can-fail/TQ-500f-3-i.yaml",
+              "locator": "/depends_on",
+              "content_hash": "fc775fe8646a55fdbb8436819a78a318afe50570565190fda3a07ac934ac3b07"
+            },
+            "source_id": "TQ-500f-3-i",
+            "target_id": "TQ-500f-2",
+            "edge_type": "depends_on",
+            "locator": "/depends_on"
+          }
+        ],
+        "limitations": [],
+        "relationships": [],
+        "field_availability": {
+          "canonical_id": "present"
+        },
+        "field_locators": {},
+        "field_derivations": {},
+        "related": []
+      },
+      {
+        "entity": {
+          "canonical_id": "TQ-500f-5",
+          "kind": "AcceptanceCriterion",
+          "title": "Reference guidance names the discrimination-shaped failure family, its catalogue, the new test kind and the wrong-versions field",
+          "summary": "",
+          "source": {
+            "repository_id": "independent-answer-qa-a9a29716a5d6",
+            "source_sha": "9f70de80ebcafe59ff55cce6732deb92069f9541",
+            "path": "docs/acceptance-criteria/testing-quality/TQ-500-checks-that-can-fail/TQ-500f-5.yaml",
+            "locator": "/criteria",
+            "content_hash": "38b63e91583ea4ed24b6d44d674ad698b54ef994f1f59141bfea2ba168d7a6fe"
+          },
+          "properties": {
+            "status": "active",
+            "req_status": "draft",
+            "work_status": "todo",
+            "readiness": "approved",
+            "priority": "high",
+            "level": "L2",
+            "covered_by": [],
+            "implemented_by": [],
+            "depends_on": [
+              "TQ-500f",
+              "TQ-500f-1",
+              "TQ-500f-2"
+            ],
+            "test_required": false,
+            "has_children": false,
+            "structural_parent": "TQ-500f",
+            "structural_parent_locator": "/id"
+          }
+        },
+        "evidence_id": "knowledge-c80dc0f8f750f2210e21f4ffee0493ae57debad76b9a62e525ecc7d3e62f5003",
+        "content": null,
+        "disclosure_level": 1,
+        "signals": {},
+        "seed_id": null,
+        "path": [
+          {
+            "source": {
+              "repository_id": "independent-answer-qa-a9a29716a5d6",
+              "source_sha": "9f70de80ebcafe59ff55cce6732deb92069f9541",
+              "path": "docs/acceptance-criteria/testing-quality/TQ-500-checks-that-can-fail/TQ-500f-5.yaml",
+              "locator": "/depends_on",
+              "content_hash": "38b63e91583ea4ed24b6d44d674ad698b54ef994f1f59141bfea2ba168d7a6fe"
+            },
+            "source_id": "TQ-500f-5",
+            "target_id": "TQ-500f-2",
+            "edge_type": "depends_on",
+            "locator": "/depends_on"
+          }
+        ],
+        "limitations": [],
+        "relationships": [],
+        "field_availability": {
+          "canonical_id": "present"
+        },
+        "field_locators": {},
+        "field_derivations": {},
+        "related": []
+      },
+      {
+        "entity": {
+          "canonical_id": "TQ-500f-6",
+          "kind": "AcceptanceCriterion",
+          "title": "A how-to: write a test that catches the plausible wrong version",
+          "summary": "",
+          "source": {
+            "repository_id": "independent-answer-qa-a9a29716a5d6",
+            "source_sha": "9f70de80ebcafe59ff55cce6732deb92069f9541",
+            "path": "docs/acceptance-criteria/testing-quality/TQ-500-checks-that-can-fail/TQ-500f-6.yaml",
+            "locator": "/criteria",
+            "content_hash": "827dc2dc0d45a485f6c5ad016abe91c777ef9b44108e40839192b667c77e9ec5"
+          },
+          "properties": {
+            "status": "active",
+            "req_status": "draft",
+            "work_status": "todo",
+            "readiness": "approved",
+            "priority": "high",
+            "level": "L2",
+            "covered_by": [],
+            "implemented_by": [],
+            "depends_on": [
+              "TQ-500f",
+              "TQ-500f-2",
+              "TQ-500f-3",
+              "TQ-500f-4"
+            ],
+            "test_required": false,
+            "has_children": false,
+            "structural_parent": "TQ-500f",
+            "structural_parent_locator": "/id"
+          }
+        },
+        "evidence_id": "knowledge-c4230cbd7431bdd514caf8aa0d6016245b34f630ddc9e4badad2a4c49ed71ecd",
+        "content": null,
+        "disclosure_level": 1,
+        "signals": {},
+        "seed_id": null,
+        "path": [
+          {
+            "source": {
+              "repository_id": "independent-answer-qa-a9a29716a5d6",
+              "source_sha": "9f70de80ebcafe59ff55cce6732deb92069f9541",
+              "path": "docs/acceptance-criteria/testing-quality/TQ-500-checks-that-can-fail/TQ-500f-6.yaml",
+              "locator": "/depends_on",
+              "content_hash": "827dc2dc0d45a485f6c5ad016abe91c777ef9b44108e40839192b667c77e9ec5"
+            },
+            "source_id": "TQ-500f-6",
+            "target_id": "TQ-500f-2",
+            "edge_type": "depends_on",
+            "locator": "/depends_on"
+          }
+        ],
+        "limitations": [],
+        "relationships": [],
+        "field_availability": {
+          "canonical_id": "present"
+        },
+        "field_locators": {},
+        "field_derivations": {},
+        "related": []
+      }
+    ],
+    "warnings": [],
+    "errors": [],
+    "continuation": null,
+    "truncated": false,
+    "stats": {
+      "mapper_version": "6",
+      "population": {
+        "population": "declared_dependents",
+        "root_id": "TQ-500f-2",
+        "levels": null,
+        "inclusion": null,
+        "relation": "depends_on",
+        "direction": "incoming",
+        "depth": 1,
+        "complete": true,
+        "limitations": [
+          "direct declared dependencies only; transitive and code-consumer impact uninspected"
+        ]
+      },
+      "candidates": 5,
+      "estimator_version": "utf8-bytes-div4-v1",
+      "round": 1,
+      "candidate_work": 6,
+      "duration_ms": 49.775,
+      "estimated_tokens": 2261
+    },
+    "answer": {
+      "status": "fulfilled",
+      "original_question": "Which ACs directly depend on TQ-500f-2?",
+      "required_fields": [
+        "canonical_id"
+      ],
+      "scope": {
+        "population": "declared_dependents",
+        "root_id": "TQ-500f-2",
+        "levels": null,
+        "inclusion": null
+      },
+      "missing_fields": [],
+      "completeness": {
+        "complete": true,
+        "known_count": 5,
+        "exact_total": 5,
+        "limitations": []
+      },
+      "work_status_counts": null,
+      "known_work_status_counts": {},
+      "limitations": []
+    },
+    "assessment": null,
+    "observation": {
+      "state": "disabled"
+    }
+  },
+  "after": {
+    "contract_version": "1",
+    "request_id": "impact-9d115947",
+    "retrieval_id": "163ea774-71db-4a54-9ed2-225198529a92",
+    "status": "ok",
+    "requested_mode": "graph",
+    "executed_mode": "graph",
+    "operation": "get_declared_dependents",
+    "operation_version": "1",
+    "source_sha": "9d11594782abfb417d0f3a826bfb1f91f3a523ac",
+    "generation_id": "6b24591259549ca25ae16d2bfff92cc34ae41359d7685e259a15e9b4323aaeb3",
+    "evidence": [
+      {
+        "entity": {
+          "canonical_id": "TQ-500f-2-i",
+          "kind": "AcceptanceCriterion",
+          "title": "An empty or malformed wrong-versions list is refused, and the fallback route never invents one",
+          "summary": "",
+          "source": {
+            "repository_id": "independent-answer-qa-a9a29716a5d6",
+            "source_sha": "9d11594782abfb417d0f3a826bfb1f91f3a523ac",
+            "path": "docs/acceptance-criteria/testing-quality/TQ-500-checks-that-can-fail/TQ-500f-2-i.yaml",
+            "locator": "/criteria",
+            "content_hash": "9979c6f46ac018c287e8fdb3dc005c3ca98c04af8d126b3ca5529be285c92121"
+          },
+          "properties": {
+            "status": "active",
+            "req_status": "draft",
+            "work_status": "done",
+            "readiness": "approved",
+            "priority": "high",
+            "level": "L3",
+            "covered_by": [],
+            "implemented_by": [],
+            "depends_on": [
+              "TQ-500f-2"
+            ],
+            "has_children": false,
+            "structural_parent": "TQ-500f-2",
+            "structural_parent_locator": "/id"
+          }
+        },
+        "evidence_id": "knowledge-5c001cddab98dd965de78b3b7f5ace5c4c769298cb2f0ebad83a5a9ef1ed0e88",
+        "content": null,
+        "disclosure_level": 1,
+        "signals": {},
+        "seed_id": null,
+        "path": [
+          {
+            "source": {
+              "repository_id": "independent-answer-qa-a9a29716a5d6",
+              "source_sha": "9d11594782abfb417d0f3a826bfb1f91f3a523ac",
+              "path": "docs/acceptance-criteria/testing-quality/TQ-500-checks-that-can-fail/TQ-500f-2-i.yaml",
+              "locator": "/depends_on",
+              "content_hash": "9979c6f46ac018c287e8fdb3dc005c3ca98c04af8d126b3ca5529be285c92121"
+            },
+            "source_id": "TQ-500f-2-i",
+            "target_id": "TQ-500f-2",
+            "edge_type": "depends_on",
+            "locator": "/depends_on"
+          }
+        ],
+        "limitations": [],
+        "relationships": [],
+        "field_availability": {
+          "canonical_id": "present"
+        },
+        "field_locators": {},
+        "field_derivations": {},
+        "related": []
+      },
+      {
+        "entity": {
+          "canonical_id": "TQ-500f-2-ii",
+          "kind": "AcceptanceCriterion",
+          "title": "Bug-fix and gate requirements arrive at the test writer with their wrong versions already named",
+          "summary": "",
+          "source": {
+            "repository_id": "independent-answer-qa-a9a29716a5d6",
+            "source_sha": "9d11594782abfb417d0f3a826bfb1f91f3a523ac",
+            "path": "docs/acceptance-criteria/testing-quality/TQ-500-checks-that-can-fail/TQ-500f-2-ii.yaml",
+            "locator": "/criteria",
+            "content_hash": "047233b38c07b25dabffa3aba4137efb7cdb4b0441fe7ce5563ab5ad5e4ebdba"
+          },
+          "properties": {
+            "status": "active",
+            "req_status": "draft",
+            "work_status": "todo",
+            "readiness": "approved",
+            "priority": "high",
+            "level": "L3",
+            "covered_by": [],
+            "implemented_by": [],
+            "depends_on": [
+              "TQ-500f-2",
+              "ACD-2500c",
+              "ACD-2500d-5"
+            ],
+            "test_required": false,
+            "has_children": false,
+            "structural_parent": "TQ-500f-2",
+            "structural_parent_locator": "/id"
+          }
+        },
+        "evidence_id": "knowledge-9aba81818007e3c6b1f969ac22ddb4625b52aeba159b34c5779a6707b7ac2eea",
+        "content": null,
+        "disclosure_level": 1,
+        "signals": {},
+        "seed_id": null,
+        "path": [
+          {
+            "source": {
+              "repository_id": "independent-answer-qa-a9a29716a5d6",
+              "source_sha": "9d11594782abfb417d0f3a826bfb1f91f3a523ac",
+              "path": "docs/acceptance-criteria/testing-quality/TQ-500-checks-that-can-fail/TQ-500f-2-ii.yaml",
+              "locator": "/depends_on",
+              "content_hash": "047233b38c07b25dabffa3aba4137efb7cdb4b0441fe7ce5563ab5ad5e4ebdba"
+            },
+            "source_id": "TQ-500f-2-ii",
+            "target_id": "TQ-500f-2",
+            "edge_type": "depends_on",
+            "locator": "/depends_on"
+          }
+        ],
+        "limitations": [],
+        "relationships": [],
+        "field_availability": {
+          "canonical_id": "present"
+        },
+        "field_locators": {},
+        "field_derivations": {},
+        "related": []
+      },
+      {
+        "entity": {
+          "canonical_id": "TQ-500f-3-i",
+          "kind": "AcceptanceCriterion",
+          "title": "The red-baseline check refuses absence-only red for a test that names wrong versions to catch",
+          "summary": "",
+          "source": {
+            "repository_id": "independent-answer-qa-a9a29716a5d6",
+            "source_sha": "9d11594782abfb417d0f3a826bfb1f91f3a523ac",
+            "path": "docs/acceptance-criteria/testing-quality/TQ-500-checks-that-can-fail/TQ-500f-3-i.yaml",
+            "locator": "/criteria",
+            "content_hash": "fc775fe8646a55fdbb8436819a78a318afe50570565190fda3a07ac934ac3b07"
+          },
+          "properties": {
+            "status": "active",
+            "req_status": "draft",
+            "work_status": "done",
+            "readiness": "approved",
+            "priority": "high",
+            "level": "L3",
+            "covered_by": [],
+            "implemented_by": [],
+            "depends_on": [
+              "TQ-500f-3",
+              "TQ-500f-1",
+              "TQ-500f-2"
+            ],
+            "has_children": false,
+            "structural_parent": "TQ-500f-3",
+            "structural_parent_locator": "/id"
+          }
+        },
+        "evidence_id": "knowledge-91f6df94d016259ff0a3cc7c4513dd57fb8ebfaacf45439934cb762d2d9ea7c7",
+        "content": null,
+        "disclosure_level": 1,
+        "signals": {},
+        "seed_id": null,
+        "path": [
+          {
+            "source": {
+              "repository_id": "independent-answer-qa-a9a29716a5d6",
+              "source_sha": "9d11594782abfb417d0f3a826bfb1f91f3a523ac",
+              "path": "docs/acceptance-criteria/testing-quality/TQ-500-checks-that-can-fail/TQ-500f-3-i.yaml",
+              "locator": "/depends_on",
+              "content_hash": "fc775fe8646a55fdbb8436819a78a318afe50570565190fda3a07ac934ac3b07"
+            },
+            "source_id": "TQ-500f-3-i",
+            "target_id": "TQ-500f-2",
+            "edge_type": "depends_on",
+            "locator": "/depends_on"
+          }
+        ],
+        "limitations": [],
+        "relationships": [],
+        "field_availability": {
+          "canonical_id": "present"
+        },
+        "field_locators": {},
+        "field_derivations": {},
+        "related": []
+      },
+      {
+        "entity": {
+          "canonical_id": "TQ-500f-5",
+          "kind": "AcceptanceCriterion",
+          "title": "Reference guidance names the discrimination-shaped failure family, its catalogue, the new test kind and the wrong-versions field",
+          "summary": "",
+          "source": {
+            "repository_id": "independent-answer-qa-a9a29716a5d6",
+            "source_sha": "9d11594782abfb417d0f3a826bfb1f91f3a523ac",
+            "path": "docs/acceptance-criteria/testing-quality/TQ-500-checks-that-can-fail/TQ-500f-5.yaml",
+            "locator": "/criteria",
+            "content_hash": "38b63e91583ea4ed24b6d44d674ad698b54ef994f1f59141bfea2ba168d7a6fe"
+          },
+          "properties": {
+            "status": "active",
+            "req_status": "draft",
+            "work_status": "todo",
+            "readiness": "approved",
+            "priority": "high",
+            "level": "L2",
+            "covered_by": [],
+            "implemented_by": [],
+            "depends_on": [
+              "TQ-500f",
+              "TQ-500f-1",
+              "TQ-500f-2"
+            ],
+            "test_required": false,
+            "has_children": false,
+            "structural_parent": "TQ-500f",
+            "structural_parent_locator": "/id"
+          }
+        },
+        "evidence_id": "knowledge-853580e2a5c666be4e56921f15c7e5272ebe49d1b49bc672255a6318a4ff3b80",
+        "content": null,
+        "disclosure_level": 1,
+        "signals": {},
+        "seed_id": null,
+        "path": [
+          {
+            "source": {
+              "repository_id": "independent-answer-qa-a9a29716a5d6",
+              "source_sha": "9d11594782abfb417d0f3a826bfb1f91f3a523ac",
+              "path": "docs/acceptance-criteria/testing-quality/TQ-500-checks-that-can-fail/TQ-500f-5.yaml",
+              "locator": "/depends_on",
+              "content_hash": "38b63e91583ea4ed24b6d44d674ad698b54ef994f1f59141bfea2ba168d7a6fe"
+            },
+            "source_id": "TQ-500f-5",
+            "target_id": "TQ-500f-2",
+            "edge_type": "depends_on",
+            "locator": "/depends_on"
+          }
+        ],
+        "limitations": [],
+        "relationships": [],
+        "field_availability": {
+          "canonical_id": "present"
+        },
+        "field_locators": {},
+        "field_derivations": {},
+        "related": []
+      },
+      {
+        "entity": {
+          "canonical_id": "TQ-500f-6",
+          "kind": "AcceptanceCriterion",
+          "title": "A how-to: write a test that catches the plausible wrong version",
+          "summary": "",
+          "source": {
+            "repository_id": "independent-answer-qa-a9a29716a5d6",
+            "source_sha": "9d11594782abfb417d0f3a826bfb1f91f3a523ac",
+            "path": "docs/acceptance-criteria/testing-quality/TQ-500-checks-that-can-fail/TQ-500f-6.yaml",
+            "locator": "/criteria",
+            "content_hash": "827dc2dc0d45a485f6c5ad016abe91c777ef9b44108e40839192b667c77e9ec5"
+          },
+          "properties": {
+            "status": "active",
+            "req_status": "draft",
+            "work_status": "todo",
+            "readiness": "approved",
+            "priority": "high",
+            "level": "L2",
+            "covered_by": [],
+            "implemented_by": [],
+            "depends_on": [
+              "TQ-500f",
+              "TQ-500f-2",
+              "TQ-500f-3",
+              "TQ-500f-4"
+            ],
+            "test_required": false,
+            "has_children": false,
+            "structural_parent": "TQ-500f",
+            "structural_parent_locator": "/id"
+          }
+        },
+        "evidence_id": "knowledge-3340f609b6029ffa6ca7066ba40a4dcf11546c3046fb5209f17d6dcd6121505a",
+        "content": null,
+        "disclosure_level": 1,
+        "signals": {},
+        "seed_id": null,
+        "path": [
+          {
+            "source": {
+              "repository_id": "independent-answer-qa-a9a29716a5d6",
+              "source_sha": "9d11594782abfb417d0f3a826bfb1f91f3a523ac",
+              "path": "docs/acceptance-criteria/testing-quality/TQ-500-checks-that-can-fail/TQ-500f-6.yaml",
+              "locator": "/depends_on",
+              "content_hash": "827dc2dc0d45a485f6c5ad016abe91c777ef9b44108e40839192b667c77e9ec5"
+            },
+            "source_id": "TQ-500f-6",
+            "target_id": "TQ-500f-2",
+            "edge_type": "depends_on",
+            "locator": "/depends_on"
+          }
+        ],
+        "limitations": [],
+        "relationships": [],
+        "field_availability": {
+          "canonical_id": "present"
+        },
+        "field_locators": {},
+        "field_derivations": {},
+        "related": []
+      }
+    ],
+    "warnings": [],
+    "errors": [],
+    "continuation": null,
+    "truncated": false,
+    "stats": {
+      "mapper_version": "6",
+      "population": {
+        "population": "declared_dependents",
+        "root_id": "TQ-500f-2",
+        "levels": null,
+        "inclusion": null,
+        "relation": "depends_on",
+        "direction": "incoming",
+        "depth": 1,
+        "complete": true,
+        "limitations": [
+          "direct declared dependencies only; transitive and code-consumer impact uninspected"
+        ]
+      },
+      "candidates": 5,
+      "estimator_version": "utf8-bytes-div4-v1",
+      "round": 1,
+      "candidate_work": 6,
+      "duration_ms": 44.015,
+      "estimated_tokens": 2261
+    },
+    "answer": {
+      "status": "fulfilled",
+      "original_question": "Which ACs directly depend on TQ-500f-2?",
+      "required_fields": [
+        "canonical_id"
+      ],
+      "scope": {
+        "population": "declared_dependents",
+        "root_id": "TQ-500f-2",
+        "levels": null,
+        "inclusion": null
+      },
+      "missing_fields": [],
+      "completeness": {
+        "complete": true,
+        "known_count": 5,
+        "exact_total": 5,
+        "limitations": []
+      },
+      "work_status_counts": null,
+      "known_work_status_counts": {},
+      "limitations": []
+    },
+    "assessment": null,
+    "observation": {
+      "state": "disabled"
+    }
+  },
+  "partial": {
+    "contract_version": "1",
+    "request_id": "impact-9d115947",
+    "retrieval_id": "041f34eb-b3ce-49a3-8913-5096c8418bda",
+    "status": "partial",
+    "requested_mode": "graph",
+    "executed_mode": "graph",
+    "operation": "get_declared_dependents",
+    "operation_version": "1",
+    "source_sha": "9d11594782abfb417d0f3a826bfb1f91f3a523ac",
+    "generation_id": "6b24591259549ca25ae16d2bfff92cc34ae41359d7685e259a15e9b4323aaeb3",
+    "evidence": [
+      {
+        "entity": {
+          "canonical_id": "TQ-500f-2-i",
+          "kind": "AcceptanceCriterion",
+          "title": "An empty or malformed wrong-versions list is refused, and the fallback route never invents one",
+          "summary": "",
+          "source": {
+            "repository_id": "independent-answer-qa-a9a29716a5d6",
+            "source_sha": "9d11594782abfb417d0f3a826bfb1f91f3a523ac",
+            "path": "docs/acceptance-criteria/testing-quality/TQ-500-checks-that-can-fail/TQ-500f-2-i.yaml",
+            "locator": "/criteria",
+            "content_hash": "9979c6f46ac018c287e8fdb3dc005c3ca98c04af8d126b3ca5529be285c92121"
+          },
+          "properties": {
+            "status": "active",
+            "req_status": "draft",
+            "work_status": "done",
+            "readiness": "approved",
+            "priority": "high",
+            "level": "L3",
+            "covered_by": [],
+            "implemented_by": [],
+            "depends_on": [
+              "TQ-500f-2"
+            ],
+            "has_children": false,
+            "structural_parent": "TQ-500f-2",
+            "structural_parent_locator": "/id"
+          }
+        },
+        "evidence_id": "knowledge-5c001cddab98dd965de78b3b7f5ace5c4c769298cb2f0ebad83a5a9ef1ed0e88",
+        "content": null,
+        "disclosure_level": 1,
+        "signals": {},
+        "seed_id": null,
+        "path": [
+          {
+            "source": {
+              "repository_id": "independent-answer-qa-a9a29716a5d6",
+              "source_sha": "9d11594782abfb417d0f3a826bfb1f91f3a523ac",
+              "path": "docs/acceptance-criteria/testing-quality/TQ-500-checks-that-can-fail/TQ-500f-2-i.yaml",
+              "locator": "/depends_on",
+              "content_hash": "9979c6f46ac018c287e8fdb3dc005c3ca98c04af8d126b3ca5529be285c92121"
+            },
+            "source_id": "TQ-500f-2-i",
+            "target_id": "TQ-500f-2",
+            "edge_type": "depends_on",
+            "locator": "/depends_on"
+          }
+        ],
+        "limitations": [],
+        "relationships": [],
+        "field_availability": {
+          "canonical_id": "present"
+        },
+        "field_locators": {},
+        "field_derivations": {},
+        "related": []
+      },
+      {
+        "entity": {
+          "canonical_id": "TQ-500f-2-ii",
+          "kind": "AcceptanceCriterion",
+          "title": "Bug-fix and gate requirements arrive at the test writer with their wrong versions already named",
+          "summary": "",
+          "source": {
+            "repository_id": "independent-answer-qa-a9a29716a5d6",
+            "source_sha": "9d11594782abfb417d0f3a826bfb1f91f3a523ac",
+            "path": "docs/acceptance-criteria/testing-quality/TQ-500-checks-that-can-fail/TQ-500f-2-ii.yaml",
+            "locator": "/criteria",
+            "content_hash": "047233b38c07b25dabffa3aba4137efb7cdb4b0441fe7ce5563ab5ad5e4ebdba"
+          },
+          "properties": {
+            "status": "active",
+            "req_status": "draft",
+            "work_status": "todo",
+            "readiness": "approved",
+            "priority": "high",
+            "level": "L3",
+            "covered_by": [],
+            "implemented_by": [],
+            "depends_on": [
+              "TQ-500f-2",
+              "ACD-2500c",
+              "ACD-2500d-5"
+            ],
+            "test_required": false,
+            "has_children": false,
+            "structural_parent": "TQ-500f-2",
+            "structural_parent_locator": "/id"
+          }
+        },
+        "evidence_id": "knowledge-9aba81818007e3c6b1f969ac22ddb4625b52aeba159b34c5779a6707b7ac2eea",
+        "content": null,
+        "disclosure_level": 1,
+        "signals": {},
+        "seed_id": null,
+        "path": [
+          {
+            "source": {
+              "repository_id": "independent-answer-qa-a9a29716a5d6",
+              "source_sha": "9d11594782abfb417d0f3a826bfb1f91f3a523ac",
+              "path": "docs/acceptance-criteria/testing-quality/TQ-500-checks-that-can-fail/TQ-500f-2-ii.yaml",
+              "locator": "/depends_on",
+              "content_hash": "047233b38c07b25dabffa3aba4137efb7cdb4b0441fe7ce5563ab5ad5e4ebdba"
+            },
+            "source_id": "TQ-500f-2-ii",
+            "target_id": "TQ-500f-2",
+            "edge_type": "depends_on",
+            "locator": "/depends_on"
+          }
+        ],
+        "limitations": [],
+        "relationships": [],
+        "field_availability": {
+          "canonical_id": "present"
+        },
+        "field_locators": {},
+        "field_derivations": {},
+        "related": []
+      }
+    ],
+    "warnings": [],
+    "errors": [],
+    "continuation": "[REDACTED_CONTINUATION_TOKEN]",
+    "truncated": true,
+    "stats": {
+      "mapper_version": "6",
+      "population": {
+        "population": "declared_dependents",
+        "root_id": "TQ-500f-2",
+        "levels": null,
+        "inclusion": null,
+        "relation": "depends_on",
+        "direction": "incoming",
+        "depth": 1,
+        "complete": true,
+        "limitations": [
+          "direct declared dependencies only; transitive and code-consumer impact uninspected"
+        ]
+      },
+      "candidates": 5,
+      "estimator_version": "utf8-bytes-div4-v1",
+      "round": 1,
+      "candidate_work": 6,
+      "duration_ms": 31.364,
+      "estimated_tokens": 1240
+    },
+    "answer": {
+      "status": "partial",
+      "original_question": "Which ACs directly depend on TQ-500f-2?",
+      "required_fields": [
+        "canonical_id"
+      ],
+      "scope": {
+        "population": "declared_dependents",
+        "root_id": "TQ-500f-2",
+        "levels": null,
+        "inclusion": null
+      },
+      "missing_fields": [],
+      "completeness": {
+        "complete": false,
+        "known_count": 2,
+        "exact_total": null,
+        "limitations": [
+          "execution is partial",
+          "enumeration or disclosure is incomplete"
+        ]
+      },
+      "work_status_counts": null,
+      "known_work_status_counts": {},
+      "limitations": [
+        "execution is partial",
+        "enumeration or disclosure is incomplete"
+      ]
+    },
+    "assessment": null,
+    "observation": {
+      "state": "disabled"
+    }
+  },
+  "cases": [
+    {
+      "id": "two-actual-source-revisions",
+      "verdict": "passed",
+      "failures": {},
+      "actual": {
+        "kind": "impact",
+        "status": "fulfilled",
+        "before_sha": "9f70de80ebcafe59ff55cce6732deb92069f9541",
+        "after_sha": "9d11594782abfb417d0f3a826bfb1f91f3a523ac",
+        "observed_before": [
+          "TQ-500f-2-i",
+          "TQ-500f-2-ii",
+          "TQ-500f-3-i",
+          "TQ-500f-5",
+          "TQ-500f-6"
+        ],
+        "observed_after": [
+          "TQ-500f-2-i",
+          "TQ-500f-2-ii",
+          "TQ-500f-3-i",
+          "TQ-500f-5",
+          "TQ-500f-6"
+        ],
+        "added": [],
+        "removed": [],
+        "relation": "depends_on",
+        "direction": "incoming",
+        "depth": 1,
+        "complete_comparison": true,
+        "complete_code_impact": false,
+        "limitations": [
+          "source differences are limited to inspected direct declarations; transitive and code-consumer impact uninspected"
+        ],
+        "repository_id": "independent-answer-qa-a9a29716a5d6",
+        "source_sha": "9d11594782abfb417d0f3a826bfb1f91f3a523ac",
+        "evidence_basis": "supplied evidence; attribution is not independently verified",
+        "discovery": "supplied packet only"
+      }
+    },
+    {
+      "id": "partial-after-cannot-prove-removals",
+      "verdict": "passed",
+      "failures": {},
+      "actual": {
+        "kind": "impact",
+        "status": "unresolved",
+        "before_sha": "9f70de80ebcafe59ff55cce6732deb92069f9541",
+        "after_sha": "9d11594782abfb417d0f3a826bfb1f91f3a523ac",
+        "observed_before": [
+          "TQ-500f-2-i",
+          "TQ-500f-2-ii",
+          "TQ-500f-3-i",
+          "TQ-500f-5",
+          "TQ-500f-6"
+        ],
+        "observed_after": [
+          "TQ-500f-2-i",
+          "TQ-500f-2-ii"
+        ],
+        "added": null,
+        "removed": null,
+        "relation": "depends_on",
+        "direction": "incoming",
+        "depth": 1,
+        "complete_comparison": false,
+        "complete_code_impact": false,
+        "limitations": [
+          "both complete, matching declared populations and the requested after revision are required",
+          "source differences are limited to inspected direct declarations; transitive and code-consumer impact uninspected"
+        ],
+        "repository_id": "independent-answer-qa-a9a29716a5d6",
+        "source_sha": "9d11594782abfb417d0f3a826bfb1f91f3a523ac",
+        "evidence_basis": "supplied evidence; attribution is not independently verified",
+        "discovery": "supplied packet only"
+      }
+    },
+    {
+      "id": "missing-before-cannot-use-workspace",
+      "verdict": "passed",
+      "failures": {},
+      "actual": {
+        "kind": "impact",
+        "status": "unresolved",
+        "before_sha": null,
+        "after_sha": "9d11594782abfb417d0f3a826bfb1f91f3a523ac",
+        "observed_before": [],
+        "observed_after": [
+          "TQ-500f-2-i",
+          "TQ-500f-2-ii",
+          "TQ-500f-3-i",
+          "TQ-500f-5",
+          "TQ-500f-6"
+        ],
+        "added": null,
+        "removed": null,
+        "relation": "depends_on",
+        "direction": "incoming",
+        "depth": 1,
+        "complete_comparison": false,
+        "complete_code_impact": false,
+        "limitations": [
+          "both complete, matching declared populations and the requested after revision are required",
+          "source differences are limited to inspected direct declarations; transitive and code-consumer impact uninspected"
+        ],
+        "repository_id": "independent-answer-qa-a9a29716a5d6",
+        "source_sha": "9d11594782abfb417d0f3a826bfb1f91f3a523ac",
+        "evidence_basis": "supplied evidence; attribution is not independently verified",
+        "discovery": "supplied packet only"
+      }
+    },
+    {
+      "id": "packet-after-sha-must-bind",
+      "verdict": "passed",
+      "failures": {},
+      "actual": {
+        "kind": "impact",
+        "status": "unresolved",
+        "before_sha": "9f70de80ebcafe59ff55cce6732deb92069f9541",
+        "after_sha": "9d11594782abfb417d0f3a826bfb1f91f3a523ac",
+        "observed_before": [
+          "TQ-500f-2-i",
+          "TQ-500f-2-ii",
+          "TQ-500f-3-i",
+          "TQ-500f-5",
+          "TQ-500f-6"
+        ],
+        "observed_after": [
+          "TQ-500f-2-i",
+          "TQ-500f-2-ii",
+          "TQ-500f-3-i",
+          "TQ-500f-5",
+          "TQ-500f-6"
+        ],
+        "added": null,
+        "removed": null,
+        "relation": "depends_on",
+        "direction": "incoming",
+        "depth": 1,
+        "complete_comparison": false,
+        "complete_code_impact": false,
+        "limitations": [
+          "both complete, matching declared populations and the requested after revision are required",
+          "source differences are limited to inspected direct declarations; transitive and code-consumer impact uninspected"
+        ],
+        "repository_id": "independent-answer-qa-a9a29716a5d6",
+        "source_sha": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "evidence_basis": "supplied evidence; attribution is not independently verified",
+        "discovery": "supplied packet only"
+      }
+    },
+    {
+      "id": "final-page-cannot-prove-removals",
+      "verdict": "passed",
+      "failures": {},
+      "actual": {
+        "kind": "impact",
+        "status": "unresolved",
+        "before_sha": "9f70de80ebcafe59ff55cce6732deb92069f9541",
+        "after_sha": "9d11594782abfb417d0f3a826bfb1f91f3a523ac",
+        "observed_before": [
+          "TQ-500f-2-i",
+          "TQ-500f-2-ii",
+          "TQ-500f-3-i",
+          "TQ-500f-5",
+          "TQ-500f-6"
+        ],
+        "observed_after": [
+          "TQ-500f-6"
+        ],
+        "added": null,
+        "removed": null,
+        "relation": "depends_on",
+        "direction": "incoming",
+        "depth": 1,
+        "complete_comparison": false,
+        "complete_code_impact": false,
+        "limitations": [
+          "both complete, matching declared populations and the requested after revision are required",
+          "source differences are limited to inspected direct declarations; transitive and code-consumer impact uninspected"
+        ],
+        "repository_id": "independent-answer-qa-a9a29716a5d6",
+        "source_sha": "9d11594782abfb417d0f3a826bfb1f91f3a523ac",
+        "evidence_basis": "supplied evidence; attribution is not independently verified",
+        "discovery": "supplied packet only"
+      }
+    }
+  ],
+  "saved_output_sanitization": {
+    "recorded_at_utc": "2026-10-01T20:46:18.131773+00:00",
+    "reason": "Continuation token values removed from the saved report after normal secret scanning. No secret allowlist or hook bypass was used.",
+    "saved_output": "Sanitized copy of actual executed responses, not a fresh execution or replayable continuation transcript.",
+    "preserved": "Original outcomes, assertions, counts, source identities, measured byte counts and latency remain unchanged; those measurements refer to the original executed response before this saved-output redaction.",
+    "redactions": [
+      {
+        "json_pointer": "/dependency_pages/0/continuation",
+        "present_in_executed_response": true,
+        "original_character_length": 428,
+        "sha256": "9653a0876591590f818a0e0d81910883ce4ac07816ec9e5f7cbb80900d1164b5"
+      },
+      {
+        "json_pointer": "/dependency_pages/1/continuation",
+        "present_in_executed_response": true,
+        "original_character_length": 431,
+        "sha256": "e3e1a57c0c66502dc00aee9e02b9c4f19061c380861ca3c2bf40271315caae7b"
+      },
+      {
+        "json_pointer": "/partial/continuation",
+        "present_in_executed_response": true,
+        "original_character_length": 428,
+        "sha256": "9653a0876591590f818a0e0d81910883ce4ac07816ec9e5f7cbb80900d1164b5"
+      }
+    ]
+  }
+}

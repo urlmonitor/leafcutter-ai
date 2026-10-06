@@ -13,6 +13,9 @@ ARCHITECTURE: Pure builders over plain state mappings (no scheduler imports, so 
 
 from __future__ import annotations
 
+from kernel.enrichment_projection import context_payload
+from kernel.entity_projection import attach_entity_context
+
 import json
 import logging
 from collections.abc import Callable, Mapping
@@ -30,7 +33,8 @@ from kernel.contracts import (
     new_id,
     schema_ids,
 )
-from kernel.contracts.base import fail
+from kernel.contracts.base import canonical_json, fail
+from kernel.contracts.entity_context import EntityContext
 from kernel.contracts.interaction import ContextLimits, Rejection
 from kernel.contracts.payloads import HumanQuestionRequestPayload
 from kernel.contracts.schema_catalog import json_schema_for
@@ -166,8 +170,32 @@ def build_host_request(state: Mapping[str, Any], item: WorkItem, revision: int, 
         state_revision=revision, attempt=item.attempts)
 
 
+def _host_clarifications(state: Mapping[str, Any]) -> list[str]:
+    """Read root clarification answers separately from the original interpretation snapshot."""
+    task = state.get("task")
+    root = state.get("work_items", {}).get(task.root_work_item_id) if task else None
+    request = state.get("requests", {}).get(root.request_id) if root else None
+    return list(request.payload.get("clarifications", [])) if request else []
+
+
+def _bound_host_evidence(body: dict[str, Any], maximum: int, reserve: int) -> dict[str, Any]:
+    """Trim optional excerpts, retaining required request text and evidence references."""
+    target = maximum - reserve
+    excerpts = body["evidence"]
+    while len(canonical_json(body)) + 1 > target:
+        longest = max(excerpts, key=lambda item: len(item.get("excerpt") or ""), default=None)
+        if longest is None or not longest.get("excerpt"):
+            break
+        longest["excerpt"] = longest["excerpt"][:len(longest["excerpt"]) // 2]
+        body["limitations"] = ["host evidence excerpts reduced to input allowance"]
+    if len(canonical_json(body)) + 1 > maximum:
+        fail(f"required host input exceeds max_input_chars={maximum}")
+    return body
+
+
 def write_input_artifact(artifacts: ArtifactStorePort, redactor: Redactor, run_id: str,
-                         state: Mapping[str, Any], packet: HostWorkRequest) -> HostWorkRequest:
+                         state: Mapping[str, Any], packet: HostWorkRequest, *,
+                         send_repo_excerpts: bool = False) -> HostWorkRequest:
     """Write the redacted input the host may read and return the packet referencing it.
 
     The artifact holds the invocation's request payload and the cited evidence excerpts; it is
@@ -184,9 +212,25 @@ def write_input_artifact(artifacts: ArtifactStorePort, redactor: Redactor, run_i
         "prompt_fingerprint": ref.fingerprint if ref else None,
         "request_schema": invocation.input_payload_schema if invocation else None,
         "request": dict(invocation.input_payload) if invocation else {}, "evidence": evidence})
+    clarifications = _host_clarifications(state)
+    if clarifications:
+        body["clarifications"] = redactor.mask(clarifications)
+    maximum = packet.context_limits.max_input_chars
+    meanings = state.get("entity_context")
+    if meanings is not None:
+        if maximum is not None:
+            body = _bound_host_evidence(body, maximum, min(2000, maximum // 3))
+        masked = EntityContext.model_validate(redactor.mask(meanings.model_dump(mode="json")))
+        body = attach_entity_context(body, masked, maximum - 1 if maximum else None,
+                                     send_repo_excerpts=send_repo_excerpts)
+    elif state.get("context_enrichment") is not None:
+        body["context_enrichment"] = redactor.mask(context_payload(state["context_enrichment"]))
+    encoded = canonical_json(body) + "\n"
+    if maximum is not None and len(encoded) > maximum:
+        fail(f"host input exceeds max_input_chars={maximum}")
     try:
         written = artifacts.write_artifact(run_id, f"input-{packet.id}.json",
-                                           json.dumps(body, indent=2, sort_keys=True) + "\n")
+                                           encoded)
     except OSError:
         logger.exception("could not write the input artifact of %s", packet.id)
         raise
@@ -233,4 +277,5 @@ def redact_packet(packet: HostWorkRequest | HumanQuestion, redactor: Redactor
 # - 2026-09-30 23:40 [python-coder]: Only free-text fields are masked: masking ids, the JSON
 #   schema or patterns would corrupt them, and the entropy rule would hit the schema patterns.
 #   (#KernelBootstrapV0/P6)
+# - 2026-10-03 15:10 [python-coder]: Preserve verbatim goals and separate meaning, caller and clarification channels. (#DK-300/entity-context)
 # ====================================================================

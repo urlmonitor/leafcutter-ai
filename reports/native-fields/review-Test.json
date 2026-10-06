@@ -1,0 +1,99 @@
+{
+  "review_version": 1,
+  "kind": "Test",
+  "reviewed_on": "2026-10-02",
+  "status": "reviewed_ready_for_coder",
+  "scope": "Enrich an existing immutable Test reference. Test is the canonical loader's specialization of an explicitly referenced file under tests/ or unit_tests/, not an execution result, parsed function inventory or independent authored test schema.",
+  "authorities": [
+    {"path": "knowledge/contracts.py#Entity", "role": "Strict six-field entity envelope with an open properties mapping."},
+    {"path": "knowledge/contracts.py#SourceReference", "role": "Five-field pinned repository provenance contract."},
+    {"path": "knowledge/contracts.py#Relation", "role": "Relationship locator and source provenance remain outside node metadata."},
+    {"path": "scripts/knowledge_query.py#NodeRecord", "role": "Canonical producer identity, surface, title, description, path and missing flag."},
+    {"path": "scripts/knowledge_query.py#EdgeRecord", "role": "Original file-reference anchor belongs to the edge."},
+    {"path": "scripts/knowledge_file_nodes.py", "symbols": ["_strip_anchor", "_normalize_separators", "_collapse_relative_segments", "_resolve_single", "_make_files_node"], "role": "Index-first reference resolution, path identity, anchor separation, original existence observation and one files-surface node per canonical path."},
+    {"path": "knowledge/projection/canonical_loader.py#_entity", "role": "Classifies files-surface paths beginning tests/ or unit_tests/ as Test and creates the pinned SourceReference and reference flags."},
+    {"path": "knowledge/projection/native_metadata.py#apply_record", "role": "Defines the three exact adapter-injected properties that must be excluded when enriching a previously enriched entity."}
+  ],
+  "record_identity": {
+    "input": "One existing Entity with kind exactly Test. Do not run repository traversal, parse test files or reclassify other input kinds by their paths.",
+    "native_id": "Preserve entity.canonical_id exactly. Producer-generated Test IDs are normalized repository-relative paths, but an already valid existing identity is not replaced with source.path.",
+    "source_path": "Preserve entity.source.path exactly.",
+    "locator": "Preserve entity.source.locator exactly, including its normally empty value.",
+    "title": "Preserve entity.title exactly, including an empty or custom title.",
+    "description": "Preserve entity.summary exactly, including an empty string.",
+    "metadata": "A deep copy of the complete Entity envelope: canonical_id, kind, title, summary, source and properties. Preserve source and properties as nested objects so their field names cannot collide with envelope fields.",
+    "derived": "Empty object. Do not manufacture file extension, test framework, function names, runtime state, outcome, ownership, execution timestamp or coverage status.",
+    "repeat_enrichment": "Exclude only _native_projection, _native_identity and _native_source_path from the nested properties copy. Preserve other _native_ prefixed properties; blanket prefix removal would discard real future data. Never mutate the input Entity."
+  },
+  "fields": [
+    {"path": "/canonical_id", "type": "string", "required": true, "meaning": "Non-empty existing canonical retrieval identity."},
+    {"path": "/kind", "type": "string", "required": true, "meaning": "Exactly Test for this reader."},
+    {"path": "/title", "type": "string", "required": true, "meaning": "Original display title; empty remains empty."},
+    {"path": "/summary", "type": "string", "required": true, "contract_default": "", "meaning": "Original summary; no source-body parsing or fallback."},
+    {"path": "/source", "type": "object", "required": true, "meaning": "Complete pinned SourceReference, copied without recomputation."},
+    {"path": "/source/repository_id", "type": "string", "required": true, "meaning": "Non-empty trusted repository namespace."},
+    {"path": "/source/source_sha", "type": "string", "required": true, "meaning": "Exactly 40 lowercase hexadecimal characters in the existing SourceReference schema."},
+    {"path": "/source/path", "type": "string", "required": true, "meaning": "Non-empty repository-relative POSIX path. Existing contract rejects absolute paths, parent traversal, backslashes and colons; reject invalid inputs instead of repairing them."},
+    {"path": "/source/locator", "type": "string", "required": true, "contract_default": "", "meaning": "Existing source locator; distinct from each referencing relationship's test-function anchor."},
+    {"path": "/source/content_hash", "type": "string", "required": true, "contract_default": "", "meaning": "Preserve the pinned value exactly. Empty is a valid legacy/partial contract value and does not authorize reading current disk."},
+    {"path": "/properties", "type": "object", "required": true, "contract_default": {}, "meaning": "Open mapping preserving all original simple and nested metadata except the exact three adapter exclusions."},
+    {"path": "/properties/surface", "type": "string", "required": false, "producer_value": "files", "meaning": "Reference origin; preserve its original value and presence."},
+    {"path": "/properties/missing", "type": "boolean", "required": false, "meaning": "Original reference-existence observation at projection time. False, true and absent remain distinct; do not recalculate from supplied root."},
+    {"path": "/properties/canonical", "type": "boolean", "required": false, "producer_value": false, "meaning": "Producer authority flag for files-surface references, not a test-pass or file-presence flag."},
+    {"path": "/properties/registry_identity", "type": "boolean", "required": false, "producer_value": false, "meaning": "Existing reference flag, not inferred from the path or current registry."}
+  ],
+  "test_reference_semantics": [
+    "A Test reference may originate from any surface-declared file_path_fields entry; covered_by is not the only possible producing relationship.",
+    "tests/a.py::Class::test_one and tests/a.py::Class::test_two refer to one file node with two relationship locators. Do not create function nodes or collapse away their separate edge anchors.",
+    "The producer strips the first # or :: suffix and preserves the rest as the edge anchor. canonical_loader copies this anchor into Relation.locator.",
+    "The original classification checks files-surface paths beginning tests/ or unit_tests/; it does not inspect Python naming conventions, extension, executable content or collected tests. A referenced support file or directory can therefore already be typed Test. Preserve the existing classification rather than add new heuristics.",
+    "The source reader has no authority to infer component membership from a referencing AC, directory name, imports, body content or test function name.",
+    "An existing source-file node and a future authored artifact at the same path have distinct identities. Enrich the supplied Test only and preserve all snapshot edges."
+  ],
+  "pinned_missing_and_hash_semantics": [
+    "Original file references record missing as not path.exists() under the source snapshot. canonical_loader hashes actual bytes only for is_file(), otherwise hashes empty bytes.",
+    "A missing path and an existing empty file share the SHA-256 of empty bytes. Retain missing to distinguish them; do not derive it from the hash.",
+    "A directory can have missing=false and an empty-byte hash. Do not reinterpret it as absent or attempt recursive content hashing.",
+    "A historical missing reference remains missing even if root now contains the file. A historical present reference retains its old hash and false missing flag even if current root lacks it.",
+    "from_entity requires no filesystem observation. root exists for integration compatibility and must not be used to refresh, validate existence or hash the referenced source.",
+    "Hash verification or pinned-source content disclosure belongs to the existing source loader/resolver, outside this metadata adapter."
+  ],
+  "metadata_fidelity": [
+    "Preserve all materialized Entity and SourceReference fields, including defaulted empty summary, locator, content_hash and properties. These are already contracted references, not authored frontmatter whose absent keys can be reconstructed.",
+    "Within properties, preserve absent versus explicit null, empty string, empty list, empty map, booleans, numbers, list order and nested object association.",
+    "Preserve future property names, including properties.source, properties.title and unknown _native_ prefixed names, without overwriting envelope provenance or presentation fields.",
+    "Use Python-mode values and a deep copy. Mutating the returned metadata must not change the input entity, and changing input nested values later must not change the record.",
+    "The shared native-property encoder exposes nested leaves with escaped JSON Pointer keys and shape metadata; retain the canonical payload and distinguish null/empty/absent rather than stringifying nested objects as the sole representation."
+  ],
+  "neo4j_exposure": {
+    "reference_tree": "Expose the entire reviewed metadata tree, especially /source/source_sha, /source/content_hash, /source/path and /properties/missing.",
+    "ordinary_flags": "The shared display_properties adapter already exposes existing simple Entity.properties fields as ordinary properties, so missing, surface, canonical and registry_identity remain directly filterable. The nested reference tree preserves the complete contract independently.",
+    "runtime_fields": "Do not add pass/fail, success, duration, executed_at, test_result or coverage facts. Existing arbitrary properties with such names must still be preserved if supplied; the reader never manufactures them.",
+    "relationship_fields": "Keep the existing anchors and relationship source provenance on their existing relationships. This metadata reader creates no additional nodes or relationships."
+  },
+  "coder_contract": {
+    "module": "knowledge/native_types/test.py",
+    "signature": "from_entity(root: pathlib.Path, entity: Entity) -> NativeRecord",
+    "shared_type": "knowledge.native_types.common.NativeRecord",
+    "algorithm": [
+      "Require kind Test and validate the existing Entity/SourceReference shape, including safe source path, without accessing the filesystem.",
+      "Deep-copy the complete Entity metadata envelope using Python-mode values, excluding only the exact three adapter-injected properties.",
+      "Return NativeRecord(kind='Test', native_id=entity.canonical_id, source_path=entity.source.path, locator=entity.source.locator, title=entity.title, description=entity.summary, metadata=reference_copy, derived={}).",
+      "Do not add extract(root), repository scanning, body parsing, test discovery, current-disk hashing or component inference.",
+      "Leave input entity identity, source, original properties and the snapshot's relationships unchanged."
+    ],
+    "acceptance_checks": [
+      "A present Test preserves all six Entity fields, all five SourceReference fields and all four current reference flags.",
+      "A missing Test preserves its exact canonical ID, source hash and missing=true even when a file now exists under root.",
+      "A present Test preserves its pinned hash and missing=false when root lacks the file; no filesystem read, exists check or hash calculation occurs.",
+      "Empty hash, locator, title, summary and properties stay empty, and a canonical ID different from source.path is preserved.",
+      "Absent flags remain absent; explicit false, null, nested objects, ordered arrays and empty structures survive metadata encode/decode.",
+      "Metadata deep-copy isolates nested source and properties from mutations in both directions.",
+      "Only the exact three adapter keys are stripped during repeat enrichment; unrelated _native_ prefixed and envelope-colliding property names survive.",
+      "SourceFile, AC, Component and other input kinds fail explicitly; invalid source paths fail without filesystem access.",
+      "The adapter never parses test functions or infers component membership and leaves derived empty.",
+      "Multiple function anchors to one file remain separate existing relationships and do not become extra metadata fields or Test identities."
+    ]
+  },
+  "count_basis": "No repository test enumeration performed. Native Test records are exactly the existing Test entities provided by the caller's immutable snapshot."
+}

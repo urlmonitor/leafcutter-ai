@@ -11,7 +11,7 @@
   "status": "active",
   "readiness": "approved",
   "superseded_by": null,
-  "version": 2,
+  "version": 3,
   "tags": [
     "product-truth",
     "authoring",
@@ -27,31 +27,167 @@
     {
       "id": "say",
       "label": "Say what you want",
-      "human": "The person describes the feature they want in plain language — no spec format, no Gherkin, just intent.",
+      "human": "The person describes the feature they want in plain language — no spec format, no Gherkin, just intent.\n\nContract fields and examples (generated)\nNo JSON handoff: The person supplies natural-language intent in conversation. No JSON input DTO is defined at this human entry; downstream classifier JSON is documented on classify.",
       "order": 1,
       "implements": [
         "UXP-400",
         "UXP-400a"
       ],
       "impl_status": "in_progress",
-      "impl_asof": "2026-07-20"
+      "impl_asof": "2026-07-20",
+      "io_contracts": {
+        "not_applicable": "The person supplies natural-language intent in conversation. No JSON input DTO is defined at this human entry; downstream classifier JSON is documented on classify."
+      },
+      "consumes": [],
+      "produces": []
     },
     {
       "id": "classify",
       "label": "Classify what to draft",
-      "human": "The system reads the request and decides which artifacts it needs — a whole flow, mock data, mockups, or a subset — along with the component and entities involved, so it only drafts what actually fits (a full journey, a single screen, or just a dataset).",
+      "human": "The system reads the request and decides which artifacts it needs — a whole flow, mock data, mockups, or a subset — along with the component and entities involved, so it only drafts what actually fits (a full journey, a single screen, or just a dataset).\n\nI/O boundary: This is the pt-classifier prompt output, not a labelled classifier-eval row. The pipeline remains a specification; this schema documents an existing prompt contract and does not prove orchestration is wired.\n\nContract fields and examples (generated)\nConsumes:\n  No checked JSON binding documented in this direction.\nProduces:\n  SOURCE-REVIEWED DOCUMENTATION: Source-reviewed templates/agents/pt-classifier.md S4 prompt contract; no runtime registration or automatic prompt/schema parity.\n  classifier/request: string (required)\n  classifier/expected/needs_flow: boolean (required)\n  classifier/expected/needs_mock_data: boolean (required)\n  classifier/expected/needs_mockup: boolean (required)\n  classifier/outcome: string (required)\n  classifier/component: string (required)\n  classifier/entities: array (required)\n  classifier/decision: string (required)\n  classifier/extends: null|string (optional)\n  classifier/dispatch: array (required)\n  classifier/anomalies: array (required)\n  Schema: [classifier](docs/product-truth/schemas/pt-classifier-output.schema.json)\n\nOutput illustrative classifier projection; not an execution receipt — classifier; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"request\": \"Describe the complete journey to author and approve a feature.\",\n  \"expected\": {\n    \"needs_flow\": true,\n    \"needs_mock_data\": true,\n    \"needs_mockup\": true\n  },\n  \"outcome\": \"full-set\",\n  \"component\": \"ux-prototyping\",\n  \"entities\": [\n    \"Ac\"\n  ],\n  \"decision\": \"create\",\n  \"extends\": null,\n  \"dispatch\": [\n    \"mock-data-author\",\n    \"mockup-author\",\n    \"flow-author\"\n  ],\n  \"anomalies\": []\n}",
       "order": 2,
       "implements": [
         "UXP-401",
         "UXP-401a"
       ],
       "impl_status": "in_progress",
-      "impl_asof": "2026-07-20"
+      "impl_asof": "2026-07-20",
+      "io_contracts": {
+        "consumes": [],
+        "produces": [
+          {
+            "contract": "classifier",
+            "fields": [
+              {
+                "path": "/request",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/expected/needs_flow",
+                "types": [
+                  "boolean"
+                ],
+                "required": true
+              },
+              {
+                "path": "/expected/needs_mock_data",
+                "types": [
+                  "boolean"
+                ],
+                "required": true
+              },
+              {
+                "path": "/expected/needs_mockup",
+                "types": [
+                  "boolean"
+                ],
+                "required": true
+              },
+              {
+                "path": "/outcome",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/component",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/entities",
+                "types": [
+                  "array"
+                ],
+                "required": true
+              },
+              {
+                "path": "/decision",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/extends",
+                "types": [
+                  "null",
+                  "string"
+                ],
+                "required": false
+              },
+              {
+                "path": "/dispatch",
+                "types": [
+                  "array"
+                ],
+                "required": true
+              },
+              {
+                "path": "/anomalies",
+                "types": [
+                  "array"
+                ],
+                "required": true
+              }
+            ]
+          }
+        ],
+        "examples": [
+          {
+            "contract": "classifier",
+            "mode": "projection",
+            "origin": "illustrative",
+            "label": "Output illustrative classifier projection; not an execution receipt",
+            "value": {
+              "request": "Describe the complete journey to author and approve a feature.",
+              "expected": {
+                "needs_flow": true,
+                "needs_mock_data": true,
+                "needs_mockup": true
+              },
+              "outcome": "full-set",
+              "component": "ux-prototyping",
+              "entities": [
+                "Ac"
+              ],
+              "decision": "create",
+              "extends": null,
+              "dispatch": [
+                "mock-data-author",
+                "mockup-author",
+                "flow-author"
+              ],
+              "anomalies": []
+            }
+          }
+        ]
+      },
+      "consumes": [],
+      "produces": [
+        "classifier/request: string (required)",
+        "classifier/expected/needs_flow: boolean (required)",
+        "classifier/expected/needs_mock_data: boolean (required)",
+        "classifier/expected/needs_mockup: boolean (required)",
+        "classifier/outcome: string (required)",
+        "classifier/component: string (required)",
+        "classifier/entities: array (required)",
+        "classifier/decision: string (required)",
+        "classifier/extends: null|string (optional)",
+        "classifier/dispatch: array (required)",
+        "classifier/anomalies: array (required)"
+      ]
     },
     {
       "id": "mockData",
       "label": "Draft the mock data",
-      "human": "For anything data-backed, the system drafts — or extends — the one canonical mock-data set for those entities: realistic records the rest of the draft is built on, never a duplicate dataset.",
+      "human": "For anything data-backed, the system drafts — or extends — the one canonical mock-data set for those entities: realistic records the rest of the draft is built on, never a duplicate dataset.\n\nI/O boundary: The output is a *.mock.json artifact. Entity records remain dataset-defined objects; the outer artifact schema does not establish their domain field types.\n\nContract fields and examples (generated)\nConsumes:\n  SOURCE-REVIEWED DOCUMENTATION: Source-reviewed templates/agents/pt-classifier.md S4 prompt contract; no runtime registration or automatic prompt/schema parity.\n  classifier/component: string (required)\n  classifier/entities: array (required)\n  Schema: [classifier](docs/product-truth/schemas/pt-classifier-output.schema.json)\nProduces:\n  mock_data/id: string (required)\n  mock_data/component: string (required)\n  mock_data/version: integer (optional)\n  mock_data/readiness: string (required)\n  mock_data/entities/*/fields: object (required)\n  mock_data/entities/*/records: array (required)\n  Schema: [mock_data](docs/product-truth/schemas/mock-data.schema.json)\n\nInput illustrative classifier projection; not an execution receipt — classifier; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"component\": \"ux-prototyping\",\n  \"entities\": [\n    \"Ac\"\n  ]\n}\n\nOutput illustrative mock_data projection; not an execution receipt — mock_data; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"id\": \"leafcutter/feature-review\",\n  \"component\": \"ux-prototyping\",\n  \"readiness\": \"draft\",\n  \"version\": 1,\n  \"entities\": {\n    \"Ac\": {\n      \"fields\": {\n        \"id\": \"string; stable acceptance criterion identifier\"\n      },\n      \"records\": [\n        {\n          \"id\": \"ACD-300\"\n        }\n      ]\n    }\n  }\n}",
       "order": 3,
       "writes": [
         "MockData"
@@ -61,12 +197,134 @@
         "UXP-401a"
       ],
       "impl_status": "in_progress",
-      "impl_asof": "2026-07-20"
+      "impl_asof": "2026-07-20",
+      "io_contracts": {
+        "consumes": [
+          {
+            "contract": "classifier",
+            "fields": [
+              {
+                "path": "/component",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/entities",
+                "types": [
+                  "array"
+                ],
+                "required": true
+              }
+            ]
+          }
+        ],
+        "produces": [
+          {
+            "contract": "mock_data",
+            "fields": [
+              {
+                "path": "/id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/component",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/version",
+                "types": [
+                  "integer"
+                ],
+                "required": false
+              },
+              {
+                "path": "/readiness",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/entities/*/fields",
+                "types": [
+                  "object"
+                ],
+                "required": true
+              },
+              {
+                "path": "/entities/*/records",
+                "types": [
+                  "array"
+                ],
+                "required": true
+              }
+            ]
+          }
+        ],
+        "examples": [
+          {
+            "contract": "classifier",
+            "mode": "projection",
+            "origin": "illustrative",
+            "label": "Input illustrative classifier projection; not an execution receipt",
+            "value": {
+              "component": "ux-prototyping",
+              "entities": [
+                "Ac"
+              ]
+            }
+          },
+          {
+            "contract": "mock_data",
+            "mode": "projection",
+            "origin": "illustrative",
+            "label": "Output illustrative mock_data projection; not an execution receipt",
+            "value": {
+              "id": "leafcutter/feature-review",
+              "component": "ux-prototyping",
+              "readiness": "draft",
+              "version": 1,
+              "entities": {
+                "Ac": {
+                  "fields": {
+                    "id": "string; stable acceptance criterion identifier"
+                  },
+                  "records": [
+                    {
+                      "id": "ACD-300"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        ]
+      },
+      "consumes": [
+        "classifier/component: string (required)",
+        "classifier/entities: array (required)"
+      ],
+      "produces": [
+        "mock_data/id: string (required)",
+        "mock_data/component: string (required)",
+        "mock_data/version: integer (optional)",
+        "mock_data/readiness: string (required)",
+        "mock_data/entities/*/fields: object (required)",
+        "mock_data/entities/*/records: array (required)"
+      ]
     },
     {
       "id": "mockups",
       "label": "Draft the mockups",
-      "human": "For each screen the request implies, the system drafts a mockup populated from that mock data, so the person sees the actual screens with real-looking content rather than a description.",
+      "human": "For each screen the request implies, the system drafts a mockup populated from that mock data, so the person sees the actual screens with real-looking content rather than a description.\n\nI/O boundary: The *.mockup.json record registers a screen and optional HTML path. HTML rendering itself is a file artifact; null renders means no rendered page.\n\nContract fields and examples (generated)\nConsumes:\n  mock_data/id: string (required)\n  mock_data/entities: object (required)\n  Schema: [mock_data](docs/product-truth/schemas/mock-data.schema.json)\nProduces:\n  mockup/id: string (required)\n  mockup/screen: string (required)\n  mockup/title: string (required)\n  mockup/entities: array (required)\n  mockup/mock_data_ref: string (optional)\n  mockup/renders: null|string (required)\n  mockup/readiness: string (required)\n  Schema: [mockup](docs/product-truth/schemas/mockup.schema.json)\n\nInput illustrative mock_data projection; not an execution receipt — mock_data; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"id\": \"leafcutter/feature-review\",\n  \"entities\": {\n    \"Ac\": {\n      \"fields\": {\n        \"id\": \"string; stable acceptance criterion identifier\"\n      },\n      \"records\": [\n        {\n          \"id\": \"ACD-300\"\n        }\n      ]\n    }\n  }\n}\n\nOutput illustrative mockup projection; not an execution receipt — mockup; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"id\": \"leafcutter/feature-review\",\n  \"screen\": \"feature-review\",\n  \"title\": \"Review the feature\",\n  \"entities\": [\n    \"Ac\"\n  ],\n  \"renders\": null,\n  \"readiness\": \"draft\",\n  \"mock_data_ref\": \"leafcutter/feature-review\"\n}",
       "order": 4,
       "reads": [
         "MockData"
@@ -79,12 +337,145 @@
         "UXP-401a"
       ],
       "impl_status": "in_progress",
-      "impl_asof": "2026-07-20"
+      "impl_asof": "2026-07-20",
+      "io_contracts": {
+        "consumes": [
+          {
+            "contract": "mock_data",
+            "fields": [
+              {
+                "path": "/id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/entities",
+                "types": [
+                  "object"
+                ],
+                "required": true
+              }
+            ]
+          }
+        ],
+        "produces": [
+          {
+            "contract": "mockup",
+            "fields": [
+              {
+                "path": "/id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/screen",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/title",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/entities",
+                "types": [
+                  "array"
+                ],
+                "required": true
+              },
+              {
+                "path": "/mock_data_ref",
+                "types": [
+                  "string"
+                ],
+                "required": false
+              },
+              {
+                "path": "/renders",
+                "types": [
+                  "null",
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/readiness",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              }
+            ]
+          }
+        ],
+        "examples": [
+          {
+            "contract": "mock_data",
+            "mode": "projection",
+            "origin": "illustrative",
+            "label": "Input illustrative mock_data projection; not an execution receipt",
+            "value": {
+              "id": "leafcutter/feature-review",
+              "entities": {
+                "Ac": {
+                  "fields": {
+                    "id": "string; stable acceptance criterion identifier"
+                  },
+                  "records": [
+                    {
+                      "id": "ACD-300"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          {
+            "contract": "mockup",
+            "mode": "projection",
+            "origin": "illustrative",
+            "label": "Output illustrative mockup projection; not an execution receipt",
+            "value": {
+              "id": "leafcutter/feature-review",
+              "screen": "feature-review",
+              "title": "Review the feature",
+              "entities": [
+                "Ac"
+              ],
+              "renders": null,
+              "readiness": "draft",
+              "mock_data_ref": "leafcutter/feature-review"
+            }
+          }
+        ]
+      },
+      "consumes": [
+        "mock_data/id: string (required)",
+        "mock_data/entities: object (required)"
+      ],
+      "produces": [
+        "mockup/id: string (required)",
+        "mockup/screen: string (required)",
+        "mockup/title: string (required)",
+        "mockup/entities: array (required)",
+        "mockup/mock_data_ref: string (optional)",
+        "mockup/renders: null|string (required)",
+        "mockup/readiness: string (required)"
+      ]
     },
     {
       "id": "flow",
       "label": "Assemble the draft flow",
-      "human": "The system assembles the steps into a draft flow, wiring each step to its screen and to the entities it reads and writes — the reviewable map of the whole journey.",
+      "human": "The system assembles the steps into a draft flow, wiring each step to its screen and to the entities it reads and writes — the reviewable map of the whole journey.\n\nI/O boundary: The draft *.flow.json is the authored contract. Examples are projections, not runnable complete flows; linked screen and AC existence is still validated against the store.\n\nContract fields and examples (generated)\nConsumes:\n  mockup/screen: string (required)\n  mockup/entities: array (required)\n  mockup/mock_data_ref: string (optional)\n  Schema: [mockup](docs/product-truth/schemas/mockup.schema.json)\nProduces:\n  flow/id: string (required)\n  flow/component: string (required)\n  flow/kind: string (required)\n  flow/source: string (required)\n  flow/readiness: string (required)\n  flow/steps/*/id: string (required)\n  flow/steps/*/screen: string (optional)\n  flow/steps/*/implements: array (optional)\n  flow/acceptance_scenarios: array (optional)\n  Schema: [flow](docs/product-truth/schemas/flow.schema.json)\n\nInput illustrative mockup projection; not an execution receipt — mockup; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"screen\": \"feature-review\",\n  \"entities\": [\n    \"Ac\"\n  ],\n  \"mock_data_ref\": \"leafcutter/feature-review\"\n}\n\nOutput illustrative flow projection; not an execution receipt — flow; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"id\": \"leafcutter/define-a-feature\",\n  \"component\": \"ux-prototyping\",\n  \"kind\": \"user\",\n  \"source\": \"real\",\n  \"readiness\": \"draft\",\n  \"steps\": [\n    {\n      \"id\": \"approve\",\n      \"order\": 1,\n      \"label\": \"Approve the feature\",\n      \"human\": \"Review the proposed behavior.\",\n      \"implements\": [],\n      \"screen\": \"feature-review\"\n    }\n  ],\n  \"acceptance_scenarios\": [\n    {\n      \"for\": \"approve\",\n      \"given\": \"A feature draft exists\",\n      \"when\": \"The person reviews it\",\n      \"then\": \"Their decision is retained\"\n    }\n  ]\n}",
       "order": 5,
       "reads": [
         "Mockup",
@@ -98,12 +489,174 @@
         "UXP-401a"
       ],
       "impl_status": "in_progress",
-      "impl_asof": "2026-07-20"
+      "impl_asof": "2026-07-20",
+      "io_contracts": {
+        "consumes": [
+          {
+            "contract": "mockup",
+            "fields": [
+              {
+                "path": "/screen",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/entities",
+                "types": [
+                  "array"
+                ],
+                "required": true
+              },
+              {
+                "path": "/mock_data_ref",
+                "types": [
+                  "string"
+                ],
+                "required": false
+              }
+            ]
+          }
+        ],
+        "produces": [
+          {
+            "contract": "flow",
+            "fields": [
+              {
+                "path": "/id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/component",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/kind",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/source",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/readiness",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/steps/*/id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/steps/*/screen",
+                "types": [
+                  "string"
+                ],
+                "required": false
+              },
+              {
+                "path": "/steps/*/implements",
+                "types": [
+                  "array"
+                ],
+                "required": false
+              },
+              {
+                "path": "/acceptance_scenarios",
+                "types": [
+                  "array"
+                ],
+                "required": false
+              }
+            ]
+          }
+        ],
+        "examples": [
+          {
+            "contract": "mockup",
+            "mode": "projection",
+            "origin": "illustrative",
+            "label": "Input illustrative mockup projection; not an execution receipt",
+            "value": {
+              "screen": "feature-review",
+              "entities": [
+                "Ac"
+              ],
+              "mock_data_ref": "leafcutter/feature-review"
+            }
+          },
+          {
+            "contract": "flow",
+            "mode": "projection",
+            "origin": "illustrative",
+            "label": "Output illustrative flow projection; not an execution receipt",
+            "value": {
+              "id": "leafcutter/define-a-feature",
+              "component": "ux-prototyping",
+              "kind": "user",
+              "source": "real",
+              "readiness": "draft",
+              "steps": [
+                {
+                  "id": "approve",
+                  "order": 1,
+                  "label": "Approve the feature",
+                  "human": "Review the proposed behavior.",
+                  "implements": [],
+                  "screen": "feature-review"
+                }
+              ],
+              "acceptance_scenarios": [
+                {
+                  "for": "approve",
+                  "given": "A feature draft exists",
+                  "when": "The person reviews it",
+                  "then": "Their decision is retained"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "consumes": [
+        "mockup/screen: string (required)",
+        "mockup/entities: array (required)",
+        "mockup/mock_data_ref: string (optional)"
+      ],
+      "produces": [
+        "flow/id: string (required)",
+        "flow/component: string (required)",
+        "flow/kind: string (required)",
+        "flow/source: string (required)",
+        "flow/readiness: string (required)",
+        "flow/steps/*/id: string (required)",
+        "flow/steps/*/screen: string (optional)",
+        "flow/steps/*/implements: array (optional)",
+        "flow/acceptance_scenarios: array (optional)"
+      ]
     },
     {
       "id": "approve",
       "label": "You review & approve; ACs are generated",
-      "human": "The person reviews the drafted flow (with its mock data and mockups) and approves it; acceptance criteria are then generated from the flow's steps so the flow stays the source of truth.",
+      "human": "The person reviews the drafted flow (with its mock data and mockups) and approves it; acceptance criteria are then generated from the flow's steps so the flow stays the source of truth.\n\nI/O boundary: The human approval is conversational; BA then writes parsed AC YAML and exact step.implements links. Metadata does not advance the real AC readiness or claim that generation already runs.\n\nContract fields and examples (generated)\nConsumes:\n  flow/id: string (required)\n  flow/readiness: string (required)\n  flow/steps/*/id: string (required)\n  flow/acceptance_scenarios: array (optional)\n  Schema: [flow](docs/product-truth/schemas/flow.schema.json)\nProduces:\n  ac/id: string (required)\n  ac/criteria: string (required)\n  ac/component: string (required)\n  ac/readiness: string (optional)\n  Schema: [ac](config/ac_store_schema.json)\n  flow/steps/*/id: string (required)\n  flow/steps/*/implements: array (optional)\n  Schema: [flow](docs/product-truth/schemas/flow.schema.json)\n\nInput illustrative flow projection; not an execution receipt — flow; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"id\": \"leafcutter/define-a-feature\",\n  \"readiness\": \"draft\",\n  \"steps\": [\n    {\n      \"id\": \"approve\",\n      \"order\": 1,\n      \"label\": \"Approve the feature\",\n      \"human\": \"Review the proposed behavior.\",\n      \"implements\": [],\n      \"screen\": \"feature-review\"\n    }\n  ],\n  \"acceptance_scenarios\": [\n    {\n      \"for\": \"approve\",\n      \"given\": \"A feature draft exists\",\n      \"when\": \"The person reviews it\",\n      \"then\": \"Their decision is retained\"\n    }\n  ]\n}\n\nOutput illustrative ac projection; not an execution receipt — ac; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"id\": \"ACD-300\",\n  \"component\": \"ac-driven-dev\",\n  \"criteria\": \"Given an approved requirement, When delivery finishes, Then its evidence is recorded.\",\n  \"readiness\": \"approved\"\n}\n\nOutput illustrative flow projection; not an execution receipt — flow; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"steps\": [\n    {\n      \"id\": \"approve\",\n      \"order\": 1,\n      \"label\": \"Approve the feature\",\n      \"human\": \"Review the proposed behavior.\",\n      \"implements\": [\n        \"UXP-531\"\n      ],\n      \"screen\": \"feature-review\"\n    }\n  ]\n}",
       "order": 6,
       "reads": [
         "Flow"
@@ -116,7 +669,174 @@
         "UXP-402a"
       ],
       "impl_status": "in_progress",
-      "impl_asof": "2026-07-20"
+      "impl_asof": "2026-07-20",
+      "io_contracts": {
+        "consumes": [
+          {
+            "contract": "flow",
+            "fields": [
+              {
+                "path": "/id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/readiness",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/steps/*/id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/acceptance_scenarios",
+                "types": [
+                  "array"
+                ],
+                "required": false
+              }
+            ]
+          }
+        ],
+        "produces": [
+          {
+            "contract": "ac",
+            "fields": [
+              {
+                "path": "/id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/criteria",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/component",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/readiness",
+                "types": [
+                  "string"
+                ],
+                "required": false
+              }
+            ]
+          },
+          {
+            "contract": "flow",
+            "fields": [
+              {
+                "path": "/steps/*/id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/steps/*/implements",
+                "types": [
+                  "array"
+                ],
+                "required": false
+              }
+            ]
+          }
+        ],
+        "examples": [
+          {
+            "contract": "flow",
+            "mode": "projection",
+            "origin": "illustrative",
+            "label": "Input illustrative flow projection; not an execution receipt",
+            "value": {
+              "id": "leafcutter/define-a-feature",
+              "readiness": "draft",
+              "steps": [
+                {
+                  "id": "approve",
+                  "order": 1,
+                  "label": "Approve the feature",
+                  "human": "Review the proposed behavior.",
+                  "implements": [],
+                  "screen": "feature-review"
+                }
+              ],
+              "acceptance_scenarios": [
+                {
+                  "for": "approve",
+                  "given": "A feature draft exists",
+                  "when": "The person reviews it",
+                  "then": "Their decision is retained"
+                }
+              ]
+            }
+          },
+          {
+            "contract": "ac",
+            "mode": "projection",
+            "origin": "illustrative",
+            "label": "Output illustrative ac projection; not an execution receipt",
+            "value": {
+              "id": "ACD-300",
+              "component": "ac-driven-dev",
+              "criteria": "Given an approved requirement, When delivery finishes, Then its evidence is recorded.",
+              "readiness": "approved"
+            }
+          },
+          {
+            "contract": "flow",
+            "mode": "projection",
+            "origin": "illustrative",
+            "label": "Output illustrative flow projection; not an execution receipt",
+            "value": {
+              "steps": [
+                {
+                  "id": "approve",
+                  "order": 1,
+                  "label": "Approve the feature",
+                  "human": "Review the proposed behavior.",
+                  "implements": [
+                    "UXP-531"
+                  ],
+                  "screen": "feature-review"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "consumes": [
+        "flow/id: string (required)",
+        "flow/readiness: string (required)",
+        "flow/steps/*/id: string (required)",
+        "flow/acceptance_scenarios: array (optional)"
+      ],
+      "produces": [
+        "ac/id: string (required)",
+        "ac/criteria: string (required)",
+        "ac/component: string (required)",
+        "ac/readiness: string (optional)",
+        "flow/steps/*/id: string (required)",
+        "flow/steps/*/implements: array (optional)"
+      ]
     }
   ],
   "branches": [],
@@ -177,6 +897,31 @@
       "by": "BrainCandy (product-truth Atlas session)",
       "date": "2026-07-14",
       "note": "Exploded the single 'draft' step into explicit classify -> draft mock data -> draft mockups -> assemble flow steps, with reads/writes over the MockData/Mockup/Flow/Ac artifacts, to show where mockups and mock data are created."
+    },
+    {
+      "action": "extended",
+      "by": "flow-author (agent-led I/O contract migration)",
+      "date": "2026-10-03",
+      "note": "Added source-bound field/type/requiredness/default metadata and explicitly illustrative JSON projections. Preserved topology, actor ownership, realization and AC status. Non-JSON artifacts and genuinely undefined proposed interfaces remain explicit."
     }
-  ]
+  ],
+  "contract_definitions": {
+    "classifier": {
+      "schema": "docs/product-truth/schemas/pt-classifier-output.schema.json",
+      "authority": "source_reviewed",
+      "note": "Source-reviewed templates/agents/pt-classifier.md S4 prompt contract; no runtime registration or automatic prompt/schema parity."
+    },
+    "mock_data": {
+      "schema": "docs/product-truth/schemas/mock-data.schema.json"
+    },
+    "mockup": {
+      "schema": "docs/product-truth/schemas/mockup.schema.json"
+    },
+    "flow": {
+      "schema": "docs/product-truth/schemas/flow.schema.json"
+    },
+    "ac": {
+      "schema": "config/ac_store_schema.json"
+    }
+  }
 }

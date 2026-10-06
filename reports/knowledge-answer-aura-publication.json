@@ -1,0 +1,55 @@
+{
+  "schema_version": 1,
+  "evidence_class": "post_commit_hosted_publication",
+  "started_at": "2026-10-01T21:44:55.662900+00:00",
+  "completed_at": "2026-10-01T21:47:46.968480+00:00",
+  "source_sha": "59269e024e4d0290b68b03d0d382745966e67e29",
+  "target": {
+    "host": "2fb38dda.databases.neo4j.io",
+    "database": "2fb38dda",
+    "repository_id": "leafcutter",
+    "verified_tls": true
+  },
+  "scope": [
+    "acs",
+    "adrs",
+    "components"
+  ],
+  "mapper_version": "6",
+  "active_generation_id": "6cd824a6df7b9f4bb424f89cbe0df51539922b5fb8372b037c5ac81d84f008d8",
+  "node_count": 6092,
+  "edge_count": 19686,
+  "semantic_ready": false,
+  "credential_composition": "authorized_process_local_serving_principal_mapping",
+  "outcomes": {
+    "immutable_validate": "passed",
+    "immutable_plan": "passed",
+    "sync": "published",
+    "active_status": "ok",
+    "lagging": false,
+    "previous_generation_retained": true,
+    "independent_public_retrieval": "pending_QA"
+  },
+  "previous_generation": {
+    "retained": true,
+    "source_sha": "9d11594782abfb417d0f3a826bfb1f91f3a523ac",
+    "generation_id": "763ef2c72f13330c002212ad3c1b1b41fb9e53683fbe440569fa260227d29e45",
+    "mapper_version": "3",
+    "node_count": 6040,
+    "edge_count": 19518
+  },
+  "publication_controls": [
+    "immutable_git_source",
+    "ancestry_guard",
+    "unchanged_projection_scope",
+    "validated_persisted_counts",
+    "atomic_compare_and_swap"
+  ],
+  "provider_execution": {
+    "jev": "not_run",
+    "langfuse": "not_run",
+    "embeddings": "not_run"
+  },
+  "operational_receipt_directory": "C:\\Users\\Hendrik\\AppData\\Local\\Temp\\leafcutter-aura-publication-59269e024e4d",
+  "qualification": "Actual hosted publication after the implementation commit; separate from historical local acceptance evidence. No credential values or opaque continuation tokens retained."
+}

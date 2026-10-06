@@ -1,0 +1,22 @@
+{
+  "working_directory": "C:\\Users\\Hendrik\\Code\\leafcutter\\worktrees\\knowledge-retrieval-v01",
+  "python": "C:/Users/Hendrik/Code/leafcutter/.venv/Scripts/python.exe",
+  "retained_runner": "tests/knowledge_live/retrieval_scenario_checks.py",
+  "retained_runner_sha256": "80d28ee50a7eda2b76f108b3266b3e85eae814b6e64e6740f708c6a1df715aba",
+  "original_runner_unchanged": true,
+  "wrapper": "reports/retrieval-scenarios-2026-10-02-post-sync-84006ac3/replay.py",
+  "wrapper_sha256": "e11c5938f07304cb1f82ce4b2cf6b85bfbf53009b5667f3625b804711d99f28a",
+  "invocation": "python -B reports/retrieval-scenarios-2026-10-02-post-sync-84006ac3/replay.py <prepare|neutral|kernel-controls|kernel-valid|live>",
+  "actually_executed_modes": [
+    "prepare",
+    "live",
+    "neutral",
+    "kernel-controls",
+    "kernel-valid"
+  ],
+  "preparation_note": "Initial wrapper preparation failed before any provider calls because a capability coroutine was not awaited. The wrapper-only await was corrected, then preparation succeeded. No product change.",
+  "isolation": "Wrapper overrides runner.OUT only; config uses fresh Temp checkpoint/catalog root. All previous receipts preserved.",
+  "external_calls": "User explicitly renewed the same two-question live evaluation after sync; both initial starts are now complete. No further live calls/resumes under this replay.",
+  "credentials": "Loaded only through existing supported external env-file mechanism; no copied secrets.",
+  "side_effects": "New local receipts/checkpoints only; no graph write/activation/embeddings/Langfuse, product edits or commits."
+}
