@@ -28,12 +28,14 @@ __all__ = ["KINDS", "OPERATIONS", "PAYLOADS", "RESPONSES", "host_result", "host_
 
 KINDS = {"host.generate_options": RequestKind.OPTIONS, "host.synthesize": RequestKind.SYNTHESIS,
          "host.research": RequestKind.EVIDENCE, "host.formulate_question": RequestKind.CAPABILITY,
-         "host.query_build": RequestKind.CAPABILITY}
+         "host.query_build": RequestKind.CAPABILITY, "host.retrieval_needs": RequestKind.CAPABILITY}
 OPERATIONS = {"host.generate_options": "generate_options",
               "host.synthesize": "synthesize_evidence", "host.research": "bounded_research",
-              "host.formulate_question": "formulate_question", "host.query_build": "build_query"}
+              "host.formulate_question": "formulate_question", "host.query_build": "build_query",
+              "host.retrieval_needs": "interpret_retrieval_needs"}
 PAYLOADS: dict[str, dict[str, Any]] = {
     "host.query_build": REQUESTS["host.query_build"],
+    "host.retrieval_needs": REQUESTS["host.retrieval_needs"],
     "host.generate_options": {"problem": "Where should the cache live?", "max_options": 2,
                               "propose_criteria": True},
     "host.synthesize": {"operation": "synthesize_evidence", "question": "What must it do?"},
@@ -42,6 +44,17 @@ PAYLOADS: dict[str, dict[str, Any]] = {
                                 "choices": [{"id": "sqlite", "label": "SQLite"},
                                             {"id": "files", "label": "Plain files"}]}}
 RESPONSES: dict[str, dict[str, Any]] = {
+    "host.retrieval_needs": {
+        "original_question": REQUESTS["host.retrieval_needs"]["original_question"],
+        "source_scope": {},
+        "selections": {"entity_types": ["test"], "target_ids": ["CMP-1"],
+                       "required_fields": ["name"], "document_types": ["source"],
+                       "relationships": []},
+        "uncertain": {name: [] for name in REQUESTS["host.retrieval_needs"]["catalog"]},
+        "detail_mode": "fields", "completeness": "single_entity",
+        "hierarchy_scope": "not_applicable", "scope_resolution": "sufficient",
+        "unresolved": [], "rationale": "Fixture answer.", "engine": "host_llm",
+        "status": "decided", "model_id": None},
     "host.query_build": {"candidate": {"query_id": "fixture.tests", "status": "proposed"}},
     "host.generate_options": {"options": [option("opt-a"), option("opt-b"), option("opt-c")],
                               "proposed_criteria": [criterion()]},
