@@ -6,7 +6,7 @@ type: manual
 components: 
   - decision_kernel
 summary: "A decision with rankable options no longer stops with an unexplained 'unidentified gap'. It runs its targeted research round first, and otherwise hands the human the ranked question."
-description: "When Jev reported an unidentified_gap while usable options existed, combine() escalated to the human without research or a ranked choice. It now runs the targeted research round when one is due, or else hands the human the ranked question, which names why research stopped (the round cap, or that there was nothing left to research). Unresolved feasibility facts the option design reports are now added to the research gaps (deduplicated, bounded by MAX_GAPS_KEPT), so that round has something to look for. 1 commit (TICKET-20261002-KernelResearchBeforeBlindEscalation)."
+description: "When Jev reported an unidentified_gap while usable options existed, combine() escalated to the human without research or a ranked choice. It now runs the targeted research round when one is due, or else hands the human the ranked question, which names why research stopped: the round cap was reached (research_cap), the one targeted round already ran (design_round_done), or nothing was targeted to research (no_research_targets). Unresolved feasibility facts the option design reports are now added to the research gaps (deduplicated, bounded by MAX_GAPS_KEPT), so that round has something to look for. The decision-forming product-truth flow gains the research-first and ranked-question branches with checked io_contracts. TICKET-20261002-KernelResearchBeforeBlindEscalation."
 commits: 
   - 87228a8e2d05f916d903a767d02ae7d8856723b5
 ---

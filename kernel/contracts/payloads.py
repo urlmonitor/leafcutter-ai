@@ -118,7 +118,8 @@ class ResearchRequestPayload(KernelModel):
     option_context: list[OptionContext] = Field(default_factory=list)
     #: The approved criteria's questions, used as query text beside the goal.
     criteria_context: list[str] = Field(default_factory=list)
-    #: What an earlier synthesis said it could not find; each becomes a targeted need.
+    #: Open unknowns (synthesis gaps, research unknowns, option-design feasibility facts);
+    #: the first research.max_targeted_needs of them become targeted needs.
     gaps: list[str] = Field(default_factory=list)
     #: Jev calls the requester keeps for itself afterwards (its final assessment); research plans
     #: no more needs than the rest of its budget affords and never spends into this reserve.
