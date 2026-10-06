@@ -171,8 +171,8 @@ def _copy_acs(source: Path, destination: Path, required: set[str]) -> None:
         return
     import yaml
 
-    sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-    from ac_store.yaml_safe_loader import get_safe_yaml_loader
+    sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "ac_store"))
+    from yaml_safe_loader import get_safe_yaml_loader
 
     candidates: dict[str, list[Path]] = {}
     for path in ac_root.rglob("*.yaml"):

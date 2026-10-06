@@ -169,8 +169,8 @@ def _parse_hook_entries_yaml(precommit_path: Path) -> list[str]:
     try:
         import yaml  # type: ignore[import-untyped]
 
-        sys.path.insert(0, str(Path(__file__).resolve().parent))
-        from ac_store.yaml_safe_loader import get_safe_yaml_loader
+        sys.path.insert(0, str(Path(__file__).resolve().parent / "ac_store"))
+        from yaml_safe_loader import get_safe_yaml_loader
     except ImportError:
         _log.debug("PyYAML not available; falling back to regex scan.")
         return re.findall(r"^\s*entry:\s*(.+)$", text, re.MULTILINE)

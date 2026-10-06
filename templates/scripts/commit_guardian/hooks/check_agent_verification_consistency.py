@@ -10,11 +10,15 @@ BUSINESS CONTEXT: An agent that declares requires_verification: true commits
     template leads to runtime failures that are difficult to diagnose.  This hook
     catches the contradiction at commit time and names both fixes so the author
     can resolve it before the offending template reaches the main branch.
-ARCHITECTURE: Reaches the shared fast-vs-pure-Python YAML parser accessor
-    (scripts/ac_store/yaml_safe_loader.py) via the same sibling-directory
-    sys.path wiring check_done_proof.py uses (_ac_store_locator, one
-    directory up from this hooks/ subfolder) -- otherwise standalone, no
-    other leafcutter-internal imports. Scans STAGED
+ARCHITECTURE: Standalone -- no leafcutter-internal imports. Deliberately uses
+    yaml.safe_load rather than the shared get_safe_yaml_loader() accessor:
+    this hook parses one small frontmatter block per staged agent template,
+    so the C-loader gain is unmeasurable, while reaching the accessor from
+    this hooks/ subfolder requires a sys.path insert one directory up that
+    scripts/ci/_declaring_files_scan.py cannot statically resolve -- it
+    assumes a bare underscore import is a same-directory sibling and so
+    reports a false "declaring files" violation. Keeping this hook
+    import-free avoids that gate failure outright. Scans STAGED
     templates/agents/*.md files by file identity only (git diff --cached
     --name-only). For each staged agent template, reads its content via
     _read_staged_file() (patchable for unit tests) and parses YAML frontmatter.
@@ -31,15 +35,8 @@ from __future__ import annotations
 
 import subprocess
 import sys
-from pathlib import Path
 
 import yaml
-
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-from _ac_store_locator import ensure_ac_store_on_syspath  # noqa: E402
-
-ensure_ac_store_on_syspath()
-from yaml_safe_loader import get_safe_yaml_loader  # noqa: E402
 
 _AGENT_TEMPLATE_PREFIX = "templates/agents/"
 _EDIT_CAPABLE_TOOLS: frozenset[str] = frozenset({"Edit", "Write"})
@@ -141,7 +138,7 @@ def _parse_frontmatter(content: str) -> dict | None:
 
     fm_text = "\n".join(lines[1:end_idx])
     try:
-        parsed = yaml.load(fm_text, Loader=get_safe_yaml_loader())
+        parsed = yaml.safe_load(fm_text)
     except yaml.YAMLError:
         return None
 

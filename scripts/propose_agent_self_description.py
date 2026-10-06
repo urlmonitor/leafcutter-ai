@@ -25,9 +25,6 @@ from pathlib import Path
 
 import yaml
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-from ac_store.yaml_safe_loader import get_safe_yaml_loader  # noqa: E402
-
 # ---------------------------------------------------------------------------
 # Path resolution
 # ---------------------------------------------------------------------------
@@ -49,7 +46,7 @@ def parse_frontmatter(text: str) -> tuple[dict, str]:
         return {}, text
     fm_text = text[3:end].strip()
     try:
-        fm = yaml.load(fm_text, Loader=get_safe_yaml_loader()) or {}
+        fm = yaml.safe_load(fm_text) or {}
     except yaml.YAMLError:
         fm = {}
     body = text[end + 4:].lstrip("\n")

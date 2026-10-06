@@ -40,8 +40,8 @@ from pathlib import Path
 
 import yaml
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-from ac_store.yaml_safe_loader import get_safe_yaml_loader  # noqa: E402
+sys.path.insert(0, str(Path(__file__).resolve().parent / "ac_store"))
+from yaml_safe_loader import get_safe_yaml_loader  # noqa: E402
 
 logger = logging.getLogger(__name__)
 

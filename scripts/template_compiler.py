@@ -41,8 +41,8 @@ from typing import Any
 # Python's own clear message naming the missing dependency rather than mask it.
 import yaml
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-from ac_store.yaml_safe_loader import get_safe_yaml_loader  # noqa: E402
+sys.path.insert(0, str(Path(__file__).resolve().parent / "ac_store"))
+from yaml_safe_loader import get_safe_yaml_loader  # noqa: E402
 
 from injection_builders import (  # noqa: E402
     _load_registry,  # noqa: F401  # re-exported; consumed by build_phases / build_helpers
