@@ -1,0 +1,161 @@
+id: TQ-600a-12-i
+components:
+  - testing_quality
+  - build_pipeline
+title: "A seed that is missing, incomplete, or built under a different configuration is refused out loud"
+component: testing-quality
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given the private-copy route configured with a seed directory,
+  And the one outcome worse than the current slowness, which is handing a caller a
+    tree that looks like a finished layout and is not,
+  When the seed directory is absent; or present but lacking the completeness record
+    the route already requires of any layout before it hands one back; or present and
+    complete but produced under a configuration that differs from the one this run
+    would use,
+  Then the route raises the layout-production error it already defines for a failed
+    production, and the message states which of the three conditions it found and
+    which seed path it inspected,
+  And it does not quietly fall back to copying the source tree and building, because
+    a silent fallback turns a misconfiguration into a mysterious 49-second pause
+    nobody traces,
+  And it does not hand back the suspect root under any of the three conditions,
+  And each of the three conditions has a check of its own that is shown to go red on
+    an instance of that condition and green on a sound seed, so no condition is
+    covered only by the other two.
+depends_on:
+  - TQ-600a-12
+doc_links:
+  - path: scripts/suite_performance/_shared_layout_producer.py
+    relationship: modifies
+    status: exists
+    relevance: >-
+      EDIT SURFACE. Owns the completeness check already performed before a layout is
+      handed out, and the layout-production error type this record reuses rather than
+      inventing a second one.
+  - path: scripts/suite_performance/pytest_shared_reference_layout.py
+    relationship: modifies
+    status: exists
+    relevance: >-
+      EDIT SURFACE. `_produce_private_copy()` is where the seed is consumed and so
+      where the three refusals belong.
+  - path: scripts/suite_performance/_shared_layout_coordination.py
+    relationship: describes
+    status: exists
+    relevance: >-
+      Defines SharedReferenceLayoutError and the manifest filename the completeness
+      check reads. Reuse both.
+declared_files:
+  - path: scripts/suite_performance/pytest_shared_reference_layout.py
+    state: existing
+  - path: scripts/suite_performance/_shared_layout_producer.py
+    state: existing
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - >-
+    THE CONFIGURATION CONDITION IS THE SUBTLE ONE AND THE REASON THIS RECORD EXISTS.
+    An absent seed fails loudly on its own. A seed that is complete but was built
+    under different settings produces a tree that passes every structural check and
+    is wrong in content. Compare a fingerprint of the configuration that produced the
+    seed against the configuration this run would use; record the fingerprint
+    alongside the seed when it is produced, so the comparison has something to read.
+  - >-
+    REUSE SharedReferenceLayoutError. A new exception type would escape the handlers
+    every existing caller already has, converting a clear refusal into an unhandled
+    traceback in an unrelated test.
+  - >-
+    THREE SEPARATE CHECKS, THREE SEPARATE REDS. One combined validity predicate is
+    satisfiable by a check that only ever tests existence — and the existence case is
+    the one that never happens in practice. The last clause is what stops that.
+  - >-
+    NO SILENT FALLBACK, EVEN A LOGGED ONE. A warning plus a 49-second build is
+    indistinguishable from normal operation to anyone watching a test run, and the
+    misconfiguration survives indefinitely. Raise.
+delivers_to: null
+expects_from:
+  - ac_id: TQ-600a-12
+    contract: >-
+      The seed-directory option on the private-copy route, and the completeness check
+      the seeded copy must satisfy.
+test_spec:
+  - name: test_tq600a_12_i_an_absent_seed_directory_raises_and_names_the_path
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: unit
+    angle: failure
+    description: >-
+      Point the route at a path that does not exist. SharedReferenceLayoutError, with
+      the path in the message, and no build subprocess started.
+  - name: test_tq600a_12_i_a_seed_without_the_completeness_record_raises
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: unit
+    angle: failure
+    description: >-
+      Take a real finished layout, remove the build manifest from the copy, point the
+      route at it. Raises, and the message says the completeness record was the
+      missing thing.
+  - name: test_tq600a_12_i_a_seed_from_a_different_configuration_raises
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: integration
+    angle: failure
+    description: >-
+      A complete seed whose recorded configuration fingerprint differs from the one
+      this run would use. Raises, and the message names the mismatch. THIS IS THE
+      DESCRIPTOR THAT CANNOT BE DROPPED: it is the only one covering a seed that
+      passes every structural check and is still wrong.
+  - name: test_tq600a_12_i_a_sound_seed_is_accepted_by_all_three_checks
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: >-
+      The paired control. A real finished layout used as a seed passes all three and
+      yields a usable private root. Without this, three checks that refuse everything
+      would satisfy the record.
+  - name: test_tq600a_12_i_no_build_subprocess_runs_on_any_refusal
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: integration
+    angle: boundary
+    description: >-
+      The execution log gains no entry on any of the three refusal paths. NAMED
+      MUTATION: replace a raise with a fallback to the build route; this test must go
+      RED, because the fallback is the natural defensive thing to write and it is
+      precisely what the third clause forbids.
+test_rationale: |
+  Serving a mismatched tree silently is the only outcome worse than the current
+  slowness, so the controls are arranged around the mismatch that is hardest to see
+  rather than the one that is easiest to construct.
+
+  Three separate descriptors exist because a single combined predicate is almost
+  always implemented as an existence check and extended later, if ever. The
+  configuration-mismatch descriptor is the load-bearing one: it is the condition
+  under which the seeded tree is structurally perfect and semantically wrong, and it
+  is the condition the prior analysis identified as the copy route's real hazard.
+
+  The sound-seed control is there because five red-path descriptors with no green
+  path are satisfied by a route that refuses every seed, which would be a correct
+  reading of the clauses and a complete failure of the feature.
+origin_agent: BrainCandy
+created: 2026-10-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: internal
+notes: |
+  This is the guard that makes the seed route defensible at all. The objection to
+  seeding — "you are handing the test a layout the harness made rather than one a
+  build produced" — is answered by the seed being byte-equivalent to a built layout.
+  That answer is only worth anything if a seed that is NOT byte-equivalent is refused
+  rather than used.

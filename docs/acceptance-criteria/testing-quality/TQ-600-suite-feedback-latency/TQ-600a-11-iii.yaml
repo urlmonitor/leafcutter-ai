@@ -1,0 +1,141 @@
+id: TQ-600a-11-iii
+components:
+  - testing_quality
+  - ac_store
+title: "The agreement check is shown to disagree when the two parsers really differ"
+component: testing-quality
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given the record-by-record comparison of TQ-600a-11-ii, which over the real store
+    finds no disagreement — a result that on its own is indistinguishable from a
+    comparison that compares nothing,
+  And an input constructed so the two parsers genuinely resolve it differently: a
+    mapping with a duplicate key whose two values differ is the cheapest instance,
+    and any input for which the two are OBSERVED to yield unequal objects is
+    acceptable in its place,
+  When that input is included in the compared set,
+  Then the comparison reports a disagreement, exits non-zero, and names the input,
+  And it names the field, or the path within the parsed object, at which the two
+    results differ, together with both values,
+  And removing that one input returns the comparison to a clean result, so the
+    non-zero outcome is attributable to the input rather than to the harness,
+  And the demonstration is itself part of the suite, so a later change that makes
+    the comparison vacuous turns a test red instead of turning a report quiet,
+  And the construction of the divergent input is verified by observation at
+    implementation time rather than taken from this record: if the chosen input turns
+    out to produce equal objects under the installed library, a different input is
+    found, and the one actually used is named in the test.
+depends_on:
+  - TQ-600a-11-ii
+doc_links:
+  - path: CLAUDE.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      Three documented precedents in this file are the same defect — a check that
+      examined nothing looking like a check that found nothing: the
+      feedback_categories.yaml path, the AC validator's bare-directory glob, and the
+      merge audit against a stale ref. This record is the standing answer for the
+      fourth candidate.
+  - path: docs/acceptance-criteria/testing-quality/TQ-500-checks-that-can-fail/TQ-500.yaml
+    relationship: describes
+    status: exists
+    relevance: >-
+      The sibling goal this mirrors. TQ-500 governs proof strength generally; this
+      applies the same discipline to one specific guard.
+declared_files:
+  - path: unit_tests/ac_store/test_tq_600a_11_iii.py
+    state: to_be_created
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - >-
+    OBSERVE THE DIVERGENCE BEFORE RELYING ON IT. Duplicate keys are the suggested
+    instance because they are cheap and historically divergent, but the two parsers
+    may agree on them under the installed PyYAML. Run both parsers over the candidate
+    FIRST; if they agree, move on to a timestamp scalar, then an ambiguous numeric
+    form, then a merge key. Hardcoding a candidate that happens to agree produces a
+    can-fail test that cannot fail, which is the exact defect this record exists to
+    prevent, one level up.
+  - >-
+    THE DIVERGENT INPUT NEVER TOUCHES docs/acceptance-criteria/. Keep it in the
+    test's own fixture space and inject it into the compared set. A duplicate-key
+    record placed in the real store would trip the AC schema hooks and would be
+    deleted by the first person who tripped over it, silently disarming this test.
+  - >-
+    ASSERT ON THE EXIT STATUS AND ON THE MESSAGE. "Exits non-zero" alone is satisfied
+    by a crash. Assert the message names the input and both differing values, so a
+    comparison that falls over for an unrelated reason is not mistaken for one that
+    detected a divergence.
+  - >-
+    THE PAIRED CLEAN RUN IS NOT OPTIONAL. Run the comparison once with the divergent
+    input and once without, in the same test. Only the pair shows the outcome is
+    caused by the input. A single red run is also what a broken harness looks like.
+delivers_to: null
+expects_from:
+  - ac_id: TQ-600a-11-ii
+    contract: >-
+      The record-by-record comparison, including a way to inject one additional input
+      into its compared set. If the comparison only ever enumerates the real store,
+      it cannot be fed a divergent input and this record is unbuildable — so the
+      injection seam is part of what TQ-600a-11-ii must deliver.
+test_spec:
+  - name: test_tq600a_11_iii_a_genuinely_divergent_input_makes_the_comparison_fail
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: failure
+    description: >-
+      With the divergent input in the compared set, the comparison exits non-zero,
+      names the input, names the differing path, and prints both values.
+  - name: test_tq600a_11_iii_the_same_comparison_without_that_input_is_clean
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: >-
+      The paired control. Same comparison, same store, input removed, clean result
+      and exit zero. Together with the descriptor above this shows the red is
+      attributable to the input.
+  - name: test_tq600a_11_iii_the_chosen_input_is_observed_to_diverge_under_the_installed_library
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    angle: boundary
+    description: >-
+      Parse the chosen input directly with both parsers and assert the two objects
+      are UNEQUAL. This is the guard on the guard: if a library upgrade makes the two
+      agree on this input, this descriptor goes red and names the problem, instead of
+      the can-fail test quietly becoming a can-not-fail test.
+test_rationale: |
+  An equivalence check over 4,635 records that reports no disagreement is the most
+  reassuring possible output and the least informative one, because it is what both
+  a working check and a check over an empty set produce. This repository has three
+  documented instances of exactly that confusion, all recorded in its own CLAUDE.md.
+
+  The third descriptor is the one that is easy to leave out and is the reason this
+  record is worth its own file. A can-fail demonstration built on an input that the
+  installed library resolves identically under both parsers is green forever and
+  proves nothing — and it would be green on the day it was written, so nobody would
+  look again. Asserting the inputs' divergence directly means a library upgrade that
+  removes the divergence reports itself.
+origin_agent: BrainCandy
+created: 2026-10-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: internal
+notes: |
+  Scope boundary worth stating because it is tempting to widen: this record does NOT
+  require the two parsers to be made to agree on the divergent input. It requires the
+  comparison to NOTICE. Whether a given divergence matters to this store is a
+  question TQ-600a-11-ii answers over the real population; this record only
+  establishes that the instrument has a needle.

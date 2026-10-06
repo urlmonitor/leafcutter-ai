@@ -88,6 +88,36 @@ amended_by:
       undeclared-test safety net toward supersession at the same moment.
     by: business-analyst
     at: 2026-09-28
+  - reason: >-
+      child_limit_override raised 8 -> 12 to admit TQ-600a-11 and TQ-600a-12, and to
+      leave room for TQ-600a-9 and TQ-600a-10, which were authored on a separate
+      branch and are not yet reachable from main (that branch raises the override to
+      10 on its own; the correct resolution of the resulting conflict is 12, not
+      either side alone). WHAT THE OVERRIDE ADMITS: two further behavioural children,
+      from two independently measured suite-speed levers that share no code and no
+      ordering. TQ-600a-12 is squarely this L1's subject: the fixture that exists to
+      produce the deployed layout once currently produces it about 23 times to run
+      its own 27 tests, because the run identity it caches is per operating-system
+      process and every one of those tests starts a child session in a new process.
+      Fixing it is worth about 950 s and needs no migration to land first. TQ-600a-11
+      is the imperfect fit and is recorded as such in its own notes: its subject is
+      the YAML parser, where a store sweep costs 24.68 s with the pure-Python safe
+      parser and 1.86 s with the libyaml-backed one already present in the same
+      installed library. WHY REDISTRIBUTING WOULD BE WORSE, FOR a-12: separating the
+      fixture's own cost from the fixture would put the single largest consumer of
+      build subprocesses in the suite under a different L1 from the mechanism that
+      exists to remove build subprocesses, and TQ-600a-12-iv's cost bound is a
+      precondition of TQ-600a-8's migration, which lives here. WHY a-11 IS HERE ANYWAY:
+      this L1's criteria name SHARING as the mechanism, and a parse cannot be shared
+      across processes, so a-11 is a cheaper-work lever rather than a shared-work one.
+      It is filed here because TQ-600 is where suite cost lives and the work is wanted
+      now; its natural home is a fourth L1 under TQ-600, which only the product owner
+      may author. REMOVE THIS OVERRIDE, or reduce it, when a PO-owned split rebalances
+      the TQ-600 tree — and at that split, re-parent TQ-600a-11 and its three children
+      onto the new L1, which is a two-field change (a-11's depends_on and the two
+      parents' covered_by).
+    by: business-analyst
+    at: 2026-10-05
 superseded_by: null
 covered_by:
   - TQ-600a-1
@@ -98,8 +128,10 @@ covered_by:
   - TQ-600a-6
   - TQ-600a-7
   - TQ-600a-8
+  - TQ-600a-11
+  - TQ-600a-12
 implemented_by: []
-child_limit_override: 8
+child_limit_override: 12
 change_target: pipeline
 risk_surface: internal
 documentation_triggers:
