@@ -1,0 +1,472 @@
+{
+  "case_id": "N08",
+  "question": "Do we already specify what happens when research lacks required inputs? Show the relevant criteria.",
+  "origin": [
+    "RS-01",
+    "RS-07",
+    "RS-18",
+    "BA-02"
+  ],
+  "human_gold": "Find canonical relevant criteria without demanding a target ID. No invented canonical identifier. Relevant ADRs or schemas may supplement but cannot replace criteria. Claiming no such specification later requires coverage proof.",
+  "result": {
+    "schema_version": "1.0",
+    "original_question": "Do we already specify what happens when research lacks required inputs? Show the relevant criteria.",
+    "source_scope": {
+      "repository": "leafcutter",
+      "source_revision": "planning-probe-only",
+      "read_roots": [
+        "docs",
+        "kernel",
+        "knowledge",
+        "integrations"
+      ],
+      "allow_retrieval": false
+    },
+    "selections": {
+      "entity_types": [
+        "ac"
+      ],
+      "target_ids": [],
+      "required_fields": [
+        "criteria",
+        "content",
+        "provenance"
+      ],
+      "document_types": [
+        "ac_yaml"
+      ],
+      "relationships": []
+    },
+    "uncertain": {
+      "entity_types": [
+        "source_file",
+        "test",
+        "adr",
+        "schema",
+        "component"
+      ],
+      "target_ids": [],
+      "required_fields": [
+        "test_spec",
+        "work_status",
+        "status",
+        "level",
+        "parent",
+        "covered_by"
+      ],
+      "document_types": [
+        "source_code",
+        "adr",
+        "schema"
+      ],
+      "relationships": [
+        "parent_direct",
+        "children_direct",
+        "linked_tests"
+      ]
+    },
+    "rejected": {
+      "entity_types": [
+        "report"
+      ],
+      "target_ids": [],
+      "required_fields": [
+        "mapping",
+        "compatibility"
+      ],
+      "document_types": [
+        "test_source",
+        "execution_report"
+      ],
+      "relationships": [
+        "all_descendants",
+        "incoming_dependencies_direct"
+      ]
+    },
+    "detail_mode": "fields",
+    "completeness": "unknown",
+    "hierarchy_scope": "unknown",
+    "scope_resolution": "discovery_needed",
+    "unresolved": [
+      "completeness"
+    ],
+    "status": "needs_resolution",
+    "response": {
+      "schema_version": "1.0",
+      "model_id": "jev-1.13.0",
+      "request_id": "req_01a100c49120739bafca01ba6641c274",
+      "answers": {
+        "entity_types.ac": {
+          "schema_version": "1.0",
+          "kind": "noul",
+          "question_id": "entity_types.ac",
+          "probability": 0.89,
+          "confidence": null
+        },
+        "entity_types.source_file": {
+          "schema_version": "1.0",
+          "kind": "noul",
+          "question_id": "entity_types.source_file",
+          "probability": 0.55,
+          "confidence": null
+        },
+        "entity_types.test": {
+          "schema_version": "1.0",
+          "kind": "noul",
+          "question_id": "entity_types.test",
+          "probability": 0.32,
+          "confidence": null
+        },
+        "entity_types.adr": {
+          "schema_version": "1.0",
+          "kind": "noul",
+          "question_id": "entity_types.adr",
+          "probability": 0.41,
+          "confidence": null
+        },
+        "entity_types.schema": {
+          "schema_version": "1.0",
+          "kind": "noul",
+          "question_id": "entity_types.schema",
+          "probability": 0.59,
+          "confidence": null
+        },
+        "entity_types.report": {
+          "schema_version": "1.0",
+          "kind": "noul",
+          "question_id": "entity_types.report",
+          "probability": 0.14,
+          "confidence": null
+        },
+        "entity_types.component": {
+          "schema_version": "1.0",
+          "kind": "noul",
+          "question_id": "entity_types.component",
+          "probability": 0.32,
+          "confidence": null
+        },
+        "required_fields.criteria": {
+          "schema_version": "1.0",
+          "kind": "noul",
+          "question_id": "required_fields.criteria",
+          "probability": 0.85,
+          "confidence": null
+        },
+        "required_fields.test_spec": {
+          "schema_version": "1.0",
+          "kind": "noul",
+          "question_id": "required_fields.test_spec",
+          "probability": 0.55,
+          "confidence": null
+        },
+        "required_fields.work_status": {
+          "schema_version": "1.0",
+          "kind": "noul",
+          "question_id": "required_fields.work_status",
+          "probability": 0.69,
+          "confidence": null
+        },
+        "required_fields.status": {
+          "schema_version": "1.0",
+          "kind": "noul",
+          "question_id": "required_fields.status",
+          "probability": 0.57,
+          "confidence": null
+        },
+        "required_fields.level": {
+          "schema_version": "1.0",
+          "kind": "noul",
+          "question_id": "required_fields.level",
+          "probability": 0.54,
+          "confidence": null
+        },
+        "required_fields.parent": {
+          "schema_version": "1.0",
+          "kind": "noul",
+          "question_id": "required_fields.parent",
+          "probability": 0.49,
+          "confidence": null
+        },
+        "required_fields.covered_by": {
+          "schema_version": "1.0",
+          "kind": "noul",
+          "question_id": "required_fields.covered_by",
+          "probability": 0.58,
+          "confidence": null
+        },
+        "required_fields.content": {
+          "schema_version": "1.0",
+          "kind": "noul",
+          "question_id": "required_fields.content",
+          "probability": 0.81,
+          "confidence": null
+        },
+        "required_fields.provenance": {
+          "schema_version": "1.0",
+          "kind": "noul",
+          "question_id": "required_fields.provenance",
+          "probability": 0.78,
+          "confidence": null
+        },
+        "required_fields.mapping": {
+          "schema_version": "1.0",
+          "kind": "noul",
+          "question_id": "required_fields.mapping",
+          "probability": 0.23,
+          "confidence": null
+        },
+        "required_fields.compatibility": {
+          "schema_version": "1.0",
+          "kind": "noul",
+          "question_id": "required_fields.compatibility",
+          "probability": 0.22,
+          "confidence": null
+        },
+        "document_types.ac_yaml": {
+          "schema_version": "1.0",
+          "kind": "noul",
+          "question_id": "document_types.ac_yaml",
+          "probability": 0.81,
+          "confidence": null
+        },
+        "document_types.source_code": {
+          "schema_version": "1.0",
+          "kind": "noul",
+          "question_id": "document_types.source_code",
+          "probability": 0.39,
+          "confidence": null
+        },
+        "document_types.test_source": {
+          "schema_version": "1.0",
+          "kind": "noul",
+          "question_id": "document_types.test_source",
+          "probability": 0.26,
+          "confidence": null
+        },
+        "document_types.adr": {
+          "schema_version": "1.0",
+          "kind": "noul",
+          "question_id": "document_types.adr",
+          "probability": 0.31,
+          "confidence": null
+        },
+        "document_types.schema": {
+          "schema_version": "1.0",
+          "kind": "noul",
+          "question_id": "document_types.schema",
+          "probability": 0.4,
+          "confidence": null
+        },
+        "document_types.execution_report": {
+          "schema_version": "1.0",
+          "kind": "noul",
+          "question_id": "document_types.execution_report",
+          "probability": 0.1,
+          "confidence": null
+        },
+        "relationships.parent_direct": {
+          "schema_version": "1.0",
+          "kind": "noul",
+          "question_id": "relationships.parent_direct",
+          "probability": 0.34,
+          "confidence": null
+        },
+        "relationships.children_direct": {
+          "schema_version": "1.0",
+          "kind": "noul",
+          "question_id": "relationships.children_direct",
+          "probability": 0.32,
+          "confidence": null
+        },
+        "relationships.all_descendants": {
+          "schema_version": "1.0",
+          "kind": "noul",
+          "question_id": "relationships.all_descendants",
+          "probability": 0.28,
+          "confidence": null
+        },
+        "relationships.incoming_dependencies_direct": {
+          "schema_version": "1.0",
+          "kind": "noul",
+          "question_id": "relationships.incoming_dependencies_direct",
+          "probability": 0.23,
+          "confidence": null
+        },
+        "relationships.linked_tests": {
+          "schema_version": "1.0",
+          "kind": "noul",
+          "question_id": "relationships.linked_tests",
+          "probability": 0.39,
+          "confidence": null
+        },
+        "detail_mode": {
+          "schema_version": "1.0",
+          "kind": "choice",
+          "question_id": "detail_mode",
+          "choice": "fields",
+          "probabilities": {
+            "full_document": 0.01,
+            "unknown": 0.0,
+            "fields": 0.95,
+            "bounded_context": 0.04
+          },
+          "confidence": 0.93
+        },
+        "completeness": {
+          "schema_version": "1.0",
+          "kind": "choice",
+          "question_id": "completeness",
+          "choice": "examples",
+          "probabilities": {
+            "exhaustive_count": 0.0,
+            "examples": 0.52,
+            "selected_entities": 0.02,
+            "exhaustive_set": 0.32,
+            "unknown": 0.04,
+            "single_entity": 0.1
+          },
+          "confidence": 0.42
+        },
+        "hierarchy_scope": {
+          "schema_version": "1.0",
+          "kind": "choice",
+          "question_id": "hierarchy_scope",
+          "choice": "not_applicable",
+          "probabilities": {
+            "exclude_parents": 0.01,
+            "exclude_root": 0.01,
+            "not_applicable": 0.68,
+            "unknown": 0.21,
+            "include_root": 0.09
+          },
+          "confidence": 0.6
+        },
+        "scope_resolution": {
+          "schema_version": "1.0",
+          "kind": "choice",
+          "question_id": "scope_resolution",
+          "choice": "discovery_needed",
+          "probabilities": {
+            "sufficient": 0.08,
+            "user_choice_missing": 0.0,
+            "unknown": 0.01,
+            "discovery_needed": 0.91
+          },
+          "confidence": 0.88
+        },
+        "needs_outside_catalog": {
+          "schema_version": "1.0",
+          "kind": "noul",
+          "question_id": "needs_outside_catalog",
+          "probability": 0.2,
+          "confidence": null
+        }
+      },
+      "usage": {
+        "schema_version": "1.0",
+        "provider": "jev",
+        "model_id": "jev-1.13.0",
+        "input_tokens": 2710,
+        "output_tokens": 798,
+        "duration_ms": 293,
+        "cost_usd": null,
+        "cost_provenance": "unavailable",
+        "calls": 1
+      },
+      "latency_ms": 293,
+      "input_fingerprint": "f238398a407586a672385ac9aa81775f1e26a3d0eb85e289ebf6d43772b49578",
+      "adapter_version": "http-direct/1"
+    },
+    "provider_calls": 1,
+    "max_relation_depth": 3,
+    "limitations": [
+      "Needs interpretation only: no retrieval, availability check, final answer or fulfillment claim.",
+      "Supplied context/known IDs are unverified candidates, not authority or permissions.",
+      "The execution depth bound does not narrow semantic all-descendant requirements."
+    ]
+  },
+  "error": null,
+  "grade": {
+    "passed": false,
+    "checks": [
+      {
+        "name": "one_actual_http_request",
+        "passed": true,
+        "actual": 1,
+        "expected": 1
+      },
+      {
+        "name": "original_question_unchanged",
+        "passed": true,
+        "actual": "Do we already specify what happens when research lacks required inputs? Show the relevant criteria.",
+        "expected": "Do we already specify what happens when research lacks required inputs? Show the relevant criteria."
+      },
+      {
+        "name": "include.entity_types",
+        "passed": true,
+        "actual": [
+          "ac"
+        ],
+        "expected": [
+          "ac"
+        ]
+      },
+      {
+        "name": "include.document_types",
+        "passed": true,
+        "actual": [
+          "ac_yaml"
+        ],
+        "expected": [
+          "ac_yaml"
+        ]
+      },
+      {
+        "name": "completeness",
+        "passed": false,
+        "actual": "unknown",
+        "expected": [
+          "examples",
+          "exhaustive_set"
+        ]
+      },
+      {
+        "name": "hierarchy_scope",
+        "passed": false,
+        "actual": "unknown",
+        "expected": [
+          "not_applicable"
+        ]
+      },
+      {
+        "name": "status",
+        "passed": false,
+        "actual": "needs_resolution",
+        "expected": [
+          "decided"
+        ]
+      },
+      {
+        "name": "required_fields_when_projecting",
+        "passed": true,
+        "actual": [
+          "criteria",
+          "content",
+          "provenance"
+        ],
+        "expected": [
+          "criteria"
+        ]
+      },
+      {
+        "name": "no_unoffered_id",
+        "passed": true,
+        "actual": [],
+        "expected": "literal or independently supplied observed candidate"
+      }
+    ]
+  },
+  "physical_http_calls": 1,
+  "wire_questions": 34,
+  "elapsed_seconds": 0.524
+}

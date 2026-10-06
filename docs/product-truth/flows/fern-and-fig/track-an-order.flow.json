@@ -12,7 +12,7 @@
   "status": "active",
   "readiness": "approved",
   "superseded_by": null,
-  "version": 2,
+  "version": 3,
   "tags": [
     "orders",
     "post-purchase"
@@ -26,7 +26,7 @@
     {
       "id": "orders",
       "label": "My orders",
-      "human": "The customer sees a list of their past orders with number, item, total and status.",
+      "human": "The customer sees a list of their past orders with number, item, total and status.\n\nThis is the sample shop design. JSON examples describe mock records read or changed by the scene; they are not observed payment, authentication or shipping calls. [Canonical sample data](docs/product-truth/mock-data/fern-and-fig/catalog.mock.json). The example is one member of the filtered paid/placed-order list; pending carts do not contribute to Customer.orders.\n\nContract fields and examples (generated)\nConsumes:\n  ILLUSTRATIVE DESIGN: Mock-record shape transcribed from docs/product-truth/mock-data/fern-and-fig/catalog.mock.json; complete records and illustrative before/after states, not implemented service DTOs. Scalar/array containers shown are limited to the declared record boundary.\n  Customer/id: string (required)\n  Customer/name: string (required)\n  Customer/email: string (required)\n  Customer/orders: integer (required)\n  Schema: [Customer](docs/product-truth/schemas/fern-and-fig-customer.schema.json)\n  ILLUSTRATIVE DESIGN: Mock-record shape transcribed from docs/product-truth/mock-data/fern-and-fig/catalog.mock.json; complete records and illustrative before/after states, not implemented service DTOs. Scalar/array containers shown are limited to the declared record boundary.\n  Order/id: string (required)\n  Order/customer: string (required)\n  Order/item: string (required)\n  Order/qty: integer (required)\n  Order/total: number (required)\n  Order/currency: string (required)\n  Order/status: string (required)\n  Order/stage: string (required)\n  Order/carrier: null|string (required)\n  Order/tracking_number: null|string (required)\n  Schema: [Order](docs/product-truth/schemas/fern-and-fig-order.schema.json)\nProduces:\n  No checked JSON binding documented in this direction.\n\nInput: Customer mock record; stored sample, not live service data — Customer; observed; complete payload:\n{\n  \"id\": \"alex-green\",\n  \"name\": \"Alex Green\",\n  \"email\": \"alex@fernfig.shop\",\n  \"orders\": 3\n}\nReceipt: [docs/product-truth/mock-data/fern-and-fig/catalog.mock.json](docs/product-truth/mock-data/fern-and-fig/catalog.mock.json)/entities/Customer/records/0\n\nInput: Order mock record; stored sample, not live service data — Order; observed; complete payload:\n{\n  \"id\": \"1043\",\n  \"customer\": \"alex-green\",\n  \"item\": \"fiddle-leaf-fig\",\n  \"qty\": 1,\n  \"total\": 59,\n  \"currency\": \"EUR\",\n  \"status\": \"paid\",\n  \"stage\": \"in-transit\",\n  \"carrier\": \"DHL\",\n  \"tracking_number\": \"JVGL07431NLTRANSIT\"\n}\nReceipt: [docs/product-truth/mock-data/fern-and-fig/catalog.mock.json](docs/product-truth/mock-data/fern-and-fig/catalog.mock.json)/entities/Order/records/1",
       "order": 1,
       "screen": "orders-list",
       "reads": [
@@ -37,12 +37,184 @@
         "UXP-220a"
       ],
       "impl_status": "done",
-      "impl_asof": "2026-07-20"
+      "impl_asof": "2026-07-20",
+      "io_contracts": {
+        "consumes": [
+          {
+            "contract": "Customer",
+            "fields": [
+              {
+                "path": "/id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/name",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/email",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/orders",
+                "types": [
+                  "integer"
+                ],
+                "required": true
+              }
+            ]
+          },
+          {
+            "contract": "Order",
+            "fields": [
+              {
+                "path": "/id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/customer",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/item",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/qty",
+                "types": [
+                  "integer"
+                ],
+                "required": true
+              },
+              {
+                "path": "/total",
+                "types": [
+                  "number"
+                ],
+                "required": true
+              },
+              {
+                "path": "/currency",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/status",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/stage",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/carrier",
+                "types": [
+                  "null",
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/tracking_number",
+                "types": [
+                  "null",
+                  "string"
+                ],
+                "required": true
+              }
+            ]
+          }
+        ],
+        "produces": [],
+        "examples": [
+          {
+            "contract": "Customer",
+            "mode": "full",
+            "origin": "observed",
+            "label": "Input: Customer mock record; stored sample, not live service data",
+            "value": {
+              "id": "alex-green",
+              "name": "Alex Green",
+              "email": "alex@fernfig.shop",
+              "orders": 3
+            },
+            "source": {
+              "path": "docs/product-truth/mock-data/fern-and-fig/catalog.mock.json",
+              "pointer": "/entities/Customer/records/0"
+            }
+          },
+          {
+            "contract": "Order",
+            "mode": "full",
+            "origin": "observed",
+            "label": "Input: Order mock record; stored sample, not live service data",
+            "value": {
+              "id": "1043",
+              "customer": "alex-green",
+              "item": "fiddle-leaf-fig",
+              "qty": 1,
+              "total": 59,
+              "currency": "EUR",
+              "status": "paid",
+              "stage": "in-transit",
+              "carrier": "DHL",
+              "tracking_number": "JVGL07431NLTRANSIT"
+            },
+            "source": {
+              "path": "docs/product-truth/mock-data/fern-and-fig/catalog.mock.json",
+              "pointer": "/entities/Order/records/1"
+            }
+          }
+        ]
+      },
+      "consumes": [
+        "Customer/id: string (required)",
+        "Customer/name: string (required)",
+        "Customer/email: string (required)",
+        "Customer/orders: integer (required)",
+        "Order/id: string (required)",
+        "Order/customer: string (required)",
+        "Order/item: string (required)",
+        "Order/qty: integer (required)",
+        "Order/total: number (required)",
+        "Order/currency: string (required)",
+        "Order/status: string (required)",
+        "Order/stage: string (required)",
+        "Order/carrier: null|string (required)",
+        "Order/tracking_number: null|string (required)"
+      ],
+      "produces": []
     },
     {
       "id": "orderDetail",
       "label": "Order detail",
-      "human": "The customer opens one order to see item, quantity, total, payment status and date.",
+      "human": "The customer opens one order to see item, quantity, total, payment status and date.\n\nThis is the sample shop design. JSON examples describe mock records read or changed by the scene; they are not observed payment, authentication or shipping calls. [Canonical sample data](docs/product-truth/mock-data/fern-and-fig/catalog.mock.json). The stored Order schema has no order-date field. This record projection therefore does not invent a date; a date-bearing design remains unspecified.\n\nContract fields and examples (generated)\nConsumes:\n  ILLUSTRATIVE DESIGN: Mock-record shape transcribed from docs/product-truth/mock-data/fern-and-fig/catalog.mock.json; complete records and illustrative before/after states, not implemented service DTOs. Scalar/array containers shown are limited to the declared record boundary.\n  Order/id: string (required)\n  Order/customer: string (required)\n  Order/item: string (required)\n  Order/qty: integer (required)\n  Order/total: number (required)\n  Order/currency: string (required)\n  Order/status: string (required)\n  Order/stage: string (required)\n  Order/carrier: null|string (required)\n  Order/tracking_number: null|string (required)\n  Schema: [Order](docs/product-truth/schemas/fern-and-fig-order.schema.json)\n  ILLUSTRATIVE DESIGN: Mock-record shape transcribed from docs/product-truth/mock-data/fern-and-fig/catalog.mock.json; complete records and illustrative before/after states, not implemented service DTOs. Scalar/array containers shown are limited to the declared record boundary.\n  Plant/id: string (required)\n  Plant/name: string (required)\n  Plant/price: number (required)\n  Plant/currency: string (required)\n  Plant/stock: integer (required)\n  Plant/status: string (required)\n  Schema: [Plant](docs/product-truth/schemas/fern-and-fig-plant.schema.json)\nProduces:\n  No checked JSON binding documented in this direction.\n\nInput: Order mock record; stored sample, not live service data — Order; observed; complete payload:\n{\n  \"id\": \"1043\",\n  \"customer\": \"alex-green\",\n  \"item\": \"fiddle-leaf-fig\",\n  \"qty\": 1,\n  \"total\": 59,\n  \"currency\": \"EUR\",\n  \"status\": \"paid\",\n  \"stage\": \"in-transit\",\n  \"carrier\": \"DHL\",\n  \"tracking_number\": \"JVGL07431NLTRANSIT\"\n}\nReceipt: [docs/product-truth/mock-data/fern-and-fig/catalog.mock.json](docs/product-truth/mock-data/fern-and-fig/catalog.mock.json)/entities/Order/records/1\n\nInput: Plant mock record; stored sample, not live service data — Plant; observed; complete payload:\n{\n  \"id\": \"fiddle-leaf-fig\",\n  \"name\": \"Fiddle-leaf Fig\",\n  \"price\": 59,\n  \"currency\": \"EUR\",\n  \"stock\": 3,\n  \"status\": \"low-stock\"\n}\nReceipt: [docs/product-truth/mock-data/fern-and-fig/catalog.mock.json](docs/product-truth/mock-data/fern-and-fig/catalog.mock.json)/entities/Plant/records/1",
       "order": 2,
       "screen": "order-detail",
       "reads": [
@@ -52,12 +224,202 @@
         "UXP-220b"
       ],
       "impl_status": "in_progress",
-      "impl_asof": "2026-07-20"
+      "impl_asof": "2026-07-20",
+      "io_contracts": {
+        "consumes": [
+          {
+            "contract": "Order",
+            "fields": [
+              {
+                "path": "/id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/customer",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/item",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/qty",
+                "types": [
+                  "integer"
+                ],
+                "required": true
+              },
+              {
+                "path": "/total",
+                "types": [
+                  "number"
+                ],
+                "required": true
+              },
+              {
+                "path": "/currency",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/status",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/stage",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/carrier",
+                "types": [
+                  "null",
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/tracking_number",
+                "types": [
+                  "null",
+                  "string"
+                ],
+                "required": true
+              }
+            ]
+          },
+          {
+            "contract": "Plant",
+            "fields": [
+              {
+                "path": "/id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/name",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/price",
+                "types": [
+                  "number"
+                ],
+                "required": true
+              },
+              {
+                "path": "/currency",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/stock",
+                "types": [
+                  "integer"
+                ],
+                "required": true
+              },
+              {
+                "path": "/status",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              }
+            ]
+          }
+        ],
+        "produces": [],
+        "examples": [
+          {
+            "contract": "Order",
+            "mode": "full",
+            "origin": "observed",
+            "label": "Input: Order mock record; stored sample, not live service data",
+            "value": {
+              "id": "1043",
+              "customer": "alex-green",
+              "item": "fiddle-leaf-fig",
+              "qty": 1,
+              "total": 59,
+              "currency": "EUR",
+              "status": "paid",
+              "stage": "in-transit",
+              "carrier": "DHL",
+              "tracking_number": "JVGL07431NLTRANSIT"
+            },
+            "source": {
+              "path": "docs/product-truth/mock-data/fern-and-fig/catalog.mock.json",
+              "pointer": "/entities/Order/records/1"
+            }
+          },
+          {
+            "contract": "Plant",
+            "mode": "full",
+            "origin": "observed",
+            "label": "Input: Plant mock record; stored sample, not live service data",
+            "value": {
+              "id": "fiddle-leaf-fig",
+              "name": "Fiddle-leaf Fig",
+              "price": 59,
+              "currency": "EUR",
+              "stock": 3,
+              "status": "low-stock"
+            },
+            "source": {
+              "path": "docs/product-truth/mock-data/fern-and-fig/catalog.mock.json",
+              "pointer": "/entities/Plant/records/1"
+            }
+          }
+        ]
+      },
+      "consumes": [
+        "Order/id: string (required)",
+        "Order/customer: string (required)",
+        "Order/item: string (required)",
+        "Order/qty: integer (required)",
+        "Order/total: number (required)",
+        "Order/currency: string (required)",
+        "Order/status: string (required)",
+        "Order/stage: string (required)",
+        "Order/carrier: null|string (required)",
+        "Order/tracking_number: null|string (required)",
+        "Plant/id: string (required)",
+        "Plant/name: string (required)",
+        "Plant/price: number (required)",
+        "Plant/currency: string (required)",
+        "Plant/stock: integer (required)",
+        "Plant/status: string (required)"
+      ],
+      "produces": []
     },
     {
       "id": "track",
       "label": "Track shipment",
-      "human": "The customer sees the current delivery stage for the order — the carrier, tracking number and where the parcel is (shipped / in transit / delivered).",
+      "human": "The customer sees the current delivery stage for the order — the carrier, tracking number and where the parcel is (shipped / in transit / delivered).\n\nThis is the sample shop design. JSON examples describe mock records read or changed by the scene; they are not observed payment, authentication or shipping calls. [Canonical sample data](docs/product-truth/mock-data/fern-and-fig/catalog.mock.json).\n\nContract fields and examples (generated)\nConsumes:\n  ILLUSTRATIVE DESIGN: Mock-record shape transcribed from docs/product-truth/mock-data/fern-and-fig/catalog.mock.json; complete records and illustrative before/after states, not implemented service DTOs. Scalar/array containers shown are limited to the declared record boundary.\n  Order/id: string (required)\n  Order/customer: string (required)\n  Order/item: string (required)\n  Order/qty: integer (required)\n  Order/total: number (required)\n  Order/currency: string (required)\n  Order/status: string (required)\n  Order/stage: string (required)\n  Order/carrier: null|string (required)\n  Order/tracking_number: null|string (required)\n  Schema: [Order](docs/product-truth/schemas/fern-and-fig-order.schema.json)\nProduces:\n  No checked JSON binding documented in this direction.\n\nInput: Order mock record; stored sample, not live service data — Order; observed; complete payload:\n{\n  \"id\": \"1043\",\n  \"customer\": \"alex-green\",\n  \"item\": \"fiddle-leaf-fig\",\n  \"qty\": 1,\n  \"total\": 59,\n  \"currency\": \"EUR\",\n  \"status\": \"paid\",\n  \"stage\": \"in-transit\",\n  \"carrier\": \"DHL\",\n  \"tracking_number\": \"JVGL07431NLTRANSIT\"\n}\nReceipt: [docs/product-truth/mock-data/fern-and-fig/catalog.mock.json](docs/product-truth/mock-data/fern-and-fig/catalog.mock.json)/entities/Order/records/1",
       "order": 3,
       "screen": "shipment-tracking",
       "reads": [
@@ -67,7 +429,126 @@
         "UXP-220c"
       ],
       "impl_status": "not_started",
-      "impl_asof": "2026-07-20"
+      "impl_asof": "2026-07-20",
+      "io_contracts": {
+        "consumes": [
+          {
+            "contract": "Order",
+            "fields": [
+              {
+                "path": "/id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/customer",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/item",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/qty",
+                "types": [
+                  "integer"
+                ],
+                "required": true
+              },
+              {
+                "path": "/total",
+                "types": [
+                  "number"
+                ],
+                "required": true
+              },
+              {
+                "path": "/currency",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/status",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/stage",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/carrier",
+                "types": [
+                  "null",
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/tracking_number",
+                "types": [
+                  "null",
+                  "string"
+                ],
+                "required": true
+              }
+            ]
+          }
+        ],
+        "produces": [],
+        "examples": [
+          {
+            "contract": "Order",
+            "mode": "full",
+            "origin": "observed",
+            "label": "Input: Order mock record; stored sample, not live service data",
+            "value": {
+              "id": "1043",
+              "customer": "alex-green",
+              "item": "fiddle-leaf-fig",
+              "qty": 1,
+              "total": 59,
+              "currency": "EUR",
+              "status": "paid",
+              "stage": "in-transit",
+              "carrier": "DHL",
+              "tracking_number": "JVGL07431NLTRANSIT"
+            },
+            "source": {
+              "path": "docs/product-truth/mock-data/fern-and-fig/catalog.mock.json",
+              "pointer": "/entities/Order/records/1"
+            }
+          }
+        ]
+      },
+      "consumes": [
+        "Order/id: string (required)",
+        "Order/customer: string (required)",
+        "Order/item: string (required)",
+        "Order/qty: integer (required)",
+        "Order/total: number (required)",
+        "Order/currency: string (required)",
+        "Order/status: string (required)",
+        "Order/stage: string (required)",
+        "Order/carrier: null|string (required)",
+        "Order/tracking_number: null|string (required)"
+      ],
+      "produces": []
     }
   ],
   "branches": [
@@ -76,7 +557,7 @@
       "from": "orders",
       "condition": "the customer has no orders",
       "label": "No orders yet",
-      "human": "A customer who has never ordered opens 'My orders' and sees a friendly empty state inviting them to browse the catalogue, rather than an empty table.",
+      "human": "A customer who has never ordered opens 'My orders' and sees a friendly empty state inviting them to browse the catalogue, rather than an empty table.\n\nThis is the sample shop design. JSON examples describe mock records read or changed by the scene; they are not observed payment, authentication or shipping calls. [Canonical sample data](docs/product-truth/mock-data/fern-and-fig/catalog.mock.json).\n\nContract fields and examples (generated)\nConsumes:\n  ILLUSTRATIVE DESIGN: Mock-record shape transcribed from docs/product-truth/mock-data/fern-and-fig/catalog.mock.json; complete records and illustrative before/after states, not implemented service DTOs. Scalar/array containers shown are limited to the declared record boundary.\n  Customer/id: string (required)\n  Customer/name: string (required)\n  Customer/email: string (required)\n  Customer/orders: integer (required)\n  Schema: [Customer](docs/product-truth/schemas/fern-and-fig-customer.schema.json)\nProduces:\n  No checked JSON binding documented in this direction.\n\nInput: Customer mock record; stored sample, not live service data — Customer; observed; complete payload:\n{\n  \"id\": \"sam-rivera\",\n  \"name\": \"Sam Rivera\",\n  \"email\": \"sam@fernfig.shop\",\n  \"orders\": 0\n}\nReceipt: [docs/product-truth/mock-data/fern-and-fig/catalog.mock.json](docs/product-truth/mock-data/fern-and-fig/catalog.mock.json)/entities/Customer/records/1",
       "screen": "orders-list",
       "reads": [
         "Customer",
@@ -86,14 +567,77 @@
         "UXP-220a-2"
       ],
       "impl_status": "not_started",
-      "impl_asof": "2026-07-20"
+      "impl_asof": "2026-07-20",
+      "io_contracts": {
+        "consumes": [
+          {
+            "contract": "Customer",
+            "fields": [
+              {
+                "path": "/id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/name",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/email",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/orders",
+                "types": [
+                  "integer"
+                ],
+                "required": true
+              }
+            ]
+          }
+        ],
+        "produces": [],
+        "examples": [
+          {
+            "contract": "Customer",
+            "mode": "full",
+            "origin": "observed",
+            "label": "Input: Customer mock record; stored sample, not live service data",
+            "value": {
+              "id": "sam-rivera",
+              "name": "Sam Rivera",
+              "email": "sam@fernfig.shop",
+              "orders": 0
+            },
+            "source": {
+              "path": "docs/product-truth/mock-data/fern-and-fig/catalog.mock.json",
+              "pointer": "/entities/Customer/records/1"
+            }
+          }
+        ]
+      },
+      "consumes": [
+        "Customer/id: string (required)",
+        "Customer/name: string (required)",
+        "Customer/email: string (required)",
+        "Customer/orders: integer (required)"
+      ],
+      "produces": []
     },
     {
       "id": "trackingUnavailable",
       "from": "track",
       "condition": "the order is paid but not yet dispatched (stage 'not-shipped', no tracking number)",
       "label": "Tracking not available yet",
-      "human": "The order has been paid but not yet handed to the carrier, so there is no tracking number: the customer sees a 'not shipped yet — tracking will appear once it's on its way' state instead of a fake delivery stage.",
+      "human": "The order has been paid but not yet handed to the carrier, so there is no tracking number: the customer sees a 'not shipped yet — tracking will appear once it's on its way' state instead of a fake delivery stage.\n\nThis is the sample shop design. JSON examples describe mock records read or changed by the scene; they are not observed payment, authentication or shipping calls. [Canonical sample data](docs/product-truth/mock-data/fern-and-fig/catalog.mock.json).\n\nContract fields and examples (generated)\nConsumes:\n  ILLUSTRATIVE DESIGN: Mock-record shape transcribed from docs/product-truth/mock-data/fern-and-fig/catalog.mock.json; complete records and illustrative before/after states, not implemented service DTOs. Scalar/array containers shown are limited to the declared record boundary.\n  Order/id: string (required)\n  Order/customer: string (required)\n  Order/item: string (required)\n  Order/qty: integer (required)\n  Order/total: number (required)\n  Order/currency: string (required)\n  Order/status: string (required)\n  Order/stage: string (required)\n  Order/carrier: null|string (required)\n  Order/tracking_number: null|string (required)\n  Schema: [Order](docs/product-truth/schemas/fern-and-fig-order.schema.json)\nProduces:\n  No checked JSON binding documented in this direction.\n\nInput: Order mock record; stored sample, not live service data — Order; observed; complete payload:\n{\n  \"id\": \"1044\",\n  \"customer\": \"alex-green\",\n  \"item\": \"golden-pothos\",\n  \"qty\": 2,\n  \"total\": 36,\n  \"currency\": \"EUR\",\n  \"status\": \"paid\",\n  \"stage\": \"not-shipped\",\n  \"carrier\": null,\n  \"tracking_number\": null\n}\nReceipt: [docs/product-truth/mock-data/fern-and-fig/catalog.mock.json](docs/product-truth/mock-data/fern-and-fig/catalog.mock.json)/entities/Order/records/2",
       "screen": "shipment-tracking",
       "reads": [
         "Order"
@@ -102,7 +646,126 @@
         "UXP-220c-2"
       ],
       "impl_status": "not_started",
-      "impl_asof": "2026-07-20"
+      "impl_asof": "2026-07-20",
+      "io_contracts": {
+        "consumes": [
+          {
+            "contract": "Order",
+            "fields": [
+              {
+                "path": "/id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/customer",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/item",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/qty",
+                "types": [
+                  "integer"
+                ],
+                "required": true
+              },
+              {
+                "path": "/total",
+                "types": [
+                  "number"
+                ],
+                "required": true
+              },
+              {
+                "path": "/currency",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/status",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/stage",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/carrier",
+                "types": [
+                  "null",
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/tracking_number",
+                "types": [
+                  "null",
+                  "string"
+                ],
+                "required": true
+              }
+            ]
+          }
+        ],
+        "produces": [],
+        "examples": [
+          {
+            "contract": "Order",
+            "mode": "full",
+            "origin": "observed",
+            "label": "Input: Order mock record; stored sample, not live service data",
+            "value": {
+              "id": "1044",
+              "customer": "alex-green",
+              "item": "golden-pothos",
+              "qty": 2,
+              "total": 36,
+              "currency": "EUR",
+              "status": "paid",
+              "stage": "not-shipped",
+              "carrier": null,
+              "tracking_number": null
+            },
+            "source": {
+              "path": "docs/product-truth/mock-data/fern-and-fig/catalog.mock.json",
+              "pointer": "/entities/Order/records/2"
+            }
+          }
+        ]
+      },
+      "consumes": [
+        "Order/id: string (required)",
+        "Order/customer: string (required)",
+        "Order/item: string (required)",
+        "Order/qty: integer (required)",
+        "Order/total: number (required)",
+        "Order/currency: string (required)",
+        "Order/status: string (required)",
+        "Order/stage: string (required)",
+        "Order/carrier: null|string (required)",
+        "Order/tracking_number: null|string (required)"
+      ],
+      "produces": []
     }
   ],
   "impl_summary": {
@@ -156,6 +819,29 @@
       "by": "BrainCandy (product-truth hardening pass)",
       "date": "2026-07-14",
       "note": "v2: added the no-orders empty-state branch and the tracking-unavailable (paid-but-not-dispatched) branch so the flow stops assuming every account has a shipped order. The track step now reads the Order shipment fields (carrier / tracking_number / stage) added to the catalog dataset in the same pass. Set realization=mock."
+    },
+    {
+      "action": "extended",
+      "by": "product-truth contract migration",
+      "date": "2026-10-03",
+      "note": "Document exact source-reviewed or illustrative inputs/outputs; preserve existing AC and lifecycle status. Generated index refresh follows the complete migration."
     }
-  ]
+  ],
+  "contract_definitions": {
+    "Customer": {
+      "schema": "docs/product-truth/schemas/fern-and-fig-customer.schema.json",
+      "authority": "illustrative_design",
+      "note": "Mock-record shape transcribed from docs/product-truth/mock-data/fern-and-fig/catalog.mock.json; complete records and illustrative before/after states, not implemented service DTOs. Scalar/array containers shown are limited to the declared record boundary."
+    },
+    "Order": {
+      "schema": "docs/product-truth/schemas/fern-and-fig-order.schema.json",
+      "authority": "illustrative_design",
+      "note": "Mock-record shape transcribed from docs/product-truth/mock-data/fern-and-fig/catalog.mock.json; complete records and illustrative before/after states, not implemented service DTOs. Scalar/array containers shown are limited to the declared record boundary."
+    },
+    "Plant": {
+      "schema": "docs/product-truth/schemas/fern-and-fig-plant.schema.json",
+      "authority": "illustrative_design",
+      "note": "Mock-record shape transcribed from docs/product-truth/mock-data/fern-and-fig/catalog.mock.json; complete records and illustrative before/after states, not implemented service DTOs. Scalar/array containers shown are limited to the declared record boundary."
+    }
+  }
 }

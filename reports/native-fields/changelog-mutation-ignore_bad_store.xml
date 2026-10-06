@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="4" skipped="0" tests="4" time="0.194" timestamp="2026-10-02T09:14:02.657498+00:00" hostname="BrainDesk"><testcase classname="tests.knowledge.test_native_changelog_entry" name="test_changelog_rejects_unsafe_or_invalid_store[../outside]" time="0.007"><failure message="Failed: DID NOT RAISE ValueError">tmp_path = WindowsPath('C:/Users/Hendrik/AppData/Local/Temp/pytest-of-Hendrik/pytest-3066/test_changelog_rejects_unsafe_0')
+setting = '../outside'
+
+    @pytest.mark.parametrize("setting", ["../outside", None, 12, ""])
+    def test_changelog_rejects_unsafe_or_invalid_store(tmp_path, setting):
+        # covers: KM-400a-3-i
+        # angle: failure
+        config = tmp_path / "templates/scripts/commit_guardian/commit_guardian.json"
+        config.parent.mkdir(parents=True)
+        config.write_text(json.dumps({"changelogs_dir": setting}), encoding="utf-8")
+&gt;       with pytest.raises(ValueError):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE ValueError
+
+tests\knowledge\test_native_changelog_entry.py:132: Failed</failure></testcase><testcase classname="tests.knowledge.test_native_changelog_entry" name="test_changelog_rejects_unsafe_or_invalid_store[None]" time="0.003"><failure message="Failed: DID NOT RAISE ValueError">tmp_path = WindowsPath('C:/Users/Hendrik/AppData/Local/Temp/pytest-of-Hendrik/pytest-3066/test_changelog_rejects_unsafe_1')
+setting = None
+
+    @pytest.mark.parametrize("setting", ["../outside", None, 12, ""])
+    def test_changelog_rejects_unsafe_or_invalid_store(tmp_path, setting):
+        # covers: KM-400a-3-i
+        # angle: failure
+        config = tmp_path / "templates/scripts/commit_guardian/commit_guardian.json"
+        config.parent.mkdir(parents=True)
+        config.write_text(json.dumps({"changelogs_dir": setting}), encoding="utf-8")
+&gt;       with pytest.raises(ValueError):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE ValueError
+
+tests\knowledge\test_native_changelog_entry.py:132: Failed</failure></testcase><testcase classname="tests.knowledge.test_native_changelog_entry" name="test_changelog_rejects_unsafe_or_invalid_store[12]" time="0.003"><failure message="Failed: DID NOT RAISE ValueError">tmp_path = WindowsPath('C:/Users/Hendrik/AppData/Local/Temp/pytest-of-Hendrik/pytest-3066/test_changelog_rejects_unsafe_2')
+setting = 12
+
+    @pytest.mark.parametrize("setting", ["../outside", None, 12, ""])
+    def test_changelog_rejects_unsafe_or_invalid_store(tmp_path, setting):
+        # covers: KM-400a-3-i
+        # angle: failure
+        config = tmp_path / "templates/scripts/commit_guardian/commit_guardian.json"
+        config.parent.mkdir(parents=True)
+        config.write_text(json.dumps({"changelogs_dir": setting}), encoding="utf-8")
+&gt;       with pytest.raises(ValueError):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE ValueError
+
+tests\knowledge\test_native_changelog_entry.py:132: Failed</failure></testcase><testcase classname="tests.knowledge.test_native_changelog_entry" name="test_changelog_rejects_unsafe_or_invalid_store[]" time="0.003"><failure message="Failed: DID NOT RAISE ValueError">tmp_path = WindowsPath('C:/Users/Hendrik/AppData/Local/Temp/pytest-of-Hendrik/pytest-3066/test_changelog_rejects_unsafe_3')
+setting = ''
+
+    @pytest.mark.parametrize("setting", ["../outside", None, 12, ""])
+    def test_changelog_rejects_unsafe_or_invalid_store(tmp_path, setting):
+        # covers: KM-400a-3-i
+        # angle: failure
+        config = tmp_path / "templates/scripts/commit_guardian/commit_guardian.json"
+        config.parent.mkdir(parents=True)
+        config.write_text(json.dumps({"changelogs_dir": setting}), encoding="utf-8")
+&gt;       with pytest.raises(ValueError):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE ValueError
+
+tests\knowledge\test_native_changelog_entry.py:132: Failed</failure></testcase></testsuite></testsuites>

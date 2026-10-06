@@ -1,0 +1,111 @@
+id: DK-400f-2-i
+title: "The report of a partial run names each part that was not settled or not run, and why"
+component: decision-kernel
+components:
+  - decision_kernel
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_kernel_1_founding
+criteria: |
+  Given the reusable-criteria split where p1 reached its budget stop, p2 and p3 wait for p1,
+    and p4 was decided,
+  When the run ends partial,
+  Then the split section has four lines, one per part:
+    "p1 not settled: its decision reached its budget stop",
+    "p2 not run: waits for p1, which was not settled (budget stop)",
+    "p3 not run: waits for p1, which was not settled (budget stop)",
+    "p4 decided: Mine from both Langfuse traces and published decision records (<p4's record
+    id>, staged)",
+  And p1's line never says "not run", because p1 ran,
+  And the report gives the run's outcome as partial, not completed.
+depends_on:
+  - DK-400f-2
+  - DK-400e-4
+doc_links:
+  - path: docs/product-truth/flows/leafcutter/decision-forming.flow.json
+    relationship: implements
+    status: exists
+    relevance: "Flow v5 node(s) split-report and split-part-unsettled, with their acceptance scenarios."
+  - path: docs/product-truth/mock-data/leafcutter/decisions.mock.json
+    relationship: specified-by
+    status: exists
+    relevance: "v5 report_lines of record dcp-reusable-criteria-partial: a not_settled part's line names its stop_reason, a waiting part's line names the part it waited for."
+  - path: docs/analysis/2026-09-30-decision-kernel-design-5-client-observability.md
+    relationship: describes
+    status: exists
+    relevance: RunService resume validation, the RunEnvelope, report.md, tracing and redaction.
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: DK-400e-4
+  contract: "The not-settled part, the not-run parts and their reasons, and the partial run status."
+it_requirements:
+  - 'Line texts by stop reason are template-built: budget_stop ''its decision reached its budget stop'' (''its research
+    reached its budget stop'' for a research part), blocked ''its decision ended blocked'', capability_gap ''its
+    decision hit a capability gap'', cancelled ''it was cancelled''. A not-run dependant names the stop reason in
+    words: budget stop, blocked, capability gap, cancelled.'
+  - A part that ran never gets a 'not run' line, and the report states the run's outcome as partial.
+  - 'Tests enable splitting explicitly: split.enabled true through a config override (false only where a test compares
+    with the off switch). None relies on the shipped default: batch order inside E3 does not guarantee that DK-400e-1''s
+    flip lands first, and a later default change must not silently flip a test (dec-9925ebf1895222f4).'
+change_target: code
+risk_surface: contract_boundary
+test_required: true
+test_spec:
+  - name: test_partial_run_report_names_each_unsettled_and_not_run_part
+    target_dir: tests/kernel/split/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: With p1 at its budget stop, report.md has the four lines of record dcp-reusable-criteria-partial
+      (with the real record id for p4) and gives the outcome as partial.
+test_rationale: Compares the written report with the mock record's line texts.
+origin_agent: business-analyst
+created: 2026-10-05
+amended_by:
+  - reason: "2026-10-05 BA, user answer to BA open question Q3 (the run ends partial) and mock-data v5 report_lines. Withdrawn wording: 'When the run ends,'; 'Then the split section has four lines, one per part,'; 'And p1's line says that it was not settled and names the budget stop,'; 'And the lines for p2 and p3 say \"not run\" and that each waited for p1,'; 'And p4's line says decided, with its record id.' Replaced by 'When the run ends partial,' with the four line texts of record dcp-reusable-criteria-partial, plus the clauses that p1's line never says not run and that the report gives the run's outcome as partial. Title now names the partial run. doc_links relevance refreshed to flow v5 and mock data v5; expects_from contract widened to the partial run status."
+  - reason: it-po-technical-enrichment
+    date: '2026-10-05'
+    by: it-po
+    summary: 'Technical enrichment: assigned_agent confirmed, estimated_complexity, change_target, risk_surface,
+      it_requirements, delivers_to/expects_from contracts, doc_links and the test contract set; readiness draft
+      -> reviewed. BA criteria and product_truth unchanged.'
+  - reason: it-po-build-slice-amendment
+    date: '2026-10-05'
+    by: it-po
+    summary: 'Build-slice amendment (dec-9925ebf1895222f4): its tests enable splitting explicitly and never depend
+      on the shipped default of split.enabled.'
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Report side of DK-400e-4. The line texts are those of mock-data v5 record
+  dcp-reusable-criteria-partial. The v4 gap this AC waited on (no outcome value for a part that
+  ran but did not settle) is closed by the v5 outcome not_settled.
+product_truth:
+  - flow: leafcutter/decision-forming
+    node: split-part-unsettled
+    node_kind: branch
+    flow_kind: data
+    screen: decision-split-progress
+    mock_data: leafcutter/decisions
+    entities:
+      - Decomposition
+    source: real
+    asof: '2026-10-05'
+  - flow: leafcutter/decision-forming
+    node: split-report
+    node_kind: step
+    flow_kind: data
+    screen: decision-split-progress
+    mock_data: leafcutter/decisions
+    entities:
+      - Decision
+      - Decomposition
+    source: real
+    asof: '2026-10-05'

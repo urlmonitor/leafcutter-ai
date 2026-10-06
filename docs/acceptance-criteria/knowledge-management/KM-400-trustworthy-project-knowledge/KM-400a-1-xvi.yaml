@@ -1,0 +1,201 @@
+id: KM-400a-1-xvi
+title: SourceFile properties preserve pinned reference evidence without refreshing it
+component: knowledge-management
+components: [knowledge_management]
+level: L3
+status: active
+req_status: active
+readiness: reviewed
+work_status: done
+priority: medium
+parent: KM-400a-1
+criteria: |
+  Given an existing SourceFile reference records a canonical identity, source revision, content hash and missing observation that may differ from the current checkout
+  When its native fields are exposed in the repository graph
+  Then its canonical_id, kind, title, summary, complete source reference and properties remain queryable with their original values
+  And source repository_id, source_sha, path, locator and content_hash retain the pinned evidence even when the current checkout differs
+  And authored surface, missing, canonical, registry_identity and future nested properties remain present exactly when supplied, preserving absent, false, null and empty values
+  And a canonical identity distinct from the source path is not renamed, and file-reference anchors remain distinct from source provenance
+  And no current file inspection, existence refresh, content rehash, directory enumeration or component inference changes the reference
+  And repeated enrichment excludes only its three defined projection-helper fields while retaining unrelated similarly named source properties
+  And changing the returned nested metadata cannot change the original reference, or vice versa
+  And a non-SourceFile input or an invalid source path or revision fails explicitly without rereading the referenced file
+depends_on: [KM-400a-1]
+doc_links:
+- path: reports/native-fields/review-SourceFile.json
+  relationship: describes
+  status: exists
+  relevance: Complete reference envelope, pinned provenance and exact enrichment exclusions.
+- path: reports/native-fields/code-SourceFile.json
+  relationship: verifies
+  status: exists
+- path: docs/architecture/components/knowledge-retrieval.md
+  relationship: context
+  status: exists
+- path: docs/architecture/adrs/ADR-062-standalone-knowledge-retrieval.md
+  relationship: describes
+  status: exists
+  relevance: Canonical Git authority, immutable repository generations and unchanged retrieval ownership.
+- path: docs/how-to/run-knowledge-retrieval.md
+  relationship: describes
+  status: exists
+  relevance: Existing Aura native-property inspection and declared-component filtering guide.
+- path: reports/native-fields/field-coverage.json
+  relationship: describes
+  status: exists
+  relevance: Dated per-type field inventory and shared representation contract; not a deployment claim.
+- path: docs/acceptance-criteria/knowledge-management/KM-400-trustworthy-project-knowledge/KM-400a-3-i.yaml
+  relationship: context
+  status: exists
+  relevance: Approved shared field-exposure and documented-nested-leaf requirement. Existing guide, field reference
+    inventory and component diagram cover this retrospective type refinement.
+- path: reports/native-fields/ac-linked-strict.xml
+  relationship: verifies
+  status: exists
+  relevance: 'Fresh strict execution after criterion-specific test tags: 388 passed and one Windows symlink-privilege
+    skip across 19 focused modules. Per-type cases resolve through the test catalog; no live database rerun is implied.'
+- path: reports/native-fields/review-SourceFile.json
+  relationship: describes
+  status: exists
+  relevance: Complete reference envelope, pinned provenance and exact enrichment exclusions.
+- path: reports/native-fields/code-SourceFile.json
+  relationship: verifies
+  status: exists
+- path: docs/architecture/components/knowledge-retrieval.md
+  relationship: context
+  status: exists
+- path: docs/architecture/adrs/ADR-062-standalone-knowledge-retrieval.md
+  relationship: describes
+  status: exists
+  relevance: Canonical Git authority, immutable repository generations and unchanged retrieval ownership.
+- path: docs/how-to/run-knowledge-retrieval.md
+  relationship: describes
+  status: exists
+  relevance: Existing Aura native-property inspection and declared-component filtering guide.
+- path: reports/native-fields/field-coverage.json
+  relationship: describes
+  status: exists
+  relevance: Dated per-type field inventory and shared representation contract; not a deployment claim.
+- path: docs/acceptance-criteria/knowledge-management/KM-400-trustworthy-project-knowledge/KM-400a-3-i.yaml
+  relationship: context
+  status: exists
+  relevance: Approved shared field-exposure and documented-nested-leaf requirement. Existing guide, field reference
+    inventory and component diagram cover this retrospective type refinement.
+assigned_agent: python-coder
+origin_agent: business-analyst
+created: '2026-10-02'
+amended_by: []
+superseded_by: null
+covered_by:
+- tests/knowledge/test_native_source_file.py::test_source_file_complete_contract_and_nested_future_fields
+- tests/knowledge/test_native_source_file.py::test_source_file_never_refreshes_pinned_existence_or_hash
+- tests/knowledge/test_native_source_file.py::test_source_file_absence_empty_and_false_are_distinct
+- tests/knowledge/test_native_source_file.py::test_source_file_repeat_enrichment_removes_only_exact_internal_keys
+- tests/knowledge/test_native_source_file.py::test_source_file_nested_values_are_independent_copies
+- tests/knowledge/test_native_source_file.py::test_source_file_rejects_other_entity_kinds
+- tests/knowledge/test_native_source_file.py::test_source_file_revalidates_invalid_source_path
+- tests/knowledge/test_native_source_file.py::test_source_file_rejects_non_entity_and_invalid_reference
+- tests/knowledge/test_native_metadata_integration.py::test_reference_readers_reach_projection_without_refreshing_historical_evidence
+implemented_by:
+  - knowledge/native_types/source_file.py
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  Retrospective refinement of KM-400a-3-i. SourceFile is an existing reference,
+  not a new authored-record surface. The receipt reports 17 passing cases and
+  process-local negative controls. Population is exactly the supplied immutable
+  SourceFile entities; no fresh file census, current existence or hash proof is
+  implied. Projection-helper exclusions are enumerated in the linked contract.
+  Final bidirectional traceability and strict test evidence: reports/native-fields/ac-traceability.json.
+  Work status reflects linked test outcomes; reviewed readiness does not assert user approval.
+estimated_complexity: S
+it_requirements:
+- Only supplied SourceFile entities may be enriched; no filesystem operation may replace their recorded source revision,
+  existence observation or content hash.
+- Exclusions are exactly the top-level properties keys _native_projection, _native_identity and _native_source_path;
+  unrelated similarly named and nested properties remain source data.
+delivers_to: null
+expects_from: null
+test_required: true
+test_spec:
+- name: test_source_file_complete_contract_and_nested_future_fields
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: unit
+  angle: criterion
+  description: Source file complete contract and nested future fields.
+  covers:
+  - KM-400a-1-xvi
+- name: test_source_file_never_refreshes_pinned_existence_or_hash
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: unit
+  angle: boundary
+  description: Source file never refreshes pinned existence or hash.
+  covers:
+  - KM-400a-1-xvi
+- name: test_source_file_absence_empty_and_false_are_distinct
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: unit
+  angle: boundary
+  description: Source file absence empty and false are distinct.
+  covers:
+  - KM-400a-1-xvi
+- name: test_source_file_repeat_enrichment_removes_only_exact_internal_keys
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: unit
+  angle: boundary
+  description: Source file repeat enrichment removes only exact internal keys.
+  covers:
+  - KM-400a-1-xvi
+- name: test_source_file_nested_values_are_independent_copies
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: unit
+  angle: boundary
+  description: Source file nested values are independent copies.
+  covers:
+  - KM-400a-1-xvi
+- name: test_source_file_rejects_other_entity_kinds
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: unit
+  angle: failure
+  description: Source file rejects other entity kinds.
+  covers:
+  - KM-400a-1-xvi
+- name: test_source_file_revalidates_invalid_source_path
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: unit
+  angle: failure
+  description: Source file revalidates invalid source path.
+  covers:
+  - KM-400a-1-xvi
+- name: test_source_file_rejects_non_entity_and_invalid_reference
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: unit
+  angle: failure
+  description: Source file rejects non entity and invalid reference.
+  covers:
+  - KM-400a-1-xvi
+- name: test_reference_readers_reach_projection_without_refreshing_historical_evidence
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: integration
+  angle: seam
+  description: Both SourceFile and Test fixtures reach native property mapping without refreshing pinned source
+    evidence.
+  covers:
+  - KM-400a-1-xvi
+  - KM-400a-1-xvii
+test_rationale: The verified catalog supplies exact existing reader-function anchors, including source-fixture,
+  boundary and failure checks. Only catalog-confirmed type-specific integration links are added. Shared lossless
+  property encoding, physical Neo4j publication, readback and retained-generation behavior remain covered by KM-400a-3-i;
+  these focused tests do not claim 17 independent live database journeys. This is retrospective traceability over
+  dated implementation receipts, not a newly performed TDD sequence. Subsequent strict execution is separately recorded
+  in reports/native-fields/ac-linked-strict.xml (388 passed, one skipped); no database test was rerun for these
+  annotation-only changes.

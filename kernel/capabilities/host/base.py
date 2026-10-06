@@ -94,6 +94,10 @@ class HostOperation:
         """Convert a validated output payload (every concrete operation overrides this)."""
         raise NotImplementedError
 
+    def submission_violations(self, request: Mapping[str, Any], payload: KernelModel) -> list[str]:
+        """Return operation-specific request-bound checks before host output is accepted."""
+        return []
+
 
 class GenericHostOperation(HostOperation):
     """Packets for a host descriptor without a dedicated module: generic text, pass-through."""
@@ -114,3 +118,4 @@ class GenericHostOperation(HostOperation):
 #   returns a failed result with retryable=false): it runs inside `await_interaction` after the
 #   submission was accepted, where a raise would crash the graph run. (#KernelBootstrapV0/P8)
 # ====================================================================
+# - 2026-10-03 00:00 [python-coder]: Add typed host-needs support without activating production retrieval. (#TICKETLESS reason=user-requested-isolated-host-experiment)

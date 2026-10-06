@@ -98,9 +98,9 @@ class TestQuestion(unittest.IsolatedAsyncioTestCase):
         jev = ScriptedJev().script(INTENT_PURPOSE, "intent.*", choice_answer("decision"))
         answers = [ClarificationAnswer("Decide which criterion to implement next.")]
         await _assess(jev, goal="Implement a critical acceptance criterion.", answers=answers)
-        goal = as_json(jev.batches[0].state)["task"]["goal"]
-        self.assertTrue(goal.startswith("Decide which criterion to implement next."))
-        self.assertIn("Implement a critical acceptance criterion.", goal)
+        state = as_json(jev.batches[0].state)
+        self.assertEqual(state["task"]["goal"], "Implement a critical acceptance criterion.")
+        self.assertEqual(state["clarifications"], ["Decide which criterion to implement next."])
 
 
 class TestFailures(unittest.IsolatedAsyncioTestCase):
@@ -123,15 +123,20 @@ class TestEffectiveGoal(unittest.TestCase):
     def test_without_answers_the_goal_is_unchanged(self) -> None:
         self.assertEqual(effective_goal("Do X", []), "Do X")
 
-    def test_the_latest_answer_leads_and_the_original_follows(self) -> None:
+    def test_clarifications_do_not_rewrite_the_original_goal(self) -> None:
+        # covers: DK-300b-1
+        # angle: criterion
         text = effective_goal("Do X", [ClarificationAnswer("old"), ClarificationAnswer("Decide Y")])
-        self.assertEqual(text, "Decide Y (original request: Do X)")
+        self.assertEqual(text, "Do X")
 
     def test_a_blank_answer_keeps_the_original(self) -> None:
         self.assertEqual(effective_goal("Do X", [ClarificationAnswer("  ")]), "Do X")
 
-    def test_the_result_stays_within_the_goal_limit(self) -> None:
-        self.assertLessEqual(len(effective_goal("g" * 4000, [ClarificationAnswer("a" * 50)])), 4000)
+    def test_admitted_long_goal_survives_clarification_verbatim(self) -> None:
+        # covers: DK-300b-1
+        # angle: boundary
+        goal = " " + "g" * 15998 + " "
+        self.assertEqual(effective_goal(goal, [ClarificationAnswer("a" * 50)]), goal)
 
     def test_a_chosen_answer_kind_is_recognised(self) -> None:
         answers = [ClarificationAnswer("text"), ClarificationAnswer("Find facts", "evidence")]

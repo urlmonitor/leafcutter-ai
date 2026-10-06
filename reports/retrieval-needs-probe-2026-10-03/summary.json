@@ -1,0 +1,185 @@
+{
+  "cases": 1,
+  "semantic_passes": 0,
+  "invalid_runs": 1,
+  "physical_http_calls": 1,
+  "received_http_responses": 0,
+  "full_retrieval_scenarios_passed": 0,
+  "scenario_applicability": {
+    "RS-01": {
+      "cases": [
+        "N08"
+      ],
+      "downstream_not_tested": "method choice and cited answer"
+    },
+    "RS-02": {
+      "cases": [
+        "N02"
+      ],
+      "downstream_not_tested": "clarification dispatch/resume and counting"
+    },
+    "RS-03": {
+      "cases": [
+        "N01",
+        "N06"
+      ],
+      "downstream_not_tested": "exact retrieval and answer"
+    },
+    "RS-04": {
+      "cases": [
+        "N09",
+        "N11"
+      ],
+      "downstream_not_tested": "advisory compatibility and authorization"
+    },
+    "RS-05": {
+      "cases": [
+        "N03"
+      ],
+      "downstream_not_tested": "operation catalog fitness and execution"
+    },
+    "RS-06": {
+      "cases": [],
+      "downstream_not_tested": "ID discovery and preparation/resume, not this step"
+    },
+    "RS-07": {
+      "cases": [
+        "N08"
+      ],
+      "downstream_not_tested": "caller keyword use and generation bypass"
+    },
+    "RS-08": {
+      "cases": [],
+      "downstream_not_tested": "optional LLM term generation, not this step"
+    },
+    "RS-09": {
+      "cases": [
+        "N12"
+      ],
+      "downstream_not_tested": "multiple retrieval methods and separate attempts"
+    },
+    "RS-10": {
+      "cases": [],
+      "downstream_not_tested": "failed method/sibling retention, not this step"
+    },
+    "RS-11": {
+      "cases": [
+        "N05"
+      ],
+      "downstream_not_tested": "directed dependency traversal; N05 only enriches hierarchy-needs contrast"
+    },
+    "RS-12": {
+      "cases": [
+        "N04"
+      ],
+      "downstream_not_tested": "actual bounded code navigation and inspected dataflow"
+    },
+    "RS-13": {
+      "cases": [],
+      "downstream_not_tested": "cycles, visited frontier and checkpointing, not this step"
+    },
+    "RS-14": {
+      "cases": [
+        "N11"
+      ],
+      "downstream_not_tested": "filesystem escape and byte pinning; N11 only tests context authority"
+    },
+    "RS-15": {
+      "cases": [
+        "N03"
+      ],
+      "downstream_not_tested": "partial navigation cannot fulfill count, not executed here"
+    },
+    "RS-16": {
+      "cases": [],
+      "downstream_not_tested": "fallback across methods, not this step"
+    },
+    "RS-17": {
+      "cases": [],
+      "downstream_not_tested": "comparison of observed attempts, not this step"
+    },
+    "RS-18": {
+      "cases": [
+        "N08"
+      ],
+      "downstream_not_tested": "deduplication/provenance merge, not this step"
+    },
+    "RS-19": {
+      "cases": [
+        "N03",
+        "N07"
+      ],
+      "downstream_not_tested": "actual field withholding and answer insufficiency"
+    },
+    "RS-20": {
+      "cases": [
+        "N03"
+      ],
+      "downstream_not_tested": "all pages/count completeness proof, not this step"
+    },
+    "RS-21": {
+      "cases": [],
+      "downstream_not_tested": "synthesis wording/citations, not this step"
+    },
+    "RS-22": {
+      "cases": [],
+      "downstream_not_tested": "structured-fact wording bypass, not this step"
+    },
+    "RS-23": {
+      "cases": [
+        "N10"
+      ],
+      "downstream_not_tested": "diagnosis of actual source/mapping/query gap; only unsupported-needs declaration here"
+    },
+    "RS-24": {
+      "cases": [],
+      "downstream_not_tested": "query build/admission/resume, not this step"
+    },
+    "RS-25": {
+      "cases": [],
+      "downstream_not_tested": "cross-method failures and stopping, not this step"
+    },
+    "RS-26": {
+      "cases": [],
+      "downstream_not_tested": "post-evidence clarification with retained findings, not this step"
+    },
+    "RS-27": {
+      "cases": [],
+      "downstream_not_tested": "cumulative multi-method budget exhaustion, not this step"
+    },
+    "RS-28": {
+      "cases": [
+        "N09"
+      ],
+      "downstream_not_tested": "advisory learning write/read; only authority resistance here"
+    },
+    "RS-29": {
+      "cases": [],
+      "downstream_not_tested": "nonreading navigation decisions, not this step"
+    }
+  },
+  "results": [
+    {
+      "case_id": "N01",
+      "question": "For KM-500c-2, what must tests demonstrate?",
+      "origin": [
+        "RS-03",
+        "QA-01"
+      ],
+      "human_gold": "Retrieve the named criterion's required behavior. Test specification is useful if recorded, not mandatory when criteria are authoritative. No count population or parent/root clarification. Full bounded AC is an acceptable alternative to field projection.",
+      "result": null,
+      "error": {
+        "type": "JevUnavailable",
+        "message": "jev unavailable after 1 attempts: connection error calling jev (ConnectError)"
+      },
+      "grade": {
+        "passed": false,
+        "checks": [],
+        "invalid_run": true
+      },
+      "physical_http_calls": 1,
+      "wire_questions": 35,
+      "elapsed_seconds": 0.293
+    }
+  ]
+}
