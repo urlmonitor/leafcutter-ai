@@ -282,8 +282,8 @@ def test_heavy_and_fast_lane_invocations_yield_identical_verdict():
         )
 
         def _run(cmd_text: str) -> dict:
-            cmd_text = cmd_text.replace("python3", sys.executable, 1)
             argv = shlex.split(cmd_text, posix=False)
+            argv[0] = sys.executable if argv[0] in ("python", "python3") else argv[0]
             proc = subprocess.run(argv, capture_output=True, text=True, timeout=120)
             try:
                 return json.loads(proc.stdout)

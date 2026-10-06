@@ -32,6 +32,7 @@ ARCHITECTURE: heavy_lane_gate itself lives in this SIBLING module rather than
 
 from __future__ import annotations
 
+import sys
 from pathlib import Path
 
 
@@ -44,7 +45,9 @@ def heavy_lane_gate(
     always passes (``applicable`` False). Otherwise this calls
     ``fast_lane.verify_red_baseline`` with *ac_root* and returns its verdict
     dict unchanged plus two wrapper keys -- ``applicable`` (True) and
-    ``verified`` (whether that verdict's own ``gate_passed`` was True).
+    ``verified`` (whether that verdict's own ``gate_passed`` was True). The
+    not-applicable verdict also carries ``interpreter`` (``sys.executable``),
+    as the shared reader's verdicts do (TQ-500f-3-ii-ii).
 
     Args:
         source_ac_ids: The ticket's source_ac id(s); empty means "not applicable".
@@ -62,6 +65,7 @@ def heavy_lane_gate(
             "applicable": False,
             "verified": False,
             "outcome": "red-baseline reader not applicable: no source requirement",
+            "interpreter": sys.executable,
         }
     from fast_lane import verify_red_baseline
 
@@ -82,4 +86,8 @@ def heavy_lane_gate(
 #   defined inline, over the 400-line check-file-size limit) to keep that
 #   module under its size cap. See the module ARCHITECTURE note above for the
 #   local-import rationale.
+# - 2026-10-06 [python-coder/review M-1]: The not-applicable verdict now carries
+#   ``interpreter`` (sys.executable) so every heavy_lane_gate verdict names the
+#   interpreter that ran it. Applicable verdicts already get it from the shared
+#   reader; it is deliberately not a wrapper-only key.
 # ====================================================================

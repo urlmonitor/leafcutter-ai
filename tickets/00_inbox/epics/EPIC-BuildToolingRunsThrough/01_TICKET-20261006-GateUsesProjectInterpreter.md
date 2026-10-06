@@ -31,13 +31,13 @@ files_touched:
   - unit_tests/workflows/test_tq500f3ii_gate_driver_contract.py  # new
 agents:
   architect-review: not_needed
-  test-writer: needed
-  python-coder: needed
+  test-writer: signed_off
+  python-coder: signed_off
   llm-expert: not_needed
-  test-runner: needed
+  test-runner: signed_off
   documentation-expert: not_needed
-  pr-reviewer: needed
-  commit: needed
+  pr-reviewer: signed_off
+  commit: signed_off
   pull-request: not_needed
   status-checker: not_needed
 ---
@@ -177,20 +177,20 @@ tests:
 ## Implementation Tasks
 
 ### test-writer
-- [ ] Create `unit_tests/workflows/test_tq500f3ii_gate_driver_contract.py` with the three driver-side tests. Ticket 03 adds to this file, so name it for the gate's driver contract rather than the interpreter alone.
-- [ ] Add the two reader tests to `test_tq500f3ii_heavy_lane_gate_subcommand.py`, using the real git fixture `unit_tests/build_orchestration/_tq500f3i_fixtures.py`.
-- [ ] In `test_tq500f3ii_heavy_lane_red_baseline_gate.py`, make `_run` (line 285) replace a leading `python3?` token with `sys.executable`, not only `python3`. Keep the file at or below its current measured length (346 / 400). `_GATE_INVOCATION_RE` in `unit_tests/workflows/_tq500f3ii_fixtures.py:74` already accepts `python3?`.
-- [ ] Grep `unit_tests/` for literal `python3 ${gateScript}` pins that would now fail. Docstring mentions are fine.
+- [x] Create `unit_tests/workflows/test_tq500f3ii_gate_driver_contract.py` with the three driver-side tests. Ticket 03 adds to this file, so name it for the gate's driver contract rather than the interpreter alone.
+- [x] Add the two reader tests to `test_tq500f3ii_heavy_lane_gate_subcommand.py`, using the real git fixture `unit_tests/build_orchestration/_tq500f3i_fixtures.py`.
+- [x] In `test_tq500f3ii_heavy_lane_red_baseline_gate.py`, make `_run` (line 285) replace a leading `python3?` token with `sys.executable`, not only `python3`. Keep the file at or below its current measured length (346 / 400). `_GATE_INVOCATION_RE` in `unit_tests/workflows/_tq500f3ii_fixtures.py:74` already accepts `python3?`.
+- [x] Grep `unit_tests/` for literal `python3 ${gateScript}` pins that would now fail. Docstring mentions are fine.
 
 ### python-coder
-- [ ] `_fl_red_baseline_support.py`: add the `find_spec("pytest")` precheck and the `interpreter` key, used by `verify_red_baseline` in `fast_lane.py`.
-- [ ] `build-feature.js:2115` and `build-ticket.js:1751`: `python3` → `python`. In the halt message (2136-2140 / 1772-1776), echo `gateVerdict.interpreter`. Pay back every changed line under the ratchet rule.
-- [ ] `fast-lane-ship.js`: `python3 ${gateScript}` → `python ${gateScript}` at 865, 958, 1073, 1202, 1304, 1308, 1626 and 1759. Pay back the changed lines.
-- [ ] Run `python scripts/build.py` and stage the tracked outputs it changes.
+- [x] `_fl_red_baseline_support.py`: add the `find_spec("pytest")` precheck and the `interpreter` key, used by `verify_red_baseline` in `fast_lane.py`.
+- [x] `build-feature.js:2115` and `build-ticket.js:1751`: `python3` → `python`. In the halt message (2136-2140 / 1772-1776), echo `gateVerdict.interpreter`. Pay back every changed line under the ratchet rule.
+- [x] `fast-lane-ship.js`: `python3 ${gateScript}` → `python ${gateScript}` at 865, 958, 1073, 1202, 1304, 1308, 1626 and 1759. Pay back the changed lines.
+- [x] Run `python scripts/build.py` and stage the tracked outputs it changes.
 
 ### test-runner / pr-reviewer / commit
-- [ ] Run the TQ-500f-3-ii suites (`unit_tests/workflows/test_tq500f3ii_*`, `unit_tests/build_orchestration/test_tq500f3ii_*`) and the fast-lane workflow tests.
-- [ ] pr-reviewer: confirm the twin parity, that no non-gate `python3` changed, and that check-file-size passes.
+- [x] Run the TQ-500f-3-ii suites (`unit_tests/workflows/test_tq500f3ii_*`, `unit_tests/build_orchestration/test_tq500f3ii_*`) and the fast-lane workflow tests.
+- [x] pr-reviewer: confirm the twin parity, that no non-gate `python3` changed, and that check-file-size passes.
 
 ## Risk & Safety
 
@@ -207,4 +207,88 @@ tests:
 
 ## Comments
 
-_(Append-only log — leave blank when authoring.)_
+### 2026-10-06 15:40 — test-writer (status: ok)
+feedback-id: (submit-failed)
+
+Wrote the 5 tests from `## Test Requirements`: 3 in the new
+`unit_tests/workflows/test_tq500f3ii_gate_driver_contract.py` (driven through the real twin drivers via
+`_driver_harness.TWIN_DRIVERS` and the real `fast-lane-ship.js`, asserting on recorded dispatches) and 2 appended to
+`unit_tests/build_orchestration/test_tq500f3ii_heavy_lane_gate_subcommand.py` (227 lines, under the limit; the reader test
+patches `importlib.util.find_spec` and the pytest runners on the real git fixture, the other runs the real
+`fast_lane.py heavy_lane_gate` CLI). Also changed `_run` in `test_tq500f3ii_heavy_lane_red_baseline_gate.py` to swap a leading
+`python`/`python3` token for `sys.executable` (same line count, 346 measured). No literal `python3 ${gateScript}` pins exist in
+`unit_tests/` (only docstring mentions). Note: AC TQ-500f-3-ii is not `done`, so plain pytest masks these as xfail; verified
+red with `AC_ENFORCE_STRICT=1` (5 failed, 4 existing passed).
+Rule 3 seam: covered (producing: JS drivers' dispatched gate command; consuming: real `fast_lane.py` verdict / halt message).
+
+reachability_entry_point_answer: resolved, entry point = build-feature.js / build-ticket.js / fast-lane-ship.js run under run_workflow_under_e2, and `fast_lane.py heavy_lane_gate` via subprocess.
+
+red_baseline:
+  - test_name: test_heavy_and_fast_lane_gate_commands_share_the_python_token
+    file: unit_tests/workflows/test_tq500f3ii_gate_driver_contract.py
+    error: "AssertionError: got {'build-feature.js': 'python3', 'build-ticket.js': 'python3', 'fast-lane-ship.js': 'python3'}"
+  - test_name: test_fast_lane_ship_never_launches_fast_lane_py_with_python3
+    file: unit_tests/workflows/test_tq500f3ii_gate_driver_contract.py
+    error: "AssertionError: offending (token, subcommand) pairs: [('python3', 'select_connected'), ... ('python3', 'release')]"
+  - test_name: test_gate_halt_message_names_interpreter_and_reason
+    file: unit_tests/workflows/test_tq500f3ii_gate_driver_contract.py
+    error: "AssertionError: build-feature.js: halt message must name the interpreter from the verdict ('/x/venv/python')"
+  - test_name: test_verify_red_baseline_refuses_when_pytest_not_importable
+    file: unit_tests/build_orchestration/test_tq500f3ii_heavy_lane_gate_subcommand.py
+    error: "AssertionError: reason 'no_red_outcome_among_new_tests' != 'test_interpreter_unusable'"
+  - test_name: test_real_gate_verdict_carries_launching_interpreter
+    file: unit_tests/build_orchestration/test_tq500f3ii_heavy_lane_gate_subcommand.py
+    error: "AssertionError: verdict has no 'interpreter' key (None != sys.executable)"
+
+### 2026-10-06 16:30 — python-coder (status: ok)
+feedback-id: (submit-failed)
+
+Change: `_fl_red_baseline_support.py` gains `_interpreter_unusable_verdict()` (importlib.util.find_spec("pytest") precheck, refusal reason `test_interpreter_unusable`) and `_red_baseline_verdict` now carries `interpreter` (sys.executable); `fast_lane.verify_red_baseline` calls the precheck first (4 lines). build-feature.js, build-ticket.js: gate command `python3` -> `python`, halt message adds `(interpreter: ${gateVerdict.interpreter || "unknown"})`. fast-lane-ship.js: 8 `python3 ${gateScript}` -> `python ${gateScript}`; non-fast_lane.py python3 uses untouched. Changelog entry docs/changelog/2026-10-06-1600-red-baseline-gate-runs-under-the-project-interpreter.md (Linux note).
+
+red_baseline_results (AC_ENFORCE_STRICT=1): all 5 green (test_heavy_and_fast_lane_gate_commands_share_the_python_token, test_fast_lane_ship_never_launches_fast_lane_py_with_python3, test_gate_halt_message_names_interpreter_and_reason, test_verify_red_baseline_refuses_when_pytest_not_importable, test_real_gate_verdict_carries_launching_interpreter). Full tq500f3ii set: workflows 11 passed, build_orchestration 6 passed (no_second_reader and passes_and_is_verified flake on a transient pytest returncode 2 in the nested run on this machine; both pass on rerun). Wider unit_tests/workflows: failures identical to HEAD (e.g. 25 failed before and after on the dispatch/release subset).
+
+Ratchet (check_file_size, staged): build-feature.js 2964 -> 2958 (req <=2958), build-ticket.js 1647 -> 1642 (req <=1642), fast-lane-ship.js 1673 -> 1665 (req <=1665), fast_lane.py 391/400, _fl_red_baseline_support.py 314/400. Payment was whole-line deletion of decorative `// ---` rule comments plus condensing the gate comment block.
+
+### 2026-10-06 17:00 — pr-reviewer (status: ok)
+feedback-id: (submit-failed)
+
+Verified: all 12 fast_lane.py launches in build-feature.js, build-ticket.js, fast-lane-ship.js use `python`; remaining `python3` are set_ticket_status.py, setup_ticket_worktree, bundle script, emit_entry, harvest_learnings (none launch fast_lane.py). find_spec precheck is the first statement of verify_red_baseline; reason is exactly `test_interpreter_unusable`; verdict built via `_red_baseline_verdict` so shape matches; `interpreter` is on every verify_red_baseline path. Halt message in both twins names interpreter and reason, degrading to "unknown". Line removals are only decorative `// ---` rules and a condensed gate comment; the TQ-500f-3-ii and H-3 references are kept.
+
+Findings (no high; non-blocking):
+- [M-1] scripts/build_orchestration/_fl_heavy_lane_gate.py:60-66 - the not-applicable verdict (no source AC) has no `interpreter` key, so "interpreter on every verdict path" is not met for the heavy_lane_gate wrapper. It cannot halt, so the halt message is unaffected; add `sys.executable` or record the exemption.
+- [M-2] docs/how-to/fast-lane-build.md:211, 281, 342 still show `python3 <worktree_path>/.../fast_lane.py`, and the reason list at :304 omits `test_interpreter_unusable`. Docs-only; decide whether to fix now or in a follow-up. templates/skills/build-feature-ops-notes/SKILL.md has no python3 reference, so it needs no change.
+- [M-3] templates/agents/build-ac.md:333 (and its .claude copy) launches `python3 ... fast_lane.py select_connected`, outside the three drivers, so it is out of this ticket's scope but has the same interpreter trap.
+Changelog frontmatter is valid (type manual, components, breaking false). The Linux note is accurate, though its claim that the hooks already require `python` was not checked here.
+
+### 2026-10-06 18:00 — test-runner (status: ok)
+feedback-id: (submit-failed)
+
+Ran with `AC_ENFORCE_STRICT=1` from the worktree root. This ticket broke nothing: every remaining failure also fails in the base worktree (build-tooling-done-proof, 119fca8e2).
+
+completion_manifest:
+  test_suite_executed: true
+  all_tests_passing: false
+  failure_report_structured: true
+  all_tests_passing_detail:
+    result: false
+    reason: 173 nodes fail in the touched dirs, all pre-existing in the base worktree; 0 attributable to this ticket, 0 flakes. Includes the step-1 node test_heavy_lane_gate_refuses_declared_absence_only_red, which fails serially in both worktrees (nested pytest ERROR outcomes).
+    remediation: Pre-existing failures belong to other tickets; none is caused by the gate-interpreter change.
+  commands:
+    step1_tq500f3ii_files: "16 passed, 1 failed (pre-existing)"
+    step2_full_dirs_xdist_here: "172 failed, 1244 passed, 4 xfailed, 1 error, 244 subtests passed (second run; first run 169 failed, 1247 passed, 1 error)"
+    step2_base_worktree: "173 failed, 1238 passed, 4 xfailed, 1 error"
+    tests_referencing_fast_lane: "tests/knowledge/test_harvest_learnings.py included in step 2"
+  classification: {attributable: 0, pre_existing: 174, flake: 0}
+
+### 2026-10-06 16:38 — python-coder (status: ok)
+feedback-id: (submit-failed)
+M-1: heavy_lane_gate not-applicable verdict now carries `interpreter` (sys.executable); pinned in test_heavy_lane_gate_with_no_source_ac_reports_not_applicable.
+M-2: docs/how-to/fast-lane-build.md uses `python` (3 places) and lists `test_interpreter_unusable` among the refusal reasons, with no net doc growth.
+
+### 2026-10-06 16:41 — commit (status: ok)
+feedback-id: (submit-failed)
+completion_manifest:
+  pre_commit_hooks_pass: true
+  commit_message_valid: true
+  ticket_staged: true
+Subject: fix(build-orchestration): run the red-baseline gate under the project interpreter

@@ -1913,9 +1913,7 @@ async function driveTicketPhases(worktreeTicketPath, isEpicMember = false) {
   let redBaselineGateOutcome = null; // carried into the final payload below
   let redBaselineGateChecked = false; // TQ-500f-3-ii H-3: runs once, before the FIRST coder dispatch on every path
 
-  // -------------------------------------------------------------------------
   // Step 2 — Filter and sort the phases to dispatch
-  // -------------------------------------------------------------------------
   // selectDispatchableByStatus keeps the phases whose status still owes work —
   // `needed` AND `failed` (KI-BO-20260907-1555: a failed phase used to be
   // dropped here and no later drive could ever re-run it). See that function
@@ -1990,9 +1988,7 @@ async function driveTicketPhases(worktreeTicketPath, isEpicMember = false) {
     });
   }
 
-  // -------------------------------------------------------------------------
   // Step 3 — Sequential phase loop with failure adjudication
-  // -------------------------------------------------------------------------
   const retryCounts = {};
   const completedPhases = [];
   const skippedPhases = [];
@@ -2098,12 +2094,10 @@ async function driveTicketPhases(worktreeTicketPath, isEpicMember = false) {
       };
     }
 
-    // TQ-500f-3-ii (H-3 resume fix): red-baseline gate runs ONCE, right before the
-    // FIRST coder dispatch on EVERY path -- including a resumed ticket whose
-    // test-writer phase is already signed_off and therefore never re-enters this
-    // loop. Thin dispatch + fail-closed parse only -- decision logic lives in
-    // fast_lane.py's heavy_lane_gate subcommand (wraps verify_red_baseline, no
-    // second reader).
+    // TQ-500f-3-ii (H-3 resume fix): red-baseline gate runs ONCE before the FIRST
+    // coder dispatch on EVERY path, incl. a resumed ticket whose test-writer phase is
+    // already signed_off. Thin dispatch + fail-closed parse; decision logic lives in
+    // fast_lane.py's heavy_lane_gate (wraps verify_red_baseline, no second reader).
     if (CODER_PHASES.has(phaseName) && !redBaselineGateChecked) {
       redBaselineGateChecked = true;
       if (sourceAcIds.length === 0) {
@@ -2112,7 +2106,7 @@ async function driveTicketPhases(worktreeTicketPath, isEpicMember = false) {
         const gateScript = `${resolvedTarget.worktree_path}/{{config.output_root}}/scripts/build_orchestration/fast_lane.py`;
         const gateAcStoreRoot = `${resolvedTarget.worktree_path}/${AC_STORE_REL_PATH}`;
         const gateCommand =
-          `python3 ${gateScript} heavy_lane_gate --source-ac ${sourceAcIds.join(",")} ` +
+          `python ${gateScript} heavy_lane_gate --source-ac ${sourceAcIds.join(",")} ` +
           `--test-root ${resolvedTarget.worktree_path} --ac-root ${gateAcStoreRoot}`;
         const gateReply = await agent(
           `Run the following command and return ONLY its raw stdout:\n${gateCommand}\n` +
@@ -2135,7 +2129,7 @@ async function driveTicketPhases(worktreeTicketPath, isEpicMember = false) {
         if (!gateVerdict.gate_passed) {
           return {
             status: "blocked",
-            message: `verify_red_baseline gate failed for ticket ${worktreeTicketPath}: gate_passed=false. Reason: ${gateVerdict.reason || "unknown"}. Refused: ${JSON.stringify(gateVerdict.refused || [])}. The coder is not dispatched — test-writer's own red_baseline_verified claim is never a substitute (TQ-500f-3-ii).`,
+            message: `verify_red_baseline gate failed for ticket ${worktreeTicketPath}: gate_passed=false. Reason: ${gateVerdict.reason || "unknown"} (interpreter: ${gateVerdict.interpreter || "unknown"}). Refused: ${JSON.stringify(gateVerdict.refused || [])}. The coder is not dispatched — test-writer's own red_baseline_verified claim is never a substitute (TQ-500f-3-ii).`,
             ticket_path: worktreeTicketPath, failing_phase: phaseName, gate: "verify_red_baseline", gate_verdict: gateVerdict, classification: "halt",
           };
         }

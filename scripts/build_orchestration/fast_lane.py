@@ -137,6 +137,7 @@ from _fl_red_baseline_support import (
     _detect_ambiguous_tag_identities,
     _partition_newly_added,
     _red_baseline_verdict,
+    _interpreter_unusable_verdict,
     _report_preexisting,
     _resolve_git_baseline_context,
 )
@@ -318,7 +319,8 @@ def verify_red_baseline(
             ``"no_new_covering_tests"``, ``"all_new_tests_green_at_baseline"``,
             ``"no_red_outcome_among_new_tests"``,
             ``"baseline_partition_unavailable"`` (BO-2400a-3-i, -vii), or
-            ``"declared_test_refused_absence_only_red"`` (TQ-500f-3-i).
+            ``"declared_test_refused_absence_only_red"`` (TQ-500f-3-i), or
+            ``"test_interpreter_unusable"`` (pytest not importable).
 
         ``red``, ``green_at_baseline``, ``inconclusive`` (list[dict])
             Newly-added tests classified per BO-2400a-3-vi, each entry
@@ -334,6 +336,9 @@ def verify_red_baseline(
             absence-only red, each ``{"nodeid", "ac_id", "kind": "absence",
             "message"}``. Always ``[]`` when *ac_root* is omitted.
     """
+    unusable = _interpreter_unusable_verdict()
+    if unusable is not None:
+        return unusable
     batch_set = set(ac_ids)
     all_tags = _scan_test_root_for_covers_tags(test_root)
     linked_tags = [t for t in all_tags if t["ac_id"] in batch_set]
