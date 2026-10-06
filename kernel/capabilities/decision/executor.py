@@ -135,7 +135,7 @@ def _stage(ctx: ExecutionContext, work: Working, result: CapabilityResult, *, ba
     if staged is None:
         return result
     note = (f"decision record staged: {staged.path}; publish writes it into "
-            f"{publish_folder()} (the kernel checkout); "
+            f"{publish_folder(ctx.config)} (the kernel checkout); "
             f"publish it for review with: {publish_command(ctx.run_id)}")
     payload = dict(result.output_payload or {})
     payload["limitations"] = [*result.limitations, note]

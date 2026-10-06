@@ -24,7 +24,7 @@ from pathlib import Path
 from unittest import mock
 
 from kernel.capabilities.decision import publish_command as pc
-from kernel.config import repo_root
+from kernel.config import load_kernel_config, repo_root
 from tests.kernel.memory import test_decision_precedent as scenario
 
 MARKER = "publish it for review with: "
@@ -32,6 +32,13 @@ MARKER = "publish it for review with: "
 
 class TestPrintedPublishCommand(scenario.PrecedentCase):
     """The limitation text of a staged record, taken from a real run."""
+
+    config = None  # a KernelConfig to run the decision under; None keeps the default
+
+    def ctx(self, evidence=None, **overrides):  # noqa: ANN001, ANN201
+        if self.config is not None:
+            overrides["config"] = self.config
+        return super().ctx(evidence, **overrides)
 
     def note(self) -> str:
         inv, ctx, waiting = self.goal()
@@ -60,6 +67,17 @@ class TestPrintedPublishCommand(scenario.PrecedentCase):
         self.assertIn("docs", before + note)
         self.assertIn("decisions", before)
         self.assertIn(str(repo_root()), before)
+    def test_folder_in_notice_follows_configured_decisions_dir(self) -> None:
+        # covers: UNKNOWN
+        # angle: regression
+        """A non-default memory.decisions_dir is the folder the notice names (not docs/decisions)."""
+        base = load_kernel_config()
+        memory = base.memory.model_copy(update={"decisions_dir": "records/custom-decisions"})
+        self.config = base.model_copy(update={"memory": memory})
+        before = self.note().split(MARKER, 1)[0]
+        expected = memory.decisions_folder(repo_root())
+        self.assertIn(str(expected), before)
+        self.assertNotIn(str(repo_root() / "docs" / "decisions"), before)
 
     def test_ac4_printed_command_runs_from_an_unrelated_directory(self) -> None:
         # covers: UNKNOWN

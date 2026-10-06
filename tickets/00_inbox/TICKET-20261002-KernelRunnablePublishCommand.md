@@ -111,3 +111,7 @@ completion_manifest:
   pre_commit_hooks_pass: true
   commit_message_valid: true
   ticket_staged: true
+
+### 2026-10-06 23:10 — python-coder (status: ok)
+feedback-id: fb_2026-10-06_2304303c
+Follow-up on PR #999: the printed "publish writes it into" folder is now resolved by the same helper publish uses. Added MemoryConfig.decisions_folder(base) in kernel/config_memory.py; kernel/memory/cli.py run_decisions uses it, and publish_command.publish_folder(config) uses it with repo_root() as base (the printed command passes no --repo-root). executor passes ctx.config. How-to Step 1 quoted text updated to match the printed note. Regression test added: non-default memory.decisions_dir is named in the notice. kernel/memory + kernel/capabilities: 326 passed, 1 failed (test_host_operations: host.retrieval_needs, unrelated to this change); ruff clean, ast.parse ok.

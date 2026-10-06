@@ -13,12 +13,16 @@ import os
 import sys
 from pathlib import Path
 
-from kernel.config import repo_root
+from kernel.config import KernelConfig, repo_root
 
 
-def publish_folder() -> Path:
-    """Return the folder `decisions publish` writes into (the kernel checkout's docs/decisions)."""
-    return repo_root() / "docs" / "decisions"
+def publish_folder(config: KernelConfig) -> Path:
+    """Return the folder `decisions publish` writes into for the printed command.
+
+    The printed command passes no --repo-root, so publish uses the kernel checkout as its base and
+    the configured `memory.decisions_dir`; this resolves them through the same helper publish uses.
+    """
+    return config.memory.decisions_folder(repo_root())
 
 
 def _quote(arg: str) -> str:

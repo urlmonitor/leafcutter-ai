@@ -11,7 +11,7 @@
   "status": "active",
   "readiness": "draft",
   "superseded_by": null,
-  "version": 2,
+  "version": 3,
   "shape_version": 2,
   "tags": [
     "decision-kernel",
@@ -27,7 +27,7 @@
     {
       "id": "decide-to-publish",
       "label": "Decide to publish",
-      "human": "Decision point: you run python -m kernel decisions publish --run-id R yourself, or ask Claude Code to run it and open a PR.\n\nThe reconstructed JSON projections come from the parsed YAML record docs/decisions/dec-ef8ddcb79d668a67.yaml; they are not a new API envelope or a replay of its historical execution. The CLI argument is --run-id run-2fbb4ef43b1345f6; this is a command over a staged file, not a JSON publication API.\n\nContract fields and examples (generated)\nConsumes:\n  decision_record/id: string (required)\n  decision_record/selected_option_id: string (required)\n  decision_record/approval/approved_by: string (required)\n  decision_record/approval/approved_at: string (required)\n  decision_record/provenance/run_id: string (required)\n  Runtime contract: [decision_record](kernel/memory/models.py)\nProduces:\n  No checked JSON binding documented in this direction.\n\nExisting decision-record scenario: decision_record — decision_record; reconstructed; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"id\": \"dec-ef8ddcb79d668a67\",\n  \"title\": \"Kernel-contract YAML per decision\",\n  \"decision_type\": \"design\",\n  \"selected_option_id\": \"opt.added.1\",\n  \"components\": [\n    \"decision_kernel\",\n    \"knowledge_management\"\n  ],\n  \"approval\": {\n    \"approval_status\": \"approved\",\n    \"approved_by\": \"human:user\",\n    \"approved_at\": \"2026-10-01T14:48:31Z\",\n    \"note\": \"approved_at is the decision's updated_at: the kernel Decision had no approved_at field when this decision was approved (added by #KernelDecisionStore).\"\n  },\n  \"provenance\": {\n    \"run_id\": \"run-2fbb4ef43b1345f6\",\n    \"created_at\": \"2026-10-01T14:48:31Z\"\n  }\n}",
+      "human": "Decision point: you run the publish command the staged notice printed yourself, from any shell and directory, or ask Claude Code to run it and open a PR. That command is the kernel's own interpreter, then scripts/run_kernel.py in the kernel checkout, then decisions publish --run-id R; the launcher puts the kernel package on the import path, so it needs no PYTHONPATH. The notice also names the folder publishing writes into: docs/decisions in that checkout.\n\nThe reconstructed JSON projections come from the parsed YAML record docs/decisions/dec-ef8ddcb79d668a67.yaml; they are not a new API envelope or a replay of its historical execution. The CLI argument is --run-id run-2fbb4ef43b1345f6; this is a command over a staged file, not a JSON publication API.\n\nContract fields and examples (generated)\nConsumes:\n  decision_record/id: string (required)\n  decision_record/selected_option_id: string (required)\n  decision_record/approval/approved_by: string (required)\n  decision_record/approval/approved_at: string (required)\n  decision_record/provenance/run_id: string (required)\n  Runtime contract: [decision_record](kernel/memory/models.py)\nProduces:\n  No checked JSON binding documented in this direction.\n\nExisting decision-record scenario: decision_record — decision_record; reconstructed; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"id\": \"dec-ef8ddcb79d668a67\",\n  \"title\": \"Kernel-contract YAML per decision\",\n  \"decision_type\": \"design\",\n  \"selected_option_id\": \"opt.added.1\",\n  \"components\": [\n    \"decision_kernel\",\n    \"knowledge_management\"\n  ],\n  \"approval\": {\n    \"approval_status\": \"approved\",\n    \"approved_by\": \"human:user\",\n    \"approved_at\": \"2026-10-01T14:48:31Z\",\n    \"note\": \"approved_at is the decision's updated_at: the kernel Decision had no approved_at field when this decision was approved (added by #KernelDecisionStore).\"\n  },\n  \"provenance\": {\n    \"run_id\": \"run-2fbb4ef43b1345f6\",\n    \"created_at\": \"2026-10-01T14:48:31Z\"\n  }\n}",
       "order": 1,
       "agent": "human (or claude_code on request)",
       "consumes": [
@@ -1665,7 +1665,7 @@
       "for": "decide-to-publish",
       "given": "a staged decision record and the publish instruction",
       "when": "you decide to publish",
-      "then": "you run python -m kernel decisions publish --run-id R, or Claude Code runs it at your request and opens a PR"
+      "then": "you run the printed publish command (<python> <repo_root>/scripts/run_kernel.py decisions publish --run-id R) as shown, or Claude Code runs it at your request and opens a PR"
     },
     {
       "for": "check-record",
@@ -1734,6 +1734,12 @@
       "by": "product-truth-expert",
       "date": "2026-10-03",
       "note": "Migrated every node to source-backed checked handoffs and labeled examples; preserved runtime, approvals and AC status."
+    },
+    {
+      "action": "extended",
+      "by": "flow-author (TICKET-20261002-KernelRunnablePublishCommand)",
+      "date": "2026-10-06",
+      "note": "Updated decide-to-publish to the runnable publish command the staged notice now prints (PR #999): the kernel's own interpreter with scripts/run_kernel.py, and the named docs/decisions folder. Prose and that scenario only; the publish CLI, its JSON result schema, contract bindings, approvals and AC links are unchanged."
     }
   ],
   "impl_summary": {
