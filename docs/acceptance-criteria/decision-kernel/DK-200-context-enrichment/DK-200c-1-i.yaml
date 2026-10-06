@@ -1,0 +1,56 @@
+id: DK-200c-1-i
+title: "Disabled gathering does not claim repository examination"
+component: decision-kernel
+components: [decision_kernel]
+level: L3
+status: active
+readiness: draft
+req_status: draft
+priority: high
+work_status: done
+criteria: |
+  Given initial gathering is disabled,
+  When a new request reaches the enrichment step,
+  Then the outcome identifies gathering as disabled,
+  And it reports no repository sources as examined by that step.
+depends_on: [DK-200c-1]
+covered_by:
+  - "tests/kernel/enrichment/test_context_enrichment.py::TestContextEnrichmentBoundaries::test_disabled_step_does_not_claim_to_have_examined_the_repository"
+implemented_by:
+  - "kernel/config_context.py"
+  - "kernel/context_enrichment.py"
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "Disabling gathering must be an explicit status and must not claim sources or files were examined."
+  - "Disabled gathering must leave the original task and supplied claims intact."
+delivers_to: null
+expects_from: null
+test_required: true
+test_spec:
+  - name: test_disabled_step_does_not_claim_to_have_examined_the_repository
+    target_dir: tests/kernel/enrichment/
+    framework: pytest
+    type: unit
+    angle: boundary
+    description: "Disabled enrichment returns disabled status, no examined files or repository evidence, and an explicit limitation."
+test_rationale: "The disabled path must be observable separately from a search that ran and found nothing."
+doc_links:
+  - path: docs/product-truth/flows/leafcutter/decision-forming.flow.json
+    relationship: implements
+    status: exists
+  - path: docs/architecture/components/decision-kernel.md
+    relationship: describes
+    status: exists
+  - path: docs/how-to/run-the-decision-kernel.md
+    relationship: context
+    status: exists
+origin_agent: business-analyst
+created: 2026-10-02
+amended_by:
+  - reason: "IT PO technical enrichment and verified test mapping on 2026-10-02; BA criteria and draft readiness preserved."
+superseded_by: null
+notes: |
+  Decomposed from the user-authorized context-enrichment scope and existing
+  DK-100 through DK-104. IT PO technical constraints and exact behavioral test
+  links are recorded. Readiness remains draft; no product approval is implied.

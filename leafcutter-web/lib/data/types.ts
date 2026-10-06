@@ -311,6 +311,8 @@ export interface FlowScenario {
   then: string;
 }
 
+import type { FlowContractDefinition, FlowIoContracts } from "./flow-contracts";
+
 /** One step in a product-truth flow. */
 export interface FlowStep {
   id: string;
@@ -321,6 +323,7 @@ export interface FlowStep {
   agent: string | null;       // actor that runs this step (agent id or script)
   produces: string[];         // data artifacts/fields handed downstream (handoff out)
   consumes: string[];         // data artifacts/fields required from upstream (handoff in)
+  ioContracts?: FlowIoContracts; // canonical structured metadata, when usable
   reads: string[];            // entity names read
   writes: string[];           // entity names written
   implements: string[];       // AC ids
@@ -331,23 +334,9 @@ export interface FlowStep {
 }
 
 /** A conditional branch off a flow step (e.g. out-of-stock path). */
-export interface FlowBranch {
-  id: string;
+export interface FlowBranch extends Omit<FlowStep, "order"> {
   from: string;               // step id this branches from
   condition: string;
-  label: string;
-  human: string;
-  screen: string | null;
-  agent: string | null;       // actor that runs this branch (agent id or script)
-  produces: string[];         // handoff out
-  consumes: string[];         // handoff in
-  reads: string[];
-  writes: string[];
-  implements: string[];
-  implStatus: WorkStatus;
-  fallbackStatus: WorkStatus;
-  acs: AcRef[];
-  expandsTo: string | null;   // child flow id this branch drills into, or null
 }
 
 /** The nature of a flow: an end-user journey, a data pipeline, or architecture. */
@@ -385,6 +374,7 @@ export interface Flow {
   scenarios: FlowScenario[];
   implSummary: FlowImplSummary; // derived from live AC status
   filePath: string;
+  contractDefinitions?: Record<string, FlowContractDefinition>;
   // Authored artifact graph (present only for architecture-kind flows loaded from
   // docs/reference/*.graph.json — absent for all journey/data flows).
   graphNodes?: ArtifactGraphNode[];

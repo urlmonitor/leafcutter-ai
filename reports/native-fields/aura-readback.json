@@ -1,0 +1,235 @@
+{
+  "source_sha": "59269e024e4d0290b68b03d0d382745966e67e29",
+  "generation_id": "20c370b99a39e0939e985846c9132986f8dc3052007b0dec5b43c19ddda7c28f",
+  "all_current_node_counts_verified": [
+    {
+      "kind": "AcceptanceCriterion",
+      "count": 4528,
+      "current_count": 4528
+    },
+    {
+      "kind": "ADR",
+      "count": 56,
+      "current_count": 56
+    },
+    {
+      "kind": "Component",
+      "count": 76,
+      "current_count": 76
+    },
+    {
+      "kind": "Agent",
+      "count": 61,
+      "current_count": 61
+    },
+    {
+      "kind": "Skill",
+      "count": 42,
+      "current_count": 42
+    },
+    {
+      "kind": "Ticket",
+      "count": 1525,
+      "current_count": 1525
+    },
+    {
+      "kind": "Document",
+      "count": 707,
+      "current_count": 707
+    },
+    {
+      "kind": "RoadmapPhase",
+      "count": 13,
+      "current_count": 13
+    },
+    {
+      "kind": "GlossaryTerm",
+      "count": 41,
+      "current_count": 41
+    },
+    {
+      "kind": "Flow",
+      "count": 14,
+      "current_count": 14
+    },
+    {
+      "kind": "Mockup",
+      "count": 10,
+      "current_count": 10
+    },
+    {
+      "kind": "MockData",
+      "count": 2,
+      "current_count": 2
+    },
+    {
+      "kind": "ChangelogEntry",
+      "count": 526,
+      "current_count": 526
+    },
+    {
+      "kind": "Capability",
+      "count": 9,
+      "current_count": 9
+    },
+    {
+      "kind": "SourceFile",
+      "count": 1006,
+      "current_count": 1006
+    },
+    {
+      "kind": "Test",
+      "count": 431,
+      "current_count": 431
+    }
+  ],
+  "sampled_physical_and_native_field_checks": [
+    {
+      "kind": "ADR",
+      "id": "ADR-001-self-hosting-boundary",
+      "physical_property_count": 48,
+      "native_field_roundtrip": true
+    },
+    {
+      "kind": "Component",
+      "id": "changelog",
+      "physical_property_count": 30,
+      "native_field_roundtrip": true
+    },
+    {
+      "kind": "AcceptanceCriterion",
+      "id": "ACD-100",
+      "physical_property_count": 54,
+      "native_field_roundtrip": true
+    },
+    {
+      "kind": "SourceFile",
+      "id": ".claude/commands/po.md",
+      "physical_property_count": 36,
+      "native_field_roundtrip": true
+    },
+    {
+      "kind": "Test",
+      "id": "unit_tests/commit_guardian/test_check_ac_schema.py",
+      "physical_property_count": 36,
+      "native_field_roundtrip": true
+    },
+    {
+      "kind": "Agent",
+      "id": "Agent:epic-supervisor",
+      "physical_property_count": 106,
+      "native_field_roundtrip": true
+    },
+    {
+      "kind": "Skill",
+      "id": "Skill:add-agent-to-package",
+      "physical_property_count": 35,
+      "native_field_roundtrip": true
+    },
+    {
+      "kind": "Ticket",
+      "id": "Ticket:tickets/00_inbox/epics/EPIC-ACStoreFoundation/01_schema_validation.md",
+      "physical_property_count": 44,
+      "native_field_roundtrip": true
+    },
+    {
+      "kind": "Document",
+      "id": "Document:docs/2b_direction_b_output_drift_detection.md",
+      "physical_property_count": 34,
+      "native_field_roundtrip": true
+    },
+    {
+      "kind": "RoadmapPhase",
+      "id": "RoadmapPhase:phase_1",
+      "physical_property_count": 35,
+      "native_field_roundtrip": true
+    },
+    {
+      "kind": "GlossaryTerm",
+      "id": "GlossaryTerm:antigravity",
+      "physical_property_count": 32,
+      "native_field_roundtrip": true
+    },
+    {
+      "kind": "Flow",
+      "id": "Flow:fern-and-fig/checkout-and-pay",
+      "physical_property_count": 155,
+      "native_field_roundtrip": true
+    },
+    {
+      "kind": "Mockup",
+      "id": "Mockup:fern-and-fig/cart",
+      "physical_property_count": 67,
+      "native_field_roundtrip": true
+    },
+    {
+      "kind": "MockData",
+      "id": "MockData:fern-and-fig/catalog",
+      "physical_property_count": 187,
+      "native_field_roundtrip": true
+    },
+    {
+      "kind": "ChangelogEntry",
+      "id": "ChangelogEntry:changelogs/2026-05-19-0000-changelog-v0-0-1-v0-0-2-2026-05-19.md",
+      "physical_property_count": 35,
+      "native_field_roundtrip": true
+    },
+    {
+      "kind": "Capability",
+      "id": "Capability:decision",
+      "physical_property_count": 46,
+      "native_field_roundtrip": true
+    },
+    {
+      "kind": "AcceptanceCriterion",
+      "id": "FIN-100",
+      "physical_property_count": 61,
+      "native_field_roundtrip": true
+    },
+    {
+      "kind": "AcceptanceCriterion",
+      "id": "FIN-100a",
+      "physical_property_count": 62,
+      "native_field_roundtrip": true
+    },
+    {
+      "kind": "Component",
+      "id": "finalize",
+      "physical_property_count": 30,
+      "native_field_roundtrip": true
+    }
+  ],
+  "declared_finalize_membership": [
+    {
+      "kind": "AcceptanceCriterion",
+      "count": 63
+    },
+    {
+      "kind": "ADR",
+      "count": 1
+    },
+    {
+      "kind": "Component",
+      "count": 1
+    },
+    {
+      "kind": "Ticket",
+      "count": 3
+    },
+    {
+      "kind": "Document",
+      "count": 2
+    },
+    {
+      "kind": "ChangelogEntry",
+      "count": 4
+    }
+  ],
+  "legacy_KR_nodes": 0,
+  "absent_native_kinds": [
+    "Decision"
+  ],
+  "compatibility_component_hubs_without_native_registry_record": 30,
+  "full_node_batch_readback": "performed before activation by native_verification.verify_rows",
+  "historical_generations_unchanged": 4
+}

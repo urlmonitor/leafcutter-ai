@@ -1,0 +1,27 @@
+{
+  "goal": "How many ACs concern test writing? Exclude parent requirements.",
+  "caller": {
+    "id": "scenario-evaluator",
+    "kind": "host"
+  },
+  "scope": {
+    "workspace_id": "leafcutter",
+    "repository_root": "C:\\Users\\Hendrik\\Code\\leafcutter\\worktrees\\knowledge-retrieval-v01",
+    "read_roots": [
+      "docs"
+    ],
+    "component_ids": [],
+    "revision": {
+      "commit": "59269e024e4d0290b68b03d0d382745966e67e29",
+      "dirty": false
+    }
+  },
+  "permissions": [
+    "read_repo"
+  ],
+  "input_payload_schema": "leafcutter.research_request.v1",
+  "input_payload": {
+    "question": "How many ACs concern test writing? Exclude parent requirements."
+  },
+  "requested_output_schema": "leafcutter.evidence_bundle.v1"
+}

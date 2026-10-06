@@ -4,10 +4,11 @@ description: "Set up credentials, start a run from the command line, answer the 
 type: how-to
 status: active
 created: 2026-10-01
-last_updated: 2026-10-01
+last_updated: 2026-10-03
 components:
   - decision_kernel
 related_docs:
+  - docs/how-to/supply-and-evaluate-kernel-context.md
   - docs/how-to/inspect-kernel-traces-with-langfuse-mcp.md
   - docs/architecture/components/decision-kernel.md
   - docs/analysis/2026-10-01-decision-kernel-v0-demo-report.md
@@ -21,7 +22,7 @@ related_code:
 
 # How to run the decision kernel
 
-The kernel takes a goal, decides it against repository evidence with the real Jev provider, and
+The kernel takes a goal, recognizes repository terms before classifying intent, decides it against repository evidence with the real Jev provider, and
 pauses whenever it needs host work or a human answer. You drive it with `python -m kernel`.
 
 ## Prerequisites
@@ -140,11 +141,22 @@ so no extra Jev call). Evidence that is on topic but does not answer leaves the 
 with a limitation: `research.answer_threshold` (0.7) sets the bar and
 `research.answer_aware_coverage` (`true`) switches it off.
 
-### Step 3 — Write the task and start the run
+### Step 3 - Prepare entity meanings, write the task and start the run
+
+Prepare the local entity index for the repository and config you will use:
+
+```bash
+python -m kernel entities build --repository-root C:/Users/me/leafcutter
+```
+
+Rebuild after changing canonical source files or source configuration. This is explicit
+maintenance; a run does not rebuild or search the repository before intent if the index is
+missing or stale. It records limited coverage and continues to intent. See the
+[context guide](supply-and-evaluate-kernel-context.md) for bounds, provenance and evaluations.
 
 The goal travels as data, never on a command line. Write a `TaskInput` JSON file and pass it with
 `--input-file`, or pipe it on stdin (`-` or no flag reads stdin). `repository_root` is an absolute
-path; `read_roots` is optional.
+path; `read_roots` is optional. The goal may contain up to 16,000 characters, preserved verbatim.
 
 ```json
 {
@@ -163,24 +175,8 @@ stdout is exactly one JSON document, the run envelope; logs go to stderr. To ski
 generation supply `input_payload_schema: "leafcutter.decision_request.v1"` and an `input_payload`
 with `question`, `options` and `criteria`. Evidence you already hold goes in `initial_evidence`.
 
-**What kind of answer does the goal need?** When you do not set `requested_output_schema`, the
-kernel asks Jev one bounded question about the goal and picks the answer kind itself:
-
-| Answer kind | The goal asks to... | Result |
-|---|---|---|
-| `decision` | choose between options or approaches, or decide what to do | `decision_report.v1` from the decision capability |
-| `evidence` | find or locate facts in this repository | `evidence_bundle.v1` from research |
-| `ideas` | generate options or ideas without deciding | `options.v1` from `host.generate_options`; every option stays `proposed` |
-| `change` | implement, edit or modify something | declined: status `blocked`, limitation `out_of_scope_write` (the V0 kernel is read-only) |
-| `out_of_domain` | something unrelated to software engineering or this repository | declined: status `blocked`, limitation `out_of_domain`; never a build opportunity |
-
-If Jev is unsure (thresholds in `config.intent`), the run pauses with a question that offers these
-kinds as choices; free text is allowed, and the answer is classified again as the new statement of
-the goal. At most `intent.max_clarifications` questions are asked; after that the run ends with a
-plain `unclear_request` message and a suggested rephrasing. If Jev is unavailable the default
-`decision_report` is kept. **To bypass the classification set `requested_output_schema`
-yourself** (`leafcutter.decision_report.v1`, `leafcutter.evidence_bundle.v1` or
-`leafcutter.options.v1`), or supply a typed `input_payload`; an explicit choice always wins.
+For caller context, enrichment limits, saved snapshots and the isolated or live evals, see
+[How to supply and evaluate kernel context enrichment](supply-and-evaluate-kernel-context.md).
 
 ### Step 4 — Route on the envelope `status`
 

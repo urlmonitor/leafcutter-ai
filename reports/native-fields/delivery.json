@@ -1,0 +1,59 @@
+{
+  "strict_enforcement": "AC_ENFORCE_STRICT=1",
+  "receipts": {
+    "native-final-strict.xml": {
+      "tests": 390,
+      "passed": 389,
+      "failed": 0,
+      "skipped": 1,
+      "skip_reason": "Windows privilege unavailable for real symlink creation; other glossary path controls pass."
+    },
+    "core-regression.xml": {
+      "tests": 74,
+      "passed": 74,
+      "failed": 0,
+      "skipped": 0
+    },
+    "refresh-recovery-complete-green.xml": {
+      "tests": 16,
+      "passed": 16,
+      "failed": 0,
+      "skipped": 0
+    },
+    "domain-graph-regression.xml": {
+      "tests": 3,
+      "passed": 3,
+      "failed": 0,
+      "skipped": 0
+    },
+    "domain-regression.xml": {
+      "tests": 10,
+      "passed": 7,
+      "failed": 3,
+      "skipped": 0,
+      "note": "Initial graph tests used the wrong disposable port; the three are superseded by domain-graph-regression.xml. The seven migration tests passed."
+    }
+  },
+  "independent_review": "reports/native-fields/integration-review.json",
+  "review_resolution": "reports/native-fields/refresh-recovery.json",
+  "field_audit": "reports/native-fields/field-coverage.json",
+  "hosted_publication": "reports/native-fields/aura-publication.json",
+  "status": "complete",
+  "hosted_readback": "reports/native-fields/aura-readback.json",
+  "visual_verification": "reports/native-fields/aura-ui.json",
+  "active_checkout": "C:/Users/Hendrik/Code/leafcutter/worktrees/knowledge-retrieval-v01",
+  "installed_smoke": {
+    "passed": 27,
+    "report": "reports/native-fields/installed-smoke.xml"
+  },
+  "notes": [
+    "The historical aura-publication.json source had zero Decision records. The 2026-10-03 publication contains six Decisions with all 31 authored fields per record verified by live readback; see latest_hosted_publication_and_readback.",
+    "At the historical aura-publication.json revision, 30 retained compatibility Component hubs had no native registry record; their original reference properties remained exposed. All 9017 canonical/native-reference records had full native metadata.",
+    "At the original operational delivery, no commit or PR was requested or created. The existing active checkout index and unrelated merge state were preserved. Historical test and visual receipts above describe that original delivery."
+  ],
+  "cleanup": {
+    "disposable_neo4j_container": "stopped",
+    "isolated_test_temporary_directory": "Windows denied removal of pytest-of-Hendrik; not installed into the active checkout."
+  },
+  "latest_hosted_publication_and_readback": "reports/native-fields/aura-decisions-2026-10-03.json"
+}

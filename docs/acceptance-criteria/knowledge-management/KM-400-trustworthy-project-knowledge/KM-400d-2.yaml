@@ -1,0 +1,99 @@
+id: KM-400d-2
+title: "Source excerpts come from the pinned commit"
+component: knowledge-management
+components: [knowledge_management]
+level: L2
+status: active
+req_status: active
+readiness: approved
+priority: medium
+work_status: done
+parent: KM-400d
+criteria: |
+  Given generation A refers to document text at commit A and the current checkout contains different text
+  When level-three source disclosure is requested
+  Then the excerpt matches A's source and includes its locator and available line range
+  And missing source text returns the locator with an explicit content-unavailable status
+  And a path or locator escaping the authorized repository is rejected
+  And generated summaries are distinguishable from exact source quotations
+depends_on: [KM-400d]
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: context
+    status: exists
+  - path: docs/acceptance-criteria/knowledge-management/KM-KGS-100-knowledge-graph-surfaces/KM-KGS-100a-3.yaml
+    relationship: context
+    status: exists
+    relevance: Preserve approved canonical field relations and path-keyed targets with separate anchors; verify shipped behavior during Stage 0.
+  - path: docs/acceptance-criteria/ac-store/ACS-1100-honest-coverage-answers/ACS-1100.yaml
+    relationship: context
+    status: exists
+    relevance: Inherit honest coverage and method for every count; unknown totals remain unknown.
+assigned_agent: python-coder
+estimated_complexity: L
+delivers_to:
+  agent: python-coder
+  contract: KM-400d-3 consumes the behavior and attributable outputs specified by
+    this AC.
+expects_from:
+  ac_id: KM-400a-1
+  contract: Approved source mapping and current kernel compatibility from Stage 0;
+    preserve canonical identities and declared ownership.
+origin_agent: business-analyst
+created: '2026-10-01'
+amended_by: []
+superseded_by: null
+covered_by:
+- tests/knowledge/test_disclosure_limits.py::test_long_utf8_source_retains_useful_labeled_excerpt_within_full_budget
+- tests/knowledge/test_disclosure_limits.py::test_pinned_old_sha_followup_uses_retained_generation
+- tests/knowledge/test_core.py::test_source_disclosure_uses_pinned_reference_and_preserves_whitespace
+- tests/knowledge/test_projection.py::test_git_source_resolver_uses_sha_and_blocks_traversal
+- tests/knowledge/test_source_boundaries.py::test_yaml_pointer_reads_exact_criterion_not_file_header
+implemented_by:
+- tickets/00_inbox/TICKET-20261001-KM-400d-2.md
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  User-authorized Knowledge Retrieval guide stages 0-4. Approval records delegated
+  behavioral authoring, not implementation completion. Stage 0 source alignment
+  gates mappings and shared contracts. IT PO adds technical constraints and test_spec.
+
+it_requirements:
+- Source resolution must validate repository-relative path and locator against the pinned SHA, including
+  traversal, symlink and missing-object cases; generated text is labeled.
+- Follow ADR-062; preserve canonical sources and current kernel contracts. Report unexecuted real-server
+  or real-model validation as not run, never passing.
+test_required: true
+test_spec:
+- name: test_km400_d_2_behavior
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: integration
+  angle: criterion
+  description: Commit source A then alter checkout; retrieve selected level-three excerpts and compare
+    exact Git bytes and line locators; reject escaping paths and report missing content.
+  covers:
+  - KM-400d-2
+  requires_db: false
+- name: test_km400_d_2_public_reachability
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: integration
+  angle: reachability
+  description: Exercise this AC through its intended standalone CLI/service or existing kernel capability
+    caller with real-format inputs; prove the result is observable outside the internal helper and optional
+    prerequisites are honestly reported.
+  covers:
+  - KM-400d-2
+test_rationale: Behavioral proof uses the public caller and source-format fixture so internal helper tests
+  cannot mask missing wiring. Live server gates remain distinct from deterministic fake-provider tests.
+product_truth:
+  - flow: leafcutter/retrieval-current-baseline
+    node: retrieve
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: null
+    entities: []
+    source: real
+    asof: '2026-10-02'

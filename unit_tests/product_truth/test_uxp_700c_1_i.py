@@ -53,7 +53,8 @@ def _flow(implements: list[str]) -> dict:
         "kind": "user", "source": "mock", "status": "active", "readiness": "draft", "version": 1,
         "entities": [],
         "steps": [{"id": "browse", "label": "browse", "human": "the actor browses", "order": 1,
-                   "implements": implements}],
+                   "implements": implements,
+                   "io_contracts": {"not_applicable": "The actor browses in a pointer-classification fixture; no JSON is exchanged."}}],
         "branches": [],
     }
 

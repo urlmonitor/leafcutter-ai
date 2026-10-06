@@ -1,0 +1,52 @@
+id: DK-102
+title: "Context discovery obeys scope, data policy and configured limits"
+component: decision-kernel
+components: [decision_kernel]
+level: L2
+status: superseded_by
+superseded_by: [DK-200b-1, DK-200b-2, DK-200b-2-i, DK-200b-3, DK-200b-3-i, DK-200b-4, DK-200b-4-i, DK-200b-4-ii]
+amended_by:
+  - reason: "2026-10-02 BA decomposition: replaced the broad preliminary requirement with focused L2/L3 successors under DK-200; historical criteria and evidence links are retained."
+readiness: draft
+req_status: draft
+priority: high
+work_status: done
+criteria: |
+  Given allowed repository sources and read roots alongside denied or sensitive files,
+  And configured source, file, excerpt, character and elapsed-time limits,
+  When enrichment searches for context,
+  Then it reads only allowed sources within the task's read scope and denial rules,
+  And it applies redaction and data-policy restrictions before external model or trace transmission,
+  And it stops at its bounds and reports truncation or incomplete coverage honestly,
+  And downstream provider projections fit the remaining payload allowance without changing the base request or checkpointed context,
+  And it performs no repository writes, host operations or Jev calls of its own.
+doc_links:
+  - path: docs/product-truth/flows/leafcutter/decision-forming.flow.json
+    relationship: implemented-by-step
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+origin_agent: Codex (user-requested context enrichment)
+created: 2026-10-02
+covered_by:
+  - tests/kernel/enrichment/test_context_enrichment.py::TestContextEnrichmentEvaluation::test_each_labelled_case_meets_the_context_contract
+  - tests/kernel/enrichment/test_context_enrichment.py::TestContextEnrichmentBoundaries::test_file_count_and_payload_bounds_are_enforced_and_reported
+  - tests/kernel/enrichment/test_context_enrichment.py::TestContextEnrichmentBoundaries::test_known_secrets_are_redacted_in_caller_context_and_excerpts
+  - tests/kernel/enrichment/test_context_enrichment.py::TestContextEnrichmentBoundaries::test_redaction_expansion_stays_within_each_caller_field_limit
+  - tests/kernel/enrichment/test_context_enrichment.py::TestContextEnrichmentBoundaries::test_supplied_context_budget_preserves_goal_and_marks_truncation
+  - tests/kernel/enrichment/test_context_enrichment.py::TestContextEnrichmentBoundaries::test_source_budget_changes_the_number_of_consulted_sources
+  - tests/kernel/enrichment/test_context_enrichment.py::TestContextEnrichmentBoundaries::test_expired_budget_prevents_search_and_reports_what_was_not_examined
+  - tests/kernel/intent/test_context_enrichment_wiring.py::TestContextEnrichmentWiring::test_data_policy_withholds_repository_context_from_intent
+  - tests/kernel/enrichment/test_projection.py::TestContextProjection::test_near_limit_request_fits_with_plain_or_json_escaped_context
+  - tests/kernel/enrichment/test_projection.py::TestContextProjection::test_no_room_omits_context_without_altering_or_oversizing_the_request
+  - tests/kernel/enrichment/test_projection.py::TestContextProjection::test_data_policy_removes_evidence_from_projection_but_not_checkpoint
+  - tests/kernel/enrichment/test_projection.py::TestContextProjection::test_downstream_batch_uses_configured_remaining_allowance
+  - tests/kernel/enrichment/test_projection.py::TestContextProjection::test_intent_batch_preserves_goal_while_projecting_context_with_its_budget
+implemented_by:
+  - kernel/config_context.py
+  - config/kernel_config.default.json
+  - kernel/context_enrichment.py
+  - kernel/enrichment_sources.py
+  - kernel/enrichment_projection.py
+change_target: code
+risk_surface: internal

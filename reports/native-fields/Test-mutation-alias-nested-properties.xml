@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="1" skipped="0" tests="1" time="27.323" timestamp="2026-10-02T09:30:23.676578+00:00" hostname="BrainDesk"><testcase classname="tests.knowledge.test_native_test" name="test_test_reference_copies_nested_data_in_both_directions" time="0.007"><failure message="assert [1, 2, 3] == [1, 2]&#10;  &#10;  Left contains one more item: 3&#10;  Use -v to get more diff">tests\knowledge\test_native_test.py:186: in test_test_reference_copies_nested_data_in_both_directions
+    assert entity.properties["nested"][0]["items"] == [1, 2]
+E   assert [1, 2, 3] == [1, 2]
+E     
+E     Left contains one more item: 3
+E     Use -v to get more diff</failure></testcase></testsuite></testsuites>

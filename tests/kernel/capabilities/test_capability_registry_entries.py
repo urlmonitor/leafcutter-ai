@@ -29,7 +29,7 @@ from kernel.registry.eligibility import filter_candidates
 from tests.kernel.helpers import ScriptedExecutor, load_json, make_request_body
 
 CONFIG = Path(__file__).resolve().parents[3] / "config"
-HOST_IDS = ["host.formulate_question", "host.generate_options", "host.research",
+HOST_IDS = ["host.formulate_question", "host.generate_options", "host.query_build", "host.research",
             "host.synthesize"]
 
 
@@ -39,6 +39,7 @@ def _table() -> BindingTable:
     table.register("decision", "1.0.0", DecisionExecutor)
     table.register("research", "1.0.0", ResearchExecutor)
     table.register("retrieve.repository", "1.0.0", RepositoryRetrievalExecutor)
+    table.register("knowledge.activate_query", "1.0.0", ScriptedExecutor)
     for host_id in HOST_IDS:
         table.register(host_id, "1.0.0", ScriptedExecutor)
     return table
@@ -54,7 +55,8 @@ class TestEntries(unittest.TestCase):
     def test_every_entry_is_a_native_registration_of_this_ticket(self) -> None:
         for d in self.snapshot.descriptors:
             self.assertEqual(d.admission.kind, "native_registration")
-            self.assertEqual(d.admission.decision_ref, "TICKET-20260930-KernelBootstrapV0")
+            expected = "TICKET-20261001-KM-500b-3" if d.id in {"host.query_build", "knowledge.activate_query"} else "TICKET-20260930-KernelBootstrapV0"
+            self.assertEqual(d.admission.decision_ref, expected)
             self.assertEqual(d.version, "1.0.0")
             self.assertEqual(d.binding, d.id)
 

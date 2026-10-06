@@ -13,6 +13,10 @@
 #                docs/components.json. BLOCKING. Diff-scoped on PRs, full tree
 #                on push to main.
 #
+#   product-truth-valid - the same offline store validator used by pre-commit,
+#                including documented handoff fields and examples. BLOCKING,
+#                every PR/push, plus its focused contract regression tests.
+#
 #   shipped-address-check — nothing under templates/ (including templates/docs/)
 #                or config/ carries a real-looking database connection address
 #                (INF-1100d-4 / INF-1100d-4-i). BLOCKING, full tree every run —
@@ -27,11 +31,49 @@
 #                that makes a reintroduced address fail CI even on a
 #                contributor whose local pre-commit hooks are not installed.
 #
-#   test       - full pytest suite over tests/ and unit_tests/. DISABLED by
-#                owner request on 2026-10-02 because the full run takes too long.
-#                The job-level condition prevents runner allocation and every
-#                setup/test step. Its definition remains available for an
-#                explicit future re-enable; local commit hooks remain enabled.
+#   test-shard — the full pytest suite over tests/ and unit_tests/, split
+#                across 8 parallel shards via pytest-split's --splits/--group.
+#                Re-enables what was DISABLED on 2026-10-02 for runtime: the
+#                single job took ~52 min, which is why no behavioural gate has
+#                guarded main since that date. The shards PARTITION the
+#                collected set — every test still runs exactly once, nothing is
+#                skipped, deselected, or sampled. Balance comes from the
+#                committed durations file; without it pytest-split splits by
+#                test COUNT, which is pathological for this suite (60 of 7604
+#                tests hold 63% of the clock). fail-fast is off so one shard's
+#                failure cannot cancel the others. NOT YET BLOCKING — see
+#                `test` below.
+#
+#                THE DURATIONS FILE IS NOT YET PRESENT. Until
+#                .github/workflows/test-durations.yml has run once and its PR
+#                is merged, these shards split by count and will be UNEVEN —
+#                degraded balance, never lost coverage. It cannot be generated
+#                locally: pydantic, langgraph, langchain, neo4j and langfuse
+#                are pinned here but absent from a typical dev environment, so
+#                163 modules fail to import locally and run only on CI.
+#
+#   test       — aggregator over test-shard, carrying the stable check name
+#                `Test suite (pytest)` that the required-check list used before
+#                2026-10-02. Green only when EVERY shard is green. Exists so
+#                that re-promoting the suite to a required check is a ruleset
+#                checkbox rather than a workflow edit, and so a matrix resize
+#                never invalidates the required-check name. Still
+#                INFORMATIONAL until the owner promotes it.
+#
+#                Shard count is bounded by CONCURRENCY, not by arithmetic. A PR
+#                starts 21 slots from this file (13 non-shard jobs, since
+#                ac-store-valid-whole-store is push-only, plus the 8 shards)
+#                and 4 more from schema_diff, agent-evals and fixture-drift —
+#                25 at peak, against a per-account cap set by plan (20 on
+#                Free). Above the cap jobs QUEUE rather than fail, so the
+#                effect is silent: later shards start only as earlier jobs
+#                finish. Accepted here because 12 of the 13 non-shard jobs are
+#                static checks that clear in seconds and hand their slots over,
+#                so the overflow drains in the first minutes rather than
+#                persisting. Expect ~7 min plus a short start-up stagger, not a
+#                clean 1/8 of 53 min. Confirm the plan before raising 8.
+#                Full rationale and measurements:
+#                docs/analysis/2026-10-05-pytest-ten-minute-target-4-ci-sharding.md
 #
 #   done-proof — proof-of-done coverage (BO-2500b). BLOCKING, diff-scoped.
 #
@@ -132,6 +174,58 @@ jobs:
         # to the full E722/BLE001/TRY set; the other trees are not (see ruff.toml).
         run: ruff check kernel --select E722,BLE001,TRY
 
+  product-truth-valid:
+    name: Product truth valid (offline)
+    runs-on: ubuntu-latest
+    # A focused whole-store check on every PR/push catches dependency-only
+    # changes and removed contract metadata without a second driftable selector.
+    # Keep this the same validator invoked by check-product-truth-validate.
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install dev dependencies
+        run: pip install -r requirements-dev.txt
+
+      - name: Validate product-truth contracts and store
+        run: python docs/product-truth/scripts/validate_product_truth.py --quiet
+
+      - name: Test product-truth contract enforcement
+        env:
+          AC_ENFORCE_STRICT: "1"
+        run: python -m pytest unit_tests/product_truth/test_flow_io_contract*.py -q
+
+  atlas-contracts:
+    name: Atlas contract display
+    runs-on: ubuntu-latest
+    # Display-only changes must exercise the real loader/explorer/drawer seam,
+    # even when no AC status or product-truth JSON file changed in this PR.
+    defaults:
+      run:
+        working-directory: leafcutter-web
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+          cache-dependency-path: leafcutter-web/package-lock.json
+
+      - name: Install Atlas dependencies
+        run: npm ci
+
+      - name: Type check Atlas and its tests
+        run: npx tsc --noEmit --incremental false
+
+      - name: Test Atlas contract display
+        run: npm test -- components/flows/__tests__/flow-drawer.contracts.test.tsx components/flows/__tests__/flow-explorer.contracts.test.tsx lib/data/__tests__/flows.contracts.test.ts
+
   component-vocab:
     name: Component vocab style (components.json)
     runs-on: ubuntu-latest
@@ -192,14 +286,43 @@ jobs:
       - name: Check shipped sources for database connection addresses
         run: python scripts/portability/check_shipped_addresses.py
 
-  test:
-    name: Test suite (pytest)
-    # Disabled indefinitely by owner request (2026-10-02): full-suite runtime.
-    # This check is also removed from the main-branch required-check list.
-    if: ${{ false }}
+  test-shard:
+    name: Test suite shard ${{ matrix.group }}/${{ strategy.job-total }}
+    # Re-enables the suite that was disabled on 2026-10-02 for runtime, by
+    # splitting it across parallel shards instead of running it as one job.
+    # Every test still runs exactly once: the shards partition the collected
+    # set, they do not sample it. See
+    # docs/analysis/2026-10-05-pytest-ten-minute-target-4-ci-sharding.md.
     runs-on: ubuntu-latest
+    strategy:
+      # Do NOT let one shard's failure cancel its siblings. The default would
+      # turn a single-test regression into "7 shards cancelled, cause unknown"
+      # — strictly less information than the old single job produced.
+      fail-fast: false
+      matrix:
+        # Eight, not ten. With these 8, a PR peaks at 25 concurrent jobs
+        # against a per-account cap of 20 on GitHub Free, so some queueing is
+        # expected and accepted — see the header note for why it drains fast.
+        # Over the cap jobs QUEUE rather than fail, so a larger matrix buys
+        # less wall clock than the arithmetic suggests, silently. Raise only
+        # after measuring a real run.
+        group: [1, 2, 3, 4, 5, 6, 7, 8]
     steps:
       - uses: actions/checkout@v4
+        with:
+          # FULL HISTORY, not the default depth-1 shallow clone. Several
+          # tests/knowledge/ tests read repository history through
+          # knowledge/adapters/git_source.py, which shells out to `git -C`.
+          # Against a shallow clone those resolve nothing and the fixture dies
+          # with `fatal: Needed a single revision`, surfacing as 27 "ERROR at
+          # setup" entries plus a handful of failures.
+          #
+          # This is NOT caused by sharding and is not new: the single `test`
+          # job used the same bare checkout, so it would have hit this the
+          # moment it was re-enabled. It stayed invisible only because that job
+          # has been disabled since 2026-10-02. Verified by reproducing the
+          # same tests green on a full local clone of the same commit.
+          fetch-depth: 0
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -214,6 +337,11 @@ jobs:
         # scripts/commit_guardian/, scripts/doc_compliance/, and
         # scripts/feedback/ pointing into .leafcutter/scripts/. Tests
         # add those paths to sys.path at import time (ADR-016).
+        #
+        # Paid once per shard rather than once per run. That is the intended
+        # trade (runner minutes for wall clock) and it does not affect
+        # correctness: each shard is an independent process tree, so
+        # TQ-600a-1's "one shared layout per run" still holds within a shard.
         run: python scripts/build.py --target-dir .
 
       - name: Fetch the retrieval benchmark's pinned corpus commit
@@ -225,7 +353,7 @@ jobs:
           PIN=$(python -c "import json; print(json.load(open('tests/kernel/retrieval/benchmark_cases.json'))['corpus_commit'])")
           git fetch --no-tags --depth=1 origin "$PIN"
 
-      - name: Run test suite
+      - name: Run test suite shard
         env:
           # Disable AC-enforcement xfail-masking on the gate so genuinely-failing
           # tests surface as real failures (not downgraded to xfail when their
@@ -233,11 +361,84 @@ jobs:
           # prerequisite for making this job blocking (BP-1200b).
           # (EPIC-RedTestClusterRepair ticket 09.)
           AC_ENFORCE_STRICT: "1"
-        run: python -m pytest tests/ unit_tests/ -q --continue-on-collection-errors
+        # --splits/--group come from pytest-split. Balance comes from the
+        # committed durations file: WITHOUT it pytest-split falls back to
+        # splitting by test COUNT, which is close to the worst choice for this
+        # suite, where 60 of 7604 tests hold 63% of the clock. An unlucky
+        # count-split lands most of those 60 on one shard and the matrix waits
+        # for it. A stale durations file degrades balance, never correctness.
+        #
+        # --durations-path keeps the file out of the repo root: pytest-split
+        # defaults to a root-level `.test_durations`, and this repo's
+        # check-root-files commit guardian governs additions there. It lives
+        # beside the only workflow that reads it instead.
+        run: >
+          python -m pytest tests/ unit_tests/ -q
+          --continue-on-collection-errors
+          --splits ${{ strategy.job-total }}
+          --group ${{ matrix.group }}
+          --durations-path .github/test_durations.json
+
+  test:
+    name: Test suite (pytest)
+    # Aggregator. Carries the single stable check name across a matrix whose
+    # size may change, so promoting the suite back to a required check is a
+    # ruleset checkbox with no workflow edit. The name is deliberately the one
+    # the required-check list used before 2026-10-02.
+    runs-on: ubuntu-latest
+    needs: [test-shard]
+    # Required: without always() this job is SKIPPED when any shard fails, so
+    # it would report nothing instead of failing — a green-looking absence.
+    if: always()
+    steps:
+      - name: Fail unless every shard succeeded
+        # needs.<matrix-job>.result aggregates across all legs: it is
+        # 'success' only when every leg succeeded, and 'failure' / 'cancelled'
+        # otherwise. Echoed before the assertion so the log names the reason.
+        run: |
+          echo "aggregate shard result: ${{ needs.test-shard.result }}"
+          test "${{ needs.test-shard.result }}" = "success"
 
   done-proof:
     name: Proof-of-done coverage check (BO-2500b)
     runs-on: ubuntu-latest
+    services:
+      knowledge-retrieval:
+        image: neo4j:5.26-community
+        env:
+          NEO4J_AUTH: neo4j/leafcutter-local-tests
+          NEO4J_server_memory_heap_initial__size: 256m
+          NEO4J_server_memory_heap_max__size: 512m
+          NEO4J_server_memory_pagecache_size: 128m
+        ports:
+          - 17687:7687
+        options: >-
+          --health-cmd "cypher-shell -u neo4j -p leafcutter-local-tests 'RETURN 1'"
+          --health-interval 10s --health-timeout 10s --health-retries 12
+      knowledge-domain:
+        image: neo4j:5.26-community
+        env:
+          NEO4J_AUTH: neo4j/leafcutter-domain-tests
+          NEO4J_server_memory_heap_initial__size: 256m
+          NEO4J_server_memory_heap_max__size: 512m
+          NEO4J_server_memory_pagecache_size: 128m
+        ports:
+          - 18087:7687
+        options: >-
+          --health-cmd "cypher-shell -u neo4j -p leafcutter-domain-tests 'RETURN 1'"
+          --health-interval 10s --health-timeout 10s --health-retries 12
+      knowledge-native:
+        image: neo4j:5.26-community
+        env:
+          NEO4J_AUTH: neo4j/leafcutter-native-tests
+          NEO4J_server_memory_heap_initial__size: 256m
+          NEO4J_server_memory_heap_max__size: 512m
+          NEO4J_server_memory_pagecache_size: 128m
+        ports:
+          - 18088:7687
+        options: >-
+          --health-cmd "cypher-shell -u neo4j -p leafcutter-native-tests 'RETURN 1'"
+          --health-interval 10s --health-timeout 10s --health-retries 12
     # Blocking gate (BO-2500b-3): diff-scoped ci-changed mode evaluates only ACs
     # changed in the PR, making this safe to require without failing on pre-existing
     # done ACs that predate the covers-tag mandate.
@@ -651,9 +852,9 @@ jobs:
           # forms are required so top-level scripts are not silently excluded from
           # mypy, which previously reported SUCCESS while never seeing 64 of 123
           # tracked scripts, including scripts/build.py.
-          CHANGED=$(git diff --name-only --diff-filter=ACM "origin/${{ github.base_ref }}"...HEAD -- 'scripts/*.py' 'scripts/**/*.py' 'tests/*.py' 'tests/**/*.py' 'unit_tests/*.py' 'unit_tests/**/*.py')
+          CHANGED=$(git diff --name-only --diff-filter=ACM "origin/${{ github.base_ref }}"...HEAD -- 'scripts/*.py' 'scripts/**/*.py' 'tests/*.py' 'tests/**/*.py' 'unit_tests/*.py' 'unit_tests/**/*.py' 'knowledge/*.py' 'knowledge/**/*.py' 'integrations/*.py' 'integrations/**/*.py' 'kernel/*.py' 'kernel/**/*.py')
           if [ -z "$CHANGED" ]; then
-            echo "No changed Python files under scripts/, tests/, or unit_tests/ — skipping mypy."
+            echo "No changed Python files under scripts/, tests/, unit_tests/, knowledge/, integrations/, or kernel/ — skipping mypy."
             exit 0
           fi
           echo "Type-checking changed files:"

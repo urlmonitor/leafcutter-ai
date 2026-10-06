@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="2" skipped="0" tests="2" time="18.628" timestamp="2026-10-02T09:25:33.814604+00:00" hostname="BrainDesk"><testcase classname="tests.knowledge.test_native_properties" name="test_large_integer_values_and_keys_remain_driver_safe_and_lossless" time="0.002"><failure message="AssertionError: assert 9223372036854775808 == '9223372036854775808'&#10; +  where '9223372036854775808' = str((2 ** 63))">def test_large_integer_values_and_keys_remain_driver_safe_and_lossless():
+        # covers: KM-400a-3-i
+        # angle: boundary
+        from knowledge.native_properties import encode, decode, restore_types
+    
+        source = {"large": 2**63, "negative": -(2**63) - 1, "items": [2**64], 2**80: "key"}
+        props = restore_types(json.loads(json.dumps(encode(source))))
+&gt;       assert props["large"] == str(2**63)
+E       AssertionError: assert 9223372036854775808 == '9223372036854775808'
+E        +  where '9223372036854775808' = str((2 ** 63))
+
+tests\knowledge\test_native_properties.py:90: AssertionError</failure></testcase><testcase classname="tests.knowledge.test_native_metadata_integration" name="test_scoped_native_import_keeps_declared_component_filter_and_reports_unresolved" time="0.013"><failure message="AssertionError: assert [] == ['finalize']&#10;  &#10;  Right contains one more item: 'finalize'&#10;  Use -v to get more diff">tmp_path = WindowsPath('C:/Users/Hendrik/AppData/Local/Temp/pytest-of-Hendrik/pytest-3075/test_scoped_native_import_keep0')
+monkeypatch = &lt;_pytest.monkeypatch.MonkeyPatch object at 0x0000019F7300F950&gt;
+
+    def test_scoped_native_import_keeps_declared_component_filter_and_reports_unresolved(tmp_path, monkeypatch):
+        # covers: KM-400a-3-i
+        # angle: boundary
+        (tmp_path / "record.yaml").write_text("source")
+        raw = {"components": ["finalize", "finalize"]}
+        monkeypatch.setattr(native_metadata, "collect", lambda *a, **kw: [
+            NativeRecord("Document", "document", "record.yaml", raw)
+        ])
+        snapshot = ProjectionSnapshot(repository_id="repo", source_sha="a" * 40, generation_id="one")
+        result = native_metadata.enrich(snapshot, tmp_path)
+        props = display_properties(result.nodes[0], [])
+&gt;       assert props["components"] == ["finalize"]
+E       AssertionError: assert [] == ['finalize']
+E         
+E         Right contains one more item: 'finalize'
+E         Use -v to get more diff
+
+tests\knowledge\test_native_metadata_integration.py:133: AssertionError</failure></testcase></testsuite></testsuites>

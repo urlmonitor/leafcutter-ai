@@ -4,6 +4,13 @@
   "additionalProperties": false,
   "description": "leafcutter.goal_request.v1: a free-form goal for the root capability request.",
   "properties": {
+    "clarifications": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Clarifications",
+      "type": "array"
+    },
     "context_summary": {
       "anyOf": [
         {
@@ -17,7 +24,7 @@
       "title": "Context Summary"
     },
     "goal": {
-      "maxLength": 4000,
+      "maxLength": 16000,
       "minLength": 1,
       "title": "Goal",
       "type": "string"
