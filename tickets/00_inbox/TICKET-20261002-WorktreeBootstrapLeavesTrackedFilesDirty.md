@@ -67,7 +67,7 @@ modified tracked files.
 ```yaml
 tests:
   - name: test_build_on_a_clean_checkout_leaves_tracked_files_unchanged
-    location: unit_tests/build/test_build_leaves_tracked_files_clean.py
+    location: unit_tests/build_guards/test_build_leaves_tracked_files_clean.py
     type: integration
     covers: TICKET-20261002-WorktreeBootstrapLeavesTrackedFilesDirty
     description: |
@@ -78,7 +78,7 @@ tests:
       marked slow if the repo's marker convention requires it.
 
   - name: test_generated_text_outputs_keep_lf_line_endings
-    location: unit_tests/build/test_build_leaves_tracked_files_clean.py
+    location: unit_tests/build_guards/test_build_leaves_tracked_files_clean.py
     type: integration
     covers: TICKET-20261002-WorktreeBootstrapLeavesTrackedFilesDirty
     description: |
@@ -87,7 +87,7 @@ tests:
       does. This pins the line-ending part of the defect, separately from any content drift.
 
   - name: test_resolver_ignores_gitignored_deployed_copy
-    location: unit_tests/build/test_build_leaves_tracked_files_clean.py
+    location: unit_tests/build_guards/test_build_leaves_tracked_files_clean.py
     type: unit
     covers: TICKET-20261002-WorktreeBootstrapLeavesTrackedFilesDirty
     description: |
@@ -97,7 +97,7 @@ tests:
       templates path, never the deployed copy. It is red today: strategy 2 meets .claude first.
 
   - name: test_resolver_deployed_copy_does_not_make_tracked_match_ambiguous
-    location: unit_tests/build/test_build_leaves_tracked_files_clean.py
+    location: unit_tests/build_guards/test_build_leaves_tracked_files_clean.py
     type: unit
     covers: TICKET-20261002-WorktreeBootstrapLeavesTrackedFilesDirty
     description: |
@@ -180,3 +180,10 @@ Commit run by the user under their own authorization ("skip check-doc-length for
 Only check-doc-length is skipped: the 4 regenerated agent cards are build output already over the
 doc limit (python-coder 2477 -> 2511, llm-expert 613 -> 619, documentation-expert 322 -> 323).
 All other hooks run. Follow-up: TICKET-20261006-GeneratedAgentCardsVsFileSizeRatchet.
+
+### 2026-10-06 08:10 — test-writer (status: ok)
+feedback-id: fb_2026-10-06_dc0c5199
+Relocated unit_tests/build/test_build_leaves_tracked_files_clean.py to unit_tests/build_guards/ and deleted
+unit_tests/build/__init__.py. That package shadowed scripts/build.py on `import build` and caused 57 CI failures
+on PR #1021 (guarded by unit_tests/build_guards/test_no_build_package_shadow.py). Same 4 tests, unchanged;
+earlier comments keep the old path as written.

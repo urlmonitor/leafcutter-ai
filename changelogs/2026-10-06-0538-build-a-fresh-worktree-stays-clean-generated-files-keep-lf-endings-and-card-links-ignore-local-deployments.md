@@ -22,5 +22,5 @@ tickets:
 
 ### Added
 
-- `unit_tests/build/test_build_leaves_tracked_files_clean.py`.
+- `unit_tests/build_guards/test_build_leaves_tracked_files_clean.py`.
 - `tickets/00_inbox/TICKET-20261006-GeneratedAgentCardsVsFileSizeRatchet.md` (follow-up).
