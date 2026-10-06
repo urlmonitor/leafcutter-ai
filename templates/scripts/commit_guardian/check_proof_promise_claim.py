@@ -39,9 +39,9 @@ ARCHITECTURE: Pure comparison over two authored declarations only.
         _read_ticket_lifecycle_status(ticket_content) -> str | None
             Reads a ticket's own ``status:`` frontmatter value. ``main()``
             uses this to pass over a ticket still declared ``status: todo``
-            (a plan, not yet offered for hand-off) rather than comparing it —
-            it has not yet reached the point at which a claim falls due.
-            Every other declared state, and any state that cannot be
+            (a plan) or ``status: deferred`` (parked), neither yet offered
+            for hand-off, rather than comparing it — it has not yet reached
+            the point at which a claim falls due. Every other declared state, and any state that cannot be
             established (missing frontmatter, missing ``status:`` key, or
             unparseable YAML), remains fully subject to the comparison
             (fail-closed). This decides WHICH tickets are compared; it never
@@ -52,7 +52,8 @@ ARCHITECTURE: Pure comparison over two authored declarations only.
         main(argv) -> int
             ``argv`` is the staged ticket ``.md`` paths (pre-commit's
             "pass_filenames" convention). Reads each ticket, extracts its
-            promised kinds, exempts any ticket still declared ``status: todo``
+            promised kinds, exempts any ticket still declared ``status: todo`` or
+            ``status: deferred``
             via the lifecycle side above, scans the project's test tree via
             ``done_proof.collect_test_tag_records`` for the claim side over
             the remaining (non-exempt) promises, and prints
@@ -146,11 +147,19 @@ _PLACEHOLDER_WORDING = "proof requirements not met"
 # promise/claim parsing paths at all (BP-1100g-4-ii).
 _FRONTMATTER_RE = re.compile(r"\A---\s*\n(.*?)\n---\s*", re.DOTALL)
 
-# The ONLY lifecycle state exempt from the promise-versus-claim comparison.
-# Every other state — started, offered for hand-off, blocked, deferred, or
-# unrecognised — remains subject to the check exactly as before, and a state
-# that cannot be read is never treated as this one (fail-closed).
+# The ONLY lifecycle states exempt from the promise-versus-claim comparison:
+# still planned (todo) or parked (deferred) — neither is offered for hand-off,
+# so no claim is due. Every other state — started, offered for hand-off,
+# blocked, or unrecognised — remains subject to the check exactly as before,
+# and a state that cannot be read is never treated as one of these
+# (fail-closed).
 _STILL_PLANNED_STATUS = "todo"
+_PARKED_STATUS = "deferred"
+_NOT_YET_DUE_STATUSES = frozenset({_STILL_PLANNED_STATUS, _PARKED_STATUS})
+_NOT_YET_DUE_WORDING = {
+    _STILL_PLANNED_STATUS: "a plan, not yet offered for hand-off",
+    _PARKED_STATUS: "parked, not offered for hand-off",
+}
 
 
 # ---------------------------------------------------------------------------
@@ -393,8 +402,9 @@ def main(argv: list[str] | None = None) -> int:
     fail-closed on inputs the check cannot account for, without misdirecting
     the fix toward writing a test that was never actually promised.
 
-    A ticket whose own frontmatter declares ``status: todo`` — still only
-    planned, not started, not offered for hand-off — is passed over rather
+    A ticket whose own frontmatter declares ``status: todo`` (still only
+    planned) or ``status: deferred`` (parked) — not started, not offered for
+    hand-off — is passed over rather
     than compared: it has not yet reached the point at which a claim falls
     due (BP-1100g-4-ii; BP-1100g-4's own criteria already say the refusal
     belongs "when the work is offered for hand-off"). Every other declared
@@ -429,9 +439,11 @@ def main(argv: list[str] | None = None) -> int:
             continue
         promises = extract_promised_kinds(content)
         status = _read_ticket_lifecycle_status(content)
-        if status == _STILL_PLANNED_STATUS:
+        if status in _NOT_YET_DUE_STATUSES:
             for promise in promises:
-                passed_over.append({**promise, "ticket_path": str(ticket_path)})
+                passed_over.append(
+                    {**promise, "ticket_path": str(ticket_path), "status": status}
+                )
             continue
         all_promises.extend(promises)
 
@@ -447,8 +459,8 @@ def main(argv: list[str] | None = None) -> int:
             f"[check-proof-promise-claim] PASSED OVER {item['ac_id']}: "
             f"promised '{item['angle']}' proof for \"{item['behaviour']}\" in "
             f"{item['ticket_path']} — still declared status: "
-            f"{_STILL_PLANNED_STATUS} (a plan, not yet offered for "
-            f"hand-off), so no claim is due yet",
+            f"{item['status']} ({_NOT_YET_DUE_WORDING[item['status']]}), "
+            f"so no claim is due yet",
             file=sys.stderr,
         )
 
@@ -504,3 +516,12 @@ if __name__ == "__main__":
 #   extract_promised_kinds, build_claim_index, find_unmatched_promises, and
 #   format_refusal were not touched — only the decision about which staged
 #   tickets are subject to the comparison changed. (#BP-1100g-4-ii)
+# - 2026-10-06 [BrainCandy]: User decision (option "a"): status: deferred joins
+#   status: todo as not yet due, so parking a ticket is never blocked by a
+#   proof that is not due (deferring TICKET-20260923-BO-4100a-1 was refused).
+#   main() now passes over any status in _NOT_YET_DUE_STATUSES (todo,
+#   deferred); the PASSED OVER line prints the ticket's real status and words
+#   deferred as parked rather than as a plan. in_progress, blocked, done and
+#   any unreadable or unknown state stay examined (fail-closed). Promise
+#   extraction, claim index, comparison and refusal wording untouched.
+#   (#TICKET-20261006-ProofPromiseCheckPassesOverDeferredTickets)
