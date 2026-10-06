@@ -128,7 +128,8 @@ amended_by:
       check; ADR-067 doc_link set to exists.'
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/TICKET-20261006-DK-400c-1-i.md
 notes: |
   User decision (DK-400 Q2): more than five means asking the person to narrow the request, or
   offering five parts and listing the rest read-only as not covered; never a silent drop. This AC

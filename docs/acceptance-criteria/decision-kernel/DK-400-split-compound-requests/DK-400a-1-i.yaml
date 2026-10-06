@@ -107,7 +107,8 @@ amended_by:
       ships false in E1 and E2.'
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/TICKET-20261006-DK-400a-1-i.md
 notes: |
   Edge case of DK-400a-1. ADR-053 section 6: an uncertain routing answer never passes
   silently, so the ambiguity must not be resolved by running the top candidate on the whole goal.

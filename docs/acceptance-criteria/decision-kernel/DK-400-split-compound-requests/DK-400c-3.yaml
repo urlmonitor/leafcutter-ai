@@ -145,7 +145,8 @@ amended_by:
 superseded_by: null
 covered_by:
   - DK-400c-3-i
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/TICKET-20261006-DK-400c-3.md
 notes: |
   User decision (DK-400 Q2): fewer than two bounded parts means it was one question after
   all, with no gate. Flow v5 branch split-too-few-parts (more than five parts is

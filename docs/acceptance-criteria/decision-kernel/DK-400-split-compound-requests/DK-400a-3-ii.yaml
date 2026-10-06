@@ -97,7 +97,8 @@ amended_by:
       ships false in E1 and E2.'
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/TICKET-20261006-DK-400a-3-ii.md
 notes: |
   User answer to BA open question Q5 (2026-10-05): a caller-supplied decision request is NEVER
   checked for bundling or split. The caller framed it as one decision, and a split would throw

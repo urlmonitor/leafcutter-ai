@@ -198,7 +198,8 @@ superseded_by: null
 covered_by:
   - DK-400a-1-i
   - DK-400a-1-ii
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/TICKET-20261006-DK-400a-1.md
 notes: |
   Flow node split-detect, the turned-away case. The real case is the run of 2026-10-02
   (run-40d2159630bb48bd), which ended blocked with an unsupported gap and was then split by hand

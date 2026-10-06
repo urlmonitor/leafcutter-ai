@@ -131,7 +131,8 @@ amended_by:
       ships false in E1 and E2.'
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/TICKET-20261006-DK-400a-1-ii.md
 notes: |
   Keeps gap counts honest in both directions (DK-400 ROADMAP ALIGNMENT): a compound request
   is not counted as a gap, and a real gap is not hidden behind a split.

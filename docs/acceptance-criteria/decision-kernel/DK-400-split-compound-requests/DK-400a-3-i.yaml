@@ -96,7 +96,8 @@ amended_by:
       ships false in E1 and E2.'
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/TICKET-20261006-DK-400a-3-i.md
 notes: |
   The likeliest false positive: conjunctions inside one question. The example is the how-to's
   own sample goal with a constraint clause added.

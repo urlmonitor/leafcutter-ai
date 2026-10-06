@@ -69,7 +69,8 @@ amended_by:
       ships false in E1 and E2.'
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/TICKET-20261006-DK-400c-3-i.md
 notes: |
   Confirms the DK-400c note "fewer than 2 parts left AFTER dropping: the same rule as fewer
   than 2 should apply". The count is taken after the quote check.

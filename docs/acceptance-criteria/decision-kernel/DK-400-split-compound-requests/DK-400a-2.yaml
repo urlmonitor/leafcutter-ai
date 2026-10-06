@@ -120,7 +120,8 @@ amended_by:
       ships false in E1 and E2.'
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/TICKET-20261006-DK-400a-2.md
 notes: |
   Flow node split-detect, the accepted-as-one case (user decision 2026-10-05, DK-400 Q1).
   The real case is the run of 2026-10-01 (run-5d246775f5e54f11), where the person had to add a

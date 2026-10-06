@@ -85,7 +85,8 @@ amended_by:
       ships false in E1 and E2.'
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/TICKET-20261006-DK-400c-2-i.md
 notes: |
   Pins the mock-data rule "verbatim (whitespace normalised)" from both sides, so that neither
   an over-strict nor a fuzzy match passes. Letter case is not normalised by the mock data and is
