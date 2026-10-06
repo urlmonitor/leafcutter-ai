@@ -84,6 +84,7 @@ class TestFind(StoreCase):
 
     def test_a_missing_index_gives_no_precedent(self) -> None:
         # covers: DK-600e-1
+        # covers: DK-600d-1-i
         (self.folder / INDEX_NAME).unlink()
         self.assertEqual(self.memory.find_decisions(DecisionQuery(text=QUESTION)), [])
 
@@ -112,6 +113,7 @@ class TestGetAndStage(StoreCase):
         self.assertIsNone(memory.get_decision("../../etc/passwd"))
 
     def test_stage_writes_only_under_the_run_root(self) -> None:
+        # covers: DK-600c-3
         memory = FileColonyMemory(self.root, self.run_root)
         staged = memory.stage_decision(make_record())
         assert staged is not None
@@ -121,6 +123,7 @@ class TestGetAndStage(StoreCase):
         self.assertFalse(self.folder.exists())  # the repository store was not touched
 
     def test_staging_an_unsafe_run_id_keeps_nothing(self) -> None:
+        # covers: DK-600c-3
         provenance = {**make_record().provenance.model_dump(), "run_id": "../escape"}
         bad = make_record(provenance=provenance)
         self.assertIsNone(FileColonyMemory(self.root, self.run_root).stage_decision(bad))

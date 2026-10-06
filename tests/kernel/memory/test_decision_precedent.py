@@ -17,6 +17,7 @@ from __future__ import annotations
 
 from dataclasses import replace
 
+import kernel
 from kernel.contracts import schema_ids
 from kernel.contracts.enums import (
     ApprovalStatus,
@@ -26,6 +27,7 @@ from kernel.contracts.enums import (
     ResultStatus,
 )
 from kernel.contracts.payloads import DecisionReportPayload, HumanQuestionRequestPayload
+from kernel.contracts.task import RevisionInfo
 from kernel.memory.codec import dump_record, load_record_file
 from kernel.memory.file_store import FileColonyMemory, staged_files
 from kernel.memory.publish import rebuild_index
@@ -168,6 +170,7 @@ class TestAMatchingPrecedentBeforeAnyBasis(PrecedentCase):
 
     def test_reuse_stages_a_new_record_citing_the_precedent(self) -> None:
         # covers: DK-600e-4
+        # covers: DK-600c-4
         inv, ctx, waiting = self.goal()
         done = self.answer(inv, ctx, waiting, {"choice_id": "reuse"}, actor="human:ada")
         (record,) = self.staged(ctx)
@@ -188,6 +191,7 @@ class TestAMatchingPrecedentBeforeAnyBasis(PrecedentCase):
 
     def test_staging_never_touches_the_repository_store(self) -> None:
         # covers: DK-600e-4
+        # covers: DK-600c-3
         before = sorted(p.name for p in self.folder.iterdir())
         inv, ctx, waiting = self.goal()
         self.answer(inv, ctx, waiting, {"choice_id": "reuse"})
@@ -217,6 +221,7 @@ class TestAMatchingPrecedentBeforeAnyBasis(PrecedentCase):
 
     def test_an_applicable_precedent_below_the_reuse_threshold_is_evidence_only(self) -> None:
         # covers: DK-600a-2-i
+        # covers: DK-600e-3-ii
         self.params["applies"] = 0.6
         _, _, waiting = self.goal()
         self.assertEqual(waiting.requests[0].kind, RequestKind.EVIDENCE)  # still grounds first
@@ -304,6 +309,7 @@ class TestOnlyHumanApprovalStagesARecord(PrecedentCase, DesignCase):
     def test_a_humans_design_choice_stages_a_publishable_record(self) -> None:
         # covers: DK-600b-3
         # covers: DK-600c-1
+        # covers: DK-600c-2
         done = self.choose("human:ada")
         self.assertEqual(done.status, ResultStatus.COMPLETED)
         self.assertTrue(any(x.startswith("decision record staged:") for x in done.limitations))
@@ -327,6 +333,19 @@ class TestOnlyHumanApprovalStagesARecord(PrecedentCase, DesignCase):
         report = validate_store(target, schema=schema(), vocab=vocabulary())
         self.assertTrue(report.ok, [p.as_dict() for p in report.problems])
 
+    def test_the_staged_record_names_model_kernel_and_repository_versions(self) -> None:
+        # covers: DK-600c-2
+        revision = RevisionInfo(commit="abc1234567", dirty=True)
+        ctx = replace(self.ctx_, scope=self.ctx_.scope.model_copy(update={"revision": revision}))
+        self.answer(self.inv, ctx, self.waiting, {"choice_id": "C"}, actor="human:ada")
+        (record,) = self.staged(ctx)
+        provenance = record.provenance
+        self.assertEqual((provenance.model_version, provenance.kernel_version),
+                         (ctx.config.jev.model, kernel.__version__))
+        self.assertTrue(provenance.model_version and provenance.kernel_version)
+        self.assertEqual((provenance.repository_revision.commit,
+                          provenance.repository_revision.dirty), ("abc1234567", True))
+
     def test_a_bare_actor_id_is_filed_as_a_human_actor(self) -> None:
         # covers: DK-600c-1
         self.choose("tester")
@@ -341,6 +360,7 @@ class TestOnlyHumanApprovalStagesARecord(PrecedentCase, DesignCase):
         self.assertEqual(self.staged(self.ctx_), [])
 
     def test_an_unanswered_decision_leaves_no_record(self) -> None:
+        # covers: DK-600b-2-iii
         self.assertEqual(self.staged(self.ctx_), [])
 
 

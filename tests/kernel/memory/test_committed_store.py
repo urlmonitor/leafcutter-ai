@@ -33,6 +33,7 @@ class TestCommittedStore(unittest.TestCase):
 
     def test_the_committed_store_validates_and_its_index_is_current(self) -> None:
         # covers: DK-600d-2
+        # covers: DK-600d-4
         report = validate_store(STORE, schema=schema(), vocab=vocabulary())
         self.assertTrue(report.ok, [p.as_dict() for p in report.problems])
 
@@ -40,6 +41,7 @@ class TestCommittedStore(unittest.TestCase):
         self.assertEqual(CHECKOUT / load_kernel_config().memory.decisions_dir, STORE)
 
     def test_the_first_record_is_the_decision_that_chose_the_format(self) -> None:
+        # covers: DK-600d-4
         report = validate_store(STORE, schema=schema(), vocab=vocabulary(), check_index=False)
         record = report.records[FIRST]
         self.assertEqual(record.title, "Kernel-contract YAML per decision")
@@ -51,6 +53,7 @@ class TestCommittedStore(unittest.TestCase):
         self.assertTrue(all(len(e.content_hash) == 64 for e in record.evidence))
 
     def test_the_index_lists_every_record_file(self) -> None:
+        # covers: DK-600d-1-i
         entries = parse_index((STORE / INDEX_NAME).read_text(encoding="utf-8"))
         files = sorted(p.name for p in STORE.glob("dec-*.yaml"))
         self.assertEqual(sorted(e.file for e in entries), files)

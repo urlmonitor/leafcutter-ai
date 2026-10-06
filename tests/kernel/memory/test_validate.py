@@ -39,6 +39,7 @@ class TestSchemaFile(StoreCase):
     """The committed schema is the model's schema."""
 
     def test_the_committed_schema_is_generated_from_the_model(self) -> None:
+        # covers: DK-600c-2
         committed = (CHECKOUT / "config" / "decision_record.schema.json").read_text(
             encoding="utf-8")
         self.assertEqual(committed.replace("\r\n", "\n"), render_schema())
@@ -129,6 +130,7 @@ class TestRefusals(StoreCase):
 
     def test_a_filter_outside_the_vocabularies_is_reported(self) -> None:
         # covers: DK-600d-2
+        # covers: DK-600d-2-ii
         for field, value in (("components", "not_a_component"), ("change_target", "magic"),
                              ("risk_surface", "vibes"), ("roadmap_phase", "phase_nine"),
                              ("file_globs", "**/*.cobol")):

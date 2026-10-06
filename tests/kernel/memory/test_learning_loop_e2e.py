@@ -22,6 +22,7 @@ import contextlib
 import io
 import json
 import shutil
+import subprocess
 from pathlib import Path
 
 from kernel.adapters.cli import main
@@ -34,6 +35,7 @@ from kernel.contracts import (
 )
 from kernel.memory.codec import load_record_file
 from kernel.memory.file_store import FileColonyMemory, staged_files
+from kernel.memory.port import DecisionQuery
 from kernel.providers.fakes import noul_answer
 from tests.kernel.grounding.test_round6_end_to_end import GOAL, Round6Case
 from tests.kernel.helpers import as_type, make_scope, narrow
@@ -119,6 +121,10 @@ class TestRunOneStagesARecordThatPublishFiles(LoopCase):
     async def test_a_human_choice_stages_a_record_and_nothing_is_written_to_the_repository(
             self) -> None:
         # covers: DK-600c-1
+        # covers: DK-600c-2
+        # covers: DK-600c-3
+        # covers: DK-600c-4
+        # covers: DK-600d-1
         _, done = await self.run_one()
         self.assertEqual(done.status, RunStatus.COMPLETED, done.limitations)
         self.assertFalse((self.repo / "docs" / "decisions").exists())  # the kernel wrote no repo file
@@ -132,6 +138,58 @@ class TestRunOneStagesARecordThatPublishFiles(LoopCase):
         self.assertEqual(record.assessment.basis, "kernel_ranking")
         self.assertGreaterEqual(len(record.assessment.ranking), 3)
         self.assertEqual(record.id, narrow(done.decision_ids)[0])
+
+    def git_status(self) -> str:
+        """Return `git status` of the scenario repository, untracked files listed individually."""
+        git = ["git", "-c", "user.name=t", "-c", "user.email=t@example.test",
+               "-c", "commit.gpgsign=false"]
+        if not (self.repo / ".git").exists():
+            for step in (["init", "-q"], ["add", "-A"], ["commit", "-q", "-m", "scenario"]):
+                subprocess.run([*git, *step], cwd=self.repo, check=True, capture_output=True)
+        out = subprocess.run([*git, "status", "--porcelain", "--untracked-files=all"],
+                             cwd=self.repo, check=True, capture_output=True, text=True)
+        return out.stdout
+
+    async def test_a_staging_run_leaves_git_status_unchanged(self) -> None:
+        # covers: DK-600c-3
+        before = self.git_status()
+        self.assertEqual(before, "")  # a clean, committed scenario repository
+        _, done = await self.run_one()
+        self.assertEqual(done.status, RunStatus.COMPLETED, done.limitations)
+        (record,) = self.staged_for(done.run_id)  # the run did stage its record ...
+        staged = self.run_root / "runs" / done.run_id / "staged" / "decisions" / f"{record.id}.yaml"
+        self.assertTrue(staged.is_file())  # ... at the documented path, outside the repository
+        self.assertEqual(self.git_status(), before)  # ... and git sees no change in the repository
+        self.assertFalse((self.repo / "docs" / "decisions").exists())
+
+    async def test_cancelling_at_the_ranked_question_stages_no_record(self) -> None:
+        # covers: DK-600b-2-iii
+        final = await self.play()
+        question = as_type(narrow(final.pending_interaction), HumanQuestion)
+        self.assertGreaterEqual(len(question.choices), 3)  # the ranked-choice question is open
+        self.assertEqual(staged_files(self.run_root, final.run_id), [])  # unanswered: no record
+        cancelled = await self.service().cancel_run(
+            final.run_id, Actor(id="human:user", kind=ActorKind.HUMAN))
+        self.assertEqual(cancelled.status, RunStatus.CANCELLED)
+        self.assertIsNone(cancelled.output)  # the decision did not resolve
+        self.assertEqual(staged_files(self.run_root, final.run_id), [])
+        folder = self.run_root / "runs" / final.run_id / "staged" / "decisions"
+        self.assertEqual(list(folder.glob("*")) if folder.is_dir() else [], [])
+        self.assertFalse((self.repo / "docs" / "decisions").exists())
+
+    async def test_a_record_kept_staged_is_never_found_as_precedent(self) -> None:
+        # covers: DK-600d-1-i
+        _, done = await self.run_one()  # run 1 stages its record; nobody publishes it
+        (record,) = self.staged_for(done.run_id)
+        before = len(self.scripted.batches)
+        envelope = await self.service().start_run(self.goal(GOAL))  # a later run, same goal
+        self.assertNotIn("decision.precedent", self.purposes_since(before))  # nothing to judge
+        self.assertNotEqual(envelope.status, RunStatus.WAITING_HUMAN)  # no reuse question
+        values = await self.checkpoint_values(envelope.run_id)
+        locators = [e.source.locator for e in values["evidence"].values()]
+        self.assertFalse([x for x in locators if record.id in x], locators)
+        self.assertEqual(self.memory.find_decisions(DecisionQuery(text=GOAL)), [])
+        self.assertFalse((self.repo / "docs" / "decisions").exists())
 
     async def test_publish_files_a_valid_record_and_the_index(self) -> None:
         # covers: DK-600d-3
@@ -166,6 +224,7 @@ class TestRunTwoReusesThePrecedent(LoopCase):
 
     async def test_the_same_goal_reuses_the_precedent_with_far_fewer_calls_and_no_host_work(
             self) -> None:
+        # covers: DK-600d-4
         first, record_id = await self.published()
         run_one_calls = self.transport.requests
         host_before = first.usage_summary.host_operations

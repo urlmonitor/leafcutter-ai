@@ -39,6 +39,8 @@ class TestAllowedToolsScope(unittest.TestCase):
         self.rules = _allowed(self.text)
 
     def test_bash_is_limited_to_run_resume_and_status(self) -> None:
+        # covers: DK-600c-4
+        # covers: DK-600d-1
         bash = sorted(r for r in self.rules if r.startswith("Bash"))
         self.assertEqual(bash, sorted(f"Bash({COMMAND} {sub} *)"
                                       for sub in ("run", "resume", "status")))

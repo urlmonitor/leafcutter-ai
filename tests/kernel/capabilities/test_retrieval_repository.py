@@ -159,6 +159,7 @@ class TestEvidenceShape(RepoTestCase):
         self.assertEqual(bundle.coverage["need.prior_decisions"], NeedStatus.OPEN)
 
     def test_no_writes_to_the_repository(self) -> None:
+        # covers: DK-600c-3
         before = sorted(p.as_posix() for p in self.root.parent.rglob("*"))
         self.run_retrieval()
         self.assertEqual(before, sorted(p.as_posix() for p in self.root.parent.rglob("*")))

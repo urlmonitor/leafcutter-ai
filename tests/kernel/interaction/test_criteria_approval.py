@@ -130,6 +130,7 @@ class TestStructuredApproval(ApprovalCase):
         self.assertEqual([b for b in self.jev.batches if b.purpose == "decision.assess"], [])
 
     async def test_subset_approval_makes_only_the_listed_criteria_usable(self) -> None:
+        # covers: DK-600b-1-i
         packet = await self.until_approval_question()
         self.decision_params["satisfies"] = {("c1", "A"): 0.95, ("c1", "B"): 0.05}
         result = await self.step(human_submission(
@@ -148,6 +149,7 @@ class TestStructuredApproval(ApprovalCase):
                                       "selected_option_id": "A", "missing_needs": 0})
 
     async def test_edited_criteria_become_human_supplied_and_approved_by_the_human(self) -> None:
+        # covers: DK-600b-1-i
         packet = await self.until_approval_question()
         edit = {"edited_criteria": [{"id": "c1", "question": "Must survive a crash"},
                                     {"question": "Must run offline", "priority": "supporting"}],

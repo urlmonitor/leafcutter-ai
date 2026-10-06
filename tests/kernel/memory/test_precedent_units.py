@@ -101,7 +101,29 @@ class TestVerdict(unittest.TestCase):
         self.assertEqual([n.action for n in verdict.notes], ["not_applicable"])
 
     def test_between_the_thresholds_is_evidence_only(self) -> None:
+        # covers: DK-600e-3-ii
         verdict = judge([hit()], {FIRST: 0.6}, CFG, can_reuse=True)
+        self.assertEqual(len(verdict.applicable), 1)
+        self.assertIsNone(verdict.offer)
+        self.assertEqual([n.action for n in verdict.notes], ["used_as_evidence"])
+
+    def test_exactly_at_the_applies_threshold_is_evidence(self) -> None:
+        # covers: DK-600e-2
+        verdict = judge([hit()], {FIRST: 0.5}, CFG, can_reuse=True)
+        self.assertEqual(len(verdict.applicable), 1)
+        self.assertEqual([n.action for n in verdict.notes], ["used_as_evidence"])
+
+    def test_an_overridden_threshold_moves_the_line(self) -> None:
+        # covers: DK-600e-2
+        strict = CFG.model_copy(update={"applies_threshold": 0.7})
+        self.assertEqual(judge([hit()], {FIRST: 0.62}, strict, can_reuse=True).applicable, [])
+        loose = CFG.model_copy(update={"applies_threshold": 0.3, "reuse_threshold": 0.4})
+        verdict = judge([hit()], {FIRST: 0.4}, loose, can_reuse=True)
+        self.assertEqual([n.action for n in verdict.notes], ["offered_for_reuse"])
+
+    def test_just_under_the_reuse_threshold_is_evidence_only(self) -> None:
+        # covers: DK-600e-3-ii
+        verdict = judge([hit()], {FIRST: 0.79}, CFG, can_reuse=True)
         self.assertEqual(len(verdict.applicable), 1)
         self.assertIsNone(verdict.offer)
         self.assertEqual([n.action for n in verdict.notes], ["used_as_evidence"])

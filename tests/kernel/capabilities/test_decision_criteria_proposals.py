@@ -14,7 +14,7 @@ import unittest
 
 from kernel.capabilities.decision.loading import load_working
 from kernel.contracts import ProposalStatus, schema_ids
-from kernel.contracts.decision import Option
+from kernel.contracts.decision import Criterion, Option
 from kernel.contracts.enums import ApprovalStatus, RequestKind, ResultStatus
 from kernel.contracts.evidence import EvidenceBundlePayload
 from kernel.contracts.payloads import (
@@ -23,6 +23,7 @@ from kernel.contracts.payloads import (
     HumanQuestionRequestPayload,
     OptionsPayload,
     OptionsRequestPayload,
+    ResearchRequestPayload,
 )
 from tests.kernel.capabilities.support import (
     child,
@@ -110,6 +111,7 @@ class TestOptionsAndCriteriaProposals(DecisionTestCase):
         self.assertEqual(self.jev.call_count, 0)
 
     def test_edited_criteria_replace_the_proposals(self) -> None:
+        # covers: DK-600b-1-i
         inv, ctx, asked = self._proposal_round()
         edited = {"edited_criteria": [{"question": "Must survive a crash"},
                                       {"question": "Must run offline", "priority": "supporting"}]}
@@ -122,6 +124,7 @@ class TestOptionsAndCriteriaProposals(DecisionTestCase):
         self.assertNotIn("p1", state)
 
     def test_subset_approval_declines_the_unlisted_proposal(self) -> None:
+        # covers: DK-600b-1-i
         inv, ctx, asked = self._proposal_round()
         subset = child(ctx, RequestKind.HUMAN, schema_ids.HUMAN_ANSWER,
                        {"approved_criterion_ids": ["p1"]})
@@ -129,6 +132,49 @@ class TestOptionsAndCriteriaProposals(DecisionTestCase):
         done = self.run_decision(resume(inv, asked, [subset]), ctx)
         self.assertEqual(done.status, ResultStatus.COMPLETED)
         self.assertEqual(set(as_json(self.jev.batches[0].state)["criteria"]), {"p1"})
+
+    def test_one_answer_applies_a_subset_a_reworded_criterion_and_an_added_option(self) -> None:
+        # covers: DK-600b-1-i
+        self.params["design"] = {"crit.small_slice"}
+        inv, ctx, waiting = self.first(_payload(options=False, criteria=False))
+        ids = ("kernel_entry_point", "consult_precedent", "session_records", "trace_analyzers")
+        proposals = OptionsPayload(
+            options=[Option(id=f"opt.{n}", title=f"Option {n}",
+                            proposal_status=ProposalStatus.PROPOSED,
+                            approval_status=ApprovalStatus.PROPOSED, proposed_by="host")
+                     for n in ids],
+            proposed_criteria=[Criterion(id=f"crit.{n}", question=f"Criterion {n}?",
+                                         proposal_status=ProposalStatus.PROPOSED,
+                                         approval_status=ApprovalStatus.PROPOSED,
+                                         proposed_by="host")
+                               for n in ("small_slice", "a", "b", "c", "d")])
+        out = child(ctx, RequestKind.OPTIONS, schema_ids.OPTIONS, proposals.model_dump(mode="json"))
+        asked = self.run_decision(resume(inv, waiting, [out]), ctx)
+        reworded = "Is it a slice one person can review in a day?"
+        # edited_criteria replaces the whole set, so every kept criterion is listed with its id
+        edits = [{"id": "crit.small_slice", "question": reworded}] + [
+            {"id": f"crit.{n}", "question": f"Criterion {n}?"} for n in ("a", "b", "c", "d")]
+        answer = child(ctx, RequestKind.HUMAN, schema_ids.HUMAN_ANSWER, {
+            "approved_option_ids": [f"opt.{n}" for n in ids[:3]],
+            "edited_criteria": edits,
+            "added_options": [{"title": "Publish through a pull request"}]})
+        answer = answer.model_copy(update={"actor_id": "human:user"})
+        after = self.run_decision(resume(inv, asked, [answer]), ctx)
+        want = {"opt.kernel_entry_point", "opt.consult_precedent", "opt.session_records",
+                "opt.added.1"}
+        work = load_working(resume(inv, asked, [answer]), ctx)
+        added = [o for o in work.options if o.id == "opt.added.1"]
+        self.assertEqual([(o.proposed_by, o.proposal_status.value) for o in added],
+                         [("human:user", "supplied")])
+        self.assertEqual({o.id for o in work.usable_options}, want)
+        batch = as_json(self.jev.batches[0].state)
+        self.assertEqual(set(batch["options"]), want)  # assessment: declined option absent
+        self.assertEqual(batch["criteria"]["crit.small_slice"], reworded)
+        self.assertNotIn("opt.trace_analyzers", batch["options"])
+        request = ResearchRequestPayload.model_validate(after.requests[0].payload)
+        self.assertEqual({c.option_id for c in request.option_context}, want)
+        self.assertEqual([c.option_id for c in request.option_context if c.human_added],
+                         ["opt.added.1"])
 
     def test_free_text_is_recorded_but_never_becomes_criteria(self) -> None:
         # covers: DK-600b-1-ii
@@ -141,6 +187,7 @@ class TestOptionsAndCriteriaProposals(DecisionTestCase):
         self.assertTrue(any("free-text answer recorded" in x for x in result.limitations))
 
     def test_edited_criteria_are_approved_by_the_answering_actor(self) -> None:
+        # covers: DK-600b-1-i
         inv, ctx, asked = self._proposal_round()
         edit = child(ctx, RequestKind.HUMAN, schema_ids.HUMAN_ANSWER,
                      {"edited_criteria": [{"question": "Must survive a crash"}]})

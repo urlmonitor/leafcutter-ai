@@ -33,7 +33,7 @@ from kernel.contracts.payloads import (
 )
 from tests.kernel.capabilities.support import child, evidence_item, invocation, resume
 from tests.kernel.capabilities.test_decision_graph import DECISION, DecisionTestCase
-from tests.kernel.helpers import make_context, narrow
+from tests.kernel.helpers import as_json, make_context, narrow
 
 FLAT = {("c1", "A"): 0.55, ("c1", "B"): 0.67, ("c1", "C"): 0.60,
         ("c2", "A"): 0.90, ("c2", "B"): 0.10, ("c2", "C"): 0.50}
@@ -165,6 +165,27 @@ class TestHumanChoiceResolves(DesignCase):
         self.assertIn("kernel rank 2 of 3", text)
         self.assertEqual(self.jev.call_count, 1)  # resolving the human's choice needs no Jev
         self.assertTrue(report.criterion_assessments)
+
+    def test_a_words_answer_at_the_ranked_question_is_reassessed_and_ranked_again(self) -> None:
+        # covers: DK-600b-2-ii
+        words = "pick the first one, but only if it keeps the record diffs reviewable"
+        again = self.answer({"free_text": words})
+        self.assertEqual(again.status, ResultStatus.WAITING)
+        self.assertEqual(self.jev.call_count, 2)  # assessed again before the human is asked
+        self.assertIn(words, as_json(self.jev.batches[1].state)["constraints"])
+        question = self.question(again)  # a new ranked question
+        self.assertEqual({c.id for c in question.choices}, {"A", "B", "C"})
+        self.assertEqual(again.continuation_state["phase"], "awaiting_design_choice")
+
+    def test_a_words_answer_never_resolves_the_decision(self) -> None:
+        # covers: DK-600b-2-ii
+        again = self.answer({"free_text": "pick the first one, but only if it keeps the diffs small"})
+        self.assertEqual(again.status, ResultStatus.WAITING)
+        self.assertIsNone(again.output_payload)
+        decision = again.decisions[0]
+        self.assertEqual(decision.status, DecisionStatus.NEEDS_HUMAN)
+        self.assertIsNone(decision.selected_option_id)
+        self.assertIsNone(decision.approved_by)
 
     def test_an_added_option_is_ranked_again(self) -> None:
         # covers: DK-600b-2-i

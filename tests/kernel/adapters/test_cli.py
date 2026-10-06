@@ -141,6 +141,7 @@ class TestUnknownAndUnsafe(CliCase):
 
 class TestCancel(CliCase):
     def test_cancel_then_resume_is_refused(self) -> None:
+        # covers: DK-600b-2-iii
         envelope = self.session.start()
         run_id = envelope["run_id"]
         cancelled = self.session.cli("cancel", "--run-id", run_id, "--actor", "human:demo")

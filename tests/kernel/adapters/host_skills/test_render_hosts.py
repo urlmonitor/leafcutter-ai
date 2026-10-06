@@ -20,6 +20,7 @@ import yaml
 
 from kernel.adapters.claude_code import install as claude
 from kernel.adapters.codex import install as codex
+from kernel.adapters.codex.rules import render_rules
 from kernel.config import repo_root
 
 REPO = Path("/repo/leafcutter")
@@ -121,6 +122,7 @@ class TestCodexSkill(unittest.TestCase):
             self.assertIn(needle, flat)
 
     def test_keeps_the_transport_rules(self) -> None:
+        # covers: DK-600c-4
         flat = " ".join(self.body.split())
         for needle in ("VERBATIM", "waiting_host", "waiting_human", "forbidden_operations",
                        "Do NOT run it", "decisions publish", "decision record staged",
@@ -128,6 +130,58 @@ class TestCodexSkill(unittest.TestCase):
             self.assertIn(needle, flat)
         self.assertIn('"relayed_by": "codex"', flat)
         self.assertIn('{"kind": "host", "id": "codex"}', flat)
+
+
+STAGED_RULE = ("If a limitation says `decision record staged: <path>; publish it ... with: "
+               "<command>`, tell the user the record is ready and show that command. Do NOT run "
+               "it: publishing writes into the repository and is the user's to run.")
+NEVER_YOURS = "`decisions publish` are the user's to run, never yours"
+KERNEL_SUBCOMMAND = re.compile(r"-m kernel (\w[\w-]*)")
+
+
+def _flat(host: str) -> str:
+    """Return the rendered skill body of `host` with whitespace collapsed."""
+    return " ".join(_render(host, repository_root=Path("/work/r")).split("---", 2)[2].split())
+
+
+class TestSkillsShowTheStagedRecordCommandAndNeverRunIt(unittest.TestCase):
+    """DK-600c-4 and DK-600d-1: both skills tell the user, show the command, never run it."""
+
+    def test_both_skills_tell_the_host_to_show_the_publish_command_and_not_run_it(self) -> None:
+        # covers: DK-600c-4
+        # covers: DK-600d-1
+        for host in ("claude_code", "codex"):
+            self.assertIn(STAGED_RULE, _flat(host), host)
+
+    def test_both_skills_name_decisions_publish_as_the_users_command(self) -> None:
+        # covers: DK-600d-1
+        for host in ("claude_code", "codex"):
+            self.assertIn(NEVER_YOURS, _flat(host), host)
+
+    def test_the_claude_code_skill_pre_approves_only_run_resume_and_status(self) -> None:
+        # covers: DK-600d-1
+        text = _render("claude_code", repository_root=Path("/work/r"))
+        line = next(ln for ln in text.splitlines() if ln.startswith("allowed-tools:"))
+        self.assertEqual(sorted(set(KERNEL_SUBCOMMAND.findall(line))), ["resume", "run", "status"])
+        self.assertNotIn("publish", line)
+        self.assertNotIn("decisions", line)
+
+    def test_the_codex_skill_pre_approves_only_run_resume_and_status(self) -> None:
+        # covers: DK-600d-1
+        text = _render("codex", repository_root=Path("/work/r"))
+        _, front, _ = text.split("---\n", 2)
+        self.assertNotIn("allowed-tools", front)  # Codex pre-approves through its rules file
+        rules = render_rules("leafcutter", PYTHON)
+        self.assertEqual(sorted(re.findall(r'"-m", "kernel", "(\w+)"', rules)),
+                         ["resume", "run", "status"])
+        self.assertNotIn("publish", rules.replace("not_match", ""))
+        self.assertNotIn('"decisions"', rules)
+
+    def test_the_codex_how_to_leaves_publishing_to_the_user(self) -> None:
+        # covers: DK-600d-1
+        how_to = repo_root() / "docs" / "how-to" / "run-the-decision-kernel-from-codex.md"
+        flat = " ".join(how_to.read_text(encoding="utf-8").split())
+        self.assertIn("Publishing the record (`decisions publish`) stays yours to run.", flat)
 
 
 class TestTemplatesAreMachineIndependent(unittest.TestCase):

@@ -117,6 +117,7 @@ class TestOneTargetedRoundBeforeRanking(RoundCase):
 
     def test_a_human_added_option_has_its_claims_checked_in_that_round(self) -> None:
         # covers: DK-600a-4
+        # covers: DK-600b-1-i
         inv, ctx, waiting = self.start()
         answered = child(ctx, RequestKind.HUMAN, schema_ids.HUMAN_ANSWER, {
             "added_options": [{"title": "Hybrid", "description": f"Both, see {CONTRACT}"}]})
