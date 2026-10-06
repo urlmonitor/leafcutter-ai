@@ -11,7 +11,7 @@
   "status": "active",
   "readiness": "draft",
   "superseded_by": null,
-  "version": 9,
+  "version": 10,
   "shape_version": 2,
   "tags": [
     "decision-kernel",
@@ -2053,7 +2053,7 @@
     {
       "id": "propose",
       "label": "Propose options and criteria",
-      "human": "Claude Code, as host, proposes options (generate_options) beside the reused criteria; options you named in your question are checked against your words and kept as yours. It drafts no new criteria unless Jev found a gap or no category fits.\n\nThe registered generate_options host capability consumes OptionsRequestPayload and returns OptionsPayload. Proposed items enter an approval track, not approved working state. The reused criteria and the gap verdict are not yet fields of that request.\n\nContract fields and examples (generated)\nConsumes:\n  options_request/problem: string (required)\n  options_request/evidence_ids: array (optional; default [])\n  options_request/findings: array (optional; default [])\n  options_request/propose_criteria: boolean (optional; default false)\n  options_request/require_grounding: boolean (optional; default false)\n  Runtime contract: [options_request](kernel/contracts/payloads.py)\nProduces:\n  options/options: array (optional; default [])\n  options/named_options: array (optional; default [])\n  options/proposed_criteria: array (optional; default [])\n  options/unresolved_feasibility: array (optional; default [])\n  Runtime contract: [options](kernel/contracts/payloads.py)\n\nPROPOSED - missing JSON binding (consumes): Reused criteria (each linked to its category) and gap verdict\nThe reuse-first design hands generate_options the reused criteria and Jev's gap verdict so that it drafts new criteria only for a gap (DK-500e-2). OptionsRequestPayload carries neither, and no request field marks reused criteria as already covered.\nDesign source: [docs/product-truth/flows/leafcutter/decision-forming.flow.json](docs/product-truth/flows/leafcutter/decision-forming.flow.json)\n\nDecision-record scenario: options_request — options_request; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"problem\": \"Decide how Leafcutter should file decision records as JSON or YAML files under docs/ so later kernel runs can find and reuse them as precedent: which fields a record needs, which classification filters it carries (component, file type or language, repository-wide, roadmap phase), the folder layout and file naming, and how human approval and later corrections are recorded.\",\n  \"evidence_ids\": [\n    \"ev-27c8e6023c8b1d02\"\n  ],\n  \"propose_criteria\": true,\n  \"require_grounding\": true\n}\n\nDecision-record scenario: options — options; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"options\": [\n    {\n      \"id\": \"opt.yaml_files_plus_generated_index\",\n      \"title\": \"One YAML file per decision plus a generated, never hand-edited filter index\",\n      \"proposal_status\": \"proposed\",\n      \"approval_status\": \"proposed\",\n      \"proposed_by\": \"host.generate_options\"\n    }\n  ],\n  \"proposed_criteria\": [\n    {\n      \"id\": \"crit.findable_by_filters\",\n      \"question\": \"Can a later run select precedent by component, roadmap phase, repository-wide flag and file type or language without opening every record?\",\n      \"priority\": \"required\",\n      \"proposal_status\": \"proposed\",\n      \"approval_status\": \"proposed\"\n    }\n  ],\n  \"named_options\": []\n}",
+      "human": "Claude Code, as host, proposes options (generate_options) beside the reused criteria; options you named in your question are checked against your words and kept as yours. It drafts no new criteria unless Jev found a gap or no category fits.\n\nThe registered generate_options host capability consumes OptionsRequestPayload and returns OptionsPayload. Proposed items enter an approval track, not approved working state. The reused criteria and the gap verdict are not yet fields of that request. Repository facts the host could not confirm come back as unresolved_feasibility. Each is kept as a limitation and also added to the decision's research gaps (blank entries dropped, duplicates removed, at most six gaps kept), so a targeted research round has something to look for. A later synthesis or research result that names its own unknowns replaces those gaps. Source: kernel/capabilities/decision/loading.py.\n\nContract fields and examples (generated)\nConsumes:\n  options_request/problem: string (required)\n  options_request/evidence_ids: array (optional; default [])\n  options_request/findings: array (optional; default [])\n  options_request/propose_criteria: boolean (optional; default false)\n  options_request/require_grounding: boolean (optional; default false)\n  Runtime contract: [options_request](kernel/contracts/payloads.py)\nProduces:\n  options/options: array (optional; default [])\n  options/named_options: array (optional; default [])\n  options/proposed_criteria: array (optional; default [])\n  options/unresolved_feasibility: array (optional; default [])\n  Runtime contract: [options](kernel/contracts/payloads.py)\n\nPROPOSED - missing JSON binding (consumes): Reused criteria (each linked to its category) and gap verdict\nThe reuse-first design hands generate_options the reused criteria and Jev's gap verdict so that it drafts new criteria only for a gap (DK-500e-2). OptionsRequestPayload carries neither, and no request field marks reused criteria as already covered.\nDesign source: [docs/product-truth/flows/leafcutter/decision-forming.flow.json](docs/product-truth/flows/leafcutter/decision-forming.flow.json)\n\nDecision-record scenario: options_request — options_request; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"problem\": \"Decide how Leafcutter should file decision records as JSON or YAML files under docs/ so later kernel runs can find and reuse them as precedent: which fields a record needs, which classification filters it carries (component, file type or language, repository-wide, roadmap phase), the folder layout and file naming, and how human approval and later corrections are recorded.\",\n  \"evidence_ids\": [\n    \"ev-27c8e6023c8b1d02\"\n  ],\n  \"propose_criteria\": true,\n  \"require_grounding\": true\n}\n\nDecision-record scenario: options — options; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"options\": [\n    {\n      \"id\": \"opt.yaml_files_plus_generated_index\",\n      \"title\": \"One YAML file per decision plus a generated, never hand-edited filter index\",\n      \"proposal_status\": \"proposed\",\n      \"approval_status\": \"proposed\",\n      \"proposed_by\": \"host.generate_options\"\n    }\n  ],\n  \"proposed_criteria\": [\n    {\n      \"id\": \"crit.findable_by_filters\",\n      \"question\": \"Can a later run select precedent by component, roadmap phase, repository-wide flag and file type or language without opening every record?\",\n      \"priority\": \"required\",\n      \"proposal_status\": \"proposed\",\n      \"approval_status\": \"proposed\"\n    }\n  ],\n  \"named_options\": []\n}\n\nIllustrative unresolved feasibility fact that becomes a research gap — options; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"unresolved_feasibility\": [\n    \"whether docs/decisions/ already has a file naming convention new records must follow\"\n  ]\n}",
       "order": 13,
       "agent": "claude_code",
       "consumes": [
@@ -2197,6 +2197,17 @@
                 }
               ],
               "named_options": []
+            }
+          },
+          {
+            "contract": "options",
+            "mode": "projection",
+            "origin": "illustrative",
+            "label": "Illustrative unresolved feasibility fact that becomes a research gap",
+            "value": {
+              "unresolved_feasibility": [
+                "whether docs/decisions/ already has a file naming convention new records must follow"
+              ]
             }
           }
         ],
@@ -2369,13 +2380,14 @@
     {
       "id": "research-options",
       "label": "Research the options' claims",
-      "human": "A targeted research round checks the claims the approved options make and reads the files they cite.\n\nSource: kernel/capabilities/decision/requests.py. Actual option_context and criteria_context are accepted; the projection omits those details rather than inventing them.\n\nContract fields and examples (generated)\nConsumes:\n  research_request/question: string (required)\n  research_request/option_context: array (optional; default [])\n  research_request/criteria_context: array (optional; default [])\n  research_request/existing_evidence_ids: array (optional; default [])\n  research_request/jev_reserve: integer (optional; default 0)\n  Runtime contract: [research_request](kernel/contracts/payloads.py)\nProduces:\n  evidence_bundle/evidence: array (optional; default [])\n  evidence_bundle/evidence_ids: array (optional; default [])\n  evidence_bundle/limitations: array (optional; default [])\n  Runtime contract: [evidence_bundle](kernel/contracts/evidence.py)\n\nDecision-record scenario: research_request — research_request; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"question\": \"Decide how Leafcutter should file decision records as JSON or YAML files under docs/ so later kernel runs can find and reuse them as precedent: which fields a record needs, which classification filters it carries (component, file type or language, repository-wide, roadmap phase), the folder layout and file naming, and how human approval and later corrections are recorded.\",\n  \"existing_evidence_ids\": [],\n  \"expected_coverage\": \"all_required\"\n}\n\nDecision-record scenario: evidence_bundle — evidence_bundle; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"evidence_ids\": [\n    \"ev-27c8e6023c8b1d02\"\n  ],\n  \"evidence\": [\n    {\n      \"id\": \"ev-27c8e6023c8b1d02\",\n      \"category\": \"prior_decisions\",\n      \"content_hash\": \"06845bf5bd25c6e571dc24b27e0b41b474274dcc130da8c0868ab25ec12f9536\",\n      \"source\": {\n        \"locator\": \"docs/analysis/2026-10-01-colony-memory-stage0-delta-2-reuse-and-mvp.md#L43-L74 (§(c) Minimal Neo4j MVP > c.1 Node and edge set)\"\n      },\n      \"verification\": \"source_verified\"\n    }\n  ],\n  \"limitations\": []\n}",
+      "human": "A targeted research round checks the claims the approved options make, reads the files they cite and looks for the decision's research gaps.\n\nSource: kernel/capabilities/decision/requests.py. The request's gaps hold what an earlier synthesis or research result could not find and the repository facts option design left unresolved, in that order; research turns the first gaps, up to research.max_targeted_needs (2 in the shipped config), into targeted needs. Actual option_context, criteria_context and gaps are accepted; the projection omits those details rather than inventing them.\n\nContract fields and examples (generated)\nConsumes:\n  research_request/question: string (required)\n  research_request/option_context: array (optional; default [])\n  research_request/criteria_context: array (optional; default [])\n  research_request/gaps: array (optional; default [])\n  research_request/existing_evidence_ids: array (optional; default [])\n  research_request/jev_reserve: integer (optional; default 0)\n  Runtime contract: [research_request](kernel/contracts/payloads.py)\nProduces:\n  evidence_bundle/evidence: array (optional; default [])\n  evidence_bundle/evidence_ids: array (optional; default [])\n  evidence_bundle/limitations: array (optional; default [])\n  Runtime contract: [evidence_bundle](kernel/contracts/evidence.py)\n\nDecision-record scenario: research_request — research_request; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"question\": \"Decide how Leafcutter should file decision records as JSON or YAML files under docs/ so later kernel runs can find and reuse them as precedent: which fields a record needs, which classification filters it carries (component, file type or language, repository-wide, roadmap phase), the folder layout and file naming, and how human approval and later corrections are recorded.\",\n  \"existing_evidence_ids\": [],\n  \"expected_coverage\": \"all_required\"\n}\n\nDecision-record scenario: evidence_bundle — evidence_bundle; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"evidence_ids\": [\n    \"ev-27c8e6023c8b1d02\"\n  ],\n  \"evidence\": [\n    {\n      \"id\": \"ev-27c8e6023c8b1d02\",\n      \"category\": \"prior_decisions\",\n      \"content_hash\": \"06845bf5bd25c6e571dc24b27e0b41b474274dcc130da8c0868ab25ec12f9536\",\n      \"source\": {\n        \"locator\": \"docs/analysis/2026-10-01-colony-memory-stage0-delta-2-reuse-and-mvp.md#L43-L74 (§(c) Minimal Neo4j MVP > c.1 Node and edge set)\"\n      },\n      \"verification\": \"source_verified\"\n    }\n  ],\n  \"limitations\": []\n}",
       "order": 15,
       "agent": "kernel research capability",
       "consumes": [
         "research_request/question: string (required)",
         "research_request/option_context: array (optional; default [])",
         "research_request/criteria_context: array (optional; default [])",
+        "research_request/gaps: array (optional; default [])",
         "research_request/existing_evidence_ids: array (optional; default [])",
         "research_request/jev_reserve: integer (optional; default 0)"
       ],
@@ -2408,6 +2420,14 @@
               },
               {
                 "path": "/criteria_context",
+                "types": [
+                  "array"
+                ],
+                "required": false,
+                "default": []
+              },
+              {
+                "path": "/gaps",
                 "types": [
                   "array"
                 ],
@@ -2708,7 +2728,7 @@
     {
       "id": "choose",
       "label": "Make the ranked choice",
-      "human": "Decision point: you see the options ranked by Jev's per-criterion scores. The ranking is evidence, not a decision; you choose an option, add one, or answer in your own words.\n\nThis example includes the human-added option after reranking. Its reconstructed rank is 2, while the human selects it; ranking is evidence rather than authorization.\n\nContract fields and examples (generated)\nConsumes:\n  option_ranking/option_id: string (required)\n  option_ranking/rank: integer (required)\n  option_ranking/required_passed: integer (required)\n  option_ranking/required_total: integer (required)\n  option_ranking/required_mean: number (required)\n  option_ranking/scores: object (optional; default {})\n  Runtime contract: [option_ranking](kernel/contracts/decision.py)\n  human_question/question: string (required)\n  human_question/choices: array (optional; default [])\n  human_question/free_text_allowed: boolean (optional; default false)\n  human_question/required_actor_kind: string (optional; default \"human\")\n  human_question/state_revision: integer (required)\n  Runtime contract: [human_question](kernel/contracts/interaction.py)\nProduces:\n  human_answer/choice_id: null|string (optional; default null)\n  human_answer/added_options: array|null (optional; default null)\n  human_answer/free_text: null|string (optional; default null)\n  Runtime contract: [human_answer](kernel/contracts/payloads.py)\n\nDecision-record scenario: option_ranking — option_ranking; reconstructed; complete payload:\n{\n  \"option_id\": \"opt.added.1\",\n  \"rank\": 2,\n  \"required_passed\": 0,\n  \"required_total\": 4,\n  \"required_mean\": 0.57,\n  \"scores\": {\n    \"crit.enforced_ids_and_links\": 0.26,\n    \"crit.findable_by_filters\": 0.74,\n    \"crit.knowledge_map_readable\": 0.58,\n    \"crit.provenance_complete\": 0.76,\n    \"crit.reuses_conventions\": 0.37,\n    \"crit.reviewable_diffs\": 0.72\n  }\n}\n\nDecision-record scenario: human_question — human_question; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"question\": \"Choose an option for the decision record format.\",\n  \"choices\": [\n    {\n      \"id\": \"opt.added.1\",\n      \"label\": \"Kernel-contract YAML per decision\"\n    }\n  ],\n  \"free_text_allowed\": true,\n  \"structured_allowed\": true,\n  \"required_actor_kind\": \"human\",\n  \"state_revision\": 1\n}\n\nDecision-record scenario: human_answer — human_answer; illustrative; complete payload:\n{\n  \"choice_id\": \"opt.added.1\"\n}",
+      "human": "Decision point: you see the options ranked by Jev's per-criterion scores. The ranking is evidence, not a decision; you choose an option, add one, or answer in your own words. The question says why research stopped, and that reason is kept as the decision's design_reason: design_judgement, no_progress, research_cap (only when the research-round limit was really reached), no_research_targets (nothing was targeted to research), design_round_done (the one targeted round already ran below the limit) or budget_reserve.\n\nThis example includes the human-added option after reranking. Its reconstructed rank is 2, while the human selects it; ranking is evidence rather than authorization.\n\nContract fields and examples (generated)\nConsumes:\n  option_ranking/option_id: string (required)\n  option_ranking/rank: integer (required)\n  option_ranking/required_passed: integer (required)\n  option_ranking/required_total: integer (required)\n  option_ranking/required_mean: number (required)\n  option_ranking/scores: object (optional; default {})\n  Runtime contract: [option_ranking](kernel/contracts/decision.py)\n  human_question/question: string (required)\n  human_question/choices: array (optional; default [])\n  human_question/free_text_allowed: boolean (optional; default false)\n  human_question/why_research_cannot_settle: string (optional; default \"\")\n  human_question/required_actor_kind: string (optional; default \"human\")\n  human_question/state_revision: integer (required)\n  Runtime contract: [human_question](kernel/contracts/interaction.py)\nProduces:\n  human_answer/choice_id: null|string (optional; default null)\n  human_answer/added_options: array|null (optional; default null)\n  human_answer/free_text: null|string (optional; default null)\n  Runtime contract: [human_answer](kernel/contracts/payloads.py)\n\nDecision-record scenario: option_ranking — option_ranking; reconstructed; complete payload:\n{\n  \"option_id\": \"opt.added.1\",\n  \"rank\": 2,\n  \"required_passed\": 0,\n  \"required_total\": 4,\n  \"required_mean\": 0.57,\n  \"scores\": {\n    \"crit.enforced_ids_and_links\": 0.26,\n    \"crit.findable_by_filters\": 0.74,\n    \"crit.knowledge_map_readable\": 0.58,\n    \"crit.provenance_complete\": 0.76,\n    \"crit.reuses_conventions\": 0.37,\n    \"crit.reviewable_diffs\": 0.72\n  }\n}\n\nDecision-record scenario: human_question — human_question; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"question\": \"Choose an option for the decision record format.\",\n  \"choices\": [\n    {\n      \"id\": \"opt.added.1\",\n      \"label\": \"Kernel-contract YAML per decision\"\n    }\n  ],\n  \"free_text_allowed\": true,\n  \"structured_allowed\": true,\n  \"required_actor_kind\": \"human\",\n  \"state_revision\": 1\n}\n\nDecision-record scenario: human_answer — human_answer; illustrative; complete payload:\n{\n  \"choice_id\": \"opt.added.1\"\n}",
       "order": 17,
       "screen": "decision-ranked-choice",
       "agent": "human (asked through claude_code)",
@@ -2722,6 +2742,7 @@
         "human_question/question: string (required)",
         "human_question/choices: array (optional; default [])",
         "human_question/free_text_allowed: boolean (optional; default false)",
+        "human_question/why_research_cannot_settle: string (optional; default \"\")",
         "human_question/required_actor_kind: string (optional; default \"human\")",
         "human_question/state_revision: integer (required)"
       ],
@@ -2807,6 +2828,14 @@
                 ],
                 "required": false,
                 "default": false
+              },
+              {
+                "path": "/why_research_cannot_settle",
+                "types": [
+                  "string"
+                ],
+                "required": false,
+                "default": ""
               },
               {
                 "path": "/required_actor_kind",
@@ -3841,6 +3870,400 @@
           }
         ]
       }
+    },
+    {
+      "id": "unidentified-gap-research",
+      "from": "assess",
+      "condition": "Jev names no missing evidence, conflict or missing option (an unidentified gap) while usable options exist, and a targeted research round is due",
+      "label": "Research before asking what is missing",
+      "human": "You are not asked a blind \"what is missing?\" question while research still has something to look for. When Jev names no missing evidence, conflict or missing option although a required criterion is not yet sufficiently evidenced, and usable options exist, the kernel first runs its one targeted research round (reason design_round) if that round is due: it has not run yet, the research-round limit (decision.max_research_rounds) has room, and there is a target. A target is a research gap, a claim of an option you added, or a file an option cites that is not yet evidence. The gaps include the repository facts option design reported as unresolved feasibility. After the round, the options are assessed again.\n\nSource: kernel/capabilities/decision/combine.py (combine), ranking.py (design_round_due, has_targets) and requests.py (research_request). The round is a ResearchRequestPayload for existing_patterns that carries option_context, criteria_context and gaps. The budget gate can still replace it with the early ranked question (budget-reserve). Both examples are illustrative projections, not a run receipt.\n\nContract fields and examples (generated)\nConsumes:\n  jev_result/answers: object (required)\n  Runtime contract: [jev_result](kernel/providers/base.py)\nProduces:\n  research_request/question: string (required)\n  research_request/evidence_needs: array (optional; default [])\n  research_request/existing_evidence_ids: array (optional; default [])\n  research_request/evidence_needs_only: boolean (optional; default false)\n  research_request/option_context: array (optional; default [])\n  research_request/criteria_context: array (optional; default [])\n  research_request/gaps: array (optional; default [])\n  research_request/jev_reserve: integer (optional; default 0)\n  Runtime contract: [research_request](kernel/contracts/payloads.py)\n\nJev names nothing missing while a required criterion is short of sufficient — jev_result; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"answers\": {\n    \"sufficient.crit.findable_by_filters\": {\n      \"kind\": \"noul\",\n      \"probability\": 0.72\n    },\n    \"satisfies.crit.findable_by_filters.opt.yaml_files_plus_generated_index\": {\n      \"kind\": \"noul\",\n      \"probability\": 0.74\n    },\n    \"missing\": {\n      \"kind\": \"choice\",\n      \"choice\": \"none\",\n      \"probabilities\": {\n        \"none\": 0.7,\n        \"missing_implementation_fact\": 0.2,\n        \"human_preference_or_authorization\": 0.1\n      }\n    }\n  }\n}\n\nTargeted design round aimed at an unresolved feasibility gap — research_request; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"question\": \"Decide how Leafcutter should file decision records as JSON or YAML files under docs/ so later kernel runs can find and reuse them as precedent: which fields a record needs, which classification filters it carries (component, file type or language, repository-wide, roadmap phase), the folder layout and file naming, and how human approval and later corrections are recorded.\",\n  \"evidence_needs\": [\n    {\n      \"id\": \"need.existing_patterns\",\n      \"category\": \"existing_patterns\",\n      \"question\": \"How do existing code or documents handle: Decide how Leafcutter should file decision records as JSON or YAML files under docs/ so later kernel runs can find and reuse them as precedent: which fields a record needs, which classification filters it carries (component, file type or language, repository-wide, roadmap phase), the folder layout and file naming, and how human approval and later corrections are recorded.\",\n      \"priority\": \"required\"\n    }\n  ],\n  \"existing_evidence_ids\": [\n    \"ev-27c8e6023c8b1d02\"\n  ],\n  \"evidence_needs_only\": true,\n  \"option_context\": [\n    {\n      \"option_id\": \"opt.yaml_files_plus_generated_index\",\n      \"title\": \"One YAML file per decision plus a generated, never hand-edited filter index\",\n      \"cited_refs\": [\n        \"ev-27c8e6023c8b1d02\"\n      ],\n      \"human_added\": false\n    }\n  ],\n  \"criteria_context\": [\n    \"Can a later run select precedent by component, roadmap phase, repository-wide flag and file type or language without opening every record?\"\n  ],\n  \"gaps\": [\n    \"whether docs/decisions/ already has a file naming convention new records must follow\"\n  ]\n}",
+      "agent": "kernel decision executor",
+      "outcome_kind": "alternative",
+      "io_contracts": {
+        "consumes": [
+          {
+            "contract": "jev_result",
+            "fields": [
+              {
+                "path": "/answers",
+                "types": [
+                  "object"
+                ],
+                "required": true
+              }
+            ]
+          }
+        ],
+        "produces": [
+          {
+            "contract": "research_request",
+            "fields": [
+              {
+                "path": "/question",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/evidence_needs",
+                "types": [
+                  "array"
+                ],
+                "required": false,
+                "default": []
+              },
+              {
+                "path": "/existing_evidence_ids",
+                "types": [
+                  "array"
+                ],
+                "required": false,
+                "default": []
+              },
+              {
+                "path": "/evidence_needs_only",
+                "types": [
+                  "boolean"
+                ],
+                "required": false,
+                "default": false
+              },
+              {
+                "path": "/option_context",
+                "types": [
+                  "array"
+                ],
+                "required": false,
+                "default": []
+              },
+              {
+                "path": "/criteria_context",
+                "types": [
+                  "array"
+                ],
+                "required": false,
+                "default": []
+              },
+              {
+                "path": "/gaps",
+                "types": [
+                  "array"
+                ],
+                "required": false,
+                "default": []
+              },
+              {
+                "path": "/jev_reserve",
+                "types": [
+                  "integer"
+                ],
+                "required": false,
+                "default": 0
+              }
+            ]
+          }
+        ],
+        "examples": [
+          {
+            "contract": "jev_result",
+            "mode": "projection",
+            "origin": "illustrative",
+            "label": "Jev names nothing missing while a required criterion is short of sufficient",
+            "value": {
+              "answers": {
+                "sufficient.crit.findable_by_filters": {
+                  "kind": "noul",
+                  "probability": 0.72
+                },
+                "satisfies.crit.findable_by_filters.opt.yaml_files_plus_generated_index": {
+                  "kind": "noul",
+                  "probability": 0.74
+                },
+                "missing": {
+                  "kind": "choice",
+                  "choice": "none",
+                  "probabilities": {
+                    "none": 0.7,
+                    "missing_implementation_fact": 0.2,
+                    "human_preference_or_authorization": 0.1
+                  }
+                }
+              }
+            }
+          },
+          {
+            "contract": "research_request",
+            "mode": "projection",
+            "origin": "illustrative",
+            "label": "Targeted design round aimed at an unresolved feasibility gap",
+            "value": {
+              "question": "Decide how Leafcutter should file decision records as JSON or YAML files under docs/ so later kernel runs can find and reuse them as precedent: which fields a record needs, which classification filters it carries (component, file type or language, repository-wide, roadmap phase), the folder layout and file naming, and how human approval and later corrections are recorded.",
+              "evidence_needs": [
+                {
+                  "id": "need.existing_patterns",
+                  "category": "existing_patterns",
+                  "question": "How do existing code or documents handle: Decide how Leafcutter should file decision records as JSON or YAML files under docs/ so later kernel runs can find and reuse them as precedent: which fields a record needs, which classification filters it carries (component, file type or language, repository-wide, roadmap phase), the folder layout and file naming, and how human approval and later corrections are recorded.",
+                  "priority": "required"
+                }
+              ],
+              "existing_evidence_ids": [
+                "ev-27c8e6023c8b1d02"
+              ],
+              "evidence_needs_only": true,
+              "option_context": [
+                {
+                  "option_id": "opt.yaml_files_plus_generated_index",
+                  "title": "One YAML file per decision plus a generated, never hand-edited filter index",
+                  "cited_refs": [
+                    "ev-27c8e6023c8b1d02"
+                  ],
+                  "human_added": false
+                }
+              ],
+              "criteria_context": [
+                "Can a later run select precedent by component, roadmap phase, repository-wide flag and file type or language without opening every record?"
+              ],
+              "gaps": [
+                "whether docs/decisions/ already has a file naming convention new records must follow"
+              ]
+            }
+          }
+        ]
+      },
+      "consumes": [
+        "jev_result/answers: object (required)"
+      ],
+      "produces": [
+        "research_request/question: string (required)",
+        "research_request/evidence_needs: array (optional; default [])",
+        "research_request/existing_evidence_ids: array (optional; default [])",
+        "research_request/evidence_needs_only: boolean (optional; default false)",
+        "research_request/option_context: array (optional; default [])",
+        "research_request/criteria_context: array (optional; default [])",
+        "research_request/gaps: array (optional; default [])",
+        "research_request/jev_reserve: integer (optional; default 0)"
+      ],
+      "impl_asof": "2026-10-06",
+      "impl_status": "not_started"
+    },
+    {
+      "id": "unidentified-gap-ranked",
+      "from": "assess",
+      "condition": "Jev names no missing evidence, conflict or missing option (an unidentified gap) while usable options exist, and no targeted research round is due",
+      "label": "Ranked question instead of a blind one",
+      "human": "You get the ranked design-choice question (phase awaiting_design_choice), not the blind \"what is missing?\" question, when Jev names nothing missing, usable options exist and no targeted research round is due. Its text names why research stopped: research_cap only when the research-round limit was really reached, no_progress when two assessments after new evidence scored almost the same, design_round_done when the one targeted round already ran below the limit: \"The one targeted research round on the options' claims already ran and some questions may remain open; further research is not planned, so a human decides.\" Otherwise it is no_research_targets: \"No research round is due: the options name no open question, cited file or added claim left to look up, so a human decides.\" The reason is kept as the decision's design_reason when your choice resolves it. With no usable option there is nothing to rank, and the decision still escalates as unidentified_gap.\n\nSource: kernel/capabilities/decision/combine.py (combine, _hand_to_human, _stop_reason), ranking.py (loop_reason, NO_RESEARCH_TARGETS, DESIGN_ROUND_DONE, DESIGN_REASONS) and design_ending.py (design_followup, _WHY). The human_question projections quote the exact no_research_targets and design_round_done wording; the decision question, option and scores are illustrative.\n\nContract fields and examples (generated)\nConsumes:\n  jev_result/answers: object (required)\n  Runtime contract: [jev_result](kernel/providers/base.py)\nProduces:\n  option_ranking/option_id: string (required)\n  option_ranking/rank: integer (required)\n  option_ranking/required_passed: integer (required)\n  option_ranking/required_total: integer (required)\n  option_ranking/required_mean: number (required)\n  option_ranking/scores: object (optional; default {})\n  Runtime contract: [option_ranking](kernel/contracts/decision.py)\n  human_question/question: string (required)\n  human_question/choices: array (optional; default [])\n  human_question/free_text_allowed: boolean (optional; default false)\n  human_question/structured_allowed: boolean (optional; default false)\n  human_question/why_research_cannot_settle: string (optional; default \"\")\n  Runtime contract: [human_question](kernel/contracts/interaction.py)\n\nJev names nothing missing while a required criterion is short of sufficient — jev_result; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"answers\": {\n    \"sufficient.crit.findable_by_filters\": {\n      \"kind\": \"noul\",\n      \"probability\": 0.72\n    },\n    \"satisfies.crit.findable_by_filters.opt.yaml_files_plus_generated_index\": {\n      \"kind\": \"noul\",\n      \"probability\": 0.74\n    },\n    \"missing\": {\n      \"kind\": \"choice\",\n      \"choice\": \"none\",\n      \"probabilities\": {\n        \"none\": 0.7,\n        \"missing_implementation_fact\": 0.2,\n        \"human_preference_or_authorization\": 0.1\n      }\n    }\n  }\n}\n\nTop-ranked option, ranked from the current assessment — option_ranking; illustrative; complete payload:\n{\n  \"option_id\": \"opt.yaml_files_plus_generated_index\",\n  \"rank\": 1,\n  \"required_passed\": 0,\n  \"required_total\": 1,\n  \"required_mean\": 0.74,\n  \"scores\": {\n    \"crit.findable_by_filters\": 0.74\n  }\n}\n\nRanked question when no research round is due (no_research_targets) — human_question; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"question\": \"How should 'Decide how Leafcutter should file decision records as JSON or YAML files under docs/ so later kernel runs can find and reuse them as precedent: which fields a record needs, which classification filters it carries (component, file type or language, repository-wide, roadmap phase), the folder layout and file naming, and how human approval and later corrections are recorded.' be decided? The kernel ranked the options by Jev's judgement of each criterion; the ranking is evidence, not a decision. No research round is due: the options name no open question, cited file or added claim left to look up, so a human decides. Choose one option, add an option of your own (added_options: title, description) or answer in free text.\",\n  \"choices\": [\n    {\n      \"id\": \"opt.yaml_files_plus_generated_index\",\n      \"label\": \"#1 One YAML file per decision plus a generated, never hand-edited filter index\"\n    }\n  ],\n  \"free_text_allowed\": true,\n  \"structured_allowed\": true,\n  \"why_research_cannot_settle\": \"No research round is due: the options name no open question, cited file or added claim left to look up, so a human decides.\"\n}\n\nRanked question after the one targeted round already ran (design_round_done) — human_question; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"question\": \"How should 'Decide how Leafcutter should file decision records as JSON or YAML files under docs/ so later kernel runs can find and reuse them as precedent: which fields a record needs, which classification filters it carries (component, file type or language, repository-wide, roadmap phase), the folder layout and file naming, and how human approval and later corrections are recorded.' be decided? The kernel ranked the options by Jev's judgement of each criterion; the ranking is evidence, not a decision. The one targeted research round on the options' claims already ran and some questions may remain open; further research is not planned, so a human decides. Choose one option, add an option of your own (added_options: title, description) or answer in free text.\",\n  \"choices\": [\n    {\n      \"id\": \"opt.yaml_files_plus_generated_index\",\n      \"label\": \"#1 One YAML file per decision plus a generated, never hand-edited filter index\"\n    }\n  ],\n  \"free_text_allowed\": true,\n  \"structured_allowed\": true,\n  \"why_research_cannot_settle\": \"The one targeted research round on the options' claims already ran and some questions may remain open; further research is not planned, so a human decides.\"\n}",
+      "agent": "kernel decision executor",
+      "outcome_kind": "alternative",
+      "io_contracts": {
+        "consumes": [
+          {
+            "contract": "jev_result",
+            "fields": [
+              {
+                "path": "/answers",
+                "types": [
+                  "object"
+                ],
+                "required": true
+              }
+            ]
+          }
+        ],
+        "produces": [
+          {
+            "contract": "option_ranking",
+            "fields": [
+              {
+                "path": "/option_id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/rank",
+                "types": [
+                  "integer"
+                ],
+                "required": true
+              },
+              {
+                "path": "/required_passed",
+                "types": [
+                  "integer"
+                ],
+                "required": true
+              },
+              {
+                "path": "/required_total",
+                "types": [
+                  "integer"
+                ],
+                "required": true
+              },
+              {
+                "path": "/required_mean",
+                "types": [
+                  "number"
+                ],
+                "required": true
+              },
+              {
+                "path": "/scores",
+                "types": [
+                  "object"
+                ],
+                "required": false,
+                "default": {}
+              }
+            ]
+          },
+          {
+            "contract": "human_question",
+            "fields": [
+              {
+                "path": "/question",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/choices",
+                "types": [
+                  "array"
+                ],
+                "required": false,
+                "default": []
+              },
+              {
+                "path": "/free_text_allowed",
+                "types": [
+                  "boolean"
+                ],
+                "required": false,
+                "default": false
+              },
+              {
+                "path": "/structured_allowed",
+                "types": [
+                  "boolean"
+                ],
+                "required": false,
+                "default": false
+              },
+              {
+                "path": "/why_research_cannot_settle",
+                "types": [
+                  "string"
+                ],
+                "required": false,
+                "default": ""
+              }
+            ]
+          }
+        ],
+        "examples": [
+          {
+            "contract": "jev_result",
+            "mode": "projection",
+            "origin": "illustrative",
+            "label": "Jev names nothing missing while a required criterion is short of sufficient",
+            "value": {
+              "answers": {
+                "sufficient.crit.findable_by_filters": {
+                  "kind": "noul",
+                  "probability": 0.72
+                },
+                "satisfies.crit.findable_by_filters.opt.yaml_files_plus_generated_index": {
+                  "kind": "noul",
+                  "probability": 0.74
+                },
+                "missing": {
+                  "kind": "choice",
+                  "choice": "none",
+                  "probabilities": {
+                    "none": 0.7,
+                    "missing_implementation_fact": 0.2,
+                    "human_preference_or_authorization": 0.1
+                  }
+                }
+              }
+            }
+          },
+          {
+            "contract": "option_ranking",
+            "mode": "full",
+            "origin": "illustrative",
+            "label": "Top-ranked option, ranked from the current assessment",
+            "value": {
+              "option_id": "opt.yaml_files_plus_generated_index",
+              "rank": 1,
+              "required_passed": 0,
+              "required_total": 1,
+              "required_mean": 0.74,
+              "scores": {
+                "crit.findable_by_filters": 0.74
+              }
+            }
+          },
+          {
+            "contract": "human_question",
+            "mode": "projection",
+            "origin": "illustrative",
+            "label": "Ranked question when no research round is due (no_research_targets)",
+            "value": {
+              "question": "How should 'Decide how Leafcutter should file decision records as JSON or YAML files under docs/ so later kernel runs can find and reuse them as precedent: which fields a record needs, which classification filters it carries (component, file type or language, repository-wide, roadmap phase), the folder layout and file naming, and how human approval and later corrections are recorded.' be decided? The kernel ranked the options by Jev's judgement of each criterion; the ranking is evidence, not a decision. No research round is due: the options name no open question, cited file or added claim left to look up, so a human decides. Choose one option, add an option of your own (added_options: title, description) or answer in free text.",
+              "choices": [
+                {
+                  "id": "opt.yaml_files_plus_generated_index",
+                  "label": "#1 One YAML file per decision plus a generated, never hand-edited filter index"
+                }
+              ],
+              "free_text_allowed": true,
+              "structured_allowed": true,
+              "why_research_cannot_settle": "No research round is due: the options name no open question, cited file or added claim left to look up, so a human decides."
+            }
+          },
+          {
+            "contract": "human_question",
+            "mode": "projection",
+            "origin": "illustrative",
+            "label": "Ranked question after the one targeted round already ran (design_round_done)",
+            "value": {
+              "question": "How should 'Decide how Leafcutter should file decision records as JSON or YAML files under docs/ so later kernel runs can find and reuse them as precedent: which fields a record needs, which classification filters it carries (component, file type or language, repository-wide, roadmap phase), the folder layout and file naming, and how human approval and later corrections are recorded.' be decided? The kernel ranked the options by Jev's judgement of each criterion; the ranking is evidence, not a decision. The one targeted research round on the options' claims already ran and some questions may remain open; further research is not planned, so a human decides. Choose one option, add an option of your own (added_options: title, description) or answer in free text.",
+              "choices": [
+                {
+                  "id": "opt.yaml_files_plus_generated_index",
+                  "label": "#1 One YAML file per decision plus a generated, never hand-edited filter index"
+                }
+              ],
+              "free_text_allowed": true,
+              "structured_allowed": true,
+              "why_research_cannot_settle": "The one targeted research round on the options' claims already ran and some questions may remain open; further research is not planned, so a human decides."
+            }
+          }
+        ]
+      },
+      "consumes": [
+        "jev_result/answers: object (required)"
+      ],
+      "produces": [
+        "option_ranking/option_id: string (required)",
+        "option_ranking/rank: integer (required)",
+        "option_ranking/required_passed: integer (required)",
+        "option_ranking/required_total: integer (required)",
+        "option_ranking/required_mean: number (required)",
+        "option_ranking/scores: object (optional; default {})",
+        "human_question/question: string (required)",
+        "human_question/choices: array (optional; default [])",
+        "human_question/free_text_allowed: boolean (optional; default false)",
+        "human_question/structured_allowed: boolean (optional; default false)",
+        "human_question/why_research_cannot_settle: string (optional; default \"\")"
+      ],
+      "impl_asof": "2026-10-06",
+      "impl_status": "not_started"
     },
     {
       "id": "rerank",
@@ -5846,6 +6269,18 @@
       "then": "the ranked question is asked early from the last complete assessment with a limited-evidence limitation"
     },
     {
+      "for": "unidentified-gap-research",
+      "given": "an assessment in which Jev names no missing knowledge although a required criterion is short of sufficient, usable options, a research gap such as an unresolved feasibility fact, and no targeted research round run yet",
+      "when": "the kernel combines Jev's answers",
+      "then": "the targeted research round runs on the gaps, option claims and cited files instead of a blind unidentified_gap question, and the options are assessed again"
+    },
+    {
+      "for": "unidentified-gap-ranked",
+      "given": "the same unidentified gap with usable options, but no targeted research round is due",
+      "when": "the kernel combines Jev's answers",
+      "then": "you get the ranked design-choice question naming research_cap only when the round limit was reached, no_progress when the scores did not move, design_round_done when the one targeted round already ran, and otherwise no_research_targets with \"No research round is due\", never the blind unidentified_gap question"
+    },
+    {
       "for": "rerank",
       "given": "the ranked-choice question",
       "when": "you add an option or answer in free text",
@@ -6146,14 +6581,20 @@
       "by": "flow-author (dk-build-step0 session)",
       "date": "2026-10-05",
       "note": "v9: ADR-067 is written and Accepted, so the split-* nodes no longer say it is not yet written or that they wait for it. Their wording now states the accepted design while every piece stays unbuilt and remains a missing binding: the schema ids leafcutter.goal_decomposition_request.v1, leafcutter.goal_decomposition.v1, leafcutter.decomposition.v1 (the split record and the split root's output) and leafcutter.split_answer.v1 (the split-gate answer, a new schema the gate's HumanQuestion declares as its response schema, while other questions keep leafcutter.human_answer.v1). A part runs as a leafcutter.goal_request.v1 bound to its approved capability and is never routed (ADR-067 §8, DK-400e-1). The WorkItem flag split_checked marks an item whose bundle question was asked, and no Decomposition is kept after fewer than two parts (ADR-067 §2 and §7, DK-400c-3). not_covered reasons are \"beyond the five-part cap\" or \"beyond the run's part allowance\" (leafcutter/decisions v7). Each reworded missing binding now cites ADR-067 in its reason and has the mock dataset as its source, because a binding source must sit under docs/product-truth/ or docs/analysis/. No node id, order, implements list, acceptance scenario or narrative meaning changed."
+    },
+    {
+      "action": "extended",
+      "by": "flow-author (kernel-research-before-blind-escalation session)",
+      "date": "2026-10-06",
+      "note": "v10: PR #1001 (TICKET-20261002-KernelResearchBeforeBlindEscalation). An unidentified gap with usable options no longer escalates blindly. New branches from assess: unidentified-gap-research (the targeted design round when due) and unidentified-gap-ranked (the ranked design-choice question; reason research_cap only at the real cap, no_progress, the new design_round_done when the one targeted round already ran, otherwise the new no_research_targets). propose and research-options say that unresolved feasibility facts join the research gaps (deduplicated, at most MAX_GAPS_KEPT = 6), and research-options documents research_request /gaps. choose names the six design reasons and documents human_question /why_research_cannot_settle. The new branches carry no implements: the ticket has no acceptance criteria by user decision. No existing node id, order, implements list or acceptance scenario changed."
     }
   ],
   "impl_summary": {
     "done": 5,
     "in_progress": 0,
-    "not_started": 33,
-    "total": 38,
-    "asof": "2026-10-05"
+    "not_started": 35,
+    "total": 40,
+    "asof": "2026-10-06"
   },
   "contract_definitions": {
     "choice_answer": {

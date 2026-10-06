@@ -20,6 +20,7 @@ from kernel.capabilities.decision.loading import MAX_GAPS_KEPT, _absorb_options
 from kernel.capabilities.decision.design_ending import choice_rationale, design_followup
 from kernel.capabilities.decision.ranking import (
     DESIGN_ROUND,
+    DESIGN_ROUND_DONE,
     NO_RESEARCH_TARGETS,
     RESEARCH_CAP,
     research_rounds,
@@ -85,6 +86,12 @@ class TestNoBlindEscalation(unittest.TestCase):
         v = combine(work, _assess(work), CFG)
         self.assertEqual(v.status, DecisionStatus.NEEDS_HUMAN)
         self.assertTrue(v.ranking)
+        self.assertEqual(v.reason, DESIGN_ROUND_DONE)
+        self.assertNotEqual(v.reason, NO_RESEARCH_TARGETS)
+        question = narrow(design_followup(work, v.reason, v.ranking, CFG).request.question)
+        self.assertNotIn("No research round is due", question)
+        self.assertNotIn("name no open question", question)
+        self.assertIn("already ran", question)
 
     def test_no_targets_below_the_cap_names_no_research_targets_not_the_cap(self) -> None:
         # covers: UNKNOWN

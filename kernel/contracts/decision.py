@@ -155,7 +155,7 @@ class Decision(PersistedModel):
     #: The human who approved the decision, when a human settled it (a design decision).
     approved_by: str | None = None
     #: Why the kernel stopped researching and ranked the options for a human (design_judgement,
-    #: no_progress, research_cap, no_research_targets,
+    #: no_progress, research_cap, no_research_targets, design_round_done,
     #: budget_reserve); null while the decision is not a design one.
     design_reason: str | None = None
     #: When the human approved (UTC); set by the kernel at the human answer, never by a model.

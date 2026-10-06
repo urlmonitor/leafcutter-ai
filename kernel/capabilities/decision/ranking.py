@@ -33,8 +33,10 @@ RESEARCH_CAP = "research_cap"
 NO_RESEARCH_TARGETS = "no_research_targets"
 #: The Jev budget cannot fund another research round plus the reserved final assessment.
 BUDGET_RESERVE = "budget_reserve"
+#: The one targeted research round already ran (below the cap) and gaps may remain.
+DESIGN_ROUND_DONE = "design_round_done"
 DESIGN_REASONS = (DESIGN_JUDGEMENT, NO_PROGRESS, RESEARCH_CAP, NO_RESEARCH_TARGETS,
-                  BUDGET_RESERVE)
+                  BUDGET_RESERVE, DESIGN_ROUND_DONE)
 #: Reason (and request key suffix) of the one targeted research round a design decision runs
 #: before it ranks its options.
 DESIGN_ROUND = "design_round"
@@ -192,6 +194,9 @@ def loop_reason(work: Working, a: Assessment, cfg: DecisionConfig) -> str | None
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-06 [python-coder]: DESIGN_ROUND_DONE names why research stopped when the one targeted
+#   round already ran below the cap; no existing reason fits (design_reason needs a design
+#   criterion, so it is None for an evidence-answerable gap). (#KernelResearchFirst)
 # - 2026-10-02 [python-coder]: NO_RESEARCH_TARGETS names why research stopped when no round is due
 #   because nothing is targeted to research; RESEARCH_CAP stays for a cap really reached.
 #   (#KernelResearchFirst)
