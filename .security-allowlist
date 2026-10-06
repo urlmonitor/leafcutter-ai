@@ -1,41 +1,43 @@
-# Allowlist for check-secrets hook — workspace root
-# False positives: file-path strings with high-entropy path components
+# Allowlist for bypass tokens in commit-guardian scripts
+GENERIC_SECRET:scripts/commit_guardian/check_architecture_scaffolds.py:*
+GENERIC_SECRET:scripts/commit_guardian/check_diagram_naming.py:*
+GENERIC_SECRET:scripts/commit_guardian/check_feedback_id.py:*
+GENERIC_SECRET:scripts/commit_guardian/check_mermaid_drift.py:*
+GENERIC_SECRET:scripts/commit_guardian/check_paths_integrity.py:*
 ENTROPY_HIGH:docs/agents/README.md:429
 ENTROPY_HIGH:docs/agents/README.md:430
 ENTROPY_HIGH:docs/agents/README.md:431
 ENTROPY_HIGH:docs/agents/README.md:432
-ENTROPY_HIGH:docs/agents/README.md:433
 ENTROPY_HIGH:docs/how-to/working-with-leafcutter.md:63
 # False positive: shell example in a how-to doc setting a long SCREAMING_SNAKE env-var
 # name (LEAFCUTTER_SHARED_LAYOUT_INTEGRITY_REPORT) to a file path -- not a secret.
 # Glob, not per-line, per CLAUDE.md: line numbers in how-to prose shift.
-# Duplicated to the worktree copy per the dual-update rule.
 ENTROPY_HIGH:docs/how-to/verify-shared-layout-stays-read-only.md:*
-# False positives from doc-compliance template strings (pre-existing content, not secrets)
-ENTROPY_HIGH:scripts/doc_compliance/generator.py:290
-ENTROPY_HIGH:scripts/doc_compliance/scanner.py:82
-# False positives from llm-expert.md — PROJECT_CONTEXT.md path strings (retro KI-1 fix)
+ENTROPY_HIGH:templates/skills/ticket-authoring/SKILL.md:42
 ENTROPY_HIGH:templates/agents/llm-expert.md:39
 ENTROPY_HIGH:templates/agents/llm-expert.md:104
-# False positives: _SPECIAL_TOKEN placeholder string in spawn-consistency hook (not a credential)
-GENERIC_SECRET:scripts/commit_guardian/hooks/check_agent_spawn_consistency.py:28
-GENERIC_SECRET:templates/scripts/commit_guardian/hooks/check_agent_spawn_consistency.py:28
-# Line 39 — same constant, line shifted after bidirectional mirror check extension (INF-600l-1)
-GENERIC_SECRET:scripts/commit_guardian/hooks/check_agent_spawn_consistency.py:39
-GENERIC_SECRET:templates/scripts/commit_guardian/hooks/check_agent_spawn_consistency.py:39
-# False positive: prose list of file paths in commit phase sign-off comment (not a credential)
-GENERIC_SECRET:tickets/00_inbox/epics/EPIC-RegistryCardMirror/01_TICKET-20260706-INF-600l-1.md:116
 # False positives: guardrail config path constant passed as kwarg in unit tests (not a secret)
 ENTROPY_HIGH:unit_tests/test_generate_ticket_from_ac.py:*
 # False positive: file path string in module docstring of test_llm_expert_artifacts.py (PROJECT_CONTEXT.md path, not a secret)
 ENTROPY_HIGH:unit_tests/agents/test_llm_expert_artifacts.py:*
 # False positive: guardrail_config_path kwarg pattern in BO-2200a-3-i tests (not a secret)
 ENTROPY_HIGH:unit_tests/test_bo_2200a_3_i.py:*
+# False positive: guardrail_config_path kwarg pattern in BO-2900g-2-ii tests (not a secret).
+# Glob rather than per-line, per CLAUDE.md: line numbers shift as the file grows and a
+# stale per-line entry stops suppressing without saying so.
+ENTROPY_HIGH:unit_tests/ac_store/test_bo_2900g_2_ii_store.py:*
+# False positives: pre-existing markdown file-path / doc-link references (not secrets)
+ENTROPY_HIGH:docs/agents/coding/python-coder.md:91
+ENTROPY_HIGH:templates/scripts/commit_guardian/INTEGRATION.md:59
+ENTROPY_HIGH:templates/scripts/commit_guardian/INTEGRATION.md:125
+ENTROPY_HIGH:templates/scripts/commit_guardian/INTEGRATION.md:382
+# False positive: line 539 is a DECISION HISTORY comment whose tail tag
+# (#TICKET-20261002-GlossaryHookStubBlacklistsNewTerms) scores high entropy. No credential.
+# Per-line on purpose (narrowest exemption); if the line shifts the finding returns.
+ENTROPY_HIGH:templates/scripts/commit_guardian/check_glossary_coverage.py:539
 
 # ---------------------------------------------------------------------------
-# GE-113c-3 backfill (2026-08-18) — MUST stay in sync with the tracked copy at
-# leafcutter-ai/.security-allowlist. These two files drift; the hook resolves
-# one of them depending on layout, so a suppression in only one is unreliable.
+# GE-113c-3 backfill (2026-08-18)
 #
 # Before GE-113c-3, _is_suppressed compared the finding path's own segments
 # against a slice of ITSELF rather than against the allowlist path. Any entry
@@ -58,12 +60,23 @@ ENTROPY_HIGH:unit_tests/test_bo_2200a_3_i.py:*
 ENTROPY_HIGH:leafcutter-web/package-lock.json:*
 # Generated artifact: build dataflow graph — "path": "docs/acceptance-criteria/..." slugs (26)
 ENTROPY_HIGH:docs/build-dataflow.json:*
+# Generated artifact: pytest-split durations map — ~9,559 test node ids, many of which
+# contain long parametrised id segments that score as high entropy. Emitted by
+# .github/workflows/test-durations.yml, never hand-edited. Glob rather than per-line:
+# the file is regenerated wholesale, so every line number shifts on each refresh.
+ENTROPY_HIGH:.github/test_durations.json:*
 
-# Sentinel string constants, not credentials. Glob replaces the stale line-22/27/29
-# entries, whose target (_SPECIAL_TOKEN) has drifted three times — per the
+# Sentinel string constants, not credentials. Replaces the stale line-22/27 entries
+# whose target (_SPECIAL_TOKEN) has since drifted to line 29 — glob per the
 # "use globs not line numbers for drifting targets" rule in CLAUDE.md.
 GENERIC_SECRET:scripts/registry_validator.py:*
 ENTROPY_HIGH:scripts/registry_validator.py:*
+# INF-600k-1 (2026-09-28): the same _SPECIAL_TOKEN sentinel, moved with the code it
+# belongs to (spawn-bidirectionality checks, card mermaid parser) and present in the
+# canonical templates/ copy of the spawn-consistency hook. Sentinel, not a credential.
+GENERIC_SECRET:scripts/spawn_bidirectionality_validator.py:*
+GENERIC_SECRET:templates/scripts/commit_guardian/card_mermaid_parser.py:*
+GENERIC_SECRET:templates/scripts/commit_guardian/hooks/check_agent_spawn_consistency.py:*
 
 # Doc-path / identifier strings in source and prompt text
 ENTROPY_HIGH:scripts/ac_store/generate_ticket_from_ac.py:*
@@ -86,7 +99,7 @@ ENTROPY_HIGH:reports/build_pipeline-implementation-audit-2026-07-14.md:*
 
 # Test files: long kwarg names, CamelCase class names, fake fixture paths.
 # Glob (:*) per CLAUDE.md "Use Glob Patterns for Test Files" — per-line entries
-# rot silently as tests grow (registry_validator.py above is live proof).
+# rot silently as tests grow (registry_validator.py:22/27 above is live proof).
 ENTROPY_HIGH:unit_tests/ac_driven_dev/test_acd_1200a_14.py:*
 ENTROPY_HIGH:unit_tests/ac_store/test_bp_1100f_5.py:*
 ENTROPY_HIGH:unit_tests/build_guards/test_bp100_drift_docs_compile.py:*
@@ -102,7 +115,26 @@ ENTROPY_HIGH:unit_tests/test_bp_1100f_5.py:*
 ENTROPY_HIGH:unit_tests/test_setup_ticket_worktree.py:*
 ENTROPY_HIGH:unit_tests/workflows/test_bo2400c_context_bundle.py:*
 ENTROPY_HIGH:unit_tests/workflows/test_finalize_feature_preflight.py:*
-ENTROPY_HIGH:unit_tests/workflows/test_quick_fix_workflow.py:*
+# test_quick_fix_workflow.py was split into the nine files below (plus an
+# uncollected harness) when check-file-size refused its 1731 content lines
+# against the 400 limit. Its blanket glob is replaced by theirs rather than
+# dropped: these files ARE its contents, so the same long-CamelCase test-class
+# names that tripped ENTROPY_HIGH there trip it here. Only
+# test_quick_fix_ac_creation.py fires today; the rest are listed because the
+# pattern is identical and a later edit surfacing one should not block a commit
+# for a finding already triaged as a false positive. The names are deliberately
+# NOT reproduced here — quoting one makes this allowlist trip the scanner it
+# suppresses. Glob, not per-line, per CLAUDE.md: these files grow.
+ENTROPY_HIGH:unit_tests/workflows/_quick_fix_harness.py:*
+ENTROPY_HIGH:unit_tests/workflows/test_quick_fix_ac_creation.py:*
+ENTROPY_HIGH:unit_tests/workflows/test_quick_fix_commit_changelog_and_delivery.py:*
+ENTROPY_HIGH:unit_tests/workflows/test_quick_fix_diagnosis_and_fix.py:*
+ENTROPY_HIGH:unit_tests/workflows/test_quick_fix_escalation_and_topology.py:*
+ENTROPY_HIGH:unit_tests/workflows/test_quick_fix_green_phase_and_mutation_proof.py:*
+ENTROPY_HIGH:unit_tests/workflows/test_quick_fix_guard_halts.py:*
+ENTROPY_HIGH:unit_tests/workflows/test_quick_fix_red_phase.py:*
+ENTROPY_HIGH:unit_tests/workflows/test_quick_fix_verification_trust_boundary.py:*
+ENTROPY_HIGH:unit_tests/workflows/test_quick_fix_worktree_invariant.py:*
 # ACS-100i-7 baseline fixture: a recorded list of AC file paths and their
 # validator messages. The long hyphenated store paths trip the entropy
 # heuristic. Glob rather than per-line, since the file is regenerated when the
@@ -112,32 +144,33 @@ ENTROPY_HIGH:tests/fixtures/acs_100i_7/pre_change_refusal_baseline.json:*
 # AC-store path quoted inline (the PROJECT_CONTEXT.md ID-numbering line), which
 # trips the entropy heuristic. Glob rather than per-line: the note is prose and
 # any later edit shifts line numbers, which would silently void a pinned entry.
-# Duplicated here per the dual-update rule — check-secrets resolves the allowlist
-# from the workspace-root symlink target, so a worktree-only entry is ignored.
 ENTROPY_HIGH:memory/feedback_po_ba_itpo_bo3100_3200_delegation_boundary.md:*
-# INF-400c-2-ii regression corpus. Verbatim capture of the 28 knowledge_captured
-# records in debugging/logs/agent_telemetry.jsonl, replacing a fabricated fixture
-# whose invented entry_kinds meant the test could never go red. The findings are
-# ordinary telemetry lines whose density trips the entropy heuristic; there is no
-# credential here. Glob rather than per-line, since the fixture is re-captured
-# from the real sink whenever the corpus legitimately changes.
-# Duplicated here per the dual-update rule.
+# INF-400c-2-ii regression corpus. This fixture is a VERBATIM capture of the 28
+# knowledge_captured records in debugging/logs/agent_telemetry.jsonl -- that is
+# the point of it, replacing a fabricated fixture whose invented entry_kinds
+# meant the test could never go red. The findings are ordinary telemetry lines
+# (timestamp + agent + component + destination + entry_kind) whose density trips
+# the entropy heuristic; there is no credential here. Glob rather than per-line:
+# the fixture is re-captured from the real sink whenever the corpus legitimately
+# changes, and pinned line numbers would silently void themselves on the first
+# re-capture.
 ENTROPY_HIGH:tests/fixtures/harvest_learnings/unroutable_corpus_28.json:*
-
 # INF-400c-4-iii fixture: 33 synthetic telemetry lines (mix of phase-probe lines
 # and knowledge_captured records) used to assert that phase-telemetry and
 # knowledge-emission streams are drained separately. Same shape as the
-# unroutable_corpus_28.json entry above; no credential material. Glob rather
-# than per-line since the fixture is regenerated when the corpus changes.
-# Duplicated here per the dual-update rule.
+# unroutable_corpus_28.json entry above (timestamp + agent + component +
+# destination + entry_kind) which trips the same entropy heuristic; no
+# credential material. Glob rather than per-line for the same reason: the
+# fixture is regenerated when the corpus legitimately changes.
 ENTROPY_HIGH:tests/fixtures/harvest_learnings/agent_telemetry_33_lines.jsonl:*
 
-# GE-120c-1's harness declares the build system's output-root substitution marker
-# as a module constant (_OUTPUT_ROOT_TOKEN) so it can detect an unsubstituted
-# placeholder in a deployed file. A literal template marker, not a credential. The
-# marker text is deliberately not reproduced here — quoting it makes the allowlist
-# trip the scanner it suppresses. Glob, not per-line: the harness grows cases.
-# Duplicated here per the dual-update rule.
+# GE-120c-1's out-of-process harness declares the build system's own output-root
+# substitution marker as a module constant (_OUTPUT_ROOT_TOKEN) so it can detect an
+# unsubstituted placeholder left in a deployed file. It is a literal template
+# marker, not a credential. The marker text is deliberately NOT reproduced in this
+# comment: quoting it here makes the allowlist trip the very scanner it is
+# suppressing. Glob rather than per-line — the harness gains cases as the checks it
+# exercises grow, and a pinned line number would void itself on the first insertion.
 GENERIC_SECRET:unit_tests/portability/_deployed_check_harness.py:*
 
 # A date-and-slug known-issue id in the testing-quality register is a long hyphenated
@@ -146,62 +179,114 @@ GENERIC_SECRET:unit_tests/portability/_deployed_check_harness.py:*
 # allowlist trip the very scanner it suppresses (observed 2026-08-31, same lesson as the
 # template-marker entry above). Glob, not per-line: the register grows and the entry is
 # cited across several paragraphs, so line numbers shift.
-# Duplicated here per the dual-update rule.
+# Duplicated to the workspace root per the dual-update rule.
 ENTROPY_HIGH:docs/known-issues/testing-quality.md:*
 ENTROPY_HIGH:changelogs/2026-08-31-1810-a-missing-seam-answer-is-now-reported-by-name-and-the-hook-that-reports-it-actually-runs.md:*
 
-# The false-green mechanism catalogue cites date-and-slug known-issue ids, which are
-# long hyphenated tokens and read as high-entropy. Prose and cross-references, not
-# credentials. The ids are deliberately NOT reproduced here: quoting one makes this
-# allowlist trip the scanner it suppresses. Glob, not per-line: the catalogue grows.
-# Duplicated here per the dual-update rule.
-ENTROPY_HIGH:docs/reference/false-green-mechanisms.md:*
+# The testing READMEs cite known-issue ids in the date-and-slug form, which read
+# as high-entropy strings to the scanner. No example is quoted here on purpose:
+# writing one out makes this very file trip the same check, which is how the
+# first attempt at this entry was blocked.
+# Glob rather than per-line: these files are prose that grows, so a pinned line
+# number would silently stop suppressing the finding it was added for and start
+# suppressing whatever moved into that slot.
+ENTROPY_HIGH:unit_tests/README.md:*
+ENTROPY_HIGH:tests/README.md:*
+ENTROPY_HIGH:changelogs/2026-09-01-1016-testing-readmes-corrected-the-commit-guardian-mutation-target-rule-was-wrong-for-31-of-106-test-files.md:*
 
 # The BP-1100g-4-i changelog entry cites a date-and-slug known-issue id (mutation
 # probe landing in the wrong copy) in its closing paragraph — a long hyphenated
 # token that reads as high-entropy. Prose, not a credential. Not reproduced here:
 # quoting it makes this allowlist trip the scanner it suppresses. Glob, not
 # per-line: the entry's surrounding prose can still shift.
-# Duplicated here per the dual-update rule.
+# Duplicated to the workspace root per the dual-update rule.
 ENTROPY_HIGH:changelogs/2026-09-01-1240-a-claim-is-taken-at-face-value-and-now-that-fact-is-pinned.md:*
 
-# unit_tests/README.md cites a date-and-slug known-issue id (mutation probe landing
-# in the wrong copy) as a worked example in its falsifiability rules. A long
-# hyphenated token, reads as high-entropy. Prose, not a credential. Not reproduced
-# here: quoting it makes this allowlist trip the scanner it suppresses. Glob, not
-# per-line: the surrounding prose can still shift.
-# Duplicated here per the dual-update rule.
-ENTROPY_HIGH:unit_tests/README.md:*
+# The false-green mechanism catalogue cites date-and-slug known-issue ids, which are
+# long hyphenated tokens and read as high-entropy. Prose and cross-references, not
+# credentials. The ids are deliberately NOT reproduced here: quoting one makes this
+# allowlist trip the scanner it suppresses. Glob, not per-line: the catalogue grows.
+# Duplicated to the workspace root per the dual-update rule.
+ENTROPY_HIGH:docs/reference/false-green-mechanisms.md:*
 
-# docs/reference/proof-claims-and-completeness.md cites the same date-and-slug
-# known-issue id (mutation probe landing in the wrong copy) as a worked example
-# in its "deployed" row. A long hyphenated token, reads as high-entropy. Prose,
-# not a credential. Not reproduced here: quoting it makes this allowlist trip
-# the scanner it suppresses. Glob, not per-line: the surrounding prose can shift.
-# Duplicated here per the dual-update rule.
+# The proof-claims reference page and the BP-1100g-tail changelog entry each cite a
+# date-and-slug known-issue id in prose. Long hyphenated tokens that read as high-entropy
+# to the scanner; not credentials. The ids are deliberately NOT reproduced here: quoting
+# one makes this allowlist trip the very check it suppresses. Glob, not per-line: both are
+# prose files that grow.
+# Duplicated to the workspace root per the dual-update rule.
 ENTROPY_HIGH:docs/reference/proof-claims-and-completeness.md:*
+ENTROPY_HIGH:changelogs/2026-09-01-0915-a-claimed-kind-of-proof-is-a-declaration-not-evidence-now-legible-on-three-surfaces.md:*
 
-# GE-127a-1's ordinary-commit fixture -- a keyword argument whose name and value
-# are both long uppercase/underscore identifiers (the ablation switch proving the
-# descriptors are not vacuous). High entropy, no secret. Glob, not per-line.
-# Duplicated here per the dual-update rule: check-secrets resolves the allowlist
-# from the workspace-root symlink target, so a worktree-only entry is ignored.
+# ADR-042 and ADR-043 (EPIC-TruthfulProjectRecord) cite AC-store and doc paths in their
+# related_docs frontmatter lists, e.g. long hyphenated
+# docs/acceptance-criteria/.../UXP-*.yaml paths. Ordinary cross-reference prose, not
+# credentials -- same pattern as the other ADR/doc-path entries above. Glob, not
+# per-line: both ADRs' related_docs/related_code lists grow as the epic proceeds.
+ENTROPY_HIGH:docs/architecture/adrs/ADR-042-product-truth-checker-outcome-vocabulary.md:*
+ENTROPY_HIGH:docs/architecture/adrs/ADR-043-journey-record-carries-its-own-behind-mark.md:*
+
+# unit_tests/product_truth/test_uxp_700d_1.py repeats a long CamelCase test class name
+# in both its module docstring and its class definition -- same "CamelCase class
+# names" false-positive pattern as the other test files globbed above. The name
+# itself is deliberately NOT reproduced here: quoting it makes this allowlist trip
+# the very scanner it suppresses (same lesson as the template-marker entry above).
+# Glob, not per-line: the file's docstring and class layout can still shift.
+ENTROPY_HIGH:unit_tests/product_truth/test_uxp_700d_1.py:*
+
+# unit_tests/ac_store/test_uxp700d2_reachability.py's TestCase class name is a long
+# CamelCase identifier -- same false-positive pattern as the other test-class-name
+# entries above (not reproduced here for the same reason: quoting it would trip the
+# scanner this entry suppresses). Glob, not per-line: the class/docstring layout can
+# still shift.
+ENTROPY_HIGH:unit_tests/ac_store/test_uxp700d2_reachability.py:*
+
+# GE-127a-1's ordinary-commit fixture. The flagged lines are a keyword argument
+# whose name and value are both long uppercase/underscore identifiers -- the
+# ablation switch that removes check-file-size from the generated pre-commit
+# config to prove the descriptors are not vacuous. High entropy, no secret.
+# Glob, not per-line: the fixture is called from two places today and the line
+# numbers shift whenever a helper is added above them.
 ENTROPY_HIGH:unit_tests/commit_guardian/_ge_127a_1_ordinary_commit_fixture.py:*
 
-# GE-127c-1's dividing-advice descriptor -- a long CamelCase test-class name.
-# Same false-positive pattern, glob not per-line. Duplicated here per the
-# dual-update rule.
+# unit_tests/product_truth/test_uxp_700c_1_i.py's TestCase class name is a long
+# CamelCase identifier -- same false-positive pattern as the other test-class-name
+# entries above (not reproduced here for the same reason: quoting it would trip the
+# scanner this entry suppresses). Glob, not per-line: the class/docstring layout can
+# still shift.
+ENTROPY_HIGH:unit_tests/product_truth/test_uxp_700c_1_i.py:*
+
+# unit_tests/product_truth/test_uxp_700b_2.py's TestCase class names are long
+# CamelCase identifiers -- same false-positive pattern as the other test-class-name
+# entries above (not reproduced here for the same reason: quoting it would trip the
+# scanner this entry suppresses). Glob, not per-line: the class/docstring layout can
+# still shift.
+ENTROPY_HIGH:unit_tests/product_truth/test_uxp_700b_2.py:*
+
+# GE-127c-1's dividing-advice descriptor. The flagged line is a long CamelCase
+# test-class name -- the same false-positive pattern as the entries above, and
+# not reproduced here for the same reason: quoting it would trip the scanner
+# this entry suppresses. Glob, not per-line: the class sits mid-file and its
+# line number moves whenever anything is added above it.
+# The file is named for the split: GE-127c-1's tests were divided into four
+# when the widened size gate refused the original 579-line single file.
 ENTROPY_HIGH:unit_tests/commit_guardian/test_ge_127c_1_dividing_advice.py:*
 
-# A DECISION HISTORY traceability tail tag citing the date-form known-issue id
-# KI-CG-20260831-glossary. The date-form id convention produces exactly the
-# long mixed-case-and-digits run the entropy heuristic scores as a secret, so
-# every future tail tag citing a date-form KI id will trip this the same way.
-# Glob not per-line: the tail-tag block grows with each amendment and a pinned
-# line number would silently stop matching. Duplicated here per the dual-update
-# rule (the hook resolves the allowlist through the workspace-root symlink
-# target, so a worktree-only entry is ignored).
-ENTROPY_HIGH:templates/scripts/commit_guardian/check_glossary_coverage.py:*
+# unit_tests/product_truth/test_uxp_700e_3_i.py's TestCase class names are long
+# CamelCase identifiers -- same false-positive pattern as the other test-class-name
+# entries above (not reproduced here for the same reason: quoting it would trip the
+# scanner this entry suppresses). Glob, not per-line: the class/docstring layout can
+# still shift.
+ENTROPY_HIGH:unit_tests/product_truth/test_uxp_700e_3_i.py:*
+
+# unit_tests/test_plan_feature_pt_phase.py's flagged line is a Python keyword
+# argument passing a module constant into the shared HopDriver -- the same
+# long-identifier false-positive pattern as the entries above, and not reproduced
+# here for the same reason: quoting it would trip the scanner this entry
+# suppresses. Glob, not per-line: the construction sits mid-file and its line
+# number moves whenever a helper is added above it, which is exactly what the
+# 2026-09-21 shared-harness extraction did.
+ENTROPY_HIGH:unit_tests/test_plan_feature_pt_phase.py:*
 
 # INF-700a-1-i's reachability suite. Its TestCase class names spell out the whole
 # behaviour being reached through the real entry point, so they are long CamelCase
@@ -209,93 +294,396 @@ ENTROPY_HIGH:templates/scripts/commit_guardian/check_glossary_coverage.py:*
 # above, and not reproduced here for the same reason: quoting it would trip the
 # scanner this entry suppresses. Glob, not per-line: these tests copy real trees
 # into a synthetic package root, so setup helpers get added above the classes and
-# the line numbers move. Duplicated here per the dual-update rule (the hook
-# resolves the allowlist through the workspace-root symlink target, so a
-# worktree-only entry is ignored).
+# the line numbers move.
 ENTROPY_HIGH:unit_tests/build_guards/test_inf_700a_1_i_reachability.py:*
 
 # The known-issues split (2026-09-14) put each issue's id in its filename, its
 # frontmatter title, its description and its H1. A long kebab-case KI id reads to
-# the entropy detector as a high-entropy string, so the same slug trips it three or
-# four times in one file. These are ids, not secrets, and there is no credential of
-# any kind in a known-issues register. Glob, not per-line: the index is regenerated
-# and entry files gain lines as an issue is updated, so a pinned line number would
-# silently stop matching. Only the two files that actually trip it are listed --
-# the rest of the 302-file tree scans clean. Duplicated here per the dual-update
-# rule (the hook resolves the allowlist through the workspace-root symlink target,
-# so a worktree-only entry is ignored).
+# the entropy detector as a high-entropy string, so the same slug trips it three
+# or four times in one file. These are ids, not secrets, and there is no credential
+# of any kind in a known-issues register.
+#
+# Glob, not per-line: these files are regenerated (the index) or will gain lines as
+# an issue is updated, so a line number would silently stop matching. Only the two
+# files that actually trip it are listed -- the rest of the 302-file tree scans
+# clean, and a blanket entry over the directory would be wider than the evidence.
+#
+# The underlying false positive is worth fixing at source rather than suppressing
+# forever: the detector has no notion that a hyphen-separated identifier is not a
+# key. Until then these two entries stop it blocking the register.
 ENTROPY_HIGH:docs/known-issues/commit-guardian.md:*
 ENTROPY_HIGH:docs/known-issues/testing-quality/open-high-ki-tq-20260831-mutation-probe-lands-in-the-wrong-copy.md:*
 
-# unit_tests/test_plan_feature_pt_phase.py's flagged line is a Python keyword
-# argument passing a module constant into the shared HopDriver introduced by the
-# 2026-09-21 gate-harness extraction -- a long-identifier false positive, not a
-# credential, and not reproduced here for the same reason as the entries above:
-# quoting it would trip the scanner this entry suppresses. Glob, not per-line:
-# the construction sits mid-file and its line number moves whenever a helper is
-# added above it. Duplicated here per the dual-update rule (the hook resolves the
-# allowlist through the workspace-root symlink target, so a worktree-only entry
-# is ignored).
-ENTROPY_HIGH:unit_tests/test_plan_feature_pt_phase.py:*
-
-# GE-127d-1 (2026-09-21). GENERIC_SECRET on a module-level sentinel constant in
-# the new file-size rule-parity gate and its fixture, whose assigned value repeats
-# its own name — the token the gate prints on a mismatch and the fixture greps
-# for, so both must name the same literal. NOT reproduced here: quoting it is what
-# trips the scanner. Same shape as the `_SPECIAL_TOKEN` entries above: a constant
-# whose value IS its meaning, not a credential. Plus ENTROPY_HIGH on a long
-# CamelCase TestCase name, same shape as the other test-class-name entries and
-# omitted here for the same reason.
+# GE-127d-1 (2026-09-21). Two false-positive shapes, both with precedent above.
 #
-# Globs, not line numbers: the gate is under active hardening and the test file
-# gains descriptors, so a pinned line would rot silently. Only the three files
-# that actually trip the scanner are listed. Duplicated here per the dual-update
-# rule (the hook resolves the allowlist through the workspace-root symlink
-# target, so a worktree-only entry is ignored).
+# GENERIC_SECRET on a module-level sentinel constant whose assigned value repeats
+# its own name — the token the parity gate prints on a mismatch and the fixture
+# greps for, so both must name the same literal. NOT reproduced here: quoting it
+# is what trips the scanner, which is the same reason the test-class-name entries
+# above describe rather than quote. Same shape as the `_SPECIAL_TOKEN` entries for
+# registry_validator.py and check_agent_spawn_consistency.py: a constant whose
+# value IS its meaning, not a credential.
+#
+# ENTROPY_HIGH on a long CamelCase TestCase name spelling out the behaviour being
+# reached — same shape as the test-class-name entries above, and not reproduced
+# here for the same reason: quoting it would trip the scanner this entry exists
+# to suppress.
+#
+# Globs, not line numbers: the gate is under active hardening (two known guard
+# asymmetries outstanding) and the test files gain descriptors, so a pinned line
+# would rot silently. Only the three files that actually trip the scanner are
+# listed — the two sibling test files scan clean today and are deliberately not
+# pre-emptively suppressed.
 GENERIC_SECRET:templates/scripts/commit_guardian/check_file_size_rule_parity.py:*
 GENERIC_SECRET:unit_tests/commit_guardian/_ge_127d_1_fixture.py:*
 ENTROPY_HIGH:unit_tests/commit_guardian/test_ge_127d_1.py:*
 
-# From origin/main, mirrored here per the dual-update rule: a keyword argument
-# passing a module-level constant of edit-surface relationship names into a helper
-# call — ordinary code, no credential (not reproduced here, since quoting it trips
-# the scanner this entry suppresses). The long SCREAMING_SNAKE identifier reads as
-# high entropy. Glob, not per-line: the call sits mid-file and its line number moves
-# whenever anything is added above it. This module was carved out of
-# generate_ticket_from_ac.py when the 4035-line original was split to clear the
-# 400-line size gate.
+# BO-2400a-1-v (2026-09-30). The entry the comment four paragraphs above already
+# claimed was here.
+#
+# That comment cites "the `_SPECIAL_TOKEN` entries for registry_validator.py and
+# check_agent_spawn_consistency.py" as established precedent. Only the first of
+# those two entries existed (line ~59); this file's never did. The two modules
+# carry the SAME module-level sentinel — a constant whose assigned value restates
+# its own name, matched against registry data — so the scanner treats them
+# identically, and the name containing "TOKEN" is what trips it rather than
+# anything about the value.
+#
+# It went unnoticed because check-secrets scans STAGED files, and this hook had
+# not been staged since the entry was written. Adding a dispatcher to an agent's
+# spawned_by staged it for the first time and the omission surfaced at once.
+#
+# Glob rather than a line number, matching every neighbour here: the constant
+# sits near the top of a file under active change, so a pinned line would rot
+# silently — and a suppression that has drifted off its target is worse than
+# none, because it still reads as covered.
+GENERIC_SECRET:templates/scripts/commit_guardian/hooks/check_agent_spawn_consistency.py:*
+
+# A keyword argument passing a module-level constant of edit-surface relationship
+# names into a helper call -- ordinary code, no credential (not reproduced here for
+# the same reason as the entries above: quoting it would trip the scanner this entry
+# suppresses). The long SCREAMING_SNAKE identifier reads as high entropy. Glob, not
+# per-line: the call sits mid-file and its line number moves whenever anything is
+# added above it. This module was carved out of generate_ticket_from_ac.py when the
+# 4035-line original was split to clear the 400-line size gate.
 ENTROPY_HIGH:scripts/ac_store/_gtfa_files_touched.py:*
 
 # Changelog prose for the ambiguous-reference_pattern fix. The description line is a
 # single long paragraph naming module paths, a code expression and an error string, so
 # it reads as high entropy to the scanner. It is narrative documentation containing no
-# credential. Glob, not per-line: matches the treatment of every other changelog entry.
-# Duplicated from the worktree .security-allowlist per the dual-update rule — the hook
-# resolves the allowlist through the .leafcutter symlink target, i.e. this copy.
+# credential. Glob, not per-line: matches the treatment of every other changelog entry
+# in this file.
 ENTROPY_HIGH:changelogs/2026-09-23-1030-an-ambiguous-reference-pattern-is-now-refused-instead-of-silently-resolving-to-an-arbitrary-file.md:*
 
-# Committed snapshot of the agent feedback corpus (787 records, 18 sinks, KI-FC-001).
-# Every line is a JSONL record whose feedback_id carries an 8-hex-character suffix
-# (fb_YYYY-MM-DD_xxxxxxxx), and a dense one-line JSON object of ids, phases, tags and
-# prose reads as high entropy to the scanner. No credential is present, and that was
-# checked rather than assumed: swept for AKIA*, PEM private-key headers, ghp_/
-# github_pat_, sk-*, xox[baprs]-, AIza*, JWTs and user:pass@host URIs (0 hits), and
-# separately for password/secret_key/api_key/bearer/authorization wording (0 hits).
-# Glob, not per-line: 787 lines today and a later snapshot will be longer.
-# Duplicated here per the dual-update rule.
-ENTROPY_HIGH:reports/feedback-snapshots/feedback-corpus-2026-09-30.jsonl:*
+# GE-127e-3-i. A module-level constant holding the name of the outcome token this
+# gate prints when it cannot describe a file -- the third member of the same family
+# as the INDETERMINATE and EMPTY HISTORY tokens already in this component. It is a
+# fixed English label printed to stdout, not a credential. The value is not
+# reproduced here on purpose: quoting it would itself trip the scanner this entry
+# exists to suppress, which is how an earlier attempt in this epic blocked on its own
+# explanatory comment. Glob, not per-line: the constant sits near the top of a file
+# that is still being added to, so a line number would silently go stale.
+GENERIC_SECRET:templates/scripts/commit_guardian/_file_description.py:*
 
-# False positives: pytest NODE IDS in the CI shard-balancing durations file.
-# 25 findings, all the same class -- long test names, plus parametrised-test
-# ids whose fixture sentinels contain a run of hex digits and so read as
-# high-entropy. (The example is deliberately NOT quoted here: an earlier
-# revision of this comment pasted one in verbatim and the scanner promptly
-# flagged the allowlist itself. Look at .github/test_durations.json if you
-# need to see one.)
-# Checked rather than assumed: the file is a flat {node_id: seconds} map
-# emitted by pytest-split --store-durations; every key is a collected test id
-# and every value is a float. It contains no other kind of string.
-# Glob, not per-line: 9,559 entries today and each refresh reorders them, so
-# per-line numbers would be invalidated by the next regeneration.
-# Duplicated to the worktree copy per the dual-update rule.
-ENTROPY_HIGH:.github/test_durations.json:*
+# GE-127e-3-i. Two unittest class names long enough to read as high entropy. This
+# repo's test-naming convention spells the behaviour under test out in full, so a
+# class name that states a whole Gherkin clause is normal here rather than unusual.
+# No credential. Glob, not per-line: both sit above code that will move as these
+# files grow, and per-line entries break silently when lines shift.
+ENTROPY_HIGH:unit_tests/commit_guardian/test_ge_127e_3_i_no_substitute_and_verdict_independence.py:*
+ENTROPY_HIGH:unit_tests/commit_guardian/test_ge_127e_3_i_reachability_and_deployed.py:*
+
+# KM-400 safe example contains placeholders only; actual credentials remain outside Git.
+ENV_FILE:knowledge/.env.example:0
+
+# KM-400 reviewed false positives: placeholder assignments, synthetic test strings,
+# and optional unresolved canonical documentation paths in sanitized reports.
+ENTROPY_HIGH:knowledge/.env.example:5
+ENTROPY_HIGH:knowledge/.env.example:7
+ENTROPY_HIGH:knowledge/.env.example:10
+ENTROPY_HIGH:reports/knowledge-retrieval-real-subset-status.json:93
+ENTROPY_HIGH:reports/knowledge-retrieval-real-subset-status.json:97
+ENTROPY_HIGH:reports/knowledge-retrieval-real-subset-sync.json:90
+ENTROPY_HIGH:reports/knowledge-retrieval-real-subset-sync.json:94
+ENTROPY_HIGH:tests/knowledge/test_environment.py:55
+ENTROPY_HIGH:tests/knowledge/test_environment.py:75
+ENTROPY_HIGH:tests/knowledge/test_environment.py:105
+ENTROPY_HIGH:tests/knowledge/test_environment.py:107
+ENTROPY_HIGH:tests/knowledge/test_environment.py:139
+ENTROPY_HIGH:tests/knowledge/test_environment.py:187
+
+# Verified public pytest command and immutable canonical ADR locator; no credential values.
+ENTROPY_HIGH:docs/analysis/2026-10-01-knowledge-retrieval-aura-acceptance.md:54
+ENTROPY_HIGH:reports/knowledge-retrieval-aura-kernel.json:16
+
+# Reviewed immutable native metadata receipts: canonical acceptance criterion paths
+# and historical pytest temporary directory paths only. Exact lines; all other
+# entropy findings and every credential-pattern rule remain enabled.
+ENTROPY_HIGH:reports/native-fields/ac-install-baseline.json:153
+ENTROPY_HIGH:reports/native-fields/ac-install-baseline.json:157
+ENTROPY_HIGH:reports/native-fields/ac-install-baseline.json:161
+ENTROPY_HIGH:reports/native-fields/ac-install-baseline.json:165
+ENTROPY_HIGH:reports/native-fields/ac-install-receipt.json:166
+ENTROPY_HIGH:reports/native-fields/ac-install-receipt.json:171
+ENTROPY_HIGH:reports/native-fields/ac-install-receipt.json:176
+ENTROPY_HIGH:reports/native-fields/ac-install-receipt.json:181
+ENTROPY_HIGH:reports/native-fields/ac-traceability.json:166
+ENTROPY_HIGH:reports/native-fields/ac-traceability.json:177
+ENTROPY_HIGH:reports/native-fields/ac-traceability.json:188
+ENTROPY_HIGH:reports/native-fields/ac-traceability.json:199
+ENTROPY_HIGH:reports/native-fields/ac-validation.json:16
+ENTROPY_HIGH:reports/native-fields/ac-validation.json:17
+ENTROPY_HIGH:reports/native-fields/ac-validation.json:18
+ENTROPY_HIGH:reports/native-fields/ac-validation.json:19
+ENTROPY_HIGH:reports/native-fields/changelog-mutation-coerce_valid_map.xml:1
+ENTROPY_HIGH:reports/native-fields/changelog-mutation-drop_extension.xml:1
+ENTROPY_HIGH:reports/native-fields/changelog-mutation-drop_recovery_error.xml:1
+ENTROPY_HIGH:reports/native-fields/changelog-mutation-duplicate_store.xml:1
+ENTROPY_HIGH:reports/native-fields/changelog-mutation-duplicate_store.xml:14
+ENTROPY_HIGH:reports/native-fields/changelog-mutation-ignore_bad_store.xml:1
+ENTROPY_HIGH:reports/native-fields/changelog-mutation-ignore_bad_store.xml:15
+ENTROPY_HIGH:reports/native-fields/changelog-mutation-ignore_bad_store.xml:29
+ENTROPY_HIGH:reports/native-fields/changelog-mutation-ignore_bad_store.xml:43
+ENTROPY_HIGH:reports/native-fields/changelog-mutation-ignore_configuration.xml:1
+ENTROPY_HIGH:reports/native-fields/changelog-mutation-ignore_configuration.xml:30
+ENTROPY_HIGH:reports/native-fields/changelog-mutation-inject_default.xml:1
+ENTROPY_HIGH:reports/native-fields/changelog-mutation-leak_checkout_path.xml:1
+ENTROPY_HIGH:reports/native-fields/changelog-mutation-strip_backslashes.xml:1
+ENTROPY_HIGH:reports/native-fields/changelog-mutation-swallow_malformed.xml:1
+ENTROPY_HIGH:reports/native-fields/changelog-mutation-swallow_malformed.xml:24
+ENTROPY_HIGH:reports/native-fields/changelog-mutation-swallow_malformed.xml:47
+ENTROPY_HIGH:reports/native-fields/changelog-mutation-swallow_malformed.xml:70
+ENTROPY_HIGH:reports/native-fields/changelog-mutation-swallow_malformed.xml:93
+ENTROPY_HIGH:reports/native-fields/changelog-mutation-swallow_malformed.xml:116
+ENTROPY_HIGH:reports/native-fields/changelog-mutation-swallow_malformed.xml:139
+ENTROPY_HIGH:reports/native-fields/changelog-red.xml:1
+ENTROPY_HIGH:reports/native-fields/changelog-red.xml:45
+ENTROPY_HIGH:reports/native-fields/changelog-red.xml:76
+ENTROPY_HIGH:reports/native-fields/changelog-red.xml:113
+ENTROPY_HIGH:reports/native-fields/changelog-red.xml:150
+ENTROPY_HIGH:reports/native-fields/changelog-red.xml:178
+ENTROPY_HIGH:reports/native-fields/changelog-red.xml:211
+ENTROPY_HIGH:reports/native-fields/changelog-red.xml:244
+ENTROPY_HIGH:reports/native-fields/changelog-red.xml:277
+ENTROPY_HIGH:reports/native-fields/changelog-red.xml:310
+ENTROPY_HIGH:reports/native-fields/changelog-red.xml:342
+ENTROPY_HIGH:reports/native-fields/changelog-red.xml:374
+ENTROPY_HIGH:reports/native-fields/changelog-red.xml:413
+ENTROPY_HIGH:reports/native-fields/changelog-red.xml:452
+ENTROPY_HIGH:reports/native-fields/changelog-red.xml:491
+ENTROPY_HIGH:reports/native-fields/changelog-red.xml:530
+ENTROPY_HIGH:reports/native-fields/changelog-red.xml:569
+ENTROPY_HIGH:reports/native-fields/changelog-red.xml:608
+ENTROPY_HIGH:reports/native-fields/code-GlossaryTerm-red.xml:39
+ENTROPY_HIGH:reports/native-fields/code-GlossaryTerm-red.xml:94
+ENTROPY_HIGH:reports/native-fields/code-GlossaryTerm-red.xml:151
+ENTROPY_HIGH:reports/native-fields/code-GlossaryTerm-red.xml:181
+ENTROPY_HIGH:reports/native-fields/code-GlossaryTerm-red.xml:211
+ENTROPY_HIGH:reports/native-fields/code-GlossaryTerm-red.xml:241
+ENTROPY_HIGH:reports/native-fields/code-GlossaryTerm-red.xml:270
+ENTROPY_HIGH:reports/native-fields/code-GlossaryTerm-red.xml:300
+ENTROPY_HIGH:reports/native-fields/code-GlossaryTerm-red.xml:330
+ENTROPY_HIGH:reports/native-fields/code-GlossaryTerm-red.xml:360
+ENTROPY_HIGH:reports/native-fields/code-GlossaryTerm-red.xml:390
+ENTROPY_HIGH:reports/native-fields/code-GlossaryTerm-red.xml:420
+ENTROPY_HIGH:reports/native-fields/code-GlossaryTerm-red.xml:450
+ENTROPY_HIGH:reports/native-fields/code-GlossaryTerm-red.xml:480
+ENTROPY_HIGH:reports/native-fields/code-GlossaryTerm-red.xml:510
+ENTROPY_HIGH:reports/native-fields/code-GlossaryTerm-red.xml:540
+ENTROPY_HIGH:reports/native-fields/code-GlossaryTerm-red.xml:570
+ENTROPY_HIGH:reports/native-fields/code-GlossaryTerm-red.xml:600
+ENTROPY_HIGH:reports/native-fields/document-red.xml:43
+ENTROPY_HIGH:reports/native-fields/document-red.xml:76
+ENTROPY_HIGH:reports/native-fields/document-red.xml:113
+ENTROPY_HIGH:reports/native-fields/document-red.xml:156
+ENTROPY_HIGH:reports/native-fields/document-red.xml:189
+ENTROPY_HIGH:reports/native-fields/document-red.xml:222
+ENTROPY_HIGH:reports/native-fields/document-red.xml:255
+ENTROPY_HIGH:reports/native-fields/document-red.xml:287
+ENTROPY_HIGH:reports/native-fields/document-red.xml:319
+ENTROPY_HIGH:reports/native-fields/document-red.xml:351
+ENTROPY_HIGH:reports/native-fields/flow-red.xml:1
+ENTROPY_HIGH:reports/native-fields/flow-red.xml:59
+ENTROPY_HIGH:reports/native-fields/flow-red.xml:126
+ENTROPY_HIGH:reports/native-fields/flow-red.xml:155
+ENTROPY_HIGH:reports/native-fields/flow-red.xml:188
+ENTROPY_HIGH:reports/native-fields/flow-red.xml:221
+ENTROPY_HIGH:reports/native-fields/flow-red.xml:254
+ENTROPY_HIGH:reports/native-fields/flow-red.xml:287
+ENTROPY_HIGH:reports/native-fields/flow-red.xml:320
+ENTROPY_HIGH:reports/native-fields/flow-red.xml:352
+ENTROPY_HIGH:reports/native-fields/flow-red.xml:384
+ENTROPY_HIGH:reports/native-fields/flow-red.xml:416
+ENTROPY_HIGH:reports/native-fields/flow-red.xml:448
+ENTROPY_HIGH:reports/native-fields/flow-red.xml:480
+ENTROPY_HIGH:reports/native-fields/flow-red.xml:512
+ENTROPY_HIGH:reports/native-fields/flow-red.xml:544
+ENTROPY_HIGH:reports/native-fields/flow-red.xml:576
+ENTROPY_HIGH:reports/native-fields/flow-red.xml:608
+ENTROPY_HIGH:reports/native-fields/flow-red.xml:650
+ENTROPY_HIGH:reports/native-fields/flow-red.xml:692
+ENTROPY_HIGH:reports/native-fields/flow-red.xml:734
+ENTROPY_HIGH:reports/native-fields/flow-red.xml:776
+ENTROPY_HIGH:reports/native-fields/flow-red.xml:818
+ENTROPY_HIGH:reports/native-fields/flow-red.xml:851
+ENTROPY_HIGH:reports/native-fields/flow-red.xml:884
+ENTROPY_HIGH:reports/native-fields/flow-red.xml:917
+ENTROPY_HIGH:reports/native-fields/itpo-ac-enrichment.json:210
+ENTROPY_HIGH:reports/native-fields/itpo-ac-enrichment.json:224
+ENTROPY_HIGH:reports/native-fields/itpo-ac-enrichment.json:238
+ENTROPY_HIGH:reports/native-fields/itpo-ac-enrichment.json:252
+ENTROPY_HIGH:reports/native-fields/refresh-recovery-live-mutation.xml:1
+
+# Historical checkpoint paths and explicit local consent label; no credential.
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02/RS-02.live-response.json:491
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02/RS-03.live-response.json:491
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02/rerun-recipe.json:13
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02/rerun-recipe.json:17
+
+# Reviewed 2026-10-05: immutable historical manifest pathname keys and one
+# documented backup path. These exact lines contain path metadata, not credentials.
+# Only the entropy heuristic is suppressed; all credential-pattern rules remain active.
+# Preserve the original receipts rather than rewriting their historical bytes.
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:74
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:76
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:107
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:116
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:150
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:155
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:157
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:190
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:323
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:413
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:420
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:506
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:2778
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:3179
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:3180
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:3182
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:3185
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:3187
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:3188
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:3198
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:3199
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:3200
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:3202
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:3203
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:4309
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:4310
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:4311
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:4312
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:4410
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:4414
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:4415
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:4416
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:4417
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:4418
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:4419
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:4420
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:4421
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:4422
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:4423
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:4425
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:4426
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:4427
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:4428
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:4429
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:4430
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:4431
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:4432
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:4433
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:4434
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:4435
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:4436
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:4437
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:4438
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:4439
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:4440
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:4441
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:4442
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:4443
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:4444
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:4445
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:4446
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:4447
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:4451
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:4452
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:4453
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:4456
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:4457
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:4458
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:4459
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:4460
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:4461
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:4462
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:4463
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:4464
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:4534
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:4535
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:4538
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:4539
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:4540
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:4541
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:4542
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:4545
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:4546
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:4547
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:4548
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:4549
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:4550
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:4553
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:4554
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:4555
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:4558
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:4559
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:4560
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:4561
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:4562
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:4563
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:4564
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:4565
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:4566
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:4570
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:4571
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:4572
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:4573
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:4574
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:4576
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:4577
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:5082
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:5110
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:5112
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:5113
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:5114
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:5115
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:5134
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:5135
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:5137
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:5138
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:5139
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:5141
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:5142
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:5145
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:5311
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:5865
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:5927
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:6544
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:6545
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:6546
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:6547
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:7266
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:7523
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:9477
+ENTROPY_HIGH:docs/analysis/retrieval-issue-review-2026-10-02/15-typing.md:21
+# DK-300 delivery evidence: trace URL and identifiers, synthetic fixture identifiers,
+# and pytest temporary paths; verified not to contain credential material.
+# Immutable report lines are pinned; other secret rules remain active.
+ENTROPY_HIGH:reports/entity-ac-live-demo/demo.md:11
+ENTROPY_HIGH:reports/entity-context-independent-final.xml:1
+ENTROPY_HIGH:reports/entity-context-kernel-verified.xml:1
+ENTROPY_HIGH:reports/entity-context-vocabulary.xml:1
+ENTROPY_HIGH:reports/entity-context-vocabulary.xml:37
+ENTROPY_HIGH:reports/entity-graph-selection-independent-green.xml:1
+ENTROPY_HIGH:reports/entity-native-pointer-core-broad.xml:1
+# Deliberately fake redaction fixture; test-file line wildcard follows CLAUDE.md.
+GENERIC_SECRET:tests/kernel/entity_context/test_permissions.py:*
