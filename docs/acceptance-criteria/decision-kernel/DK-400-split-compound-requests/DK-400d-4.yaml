@@ -32,23 +32,23 @@ doc_links:
   - path: docs/how-to/run-the-decision-kernel.md
     relationship: describes
     status: exists
-    relevance: "The kernel how-to; answering a split belongs beside answering the other gates (Step 5)."
+    relevance: The kernel how-to; answering a split belongs beside answering the other gates (Step 5).
   - path: docs/product-truth/mockups/leafcutter/decision-split-approve.mockup.json
     relationship: specified-by
     status: exists
-    relevance: "Screen decision-split-approve (v2)."
+    relevance: Screen decision-split-approve (v2).
   - path: docs/architecture/adrs/ADR-067-kernel-splits-bundled-requests-into-approved-parts.md
     relationship: describes
-    status: planned
-    relevance: Pinned ADR for splitting a bundled request; adr-author dispatched directly with this number and filename.
-      Re-verify the number is free before dispatch.
+    status: exists
+    relevance: 'ADR-067 (Accepted): the kernel splits a bundled request into parts a person approves; binding source
+      for the four schema ids (goal_decomposition_request.v1, goal_decomposition.v1, split_answer.v1, decomposition.v1).'
 assigned_agent: documentation-expert
 estimated_complexity: S
 delivers_to: null
 expects_from:
   ac_id: DK-400d-1
-  contract: The built split answer schema and its refusal rules (DK-400d-1, DK-400d-2-i) and the rejection endings
-    of DK-400d-3.
+  contract: The built leafcutter.split_answer.v1 schema and its refusal rules (DK-400d-1, DK-400d-2-i) and the rejection
+    endings of DK-400d-3.
 change_target: docs
 it_requirements:
   - 'Describes the built gate only: the four answers with one example each, combined rewording and leaving out,
@@ -56,8 +56,8 @@ it_requirements:
     ends blocked with nothing decided and its gap recorded; ambiguous goes back to today''s clarification question;
     bundled_accepted or mid-run goes ahead as one), and that only a person answers (a relayed answer carries the
     person''s own id).'
-  - Edits docs/how-to/run-the-decision-kernel.md beside Step 5 and shows the exact submission shape of the split
-    answer schema, matching the built schema.
+  - Edits docs/how-to/run-the-decision-kernel.md beside Step 5 and shows the exact submission shape of leafcutter.split_answer.v1
+    (response_schema_id leafcutter.split_answer.v1, answer, parts, note), matching the built schema.
   - Uses the terms of ADR-067 and links the reference entry of DK-400a-5.
 risk_surface: internal
 test_required: false
@@ -78,6 +78,11 @@ amended_by:
     date: '2026-10-05'
     by: it-po
     summary: Rejection endings in it_requirements enumerated per the final-gate rule.
+  - reason: it-po-adr067-alignment
+    date: '2026-10-05'
+    by: it-po
+    summary: 'Aligned with ADR-067 (Accepted, docs/architecture/adrs/ADR-067-kernel-splits-bundled-requests-into-approved-parts.md):
+      named leafcutter.split_answer.v1; ADR-067 doc_link set to exists.'
 superseded_by: null
 covered_by: []
 implemented_by: []

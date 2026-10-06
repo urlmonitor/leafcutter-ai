@@ -64,6 +64,10 @@ it_requirements:
     today''s ambiguous gap is recorded only if the request ends unresolved (the person cannot be asked, or the follow-up
     limit is reached), and only then does the run end blocked (DK-400d-3-i, DK-400c-3); it is never offered a split
     again in the same run.'
+  - 'Tests enable splitting explicitly: split.enabled true through a config override (false only where a test compares
+    with the off switch). None relies on the shipped default, which stays false until E3 merges (dec-9925ebf1895222f4,
+    see DK-400a-1). A test asserting that no split starts must run with splitting on, or it passes for the wrong
+    reason.'
 change_target: code
 risk_surface: contract_boundary
 test_required: true
@@ -96,6 +100,11 @@ amended_by:
     date: '2026-10-05'
     by: it-po
     summary: Added the final-gate ambiguous fallback (today's clarification path) to it_requirements.
+  - reason: it-po-build-slice-amendment
+    date: '2026-10-05'
+    by: it-po
+    summary: 'Build-slice amendment (dec-9925ebf1895222f4): its tests enable splitting explicitly, because split.enabled
+      ships false in E1 and E2.'
 superseded_by: null
 covered_by: []
 implemented_by: []

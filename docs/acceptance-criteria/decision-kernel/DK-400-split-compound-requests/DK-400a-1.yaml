@@ -29,19 +29,20 @@ doc_links:
   - path: docs/product-truth/flows/leafcutter/decision-forming.flow.json
     relationship: implements
     status: exists
-    relevance: "Flow v5 node(s) split-detect, with their acceptance scenarios."
+    relevance: Flow v5 node(s) split-detect, with their acceptance scenarios.
   - path: docs/product-truth/mock-data/leafcutter/decisions.mock.json
     relationship: specified-by
     status: exists
-    relevance: "Decomposition fields subject_text, subject_kind, found_at, work_item_depth, trigger; records dcp-reusable-criteria-by-hand and dcp-reusable-criteria-proposed."
+    relevance: Decomposition fields subject_text, subject_kind, found_at, work_item_depth, trigger; records dcp-reusable-criteria-by-hand
+      and dcp-reusable-criteria-proposed.
   - path: docs/architecture/adrs/ADR-053-intelligence-selection-deterministic-jev-llm-human.md
     relationship: constrains
     status: exists
-    relevance: "Host proposes (generative), Jev only judges, a person approves; cheapest mechanism first."
+    relevance: Host proposes (generative), Jev only judges, a person approves; cheapest mechanism first.
   - path: docs/architecture/components/decision-kernel.md
     relationship: describes
     status: exists
-    relevance: "Kernel containers: routing, scheduler, host handoffs, run root."
+    relevance: 'Kernel containers: routing, scheduler, host handoffs, run root.'
   - path: docs/analysis/2026-09-30-decision-kernel-design-3-kernel-scheduler.md
     relationship: describes
     status: exists
@@ -57,9 +58,9 @@ doc_links:
     relevance: Contracts, the payload schema catalog, the capability registry entry shape and the kernel configuration.
   - path: docs/architecture/adrs/ADR-067-kernel-splits-bundled-requests-into-approved-parts.md
     relationship: describes
-    status: planned
-    relevance: Pinned ADR for splitting a bundled request; adr-author dispatched directly with this number and filename.
-      Re-verify the number is free before dispatch.
+    status: exists
+    relevance: 'ADR-067 (Accepted): the kernel splits a bundled request into parts a person approves; binding source
+      for the four schema ids (goal_decomposition_request.v1, goal_decomposition.v1, split_answer.v1, decomposition.v1).'
 assigned_agent: python-coder
 estimated_complexity: L
 delivers_to:
@@ -97,6 +98,8 @@ it_requirements:
     DK-400d-3-i). Split detection takes precedence over the no_match fallback for a bundled subject.
   - The split record is checkpointed before the run returns waiting_host; its id is derived from the owning work
     item, so a re-executed node or a resumed run never creates a second split for the same item.
+  - The item's split_checked flag (DK-400c-3) is set in the same route pass, so a re-executed node or a resumed
+    run never asks the bundle question twice.
   - subject_text equals the submitted goal with only whitespace runs collapsed, using one shared normalisation helper
     that the quote check (DK-400c-2) also uses.
   - 'subject_kind is derived deterministically: research_request when the item''s requested or classified output
@@ -106,6 +109,12 @@ it_requirements:
     split.max_parts, split.max_parts_per_run and the per-part budget keys of DK-400e-1), with config/kernel_config.schema.json
     regenerated from the config model and kept equal by the existing config test; no threshold or bound is hard-coded
     in node code, and every value used is recorded in the trace.
+  - 'Shipped default of split.enabled: on, as approved at the final gate. While DK-400 is built in three dependency-checked
+    epics (dec-9925ebf1895222f4: E1 = DK-400a + DK-400c except c-5; E2 = DK-400b + DK-400d except d-5, plus c-5;
+    E3 = DK-400e + DK-400f + d-5), E1 and E2 ship split.enabled: false in config/kernel_config.default.json and
+    as the config model''s default, so main stays usable for daily kernel runs between merges. DK-400e-1 (E3) returns
+    both to on. Every split test enables splitting explicitly through a config override and never relies on the
+    shipped default.'
   - 'split.enabled false (the off switch) restores today''s behaviour exactly on the same inputs: no bundle question
     in any Jev batch, no split record, today''s gap, fallback, clarification and report.'
   - The split lifecycle emits run events and tracer events (split.started and the later split.* events) carrying
@@ -160,8 +169,9 @@ test_spec:
     framework: pytest
     type: unit
     angle: real_artifact
-    description: The config schema regenerated from the model includes the split section with its defaults and equals
-      the committed config/kernel_config.schema.json.
+    description: The config schema regenerated from the model includes the split section and its keys and equals
+      the committed config/kernel_config.schema.json; it does not pin split.enabled, whose shipped value is false
+      in E1 and E2 and is pinned on by DK-400e-1.
 test_rationale: 'Detection must be proven through the real route node and the real Jev batch: a direct call to a
   detector function could pass while routing never asks the question, and the no-extra-call claim only holds if
   the provider call count of a whole run is compared.'
@@ -174,6 +184,16 @@ amended_by:
     summary: 'Technical enrichment: assigned_agent confirmed, estimated_complexity, change_target, risk_surface,
       it_requirements, delivers_to/expects_from contracts, doc_links and the test contract set; readiness draft
       -> reviewed. BA criteria and product_truth unchanged.'
+  - reason: it-po-build-slice-amendment
+    date: '2026-10-05'
+    by: it-po
+    summary: 'Build-slice amendment (dec-9925ebf1895222f4): shipped default on, but false in E1 and E2 until DK-400e-1
+      flips it; split tests enable splitting explicitly; the config-schema test no longer pins split.enabled.'
+  - reason: it-po-adr067-alignment
+    date: '2026-10-05'
+    by: it-po
+    summary: 'Aligned with ADR-067 (Accepted, docs/architecture/adrs/ADR-067-kernel-splits-bundled-requests-into-approved-parts.md):
+      split_checked flag cross-reference (Open Question 1); ADR-067 doc_link set to exists.'
 superseded_by: null
 covered_by:
   - DK-400a-1-i

@@ -48,6 +48,10 @@ it_requirements:
   - 'The set-aside reason is template text by subject kind: ''quote not found in the goal'', ''quote not found in
     the request'' (research request) or ''quote not found in the question'' (decision question).'
   - Reached only through the injected test producer of DK-400b-2; the mid-run path is dormant in production.
+  - 'Tests enable splitting explicitly: split.enabled true through a config override (false only where a test compares
+    with the off switch). None relies on the shipped default, which stays false until E3 merges (dec-9925ebf1895222f4,
+    see DK-400a-1). A test asserting that no split starts must run with splitting on, or it passes for the wrong
+    reason.'
 change_target: code
 risk_surface: contract_boundary
 test_required: true
@@ -74,6 +78,11 @@ amended_by:
     date: '2026-10-05'
     by: it-po
     summary: Mid-run test pinned to the injected test producer of DK-400b-2.
+  - reason: it-po-build-slice-amendment
+    date: '2026-10-05'
+    by: it-po
+    summary: 'Build-slice amendment (dec-9925ebf1895222f4): its tests enable splitting explicitly, because split.enabled
+      ships false in E1 and E2.'
 superseded_by: null
 covered_by: []
 implemented_by: []

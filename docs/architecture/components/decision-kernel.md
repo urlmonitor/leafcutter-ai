@@ -7,7 +7,7 @@ flight_level: L2-Container
 diagram_type: container
 root: true
 created: 2026-09-30
-last_updated: 2026-10-03
+last_updated: 2026-10-05
 components:
   - decision_kernel
 related_docs:
@@ -27,6 +27,7 @@ related_docs:
   - docs/architecture/adrs/ADR-060-source-of-truth-and-approval-authority.md
   - docs/architecture/adrs/ADR-061-identity-of-declared-and-learned-records.md
   - docs/architecture/adrs/ADR-065-colony-learned-statistics-neo4j-aggregates.md
+  - docs/architecture/adrs/ADR-067-kernel-splits-bundled-requests-into-approved-parts.md
   - docs/how-to/run-the-decision-kernel.md
   - docs/how-to/inspect-kernel-traces-with-langfuse-mcp.md
   - docs/analysis/2026-10-01-decision-kernel-v0-demo-report.md
@@ -156,6 +157,7 @@ Registered in `docs/components.json` under `decision_kernel.exposed_interfaces`:
 | [ADR-060](../adrs/ADR-060-source-of-truth-and-approval-authority.md) | Git is canonical for published records; only a human approval creates a record; the kernel never writes the repository during a run; precedent is evidence, not authority. |
 | [ADR-061](../adrs/ADR-061-identity-of-declared-and-learned-records.md) | Existing ids stay; decisions get a kernel-minted `dec-<16hex>` id; a record is keyed by (repository_id, kind, id). |
 | [ADR-065](../adrs/ADR-065-colony-learned-statistics-neo4j-aggregates.md) | Learned colony statistics live in Neo4j as derived aggregates updated after specific actions, behind ADR-059's `ColonyMemory` port; supersedes ADR-057's PostgreSQL store in part. |
+| [ADR-067](../adrs/ADR-067-kernel-splits-bundled-requests-into-approved-parts.md) | A request that bundles several questions is split into 2 to 5 person-approved parts by the host operation `host.decompose_goal` (schemas `goal_decomposition_request.v1`, `goal_decomposition.v1`, `decomposition.v1`, `split_answer.v1`). Endings are keyed on the routing trigger, and `split.enabled` is staged off on main until the gate and part runs land (dec-9925ebf1895222f4). Not built yet (DK-400). |
 
 ## Specification
 

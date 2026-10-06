@@ -62,6 +62,9 @@ it_requirements:
   - 'Precedent is evidence, never authority: at or above memory.reuse_threshold the existing reuse-or-decide-anew
     question is asked, and a later part''s choice always needs a person''s approval (ADR-060 section 4).'
   - The prior_decisions evidence carries the earlier record's approver and approval time.
+  - 'Tests enable splitting explicitly: split.enabled true through a config override (false only where a test compares
+    with the off switch). None relies on the shipped default: batch order inside E3 does not guarantee that DK-400e-1''s
+    flip lands first, and a later default change must not silently flip a test (dec-9925ebf1895222f4).'
 change_target: code
 risk_surface: contract_boundary
 test_required: true
@@ -96,6 +99,11 @@ amended_by:
     summary: 'Technical enrichment: assigned_agent confirmed, estimated_complexity, change_target, risk_surface,
       it_requirements, delivers_to/expects_from contracts, doc_links and the test contract set; readiness draft
       -> reviewed. BA criteria and product_truth unchanged.'
+  - reason: it-po-build-slice-amendment
+    date: '2026-10-05'
+    by: it-po
+    summary: 'Build-slice amendment (dec-9925ebf1895222f4): its tests enable splitting explicitly and never depend
+      on the shipped default of split.enabled.'
 superseded_by: null
 covered_by:
   - DK-400e-3-i
