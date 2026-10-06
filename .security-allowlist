@@ -383,3 +383,7 @@ GENERIC_SECRET:templates/scripts/commit_guardian/_file_description.py:*
 # files grow, and per-line entries break silently when lines shift.
 ENTROPY_HIGH:unit_tests/commit_guardian/test_ge_127e_3_i_no_substitute_and_verdict_independence.py:*
 ENTROPY_HIGH:unit_tests/commit_guardian/test_ge_127e_3_i_reachability_and_deployed.py:*
+# False positive: line 539 is a DECISION HISTORY comment whose tail tag
+# (#TICKET-20261002-GlossaryHookStubBlacklistsNewTerms) scores high entropy. No credential.
+# Per-line on purpose (narrowest exemption); if the line shifts the finding returns.
+ENTROPY_HIGH:templates/scripts/commit_guardian/check_glossary_coverage.py:539
