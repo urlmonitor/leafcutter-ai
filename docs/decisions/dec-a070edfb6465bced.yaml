@@ -1,0 +1,403 @@
+schema_version: '1.0'
+kind: decision
+id: dec-a070edfb6465bced
+repository_id: leafcutter-ai
+title: Jev judging 'same question?' for candidate pairs against existing categories
+description: Decide how the Leafcutter decision kernel should group reusable decision criteria into ...
+decision_type: design
+question: 'Decide how the Leafcutter decision kernel should group reusable decision criteria into categories (AC DK-300b):
+  criteria that ask the same thing in different words must end up in one category with one preferred wording, related categories
+  may sit under a broader one, and every grouping stays a suggestion a person can accept, change or undo. The storage format
+  is already decided (dec-93c1c730463c1f3c: category records with SKOS-style labels that hold (decision id, criterion id)
+  membership), and candidates come from published decision records and Langfuse run history. Options: a) deterministic wording
+  or label matching (content-word overlap, as precedent lookup uses today); b) embedding-similarity clustering of criterion
+  questions; c) Jev judging ''same question?'' for candidate pairs against existing categories; d) an LLM proposes the groupings
+  for human approval; e) a staged mix ordered by ADR-053 (deterministic first, then Jev, then an LLM, then the human); or
+  another option grounded in the repository.'
+components: []
+change_target: []
+risk_surface: []
+roadmap_phase: []
+file_globs: []
+repository_wide: true
+selected_option_id: opt.jev_pick_existing
+supersedes: []
+superseded_by: []
+related: []
+task_context:
+  goal: 'Decide how the Leafcutter decision kernel should group reusable decision criteria into categories (AC DK-300b): criteria
+    that ask the same thing in different words must end up in one category with one preferred wording, related categories
+    may sit under a broader one, and every grouping stays a suggestion a person can accept, change or undo. The storage format
+    is already decided (dec-93c1c730463c1f3c: category records with SKOS-style labels that hold (decision id, criterion id)
+    membership), and candidates come from published decision records and Langfuse run history. Options: a) deterministic wording
+    or label matching (content-word overlap, as precedent lookup uses today); b) embedding-similarity clustering of criterion
+    questions; c) Jev judging ''same question?'' for candidate pairs against existing categories; d) an LLM proposes the groupings
+    for human approval; e) a staged mix ordered by ADR-053 (deterministic first, then Jev, then an LLM, then the human); or
+    another option grounded in the repository.'
+  component_ids: []
+  technologies: []
+  constraints:
+    - '[must] requirement: Every grouping is only a suggestion a person accepts, changes or undoes before it becomes a published
+      category (DK-300b, DK-300c, ADR-060).'
+    - '[must] preference: The user ranks a wrong merge as worse than a missed merge: favour precision over recall.'
+    - '[must] requirement: For grouping too, an LLM is used only for what code and Jev cannot place (user, 2026-10-03).'
+    - '[must] scope: Grouping a question drafted during a decision run is in scope of this decision (user, 2026-10-03).'
+rationale:
+  text: 'Design decision settled by a human. Kernel ranking (Jev''s per-criterion judgement, evidence not authority; stopped
+    researching because design_judgement after 0 research round(s)): 1. [opt.jev_pick_existing] Jev judging ''same question?''
+    for candidate pairs against existing categories (required mean 0.80, 3/5 passed); 2. [opt.cascade_adr053] a staged mix
+    ordered by ADR-053 (required mean 0.71, 3/5 passed); 3. [opt.wording_match] deterministic wording or label matching (required
+    mean 0.53, 0/5 passed); 4. [opt.embedding_assign] embedding-similarity clustering of criterion questions (required mean
+    0.43, 0/5 passed); 5. [opt.llm_groups_all] an LLM proposes the groupings for human approval (required mean 0.30, 0/5 passed).
+    human:user chose option [opt.jev_pick_existing] Jev judging ''same question?'' for candidate pairs against existing categories
+    (kernel rank 1 of 5).'
+  origin: template
+assumptions: []
+unresolved_risks: []
+assessment:
+  basis: kernel_ranking
+  design_reason: design_judgement
+  confidence: 0.8
+  selected_rank: 1
+  ranking:
+    - option_id: opt.jev_pick_existing
+      rank: 1
+      required_passed: 3
+      required_total: 5
+      required_mean: 0.8
+      scores:
+        crit.assigns_before_creating: 0.91
+        crit.broader_links: 0.07
+        crit.cheapest_sufficient_mechanism: 0.62
+        crit.cold_start: 0.86
+        crit.in_run_fit: 0.82
+        crit.reasons_and_review_load: 0.52
+        crit.related_kept_apart: 0.79
+        crit.runs_on_defaults: 0.94
+        crit.same_question_recall: 0.47
+    - option_id: opt.cascade_adr053
+      rank: 2
+      required_passed: 3
+      required_total: 5
+      required_mean: 0.71
+      scores:
+        crit.assigns_before_creating: 0.83
+        crit.broader_links: 0.88
+        crit.cheapest_sufficient_mechanism: 0.82
+        crit.cold_start: 0.81
+        crit.in_run_fit: 0.34
+        crit.reasons_and_review_load: 0.73
+        crit.related_kept_apart: 0.75
+        crit.runs_on_defaults: 0.9
+        crit.same_question_recall: 0.43
+    - option_id: opt.wording_match
+      rank: 3
+      required_passed: 0
+      required_total: 5
+      required_mean: 0.528
+      scores:
+        crit.assigns_before_creating: 0.59
+        crit.broader_links: 0.06
+        crit.cheapest_sufficient_mechanism: 0.19
+        crit.cold_start: 0.71
+        crit.in_run_fit: 0.78
+        crit.reasons_and_review_load: 0.43
+        crit.related_kept_apart: 0.37
+        crit.runs_on_defaults: 0.92
+        crit.same_question_recall: 0.15
+    - option_id: opt.embedding_assign
+      rank: 4
+      required_passed: 0
+      required_total: 5
+      required_mean: 0.432
+      scores:
+        crit.assigns_before_creating: 0.67
+        crit.broader_links: 0.1
+        crit.cheapest_sufficient_mechanism: 0.09
+        crit.cold_start: 0.66
+        crit.in_run_fit: 0.52
+        crit.reasons_and_review_load: 0.15
+        crit.related_kept_apart: 0.22
+        crit.runs_on_defaults: 0.05
+        crit.same_question_recall: 0.17
+    - option_id: opt.llm_groups_all
+      rank: 5
+      required_passed: 0
+      required_total: 5
+      required_mean: 0.298
+      scores:
+        crit.assigns_before_creating: 0.13
+        crit.broader_links: 0.86
+        crit.cheapest_sufficient_mechanism: 0.06
+        crit.cold_start: 0.71
+        crit.in_run_fit: 0.34
+        crit.reasons_and_review_load: 0.56
+        crit.related_kept_apart: 0.25
+        crit.runs_on_defaults: 0.85
+        crit.same_question_recall: 0.28
+final_outcome:
+  status: pending
+  observed_at: null
+  note: ''
+options:
+  - id: opt.wording_match
+    title: deterministic wording or label matching
+    description: 'Code groups a candidate with a category when its wording equals a preferred or alternative label, or shares
+      the criterion id; otherwise content-word overlap with the category''s labels above a set threshold suggests membership.
+      Everything else becomes its own one-member candidate category worded as the candidate, with no LLM. Cold start: with
+      no categories, every candidate is its own candidate category. In a run: the same code check, no Jev call. No broader-link
+      suggestions.'
+    assumptions: []
+    evidence_ids: []
+    proposed_by: claude_code:refined_after_review
+    approved_by: human:user
+  - id: opt.embedding_assign
+    title: embedding-similarity clustering of criterion questions
+    description: 'Every criterion wording is embedded through a user-supplied embedding gateway (criteria become a new vector-eligible
+      kind); a new candidate is assigned to the nearest published category above a similarity threshold, never re-clustering
+      the library. Unassigned candidates are clustered among themselves by similarity into new candidate categories. Cold
+      start: cluster all candidates. In a run: one embedding call per drafted question. Needs embeddings enabled and a model
+      chosen.'
+    assumptions: []
+    evidence_ids: []
+    proposed_by: claude_code:refined_after_review
+    approved_by: human:user
+  - id: opt.jev_pick_existing
+    title: Jev judging 'same question?' for candidate pairs against existing categories
+    description: 'Code first groups exact label or criterion-id matches. Then Jev answers one bounded choice per candidate
+      over ALL existing categories (preferred plus alternative labels) plus ''none'' while the library fits one choice question;
+      a merge is suggested only at p >= 0.8 (the trial''s 100% precision point). Candidates Jev leaves unassigned become one-member
+      candidate categories made by code, worded as the candidate; no LLM. Cold start: no categories, so all candidates are
+      one-member candidates. In a run: one Jev choice per drafted question within the run''s budget. No broader-link suggestions.'
+    assumptions: []
+    evidence_ids: []
+    proposed_by: claude_code:refined_after_review
+    approved_by: human:user
+  - id: opt.llm_groups_all
+    title: an LLM proposes the groupings for human approval
+    description: 'Each mining round the host LLM reads all candidates and the published categories and proposes the full grouping:
+      categories with preferred and alternative labels, members, broader links and a reason each, regrouping where it sees
+      fit. Cold start: the LLM proposes the first library. In a run: an LLM call places a drafted question. A person approves
+      every suggestion.'
+    assumptions: []
+    evidence_ids: []
+    proposed_by: claude_code:refined_after_review
+    approved_by: human:user
+  - id: opt.cascade_adr053
+    title: a staged mix ordered by ADR-053
+    description: 'Code groups exact label or criterion-id matches. Jev then picks one existing category or ''none'' per candidate
+      over all categories, accepted at p >= 0.8. Only the candidates still unassigned go to the host LLM, which groups them
+      into new candidate categories, words their preferred labels and suggests broader links with a reason. A person reviews
+      every suggestion. Cold start: the first round has no categories, so the LLM groups all candidates once; later rounds
+      are mostly code and Jev. In a run: one Jev choice per drafted question; an unplaced question waits for the next mining
+      round (no LLM in a run).'
+    assumptions: []
+    evidence_ids: []
+    proposed_by: claude_code:refined_after_review
+    approved_by: human:user
+criteria:
+  - id: crit.related_kept_apart
+    question: On the gold set plus the known related-but-different pairs (crit.both_hosts/crit.one_source; crit.approval_unit_and_path/crit.human_authority;
+      maintainability vs crit.small_to_maintain), how few wrong merges does the method suggest? (The user ranks a wrong merge
+      worse than a missed one.)
+    priority: required
+    kind: design_judgement
+    evidence_ids:
+      - ev-256dc0c9d47b3a73
+      - ev-e232c933c0643234
+      - ev-e338c8eba5e7a791
+      - ev-a55327c4f55a8cf1
+      - ev-c14dd2b2667edcef
+  - id: crit.assigns_before_creating
+    question: Is each new candidate matched first against the published categories, with a new category proposed only when
+      none fits, and never by regrouping the library?
+    priority: required
+    kind: design_judgement
+    evidence_ids:
+      - ev-e232c933c0643234
+      - ev-256dc0c9d47b3a73
+      - ev-e338c8eba5e7a791
+      - ev-80b646232b8bdb01
+      - ev-a55327c4f55a8cf1
+  - id: crit.cold_start
+    question: With zero published categories (today's state), how does the method form the first categories, and how many
+      suggestions does a person then review?
+    priority: required
+    kind: design_judgement
+    evidence_ids:
+      - ev-e232c933c0643234
+      - ev-c77b58a6e17b8564
+      - ev-e338c8eba5e7a791
+      - ev-80b646232b8bdb01
+      - ev-256dc0c9d47b3a73
+  - id: crit.cheapest_sufficient_mechanism
+    question: Does each step use the cheapest ADR-053 mechanism that can do it (code only for exact decisions such as an exact
+      label or the same criterion id, Jev for a bounded same-question choice, an LLM only to word new labels or group what
+      code and Jev could not place), as the user requires for grouping?
+    priority: required
+    kind: design_judgement
+    evidence_ids:
+      - ev-e232c933c0643234
+      - ev-a55327c4f55a8cf1
+      - ev-e338c8eba5e7a791
+      - ev-256dc0c9d47b3a73
+      - ev-0ac01c0099aa651c
+  - id: crit.in_run_fit
+    question: Can the same method place a question drafted during a decision run (DK-300e) within that run's Jev budget, without
+      blocking or slowing a run when the library is empty?
+    priority: required
+    kind: design_judgement
+    evidence_ids:
+      - ev-e232c933c0643234
+      - ev-a55327c4f55a8cf1
+      - ev-e338c8eba5e7a791
+      - ev-256dc0c9d47b3a73
+      - ev-c14dd2b2667edcef
+  - id: crit.same_question_recall
+    question: On the reviewed same-question set (published members and mined wordings of the mock categories), what share
+      of true same-question pairs does the method put into one suggested category?
+    priority: supporting
+    kind: design_judgement
+    evidence_ids:
+      - ev-a55327c4f55a8cf1
+      - ev-e338c8eba5e7a791
+      - ev-e232c933c0643234
+      - ev-80b646232b8bdb01
+      - ev-256dc0c9d47b3a73
+  - id: crit.broader_links
+    question: Does the method suggest broader links, keeping 'asks the same thing' (an alternative label) apart from 'narrower'
+      (broader) and 'related'?
+    priority: supporting
+    kind: design_judgement
+    evidence_ids:
+      - ev-c77b58a6e17b8564
+      - ev-e338c8eba5e7a791
+      - ev-80b646232b8bdb01
+      - ev-e232c933c0643234
+      - ev-256dc0c9d47b3a73
+  - id: crit.runs_on_defaults
+    question: Does the method run with the default knowledge config (embeddings disabled, no user-supplied embedding gateway)?
+    priority: supporting
+    kind: design_judgement
+    evidence_ids:
+      - ev-bbdbd73e9a73079b
+      - ev-e232c933c0643234
+      - ev-7212f1b77e32968a
+      - ev-e338c8eba5e7a791
+      - ev-256dc0c9d47b3a73
+  - id: crit.reasons_and_review_load
+    question: Does each suggestion show its reason (same label or id, Jev's probability, the LLM's stated reason), and does
+      a mining round produce a number of suggestions one person can review?
+    priority: supporting
+    kind: design_judgement
+    evidence_ids:
+      - ev-e232c933c0643234
+      - ev-256dc0c9d47b3a73
+      - ev-c77b58a6e17b8564
+      - ev-a55327c4f55a8cf1
+      - ev-e338c8eba5e7a791
+evidence:
+  - id: ev-80b646232b8bdb01
+    locator: ac-authoring/reusable-criteria-store:docs/decisions/dec-93c1c730463c1f3c.yaml (options)
+    category: prior_decisions
+    content_hash: 4304b424cdae3bf7931b5e017fe280dceada03770e689655083127b994c8206d
+    verification: unverified
+    relevance: null
+    source_version: null
+  - id: ev-c77b58a6e17b8564
+    locator: ac-authoring/reusable-criteria-store:docs/acceptance-criteria/decision-kernel/DK-300-reusable-decision-criteria/DK-300b.yaml
+    category: task_context
+    content_hash: f49374a69c9179e72440d5b5e1337209010123ffe329768189634debde65ad7a
+    verification: unverified
+    relevance: null
+    source_version: null
+  - id: ev-e232c933c0643234
+    locator: docs/decisions/*.yaml (criteria blocks, branch ac-authoring/reusable-criteria-store)
+    category: existing_patterns
+    content_hash: ce1f946e62466862b11f09d33901b6d8d9235a0fdc6b87a9fc30248a3d542290
+    verification: unverified
+    relevance: null
+    source_version: null
+  - id: ev-e338c8eba5e7a791
+    locator: 'trial artifact: scratchpad/jev-trial/summary.md (host-run, 82 questions, 5 Jev calls)'
+    category: task_context
+    content_hash: 1afc40635361432f039bd9c915fb3132781ca7fa11c715e5f7ab63a96381da5d
+    verification: unverified
+    relevance: null
+    source_version: null
+  - id: ev-256dc0c9d47b3a73
+    locator: 'trial artifact: scratchpad/jev-trial/summary.md#pair-probes'
+    category: task_context
+    content_hash: 966ad03c85f7dc9423beb26f1e7a90010d6792cdc121628a23e85cd1b4e1f29f
+    verification: unverified
+    relevance: null
+    source_version: null
+  - id: ev-a55327c4f55a8cf1
+    locator: 'trial artifact: scratchpad/jev-trial/summary.md#caveats'
+    category: task_context
+    content_hash: 603cc8caa13511319d6709af7889355243456598f197b02a8033f47bad5a121f
+    verification: unverified
+    relevance: null
+    source_version: null
+  - id: ev-c14dd2b2667edcef
+    locator: LLM review of run-b5af8c7fae2248ba (claude_code subagent, 2026-10-03), scratchpad/rv_overlap.py
+    category: task_context
+    content_hash: 121862780a04fc8638b10a5f81034c2ccf38b419d230e08ca4ce42df3af0a30f
+    verification: unverified
+    relevance: null
+    source_version: null
+  - id: ev-0ac01c0099aa651c
+    locator: docs/architecture/adrs/ADR-053-intelligence-selection-deterministic-jev-llm-human.md#L78-L90
+    category: prior_decisions
+    content_hash: 5ca8b456f3b644484f090be9e00cde207eea42f53220c7bb029bc44321af1d6b
+    verification: unverified
+    relevance: null
+    source_version: null
+  - id: ev-7212f1b77e32968a
+    locator: config/kernel_config.default.json (limits, jev, knowledge sections)
+    category: existing_patterns
+    content_hash: 278cc5241431d97c8affdf69ea62042e67abc83d663608312cc0158d42379b71
+    verification: unverified
+    relevance: null
+    source_version: null
+  - id: ev-bbdbd73e9a73079b
+    locator: LLM review of run-b5af8c7fae2248ba (claude_code subagent, 2026-10-03)
+    category: task_context
+    content_hash: c60829dec2f1b7c5b7215be9a404eee47f39b5e988d849a842f971ba55c173c0
+    verification: unverified
+    relevance: null
+    source_version: null
+precedents_considered:
+  - id: dec-acdfd972fcaca478
+    applicability: 0.07
+    action: not_applicable
+    note: judged not to apply to this question; human:user approved [opt.added.1] on 2026-10-02
+  - id: dec-5e7445182eaec1f2
+    applicability: 0.16
+    action: not_applicable
+    note: judged not to apply to this question; human:user approved [opt.parent_with_subflows] on 2026-10-02
+approval:
+  approval_status: approved
+  approved_by: human:user
+  approved_at: '2026-10-04T17:41:27Z'
+  note: ''
+provenance:
+  origin: learned
+  created_by_capability: decision
+  created_at: '2026-10-04T17:41:27Z'
+  run_id: run-14655bf6d5e84cb3
+  root_task_id: task-d665389db9da4912
+  langfuse_trace_id: 8e37f7863ecdafc1fb3491490538cf19
+  langfuse_trace_url: null
+  repository_revision:
+    commit: null
+    dirty: false
+  policy_version: null
+  template_version: decision.assess@1
+  model_version: jev-latest
+  kernel_version: 0.1.0.dev0
+  decision_versions:
+    options: 05095d76f7f2
+    criteria: 577ae9d479df
+    templates: decision.assess@1
+corrections: []

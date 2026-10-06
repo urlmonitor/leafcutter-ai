@@ -263,8 +263,9 @@ class TestClarification(IntentCase):
                                                 answer_human(paused, {"free_text": answer}))
         self.assertNotEqual(final.status, RunStatus.BLOCKED, final.limitations)
         self.assertEqual(self.classified()[0], IMPLEMENT)
-        self.assertTrue(self.classified()[1].startswith(answer))  # the answer leads
-        self.assertIn(IMPLEMENT, self.classified()[1])  # the original stays as context
+        self.assertEqual(self.classified()[1], IMPLEMENT)
+        batches = [batch for batch in self.jev.batches if batch.purpose == "kernel.intent"]
+        self.assertEqual(batches[1].state["clarifications"], [answer])
         values = await self.checkpoint_values(final.run_id)
         self.assertIn("decision", self.capabilities_used(values))
         self.assertEqual(values["task"].intent, "decision")
@@ -272,10 +273,12 @@ class TestClarification(IntentCase):
                        key=lambda i: i.created_at)  # the first one (grounding research follows)
         self.assertIsNone(decision.continuation)  # the router's wait does not leak into the capability
         self.assertEqual(decision.child_outcomes, [])  # nor does the clarification answer
+        self.assertEqual(decision.input_payload["clarifications"], [answer])
         self.assertEqual(values["task"].original_goal, IMPLEMENT)  # never rewritten
         root = values["requests"][values["work_items"][values["task"].root_work_item_id]
                                   .request_id]
-        self.assertTrue(root.goal.startswith(answer))
+        self.assertEqual(root.goal, IMPLEMENT)
+        self.assertEqual(root.payload["clarifications"], [answer])
         self.assertEqual(self.service().list_gaps(), [])  # the clarification resolved it
 
     async def test_an_answer_that_is_still_unclear_gets_one_improved_follow_up(self) -> None:

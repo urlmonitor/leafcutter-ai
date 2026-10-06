@@ -1,6 +1,6 @@
 ---
 title: "Commit agent: the Step 0 pytest kill terminates every session's tests, not just this worktree's"
-status: todo
+status: done
 components:
   - git_vcs_operations
   - supervisor_system
@@ -17,8 +17,8 @@ tags:
   - safety
 last_updated: 2026-10-02
 agents:
-  llm-expert: needed
-  commit: needed
+  llm-expert: signed_off
+  commit: signed_off
 ---
 
 # Commit agent: the Step 0 pytest kill terminates every session's tests, not just this worktree's
@@ -54,4 +54,24 @@ in one session can kill a test run in another.
 ## Out of Scope
 - Changing the idle-only rule of the pre-flight sweep.
 
+## Sign-offs
+- [x] llm-expert — 2026-10-02 14:20
+- [x] commit — 2026-10-02 14:35
+
 ## Comments
+
+### 2026-10-02 14:20 — llm-expert (status: ok)
+feedback-id: fb_2026-10-02_b33a2ef1
+completion_manifest:
+  template_written: true
+  prompt_quality_checklist_passed: true
+  convention_violations_resolved: true
+Rewrote commit.md Step 0 to kill only pytest processes whose cwd/command line is inside the current worktree (POSIX /proc cwd or lsof; Windows CIM CommandLine), skipping the kill when scoping is impossible. Corrected the false "isolated by worktree" premise in building-epics §5.5. Built copies (.claude/.gemini/.leafcutter) are generated and need a build run (workflow-architect) to pick this up.
+
+### 2026-10-02 14:35 — commit (status: ok)
+feedback-id: fb_2026-10-02_6e9e6a87
+completion_manifest:
+  pre_commit_hooks_pass: true
+  commit_message_valid: true
+  ticket_staged: true
+Skipped the unscoped Step 0 pytest kill (the behaviour this ticket removes; it would have killed other sessions tests). Probe passed. Committed the two template edits and this ticket together.

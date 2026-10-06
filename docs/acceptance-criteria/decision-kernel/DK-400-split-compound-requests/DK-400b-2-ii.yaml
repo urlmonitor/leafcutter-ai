@@ -1,0 +1,95 @@
+id: DK-400b-2-ii
+title: "A research request with several needs raised partway through a run is split as a research request"
+component: decision-kernel
+components:
+  - decision_kernel
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_kernel_1_founding
+criteria: |
+  Given a research request raised at work-item depth 1 below the run's root, holding three
+    needs: "Find which runs staged a decision record last week, which of those records were
+    published, and who approved each one.",
+  When the run reaches that research request,
+  Then a split is started for it with subject kind research_request, found mid-run, work-item
+    depth 1 and no routing trigger,
+  And every part offered at the split gate names research as the capability that will run it,
+  And the research request does not run as one research step while its split is proposed and
+    unanswered.
+depends_on:
+  - DK-400b-2
+  - DK-400b-1
+doc_links:
+  - path: docs/product-truth/flows/leafcutter/decision-forming.flow.json
+    relationship: implements
+    status: exists
+    relevance: "Flow v5 node(s) split-mid-run, with their acceptance scenarios."
+  - path: docs/product-truth/mock-data/leafcutter/decisions.mock.json
+    relationship: specified-by
+    status: exists
+    relevance: "subject_kind research_request with found_at mid_run."
+  - path: docs/analysis/2026-09-30-decision-kernel-design-3-kernel-scheduler.md
+    relationship: describes
+    status: exists
+    relevance: Route node and batched Jev routing, intent step, guards and budgets, root completion, gap recording,
+      resume and restart.
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: DK-400b-2
+  contract: "The mid-run split start, reused for a subject of kind research_request."
+it_requirements:
+  - A mid-run item whose requested output is leafcutter.evidence_bundle.v1 gets subject_kind research_request and
+    allows only research parts (DK-400b-1 rule).
+  - The research item runs no research (no research planning Jev batch, no retrieval child) while its split is proposed
+    and unanswered.
+  - Reached only through the injected test producer of DK-400b-2; the mid-run path is dormant in production.
+change_target: code
+risk_surface: contract_boundary
+test_required: true
+test_spec:
+  - name: test_mid_run_research_request_split_as_research_request
+    target_dir: tests/kernel/split/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: A depth-1 research request injected through the test producer of DK-400b-2, with bundle 0.9, gets
+      a split with subject_kind research_request, found_at mid_run, depth 1 and trigger null; every gate part names
+      research; no research batch or retrieval child exists before the answer.
+test_rationale: Uses the injected depth-1 producer of DK-400b-2, the only way to reach this path today.
+origin_agent: business-analyst
+created: 2026-10-05
+amended_by:
+  - reason: it-po-technical-enrichment
+    date: '2026-10-05'
+    by: it-po
+    summary: 'Technical enrichment: assigned_agent confirmed, estimated_complexity, change_target, risk_surface,
+      it_requirements, delivers_to/expects_from contracts, doc_links and the test contract set; readiness draft
+      -> reviewed. BA criteria and product_truth unchanged.'
+  - reason: it-po-final-gate-re-enrichment
+    date: '2026-10-05'
+    by: it-po
+    summary: Mid-run test pinned to the injected test producer of DK-400b-2.
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Flow split-mid-run names both a multi-part decision question and a research request with
+  several needs. No mock record shows the mid-run research case; the example request is
+  illustrative.
+product_truth:
+  - flow: leafcutter/decision-forming
+    node: split-mid-run
+    node_kind: branch
+    flow_kind: data
+    screen: null
+    mock_data: leafcutter/decisions
+    entities:
+      - Decomposition
+    source: real
+    asof: '2026-10-05'

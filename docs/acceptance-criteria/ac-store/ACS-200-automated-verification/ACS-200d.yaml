@@ -19,7 +19,7 @@ criteria: |
     and the ticket's component has active ACs, source_acs must be non-empty.
   And tickets for components with no ACs yet are exempt (graceful degradation).
   And this is a standing rule — it applies to ALL future tickets.
-depends_on: [ACS-200b]
+depends_on: [ACS-100f]
 doc_links: []
 assigned_agent: python-coder
 estimated_complexity: S
@@ -32,7 +32,8 @@ delivers_to: null
 expects_from: null
 origin_agent: BrainCandy
 created: 2026-06-05
-amended_by: []
+amended_by:
+  - "2026-10-01 [business-analyst]: Replaced unresolved ACS-200b with the existing prerequisite ACS-100f, which supplies component/status-filtered AC lookup and canonical IDs needed to decide whether a ticket requires source_acs or qualifies for the no-AC exemption. The old target has no canonical declaration in available Git history and was already unresolved when this record was introduced in 0e73b077. This is a semantic dependency repair, not a claim of renaming or implementation; criteria and lifecycle are unchanged."
 superseded_by: null
 covered_by: []
 implemented_by: []

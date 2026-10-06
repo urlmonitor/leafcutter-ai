@@ -45,9 +45,13 @@ QUESTION_REQUEST = {"question": "Which store?", "free_text_allowed": False,
                                 {"id": "files", "label": "Plain files"}]}
 REQUESTS: dict[str, dict[str, Any]] = {"host.generate_options": OPTIONS_REQUEST, "host.synthesize": SYNTHESIS_REQUEST,
             "host.research": RESEARCH_REQUEST, "host.formulate_question": QUESTION_REQUEST}
+REQUESTS["host.query_build"] = {"question":"Which tests cover a component?",
+    "repository_id":"repo","source_sha":"a"*40,"generation_id":"g1",
+    "component_ids":["component"],"need_id":"need.tests","attempt_id":"attempt1"}
 FAKE_HASH = "f" * 64
 ANSWER_AFTER = timedelta(milliseconds=1500)
 SCHEMAS = {
+    "host.query_build": (schema_ids.QUERY_BUILD_REQUEST,schema_ids.QUERY_CANDIDATE),
     "host.generate_options": (schema_ids.OPTIONS_REQUEST, schema_ids.OPTIONS),
     "host.synthesize": (schema_ids.SYNTHESIS_REQUEST, schema_ids.FINDINGS),
     "host.research": (schema_ids.RETRIEVAL_REQUEST, schema_ids.EVIDENCE_BUNDLE),

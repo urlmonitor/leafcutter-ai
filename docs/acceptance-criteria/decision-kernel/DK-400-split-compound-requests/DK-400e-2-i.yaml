@@ -1,0 +1,82 @@
+id: DK-400e-2-i
+title: "A research part settles as answered with findings, not with a decision record"
+component: decision-kernel
+components:
+  - decision_kernel
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_kernel_1_founding
+criteria: |
+  Given the reuse-threshold research split approved with research parts p1, p2 and p3,
+  When each part runs as research,
+  Then each settles as answered, with its findings and a link to its research result,
+  And no decision record is created for any of the three parts.
+depends_on:
+  - DK-400e-2
+doc_links:
+  - path: docs/product-truth/flows/leafcutter/decision-forming.flow.json
+    relationship: implements
+    status: exists
+    relevance: "Flow v5 node(s) split-run, with their acceptance scenarios."
+  - path: docs/product-truth/mock-data/leafcutter/decisions.mock.json
+    relationship: specified-by
+    status: exists
+    relevance: "outcome answered iff child_capability research with result_ref and findings; record dcp-reuse-threshold-research."
+  - path: docs/analysis/2026-09-30-decision-kernel-design-4-jev-and-capabilities.md
+    relationship: describes
+    status: exists
+    relevance: Jev template rules, host operations and their conversion, capability gaps, the precedent node.
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: DK-400e-1
+  contract: "Parts run as work items of the same run."
+it_requirements:
+  - 'A research part settles answered when its research child returns an evidence bundle (completed, or partial
+    with its coverage limitations noted): result_ref is the child''s invocation id, whose artifact result-<inv>.json
+    exists in the run''s artifacts; findings is a summary built from the bundle by template (no LLM); no decision
+    record is staged.'
+  - A research part whose child fails, ends blocked or is cancelled is not_settled (DK-400e-4), never answered.
+change_target: code
+risk_surface: contract_boundary
+test_required: true
+test_spec:
+  - name: test_research_parts_settle_answered_without_records
+    target_dir: tests/kernel/split/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: The reuse-threshold split's three research parts settle answered with findings and a result_ref
+      whose artifact exists, and no decision record is staged.
+test_rationale: The link must resolve to a real artifact, so the test opens the result file the result_ref names.
+origin_agent: business-analyst
+created: 2026-10-05
+amended_by:
+  - reason: it-po-technical-enrichment
+    date: '2026-10-05'
+    by: it-po
+    summary: 'Technical enrichment: assigned_agent confirmed, estimated_complexity, change_target, risk_surface,
+      it_requirements, delivers_to/expects_from contracts, doc_links and the test contract set; readiness draft
+      -> reviewed. BA criteria and product_truth unchanged.'
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  DK-400e SETTLED: a research part returns findings, not a record.
+product_truth:
+  - flow: leafcutter/decision-forming
+    node: split-run
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: leafcutter/decisions
+    entities:
+      - Decision
+      - Decomposition
+    source: real
+    asof: '2026-10-05'

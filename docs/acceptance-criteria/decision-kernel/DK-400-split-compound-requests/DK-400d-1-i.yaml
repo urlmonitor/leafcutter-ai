@@ -1,0 +1,95 @@
+id: DK-400d-1-i
+title: "Only a person can answer the split gate; an answer from the host or a model is refused"
+component: decision-kernel
+components:
+  - decision_kernel
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_kernel_1_founding
+criteria: |
+  Given a split waiting at the split gate,
+  When an answer arrives whose actor is the host, the kernel or a model rather than a person,
+  Then the answer is refused, the split records no answer and the run stays waiting for a person,
+  And when the same answer is then relayed by the host on behalf of the person human:user, it is
+    accepted and recorded as given by human:user, never by the host.
+depends_on:
+  - DK-400d-1
+doc_links:
+  - path: docs/architecture/adrs/ADR-060-source-of-truth-and-approval-authority.md
+    relationship: constrains
+    status: exists
+    relevance: "Only a person answers a gate and approves a decision; precedent is evidence, never authority."
+  - path: docs/product-truth/mock-data/leafcutter/decisions.mock.json
+    relationship: specified-by
+    status: exists
+    relevance: "Invariant: gate_by matches human(:<name>) iff gate_answer is set; never a model."
+  - path: docs/how-to/run-the-decision-kernel.md
+    relationship: context
+    status: exists
+    relevance: "Run statuses, gap records, resume answers and the run report as they are today."
+  - path: docs/analysis/2026-09-30-decision-kernel-design-5-client-observability.md
+    relationship: describes
+    status: exists
+    relevance: RunService resume validation, the RunEnvelope, report.md, tracing and redaction.
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: DK-400d-1
+  contract: "The gate answer path whose actor this case checks."
+it_requirements:
+  - Only a submission whose actor.kind is human answers the split gate. An actor of kind host or service, or an
+    id naming the host, the kernel or a model (claude_code, codex, kernel, jev), is refused with the existing actor_mismatch
+    rejection; the split records no answer and the interaction stays pending.
+  - A relayed answer (relayed_by claude_code, actor human:user) is recorded with gate_by human:user; the relayer
+    appears only as relayed_by.
+  - A bare human id is normalised to human:<id>, the same rule the decision-record staging gate applies.
+change_target: code
+risk_surface: auth
+test_required: true
+test_spec:
+  - name: test_host_actor_answer_refused_at_split_gate
+    target_dir: tests/kernel/split/
+    framework: pytest
+    type: integration
+    angle: failure
+    description: An answer whose actor is the host, the kernel or a model is refused with state unchanged and the
+      run still waiting_human.
+  - name: test_relayed_human_answer_recorded_as_the_person
+    target_dir: tests/kernel/split/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: The same answer relayed by claude_code for human:user is accepted with gate_by human:user.
+test_rationale: The actor check lives in resume validation, so both cases go through RunService.resume_run.
+origin_agent: business-analyst
+created: 2026-10-05
+amended_by:
+  - reason: it-po-technical-enrichment
+    date: '2026-10-05'
+    by: it-po
+    summary: 'Technical enrichment: assigned_agent confirmed, estimated_complexity, change_target, risk_surface,
+      it_requirements, delivers_to/expects_from contracts, doc_links and the test contract set; readiness draft
+      -> reviewed. BA criteria and product_truth unchanged. Correction 2026-10-05: the refusal code is actor_mismatch
+      (kind_mismatch was retired on 2026-09-30).'
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  DK-400 SETTLED 2 and ADR-060. The relay case matters because the person answers through
+  Claude Code: the relayer is the host, the actor is the person.
+product_truth:
+  - flow: leafcutter/decision-forming
+    node: split-approve
+    node_kind: step
+    flow_kind: data
+    screen: decision-split-approve
+    mock_data: leafcutter/decisions
+    entities:
+      - Decomposition
+    source: real
+    asof: '2026-10-05'

@@ -11,7 +11,7 @@
   "status": "active",
   "readiness": "approved",
   "superseded_by": null,
-  "version": 1,
+  "version": 2,
   "tags": [
     "build-pipeline",
     "ticket-supervisor",
@@ -31,7 +31,7 @@
     {
       "id": "dispatch",
       "label": "Build driver dispatches phases",
-      "human": "The build driver reads the ticket's `agents:` map and drives it through its phase agents in priority order, spawning the next `needed` agent at depth 1 and routing on the sign-off status it parses back. Per ADR-006 the real driver is the flattened per-phase dispatcher in build-feature.js / build-ticket.js (each phase dispatched at depth 1, no nested supervisor); 'ticket-supervisor' is the legacy name for this role.",
+      "human": "The build driver reads the ticket's `agents:` map and drives it through its phase agents in priority order, spawning the next `needed` agent at depth 1 and routing on the sign-off status it parses back. Per ADR-006 the real driver is the flattened per-phase dispatcher in build-feature.js / build-ticket.js (each phase dispatched at depth 1, no nested supervisor); 'ticket-supervisor' is the legacy name for this role.\n\nI/O boundary: build-ticket.js/build-feature.js enforce these inline JSON response schemas. The ticket itself is Markdown; the planner reports parsed fields and each dispatched phase replies with the result envelope. The driver re-reads sign-offs before declaring completion.\n\nContract fields and examples (generated)\nConsumes:\n  SOURCE-REVIEWED DOCUMENTATION: Source-reviewed transcription of templates/workflows-js/build-ticket.js planner response schema (also used by build-feature.js); no new runtime registration or automatic JavaScript/schema parity.\n  planner/ticket_path: string (required)\n  planner/source_ac: array (optional)\n  planner/files_touched: array (optional)\n  planner/has_test_requirements: boolean (optional)\n  planner/existing_test_files: array (optional)\n  planner/ordered_phases/*/agent: string (required)\n  planner/ordered_phases/*/status: string (required)\n  Schema: [planner](docs/product-truth/schemas/delivery-workflow-planner.schema.json)\nProduces:\n  SOURCE-REVIEWED DOCUMENTATION: Source-reviewed transcription of templates/workflows-js/build-ticket.js phase-result response schema (also used by build-feature.js); no new runtime registration or automatic JavaScript/schema parity.\n  phase-result/status: string (required)\n  phase-result/message: string (optional)\n  phase-result/handoff_target: string (optional)\n  Schema: [phase-result](docs/product-truth/schemas/delivery-workflow-phase-result.schema.json)\n\nInput illustrative planner projection; not an execution receipt — planner; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"ticket_path\": \"tickets/01_todo/feature.md\",\n  \"files_touched\": [\n    \"app/service.py\"\n  ],\n  \"has_test_requirements\": true,\n  \"existing_test_files\": [\n    \"tests/test_service.py\"\n  ],\n  \"source_ac\": [\n    \"ACD-300\"\n  ],\n  \"ordered_phases\": [\n    {\n      \"agent\": \"test-writer\",\n      \"status\": \"needed\"\n    },\n    {\n      \"agent\": \"python-coder\",\n      \"status\": \"needed\"\n    }\n  ]\n}\n\nOutput illustrative phase-result projection; not an execution receipt — phase-result; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"status\": \"ok\",\n  \"message\": \"The assigned phase completed; the ticket retains its evidence.\"\n}",
       "order": 1,
       "agent": "build-feature.js / build-ticket.js (per ADR-006; legacy: ticket-supervisor)",
       "reads": [
@@ -42,12 +42,153 @@
         "BO-2000f"
       ],
       "impl_status": "not_started",
-      "impl_asof": "2026-07-20"
+      "impl_asof": "2026-07-20",
+      "io_contracts": {
+        "consumes": [
+          {
+            "contract": "planner",
+            "fields": [
+              {
+                "path": "/ticket_path",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/source_ac",
+                "types": [
+                  "array"
+                ],
+                "required": false
+              },
+              {
+                "path": "/files_touched",
+                "types": [
+                  "array"
+                ],
+                "required": false
+              },
+              {
+                "path": "/has_test_requirements",
+                "types": [
+                  "boolean"
+                ],
+                "required": false
+              },
+              {
+                "path": "/existing_test_files",
+                "types": [
+                  "array"
+                ],
+                "required": false
+              },
+              {
+                "path": "/ordered_phases/*/agent",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/ordered_phases/*/status",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              }
+            ]
+          }
+        ],
+        "produces": [
+          {
+            "contract": "phase-result",
+            "fields": [
+              {
+                "path": "/status",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/message",
+                "types": [
+                  "string"
+                ],
+                "required": false
+              },
+              {
+                "path": "/handoff_target",
+                "types": [
+                  "string"
+                ],
+                "required": false
+              }
+            ]
+          }
+        ],
+        "examples": [
+          {
+            "contract": "planner",
+            "mode": "projection",
+            "origin": "illustrative",
+            "label": "Input illustrative planner projection; not an execution receipt",
+            "value": {
+              "ticket_path": "tickets/01_todo/feature.md",
+              "files_touched": [
+                "app/service.py"
+              ],
+              "has_test_requirements": true,
+              "existing_test_files": [
+                "tests/test_service.py"
+              ],
+              "source_ac": [
+                "ACD-300"
+              ],
+              "ordered_phases": [
+                {
+                  "agent": "test-writer",
+                  "status": "needed"
+                },
+                {
+                  "agent": "python-coder",
+                  "status": "needed"
+                }
+              ]
+            }
+          },
+          {
+            "contract": "phase-result",
+            "mode": "projection",
+            "origin": "illustrative",
+            "label": "Output illustrative phase-result projection; not an execution receipt",
+            "value": {
+              "status": "ok",
+              "message": "The assigned phase completed; the ticket retains its evidence."
+            }
+          }
+        ]
+      },
+      "consumes": [
+        "planner/ticket_path: string (required)",
+        "planner/source_ac: array (optional)",
+        "planner/files_touched: array (optional)",
+        "planner/has_test_requirements: boolean (optional)",
+        "planner/existing_test_files: array (optional)",
+        "planner/ordered_phases/*/agent: string (required)",
+        "planner/ordered_phases/*/status: string (required)"
+      ],
+      "produces": [
+        "phase-result/status: string (required)",
+        "phase-result/message: string (optional)",
+        "phase-result/handoff_target: string (optional)"
+      ]
     },
     {
       "id": "status",
       "label": "Status check (prio 1)",
-      "human": "status-checker reads the ticket state, current branch, and whether prior phases/commits already exist, so the drive starts from the real state.",
+      "human": "status-checker reads the ticket state, current branch, and whether prior phases/commits already exist, so the drive starts from the real state.\n\nI/O boundary: The planner/readback shapes are concrete machine responses from the flattened driver. The examples show available fields, not a claim that both messages are emitted in a single call.\n\nContract fields and examples (generated)\nConsumes:\n  No checked JSON binding documented in this direction.\nProduces:\n  SOURCE-REVIEWED DOCUMENTATION: Source-reviewed transcription of templates/workflows-js/build-ticket.js planner response schema (also used by build-feature.js); no new runtime registration or automatic JavaScript/schema parity.\n  planner/ticket_path: string (required)\n  planner/ordered_phases: array (required)\n  planner/existing_test_files: array (optional)\n  Schema: [planner](docs/product-truth/schemas/delivery-workflow-planner.schema.json)\n  SOURCE-REVIEWED DOCUMENTATION: Source-reviewed transcription of templates/workflows-js/build-ticket.js readback response schema (also used by build-feature.js); no new runtime registration or automatic JavaScript/schema parity.\n  readback/readable: boolean (required)\n  readback/ticket_path: string (optional)\n  readback/lifecycle_status: string (optional)\n  readback/needed_phases: array (optional)\n  readback/failed_phases: array (optional)\n  readback/signoffs: array (optional)\n  Schema: [readback](docs/product-truth/schemas/delivery-workflow-readback.schema.json)\n\nOutput illustrative planner projection; not an execution receipt — planner; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"ticket_path\": \"tickets/01_todo/feature.md\",\n  \"existing_test_files\": [\n    \"tests/test_service.py\"\n  ],\n  \"ordered_phases\": [\n    {\n      \"agent\": \"test-writer\",\n      \"status\": \"needed\"\n    },\n    {\n      \"agent\": \"python-coder\",\n      \"status\": \"needed\"\n    }\n  ]\n}\n\nOutput illustrative readback projection; not an execution receipt — readback; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"readable\": true,\n  \"ticket_path\": \"tickets/01_todo/feature.md\",\n  \"lifecycle_status\": \"in_progress\",\n  \"needed_phases\": [\n    \"python-coder\"\n  ],\n  \"failed_phases\": [],\n  \"signoffs\": [\n    {\n      \"agent\": \"test-writer\",\n      \"status\": \"passed\"\n    }\n  ]\n}",
       "order": 2,
       "agent": "status-checker",
       "reads": [
@@ -57,12 +198,147 @@
         "BP-300b"
       ],
       "impl_status": "not_started",
-      "impl_asof": "2026-07-20"
+      "impl_asof": "2026-07-20",
+      "io_contracts": {
+        "consumes": [],
+        "produces": [
+          {
+            "contract": "planner",
+            "fields": [
+              {
+                "path": "/ticket_path",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/ordered_phases",
+                "types": [
+                  "array"
+                ],
+                "required": true
+              },
+              {
+                "path": "/existing_test_files",
+                "types": [
+                  "array"
+                ],
+                "required": false
+              }
+            ]
+          },
+          {
+            "contract": "readback",
+            "fields": [
+              {
+                "path": "/readable",
+                "types": [
+                  "boolean"
+                ],
+                "required": true
+              },
+              {
+                "path": "/ticket_path",
+                "types": [
+                  "string"
+                ],
+                "required": false
+              },
+              {
+                "path": "/lifecycle_status",
+                "types": [
+                  "string"
+                ],
+                "required": false
+              },
+              {
+                "path": "/needed_phases",
+                "types": [
+                  "array"
+                ],
+                "required": false
+              },
+              {
+                "path": "/failed_phases",
+                "types": [
+                  "array"
+                ],
+                "required": false
+              },
+              {
+                "path": "/signoffs",
+                "types": [
+                  "array"
+                ],
+                "required": false
+              }
+            ]
+          }
+        ],
+        "examples": [
+          {
+            "contract": "planner",
+            "mode": "projection",
+            "origin": "illustrative",
+            "label": "Output illustrative planner projection; not an execution receipt",
+            "value": {
+              "ticket_path": "tickets/01_todo/feature.md",
+              "existing_test_files": [
+                "tests/test_service.py"
+              ],
+              "ordered_phases": [
+                {
+                  "agent": "test-writer",
+                  "status": "needed"
+                },
+                {
+                  "agent": "python-coder",
+                  "status": "needed"
+                }
+              ]
+            }
+          },
+          {
+            "contract": "readback",
+            "mode": "projection",
+            "origin": "illustrative",
+            "label": "Output illustrative readback projection; not an execution receipt",
+            "value": {
+              "readable": true,
+              "ticket_path": "tickets/01_todo/feature.md",
+              "lifecycle_status": "in_progress",
+              "needed_phases": [
+                "python-coder"
+              ],
+              "failed_phases": [],
+              "signoffs": [
+                {
+                  "agent": "test-writer",
+                  "status": "passed"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "consumes": [],
+      "produces": [
+        "planner/ticket_path: string (required)",
+        "planner/ordered_phases: array (required)",
+        "planner/existing_test_files: array (optional)",
+        "readback/readable: boolean (required)",
+        "readback/ticket_path: string (optional)",
+        "readback/lifecycle_status: string (optional)",
+        "readback/needed_phases: array (optional)",
+        "readback/failed_phases: array (optional)",
+        "readback/signoffs: array (optional)"
+      ]
     },
     {
       "id": "adr",
       "label": "ADR (prio 2, conditional)",
-      "human": "adr-author writes an Architecture Decision Record — only when the ticket's `requires_adr` is set.",
+      "human": "adr-author writes an Architecture Decision Record — only when the ticket's `requires_adr` is set.\n\nI/O boundary: The substantive output is an ADR Markdown file. The phase response is the real PHASE_RESULT_SCHEMA; absent optional fields are not inferred.\n\nContract fields and examples (generated)\nConsumes:\n  SOURCE-REVIEWED DOCUMENTATION: Source-reviewed transcription of templates/workflows-js/build-ticket.js planner response schema (also used by build-feature.js); no new runtime registration or automatic JavaScript/schema parity.\n  planner/ticket_path: string (required)\n  planner/files_touched: array (optional)\n  planner/source_ac: array (optional)\n  Schema: [planner](docs/product-truth/schemas/delivery-workflow-planner.schema.json)\nProduces:\n  SOURCE-REVIEWED DOCUMENTATION: Source-reviewed transcription of templates/workflows-js/build-ticket.js phase-result response schema (also used by build-feature.js); no new runtime registration or automatic JavaScript/schema parity.\n  phase-result/status: string (required)\n  phase-result/result_status: string (optional)\n  phase-result/message: string (optional)\n  phase-result/handoff_target: string (optional)\n  Schema: [phase-result](docs/product-truth/schemas/delivery-workflow-phase-result.schema.json)\n\nInput illustrative planner projection; not an execution receipt — planner; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"ticket_path\": \"tickets/01_todo/feature.md\",\n  \"files_touched\": [\n    \"app/service.py\"\n  ],\n  \"source_ac\": [\n    \"ACD-300\"\n  ]\n}\n\nOutput illustrative phase-result projection; not an execution receipt — phase-result; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"status\": \"ok\",\n  \"message\": \"The assigned phase completed; the ticket retains its evidence.\"\n}",
       "order": 3,
       "agent": "adr-author",
       "reads": [
@@ -72,12 +348,115 @@
         "BO-540"
       ],
       "impl_status": "not_started",
-      "impl_asof": "2026-07-20"
+      "impl_asof": "2026-07-20",
+      "io_contracts": {
+        "consumes": [
+          {
+            "contract": "planner",
+            "fields": [
+              {
+                "path": "/ticket_path",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/files_touched",
+                "types": [
+                  "array"
+                ],
+                "required": false
+              },
+              {
+                "path": "/source_ac",
+                "types": [
+                  "array"
+                ],
+                "required": false
+              }
+            ]
+          }
+        ],
+        "produces": [
+          {
+            "contract": "phase-result",
+            "fields": [
+              {
+                "path": "/status",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/result_status",
+                "types": [
+                  "string"
+                ],
+                "required": false
+              },
+              {
+                "path": "/message",
+                "types": [
+                  "string"
+                ],
+                "required": false
+              },
+              {
+                "path": "/handoff_target",
+                "types": [
+                  "string"
+                ],
+                "required": false
+              }
+            ]
+          }
+        ],
+        "examples": [
+          {
+            "contract": "planner",
+            "mode": "projection",
+            "origin": "illustrative",
+            "label": "Input illustrative planner projection; not an execution receipt",
+            "value": {
+              "ticket_path": "tickets/01_todo/feature.md",
+              "files_touched": [
+                "app/service.py"
+              ],
+              "source_ac": [
+                "ACD-300"
+              ]
+            }
+          },
+          {
+            "contract": "phase-result",
+            "mode": "projection",
+            "origin": "illustrative",
+            "label": "Output illustrative phase-result projection; not an execution receipt",
+            "value": {
+              "status": "ok",
+              "message": "The assigned phase completed; the ticket retains its evidence."
+            }
+          }
+        ]
+      },
+      "consumes": [
+        "planner/ticket_path: string (required)",
+        "planner/files_touched: array (optional)",
+        "planner/source_ac: array (optional)"
+      ],
+      "produces": [
+        "phase-result/status: string (required)",
+        "phase-result/result_status: string (optional)",
+        "phase-result/message: string (optional)",
+        "phase-result/handoff_target: string (optional)"
+      ]
     },
     {
       "id": "diagram",
       "label": "Architecture diagram (prio 3, conditional)",
-      "human": "architecture-diagram-author writes or updates the C4 mermaid diagram — only when the ticket's `requires_diagram` is set.",
+      "human": "architecture-diagram-author writes or updates the C4 mermaid diagram — only when the ticket's `requires_diagram` is set.\n\nI/O boundary: The substantive output is a Mermaid/C4 text artifact. The phase response is the real PHASE_RESULT_SCHEMA; absent optional fields are not inferred.\n\nContract fields and examples (generated)\nConsumes:\n  SOURCE-REVIEWED DOCUMENTATION: Source-reviewed transcription of templates/workflows-js/build-ticket.js planner response schema (also used by build-feature.js); no new runtime registration or automatic JavaScript/schema parity.\n  planner/ticket_path: string (required)\n  planner/files_touched: array (optional)\n  planner/source_ac: array (optional)\n  Schema: [planner](docs/product-truth/schemas/delivery-workflow-planner.schema.json)\nProduces:\n  SOURCE-REVIEWED DOCUMENTATION: Source-reviewed transcription of templates/workflows-js/build-ticket.js phase-result response schema (also used by build-feature.js); no new runtime registration or automatic JavaScript/schema parity.\n  phase-result/status: string (required)\n  phase-result/result_status: string (optional)\n  phase-result/message: string (optional)\n  phase-result/handoff_target: string (optional)\n  Schema: [phase-result](docs/product-truth/schemas/delivery-workflow-phase-result.schema.json)\n\nInput illustrative planner projection; not an execution receipt — planner; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"ticket_path\": \"tickets/01_todo/feature.md\",\n  \"files_touched\": [\n    \"app/service.py\"\n  ],\n  \"source_ac\": [\n    \"ACD-300\"\n  ]\n}\n\nOutput illustrative phase-result projection; not an execution receipt — phase-result; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"status\": \"ok\",\n  \"message\": \"The assigned phase completed; the ticket retains its evidence.\"\n}",
       "order": 4,
       "agent": "architecture-diagram-author",
       "reads": [
@@ -87,12 +466,115 @@
         "BO-540"
       ],
       "impl_status": "not_started",
-      "impl_asof": "2026-07-20"
+      "impl_asof": "2026-07-20",
+      "io_contracts": {
+        "consumes": [
+          {
+            "contract": "planner",
+            "fields": [
+              {
+                "path": "/ticket_path",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/files_touched",
+                "types": [
+                  "array"
+                ],
+                "required": false
+              },
+              {
+                "path": "/source_ac",
+                "types": [
+                  "array"
+                ],
+                "required": false
+              }
+            ]
+          }
+        ],
+        "produces": [
+          {
+            "contract": "phase-result",
+            "fields": [
+              {
+                "path": "/status",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/result_status",
+                "types": [
+                  "string"
+                ],
+                "required": false
+              },
+              {
+                "path": "/message",
+                "types": [
+                  "string"
+                ],
+                "required": false
+              },
+              {
+                "path": "/handoff_target",
+                "types": [
+                  "string"
+                ],
+                "required": false
+              }
+            ]
+          }
+        ],
+        "examples": [
+          {
+            "contract": "planner",
+            "mode": "projection",
+            "origin": "illustrative",
+            "label": "Input illustrative planner projection; not an execution receipt",
+            "value": {
+              "ticket_path": "tickets/01_todo/feature.md",
+              "files_touched": [
+                "app/service.py"
+              ],
+              "source_ac": [
+                "ACD-300"
+              ]
+            }
+          },
+          {
+            "contract": "phase-result",
+            "mode": "projection",
+            "origin": "illustrative",
+            "label": "Output illustrative phase-result projection; not an execution receipt",
+            "value": {
+              "status": "ok",
+              "message": "The assigned phase completed; the ticket retains its evidence."
+            }
+          }
+        ]
+      },
+      "consumes": [
+        "planner/ticket_path: string (required)",
+        "planner/files_touched: array (optional)",
+        "planner/source_ac: array (optional)"
+      ],
+      "produces": [
+        "phase-result/status: string (required)",
+        "phase-result/result_status: string (optional)",
+        "phase-result/message: string (optional)",
+        "phase-result/handoff_target: string (optional)"
+      ]
     },
     {
       "id": "itpo",
       "label": "IT-PO enrichment (prio 3.5, conditional)",
-      "human": "it-po enriches the ACs' technical fields (assigned_agent, contracts, complexity) if they still need it before implementation.",
+      "human": "it-po enriches the ACs' technical fields (assigned_agent, contracts, complexity) if they still need it before implementation.\n\nI/O boundary: Technical enrichment changes parsed AC YAML, not a new JSON ticket. This example records declared contracts without claiming they were implemented.\n\nContract fields and examples (generated)\nConsumes:\n  ac/id: string (required)\n  ac/criteria: string (required)\n  Schema: [ac](config/ac_store_schema.json)\nProduces:\n  ac/id: string (required)\n  ac/assigned_agent: null|string (optional)\n  ac/delivers_to: array|null|object|string (optional)\n  ac/expects_from: array|null|object|string (optional)\n  Schema: [ac](config/ac_store_schema.json)\n\nInput illustrative ac projection; not an execution receipt — ac; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"id\": \"ACD-300\",\n  \"criteria\": \"Given an approved requirement, When delivery finishes, Then its evidence is recorded.\"\n}\n\nOutput illustrative ac projection; not an execution receipt — ac; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"id\": \"ACD-300\",\n  \"assigned_agent\": \"python-coder\",\n  \"delivers_to\": {\n    \"agent\": \"test-runner\",\n    \"contract\": \"Verify implementation against the recorded AC.\"\n  },\n  \"expects_from\": {\n    \"agent\": \"test-writer\",\n    \"contract\": \"A failing behavioral test baseline.\"\n  }\n}",
       "order": 5,
       "agent": "it-po",
       "reads": [
@@ -106,12 +588,117 @@
         "ACD-300b"
       ],
       "impl_status": "in_progress",
-      "impl_asof": "2026-07-20"
+      "impl_asof": "2026-07-20",
+      "io_contracts": {
+        "consumes": [
+          {
+            "contract": "ac",
+            "fields": [
+              {
+                "path": "/id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/criteria",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              }
+            ]
+          }
+        ],
+        "produces": [
+          {
+            "contract": "ac",
+            "fields": [
+              {
+                "path": "/id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/assigned_agent",
+                "types": [
+                  "null",
+                  "string"
+                ],
+                "required": false
+              },
+              {
+                "path": "/delivers_to",
+                "types": [
+                  "array",
+                  "null",
+                  "object",
+                  "string"
+                ],
+                "required": false
+              },
+              {
+                "path": "/expects_from",
+                "types": [
+                  "array",
+                  "null",
+                  "object",
+                  "string"
+                ],
+                "required": false
+              }
+            ]
+          }
+        ],
+        "examples": [
+          {
+            "contract": "ac",
+            "mode": "projection",
+            "origin": "illustrative",
+            "label": "Input illustrative ac projection; not an execution receipt",
+            "value": {
+              "id": "ACD-300",
+              "criteria": "Given an approved requirement, When delivery finishes, Then its evidence is recorded."
+            }
+          },
+          {
+            "contract": "ac",
+            "mode": "projection",
+            "origin": "illustrative",
+            "label": "Output illustrative ac projection; not an execution receipt",
+            "value": {
+              "id": "ACD-300",
+              "assigned_agent": "python-coder",
+              "delivers_to": {
+                "agent": "test-runner",
+                "contract": "Verify implementation against the recorded AC."
+              },
+              "expects_from": {
+                "agent": "test-writer",
+                "contract": "A failing behavioral test baseline."
+              }
+            }
+          }
+        ]
+      },
+      "consumes": [
+        "ac/id: string (required)",
+        "ac/criteria: string (required)"
+      ],
+      "produces": [
+        "ac/id: string (required)",
+        "ac/assigned_agent: null|string (optional)",
+        "ac/delivers_to: array|null|object|string (optional)",
+        "ac/expects_from: array|null|object|string (optional)"
+      ]
     },
     {
       "id": "architect",
       "label": "Architect review (prio 4, conditional)",
-      "human": "architect-review classifies the change's blast radius (small vs large) and writes an inline note or escalates, so coders know the structural impact before touching code — and it is what decides whether an ADR is required. CONDITIONAL: it is NOT in a normal AC-generated ticket's `agents:` map; it is injected only by a flow-change/guardrail gate (config/guardrail_gates.yaml, e.g. code/contract_boundary, schema/safety) or when the ticket sets requires_adr.",
+      "human": "architect-review classifies the change's blast radius (small vs large) and writes an inline note or escalates, so coders know the structural impact before touching code — and it is what decides whether an ADR is required. CONDITIONAL: it is NOT in a normal AC-generated ticket's `agents:` map; it is injected only by a flow-change/guardrail gate (config/guardrail_gates.yaml, e.g. code/contract_boundary, schema/safety) or when the ticket sets requires_adr.\n\nI/O boundary: The review is a ticket sign-off/comment; any architectural escalation is retained there. The phase response is the real PHASE_RESULT_SCHEMA; absent optional fields are not inferred.\n\nContract fields and examples (generated)\nConsumes:\n  SOURCE-REVIEWED DOCUMENTATION: Source-reviewed transcription of templates/workflows-js/build-ticket.js planner response schema (also used by build-feature.js); no new runtime registration or automatic JavaScript/schema parity.\n  planner/ticket_path: string (required)\n  planner/files_touched: array (optional)\n  planner/source_ac: array (optional)\n  Schema: [planner](docs/product-truth/schemas/delivery-workflow-planner.schema.json)\nProduces:\n  SOURCE-REVIEWED DOCUMENTATION: Source-reviewed transcription of templates/workflows-js/build-ticket.js phase-result response schema (also used by build-feature.js); no new runtime registration or automatic JavaScript/schema parity.\n  phase-result/status: string (required)\n  phase-result/result_status: string (optional)\n  phase-result/message: string (optional)\n  phase-result/handoff_target: string (optional)\n  Schema: [phase-result](docs/product-truth/schemas/delivery-workflow-phase-result.schema.json)\n\nInput illustrative planner projection; not an execution receipt — planner; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"ticket_path\": \"tickets/01_todo/feature.md\",\n  \"files_touched\": [\n    \"app/service.py\"\n  ],\n  \"source_ac\": [\n    \"ACD-300\"\n  ]\n}\n\nOutput illustrative phase-result projection; not an execution receipt — phase-result; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"status\": \"ok\",\n  \"message\": \"The assigned phase completed; the ticket retains its evidence.\"\n}",
       "order": 6,
       "agent": "architect-review",
       "reads": [
@@ -121,12 +708,115 @@
         "BO-540-1"
       ],
       "impl_status": "not_started",
-      "impl_asof": "2026-07-20"
+      "impl_asof": "2026-07-20",
+      "io_contracts": {
+        "consumes": [
+          {
+            "contract": "planner",
+            "fields": [
+              {
+                "path": "/ticket_path",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/files_touched",
+                "types": [
+                  "array"
+                ],
+                "required": false
+              },
+              {
+                "path": "/source_ac",
+                "types": [
+                  "array"
+                ],
+                "required": false
+              }
+            ]
+          }
+        ],
+        "produces": [
+          {
+            "contract": "phase-result",
+            "fields": [
+              {
+                "path": "/status",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/result_status",
+                "types": [
+                  "string"
+                ],
+                "required": false
+              },
+              {
+                "path": "/message",
+                "types": [
+                  "string"
+                ],
+                "required": false
+              },
+              {
+                "path": "/handoff_target",
+                "types": [
+                  "string"
+                ],
+                "required": false
+              }
+            ]
+          }
+        ],
+        "examples": [
+          {
+            "contract": "planner",
+            "mode": "projection",
+            "origin": "illustrative",
+            "label": "Input illustrative planner projection; not an execution receipt",
+            "value": {
+              "ticket_path": "tickets/01_todo/feature.md",
+              "files_touched": [
+                "app/service.py"
+              ],
+              "source_ac": [
+                "ACD-300"
+              ]
+            }
+          },
+          {
+            "contract": "phase-result",
+            "mode": "projection",
+            "origin": "illustrative",
+            "label": "Output illustrative phase-result projection; not an execution receipt",
+            "value": {
+              "status": "ok",
+              "message": "The assigned phase completed; the ticket retains its evidence."
+            }
+          }
+        ]
+      },
+      "consumes": [
+        "planner/ticket_path: string (required)",
+        "planner/files_touched: array (optional)",
+        "planner/source_ac: array (optional)"
+      ],
+      "produces": [
+        "phase-result/status: string (required)",
+        "phase-result/result_status: string (optional)",
+        "phase-result/message: string (optional)",
+        "phase-result/handoff_target: string (optional)"
+      ]
     },
     {
       "id": "test",
       "label": "Test-writer — TDD red (prio 5)",
-      "human": "test-writer writes the failing test stubs from the ticket's `## Test Requirements`, runs them RED, and records a red_baseline — the contract the coders must turn green. Auto-skips for docs/config-only tickets.",
+      "human": "test-writer writes the failing test stubs from the ticket's `## Test Requirements`, runs them RED, and records a red_baseline — the contract the coders must turn green. Auto-skips for docs/config-only tickets.\n\nI/O boundary: test-writer writes failing test files and records its RED baseline in the ticket. These are the driver-enforced JSON evidence fields; the example is illustrative, not an actual failed test receipt.\n\nContract fields and examples (generated)\nConsumes:\n  SOURCE-REVIEWED DOCUMENTATION: Source-reviewed transcription of templates/workflows-js/build-ticket.js planner response schema (also used by build-feature.js); no new runtime registration or automatic JavaScript/schema parity.\n  planner/ticket_path: string (required)\n  planner/files_touched: array (optional)\n  planner/has_test_requirements: boolean (optional)\n  planner/existing_test_files: array (optional)\n  Schema: [planner](docs/product-truth/schemas/delivery-workflow-planner.schema.json)\nProduces:\n  SOURCE-REVIEWED DOCUMENTATION: Source-reviewed transcription of templates/workflows-js/build-ticket.js phase-result response schema (also used by build-feature.js); no new runtime registration or automatic JavaScript/schema parity.\n  phase-result/status: string (required)\n  phase-result/tests_written: array (optional)\n  phase-result/red_baseline_verified: boolean (optional)\n  phase-result/message: string (optional)\n  Schema: [phase-result](docs/product-truth/schemas/delivery-workflow-phase-result.schema.json)\n\nInput illustrative planner projection; not an execution receipt — planner; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"ticket_path\": \"tickets/01_todo/feature.md\",\n  \"files_touched\": [\n    \"app/service.py\"\n  ],\n  \"has_test_requirements\": true,\n  \"existing_test_files\": [\n    \"tests/test_service.py\"\n  ]\n}\n\nOutput illustrative phase-result projection; not an execution receipt — phase-result; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"status\": \"ok\",\n  \"message\": \"The assigned phase completed; the ticket retains its evidence.\",\n  \"tests_written\": [\n    \"tests/test_service.py\"\n  ],\n  \"red_baseline_verified\": true\n}",
       "order": 7,
       "agent": "test-writer",
       "reads": [
@@ -140,12 +830,128 @@
         "BO-530-1"
       ],
       "impl_status": "done",
-      "impl_asof": "2026-07-20"
+      "impl_asof": "2026-07-20",
+      "io_contracts": {
+        "consumes": [
+          {
+            "contract": "planner",
+            "fields": [
+              {
+                "path": "/ticket_path",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/files_touched",
+                "types": [
+                  "array"
+                ],
+                "required": false
+              },
+              {
+                "path": "/has_test_requirements",
+                "types": [
+                  "boolean"
+                ],
+                "required": false
+              },
+              {
+                "path": "/existing_test_files",
+                "types": [
+                  "array"
+                ],
+                "required": false
+              }
+            ]
+          }
+        ],
+        "produces": [
+          {
+            "contract": "phase-result",
+            "fields": [
+              {
+                "path": "/status",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/tests_written",
+                "types": [
+                  "array"
+                ],
+                "required": false
+              },
+              {
+                "path": "/red_baseline_verified",
+                "types": [
+                  "boolean"
+                ],
+                "required": false
+              },
+              {
+                "path": "/message",
+                "types": [
+                  "string"
+                ],
+                "required": false
+              }
+            ]
+          }
+        ],
+        "examples": [
+          {
+            "contract": "planner",
+            "mode": "projection",
+            "origin": "illustrative",
+            "label": "Input illustrative planner projection; not an execution receipt",
+            "value": {
+              "ticket_path": "tickets/01_todo/feature.md",
+              "files_touched": [
+                "app/service.py"
+              ],
+              "has_test_requirements": true,
+              "existing_test_files": [
+                "tests/test_service.py"
+              ]
+            }
+          },
+          {
+            "contract": "phase-result",
+            "mode": "projection",
+            "origin": "illustrative",
+            "label": "Output illustrative phase-result projection; not an execution receipt",
+            "value": {
+              "status": "ok",
+              "message": "The assigned phase completed; the ticket retains its evidence.",
+              "tests_written": [
+                "tests/test_service.py"
+              ],
+              "red_baseline_verified": true
+            }
+          }
+        ]
+      },
+      "consumes": [
+        "planner/ticket_path: string (required)",
+        "planner/files_touched: array (optional)",
+        "planner/has_test_requirements: boolean (optional)",
+        "planner/existing_test_files: array (optional)"
+      ],
+      "produces": [
+        "phase-result/status: string (required)",
+        "phase-result/tests_written: array (optional)",
+        "phase-result/red_baseline_verified: boolean (optional)",
+        "phase-result/message: string (optional)"
+      ]
     },
     {
       "id": "code",
       "label": "Coders make it green (prio 6-8)",
-      "human": "python-coder (6), sql-coder (7) and frontend-coder (8) implement against the red baseline, editing only files_touched, until every red_baseline test goes green.",
+      "human": "python-coder (6), sql-coder (7) and frontend-coder (8) implement against the red baseline, editing only files_touched, until every red_baseline test goes green.\n\nI/O boundary: The substantive outputs are source/test file edits and a ticket sign-off. The phase response is the real PHASE_RESULT_SCHEMA; absent optional fields are not inferred.\n\nContract fields and examples (generated)\nConsumes:\n  SOURCE-REVIEWED DOCUMENTATION: Source-reviewed transcription of templates/workflows-js/build-ticket.js planner response schema (also used by build-feature.js); no new runtime registration or automatic JavaScript/schema parity.\n  planner/ticket_path: string (required)\n  planner/files_touched: array (optional)\n  planner/source_ac: array (optional)\n  Schema: [planner](docs/product-truth/schemas/delivery-workflow-planner.schema.json)\nProduces:\n  SOURCE-REVIEWED DOCUMENTATION: Source-reviewed transcription of templates/workflows-js/build-ticket.js phase-result response schema (also used by build-feature.js); no new runtime registration or automatic JavaScript/schema parity.\n  phase-result/status: string (required)\n  phase-result/result_status: string (optional)\n  phase-result/message: string (optional)\n  phase-result/handoff_target: string (optional)\n  Schema: [phase-result](docs/product-truth/schemas/delivery-workflow-phase-result.schema.json)\n\nInput illustrative planner projection; not an execution receipt — planner; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"ticket_path\": \"tickets/01_todo/feature.md\",\n  \"files_touched\": [\n    \"app/service.py\"\n  ],\n  \"source_ac\": [\n    \"ACD-300\"\n  ]\n}\n\nOutput illustrative phase-result projection; not an execution receipt — phase-result; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"status\": \"ok\",\n  \"message\": \"The assigned phase completed; the ticket retains its evidence.\"\n}",
       "order": 8,
       "agent": "python-coder / sql-coder / frontend-coder",
       "reads": [
@@ -162,12 +968,115 @@
         "BO-2000b"
       ],
       "impl_status": "not_started",
-      "impl_asof": "2026-07-20"
+      "impl_asof": "2026-07-20",
+      "io_contracts": {
+        "consumes": [
+          {
+            "contract": "planner",
+            "fields": [
+              {
+                "path": "/ticket_path",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/files_touched",
+                "types": [
+                  "array"
+                ],
+                "required": false
+              },
+              {
+                "path": "/source_ac",
+                "types": [
+                  "array"
+                ],
+                "required": false
+              }
+            ]
+          }
+        ],
+        "produces": [
+          {
+            "contract": "phase-result",
+            "fields": [
+              {
+                "path": "/status",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/result_status",
+                "types": [
+                  "string"
+                ],
+                "required": false
+              },
+              {
+                "path": "/message",
+                "types": [
+                  "string"
+                ],
+                "required": false
+              },
+              {
+                "path": "/handoff_target",
+                "types": [
+                  "string"
+                ],
+                "required": false
+              }
+            ]
+          }
+        ],
+        "examples": [
+          {
+            "contract": "planner",
+            "mode": "projection",
+            "origin": "illustrative",
+            "label": "Input illustrative planner projection; not an execution receipt",
+            "value": {
+              "ticket_path": "tickets/01_todo/feature.md",
+              "files_touched": [
+                "app/service.py"
+              ],
+              "source_ac": [
+                "ACD-300"
+              ]
+            }
+          },
+          {
+            "contract": "phase-result",
+            "mode": "projection",
+            "origin": "illustrative",
+            "label": "Output illustrative phase-result projection; not an execution receipt",
+            "value": {
+              "status": "ok",
+              "message": "The assigned phase completed; the ticket retains its evidence."
+            }
+          }
+        ]
+      },
+      "consumes": [
+        "planner/ticket_path: string (required)",
+        "planner/files_touched: array (optional)",
+        "planner/source_ac: array (optional)"
+      ],
+      "produces": [
+        "phase-result/status: string (required)",
+        "phase-result/result_status: string (optional)",
+        "phase-result/message: string (optional)",
+        "phase-result/handoff_target: string (optional)"
+      ]
     },
     {
       "id": "testrun",
       "label": "Test-runner (prio 9)",
-      "human": "test-runner picks the right suite for what changed, runs it, and returns a structured pass/fail report confirming the red baseline is now green.",
+      "human": "test-runner picks the right suite for what changed, runs it, and returns a structured pass/fail report confirming the red baseline is now green.\n\nI/O boundary: Inside this flattened phase driver, its schema controls the response. Detailed pytest output and structured test report remain ticket/evidence artifacts; status ok is not itself a test execution receipt.\n\nContract fields and examples (generated)\nConsumes:\n  SOURCE-REVIEWED DOCUMENTATION: Source-reviewed transcription of templates/workflows-js/build-ticket.js planner response schema (also used by build-feature.js); no new runtime registration or automatic JavaScript/schema parity.\n  planner/ticket_path: string (required)\n  planner/existing_test_files: array (optional)\n  Schema: [planner](docs/product-truth/schemas/delivery-workflow-planner.schema.json)\nProduces:\n  SOURCE-REVIEWED DOCUMENTATION: Source-reviewed transcription of templates/workflows-js/build-ticket.js phase-result response schema (also used by build-feature.js); no new runtime registration or automatic JavaScript/schema parity.\n  phase-result/status: string (required)\n  phase-result/message: string (optional)\n  Schema: [phase-result](docs/product-truth/schemas/delivery-workflow-phase-result.schema.json)\n\nInput illustrative planner projection; not an execution receipt — planner; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"ticket_path\": \"tickets/01_todo/feature.md\",\n  \"existing_test_files\": [\n    \"tests/test_service.py\"\n  ]\n}\n\nOutput illustrative phase-result projection; not an execution receipt — phase-result; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"status\": \"ok\",\n  \"message\": \"The assigned phase completed; the ticket retains its evidence.\"\n}",
       "order": 9,
       "agent": "test-runner",
       "reads": [
@@ -178,12 +1087,88 @@
         "BO-530-2"
       ],
       "impl_status": "not_started",
-      "impl_asof": "2026-07-20"
+      "impl_asof": "2026-07-20",
+      "io_contracts": {
+        "consumes": [
+          {
+            "contract": "planner",
+            "fields": [
+              {
+                "path": "/ticket_path",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/existing_test_files",
+                "types": [
+                  "array"
+                ],
+                "required": false
+              }
+            ]
+          }
+        ],
+        "produces": [
+          {
+            "contract": "phase-result",
+            "fields": [
+              {
+                "path": "/status",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/message",
+                "types": [
+                  "string"
+                ],
+                "required": false
+              }
+            ]
+          }
+        ],
+        "examples": [
+          {
+            "contract": "planner",
+            "mode": "projection",
+            "origin": "illustrative",
+            "label": "Input illustrative planner projection; not an execution receipt",
+            "value": {
+              "ticket_path": "tickets/01_todo/feature.md",
+              "existing_test_files": [
+                "tests/test_service.py"
+              ]
+            }
+          },
+          {
+            "contract": "phase-result",
+            "mode": "projection",
+            "origin": "illustrative",
+            "label": "Output illustrative phase-result projection; not an execution receipt",
+            "value": {
+              "status": "ok",
+              "message": "The assigned phase completed; the ticket retains its evidence."
+            }
+          }
+        ]
+      },
+      "consumes": [
+        "planner/ticket_path: string (required)",
+        "planner/existing_test_files: array (optional)"
+      ],
+      "produces": [
+        "phase-result/status: string (required)",
+        "phase-result/message: string (optional)"
+      ]
     },
     {
       "id": "docs",
       "label": "Documentation (prio 10, conditional)",
-      "human": "documentation-expert (and its how-to / reference / explanation sub-authors) writes or updates docs. Off by default in AC-generated tickets (documentation-expert: not_needed); it runs only when an L1 AC's documentation_triggers call for docs or a flow-change gate flips it on. NOTE: although its priority is 10 (after the coders), for flow-change tickets it is REORDERED before the coders — docs-before-code — so the design is written down before implementation.",
+      "human": "documentation-expert (and its how-to / reference / explanation sub-authors) writes or updates docs. Off by default in AC-generated tickets (documentation-expert: not_needed); it runs only when an L1 AC's documentation_triggers call for docs or a flow-change gate flips it on. NOTE: although its priority is 10 (after the coders), for flow-change tickets it is REORDERED before the coders — docs-before-code — so the design is written down before implementation.\n\nI/O boundary: The substantive outputs are documentation files and a ticket sign-off. The phase response is the real PHASE_RESULT_SCHEMA; absent optional fields are not inferred.\n\nContract fields and examples (generated)\nConsumes:\n  SOURCE-REVIEWED DOCUMENTATION: Source-reviewed transcription of templates/workflows-js/build-ticket.js planner response schema (also used by build-feature.js); no new runtime registration or automatic JavaScript/schema parity.\n  planner/ticket_path: string (required)\n  planner/files_touched: array (optional)\n  planner/source_ac: array (optional)\n  Schema: [planner](docs/product-truth/schemas/delivery-workflow-planner.schema.json)\nProduces:\n  SOURCE-REVIEWED DOCUMENTATION: Source-reviewed transcription of templates/workflows-js/build-ticket.js phase-result response schema (also used by build-feature.js); no new runtime registration or automatic JavaScript/schema parity.\n  phase-result/status: string (required)\n  phase-result/result_status: string (optional)\n  phase-result/message: string (optional)\n  phase-result/handoff_target: string (optional)\n  Schema: [phase-result](docs/product-truth/schemas/delivery-workflow-phase-result.schema.json)\n\nInput illustrative planner projection; not an execution receipt — planner; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"ticket_path\": \"tickets/01_todo/feature.md\",\n  \"files_touched\": [\n    \"app/service.py\"\n  ],\n  \"source_ac\": [\n    \"ACD-300\"\n  ]\n}\n\nOutput illustrative phase-result projection; not an execution receipt — phase-result; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"status\": \"ok\",\n  \"message\": \"The assigned phase completed; the ticket retains its evidence.\"\n}",
       "order": 10,
       "agent": "documentation-expert",
       "reads": [
@@ -194,12 +1179,115 @@
         "BO-540-2"
       ],
       "impl_status": "not_started",
-      "impl_asof": "2026-07-20"
+      "impl_asof": "2026-07-20",
+      "io_contracts": {
+        "consumes": [
+          {
+            "contract": "planner",
+            "fields": [
+              {
+                "path": "/ticket_path",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/files_touched",
+                "types": [
+                  "array"
+                ],
+                "required": false
+              },
+              {
+                "path": "/source_ac",
+                "types": [
+                  "array"
+                ],
+                "required": false
+              }
+            ]
+          }
+        ],
+        "produces": [
+          {
+            "contract": "phase-result",
+            "fields": [
+              {
+                "path": "/status",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/result_status",
+                "types": [
+                  "string"
+                ],
+                "required": false
+              },
+              {
+                "path": "/message",
+                "types": [
+                  "string"
+                ],
+                "required": false
+              },
+              {
+                "path": "/handoff_target",
+                "types": [
+                  "string"
+                ],
+                "required": false
+              }
+            ]
+          }
+        ],
+        "examples": [
+          {
+            "contract": "planner",
+            "mode": "projection",
+            "origin": "illustrative",
+            "label": "Input illustrative planner projection; not an execution receipt",
+            "value": {
+              "ticket_path": "tickets/01_todo/feature.md",
+              "files_touched": [
+                "app/service.py"
+              ],
+              "source_ac": [
+                "ACD-300"
+              ]
+            }
+          },
+          {
+            "contract": "phase-result",
+            "mode": "projection",
+            "origin": "illustrative",
+            "label": "Output illustrative phase-result projection; not an execution receipt",
+            "value": {
+              "status": "ok",
+              "message": "The assigned phase completed; the ticket retains its evidence."
+            }
+          }
+        ]
+      },
+      "consumes": [
+        "planner/ticket_path: string (required)",
+        "planner/files_touched: array (optional)",
+        "planner/source_ac: array (optional)"
+      ],
+      "produces": [
+        "phase-result/status: string (required)",
+        "phase-result/result_status: string (optional)",
+        "phase-result/message: string (optional)",
+        "phase-result/handoff_target: string (optional)"
+      ]
     },
     {
       "id": "scope",
       "label": "Change-scope review (prio 10)",
-      "human": "change-scope-reviewer compares the staged diff against files_touched / out_of_scope and flags any unexpected file as soft / hard / ambiguous.",
+      "human": "change-scope-reviewer compares the staged diff against files_touched / out_of_scope and flags any unexpected file as soft / hard / ambiguous.\n\nI/O boundary: Scope findings are written to the ticket report; the driver consumes this status. The phase response is the real PHASE_RESULT_SCHEMA; absent optional fields are not inferred.\n\nContract fields and examples (generated)\nConsumes:\n  SOURCE-REVIEWED DOCUMENTATION: Source-reviewed transcription of templates/workflows-js/build-ticket.js planner response schema (also used by build-feature.js); no new runtime registration or automatic JavaScript/schema parity.\n  planner/ticket_path: string (required)\n  planner/files_touched: array (optional)\n  planner/source_ac: array (optional)\n  Schema: [planner](docs/product-truth/schemas/delivery-workflow-planner.schema.json)\nProduces:\n  SOURCE-REVIEWED DOCUMENTATION: Source-reviewed transcription of templates/workflows-js/build-ticket.js phase-result response schema (also used by build-feature.js); no new runtime registration or automatic JavaScript/schema parity.\n  phase-result/status: string (required)\n  phase-result/result_status: string (optional)\n  phase-result/message: string (optional)\n  phase-result/handoff_target: string (optional)\n  Schema: [phase-result](docs/product-truth/schemas/delivery-workflow-phase-result.schema.json)\n\nInput illustrative planner projection; not an execution receipt — planner; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"ticket_path\": \"tickets/01_todo/feature.md\",\n  \"files_touched\": [\n    \"app/service.py\"\n  ],\n  \"source_ac\": [\n    \"ACD-300\"\n  ]\n}\n\nOutput illustrative phase-result projection; not an execution receipt — phase-result; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"status\": \"ok\",\n  \"message\": \"The assigned phase completed; the ticket retains its evidence.\"\n}",
       "order": 11,
       "agent": "change-scope-reviewer",
       "reads": [
@@ -210,12 +1298,115 @@
         "BP-1100a"
       ],
       "impl_status": "not_started",
-      "impl_asof": "2026-07-20"
+      "impl_asof": "2026-07-20",
+      "io_contracts": {
+        "consumes": [
+          {
+            "contract": "planner",
+            "fields": [
+              {
+                "path": "/ticket_path",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/files_touched",
+                "types": [
+                  "array"
+                ],
+                "required": false
+              },
+              {
+                "path": "/source_ac",
+                "types": [
+                  "array"
+                ],
+                "required": false
+              }
+            ]
+          }
+        ],
+        "produces": [
+          {
+            "contract": "phase-result",
+            "fields": [
+              {
+                "path": "/status",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/result_status",
+                "types": [
+                  "string"
+                ],
+                "required": false
+              },
+              {
+                "path": "/message",
+                "types": [
+                  "string"
+                ],
+                "required": false
+              },
+              {
+                "path": "/handoff_target",
+                "types": [
+                  "string"
+                ],
+                "required": false
+              }
+            ]
+          }
+        ],
+        "examples": [
+          {
+            "contract": "planner",
+            "mode": "projection",
+            "origin": "illustrative",
+            "label": "Input illustrative planner projection; not an execution receipt",
+            "value": {
+              "ticket_path": "tickets/01_todo/feature.md",
+              "files_touched": [
+                "app/service.py"
+              ],
+              "source_ac": [
+                "ACD-300"
+              ]
+            }
+          },
+          {
+            "contract": "phase-result",
+            "mode": "projection",
+            "origin": "illustrative",
+            "label": "Output illustrative phase-result projection; not an execution receipt",
+            "value": {
+              "status": "ok",
+              "message": "The assigned phase completed; the ticket retains its evidence."
+            }
+          }
+        ]
+      },
+      "consumes": [
+        "planner/ticket_path: string (required)",
+        "planner/files_touched: array (optional)",
+        "planner/source_ac: array (optional)"
+      ],
+      "produces": [
+        "phase-result/status: string (required)",
+        "phase-result/result_status: string (optional)",
+        "phase-result/message: string (optional)",
+        "phase-result/handoff_target: string (optional)"
+      ]
     },
     {
       "id": "review",
       "label": "PR self-review (prio 11)",
-      "human": "pr-reviewer runs the review-pr toolkit over the diff, keeps only high-confidence findings, and escalates a medium cluster to Opus — the quality gate before the coverage gates.",
+      "human": "pr-reviewer runs the review-pr toolkit over the diff, keeps only high-confidence findings, and escalates a medium cluster to Opus — the quality gate before the coverage gates.\n\nI/O boundary: Review findings are retained in ticket/PR text; the driver consumes this status. The phase response is the real PHASE_RESULT_SCHEMA; absent optional fields are not inferred.\n\nContract fields and examples (generated)\nConsumes:\n  SOURCE-REVIEWED DOCUMENTATION: Source-reviewed transcription of templates/workflows-js/build-ticket.js planner response schema (also used by build-feature.js); no new runtime registration or automatic JavaScript/schema parity.\n  planner/ticket_path: string (required)\n  planner/files_touched: array (optional)\n  planner/source_ac: array (optional)\n  Schema: [planner](docs/product-truth/schemas/delivery-workflow-planner.schema.json)\nProduces:\n  SOURCE-REVIEWED DOCUMENTATION: Source-reviewed transcription of templates/workflows-js/build-ticket.js phase-result response schema (also used by build-feature.js); no new runtime registration or automatic JavaScript/schema parity.\n  phase-result/status: string (required)\n  phase-result/result_status: string (optional)\n  phase-result/message: string (optional)\n  phase-result/handoff_target: string (optional)\n  Schema: [phase-result](docs/product-truth/schemas/delivery-workflow-phase-result.schema.json)\n\nInput illustrative planner projection; not an execution receipt — planner; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"ticket_path\": \"tickets/01_todo/feature.md\",\n  \"files_touched\": [\n    \"app/service.py\"\n  ],\n  \"source_ac\": [\n    \"ACD-300\"\n  ]\n}\n\nOutput illustrative phase-result projection; not an execution receipt — phase-result; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"status\": \"ok\",\n  \"message\": \"The assigned phase completed; the ticket retains its evidence.\"\n}",
       "order": 12,
       "agent": "pr-reviewer",
       "reads": [
@@ -225,12 +1416,115 @@
         "BO-1400a"
       ],
       "impl_status": "not_started",
-      "impl_asof": "2026-07-20"
+      "impl_asof": "2026-07-20",
+      "io_contracts": {
+        "consumes": [
+          {
+            "contract": "planner",
+            "fields": [
+              {
+                "path": "/ticket_path",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/files_touched",
+                "types": [
+                  "array"
+                ],
+                "required": false
+              },
+              {
+                "path": "/source_ac",
+                "types": [
+                  "array"
+                ],
+                "required": false
+              }
+            ]
+          }
+        ],
+        "produces": [
+          {
+            "contract": "phase-result",
+            "fields": [
+              {
+                "path": "/status",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/result_status",
+                "types": [
+                  "string"
+                ],
+                "required": false
+              },
+              {
+                "path": "/message",
+                "types": [
+                  "string"
+                ],
+                "required": false
+              },
+              {
+                "path": "/handoff_target",
+                "types": [
+                  "string"
+                ],
+                "required": false
+              }
+            ]
+          }
+        ],
+        "examples": [
+          {
+            "contract": "planner",
+            "mode": "projection",
+            "origin": "illustrative",
+            "label": "Input illustrative planner projection; not an execution receipt",
+            "value": {
+              "ticket_path": "tickets/01_todo/feature.md",
+              "files_touched": [
+                "app/service.py"
+              ],
+              "source_ac": [
+                "ACD-300"
+              ]
+            }
+          },
+          {
+            "contract": "phase-result",
+            "mode": "projection",
+            "origin": "illustrative",
+            "label": "Output illustrative phase-result projection; not an execution receipt",
+            "value": {
+              "status": "ok",
+              "message": "The assigned phase completed; the ticket retains its evidence."
+            }
+          }
+        ]
+      },
+      "consumes": [
+        "planner/ticket_path: string (required)",
+        "planner/files_touched: array (optional)",
+        "planner/source_ac: array (optional)"
+      ],
+      "produces": [
+        "phase-result/status: string (required)",
+        "phase-result/result_status: string (optional)",
+        "phase-result/message: string (optional)",
+        "phase-result/handoff_target: string (optional)"
+      ]
     },
     {
       "id": "acval",
       "label": "AC coverage gate (prio 11.5)",
-      "human": "ac-validator confirms every AC has concrete implementation AND test evidence in the diff before the commit lock.",
+      "human": "ac-validator confirms every AC has concrete implementation AND test evidence in the diff before the commit lock.\n\nI/O boundary: Implementation/test evidence remains in the actual diff and AC references; status alone is not coverage proof. The phase response is the real PHASE_RESULT_SCHEMA; absent optional fields are not inferred.\n\nContract fields and examples (generated)\nConsumes:\n  SOURCE-REVIEWED DOCUMENTATION: Source-reviewed transcription of templates/workflows-js/build-ticket.js planner response schema (also used by build-feature.js); no new runtime registration or automatic JavaScript/schema parity.\n  planner/ticket_path: string (required)\n  planner/files_touched: array (optional)\n  planner/source_ac: array (optional)\n  Schema: [planner](docs/product-truth/schemas/delivery-workflow-planner.schema.json)\nProduces:\n  SOURCE-REVIEWED DOCUMENTATION: Source-reviewed transcription of templates/workflows-js/build-ticket.js phase-result response schema (also used by build-feature.js); no new runtime registration or automatic JavaScript/schema parity.\n  phase-result/status: string (required)\n  phase-result/result_status: string (optional)\n  phase-result/message: string (optional)\n  phase-result/handoff_target: string (optional)\n  Schema: [phase-result](docs/product-truth/schemas/delivery-workflow-phase-result.schema.json)\n\nInput illustrative planner projection; not an execution receipt — planner; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"ticket_path\": \"tickets/01_todo/feature.md\",\n  \"files_touched\": [\n    \"app/service.py\"\n  ],\n  \"source_ac\": [\n    \"ACD-300\"\n  ]\n}\n\nOutput illustrative phase-result projection; not an execution receipt — phase-result; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"status\": \"ok\",\n  \"message\": \"The assigned phase completed; the ticket retains its evidence.\"\n}",
       "order": 13,
       "agent": "ac-validator",
       "reads": [
@@ -242,12 +1536,115 @@
         "BP-1100"
       ],
       "impl_status": "not_started",
-      "impl_asof": "2026-07-20"
+      "impl_asof": "2026-07-20",
+      "io_contracts": {
+        "consumes": [
+          {
+            "contract": "planner",
+            "fields": [
+              {
+                "path": "/ticket_path",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/files_touched",
+                "types": [
+                  "array"
+                ],
+                "required": false
+              },
+              {
+                "path": "/source_ac",
+                "types": [
+                  "array"
+                ],
+                "required": false
+              }
+            ]
+          }
+        ],
+        "produces": [
+          {
+            "contract": "phase-result",
+            "fields": [
+              {
+                "path": "/status",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/result_status",
+                "types": [
+                  "string"
+                ],
+                "required": false
+              },
+              {
+                "path": "/message",
+                "types": [
+                  "string"
+                ],
+                "required": false
+              },
+              {
+                "path": "/handoff_target",
+                "types": [
+                  "string"
+                ],
+                "required": false
+              }
+            ]
+          }
+        ],
+        "examples": [
+          {
+            "contract": "planner",
+            "mode": "projection",
+            "origin": "illustrative",
+            "label": "Input illustrative planner projection; not an execution receipt",
+            "value": {
+              "ticket_path": "tickets/01_todo/feature.md",
+              "files_touched": [
+                "app/service.py"
+              ],
+              "source_ac": [
+                "ACD-300"
+              ]
+            }
+          },
+          {
+            "contract": "phase-result",
+            "mode": "projection",
+            "origin": "illustrative",
+            "label": "Output illustrative phase-result projection; not an execution receipt",
+            "value": {
+              "status": "ok",
+              "message": "The assigned phase completed; the ticket retains its evidence."
+            }
+          }
+        ]
+      },
+      "consumes": [
+        "planner/ticket_path: string (required)",
+        "planner/files_touched: array (optional)",
+        "planner/source_ac: array (optional)"
+      ],
+      "produces": [
+        "phase-result/status: string (required)",
+        "phase-result/result_status: string (optional)",
+        "phase-result/message: string (optional)",
+        "phase-result/handoff_target: string (optional)"
+      ]
     },
     {
       "id": "smoke",
       "label": "User-surface smoke (prio 11.5, conditional)",
-      "human": "user-surface-smoker invokes the user-facing surface end-to-end and asserts its side-effects — only when the ticket declares a `user_facing_surface`.",
+      "human": "user-surface-smoker invokes the user-facing surface end-to-end and asserts its side-effects — only when the ticket declares a `user_facing_surface`.\n\nI/O boundary: The smoke report and side-effect observations remain actual test artifacts; this envelope only controls phase advancement. The phase response is the real PHASE_RESULT_SCHEMA; absent optional fields are not inferred.\n\nContract fields and examples (generated)\nConsumes:\n  SOURCE-REVIEWED DOCUMENTATION: Source-reviewed transcription of templates/workflows-js/build-ticket.js planner response schema (also used by build-feature.js); no new runtime registration or automatic JavaScript/schema parity.\n  planner/ticket_path: string (required)\n  planner/files_touched: array (optional)\n  planner/source_ac: array (optional)\n  Schema: [planner](docs/product-truth/schemas/delivery-workflow-planner.schema.json)\nProduces:\n  SOURCE-REVIEWED DOCUMENTATION: Source-reviewed transcription of templates/workflows-js/build-ticket.js phase-result response schema (also used by build-feature.js); no new runtime registration or automatic JavaScript/schema parity.\n  phase-result/status: string (required)\n  phase-result/result_status: string (optional)\n  phase-result/message: string (optional)\n  phase-result/handoff_target: string (optional)\n  Schema: [phase-result](docs/product-truth/schemas/delivery-workflow-phase-result.schema.json)\n\nInput illustrative planner projection; not an execution receipt — planner; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"ticket_path\": \"tickets/01_todo/feature.md\",\n  \"files_touched\": [\n    \"app/service.py\"\n  ],\n  \"source_ac\": [\n    \"ACD-300\"\n  ]\n}\n\nOutput illustrative phase-result projection; not an execution receipt — phase-result; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"status\": \"ok\",\n  \"message\": \"The assigned phase completed; the ticket retains its evidence.\"\n}",
       "order": 14,
       "agent": "user-surface-smoker",
       "reads": [
@@ -258,12 +1655,115 @@
         "BO-1300c"
       ],
       "impl_status": "not_started",
-      "impl_asof": "2026-07-20"
+      "impl_asof": "2026-07-20",
+      "io_contracts": {
+        "consumes": [
+          {
+            "contract": "planner",
+            "fields": [
+              {
+                "path": "/ticket_path",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/files_touched",
+                "types": [
+                  "array"
+                ],
+                "required": false
+              },
+              {
+                "path": "/source_ac",
+                "types": [
+                  "array"
+                ],
+                "required": false
+              }
+            ]
+          }
+        ],
+        "produces": [
+          {
+            "contract": "phase-result",
+            "fields": [
+              {
+                "path": "/status",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/result_status",
+                "types": [
+                  "string"
+                ],
+                "required": false
+              },
+              {
+                "path": "/message",
+                "types": [
+                  "string"
+                ],
+                "required": false
+              },
+              {
+                "path": "/handoff_target",
+                "types": [
+                  "string"
+                ],
+                "required": false
+              }
+            ]
+          }
+        ],
+        "examples": [
+          {
+            "contract": "planner",
+            "mode": "projection",
+            "origin": "illustrative",
+            "label": "Input illustrative planner projection; not an execution receipt",
+            "value": {
+              "ticket_path": "tickets/01_todo/feature.md",
+              "files_touched": [
+                "app/service.py"
+              ],
+              "source_ac": [
+                "ACD-300"
+              ]
+            }
+          },
+          {
+            "contract": "phase-result",
+            "mode": "projection",
+            "origin": "illustrative",
+            "label": "Output illustrative phase-result projection; not an execution receipt",
+            "value": {
+              "status": "ok",
+              "message": "The assigned phase completed; the ticket retains its evidence."
+            }
+          }
+        ]
+      },
+      "consumes": [
+        "planner/ticket_path: string (required)",
+        "planner/files_touched: array (optional)",
+        "planner/source_ac: array (optional)"
+      ],
+      "produces": [
+        "phase-result/status: string (required)",
+        "phase-result/result_status: string (optional)",
+        "phase-result/message: string (optional)",
+        "phase-result/handoff_target: string (optional)"
+      ]
     },
     {
       "id": "acfulfill",
       "label": "AC fulfillment gate (prio 11.7)",
-      "human": "ac-fulfillment-gate verifies (and append-only auto-fixes) the AC store's work_status / implemented_by / covered_by so the store is accurate before commit.",
+      "human": "ac-fulfillment-gate verifies (and append-only auto-fixes) the AC store's work_status / implemented_by / covered_by so the store is accurate before commit.\n\nI/O boundary: The gate verifies or append-only repairs the parsed YAML declarations from actual evidence; the generic example does not certify any requirement completion.\n\nContract fields and examples (generated)\nConsumes:\n  ac/id: string (required)\n  ac/work_status: null|string (optional)\n  ac/implemented_by: array (optional; default [])\n  ac/covered_by: array (optional; default [])\n  Schema: [ac](config/ac_store_schema.json)\nProduces:\n  ac/id: string (required)\n  ac/work_status: null|string (optional)\n  ac/implemented_by: array (optional; default [])\n  ac/covered_by: array (optional; default [])\n  Schema: [ac](config/ac_store_schema.json)\n\nInput illustrative ac projection; not an execution receipt — ac; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"id\": \"ACD-300\",\n  \"work_status\": \"todo\",\n  \"implemented_by\": [],\n  \"covered_by\": []\n}\n\nOutput illustrative ac projection; not an execution receipt — ac; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"id\": \"ACD-300\",\n  \"work_status\": \"todo\",\n  \"implemented_by\": [],\n  \"covered_by\": []\n}",
       "order": 15,
       "agent": "ac-fulfillment-gate",
       "reads": [
@@ -278,12 +1778,128 @@
         "BO-202"
       ],
       "impl_status": "in_progress",
-      "impl_asof": "2026-08-25"
+      "impl_asof": "2026-08-25",
+      "io_contracts": {
+        "consumes": [
+          {
+            "contract": "ac",
+            "fields": [
+              {
+                "path": "/id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/work_status",
+                "types": [
+                  "null",
+                  "string"
+                ],
+                "required": false
+              },
+              {
+                "path": "/implemented_by",
+                "types": [
+                  "array"
+                ],
+                "required": false,
+                "default": []
+              },
+              {
+                "path": "/covered_by",
+                "types": [
+                  "array"
+                ],
+                "required": false,
+                "default": []
+              }
+            ]
+          }
+        ],
+        "produces": [
+          {
+            "contract": "ac",
+            "fields": [
+              {
+                "path": "/id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/work_status",
+                "types": [
+                  "null",
+                  "string"
+                ],
+                "required": false
+              },
+              {
+                "path": "/implemented_by",
+                "types": [
+                  "array"
+                ],
+                "required": false,
+                "default": []
+              },
+              {
+                "path": "/covered_by",
+                "types": [
+                  "array"
+                ],
+                "required": false,
+                "default": []
+              }
+            ]
+          }
+        ],
+        "examples": [
+          {
+            "contract": "ac",
+            "mode": "projection",
+            "origin": "illustrative",
+            "label": "Input illustrative ac projection; not an execution receipt",
+            "value": {
+              "id": "ACD-300",
+              "work_status": "todo",
+              "implemented_by": [],
+              "covered_by": []
+            }
+          },
+          {
+            "contract": "ac",
+            "mode": "projection",
+            "origin": "illustrative",
+            "label": "Output illustrative ac projection; not an execution receipt",
+            "value": {
+              "id": "ACD-300",
+              "work_status": "todo",
+              "implemented_by": [],
+              "covered_by": []
+            }
+          }
+        ]
+      },
+      "consumes": [
+        "ac/id: string (required)",
+        "ac/work_status: null|string (optional)",
+        "ac/implemented_by: array (optional; default [])",
+        "ac/covered_by: array (optional; default [])"
+      ],
+      "produces": [
+        "ac/id: string (required)",
+        "ac/work_status: null|string (optional)",
+        "ac/implemented_by: array (optional; default [])",
+        "ac/covered_by: array (optional; default [])"
+      ]
     },
     {
       "id": "livetest",
       "label": "Live-surface test (prio 11.8, conditional)",
-      "human": "live-surface-tester starts a dev server, issues real HTTP requests against declared fixtures, asserts status/body/headers, then tears down — only when the ticket sets `live_surface_test: true`.",
+      "human": "live-surface-tester starts a dev server, issues real HTTP requests against declared fixtures, asserts status/body/headers, then tears down — only when the ticket sets `live_surface_test: true`.\n\nI/O boundary: HTTP request/status/body receipts remain test artifacts; this envelope does not type or fabricate them. The phase response is the real PHASE_RESULT_SCHEMA; absent optional fields are not inferred.\n\nContract fields and examples (generated)\nConsumes:\n  SOURCE-REVIEWED DOCUMENTATION: Source-reviewed transcription of templates/workflows-js/build-ticket.js planner response schema (also used by build-feature.js); no new runtime registration or automatic JavaScript/schema parity.\n  planner/ticket_path: string (required)\n  planner/files_touched: array (optional)\n  planner/source_ac: array (optional)\n  Schema: [planner](docs/product-truth/schemas/delivery-workflow-planner.schema.json)\nProduces:\n  SOURCE-REVIEWED DOCUMENTATION: Source-reviewed transcription of templates/workflows-js/build-ticket.js phase-result response schema (also used by build-feature.js); no new runtime registration or automatic JavaScript/schema parity.\n  phase-result/status: string (required)\n  phase-result/result_status: string (optional)\n  phase-result/message: string (optional)\n  phase-result/handoff_target: string (optional)\n  Schema: [phase-result](docs/product-truth/schemas/delivery-workflow-phase-result.schema.json)\n\nInput illustrative planner projection; not an execution receipt — planner; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"ticket_path\": \"tickets/01_todo/feature.md\",\n  \"files_touched\": [\n    \"app/service.py\"\n  ],\n  \"source_ac\": [\n    \"ACD-300\"\n  ]\n}\n\nOutput illustrative phase-result projection; not an execution receipt — phase-result; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"status\": \"ok\",\n  \"message\": \"The assigned phase completed; the ticket retains its evidence.\"\n}",
       "order": 16,
       "agent": "live-surface-tester",
       "reads": [
@@ -294,12 +1910,115 @@
         "BP-014"
       ],
       "impl_status": "not_started",
-      "impl_asof": "2026-07-20"
+      "impl_asof": "2026-07-20",
+      "io_contracts": {
+        "consumes": [
+          {
+            "contract": "planner",
+            "fields": [
+              {
+                "path": "/ticket_path",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/files_touched",
+                "types": [
+                  "array"
+                ],
+                "required": false
+              },
+              {
+                "path": "/source_ac",
+                "types": [
+                  "array"
+                ],
+                "required": false
+              }
+            ]
+          }
+        ],
+        "produces": [
+          {
+            "contract": "phase-result",
+            "fields": [
+              {
+                "path": "/status",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/result_status",
+                "types": [
+                  "string"
+                ],
+                "required": false
+              },
+              {
+                "path": "/message",
+                "types": [
+                  "string"
+                ],
+                "required": false
+              },
+              {
+                "path": "/handoff_target",
+                "types": [
+                  "string"
+                ],
+                "required": false
+              }
+            ]
+          }
+        ],
+        "examples": [
+          {
+            "contract": "planner",
+            "mode": "projection",
+            "origin": "illustrative",
+            "label": "Input illustrative planner projection; not an execution receipt",
+            "value": {
+              "ticket_path": "tickets/01_todo/feature.md",
+              "files_touched": [
+                "app/service.py"
+              ],
+              "source_ac": [
+                "ACD-300"
+              ]
+            }
+          },
+          {
+            "contract": "phase-result",
+            "mode": "projection",
+            "origin": "illustrative",
+            "label": "Output illustrative phase-result projection; not an execution receipt",
+            "value": {
+              "status": "ok",
+              "message": "The assigned phase completed; the ticket retains its evidence."
+            }
+          }
+        ]
+      },
+      "consumes": [
+        "planner/ticket_path: string (required)",
+        "planner/files_touched: array (optional)",
+        "planner/source_ac: array (optional)"
+      ],
+      "produces": [
+        "phase-result/status: string (required)",
+        "phase-result/result_status: string (optional)",
+        "phase-result/message: string (optional)",
+        "phase-result/handoff_target: string (optional)"
+      ]
     },
     {
       "id": "commit",
       "label": "Gated commit (prio 12)",
-      "human": "the commit agent shows the planned message + file list, commits under the worktree commit-phase lock, and on a pre-commit hook failure runs precommit-autofix and retries once.",
+      "human": "the commit agent shows the planned message + file list, commits under the worktree commit-phase lock, and on a pre-commit hook failure runs precommit-autofix and retries once.\n\nI/O boundary: The output Git commit is a separate repository artifact created only after its approval gate. The phase response is the real PHASE_RESULT_SCHEMA; absent optional fields are not inferred.\n\nContract fields and examples (generated)\nConsumes:\n  SOURCE-REVIEWED DOCUMENTATION: Source-reviewed transcription of templates/workflows-js/build-ticket.js planner response schema (also used by build-feature.js); no new runtime registration or automatic JavaScript/schema parity.\n  planner/ticket_path: string (required)\n  planner/files_touched: array (optional)\n  planner/source_ac: array (optional)\n  Schema: [planner](docs/product-truth/schemas/delivery-workflow-planner.schema.json)\nProduces:\n  SOURCE-REVIEWED DOCUMENTATION: Source-reviewed transcription of templates/workflows-js/build-ticket.js phase-result response schema (also used by build-feature.js); no new runtime registration or automatic JavaScript/schema parity.\n  phase-result/status: string (required)\n  phase-result/result_status: string (optional)\n  phase-result/message: string (optional)\n  phase-result/handoff_target: string (optional)\n  Schema: [phase-result](docs/product-truth/schemas/delivery-workflow-phase-result.schema.json)\n\nInput illustrative planner projection; not an execution receipt — planner; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"ticket_path\": \"tickets/01_todo/feature.md\",\n  \"files_touched\": [\n    \"app/service.py\"\n  ],\n  \"source_ac\": [\n    \"ACD-300\"\n  ]\n}\n\nOutput illustrative phase-result projection; not an execution receipt — phase-result; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"status\": \"ok\",\n  \"message\": \"The assigned phase completed; the ticket retains its evidence.\"\n}",
       "order": 17,
       "agent": "commit",
       "reads": [
@@ -312,12 +2031,115 @@
         "BO-1100a"
       ],
       "impl_status": "not_started",
-      "impl_asof": "2026-07-20"
+      "impl_asof": "2026-07-20",
+      "io_contracts": {
+        "consumes": [
+          {
+            "contract": "planner",
+            "fields": [
+              {
+                "path": "/ticket_path",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/files_touched",
+                "types": [
+                  "array"
+                ],
+                "required": false
+              },
+              {
+                "path": "/source_ac",
+                "types": [
+                  "array"
+                ],
+                "required": false
+              }
+            ]
+          }
+        ],
+        "produces": [
+          {
+            "contract": "phase-result",
+            "fields": [
+              {
+                "path": "/status",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/result_status",
+                "types": [
+                  "string"
+                ],
+                "required": false
+              },
+              {
+                "path": "/message",
+                "types": [
+                  "string"
+                ],
+                "required": false
+              },
+              {
+                "path": "/handoff_target",
+                "types": [
+                  "string"
+                ],
+                "required": false
+              }
+            ]
+          }
+        ],
+        "examples": [
+          {
+            "contract": "planner",
+            "mode": "projection",
+            "origin": "illustrative",
+            "label": "Input illustrative planner projection; not an execution receipt",
+            "value": {
+              "ticket_path": "tickets/01_todo/feature.md",
+              "files_touched": [
+                "app/service.py"
+              ],
+              "source_ac": [
+                "ACD-300"
+              ]
+            }
+          },
+          {
+            "contract": "phase-result",
+            "mode": "projection",
+            "origin": "illustrative",
+            "label": "Output illustrative phase-result projection; not an execution receipt",
+            "value": {
+              "status": "ok",
+              "message": "The assigned phase completed; the ticket retains its evidence."
+            }
+          }
+        ]
+      },
+      "consumes": [
+        "planner/ticket_path: string (required)",
+        "planner/files_touched: array (optional)",
+        "planner/source_ac: array (optional)"
+      ],
+      "produces": [
+        "phase-result/status: string (required)",
+        "phase-result/result_status: string (optional)",
+        "phase-result/message: string (optional)",
+        "phase-result/handoff_target: string (optional)"
+      ]
     },
     {
       "id": "pr",
       "label": "Open the pull request (prio 13)",
-      "human": "the pull-request agent drafts the title + body from the branch's commits, opens (or reuses) the PR, and resolves any merge conflict via conflict-resolver — on merge, control returns to the AC lifecycle's 'complete' step which marks the AC done.",
+      "human": "the pull-request agent drafts the title + body from the branch's commits, opens (or reuses) the PR, and resolves any merge conflict via conflict-resolver — on merge, control returns to the AC lifecycle's 'complete' step which marks the AC done.\n\nI/O boundary: The output is an external PR plus ticket sign-off; this JSON does not reproduce the GitHub API. The phase response is the real PHASE_RESULT_SCHEMA; absent optional fields are not inferred.\n\nContract fields and examples (generated)\nConsumes:\n  SOURCE-REVIEWED DOCUMENTATION: Source-reviewed transcription of templates/workflows-js/build-ticket.js planner response schema (also used by build-feature.js); no new runtime registration or automatic JavaScript/schema parity.\n  planner/ticket_path: string (required)\n  planner/files_touched: array (optional)\n  planner/source_ac: array (optional)\n  Schema: [planner](docs/product-truth/schemas/delivery-workflow-planner.schema.json)\nProduces:\n  SOURCE-REVIEWED DOCUMENTATION: Source-reviewed transcription of templates/workflows-js/build-ticket.js phase-result response schema (also used by build-feature.js); no new runtime registration or automatic JavaScript/schema parity.\n  phase-result/status: string (required)\n  phase-result/result_status: string (optional)\n  phase-result/message: string (optional)\n  phase-result/handoff_target: string (optional)\n  Schema: [phase-result](docs/product-truth/schemas/delivery-workflow-phase-result.schema.json)\n\nInput illustrative planner projection; not an execution receipt — planner; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"ticket_path\": \"tickets/01_todo/feature.md\",\n  \"files_touched\": [\n    \"app/service.py\"\n  ],\n  \"source_ac\": [\n    \"ACD-300\"\n  ]\n}\n\nOutput illustrative phase-result projection; not an execution receipt — phase-result; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"status\": \"ok\",\n  \"message\": \"The assigned phase completed; the ticket retains its evidence.\"\n}",
       "order": 18,
       "agent": "pull-request",
       "reads": [
@@ -330,7 +2152,110 @@
         "BO-800a"
       ],
       "impl_status": "not_started",
-      "impl_asof": "2026-07-20"
+      "impl_asof": "2026-07-20",
+      "io_contracts": {
+        "consumes": [
+          {
+            "contract": "planner",
+            "fields": [
+              {
+                "path": "/ticket_path",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/files_touched",
+                "types": [
+                  "array"
+                ],
+                "required": false
+              },
+              {
+                "path": "/source_ac",
+                "types": [
+                  "array"
+                ],
+                "required": false
+              }
+            ]
+          }
+        ],
+        "produces": [
+          {
+            "contract": "phase-result",
+            "fields": [
+              {
+                "path": "/status",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/result_status",
+                "types": [
+                  "string"
+                ],
+                "required": false
+              },
+              {
+                "path": "/message",
+                "types": [
+                  "string"
+                ],
+                "required": false
+              },
+              {
+                "path": "/handoff_target",
+                "types": [
+                  "string"
+                ],
+                "required": false
+              }
+            ]
+          }
+        ],
+        "examples": [
+          {
+            "contract": "planner",
+            "mode": "projection",
+            "origin": "illustrative",
+            "label": "Input illustrative planner projection; not an execution receipt",
+            "value": {
+              "ticket_path": "tickets/01_todo/feature.md",
+              "files_touched": [
+                "app/service.py"
+              ],
+              "source_ac": [
+                "ACD-300"
+              ]
+            }
+          },
+          {
+            "contract": "phase-result",
+            "mode": "projection",
+            "origin": "illustrative",
+            "label": "Output illustrative phase-result projection; not an execution receipt",
+            "value": {
+              "status": "ok",
+              "message": "The assigned phase completed; the ticket retains its evidence."
+            }
+          }
+        ]
+      },
+      "consumes": [
+        "planner/ticket_path: string (required)",
+        "planner/files_touched: array (optional)",
+        "planner/source_ac: array (optional)"
+      ],
+      "produces": [
+        "phase-result/status: string (required)",
+        "phase-result/result_status: string (optional)",
+        "phase-result/message: string (optional)",
+        "phase-result/handoff_target: string (optional)"
+      ]
     }
   ],
   "branches": [
@@ -338,7 +2263,7 @@
       "id": "blocked",
       "label": "Blocker → adjudication ladder",
       "condition": "a phase agent signs off with status: blocker",
-      "human": "when a phase returns a blocker, ticket-supervisor climbs the failure-adjudication ladder from building-epics — mechanical retry, then cross-agent rework, then brainstorm-lead, then halt — with hard retry caps, instead of advancing the chain.",
+      "human": "when a phase returns a blocker, ticket-supervisor climbs the failure-adjudication ladder from building-epics — mechanical retry, then cross-agent rework, then brainstorm-lead, then halt — with hard retry caps, instead of advancing the chain.\n\nI/O boundary: A phase blocker is classified by CLASSIFY_SCHEMA; mechanical/cross_agent/design/halt decides the bounded driver response. This is a classification envelope, not a new approval.\n\nContract fields and examples (generated)\nConsumes:\n  SOURCE-REVIEWED DOCUMENTATION: Source-reviewed transcription of templates/workflows-js/build-ticket.js phase-result response schema (also used by build-feature.js); no new runtime registration or automatic JavaScript/schema parity.\n  phase-result/status: string (required)\n  phase-result/message: string (optional)\n  phase-result/handoff_target: string (optional)\n  Schema: [phase-result](docs/product-truth/schemas/delivery-workflow-phase-result.schema.json)\nProduces:\n  SOURCE-REVIEWED DOCUMENTATION: Source-reviewed transcription of templates/workflows-js/build-ticket.js classify response schema (also used by build-feature.js); no new runtime registration or automatic JavaScript/schema parity.\n  classify/classification: string (required)\n  classify/reason: string (optional)\n  Schema: [classify](docs/product-truth/schemas/delivery-workflow-classify.schema.json)\n\nInput illustrative phase-result projection; not an execution receipt — phase-result; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"status\": \"blocker\",\n  \"message\": \"The test process could not start.\"\n}\n\nOutput illustrative classify projection; not an execution receipt — classify; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"classification\": \"mechanical\",\n  \"reason\": \"The test process could not start; retry within the driver limit.\"\n}",
       "from": "dispatch",
       "agent": "ticket-supervisor / brainstorm-lead",
       "reads": [
@@ -348,7 +2273,89 @@
         "BO-2000f-5"
       ],
       "impl_status": "done",
-      "impl_asof": "2026-07-20"
+      "impl_asof": "2026-07-20",
+      "io_contracts": {
+        "consumes": [
+          {
+            "contract": "phase-result",
+            "fields": [
+              {
+                "path": "/status",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/message",
+                "types": [
+                  "string"
+                ],
+                "required": false
+              },
+              {
+                "path": "/handoff_target",
+                "types": [
+                  "string"
+                ],
+                "required": false
+              }
+            ]
+          }
+        ],
+        "produces": [
+          {
+            "contract": "classify",
+            "fields": [
+              {
+                "path": "/classification",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/reason",
+                "types": [
+                  "string"
+                ],
+                "required": false
+              }
+            ]
+          }
+        ],
+        "examples": [
+          {
+            "contract": "phase-result",
+            "mode": "projection",
+            "origin": "illustrative",
+            "label": "Input illustrative phase-result projection; not an execution receipt",
+            "value": {
+              "status": "blocker",
+              "message": "The test process could not start."
+            }
+          },
+          {
+            "contract": "classify",
+            "mode": "projection",
+            "origin": "illustrative",
+            "label": "Output illustrative classify projection; not an execution receipt",
+            "value": {
+              "classification": "mechanical",
+              "reason": "The test process could not start; retry within the driver limit."
+            }
+          }
+        ]
+      },
+      "consumes": [
+        "phase-result/status: string (required)",
+        "phase-result/message: string (optional)",
+        "phase-result/handoff_target: string (optional)"
+      ],
+      "produces": [
+        "classify/classification: string (required)",
+        "classify/reason: string (optional)"
+      ]
     }
   ],
   "acceptance_scenarios": [
@@ -413,6 +2420,12 @@
       "by": "BrainCandy",
       "date": "2026-07-14",
       "note": "Accuracy pass verified against the real pipeline: marked architect-review conditional (injected only by a flow-change/guardrail gate or requires_adr, absent from a normal AC-generated ticket); noted documentation is off by default and reordered before the coders for flow-change tickets (docs-before-code); re-attributed the dispatch step to the ADR-006 flattened per-phase driver (build-feature.js / build-ticket.js), with ticket-supervisor as the legacy name."
+    },
+    {
+      "action": "extended",
+      "by": "flow-author (agent-led I/O contract migration)",
+      "date": "2026-10-03",
+      "note": "Added source-bound field/type/requiredness/default metadata and explicitly illustrative JSON projections. Preserved topology, actor ownership, realization and AC status. Non-JSON artifacts and genuinely undefined proposed interfaces remain explicit."
     }
   ],
   "impl_summary": {
@@ -421,5 +2434,30 @@
     "not_started": 15,
     "total": 19,
     "asof": "2026-08-25"
+  },
+  "contract_definitions": {
+    "planner": {
+      "schema": "docs/product-truth/schemas/delivery-workflow-planner.schema.json",
+      "authority": "source_reviewed",
+      "note": "Source-reviewed transcription of templates/workflows-js/build-ticket.js planner response schema (also used by build-feature.js); no new runtime registration or automatic JavaScript/schema parity."
+    },
+    "phase-result": {
+      "schema": "docs/product-truth/schemas/delivery-workflow-phase-result.schema.json",
+      "authority": "source_reviewed",
+      "note": "Source-reviewed transcription of templates/workflows-js/build-ticket.js phase-result response schema (also used by build-feature.js); no new runtime registration or automatic JavaScript/schema parity."
+    },
+    "readback": {
+      "schema": "docs/product-truth/schemas/delivery-workflow-readback.schema.json",
+      "authority": "source_reviewed",
+      "note": "Source-reviewed transcription of templates/workflows-js/build-ticket.js readback response schema (also used by build-feature.js); no new runtime registration or automatic JavaScript/schema parity."
+    },
+    "ac": {
+      "schema": "config/ac_store_schema.json"
+    },
+    "classify": {
+      "schema": "docs/product-truth/schemas/delivery-workflow-classify.schema.json",
+      "authority": "source_reviewed",
+      "note": "Source-reviewed transcription of templates/workflows-js/build-ticket.js classify response schema (also used by build-feature.js); no new runtime registration or automatic JavaScript/schema parity."
+    }
   }
 }

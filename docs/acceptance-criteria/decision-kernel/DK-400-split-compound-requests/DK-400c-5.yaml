@@ -1,0 +1,94 @@
+id: DK-400c-5
+title: "Sequence diagram: from a bundled request to the person's answer at the split gate"
+component: decision-kernel
+components:
+  - decision_kernel
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_kernel_1_founding
+criteria: |
+  Given a reader who wants to follow one split from its start to the gate,
+  When they open the sequence diagram for proposing a split,
+  Then it shows, in order: routing spotting a bundled request, the kernel asking the host for a
+    proposal, the host's answer, the kernel setting aside proposals whose quotes are not in the
+    request, the person's answer at the split gate, and the kernel releasing the approved parts,
+  And it shows the run waiting on the host and then on the person, with no part run before the
+    person's answer,
+  And it shows the four endings of the gate as distinct: approved; rejected and ended blocked,
+    when no capability could meet the request; rejected and back to today's clarification
+    question, when routing found the request ambiguous; and rejected and kept whole.
+depends_on:
+  - DK-400c
+  - DK-400c-1
+  - DK-400c-2
+  - DK-400d-1
+  - DK-400d-3
+doc_links:
+  - path: docs/architecture/components/decision-kernel.md
+    relationship: describes
+    status: exists
+    relevance: "Kernel containers: routing, scheduler, host handoffs, run root."
+  - path: docs/architecture/diagrams/c2-007-decision-kernel-flows-overview.md
+    relationship: related
+    status: exists
+  - path: docs/product-truth/flows/leafcutter/decision-forming.flow.json
+    relationship: implements
+    status: exists
+    relevance: "Flow v5 node(s) split-detect, split-propose, split-dropped, split-approve, split-reject, split-reject-kept-whole, with their acceptance scenarios."
+  - path: docs/architecture/adrs/ADR-067-kernel-splits-bundled-requests-into-approved-parts.md
+    relationship: describes
+    status: planned
+    relevance: Pinned ADR for splitting a bundled request; adr-author dispatched directly with this number and filename.
+      Re-verify the number is free before dispatch.
+  - path: docs/architecture/diagrams/c3-014-decision-kernel-flows-request-handoff.md
+    relationship: describes
+    status: exists
+    relevance: Host or human handoff, validated resume, repair and finalize as built.
+assigned_agent: architecture-diagram-author
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: DK-400d-3
+  contract: "The two rejection endings the diagram shows as distinct terminations."
+change_target: docs
+it_requirements:
+  - Authored with the write-c4-diagram skill; the file number comes from the diagram sequence tool; parent docs/architecture/diagrams/c2-007-decision-kernel-flows-overview.md,
+    whose child list gains the new diagram in the same change.
+  - Every container shown matches a container of docs/architecture/components/decision-kernel.md; split pieces are
+    drawn inside existing containers (kernel scheduler, host handoffs, run root, RunService and CLI, host skill),
+    never as new containers.
+  - 'Uses the names of the built code and of ADR-067: host.decompose_goal, leafcutter.goal_decomposition_request.v1,
+    leafcutter.goal_decomposition.v1, the split record and its states, and the run statuses waiting_host and waiting_human.'
+  - 'Shows the run statuses waiting_host then waiting_human, the deterministic conversion steps in their fixed order
+    (DK-400c-1), and the four gate endings as distinct terminations: approved; rejected with the run blocked (jev_none);
+    rejected_clarify with today''s clarification question and the run waiting_human (ambiguous); rejected_kept_whole
+    (bundled_accepted or mid_run). It stops at the gate (running the parts is DK-400e-5).'
+risk_surface: internal
+test_required: false
+origin_agent: business-analyst
+created: 2026-10-05
+amended_by:
+  - reason: it-po-technical-enrichment
+    date: '2026-10-05'
+    by: it-po
+    summary: 'Technical enrichment: assigned_agent confirmed, estimated_complexity, change_target, risk_surface,
+      it_requirements, delivers_to/expects_from contracts, doc_links and the test contract set; readiness draft
+      -> reviewed. BA criteria and product_truth unchanged.'
+  - reason: ba-user-gate-amendment
+    date: '2026-10-05'
+    by: business-analyst
+    summary: "User rule at the final gate: a rejected split of an ambiguous request falls back to today's clarification question. Withdrawn wording: 'And it shows the three endings of the gate as distinct: approved, rejected and ended blocked, and rejected and kept whole.' Replaced by four endings, adding rejected and back to today's clarification question. IT PO fields were not edited; its it_requirements entry still says three gate endings."
+  - reason: it-po-final-gate-re-enrichment
+    date: '2026-10-05'
+    by: it-po
+    summary: Three gate endings became four (rejected_clarify added).
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Documentation AC for DK-400c documentation_triggers [sequence-diagram]. Running the parts
+  is DK-400e-5's diagram, so this one stops at the gate.

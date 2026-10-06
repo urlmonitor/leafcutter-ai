@@ -1,0 +1,164 @@
+id: DK-400e-1
+title: "Approved parts run one at a time, in dependency order, inside the same run"
+component: decision-kernel
+components:
+  - decision_kernel
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_kernel_1_founding
+criteria: |
+  Given the reusable-criteria split approved with p1 and p4 waiting for no part, and p2 and p3
+    waiting for p1,
+  When the parts run,
+  Then each part runs as a work item of the same run, not as a new run,
+  And at no moment are two parts in progress at once,
+  And p2 and p3 start only after p1 has settled,
+  And the parts settle in the order p1, p2, p3, p4 (dependency order, taking the parts that are free
+    to start in proposed order), numbered 1 to 4 with no gaps.
+depends_on:
+  - DK-400e
+  - DK-400d-1
+doc_links:
+  - path: docs/product-truth/flows/leafcutter/decision-forming.flow.json
+    relationship: implements
+    status: exists
+    relevance: "Flow v5 node(s) split-run, with their acceptance scenarios."
+  - path: docs/product-truth/mock-data/leafcutter/decisions.mock.json
+    relationship: specified-by
+    status: exists
+    relevance: "Invariants on settled_order (1..n, after every dependency) and parts[].run_id (children of the run that split)."
+  - path: docs/architecture/components/decision-kernel.md
+    relationship: describes
+    status: exists
+    relevance: "Kernel containers: routing, scheduler, host handoffs, run root."
+  - path: docs/analysis/2026-09-30-decision-kernel-design-3-kernel-scheduler.md
+    relationship: describes
+    status: exists
+    relevance: Route node and batched Jev routing, intent step, guards and budgets, root completion, gap recording,
+      resume and restart.
+  - path: docs/architecture/adrs/ADR-067-kernel-splits-bundled-requests-into-approved-parts.md
+    relationship: describes
+    status: planned
+    relevance: Pinned ADR for splitting a bundled request; adr-author dispatched directly with this number and filename.
+      Re-verify the number is free before dispatch.
+assigned_agent: python-coder
+estimated_complexity: L
+delivers_to:
+  agent: python-coder
+  contract: 'Per part, updated when the part ends: outcome ''pending'' | ''decided'' | ''answered'' | ''not_settled''
+    | ''not_run''; settled_order: integer 1..n in settling order, null unless decided or answered; run_id: this
+    run''s id for every part that ran; decision_id: ''dec-'' + 16 hex of the staged record iff decided; result_ref:
+    ''inv-'' + 16 hex iff answered (artifact result-<inv>.json in the run''s artifacts); findings: string iff answered;
+    stop_reason: ''budget_stop'' | ''blocked'' | ''capability_gap'' | ''cancelled'' iff not_settled; waited_for:
+    part id iff not_run because a dependency did not settle. Split state moves approved -> in_progress -> completed
+    | ended_partial; run status completed iff every part not left out settled, partial otherwise. Consumed by DK-400e-2,
+    DK-400e-3, DK-400e-4, DK-400f-1 (progress) and DK-400f-2 (report).'
+expects_from:
+  ac_id: DK-400d-1
+  contract: 'The approved split (DK-400d-1 delivers_to shape): parts with review kept, edited or left_out, their
+    depends_on after releases, and gate_by and gate_at.'
+it_requirements:
+  - Approved parts run as work items of the same run (children of the split item), never as new runs, and strictly
+    one at a time whatever limits.max_concurrent_native allows.
+  - 'Order: dependency order computed by one shared ordering function (Kahn''s order over depends_on, taking the
+    free part with the lowest proposed index first), the same function the five-part cut uses (DK-400c-1-i). A part
+    starts only after every part it depends on has settled; settled_order counts 1..n without gaps.'
+  - Parts are bound deterministically to their approved child_capability (decision or research) without a routing
+    Jev call.
+  - 'Per-part budgets: each part runs with its own allowance equal to what a stand-alone run of that question would
+    get from config (Jev calls, host operations, work items, active seconds, and depth headroom measured from the
+    part''s own work item), configurable under split. A part''s unspent allowance is not lent to other parts, and
+    the root''s pre-gate spend (routing, decomposition) is charged to the root. No part may be stopped by a run-level
+    guard that a stand-alone run of its question would have passed.'
+  - Child work per run is bounded by split.max_parts_per_run (default 5, counting every part offered by every split
+    in the run), so a run's total spend stays bounded by that count times the per-part allowance plus the root's
+    own.
+  - 'The split item''s terminal status is derived from its parts: completed iff every part not left out settled,
+    partial otherwise. finalize''s root-completion rule is extended for a split root only: its output is the split
+    record under a registered output schema named in ADR-067 (IT PO recommendation: leafcutter.decomposition.v1),
+    and the envelope''s decision_ids list every decided part''s record. No decision_report.v1 is produced for the
+    bundle as a whole.'
+  - 'Restart and cancellation safety: a restart between parts neither re-runs a settled part nor skips a pending
+    one; cancelling stops at the next safe point and the running part ends not_settled with stop_reason cancelled.'
+  - 'Handle failures per the project error handling policy: catch specific exceptions, log at WARNING with the run,
+    work item and split ids involved, and never swallow a failure silently; a rejected submission leaves run state
+    unchanged.'
+change_target:
+  - code
+  - config
+risk_surface: cost
+test_required: true
+test_spec:
+  - name: test_parts_run_one_at_a_time_in_dependency_order
+    target_dir: tests/kernel/split/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: For p1 and p4 free and p2 and p3 waiting for p1, the event timeline shows the parts settle in the
+      order p1, p2, p3, p4, numbered 1 to 4, with never two parts in progress at once.
+  - name: test_parts_are_work_items_of_the_same_run
+    target_dir: tests/kernel/split/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: Every part's run_id is the splitting run's id and no new run is created.
+  - name: test_part_budget_not_starved_by_earlier_parts
+    target_dir: tests/kernel/split/
+    framework: pytest
+    type: integration
+    angle: boundary
+    description: With run limits that one decision fits, four decision parts each receive their own allowance and
+      all settle.
+  - name: test_split_root_completes_from_its_parts
+    target_dir: tests/kernel/split/
+    framework: pytest
+    type: integration
+    angle: seam
+    description: When every part settled, finalize marks the run completed, its output is the split record and the
+      envelope lists every decided part's record; no decision report covers the whole goal.
+  - name: test_restart_between_parts_resumes_next_part
+    target_dir: tests/kernel/split/
+    framework: pytest
+    type: integration
+    angle: failure
+    description: A process restart after p1 settles resumes with p2 and never re-runs p1.
+test_rationale: Ordering, budgets and root completion are scheduler behaviour, so the tests run whole split runs
+  through RunService with scripted Jev and host answers and read the event timeline.
+origin_agent: business-analyst
+created: 2026-10-05
+amended_by:
+  - reason: it-po-technical-enrichment
+    date: '2026-10-05'
+    by: it-po
+    summary: 'Technical enrichment: assigned_agent confirmed, estimated_complexity, change_target, risk_surface,
+      it_requirements, delivers_to/expects_from contracts, doc_links and the test contract set; readiness draft
+      -> reviewed. BA criteria and product_truth unchanged.'
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Flow step split-run. Parallel children are out of scope (DK-400 SETTLED 5).
+  Among parts free to start, proposed order decides: the user kept this default on 2026-10-05
+  (answer to BA open question Q4). It matches every sample record. The person's preferred order
+  is kept only as words in the gate note.
+  For the IT PO: the configured bound on child work per run, and the off switch.
+  IT PO (2026-10-05): settled the run setup: parts are bound to their approved capability without
+  routing; each part gets the budget a stand-alone run of its question would get (so the first parts
+  cannot starve the later ones), with child work bounded by split.max_parts_per_run; a split root
+  completes from its parts with the split record as its output.
+product_truth:
+  - flow: leafcutter/decision-forming
+    node: split-run
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: leafcutter/decisions
+    entities:
+      - Decision
+      - Decomposition
+    source: real
+    asof: '2026-10-05'

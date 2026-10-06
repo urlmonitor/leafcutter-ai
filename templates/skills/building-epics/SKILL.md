@@ -931,13 +931,21 @@ if (-not $parentAlive -and $cpuPct -lt 2) {
 captures the original user correction that prompted this rule
 (EPIC-ArchitectureDocsEnforcement, 2026-05-14).
 
-**Exception — commit-phase preamble kill is unconditional.** The idle-only
-rule (§5.5) applies to the pre-flight sweep. The commit agent's Step 0
-preamble kill (`pkill -f "pytest" || true` / `taskkill ...`) is deliberately
-**unconditional** — it terminates all pytest workers regardless of CPU or
-parent status. This is safe because by the time commit fires, all test phases
-for the current ticket have completed and any remaining workers are stale.
-Workers in parallel tickets are isolated by worktree (separate working dirs).
+**Exception — commit-phase preamble kill is unconditional on idleness, but
+scoped to the current worktree.** The idle-only rule (§5.5) applies to the
+pre-flight sweep. The commit agent's Step 0 preamble kill is deliberately
+**not** idle-gated — it terminates pytest workers regardless of CPU or parent
+status, because by the time commit fires all test phases for the current ticket
+have completed and any remaining workers of *this worktree* are stale.
+
+It is **not** machine-wide. Worktrees isolate files, not processes: a bare
+`pkill -f pytest` or `taskkill ... *pytest*` matches every pytest process on the
+machine, including other sessions' and other worktrees' live test runs (observed
+2026-10-02). Step 0 therefore kills only processes whose cwd (POSIX
+`/proc/<pid>/cwd`) or command line (Windows CIM `CommandLine`) lies inside the
+current worktree root. Where that scoping is impossible, Step 0 skips the kill
+and relies on the commit agent's lock-failure retry. See
+`templates/agents/commit.md` Step 0.
 
 ### §5.6 Stage-all-in-scope before `git commit`
 

@@ -4,14 +4,14 @@
   "product": "Leafcutter",
   "name": "How a decision is formed, saved, stored and reused",
   "level": "journey",
-  "summary": "A request is enriched, formed into a human-approved decision, staged, published and later reused as precedent.",
+  "summary": "Interpret entity meanings, form a decision with later evidence, then stage, publish and reuse it.",
   "kind": "data",
   "source": "real",
   "realization": "built",
   "status": "active",
   "readiness": "draft",
   "superseded_by": null,
-  "version": 2,
+  "version": 6,
   "shape_version": 2,
   "tags": [
     "decision-kernel",
@@ -27,12 +27,23 @@
   "steps": [
     {
       "id": "form",
+      "implements": [
+        "DK-300d-1",
+        "DK-300d-3",
+        "DK-300d-3-i",
+        "DK-600b-3"
+      ],
       "label": "Form the decision",
-      "human": "You ask a question; the kernel enriches its context before intent, then researches the decision, assesses options and asks you to approve and choose.",
+      "human": "You ask a question; compact entity meanings help classify intent, then the kernel retrieves decision evidence, assesses options and asks you to approve and choose.\n\nExamples use the existing decision-record scenario in docs/decisions/dec-ef8ddcb79d668a67.yaml. They illustrate the current contracts; they are not a replay or receipt of every earlier execution phase.\n\nContract fields and examples (generated)\nConsumes:\n  task_input/goal: string (required)\n  task_input/caller: object (required)\n  task_input/scope: object (required)\n  task_input/context: object (optional)\n  task_input/requested_output_schema: null|string (optional; default null)\n  Runtime contract: [task_input](kernel/contracts/task.py)\nProduces:\n  decision/question: string (required)\n  decision/status: string (required)\n  decision/selected_option_id: null|string (optional; default null)\n  decision/approval_status: string (optional; default \"not_required\")\n  decision/approved_by: null|string (optional; default null)\n  decision/approved_at: null|string (optional; default null)\n  Runtime contract: [decision](kernel/contracts/decision.py)\n\nDecision-record scenario: task_input — task_input; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"goal\": \"Decide how Leafcutter should file decision records as JSON or YAML files under docs/ so later kernel runs can find and reuse them as precedent: which fields a record needs, which classification filters it carries (component, file type or language, repository-wide, roadmap phase), the folder layout and file naming, and how human approval and later corrections are recorded.\",\n  \"caller\": {\n    \"kind\": \"human\",\n    \"id\": \"user\"\n  },\n  \"scope\": {\n    \"workspace_id\": \"leafcutter-ai\",\n    \"repository_root\": \"C:\\\\Users\\\\Hendrik\\\\Code\\\\leafcutter\\\\worktrees\\\\typed-research-binding-v01\"\n  },\n  \"context\": {\n    \"conversation\": []\n  }\n}\n\nDecision-record scenario: decision — decision; reconstructed; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"question\": \"Decide how Leafcutter should file decision records as JSON or YAML files under docs/ so later kernel runs can find and reuse them as precedent: which fields a record needs, which classification filters it carries (component, file type or language, repository-wide, roadmap phase), the folder layout and file naming, and how human approval and later corrections are recorded.\",\n  \"option_ids\": [\n    \"opt.yaml_per_decision_component_folders\",\n    \"opt.reuse_ac_store_conventions\",\n    \"opt.yaml_files_plus_generated_index\",\n    \"opt.added.1\"\n  ],\n  \"selected_option_id\": \"opt.added.1\",\n  \"status\": \"resolved\",\n  \"approval_status\": \"approved\",\n  \"approved_by\": \"human:user\",\n  \"approved_at\": \"2026-10-01T14:48:31Z\"\n}",
       "order": 1,
       "agent": "kernel",
       "produces": [
-        "resolved decision (approved_by: human)"
+        "decision/question: string (required)",
+        "decision/status: string (required)",
+        "decision/selected_option_id: null|string (optional; default null)",
+        "decision/approval_status: string (optional; default \"not_required\")",
+        "decision/approved_by: null|string (optional; default null)",
+        "decision/approved_at: null|string (optional; default null)"
       ],
       "writes": [
         "Decision"
@@ -40,23 +51,180 @@
       "expands_to": [
         "leafcutter/decision-forming"
       ],
-      "impl_asof": "2026-10-02",
+      "impl_asof": "2026-10-03",
       "impl_status": "in_progress",
-      "implements": [
-        "DK-600b-3"
+      "io_contracts": {
+        "consumes": [
+          {
+            "contract": "task_input",
+            "fields": [
+              {
+                "path": "/goal",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/caller",
+                "types": [
+                  "object"
+                ],
+                "required": true
+              },
+              {
+                "path": "/scope",
+                "types": [
+                  "object"
+                ],
+                "required": true
+              },
+              {
+                "path": "/context",
+                "types": [
+                  "object"
+                ],
+                "required": false
+              },
+              {
+                "path": "/requested_output_schema",
+                "types": [
+                  "null",
+                  "string"
+                ],
+                "required": false,
+                "default": null
+              }
+            ]
+          }
+        ],
+        "produces": [
+          {
+            "contract": "decision",
+            "fields": [
+              {
+                "path": "/question",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/status",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/selected_option_id",
+                "types": [
+                  "null",
+                  "string"
+                ],
+                "required": false,
+                "default": null
+              },
+              {
+                "path": "/approval_status",
+                "types": [
+                  "string"
+                ],
+                "required": false,
+                "default": "not_required"
+              },
+              {
+                "path": "/approved_by",
+                "types": [
+                  "null",
+                  "string"
+                ],
+                "required": false,
+                "default": null
+              },
+              {
+                "path": "/approved_at",
+                "types": [
+                  "null",
+                  "string"
+                ],
+                "required": false,
+                "default": null
+              }
+            ]
+          }
+        ],
+        "examples": [
+          {
+            "contract": "task_input",
+            "mode": "projection",
+            "origin": "illustrative",
+            "label": "Decision-record scenario: task_input",
+            "value": {
+              "goal": "Decide how Leafcutter should file decision records as JSON or YAML files under docs/ so later kernel runs can find and reuse them as precedent: which fields a record needs, which classification filters it carries (component, file type or language, repository-wide, roadmap phase), the folder layout and file naming, and how human approval and later corrections are recorded.",
+              "caller": {
+                "kind": "human",
+                "id": "user"
+              },
+              "scope": {
+                "workspace_id": "leafcutter-ai",
+                "repository_root": "C:\\Users\\Hendrik\\Code\\leafcutter\\worktrees\\typed-research-binding-v01"
+              },
+              "context": {
+                "conversation": []
+              }
+            }
+          },
+          {
+            "contract": "decision",
+            "mode": "projection",
+            "origin": "reconstructed",
+            "label": "Decision-record scenario: decision",
+            "value": {
+              "question": "Decide how Leafcutter should file decision records as JSON or YAML files under docs/ so later kernel runs can find and reuse them as precedent: which fields a record needs, which classification filters it carries (component, file type or language, repository-wide, roadmap phase), the folder layout and file naming, and how human approval and later corrections are recorded.",
+              "option_ids": [
+                "opt.yaml_per_decision_component_folders",
+                "opt.reuse_ac_store_conventions",
+                "opt.yaml_files_plus_generated_index",
+                "opt.added.1"
+              ],
+              "selected_option_id": "opt.added.1",
+              "status": "resolved",
+              "approval_status": "approved",
+              "approved_by": "human:user",
+              "approved_at": "2026-10-01T14:48:31Z"
+            }
+          }
+        ]
+      },
+      "consumes": [
+        "task_input/goal: string (required)",
+        "task_input/caller: object (required)",
+        "task_input/scope: object (required)",
+        "task_input/context: object (optional)",
+        "task_input/requested_output_schema: null|string (optional; default null)"
       ]
     },
     {
       "id": "stage",
       "label": "Stage the record",
-      "human": "When the run ends, the approved decision is saved as a record in the run folder (never in the repository), and you are told how to publish it.",
+      "human": "When the run ends, the approved decision is saved as a record in the run folder (never in the repository), and you are told how to publish it.\n\nThe internal Decision is converted to a DecisionRecord. Its serialized storage is YAML; shown JSON is a projection of the parsed model, not a new API envelope. Staging can return None on refusal or storage failure; that does not fail an otherwise resolved decision.\n\nContract fields and examples (generated)\nConsumes:\n  decision/question: string (required)\n  decision/status: string (required)\n  decision/selected_option_id: null|string (optional; default null)\n  decision/approval_status: string (optional; default \"not_required\")\n  decision/approved_by: null|string (optional; default null)\n  decision/approved_at: null|string (optional; default null)\n  Runtime contract: [decision](kernel/contracts/decision.py)\nProduces:\n  decision_record/id: string (required)\n  decision_record/selected_option_id: string (required)\n  decision_record/approval/approved_by: string (required)\n  decision_record/approval/approved_at: string (required)\n  decision_record/provenance/run_id: string (required)\n  Runtime contract: [decision_record](kernel/memory/models.py)\n\nDecision-record scenario: decision — decision; reconstructed; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"question\": \"Decide how Leafcutter should file decision records as JSON or YAML files under docs/ so later kernel runs can find and reuse them as precedent: which fields a record needs, which classification filters it carries (component, file type or language, repository-wide, roadmap phase), the folder layout and file naming, and how human approval and later corrections are recorded.\",\n  \"option_ids\": [\n    \"opt.yaml_per_decision_component_folders\",\n    \"opt.reuse_ac_store_conventions\",\n    \"opt.yaml_files_plus_generated_index\",\n    \"opt.added.1\"\n  ],\n  \"selected_option_id\": \"opt.added.1\",\n  \"status\": \"resolved\",\n  \"approval_status\": \"approved\",\n  \"approved_by\": \"human:user\",\n  \"approved_at\": \"2026-10-01T14:48:31Z\"\n}\n\nDecision-record scenario: decision_record — decision_record; reconstructed; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"id\": \"dec-ef8ddcb79d668a67\",\n  \"title\": \"Kernel-contract YAML per decision\",\n  \"decision_type\": \"design\",\n  \"selected_option_id\": \"opt.added.1\",\n  \"components\": [\n    \"decision_kernel\",\n    \"knowledge_management\"\n  ],\n  \"approval\": {\n    \"approval_status\": \"approved\",\n    \"approved_by\": \"human:user\",\n    \"approved_at\": \"2026-10-01T14:48:31Z\",\n    \"note\": \"approved_at is the decision's updated_at: the kernel Decision had no approved_at field when this decision was approved (added by #KernelDecisionStore).\"\n  },\n  \"provenance\": {\n    \"run_id\": \"run-2fbb4ef43b1345f6\",\n    \"created_at\": \"2026-10-01T14:48:31Z\"\n  }\n}",
       "order": 2,
       "agent": "kernel decision executor",
       "consumes": [
-        "resolved decision (approved_by: human)"
+        "decision/question: string (required)",
+        "decision/status: string (required)",
+        "decision/selected_option_id: null|string (optional; default null)",
+        "decision/approval_status: string (optional; default \"not_required\")",
+        "decision/approved_by: null|string (optional; default null)",
+        "decision/approved_at: null|string (optional; default null)"
       ],
       "produces": [
-        "staged record (<run_root>/runs/<run_id>/staged/decisions/<id>.yaml)"
+        "decision_record/id: string (required)",
+        "decision_record/selected_option_id: string (required)",
+        "decision_record/approval/approved_by: string (required)",
+        "decision_record/approval/approved_at: string (required)",
+        "decision_record/provenance/run_id: string (required)"
       ],
       "reads": [
         "Decision"
@@ -67,8 +235,156 @@
       "expands_to": [
         "leafcutter/decision-staging"
       ],
-      "impl_asof": "2026-10-02",
+      "impl_asof": "2026-10-06",
       "impl_status": "in_progress",
+      "io_contracts": {
+        "consumes": [
+          {
+            "contract": "decision",
+            "fields": [
+              {
+                "path": "/question",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/status",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/selected_option_id",
+                "types": [
+                  "null",
+                  "string"
+                ],
+                "required": false,
+                "default": null
+              },
+              {
+                "path": "/approval_status",
+                "types": [
+                  "string"
+                ],
+                "required": false,
+                "default": "not_required"
+              },
+              {
+                "path": "/approved_by",
+                "types": [
+                  "null",
+                  "string"
+                ],
+                "required": false,
+                "default": null
+              },
+              {
+                "path": "/approved_at",
+                "types": [
+                  "null",
+                  "string"
+                ],
+                "required": false,
+                "default": null
+              }
+            ]
+          }
+        ],
+        "produces": [
+          {
+            "contract": "decision_record",
+            "fields": [
+              {
+                "path": "/id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/selected_option_id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/approval/approved_by",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/approval/approved_at",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/provenance/run_id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              }
+            ]
+          }
+        ],
+        "examples": [
+          {
+            "contract": "decision",
+            "mode": "projection",
+            "origin": "reconstructed",
+            "label": "Decision-record scenario: decision",
+            "value": {
+              "question": "Decide how Leafcutter should file decision records as JSON or YAML files under docs/ so later kernel runs can find and reuse them as precedent: which fields a record needs, which classification filters it carries (component, file type or language, repository-wide, roadmap phase), the folder layout and file naming, and how human approval and later corrections are recorded.",
+              "option_ids": [
+                "opt.yaml_per_decision_component_folders",
+                "opt.reuse_ac_store_conventions",
+                "opt.yaml_files_plus_generated_index",
+                "opt.added.1"
+              ],
+              "selected_option_id": "opt.added.1",
+              "status": "resolved",
+              "approval_status": "approved",
+              "approved_by": "human:user",
+              "approved_at": "2026-10-01T14:48:31Z"
+            }
+          },
+          {
+            "contract": "decision_record",
+            "mode": "projection",
+            "origin": "reconstructed",
+            "label": "Decision-record scenario: decision_record",
+            "value": {
+              "id": "dec-ef8ddcb79d668a67",
+              "title": "Kernel-contract YAML per decision",
+              "decision_type": "design",
+              "selected_option_id": "opt.added.1",
+              "components": [
+                "decision_kernel",
+                "knowledge_management"
+              ],
+              "approval": {
+                "approval_status": "approved",
+                "approved_by": "human:user",
+                "approved_at": "2026-10-01T14:48:31Z",
+                "note": "approved_at is the decision's updated_at: the kernel Decision had no approved_at field when this decision was approved (added by #KernelDecisionStore)."
+              },
+              "provenance": {
+                "run_id": "run-2fbb4ef43b1345f6",
+                "created_at": "2026-10-01T14:48:31Z"
+              }
+            }
+          }
+        ]
+      },
       "implements": [
         "DK-600c-3"
       ]
@@ -76,15 +392,23 @@
     {
       "id": "publish",
       "label": "Publish the record",
-      "human": "You run the publish command; the record is validated, written to docs/decisions/, the index is regenerated, and the change goes through a normal git review.",
+      "human": "You run the publish command; the record is validated, written to docs/decisions/, the index is regenerated, and the change goes through a normal git review.\n\nThe shown index value is one IndexEntry inside index.json records[], not the whole index file. Git review is a separate human action.\n\nContract fields and examples (generated)\nConsumes:\n  decision_record/id: string (required)\n  decision_record/selected_option_id: string (required)\n  decision_record/approval/approved_by: string (required)\n  decision_record/approval/approved_at: string (required)\n  decision_record/provenance/run_id: string (required)\n  Runtime contract: [decision_record](kernel/memory/models.py)\nProduces:\n  decision_index_entry/id: string (required)\n  decision_index_entry/file: string (required)\n  decision_index_entry/sha256: string (required)\n  decision_index_entry/selected_option_id: string (required)\n  decision_index_entry/approved_by: string (required)\n  decision_index_entry/approved_at: string (required)\n  Runtime contract: [decision_index_entry](kernel/memory/index.py)\n\nDecision-record scenario: decision_record — decision_record; reconstructed; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"id\": \"dec-ef8ddcb79d668a67\",\n  \"title\": \"Kernel-contract YAML per decision\",\n  \"decision_type\": \"design\",\n  \"selected_option_id\": \"opt.added.1\",\n  \"components\": [\n    \"decision_kernel\",\n    \"knowledge_management\"\n  ],\n  \"approval\": {\n    \"approval_status\": \"approved\",\n    \"approved_by\": \"human:user\",\n    \"approved_at\": \"2026-10-01T14:48:31Z\",\n    \"note\": \"approved_at is the decision's updated_at: the kernel Decision had no approved_at field when this decision was approved (added by #KernelDecisionStore).\"\n  },\n  \"provenance\": {\n    \"run_id\": \"run-2fbb4ef43b1345f6\",\n    \"created_at\": \"2026-10-01T14:48:31Z\"\n  }\n}\n\nDecision-record scenario: decision_index_entry — decision_index_entry; reconstructed; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"id\": \"dec-ef8ddcb79d668a67\",\n  \"file\": \"dec-ef8ddcb79d668a67.yaml\",\n  \"sha256\": \"d4426542cc89f863b3795b69e1caf182607980c8b642190318fc7c608c3ea819\",\n  \"selected_option_id\": \"opt.added.1\",\n  \"approved_by\": \"human:user\",\n  \"approved_at\": \"2026-10-01T14:48:31Z\"\n}",
       "order": 3,
       "agent": "python -m kernel decisions publish",
       "consumes": [
-        "staged record (<run_root>/runs/<run_id>/staged/decisions/<id>.yaml)"
+        "decision_record/id: string (required)",
+        "decision_record/selected_option_id: string (required)",
+        "decision_record/approval/approved_by: string (required)",
+        "decision_record/approval/approved_at: string (required)",
+        "decision_record/provenance/run_id: string (required)"
       ],
       "produces": [
-        "published record (docs/decisions/<id>.yaml)",
-        "docs/decisions/index.json"
+        "decision_index_entry/id: string (required)",
+        "decision_index_entry/file: string (required)",
+        "decision_index_entry/sha256: string (required)",
+        "decision_index_entry/selected_option_id: string (required)",
+        "decision_index_entry/approved_by: string (required)",
+        "decision_index_entry/approved_at: string (required)"
       ],
       "reads": [
         "Decision"
@@ -95,8 +419,143 @@
       "expands_to": [
         "leafcutter/decision-publishing"
       ],
-      "impl_asof": "2026-10-02",
+      "impl_asof": "2026-10-06",
       "impl_status": "in_progress",
+      "io_contracts": {
+        "consumes": [
+          {
+            "contract": "decision_record",
+            "fields": [
+              {
+                "path": "/id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/selected_option_id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/approval/approved_by",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/approval/approved_at",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/provenance/run_id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              }
+            ]
+          }
+        ],
+        "produces": [
+          {
+            "contract": "decision_index_entry",
+            "fields": [
+              {
+                "path": "/id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/file",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/sha256",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/selected_option_id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/approved_by",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/approved_at",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              }
+            ]
+          }
+        ],
+        "examples": [
+          {
+            "contract": "decision_record",
+            "mode": "projection",
+            "origin": "reconstructed",
+            "label": "Decision-record scenario: decision_record",
+            "value": {
+              "id": "dec-ef8ddcb79d668a67",
+              "title": "Kernel-contract YAML per decision",
+              "decision_type": "design",
+              "selected_option_id": "opt.added.1",
+              "components": [
+                "decision_kernel",
+                "knowledge_management"
+              ],
+              "approval": {
+                "approval_status": "approved",
+                "approved_by": "human:user",
+                "approved_at": "2026-10-01T14:48:31Z",
+                "note": "approved_at is the decision's updated_at: the kernel Decision had no approved_at field when this decision was approved (added by #KernelDecisionStore)."
+              },
+              "provenance": {
+                "run_id": "run-2fbb4ef43b1345f6",
+                "created_at": "2026-10-01T14:48:31Z"
+              }
+            }
+          },
+          {
+            "contract": "decision_index_entry",
+            "mode": "projection",
+            "origin": "reconstructed",
+            "label": "Decision-record scenario: decision_index_entry",
+            "value": {
+              "id": "dec-ef8ddcb79d668a67",
+              "file": "dec-ef8ddcb79d668a67.yaml",
+              "sha256": "d4426542cc89f863b3795b69e1caf182607980c8b642190318fc7c608c3ea819",
+              "selected_option_id": "opt.added.1",
+              "approved_by": "human:user",
+              "approved_at": "2026-10-01T14:48:31Z"
+            }
+          }
+        ]
+      },
       "implements": [
         "DK-600d-3"
       ]
@@ -104,16 +563,28 @@
     {
       "id": "reuse",
       "label": "Reuse it as precedent",
-      "human": "A later decision run finds the record through the index; Jev judges whether it applies, and a strong match asks you to reuse it or decide anew.",
+      "human": "A later decision run finds the record through the index; Jev judges whether it applies, and a strong match asks you to reuse it or decide anew.\n\nDecisionQuery is passed to the memory port; matching DecisionHit objects carry parsed DecisionRecord values plus score/path. Only a fresh human answer can approve the new decision; the earlier approval is evidence.\n\nContract fields and examples (generated)\nConsumes:\n  decision_query/text: string (required)\n  decision_query/components: array (optional; default [])\n  decision_query/roadmap_phase: array (optional; default [])\n  decision_query/limit: integer (optional; default 3)\n  decision_query/min_score: number (optional; default 0.0)\n  Runtime contract: [decision_query](kernel/memory/port.py)\n  decision_record/id: string (required)\n  decision_record/selected_option_id: string (required)\n  decision_record/approval/approved_by: string (required)\n  decision_record/approval/approved_at: string (required)\n  decision_record/provenance/run_id: string (required)\n  Runtime contract: [decision_record](kernel/memory/models.py)\nProduces:\n  decision/question: string (required)\n  decision/status: string (required)\n  decision/selected_option_id: null|string (optional; default null)\n  decision/approval_status: string (optional; default \"not_required\")\n  decision/approved_by: null|string (optional; default null)\n  decision/approved_at: null|string (optional; default null)\n  Runtime contract: [decision](kernel/contracts/decision.py)\n\nDecision-record scenario: decision_query — decision_query; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"text\": \"Decide how Leafcutter should file decision records as JSON or YAML files under docs/ so later kernel runs can find and reuse them as precedent: which fields a record needs, which classification filters it carries (component, file type or language, repository-wide, roadmap phase), the folder layout and file naming, and how human approval and later corrections are recorded.\",\n  \"components\": [\n    \"decision_kernel\"\n  ],\n  \"limit\": 3,\n  \"min_score\": 0.0\n}\n\nDecision-record scenario: decision_record — decision_record; reconstructed; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"id\": \"dec-ef8ddcb79d668a67\",\n  \"title\": \"Kernel-contract YAML per decision\",\n  \"decision_type\": \"design\",\n  \"selected_option_id\": \"opt.added.1\",\n  \"components\": [\n    \"decision_kernel\",\n    \"knowledge_management\"\n  ],\n  \"approval\": {\n    \"approval_status\": \"approved\",\n    \"approved_by\": \"human:user\",\n    \"approved_at\": \"2026-10-01T14:48:31Z\",\n    \"note\": \"approved_at is the decision's updated_at: the kernel Decision had no approved_at field when this decision was approved (added by #KernelDecisionStore).\"\n  },\n  \"provenance\": {\n    \"run_id\": \"run-2fbb4ef43b1345f6\",\n    \"created_at\": \"2026-10-01T14:48:31Z\"\n  }\n}\n\nIllustrative fresh later human approval — decision; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"question\": \"Decide how Leafcutter should file decision records as JSON or YAML files under docs/ so later kernel runs can find and reuse them as precedent: which fields a record needs, which classification filters it carries (component, file type or language, repository-wide, roadmap phase), the folder layout and file naming, and how human approval and later corrections are recorded.\",\n  \"option_ids\": [\n    \"opt.added.1\"\n  ],\n  \"selected_option_id\": \"opt.added.1\",\n  \"status\": \"resolved\",\n  \"approval_status\": \"approved\",\n  \"approved_by\": \"human:user\",\n  \"approved_at\": \"2026-10-03T00:00:00Z\",\n  \"precedent_ids\": [\n    \"dec-ef8ddcb79d668a67\"\n  ],\n  \"criterion_ids\": []\n}",
       "order": 4,
       "agent": "kernel precedent step",
       "consumes": [
-        "published record (docs/decisions/<id>.yaml)",
-        "docs/decisions/index.json"
+        "decision_query/text: string (required)",
+        "decision_query/components: array (optional; default [])",
+        "decision_query/roadmap_phase: array (optional; default [])",
+        "decision_query/limit: integer (optional; default 3)",
+        "decision_query/min_score: number (optional; default 0.0)",
+        "decision_record/id: string (required)",
+        "decision_record/selected_option_id: string (required)",
+        "decision_record/approval/approved_by: string (required)",
+        "decision_record/approval/approved_at: string (required)",
+        "decision_record/provenance/run_id: string (required)"
       ],
       "produces": [
-        "prior_decisions evidence",
-        "reused decision (approved by the current human)"
+        "decision/question: string (required)",
+        "decision/status: string (required)",
+        "decision/selected_option_id: null|string (optional; default null)",
+        "decision/approval_status: string (optional; default \"not_required\")",
+        "decision/approved_by: null|string (optional; default null)",
+        "decision/approved_at: null|string (optional; default null)"
       ],
       "reads": [
         "Decision"
@@ -124,8 +595,215 @@
       "expands_to": [
         "leafcutter/decision-retrieval"
       ],
-      "impl_asof": "2026-10-02",
+      "impl_asof": "2026-10-06",
       "impl_status": "in_progress",
+      "io_contracts": {
+        "consumes": [
+          {
+            "contract": "decision_query",
+            "fields": [
+              {
+                "path": "/text",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/components",
+                "types": [
+                  "array"
+                ],
+                "required": false,
+                "default": []
+              },
+              {
+                "path": "/roadmap_phase",
+                "types": [
+                  "array"
+                ],
+                "required": false,
+                "default": []
+              },
+              {
+                "path": "/limit",
+                "types": [
+                  "integer"
+                ],
+                "required": false,
+                "default": 3
+              },
+              {
+                "path": "/min_score",
+                "types": [
+                  "number"
+                ],
+                "required": false,
+                "default": 0.0
+              }
+            ]
+          },
+          {
+            "contract": "decision_record",
+            "fields": [
+              {
+                "path": "/id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/selected_option_id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/approval/approved_by",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/approval/approved_at",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/provenance/run_id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              }
+            ]
+          }
+        ],
+        "produces": [
+          {
+            "contract": "decision",
+            "fields": [
+              {
+                "path": "/question",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/status",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/selected_option_id",
+                "types": [
+                  "null",
+                  "string"
+                ],
+                "required": false,
+                "default": null
+              },
+              {
+                "path": "/approval_status",
+                "types": [
+                  "string"
+                ],
+                "required": false,
+                "default": "not_required"
+              },
+              {
+                "path": "/approved_by",
+                "types": [
+                  "null",
+                  "string"
+                ],
+                "required": false,
+                "default": null
+              },
+              {
+                "path": "/approved_at",
+                "types": [
+                  "null",
+                  "string"
+                ],
+                "required": false,
+                "default": null
+              }
+            ]
+          }
+        ],
+        "examples": [
+          {
+            "contract": "decision_query",
+            "mode": "projection",
+            "origin": "illustrative",
+            "label": "Decision-record scenario: decision_query",
+            "value": {
+              "text": "Decide how Leafcutter should file decision records as JSON or YAML files under docs/ so later kernel runs can find and reuse them as precedent: which fields a record needs, which classification filters it carries (component, file type or language, repository-wide, roadmap phase), the folder layout and file naming, and how human approval and later corrections are recorded.",
+              "components": [
+                "decision_kernel"
+              ],
+              "limit": 3,
+              "min_score": 0.0
+            }
+          },
+          {
+            "contract": "decision_record",
+            "mode": "projection",
+            "origin": "reconstructed",
+            "label": "Decision-record scenario: decision_record",
+            "value": {
+              "id": "dec-ef8ddcb79d668a67",
+              "title": "Kernel-contract YAML per decision",
+              "decision_type": "design",
+              "selected_option_id": "opt.added.1",
+              "components": [
+                "decision_kernel",
+                "knowledge_management"
+              ],
+              "approval": {
+                "approval_status": "approved",
+                "approved_by": "human:user",
+                "approved_at": "2026-10-01T14:48:31Z",
+                "note": "approved_at is the decision's updated_at: the kernel Decision had no approved_at field when this decision was approved (added by #KernelDecisionStore)."
+              },
+              "provenance": {
+                "run_id": "run-2fbb4ef43b1345f6",
+                "created_at": "2026-10-01T14:48:31Z"
+              }
+            }
+          },
+          {
+            "contract": "decision",
+            "mode": "projection",
+            "origin": "illustrative",
+            "label": "Illustrative fresh later human approval",
+            "value": {
+              "question": "Decide how Leafcutter should file decision records as JSON or YAML files under docs/ so later kernel runs can find and reuse them as precedent: which fields a record needs, which classification filters it carries (component, file type or language, repository-wide, roadmap phase), the folder layout and file naming, and how human approval and later corrections are recorded.",
+              "option_ids": [
+                "opt.added.1"
+              ],
+              "selected_option_id": "opt.added.1",
+              "status": "resolved",
+              "approval_status": "approved",
+              "approved_by": "human:user",
+              "approved_at": "2026-10-03T00:00:00Z",
+              "precedent_ids": [
+                "dec-ef8ddcb79d668a67"
+              ],
+              "criterion_ids": []
+            }
+          }
+        ]
+      },
       "implements": [
         "DK-600e-1",
         "DK-600e-3"
@@ -137,7 +815,7 @@
       "for": "form",
       "given": "a question asked through Claude Code",
       "when": "the kernel runs it as a decision",
-      "then": "bounded context enrichment precedes intent, and a decision resolves only after a human approves criteria and makes the ranked choice, carrying approved_by: human:<id> and approved_at"
+      "then": "the flow recognizes compact entity meanings before intent, retrieves task evidence afterward, and resolves only after a human approves criteria and makes the ranked choice, carrying approved_by: human:<id> and approved_at"
     },
     {
       "for": "stage",
@@ -170,6 +848,30 @@
       "by": "Codex (user-requested context enrichment)",
       "date": "2026-10-02",
       "note": "Extended the canonical flow with the implemented initial context pass before intent. DK-100 through DK-104 link implementation and evaluation. The isolated report records 10/10 cases; the separate paired live intent report records 5/5 expected enriched labels with ten Jev calls, without claiming general improvement. Readiness stays draft; no persona approval is claimed."
+    },
+    {
+      "action": "extended",
+      "by": "product-truth-expert",
+      "note": "Migrated every step and branch to checked source-backed handoff metadata. Examples are labeled illustrative/reconstructed; no new runtime, approval or AC status is claimed.",
+      "date": "2026-10-03"
+    },
+    {
+      "action": "extended",
+      "by": "GPT-6.1 (user-requested entity-context concept)",
+      "date": "2026-10-03",
+      "note": "Kept the existing parent journey and forming sub-flow coherent with the unimplemented entity-meaning design. Realization is spec and readiness remains draft; existing decision publication and precedent semantics are unchanged. Historical DK-200 evidence applies to running lexical enrichment, not this recognition proposal."
+    },
+    {
+      "action": "extended",
+      "by": "BA, IT PO, test writer, Python coders and independent evaluator (user-authorized agent pipeline)",
+      "date": "2026-10-03",
+      "note": "Implemented DK-300 entity meanings before intent, explicit index preparation, bounded verbatim goals, permission-filtered meaning projection and later canonical evidence hints. AC links carry implementation and independent test evidence; see reports/entity-context-verification.md. Historical DK-200 evidence remains historical. Derived status is generated from ACs; readiness remains draft and no human approval is implied."
+    },
+    {
+      "action": "extended",
+      "by": "product-truth expert",
+      "date": "2026-10-05",
+      "note": "Preserved merged DK-300 recognition-before-intent behavior and AC links while restoring reviewed storage, precedent and illustrative-example contract caveats. No approval, runtime behavior or historical receipt changed."
     }
   ],
   "impl_summary": {
@@ -177,6 +879,23 @@
     "in_progress": 4,
     "not_started": 0,
     "total": 4,
-    "asof": "2026-10-02"
+    "asof": "2026-10-06"
+  },
+  "contract_definitions": {
+    "decision": {
+      "model": "decision"
+    },
+    "decision_index_entry": {
+      "model": "decision_index_entry"
+    },
+    "decision_query": {
+      "model": "decision_query"
+    },
+    "decision_record": {
+      "model": "decision_record"
+    },
+    "task_input": {
+      "model": "task_input"
+    }
   }
 }

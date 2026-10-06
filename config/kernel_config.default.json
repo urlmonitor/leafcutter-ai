@@ -1,5 +1,21 @@
 {
   "$schema": "./kernel_config.schema.json",
+  "knowledge": {
+    "backend": "none",
+    "repository_id": "leafcutter",
+    "repository_root": null,
+    "query_catalog_root": null,
+    "neo4j_uri_env": "LEAFCUTTER_NEO4J_URI",
+    "neo4j_username_env": "LEAFCUTTER_NEO4J_USERNAME",
+    "neo4j_password_env": "LEAFCUTTER_NEO4J_PASSWORD",
+    "database": null,
+    "embeddings_enabled": false,
+    "embedding_endpoint_env": "LEAFCUTTER_EMBEDDING_ENDPOINT",
+    "embedding_token_env": "LEAFCUTTER_EMBEDDING_TOKEN",
+    "embedding_model": null,
+    "embedding_dimensions": null,
+    "query_timeout": 3.0
+  },
   "paths": {
     "run_root": ".leafcutter/kernel",
     "registry": "config/capability_registry.json"
@@ -39,6 +55,20 @@
     "max_context_chars": 4000,
     "max_excerpt_chars": 1600,
     "max_seconds": 3.0
+  },
+  "entity_context": {
+    "enabled": true,
+    "index_path": ".leafcutter/kernel/entity-index.json",
+    "source_ids": [],
+    "max_caller_chars": 12000,
+    "max_lookups": 64,
+    "max_entities": 16,
+    "max_ambiguity_candidates": 3,
+    "max_meaning_chars": 300,
+    "max_serialized_chars": 8000,
+    "max_unknowns": 8,
+    "max_unknown_chars": 128,
+    "max_seconds": 2.0
   },
   "decision": {
     "sufficiency_threshold": 0.8,
@@ -112,6 +142,10 @@
      "roots": ["CLAUDE.md", "docs/conventions", "docs/vision.md"]},
     {"id": "repo.decisions", "kind": "repo_text", "categories": ["prior_decisions"],
      "roots": ["docs/architecture/adrs"]},
+    {"id": "repo.native_decisions", "kind": "repo_text", "categories": ["prior_decisions"],
+     "roots": ["docs/decisions"], "automatic_research": false},
+    {"id": "repo.flows", "kind": "repo_text", "categories": ["task_context", "existing_patterns"],
+     "roots": ["docs/product-truth"], "automatic_research": false},
     {"id": "knowledge.decisions", "kind": "knowledge_map", "categories": ["prior_decisions"],
      "surfaces": ["adrs"]},
     {"id": "repo.patterns", "kind": "repo_text", "categories": ["existing_patterns"],

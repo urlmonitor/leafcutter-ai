@@ -25,6 +25,15 @@ mypy>=1.8
 # execution.
 pytest-xdist>=3.5
 
+# Partitions the collected test set across parallel CI shards
+# (`--splits N --group K`), which is how .github/workflows/ci.yml re-enables
+# the full suite that was disabled on 2026-10-02 for runtime. CI-only in
+# practice: the plugin is inert unless --splits is passed, so a local run is
+# unaffected whether or not it is installed. Balance comes from the committed
+# .test_durations file -- see the test-shard job's comment for why count-based
+# splitting is not an acceptable fallback for this suite.
+pytest-split>=0.9
+
 # Runs the AC guardrail hooks in the ac-store-valid CI job. The job invokes the
 # same .pre-commit-config.yaml the local guardrails use so the two rule sets
 # cannot drift (ACS-200i); those hooks are language: system, so pre-commit
@@ -47,3 +56,6 @@ langchain==1.4.3
 langchain-typesafe==0.0.1a3
 langfuse==4.16.0
 pydantic==2.13.5
+
+# Real Neo4j acceptance checks are part of the knowledge proof-of-done gate.
+neo4j==6.0.3

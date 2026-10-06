@@ -1,0 +1,109 @@
+id: DK-400f-2
+title: "The run report gives one line per part, starting with the part id and naming its outcome"
+component: decision-kernel
+components:
+  - decision_kernel
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_kernel_1_founding
+criteria: |
+  Given the split-bounds split whose parts have all settled or been left out,
+  When the run ends,
+  Then the report's split section has exactly three lines, one per part, in this form:
+    "p1 decided: Two to five sub-questions per split (<p1's record id>, staged)",
+    "p2 decided: At most five child decisions per run (<p2's record id>, staged; p1's record cited
+    as precedent)",
+    "p3 not run: left out at the split",
+  And while the split gate was open, the report had no split lines.
+depends_on:
+  - DK-400f
+  - DK-400e-1
+  - DK-400e-2
+doc_links:
+  - path: docs/product-truth/flows/leafcutter/decision-forming.flow.json
+    relationship: implements
+    status: exists
+    relevance: "Flow v5 node(s) split-report, with their acceptance scenarios."
+  - path: docs/product-truth/mock-data/leafcutter/decisions.mock.json
+    relationship: specified-by
+    status: exists
+    relevance: "report_lines: one line per part starting with the part id; [] while the gate is open; record dcp-split-bounds-mid-run."
+  - path: docs/how-to/run-the-decision-kernel.md
+    relationship: context
+    status: exists
+    relevance: "Run statuses, gap records, resume answers and the run report as they are today."
+  - path: docs/analysis/2026-09-30-decision-kernel-design-5-client-observability.md
+    relationship: describes
+    status: exists
+    relevance: RunService resume validation, the RunEnvelope, report.md, tracing and redaction.
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to:
+  agent: documentation-expert
+  contract: The exact report line forms listed in this AC's it_requirements, which the how-to of DK-400f-4 explains.
+expects_from:
+  ac_id: DK-400e-2
+  contract: Decided parts' record ids, chosen option titles and precedents_considered actions (DK-400e-2 delivers_to
+    shape).
+it_requirements:
+  - 'report.md gains a split section built from report_lines (template text, no LLM): one line per part in part
+    order, each starting with the part id: ''<id> decided: <chosen option title> (<dec id>, staged)'', with '';
+    <earlier part id>''s record cited as precedent'' when an earlier part''s record was used as evidence or reused;
+    ''<id> answered: <findings>''; ''<id> not settled: ...'' (DK-400f-2-i); ''<id> not run: waits for <id>, which
+    was not settled (<stop reason>)''; ''<id> not run: left out at the split''.'
+  - report_lines is empty while the gate is open and for every run without a split; report.json carries the same
+    lines.
+  - The lines are stored on the split record (report_lines), so the envelope, report.md and the progress view never
+    disagree.
+  - 'Handle failures per the project error handling policy: catch specific exceptions, log at WARNING with the run,
+    work item and split ids involved, and never swallow a failure silently; a rejected submission leaves run state
+    unchanged.'
+change_target: code
+risk_surface: contract_boundary
+test_required: true
+test_spec:
+  - name: test_report_has_one_line_per_part_in_record_form
+    target_dir: tests/kernel/split/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: 'For the split-bounds split report.md has exactly three split lines: p1 decided with its record
+      id, p2 decided with its record id and p1''s record cited as precedent, and p3 not run, left out.'
+  - name: test_report_has_no_split_lines_while_gate_open
+    target_dir: tests/kernel/split/
+    framework: pytest
+    type: integration
+    angle: boundary
+    description: The envelope and report written while the gate is open have empty report_lines.
+test_rationale: The report is a written artifact, so the tests read report.md back from the run's artifacts.
+origin_agent: business-analyst
+created: 2026-10-05
+amended_by:
+  - reason: it-po-technical-enrichment
+    date: '2026-10-05'
+    by: it-po
+    summary: 'Technical enrichment: assigned_agent confirmed, estimated_complexity, change_target, risk_surface,
+      it_requirements, delivers_to/expects_from contracts, doc_links and the test contract set; readiness draft
+      -> reviewed. BA criteria and product_truth unchanged.'
+superseded_by: null
+covered_by:
+  - DK-400f-2-i
+implemented_by: []
+notes: |
+  Flow step split-report. The line texts are those of the mock record.
+product_truth:
+  - flow: leafcutter/decision-forming
+    node: split-report
+    node_kind: step
+    flow_kind: data
+    screen: decision-split-progress
+    mock_data: leafcutter/decisions
+    entities:
+      - Decision
+      - Decomposition
+    source: real
+    asof: '2026-10-05'
