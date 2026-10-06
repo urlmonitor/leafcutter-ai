@@ -1,0 +1,168 @@
+{
+  "review_version": 1,
+  "entity_kind": "ADR",
+  "neo4j_label": "ADR",
+  "reviewed_on": "2026-10-02",
+  "scope": "ADR field contract review only; no source-record, runtime, schema, or Aura writes",
+  "canonical_source": {
+    "surface": "adrs",
+    "declaration": "config/paths.json#/surfaces/adrs",
+    "path_pattern": "docs/architecture/adrs/ADR-NNN-<slug>.md",
+    "identity_rule": "scripts/knowledge_query.py::_extract_nodes_from_md_file uses non-empty frontmatter id if present, otherwise the complete filename stem. Do not replace canonical_id with the short ADR-NNN prefix.",
+    "revision_rule": "Read the source document at Entity.source.source_sha and Entity.source.path, with its recorded content_hash, not the current working-tree document when backfilling a retained generation.",
+    "frontmatter_locator": "YAML mapping enclosed by whole-line --- delimiters at the start of the file",
+    "body_locator": "Markdown after the closing frontmatter delimiter; documents without frontmatter still have body content",
+    "source_is_open_mapping": true,
+    "source_is_open_mapping_reason": "The frontmatter validator checks required fields and selected values; it does not reject additional field names. Preserve supplied extension fields without declaring them universally required."
+  },
+  "authorities": [
+    {
+      "path": "docs/how-to/documentation/write-adr.md",
+      "role": "ADR authoring source of truth: frontmatter rules, mandatory body sections, distinct ADR lifecycle, cross-links",
+      "anchors": ["3-write-the-frontmatter", "4-write-the-mandatory-section-order", "5-status-values"]
+    },
+    {
+      "path": "templates/docs/architecture/adrs/ADR-template.md",
+      "role": "Scaffold for ADR frontmatter and five mandatory body sections"
+    },
+    {
+      "path": "templates/docs/architecture/FRONTMATTER.md",
+      "role": "General architecture metadata reference; ADR-specific affects_diagrams rule"
+    },
+    {
+      "path": "templates/scripts/commit_guardian/commit_guardian.json",
+      "locator": "/doc_frontmatter/required_fields/docs~1architecture~1adrs~1**",
+      "role": "Mechanically enforced six-field required set and frontmatter status vocabulary"
+    },
+    {
+      "path": "templates/scripts/commit_guardian/frontmatter_validators.py",
+      "symbols": ["validate_required_fields", "validate_status_enum", "validate_components", "validate_paths"],
+      "role": "Null-required-field refusal, component IDs and path shape validation"
+    },
+    {
+      "path": "scripts/frontmatter_path_resolver.py",
+      "symbols": ["ACCEPTED_SHAPES", "resolve_frontmatter_path_entry"],
+      "role": "Path-bearing entries may be a string or a single-key label-to-path mapping"
+    },
+    {
+      "path": "config/doc_types.json",
+      "locator": "/doc_types/adr",
+      "role": "Native ADR document genre and author routing"
+    },
+    {
+      "path": "knowledge/projection/canonical_loader.py",
+      "symbols": ["_entity"],
+      "role": "Current projection drops all ADR frontmatter except producer title and description"
+    },
+    {
+      "path": "scripts/knowledge_query.py",
+      "symbols": ["_extract_nodes_from_md_file"],
+      "role": "Existing identity, title and description fallback rules to preserve"
+    }
+  ],
+  "required_fields_mechanically_enforced": ["title", "type", "status", "created", "last_updated", "components"],
+  "field_inventory": [
+    {"name": "id", "source": "frontmatter/id", "type": "string", "required": false, "observed_count": 0, "rule": "Existing producer supports it as an optional identity override; absence leaves filename-stem identity. Never invent a native id frontmatter field when absent.", "recommended_property": "native pointer /id on collision, existing id remains canonical identity"},
+    {"name": "title", "source": "frontmatter/title", "type": "string", "required": true, "observed_count": 54, "rule": "Authoring guide expects ADR-NNN: prefix matching filename. Keep exact supplied value; preserve legacy producer fallback separately when source title is absent.", "recommended_property": "title"},
+    {"name": "description", "source": "frontmatter/description", "type": "string", "required": "ADR authoring guide requires it; generic mechanical validator and scaffold do not", "observed_count": 52, "rule": "One or two sentences stating decision and reason. Entity.summary is currently a producer-selected description OR first body line; do not mistake fallback summary for present source description.", "recommended_property": "description"},
+    {"name": "type", "source": "frontmatter/type", "type": "string", "required": true, "expected_value": "adr", "observed_count": 55, "rule": "Document type is separate from Entity.kind. Preserve legacy source type tutorial without rewriting it to adr; graph kind remains ADR because the source is on the ADR surface.", "recommended_property": "type"},
+    {"name": "status", "source": "frontmatter/status", "type": "string", "required": true, "allowed_values": ["active", "draft", "deprecated", "migrating"], "observed_count": 55, "rule": "Document lifecycle only; never substitute the body decision lifecycle.", "recommended_property": "status"},
+    {"name": "created", "source": "frontmatter/created", "type": "ISO date string or YAML date scalar", "required": true, "observed_count": 55, "rule": "YYYY-MM-DD; immutable first-authored date. Normalize YAML date objects with isoformat for JSON/Neo4j compatibility, keeping value and date-type provenance rather than datetime repr.", "recommended_property": "created"},
+    {"name": "last_updated", "source": "frontmatter/last_updated", "type": "ISO date string or YAML date scalar", "required": true, "observed_count": 55, "rule": "YYYY-MM-DD; last substantive source edit. Not the graph ingestion timestamp.", "recommended_property": "last_updated"},
+    {"name": "components", "source": "frontmatter/components", "type": "array<string>", "required": true, "observed_count": 54, "rule": "Registered IDs or accepted registry aliases. Preserve original order/duplicates in native source representation; existing display components is a sorted deduplicated graph-membership convenience value.", "recommended_property": "components when it faithfully equals source; otherwise retain existing display components plus source pointer /components"},
+    {"name": "deciders", "source": "frontmatter/deciders", "type": "array<string>", "required": "included in ADR authoring guide example; no explicit universal required rule", "observed_count": 44, "rule": "Names or agents authoring/approving decision. No inferred person identities. Distinct from raw body Decider/Deciders table row.", "recommended_property": "deciders"},
+    {"name": "affects_diagrams", "source": "frontmatter/affects_diagrams", "type": "array<string>", "required": "architecture frontmatter reference calls it required with [] for none; generic mechanical validator does not require it and ADR authoring guide omits it", "observed_count": 1, "rule": "Paths of governed diagrams, with diagram related_adrs backlinks. Preserve [] distinctly from absent; do not fabricate [] for 55 absent records.", "recommended_property": "affects_diagrams"},
+    {"name": "related_docs", "source": "frontmatter/related_docs", "type": "array<string | single-key mapping<string,string>>", "required": "ADR guide says list all applicable cross-references; general ADR reference labels optional", "observed_count": 50, "rule": "Preserve source declarations even when referenced surface is not projected or graph edge resolution declines the target. The shared resolver accepts labeled path entries.", "recommended_property": "related_docs for homogeneous string lists; indexed pointer leaves for any labeled/mixed entries"},
+    {"name": "related_code", "source": "frontmatter/related_code", "type": "array<string | single-key mapping<string,string>>", "required": "ADR guide says list governed modules; general ADR reference labels optional", "observed_count": 42, "rule": "Every directly governed module/script/config. Currently not among ADR edge_fields, so absence of Neo4j edges does not mean source references are absent.", "recommended_property": "related_code for homogeneous string lists; indexed pointer leaves for any labeled/mixed entries"},
+    {"name": "architecture_diagrams", "source": "frontmatter/architecture_diagrams", "type": "array<string | single-key mapping<string,string>>", "required": false, "observed_count": 0, "rule": "Generic validator-supported optional path field; not an alias for affects_diagrams. Preserve if supplied.", "recommended_property": "architecture_diagrams or indexed pointer leaves"},
+    {"name": "amended", "source": "frontmatter/amended", "type": "string in observed corpus", "required": false, "observed_count": 1, "example_source": "docs/architecture/adrs/ADR-013-portable-skill-script-deployment-boundary.md", "rule": "Observed extension; no global ADR schema requirement. Do not overwrite with body Amended prose.", "recommended_property": "amended"},
+    {"name": "requires_ac", "source": "frontmatter/requires_ac", "type": "string in observed corpus", "required": false, "observed_count": 1, "example_source": "docs/architecture/adrs/ADR-009-itpo-no-source-code-access.md", "rule": "Observed extension; preserve explicit AC reference TKT-300a without inventing a required graph relationship.", "recommended_property": "requires_ac"},
+    {"name": "tags", "source": "frontmatter/tags", "type": "array<string> in observed corpus", "required": false, "observed_count": 1, "example_source": "docs/architecture/adrs/ADR-030-dual-engine-workflow-support.md", "rule": "Observed extension, not required by ADR scaffold or validator.", "recommended_property": "tags"},
+    {"name": "other supplied frontmatter keys", "source": "frontmatter/*", "type": "source YAML value", "required": false, "rule": "The schema is open. Expose scalar/list values directly and structured values via faithful pointer leaves; do not discard them through a hard-coded allowlist."}
+  ],
+  "body_contract": {
+    "distinction": "ADR body is native document content, not frontmatter. Do not invent required frontmatter author, date, supersedes, context, decision, consequences or alternatives keys from the body template.",
+    "required_sections_by_authoring_guide": ["Status", "Context", "Decision", "Consequences", "Alternatives"],
+    "consequences_subsections": ["Positive", "Negative", "Operational"],
+    "accepted_heading_variants_observed": ["Decision status", "Alternatives Considered", "Negative / Trade-offs", "number-prefixed section headings"],
+    "optional_sections": ["References", "Bidirectional Links", "amendments and other source-authored sections"],
+    "required_status_table_rows_by_authoring_guide": ["Status", "Date", "Author", "Supersedes"],
+    "decision_lifecycle_expected_values": ["Proposed", "Accepted", "Superseded", "Deprecated"],
+    "legacy_lifecycle_values_observed": ["Active", "Accepted (date)", "Accepted, amended twice", "free prose under Decision status"],
+    "additional_status_rows_observed": ["Deciders", "Decider", "Requires AC", "Context ADRs", "Amended", "Amends", "Extends", "Renumbered", "Forced by", "Specification served", "Implementation"],
+    "representation_recommendation": {
+      "body": "Expose exact Markdown body as a content string if this change includes content visibility. This preserves nonstandard headings, amendments, and prose without guessing semantic structure.",
+      "status_metadata": "For the actual first two-column metadata table directly under a Status heading, retain an ordered array of {label, value} rows and explicit source locators. Preserve raw Markdown and unknown row labels. Do not accidentally consume later tables elsewhere in that section/document.",
+      "convenience_fields": ["adr_status", "adr_date", "adr_author", "adr_supersedes"],
+      "convenience_rule": "Only populate from unambiguous corresponding body metadata rows; keep raw strings. Never overwrite frontmatter status/created/deciders. For prose-only statuses preserve raw status section; do not infer acceptance dates or lifecycle from arbitrary prose.",
+      "structured_sections": "Optional ordered array of {heading, level, content, source_locator}; retain exact source spelling and nesting. A full raw body is preferable to lossy ad-hoc section parsing if structured body extraction is beyond scope."
+    }
+  },
+  "null_and_absence_semantics": {
+    "required_field": "Mechanical validator treats both omitted and explicit null as missing. Projection must expose observed source truth and report it, not silently insert a default or drop the whole legacy ADR.",
+    "optional_absent": "No native property; absence evidence comes from present-field inventory or source field state. Absence is not an empty string/list and is not false.",
+    "explicit_null": "Neo4j null deletes a property; retain an explicit native null-path list so null remains distinguishable from omitted.",
+    "empty_list_or_mapping": "Retain container type/path metadata so [] and {} remain visible and reconstructable even when there are no leaf values.",
+    "literal_none_tokens": "Body Supersedes values '-', em dash, 'None', or explanatory prose are source strings, not YAML/JSON null. Do not translate these to null automatically.",
+    "dates": "PyYAML produces datetime.date for unquoted dates and str for quoted dates; convert deliberately to a supported representation without converting missing dates to today's date."
+  },
+  "current_projection_gap": {
+    "already_in_entity": ["canonical_id", "kind=ADR", "title (possibly filename fallback)", "summary (description or first body line fallback)", "source repository/revision/path/hash", "properties.surface", "properties.missing", "properties.canonical", "properties.registry_identity"],
+    "already_in_graph_presentation": ["id", "name", "title", "repository_id", "source_path", "source_revision", "components derived from resolved direct membership edges"],
+    "omitted_even_from_payload": ["source id field presence", "source title field presence", "source description field presence/value independent of summary fallback", "type", "status", "created", "last_updated", "ordered original components declaration", "deciders", "affects_diagrams", "related_docs declarations", "related_code", "architecture_diagrams", "amended", "requires_ac", "tags", "all other supplied frontmatter", "body and body status metadata"],
+    "existing_payload_is_insufficient_for_backfill": true,
+    "relationships_do_not_replace_fields": "ADR declared edge_fields are only related_docs and components. Resolution can decline targets; even a resolved edge does not preserve all source list ordering, labels, empty/null states or unprojected references."
+  },
+  "representation_assessment": {
+    "native_scalar_fields": "Use existing source names for directly viewable/filterable strings, booleans and numbers.",
+    "native_scalar_lists": "Homogeneous primitive arrays remain ordinary array properties; retain source order and duplicates.",
+    "nested_fields": "Escaped JSON Pointer property keys are appropriate: a labeled path entry can be exposed as /related_docs/0/explanation, while a later plain entry remains /related_docs/1. This preserves label, order and correlation without additional bookkeeping nodes.",
+    "pointer_escaping": "Escape '~' to '~0' and '/' to '~1' in each object-key segment. Retain array indices. Do not join nested object arrays into parallel lists.",
+    "containers_and_nulls": "Keep explicit container paths/types and null paths; use a reserved metadata namespace and present-field inventory to prevent source keys from colliding with these helpers.",
+    "collision_rules": "Existing canonical identity, generation/current flags, key, payload, provenance, and storage hash keys remain authoritative. Any conflicting source field retains its complete value under an unambiguous source pointer/prefix. Source components may differ from sorted graph membership; source status must never be replaced with body ADR status.",
+    "no_json_only_fallback": "Do not hide nested values solely in a serialized JSON property. Pointer leaves must remain directly inspectable/filterable. Raw JSON may be an additional integrity representation only."
+  },
+  "isolated_coder_module_contract": {
+    "suggested_inputs": ["fully parsed raw frontmatter mapping", "raw Markdown body", "source path", "source revision", "existing canonical_id for collision/context checks"],
+    "suggested_output": "Raw native field mapping plus explicitly sourced optional body metadata/content; shared projection layer performs Neo4j flattening, reserved-key protection, type/null/container metadata.",
+    "parsing_warning": "scripts.knowledge_frontmatter_reader is deliberately partial and stdlib-only: it loses explicit null/empty block values and does not faithfully parse nested labeled path entries or arbitrary multiline YAML. Do not use its output as a complete native metadata representation. Full YAML parsing may be owned by the new isolated projection extractor without altering the legacy producer or its dependency contract.",
+    "no_shared_loader_edits_in_this_review": true,
+    "no_source_migration": "Do not repair historical ADR metadata during projection. Preserve actual values and separately report native contract gaps."
+  },
+  "observed_corpus": {
+    "documents": 56,
+    "frontmatter_type_counts": {"adr": 54, "tutorial": 1, "absent": 1},
+    "nested_frontmatter_values_observed": 0,
+    "explicit_frontmatter_nulls_observed": 0,
+    "schema_disagreements": [
+      "ADR authoring guide requires description but six-field validator and scaffold do not.",
+      "Architecture frontmatter reference calls affects_diagrams required; only one of 56 ADRs declares it, as []. Generic validator does not require it.",
+      "ADR-001 has source type tutorial and lacks frontmatter title/components.",
+      "ADR-003 has no frontmatter; all six mechanically required fields are absent.",
+      "Several ADRs use prose Status instead of the current prescribed table, and raw status strings can exceed the guide's four expected values."
+    ],
+    "representative_sources": [
+      "docs/architecture/adrs/ADR-001-self-hosting-boundary.md",
+      "docs/architecture/adrs/ADR-003-test-source-of-truth-discipline.md",
+      "docs/architecture/adrs/ADR-009-itpo-no-source-code-access.md",
+      "docs/architecture/adrs/ADR-013-portable-skill-script-deployment-boundary.md",
+      "docs/architecture/adrs/ADR-025-first-class-flow-decisions.md",
+      "docs/architecture/adrs/ADR-030-dual-engine-workflow-support.md",
+      "docs/architecture/adrs/ADR-032-tiered-parallel-code-smell-review.md",
+      "docs/architecture/adrs/ADR-042-product-truth-checker-outcome-vocabulary.md",
+      "docs/architecture/adrs/ADR-056-colony-memory-evidence-reinforcement.md",
+      "docs/architecture/adrs/ADR-062-standalone-knowledge-retrieval.md",
+      "docs/architecture/adrs/ADR-064-persona-discovery-before-feature-planning.md"
+    ]
+  },
+  "recommended_behavioral_checks": [
+    "Real ADR-056 frontmatter round-trips all source fields; status active and body adr_status Accepted are separately visible.",
+    "A labeled related_docs entry plus a plain path remains ordered, labeled and directly filterable through pointer properties.",
+    "Absent, null, [], {}, false, 0 and empty string retain distinct source states.",
+    "Explicit YAML date and quoted date both project without unsupported date objects or silent value changes.",
+    "Legacy ADR-003 remains present with body content and absent-frontmatter metadata, without fabricated native fields.",
+    "Reserved id/current/key/payload/source_path collisions cannot overwrite graph identity/provenance; conflicting raw values remain visible.",
+    "Source component order and duplicates remain recoverable even if existing graph membership display remains sorted/deduplicated.",
+    "Retained snapshot backfill verifies source_sha/path/hash and does not take metadata from a later working-tree revision."
+  ]
+}

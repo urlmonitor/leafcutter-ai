@@ -12,6 +12,7 @@ source_ticket: null
 components:
   - decision_kernel
 related_docs:
+  - docs/how-to/supply-and-evaluate-kernel-context.md
   - docs/architecture/agent_knowledge_plane.md
   - docs/architecture/components/injection-builder.md
   - docs/architecture/components/colony-memory.md
@@ -49,7 +50,7 @@ run history by default (spec §5).
 ```mermaid
 flowchart LR
   subgraph SRC["Context sources"]
-    TI["TaskInput - goal, scope, constraints, initial evidence, payload"]
+    TI["TaskInput - goal, scope, caller context, constraints, initial evidence, payload"]
     CFG[("capability_registry.json and kernel_config")]
     REPO[("Repo text roots and knowledge-map surfaces")]
     MEM[("docs/decisions - approved records via the ColonyMemory port")]
@@ -58,16 +59,23 @@ flowchart LR
     LATER["Planned - Stage 2 context, policies, ContextBundle; ADR-062 knowledge retrieval, not on main"]
   end
   subgraph ASM["Assembled by kernel code"]
+    ENRICH["enrich_context - bounded read-only snapshot before intent"]
     ROUTE["intake intent and route node"]
     GRAPHS["decision and research graphs, retrieve.repository"]
     PKT["open_interactions - compiled host packets"]
     COMP["Planned - compiler for worker loops"]
   end
   JEV["Jev calls - intent, routing, decision, research"]
-  HOST["Host LLM - Claude Code"]
+  HOST["Host LLM - Claude Code or Codex"]
   HUM["Human"]
   WRK["Planned - bounded worker loop"]
   TI --> ROUTE
+  TI --> ENRICH
+  CFG --> ENRICH
+  REPO --> ENRICH
+  ENRICH --> ROUTE
+  ENRICH --> GRAPHS
+  ENRICH --> PKT
   CFG --> ROUTE
   RUN --> ROUTE
   COL -.-> ROUTE
@@ -93,7 +101,7 @@ Parent: [Decision Kernel and Colony Memory — Design Map](c2-007-decision-kerne
 
 | Consumer | Receives, in short | Assembled by | Available from | Detail |
 |---|---|---|---|---|
-| Intake intent Jev call | The goal (or the clarified goal), component ids, earlier clarification answers, five answer kinds plus `__NEEDS_CONTEXT__` | First `route` pass, `kernel/intent/classify.py`, template `kernel.intent` v1 | V0 | [Jev calls](c3-017-decision-kernel-context-jev.md) |
+| Intake intent Jev call | The goal (or the clarified goal), component ids, earlier clarification answers, bounded enriched context, five answer kinds plus `__NEEDS_CONTEXT__` | First `route` pass after `enrich_context`, `kernel/intent/classify.py`, template `kernel.intent` v2 | V0 | [Jev calls](c3-017-decision-kernel-context-jev.md) |
 | Routing Jev call | Task goal and component ids, the request, the descriptions of eligible `semantic` capabilities, the `__NONE__` and `__NEEDS_CONTEXT__` choices, earlier clarification answers | `route` node with the routing template (`kernel/scheduler/routing.py`) | V0. Learned statistics: INFLUENCE ROUTING (Stage 4 or later, store per ADR-065) | [Jev calls](c3-017-decision-kernel-context-jev.md) |
 | Decision Jev calls (`assess`: kind, sufficiency, satisfaction, missing knowledge, preference, conflict, precedent) | Question, options, approved criteria, evidence excerpts, findings, constraints, **precedent candidates and precedent evidence** | Decision graph: `load`, `precedent`, templates in `assess` | V0. Precedent: V0, decision store (ADR-059 §5). Policies: Stage 3. Glossary-aware context: Stage 2 | [Jev calls](c3-017-decision-kernel-context-jev.md) |
 | Research capability and its retrieval | Research question, evidence needs, category descriptions, source catalog, option context, search candidates | Research graph, `retrieve.repository` | V0. Context compiler: Stage 2. ADR-062 knowledge retrieval: in progress, not on main | [Research](c3-018-decision-kernel-context-research.md) |
@@ -103,6 +111,9 @@ Parent: [Decision Kernel and Colony Memory — Design Map](c2-007-decision-kerne
 
 ## Rules that hold for every kernel consumer
 
+- **Context gathering precedes intent.** One bounded pass saves permitted repository excerpts,
+  workspace and registry context, and explicit caller claims. Intent, native capability calls and
+  host input artifacts reuse that snapshot. See [configuration and evals](../../how-to/supply-and-evaluate-kernel-context.md).
 - **Kernel code assembles, models do not.** The kernel, never a model, assigns IDs, root
   identity and execution permissions (spec §7.2). Model instructions are compiled
   deterministically, never improvised by an LLM (ADR-052 §3).

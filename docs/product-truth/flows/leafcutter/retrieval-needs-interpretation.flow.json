@@ -1,0 +1,3212 @@
+{
+  "id": "leafcutter/retrieval-needs-interpretation",
+  "component": "knowledge-management",
+  "product": "Leafcutter",
+  "name": "Interpret what a retrieval question needs",
+  "level": "pipeline",
+  "summary": "An isolated host LLM interprets a question into typed information needs; production retrieval does not call it.",
+  "kind": "data",
+  "source": "real",
+  "realization": "built",
+  "status": "active",
+  "readiness": "draft",
+  "version": 6,
+  "shape_version": 2,
+  "tags": [
+    "retrieval",
+    "retrieval-needs",
+    "host-llm",
+    "isolated-experiment"
+  ],
+  "entities": [],
+  "steps": [
+    {
+      "id": "prepare-request",
+      "label": "Prepare the question and offered meanings",
+      "agent": "System",
+      "order": 1,
+      "human": "Validate the original question, optional context, known ID candidates, source-scope metadata and a finite catalog for five dimensions. Add only supplied IDs or literal IDs found in the question; an offered ID is a candidate, not a chosen target. Validate again after augmentation and enforce the 50,000-character input bound.\n\nThe caller also supplies the actual kernel Scope and caller Actor. source_scope is an echoed metadata claim, not a verified repository revision or permission grant. This experiment grants no repository-read permissions. [Request contract](kernel/contracts/retrieval_needs.py) · [Task builder](integrations/retrieval_needs_llm.py).\n\nAll KernelModel objects have defaulted schema_version=1.0. The callable copies original_question to TaskInput.goal. The current TaskInput goal bound is 16,000 characters; this operation retains the stricter 8,000-character retrieval-needs request bound. The archived N03 execution predates that goal-bound increase. Unknown fields are forbidden. source_scope keys in this example are caller data, not mandatory named schema fields.\n\nInput contract: [request JSON Schema](kernel/schemas/leafcutter.retrieval_needs_request.v1.schema.json) and [runtime validators](kernel/contracts/retrieval_needs.py). catalog must contain entity_types, target_ids, required_fields, document_types and relationships; each maps offered labels to meanings. The validators enforce all five keys and grounded targets in addition to JSON Schema.\n\nThis is the request member of [saved N03 operational input](reports/retrieval-needs-llm-2026-10-03-accepted/inputs/N03.input.json). Its literal TQ-500f candidate has already been added. It is not a response or permission grant. The separate Scope and Actor arguments appear in the next step's task example.\n\nContract fields and examples (generated)\nConsumes:\n  retrieval_needs_request/original_question: string (required)\n  retrieval_needs_request/catalog: object (required)\n  retrieval_needs_request/catalog/*: object (each present item/value)\n  retrieval_needs_request/catalog/*/*: string (each present item/value)\n  retrieval_needs_request/context: array (optional; default [])\n  retrieval_needs_request/context/*: string (each present item/value)\n  retrieval_needs_request/known_ids: array (optional; default [])\n  retrieval_needs_request/known_ids/*: string (each present item/value)\n  retrieval_needs_request/source_scope: object (optional; default {})\n  Schema: [retrieval_needs_request](kernel/schemas/leafcutter.retrieval_needs_request.v1.schema.json)\n  scope/workspace_id: string (required)\n  scope/repository_root: string (required)\n  scope/read_roots: array (optional; default [])\n  Runtime contract: [scope](kernel/contracts/task.py)\n  actor/id: string (required)\n  actor/kind: string (required)\n  Runtime contract: [actor](kernel/contracts/task.py)\nProduces:\n  task_input/goal: string (required)\n  task_input/caller: object (required; applies actor schema)\n  task_input/scope: object (required; applies scope schema)\n  task_input/permissions: array (optional)\n  task_input/input_payload_schema: null|string (optional; default null)\n  task_input/input_payload: null|object (optional; default null; applies retrieval_needs_request schema)\n  task_input/requested_output_schema: null|string (optional; default null)\n  Runtime contract: [task_input](kernel/contracts/task.py)\n\nComplete prepared request — actual N03 input; JSON Schema and typed model validated. — retrieval_needs_request; observed; complete payload:\n{\n  \"catalog\": {\n    \"document_types\": {\n      \"ac_yaml\": \"Canonical acceptance criterion definition\",\n      \"adr\": \"Architecture decision record\",\n      \"execution_report\": \"Actual test execution or publication receipt; not declarations\",\n      \"schema\": \"Machine-readable schema or versioned contract definition\",\n      \"source_code\": \"Implementation source code\",\n      \"test_source\": \"Test and fixture code\"\n    },\n    \"entity_types\": {\n      \"ac\": \"Acceptance criterion or requirement\",\n      \"adr\": \"Architecture decision record\",\n      \"component\": \"Product or code component\",\n      \"report\": \"Actual execution or publication report\",\n      \"schema\": \"Schema or versioned input/output contract\",\n      \"source_file\": \"Implementation source code\",\n      \"test\": \"Test or fixture source\"\n    },\n    \"relationships\": {\n      \"all_descendants\": \"Every descendant under the target, including intermediate levels, subject to later explicit completeness checks; execution depth caps do not redefine this need\",\n      \"children_direct\": \"Direct children only, one hierarchy hop\",\n      \"incoming_dependencies_direct\": \"Requirements that directly depend on the target, incoming dependency edges, one hop\",\n      \"linked_tests\": \"Declared tests linked to the target; no execution proof implied\",\n      \"parent_direct\": \"Immediate parent only, one hierarchy hop\"\n    },\n    \"required_fields\": {\n      \"compatibility\": \"Contract compatibility obligations and version constraints\",\n      \"content\": \"Relevant source code or document content\",\n      \"covered_by\": \"Declared test links, not proof tests executed\",\n      \"criteria\": \"Acceptance criteria, exact required behavior or canonical clauses\",\n      \"level\": \"Requirement hierarchy level, e.g. L2 or L3\",\n      \"mapping\": \"Inspected field transformations or producer/consumer handoffs\",\n      \"parent\": \"Declared parent requirement identity\",\n      \"provenance\": \"Canonical identity, source revision, path and field/line locators\",\n      \"status\": \"Requirement lifecycle status such as active or deprecated; never implementation progress\",\n      \"test_spec\": \"Test requirements and must-catch wrong implementations\",\n      \"work_status\": \"Implementation progress such as todo, in progress, done; distinct from lifecycle\"\n    },\n    \"target_ids\": {\n      \"TQ-500f\": \"Literal identifier in the original question; assess its requested role.\"\n    }\n  },\n  \"context\": [],\n  \"known_ids\": [],\n  \"original_question\": \"Count all L2 and L3 descendants of TQ-500f, excluding only TQ-500f, grouped by work_status.\",\n  \"schema_version\": \"1.0\",\n  \"source_scope\": {\n    \"allow_retrieval\": false,\n    \"read_roots\": [\n      \"docs\",\n      \"kernel\",\n      \"knowledge\",\n      \"integrations\"\n    ],\n    \"repository\": \"leafcutter\",\n    \"source_revision\": \"planning-probe-only\"\n  }\n}\nReceipt: [reports/retrieval-needs-llm-2026-10-03-accepted/inputs/N03.input.json](reports/retrieval-needs-llm-2026-10-03-accepted/inputs/N03.input.json)/request",
+      "consumes": [
+        "retrieval_needs_request/original_question: string (required)",
+        "retrieval_needs_request/catalog: object (required)",
+        "retrieval_needs_request/catalog/*: object (each present item/value)",
+        "retrieval_needs_request/catalog/*/*: string (each present item/value)",
+        "retrieval_needs_request/context: array (optional; default [])",
+        "retrieval_needs_request/context/*: string (each present item/value)",
+        "retrieval_needs_request/known_ids: array (optional; default [])",
+        "retrieval_needs_request/known_ids/*: string (each present item/value)",
+        "retrieval_needs_request/source_scope: object (optional; default {})",
+        "scope/workspace_id: string (required)",
+        "scope/repository_root: string (required)",
+        "scope/read_roots: array (optional; default [])",
+        "actor/id: string (required)",
+        "actor/kind: string (required)"
+      ],
+      "produces": [
+        "task_input/goal: string (required)",
+        "task_input/caller: object (required; applies actor schema)",
+        "task_input/scope: object (required; applies scope schema)",
+        "task_input/permissions: array (optional)",
+        "task_input/input_payload_schema: null|string (optional; default null)",
+        "task_input/input_payload: null|object (optional; default null; applies retrieval_needs_request schema)",
+        "task_input/requested_output_schema: null|string (optional; default null)"
+      ],
+      "implements": [],
+      "impl_asof": "2026-10-03",
+      "impl_status": "not_started",
+      "io_contracts": {
+        "consumes": [
+          {
+            "contract": "retrieval_needs_request",
+            "fields": [
+              {
+                "path": "/original_question",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/catalog",
+                "types": [
+                  "object"
+                ],
+                "required": true
+              },
+              {
+                "path": "/catalog/*",
+                "types": [
+                  "object"
+                ],
+                "required": true
+              },
+              {
+                "path": "/catalog/*/*",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/context",
+                "types": [
+                  "array"
+                ],
+                "required": false,
+                "default": []
+              },
+              {
+                "path": "/context/*",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/known_ids",
+                "types": [
+                  "array"
+                ],
+                "required": false,
+                "default": []
+              },
+              {
+                "path": "/known_ids/*",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/source_scope",
+                "types": [
+                  "object"
+                ],
+                "required": false,
+                "default": {}
+              }
+            ]
+          },
+          {
+            "contract": "scope",
+            "fields": [
+              {
+                "path": "/workspace_id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/repository_root",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/read_roots",
+                "types": [
+                  "array"
+                ],
+                "required": false,
+                "default": []
+              }
+            ]
+          },
+          {
+            "contract": "actor",
+            "fields": [
+              {
+                "path": "/id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/kind",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              }
+            ]
+          }
+        ],
+        "produces": [
+          {
+            "contract": "task_input",
+            "fields": [
+              {
+                "path": "/goal",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/caller",
+                "types": [
+                  "object"
+                ],
+                "required": true,
+                "applies": "actor"
+              },
+              {
+                "path": "/scope",
+                "types": [
+                  "object"
+                ],
+                "required": true,
+                "applies": "scope"
+              },
+              {
+                "path": "/permissions",
+                "types": [
+                  "array"
+                ],
+                "required": false
+              },
+              {
+                "path": "/input_payload_schema",
+                "types": [
+                  "null",
+                  "string"
+                ],
+                "required": false,
+                "default": null
+              },
+              {
+                "path": "/input_payload",
+                "types": [
+                  "null",
+                  "object"
+                ],
+                "required": false,
+                "default": null,
+                "applies": "retrieval_needs_request"
+              },
+              {
+                "path": "/requested_output_schema",
+                "types": [
+                  "null",
+                  "string"
+                ],
+                "required": false,
+                "default": null
+              }
+            ]
+          }
+        ],
+        "examples": [
+          {
+            "contract": "retrieval_needs_request",
+            "mode": "full",
+            "origin": "observed",
+            "label": "Complete prepared request — actual N03 input; JSON Schema and typed model validated.",
+            "value": {
+              "catalog": {
+                "document_types": {
+                  "ac_yaml": "Canonical acceptance criterion definition",
+                  "adr": "Architecture decision record",
+                  "execution_report": "Actual test execution or publication receipt; not declarations",
+                  "schema": "Machine-readable schema or versioned contract definition",
+                  "source_code": "Implementation source code",
+                  "test_source": "Test and fixture code"
+                },
+                "entity_types": {
+                  "ac": "Acceptance criterion or requirement",
+                  "adr": "Architecture decision record",
+                  "component": "Product or code component",
+                  "report": "Actual execution or publication report",
+                  "schema": "Schema or versioned input/output contract",
+                  "source_file": "Implementation source code",
+                  "test": "Test or fixture source"
+                },
+                "relationships": {
+                  "all_descendants": "Every descendant under the target, including intermediate levels, subject to later explicit completeness checks; execution depth caps do not redefine this need",
+                  "children_direct": "Direct children only, one hierarchy hop",
+                  "incoming_dependencies_direct": "Requirements that directly depend on the target, incoming dependency edges, one hop",
+                  "linked_tests": "Declared tests linked to the target; no execution proof implied",
+                  "parent_direct": "Immediate parent only, one hierarchy hop"
+                },
+                "required_fields": {
+                  "compatibility": "Contract compatibility obligations and version constraints",
+                  "content": "Relevant source code or document content",
+                  "covered_by": "Declared test links, not proof tests executed",
+                  "criteria": "Acceptance criteria, exact required behavior or canonical clauses",
+                  "level": "Requirement hierarchy level, e.g. L2 or L3",
+                  "mapping": "Inspected field transformations or producer/consumer handoffs",
+                  "parent": "Declared parent requirement identity",
+                  "provenance": "Canonical identity, source revision, path and field/line locators",
+                  "status": "Requirement lifecycle status such as active or deprecated; never implementation progress",
+                  "test_spec": "Test requirements and must-catch wrong implementations",
+                  "work_status": "Implementation progress such as todo, in progress, done; distinct from lifecycle"
+                },
+                "target_ids": {
+                  "TQ-500f": "Literal identifier in the original question; assess its requested role."
+                }
+              },
+              "context": [],
+              "known_ids": [],
+              "original_question": "Count all L2 and L3 descendants of TQ-500f, excluding only TQ-500f, grouped by work_status.",
+              "schema_version": "1.0",
+              "source_scope": {
+                "allow_retrieval": false,
+                "read_roots": [
+                  "docs",
+                  "kernel",
+                  "knowledge",
+                  "integrations"
+                ],
+                "repository": "leafcutter",
+                "source_revision": "planning-probe-only"
+              }
+            },
+            "source": {
+              "path": "reports/retrieval-needs-llm-2026-10-03-accepted/inputs/N03.input.json",
+              "pointer": "/request"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "start-run",
+      "label": "Start the isolated kernel run",
+      "agent": "System",
+      "order": 2,
+      "human": "Start KernelService with the experiment-only registry snapshot. Fixed routing selects host.retrieval_needs / interpret_retrieval_needs and the real LangGraph scheduler. Legacy enrichment and entity recognition are explicitly disabled, as are knowledge reads and memory; the limits allow one host operation and zero Jev calls.\n\nThis callable exists only when this experimental snapshot is supplied. No default production descriptor or existing retrieval call-site activates it. [Experiment service](integrations/retrieval_needs_llm.py) · [KernelService](kernel/service.py).\n\nThis is an internal phase of start_run, not a separate public JSON endpoint. It creates the [work binding and invocation](kernel/contracts/work.py). The public RunEnvelope becomes available after the next step has opened the wait. The experiment snapshot supplies the fixed capability; the caller does not send a capability_id in TaskInput.\n\nThe omitted input_payload is the complete request shown in the previous step and is required for this operation. The complete reconstructed TaskInput, including that payload, passes the [TaskInput model](kernel/contracts/task.py). Actual kernel read_roots=[docs] is distinct from the source_scope metadata's longer read_roots list; permissions=[] grants no repository reads. [Controller construction](scripts/evaluate_retrieval_needs_llm.py).\n\nContract fields and examples (generated)\nConsumes:\n  task_input/goal: string (required)\n  task_input/caller: object (required; applies actor schema)\n  task_input/scope: object (required; applies scope schema)\n  task_input/permissions: array (optional)\n  task_input/input_payload_schema: null|string (optional; default null)\n  task_input/input_payload: null|object (optional; default null; applies retrieval_needs_request schema)\n  task_input/requested_output_schema: null|string (optional; default null)\n  Runtime contract: [task_input](kernel/contracts/task.py)\nProduces:\n  work_item/binding/capability_id: string (required)\n  work_item/binding/version: string (required)\n  work_item/binding/execution_mode: string (required)\n  Runtime contract: [work_item](kernel/contracts/work.py)\n  capability_invocation/input_payload_schema: string (required)\n  capability_invocation/input_payload: object (required; applies retrieval_needs_request schema)\n  Runtime contract: [capability_invocation](kernel/contracts/work.py)\n\nTaskInput projection — reconstructed from the actual N03 request and controller source; not a saved TaskInput receipt. — task_input; reconstructed; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"goal\": \"Count all L2 and L3 descendants of TQ-500f, excluding only TQ-500f, grouped by work_status.\",\n  \"caller\": {\n    \"id\": \"evaluation-controller\",\n    \"kind\": \"host\"\n  },\n  \"scope\": {\n    \"workspace_id\": \"needs-llm-eval\",\n    \"repository_root\": \"C:\\\\Users\\\\Hendrik\\\\Code\\\\leafcutter\\\\worktrees\\\\typed-research-binding-v01\",\n    \"read_roots\": [\n      \"docs\"\n    ]\n  },\n  \"permissions\": [],\n  \"input_payload_schema\": \"leafcutter.retrieval_needs_request.v1\",\n  \"requested_output_schema\": \"leafcutter.retrieval_needs_output.v1\"\n}",
+      "consumes": [
+        "task_input/goal: string (required)",
+        "task_input/caller: object (required; applies actor schema)",
+        "task_input/scope: object (required; applies scope schema)",
+        "task_input/permissions: array (optional)",
+        "task_input/input_payload_schema: null|string (optional; default null)",
+        "task_input/input_payload: null|object (optional; default null; applies retrieval_needs_request schema)",
+        "task_input/requested_output_schema: null|string (optional; default null)"
+      ],
+      "produces": [
+        "work_item/binding/capability_id: string (required)",
+        "work_item/binding/version: string (required)",
+        "work_item/binding/execution_mode: string (required)",
+        "capability_invocation/input_payload_schema: string (required)",
+        "capability_invocation/input_payload: object (required; applies retrieval_needs_request schema)"
+      ],
+      "implements": [],
+      "impl_asof": "2026-10-03",
+      "impl_status": "not_started",
+      "io_contracts": {
+        "consumes": [
+          {
+            "contract": "task_input",
+            "fields": [
+              {
+                "path": "/goal",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/caller",
+                "types": [
+                  "object"
+                ],
+                "required": true,
+                "applies": "actor"
+              },
+              {
+                "path": "/scope",
+                "types": [
+                  "object"
+                ],
+                "required": true,
+                "applies": "scope"
+              },
+              {
+                "path": "/permissions",
+                "types": [
+                  "array"
+                ],
+                "required": false
+              },
+              {
+                "path": "/input_payload_schema",
+                "types": [
+                  "null",
+                  "string"
+                ],
+                "required": false,
+                "default": null
+              },
+              {
+                "path": "/input_payload",
+                "types": [
+                  "null",
+                  "object"
+                ],
+                "required": false,
+                "default": null,
+                "applies": "retrieval_needs_request"
+              },
+              {
+                "path": "/requested_output_schema",
+                "types": [
+                  "null",
+                  "string"
+                ],
+                "required": false,
+                "default": null
+              }
+            ]
+          }
+        ],
+        "produces": [
+          {
+            "contract": "work_item",
+            "fields": [
+              {
+                "path": "/binding/capability_id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/binding/version",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/binding/execution_mode",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              }
+            ]
+          },
+          {
+            "contract": "capability_invocation",
+            "fields": [
+              {
+                "path": "/input_payload_schema",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/input_payload",
+                "types": [
+                  "object"
+                ],
+                "required": true,
+                "applies": "retrieval_needs_request"
+              }
+            ]
+          }
+        ],
+        "examples": [
+          {
+            "contract": "task_input",
+            "mode": "projection",
+            "origin": "reconstructed",
+            "label": "TaskInput projection — reconstructed from the actual N03 request and controller source; not a saved TaskInput receipt.",
+            "value": {
+              "goal": "Count all L2 and L3 descendants of TQ-500f, excluding only TQ-500f, grouped by work_status.",
+              "caller": {
+                "id": "evaluation-controller",
+                "kind": "host"
+              },
+              "scope": {
+                "workspace_id": "needs-llm-eval",
+                "repository_root": "C:\\Users\\Hendrik\\Code\\leafcutter\\worktrees\\typed-research-binding-v01",
+                "read_roots": [
+                  "docs"
+                ]
+              },
+              "permissions": [],
+              "input_payload_schema": "leafcutter.retrieval_needs_request.v1",
+              "requested_output_schema": "leafcutter.retrieval_needs_output.v1"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "wait-for-host",
+      "label": "Save the request and wait for the host",
+      "agent": "System",
+      "order": 3,
+      "human": "Compile the typed HostWorkRequest, persist its operational input artifact and packet, then checkpoint waiting_host through LangGraph. RunEnvelope carries run_id; the packet's id is the interaction identity. The packet carries state_revision, output requirements, output JSON Schema and input_artifact_refs. The external host reads the referenced operational input; the kernel does not call a model client.\n\n[RunEnvelope model](kernel/contracts/run.py) · [HostWorkRequest model](kernel/contracts/interaction.py) · [Operational artifact writer](kernel/interaction/packets.py). The operational artifact is a persisted JSON document with a request member, not a second retrieval-needs schema. It records interaction_id, operation, task_template, prompt_fingerprint, request_schema and evidence. The current writer can add a bounded entity_context projection with separate caller_context and registered_capabilities channels, plus clarifications when supplied; policy and receiver budgets can reduce optional context. Disabled recognition still has a disabled checkpoint status. The archived N03 artifact instead has the historical context_enrichment member. Restored historical checkpoints can retain that older channel; this receipt is not a claim that a new run emits the same wrapper. See kernel/entity_projection.py for the current projection boundary.\n\n[Complete saved waiting envelope](reports/retrieval-needs-llm-2026-10-03-accepted/N03.started.json). The historical temporary artifact path is preserved exactly; [saved N03 operational input](reports/retrieval-needs-llm-2026-10-03-accepted/inputs/N03.input.json) is the archived readable copy. Selected fields only; full required/defaulted fields are in the linked contract.\n\nContract fields and examples (generated)\nConsumes:\n  capability_invocation/input_payload_schema: string (required)\n  capability_invocation/input_payload: object (required; applies retrieval_needs_request schema)\n  Runtime contract: [capability_invocation](kernel/contracts/work.py)\n  work_item/binding: null|object (optional; default null)\n  Runtime contract: [work_item](kernel/contracts/work.py)\nProduces:\n  run_envelope/run_id: string (required)\n  run_envelope/state_revision: integer (required)\n  run_envelope/status: string (required)\n  run_envelope/pending_interaction: null|object (optional; default null)\n  Runtime contract: [run_envelope](kernel/contracts/run.py)\n  host_work_request/id: string (required)\n  host_work_request/state_revision: integer (required)\n  host_work_request/operation: string (required)\n  host_work_request/input_artifact_refs: array (optional; default [])\n  host_work_request/output_schema_id: string (required)\n  host_work_request/output_json_schema: object (optional; default {})\n  Runtime contract: [host_work_request](kernel/contracts/interaction.py)\n  retrieval_needs_request/original_question: string (required)\n  retrieval_needs_request/catalog: object (required)\n  retrieval_needs_request/catalog/*: object (each present item/value)\n  retrieval_needs_request/catalog/*/*: string (each present item/value)\n  retrieval_needs_request/context: array (optional; default [])\n  retrieval_needs_request/context/*: string (each present item/value)\n  retrieval_needs_request/known_ids: array (optional; default [])\n  retrieval_needs_request/known_ids/*: string (each present item/value)\n  retrieval_needs_request/source_scope: object (optional; default {})\n  Schema: [retrieval_needs_request](kernel/schemas/leafcutter.retrieval_needs_request.v1.schema.json)\n\nWaiting RunEnvelope projection — actual N03; transport metadata and output_json_schema omitted. — run_envelope; observed; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"run_id\": \"run-b8e03912ebc8474b\",\n  \"state_revision\": 1,\n  \"status\": \"waiting_host\",\n  \"pending_interaction\": {\n    \"id\": \"int-e409b90b61ab4aeb\",\n    \"state_revision\": 1,\n    \"operation\": \"interpret_retrieval_needs\",\n    \"input_artifact_refs\": [\n      \"C:\\\\Users\\\\Hendrik\\\\AppData\\\\Local\\\\Temp\\\\leafcutter-needs-llm-host-nsvsjpd2\\\\kernel-runs\\\\runs\\\\run-b8e03912ebc8474b\\\\artifacts\\\\input-int-e409b90b61ab4aeb.json\"\n    ],\n    \"output_schema_id\": \"leafcutter.retrieval_needs_output.v1\"\n  }\n}\nReceipt: [reports/retrieval-needs-llm-2026-10-03-accepted/N03.started.json](reports/retrieval-needs-llm-2026-10-03-accepted/N03.started.json)\n\nArchived operational input request member from actual N03 — retrieval_needs_request; observed; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"original_question\": \"Count all L2 and L3 descendants of TQ-500f, excluding only TQ-500f, grouped by work_status.\"\n}\nReceipt: [reports/retrieval-needs-llm-2026-10-03-accepted/inputs/N03.input.json](reports/retrieval-needs-llm-2026-10-03-accepted/inputs/N03.input.json)/request",
+      "consumes": [
+        "capability_invocation/input_payload_schema: string (required)",
+        "capability_invocation/input_payload: object (required; applies retrieval_needs_request schema)",
+        "work_item/binding: null|object (optional; default null)"
+      ],
+      "produces": [
+        "run_envelope/run_id: string (required)",
+        "run_envelope/state_revision: integer (required)",
+        "run_envelope/status: string (required)",
+        "run_envelope/pending_interaction: null|object (optional; default null)",
+        "host_work_request/id: string (required)",
+        "host_work_request/state_revision: integer (required)",
+        "host_work_request/operation: string (required)",
+        "host_work_request/input_artifact_refs: array (optional; default [])",
+        "host_work_request/output_schema_id: string (required)",
+        "host_work_request/output_json_schema: object (optional; default {})",
+        "retrieval_needs_request/original_question: string (required)",
+        "retrieval_needs_request/catalog: object (required)",
+        "retrieval_needs_request/catalog/*: object (each present item/value)",
+        "retrieval_needs_request/catalog/*/*: string (each present item/value)",
+        "retrieval_needs_request/context: array (optional; default [])",
+        "retrieval_needs_request/context/*: string (each present item/value)",
+        "retrieval_needs_request/known_ids: array (optional; default [])",
+        "retrieval_needs_request/known_ids/*: string (each present item/value)",
+        "retrieval_needs_request/source_scope: object (optional; default {})"
+      ],
+      "implements": [],
+      "impl_asof": "2026-10-03",
+      "impl_status": "not_started",
+      "io_contracts": {
+        "consumes": [
+          {
+            "contract": "capability_invocation",
+            "fields": [
+              {
+                "path": "/input_payload_schema",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/input_payload",
+                "types": [
+                  "object"
+                ],
+                "required": true,
+                "applies": "retrieval_needs_request"
+              }
+            ]
+          },
+          {
+            "contract": "work_item",
+            "fields": [
+              {
+                "path": "/binding",
+                "types": [
+                  "null",
+                  "object"
+                ],
+                "required": false,
+                "default": null
+              }
+            ]
+          }
+        ],
+        "produces": [
+          {
+            "contract": "run_envelope",
+            "fields": [
+              {
+                "path": "/run_id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/state_revision",
+                "types": [
+                  "integer"
+                ],
+                "required": true
+              },
+              {
+                "path": "/status",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/pending_interaction",
+                "types": [
+                  "null",
+                  "object"
+                ],
+                "required": false,
+                "default": null
+              }
+            ]
+          },
+          {
+            "contract": "host_work_request",
+            "fields": [
+              {
+                "path": "/id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/state_revision",
+                "types": [
+                  "integer"
+                ],
+                "required": true
+              },
+              {
+                "path": "/operation",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/input_artifact_refs",
+                "types": [
+                  "array"
+                ],
+                "required": false,
+                "default": []
+              },
+              {
+                "path": "/output_schema_id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/output_json_schema",
+                "types": [
+                  "object"
+                ],
+                "required": false,
+                "default": {}
+              }
+            ]
+          },
+          {
+            "contract": "retrieval_needs_request",
+            "fields": [
+              {
+                "path": "/original_question",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/catalog",
+                "types": [
+                  "object"
+                ],
+                "required": true
+              },
+              {
+                "path": "/catalog/*",
+                "types": [
+                  "object"
+                ],
+                "required": true
+              },
+              {
+                "path": "/catalog/*/*",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/context",
+                "types": [
+                  "array"
+                ],
+                "required": false,
+                "default": []
+              },
+              {
+                "path": "/context/*",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/known_ids",
+                "types": [
+                  "array"
+                ],
+                "required": false,
+                "default": []
+              },
+              {
+                "path": "/known_ids/*",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/source_scope",
+                "types": [
+                  "object"
+                ],
+                "required": false,
+                "default": {}
+              }
+            ]
+          }
+        ],
+        "examples": [
+          {
+            "contract": "run_envelope",
+            "mode": "projection",
+            "origin": "observed",
+            "label": "Waiting RunEnvelope projection — actual N03; transport metadata and output_json_schema omitted.",
+            "value": {
+              "run_id": "run-b8e03912ebc8474b",
+              "state_revision": 1,
+              "status": "waiting_host",
+              "pending_interaction": {
+                "id": "int-e409b90b61ab4aeb",
+                "state_revision": 1,
+                "operation": "interpret_retrieval_needs",
+                "input_artifact_refs": [
+                  "C:\\Users\\Hendrik\\AppData\\Local\\Temp\\leafcutter-needs-llm-host-nsvsjpd2\\kernel-runs\\runs\\run-b8e03912ebc8474b\\artifacts\\input-int-e409b90b61ab4aeb.json"
+                ],
+                "output_schema_id": "leafcutter.retrieval_needs_output.v1"
+              }
+            },
+            "source": {
+              "path": "reports/retrieval-needs-llm-2026-10-03-accepted/N03.started.json",
+              "pointer": ""
+            }
+          },
+          {
+            "contract": "retrieval_needs_request",
+            "mode": "projection",
+            "origin": "observed",
+            "label": "Archived operational input request member from actual N03",
+            "value": {
+              "original_question": "Count all L2 and L3 descendants of TQ-500f, excluding only TQ-500f, grouped by work_status."
+            },
+            "source": {
+              "path": "reports/retrieval-needs-llm-2026-10-03-accepted/inputs/N03.input.json",
+              "pointer": "/request"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "interpret",
+      "label": "Interpret all information needs together",
+      "agent": "Host LLM",
+      "order": 4,
+      "human": "Read the packet and referenced input. Interpret selected and uncertain entity types, target IDs, indispensable fields, document types and relationships using only exact offered labels. Also supply detail, completeness, hierarchy and scope-resolution modes, unresolved reasons and a concise rationale. Preserve the original question and source_scope exactly.\n\nUse unresolved reasons for unsupported meanings or unresolved gaps. A discovery need does not itself mean the user must choose a scope. This is one host operation with all dimensions together; the host controls its model and there is no guarantee of one underlying model request. [Host instructions](kernel/capabilities/host/retrieval_needs.py).\n\nOutput contract: [output JSON Schema](kernel/schemas/leafcutter.retrieval_needs_output.v1.schema.json) plus [request-bound rules](kernel/capabilities/host/retrieval_needs.py). selections and uncertain each require entity_types, target_ids, required_fields, document_types and relationships, including empty arrays. Values must be exact offered labels; required_fields names indispensable facts, not optional supporting information. Common schema_version defaults to 1.0.\n\n[Complete saved candidate](reports/retrieval-needs-llm-2026-10-03-accepted/responses/N03.json). The complete typed payload is shown at Return the typed needs. This projection alone is not a valid full output.\n\nContract fields and examples (generated)\nConsumes:\n  host_work_request/output_schema_id: string (required)\n  host_work_request/output_json_schema: object (optional; default {})\n  host_work_request/output_requirements: array (optional; default [])\n  Runtime contract: [host_work_request](kernel/contracts/interaction.py)\n  retrieval_needs_request/original_question: string (required)\n  retrieval_needs_request/catalog: object (required)\n  retrieval_needs_request/catalog/*: object (each present item/value)\n  retrieval_needs_request/catalog/*/*: string (each present item/value)\n  retrieval_needs_request/context: array (optional; default [])\n  retrieval_needs_request/context/*: string (each present item/value)\n  retrieval_needs_request/known_ids: array (optional; default [])\n  retrieval_needs_request/known_ids/*: string (each present item/value)\n  retrieval_needs_request/source_scope: object (optional; default {})\n  Schema: [retrieval_needs_request](kernel/schemas/leafcutter.retrieval_needs_request.v1.schema.json)\nProduces:\n  retrieval_needs_output/original_question: string (required)\n  retrieval_needs_output/source_scope: object (required)\n  retrieval_needs_output/selections: object (required)\n  retrieval_needs_output/selections/*: array (each present item/value)\n  retrieval_needs_output/selections/*/*: string (each present item/value)\n  retrieval_needs_output/uncertain: object (required)\n  retrieval_needs_output/uncertain/*: array (each present item/value)\n  retrieval_needs_output/uncertain/*/*: string (each present item/value)\n  retrieval_needs_output/detail_mode: string (required)\n  retrieval_needs_output/completeness: string (required)\n  retrieval_needs_output/hierarchy_scope: string (required)\n  retrieval_needs_output/scope_resolution: string (required)\n  retrieval_needs_output/unresolved: array (optional; default [])\n  retrieval_needs_output/rationale: string (optional; default \"\")\n  retrieval_needs_output/engine: string (optional; default \"host_llm\")\n  retrieval_needs_output/status: string (optional; default \"decided\")\n  retrieval_needs_output/model_id: null|string (optional; default null)\n  Schema: [retrieval_needs_output](kernel/schemas/leafcutter.retrieval_needs_output.v1.schema.json)\n\nCandidate output projection — actual N03; echoed question/scope and other fields omitted. — retrieval_needs_output; observed; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"selections\": {\n    \"entity_types\": [\n      \"ac\"\n    ],\n    \"target_ids\": [\n      \"TQ-500f\"\n    ],\n    \"required_fields\": [\n      \"level\",\n      \"work_status\"\n    ],\n    \"document_types\": [\n      \"ac_yaml\"\n    ],\n    \"relationships\": [\n      \"all_descendants\"\n    ]\n  },\n  \"uncertain\": {\n    \"entity_types\": [],\n    \"target_ids\": [],\n    \"required_fields\": [],\n    \"document_types\": [],\n    \"relationships\": []\n  },\n  \"detail_mode\": \"fields\",\n  \"completeness\": \"exhaustive_count\",\n  \"hierarchy_scope\": \"exclude_root\",\n  \"scope_resolution\": \"sufficient\",\n  \"status\": \"decided\"\n}\nReceipt: [reports/retrieval-needs-llm-2026-10-03-accepted/responses/N03.json](reports/retrieval-needs-llm-2026-10-03-accepted/responses/N03.json)",
+      "consumes": [
+        "host_work_request/output_schema_id: string (required)",
+        "host_work_request/output_json_schema: object (optional; default {})",
+        "host_work_request/output_requirements: array (optional; default [])",
+        "retrieval_needs_request/original_question: string (required)",
+        "retrieval_needs_request/catalog: object (required)",
+        "retrieval_needs_request/catalog/*: object (each present item/value)",
+        "retrieval_needs_request/catalog/*/*: string (each present item/value)",
+        "retrieval_needs_request/context: array (optional; default [])",
+        "retrieval_needs_request/context/*: string (each present item/value)",
+        "retrieval_needs_request/known_ids: array (optional; default [])",
+        "retrieval_needs_request/known_ids/*: string (each present item/value)",
+        "retrieval_needs_request/source_scope: object (optional; default {})"
+      ],
+      "produces": [
+        "retrieval_needs_output/original_question: string (required)",
+        "retrieval_needs_output/source_scope: object (required)",
+        "retrieval_needs_output/selections: object (required)",
+        "retrieval_needs_output/selections/*: array (each present item/value)",
+        "retrieval_needs_output/selections/*/*: string (each present item/value)",
+        "retrieval_needs_output/uncertain: object (required)",
+        "retrieval_needs_output/uncertain/*: array (each present item/value)",
+        "retrieval_needs_output/uncertain/*/*: string (each present item/value)",
+        "retrieval_needs_output/detail_mode: string (required)",
+        "retrieval_needs_output/completeness: string (required)",
+        "retrieval_needs_output/hierarchy_scope: string (required)",
+        "retrieval_needs_output/scope_resolution: string (required)",
+        "retrieval_needs_output/unresolved: array (optional; default [])",
+        "retrieval_needs_output/rationale: string (optional; default \"\")",
+        "retrieval_needs_output/engine: string (optional; default \"host_llm\")",
+        "retrieval_needs_output/status: string (optional; default \"decided\")",
+        "retrieval_needs_output/model_id: null|string (optional; default null)"
+      ],
+      "implements": [],
+      "impl_asof": "2026-10-03",
+      "impl_status": "not_started",
+      "io_contracts": {
+        "consumes": [
+          {
+            "contract": "host_work_request",
+            "fields": [
+              {
+                "path": "/output_schema_id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/output_json_schema",
+                "types": [
+                  "object"
+                ],
+                "required": false,
+                "default": {}
+              },
+              {
+                "path": "/output_requirements",
+                "types": [
+                  "array"
+                ],
+                "required": false,
+                "default": []
+              }
+            ]
+          },
+          {
+            "contract": "retrieval_needs_request",
+            "fields": [
+              {
+                "path": "/original_question",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/catalog",
+                "types": [
+                  "object"
+                ],
+                "required": true
+              },
+              {
+                "path": "/catalog/*",
+                "types": [
+                  "object"
+                ],
+                "required": true
+              },
+              {
+                "path": "/catalog/*/*",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/context",
+                "types": [
+                  "array"
+                ],
+                "required": false,
+                "default": []
+              },
+              {
+                "path": "/context/*",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/known_ids",
+                "types": [
+                  "array"
+                ],
+                "required": false,
+                "default": []
+              },
+              {
+                "path": "/known_ids/*",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/source_scope",
+                "types": [
+                  "object"
+                ],
+                "required": false,
+                "default": {}
+              }
+            ]
+          }
+        ],
+        "produces": [
+          {
+            "contract": "retrieval_needs_output",
+            "fields": [
+              {
+                "path": "/original_question",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/source_scope",
+                "types": [
+                  "object"
+                ],
+                "required": true
+              },
+              {
+                "path": "/selections",
+                "types": [
+                  "object"
+                ],
+                "required": true
+              },
+              {
+                "path": "/selections/*",
+                "types": [
+                  "array"
+                ],
+                "required": true
+              },
+              {
+                "path": "/selections/*/*",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/uncertain",
+                "types": [
+                  "object"
+                ],
+                "required": true
+              },
+              {
+                "path": "/uncertain/*",
+                "types": [
+                  "array"
+                ],
+                "required": true
+              },
+              {
+                "path": "/uncertain/*/*",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/detail_mode",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/completeness",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/hierarchy_scope",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/scope_resolution",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/unresolved",
+                "types": [
+                  "array"
+                ],
+                "required": false,
+                "default": []
+              },
+              {
+                "path": "/rationale",
+                "types": [
+                  "string"
+                ],
+                "required": false,
+                "default": ""
+              },
+              {
+                "path": "/engine",
+                "types": [
+                  "string"
+                ],
+                "required": false,
+                "default": "host_llm"
+              },
+              {
+                "path": "/status",
+                "types": [
+                  "string"
+                ],
+                "required": false,
+                "default": "decided"
+              },
+              {
+                "path": "/model_id",
+                "types": [
+                  "null",
+                  "string"
+                ],
+                "required": false,
+                "default": null
+              }
+            ]
+          }
+        ],
+        "examples": [
+          {
+            "contract": "retrieval_needs_output",
+            "mode": "projection",
+            "origin": "observed",
+            "label": "Candidate output projection — actual N03; echoed question/scope and other fields omitted.",
+            "value": {
+              "selections": {
+                "entity_types": [
+                  "ac"
+                ],
+                "target_ids": [
+                  "TQ-500f"
+                ],
+                "required_fields": [
+                  "level",
+                  "work_status"
+                ],
+                "document_types": [
+                  "ac_yaml"
+                ],
+                "relationships": [
+                  "all_descendants"
+                ]
+              },
+              "uncertain": {
+                "entity_types": [],
+                "target_ids": [],
+                "required_fields": [],
+                "document_types": [],
+                "relationships": []
+              },
+              "detail_mode": "fields",
+              "completeness": "exhaustive_count",
+              "hierarchy_scope": "exclude_root",
+              "scope_resolution": "sufficient",
+              "status": "decided"
+            },
+            "source": {
+              "path": "reports/retrieval-needs-llm-2026-10-03-accepted/responses/N03.json",
+              "pointer": ""
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "submit",
+      "label": "Submit the interpretation to its wait",
+      "agent": "Host controller",
+      "order": 5,
+      "human": "Wrap the candidate in an InteractionSubmission for the original run, interaction and expected state revision. Supply actor.kind=host, a valid actor ID, the requested output schema and any actual usage receipt. Send it to KernelService.resume_run. Missing model or token information stays unknown; response.model_id alone is not model provenance.\n\nThe [InteractionSubmission model](kernel/contracts/interaction.py) is a transport wrapper around the output. packet.id becomes interaction_id; packet.state_revision becomes expected_state_revision. run_id comes from the envelope. The original request's caller Actor and this responding host Actor have different roles.\n\nThe required response field is the complete candidate from the preceding step, unchanged. The actual submission omits usage, so the model defaults it to []; no tokens or model are claimed. [Complete accepted submission](reports/retrieval-needs-llm-2026-10-03-accepted/N03.submission.json).\n\nContract fields and examples (generated)\nConsumes:\n  run_envelope/run_id: string (required)\n  Runtime contract: [run_envelope](kernel/contracts/run.py)\n  host_work_request/id: string (required)\n  host_work_request/state_revision: integer (required)\n  host_work_request/output_schema_id: string (required)\n  Runtime contract: [host_work_request](kernel/contracts/interaction.py)\n  retrieval_needs_output/original_question: string (required)\n  retrieval_needs_output/source_scope: object (required)\n  retrieval_needs_output/selections: object (required)\n  retrieval_needs_output/selections/*: array (each present item/value)\n  retrieval_needs_output/selections/*/*: string (each present item/value)\n  retrieval_needs_output/uncertain: object (required)\n  retrieval_needs_output/uncertain/*: array (each present item/value)\n  retrieval_needs_output/uncertain/*/*: string (each present item/value)\n  retrieval_needs_output/detail_mode: string (required)\n  retrieval_needs_output/completeness: string (required)\n  retrieval_needs_output/hierarchy_scope: string (required)\n  retrieval_needs_output/scope_resolution: string (required)\n  retrieval_needs_output/unresolved: array (optional; default [])\n  retrieval_needs_output/rationale: string (optional; default \"\")\n  retrieval_needs_output/engine: string (optional; default \"host_llm\")\n  retrieval_needs_output/status: string (optional; default \"decided\")\n  retrieval_needs_output/model_id: null|string (optional; default null)\n  Schema: [retrieval_needs_output](kernel/schemas/leafcutter.retrieval_needs_output.v1.schema.json)\nProduces:\n  interaction_submission/run_id: string (required)\n  interaction_submission/interaction_id: string (required)\n  interaction_submission/expected_state_revision: integer (required)\n  interaction_submission/actor/id: string (required)\n  interaction_submission/actor/kind: string (required)\n  interaction_submission/response_schema_id: string (required)\n  interaction_submission/response: object (required; applies retrieval_needs_output schema)\n  interaction_submission/relayed_by: null|string (optional; default null)\n  interaction_submission/usage: array (optional; default [])\n  Runtime contract: [interaction_submission](kernel/contracts/interaction.py)\n\nSubmission wrapper projection — actual N03; response body omitted. — interaction_submission; observed; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"run_id\": \"run-b8e03912ebc8474b\",\n  \"interaction_id\": \"int-e409b90b61ab4aeb\",\n  \"expected_state_revision\": 1,\n  \"actor\": {\n    \"id\": \"codex:root:needs_llm_host\",\n    \"kind\": \"host\"\n  },\n  \"relayed_by\": \"isolated-evaluation-controller\",\n  \"response_schema_id\": \"leafcutter.retrieval_needs_output.v1\"\n}\nReceipt: [reports/retrieval-needs-llm-2026-10-03-accepted/N03.submission.json](reports/retrieval-needs-llm-2026-10-03-accepted/N03.submission.json)",
+      "consumes": [
+        "run_envelope/run_id: string (required)",
+        "host_work_request/id: string (required)",
+        "host_work_request/state_revision: integer (required)",
+        "host_work_request/output_schema_id: string (required)",
+        "retrieval_needs_output/original_question: string (required)",
+        "retrieval_needs_output/source_scope: object (required)",
+        "retrieval_needs_output/selections: object (required)",
+        "retrieval_needs_output/selections/*: array (each present item/value)",
+        "retrieval_needs_output/selections/*/*: string (each present item/value)",
+        "retrieval_needs_output/uncertain: object (required)",
+        "retrieval_needs_output/uncertain/*: array (each present item/value)",
+        "retrieval_needs_output/uncertain/*/*: string (each present item/value)",
+        "retrieval_needs_output/detail_mode: string (required)",
+        "retrieval_needs_output/completeness: string (required)",
+        "retrieval_needs_output/hierarchy_scope: string (required)",
+        "retrieval_needs_output/scope_resolution: string (required)",
+        "retrieval_needs_output/unresolved: array (optional; default [])",
+        "retrieval_needs_output/rationale: string (optional; default \"\")",
+        "retrieval_needs_output/engine: string (optional; default \"host_llm\")",
+        "retrieval_needs_output/status: string (optional; default \"decided\")",
+        "retrieval_needs_output/model_id: null|string (optional; default null)"
+      ],
+      "produces": [
+        "interaction_submission/run_id: string (required)",
+        "interaction_submission/interaction_id: string (required)",
+        "interaction_submission/expected_state_revision: integer (required)",
+        "interaction_submission/actor/id: string (required)",
+        "interaction_submission/actor/kind: string (required)",
+        "interaction_submission/response_schema_id: string (required)",
+        "interaction_submission/response: object (required; applies retrieval_needs_output schema)",
+        "interaction_submission/relayed_by: null|string (optional; default null)",
+        "interaction_submission/usage: array (optional; default [])"
+      ],
+      "implements": [],
+      "impl_asof": "2026-10-03",
+      "impl_status": "not_started",
+      "io_contracts": {
+        "consumes": [
+          {
+            "contract": "run_envelope",
+            "fields": [
+              {
+                "path": "/run_id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              }
+            ]
+          },
+          {
+            "contract": "host_work_request",
+            "fields": [
+              {
+                "path": "/id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/state_revision",
+                "types": [
+                  "integer"
+                ],
+                "required": true
+              },
+              {
+                "path": "/output_schema_id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              }
+            ]
+          },
+          {
+            "contract": "retrieval_needs_output",
+            "fields": [
+              {
+                "path": "/original_question",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/source_scope",
+                "types": [
+                  "object"
+                ],
+                "required": true
+              },
+              {
+                "path": "/selections",
+                "types": [
+                  "object"
+                ],
+                "required": true
+              },
+              {
+                "path": "/selections/*",
+                "types": [
+                  "array"
+                ],
+                "required": true
+              },
+              {
+                "path": "/selections/*/*",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/uncertain",
+                "types": [
+                  "object"
+                ],
+                "required": true
+              },
+              {
+                "path": "/uncertain/*",
+                "types": [
+                  "array"
+                ],
+                "required": true
+              },
+              {
+                "path": "/uncertain/*/*",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/detail_mode",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/completeness",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/hierarchy_scope",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/scope_resolution",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/unresolved",
+                "types": [
+                  "array"
+                ],
+                "required": false,
+                "default": []
+              },
+              {
+                "path": "/rationale",
+                "types": [
+                  "string"
+                ],
+                "required": false,
+                "default": ""
+              },
+              {
+                "path": "/engine",
+                "types": [
+                  "string"
+                ],
+                "required": false,
+                "default": "host_llm"
+              },
+              {
+                "path": "/status",
+                "types": [
+                  "string"
+                ],
+                "required": false,
+                "default": "decided"
+              },
+              {
+                "path": "/model_id",
+                "types": [
+                  "null",
+                  "string"
+                ],
+                "required": false,
+                "default": null
+              }
+            ]
+          }
+        ],
+        "produces": [
+          {
+            "contract": "interaction_submission",
+            "fields": [
+              {
+                "path": "/run_id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/interaction_id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/expected_state_revision",
+                "types": [
+                  "integer"
+                ],
+                "required": true
+              },
+              {
+                "path": "/actor/id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/actor/kind",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/response_schema_id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/response",
+                "types": [
+                  "object"
+                ],
+                "required": true,
+                "applies": "retrieval_needs_output"
+              },
+              {
+                "path": "/relayed_by",
+                "types": [
+                  "null",
+                  "string"
+                ],
+                "required": false,
+                "default": null
+              },
+              {
+                "path": "/usage",
+                "types": [
+                  "array"
+                ],
+                "required": false,
+                "default": []
+              }
+            ]
+          }
+        ],
+        "examples": [
+          {
+            "contract": "interaction_submission",
+            "mode": "projection",
+            "origin": "observed",
+            "label": "Submission wrapper projection — actual N03; response body omitted.",
+            "value": {
+              "run_id": "run-b8e03912ebc8474b",
+              "interaction_id": "int-e409b90b61ab4aeb",
+              "expected_state_revision": 1,
+              "actor": {
+                "id": "codex:root:needs_llm_host",
+                "kind": "host"
+              },
+              "relayed_by": "isolated-evaluation-controller",
+              "response_schema_id": "leafcutter.retrieval_needs_output.v1"
+            },
+            "source": {
+              "path": "reports/retrieval-needs-llm-2026-10-03-accepted/N03.submission.json",
+              "pointer": ""
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "validate",
+      "label": "Check the response before accepting it",
+      "agent": "System",
+      "order": 6,
+      "human": "Check the current wait, run, revision, host actor and response schema. Validate the payload against the typed schema, then compare it with the actual pending request: question and source_scope must be unchanged; selected and uncertain labels must be offered and must not overlap.\n\nCheck that needs_resolution has an explicit reason or a structural gap, and that the combined unresolved reasons will fit the 32-item bound. These deterministic checks establish contract validity, not whether every necessary fact was correctly identified. [Submission checks](kernel/interaction/submissions.py) · [Request-bound checks](kernel/capabilities/host/retrieval_needs.py).\n\nNo new wire payload is manufactured here. Successful validation passes the same submission onward; the code's Verdict is an internal Python result, not a JSON field to send. Both [output JSON Schema](kernel/schemas/leafcutter.retrieval_needs_output.v1.schema.json) and the pending request constrain response.\n\nN03 validation projection below shows the actual response facts being checked. Selected fields only; full required/defaulted fields are in the linked contract and complete saved submission.\n\nChanging source_scope.repository would fail request-bound validation even if the JSON Schema still accepts the object. Conversely, [accepted N01](reports/retrieval-needs-llm-2026-10-03-accepted/N01.result.json) selected test_spec without criteria: its typed response passes these mechanical checks but fails the frozen semantic expectation. Acceptance does not prove the right fields were selected.\n\nContract fields and examples (generated)\nConsumes:\n  interaction_submission/run_id: string (required)\n  interaction_submission/interaction_id: string (required)\n  interaction_submission/expected_state_revision: integer (required)\n  interaction_submission/actor: object (required)\n  interaction_submission/response_schema_id: string (required)\n  interaction_submission/response: object (required; applies retrieval_needs_output schema)\n  Runtime contract: [interaction_submission](kernel/contracts/interaction.py)\n  capability_invocation/input_payload: object (required; applies retrieval_needs_request schema)\n  Runtime contract: [capability_invocation](kernel/contracts/work.py)\n  retrieval_needs_output/original_question: string (required)\n  retrieval_needs_output/source_scope: object (required)\n  retrieval_needs_output/selections: object (required)\n  Schema: [retrieval_needs_output](kernel/schemas/leafcutter.retrieval_needs_output.v1.schema.json)\nProduces:\n  interaction_submission/run_id: string (required)\n  interaction_submission/interaction_id: string (required)\n  interaction_submission/response: object (required; applies retrieval_needs_output schema)\n  interaction_submission/usage: array (optional; default [])\n  Runtime contract: [interaction_submission](kernel/contracts/interaction.py)\n\nResponse projection — actual N03, not a complete output. — retrieval_needs_output; observed; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"original_question\": \"Count all L2 and L3 descendants of TQ-500f, excluding only TQ-500f, grouped by work_status.\",\n  \"source_scope\": {\n    \"allow_retrieval\": false,\n    \"read_roots\": [\n      \"docs\",\n      \"kernel\",\n      \"knowledge\",\n      \"integrations\"\n    ],\n    \"repository\": \"leafcutter\",\n    \"source_revision\": \"planning-probe-only\"\n  },\n  \"selections\": {\n    \"entity_types\": [\n      \"ac\"\n    ],\n    \"target_ids\": [\n      \"TQ-500f\"\n    ],\n    \"required_fields\": [\n      \"level\",\n      \"work_status\"\n    ],\n    \"document_types\": [\n      \"ac_yaml\"\n    ],\n    \"relationships\": [\n      \"all_descendants\"\n    ]\n  }\n}\nReceipt: [reports/retrieval-needs-llm-2026-10-03-accepted/N03.submission.json](reports/retrieval-needs-llm-2026-10-03-accepted/N03.submission.json)/response",
+      "consumes": [
+        "interaction_submission/run_id: string (required)",
+        "interaction_submission/interaction_id: string (required)",
+        "interaction_submission/expected_state_revision: integer (required)",
+        "interaction_submission/actor: object (required)",
+        "interaction_submission/response_schema_id: string (required)",
+        "interaction_submission/response: object (required; applies retrieval_needs_output schema)",
+        "capability_invocation/input_payload: object (required; applies retrieval_needs_request schema)",
+        "retrieval_needs_output/original_question: string (required)",
+        "retrieval_needs_output/source_scope: object (required)",
+        "retrieval_needs_output/selections: object (required)"
+      ],
+      "produces": [
+        "interaction_submission/run_id: string (required)",
+        "interaction_submission/interaction_id: string (required)",
+        "interaction_submission/response: object (required; applies retrieval_needs_output schema)",
+        "interaction_submission/usage: array (optional; default [])"
+      ],
+      "implements": [],
+      "impl_asof": "2026-10-03",
+      "impl_status": "not_started",
+      "io_contracts": {
+        "consumes": [
+          {
+            "contract": "interaction_submission",
+            "fields": [
+              {
+                "path": "/run_id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/interaction_id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/expected_state_revision",
+                "types": [
+                  "integer"
+                ],
+                "required": true
+              },
+              {
+                "path": "/actor",
+                "types": [
+                  "object"
+                ],
+                "required": true
+              },
+              {
+                "path": "/response_schema_id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/response",
+                "types": [
+                  "object"
+                ],
+                "required": true,
+                "applies": "retrieval_needs_output"
+              }
+            ]
+          },
+          {
+            "contract": "capability_invocation",
+            "fields": [
+              {
+                "path": "/input_payload",
+                "types": [
+                  "object"
+                ],
+                "required": true,
+                "applies": "retrieval_needs_request"
+              }
+            ]
+          },
+          {
+            "contract": "retrieval_needs_output",
+            "fields": [
+              {
+                "path": "/original_question",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/source_scope",
+                "types": [
+                  "object"
+                ],
+                "required": true
+              },
+              {
+                "path": "/selections",
+                "types": [
+                  "object"
+                ],
+                "required": true
+              }
+            ]
+          }
+        ],
+        "produces": [
+          {
+            "contract": "interaction_submission",
+            "fields": [
+              {
+                "path": "/run_id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/interaction_id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/response",
+                "types": [
+                  "object"
+                ],
+                "required": true,
+                "applies": "retrieval_needs_output"
+              },
+              {
+                "path": "/usage",
+                "types": [
+                  "array"
+                ],
+                "required": false,
+                "default": []
+              }
+            ]
+          }
+        ],
+        "examples": [
+          {
+            "contract": "retrieval_needs_output",
+            "mode": "projection",
+            "origin": "observed",
+            "label": "Response projection — actual N03, not a complete output.",
+            "value": {
+              "original_question": "Count all L2 and L3 descendants of TQ-500f, excluding only TQ-500f, grouped by work_status.",
+              "source_scope": {
+                "allow_retrieval": false,
+                "read_roots": [
+                  "docs",
+                  "kernel",
+                  "knowledge",
+                  "integrations"
+                ],
+                "repository": "leafcutter",
+                "source_revision": "planning-probe-only"
+              },
+              "selections": {
+                "entity_types": [
+                  "ac"
+                ],
+                "target_ids": [
+                  "TQ-500f"
+                ],
+                "required_fields": [
+                  "level",
+                  "work_status"
+                ],
+                "document_types": [
+                  "ac_yaml"
+                ],
+                "relationships": [
+                  "all_descendants"
+                ]
+              }
+            },
+            "source": {
+              "path": "reports/retrieval-needs-llm-2026-10-03-accepted/N03.submission.json",
+              "pointer": "/response"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "accept-and-resume",
+      "label": "Record acceptance and resume the run",
+      "agent": "System",
+      "order": 7,
+      "human": "Persist the accepted submission in the durable interaction ledger before resuming LangGraph. The resumed node validates the same submission again before converting it. Identical accepted replays are idempotent; a conflicting duplicate cannot replace the accepted response. The issued host-operation counter is not evidence of acceptance; the ledger is.\n\n[Interaction ledger](kernel/interaction/ledger.py) · [Resume node](kernel/scheduler/nodes_interaction.py).\n\nThe persisted [SubmissionRecord model](kernel/persistence/base.py) is internal ledger JSON, not a replacement host response. submission stores the complete normalized transport wrapper; the original response body is preserved.\n\n[Complete accepted ledger](reports/retrieval-needs-llm-2026-10-03-accepted/accepted-ledgers/N03.json). Its required submission member carries the accepted wrapper and response. This record proves acceptance; an issued-operation counter does not.\n\nContract fields and examples (generated)\nConsumes:\n  interaction_submission/run_id: string (required)\n  interaction_submission/interaction_id: string (required)\n  interaction_submission/response: object (required; applies retrieval_needs_output schema)\n  Runtime contract: [interaction_submission](kernel/contracts/interaction.py)\nProduces:\n  submission_record/run_id: string (required)\n  submission_record/interaction_id: string (required)\n  submission_record/sha256: string (required)\n  submission_record/submission: object (required; applies interaction_submission schema)\n  submission_record/accepted_at: string (optional)\n  Runtime contract: [submission_record](kernel/persistence/base.py)\n\nAccepted-ledger projection — actual N03; submission body omitted. — submission_record; observed; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"run_id\": \"run-b8e03912ebc8474b\",\n  \"interaction_id\": \"int-e409b90b61ab4aeb\",\n  \"sha256\": \"c8406a93f8f95f0a2c399e6eee595a756a1c3b7b5b2135b1ba25240ea681c134\",\n  \"accepted_at\": \"2026-10-03T09:45:54.769557Z\"\n}\nReceipt: [reports/retrieval-needs-llm-2026-10-03-accepted/accepted-ledgers/N03.json](reports/retrieval-needs-llm-2026-10-03-accepted/accepted-ledgers/N03.json)",
+      "consumes": [
+        "interaction_submission/run_id: string (required)",
+        "interaction_submission/interaction_id: string (required)",
+        "interaction_submission/response: object (required; applies retrieval_needs_output schema)"
+      ],
+      "produces": [
+        "submission_record/run_id: string (required)",
+        "submission_record/interaction_id: string (required)",
+        "submission_record/sha256: string (required)",
+        "submission_record/submission: object (required; applies interaction_submission schema)",
+        "submission_record/accepted_at: string (optional)"
+      ],
+      "implements": [],
+      "impl_asof": "2026-10-03",
+      "impl_status": "not_started",
+      "io_contracts": {
+        "consumes": [
+          {
+            "contract": "interaction_submission",
+            "fields": [
+              {
+                "path": "/run_id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/interaction_id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/response",
+                "types": [
+                  "object"
+                ],
+                "required": true,
+                "applies": "retrieval_needs_output"
+              }
+            ]
+          }
+        ],
+        "produces": [
+          {
+            "contract": "submission_record",
+            "fields": [
+              {
+                "path": "/run_id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/interaction_id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/sha256",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/submission",
+                "types": [
+                  "object"
+                ],
+                "required": true,
+                "applies": "interaction_submission"
+              },
+              {
+                "path": "/accepted_at",
+                "types": [
+                  "string"
+                ],
+                "required": false
+              }
+            ]
+          }
+        ],
+        "examples": [
+          {
+            "contract": "submission_record",
+            "mode": "projection",
+            "origin": "observed",
+            "label": "Accepted-ledger projection — actual N03; submission body omitted.",
+            "value": {
+              "run_id": "run-b8e03912ebc8474b",
+              "interaction_id": "int-e409b90b61ab4aeb",
+              "sha256": "c8406a93f8f95f0a2c399e6eee595a756a1c3b7b5b2135b1ba25240ea681c134",
+              "accepted_at": "2026-10-03T09:45:54.769557Z"
+            },
+            "source": {
+              "path": "reports/retrieval-needs-llm-2026-10-03-accepted/accepted-ledgers/N03.json",
+              "pointer": ""
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "normalize-needs",
+      "label": "Normalize the interpretation",
+      "agent": "System",
+      "order": 8,
+      "human": "Recheck the request binding, add structural missing reasons, deduplicate them and derive status: needs_resolution when explicit or structural reasons remain, otherwise decided. Take model_id only from reported host usage; leave it null when unknown. Revalidate the normalized output.\n\nUncertain alternatives can coexist with decided. discovery_needed does not force needs_resolution; hierarchy_scope=unknown adds a gap only for an exhaustive set or count. These checks normalize a host interpretation; they do not establish semantic correctness. [Normalization](kernel/capabilities/host/retrieval_needs.py).\n\nThis phase returns the same [output JSON Schema](kernel/schemas/leafcutter.retrieval_needs_output.v1.schema.json) shape, not a new needs format. Only status, unresolved and model_id are normalized here; the candidate's other fields are retained. The model and request-bound checks are rerun. N03 reported no usage, so no model identity is inferred.\n\nN03's complete candidate and normalized output are equal. Other valid inputs can gain structural unresolved reasons and change status to needs_resolution. A reported model ID that exceeds the output bound can instead cause the existing conversion-failure branch.\n\nContract fields and examples (generated)\nConsumes:\n  interaction_submission/response: object (required; applies retrieval_needs_output schema)\n  interaction_submission/usage: array (optional; default [])\n  Runtime contract: [interaction_submission](kernel/contracts/interaction.py)\n  capability_invocation/input_payload: object (required; applies retrieval_needs_request schema)\n  Runtime contract: [capability_invocation](kernel/contracts/work.py)\n  retrieval_needs_request/original_question: string (required)\n  retrieval_needs_request/source_scope: object (optional; default {})\n  retrieval_needs_request/catalog: object (required)\n  Schema: [retrieval_needs_request](kernel/schemas/leafcutter.retrieval_needs_request.v1.schema.json)\nProduces:\n  retrieval_needs_output/original_question: string (required)\n  retrieval_needs_output/source_scope: object (required)\n  retrieval_needs_output/selections: object (required)\n  retrieval_needs_output/selections/*: array (each present item/value)\n  retrieval_needs_output/selections/*/*: string (each present item/value)\n  retrieval_needs_output/uncertain: object (required)\n  retrieval_needs_output/uncertain/*: array (each present item/value)\n  retrieval_needs_output/uncertain/*/*: string (each present item/value)\n  retrieval_needs_output/detail_mode: string (required)\n  retrieval_needs_output/completeness: string (required)\n  retrieval_needs_output/hierarchy_scope: string (required)\n  retrieval_needs_output/scope_resolution: string (required)\n  retrieval_needs_output/unresolved: array (optional; default [])\n  retrieval_needs_output/rationale: string (optional; default \"\")\n  retrieval_needs_output/engine: string (optional; default \"host_llm\")\n  retrieval_needs_output/status: string (optional; default \"decided\")\n  retrieval_needs_output/model_id: null|string (optional; default null)\n  Schema: [retrieval_needs_output](kernel/schemas/leafcutter.retrieval_needs_output.v1.schema.json)\n\nNormalized output projection — actual N03; selected fields only; full required/defaulted fields are in the linked contract. — retrieval_needs_output; observed; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"status\": \"decided\",\n  \"unresolved\": [],\n  \"model_id\": null,\n  \"selections\": {\n    \"entity_types\": [\n      \"ac\"\n    ],\n    \"target_ids\": [\n      \"TQ-500f\"\n    ],\n    \"required_fields\": [\n      \"level\",\n      \"work_status\"\n    ],\n    \"document_types\": [\n      \"ac_yaml\"\n    ],\n    \"relationships\": [\n      \"all_descendants\"\n    ]\n  }\n}\nReceipt: [reports/retrieval-needs-llm-2026-10-03-accepted/N03.result.json](reports/retrieval-needs-llm-2026-10-03-accepted/N03.result.json)/envelope/output/payload",
+      "consumes": [
+        "interaction_submission/response: object (required; applies retrieval_needs_output schema)",
+        "interaction_submission/usage: array (optional; default [])",
+        "capability_invocation/input_payload: object (required; applies retrieval_needs_request schema)",
+        "retrieval_needs_request/original_question: string (required)",
+        "retrieval_needs_request/source_scope: object (optional; default {})",
+        "retrieval_needs_request/catalog: object (required)"
+      ],
+      "produces": [
+        "retrieval_needs_output/original_question: string (required)",
+        "retrieval_needs_output/source_scope: object (required)",
+        "retrieval_needs_output/selections: object (required)",
+        "retrieval_needs_output/selections/*: array (each present item/value)",
+        "retrieval_needs_output/selections/*/*: string (each present item/value)",
+        "retrieval_needs_output/uncertain: object (required)",
+        "retrieval_needs_output/uncertain/*: array (each present item/value)",
+        "retrieval_needs_output/uncertain/*/*: string (each present item/value)",
+        "retrieval_needs_output/detail_mode: string (required)",
+        "retrieval_needs_output/completeness: string (required)",
+        "retrieval_needs_output/hierarchy_scope: string (required)",
+        "retrieval_needs_output/scope_resolution: string (required)",
+        "retrieval_needs_output/unresolved: array (optional; default [])",
+        "retrieval_needs_output/rationale: string (optional; default \"\")",
+        "retrieval_needs_output/engine: string (optional; default \"host_llm\")",
+        "retrieval_needs_output/status: string (optional; default \"decided\")",
+        "retrieval_needs_output/model_id: null|string (optional; default null)"
+      ],
+      "implements": [],
+      "impl_asof": "2026-10-03",
+      "impl_status": "not_started",
+      "io_contracts": {
+        "consumes": [
+          {
+            "contract": "interaction_submission",
+            "fields": [
+              {
+                "path": "/response",
+                "types": [
+                  "object"
+                ],
+                "required": true,
+                "applies": "retrieval_needs_output"
+              },
+              {
+                "path": "/usage",
+                "types": [
+                  "array"
+                ],
+                "required": false,
+                "default": []
+              }
+            ]
+          },
+          {
+            "contract": "capability_invocation",
+            "fields": [
+              {
+                "path": "/input_payload",
+                "types": [
+                  "object"
+                ],
+                "required": true,
+                "applies": "retrieval_needs_request"
+              }
+            ]
+          },
+          {
+            "contract": "retrieval_needs_request",
+            "fields": [
+              {
+                "path": "/original_question",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/source_scope",
+                "types": [
+                  "object"
+                ],
+                "required": false,
+                "default": {}
+              },
+              {
+                "path": "/catalog",
+                "types": [
+                  "object"
+                ],
+                "required": true
+              }
+            ]
+          }
+        ],
+        "produces": [
+          {
+            "contract": "retrieval_needs_output",
+            "fields": [
+              {
+                "path": "/original_question",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/source_scope",
+                "types": [
+                  "object"
+                ],
+                "required": true
+              },
+              {
+                "path": "/selections",
+                "types": [
+                  "object"
+                ],
+                "required": true
+              },
+              {
+                "path": "/selections/*",
+                "types": [
+                  "array"
+                ],
+                "required": true
+              },
+              {
+                "path": "/selections/*/*",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/uncertain",
+                "types": [
+                  "object"
+                ],
+                "required": true
+              },
+              {
+                "path": "/uncertain/*",
+                "types": [
+                  "array"
+                ],
+                "required": true
+              },
+              {
+                "path": "/uncertain/*/*",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/detail_mode",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/completeness",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/hierarchy_scope",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/scope_resolution",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/unresolved",
+                "types": [
+                  "array"
+                ],
+                "required": false,
+                "default": []
+              },
+              {
+                "path": "/rationale",
+                "types": [
+                  "string"
+                ],
+                "required": false,
+                "default": ""
+              },
+              {
+                "path": "/engine",
+                "types": [
+                  "string"
+                ],
+                "required": false,
+                "default": "host_llm"
+              },
+              {
+                "path": "/status",
+                "types": [
+                  "string"
+                ],
+                "required": false,
+                "default": "decided"
+              },
+              {
+                "path": "/model_id",
+                "types": [
+                  "null",
+                  "string"
+                ],
+                "required": false,
+                "default": null
+              }
+            ]
+          }
+        ],
+        "examples": [
+          {
+            "contract": "retrieval_needs_output",
+            "mode": "projection",
+            "origin": "observed",
+            "label": "Normalized output projection — actual N03; selected fields only; full required/defaulted fields are in the linked contract.",
+            "value": {
+              "status": "decided",
+              "unresolved": [],
+              "model_id": null,
+              "selections": {
+                "entity_types": [
+                  "ac"
+                ],
+                "target_ids": [
+                  "TQ-500f"
+                ],
+                "required_fields": [
+                  "level",
+                  "work_status"
+                ],
+                "document_types": [
+                  "ac_yaml"
+                ],
+                "relationships": [
+                  "all_descendants"
+                ]
+              }
+            },
+            "source": {
+              "path": "reports/retrieval-needs-llm-2026-10-03-accepted/N03.result.json",
+              "pointer": "/envelope/output/payload"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "return-needs",
+      "label": "Return the typed needs",
+      "agent": "System",
+      "order": 9,
+      "human": "After successful normalization, return the typed payload in a completed CapabilityResult with the interpretation-only limitation. Both decided and needs_resolution are completed interpretation outcomes. Completion does not mean retrieval or an answer finished. A failed normalization terminates through its failure branch instead. [Result conversion](kernel/capabilities/host/retrieval_needs.py).\n\nThe internal [CapabilityResult](kernel/contracts/capability.py) uses output_payload. The caller receives a [RunEnvelope](kernel/contracts/run.py), where the same payload is at output.payload and its schema ID is at output.schema_id. Neither wrapper adds a retrieved count. The envelope's completed status is distinct from the payload's decided status.\n\nThis is exactly [saved N03 result](reports/retrieval-needs-llm-2026-10-03-accepted/N03.result.json) at envelope.output.payload. Its top-level fields conform to [output JSON Schema](kernel/schemas/leafcutter.retrieval_needs_output.v1.schema.json). source_scope remains the original metadata claim.\n\nThe output examples distinguish the complete typed payload from selected envelope fields; an envelope projection is not a complete response. [Full recorded envelope](reports/retrieval-needs-llm-2026-10-03-accepted/N03.result.json).\n\nContract fields and examples (generated)\nConsumes:\n  retrieval_needs_output/original_question: string (required)\n  retrieval_needs_output/source_scope: object (required)\n  retrieval_needs_output/selections: object (required)\n  retrieval_needs_output/selections/*: array (each present item/value)\n  retrieval_needs_output/selections/*/*: string (each present item/value)\n  retrieval_needs_output/uncertain: object (required)\n  retrieval_needs_output/uncertain/*: array (each present item/value)\n  retrieval_needs_output/uncertain/*/*: string (each present item/value)\n  retrieval_needs_output/detail_mode: string (required)\n  retrieval_needs_output/completeness: string (required)\n  retrieval_needs_output/hierarchy_scope: string (required)\n  retrieval_needs_output/scope_resolution: string (required)\n  retrieval_needs_output/unresolved: array (optional; default [])\n  retrieval_needs_output/rationale: string (optional; default \"\")\n  retrieval_needs_output/engine: string (optional; default \"host_llm\")\n  retrieval_needs_output/status: string (optional; default \"decided\")\n  retrieval_needs_output/model_id: null|string (optional; default null)\n  Schema: [retrieval_needs_output](kernel/schemas/leafcutter.retrieval_needs_output.v1.schema.json)\nProduces:\n  capability_result/status: string (required)\n  capability_result/output_schema_id: null|string (optional; default null)\n  capability_result/output_payload: null|object (optional; default null; applies retrieval_needs_output schema)\n  capability_result/limitations: array (optional; default [])\n  Runtime contract: [capability_result](kernel/contracts/capability.py)\n  run_envelope/run_id: string (required)\n  run_envelope/state_revision: integer (required)\n  run_envelope/status: string (required)\n  run_envelope/output/schema_id: string (required)\n  run_envelope/output/payload: object (required; applies retrieval_needs_output schema)\n  run_envelope/pending_interaction: null|object (optional; default null)\n  Runtime contract: [run_envelope](kernel/contracts/run.py)\n\nComplete normalized output payload — actual N03; JSON Schema and typed model validated. — retrieval_needs_output; observed; complete payload:\n{\n  \"schema_version\": \"1.0\",\n  \"original_question\": \"Count all L2 and L3 descendants of TQ-500f, excluding only TQ-500f, grouped by work_status.\",\n  \"source_scope\": {\n    \"allow_retrieval\": false,\n    \"read_roots\": [\n      \"docs\",\n      \"kernel\",\n      \"knowledge\",\n      \"integrations\"\n    ],\n    \"repository\": \"leafcutter\",\n    \"source_revision\": \"planning-probe-only\"\n  },\n  \"selections\": {\n    \"entity_types\": [\n      \"ac\"\n    ],\n    \"target_ids\": [\n      \"TQ-500f\"\n    ],\n    \"required_fields\": [\n      \"level\",\n      \"work_status\"\n    ],\n    \"document_types\": [\n      \"ac_yaml\"\n    ],\n    \"relationships\": [\n      \"all_descendants\"\n    ]\n  },\n  \"uncertain\": {\n    \"entity_types\": [],\n    \"target_ids\": [],\n    \"required_fields\": [],\n    \"document_types\": [],\n    \"relationships\": []\n  },\n  \"detail_mode\": \"fields\",\n  \"completeness\": \"exhaustive_count\",\n  \"hierarchy_scope\": \"exclude_root\",\n  \"scope_resolution\": \"sufficient\",\n  \"unresolved\": [],\n  \"rationale\": \"The population is every descendant of the named root whose level is L2 or L3, including intermediate descendants that are themselves parents. Exclude only TQ-500f and group the complete count by implementation work_status. Direct children and lifecycle status would not preserve the request.\",\n  \"engine\": \"host_llm\",\n  \"status\": \"decided\",\n  \"model_id\": null\n}\nReceipt: [reports/retrieval-needs-llm-2026-10-03-accepted/N03.result.json](reports/retrieval-needs-llm-2026-10-03-accepted/N03.result.json)/envelope/output/payload\n\nReturned RunEnvelope projection — actual N03; most payload and envelope fields omitted. — run_envelope; observed; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"run_id\": \"run-b8e03912ebc8474b\",\n  \"state_revision\": 3,\n  \"status\": \"completed\",\n  \"pending_interaction\": null,\n  \"output\": {\n    \"schema_id\": \"leafcutter.retrieval_needs_output.v1\",\n    \"payload\": {\n      \"status\": \"decided\",\n      \"completeness\": \"exhaustive_count\"\n    }\n  }\n}\nReceipt: [reports/retrieval-needs-llm-2026-10-03-accepted/N03.result.json](reports/retrieval-needs-llm-2026-10-03-accepted/N03.result.json)/envelope",
+      "consumes": [
+        "retrieval_needs_output/original_question: string (required)",
+        "retrieval_needs_output/source_scope: object (required)",
+        "retrieval_needs_output/selections: object (required)",
+        "retrieval_needs_output/selections/*: array (each present item/value)",
+        "retrieval_needs_output/selections/*/*: string (each present item/value)",
+        "retrieval_needs_output/uncertain: object (required)",
+        "retrieval_needs_output/uncertain/*: array (each present item/value)",
+        "retrieval_needs_output/uncertain/*/*: string (each present item/value)",
+        "retrieval_needs_output/detail_mode: string (required)",
+        "retrieval_needs_output/completeness: string (required)",
+        "retrieval_needs_output/hierarchy_scope: string (required)",
+        "retrieval_needs_output/scope_resolution: string (required)",
+        "retrieval_needs_output/unresolved: array (optional; default [])",
+        "retrieval_needs_output/rationale: string (optional; default \"\")",
+        "retrieval_needs_output/engine: string (optional; default \"host_llm\")",
+        "retrieval_needs_output/status: string (optional; default \"decided\")",
+        "retrieval_needs_output/model_id: null|string (optional; default null)"
+      ],
+      "produces": [
+        "capability_result/status: string (required)",
+        "capability_result/output_schema_id: null|string (optional; default null)",
+        "capability_result/output_payload: null|object (optional; default null; applies retrieval_needs_output schema)",
+        "capability_result/limitations: array (optional; default [])",
+        "run_envelope/run_id: string (required)",
+        "run_envelope/state_revision: integer (required)",
+        "run_envelope/status: string (required)",
+        "run_envelope/output/schema_id: string (required)",
+        "run_envelope/output/payload: object (required; applies retrieval_needs_output schema)",
+        "run_envelope/pending_interaction: null|object (optional; default null)"
+      ],
+      "implements": [],
+      "impl_asof": "2026-10-03",
+      "impl_status": "not_started",
+      "io_contracts": {
+        "consumes": [
+          {
+            "contract": "retrieval_needs_output",
+            "fields": [
+              {
+                "path": "/original_question",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/source_scope",
+                "types": [
+                  "object"
+                ],
+                "required": true
+              },
+              {
+                "path": "/selections",
+                "types": [
+                  "object"
+                ],
+                "required": true
+              },
+              {
+                "path": "/selections/*",
+                "types": [
+                  "array"
+                ],
+                "required": true
+              },
+              {
+                "path": "/selections/*/*",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/uncertain",
+                "types": [
+                  "object"
+                ],
+                "required": true
+              },
+              {
+                "path": "/uncertain/*",
+                "types": [
+                  "array"
+                ],
+                "required": true
+              },
+              {
+                "path": "/uncertain/*/*",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/detail_mode",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/completeness",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/hierarchy_scope",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/scope_resolution",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/unresolved",
+                "types": [
+                  "array"
+                ],
+                "required": false,
+                "default": []
+              },
+              {
+                "path": "/rationale",
+                "types": [
+                  "string"
+                ],
+                "required": false,
+                "default": ""
+              },
+              {
+                "path": "/engine",
+                "types": [
+                  "string"
+                ],
+                "required": false,
+                "default": "host_llm"
+              },
+              {
+                "path": "/status",
+                "types": [
+                  "string"
+                ],
+                "required": false,
+                "default": "decided"
+              },
+              {
+                "path": "/model_id",
+                "types": [
+                  "null",
+                  "string"
+                ],
+                "required": false,
+                "default": null
+              }
+            ]
+          }
+        ],
+        "produces": [
+          {
+            "contract": "capability_result",
+            "fields": [
+              {
+                "path": "/status",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/output_schema_id",
+                "types": [
+                  "null",
+                  "string"
+                ],
+                "required": false,
+                "default": null
+              },
+              {
+                "path": "/output_payload",
+                "types": [
+                  "null",
+                  "object"
+                ],
+                "required": false,
+                "default": null,
+                "applies": "retrieval_needs_output"
+              },
+              {
+                "path": "/limitations",
+                "types": [
+                  "array"
+                ],
+                "required": false,
+                "default": []
+              }
+            ]
+          },
+          {
+            "contract": "run_envelope",
+            "fields": [
+              {
+                "path": "/run_id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/state_revision",
+                "types": [
+                  "integer"
+                ],
+                "required": true
+              },
+              {
+                "path": "/status",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/output/schema_id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/output/payload",
+                "types": [
+                  "object"
+                ],
+                "required": true,
+                "applies": "retrieval_needs_output"
+              },
+              {
+                "path": "/pending_interaction",
+                "types": [
+                  "null",
+                  "object"
+                ],
+                "required": false,
+                "default": null
+              }
+            ]
+          }
+        ],
+        "examples": [
+          {
+            "contract": "retrieval_needs_output",
+            "mode": "full",
+            "origin": "observed",
+            "label": "Complete normalized output payload — actual N03; JSON Schema and typed model validated.",
+            "value": {
+              "schema_version": "1.0",
+              "original_question": "Count all L2 and L3 descendants of TQ-500f, excluding only TQ-500f, grouped by work_status.",
+              "source_scope": {
+                "allow_retrieval": false,
+                "read_roots": [
+                  "docs",
+                  "kernel",
+                  "knowledge",
+                  "integrations"
+                ],
+                "repository": "leafcutter",
+                "source_revision": "planning-probe-only"
+              },
+              "selections": {
+                "entity_types": [
+                  "ac"
+                ],
+                "target_ids": [
+                  "TQ-500f"
+                ],
+                "required_fields": [
+                  "level",
+                  "work_status"
+                ],
+                "document_types": [
+                  "ac_yaml"
+                ],
+                "relationships": [
+                  "all_descendants"
+                ]
+              },
+              "uncertain": {
+                "entity_types": [],
+                "target_ids": [],
+                "required_fields": [],
+                "document_types": [],
+                "relationships": []
+              },
+              "detail_mode": "fields",
+              "completeness": "exhaustive_count",
+              "hierarchy_scope": "exclude_root",
+              "scope_resolution": "sufficient",
+              "unresolved": [],
+              "rationale": "The population is every descendant of the named root whose level is L2 or L3, including intermediate descendants that are themselves parents. Exclude only TQ-500f and group the complete count by implementation work_status. Direct children and lifecycle status would not preserve the request.",
+              "engine": "host_llm",
+              "status": "decided",
+              "model_id": null
+            },
+            "source": {
+              "path": "reports/retrieval-needs-llm-2026-10-03-accepted/N03.result.json",
+              "pointer": "/envelope/output/payload"
+            }
+          },
+          {
+            "contract": "run_envelope",
+            "mode": "projection",
+            "origin": "observed",
+            "label": "Returned RunEnvelope projection — actual N03; most payload and envelope fields omitted.",
+            "value": {
+              "run_id": "run-b8e03912ebc8474b",
+              "state_revision": 3,
+              "status": "completed",
+              "pending_interaction": null,
+              "output": {
+                "schema_id": "leafcutter.retrieval_needs_output.v1",
+                "payload": {
+                  "status": "decided",
+                  "completeness": "exhaustive_count"
+                }
+              }
+            },
+            "source": {
+              "path": "reports/retrieval-needs-llm-2026-10-03-accepted/N03.result.json",
+              "pointer": "/envelope"
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "branches": [
+    {
+      "id": "invalid-request",
+      "from": "prepare-request",
+      "label": "Reject an invalid request",
+      "agent": "System",
+      "condition": "Input is malformed, ungrounded or outside the request bounds",
+      "outcome_kind": "failure",
+      "human": "Reject the task before a host wait is created. Do not silently trim the catalog, invent target IDs or reinterpret a changed question.\n\nContract fields and examples (generated)\nNo JSON handoff: The Python build_llm_needs_task call raises a validation/value error before a TaskInput or RunEnvelope exists. The rejected arguments do not become an accepted request DTO. There is no separate serialized error payload at this API boundary; the callable does not start a host wait.",
+      "implements": [],
+      "impl_asof": "2026-10-03",
+      "impl_status": "not_started",
+      "io_contracts": {
+        "not_applicable": "The Python build_llm_needs_task call raises a validation/value error before a TaskInput or RunEnvelope exists. The rejected arguments do not become an accepted request DTO. There is no separate serialized error payload at this API boundary; the callable does not start a host wait."
+      },
+      "consumes": [],
+      "produces": []
+    },
+    {
+      "id": "host-pending",
+      "from": "wait-for-host",
+      "label": "Keep waiting across a restart",
+      "agent": "System",
+      "condition": "The host has not submitted a response",
+      "outcome_kind": "alternative",
+      "human": "Keep the durable wait available. A restarted service can read the same packet and resume the original run when its valid response arrives; elapsed time supplies no interpretation.\n\nThe same persisted RunEnvelope remains available while the external host has not submitted; no new output or acceptance is fabricated.\n\nContract fields and examples (generated)\nConsumes:\n  run_envelope/run_id: string (required)\n  run_envelope/state_revision: integer (required)\n  run_envelope/status: string (required)\n  run_envelope/pending_interaction: null|object (optional; default null)\n  Runtime contract: [run_envelope](kernel/contracts/run.py)\nProduces:\n  run_envelope/run_id: string (required)\n  run_envelope/state_revision: integer (required)\n  run_envelope/status: string (required)\n  run_envelope/pending_interaction: null|object (optional; default null)\n  Runtime contract: [run_envelope](kernel/contracts/run.py)\n\nSaved N03 wait remains waiting_host — run_envelope; observed; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"run_id\": \"run-b8e03912ebc8474b\",\n  \"state_revision\": 1,\n  \"status\": \"waiting_host\"\n}\nReceipt: [reports/retrieval-needs-llm-2026-10-03-accepted/N03.started.json](reports/retrieval-needs-llm-2026-10-03-accepted/N03.started.json)",
+      "implements": [],
+      "impl_asof": "2026-10-03",
+      "impl_status": "not_started",
+      "io_contracts": {
+        "consumes": [
+          {
+            "contract": "run_envelope",
+            "fields": [
+              {
+                "path": "/run_id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/state_revision",
+                "types": [
+                  "integer"
+                ],
+                "required": true
+              },
+              {
+                "path": "/status",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/pending_interaction",
+                "types": [
+                  "null",
+                  "object"
+                ],
+                "required": false,
+                "default": null
+              }
+            ]
+          }
+        ],
+        "produces": [
+          {
+            "contract": "run_envelope",
+            "fields": [
+              {
+                "path": "/run_id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/state_revision",
+                "types": [
+                  "integer"
+                ],
+                "required": true
+              },
+              {
+                "path": "/status",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/pending_interaction",
+                "types": [
+                  "null",
+                  "object"
+                ],
+                "required": false,
+                "default": null
+              }
+            ]
+          }
+        ],
+        "examples": [
+          {
+            "contract": "run_envelope",
+            "mode": "projection",
+            "origin": "observed",
+            "label": "Saved N03 wait remains waiting_host",
+            "value": {
+              "run_id": "run-b8e03912ebc8474b",
+              "state_revision": 1,
+              "status": "waiting_host"
+            },
+            "source": {
+              "path": "reports/retrieval-needs-llm-2026-10-03-accepted/N03.started.json",
+              "pointer": ""
+            }
+          }
+        ]
+      },
+      "consumes": [
+        "run_envelope/run_id: string (required)",
+        "run_envelope/state_revision: integer (required)",
+        "run_envelope/status: string (required)",
+        "run_envelope/pending_interaction: null|object (optional; default null)"
+      ],
+      "produces": [
+        "run_envelope/run_id: string (required)",
+        "run_envelope/state_revision: integer (required)",
+        "run_envelope/status: string (required)",
+        "run_envelope/pending_interaction: null|object (optional; default null)"
+      ]
+    },
+    {
+      "id": "submission-refused",
+      "from": "validate",
+      "label": "Refuse the wrong submission",
+      "agent": "System",
+      "condition": "The wrapper, actor, run, wait, revision or response kind is invalid",
+      "outcome_kind": "failure",
+      "human": "Return the stable rejection without writing an accepted ledger entry or changing the graph. An invalid slash-containing actor ID is one observed example. Correct the wrapper for the actual current wait; this is different from a valid needs_resolution output.\n\nKernelService.resume_run raises SubmissionRejected for this Python call. Its code/details/envelope are exception attributes, not a returned submission DTO. The separate CLI can serialize error_payload in kernel/service_errors.py; this flow does not claim that the Python method returns that CLI wrapper. The saved wait and accepted ledger remain unchanged.\n\nContract fields and examples (generated)\nConsumes:\n  interaction_submission/run_id: string (required)\n  interaction_submission/interaction_id: string (required)\n  interaction_submission/expected_state_revision: integer (required)\n  interaction_submission/actor: object (required)\n  interaction_submission/response_schema_id: string (required)\n  Runtime contract: [interaction_submission](kernel/contracts/interaction.py)\nProduces:\n  No checked JSON binding documented in this direction.\n\nIllustrative stale-revision submission, rejected against revision 1 — interaction_submission; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"run_id\": \"run-b8e03912ebc8474b\",\n  \"interaction_id\": \"int-e409b90b61ab4aeb\",\n  \"expected_state_revision\": 0\n}",
+      "implements": [],
+      "impl_asof": "2026-10-03",
+      "impl_status": "not_started",
+      "io_contracts": {
+        "consumes": [
+          {
+            "contract": "interaction_submission",
+            "fields": [
+              {
+                "path": "/run_id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/interaction_id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/expected_state_revision",
+                "types": [
+                  "integer"
+                ],
+                "required": true
+              },
+              {
+                "path": "/actor",
+                "types": [
+                  "object"
+                ],
+                "required": true
+              },
+              {
+                "path": "/response_schema_id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              }
+            ]
+          }
+        ],
+        "produces": [],
+        "examples": [
+          {
+            "contract": "interaction_submission",
+            "mode": "projection",
+            "origin": "illustrative",
+            "label": "Illustrative stale-revision submission, rejected against revision 1",
+            "value": {
+              "run_id": "run-b8e03912ebc8474b",
+              "interaction_id": "int-e409b90b61ab4aeb",
+              "expected_state_revision": 0
+            }
+          }
+        ]
+      },
+      "consumes": [
+        "interaction_submission/run_id: string (required)",
+        "interaction_submission/interaction_id: string (required)",
+        "interaction_submission/expected_state_revision: integer (required)",
+        "interaction_submission/actor: object (required)",
+        "interaction_submission/response_schema_id: string (required)"
+      ],
+      "produces": []
+    },
+    {
+      "id": "repair-content",
+      "from": "validate",
+      "label": "Return to the host for correction",
+      "agent": "System",
+      "condition": "The payload fails schema or request-bound validation and its first correction remains",
+      "outcome_kind": "alternative",
+      "human": "Checkpoint the rejection and reissue the same interaction with rejection details. Return to [host interpretation](docs/product-truth/flows/leafcutter/retrieval-needs-interpretation.flow.json#interpret), then [submit the corrected output](docs/product-truth/flows/leafcutter/retrieval-needs-interpretation.flow.json#submit) to that wait. The experiment inherits max_repair_attempts=1, so only one correction follows the first invalid payload. No accepted ledger entry is written. [Repair handling](kernel/interaction/ledger.py).\n\nThe rejection list is the durable repair counter; attempt is not incremented by this path. The Python call raises SubmissionRejected with the updated pending_interaction in details. Return to the host interpret/submit steps for the one permitted correction. This example is a counterfactual branch using N03 identities, not an observed N03 rejection.\n\nContract fields and examples (generated)\nConsumes:\n  host_work_request/id: string (required)\n  host_work_request/state_revision: integer (required)\n  host_work_request/rejections: array (optional; default [])\n  Runtime contract: [host_work_request](kernel/contracts/interaction.py)\nProduces:\n  host_work_request/id: string (required)\n  host_work_request/state_revision: integer (required)\n  host_work_request/attempt: integer (optional; default 1)\n  host_work_request/rejections: array (optional; default [])\n  host_work_request/rejections/*/code: string (required)\n  host_work_request/rejections/*/message: string (optional; default \"\")\n  Runtime contract: [host_work_request](kernel/contracts/interaction.py)\n\nIllustrative first rejected payload; same interaction is reissued — host_work_request; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"id\": \"int-e409b90b61ab4aeb\",\n  \"state_revision\": 1,\n  \"attempt\": 1,\n  \"rejections\": [\n    {\n      \"code\": \"schema_invalid\",\n      \"message\": \"the response does not match its schema\"\n    }\n  ]\n}",
+      "implements": [],
+      "impl_asof": "2026-10-03",
+      "impl_status": "not_started",
+      "io_contracts": {
+        "consumes": [
+          {
+            "contract": "host_work_request",
+            "fields": [
+              {
+                "path": "/id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/state_revision",
+                "types": [
+                  "integer"
+                ],
+                "required": true
+              },
+              {
+                "path": "/rejections",
+                "types": [
+                  "array"
+                ],
+                "required": false,
+                "default": []
+              }
+            ]
+          }
+        ],
+        "produces": [
+          {
+            "contract": "host_work_request",
+            "fields": [
+              {
+                "path": "/id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/state_revision",
+                "types": [
+                  "integer"
+                ],
+                "required": true
+              },
+              {
+                "path": "/attempt",
+                "types": [
+                  "integer"
+                ],
+                "required": false,
+                "default": 1
+              },
+              {
+                "path": "/rejections",
+                "types": [
+                  "array"
+                ],
+                "required": false,
+                "default": []
+              },
+              {
+                "path": "/rejections/*/code",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/rejections/*/message",
+                "types": [
+                  "string"
+                ],
+                "required": false,
+                "default": ""
+              }
+            ]
+          }
+        ],
+        "examples": [
+          {
+            "contract": "host_work_request",
+            "mode": "projection",
+            "origin": "illustrative",
+            "label": "Illustrative first rejected payload; same interaction is reissued",
+            "value": {
+              "id": "int-e409b90b61ab4aeb",
+              "state_revision": 1,
+              "attempt": 1,
+              "rejections": [
+                {
+                  "code": "schema_invalid",
+                  "message": "the response does not match its schema"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "consumes": [
+        "host_work_request/id: string (required)",
+        "host_work_request/state_revision: integer (required)",
+        "host_work_request/rejections: array (optional; default [])"
+      ],
+      "produces": [
+        "host_work_request/id: string (required)",
+        "host_work_request/state_revision: integer (required)",
+        "host_work_request/attempt: integer (optional; default 1)",
+        "host_work_request/rejections: array (optional; default [])",
+        "host_work_request/rejections/*/code: string (required)",
+        "host_work_request/rejections/*/message: string (optional; default \"\")"
+      ]
+    },
+    {
+      "id": "repair-exhausted",
+      "from": "validate",
+      "label": "Stop after correction fails",
+      "agent": "System",
+      "condition": "A second payload fails schema or request-bound validation after the one allowed correction",
+      "outcome_kind": "failure",
+      "human": "Record the rejection, exhaust the inherited repair limit, fail the work item and remove the wait without an accepted ledger entry. This route terminates; it does not return to interpretation or the completed-result step. max_retries=0 is a separate limit. [Exhaustion](kernel/scheduler/nodes_interaction.py).\n\nThe internal submission outcome is SubmitStatus.REPAIR_EXHAUSTED; the graph emits this failed CapabilityResult and dequeues the interaction. It is not an accepted ledger record. The example is reconstructed from the failure constructor using N03 identities, not a historical failure of N03.\n\nContract fields and examples (generated)\nConsumes:\n  host_work_request/id: string (required)\n  host_work_request/rejections: array (optional; default [])\n  Runtime contract: [host_work_request](kernel/contracts/interaction.py)\nProduces:\n  capability_result/invocation_id: string (required)\n  capability_result/work_item_id: string (required)\n  capability_result/status: string (required)\n  capability_result/error: null|object (optional; default null)\n  capability_result/error/code: string (required)\n  capability_result/error/retryable: boolean (optional; default false)\n  Runtime contract: [capability_result](kernel/contracts/capability.py)\n\nIllustrative failure after the initial invalid payload and one invalid correction — capability_result; illustrative; complete payload:\n{\n  \"invocation_id\": \"inv-bf4897077e6b4168\",\n  \"work_item_id\": \"work-bf7398f71a4f4755\",\n  \"status\": \"failed\",\n  \"error\": {\n    \"code\": \"host_output_invalid\",\n    \"retryable\": false,\n    \"message\": \"host output stayed invalid after 2 submissions (last: schema_invalid)\"\n  }\n}",
+      "implements": [],
+      "impl_asof": "2026-10-03",
+      "impl_status": "not_started",
+      "io_contracts": {
+        "consumes": [
+          {
+            "contract": "host_work_request",
+            "fields": [
+              {
+                "path": "/id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/rejections",
+                "types": [
+                  "array"
+                ],
+                "required": false,
+                "default": []
+              }
+            ]
+          }
+        ],
+        "produces": [
+          {
+            "contract": "capability_result",
+            "fields": [
+              {
+                "path": "/invocation_id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/work_item_id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/status",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/error",
+                "types": [
+                  "null",
+                  "object"
+                ],
+                "required": false,
+                "default": null
+              },
+              {
+                "path": "/error/code",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/error/retryable",
+                "types": [
+                  "boolean"
+                ],
+                "required": false,
+                "default": false
+              }
+            ]
+          }
+        ],
+        "examples": [
+          {
+            "contract": "capability_result",
+            "mode": "full",
+            "origin": "illustrative",
+            "label": "Illustrative failure after the initial invalid payload and one invalid correction",
+            "value": {
+              "invocation_id": "inv-bf4897077e6b4168",
+              "work_item_id": "work-bf7398f71a4f4755",
+              "status": "failed",
+              "error": {
+                "code": "host_output_invalid",
+                "retryable": false,
+                "message": "host output stayed invalid after 2 submissions (last: schema_invalid)"
+              }
+            }
+          }
+        ]
+      },
+      "consumes": [
+        "host_work_request/id: string (required)",
+        "host_work_request/rejections: array (optional; default [])"
+      ],
+      "produces": [
+        "capability_result/invocation_id: string (required)",
+        "capability_result/work_item_id: string (required)",
+        "capability_result/status: string (required)",
+        "capability_result/error: null|object (optional; default null)",
+        "capability_result/error/code: string (required)",
+        "capability_result/error/retryable: boolean (optional; default false)"
+      ]
+    },
+    {
+      "id": "unresolved-needs",
+      "from": "normalize-needs",
+      "label": "Return unsupported or unresolved needs",
+      "agent": "System",
+      "condition": "Valid output contains unresolved reasons or structural missing dimensions",
+      "outcome_kind": "alternative",
+      "human": "Preserve the original question, selected/uncertain values and reasons with status=needs_resolution, then continue to [return the typed needs](docs/product-truth/flows/leafcutter/retrieval-needs-interpretation.flow.json#return-needs). Unsupported meaning is a valid bounded outcome, not a rejected submission. This operation does not create a human question, choose a search or resolve the missing need itself.\n\nFor this illustrative variation of N03, an unknown hierarchy adds hierarchy_scope to unresolved and derives needs_resolution. Successful normalization still returns a completed interpretation result. It does not open a human wait or claim that retrieval can answer the question.\n\nContract fields and examples (generated)\nConsumes:\n  retrieval_needs_output/hierarchy_scope: string (required)\n  retrieval_needs_output/completeness: string (required)\n  retrieval_needs_output/unresolved: array (optional; default [])\n  Schema: [retrieval_needs_output](kernel/schemas/leafcutter.retrieval_needs_output.v1.schema.json)\nProduces:\n  retrieval_needs_output/status: string (optional; default \"decided\")\n  retrieval_needs_output/unresolved: array (optional; default [])\n  retrieval_needs_output/hierarchy_scope: string (required)\n  retrieval_needs_output/scope_resolution: string (required)\n  Schema: [retrieval_needs_output](kernel/schemas/leafcutter.retrieval_needs_output.v1.schema.json)\n\nIllustrative exhaustive-count interpretation with unresolved hierarchy — retrieval_needs_output; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"original_question\": \"Count all L2 and L3 descendants of TQ-500f, excluding only TQ-500f, grouped by work_status.\",\n  \"hierarchy_scope\": \"unknown\",\n  \"completeness\": \"exhaustive_count\",\n  \"status\": \"needs_resolution\",\n  \"unresolved\": [\n    \"hierarchy_scope\"\n  ]\n}",
+      "implements": [],
+      "impl_asof": "2026-10-03",
+      "impl_status": "not_started",
+      "io_contracts": {
+        "consumes": [
+          {
+            "contract": "retrieval_needs_output",
+            "fields": [
+              {
+                "path": "/hierarchy_scope",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/completeness",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/unresolved",
+                "types": [
+                  "array"
+                ],
+                "required": false,
+                "default": []
+              }
+            ]
+          }
+        ],
+        "produces": [
+          {
+            "contract": "retrieval_needs_output",
+            "fields": [
+              {
+                "path": "/status",
+                "types": [
+                  "string"
+                ],
+                "required": false,
+                "default": "decided"
+              },
+              {
+                "path": "/unresolved",
+                "types": [
+                  "array"
+                ],
+                "required": false,
+                "default": []
+              },
+              {
+                "path": "/hierarchy_scope",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/scope_resolution",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              }
+            ]
+          }
+        ],
+        "examples": [
+          {
+            "contract": "retrieval_needs_output",
+            "mode": "projection",
+            "origin": "illustrative",
+            "label": "Illustrative exhaustive-count interpretation with unresolved hierarchy",
+            "value": {
+              "original_question": "Count all L2 and L3 descendants of TQ-500f, excluding only TQ-500f, grouped by work_status.",
+              "hierarchy_scope": "unknown",
+              "completeness": "exhaustive_count",
+              "status": "needs_resolution",
+              "unresolved": [
+                "hierarchy_scope"
+              ]
+            }
+          }
+        ]
+      },
+      "consumes": [
+        "retrieval_needs_output/hierarchy_scope: string (required)",
+        "retrieval_needs_output/completeness: string (required)",
+        "retrieval_needs_output/unresolved: array (optional; default [])"
+      ],
+      "produces": [
+        "retrieval_needs_output/status: string (optional; default \"decided\")",
+        "retrieval_needs_output/unresolved: array (optional; default [])",
+        "retrieval_needs_output/hierarchy_scope: string (required)",
+        "retrieval_needs_output/scope_resolution: string (required)"
+      ]
+    },
+    {
+      "id": "normalization-failed",
+      "from": "normalize-needs",
+      "label": "Report a conversion failure",
+      "agent": "System",
+      "condition": "Accepted submission cannot produce a valid normalized result",
+      "outcome_kind": "failure",
+      "human": "Return a failed CapabilityResult rather than claiming a completed interpretation. For example, reported host usage can contain a model ID longer than this output contract permits. Acceptance may already be recorded; conversion failure is not a pre-acceptance rejection.\n\nThis is the actual failed-result shape from invalid_output, not a needs_resolution payload. For example an overlong model_id supplied through usage can fail normalized output validation after acceptance. No such failure is claimed for the observed N03 run.\n\nContract fields and examples (generated)\nConsumes:\n  interaction_submission/response: object (required)\n  interaction_submission/usage: array (optional; default [])\n  Runtime contract: [interaction_submission](kernel/contracts/interaction.py)\nProduces:\n  capability_result/invocation_id: string (required)\n  capability_result/work_item_id: string (required)\n  capability_result/status: string (required)\n  capability_result/error: null|object (optional; default null)\n  capability_result/error/code: string (required)\n  capability_result/error/message: string (optional; default \"\")\n  Runtime contract: [capability_result](kernel/contracts/capability.py)\n\nIllustrative failure if normalized host metadata exceeds the output contract — capability_result; illustrative; complete payload:\n{\n  \"invocation_id\": \"inv-bf4897077e6b4168\",\n  \"work_item_id\": \"work-bf7398f71a4f4755\",\n  \"status\": \"failed\",\n  \"error\": {\n    \"code\": \"host_output_invalid\",\n    \"retryable\": false,\n    \"message\": \"Normalized host metadata exceeds the retrieval-needs contract\"\n  }\n}",
+      "implements": [],
+      "impl_asof": "2026-10-03",
+      "impl_status": "not_started",
+      "io_contracts": {
+        "consumes": [
+          {
+            "contract": "interaction_submission",
+            "fields": [
+              {
+                "path": "/response",
+                "types": [
+                  "object"
+                ],
+                "required": true
+              },
+              {
+                "path": "/usage",
+                "types": [
+                  "array"
+                ],
+                "required": false,
+                "default": []
+              }
+            ]
+          }
+        ],
+        "produces": [
+          {
+            "contract": "capability_result",
+            "fields": [
+              {
+                "path": "/invocation_id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/work_item_id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/status",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/error",
+                "types": [
+                  "null",
+                  "object"
+                ],
+                "required": false,
+                "default": null
+              },
+              {
+                "path": "/error/code",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/error/message",
+                "types": [
+                  "string"
+                ],
+                "required": false,
+                "default": ""
+              }
+            ]
+          }
+        ],
+        "examples": [
+          {
+            "contract": "capability_result",
+            "mode": "full",
+            "origin": "illustrative",
+            "label": "Illustrative failure if normalized host metadata exceeds the output contract",
+            "value": {
+              "invocation_id": "inv-bf4897077e6b4168",
+              "work_item_id": "work-bf7398f71a4f4755",
+              "status": "failed",
+              "error": {
+                "code": "host_output_invalid",
+                "retryable": false,
+                "message": "Normalized host metadata exceeds the retrieval-needs contract"
+              }
+            }
+          }
+        ]
+      },
+      "consumes": [
+        "interaction_submission/response: object (required)",
+        "interaction_submission/usage: array (optional; default [])"
+      ],
+      "produces": [
+        "capability_result/invocation_id: string (required)",
+        "capability_result/work_item_id: string (required)",
+        "capability_result/status: string (required)",
+        "capability_result/error: null|object (optional; default null)",
+        "capability_result/error/code: string (required)",
+        "capability_result/error/message: string (optional; default \"\")"
+      ]
+    }
+  ],
+  "acceptance_scenarios": [
+    {
+      "for": "prepare-request",
+      "given": "A question names TQ-500f and supplies a catalog with no target IDs",
+      "when": "The task builder validates and prepares the request",
+      "then": "TQ-500f is added as a literal candidate without selecting it; invalid or oversized input is refused before start."
+    },
+    {
+      "for": "start-run",
+      "given": "A validated task and the isolated experiment service",
+      "when": "KernelService starts the run",
+      "then": "Fixed routing selects only host.retrieval_needs; no Jev call, repository retrieval or production activation occurs."
+    },
+    {
+      "for": "wait-for-host",
+      "given": "The isolated run requests host interpretation",
+      "when": "The scheduler opens the interaction",
+      "then": "The actual input artifact and typed packet are persisted and the run checkpoints waiting_host."
+    },
+    {
+      "for": "interpret",
+      "given": "The saved packet and operational input",
+      "when": "The external host interprets the question",
+      "then": "A candidate supplies all five selected/uncertain dimensions and all modes without retrieving or answering the question."
+    },
+    {
+      "for": "submit",
+      "given": "A candidate output and its pending host packet",
+      "when": "The host controller submits the result",
+      "then": "The submission names the original run, interaction, expected revision and output schema with a valid host actor."
+    },
+    {
+      "for": "validate",
+      "given": "An otherwise valid response selects an unoffered ID or changes source_scope",
+      "when": "Submission validation checks the actual pending request",
+      "then": "The payload is rejected before accepted-ledger persistence; schema validity alone is insufficient for acceptance."
+    },
+    {
+      "for": "accept-and-resume",
+      "given": "A submission passes schema and request-bound checks",
+      "when": "The ledger accepts it",
+      "then": "The durable accepted entry is written before the original LangGraph wait resumes; identical replays do not apply a second interpretation."
+    },
+    {
+      "for": "normalize-needs",
+      "given": "Accepted output has no structural gaps, no explicit unresolved reasons and no reported host usage",
+      "when": "The host operation normalizes the result",
+      "then": "The typed output is decided with model_id=null while retaining any uncertain alternatives; this is not a semantic-correctness guarantee."
+    },
+    {
+      "for": "invalid-request",
+      "given": "An offered target ID is neither literal in the question nor supplied in known_ids",
+      "when": "The task builder validates the request",
+      "then": "The request is refused before host work is opened."
+    },
+    {
+      "for": "host-pending",
+      "given": "The run is waiting_host and the process restarts",
+      "when": "The service reloads the run",
+      "then": "The same persisted wait remains available for its matching response; no new model result is assumed."
+    },
+    {
+      "for": "submission-refused",
+      "given": "A response wrapper carries an invalid actor ID or stale revision",
+      "when": "The service checks it",
+      "then": "It is refused without accepted-ledger or graph mutation; it is not reported as needs_resolution."
+    },
+    {
+      "for": "repair-content",
+      "given": "The first pending host payload fails schema or request-bound checks",
+      "when": "The kernel checkpoints the rejection",
+      "then": "The same interaction allows one correction and returns to host interpretation and resubmission without an accepted ledger entry."
+    },
+    {
+      "for": "unresolved-needs",
+      "given": "An accepted payload retains an unsupported meaning in unresolved",
+      "when": "The operation derives its normalized status",
+      "then": "The interpretation completes with needs_resolution and its reasons; it neither answers the question nor opens a human wait."
+    },
+    {
+      "for": "normalization-failed",
+      "given": "An accepted submission reports a host model ID longer than the output contract allows",
+      "when": "The operation revalidates normalized metadata",
+      "then": "It returns a failed capability result without crashing or claiming a completed interpretation."
+    },
+    {
+      "for": "return-needs",
+      "given": "A normalized typed output with decided or needs_resolution",
+      "when": "The operation constructs its CapabilityResult",
+      "then": "The interpretation completes and returns typed needs with an interpretation-only limitation; no retrieval or final answer is produced."
+    },
+    {
+      "for": "repair-exhausted",
+      "given": "The first invalid payload was rejected and the one allowed correction was requested",
+      "when": "A second payload fails schema or request-bound checks",
+      "then": "The work item fails and the wait is removed without an accepted submission or completed interpretation result."
+    }
+  ],
+  "provenance": [
+    {
+      "action": "authored",
+      "by": "product-truth-expert / flow-author",
+      "date": "2026-10-03",
+      "note": "Search and scope\nSearched artifacts[], by_component and by_flow: the existing retrieval journey and its query, search, traversal, build and baseline artifacts do not describe this callable interpreter. Extend [the existing draft](docs/product-truth/flows/leafcutter/retrieve-project-knowledge.flow.json#interpret-needs) with an explicitly proposed/unwired call-site; keep implementation detail in this bounded child. The current baseline only links it as separate experiment evidence. No new screens, entities, AC links or approvals are invented. Built means the isolated experiment exists in this worktree; readiness remains draft. The displayed normalize/return phases describe existing conversion code, not new runtime steps. The Atlas schema records branch origins only; return routes are explicit in branch text and links."
+    },
+    {
+      "action": "authored",
+      "by": "product-truth-expert / flow-author",
+      "date": "2026-10-03",
+      "note": "Input contract\nleafcutter.retrieval_needs_request.v1: original_question; optional context, known_ids and source_scope; catalog with exactly entity_types, target_ids, required_fields, document_types and relationships. Each dimension maps offered labels to meanings, at most 64 labels. Scope and caller Actor are separate TaskInput parameters; permissions are empty. Catalog meanings describe possible information needs, not evidence that a backend can retrieve them.\n\nThe builder preserves literal/supplied target candidates. Context and known IDs are unverified hints. Echoing source_scope does not verify its repository, paths or revision. [Typed contracts](kernel/contracts/retrieval_needs.py) · [Frozen example input](reports/retrieval-needs-llm-2026-10-03-accepted/inputs/N03.input.json)."
+    },
+    {
+      "action": "authored",
+      "by": "product-truth-expert / flow-author",
+      "date": "2026-10-03",
+      "note": "Output contract and example\nleafcutter.retrieval_needs_output.v1 returns the unchanged question/scope, selections and uncertain arrays for all five dimensions, detail_mode, completeness, hierarchy_scope, scope_resolution, unresolved, rationale, engine=host_llm, normalized status and model_id.\n\nSaved N03 input: Count all L2 and L3 descendants of TQ-500f, excluding only TQ-500f, grouped by work_status.\nSaved output: entity_types=[ac]; target_ids=[TQ-500f]; required_fields=[level, work_status]; document_types=[ac_yaml]; relationships=[all_descendants]. detail_mode=fields; completeness=exhaustive_count; hierarchy_scope=exclude_root; scope_resolution=sufficient. All uncertain arrays and unresolved are empty; status=decided; model_id=null. This identifies what a later retrieval would need; it returns no count. [Original response](reports/retrieval-needs-llm-2026-10-03-accepted/responses/N03.json)."
+    },
+    {
+      "action": "authored",
+      "by": "product-truth-expert / flow-author",
+      "date": "2026-10-03",
+      "note": "Mode meanings\nDetail: fields = requested facts; full_document = the whole selected item; bounded_context = the selected item plus requested surroundings; unknown retains a gap. Completeness: single_entity, selected_entities, exhaustive_set, exhaustive_count, examples or unknown. Hierarchy: not_applicable, exclude_root, exclude_parents, include_root or unknown. Scope resolution: sufficient, discovery_needed, user_choice_missing or unknown.\n\nNormalization adds missing entity/document types, unknown detail/completeness, missing fields for fields mode, missing target IDs for identified targets, unresolved user choice/unknown scope, unknown hierarchy for exhaustive sets/counts, and selected_entities with only one target and no relationship. Nonempty uncertain arrays alone do not force needs_resolution. These are structural rules, not an oracle for semantic correctness."
+    },
+    {
+      "action": "authored",
+      "by": "product-truth-expert / flow-author",
+      "date": "2026-10-03",
+      "note": "Frozen evidence, not a runtime grading step\nThe [accepted trial](reports/retrieval-needs-llm-2026-10-03-accepted/README.md) and [per-case results](reports/retrieval-needs-llm-2026-10-03-accepted/results.md) record 12 durable accepted submissions and 12 completed interpretations, but only 8/12 frozen semantic passes. N01, N09 and N11 selected test_spec without required criteria for exact-AC obligations. N10 honestly retained unsupported payroll needs but used a prefixed explanation instead of the frozen exact needs_outside_catalog marker. It passed kernel acceptance and failed that semantic encoding check.\n\nThe separate prospective overlay passed 7/7 applicable host cases; it does not repair the four shared failures. Original Jev score remains 7/12. Reported deterministic coverage is 76 tests plus 82 subtests, including 18 new controlled cases. No tests or model trial are rerun by this flow; these are dated annotations. [Independent review](docs/analysis/retrieval-needs-llm-probe-2026-10-03/independent-review.md)."
+    },
+    {
+      "action": "authored",
+      "by": "product-truth-expert / flow-author",
+      "date": "2026-10-03",
+      "note": "Boundaries and provenance\nThe external host chooses/configures its model; no Haiku or provider client is hardcoded here. The blind trial used a Codex host agent. Its exact model, underlying request count and tokens were unknown. One issued host operation is not one model HTTP call or an accepted response; ledger evidence establishes acceptance.\n\nThis flow does not select or run search methods, construct query arguments, retrieve source data, answer the question, call Jev, approve or train classifiers, self-learn, or activate fallback policy. Acceptance and decided are not guarantees of semantic correctness. [Architecture contract](docs/analysis/retrieval-needs-llm-probe-2026-10-03/contract-and-architecture.md)."
+    },
+    {
+      "action": "extended",
+      "by": "product-truth-expert / flow-author",
+      "date": "2026-10-03",
+      "note": "Concrete contract review\nReplaced descriptive handoff terms with actual model/artifact field paths, types, requiredness and defaults. Added step-local JSON examples following accepted N03. Complete request/output payloads are copied from saved evidence and validated against canonical JSON Schemas plus typed models. Transport/ledger examples are explicitly projections; the TaskInput example is clearly reconstructed from the request and controller source, not a saved receipt. No new wire fields, runtime phases, mock entities, statuses or integration are introduced. Model prefixes in field labels identify ownership and are not serialized wrapper keys."
+    },
+    {
+      "action": "extended",
+      "by": "product-truth expert",
+      "date": "2026-10-03",
+      "note": "Reassessed the isolated interpreter against the current source. Replaced generic branch exemptions with actual wait, submission, rejection-list, unresolved-output and failure-result contracts. Examples explicitly distinguish observed N03 receipts from counterfactual branch illustrations. Runtime, frozen evaluation and approval statuses are unchanged."
+    },
+    {
+      "action": "extended",
+      "by": "product-truth-expert",
+      "date": "2026-10-04",
+      "note": "Removed obsolete display instructions from the authored narrative for the structured Atlas contract view. Preserved exact handoff metadata, examples, experimental scope and runtime limits."
+    },
+    {
+      "action": "extended",
+      "by": "product-truth expert",
+      "date": "2026-10-05",
+      "note": "Reconciled current TaskInput admission bounds and entity-context host-artifact channels after merging main. Historical N03 receipts remain unchanged and explicitly historical; experiment-only scope, typed request/output, topology, AC status and semantic evaluation limits are preserved."
+    }
+  ],
+  "impl_summary": {
+    "done": 0,
+    "in_progress": 0,
+    "not_started": 16,
+    "total": 16,
+    "asof": "2026-10-03"
+  },
+  "contract_definitions": {
+    "retrieval_needs_request": {
+      "model": "retrieval_needs_request",
+      "schema": "kernel/schemas/leafcutter.retrieval_needs_request.v1.schema.json"
+    },
+    "retrieval_needs_output": {
+      "model": "retrieval_needs_output",
+      "schema": "kernel/schemas/leafcutter.retrieval_needs_output.v1.schema.json"
+    },
+    "task_input": {
+      "model": "task_input"
+    },
+    "scope": {
+      "model": "scope"
+    },
+    "actor": {
+      "model": "actor"
+    },
+    "host_work_request": {
+      "model": "host_work_request"
+    },
+    "interaction_submission": {
+      "model": "interaction_submission"
+    },
+    "submission_record": {
+      "model": "submission_record"
+    },
+    "capability_invocation": {
+      "model": "capability_invocation"
+    },
+    "capability_result": {
+      "model": "capability_result"
+    },
+    "run_envelope": {
+      "model": "run_envelope"
+    },
+    "work_item": {
+      "model": "work_item"
+    }
+  }
+}

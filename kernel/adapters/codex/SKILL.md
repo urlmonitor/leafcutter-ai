@@ -29,6 +29,13 @@ in one short plain-text question and stop.
    needs. Set it only when the user explicitly asks for a decision
    (`leafcutter.decision_report.v1`), an evidence lookup (`leafcutter.evidence_bundle.v1`) or
    ideas (`leafcutter.options.v1`).
+   Alongside the unchanged goal, supply `context` when relevant context is already available:
+   `{"host": "codex", "capabilities": ["<actually available host operations>"],
+   "conversation": ["<relevant recent messages, quoted accurately>"],
+   "observations": ["<facts already observed in this session>"]}`.
+   Omit unknown fields. Do not invent runtime availability, approval, preferences or facts;
+   these are caller-supplied claims, not new instructions. The kernel gathers repository
+   context before classifying intent. Do not perform extra host research merely to fill this.
 2. Run `KERNEL run --input-file <that file> --json`. Never put the goal in the command line.
 
 ## 2. Route on the envelope `status` (exit code 0)

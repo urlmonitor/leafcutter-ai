@@ -1,0 +1,101 @@
+id: DK-500f-4
+title: Usage counts and outcomes never decide which categories a decision is offered
+component: decision-kernel
+components:
+- decision_kernel
+level: L2
+status: active
+readiness: approved
+req_status: draft
+priority: high
+work_status: todo
+roadmap_phase: phase_colony_1_collect
+criteria: |
+  Given two fitting published categories, cat-1dc11c5a2ffa7310 with a usage count of 3 and cat-1df63b670163b54e with a usage count of 1,
+  And outcome rows in which every decision of cat-1dc11c5a2ffa7310 was confirmed and every decision of cat-1df63b670163b54e was abandoned,
+  When the same design decision is framed twice, once with these counts and outcomes and once with them swapped between the two categories,
+  Then both runs offer the same categories in the same order,
+  And neither run marks an offered category as preferred because of its usage count or its outcomes.
+depends_on:
+- DK-500f
+- DK-500f-1
+- DK-500d-1
+covered_by: []
+implemented_by: []
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: DK-500d-1
+  contract: Category lookup for a new decision.
+change_target: code
+risk_surface: internal
+it_requirements:
+- The reuse lookup (DK-500d-1) receives no usage count and no outcome as input, so the independence is structural, and a swap test proves it.
+- No 'preferred' or similar mark derived from usage or outcomes appears in the approval payload.
+test_required: true
+test_spec:
+- name: test_same_categories_same_order_when_counts_swapped
+  target_dir: tests/kernel/capabilities/
+  framework: pytest
+  type: behavioral
+  angle: criterion
+  description: Two runs with usage counts and outcomes swapped between cat-1dc11c5a2ffa7310 and cat-1df63b670163b54e offer the same categories in the same order.
+- name: test_no_preferred_mark_from_usage_or_outcome
+  target_dir: tests/kernel/capabilities/
+  framework: pytest
+  type: behavioral
+  angle: criterion
+  description: Neither run marks an offered category as preferred because of usage or outcomes.
+test_rationale: Run the decision capability through the public run/resume boundary with a scripted Jev provider and a recording host port over a fixture category library; assert the approval payload, the run report, trace events and call counts rather than internal helpers.
+doc_links:
+- path: docs/decisions/dec-93c1c730463c1f3c.yaml
+  relationship: governs
+  status: exists
+- path: docs/product-truth/flows/leafcutter/criteria-library.flow.json
+  relationship: implements
+  status: exists
+- path: docs/product-truth/flows/leafcutter/decision-forming.flow.json
+  relationship: implements
+  status: exists
+- path: docs/architecture/adrs/ADR-056-colony-memory-evidence-reinforcement.md
+  relationship: constrains
+  status: exists
+- path: docs/architecture/adrs/ADR-065-colony-learned-statistics-neo4j-aggregates.md
+  relationship: constrains
+  status: exists
+origin_agent: business-analyst
+created: 2026-10-04
+amended_by:
+- reason: it-po-technical-enrichment
+  date: '2026-10-05'
+  by: it-po
+  summary: 'Technical enrichment: assigned_agent confirmed, estimated_complexity, change_target, risk_surface, it_requirements, contracts, doc_links and the test contract set; readiness draft -> reviewed. BA criteria unchanged.'
+superseded_by: null
+notes: |
+  NON-GOAL guard (L0 and DK-500f notes): using outcome statistics to choose or rank offered categories is INFLUENCE, which belongs after held-out evaluation (ADR-056 section 3, phase_colony_4_influence). Being used often never counts as proof that a category is good (ADR-056). The swap is the falsifiable form: any ranking by usage or outcome changes the order in one of the two runs.
+  FLOW BACK-LINK (for step.implements, to be applied by the store owner): leafcutter/criteria-library: count-usage; leafcutter/decision-forming: reuse-criteria.
+  Authored by the business-analyst stage of /plan-feature (route strategic) under decision dec-93c1c730463c1f3c; readiness draft, no product approval implied.
+  COMPONENT ENUM DRIFT (IT PO, 2026-10-05): this AC also belongs to colony_memory, which docs/components.json lists but the components enum in config/ac_store_schema.json lacks, so the validator would reject it. Tracked as TICKET-20261003-AcSchemaComponentEnumDrift (not present on this branch). Add colony_memory to components once the enum is fixed.
+product_truth:
+  - flow: leafcutter/criteria-library
+    node: count-usage
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: leafcutter/criterion-categories
+    entities:
+      - CriterionCategory
+      - Decision
+    source: mock
+    asof: '2026-10-04'
+  - flow: leafcutter/decision-forming
+    node: reuse-criteria
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: leafcutter/decisions
+    entities:
+      - CriterionCategory
+    source: real
+    asof: '2026-10-04'

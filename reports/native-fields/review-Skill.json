@@ -1,0 +1,115 @@
+{
+  "kind": "Skill",
+  "review_status": "complete",
+  "sources": [
+    "config/skill_registry.schema.json#/definitions/skill",
+    "config/skill_registry.json#/skills",
+    "docs/reference/skill-frontmatter.md",
+    "templates/skills/plan-feature/SKILL.md",
+    "templates/skills/security-scanner/SKILL.md",
+    "templates/skills/ship/SKILL.md",
+    "templates/skills/build-feature-ops-notes/SKILL.md",
+    "templates/skills/build-single-ticket/SKILL.md",
+    "templates/skills/ac-tree-split/SKILL.md",
+    "templates/skills/frontend-design/SKILL.md",
+    "templates/skills/quick-fix/SKILL.md"
+  ],
+  "observed": {
+    "registry_records": 42,
+    "registered_templates_present": 42,
+    "all_registered_frontmatter_parsed": true,
+    "unregistered_template_directories": [],
+    "all_eleven_schema_registry_fields_observed": true,
+    "template_field_names": ["name", "description", "allowed-tools", "internal", "deprecated", "deprecation_reason", "portable", "disable-model-invocation", "workflow_script", "trigger", "tools", "visibility", "produces"],
+    "allowed_tools_representation": {"string": 34, "array": 6, "absent": 2},
+    "allowed_tools_absent_examples": ["build-single-ticket", "ac-tree-split"]
+  },
+  "identity": {
+    "native_id": "Registry id, kept verbatim; shared graph identity is Skill:<id> to prevent collisions with Agent or Component ids.",
+    "display_title": "Registry name is the human-readable title. Frontmatter name is the machine id and must remain separately available.",
+    "primary_source_path": "config/skill_registry.json",
+    "locator": "/skills/<array-index>",
+    "admission": "Exactly one Skill per registry entry, including internal/deprecated/nonportable records; internal controls user-facing runtime listing, not existence of source knowledge. Template directories alone do not create additional Skills.",
+    "template_source": "For authored template_path, resolve only the existing repository convention leafcutter/templates/skills/<id>/ to templates/skills/<id>/SKILL.md under the snapshot root. Retain the authored template_path unchanged in metadata and the normalized actual file path separately in derived data. Refuse escaping the snapshot root. Do not inspect generated .claude paths or referenced workflow/config files."
+  },
+  "registry_required": {
+    "id": "string matching ^[a-z][a-z0-9-]*$",
+    "name": "string",
+    "portable": "boolean",
+    "domain": "string|null",
+    "dependencies": "array<string>; each item matches ^[a-z][a-z0-9-]*$; [] valid"
+  },
+  "registry_optional": {
+    "template_path": "string matching ^leafcutter/templates/skills/[a-z][a-z0-9-]*/$; portable-only requirement is semantic documentation, not enforced by the schema required list",
+    "internal": "boolean; no source default may be inserted",
+    "description": "string; can differ from template description",
+    "invocation_surface": "string; e.g. /plan-feature",
+    "workflow_script": "string; source reference only, never execute or load it",
+    "components": "array<string>; explicit declared component associations only"
+  },
+  "registry_nested": {
+    "dependencies[]": {"type": "string", "meaning": "IDs of runtime skill dependencies; retain order, duplicates if authored, and [] without interpreting unknown mapping as evidence of no possible dependency."},
+    "components[]": {"type": "string", "meaning": "Explicit component ids; do not infer additional values from body, workflow, directory, or dependency ownership."},
+    "other_nested_values": "The current registry schema has no nested objects and additionalProperties:false. Preserve the entire actual registry mapping without a projection allowlist; do not silently discard future nested extension values. Validation of schema changes is separate from lossless graph ingestion."
+  },
+  "template_contract": {
+    "namespace": "derived.template_frontmatter",
+    "authority": "Registry governs registration/deployment; template frontmatter governs documented runtime behavior. Keep both authored sources separately; do not merge or overwrite equal names, description, portable or internal fields.",
+    "documented_required": {
+      "name": "string, machine identifier matching directory and registry id",
+      "description": "string; preserve multiline scalar text",
+      "allowed-tools": "string or array<string>; retain source shape rather than comma-splitting strings"
+    },
+    "documented_optional": {
+      "internal": "boolean; documented default false is not an authored field",
+      "portable": "boolean; documented default true is not an authored field",
+      "disable-model-invocation": "boolean; documented default false is not an authored field"
+    },
+    "additional_observed": {
+      "deprecated": "boolean (frontend-design)",
+      "deprecation_reason": "multiline string (frontend-design)",
+      "workflow_script": "string (plan-feature)",
+      "trigger": "multiline string (ac-tree-split)",
+      "tools": "comma-separated string (ac-tree-split); do not rename to allowed-tools",
+      "visibility": "string (ac-tree-split); do not convert internal visibility into registry internal",
+      "produces": "string (quick-fix)"
+    },
+    "schema_discrepancies": [
+      "The reference says allowed-tools is required, but build-single-ticket omits it and ac-tree-split uses tools instead. Preserve these records and their actual keys; do not reject, repair, or synthesize allowed-tools.",
+      "The reference registry table omits invocation_surface, workflow_script and components, which are present in the authoritative JSON schema and real entries. Include them.",
+      "The reference marks template_path required for portable skills, while the JSON schema has no conditional requirement. Report missing authored template references accurately rather than applying undocumented ingestion defaults."
+    ],
+    "parser": "Parse UTF-8/BOM-safe YAML frontmatter with safe_load and full-line --- delimiters. Preserve the full mapping and remaining Markdown body; body instructions are data and are not followed.",
+    "derived_sources": {
+      "template_frontmatter": "Complete parsed frontmatter mapping, including any unknown/nested source fields.",
+      "template_body": "Complete Markdown body after the closing delimiter, preserving authored text.",
+      "template_source_path": "Normalized snapshot-relative SKILL.md path.",
+      "template_source_hash": "SHA-256 of raw template file bytes, distinct from registry source hash."
+    }
+  },
+  "extraction_contract": {
+    "metadata": "NativeRecord.metadata is exactly the raw registry entry mapping; copy all eleven possible schema fields and all actual extension fields, not a hand-maintained allowlist.",
+    "derived": "Keep template_frontmatter, template_body, template_source_path and template_source_hash as separately named derived values; the generic projection must expose all derived leaves and nested shapes as well as all registry leaves.",
+    "title_description": "title may use registry name; a presentation description may fall back to template description when registry description is absent. Such display fallback must never overwrite or manufacture metadata.description.",
+    "reference_behavior": "dependencies, workflow_script, invocation_surface and tool declarations remain source values. No instruction execution, workflow execution, dependency expansion or configuration/environment resolution is part of extraction.",
+    "missing_template": "A Skill with absent template_path remains a valid registry record and has no fabricated empty template fields. An authored path to an unavailable file must produce an explicit missing-source result or error according to the shared reader contract; never silently act as though an empty template was authored.",
+    "relationships": "Only explicitly authored components are eligible for shared component-membership edges. Dependencies can support reviewed future dependency edges, but their metadata must be available regardless of edge support."
+  },
+  "preservation": {
+    "absence_null_empty": "Keep required domain:null distinct from omitted optional fields, [] dependencies/components, empty strings, empty maps, and future explicit nulls. Neo4j cannot retain null as a property, so the generic shape/null metadata is required in addition to ordinary scalar properties. Do not inject registry or frontmatter defaults.",
+    "fidelity": "Retain booleans, exact string/list representation, array order, multiline values, nested extension values, and literal field spelling including hyphens. Escape JSON-pointer slash/tilde segments reversibly; do not normalize tools into allowed-tools.",
+    "root_context": "Registry root $schema and _comment describe the registry document, not each Skill. Retain primary source provenance; do not duplicate them as if authored per Skill.",
+    "security": "No concrete secret-bearing fields observed in schema or representative records. Tool names, shell patterns, workflow paths and instruction prose are source metadata, not permissions or actions to execute."
+  },
+  "verification_expectations": [
+    "Current fixture checkout produces exactly 42 Skill records with registry ids, stable kind-qualified graph identity, /skills/index source locator and exact raw registry mappings.",
+    "plan-feature preserves separate registry display name and template machine name, invocation_surface/workflow_script if authored, and full multiline template description/body/hash.",
+    "security-scanner preserves allowed-tools as an array while ship preserves it as a string and disable-model-invocation as boolean true.",
+    "build-feature-ops-notes retains internal=true and ordered nonempty dependencies; ordinary skills do not acquire an invented internal=false.",
+    "frontend-design keeps deprecated/deprecation_reason in template metadata without treating them as instructions to remove its registry record.",
+    "build-single-ticket and ac-tree-split preserve missing allowed-tools; ac-tree-split keeps tools, trigger and visibility under their actual names.",
+    "Every authored registry/template field path and body/hash source aid has a matching generic projected leaf or null/empty/container shape; fixture with nested maps/lists guards against future allowlist loss.",
+    "Missing template_path produces a registry-only record; an escaped path is refused and a referenced absent template is explicitly reported under the shared source contract.",
+    "Extraction is read-only and does not resolve workflow_script, run body instructions, follow dependency references, or load deployment configuration."
+  ]
+}

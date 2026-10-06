@@ -1,0 +1,147 @@
+{
+  "$defs": {
+    "JsonValue": {}
+  },
+  "$id": "leafcutter.retrieval_needs_output.v1",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Host interpretation, never a retrieved answer or approval of a classifier.",
+  "properties": {
+    "completeness": {
+      "enum": [
+        "single_entity",
+        "selected_entities",
+        "exhaustive_set",
+        "exhaustive_count",
+        "examples",
+        "unknown"
+      ],
+      "title": "Completeness",
+      "type": "string"
+    },
+    "detail_mode": {
+      "enum": [
+        "fields",
+        "full_document",
+        "bounded_context",
+        "unknown"
+      ],
+      "title": "Detail Mode",
+      "type": "string"
+    },
+    "engine": {
+      "const": "host_llm",
+      "default": "host_llm",
+      "title": "Engine",
+      "type": "string"
+    },
+    "hierarchy_scope": {
+      "enum": [
+        "not_applicable",
+        "exclude_root",
+        "exclude_parents",
+        "include_root",
+        "unknown"
+      ],
+      "title": "Hierarchy Scope",
+      "type": "string"
+    },
+    "model_id": {
+      "anyOf": [
+        {
+          "maxLength": 200,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Model Id"
+    },
+    "original_question": {
+      "maxLength": 8000,
+      "minLength": 1,
+      "title": "Original Question",
+      "type": "string"
+    },
+    "rationale": {
+      "default": "",
+      "maxLength": 4000,
+      "title": "Rationale",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": "1.0",
+      "default": "1.0",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "scope_resolution": {
+      "enum": [
+        "sufficient",
+        "discovery_needed",
+        "user_choice_missing",
+        "unknown"
+      ],
+      "title": "Scope Resolution",
+      "type": "string"
+    },
+    "selections": {
+      "additionalProperties": {
+        "items": {
+          "type": "string"
+        },
+        "type": "array"
+      },
+      "title": "Selections",
+      "type": "object"
+    },
+    "source_scope": {
+      "additionalProperties": {
+        "$ref": "#/$defs/JsonValue"
+      },
+      "title": "Source Scope",
+      "type": "object"
+    },
+    "status": {
+      "default": "decided",
+      "enum": [
+        "decided",
+        "needs_resolution"
+      ],
+      "title": "Status",
+      "type": "string"
+    },
+    "uncertain": {
+      "additionalProperties": {
+        "items": {
+          "type": "string"
+        },
+        "type": "array"
+      },
+      "title": "Uncertain",
+      "type": "object"
+    },
+    "unresolved": {
+      "items": {
+        "type": "string"
+      },
+      "maxItems": 32,
+      "title": "Unresolved",
+      "type": "array"
+    }
+  },
+  "required": [
+    "original_question",
+    "source_scope",
+    "selections",
+    "uncertain",
+    "detail_mode",
+    "completeness",
+    "hierarchy_scope",
+    "scope_resolution"
+  ],
+  "title": "RetrievalNeedsOutput",
+  "type": "object"
+}

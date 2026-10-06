@@ -105,11 +105,13 @@ class IntentStep:
         item = self.draft.items[item.id]
         if assessment.kind is not None:
             self._apply_kind(item, task, assessment.kind, effective_goal(task.original_goal,
-                                                                         answers))
+                                                                         answers), answers)
         elif (assessment.outcome is RoutingOutcome.INSUFFICIENT_CONTEXT
               and self.cfg.routing.on_insufficient_context == "human"
               and len(answers) < self.cfg.intent.max_clarifications):
-            question = intent_question(task.original_goal, answers[-1] if answers else None)
+            question = intent_question(task.original_goal, answers[-1] if answers else None,
+                                       context=self.state.get("entity_context")
+                                       or self.state.get("context_enrichment"))
             if self._park(item, question):
                 return
             self.task_update = task.model_copy(update={"intent": INTENT_DEFAULT})
@@ -128,9 +130,13 @@ class IntentStep:
                                     reason_codes=["human_chosen"])
         if guards.jev_calls_available(self.draft.budgets, self.cfg.limits) < 1:
             return IntentAssessment(RoutingOutcome.UNAVAILABLE, reason_codes=["budget_exhausted"])
+        context = self.state.get("context_enrichment")
         assessment = await assess_intent(
             self.ctx.jev, task.original_goal, answers, task.scope.component_ids, self.cfg.intent,
-            run_corr(self.state, work_item_id=item.id))
+            run_corr(self.state, work_item_id=item.id), context=context,
+            entity_context=self.state.get("entity_context"),
+            max_state_chars=self.cfg.jev.max_state_chars,
+            send_repo_excerpts=self.cfg.data_policy.send_repo_excerpts_to_jev)
         self.draft.budgets = guards.account_usage(
             self.draft.budgets.model_copy(update={
                 "jev_calls": self.draft.budgets.jev_calls + 1}),
@@ -163,7 +169,8 @@ class IntentStep:
         self.draft.emit("intent.assessed", result.kind or result.outcome.value,
                         work_item_id=item.id, assessment_id=assessment.id)
 
-    def _apply_kind(self, item: WorkItem, task: Task, kind: str, goal: str) -> None:
+    def _apply_kind(self, item: WorkItem, task: Task, kind: str, goal: str,
+                    answers: list[ClarificationAnswer]) -> None:
         """Shape the root for a served kind, or decline it plainly."""
         from kernel.scheduler import guards
 
@@ -172,6 +179,9 @@ class IntentStep:
             self._decline(item, task, kind, decline)
             return
         shaped = shape_root(self.draft.request_of(item), kind, goal)
+        if answers:
+            shaped = shaped.model_copy(update={"payload": {
+                **shaped.payload, "clarifications": [answer.text for answer in answers]}})
         self.draft.add_request(shaped.model_copy(update={
             "dedup_key": guards.request_dedup_key(shaped, self.scope_rev)}))
         self.task_update = task.model_copy(update={
@@ -210,4 +220,5 @@ class IntentStep:
 #   (#KernelBootstrapV0/INTENT)
 # - 2026-10-01 22:00 [python-coder]: A human's own pick from the offered kinds needs no Jev call;
 #   free text is re-classified on the goal as clarified. (#KernelBootstrapV0/INTENT)
+# - 2026-10-03 15:10 [python-coder]: Preserve verbatim goals and separate meaning, caller and clarification channels. (#DK-300/entity-context)
 # ====================================================================

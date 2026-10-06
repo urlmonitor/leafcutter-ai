@@ -17,11 +17,15 @@ from types import ModuleType
 from kernel.contracts import (
     base,
     capability,
+    context,
     decision,
+    entity_context,
     enums,
     evidence,
     interaction,
     payloads,
+    query,
+    retrieval_needs,
     run,
     schema_ids,  # noqa: F401
     task,
@@ -111,8 +115,15 @@ from kernel.contracts.work import (  # noqa: F401
     WorkItem,
 )
 
-_MODULES: tuple[ModuleType, ...] = (base, capability, decision, enums, evidence, interaction,
-                                    payloads, run, task, work)
+from kernel.contracts.context import CallerContext, ContextExcerpt, EnrichedContext  # noqa: F401
+from kernel.contracts.retrieval_needs import RetrievalNeedsRequest, RetrievalNeedsOutput  # noqa: F401
+from kernel.contracts.entity_context import (  # noqa: F401
+    EntityBudgets, EntityCard, EntityContext, EntityCounts, EntityCoverage,
+    EntityMatch, EntityProvenance, UnresolvedEntity,
+)
+
+_MODULES: tuple[ModuleType, ...] = (base, capability, context, decision, entity_context, enums, evidence, interaction,
+                                    payloads, query, retrieval_needs, run, task, work)
 
 
 def _collect_types() -> tuple[type, ...]:
@@ -136,4 +147,6 @@ __all__ = [name for name in dir() if not name.startswith("_")]
 # ====================================================================
 # - 2026-09-30 22:00 [python-coder]: ALL_MODELS is introspected rather than hand-listed so the
 #   serde allowlist can never lag behind a new contract. (#KernelBootstrapV0/P1)
+# - 2026-10-03 15:10 [python-coder]: Preserve verbatim goals and separate meaning, caller and clarification channels. (#DK-300/entity-context)
 # ====================================================================
+# - 2026-10-03 00:00 [python-coder]: Add typed host-needs support without activating production retrieval. (#TICKETLESS reason=user-requested-isolated-host-experiment)

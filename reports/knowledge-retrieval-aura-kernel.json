@@ -1,0 +1,29 @@
+{
+  "status": "passed",
+  "backend": "Aura",
+  "database_writes": false,
+  "repository_id": "leafcutter",
+  "source_sha": "c2ddb6f126e5b8539f217836f67decba5e91eca4",
+  "kernel_run_status": "completed",
+  "checkpoint_reopened": true,
+  "evidence_count": 2,
+  "evidence_ids": [
+    "ev-85834782a9f1afde",
+    "ev-b0f82116c6cf4ec1"
+  ],
+  "source_locators": [
+    "knowledge://leafcutter@c2ddb6f126e5b8539f217836f67decba5e91eca4/GE-124g-3?path=docs/acceptance-criteria/guardrail-engine/GE-124-frontend-declares-what-it-renders/GE-124g-3.yaml&locator=%2Fcriteria",
+    "knowledge://leafcutter@c2ddb6f126e5b8539f217836f67decba5e91eca4/ADR-062-standalone-knowledge-retrieval?path=docs/architecture/adrs/ADR-062-standalone-knowledge-retrieval.md&locator="
+  ],
+  "retrieval_refs": [
+    "knowledge:6a3fcd76-d359-434e-a59f-e8bf4505dc1a",
+    "knowledge:6a3fcd76-d359-434e-a59f-e8bf4505dc1a"
+  ],
+  "doubles": [
+    "Jev",
+    "host",
+    "human"
+  ],
+  "embedding_provider_calls": 0,
+  "semantic_usefulness_proven": false
+}

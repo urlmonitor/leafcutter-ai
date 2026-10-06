@@ -1,0 +1,39 @@
+{
+  "url": "https://console.neo4j.io/projects/83c2ca44-5a6b-4f8e-ad21-4bae1b489983/studio/bloom",
+  "date": "2026-10-02",
+  "perspective": "Default Perspective",
+  "saved_search_phrase": "Component $component",
+  "query": "MATCH p = (n)-[r:COMPONENT_MEMBERSHIP]->(c:Component) WHERE c.name = $component AND c.current = true AND n.current = true AND r.current = true RETURN p LIMIT 500",
+  "verified_ui_result": {
+    "nodes": 65,
+    "relationships": 65,
+    "AC": 63,
+    "ADR": 1,
+    "Component": 1
+  },
+  "verified_legend_filter": "In Scene",
+  "applied_styles": {
+    "AC": {
+      "color": "#57C7E3",
+      "caption": "name",
+      "hover": "title"
+    },
+    "ADR": {
+      "color": "#C990C0",
+      "caption": "name",
+      "hover": "title"
+    },
+    "Component": {
+      "color": "#FFC454",
+      "caption": "name",
+      "hover": "title"
+    }
+  },
+  "attempted_scene_name": "Finalize \u2014 current component",
+  "pending": [
+    "Verify scene rename and settings after reload",
+    "Configure SourceFile/Test captions when their properties are available in the scene",
+    "Capture final screenshot"
+  ],
+  "blocker": "Browser panel disconnected during reload. Reopen request sent to user. No screenshot or successful reopen is claimed."
+}

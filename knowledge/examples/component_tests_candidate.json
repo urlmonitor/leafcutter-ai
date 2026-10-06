@@ -1,0 +1,58 @@
+{
+  "descriptor": {
+    "operation": "get_component_tests",
+    "version": "1",
+    "description": "Directly declared test files covering acceptance criteria assigned to selected components",
+    "questions": [
+      "Which directly declared test files cover acceptance criteria belonging to this component?"
+    ],
+    "parameters": {
+      "component_ids": {
+        "type": "string_list",
+        "required": true
+      }
+    },
+    "recipe": {
+      "seed_parameter": "component_ids",
+      "seed_kind": "Component",
+      "steps": [
+        {
+          "edge_type": "component_membership",
+          "direction": "incoming",
+          "kind": "AcceptanceCriterion"
+        },
+        {
+          "edge_type": "covered_by",
+          "direction": "outgoing",
+          "kind": "Test"
+        }
+      ]
+    }
+  },
+  "reviewer": "BA immutable-source review at 9f70de80ebcafe59ff55cce6732deb92069f9541",
+  "cases": [
+    {
+      "name": "four_declared_git_vcs_test_files",
+      "arguments": {
+        "component_ids": [
+          "git_vcs_operations"
+        ]
+      },
+      "expected_ids": [
+        "unit_tests/commit_guardian/test_ge_120e_1_ii.py",
+        "unit_tests/portability/test_ge_120e_4_i.py",
+        "unit_tests/workflows/test_bo4000b_branch_staleness_decision.py",
+        "unit_tests/workflows/test_inf_700a_5_i.py"
+      ]
+    },
+    {
+      "name": "existing_release_component_has_no_declared_test_files",
+      "arguments": {
+        "component_ids": [
+          "release_manager"
+        ]
+      },
+      "expected_ids": []
+    }
+  ]
+}

@@ -1,0 +1,190 @@
+{
+  "entity_kind": "GlossaryTerm",
+  "implemented_on": "2026-10-02",
+  "implementation": "knowledge/native_types/glossary_term.py",
+  "tests": "tests/knowledge/test_native_glossary_term.py",
+  "api": "extract(root: Path) -> list[NativeRecord]",
+  "metadata_contract": {
+    "term": "Exact stripped authored heading text",
+    "definition": "Complete exact Markdown slice, including original newline sequences"
+  },
+  "derived_contract": "Complete safe-YAML file_frontmatter stored separately, with no inheritance into authored term fields.",
+  "identity_contract": "Lowercase stripped term; #term= URL-quoted normalized term locator. Reject duplicates without merging.",
+  "red": {
+    "failed": 21,
+    "skipped": 1,
+    "cause": "ModuleNotFoundError before implementation",
+    "report": "reports/native-fields/code-GlossaryTerm-red.xml"
+  },
+  "green": {
+    "passed": 22,
+    "skipped": 1,
+    "report": "reports/native-fields/code-GlossaryTerm-green.xml"
+  },
+  "skips": [
+    {
+      "test": "test_native_glossary_symlink_outside_snapshot_fails",
+      "reason": "Windows host does not grant symlink creation privilege; actual symlink case not verified. Unsafe configured absolute/traversal paths are covered."
+    }
+  ],
+  "mutation_module": "C:\\Users\\Hendrik\\Code\\leafcutter\\worktrees\\aura-domain-graph\\knowledge\\native_types\\glossary_term.py",
+  "mutation_proofs": [
+    {
+      "test": "test_native_glossary_preserves_fields_and_exact_markdown",
+      "injection": "Replace complete definition with trimmed first-line summary",
+      "exit_code": 1,
+      "restored": true
+    },
+    {
+      "test": "test_native_glossary_preserves_fields_and_exact_markdown",
+      "injection": "Invent term-level status by inheriting file frontmatter",
+      "exit_code": 1,
+      "restored": true
+    },
+    {
+      "test": "test_native_glossary_ignores_comments_and_fences_without_truncation",
+      "injection": "Recognize fake term headings inside comments and code fences",
+      "exit_code": 1,
+      "restored": true
+    },
+    {
+      "test": "test_native_glossary_fence_info_does_not_open_html_comment",
+      "injection": "Treat fence info text as an HTML comment opener and hide following real term",
+      "exit_code": 1,
+      "restored": true
+    },
+    {
+      "test": "test_native_glossary_true_section_boundaries_and_empty_definition",
+      "injection": "Truncate authored definition at a nested level-four heading",
+      "exit_code": 1,
+      "restored": true
+    },
+    {
+      "test": "test_native_glossary_identities_survive_insertion_and_reordering",
+      "injection": "Use unstable section ordinals for locators",
+      "exit_code": 1,
+      "restored": true
+    },
+    {
+      "test": "test_native_glossary_missing_and_empty_store_emit_no_placeholder",
+      "injection": "Fabricate a glossary placeholder when no authored terms exist",
+      "exit_code": 1,
+      "restored": true
+    },
+    {
+      "test": "test_native_glossary_preserves_fields_and_exact_markdown",
+      "injection": "Rewrite the source file as a side effect of extraction",
+      "exit_code": 1,
+      "restored": true
+    },
+    {
+      "test": "tests/knowledge/test_native_glossary_term.py::test_native_glossary_duplicate_normalized_terms_fail[Name]",
+      "injection": "Silently keep only the first duplicate normalized term",
+      "exit_code": 1,
+      "restored": true,
+      "observed_outcome": "failed"
+    },
+    {
+      "test": "tests/knowledge/test_native_glossary_term.py::test_native_glossary_duplicate_normalized_terms_fail[nAmE]",
+      "injection": "Silently keep only the first duplicate normalized term",
+      "exit_code": 1,
+      "restored": true,
+      "observed_outcome": "failed"
+    },
+    {
+      "test": "tests/knowledge/test_native_glossary_term.py::test_native_glossary_duplicate_normalized_terms_fail[  NAME  ]",
+      "injection": "Silently keep only the first duplicate normalized term",
+      "exit_code": 1,
+      "restored": true,
+      "observed_outcome": "failed"
+    },
+    {
+      "test": "tests/knowledge/test_native_glossary_term.py::test_native_glossary_invalid_configuration_fails[value0]",
+      "injection": "Ignore invalid source configuration and silently use default",
+      "exit_code": 1,
+      "restored": true,
+      "observed_outcome": "failed"
+    },
+    {
+      "test": "tests/knowledge/test_native_glossary_term.py::test_native_glossary_invalid_configuration_fails[value1]",
+      "injection": "Ignore invalid source configuration and silently use default",
+      "exit_code": 1,
+      "restored": true,
+      "observed_outcome": "failed"
+    },
+    {
+      "test": "tests/knowledge/test_native_glossary_term.py::test_native_glossary_invalid_configuration_fails[value2]",
+      "injection": "Ignore invalid source configuration and silently use default",
+      "exit_code": 1,
+      "restored": true,
+      "observed_outcome": "failed"
+    },
+    {
+      "test": "tests/knowledge/test_native_glossary_term.py::test_native_glossary_invalid_configuration_fails[value3]",
+      "injection": "Ignore invalid source configuration and silently use default",
+      "exit_code": 1,
+      "restored": true,
+      "observed_outcome": "failed"
+    },
+    {
+      "test": "tests/knowledge/test_native_glossary_term.py::test_native_glossary_invalid_configuration_fails[value4]",
+      "injection": "Ignore invalid source configuration and silently use default",
+      "exit_code": 1,
+      "restored": true,
+      "observed_outcome": "failed"
+    },
+    {
+      "test": "tests/knowledge/test_native_glossary_term.py::test_native_glossary_invalid_configuration_fails[value5]",
+      "injection": "Ignore invalid source configuration and silently use default",
+      "exit_code": 1,
+      "restored": true,
+      "observed_outcome": "failed"
+    },
+    {
+      "test": "tests/knowledge/test_native_glossary_term.py::test_native_glossary_invalid_configuration_fails[value6]",
+      "injection": "Ignore invalid source configuration and silently use default",
+      "exit_code": 1,
+      "restored": true,
+      "observed_outcome": "failed"
+    },
+    {
+      "test": "tests/knowledge/test_native_glossary_term.py::test_native_glossary_invalid_configuration_fails[value7]",
+      "injection": "Ignore invalid source configuration and silently use default",
+      "exit_code": 1,
+      "restored": true,
+      "observed_outcome": "failed"
+    },
+    {
+      "test": "tests/knowledge/test_native_glossary_term.py::test_native_glossary_malformed_frontmatter_fails[---\\ntitle: unfinished\\n]",
+      "injection": "Bypass safe frontmatter validation",
+      "exit_code": 1,
+      "restored": true,
+      "observed_outcome": "failed"
+    },
+    {
+      "test": "tests/knowledge/test_native_glossary_term.py::test_native_glossary_malformed_frontmatter_fails[---\\n- not\\n- mapping\\n---\\n]",
+      "injection": "Bypass safe frontmatter validation",
+      "exit_code": 1,
+      "restored": true,
+      "observed_outcome": "failed"
+    },
+    {
+      "test": "tests/knowledge/test_native_glossary_term.py::test_native_glossary_malformed_frontmatter_fails[---\\nbroken: [\\n---\\n]",
+      "injection": "Bypass safe frontmatter validation",
+      "exit_code": 1,
+      "restored": true,
+      "observed_outcome": "failed"
+    }
+  ],
+  "real_corpus": {
+    "records": 41,
+    "fidelity": "All 41 term values, definitions, locators, and file-frontmatter values compared with original source sections."
+  },
+  "verification": {
+    "ruff_format": "passed",
+    "ruff_check": "passed",
+    "strict_ac_enforcement": true
+  },
+  "integration_owner": "Root integrates shared native property encoding, loader, and Neo4j publication.",
+  "aura_writes": false
+}

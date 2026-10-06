@@ -162,6 +162,9 @@ Open points for this page: OP-05, OP-06, OP-11, OP-31 in [open points](c3-022-de
 
 ## Cross-Links
 
+- [Pre-intent enrichment and evals](../../how-to/supply-and-evaluate-kernel-context.md): native
+  research Jev batches receive the saved bounded context; caller conversation and observations
+  also extend query hints, with recent entries first.
 - Parent: [Design Map](c2-007-decision-kernel-flows-overview.md)
 - Sibling pages: [Context map](c3-016-decision-kernel-context-map.md), [Jev calls](c3-017-decision-kernel-context-jev.md)
 - The knowledge map it reads: [Knowledge System](../components/knowledge-system.md)

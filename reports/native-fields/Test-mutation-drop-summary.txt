@@ -1,0 +1,16 @@
+AC-ENFORCEMENT [STRICT]: tests/knowledge/test_native_test.py::test_test_reference_exposes_complete_contract_and_future_fields covers not-done AC KM-400a-3-i — NOT masked (AC_ENFORCE_STRICT=1); reported as a real failure.
+F                                                                        [100%]
+================================== FAILURES ===================================
+_______ test_test_reference_exposes_complete_contract_and_future_fields _______
+tests\knowledge\test_native_test.py:65: in test_test_reference_exposes_complete_contract_and_future_fields
+    assert record.metadata == expected
+E   AssertionError: assert {'canonical_i...r', ...}, ...} == {'canonical_i...summary', ...}
+E     
+E     Omitting 5 identical items, use -vv to show
+E     Right contains 1 more item:
+E     {'summary': 'An original reference summary'}
+E     Use -v to get more diff
+shared-layout-routing: declared_mutators=0 undeclared=0
+=========================== short test summary info ===========================
+FAILED tests/knowledge/test_native_test.py::test_test_reference_exposes_complete_contract_and_future_fields
+1 failed in 18.12s

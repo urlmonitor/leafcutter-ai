@@ -1,0 +1,57 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Payment illustrative mock-record design",
+  "description": "Transcribed from docs/product-truth/mock-data/fern-and-fig/catalog.mock.json entities.Payment.fields. All listed fields are present in the complete mock-record design. No production API, processor/auth request or runtime validation is implied; the canonical dataset remains unchanged.",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "id": {
+      "type": "string",
+      "description": "string"
+    },
+    "order": {
+      "type": "string",
+      "description": "string — Order.id"
+    },
+    "method": {
+      "type": "string",
+      "enum": [
+        "card"
+      ],
+      "description": "enum: card"
+    },
+    "amount": {
+      "type": "number",
+      "description": "number — matches Order.total"
+    },
+    "currency": {
+      "type": "string",
+      "description": "string"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "authorized",
+        "captured",
+        "declined"
+      ],
+      "description": "enum: authorized | captured | declined — authorized == card accepted pending capture; captured == money taken (marks Order paid); declined == card refused"
+    },
+    "processor_ref": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "string | null — payment-processor reference for the attempt"
+    }
+  },
+  "required": [
+    "id",
+    "order",
+    "method",
+    "amount",
+    "currency",
+    "status",
+    "processor_ref"
+  ]
+}

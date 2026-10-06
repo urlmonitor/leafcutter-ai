@@ -1,0 +1,41 @@
+{
+  "kind": "Agent",
+  "status": "implemented_and_verified",
+  "review_consumed": "reports/native-fields/review-Agent.json",
+  "implementation": "knowledge/native_types/agent.py",
+  "tests": "tests/knowledge/test_native_agent.py",
+  "contract": {
+    "source": "config/agent_registry.json#/agents",
+    "identity": "Registry entry id, with /agents/<array-index> JSON pointer locator",
+    "metadata": "Complete original registry entry without field filtering, defaults, or template overwrite",
+    "derived": ["template_frontmatter", "template_body", "template_source_path", "template_source_hash"],
+    "template_source_hash": "SHA-256 of original template bytes",
+    "inline_agents": "Missing or explicit null template_path produces no fabricated template metadata",
+    "validation": "Registry object/array envelope, object entries, nonempty unique string ids, and snapshot-contained template paths; invalid/missing referenced templates fail explicitly",
+    "source_behavior": "Reads source data only. Does not resolve configuration/environment values, execute conditions or instructions, or discover unregistered helper templates."
+  },
+  "real_artifact_counts": {
+    "agents": 61,
+    "templates": 59,
+    "inline_agents": ["architect-review-deep", "conflict-resolver-deep"],
+    "declared_registry_fields_covered_by_fixture": 35
+  },
+  "verification": {
+    "red_baseline": {"failed": 20, "reason": "Extractor module absent before implementation", "exit_code": 1},
+    "green": {"passed": 20, "seconds": 0.94, "exit_code": 0, "strict_ac_enforcement": true},
+    "format": "ruff format applied to owned files; ruff check passes",
+    "mutation": {
+      "method": "Process-local replacement of the actual imported knowledge.native_types.agent.extract; no file mutation",
+      "injections": ["Invent record when registry is absent", "Invent empty template_frontmatter for inline agents"],
+      "failed_tests": [
+        "test_agent_absent_registry_does_not_discover_unregistered_templates",
+        "test_agent_missing_and_null_template_fields_remain_distinct"
+      ],
+      "failed": 2,
+      "exit_code": 1,
+      "restoration": "Independent unmodified process confirmed all 20 tests green"
+    },
+    "command": "AC_ENFORCE_STRICT=1 python -m pytest tests/knowledge/test_native_agent.py -q -p no:cacheprovider --tb=short"
+  },
+  "integration_note": "Root publisher must expose derived.template_frontmatter and body separately from raw registry fields; root confirmed its generic derived metadata projection does this. No Aura writes or shared-file changes performed by this coder."
+}

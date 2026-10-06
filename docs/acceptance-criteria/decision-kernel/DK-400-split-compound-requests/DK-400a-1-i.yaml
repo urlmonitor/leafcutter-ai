@@ -1,0 +1,126 @@
+id: DK-400a-1-i
+title: "An ambiguous routing result on a bundled goal starts the same split, recorded as ambiguous"
+component: decision-kernel
+components:
+  - decision_kernel
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_kernel_1_founding
+criteria: |
+  Given a run whose root goal is "Decide the storage format for reusable decision criteria,
+    and find which published decision records already repeat the same criteria",
+  And routing finds the decision capability and the research capability equally fitting, so its
+    result is an ambiguous gap rather than one capability,
+  When routing runs on the run's root,
+  Then a split is started for the goal with trigger ambiguous, not jev_none,
+  And the top routing candidate is not picked silently to run the whole goal,
+  And the run waits for the host to propose the parts, exactly as for a split with trigger
+    jev_none.
+depends_on:
+  - DK-400a-1
+doc_links:
+  - path: docs/product-truth/flows/leafcutter/decision-forming.flow.json
+    relationship: implements
+    status: exists
+    relevance: "Flow v5 node(s) split-detect, with their acceptance scenarios."
+  - path: docs/product-truth/mock-data/leafcutter/decisions.mock.json
+    relationship: specified-by
+    status: exists
+    relevance: "Decomposition.trigger ambiguous; record dcp-reuse-threshold-research is the research-request sample with this trigger."
+  - path: docs/architecture/adrs/ADR-053-intelligence-selection-deterministic-jev-llm-human.md
+    relationship: constrains
+    status: exists
+    relevance: "Host proposes (generative), Jev only judges, a person approves; cheapest mechanism first."
+  - path: docs/analysis/2026-09-30-decision-kernel-design-3-kernel-scheduler.md
+    relationship: describes
+    status: exists
+    relevance: Route node and batched Jev routing, intent step, guards and budgets, root completion, gap recording,
+      resume and restart.
+  - path: docs/architecture/components/decision-kernel.md
+    relationship: describes
+    status: exists
+    relevance: 'Kernel containers: routing, scheduler, host handoffs, run root.'
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: DK-400a-1
+  contract: The split record of DK-400a-1 with trigger 'ambiguous' instead of 'jev_none'; every other field and
+    the waiting_host handoff are the same.
+it_requirements:
+  - trigger ambiguous applies when the root's intent or routing assessment ends insufficient_context (the needs-context
+    answer, or an answer below the configured probability or confidence) and the bundle answer is at or above split.bundle_threshold;
+    the top candidate is never bound.
+  - 'For a bundled ambiguous root the split replaces today''s clarification question: no human question opens before
+    the host''s proposal, and no ambiguous gap is recorded at detection.'
+  - A not-bundled ambiguous root keeps today's clarification path unchanged.
+  - 'If that split is rejected or its proposal leaves fewer than two parts, the root falls back to today''s insufficient_context
+    path, unchanged: with routing.on_insufficient_context ''human'' today''s clarification question is opened (the
+    same template and choices as today) and the run is waiting_human; follow-ups count against intent.max_clarifications;
+    today''s ambiguous gap is recorded only if the request ends unresolved (the person cannot be asked, or the follow-up
+    limit is reached), and only then does the run end blocked (DK-400d-3-i, DK-400c-3); it is never offered a split
+    again in the same run.'
+  - 'Tests enable splitting explicitly: split.enabled true through a config override (false only where a test compares
+    with the off switch). None relies on the shipped default, which stays false until E3 merges (dec-9925ebf1895222f4,
+    see DK-400a-1). A test asserting that no split starts must run with splitting on, or it passes for the wrong
+    reason.'
+change_target: code
+risk_surface: contract_boundary
+test_required: true
+test_spec:
+  - name: test_ambiguous_bundled_goal_starts_split_with_trigger_ambiguous
+    target_dir: tests/kernel/split/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: Scripted routing with decision and research equally fitting (needs-context) and bundle 0.9 ends
+      waiting_host on decompose_goal with trigger ambiguous; no capability is bound and no human question is opened.
+  - name: test_ambiguous_single_question_keeps_clarification
+    target_dir: tests/kernel/split/
+    framework: pytest
+    type: integration
+    angle: failure
+    description: The same routing answer with bundle 0.2 opens today's clarification question and starts no split.
+test_rationale: The ambiguity comes from a real routing or intent assessment, so the test drives the route node
+  with scripted Jev answers rather than calling the detector directly.
+origin_agent: business-analyst
+created: 2026-10-05
+amended_by:
+  - reason: it-po-technical-enrichment
+    date: '2026-10-05'
+    by: it-po
+    summary: 'Technical enrichment: assigned_agent confirmed, estimated_complexity, change_target, risk_surface,
+      it_requirements, delivers_to/expects_from contracts, doc_links and the test contract set; readiness draft
+      -> reviewed. BA criteria and product_truth unchanged.'
+  - reason: it-po-final-gate-re-enrichment
+    date: '2026-10-05'
+    by: it-po
+    summary: Added the final-gate ambiguous fallback (today's clarification path) to it_requirements.
+  - reason: it-po-build-slice-amendment
+    date: '2026-10-05'
+    by: it-po
+    summary: 'Build-slice amendment (dec-9925ebf1895222f4): its tests enable splitting explicitly, because split.enabled
+      ships false in E1 and E2.'
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Edge case of DK-400a-1. ADR-053 section 6: an uncertain routing answer never passes
+  silently, so the ambiguity must not be resolved by running the top candidate on the whole goal.
+  A goal whose parts need different capabilities (here one decision part and one research part)
+  is a normal split; each part names its own capability (DK-400c-1).
+product_truth:
+  - flow: leafcutter/decision-forming
+    node: split-detect
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: leafcutter/decisions
+    entities:
+      - Decomposition
+    source: real
+    asof: '2026-10-05'
