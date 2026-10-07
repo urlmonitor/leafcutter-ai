@@ -155,6 +155,7 @@ AC_STORE_DEPLOY_MAP: tuple[tuple[str, str], ...] = (
     # (BP-900h-4): an underscore reads to the declaring-files inspector as
     # "same-dir sibling", wrong for this cross-directory import.
     ("scripts/ac_store/done_proof_kind_support.py", "done_proof_kind_support.py"),
+    ("scripts/ac_store/pytest_outcome_reader.py", "pytest_outcome_reader.py"),  # TQ-500g-4
     # _kind_plugin.py (TQ-500f-3-i H-1) -- the pytest plugin (-p _kind_plugin)
     # done_proof_kind_support.py loads to read each test's real exception
     # type from pytest's own hook data. Must deploy alongside it.
