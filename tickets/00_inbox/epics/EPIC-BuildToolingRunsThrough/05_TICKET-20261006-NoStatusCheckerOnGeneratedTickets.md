@@ -20,13 +20,13 @@ files_touched:
   - unit_tests/test_guardrail_matrix_status_checker.py  # new
 agents:
   architect-review: not_needed
-  test-writer: needed
-  python-coder: needed
+  test-writer: signed_off
+  python-coder: signed_off
   llm-expert: not_needed
-  test-runner: needed
+  test-runner: signed_off
   documentation-expert: not_needed
-  pr-reviewer: needed
-  commit: needed
+  pr-reviewer: signed_off
+  commit: signed_off
   pull-request: not_needed
   status-checker: not_needed
 ---
@@ -151,14 +151,14 @@ tests:
 ## Implementation Tasks
 
 ### test-writer
-- [ ] Write `unit_tests/test_guardrail_matrix_status_checker.py`, loading the real `config/guardrail_gates.yaml`, with the four tests above.
+- [x] Write `unit_tests/test_guardrail_matrix_status_checker.py`, loading the real `config/guardrail_gates.yaml`, with the four tests above.
 
 ### python-coder
-- [ ] Edit `config/guardrail_gates.yaml`: lines 177, 190 and 197, and the flow-change gate at 322-328 (mandatory_agents and phase_constraint text).
-- [ ] Run `python scripts/build.py` and stage the tracked outputs.
+- [x] Edit `config/guardrail_gates.yaml`: lines 177, 190 and 197, and the flow-change gate at 322-328 (mandatory_agents and phase_constraint text).
+- [x] Run `python scripts/build.py` and stage the tracked outputs.
 
 ### test-runner / pr-reviewer / commit
-- [ ] Run `unit_tests/test_generate_ticket_from_ac.py`, `unit_tests/test_bo_2200*` and the new file. pr-reviewer confirms that no other config or doc lists the removed cells.
+- [x] Run `unit_tests/test_generate_ticket_from_ac.py`, `unit_tests/test_bo_2200*` and the new file. pr-reviewer confirms that no other config or doc lists the removed cells.
 
 ## Risk & Safety
 
@@ -175,3 +175,61 @@ tests:
 ## Comments
 
 _(Append-only log — leave blank when authoring.)_
+
+### 2026-10-06 15:36 — test-writer (status: ok)
+feedback-id: (submit-failed)
+Wrote unit_tests/test_guardrail_matrix_status_checker.py (4 tests, pytest) against the real config/guardrail_gates.yaml and the real _build_agents_map. Cells are read from the YAML itself (matrix rows plus flow_change_gates). With AC_ENFORCE_STRICT=1: 3 failed, 1 passed. Without it, the two ACD-400b-1 tests xfail through the AC-enforcement mask, as the AC is not yet done.
+cross_layer_seam_answer: covered (producing side: config/guardrail_gates.yaml; consuming side: _build_agents_map via _union_guardrail_agents)
+red_baseline:
+  - test_name: test_no_real_guardrail_cell_makes_status_checker_needed
+    file: unit_tests/test_guardrail_matrix_status_checker.py
+    error: "AssertionError: cells still making status-checker needed: [('config', 'contract_boundary'), ('model', 'contract_boundary'), ('model', 'cost')]"
+  - test_name: test_assigned_status_checker_is_still_needed
+    file: unit_tests/test_guardrail_matrix_status_checker.py
+    error: "green_at_baseline (guard): passes today; an assigned status-checker is already needed"
+  - test_name: test_config_contract_boundary_gets_architect_review
+    file: unit_tests/test_guardrail_matrix_status_checker.py
+    error: "AssertionError: architect-review is 'not_needed' (assert 'not_needed' == 'needed')"
+  - test_name: test_flow_change_gate_names_architect_review_not_status_checker
+    file: unit_tests/test_guardrail_matrix_status_checker.py
+    error: "AssertionError: mandatory_agents ['status-checker', 'pr-reviewer'] != ['architect-review', 'pr-reviewer']"
+
+### 2026-10-06 15:45 — python-coder (status: ok)
+feedback-id: (submit-failed)
+Edited config/guardrail_gates.yaml only: removed status-checker from model/contract_boundary and model/cost (architect-review already listed, no duplicate); config/contract_boundary is now [architect-review, pr-reviewer]; the config/contract_boundary flow_change_gates entry has mandatory_agents [architect-review, pr-reviewer] and its phase_constraint now names architect-review. No code change needed. No tracked build mirror exists (.leafcutter/config is untracked build output), so build.py was not run.
+Strict tests: unit_tests/test_guardrail_matrix_status_checker.py 4 passed. All 28 unit_tests files mentioning guardrail_gates: 251 passed, 1 failed (unit_tests/ac_store/test_tkt_500f_6_iii_a.py::TestSinglePredicateOwner, fails identically with the old YAML, unrelated).
+red_baseline_results:
+  - test_no_real_guardrail_cell_makes_status_checker_needed: green
+  - test_assigned_status_checker_is_still_needed: green
+  - test_config_contract_boundary_gets_architect_review: green
+  - test_flow_change_gate_names_architect_review_not_status_checker: green
+
+### 2026-10-06 15:50 — pr-reviewer (status: ok)
+feedback-id: (submit-failed)
+Reviewed the staged diff (config/guardrail_gates.yaml, unit_tests/test_guardrail_matrix_status_checker.py, this ticket). No high-confidence and no medium findings.
+- YAML: status-checker appears nowhere in the file. model/contract_boundary and model/cost list architect-review once. config/contract_boundary is [architect-review, pr-reviewer]. The flow-change gate has mandatory_agents [architect-review, pr-reviewer] and its phase_constraint names architect-review, which is accurate.
+- Tests: they load the real YAML and call the real _build_agents_map. The cell list is derived from the YAML itself, not hard-coded. The boundary and criterion tests are not tautological.
+- Other readers: templates/agents/ticket-supervisor.md and building-epics SKILL.md only reference the file path. No doc under docs/reference, docs/how-to or docs/explanation lists the matrix cells. The fixture-YAML tests (test_bo_2200a_3.py:82, test_generate_ticket_from_ac.py:951) use their own YAML and are unaffected.
+- Suppressed: low-confidence nits only.
+
+### 2026-10-06 16:10 — test-runner (status: ok)
+feedback-id: (submit-failed)
+All runs with AC_ENFORCE_STRICT=1. No failure is attributable to this ticket: every failure outside the pre-existing known one also fails in the base-commit worktree build-tooling-done-proof (no YAML change) or is a load-sensitive perf-timing test.
+- Cmd 1 (new file): 4 passed, 0 failed.
+- Cmd 2 (non-ac_store files reading guardrail_gates / calling generate_ticket_from_ac / _build_agents_map, -n auto): 334 passed, 3 failed. All 3 pre-existing (fail identically at base): test_acd_1200a_14_i::test_git_rev_parse_failure_falls_back_with_warning, test_acd_1200b_4::test_no_tty_no_flag_fails_clearly, test_bo_2600a_5::test_implemented_by_written_repo_relative (backslash path, Windows).
+- Cmd 3 (unit_tests/ac_store + tests/ac_store, -n auto): 880 passed, 14 failed, 4 skipped, 6 xfailed. Known pre-existing: test_tkt_500f_6_iii_a. 10 more fail identically at base (test_bo_2900d_1_eligibility_exemption, test_pytest_ac_enforcement x3, test_done_proof_composite_js x3, test_tkt_500f_5_i_registry_fallback, test_pytest_ac_enforcement_strict_on_ci x2; subprocess probes hit Windows temp-dir collection errors). 3 perf-timing tests (test_dependency_wiring ac1_performance, test_tree_traversal ac1_performance, test_readiness_gate ac1_performance) failed only under -n auto load and passed or flip between base and branch on serial rerun (different one failed in each worktree), so flaky, not caused by this change.
+completion_manifest:
+  test_suite_executed: true
+  all_tests_passing:
+    result: false
+    reason: "Failures remain, none caused by this ticket (13 pre-existing/environmental Windows failures plus 3 load-sensitive perf-timing tests)."
+    remediation: "Separate tickets for the Windows backslash-path and temp-dir probe failures; none needed for this ticket."
+  failure_report_structured: true
+
+### 2026-10-06 16:12 — commit (status: ok)
+feedback-id: (submit-failed)
+Committed: "fix(ticket-creation): stop generated tickets starting with status-checker"
+completion_manifest:
+  pre_commit_hooks_pass: true
+  commit_message_valid: true
+  ticket_staged: true

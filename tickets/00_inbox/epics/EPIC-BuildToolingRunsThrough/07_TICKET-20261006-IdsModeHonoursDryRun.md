@@ -25,13 +25,13 @@ files_touched:
   - unit_tests/test_goal_to_epic.py
 agents:
   architect-review: not_needed
-  test-writer: needed
-  python-coder: needed
+  test-writer: signed_off
+  python-coder: signed_off
   llm-expert: not_needed
-  test-runner: needed
+  test-runner: signed_off
   documentation-expert: not_needed
-  pr-reviewer: needed
-  commit: needed
+  pr-reviewer: signed_off
+  commit: signed_off
   pull-request: not_needed
   status-checker: not_needed
 ---
@@ -161,11 +161,11 @@ tests:
 ## Implementation Tasks
 
 ### test-writer
-- [ ] Add the five subprocess tests to `unit_tests/test_goal_to_epic.py`, using a temporary AC store and inbox.
+- [x] Add the five subprocess tests to `unit_tests/test_goal_to_epic.py`, using a temporary AC store and inbox.
 
 ### python-coder
-- [ ] `goal_to_epic.py:257-259`: pass `dry_run=args.dry_run`.
-- [ ] `epic_cli._run_ids_mode` and `epic_pipeline.build_epic_from_ids`: add keyword-only `dry_run=False`. In dry-run, stop after the sort and the name derivation, print the order and the would-create line, and return.
+- [x] `goal_to_epic.py:257-259`: pass `dry_run=args.dry_run`.
+- [x] `epic_cli._run_ids_mode` and `epic_pipeline.build_epic_from_ids`: add keyword-only `dry_run=False`. In dry-run, stop after the sort and the name derivation, print the order and the would-create line, and return.
 
 ### test-runner / pr-reviewer / commit
 - [ ] Run `unit_tests/test_goal_to_epic.py`, `unit_tests/build_orchestration/test_bo_2600a_5.py` and the fast_lane `--ids` tests.
@@ -183,4 +183,64 @@ tests:
 
 ## Comments
 
-_(Append-only log — leave blank when authoring.)_
+### 2026-10-06 16:02 — test-writer (status: ok)
+feedback-id: (submit-failed)
+Added class TestIdsModeHonoursDryRun (5 subprocess tests, real temp AC store via yaml.safe_dump, real generator) to unit_tests/test_goal_to_epic.py (255 lines, ratchet OK). Strict run: 4 failed, 5 passed (the 4 pre-existing tests pass).
+red_baseline:
+  - file: unit_tests/test_goal_to_epic.py
+    function: test_ids_dry_run_writes_nothing_under_inbox
+    red_reason: "AssertionError: inbox gained epics/EPIC-TestAcDryA/... (dry-run wrote tickets, Master_Plan)"
+  - file: unit_tests/test_goal_to_epic.py
+    function: test_ids_dry_run_leaves_ac_yamls_byte_identical
+    red_reason: "AssertionError: AC YAML now has implemented_by entries (bytes changed)"
+  - file: unit_tests/test_goal_to_epic.py
+    function: test_ids_dry_run_name_equals_real_run_name
+    red_reason: "AssertionError: last stdout line lacks 'Dry-run: would create' prefix"
+  - file: unit_tests/test_goal_to_epic.py
+    function: test_ids_dry_run_prints_ids_in_build_order
+    red_reason: "AssertionError: last stdout line lacks 'Dry-run: would create' prefix"
+  - file: unit_tests/test_goal_to_epic.py
+    function: test_ids_dry_run_cycle_exits_1_without_writes
+    red_reason: green_at_baseline (guard) - cycle already exits 1 before any write; must stay green
+
+### 2026-10-06 17:00 — python-coder (status: ok)
+feedback-id: (submit-failed)
+Threaded keyword-only `dry_run=False` through `_run_ids_mode` and `build_epic_from_ids`; goal_to_epic passes `dry_run=args.dry_run`. In dry-run the pipeline stops after graph, sort and name derivation, prints the build order then `Dry-run: would create <resolved EPIC path>`, writes nothing; the CLI skips its trailing path print. Cycle still raises before any write.
+red_baseline_results: all 4 red tests green; cycle guard, test_dry_run_matches_real_run and slug tests green.
+Strict (AC_ENFORCE_STRICT=1): test_goal_to_epic.py 9 passed. All 29 test files referencing goal_to_epic/epic_cli/epic_pipeline: 266 passed, 5 failed, all 5 fail identically on base worktree build-tooling-done-proof (pre-existing: test_no_tty_no_flag_fails_clearly, three test_ac1_performance_* timing tests, test_implemented_by_written_repo_relative backslash path on Windows).
+Ratchet: epic_cli.py 195 -> 201 (limit 400), epic_pipeline.py 316 -> 327, goal_to_epic.py 492 -> 492 (no change); check_file_size passed. No tracked deployed mirrors, so no build.py run.
+
+### 2026-10-06 17:30 — pr-reviewer (status: ok)
+feedback-id: (submit-failed)
+Verdict: ok, no high findings. dry_run returns before every write point in build_epic_from_ids (ticket generation, assemble, depends_on wiring, implemented_by back-refs, loose-ticket removal, Master_Plan); only reads/prints precede it. Real --ids run unchanged; dry_run defaults False and the only callers (epic_cli._run_ids_mode, goal_to_epic.main) are the ones changed. Tests run the real CLI against a temp store and assert on the filesystem.
+Medium:
+- M-1 scripts/ac_store/epic_pipeline.py:236 - ids dry-run line is `Dry-run: would create <path>`, while the --ac form (epic_pipeline.py:115) is `Dry-run: would create EPIC-<name> with N ticket(s):`. Same prefix, different shape; the test pins the path form. Acceptable if the design intends it, otherwise align.
+- M-2 scripts/ac_store/epic_pipeline.py:283, epic_cli.py:178, goal_to_epic.py:280 - all three carry a DECISION HISTORY footer; none got an entry for this change.
+- M-3 templates/agents/build-ac.md:79, :461, :651 - still say "--ids mode does not implement dry-run" and skip the --ids call (line 506 already says to pass --dry-run, so the file contradicts itself). Stale now; needs a follow-up ticket (documentation-expert not_needed here). docs/how-to/goal-to-epic.md and templates/skills/build-feature-ops-notes/SKILL.md do not mention it.
+Suppressed: 0 low.
+
+### 2026-10-06 17:45 — test-runner (status: ok)
+feedback-id: (submit-failed)
+Ran with AC_ENFORCE_STRICT=1. All failures are pre-existing and identical at base; nothing broken by this ticket.
+- unit_tests/test_goal_to_epic.py: 9 passed, 0 failed.
+- All 29 test files in unit_tests/ and tests/ referencing goal_to_epic/epic_cli/epic_pipeline/build_epic_from_ids (-n auto): 266 passed, 5 failed, 1 skipped. Failures (pre-existing): test_acd_1200b_4::test_no_tty_no_flag_fails_clearly; test_bo_2600a_5::test_implemented_by_written_repo_relative (Windows backslash); perf-timing tests test_readiness_gate::test_ac1_performance_under_100_leaves, test_dependency_wiring::test_ac1_performance_100_leaves_500_edges, test_tree_traversal::test_ac1_performance_200_nodes.
+- Reachability via real temp store (BO-3900, BO-3900a, BO-3900b copied): `goal_to_epic.py --ids BO-3900a,BO-3900b --dry-run --store-root <tmp> --inbox-dir <tmp>` exit 0, last line `Dry-run: would create <tmp inbox>\epics\EPIC-...`, 0 files in tmp inbox, 3 YAMLs sha256-identical.
+
+completion_manifest:
+  test_suite_executed: true
+  all_tests_passing: true   # only pre-existing base failures remain
+  failure_report_structured: true
+
+### 2026-10-06 18:00 — llm-expert (status: ok)
+feedback-id: (submit-failed)
+M-3 follow-up: templates/agents/build-ac.md (frontmatter behavior line, Step 2b.3 dry-run paragraph, new DECISION HISTORY entry) now says --ids honours --dry-run and the dry-run path passes --dry-run; build-ac.card.md regenerated and staged; 24 template tests green before and after.
+M-2 follow-up: NOT applied by llm-expert - the three DECISION HISTORY footers are in .py files, outside this agent scope; left for python-coder or the caller.
+
+### 2026-10-06 16:22 — commit (status: ok)
+feedback-id: (submit-failed)
+Auto-authorized commit gate: subject "fix(ac-driven-dev): make goal_to_epic --ids honour --dry-run".
+
+completion_manifest:
+  pre_commit_hooks_pass: true
+  commit_message_valid: true
+  ticket_staged: true

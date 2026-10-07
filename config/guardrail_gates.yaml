@@ -174,7 +174,6 @@ model:
     - architect-review
   contract_boundary:
     - architect-review
-    - status-checker
     - pr-reviewer
   auth:
     - architect-review
@@ -187,14 +186,13 @@ model:
     - pr-reviewer
   cost:
     - architect-review
-    - status-checker
     - pr-reviewer
 
 config:
   internal:
     []
   contract_boundary:
-    - status-checker
+    - architect-review
     - pr-reviewer
   auth:
     - architect-review
@@ -321,11 +319,11 @@ flow_change_gates:
   - change_target: config
     risk_surface: contract_boundary
     mandatory_agents:
-      - status-checker
+      - architect-review
       - pr-reviewer
     phase_constraint: >
-      status-checker must verify boundary impact before
-      config changes are merged; pr-reviewer gates the merge.
+      architect-review must assess boundary impact before
+      config changes are coded; pr-reviewer gates the merge.
 
 # ---------------------------------------------------------------------------
 # documentation_gates

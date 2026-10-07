@@ -11,7 +11,8 @@ BUSINESS CONTEXT: Implements ACD-1200c (dependency wiring + topological sort).
 ARCHITECTURE: One O(n) store scan builds an in-memory index; all leaf lookups
       resolve from that index. Ordering is Kahn's BFS with alphabetical
       tie-breaking for determinism; cycle reporting is a coloured DFS. Imports
-      epic_errors (CyclicDependencyError) only. Deployed flat beside
+      epic_errors (CyclicDependencyError) and _gtfa_store (the shared
+      prerequisite rule, deployed flat beside it). Deployed flat beside
       goal_to_epic.py in <output_root>/scripts/ac_store/ (see
       AC_STORE_DEPLOY_MAP in scripts/build_phases.py).
 
@@ -31,6 +32,11 @@ from pathlib import Path
 
 import yaml
 
+from _gtfa_store import (
+    _expects_from_ac_ids,
+    _load_derive_parent_id_fn,
+    _prerequisite_ac_ids,
+)
 from epic_errors import CyclicDependencyError
 
 # ---------------------------------------------------------------------------
@@ -38,36 +44,84 @@ from epic_errors import CyclicDependencyError
 # ---------------------------------------------------------------------------
 
 
-def _build_depends_on_index(ac_store_root: Path) -> dict[str, list[str]]:
-    """Build a mapping from AC id to its ``depends_on`` list from the store.
+class DepGraph(dict):
+    """Leaf dependency map that also carries the raw edge kinds for reporting.
 
-    Scans *ac_store_root* once (O(n) walk). Returns an index that can be
-    reused for all subsequent lookups, avoiding repeated filesystem scans.
-    Missing or malformed files are silently skipped.
+    Behaves exactly like ``dict[str, list[str]]``; ``edges`` maps each owner
+    AC id to ``{prerequisite: field}`` (``depends_on`` or ``expects_from``) so
+    :func:`topological_sort` can name every edge of a cycle (BO-2600a-5 AC-8).
+    """
+
+    edges: dict[str, dict[str, str]]
+
+
+def _load_records(ac_store_root: Path) -> dict[str, dict]:
+    """Read every AC record in *ac_store_root* once, skipping unreadable files.
 
     Args:
         ac_store_root: Root directory of the AC YAML store.
 
     Returns:
-        Dict mapping AC id → list of depends_on AC ids. ACs without a
-        ``depends_on`` field appear with an empty list.
+        Mapping from AC id to its parsed record dict.
     """
-    index: dict[str, list[str]] = {}
+    records: dict[str, dict] = {}
     for yaml_path in sorted(ac_store_root.rglob("*.yaml")):
         try:
             with open(yaml_path, encoding="utf-8") as fh:
                 data = yaml.safe_load(fh)
         except (yaml.YAMLError, OSError):
             continue
-        else:
-            if not isinstance(data, dict):
-                continue
-            ac_id = data.get("id")
-            if not ac_id:
-                continue
-            raw = data.get("depends_on")
-            index[ac_id] = raw if isinstance(raw, list) else []
-    return index
+        if isinstance(data, dict) and data.get("id"):
+            records[data["id"]] = data
+    return records
+
+
+def _scan_edges(ac_store_root: Path) -> dict[str, dict[str, str]]:
+    """Build ``owner -> {prerequisite: field}`` for the whole store.
+
+    Prerequisites are ``depends_on`` plus ``expects_from[].ac_id`` through the
+    rule the ticket generator shares (:func:`_gtfa_store._prerequisite_ac_ids`).
+    BO-2600a-5 AC-7: a child's ``depends_on`` on its own structural parent
+    (``derive_parent_id``, as the generator uses) yields, and is not an ordering
+    edge, when the parent's ``expects_from`` names that child. Every
+    ``expects_from`` edge and every other parent link is kept.
+
+    Args:
+        ac_store_root: Root directory of the AC YAML store.
+
+    Returns:
+        Mapping from AC id to its ordered ``{prerequisite: field}`` edges.
+    """
+    records = _load_records(ac_store_root)
+    derive = _load_derive_parent_id_fn(warn_context="epic ordering parent yield")
+    edges: dict[str, dict[str, str]] = {}
+    for ac_id, rec in records.items():
+        parent = derive(ac_id) if derive is not None else None
+        parent_rec = records.get(parent) or {}
+        yields_parent = ac_id in _expects_from_ac_ids(parent_rec.get("expects_from"))
+        expects = _expects_from_ac_ids(rec.get("expects_from"))
+        owned: dict[str, str] = {}
+        for dep in _prerequisite_ac_ids(rec):
+            if dep == parent and yields_parent and dep not in expects:
+                continue  # parent link yields to the parent's expects_from
+            owned[dep] = "expects_from" if dep in expects and dep not in (rec.get("depends_on") or []) else "depends_on"
+        edges[ac_id] = owned
+    return edges
+
+
+def _build_depends_on_index(ac_store_root: Path) -> dict[str, list[str]]:
+    """Build a mapping from AC id to its ordering prerequisite ids.
+
+    Scans *ac_store_root* once. Missing or malformed files are skipped.
+
+    Args:
+        ac_store_root: Root directory of the AC YAML store.
+
+    Returns:
+        Dict mapping AC id to the list of AC ids it must wait for (see
+        :func:`_scan_edges`). ACs with none appear with an empty list.
+    """
+    return {ac_id: list(owned) for ac_id, owned in _scan_edges(ac_store_root).items()}
 
 
 def _resolve_to_leaf_deps_from_index(
@@ -167,9 +221,11 @@ def resolve_leaf_dependencies(
         # }
     """
     # Build index once — O(n) store scan amortised across all leaf lookups
-    dep_index = _build_depends_on_index(ac_store_root)
+    edges = _scan_edges(ac_store_root)
+    dep_index = {ac_id: list(owned) for ac_id, owned in edges.items()}
     leaf_id_set = frozenset(leaf_ids)
-    result: dict[str, list[str]] = {}
+    result = DepGraph()
+    result.edges = edges
 
     for leaf_id in leaf_ids:
         deps = _resolve_to_leaf_deps_from_index(leaf_id, dep_index, leaf_id_set)
@@ -276,6 +332,65 @@ def _build_in_degrees(
     return in_degree, reverse_edges
 
 
+def _real_path(
+    start: str, goal: str, edges: dict[str, dict[str, str]], in_set: set[str]
+) -> list[str] | None:
+    """Shortest raw-edge path ``start -> ... -> goal`` through out-of-set ACs only.
+
+    Args:
+        start: Owner AC id.
+        goal: Prerequisite AC id reached by the collapsed edge.
+        edges: Raw ``owner -> {prerequisite: field}`` map.
+        in_set: AC ids of the generated set (never used as intermediates).
+
+    Returns:
+        The id path including both ends, or None when no such path exists.
+    """
+    queue: list[list[str]] = [[start]]
+    seen = {start}
+    while queue:
+        path = queue.pop(0)
+        for nxt in sorted(edges.get(path[-1], {})):
+            if nxt == goal:
+                return [*path, nxt]
+            if nxt not in seen and nxt not in in_set:
+                seen.add(nxt)
+                queue.append([*path, nxt])
+    return None
+
+
+def _cycle_message(cycle_path: list[str], dep_graph: dict[str, list[str]]) -> str:
+    """Render the cycle error naming every AC and every edge (BO-2600a-5 AC-8).
+
+    Each collapsed edge is expanded to the real store edges it stands for, so
+    ACs outside the requested set are named. Edge format:
+    ``<owner> -> <prerequisite> (<depends_on|expects_from>, parent-link: <true|false>)``.
+    Without raw edge data (a plain dict) only the collapsed path is reported.
+
+    Args:
+        cycle_path: Collapsed cycle ``[a, b, ..., a]`` from :func:`_extract_cycle`.
+        dep_graph: The graph that was being sorted; a :class:`DepGraph` carries
+            the raw edges.
+
+    Returns:
+        The multi-line error message.
+    """
+    edges = getattr(dep_graph, "edges", None)
+    if not edges:
+        return f"Circular dependency detected: {' -> '.join(cycle_path)}"
+    in_set = set(dep_graph)
+    full = [cycle_path[0]]
+    for owner, prereq in zip(cycle_path, cycle_path[1:]):
+        full.extend((_real_path(owner, prereq, edges, in_set) or [owner, prereq])[1:])
+    derive = _load_derive_parent_id_fn(warn_context="cycle report parent-link flag")
+    lines = [f"Circular dependency detected: {' -> '.join(full)}"]
+    for owner, prereq in zip(full, full[1:]):
+        field = edges.get(owner, {}).get(prereq, "depends_on")
+        is_parent = str(derive is not None and derive(owner) == prereq).lower()
+        lines.append(f"  {owner} -> {prereq} ({field}, parent-link: {is_parent})")
+    return "\n".join(lines)
+
+
 def topological_sort(dep_graph: dict[str, list[str]]) -> list[str]:
     """Return the leaf AC ids in topological build order (Kahn's BFS algorithm).
 
@@ -335,9 +450,7 @@ def topological_sort(dep_graph: dict[str, list[str]]) -> list[str]:
         # Not all nodes were processed — there is a cycle
         remaining = {node for node, deg in in_degree.items() if deg > 0}
         cycle_path = _extract_cycle(dep_graph, remaining)
-        raise CyclicDependencyError(  # noqa: TRY003
-            f"Circular dependency detected: {' -> '.join(cycle_path)}"
-        )
+        raise CyclicDependencyError(_cycle_message(cycle_path, dep_graph))  # noqa: TRY003
 
     return order
 
@@ -368,5 +481,16 @@ DECISION HISTORY
   cyclomatic 12 to 7 with no change to the traversal, the alphabetical
   tie-breaking, or the CyclicDependencyError message.
   (#TICKETLESS reason=file-size-decomposition-refactor)
+- 2026-10-06 [BO-2600a-5, EPIC-BuildToolingRunsThrough/08]: _build_depends_on_index
+  now reads expects_from[].ac_id as well as depends_on, through
+  _gtfa_store._prerequisite_ac_ids (the rule _build_ticket_depends_on uses), so
+  an expects_from-only edge orders the epic and joins cycle detection.
+- 2026-10-07 [BO-2600a-5, EPIC-BuildToolingRunsThrough/08, dec-46476988badbd5e6]:
+  AC-7: a child's depends_on on its own structural parent yields (is not an
+  ordering edge) when the parent's expects_from names that child; all other
+  edges kept. AC-8: resolve_leaf_dependencies returns a DepGraph carrying the
+  raw edge kinds, and topological_sort's CyclicDependencyError names every AC
+  on the cycle (out-of-set ones too) and each edge as
+  "<owner> -> <prereq> (<field>, parent-link: <true|false>)".
 ====================================================================
 """
