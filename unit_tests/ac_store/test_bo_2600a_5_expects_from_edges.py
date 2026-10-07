@@ -36,7 +36,7 @@ import ticket_frontmatter_guard as guard  # noqa: E402
 
 
 def _record(ac_id: str, **extra: object) -> dict:
-    rec = {
+    rec: dict[str, object] = {
         "id": ac_id,
         "title": f"Fixture {ac_id} for the expects_from edge test",
         "component": "ticket-creation",

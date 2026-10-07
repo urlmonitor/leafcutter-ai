@@ -36,7 +36,7 @@ for _p in (str(_REPO_ROOT / "scripts" / "ac_store"), str(_REPO_ROOT / "scripts")
 
 
 def _record(ac_id: str, **extra: object) -> dict:
-    rec = {
+    rec: dict[str, object] = {
         "id": ac_id,
         "title": f"Fixture {ac_id} for the cycle policy test",
         "component": "ticket-creation",
@@ -123,12 +123,14 @@ class TestCyclePolicy(unittest.TestCase):
         pattern = rf"{re.escape(owner)}\s*->\s*{re.escape(prereq)}\s*\(([^)]*)\)"
         found = re.search(pattern, msg)
         self.assertIsNotNone(found, f"edge {owner} -> {prereq} not reported\n{msg}")
+        assert found is not None, f"edge {owner} -> {prereq} not reported"
         inner = found.group(1)
         other = "expects_from" if field == "depends_on" else "depends_on"
         self.assertIn(field, inner, msg)
         self.assertNotIn(other, inner, msg)
         flag = re.search(r"parent[-_ ]?link\W*(true|false)", inner, re.IGNORECASE)
         self.assertIsNotNone(flag, f"no parent-link flag on edge\n{msg}")
+        assert flag is not None, "no parent-link flag on edge"
         self.assertEqual(str(parent_link).lower(), flag.group(1).lower(), msg)
 
     def assert_no_epic_written(self, inbox: Path) -> None:

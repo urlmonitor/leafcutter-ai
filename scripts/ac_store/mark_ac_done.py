@@ -114,8 +114,10 @@ def _composite_verdict(
         2 status not active, 3 already-done composite refused, 1 write error).
     """
     ac_file = _find_ac_file(ac_root, ac_id)
+    if ac_file is None:
+        return None  # no record: the ordinary gate-and-done path reports not-found
     try:
-        data = yaml.safe_load(ac_file.read_text(encoding="utf-8")) if ac_file else None
+        data = yaml.safe_load(ac_file.read_text(encoding="utf-8"))
     except (yaml.YAMLError, OSError):
         return None
     if not isinstance(data, dict) or not _composite_child_ids(data.get("covered_by")):
@@ -436,6 +438,10 @@ if __name__ == "__main__":
 
 # DECISION HISTORY
 # ================================================================================
+# - 2026-10-07 [python-coder]: CI mypy follow-up, EPIC-BuildToolingRunsThrough. (#TICKETLESS reason=ci-mypy-followup-pr-1035)
+#   The composite in_progress step now returns None (continue ordinary path) as soon
+#   as _find_ac_file yields no file, so ac_file is a Path afterwards (arg-type fix,
+#   no cast). Behaviour is unchanged: a missing file already fell through to None.
 # - 2026-09-25 12:00 [python-coder]: ACS-200f-3 anchored done write. (#TICKETLESS reason=quick-fix-ACS-200f-3-mark-ac-done-anchored-write)
 #   The done write no longer does an unanchored str.replace of the first
 #   "work_status: todo" anywhere in the file (which edited quoted prose, left the real key todo, and still printed success) and

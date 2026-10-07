@@ -97,7 +97,7 @@ def _scan_edges(ac_store_root: Path) -> dict[str, dict[str, str]]:
     edges: dict[str, dict[str, str]] = {}
     for ac_id, rec in records.items():
         parent = derive(ac_id) if derive is not None else None
-        parent_rec = records.get(parent) or {}
+        parent_rec = (records.get(parent) or {}) if parent is not None else {}  # root AC: no parent, no yield
         yields_parent = ac_id in _expects_from_ac_ids(parent_rec.get("expects_from"))
         expects = _expects_from_ac_ids(rec.get("expects_from"))
         owned: dict[str, str] = {}
@@ -459,6 +459,10 @@ def topological_sort(dep_graph: dict[str, list[str]]) -> list[str]:
 ====================================================================
 DECISION HISTORY
 ====================================================================
+- 2026-10-07 [python-coder]: CI mypy follow-up, EPIC-BuildToolingRunsThrough.
+  _scan_edges looks up the parent record only when derive_parent_id returned a
+  parent; a root AC has no structural parent, so there is no yield. Same result
+  as before for every non-None parent (arg-type fix).
 - 2026-06-05 [EPIC-GoalToEpic/03]: Dependency wiring and topological sort.
   Implements ACD-1200c-1: resolve_leaf_dependencies() builds leaf-to-leaf
   dependency map by resolving transitive depends_on chains through composite
