@@ -223,7 +223,9 @@ def test_heavy_lane_gate_verdict_equals_verify_red_baseline_no_second_reader():
                 f"stdout={direct_proc.stdout!r} stderr={direct_proc.stderr!r}"
             ) from None
 
-        wrapper_only_keys = {"applicable", "verified", "outcome"}
+        sys.path.insert(0, str(fx.GATE_SCRIPT.parent))
+        from _fl_heavy_lane_gate import HEAVY_WRAPPER_KEYS as wrapper_only_keys  # noqa: E402
+
         gate_core = {k: v for k, v in gate_verdict.items() if k not in wrapper_only_keys}
 
         assert gate_core == direct_verdict, (
