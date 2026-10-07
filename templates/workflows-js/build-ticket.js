@@ -1526,28 +1526,16 @@ const filesTouched = plan.files_touched || [];
 const title = plan.title || ticketPath;
 
 // -------------------------------------------------------------------------
-/*
- * Test Requirements Guard — extracted from planner data (BO-2000e-2)
- * Three satisfaction routes, any of which proves tests exist before a coder runs:
- *   1. the ticket ships a populated ## Test Requirements section (at least one
- *      "- name:" entry in the tests: YAML array), OR
- *   2. the test-writer phase runs earlier in this same drive and returns evidence
- *      of test files it wrote (see the test-writer branch in the phase loop), OR
- *   3. a previous drive already wrote test files that still exist on disk.
- *
- * Route 3 covers RESUME. Once test-writer is signed_off it drops out of the needed
- * set, so on a re-run it can never re-supply route 2's evidence — the ticket would
- * deadlock permanently on the second drive. The planner verifies these paths exist
- * on disk, so this is evidence, not a status flag.
- *
- * Route 2 exists because test-writer has a mandatory AC-derivation fallback: when
- * ## Test Requirements is absent it resolves the ticket's source_ac and derives the
- * tests from the AC store instead. Reading the planner's pre-drive snapshot as an
- * immutable fact ignored that fallback entirely and deadlocked every AC-generated
- * ticket (no surface has emitted ## Test Requirements since v2.0.0), so this must
- * stay a `let` that route 2 can flip. When neither route produces evidence, coder
- * phases are refused with a structured blocker.
- */
+// Test Requirements Guard — extracted from planner data (BO-2000e-2)
+// -------------------------------------------------------------------------
+// Tests must be proven to exist before a coder runs, by any of three routes:
+//   1. the ticket ships a populated ## Test Requirements section, OR
+//   2. test-writer runs earlier in this drive and returns evidence of test files it
+//      wrote (so this stays a `let` route 2 can flip: its AC-derivation fallback
+//      serves tickets with no ## Test Requirements), OR
+//   3. a previous drive already wrote test files that still exist on disk (RESUME: a
+//      signed_off test-writer never re-supplies route 2; planner-verified evidence).
+// When no route produces evidence, coder phases are refused with a structured blocker.
 const existingTestFiles = Array.isArray(plan.existing_test_files)
   ? plan.existing_test_files.filter((p) => typeof p === 'string' && p.trim())
   : []
@@ -1776,7 +1764,7 @@ while (pendingPhases.length > 0) {
       const gateAcStoreRoot = `${resolvedTarget.worktree_path}/${AC_STORE_REL_PATH}`;
       const gateCommand =
         `python ${gateScript} heavy_lane_gate --source-ac ${sourceAcIds.join(",")} ` +
-        `--test-root ${resolvedTarget.worktree_path} --ac-root ${gateAcStoreRoot}`;
+        `--test-root ${resolvedTarget.worktree_path} --ac-root ${gateAcStoreRoot} --ticket ${ticketPath}`;
       const gateReply = await agent(
         `Run the following command and return ONLY its raw stdout:\n${gateCommand}\n` +
         `Return JSON: { "output": "<raw stdout>", "exit_code": <number> }`,
@@ -1798,8 +1786,8 @@ while (pendingPhases.length > 0) {
       if (!gateVerdict.gate_passed) {
         return {
           status: "blocked",
-          message: `verify_red_baseline gate failed for ticket ${ticketPath}: gate_passed=false. Reason: ${gateVerdict.reason || "unknown"} (interpreter: ${gateVerdict.interpreter || "unknown"}). Refused: ${JSON.stringify(gateVerdict.refused || [])}. The coder is not dispatched — test-writer's own red_baseline_verified claim is never a substitute (TQ-500f-3-ii).`,
-          ticket_path: ticketPath, failing_phase: phaseName, gate: "verify_red_baseline", gate_verdict: gateVerdict, classification: "halt",
+          message: `verify_red_baseline gate failed for ticket ${ticketPath}: gate_passed=false. Reason: ${gateVerdict.reason || "unknown"} (interpreter: ${gateVerdict.interpreter || "unknown"}). Refused: ${JSON.stringify(gateVerdict.refused || [])}. The coder is not dispatched — test-writer's own red_baseline_verified claim is never a substitute (TQ-500f-3-ii). ${gateVerdict.remedy || ""}`,
+          ticket_path: ticketPath, failing_phase: phaseName, gate: "verify_red_baseline", gate_verdict: gateVerdict, classification: gateVerdict.halt_classification || "halt",
         };
       }
     }

@@ -1896,26 +1896,14 @@ async function driveTicketPhases(worktreeTicketPath, isEpicMember = false) {
   const filesTouched = plan.files_touched || [];
   const title = plan.title || worktreeTicketPath;
 
-  /*
-   * Test-coverage precondition for coder phases (BO-2000e-2). Three satisfaction
-   * routes, any of which proves tests exist before a coder runs:
-   *   1. the ticket ships a populated ## Test Requirements section, OR
-   *   2. the test-writer phase runs earlier in this same drive and returns
-   *      evidence of test files it wrote (see the test-writer branch below), OR
-   *   3. a previous drive already wrote test files that still exist on disk.
-   *
-   * Route 2 exists because test-writer has a mandatory AC-derivation fallback:
-   * when ## Test Requirements is absent it resolves the ticket's source_ac and
-   * derives the tests from the AC store instead. Reading the planner's pre-drive
-   * snapshot as an immutable fact ignored that fallback entirely and deadlocked
-   * every AC-generated ticket (no surface has emitted ## Test Requirements since
-   * v2.0.0), so this must stay a `let` that route 2 can flip.
-   *
-   * Route 3 covers RESUME. Once test-writer is signed_off it drops out of the
-   * needed set, so on a re-run it can never re-supply route 2's evidence — the
-   * ticket would deadlock permanently on the second drive. The planner verifies
-   * these paths exist on disk, so this is evidence, not a status flag.
-   */
+  // Test-coverage precondition for coder phases (BO-2000e-2): tests must be proven to
+  // exist before a coder runs, by any of three routes:
+  //   1. the ticket ships a populated ## Test Requirements section, OR
+  //   2. test-writer runs earlier in this drive and returns evidence of test files it
+  //      wrote (so this stays a `let` route 2 can flip: its AC-derivation fallback
+  //      serves tickets with no ## Test Requirements), OR
+  //   3. a previous drive already wrote test files that still exist on disk (RESUME: a
+  //      signed_off test-writer never re-supplies route 2; planner-verified evidence).
   const existingTestFiles = Array.isArray(plan.existing_test_files)
     ? plan.existing_test_files.filter((p) => typeof p === "string" && p.trim())
     : [];
@@ -2144,7 +2132,7 @@ async function driveTicketPhases(worktreeTicketPath, isEpicMember = false) {
         const gateAcStoreRoot = `${resolvedTarget.worktree_path}/${AC_STORE_REL_PATH}`;
         const gateCommand =
           `python ${gateScript} heavy_lane_gate --source-ac ${sourceAcIds.join(",")} ` +
-          `--test-root ${resolvedTarget.worktree_path} --ac-root ${gateAcStoreRoot}`;
+          `--test-root ${resolvedTarget.worktree_path} --ac-root ${gateAcStoreRoot} --ticket ${worktreeTicketPath}`;
         const gateReply = await agent(
           `Run the following command and return ONLY its raw stdout:\n${gateCommand}\n` +
           `Return JSON: { "output": "<raw stdout>", "exit_code": <number> }`,
@@ -2166,8 +2154,8 @@ async function driveTicketPhases(worktreeTicketPath, isEpicMember = false) {
         if (!gateVerdict.gate_passed) {
           return {
             status: "blocked",
-            message: `verify_red_baseline gate failed for ticket ${worktreeTicketPath}: gate_passed=false. Reason: ${gateVerdict.reason || "unknown"} (interpreter: ${gateVerdict.interpreter || "unknown"}). Refused: ${JSON.stringify(gateVerdict.refused || [])}. The coder is not dispatched — test-writer's own red_baseline_verified claim is never a substitute (TQ-500f-3-ii).`,
-            ticket_path: worktreeTicketPath, failing_phase: phaseName, gate: "verify_red_baseline", gate_verdict: gateVerdict, classification: "halt",
+            message: `verify_red_baseline gate failed for ticket ${worktreeTicketPath}: gate_passed=false. Reason: ${gateVerdict.reason || "unknown"} (interpreter: ${gateVerdict.interpreter || "unknown"}). Refused: ${JSON.stringify(gateVerdict.refused || [])}. The coder is not dispatched — test-writer's own red_baseline_verified claim is never a substitute (TQ-500f-3-ii). ${gateVerdict.remedy || ""}`,
+            ticket_path: worktreeTicketPath, failing_phase: phaseName, gate: "verify_red_baseline", gate_verdict: gateVerdict, classification: gateVerdict.halt_classification || "halt",
           };
         }
       }

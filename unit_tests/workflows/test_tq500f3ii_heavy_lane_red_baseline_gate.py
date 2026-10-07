@@ -306,7 +306,9 @@ def test_heavy_and_fast_lane_invocations_yield_identical_verdict():
         # in isolation. Here the wrapper keys are stripped for the byte-equality
         # check below, then separately pinned so this test still proves the
         # wrapper itself is correct for this fixture, not just discarded.
-        wrapper_only_keys = {"applicable", "verified", "outcome"}
+        sys.path.insert(0, str(gitfx.GATE_SCRIPT.parent))
+        from _fl_heavy_lane_gate import HEAVY_WRAPPER_KEYS as wrapper_only_keys  # noqa: E402
+
         heavy_core = {k: v for k, v in heavy_verdict.items() if k not in wrapper_only_keys}
 
         assert heavy_core == fast_lane_verdict, (
