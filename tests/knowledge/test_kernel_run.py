@@ -11,6 +11,7 @@ from pathlib import Path
 from kernel.bootstrap import build_bindings
 from kernel.config import SourceConfig
 from kernel.contracts import RunStatus, new_id, schema_ids
+from kernel.providers.fakes import choice_answer
 from knowledge.config import KnowledgeConfig
 from knowledge.contracts import Entity, KnowledgeEvidence, KnowledgeRetrievalResult, SourceReference
 from tests.kernel.integration.scenario_support import (
@@ -74,6 +75,9 @@ class TestKnowledgeRun(ScenarioCase):
             }
         )
         self.calls = []
+        # Natural-language retrieval asks Jev to pick the graph read (DK-300d-4); answer it here,
+        # not in the shared ScenarioCase, so selector regressions stay visible elsewhere.
+        self.jev.script("knowledge.operation_select", "operation", choice_answer("get_component_context"))
 
     def service(self):
         """Inject the fake port through the real production binding builder."""
@@ -132,6 +136,15 @@ class TestKnowledgeRun(ScenarioCase):
         )
         self.params["satisfies"] = {("c1", "A"): 0.95, ("c2", "A"): 0.9}
         paused = await self.service().start_run(task)
+        assert "knowledge.operation_select" in {batch.purpose for batch in self.jev.batches}, (
+            "The graph read ran without the Jev operation selection (DK-300d-4).")
+        selected_operations = [
+            item.diagnostics.get("knowledge_selected_operation")
+            for item in (await self.checkpoint_values(paused.run_id))["results"].values()
+            if "knowledge_selection" in item.diagnostics
+        ]
+        assert selected_operations and set(selected_operations) == {"get_component_context"}, (
+            selected_operations, paused.model_dump_json())
         paused = await resume_supplied_synthesis(self, paused)
         assert paused.status == RunStatus.WAITING_HOST
         assert paused.pending_interaction.input_evidence_ids
@@ -157,3 +170,4 @@ class TestKnowledgeRun(ScenarioCase):
 # - 2026-10-01 20:00 [python-coder]: Verify integration through persisted full decision flow. (#TICKET-20261001-KM-400e-3)
 
 # - 2026-10-02 17:00 [test-writer]: Answer the actual configured synthesis packet before options without inventing facts. (#TICKETLESS reason=main-integration-fixture-repair)
+# - 2026-10-06 12:00 [test-writer]: Script the operation_select question in this fixture (not the shared ScenarioCase) and assert the persisted selection, so a selector bypass fails. (#KnowledgeFixturesOpSelect)

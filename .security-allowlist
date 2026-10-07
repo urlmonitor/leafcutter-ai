@@ -31,6 +31,10 @@ ENTROPY_HIGH:docs/agents/coding/python-coder.md:91
 ENTROPY_HIGH:templates/scripts/commit_guardian/INTEGRATION.md:59
 ENTROPY_HIGH:templates/scripts/commit_guardian/INTEGRATION.md:125
 ENTROPY_HIGH:templates/scripts/commit_guardian/INTEGRATION.md:382
+# False positive: line 539 is a DECISION HISTORY comment whose tail tag
+# (#TICKET-20261002-GlossaryHookStubBlacklistsNewTerms) scores high entropy. No credential.
+# Per-line on purpose (narrowest exemption); if the line shifts the finding returns.
+ENTROPY_HIGH:templates/scripts/commit_guardian/check_glossary_coverage.py:539
 
 # ---------------------------------------------------------------------------
 # GE-113c-3 backfill (2026-08-18)
@@ -56,6 +60,11 @@ ENTROPY_HIGH:templates/scripts/commit_guardian/INTEGRATION.md:382
 ENTROPY_HIGH:leafcutter-web/package-lock.json:*
 # Generated artifact: build dataflow graph — "path": "docs/acceptance-criteria/..." slugs (26)
 ENTROPY_HIGH:docs/build-dataflow.json:*
+# Generated artifact: pytest-split durations map — ~9,559 test node ids, many of which
+# contain long parametrised id segments that score as high entropy. Emitted by
+# .github/workflows/test-durations.yml, never hand-edited. Glob rather than per-line:
+# the file is regenerated wholesale, so every line number shifts on each refresh.
+ENTROPY_HIGH:.github/test_durations.json:*
 
 # Sentinel string constants, not credentials. Replaces the stale line-22/27 entries
 # whose target (_SPECIAL_TOKEN) has since drifted to line 29 — glob per the

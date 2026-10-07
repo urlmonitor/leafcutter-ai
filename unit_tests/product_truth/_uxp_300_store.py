@@ -7,7 +7,9 @@ deployed-store test retains the complete AC corpus.
 """
 from __future__ import annotations
 
+import copy
 import json
+import re
 import shutil
 from pathlib import Path
 
@@ -45,25 +47,77 @@ def select_ac_paths(source: Path, required: set[str]) -> dict[str, Path]:
     return selected
 
 
+# Relative, slash-separated, ending in a file extension: no spaces, pointers or ids.
+_PATH_SHAPE = re.compile(r"[\w.-]+(?:/[\w.-]+)+\.\w+")
+
+
+def _fixture_flows(store: Path) -> list[dict]:
+    return [json.loads(path.read_text(encoding="utf-8"))
+            for path in sorted((store / "flows").rglob("*.flow.json"))]
+
+
+def _nodes(flow: dict) -> list[dict]:
+    return flow.get("steps", []) + flow.get("branches", [])
+
+
+def declared_dependency_paths(flow: dict) -> set[str]:
+    """Return the repo-relative files the contract validator resolves for one flow.
+
+    Mirrors product_truth_contracts: contract schemas, example receipts and the
+    planning source of every missing binding, on every step and branch.
+    """
+    paths = {definition["schema"] for definition in flow.get("contract_definitions", {}).values()
+             if "schema" in definition}
+    for node in _nodes(flow):
+        io = node.get("io_contracts", {})
+        paths.update(example["source"]["path"] for example in io.get("examples", []) if "source" in example)
+        paths.update(gap["source"] for gap in io.get("missing_bindings", []))
+    return paths
+
+
+def declared_repo_files(flow: dict) -> set[str]:
+    """Find every path-shaped string naming a repository file, independent of the copy list.
+
+    Example payload values are data, not dependencies, so they are skipped.
+    """
+    stripped = copy.deepcopy(flow)
+    for node in _nodes(stripped):
+        for example in node.get("io_contracts", {}).get("examples", []):
+            example.pop("value", None)
+    found: set[str] = set()
+    pending: list[object] = [stripped]
+    while pending:
+        value = pending.pop()
+        if isinstance(value, dict):
+            pending.extend(value.values())
+        elif isinstance(value, list):
+            pending.extend(value)
+        elif isinstance(value, str) and _PATH_SHAPE.fullmatch(value) and (REPO_ROOT / value).is_file():
+            found.add(value)
+    return found
+
+
+def assert_declared_paths_present(store: Path) -> None:
+    """Fail, naming each flow and path, when the fixture lacks a file a flow declares."""
+    root = store.parent.parent
+    missing = sorted(f"{flow.get('id', '<no id>')}: {relative}" for flow in _fixture_flows(store)
+                     for relative in declared_repo_files(flow) if not (root / relative).is_file())
+    if missing:
+        raise ValueError("fixture lacks declared repository file(s): " + "; ".join(missing))
+
+
 def copy_contract_dependencies(store: Path) -> None:
-    """Keep real contract models and declared schema/receipt dependencies in the fixture.
+    """Keep real contract models and every declared repository dependency in the fixture.
 
     This copies source bytes, never substitutes validation models or drops flows.
     Model imports need the kernel, integration and knowledge source packages;
-    schemas and receipts remain limited to paths declared by the real artifacts.
+    schemas, receipts and missing-binding planning sources remain limited to
+    paths declared by the real artifacts. A self-check then proves closure.
     """
-    paths: set[str] = set()
-    has_models = False
-    for path in (store / "flows").rglob("*.flow.json"):
-        flow = json.loads(path.read_text(encoding="utf-8"))
-        for definition in flow.get("contract_definitions", {}).values():
-            has_models = has_models or "model" in definition
-            if "schema" in definition:
-                paths.add(definition["schema"])
-        for node in flow.get("steps", []) + flow.get("branches", []):
-            for example in node.get("io_contracts", {}).get("examples", []):
-                if "source" in example:
-                    paths.add(example["source"]["path"])
+    flows = _fixture_flows(store)
+    paths = set().union(*(declared_dependency_paths(flow) for flow in flows))
+    has_models = any("model" in definition for flow in flows
+                     for definition in flow.get("contract_definitions", {}).values())
     destination_root = store.parent.parent.resolve()
     if has_models:
         for package in ("kernel", "integrations", "knowledge"):
@@ -77,6 +131,7 @@ def copy_contract_dependencies(store: Path) -> None:
             raise ValueError(f"contract dependency escapes fixture: {relative}")
         destination.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(source, destination)
+    assert_declared_paths_present(store)
 
 
 def copy_bounded_store(docs: Path, *, extra_ac_ids: tuple[str, ...] = ()) -> Path:

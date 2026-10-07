@@ -88,7 +88,7 @@ Consult it for project-specific terms when reading code or docs.
 - **To populate from scratch**: run `/glossary-bootstrap` (once after initial install
   or after a major codebase merge).
 - **Ongoing additions**: the `check-glossary-coverage` pre-commit hook detects novel
-  terms in staged files and dispatches the `glossary-triage` agent automatically.
+  terms in staged files and reports them (it cannot dispatch agents); triage via `glossary-triage` + `glossary_bootstrap.py --apply-decisions`.
 - **Do NOT hand-edit to add entries** — always use the triage flow so the blacklist
   stays consistent. Manual edits are only for correcting existing entries.
 

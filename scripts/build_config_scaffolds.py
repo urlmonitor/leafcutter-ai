@@ -189,7 +189,7 @@ def build_config_scaffolds(
             written += 1
         else:
             target_path.parent.mkdir(parents=True, exist_ok=True)
-            target_path.write_text(content, encoding="utf-8")
+            target_path.write_text(content, encoding="utf-8", newline="\n")
             print(f"  scaffolded: {rel_path}")
             written += 1
 
