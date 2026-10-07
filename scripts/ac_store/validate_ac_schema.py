@@ -47,8 +47,6 @@ from typing import Any
 
 import yaml
 
-from yaml_safe_loader import get_safe_yaml_loader
-
 from _ac_components import components_field_errors, load_registry_ids  # noqa: E402
 from _ac_schema_test_spec_validators import test_spec_entry_errors  # noqa: E402
 from declared_files import declared_files_commit_messages  # noqa: E402
@@ -242,7 +240,20 @@ def _validate_file(
 
     try:
         content = path.read_text(encoding="utf-8")
-        data = yaml.load(content, Loader=get_safe_yaml_loader())
+        # Deliberately yaml.SafeLoader, NOT the shared fast accessor
+        # (yaml_safe_loader.get_safe_yaml_loader) used elsewhere in this
+        # package (loader-audit, TQ-600a-11 fix-pass, 2026-10-07): this
+        # except branch IS the required "AC store valid" gate's own
+        # malformed-YAML detector -- its entire job is to turn an unparseable
+        # file into the reported violation below. CSafeLoader accepts at
+        # least one input class (a tab adjacent to a colon/comma) that
+        # yaml.SafeLoader correctly rejects, so routing this one call through
+        # the fast accessor would silently narrow what this validator catches
+        # -- a malformed AC file that should fail this gate would instead
+        # parse "successfully" and be judged only on field presence, which it
+        # may pass by chance. See scripts/ac_store/yaml_safe_loader.py's own
+        # docstring for the measured divergence classes.
+        data = yaml.load(content, Loader=yaml.SafeLoader)
     except yaml.YAMLError as exc:
         return [f"{path}: YAML parse error — {exc}"]
     except OSError as exc:

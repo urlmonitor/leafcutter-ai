@@ -57,8 +57,6 @@ from typing import Any
 
 import yaml
 
-from yaml_safe_loader import get_safe_yaml_loader
-
 
 # ---------------------------------------------------------------------------
 # Public constants
@@ -281,7 +279,15 @@ def _validate_file(
     """
     try:
         content = path.read_text(encoding="utf-8")
-        data = yaml.load(content, Loader=get_safe_yaml_loader())
+        # Deliberately yaml.SafeLoader, NOT the shared fast accessor
+        # (loader-audit, TQ-600a-11 fix-pass, 2026-10-07): same reasoning as
+        # the sibling validate_ac_schema.py._validate_file, which this
+        # function mirrors (ACS-100i-7-ii). This except branch IS the
+        # malformed-YAML detector; routing through get_safe_yaml_loader()
+        # would let CSafeLoader's permissiveness on inputs like a tab next to
+        # a colon silently turn a file that should report "YAML parse error"
+        # into one judged only on field presence.
+        data = yaml.load(content, Loader=yaml.SafeLoader)
     except yaml.YAMLError as exc:
         return [f"{path}: YAML parse error — {exc}"]
     except OSError as exc:

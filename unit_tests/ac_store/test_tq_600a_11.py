@@ -110,6 +110,16 @@ _DOCUMENTED_EXCEPTIONS = frozenset(
         # import-free avoids that gate failure outright.
         "templates/scripts/commit_guardian/hooks/check_ac_done_on_merge.py",
         "templates/scripts/commit_guardian/hooks/check_agent_verification_consistency.py",
+        # Deliberate revert (loader-audit, TQ-600a-11 fix-pass, 2026-10-07):
+        # _parse_yaml_dict's whole contract, stated repeatedly in its own
+        # module docstring, is that it matches what `yaml.safe_load` itself
+        # would produce -- it is the full-parse fallback the `_read_yaml_id`
+        # regex fast path is checked against, so it must call the literal
+        # reference implementation, not a loader that can disagree with it.
+        # CSafeLoader accepts an input class (a tab in a value) that
+        # `yaml.safe_load` correctly rejects, which broke
+        # test_ge_122a_1_fast_path_equivalence.py before this revert.
+        "templates/scripts/commit_guardian/_uniqueness_scanners.py",
     }
 )
 

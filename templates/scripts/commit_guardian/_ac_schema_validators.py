@@ -156,6 +156,18 @@ def load_yaml_manual(path: Path) -> dict[str, Any]:
 def load_yaml_from_string(content: str, source_label: str) -> dict | None:
     """Parse a YAML string; returns dict or None on failure (fail-open).
 
+    Deliberately yaml.SafeLoader, NOT the shared fast accessor (loader-audit,
+    TQ-600a-11 fix-pass, 2026-10-07): this is a second, sibling call site in
+    the same module as `load_yaml` above, which was already reverted for
+    being "the parser behind the AC store's fail-open malformed-file guard."
+    This function feeds `check_ac_schema.py`'s HEAD-vs-staged
+    `implements_pattern` preservation check (the required `check-ac-schema`
+    gate) -- a parse failure on either side is fail-open ("nothing to compare
+    against, no violation"), so a tab-malformed HEAD or staged copy that
+    `yaml.SafeLoader` would correctly reject (forcing the comparison to run)
+    must not instead be silently accepted by a more permissive loader and
+    skip the comparison it exists to make.
+
     Args:
         content: Raw YAML string.
         source_label: Human-readable label for error messages.
@@ -166,13 +178,8 @@ def load_yaml_from_string(content: str, source_label: str) -> dict | None:
     try:
         import yaml  # type: ignore[import]
 
-        from _ac_store_locator import ensure_ac_store_on_syspath
-
-        ensure_ac_store_on_syspath()
-        from yaml_safe_loader import get_safe_yaml_loader
-
         try:
-            data = yaml.load(content, Loader=get_safe_yaml_loader())
+            data = yaml.load(content, Loader=yaml.SafeLoader)
             return data if isinstance(data, dict) else None
         except yaml.YAMLError as exc:
             print(

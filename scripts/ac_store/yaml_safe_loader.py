@@ -92,6 +92,58 @@ ARCHITECTURE: A single, uncached accessor module, generalising the one
       unaffected and stays on the fast accessor. A reader relying on "four
       divergence classes, all checked and found to agree" as exhaustive
       would be misled without this entry.
+
+    - 2026-10-07 [loader-audit, TQ-600a-1 follow-up]: An independent
+      differential probe (both loaders fed ~45 deliberately awkward inputs:
+      tabs in several positions, duplicate keys, merge keys, ambiguous
+      numerics/booleans/sexagesimals, timestamps, a 200KB scalar, a 20000-key
+      document, anchors/aliases, control characters, a BOM, non-UTF8
+      escapes) found TWO corrections to the record above, not a sixth
+      independent class and a scope fix:
+
+      (1) SCOPE CORRECTION on the tab divergence entry above: it is not
+      limited to "a tab inside a flow-context sequence". The same
+      accept/reject split reproduces for a tab immediately after the
+      key's colon in an ordinary BLOCK mapping (``"key:\\tvalue\\n"``), for a
+      tab after a comma inside a flow MAPPING (``"{key:\\tvalue}"``), and
+      for a tab following a comma in a flow sequence
+      (``"key: a,\\tb\\n"`` -- parsed as a plain scalar containing a
+      literal comma, not a sequence, but the same accept/reject split
+      applies). The governing rule is simpler than "flow-context
+      sequences": pure-Python ``SafeLoader`` rejects a raw tab anywhere
+      YAML's grammar requires a space-only separator (after `:` or `,`,
+      in both block and flow styles); ``CSafeLoader`` accepts it in every
+      position tried. Treat the divergence as "any separator-position
+      tab", not as flow-sequences specifically.
+
+      (2) A GENUINELY NEW (sixth) class, in the OPPOSITE direction from
+      every divergence above: a lone UTF-16 surrogate escape inside a
+      double-quoted scalar, e.g. ``'key: "\\ud800"\\n'``. Pure-Python
+      ``SafeLoader`` ACCEPTS it, producing a Python string containing the
+      lone surrogate character. ``CSafeLoader`` REJECTS it --
+      ``yaml.scanner.ScannerError: ... found invalid Unicode character
+      escape code``. Here CSafeLoader is the STRICTER parser, so this is
+      not a "silently accepts malformed input" hazard in the direction the
+      tab and recursion-depth classes are -- but it is still a real
+      divergence: content that used to parse successfully under
+      ``yaml.safe_load`` now raises under the fast accessor. A call site
+      whose code path treated "parses successfully" as the normal case
+      (no error-handling around the parse) will see a new, previously
+      impossible exception surface. Checked, no live call site in this
+      package currently exercises content containing a raw surrogate
+      escape, but a future reader adding one should know this is not a
+      new bug in their code.
+
+      All other probed classes (duplicate keys, merge keys -- including
+      multi-document merge via a list of anchors, yes/no/on/off and y/n
+      booleans, sexagesimal ints/floats, octal/hex ints, ``.inf``/``.nan``,
+      ISO and space-separated timestamps, a 200KB scalar, a 20000-entry
+      mapping, anchors/aliases including a self-nested list, control
+      characters embedded via escape sequences, and a UTF-8 BOM prefix)
+      were found to AGREE between the two loaders under PyYAML 6.0.1. As
+      with the fifth entry above: a reader treating "four... no, five...
+      divergence classes" as exhaustive would again be misled -- the
+      count is now six, and nothing guarantees it is complete even now.
 """
 
 from __future__ import annotations

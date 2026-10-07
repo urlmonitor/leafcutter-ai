@@ -27,7 +27,6 @@ from __future__ import annotations
 
 import logging
 import re
-import sys
 from pathlib import Path
 from typing import Any
 
@@ -40,9 +39,6 @@ from typing import Any
 # written: N" and exiting 0. See KI-BP-019. Let the ImportError propagate with
 # Python's own clear message naming the missing dependency rather than mask it.
 import yaml
-
-sys.path.insert(0, str(Path(__file__).resolve().parent / "ac_store"))
-from yaml_safe_loader import get_safe_yaml_loader  # noqa: E402
 
 from injection_builders import (  # noqa: E402
     _load_registry,  # noqa: F401  # re-exported; consumed by build_phases / build_helpers
@@ -123,8 +119,26 @@ def parse_frontmatter(text: str) -> tuple[dict[str, Any], str]:
     fm_text = text[3:end].strip()
     body = text[end + 4:].lstrip("\n")
 
+    # Deliberately yaml.SafeLoader, NOT the shared fast accessor
+    # (loader-audit, TQ-600a-11 fix-pass, 2026-10-07): this is the entry
+    # point for compile_agent_template/compile_skill_template, i.e. it runs
+    # in the live build/deploy path for every agent and skill template, over
+    # hand-edited `templates/agents/*.md` / `templates/skills/*/SKILL.md`
+    # frontmatter. The `except: fm = {}` degrade-to-empty shape immediately
+    # below is the EXACT shape of a prior production incident (KI-BP-019,
+    # see the module-level comment above the `import yaml` line): a masked
+    # import failure once made every template's frontmatter parse as `{}`,
+    # silently stripping name/description/model/tools from every deployed
+    # agent while the build still printed "Total files written: N" and
+    # exited 0. Routing this parse through a more permissive loader
+    # (CSafeLoader accepts at least one input class, a tab adjacent to a
+    # colon/comma, that yaml.SafeLoader correctly rejects) would make a
+    # hand-typo'd template silently parse into a partial/wrong dict instead
+    # of either parsing cleanly or correctly falling into this same `{}`
+    # degrade path where the loss is at least total and uniform rather than
+    # field-by-field unpredictable.
     try:
-        fm = yaml.load(fm_text, Loader=get_safe_yaml_loader()) or {}
+        fm = yaml.load(fm_text, Loader=yaml.SafeLoader) or {}
     except yaml.YAMLError:
         fm = {}
 
