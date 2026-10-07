@@ -229,7 +229,7 @@ def _write_manifest(sb: Sandbox, entries, claims: bool) -> None:
         sb.altered[key] = copy
         diff = "".join(difflib.unified_diff(text.splitlines(True), altered.splitlines(True),
                                             "a/refresh_config.py", "b/refresh_config.py"))
-        entry = {"name": name, "status": "prepared", "reason": None, "diff": diff,
+        entry: dict[str, object] = {"name": name, "status": "prepared", "reason": None, "diff": diff,
                  "files": [{"path": "refresh_config.py", "altered_copy": str(copy)}]}
         if claims:
             entry.update({"caught": True, "caught_by": [T2], "outcome": "caught"})
@@ -345,8 +345,8 @@ def kill_tree(proc: subprocess.Popen) -> None:
 def start_runner_until_altered(sb: Sandbox, limit: float = 150.0) -> subprocess.Popen:
     """Start ``run`` in the background; return once refresh_config.py differs from as-written."""
     log = (sb.root / "state" / "runner.log").open("w")
-    popen_kw = {"start_new_session": True} if sys.platform != "win32" else {}
-    proc = subprocess.Popen(runner_cmd(sb), cwd=sb.work, stdout=log, stderr=log, env=_env(), **popen_kw)
+    proc = subprocess.Popen(runner_cmd(sb), cwd=sb.work, stdout=log, stderr=log, env=_env(),
+                            start_new_session=sys.platform != "win32")
     end = time.time() + limit
     while time.time() < end:
         if proc.poll() is not None:
