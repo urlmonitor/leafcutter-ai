@@ -4,16 +4,65 @@ Ticket TICKET-20261002-WorktreeBootstrapLeavesTrackedFilesDirty. The build is ru
 exactly as ``setup_ticket_worktree._bootstrap`` runs it, in a throwaway clone.
 Implementation needed: build.py writes generated text with newline="\n" and
 committed generated files match current build output.
+
+TQ-600a-9-ii: ``test_a_second_build_on_a_clean_checkout_changes_nothing`` used
+to clone and build its own throwaway checkout (2 real ``build.py`` spawns),
+structurally identical to ``_built_clone()``'s own clone-and-build (a 3rd
+spawn when ``test_generated_text_outputs_keep_lf_line_endings`` also runs).
+It now reuses ``_built_clone()``'s cached, already-built clone as its "first"
+snapshot and runs exactly one more build on top of it for the "second" --
+2 real builds total for the whole file where there were 3. See
+``unit_tests/suite_performance/_test_helpers_tq_600a_9.py``'s module
+docstring for the full TQ-600a-9 production contract this file's
+``emit_execution_signal`` call participates in.
 """
 import hashlib
+import shutil
 import subprocess
 import sys
 import tempfile
 import unittest
+import uuid
 from pathlib import Path
+
+import pytest
+
+from scripts.suite_performance._shared_layout_coordination import (
+    emit_execution_signal,
+)
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 _STATE: dict = {}
+_BASETEMP_ROOT: dict[str, Path] = {}
+
+
+@pytest.fixture(scope="session", autouse=True)
+def _capture_basetemp_root(tmp_path_factory):
+    """Capture pytest's own basetemp root so `_built_clone()`'s clone lands
+    somewhere an EXTERNAL caller can find via `--basetemp` (TQ-600a-9-ii's
+    hardlink-safety test inspects the clone this file produces via
+    `basetemp.rglob(".git")`, which can only see paths pytest itself placed
+    under that root -- a plain `tempfile.TemporaryDirectory()`, this file's
+    previous approach, is invisible to it). Autouse so it runs even though
+    this file's tests are unittest.TestCase methods, which cannot request a
+    fixture directly; session-scoped so every test in this module shares the
+    one captured root.
+    """
+    _BASETEMP_ROOT["root"] = tmp_path_factory.getbasetemp()
+
+
+def _clone_parent_dir() -> Path:
+    """Return the directory `_built_clone()` should create its clone under.
+
+    Prefers the captured pytest basetemp root (see `_capture_basetemp_root`)
+    so the clone is discoverable via `--basetemp` from an external process.
+    Falls back to an ordinary OS temp dir for a direct `python -m unittest`
+    invocation, where no pytest session (and so no basetemp fixture) ran.
+    """
+    root = _BASETEMP_ROOT.get("root")
+    if root is not None:
+        return root
+    return Path(tempfile.mkdtemp(prefix="tq600a9ii_no_basetemp_"))
 
 
 def _git(cwd, *args):
@@ -30,13 +79,15 @@ def _run_build(clone: Path) -> None:
     subprocess.run([sys.executable, str(clone / "scripts" / "build.py"),
                     "--target-dir", str(clone)],
                    cwd=str(clone), check=True, capture_output=True)
+    # TQ-600a-9-ii: the one real deploy subprocess this file's tests funnel
+    # through. A no-op unless a test has pointed
+    # LEAFCUTTER_SHARED_LAYOUT_EXECUTION_LOG at a scratch file.
+    emit_execution_signal(clone)
 
 
 def _built_clone() -> Path:
     if "clone" not in _STATE:
-        tmp = tempfile.TemporaryDirectory()
-        _STATE["tmp"] = tmp
-        clone = Path(tmp.name) / "clone"
+        clone = _clone_parent_dir() / f"tq600a9ii_clone_{uuid.uuid4().hex}"
         _clone_head(clone)
         _run_build(clone)
         _STATE["clone"] = clone
@@ -55,9 +106,18 @@ def _snapshot_tracked(clone: Path) -> dict:
 
 
 def tearDownModule():
-    tmp = _STATE.pop("tmp", None)
-    if tmp is not None:
-        tmp.cleanup()
+    """Leave `_built_clone()`'s clone in place when it was placed under
+    pytest's own basetemp (TQ-600a-9-ii's hardlink-safety and self-
+    targeting tests inspect it via `--basetemp` from an EXTERNAL process,
+    AFTER this module's own test run has already finished -- eagerly
+    deleting it here would make it invisible to that later inspection).
+    Only the FALLBACK (no pytest basetemp available, e.g. a direct
+    `python -m unittest` invocation) location -- which no external
+    inspection can ever reach -- is cleaned up here.
+    """
+    clone = _STATE.pop("clone", None)
+    if clone is not None and _BASETEMP_ROOT.get("root") is None:
+        shutil.rmtree(clone, ignore_errors=True)
 
 
 class TestBuildLeavesTrackedFilesClean(unittest.TestCase):
@@ -69,14 +129,19 @@ class TestBuildLeavesTrackedFilesClean(unittest.TestCase):
         Pins byte stability (no CRLF flip-flop) and machine independence (a
         deployed copy cannot change links between runs). Freshness of the
         committed generated files is out of scope for this test.
+
+        TQ-600a-9-ii: reuses `_built_clone()`'s already-built clone as the
+        FIRST snapshot instead of cloning and building one of its own -- the
+        clone it would have produced is structurally identical to
+        `_built_clone()`'s own clone-and-build, so sharing it removes one of
+        this file's three real `build.py` subprocess spawns without changing
+        what this test proves: idempotency does not depend on how many PRIOR
+        builds the inspected tree has already undergone.
         """
-        with tempfile.TemporaryDirectory() as tmp:
-            clone = Path(tmp) / "clone"
-            _clone_head(clone)
-            _run_build(clone)
-            first = _snapshot_tracked(clone)
-            _run_build(clone)
-            second = _snapshot_tracked(clone)
+        clone = _built_clone()
+        first = _snapshot_tracked(clone)
+        _run_build(clone)
+        second = _snapshot_tracked(clone)
         changed = sorted(k for k in first.keys() | second.keys()
                          if first.get(k) != second.get(k))
         self.assertEqual(
