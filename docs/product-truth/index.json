@@ -858,7 +858,7 @@
       "path": "flows/leafcutter/decision-forming.flow.json",
       "status": "active",
       "readiness": "draft",
-      "version": 9,
+      "version": 10,
       "entities": [
         "Decision",
         "Decomposition"
@@ -867,9 +867,9 @@
       "impl_summary": {
         "done": 5,
         "in_progress": 0,
-        "not_started": 33,
-        "total": 38,
-        "asof": "2026-10-05"
+        "not_started": 35,
+        "total": 40,
+        "asof": "2026-10-06"
       },
       "tags": [
         "decision-kernel",
@@ -1691,9 +1691,9 @@
       "impl_summary": {
         "done": 5,
         "in_progress": 0,
-        "not_started": 33,
-        "total": 38,
-        "asof": "2026-10-05"
+        "not_started": 35,
+        "total": 40,
+        "asof": "2026-10-06"
       },
       "expands": [
         "leafcutter/decision-retrieval"
