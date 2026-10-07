@@ -1,0 +1,196 @@
+id: TQ-600a-10-i
+components:
+  - testing_quality
+  - build_pipeline
+title: "A path the smaller copy omits produces a failure that names it, never a test that passes for the wrong reason"
+component: testing-quality
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given a package copy that has been made smaller, from the whole checkout down to the
+    template, script and configuration directories,
+  And the hazard that makes shrinking a copy different in kind from sharing one: the
+    tests in this file assert that a build FAILS after a deliberate mutation, so a
+    build that fails because the copy is missing something unrelated produces exactly
+    the same green verdict as a build that fails for the reason under test,
+  And the second face of the same hazard: a test that reads a path the smaller copy no
+    longer provides, where the read quietly yields nothing rather than refusing,
+  When the build run against the smaller copy fails,
+  Then the reason it gives is the one the test's own mutation was made to provoke, and
+    a test asserting failure passes only when the reason matches that mutation rather
+    than merely because something went wrong,
+  And when a path a test needs is absent from the copy, the run stops and says which
+    path was absent, instead of continuing with an empty or default value,
+  And this is demonstrated by removing a required entry from the copy and observing the
+    affected test turn red with a message naming the removed entry,
+  And a control run against a sound copy shows the same test green, so a check that
+    refuses every copy does not satisfy this record,
+  And each of the file's failure-asserting tests is shown to turn green only for its
+    own provoked reason: injecting a different, unrelated build failure turns it red
+    rather than leaving it green.
+depends_on:
+  - TQ-600a-10
+doc_links:
+  - path: unit_tests/test_bp_900g_8_ii.py
+    relationship: modifies
+    status: exists
+    relevance: >-
+      Subject. Its tests assert that a build fails after a deliberate mutation, which
+      is what makes a smaller copy able to turn a real pass into a coincidental one.
+  - path: unit_tests/build_guards/test_bp_100k_2.py
+    relationship: describes
+    status: exists
+    relevance: >-
+      Owns the synthetic-package helper whose contents define what "absent from the
+      copy" means. The omission check belongs where the copy is assembled, not
+      scattered through the tests.
+  - path: CLAUDE.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      Records this repository's recurring defect — a check that examined nothing
+      looking exactly like a check that found nothing — with three precedents. A test
+      that passes because the build broke early is the same defect wearing a different
+      hat.
+  - path: unit_tests/build_guards/test_acd_2100d_2_i.py
+    relationship: describes
+    status: exists
+    relevance: >-
+      A SECOND CONSUMER of the helper that gains the omission refusal, and the file
+      TQ-600a-9-iii is editing concurrently. A global raise added at the copy changes
+      behaviour here too; check the blast radius before adding one.
+  - path: unit_tests/test_bp_900g_8_i.py
+    relationship: describes
+    status: exists
+    relevance: >-
+      The third consumer of the same helper, for the same reason.
+declared_files:
+  - path: unit_tests/test_bp_900g_8_ii.py
+    state: existing
+  - path: unit_tests/build_guards/test_bp_100k_2.py
+    state: existing
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - >-
+    A FAILURE-ASSERTING TEST MUST MATCH THE REASON, NOT JUST THE FAILURE. If any test
+    in this file currently asserts only that the build exited non-zero, tighten it to
+    assert the reason before the copy is made smaller. Otherwise the smaller copy
+    cannot be distinguished from a correct result and this whole record is
+    unverifiable.
+  - >-
+    THE OMISSION CHECK BELONGS AT THE COPY, NOT IN EACH TEST. One place that refuses
+    when a needed path is not present, naming it. Spread across five tests it will be
+    added to three of them.
+  - >-
+    REFUSE, DO NOT DEFAULT. A missing path that yields an empty string or a default is
+    the exact silent shape this record exists to prevent, and it is the natural thing
+    to write.
+  - >-
+    THE CONTROL IS NOT OPTIONAL. Three refusal descriptors with no green path are
+    satisfied by a copy mechanism that rejects everything.
+  - >-
+    SIZED AS M, NOT S, AND THE REASON IS THE ORDERING. This looks like a one-function
+    change and is not. The first requirement above — tighten every failure-asserting
+    test to match its reason BEFORE the copy shrinks — lands in a file of over a
+    thousand lines across the three named failure tests at lines 430, 598 and 723; the
+    omission refusal lands in a SECOND file, the synthetic-package helper owned by
+    unit_tests/build_guards/test_bp_100k_2.py. Two files, and the tightening must
+    precede the shrink or the whole record is unverifiable.
+  - >-
+    THE OMISSION CHECK GOES IN A HELPER TWO OTHER FILES DEPEND ON. test_bp_900g_8_i.py
+    and test_acd_2100d_2_i.py already use the synthetic-package helper, and
+    TQ-600a-9-iii is working in the second of those concurrently. A refusal added there
+    changes behaviour for all three. Either make the refusal opt-in per caller, or
+    confirm the other two callers never ask for a path the copy omits — do not add a
+    global raise and discover the blast radius at green phase.
+  - >-
+    THE UNRELATED-FAILURE INJECTION MUST NOT BE A MISSING FILE. The hazard under test
+    is a build that fails because the copy is short of something. If the injected
+    "unrelated failure" is itself a missing path, the injection and the hazard are the
+    same event and the descriptor proves nothing. Inject a failure of a different kind
+    — a syntactically valid but semantically rejected declaration, say — so the
+    reason-matching is genuinely discriminating.
+delivers_to: null
+expects_from:
+  - ac_id: TQ-600a-10
+    contract: >-
+      The smaller package copy and the set of directories it provides.
+test_spec:
+  - name: test_tq600a_10_i_a_removed_entry_turns_the_affected_test_red_and_names_itself
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: integration
+    angle: discrimination
+    must_catch:
+      - "the affected test stays green because its assertion matches any non-zero exit rather than the reason, so a copy short of a required entry is indistinguishable from a correct result"
+      - "the test goes red but the message is a generic build failure that does not name the removed entry, leaving the next reader to bisect the copy by hand"
+    description: >-
+      Remove a required entry from the synthetic copy and execute the build. The
+      affected test goes red and the message names the removed entry.
+  - name: test_tq600a_10_i_a_missing_path_refuses_rather_than_yielding_a_default
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: unit
+    angle: discrimination
+    must_catch:
+      - "the raise is replaced with an empty string or other default, so a missing path flows onward silently — the exact shape this record exists to prevent, and the natural thing to write"
+    description: >-
+      Ask the copy for a path it does not provide. It raises and names the path.
+  - name: test_tq600a_10_i_each_failure_asserting_test_matches_its_own_provoked_reason
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: integration
+    angle: discrimination
+    must_catch:
+      - "a failure-asserting test stays green under an injected failure that is not the one its own mutation provokes, which means it asserts only that something went wrong"
+      - "the injected unrelated failure is itself a missing path, making the injection and the hazard under test the same event, so the descriptor passes while discriminating nothing"
+    description: >-
+      For each of the three failure-asserting tests (lines 430, 598 and 723), inject a
+      different, unrelated build failure of a DIFFERENT KIND from a missing path, in
+      place of its own mutation. The test goes red. THIS IS THE DESCRIPTOR THAT CANNOT
+      BE DROPPED: without it, "the build failed" and "the build failed for the declared
+      reason" are indistinguishable and the smaller copy is unsafe.
+  - name: test_tq600a_10_i_a_sound_copy_leaves_every_test_green
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: >-
+      The paired control. Against an unmodified synthetic copy, all five tests pass.
+test_rationale: |
+  Shrinking a copy carries a risk that sharing one does not: these tests assert that a
+  build fails, so making the build fail for an unrelated reason produces the same green
+  result as the behaviour under test. The reason-matching descriptor is the whole
+  record; the others support it.
+
+  The unrelated-failure injection is the only way to tell a test that proves something
+  from a test that merely observes a non-zero exit. It is deliberately specified as an
+  injection rather than as a reading of the assertion text, because an assertion that
+  looks specific can still be satisfied by any failure if the matching is loose.
+
+  The control exists because three red-demanding descriptors with no green path would
+  be satisfied by a copy that never works.
+origin_agent: business-analyst
+created: 2026-10-07
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: internal
+notes: |
+  This record is the reason the parent's risk is rated as it is. The parent change is
+  mechanically trivial — one call site — and its failure mode is not. A smaller copy
+  that happens to break the build early leaves every test in the file green while the
+  file proves nothing, and nothing in the suite would report it.
+
+  It is also the condition under which the parent's source-reading evidence becomes a
+  result: every mutation site in the file was confirmed by reading to target a file the
+  smaller helper provides, but reading cannot see a path a test reaches for indirectly.
+  The omission refusal is what turns that blind spot into a loud failure.
