@@ -4,7 +4,7 @@
   "status": "active",
   "readiness": "draft",
   "superseded_by": null,
-  "version": 7,
+  "version": 8,
   "shape_version": 2,
   "reusable": true,
   "realization": "built",
@@ -27,7 +27,8 @@
     "Decision.supersedes contains P iff its precedents_considered note for P has action 'set_aside' and the human chose a different option than P did",
     "No Decision cites a superseded precedent with action 'reused' (a superseded record is never offered for reuse)",
     "Decision.considered_by lists exactly the records whose precedents_considered names this id, with that record's action (a derived reverse view for display, not a field of the record file)",
-    "Decision.publish_command == 'python -m kernel decisions publish --run-id ' + run_id, followed by ' --correct <id> --reason \"...\"' for each id in Decision.supersedes",
+    "Decision.publish_command == <python> + ' ' + <repo_root> + '/scripts/run_kernel.py decisions publish --run-id ' + run_id, followed by ' --correct <id> --reason \"...\"' for each id in Decision.supersedes. <python> is the interpreter the kernel runs under (sys.executable) and <repo_root> is the kernel checkout (kernel.config.repo_root()); a record writes them as these placeholders or as illustrative concrete paths with the platform's separators. Only these two paths are quoted, and only when they contain whitespace; on Windows a command with a quoted path starts with '& ' (kernel/capabilities/decision/publish_command.py). The command never uses 'python -m kernel', which fails with 'No module named kernel' outside the checkout (PR #999)",
+    "Decision.publish_folder == <repo_root> + '/' + memory.decisions_dir, which is '/docs/decisions' in the default config (platform separators, never quoted), with the same <repo_root> as the launcher in Decision.publish_command: the folder the staging notice names as the one `decisions publish` writes into, in the kernel checkout. A published record's record_path is that file relative to the checkout ('docs/decisions/' + id + '.yaml')",
     "Decision.split_part == {decomposition, part} iff that Decomposition part's decision_id == this Decision.id (a derived reverse view for display, not a field of the record file); null for a record not formed from a split",
     "Decomposition.parts has 2 to 5 entries, with ids unique within the record (a split proposes 2-5 bounded sub-questions)",
     "Every Decomposition.parts[].covers is a verbatim substring of Decomposition.subject_text, and no Decomposition.dropped[].covers is (the conversion drops a proposal whose quote is not in the subject); dropped == [] when proposed_by == 'claude_code'",
@@ -89,7 +90,8 @@
         "langfuse_trace_id": "string — the run's Langfuse trace id",
         "staged_path": "string — where the run staged the record; <run_root> is the machine-local kernel run root, and <run_id> (where written) is the record's own run_id",
         "record_path": "string | null — docs/decisions/<id>.yaml once published; null while staged",
-        "publish_command": "string — the command a human runs to publish this record from its run (with --correct for each record it supersedes)",
+        "publish_folder": "string — the folder `decisions publish` writes this record into, as the staging notice names it: docs/decisions in the kernel checkout, <repo_root>/docs/decisions: the configured memory.decisions_dir (default docs/decisions) under kernel.config.repo_root(), resolved by MemoryConfig.decisions_folder, the same helper `decisions publish` uses (publish_command.publish_folder). It is the kernel checkout's folder, not the folder of the shell the command runs from. <repo_root> is the machine-local checkout placeholder; an illustrative record may show a concrete path",
+        "publish_command": "string — the command a human runs to publish this record from its run, as the staging notice prints it: the kernel's own interpreter (<python>, sys.executable), then the launcher <repo_root>/scripts/run_kernel.py, then decisions publish --run-id <run_id> (with --correct for each record it supersedes). It runs verbatim from any shell and directory: the launcher puts the kernel package on the import path, so no PYTHONPATH or virtual-environment activation is needed. A path is quoted only when it contains whitespace; on Windows a quoted command starts with '& '",
         "split_part": "object | null — { decomposition: Decomposition.id, part: part id }: the part of a split this record answers (derived reverse view from Decomposition.parts[].decision_id, for display; not a field of the record file); null for a record not formed from a split",
         "source": "string — where this sample record comes from: a real published or staged record, or an illustrative one for a state the real store has not reached"
       },
@@ -141,7 +143,8 @@
           "langfuse_trace_id": "c93592ca1a813365b7d48d5a8363c66d",
           "staged_path": "<run_root>/runs/run-2fbb4ef43b1345f6/staged/decisions/dec-ef8ddcb79d668a67.yaml",
           "record_path": "docs/decisions/dec-ef8ddcb79d668a67.yaml",
-          "publish_command": "python -m kernel decisions publish --run-id run-2fbb4ef43b1345f6",
+          "publish_folder": "<repo_root>/docs/decisions",
+          "publish_command": "<python> <repo_root>/scripts/run_kernel.py decisions publish --run-id run-2fbb4ef43b1345f6",
           "split_part": null,
           "source": "real: docs/decisions/dec-ef8ddcb79d668a67.yaml, the store's first record, merged to main with PR #978 (2026-10-02)"
         },
@@ -190,7 +193,8 @@
           "langfuse_trace_id": "e944fec7169f6c70f899f3e7f9097fd4",
           "staged_path": "<run_root>/runs/run-f0f15b38791a428f/staged/decisions/dec-d53e1c52cd47c832.yaml",
           "record_path": "docs/decisions/dec-d53e1c52cd47c832.yaml",
-          "publish_command": "python -m kernel decisions publish --run-id run-f0f15b38791a428f",
+          "publish_folder": "<repo_root>/docs/decisions",
+          "publish_command": "<python> <repo_root>/scripts/run_kernel.py decisions publish --run-id run-f0f15b38791a428f",
           "split_part": null,
           "source": "real: staged by run-f0f15b38791a428f, then published into docs/decisions/ on branch decisions/publish-2026-10-02, open for review as PR #979"
         },
@@ -236,7 +240,8 @@
           "langfuse_trace_id": "b08d45b4f4d504ead065df9d2e5232a0",
           "staged_path": "<run_root>/runs/run-7c7d6474612b438b/staged/decisions/dec-5e7445182eaec1f2.yaml",
           "record_path": "docs/decisions/dec-5e7445182eaec1f2.yaml",
-          "publish_command": "python -m kernel decisions publish --run-id run-7c7d6474612b438b",
+          "publish_folder": "<repo_root>/docs/decisions",
+          "publish_command": "<python> <repo_root>/scripts/run_kernel.py decisions publish --run-id run-7c7d6474612b438b",
           "split_part": null,
           "source": "real: staged by run-7c7d6474612b438b (the decision that shaped this very lifecycle model), then published into docs/decisions/ on branch decisions/publish-2026-10-02, open for review as PR #979"
         },
@@ -276,7 +281,8 @@
           "langfuse_trace_id": "e6e73f3fe7b16af392dbcfd7535c0b0c",
           "staged_path": "<run_root>/runs/run-0fdfb09bbcd34231/staged/decisions/dec-7cdc61ea41a206e0.yaml",
           "record_path": null,
-          "publish_command": "python -m kernel decisions publish --run-id run-0fdfb09bbcd34231",
+          "publish_folder": "<repo_root>/docs/decisions",
+          "publish_command": "<python> <repo_root>/scripts/run_kernel.py decisions publish --run-id run-0fdfb09bbcd34231",
           "split_part": null,
           "source": "real: staged by run-0fdfb09bbcd34231 when the human confirmed reuse of dec-ef8ddcb79d668a67; never published"
         },
@@ -325,7 +331,8 @@
           "langfuse_trace_id": "5d135efdb96dc9e54a21d78a18dc6341",
           "staged_path": "<run_root>/runs/run-455096347862700c/staged/decisions/dec-dfb0b8d1eb88ec16.yaml",
           "record_path": "docs/decisions/dec-dfb0b8d1eb88ec16.yaml",
-          "publish_command": "python -m kernel decisions publish --run-id run-455096347862700c",
+          "publish_folder": "<repo_root>/docs/decisions",
+          "publish_command": "<python> <repo_root>/scripts/run_kernel.py decisions publish --run-id run-455096347862700c",
           "split_part": null,
           "source": "illustrative: no real record has been superseded yet (2026-10-02). This pair shows the state `decisions publish --correct` produces; the real memory.reuse_threshold has stayed 0.8"
         },
@@ -372,7 +379,8 @@
           "langfuse_trace_id": "0ce2afc6ab1d7828da48136cba37cae8",
           "staged_path": "<run_root>/runs/run-abeec7f18945607c/staged/decisions/dec-bcae2c02f17508c1.yaml",
           "record_path": "docs/decisions/dec-bcae2c02f17508c1.yaml",
-          "publish_command": "python -m kernel decisions publish --run-id run-abeec7f18945607c --correct dec-dfb0b8d1eb88ec16 --reason \"at 0.9 matching precedents were no longer offered\"",
+          "publish_folder": "<repo_root>/docs/decisions",
+          "publish_command": "<python> <repo_root>/scripts/run_kernel.py decisions publish --run-id run-abeec7f18945607c --correct dec-dfb0b8d1eb88ec16 --reason \"at 0.9 matching precedents were no longer offered\"",
           "split_part": null,
           "source": "illustrative: the decide-anew record that supersedes dec-dfb0b8d1eb88ec16 (offered for reuse at 0.88, set aside, a different option chosen), published with --correct"
         },
@@ -426,7 +434,8 @@
           "langfuse_trace_id": "ddd2a8a36efc7b0afaaf969dc062a882",
           "staged_path": "<run_root>/runs/run-3bba494c7c9b48ce/staged/decisions/dec-93c1c730463c1f3c.yaml",
           "record_path": null,
-          "publish_command": "python -m kernel decisions publish --run-id run-3bba494c7c9b48ce",
+          "publish_folder": "<repo_root>/docs/decisions",
+          "publish_command": "<python> <repo_root>/scripts/run_kernel.py decisions publish --run-id run-3bba494c7c9b48ce",
           "split_part": { "decomposition": "dcp-reusable-criteria-by-hand", "part": "G1" },
           "source": "real: staged by run-3bba494c7c9b48ce, the run started by hand for G1 of the hand split dcp-reusable-criteria-by-hand; not published (2026-10-02). An earlier run on the same question, run-aa2831ba7f0e4ec9, ranked with no clear winner and was cancelled by human:user; this record's rank-1 option came from the manual basis-review prototype (TICKET-20261002-KernelInconclusiveRankingReview)"
         },
@@ -473,7 +482,8 @@
           "langfuse_trace_id": "3f9a6c1e0b7d4a52c8e1f06b9d2a7e43",
           "staged_path": "<run_root>/runs/<run_id>/staged/decisions/dec-2c8e5a7f19d04b36.yaml",
           "record_path": null,
-          "publish_command": "python -m kernel decisions publish --run-id run-1d9c6e0b57a24f83",
+          "publish_folder": "<repo_root>/docs/decisions",
+          "publish_command": "<python> <repo_root>/scripts/run_kernel.py decisions publish --run-id run-1d9c6e0b57a24f83",
           "split_part": { "decomposition": "dcp-split-bounds-mid-run", "part": "p1" },
           "source": "illustrative: no split has run in the kernel yet (2026-10-02). First child decision of dcp-split-bounds-mid-run. The KernelDecomposeMultiPartGoal ticket sets the real bounds in config"
         },
@@ -520,7 +530,8 @@
           "langfuse_trace_id": "3f9a6c1e0b7d4a52c8e1f06b9d2a7e43",
           "staged_path": "<run_root>/runs/<run_id>/staged/decisions/dec-6f31b0d84ae72c95.yaml",
           "record_path": null,
-          "publish_command": "python -m kernel decisions publish --run-id run-1d9c6e0b57a24f83",
+          "publish_folder": "<repo_root>/docs/decisions",
+          "publish_command": "<python> <repo_root>/scripts/run_kernel.py decisions publish --run-id run-1d9c6e0b57a24f83",
           "split_part": { "decomposition": "dcp-split-bounds-mid-run", "part": "p2" },
           "source": "illustrative: the second child decision of dcp-split-bounds-mid-run, formed after p1 and citing p1's record as precedent evidence; its question is the human's edited text. Both children are staged in the one run that split"
         },
@@ -565,9 +576,10 @@
           "langfuse_trace_id": "1e7c3a90d4b26f5e8a1c07d39b4e6f21",
           "staged_path": "<run_root>/runs/<run_id>/staged/decisions/dec-a41c07e9b35a1d62.yaml",
           "record_path": null,
-          "publish_command": "python -m kernel decisions publish --run-id run-9c40e2b7a15d93e0",
+          "publish_folder": "C:\\Users\\Ada Lovelace\\leafcutter\\docs\\decisions",
+          "publish_command": "& \"C:\\Users\\Ada Lovelace\\leafcutter\\.venv\\Scripts\\python.exe\" \"C:\\Users\\Ada Lovelace\\leafcutter\\scripts\\run_kernel.py\" decisions publish --run-id run-9c40e2b7a15d93e0",
           "split_part": { "decomposition": "dcp-reusable-criteria-partial", "part": "p4" },
-          "source": "illustrative: the one decided part (p4) of dcp-reusable-criteria-partial. Its choice matches the real answer the user gave for G3 of the hand split ('we mine from both langfuse and records'). Langfuse-only was proposed by the caller's goal"
+          "source": "illustrative: the one decided part (p4) of dcp-reusable-criteria-partial. Its choice matches the real answer the user gave for G3 of the hand split ('we mine from both langfuse and records'). Langfuse-only was proposed by the caller's goal. Its publish_folder and publish_command show the Windows form of the staging notice for an illustrative kernel checkout whose path has a space: both paths of the command are quoted and the command starts with '& '"
         }
       ]
     },
@@ -903,6 +915,7 @@
     { "action": "extended", "by": "mock-data-author", "date": "2026-10-05", "note": "User decisions of 2026-10-05: rejecting the split of a bundled_accepted subject, or of an item found mid-run, keeps it whole. It goes ahead as one decision or research step, and the run is not blocked. Only a rejected jev_none or ambiguous split still ends the run blocked. The state enum gains rejected_kept_whole, and the rejected invariant is now scoped to the jev_none and ambiguous triggers. New field Decomposition.whole_decision_id links the one Decision that may result; it is null on every record. run_status gains waiting_host. dcp-decision-records-bundled moved from proposed to rejected_kept_whole. Version 3 -> 4." },
     { "action": "extended", "by": "mock-data-author", "date": "2026-10-05", "note": "Gaps the BA found in v4 (ccd51a52, DK-400a to DK-400f), plus three user rules of 2026-10-05. parts[].outcome gains not_settled, for a part that ran but did not settle, with stop_reason (budget_stop, blocked, capability_gap, cancelled). not_run stays for parts that never started; a dependant of an unsettled part names it in waited_for. State gains ended_partial, and run_status gains partial: the other parts still run. New not_covered[] holds proposals beyond the five-part cap, whose quotes are in the subject. New capability_gap_recorded is true for a rejected split of a turned-away request (and for the hand split), false otherwise. New invariant: a caller-supplied leafcutter.decision_request.v1 is never checked for bundling or split. Every existing record gained the new fields (null, false, [], or true where a gap was recorded). Added dcp-reusable-criteria-partial (DK-400e-4) with its decided part dec-a41c07e9b35a1d62, and dcp-decision-records-seven-parts (DK-400c-1-i). Version 4 -> 5." },
     { "action": "extended", "by": "mock-data-author", "date": "2026-10-05", "note": "User decision of 2026-10-05: a rejected split of an ambiguous subject, or an ambiguous subject that yields fewer than two parts, falls back to today's clarification question instead of ending blocked. Only trigger jev_none keeps 'rejected: ends blocked and records the capability gap'. State gains rejected_clarify; the rejected invariant is scoped to jev_none. Gap accounting mirrors today's code (_unclear in kernel/scheduler/nodes_route.py): no gap while the clarification is open, and an ambiguous gap only if the request ends unresolved. The trigger, found_at, gate_answer, state and capability_gap_recorded descriptions are updated. Added dcp-format-and-repeats-clarify (DK-400a-1-i's goal). No existing record changed. Version 5 -> 6." },
-    { "action": "extended", "by": "mock-data-author", "date": "2026-10-05", "note": "ADR-067 (Accepted) and the IT PO settled that a run's remaining part allowance (split.max_parts_per_run) can also cut parts into not_covered (DK-400c-1-i). This reconciles ADR-067 open question 2. The not_covered invariant is replaced: one reason per record, either 'beyond the five-part cap' (exactly 5 parts offered) or 'beyond the run's part allowance' (exactly the remaining allowance, 2 to 4, offered). The not_covered field lists both reasons; proposed_by and gate_answer now name ADR-067 and leafcutter.split_answer.v1. No record changed: dcp-decision-records-seven-parts uses the five-part cap. Version 6 -> 7." }
+    { "action": "extended", "by": "mock-data-author", "date": "2026-10-05", "note": "ADR-067 (Accepted) and the IT PO settled that a run's remaining part allowance (split.max_parts_per_run) can also cut parts into not_covered (DK-400c-1-i). This reconciles ADR-067 open question 2. The not_covered invariant is replaced: one reason per record, either 'beyond the five-part cap' (exactly 5 parts offered) or 'beyond the run's part allowance' (exactly the remaining allowance, 2 to 4, offered). The not_covered field lists both reasons; proposed_by and gate_answer now name ADR-067 and leafcutter.split_answer.v1. No record changed: dcp-decision-records-seven-parts uses the five-part cap. Version 6 -> 7." },
+    { "action": "extended", "by": "mock-data-author", "date": "2026-10-06", "note": "Extended in place for the runnable publish command (PR #999, TICKET-20261002-KernelRunnablePublishCommand). The staging notice used to print 'python -m kernel decisions publish --run-id <id>', which failed with 'No module named kernel' when run as shown. It now prints the kernel's own interpreter and the launcher scripts/run_kernel.py in the kernel checkout, and names the docs/decisions folder there that publish writes into. Decision.publish_command and its invariant now use that form: <python> <repo_root>/scripts/run_kernel.py decisions publish --run-id <run_id>, keeping the --correct suffix for a record that supersedes. Paths are quoted only when they contain whitespace, and on Windows a quoted command starts with '& '. New field Decision.publish_folder (<repo_root>/docs/decisions, the configured memory.decisions_dir under the kernel checkout) has its own invariant. All 10 Decision records were updated. Nine use the <python> and <repo_root> placeholders, in line with <run_root> in staged_path. The illustrative dec-a41c07e9b35a1d62 shows the quoted Windows form, using the checkout C:\\Users\\Ada Lovelace\\leafcutter from the decision-staging flow's announce example. Decomposition is unchanged. Version 7 -> 8." }
   ]
 }
