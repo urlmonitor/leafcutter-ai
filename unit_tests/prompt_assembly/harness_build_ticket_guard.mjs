@@ -75,6 +75,7 @@
  *            // or an ARRAY of the above, one entry per dispatch attempt
  *          },
  *          "delete_record_after_phase": "<phase>",   // makes the record unreadable
+ *          "unreadable_readback_after_phase": "<phase>", // ONE read-back reports unreadable
  *          "delete_record_before_run": bool,
  *          "plan_reply": { "mode": "...", "value": ... }   // OPT-IN, see below
  *        }
@@ -234,6 +235,7 @@ const writes = [];
 const enumerations = [];
 const planReplies = [];
 const logs = [];
+const unreadableOnce = new Set(); // BO-3000a: one-shot unreadable read-backs
 const attemptCounts = {}; // "<ticket>::<phase>" -> n
 
 // ---------------------------------------------------------------------------
@@ -418,12 +420,14 @@ function parseRecord(path) {
 }
 
 /** Append a real sign-off heading, exactly as a phase agent would. */
-function appendSignoff(path, agentName, status) {
+function appendSignoff(path, agentName, status, handoffTarget) {
   if (!existsSync(path)) return false;
   const stamp = "2026-08-18 12:00";
   const block =
     `\n### ${stamp} — ${agentName} (status: ${status})\n` +
-    `harness-simulated phase agent sign-off\n`;
+    `harness-simulated phase agent sign-off\n` +
+    // BO-3000a: opt-in `handoff_target:` line the read-back parser reads per entry.
+    (handoffTarget ? `handoff_target: ${handoffTarget}\n` : "");
   writeFileSync(path, readFileSync(path, "utf8") + block, "utf8");
   return true;
 }
@@ -857,7 +861,10 @@ async function agent(prompt, opts = {}) {
   // --- record read-back -----------------------------------------------------
   if (RE_READBACK.test(label)) {
     const ticketPath = ticketFromPrompt(prompt) || opts.ticket_path || null;
-    const record = ticketPath
+    const forcedUnreadable = ticketPath && unreadableOnce.delete(ticketPath);
+    const record = forcedUnreadable
+      ? { readable: false, error: "harness: one-shot unreadable read-back" }
+      : ticketPath
       ? parseRecord(ticketPath)
       : { readable: false, error: "harness: read-back named no known ticket record" };
     readbacks.push({
@@ -1009,13 +1016,14 @@ async function agent(prompt, opts = {}) {
   // A phase that records leaves a real sign-off in the real record. A phase
   // with record:false reports success and leaves nothing — BUG-23.
   if (spec.record !== false && ticketPath) {
-    appendSignoff(ticketPath, label, status);
+    appendSignoff(ticketPath, label, status, spec.record_handoff_target);
     // BO-400e-3 fixture repair: a genuine success also flips the agent's OWN
     // frontmatter entry to signed_off, mirroring the real signoff skill's
     // atomic recipe (see flipAgentSignedOff() above). Gated on status === "ok"
     // so a blocker/failed/handoff report never marks the record's own agents
     // map as satisfied.
-    if (status === "ok") flipAgentSignedOff(ticketPath, label);
+    // BO-3000a: opt-in `flips_signed_off` lets a handoff entry flip its own agent too.
+    if (status === "ok" || spec.flips_signed_off === true) flipAgentSignedOff(ticketPath, label);
   }
 
   // BO-3700: a running phase promoting another agent to `needed` in the real
@@ -1034,6 +1042,12 @@ async function agent(prompt, opts = {}) {
 
   if (cfg.delete_record_after_phase === label && ticketPath) {
     deleteRecord(ticketPath);
+  }
+
+  // BO-3000a (review M-2): opt-in. The record stays on disk but the NEXT single
+  // read-back of it reports `readable: false`; every later read-back is normal.
+  if (cfg.unreadable_readback_after_phase === label && ticketPath) {
+    unreadableOnce.add(ticketPath);
   }
 
   const reply = { status };

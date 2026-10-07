@@ -305,6 +305,30 @@ H-1 fix, commit `2a377f91`, 2026-07-08.)
 
 ---
 
+## KI-8: A phase handoff continues the ticket — do not re-run after it
+
+**Old behaviour.** The drivers dispatched the handoff target inline, then always halted
+`cross_agent` with "re-run /build-feature". That inline dispatch skipped the test guard and
+the red-baseline gate, and an epic stopped at the halted ticket.
+
+**Now (BO-3000a).** A handoff from phase H to target T runs T through the normal phase loop,
+then re-queues H if the record still lists it as `needed` or `failed`. The ticket finishes
+in the same run, so a halt is not the normal outcome of a handoff and re-running is not the
+default remedy. Refused with a named reason, dispatching nobody: a self-handoff, a target not
+on the ticket (`not_needed` is honoured), a deferred target such as `pull-request`.
+
+**Reading a halt.**
+- `cross_agent` with `handoff_target` set: T left no new sign-off entry after the handoff
+  (an older passing entry does not count). Open the ticket, check T's `## Comments`, fix the
+  record, then re-run.
+- `handoff_loop`: the same (from→to) pair repeated, or a fourth handoff hit the per-ticket
+  cap of three. The halt names the chain; the phases are bouncing work between them. Fix
+  the cause in the ticket, not by re-running.
+- A handoff to a coder while `test-writer` is still pending can halt at the test guard when
+  the ticket has no test requirements. That is fail-closed and expected.
+
+---
+
 ## References
 
 - `.claude/commands/build-feature.md` — executable workflow; Step A step 6
