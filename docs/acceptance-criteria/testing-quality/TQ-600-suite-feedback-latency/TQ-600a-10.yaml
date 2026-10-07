@@ -8,7 +8,7 @@ level: L2
 status: active
 req_status: draft
 work_status: todo
-readiness: reviewed
+readiness: approved
 priority: high
 roadmap_phase: phase_1
 criteria: |
@@ -259,7 +259,10 @@ test_rationale: |
   helper and never calls it, and on a file that has pasted a copy of it.
 origin_agent: business-analyst
 created: 2026-10-07
-amended_by: []
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-10-07'
 superseded_by: null
 covered_by:
   - TQ-600a-10-i
