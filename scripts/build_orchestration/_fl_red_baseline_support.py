@@ -307,9 +307,17 @@ def _resolve_tag_outcome(tag: dict, pytest_results: dict[str, str]) -> tuple[str
     return nodeid, pytest_results.get(nodeid, "ERROR")
 
 
-def _build_entry(tag: dict, nodeid: str, outcome: str) -> dict:
-    """Build a ``{"nodeid", "ac_id", "outcome"}`` report entry for *tag*."""
-    return {"nodeid": nodeid, "ac_id": tag["ac_id"], "outcome": outcome}
+def _build_entry(tag: dict, nodeid: str, outcome: str, results: dict | None = None) -> dict:
+    """Build a ``{"nodeid", "ac_id", "outcome"}`` report entry for *tag*.
+
+    TQ-500g-4: when *results* (the shared reading) names failed sub-cases for
+    *nodeid*, the entry also carries them under the additive ``"subcases"`` key.
+    """
+    entry = {"nodeid": nodeid, "ac_id": tag["ac_id"], "outcome": outcome}
+    subcases = getattr(results, "subfailed", {}).get(nodeid)
+    if subcases:
+        entry["subcases"] = list(subcases)
+    return entry
 
 
 def _classify_newly_added(
@@ -332,7 +340,7 @@ def _classify_newly_added(
     inconclusive: list[dict] = []
     for tag in newly_added_tags:
         nodeid, outcome = _resolve_tag_outcome(tag, pytest_results)
-        entry = _build_entry(tag, nodeid, outcome)
+        entry = _build_entry(tag, nodeid, outcome, pytest_results)
         bucket = _classify_outcome_bucket(outcome)
         if bucket == "red":
             red.append(entry)
@@ -359,7 +367,7 @@ def _report_preexisting(
         operator can see them.
     """
     return [
-        _build_entry(tag, *_resolve_tag_outcome(tag, pytest_results))
+        _build_entry(tag, *_resolve_tag_outcome(tag, pytest_results), pytest_results)
         for tag in preexisting_tags
     ]
 
