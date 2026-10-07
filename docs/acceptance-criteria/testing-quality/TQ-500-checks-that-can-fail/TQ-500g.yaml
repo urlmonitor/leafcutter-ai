@@ -35,7 +35,7 @@ doc_links:
   - path: docs/known-issues/testing-quality.md
     relationship: relates-to
     status: exists
-  - path: docs/known-issues/testing-quality/open-low-ki-tq-20260928-subtest-failures-read-as-passed.md
+  - path: docs/known-issues/testing-quality/resolved/resolved-low-ki-tq-20260928-subtest-failures-read-as-passed.md
     relationship: describes
     status: planned
     relevance: "Failures only inside unittest subTest blocks are read as PASSED by the outcome parser the gates share. Answered by the read-truthfully clause. On branch feature/kis-from-test-discrimination (PR #928) at the time of writing."

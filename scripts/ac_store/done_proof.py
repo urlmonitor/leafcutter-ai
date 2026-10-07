@@ -178,6 +178,11 @@ from pathlib import Path
 # test_enforcement lazily imports done_proof inside a function body,
 # so this top-level import does NOT create a circular dependency.
 from test_enforcement import COVERS_TAG_RE
+from pytest_outcome_reader import (  # TQ-500g-4: the ONE shared reading of a pytest run
+    _PYTEST_RUN_INCOMPLETE_SENTINEL,
+    describe_subcases,
+    parse_pytest_outcomes as _parse_pytest_verbose_output,
+)
 
 # BP-100n-4-ii: import the sibling module's relocated private helpers at
 # top level. This is safe in EITHER load order: _done_proof_phase_helpers
@@ -235,14 +240,6 @@ from _done_proof_automation_gate import (  # BO-2900a-3 rework
 # out of this module at all, one indirection layer thinner.
 # ---------------------------------------------------------------------------
 _COMMIT_GUARDIAN_DIR = Path(__file__).resolve().parent.parent / "commit_guardian"
-
-# Matches a pytest -v result line: <nodeid> <OUTCOME>
-# Handles relative and absolute paths including "../" prefixes.
-# Outcomes: PASSED, FAILED, XFAIL, XPASS, SKIPPED, ERROR.
-_PYTEST_RESULT_RE = re.compile(
-    r"^(\S+::test_\w+(?:\[.*?\])?)\s+(PASSED|FAILED|XFAIL|XPASS|SKIPPED|ERROR)",
-    re.MULTILINE,
-)
 
 # Matches synchronous and asynchronous test definitions; both carry coverage tags.
 _TEST_DEF_RE = re.compile(r"^\s*(?:async\s+)?def\s+(test_\w+)")
@@ -348,12 +345,8 @@ _PYTEST_PER_FILE_BUDGET_SECONDS = 300.0
 # otherwise. See _resolve_pytest_timeout_seconds.
 _ENV_TIMEOUT_OVERRIDE_VAR = "LEAFCUTTER_DONE_PROOF_PYTEST_TIMEOUT_SECONDS"
 
-# Sentinel key _run_pytest_and_parse returns whenever the run did not finish
-# -- a subprocess timeout OR a completed-but-truncated process, e.g. killed by
-# machine/OOM/scheduler contention (BO-2500a-7). Shaped so it never collides
-# with a real nodeid (every real nodeid contains "::"); only the two
-# eligibility-reason call sites read it directly (KI-TQ-20260901-1310 bullet 2).
-_PYTEST_RUN_INCOMPLETE_SENTINEL = "__done_proof_pytest_timeout__"
+# Sentinel key (defined in pytest_outcome_reader) returned whenever the run did
+# not finish or contradicts itself; read by the two eligibility-reason call sites.
 
 
 def _resolve_pytest_timeout_seconds(test_files: list[Path]) -> float:
@@ -1285,19 +1278,6 @@ def find_unrecognised_angle_tags(records: list[dict]) -> list[dict]:
     return unrecognised
 
 
-def _parse_pytest_verbose_output(output: str) -> dict[str, str]:
-    """Parse ``pytest -v`` stdout into a ``{nodeid: outcome}`` mapping.
-
-    Args:
-        output: Raw stdout string from a ``pytest -v`` run.
-
-    Returns:
-        Dict mapping pytest nodeid strings to their outcome strings
-        (``PASSED``, ``FAILED``, ``XFAIL``, ``XPASS``, ``SKIPPED``, ``ERROR``).
-    """
-    return {m.group(1): m.group(2) for m in _PYTEST_RESULT_RE.finditer(output)}
-
-
 def _run_pytest_and_parse(test_files: list[Path]) -> dict[str, str]:
     """Execute pytest on *test_files* and return ``{nodeid: outcome}``.
 
@@ -1409,7 +1389,7 @@ def _run_pytest_and_parse(test_files: list[Path]) -> dict[str, str]:
         message = f"pytest run unfinished: {len(test_files)} file(s), returncode {proc.returncode}"
         print(f"WARNING: done_proof: {message}", file=sys.stderr)
         return {_PYTEST_RUN_INCOMPLETE_SENTINEL: message}
-    return _parse_pytest_verbose_output(proc.stdout)
+    return _parse_pytest_verbose_output(proc.stdout, proc.returncode)
 
 
 # ---------------------------------------------------------------------------
@@ -1647,7 +1627,7 @@ def _describe_non_passing(nodeid: str, pytest_results: dict[str, str]) -> str:
     """
     outcome = pytest_results.get(nodeid)
     label = outcome.lower() if outcome else "not run"
-    return f"linked test {label}: {nodeid}"
+    return f"linked test {label}: {nodeid}{describe_subcases(pytest_results, nodeid)}"
 
 
 def _pytest_incomplete_run_reason(ac_id: str, pytest_results: dict[str, str]) -> str | None:

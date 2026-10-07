@@ -123,10 +123,23 @@ class TestRejections(RejectionCase):
                 await self.assertRejected(run, raw, RejectionCode.SCHEMA_INVALID)
 
     async def test_rejects_schema_invalid_for_a_human_answer_with_two_modes(self) -> None:
+        run = await start(human_rig(structured=True))
+        raw = raw_submission(run.packet, run.run_id, kind=ActorKind.HUMAN,
+                             response={"choice_id": "sqlite", "approved_option_ids": ["sqlite"]})
+        await self.assertRejected(run, raw, RejectionCode.SCHEMA_INVALID)
+
+    async def test_accepts_a_choice_with_a_condition_where_free_text_is_allowed(self) -> None:
         run = await start(human_rig())
         raw = raw_submission(run.packet, run.run_id, kind=ActorKind.HUMAN,
-                             response={"choice_id": "sqlite", "free_text": "and this"})
-        await self.assertRejected(run, raw, RejectionCode.SCHEMA_INVALID)
+                             response={"choice_id": "sqlite", "free_text": "but keep it small"})
+        await run.submit(raw)
+
+    async def test_rejects_semantic_invalid_for_a_condition_where_free_text_is_not_allowed(
+            self) -> None:
+        run = await start(human_rig(free_text=False))
+        raw = raw_submission(run.packet, run.run_id, kind=ActorKind.HUMAN,
+                             response={"choice_id": "sqlite", "free_text": "but keep it small"})
+        await self.assertRejected(run, raw, RejectionCode.SEMANTIC_INVALID)
 
     async def test_rejects_semantic_invalid_when_the_choice_was_not_offered(self) -> None:
         run = await start(human_rig())

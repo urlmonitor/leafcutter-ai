@@ -87,7 +87,7 @@ def run_decisions(args: argparse.Namespace, *, root: Path | None = None) -> Resu
         vocab: Vocabulary | None = load_vocabulary(base)
     except (ConfigError, RecordReadError, VocabularyError) as exc:
         return _error("decisions_environment", str(exc))
-    folder = base / config.memory.decisions_dir
+    folder = config.memory.decisions_folder(base)
     command = args.decisions_command
     if command == "validate":
         report = validate_store(folder, schema=schema, vocab=vocab)

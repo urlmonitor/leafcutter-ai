@@ -3,6 +3,7 @@
 BUSINESS CONTEXT: KM-400a-3-i exposes complete authored fields in the graph.
 ARCHITECTURE: Strict YAML is authoritative. Two failing emitter shapes alone have
 literal compatibility readers; graph publication remains outside this module.
+An entry with no frontmatter, or an empty one, fails with its source and reason.
 """
 
 from __future__ import annotations
@@ -38,12 +39,16 @@ def _stores(root: Path) -> list[Path]:
     return paths
 
 
-def _parts(path: Path) -> tuple[str, str]:
-    """Keep exact frontmatter and body with only whole-line delimiters recognized."""
+def _parts(path: Path, source: str) -> tuple[str, str]:
+    """Keep exact frontmatter and body with only whole-line delimiters recognized.
+
+    An entry without a frontmatter block (including an empty file) is malformed:
+    it fails with its source instead of becoming an empty record.
+    """
     text = read_text(path)
     lines = text.splitlines(keepends=True)
     if not lines or lines[0].strip() != "---":
-        return "", text
+        raise ValueError(f"malformed changelog {source}: no frontmatter block")
     end = next((i for i, line in enumerate(lines[1:], 1) if line.strip() == "---"), None)
     if end is None:
         raise ValueError(f"unclosed changelog frontmatter: {path.name}")
@@ -144,7 +149,7 @@ def extract(root: Path) -> list[NativeRecord]:
                     sources[path.resolve()] = source
     records = []
     for path, source in sorted(sources.items(), key=lambda item: item[1]):
-        raw, body = _parts(path)
+        raw, body = _parts(path, source)
         try:
             metadata, _ = frontmatter(path)
             parsing = {"mode": "strict"}
@@ -152,6 +157,10 @@ def extract(root: Path) -> list[NativeRecord]:
             if not isinstance(error.__cause__, yaml.YAMLError):
                 raise ValueError(f"invalid changelog frontmatter: {source}") from error
             metadata, parsing = _recover(raw, error.__cause__, source)
+        # A blank or comment-only block parses to None, which frontmatter() reports as {};
+        # an authored empty mapping ({}) stays a valid, distinct value.
+        if not metadata and yaml.safe_load(raw) is None:
+            raise ValueError(f"malformed changelog {source}: empty frontmatter")
         title = metadata.get("title")
         description = metadata.get("description")
         if not isinstance(description, str):
@@ -168,3 +177,10 @@ def extract(root: Path) -> list[NativeRecord]:
             )
         )
     return records
+
+
+# DECISION HISTORY
+# ================================================================================
+# - 2026-10-06 12:00 [python-coder]: A changelog with no frontmatter block, or an empty
+#   one, fails with its source and reason instead of becoming an empty record
+#   (KM-400a-1-xiii; TICKET-20261006-KnowledgeRealCorpusTestsDeriveCensus).

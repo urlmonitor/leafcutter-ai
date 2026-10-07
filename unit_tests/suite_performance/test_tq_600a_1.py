@@ -177,7 +177,7 @@ class TestTQ600a1SharedReferenceLayout(unittest.TestCase):
             def test_consumer_{n}(shared_reference_layout):
                 root = Path(shared_reference_layout)
                 assert root.exists()
-                assert (root / "scripts" / "build.py").exists()
+                assert (root / ".build_manifest.json").exists()
         """
         for n in range(3):
             _write_consumer_test(

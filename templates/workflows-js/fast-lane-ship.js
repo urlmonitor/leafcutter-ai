@@ -850,9 +850,7 @@ const worktreePath = gitReportedPath || claimedWorktreePath;
 const acStoreRoot = `${worktreePath}/${acStoreRel}`;
 const gateScript = `${worktreePath}/{{config.output_root}}/scripts/build_orchestration/fast_lane.py`;
 
-// ---------------------------------------------------------------------------
 // Phase 2 — Resolve the connected build set (BO-2400f-1/f-2)
-// ---------------------------------------------------------------------------
 
 phase("Resolve");
 
@@ -862,7 +860,7 @@ phase("Resolve");
 // it: aim at the branch (BO-2600b-1-i) — the exclusion only prunes the
 // depends_on walk, never the subtree gathered beneath the aimed-at criterion.
 const selectConnectedInvocation =
-  `python3 ${gateScript} select_connected --ac ${targetAc} --ac-root ${acStoreRoot} ` +
+  `python ${gateScript} select_connected --ac ${targetAc} --ac-root ${acStoreRoot} ` +
   `--exclude-structural-parent`;
 
 // Derived from the command actually composed above, never asserted independently.
@@ -943,7 +941,6 @@ if (acIds.length === 0) {
 const batchIds = acIds.join(" ");
 const batchIdsCsv = acIds.join(",");
 
-// ---------------------------------------------------------------------------
 // Producibility guard (BO-2400f-12 / -i / -ii) — consulted BEFORE any claim
 // or build-agent dispatch. An unproducible (or unreadable) verdict ends the
 // run in a distinct "refused" terminal outcome naming every unproducible
@@ -952,10 +949,9 @@ const batchIdsCsv = acIds.join(",");
 // this resolution. This dispatch fires on EVERY resolved (non-empty) set,
 // including a fully producible one, so the guard is provably consulted even
 // when it never blocks (BO-2400f-12-ii).
-// ---------------------------------------------------------------------------
 
 const producibilityInvocation =
-  `python3 ${gateScript} check_producibility --ac-ids ${batchIdsCsv} --ac-root ${acStoreRoot}`;
+  `python ${gateScript} check_producibility --ac-ids ${batchIdsCsv} --ac-root ${acStoreRoot}`;
 
 const producibilityResult = await agent(
   `You are the producibility-guard phase agent for a fast-lane build. Before ` +
@@ -1070,7 +1066,7 @@ if (producibilityResult.producible !== true) {
  */
 const CLAIM_EXECUTOR_AGENT_TYPE = "command-step-runner";
 const claimInvocation =
-  `python3 ${gateScript} claim --ac-ids ${batchIdsCsv} --ac-root ${acStoreRoot}`;
+  `python ${gateScript} claim --ac-ids ${batchIdsCsv} --ac-root ${acStoreRoot}`;
 
 /**
  * The runner answers with one of two shapes that share NO mandatory key: a
@@ -1199,16 +1195,14 @@ if (claimResult.target_refused) {
  */
 const claimedIdsCsv = (claimResult.claimed || []).join(",");
 const releaseInvocation =
-  `python3 ${gateScript} release --ac-ids ${claimedIdsCsv} --ac-root ${acStoreRoot}`;
+  `python ${gateScript} release --ac-ids ${claimedIdsCsv} --ac-root ${acStoreRoot}`;
 
-// ---------------------------------------------------------------------------
 // Context Bundle — assemble the prompt-caching layer ONCE per run
 // (BO-2400c-1-ii/-iii/-iv). Obtained exactly once here and threaded verbatim,
 // unaltered, as the prefix of every later build-context-carrying dispatch
 // (Test Writer, Coder) — never re-assembled per phase, which is precisely how
 // a mid-run re-read of a stable source would bust the cache anchor without
 // anyone noticing.
-// ---------------------------------------------------------------------------
 
 const bundleScript = `${worktreePath}/{{config.output_root}}/scripts/injection_builders.py`;
 
@@ -1301,16 +1295,14 @@ if (!contextBundleUsable) {
 // invocation in this file already passes) — never a second, independently
 // resolved path.
 const redBaselineInvocation =
-  `python3 ${gateScript} verify_red_baseline --ac-ids ${batchIds} --test-root ${worktreePath}` +
+  `python ${gateScript} verify_red_baseline --ac-ids ${batchIds} --test-root ${worktreePath}` +
   ` --ac-root ${acStoreRoot}`;
 
 const greenCoverageInvocation =
-  `python3 ${gateScript} verify_green_and_coverage` +
+  `python ${gateScript} verify_green_and_coverage` +
   ` --ac-ids ${batchIds} --test-root ${worktreePath} --ac-root ${acStoreRoot}`;
 
-// ---------------------------------------------------------------------------
 // Phase 3 — test-writer: red stubs for the resolved ids + red-baseline gate
-// ---------------------------------------------------------------------------
 
 phase("Test Writer");
 
@@ -1623,7 +1615,7 @@ let changelogResult = null;
 
 if (changelogRequired) {
   const changelogPayloadInvocation =
-    `python3 ${gateScript} changelog_payload --target-ac ${targetAc} ` +
+    `python ${gateScript} changelog_payload --target-ac ${targetAc} ` +
     `--built-ac-ids ${batchIdsCsv} --files-modified "${filesModified.join(",")}" ` +
     `--branch ${branch} --ac-root ${acStoreRoot}`;
 
@@ -1756,7 +1748,7 @@ const knowledgeRouting = classifyKnowledgeRouting(knowledgeRoutingReply);
 phase("Commit");
 
 const markDoneInvocation =
-  `python3 ${gateScript} mark_done --ac-ids ${batchIdsCsv}` +
+  `python ${gateScript} mark_done --ac-ids ${batchIdsCsv}` +
   ` --ac-root ${acStoreRoot} --test-root ${worktreePath}`;
 
 const commitResult = await agent(

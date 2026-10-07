@@ -1,0 +1,160 @@
+id: BO-1500a-1-ii
+components:
+  - build_orchestration
+  - worktree_manager
+readiness: approved
+priority: high
+title: "The authoring-worktree command's stdout holds only its JSON answer; child-process progress goes to stderr"
+component: build-orchestration
+level: L3
+status: active
+req_status: draft
+work_status: done
+roadmap_phase: phase_1
+criteria: |
+  Given an AC-authoring run invokes `setup_ticket_worktree.py create-ac-worktree`,
+    and the child processes that command starts -- the pre-commit shim installer
+    (which prints '[<result>] <stage>' for each hook stage), the dependency install
+    and build run during bootstrap, and git itself -- each print their own
+    progress lines,
+  When the command runs to success, either on a first run that creates and
+    bootstraps the authoring worktree or on a re-run that reuses it,
+  Then the command's stdout holds exactly one JSON object -- the payload naming
+    worktree_path, branch, ac_store_path and created -- with nothing before or
+    after it,
+  And every progress line from those child processes appears on the command's
+    stderr instead of being dropped,
+  And the command's exit code and the payload's fields are the same as before,
+  And the bug symptom ("`setup_ticket_worktree.py create-ac-worktree` prints non-JSON lines (e.g. '[already_installed] commit-msg', and on a first run 1100+ lines of build output) to stdout before its single-line JSON payload, so /plan-feature's worktree-setup parse (JSON.parse of the whole output) fails and halts every run with setup_failure_kind no_workspace_named even though the worktree was created") must not occur.
+depends_on:
+  - BO-1500a-1
+doc_links:
+  - path: scripts/setup_ticket_worktree.py
+    relationship: modifies
+    status: exists
+    relevance: "The repo-anchored copy /plan-feature actually runs (plan-feature.js resolves
+      scripts/setup_ticket_worktree.py via resolveRepoAnchoredScriptPath). Inheriting call sites
+      in create-ac-worktree's path: _install_pre_commit_shims(), _bootstrap() (git submodule
+      update, dependency install, build.py), _fetch_origin() and _create_ac_worktree()
+      (git worktree add)."
+  - path: templates/scripts/setup_ticket_worktree.py
+    relationship: modifies
+    status: exists
+    relevance: "Canonical source that build_phases_script_deploy.build_template_standalone_scripts()
+      deploys to scripts/setup_ticket_worktree.py. The two copies differed on 2026-10-06, so a
+      fix applied to one copy must be carried to the other or it is lost or left unfixed on
+      the next build."
+  - path: scripts/commit_guardian/install_pre_commit_shims.py
+    relationship: describes
+    status: exists
+    relevance: "install_shims() prints '[<result>] <stage>' to its own stdout for every non
+      pre-commit stage; that output is correct for a standalone run and is not the defect.
+      The defect is that the parent lets it inherit the JSON channel."
+  - path: templates/workflows-js/plan-feature.js
+    relationship: describes
+    status: exists
+    relevance: "Consumer of the payload: JSON.parse(wtParsed.output.trim()) over the whole
+      relayed stdout, halting as no_workspace_named when it does not parse (BO-1500a-5-i)."
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "stdout is reserved for the one payload. Every child process create-ac-worktree starts whose
+    output is not already captured -- install_pre_commit_shims.py (_install_pre_commit_shims),
+    git submodule update, the dependency install and build.py (_bootstrap), git fetch
+    (_fetch_origin) and git worktree add (_create_ac_worktree) -- must have its stdout sent to
+    the parent's stderr, never inherited from the parent's stdout. The final print(json.dumps(payload))
+    stays the only write to stdout."
+  - "Forward, do not discard: child progress lines must reach stderr, not subprocess.DEVNULL. They
+    are the diagnostics an operator needs when bootstrap fails, and the BO-1500a-5 halt message
+    relays stderr."
+  - "When redirecting to the parent's stderr, do not assume sys.stderr has a real file descriptor
+    (it may be replaced by a test harness); either pass a descriptor that is known to be valid or
+    capture the child's output and re-emit it on sys.stderr. Re-emitting must preserve every line."
+  - "Fix the producer, not the consumer. Do not make /plan-feature tolerant (for example by parsing
+    only the last stdout line): BO-1500a-5 deliberately fails closed on an uninterpretable setup
+    outcome, and loosening the parse would hide the next stdout leak."
+  - "The helpers touched here are shared by setup-ticket, create-only and create-fastlane-worktree,
+    which make the same single-line JSON promise in the module docstring; the redirect must keep
+    their payloads and exit codes unchanged."
+  - "Follow the project Error Handling Policy (CLAUDE.md): keep the existing explicit error handling
+    around each subprocess call; no bare except; never swallow a failure silently."
+test_spec:
+  - name: test_first_run_stdout_is_exactly_one_json_object
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: integration
+    angle: criterion
+    surface_invoked: "python scripts/setup_ticket_worktree.py create-ac-worktree <slug>, run as a real subprocess"
+    description: "In a real clone of a real origin whose committed tree carries a stub build.py that
+      prints many lines to stdout and a stub scripts/commit_guardian/install_pre_commit_shims.py that
+      prints '[installed] commit-msg', a first create-ac-worktree run exits 0 and json.loads() of the
+      WHOLE stripped stdout (not its last line) succeeds, yielding one object whose worktree_path the
+      fixture repository itself lists in git worktree list."
+    must_catch:
+      - "only the shim installer's output is redirected while the build's output still reaches stdout"
+      - "only the build's output is redirected while the shim installer's output still reaches stdout"
+      - "the bootstrap children are redirected but git worktree add still prints its tracking and HEAD lines to stdout"
+  - name: test_reuse_run_stdout_is_exactly_one_json_object
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: integration
+    angle: boundary
+    description: "A second create-ac-worktree run for the same session slug takes the reuse path
+      (no bootstrap; only the shim installer runs, printing '[already_installed] commit-msg'),
+      exits 0, and its whole stdout still parses as exactly one JSON object with created false."
+    must_catch:
+      - "the redirect is applied inside _bootstrap() only, so the reuse path's shim install still writes to stdout"
+  - name: test_child_progress_lines_reach_stderr_and_never_stdout
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: integration
+    angle: discrimination
+    description: "Across the first and reuse runs, the stub shim installer's '[<result>] commit-msg'
+      line and a unique marker line printed by the stub build.py both appear in the command's
+      stderr and appear nowhere in its stdout."
+    must_catch:
+      - "child output is sent to subprocess.DEVNULL, so stdout is clean but the progress lines are lost"
+test_rationale: "The defect is in the channel, not in any function's return value, so every test runs
+  the real command-line entry point as a separate process against a real git clone of a real origin
+  and asserts on the bytes that come out of stdout and stderr. A direct-import unit test of a helper
+  would pass while another call site still let a child inherit stdout, which is how the shim installer
+  and the build kept leaking after the payload was declared single-line. The first-run test parses
+  the WHOLE stdout rather than its last line on purpose: the existing ACD-2100a-2-ii tests accept a
+  leading leak by reading only the last line, which is exactly why this regression stayed green. The
+  reuse-run test is separate because the reuse path skips bootstrap and runs only the shim installer,
+  so a fix scoped to _bootstrap() would pass the first run and still fail every /plan-feature re-run.
+  The stderr test discriminates a correct fix from one that silences the children with DEVNULL,
+  which would satisfy the first two tests while throwing away the diagnostics the BO-1500a-5 halt
+  message relays."
+delivers_to: null
+expects_from:
+  ac_id: BO-1500a-1
+  contract: "The authoring worktree path, branch name and AC store path that create-ac-worktree reports
+    as its single JSON payload"
+origin_agent: BrainCandy
+created: 2026-10-06
+amended_by: []
+superseded_by: null
+covered_by:
+  - unit_tests/build_orchestration/test_bootstrap_child_stdout_to_stderr.py
+implemented_by:
+  - scripts/setup_ticket_worktree.py
+  - templates/scripts/setup_ticket_worktree.py
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  Authored by /quick-fix. Root cause: child processes started during bootstrap (install_pre_commit_shims.py, which prints '[<result>] <stage>' per hook stage, and build output) inherit the parent's stdout, which is the script's machine-readable JSON channel; their progress lines must go to stderr so stdout carries only the JSON payload.
+
+  Placement: BO-1500a is at its cap of 5 L2 children, and this is a technical constraint on
+  BO-1500a-1's existing behaviour (the authoring worktree is created and reported), so it is an L3
+  under BO-1500a-1 rather than a new L2.
+
+  Scope: git worktree add on the fresh-branch path also inherits stdout. It is listed in
+  it_requirements because the first-run outcome cannot hold without it: its tracking and HEAD lines
+  were recorded as a leak in unit_tests/ac_driven_dev/test_acd_2100a_2_ii.py (_parse_json_payload)
+  and as finding F4 in BO-4300c-2. BO-4300c-2 states the same stdout-only rule for the planned
+  workspace maker; this record covers the current create-ac-worktree command, which /plan-feature
+  runs today.
+
+  Follow-on, out of scope here: once this lands, the last-line tolerance in
+  test_acd_2100a_2_ii._parse_json_payload no longer serves a purpose and could be tightened.

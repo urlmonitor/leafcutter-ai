@@ -31,9 +31,12 @@ unresolved assessment even when another research source returns examples.
 ## Maintenance
 
 Add an operation only when its backend implementation and Python argument binding exist.
-Keep policy checks on cached meanings and returned evidence aligned. Run
-`tests/kernel/entity_context/test_knowledge_operation_selection.py`,
-`tests/kernel/entity_context/test_knowledge_selection_fallback.py` and
-`tests/knowledge/test_kernel_bridge.py` after changing the bridge. Acceptance criteria
+Keep policy checks on cached meanings and returned evidence aligned. After changing the
+bridge, run `tests/kernel/entity_context/test_knowledge_operation_selection.py`,
+`tests/kernel/entity_context/test_knowledge_selection_fallback.py` and `tests/knowledge/`
+in strict mode (`AC_ENFORCE_STRICT=1`), as CI does. `tests/knowledge/` holds full kernel
+runs (`test_kernel_run.py`, `test_query_answer_contract_acceptance_kernel.py`) beside
+`test_kernel_bridge.py`. A new Jev question on the retrieval path must be scripted in each
+of those fixtures, not in the shared `ScenarioCase`. Acceptance criteria
 and test links live under `docs/acceptance-criteria/decision-kernel/DK-300-entity-context/`.
 Live verification must distinguish Jev selection, executed reads and answer completeness.

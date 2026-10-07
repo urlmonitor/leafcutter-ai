@@ -27,16 +27,17 @@ halted. Those later-batch tickets are still plan members and still present in
 the epic folder, so `compareEpicTicketSets` classifies them as neither an
 addition nor a removal, and `epicRecheckReport` says nothing about them at
 all. Only the tickets that failed IN THE HALTING BATCH ITSELF are named, via
-`haltedTickets`. Every ticket in a batch the halt never reached is invisible
-to both the count and the name — which is KI-BO-025 exactly: "a run built 17
+`haltedTickets`. Every ticket behind the failure (withheld, or never reached)
+is invisible to both the count and the name — which is KI-BO-025 exactly: "a run built 17
 of 37 pieces of work... it did not say how many pieces it had not built."
 
 Every scenario below therefore drives an explicit THREE-PART plan: a batch
 that completes successfully, a batch of exactly one ticket that fails and
-halts the drive, and a further batch the halt never reaches at all. The
-never-reached batch is the reproduction; without it every one of these tests
-would pass against the code as it stands, for the same reason the discarded
-additions-only draft did.
+halts the drive, and a further batch of tickets BEHIND that failure. Since
+BO-100e-4 the drive continues past a halt, so the third batch is reached and
+every ticket in it is withheld by the failed prerequisite; it is still
+unbuilt, still named, and still counted (their `depends_on` names the failing
+ticket, which is what keeps them unbuilt rather than built after the halt).
 
 Every test EXECUTES templates/workflows-js/build-feature.js through
 harness_build_ticket_guard.mjs — per CLAUDE.md "Gate / Workflow ACs — Verify
@@ -102,15 +103,20 @@ class _UnbuiltCountCase(unittest.TestCase):
         self._tmpdirs.append(path)
         return path
 
-    def build_epic(self, worktree, names):
-        """Write REAL ticket records for the epic; return (epic_path, paths)."""
+    def build_epic(self, worktree, names, behind=None):
+        """Write REAL ticket records for the epic; return (epic_path, paths).
+
+        Every ticket written AFTER ``behind`` (a name in ``names``) depends on it.
+        """
         epic_subdir = os.path.join("tickets", "00_inbox", "epics", "EPIC-Growth")
         epic_path = os.path.join(worktree, epic_subdir)
         os.makedirs(epic_path, exist_ok=True)
         paths = {}
         for name in names:
+            frontmatter = {"depends_on": [paths[behind]]} if behind in paths else None
             paths[name] = H.write_ticket_record(
-                worktree, name, GATES, title=name, subdir=epic_subdir
+                worktree, name, GATES, title=name, subdir=epic_subdir,
+                extra_frontmatter=frontmatter,
             )
         return epic_path, paths
 
@@ -182,10 +188,10 @@ class _UnbuiltCountCase(unittest.TestCase):
         Batch 1 — ``built`` tickets, every one driven to completion.
         Batch 2 — exactly ONE ticket whose first gate reports a blocker,
                   halting the drive.
-        Batch 3 — every remaining ticket. The halt returns before this batch
-                  is ever iterated: its members are still plan members and
-                  still present in the epic at the re-read, so they are
-                  neither an addition nor a removal, and today's
+        Batch 3 — every remaining ticket, each depending on the failing one
+                  (so the continuing drive withholds them). They are still
+                  plan members and still present in the epic at the re-read,
+                  so they are neither an addition nor a removal, and
                   `epicRecheckReport` says nothing about them at all.
 
         Returns ``(result, paths, built_names, failing_name,
@@ -196,7 +202,7 @@ class _UnbuiltCountCase(unittest.TestCase):
         built_names = names[:built]
         failing_name = names[built]
         never_attempted_names = names[built + 1 :]
-        epic_path, paths = self.build_epic(worktree, names)
+        epic_path, paths = self.build_epic(worktree, names, behind=failing_name)
 
         batch_defs = []
         if built_names:
@@ -227,17 +233,15 @@ class _UnbuiltCountCase(unittest.TestCase):
 
         reads = [
             {"present": self.present(paths, names), "batches": batch_defs},
+            {"present": self.present(paths, names, done=set(built_names)), "batches": []},
             {"present": self.present(paths, names, done=set(built_names))},
         ]
-        tickets = {paths[n]: self.completing_ticket(n) for n in built_names}
+        tickets = {paths[n]: self.completing_ticket(n) for n in built_names + never_attempted_names}
         tickets[paths[failing_name]] = self.failing_ticket(failing_name)
         result = self.run_epic(worktree, epic_path, tickets, reads)["result"]
         return result, paths, built_names, failing_name, never_attempted_names
 
 
-# ---------------------------------------------------------------------------
-# angle: criterion
-# ---------------------------------------------------------------------------
 
 
 class TestUnbuiltCountIsStatedAndEqualsThePiecesNamed(_UnbuiltCountCase):
@@ -246,16 +250,16 @@ class TestUnbuiltCountIsStatedAndEqualsThePiecesNamed(_UnbuiltCountCase):
         # angle: criterion
         """37 pieces of work, 17 built, 20 left unbuilt (KI-BO-025's own
         numbers): 17 complete in batch 1, 1 fails and halts the drive in
-        batch 2, and 19 more sit in batch 3, which the halt never reaches.
+        batch 2, and 19 more sit in batch 3, behind the failed ticket.
 
         The emitted completion output must NAME all 20 unbuilt pieces (the
-        one that failed AND the nineteen the halt never touched), and must
+        one that failed AND the nineteen behind it), and must
         STATE the number 20 as a number in that same output — not merely
         carry a field an operator would have to count by hand, and not a
         number arrived at by subtracting the built count from the total
         (BO-300d-1's own constraint: "COUNT THE NAMED SET, DO NOT
         SUBTRACT"). Today only the ONE ticket that actually failed is named;
-        the nineteen the halt never reached are invisible.
+        the nineteen behind it are invisible.
         """
         result, paths, built_names, failing_name, never_attempted = (
             self.drive_multi_batch_halt(TOTAL_COUNT, BUILT_COUNT)
@@ -286,9 +290,6 @@ class TestUnbuiltCountIsStatedAndEqualsThePiecesNamed(_UnbuiltCountCase):
         )
 
 
-# ---------------------------------------------------------------------------
-# angle: reachability
-# ---------------------------------------------------------------------------
 
 
 class TestTheStatedCountReachesTheOperatorFacingMessageAndGatesTheVerdict(
@@ -333,9 +334,6 @@ class TestTheStatedCountReachesTheOperatorFacingMessageAndGatesTheVerdict(
         )
 
 
-# ---------------------------------------------------------------------------
-# angle: boundary — the empty pole
-# ---------------------------------------------------------------------------
 
 
 class TestARunThatBuiltNothingReportsAShortfallOfThirtySeven(_UnbuiltCountCase):
@@ -343,7 +341,7 @@ class TestARunThatBuiltNothingReportsAShortfallOfThirtySeven(_UnbuiltCountCase):
         # covers: BO-300d-1
         # angle: boundary
         """Zero of 37 pieces built: the very first ticket fails and halts the
-        drive, leaving the other 36 in a batch the halt never reaches.
+        drive, leaving the other 36 in a batch behind the failed ticket.
 
         The report must state 37 and name all 37 — the empty pole, where an
         implementation that only reports a PARTIAL shortfall says nothing at
@@ -382,9 +380,6 @@ class TestARunThatBuiltNothingReportsAShortfallOfThirtySeven(_UnbuiltCountCase):
         )
 
 
-# ---------------------------------------------------------------------------
-# angle: boundary — identity, not arithmetic
-# ---------------------------------------------------------------------------
 
 
 class TestTheUnbuiltSetIsDeterminedByIdentityAndNotByArithmetic(_UnbuiltCountCase):
@@ -495,6 +490,7 @@ class TestAPieceNoticedTwiceIsCountedOnce(_UnbuiltCountCase):
         reads = [
             {"present": self.present(paths, names), "batches": batch_defs},
             # 02_fails.md halted in batch 2 AND is gone at the re-read.
+            {"batches": [], "present": self.present(paths, ["01_a.md"], done={"01_a.md"})},
             {"present": self.present(paths, ["01_a.md"], done={"01_a.md"})},
         ]
         tickets = {

@@ -21,7 +21,7 @@ from kernel.adapters.claude_code.install import render_skill
 REPO = Path("/repo/leafcutter")
 PYTHON = "/usr/bin/python3"
 RUN_ROOT = Path("/data/kernel_runs")
-COMMAND = "PYTHONPATH=/repo/leafcutter /usr/bin/python3 -m kernel"
+COMMAND = "PYTHONPATH=/repo/leafcutter /usr/bin/python3 -P -m kernel"
 RULE = re.compile(r"[A-Za-z]+(?:\([^)]*\))?")
 
 

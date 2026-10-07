@@ -5,7 +5,7 @@ type: reference
 category: reference
 status: active
 created: '2026-09-28'
-last_updated: '2026-09-28'
+last_updated: '2026-10-07'
 components:
   - testing_quality
   - build_orchestration
@@ -18,7 +18,7 @@ related_docs:
 # KI-TQ-20260928-subtest-failures-read-as-passed — the pytest outcome parser the red-baseline and done-proof gates share reads a test whose only failures are in unittest subTest blocks as PASSED, so a red test counts as green at baseline
 
 - **Severity:** medium. The error goes in the safe direction at red-baseline (a truly red test is reported as `green_at_baseline`, so the gate refuses when it should accept). At done-proof it goes the other way: a test whose subtests fail is read as PASSED and can support a done verdict. Both depend on the test using `self.subTest()`.
-- **Status:** open. No AC of its own. It is one instance of the gap `TQ-500g` (L1, `readiness: approved`, `work_status: todo`) exists to close: nothing checks that the runs the gates read actually show what the gate concludes. `TQ-500g` is Phase B and is not decomposed yet, so this parser fix needs its own leaf when that tree is planned, or a separate ticket.
+- **Status:** **RESOLVED 2026-10-07** by TQ-500g-4 / TQ-500g-4-i (fast lane). `scripts/ac_store/pytest_outcome_reader.py` is now the one parse that done_proof, the kind-aware reader and `fast_lane.verify_red_baseline` share: any `SUBFAILED[...]` / `SUBFAILED(...)` line forces its node id to FAILED (the reason names the sub-case), and an exit-1 run with no identifiable failing test is inconclusive. Tests: `unit_tests/ac_store/test_tq_500g_4*.py`, `unit_tests/build_orchestration/test_tq_500g_4_cli.py`. The line references under **Where** describe the code before the fix.
 - **Occurrences:** 1 live (fast-lane red baseline for INF-1100d-3-i, `unit_tests/portability/test_inf_1100d_3_i_no_leak.py:156` `test_db_check_output_never_contains_credentials`, whose cases run inside `self.subTest(address=...)` at `:169`; session observation) plus the reproduction below.
 - **First seen:** 2026-09-27 · **Last seen:** 2026-09-28
 - **Reported by:** session leafcutter-6d (closed PR #928; carried over to main with its user's approval). Reproduction re-run on main `ae85a2a1` on 2026-09-28 with the same result.

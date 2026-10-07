@@ -412,11 +412,11 @@ def _write_version_files(
     """
     if not dry_run:
         version_file = target_root / "VERSION"
-        version_file.write_text(computed_version + "\n", encoding="utf-8")
+        version_file.write_text(computed_version + "\n", encoding="utf-8", newline="\n")
         # Write LEAFCUTTER_VERSION file so deployed consumers can determine the
         # package version without reading the source package directly (ACD-1100e-2).
         lv_file = target_root / "LEAFCUTTER_VERSION"
-        lv_file.write_text(package_version + "\n", encoding="utf-8")
+        lv_file.write_text(package_version + "\n", encoding="utf-8", newline="\n")
     else:
         _dry_run_msg(f"would write {target_root / 'VERSION'}")
         _dry_run_msg(f"would write {target_root / 'LEAFCUTTER_VERSION'}")

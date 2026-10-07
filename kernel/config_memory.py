@@ -13,6 +13,7 @@ ARCHITECTURE: A frozen, extra-forbidding Pydantic section with no field defaults
 
 from __future__ import annotations
 
+from pathlib import Path
 from typing import Annotated, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
@@ -52,6 +53,14 @@ class MemoryConfig(BaseModel):
         if self.reuse_threshold < self.applies_threshold:
             fail("reuse_threshold must not be below applies_threshold")
         return self
+
+    def decisions_folder(self, base: Path) -> Path:
+        """Return the store folder under `base`: the one place `decisions_dir` is resolved.
+
+        Both `decisions publish` and the notice that names where it writes use this, so the
+        two cannot drift apart.
+        """
+        return base / self.decisions_dir
 
 
 # ====================================================================

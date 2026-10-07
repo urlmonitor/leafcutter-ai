@@ -25,6 +25,7 @@ if TYPE_CHECKING:
 
 import asyncio
 import logging
+import os
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from functools import partial
@@ -142,16 +143,25 @@ class EnvironmentOverrides:
     memory: ColonyMemory | None = None
 
 
+RUN_ROOT_ENV_VAR = "LEAFCUTTER_KERNEL_RUN_ROOT"
+
+
 def resolve_run_root(config: KernelConfig, root: Path) -> Path:
-    """Return the run root from config: absolute as given, else relative to the repo root.
+    """Return the run root: env override, else config (absolute as given, else repo-root relative).
+
+    Resolution order: ``LEAFCUTTER_KERNEL_RUN_ROOT`` env value, then ``paths.run_root`` from config.
+    The repo root is the kernel package's own checkout, never the caller's cwd.
 
     Args:
-        config: Input to the documented operation.
-        root: Input to the documented operation.
+        config: Kernel config; ``paths.run_root`` is used when no env override is set.
+        root: The kernel package's own checkout, the base for a relative ``paths.run_root``.
 
     Returns:
-        Path: Result of the documented contract operation.
+        Path: The resolved run root.
     """
+    env_value = os.environ.get(RUN_ROOT_ENV_VAR, "").strip()
+    if env_value:
+        return Path(env_value).expanduser().resolve()
     configured = Path(config.paths.run_root)
     return configured if configured.is_absolute() else (root / configured).resolve()
 
@@ -240,6 +250,7 @@ def build_environment(*, config_path: Path | None = None, env_file: Path | None 
     config = load_kernel_config(config_path)
     secrets = seams.secrets if seams.secrets is not None else load_secrets(env_file)
     run_root = resolve_run_root(config, root)
+    run_root.mkdir(parents=True, exist_ok=True)
     snapshot = seams.snapshot or load_snapshot(config, root)
     deny = list(config.retrieval.deny_globs)
     tracer = seams.tracer or LangfuseTracer(

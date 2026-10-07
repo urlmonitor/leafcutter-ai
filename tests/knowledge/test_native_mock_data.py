@@ -128,7 +128,9 @@ def test_mock_data_real_corpus_preserves_all_records_and_unregistered_dataset():
     root = Path(__file__).resolve().parents[2]
     records = _extract(root)
     paths = list((root / "docs/product-truth/mock-data").rglob("*.mock.json"))
-    assert len(records) == len(paths) == 3
+    before = {p: p.read_bytes() for p in paths}
+    assert paths
+    assert len(records) == len(paths)
     assert {record.source_path for record in records} == {
         p.relative_to(root).as_posix() for p in paths
     }
@@ -136,17 +138,6 @@ def test_mock_data_real_corpus_preserves_all_records_and_unregistered_dataset():
     registered = {
         entry["id"]: entry for entry in manifest["artifacts"] if entry["type"] == "mock_data"
     }
-    assert sum(record.derived["manifest_registered"] for record in records) == 2
-    assert sum(len(record.metadata["entities"]) for record in records) == 9
-    assert (
-        sum(
-            len(spec["records"])
-            for record in records
-            for spec in record.metadata["entities"].values()
-        )
-        == 54
-    )
-    assert sum("shape_version" in record.metadata for record in records) == 1
     for record in records:
         source = json.loads((root / record.source_path).read_text(encoding="utf-8-sig"))
         assert record.metadata == source
@@ -155,10 +146,14 @@ def test_mock_data_real_corpus_preserves_all_records_and_unregistered_dataset():
         assert record.derived["manifest_registered"] == (record.native_id in registered)
         if record.native_id in registered:
             assert record.derived["manifest_entry"] == registered[record.native_id]
-    unregistered = next(
-        record for record in records if record.native_id == "guardrails/frontend-ac-declarations"
-    )
+    # Reviewed anchor (KM-400a-1-xii): a canonical dataset missing from registration stays
+    # visible, and its omitted shape_version is not filled in.
+    anchor = "guardrails/frontend-ac-declarations"
+    assert anchor not in registered
+    unregistered = next(record for record in records if record.native_id == anchor)
     assert unregistered.derived == {"manifest_registered": False}
+    assert "shape_version" not in unregistered.metadata
+    assert all(p.read_bytes() == data for p, data in before.items())
 
 
 def test_mock_data_missing_store_and_absent_values_are_not_defaulted(tmp_path):

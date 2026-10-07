@@ -162,6 +162,60 @@ python -m py_compile <test_file_path>
 
 If syntax fails, fix before returning.
 
+## Step 4b — Ask the Three Questions, Fix the Test Before Handing On
+
+A test that merely exists proves nothing about whether it would catch the bug
+coming back. For every test that guards a change, answer these three questions
+and fix the test before you hand on:
+
+- **Q1** What is the smallest change to the production code that keeps this
+  test green but brings the bug back?
+- **Q2** What result would show this assertion can fail, and does the fixture
+  produce that result?
+- **Q3** Does the control row pass for a different reason than the negative row
+  fails?
+
+When Q1 names a change that would keep the test green, strengthen the test until
+that change would turn it red, then list the named change in your report as a
+wrong version the test now catches. When the test's entry carries `must_catch`
+(or `angle: discrimination`), each listed wrong version is a Q1 answer you must
+defeat first: every one must be a version the test would catch. Keep one list
+of wrong versions; do not start a second.
+
+**Vacuity checklist** — go through all four items for each test. An item that
+does not apply is marked `not applicable: <one-line reason>`; never leave it out.
+
+1. The assertion states an exact count, not a one-sided bound (`== 3`, not
+   `>= 1` or `>= 0`).
+2. A control row that must pass is present alongside the negative row.
+3. Every new input the change reads is seeded with values distinct from the old
+   inputs, so the old input cannot satisfy the new branch.
+4. The test counts calls on the collaborator the new branch must reach.
+
+Two patterns pass best when nothing happened — look for both in Q2:
+
+- **A one-sided or NULL-skipping check over a set that can be empty.** "Every
+  row in the window has `buy_volume >= 0`" skips NULLs, so an empty or all-NULL
+  window passes, and it passes most reliably when the pipeline is dead. The same
+  holds for a "no NULLs" check over a possibly-empty set, and for a coverage
+  figure measured over a window that predates the data. Remedy: assert an exact
+  count of processed rows plus a non-NULL count.
+- **Presence measured instead of correctness.** "Every symbol has a value in
+  the live context" passes when the value is present but wrong. Remedy: assert
+  at least one known expected value seeded in the fixture.
+
+Worked case: a refresh that ran `if refresh_due` now runs
+`if refresh_due and retry_due`. A fixture that sets `refresh_due` but never
+`retry_due` leaves the branch running 0 times and a lazy assertion green. Seed
+`retry_due` distinct from its old value, add a `retry_due`-false control row, and
+assert the collaborator's call count exactly (1 and 0).
+
+**You do not run your tests, so every answer is reasoning, not a result.** Label
+each Q1–Q3 answer `reasoned`. Never write that the test was seen to fail under
+the Q1 wrong version, or seen to pass on the fix, and never use wording that
+implies it. List the Q1 wrong version under a "To run later" heading so a later
+run can take it up. This does not relax the rule against running the suite.
+
 ## Step 5 — Return the Structured Report
 
 ```
@@ -180,6 +234,16 @@ If syntax fails, fix before returning.
 **Slow tests** (marked _MANUAL or equivalent):
 - <method name> — <reason>
 [or "none"]
+
+**Three questions** (per guarding test; every answer labelled `reasoned`):
+- <test> — Q1: <smallest wrong change, and how the test now catches it> [reasoned]
+  Q2: <result that shows it can fail; fixture produces it> [reasoned]
+  Q3: <does the control row pass for a different reason? no> [reasoned]
+- Vacuity checklist: exact count / control row / distinct new inputs /
+  collaborator call-count — each done or `not applicable: <reason>`
+- Wrong versions the tests now catch (reasoned, not observed): <list, including every `must_catch` entry>
+
+**To run later**: <each Q1 wrong version, to be applied and run by a later run — or "none">
 
 **Syntax check**: <OK | FAILED — error message>
 

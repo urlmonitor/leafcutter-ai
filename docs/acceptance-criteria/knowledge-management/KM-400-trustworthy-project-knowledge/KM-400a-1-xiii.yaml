@@ -97,6 +97,7 @@ covered_by:
 - tests/knowledge/test_native_changelog_entry.py::test_changelog_recovery_payload_is_independent_of_checkout_path
 - tests/knowledge/test_native_changelog_entry.py::test_changelog_rejects_ambiguous_or_unrelated_malformations
 - tests/knowledge/test_native_changelog_entry.py::test_changelog_real_corpus_accounts_for_all_fields_and_three_recoveries
+- tests/knowledge/test_native_changelog_entry.py::test_changelog_without_frontmatter_fails_naming_source_and_reason
 implemented_by:
   - knowledge/native_types/changelog_entry.py
 change_target: code

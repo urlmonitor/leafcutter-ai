@@ -29,23 +29,63 @@ ARCHITECTURE: Private helper imported by
          processes: the first caller to acquire the lock produces; every
          other caller blocks on the same lock, then observes the
          now-complete (or now-failed) cache instead of retrying.
-      3. Production copies this repository (excluding build outputs,
-         caches, and VCS metadata -- see ``_EXCLUDED_NAMES``) into a
-         PRIVATE staging directory, then runs a real, self-targeting
-         ``python <staging>/scripts/build.py --target-dir <staging>``
-         subprocess -- the same self-hosting pattern
-         ``setup_ticket_worktree.py`` already uses to bootstrap a fresh
-         ticket worktree (probing ``<root>/scripts/build.py``, then running
-         it with ``--target-dir <root>``). The staging directory is
-         published (atomic ``os.rename``) to its final run-scoped path only
-         AFTER ``.build_manifest.json`` exists at its root (written near
-         the end of ``build.py``'s ``main()`` -- confirmed by reading
-         ``scripts/build_main_helpers.py::_write_and_verify_manifest``), so
-         no caller can ever observe a partially-written tree.
+      3. Production runs a real, DIRECTED
+         ``python <this worktree>/scripts/build.py --target-dir <private>``
+         subprocess straight against an EMPTY private staging directory --
+         no source copy step first. This is the SAME ``build.py
+         --target-dir`` invocation form ``setup_ticket_worktree.py`` uses,
+         but the opposite starting point: ``setup_ticket_worktree.py``
+         self-targets because its target directory ALREADY IS a source
+         checkout -- it probes for ``<root>/scripts/build.py`` and then
+         builds into that same ``<root>``, so self-targeting is its only
+         option there. This producer instead starts from an EMPTY
+         directory and has an actual choice between self-targeting (copy
+         the source tree in first, then build onto it) and directing (skip
+         the copy, build straight into the empty directory). A directed
+         build yields the deployed output ONLY -- byte-identical in shape,
+         at the same relative paths, to the deployed half of a
+         self-targeting build -- at a measured ~775 files versus ~11,675
+         for the self-targeting shape, because the self-targeting shape
+         also carries this repository's own package source alongside the
+         output it produces. That 15x-ish file-count gap is what
+         ``shared_layout_integrity``'s post-reader whole-tree
+         walk-and-digest pays on every reader, so the directed shape was
+         chosen deliberately, not merely because it happens to be shorter
+         code (see TQ-600a's shared-layout-directed-build decision and the
+         measured counts in
+         ``docs/acceptance-criteria/testing-quality/TQ-600-suite-feedback-latency/TQ-600.yaml``).
+         The staging directory is published (atomic ``os.rename``) to its
+         final run-scoped path only AFTER ``.build_manifest.json`` exists
+         at its root (written near the end of ``build.py``'s ``main()`` --
+         confirmed by reading
+         ``scripts/build_main_helpers.py::_write_and_verify_manifest``,
+         and true for a directed build exactly as for a self-targeting
+         one: ``build_helpers.py``'s manifest-writing path computes
+         ``repo_root = target_root if target_root is not None else
+         package_root``, so a directed build's ``target_root`` -- the
+         empty ``--target-dir`` -- is where the manifest lands), so no
+         caller can ever observe a partially-written tree.
       4. Both outcomes are cached durably: success as the published root
          path, failure as the captured subprocess diagnostic, so every
          waiter -- in this process or another worker's -- raises from the
          SAME cached failure rather than retrying the deploy.
+
+    KNOWN NON-HERMETIC PROPERTY (recorded, not resolved -- re-measure before
+    relying on it): because this producer's ``target_root`` is NOT also the
+    ``package_root`` (unlike a self-targeting build, where they are the same
+    directory), the written ``.build_manifest.json``'s ``package_root`` field
+    becomes a RELATIVE PATH that escapes the private staging directory back
+    out into this live worktree (e.g.
+    ``"../../../../projects/leafcutter/leafcutter-ai"``), rather than the
+    empty string a self-targeting build would record. ``check_build_drift.py``
+    (lines ~519-571) resolves template paths through that same offset, so a
+    deployed drift-gate run pointed at a directed layout's root would reach
+    OUTSIDE the layout, back into the live repository. No current or planned
+    consumer of the shared reference layout runs a drift gate against it, so
+    this is inert today -- but it makes the directed layout non-hermetic with
+    respect to the live repo it was built from. Re-measure this the first time
+    any test migrates a drift-gate check onto the shared layout; do not assume
+    it has been fixed just because nothing exercises it yet.
 """
 
 from __future__ import annotations
@@ -81,32 +121,6 @@ _WORKTREE_ROOT = Path(__file__).resolve().parents[2]
 # Generous timeout for the real ~60s package deploy (see TQ-600.yaml).
 _DEPLOY_SUBPROCESS_TIMEOUT_S = 240
 
-# Names excluded when copying this repository into a staging directory:
-# VCS metadata, prior build outputs, and caches -- none of these are part
-# of the deployable SOURCE, and copying .git in particular would point the
-# copy's git metadata at this worktree's real (shared) object store, which
-# is not a risk worth taking for a throwaway staging copy.
-_EXCLUDED_NAMES = frozenset(
-    {
-        ".git",
-        ".claude",
-        ".leafcutter",
-        ".leafcutter.lock",
-        ".agents",
-        "debugging",
-        "__pycache__",
-        ".pytest_cache",
-        ".ruff_cache",
-        "node_modules",
-        ".env",
-        ".gemini",
-        ".pre-commit-config.yaml",
-        MANIFEST_FILENAME,
-        ".venv",
-        "venv",
-    }
-)
-
 # ---------------------------------------------------------------------------
 # In-process fast path (module globals -- one set per pytest OS process)
 # ---------------------------------------------------------------------------
@@ -133,49 +147,38 @@ def _cache_failure(message: str) -> None:
 # ---------------------------------------------------------------------------
 
 
-def _copy_source_tree(dest: Path) -> None:
-    """Copy this repository's deployable source tree into *dest*.
-
-    Args:
-        dest: Destination directory. Must not already exist.
-
-    Raises:
-        SharedReferenceLayoutError: on any OS-level copy failure.
-    """
-    try:
-        shutil.copytree(
-            _WORKTREE_ROOT,
-            dest,
-            symlinks=True,
-            ignore=shutil.ignore_patterns(*_EXCLUDED_NAMES),
-        )
-    except OSError as exc:
-        raise SharedReferenceLayoutError(
-            f"could not copy source tree from {_WORKTREE_ROOT} to {dest}: {exc}"
-        ) from exc
-
-
 def _run_build_subprocess(target_dir: Path) -> None:
-    """Run a real, self-targeting ``build.py --target-dir`` subprocess.
+    """Run a real, DIRECTED ``build.py --target-dir`` subprocess.
+
+    Invokes THIS worktree's own ``scripts/build.py`` (never a copy) against
+    *target_dir* -- an empty private staging directory that is neither the
+    package root nor a source checkout. This is deliberately NOT the
+    self-targeting form (``<target_dir>/scripts/build.py --target-dir
+    <target_dir>``): that would require a source copy into *target_dir*
+    first, which is exactly the extra ~10,900 files (see TQ-600a's measured
+    11,675-vs-775 comparison) this producer exists to stop paying for. See
+    this module's docstring for the full self-targeting-vs-directed
+    rationale and the non-hermetic ``package_root`` caveat that follows from
+    *target_dir* no longer being the package root.
 
     Emits the execution signal exactly when the subprocess really ran
     (normal completion or timeout-after-launch), never when it could not
     be started at all.
 
     Args:
-        target_dir: Both the copied package root AND the ``--target-dir``
-            value -- this is the self-hosting invocation pattern.
+        target_dir: The empty staging directory to pass as ``--target-dir``.
+            Not copied into, not the package root.
 
     Raises:
         SharedReferenceLayoutError: when the subprocess could not be
             started, timed out, or exited non-zero.
     """
-    build_script = target_dir / "scripts" / "build.py"
+    build_script = _WORKTREE_ROOT / "scripts" / "build.py"
     cmd = [sys.executable, str(build_script), "--target-dir", str(target_dir)]
     try:
         result = subprocess.run(  # noqa: S603 - fixed argv, no shell, internal tool
             cmd,
-            cwd=str(target_dir),
+            cwd=str(_WORKTREE_ROOT),
             capture_output=True,
             text=True,
             timeout=_DEPLOY_SUBPROCESS_TIMEOUT_S,
@@ -206,11 +209,16 @@ def _run_build_subprocess(target_dir: Path) -> None:
 
 
 def _produce(run_base: Path, published: Path) -> Path:
-    """Produce the layout into a private staging dir, then publish it.
+    """Produce the layout via a directed build into an empty private dir,
+    then publish it.
 
-    The staging dir is only renamed to *published* after
-    ``.build_manifest.json`` is confirmed present at its root, so a waiter
-    can never observe a partially-written tree.
+    No source-tree copy: *private* is left for ``build.py`` itself to
+    create (its ``--target-dir`` writes the deployed output straight into
+    it) -- see ``_run_build_subprocess``'s docstring for why this is a
+    DIRECTED build rather than the self-targeting form. The staging dir is
+    only renamed to *published* after ``.build_manifest.json`` is confirmed
+    present at its root, so a waiter can never observe a partially-written
+    tree.
 
     Args:
         run_base: The run-scoped shared directory (holds both the private
@@ -221,17 +229,16 @@ def _produce(run_base: Path, published: Path) -> Path:
         *published*, once the layout is confirmed complete and renamed.
 
     Raises:
-        SharedReferenceLayoutError: on any copy, deploy, or publish failure.
+        SharedReferenceLayoutError: on any deploy or publish failure.
     """
     private = run_base / PRIVATE_DIRNAME
     if private.exists():
         # Leftover from a prior attempt whose process died mid-production
         # (flock is released by the kernel on process exit, so a new
         # acquirer reaches here without a stale lock, but may inherit a
-        # half-copied staging dir).
+        # half-deployed staging dir).
         shutil.rmtree(private, ignore_errors=True)
 
-    _copy_source_tree(private)
     _run_build_subprocess(private)
 
     if not (private / MANIFEST_FILENAME).exists():
@@ -316,3 +323,32 @@ def get_or_produce_shared_layout() -> Path:
 #   _shared_layout_coordination, so every waiter -- this process or another
 #   pytest-xdist worker's -- gets the identical outcome without repeating
 #   the ~60s deploy. (#TQ-600a-1)
+# - 2026-10-06 [python-coder]: Changed `_produce` from a self-targeting
+#   build (copy this repo into `private` via `_copy_source_tree`, then run
+#   `<private>/scripts/build.py --target-dir <private>`) to a DIRECTED build
+#   (`_WORKTREE_ROOT/scripts/build.py --target-dir <private>`, no copy, into
+#   an empty `private`). A prior investigation measured the self-targeting
+#   shape as producing package source PLUS deployed output -- 11,675 files
+#   -- versus 775 for the directed shape, with the deployed tree
+#   byte-identical in shape at the same relative paths (493
+#   output_mappings in both manifests, no errors in either). The real cost
+#   was never mainly the build subprocess: `shared_layout_integrity`
+#   re-walks and re-digests the WHOLE published tree after every
+#   reader-marked test, so the self-targeting shape's extra ~10,900 files
+#   were a ~16x per-reader tax (measured ~6.00s vs ~0.24s per reader on the
+#   authoring investigation's box; see this file's VERIFY section in the
+#   TQ-600a-shared-layout-directed-build ticket for this session's own
+#   ratios). Removed `_copy_source_tree` and its `_EXCLUDED_NAMES` constant
+#   from this module as dead code -- confirmed via grep that
+#   `pytest_shared_reference_layout.py`'s own `_produce_private_copy`
+#   (the mutator/undeclared route) keeps its OWN separate copytree and
+#   `_EXCLUDED_NAMES`, untouched by this change, since a mutator legitimately
+#   needs `templates/` and `scripts/build.py` present to alter the package
+#   before building. CAVEAT (recorded, not resolved): a directed build's
+#   `.build_manifest.json` records `package_root` as a relative path
+#   escaping back into the live worktree (confirmed via
+#   `build_helpers.py`'s `repo_root = target_root if target_root is not
+#   None else package_root`), so `check_build_drift.py` would resolve
+#   outside the layout if ever pointed at it -- inert today, re-measure the
+#   first time a drift-gate test migrates onto the shared layout.
+#   (#TQ-600a-shared-layout-directed-build)

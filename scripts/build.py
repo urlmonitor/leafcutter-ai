@@ -235,7 +235,7 @@ def write_file(target: Path, content: str, dry_run: bool, force: bool) -> bool:
             pass  # Binary or unreadable file — fall through to write.
         announce_if_local_change_replaced(target)
     target.parent.mkdir(parents=True, exist_ok=True)
-    target.write_text(content, encoding="utf-8")
+    target.write_text(content, encoding="utf-8", newline="\n")
     return True
 
 
@@ -378,12 +378,6 @@ def _validate_all(config: dict, package_root: Path, validate_only: bool, dry_run
 
 # _manifest_ac_store_scripts moved to build_deploy_manifest_helpers.py
 # (BP-1500g-1 headroom pass); imported above, unchanged in behaviour.
-
-
-# _manifest_commit_guardian_scripts moved to build_deploy_manifest_helpers.py.
-
-
-# _manifest_feedback_scripts moved to build_deploy_manifest_helpers.py.
 
 
 # _manifest_build_orchestration_scripts moved to build_deploy_manifest_helpers.py.
@@ -1731,7 +1725,7 @@ def _write_migrated_skills_config(
         return
 
     try:
-        resolved.write_text(new_raw, encoding="utf-8")
+        resolved.write_text(new_raw, encoding="utf-8", newline="\n")
     except OSError as exc:
         _warn(f"Could not write {resolved}: {exc} — migration skipped.")
         return

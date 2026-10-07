@@ -21,6 +21,10 @@ THE BUG: the red-baseline gate dispatch lives entirely INSIDE the
     signed_off re-runs the reader before the coder rather than trusting the
     earlier sign-off."
 
+    NOTE (ticket 03): the driver still dispatches the gate on every resume. A
+    valid red_baseline_gate ticket record is reused INSIDE the Python wrapper,
+    which then returns a reused pass; the dispatch asserted here is unchanged.
+
 AC: docs/acceptance-criteria/testing-quality/TQ-500-checks-that-can-fail/TQ-500f-3-ii.yaml
 
 Both tests drive the REAL, unmodified workflow scripts' own top-level body

@@ -15,9 +15,12 @@ def test_native_decision_real_corpus_preserves_all_authored_records():
     paths = sorted((root / "docs/decisions").glob("dec-*.yaml"))
     before = {path: path.read_bytes() for path in paths}
     source = {yaml.safe_load(data)["id"]: yaml.safe_load(data) for data in before.values()}
-    assert len(paths) == len(source) == 6
+    assert paths
+    assert len(paths) == len(source)
+    # Reviewed anchors: the two decisions published with the criteria library (2026-10-05).
+    assert {"dec-93c1c730463c1f3c", "dec-a070edfb6465bced"} <= set(source)
     records = import_module("knowledge.native_types.decision").extract(root)
-    assert len(records) == 6
+    assert len(records) == len(paths)
     assert {record.native_id: record.metadata for record in records} == source
     assert {record.source_path for record in records} == {
         path.relative_to(root).as_posix() for path in paths

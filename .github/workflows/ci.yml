@@ -44,6 +44,19 @@
 #                failure cannot cancel the others. NOT YET BLOCKING — see
 #                `test` below.
 #
+#                EVERY SHARD INSTALLS THE WEB TOOLCHAIN (Node 20 +
+#                `npm ci --prefix leafcutter-web`), copied step-for-step from
+#                `done-proof`. Some Python tests are proof that needs a real
+#                vitest: unit_tests/ac_store/test_done_proof_composite_js.py
+#                (BO-2500a-6) and test_done_proof_js_integration.py
+#                (BO-2500e-2). They FAIL, not skip, when the runtime is missing,
+#                because a skip is not proof (docs/how-to/prove-ac-done.md).
+#                Without these steps they are red on every run. The install
+#                runs on every leg because pytest-split decides which shard
+#                holds those tests, and the durations file can move them. The
+#                cost is about 30 s per leg with a warm npm cache.
+#                Ticket: TICKET-20261006-CiShardsInstallWebToolchain.
+#
 #                THE DURATIONS FILE IS NOT YET PRESENT. Until
 #                .github/workflows/test-durations.yml has run once and its PR
 #                is merged, these shards split by count and will be UNEVEN —
@@ -331,6 +344,23 @@ jobs:
 
       - name: Install dev dependencies
         run: pip install -r requirements-dev.txt
+
+      # --- JS/TypeScript toolchain (TICKET-20261006-CiShardsInstallWebToolchain)
+      # Identical to the done-proof job's two steps below: same action, Node
+      # major and npm cache key. Keep them in step. The vitest-backed proof
+      # tests (test_done_proof_composite_js.py, test_done_proof_js_integration.py)
+      # FAIL when this runtime is missing, by design, since a skip is not proof.
+      # This must be on every leg because pytest-split, not this file, decides
+      # which shard runs them.
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: leafcutter-web/package-lock.json
+
+      - name: Install leafcutter-web dependencies (provides vitest)
+        run: npm ci --prefix leafcutter-web
 
       - name: Build — run install_shims to create scripts/ symlinks
         # Required before pytest: install_shims() creates symlinks at

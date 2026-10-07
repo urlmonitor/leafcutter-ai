@@ -3,7 +3,7 @@
   "component": "decision_kernel",
   "screen": "decision-record-published",
   "title": "Published record in review",
-  "summary": "A decision record as reviewed in git or a detail view: title, question, selected option, approval block, precedents considered, supersedes and superseded_by, provenance (run id, Langfuse trace id, repository revision), record path and PR. Populated from dec-d53e1c52cd47c832 (PR #979), with the superseded pair dec-dfb0b8d1eb88ec16 and dec-bcae2c02f17508c1 shown as an illustrative correction.",
+  "summary": "A decision record as reviewed in git or a detail view: title, question, selected option, approval block, precedents considered, supersedes and superseded_by, provenance (run id, Langfuse trace id, repository revision), record path and PR. Populated from dec-d53e1c52cd47c832 (PR #979), with the superseded pair dec-dfb0b8d1eb88ec16 and dec-bcae2c02f17508c1 shown as an illustrative correction, with the condition the human stated on dec-bcae2c02f17508c1.",
   "entities": [
     "Decision"
   ],
@@ -13,7 +13,7 @@
   "status": "active",
   "superseded_by": null,
   "readiness": "draft",
-  "version": 1,
+  "version": 2,
   "shape_version": 1,
   "tags": [
     "decision-kernel",
@@ -29,6 +29,12 @@
       "by": "mockup-author",
       "date": "2026-10-02",
       "note": "Drafted from leafcutter/decisions records; styled from the Atlas tokens via docs/ui-context.md (globals.css, tailwind.config.ts, layout.tsx, kit.tsx)."
+    },
+    {
+      "action": "extended",
+      "by": "mockup-author",
+      "date": "2026-10-06",
+      "note": "Extended for PR #1003: the dec-bcae2c02f17508c1 card shows its stated condition from leafcutter/decisions v8."
     }
   ]
 }

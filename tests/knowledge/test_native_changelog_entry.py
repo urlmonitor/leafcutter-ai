@@ -230,6 +230,56 @@ def test_changelog_rejects_ambiguous_or_unrelated_malformations(tmp_path, raw):
         _extract(tmp_path)
 
 
+@pytest.mark.parametrize(
+    ("text", "reason"),
+    [
+        ("", "no frontmatter block"),
+        ("## Entry\n\nA body with no frontmatter block.\n", "no frontmatter block"),
+        ("---\n# a comment parses to nothing\n---\n\n## Entry\n", "empty frontmatter"),
+    ],
+)
+def test_changelog_without_frontmatter_fails_naming_source_and_reason(tmp_path, text, reason):
+    # covers: KM-400a-1-xiii
+    # covers: KM-400a-3-i
+    # angle: failure
+    _write(tmp_path, "changelogs/valid.md", "title: Valid\n")
+    path = tmp_path / "changelogs/2026-10-05-1602-empty.md"
+    path.write_bytes(text.encode("utf-8"))
+    with pytest.raises(ValueError, match=f"changelogs/2026-10-05-1602-empty.md: {reason}"):
+        _extract(tmp_path)
+    assert path.read_bytes() == text.encode("utf-8")
+
+
+# KM-400a-1-xiii: "the three reviewed malformed writer outputs", pinned by source path.
+REVIEWED_RECOVERIES = {
+    "changelogs/2026-05-27-0000-epic-consolidatedoutputroot-all-build-outputs-consolidated"
+    "-into-leafcutter.md": ("migration_steps", "emitter_literal_migration_list"),
+    "changelogs/2026-09-07-1215-windows-contributors-can-commit-again-and-the-product-truth"
+    "-record-gets-criteria-for-staying-true.md": ("description", "emitter_literal_description"),
+    "changelogs/2026-09-07-1305-a-gate-that-had-nothing-to-match-yet-stops-being-treated-as"
+    "-one-that-never-could-and-the-known-issue-this-only-half-closes-is-reopened-in-the-same"
+    "-commit.md": ("description", "emitter_literal_description"),
+}
+
+
+def _split(path):
+    """Independent oracle: exact frontmatter and body between whole-line delimiters."""
+    lines = path.read_text(encoding="utf-8-sig").splitlines(keepends=True)
+    assert lines and lines[0].strip() == "---", f"no frontmatter: {path}"
+    end = next(i for i in range(1, len(lines)) if lines[i].strip() == "---")
+    return "".join(lines[1:end]), "".join(lines[end + 1 :])
+
+
+def _without_field(raw, field):
+    """Drop one top-level field and its indented continuation lines."""
+    kept, inside = [], False
+    for line in raw.splitlines(keepends=True):
+        inside = line.startswith(field + ":") or (inside and line[:1].isspace())
+        if not inside:
+            kept.append(line)
+    return "".join(kept)
+
+
 def test_changelog_real_corpus_accounts_for_all_fields_and_three_recoveries():
     # covers: KM-400a-1-xiii
     # covers: KM-400a-3-i
@@ -245,31 +295,48 @@ def test_changelog_real_corpus_accounts_for_all_fields_and_three_recoveries():
         for path in store.glob("*.md")
         if path.is_file() and path.name.lower() not in {"readme.md", "index.md"}
     }
-    assert len(records) == len(paths) == 551
+    assert paths
     assert {record.source_path for record in records} == paths
-    assert len({r.native_id for r in records}) == 551
+    assert len({r.native_id for r in records}) == len(records) == len(paths)
+    from knowledge.native_properties import decode, encode
+
+    before = {path: (root / path).read_bytes() for path in paths}
     recovered = []
     for record in records:
-        raw = record.derived["frontmatter_raw"]
+        raw, body = _split(root / record.source_path)
+        assert record.derived["frontmatter_raw"] == raw
+        assert record.derived["body"] == body
         if record.derived["parsing"]["mode"] == "strict":
             assert record.metadata == yaml.safe_load(raw)
         else:
             recovered.append(record)
-        from knowledge.native_properties import decode, encode
-
+            field = record.derived["parsing"]["field"]
+            siblings = {key: value for key, value in record.metadata.items() if key != field}
+            assert siblings == yaml.safe_load(_without_field(raw, field))
         assert decode(encode(record.metadata)) == record.metadata
     assert len(recovered) == 3
+    assert {
+        r.source_path: (r.derived["parsing"]["field"], r.derived["parsing"]["rule"])
+        for r in recovered
+    } == REVIEWED_RECOVERIES
     assert sorted(r.derived["parsing"]["rule"] for r in recovered) == [
         "emitter_literal_description",
         "emitter_literal_description",
         "emitter_literal_migration_list",
     ]
+    for record in recovered:
+        if record.derived["parsing"]["field"] == "description":
+            escaped = record.metadata["description"].replace('"', '\\"')
+            assert f'description: "{escaped}"' in record.derived["frontmatter_raw"]
     migration = next(r for r in recovered if r.derived["parsing"]["field"] == "migration_steps")
+    raw_lines = migration.derived["frontmatter_raw"].splitlines()
+    assert all("  - " + step in raw_lines for step in migration.metadata["migration_steps"])
     assert len(migration.metadata["migration_steps"]) == 5
     assert (
         "`output_root: .leafcutter` and `shim_strategy: symlink`"
         in migration.metadata["migration_steps"][1]
     )
+    assert all((root / path).read_bytes() == data for path, data in before.items())
 
 
 # DECISION HISTORY

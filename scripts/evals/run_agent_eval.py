@@ -94,6 +94,13 @@ Usage:
 #   not false-fail a good run; the sandbox baseline registry is normalized to cover
 #   entities already present so a peer's transient registry gap is not charged to
 #   the agent. Live result: both agents 3/3 (golden + held-out + negative).
+# - 2026-10-06 [python-coder]: Both CLI invokers read the envelope through
+#   cli_envelope.envelope_result. A non-zero exit with EMPTY stderr (the CI case:
+#   no credential, stdout {"is_error":true,"result":"Not logged in ..."}) now
+#   reports the stdout `result` text instead of a blank error. invoke_via_cli runs
+#   with check=False so it shares that one path. Moving the duplicated reader out
+#   shrinks this oversized file (GE-127b-1 ratchet).
+#   (#TICKET-20261006-AgentEvalGateHonestAboutCredentials)
 # ====================================================================
 """
 
@@ -132,6 +139,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from eval_selector import resolve_trigger_shas  # noqa: E402
 from artifact_dependencies import checked_path, copy_sandbox_inputs  # noqa: E402
 from artifact_validation import store_errors, target_errors  # noqa: E402
+from cli_envelope import envelope_result  # noqa: E402
 from label_scoring import OUTCOME_BY_COMBO as OUTCOME_BY_COMBO  # noqa: E402
 from label_scoring import aggregate_label, derive_outcome, print_report, score_label_row  # noqa: E402
 
@@ -280,33 +288,17 @@ def invoke_via_cli(
             capture_output=True,
             text=True,
             timeout=timeout,
-            check=True,
+            check=False,
         )
     except subprocess.TimeoutExpired as exc:
         logger.exception("claude CLI timed out after %ss", timeout)
         msg = f"claude CLI timed out after {timeout}s"
         raise ModelInvocationError(msg) from exc
-    except subprocess.CalledProcessError as exc:
-        logger.exception("claude CLI exited %s", exc.returncode)
-        msg = f"claude CLI exited {exc.returncode}: {(exc.stderr or '').strip()[:400]}"
-        raise ModelInvocationError(msg) from exc
     except OSError as exc:
         logger.exception("claude CLI could not be launched")
         msg = "claude CLI could not be launched"
         raise ModelInvocationError(msg) from exc
-
-    try:
-        envelope = json.loads(completed.stdout)
-    except json.JSONDecodeError as exc:
-        logger.exception("claude CLI returned non-JSON envelope")
-        msg = "claude CLI returned non-JSON envelope"
-        raise ModelInvocationError(msg) from exc
-
-    result = envelope.get("result")
-    if not isinstance(result, str):
-        msg = "claude CLI envelope has no string 'result'"
-        raise ModelInvocationError(msg)
-    return result
+    return envelope_result(completed, "claude CLI", ModelInvocationError)
 
 
 def invoke_via_api(
@@ -791,21 +783,7 @@ def invoke_agent_writer(
         logger.exception("agent CLI could not be launched")
         msg = "agent CLI could not be launched"
         raise ModelInvocationError(msg) from exc
-
-    if completed.returncode != 0:
-        msg = f"agent CLI exited {completed.returncode}: {(completed.stderr or '').strip()[:400]}"
-        raise ModelInvocationError(msg)
-    try:
-        envelope = json.loads(completed.stdout)
-    except json.JSONDecodeError as exc:
-        logger.exception("agent CLI returned non-JSON envelope")
-        msg = "agent CLI returned non-JSON envelope"
-        raise ModelInvocationError(msg) from exc
-    result = envelope.get("result")
-    if not isinstance(result, str):
-        msg = "agent CLI envelope has no string 'result'"
-        raise ModelInvocationError(msg)
-    return result
+    return envelope_result(completed, "agent CLI", ModelInvocationError)
 
 
 def _parse_report(reply: str) -> dict[str, Any]:

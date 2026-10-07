@@ -37,8 +37,11 @@ never writes into the repository during a run, and nothing a model wrote can bec
 
 ### Step 1 — Find the staged record
 
-The completed run's envelope lists it under `limitations` (`decision record staged: <path>;
-publish with: python -m kernel decisions publish --run-id <run id>`) and `report.md` shows it. It
+The completed run's envelope lists it under `limitations` (`decision record staged: <staged
+path>; publish writes it into <decisions folder> (the kernel checkout); publish it for review
+with: <python> <repo>/scripts/run_kernel.py decisions publish --run-id <run id>`) and `report.md`
+shows it. `<decisions folder>` is the configured `memory.decisions_dir` under the kernel
+checkout (`docs/decisions` by default). The command runs as printed from any shell. It
 sits in the run root, not in the repository:
 `<run_root>/runs/<run id>/staged/decisions/<dec-id>.yaml`. Open it if you want to check it first.
 

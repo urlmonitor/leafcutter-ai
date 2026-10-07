@@ -26,6 +26,7 @@ from kernel.adapters.claude_code.install import (
     render_skill,
 )
 from kernel.adapters.cli import main
+from kernel.adapters.codex.install import render_codex_skill
 
 HAND_WRITTEN = "---\nname: leafcutter\n---\nThe hub command.\n"
 
@@ -50,7 +51,7 @@ class TestRenderedSkill(InstallCase):
         text = render_skill("leafcutter", Path("/repo/leafcutter"), "/usr/bin/python3", Path("/runs"))
         self.assertTrue(text.startswith("---\nname: leafcutter\n"))
         self.assertIn(MARKER, text)
-        command = "PYTHONPATH=/repo/leafcutter /usr/bin/python3 -m kernel"
+        command = "PYTHONPATH=/repo/leafcutter /usr/bin/python3 -P -m kernel"
         self.assertIn(f"Bash({command} run *) Bash({command} resume *) Bash({command} status *)",
                       text)  # scope itself is asserted in test_skill_scope
         self.assertIn("disable-model-invocation: true", text)
@@ -58,7 +59,7 @@ class TestRenderedSkill(InstallCase):
 
     def test_paths_with_spaces_are_quoted(self) -> None:
         text = render_skill("leafcutter", Path("/my repo"), "/usr/bin/python3")
-        self.assertIn('PYTHONPATH="/my repo" /usr/bin/python3 -m kernel', text)
+        self.assertIn('PYTHONPATH="/my repo" /usr/bin/python3 -P -m kernel', text)
 
     def test_skill_routes_every_status_and_forbids_deciding(self) -> None:
         text = render_skill("leafcutter", Path("/r"), "python")
@@ -74,6 +75,14 @@ class TestRenderedSkill(InstallCase):
             with self.assertRaises(InstallRefused, msg=bad) as caught:
                 render_skill(bad)
             self.assertEqual(caught.exception.code, "invalid_name")
+
+    def test_skills_tell_the_host_it_may_send_choice_plus_condition(self) -> None:
+        pair = '{"choice_id": "<id>", "free_text": "<condition>"}'
+        for text in (render_skill("leafcutter", Path("/r"), "python"),
+                     render_codex_skill("leafcutter", Path("/r"), "python")):
+            self.assertIn(pair, text)
+            self.assertIn("verbatim", text)
+            self.assertIn("send both", text)
 
 
 class TestInstallSafety(InstallCase):
