@@ -92,7 +92,16 @@ class TestExceptionHookBareExcept(unittest.TestCase):
     """E722 — bare except: clause should trigger a block (exit 2)."""
 
     def test_bare_except_triggers_block(self) -> None:
-        """Hook exits 2 and reports E722 when a .py file has bare except:."""
+        # covers: GE-108d
+        # angle: criterion
+        """Hook exits 2 and reports E722 when a .py file has bare except:.
+
+        Assertion target corrected per GE-108d: Claude Code's PostToolUse
+        blocking feedback is read from STDERR, not STDOUT. This test
+        originally asserted on result.stdout, which encoded the very defect
+        GE-108d exists to fix (see it_requirements: "TWO EXISTING TESTS
+        ENCODE THE DEFECT").
+        """
         bad_python = textwrap.dedent("""\
             def bad():
                 try:
@@ -117,11 +126,12 @@ class TestExceptionHookBareExcept(unittest.TestCase):
                     f"stdout: {result.stdout!r}\nstderr: {result.stderr!r}"
                 ),
             )
-            # Stdout must mention E722 so Claude can identify the rule
+            # Stderr must mention E722 so Claude can identify the rule
+            # (Claude Code reads PostToolUse blocking feedback from stderr)
             self.assertIn(
                 "E722",
-                result.stdout,
-                msg=f"Expected 'E722' in stdout. Got: {result.stdout!r}",
+                result.stderr,
+                msg=f"Expected 'E722' in stderr. Got: {result.stderr!r}",
             )
         finally:
             Path(tmp_path).unlink(missing_ok=True)
@@ -196,7 +206,16 @@ class TestExceptionHookRuffNotFound(unittest.TestCase):
     """When ruff is not on PATH, hook must exit 2 with an install message."""
 
     def test_ruff_not_found_produces_install_message(self) -> None:
-        """Hook exits 2 with an install instruction when ruff is missing."""
+        # covers: GE-108d
+        # angle: criterion
+        """Hook exits 2 with an install instruction when ruff is missing.
+
+        Assertion target corrected per GE-108d: Claude Code's PostToolUse
+        blocking feedback is read from STDERR, not STDOUT. This test
+        originally asserted on result.stdout.lower(), which encoded the very
+        defect GE-108d exists to fix (see it_requirements: "TWO EXISTING
+        TESTS ENCODE THE DEFECT").
+        """
         # We patch subprocess.run inside the hook module.  Because the hook
         # runs as a subprocess we cannot use unittest.mock.patch directly on
         # the hook module; instead we manipulate PATH to a sentinel empty dir
@@ -228,19 +247,193 @@ class TestExceptionHookRuffNotFound(unittest.TestCase):
                         f"stdout: {result.stdout!r}\nstderr: {result.stderr!r}"
                     ),
                 )
-                # The install instruction must appear in stdout
+                # The install instruction must appear in stderr (Claude Code
+                # reads PostToolUse blocking feedback from stderr)
                 install_keywords = ("ruff", "install")
                 for kw in install_keywords:
                     self.assertIn(
                         kw,
-                        result.stdout.lower(),
+                        result.stderr.lower(),
                         msg=(
                             f"Expected '{kw}' in install instruction. "
-                            f"Got: {result.stdout!r}"
+                            f"Got: {result.stderr!r}"
                         ),
                     )
             finally:
                 Path(tmp_path).unlink(missing_ok=True)
+
+
+class TestExceptionHookStderrRouting(unittest.TestCase):
+    """GE-108d — the two blocking refusals must write their explanation to
+    STDERR (what Claude Code actually reads for PostToolUse blocking
+    feedback), not STDOUT (which is discarded), and must not duplicate the
+    message onto both streams.
+    """
+
+    def test_violation_block_message_goes_to_stderr_not_stdout(self) -> None:
+        # covers: GE-108d
+        # angle: criterion
+        """A bare `except:` (E722) violation must be reported on stderr, and
+        stdout must stay empty.
+
+        RED today: templates/hooks/check_exception_handling_hook.py's
+        returncode != 0 branch calls bare print() (stdout) for the violation
+        message, so 'E722' is absent from stderr and present on stdout
+        instead.
+        """
+        bad_python = textwrap.dedent("""\
+            def bad():
+                try:
+                    open("x")
+                except:
+                    pass
+        """)
+        with tempfile.NamedTemporaryFile(
+            suffix=".py", mode="w", encoding="utf-8", delete=False
+        ) as f:
+            f.write(bad_python)
+            tmp_path = f.name
+
+        try:
+            result = _run_hook(_make_payload(tmp_path))
+            self.assertEqual(
+                result.returncode,
+                2,
+                msg=(
+                    f"Expected exit 2 (block) for bare except:, got {result.returncode}.\n"
+                    f"stdout: {result.stdout!r}\nstderr: {result.stderr!r}"
+                ),
+            )
+            self.assertIn(
+                "E722",
+                result.stderr,
+                msg=f"Expected 'E722' in stderr. Got: {result.stderr!r}",
+            )
+            # stdout must be empty — a stderr-only check cannot catch an
+            # implementation that writes the message to BOTH streams.
+            self.assertEqual(
+                result.stdout.strip(),
+                "",
+                msg=(
+                    "Expected empty stdout for the violation block message "
+                    f"(must only go to stderr). Got: {result.stdout!r}"
+                ),
+            )
+        finally:
+            Path(tmp_path).unlink(missing_ok=True)
+
+    def test_ruff_not_found_install_message_goes_to_stderr_not_stdout(self) -> None:
+        # covers: GE-108d
+        # angle: criterion
+        """The ruff-not-found install instruction must be reported on
+        stderr, and stdout must stay empty.
+
+        RED today: templates/hooks/check_exception_handling_hook.py's
+        FileNotFoundError branch calls bare print() (stdout) for the install
+        instruction, so it is absent from stderr and present on stdout
+        instead.
+        """
+        good_python = textwrap.dedent("""\
+            def hello() -> str:
+                return "hello"
+        """)
+        with tempfile.NamedTemporaryFile(
+            suffix=".py", mode="w", encoding="utf-8", delete=False
+        ) as f:
+            f.write(good_python)
+            tmp_path = f.name
+
+        with tempfile.TemporaryDirectory() as empty_dir:
+            try:
+                result = _run_hook(
+                    _make_payload(tmp_path),
+                    env={"PATH": empty_dir},
+                )
+                self.assertEqual(
+                    result.returncode,
+                    2,
+                    msg=(
+                        f"Expected exit 2 when ruff is not on PATH, "
+                        f"got {result.returncode}.\n"
+                        f"stdout: {result.stdout!r}\nstderr: {result.stderr!r}"
+                    ),
+                )
+                install_keywords = ("ruff", "install")
+                for kw in install_keywords:
+                    self.assertIn(
+                        kw,
+                        result.stderr.lower(),
+                        msg=(
+                            f"Expected '{kw}' in install instruction on stderr. "
+                            f"Got: {result.stderr!r}"
+                        ),
+                    )
+                # stdout must be empty — a stderr-only check cannot catch an
+                # implementation that writes the message to BOTH streams.
+                self.assertEqual(
+                    result.stdout.strip(),
+                    "",
+                    msg=(
+                        "Expected empty stdout for the install instruction "
+                        f"(must only go to stderr). Got: {result.stdout!r}"
+                    ),
+                )
+            finally:
+                Path(tmp_path).unlink(missing_ok=True)
+
+    def test_clean_and_skipped_files_stay_silent_on_both_streams(self) -> None:
+        # covers: GE-108d
+        # angle: criterion
+        """Regression guard, NOT evidence the fix landed — GREEN ON ARRIVAL.
+
+        A clean .py file and a separate .md file must each exit 0 with both
+        stdout AND stderr empty. GE-108d only moves which stream a refusal
+        is written to; it must not start emitting noise on the paths that
+        were already silent. Per GE-108d's test_rationale, this arm is
+        expected to pass before and after the fix — the red-baseline gate
+        for this AC must be satisfied by one of the two refusal arms above,
+        never by this one.
+        """
+        clean_python = textwrap.dedent("""\
+            def greet(name: str) -> str:
+                return f"Hello, {name}"
+        """)
+        with tempfile.NamedTemporaryFile(
+            suffix=".py", mode="w", encoding="utf-8", delete=False
+        ) as f:
+            f.write(clean_python)
+            clean_py_path = f.name
+
+        with tempfile.NamedTemporaryFile(
+            suffix=".md", mode="w", encoding="utf-8", delete=False
+        ) as f:
+            f.write("# Just a markdown file\n")
+            md_path = f.name
+
+        try:
+            for path in (clean_py_path, md_path):
+                result = _run_hook(_make_payload(path))
+                self.assertEqual(
+                    result.returncode,
+                    0,
+                    msg=(
+                        f"Expected exit 0 for {path!r}, got {result.returncode}.\n"
+                        f"stdout: {result.stdout!r}\nstderr: {result.stderr!r}"
+                    ),
+                )
+                self.assertEqual(
+                    result.stdout.strip(),
+                    "",
+                    msg=f"Expected empty stdout for {path!r}. Got: {result.stdout!r}",
+                )
+                self.assertEqual(
+                    result.stderr.strip(),
+                    "",
+                    msg=f"Expected empty stderr for {path!r}. Got: {result.stderr!r}",
+                )
+        finally:
+            Path(clean_py_path).unlink(missing_ok=True)
+            Path(md_path).unlink(missing_ok=True)
 
 
 if __name__ == "__main__":
