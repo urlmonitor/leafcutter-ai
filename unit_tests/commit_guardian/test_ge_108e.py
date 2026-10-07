@@ -28,7 +28,11 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-from _exception_hook_fixture import _make_payload, _run_hook  # noqa: E402
+from _exception_hook_fixture import (  # noqa: E402
+    _make_payload,
+    _run_hook,
+    ruff_made_unavailable,
+)
 
 
 class TestExceptionHookModuleOnlyRuffLookup(unittest.TestCase):
@@ -180,19 +184,27 @@ class TestExceptionHookModuleOnlyRuffLookup(unittest.TestCase):
         routing and the not-installed branch from being deleted by an
         over-eager fix to the two RED tests above.
 
-        Neither the module nor the executable is available to the child:
-        PATH is emptied (as above, removing the executable) AND
-        `PYTHONNOUSERSITE=1` is set, which removes ruff's own package --
-        installed under this interpreter's USER site-packages -- from the
-        child's import path entirely (`ModuleNotFoundError: No module named
-        'ruff'`), verified manually in this environment before writing this
-        test. `python -m ruff` under that condition exits 1 and prints "No
-        module named ruff" to stderr; it does not raise, which is exactly
-        the "non-zero exit that is NOT a real E722 violation" case the AC's
+        Neither the module nor the executable is available to the child.
+        `ruff_made_unavailable()` empties PATH (removing the executable) and
+        puts a `sitecustomize` import blocker on PYTHONPATH (removing the
+        module), which is independent of WHERE ruff is installed.
+
+        That independence is the whole point, and this test learned it the
+        hard way: it originally used `PYTHONNOUSERSITE=1`, which disables
+        only the USER site directory. That removed ruff on the authoring
+        machine (pip install --user) and removed nothing in CI, where
+        `pip install -r requirements-dev.txt` puts ruff in the environment's
+        own site-packages. The test passed locally and failed on CI shard
+        3/8 with exit 0 -- the hook had correctly found ruff and let the
+        clean file through.
+
+        `python -m ruff` with the module blocked exits non-zero and prints
+        "No module named ruff"; it does not raise, which is exactly the
+        "non-zero exit that is NOT a real E722 violation" case the AC's
         it_requirements warns must not be conflated with one -- the
-        production fix must detect this specific case and fall through to
-        the bare executable, which is then ALSO missing (empty PATH),
-        raising FileNotFoundError and reaching main()'s pre-existing
+        production fix detects that marker and falls through to the bare
+        executable, which is then ALSO missing (empty PATH), raising
+        FileNotFoundError and reaching main()'s pre-existing
         install-instruction branch.
 
         Asserts exit 2 and the install instruction present on stderr.
@@ -207,11 +219,11 @@ class TestExceptionHookModuleOnlyRuffLookup(unittest.TestCase):
             f.write(clean_python)
             tmp_path = f.name
 
-        with tempfile.TemporaryDirectory() as empty_dir:
+        with ruff_made_unavailable() as blocked_env:
             try:
                 result = _run_hook(
                     _make_payload(tmp_path),
-                    env={"PATH": empty_dir, "PYTHONNOUSERSITE": "1"},
+                    env=blocked_env,
                 )
                 self.assertEqual(
                     result.returncode,

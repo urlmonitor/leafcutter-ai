@@ -20,11 +20,73 @@ test_exception_hook.py; this is a move, not a rewrite.
 """
 from __future__ import annotations
 
+import contextlib
 import json
 import os
 import subprocess
 import sys
+import tempfile
 from pathlib import Path
+
+#: A `sitecustomize` module that makes `ruff` unimportable for any
+#: interpreter started with its directory on PYTHONPATH, by refusing to
+#: find it at the meta-path level.
+#:
+#: WHY NOT `PYTHONNOUSERSITE=1`, which this suite used until 2026-10-07:
+#: that only disables the USER site directory. It removes ruff on a machine
+#: where ruff was pip-installed with `--user` (as on the authoring machine),
+#: and removes NOTHING in CI, where `pip install -r requirements-dev.txt`
+#: puts ruff in the environment's own site-packages. The three
+#: "ruff is genuinely absent" tests therefore passed locally and failed on
+#: CI shard 3/8 with exit 0 -- the hook correctly found ruff and allowed the
+#: clean file through. Blocking the import is independent of where ruff is
+#: installed, so it behaves the same in both places.
+#:
+#: The raised message matters: `runpy` reports a module it cannot find as
+#: "No module named ruff", which is exactly the marker
+#: `check_exception_handling_hook._RUFF_MODULE_MISSING_MARKER` looks for to
+#: decide the module form is unavailable and fall through to the bare
+#: executable. Raising a differently-worded ImportError here would NOT
+#: reproduce a genuinely-absent ruff -- the hook would read the failure as
+#: "ruff ran and reported something".
+_RUFF_IMPORT_BLOCKER = '''\
+import sys
+
+
+class _BlockRuff:
+    """Meta-path finder that refuses to resolve the `ruff` package."""
+
+    def find_spec(self, fullname, path=None, target=None):
+        if fullname == "ruff" or fullname.startswith("ruff."):
+            raise ModuleNotFoundError("No module named ruff", name=fullname)
+        return None
+
+
+sys.meta_path.insert(0, _BlockRuff())
+'''
+
+
+@contextlib.contextmanager
+def ruff_made_unavailable():
+    """Yield an env mapping in which ruff is neither importable nor on PATH.
+
+    Both of the hook's lookup routes must be closed for this to represent a
+    genuinely absent ruff:
+
+    - the bare `ruff` executable, closed by pointing PATH at an empty dir;
+    - the `ruff` MODULE, closed by the `sitecustomize` blocker above, since
+      `subprocess.run([sys.executable, ...])` execs the interpreter by
+      absolute path and never consults PATH at all.
+
+    Yields:
+        dict[str, str]: environment overrides to pass to `_run_hook`.
+    """
+    with tempfile.TemporaryDirectory() as stub_dir:
+        (Path(stub_dir) / "sitecustomize.py").write_text(
+            _RUFF_IMPORT_BLOCKER, encoding="utf-8"
+        )
+        with tempfile.TemporaryDirectory() as empty_dir:
+            yield {"PATH": empty_dir, "PYTHONPATH": stub_dir}
 
 
 def _hook_path() -> Path:

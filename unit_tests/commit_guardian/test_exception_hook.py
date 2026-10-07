@@ -25,7 +25,11 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 # Shared with test_ge_108e.py — see _exception_hook_fixture.py for why these
 # moved out of this file (GE-108e pushed it past its 400-line limit, and the
 # two files must launch the hook identically to be testing the same thing).
-from _exception_hook_fixture import _make_payload, _run_hook  # noqa: E402
+from _exception_hook_fixture import (  # noqa: E402
+    _make_payload,
+    _run_hook,
+    ruff_made_unavailable,
+)
 
 
 # ---------------------------------------------------------------------------
@@ -168,13 +172,13 @@ class TestExceptionHookRuffNotFound(unittest.TestCase):
         importable ruff is still found with PATH empty, and the hook
         correctly reports the clean file as clean. Emptying PATH now means
         "no console script", which GE-108e exists to distinguish FROM
-        absence. `PYTHONNOUSERSITE=1` is what removes the module here, so
-        genuine absence needs both.
+        absence. `ruff_made_unavailable()` closes both routes.
         """
         # We cannot patch inside the hook module because the hook runs as a
         # subprocess; instead we remove BOTH resolution mechanisms from the
-        # child's environment -- the executable (empty PATH) and the module
-        # (PYTHONNOUSERSITE) -- so that ruff is genuinely not found.
+        # child's environment -- see ruff_made_unavailable() for why an
+        # import blocker is used rather than PYTHONNOUSERSITE (which is
+        # install-location dependent and was green here, red on CI).
 
         good_python = textwrap.dedent("""\
             def hello() -> str:
@@ -186,12 +190,11 @@ class TestExceptionHookRuffNotFound(unittest.TestCase):
             f.write(good_python)
             tmp_path = f.name
 
-        # Create an empty temp dir so PATH contains nothing useful
-        with tempfile.TemporaryDirectory() as empty_dir:
+        with ruff_made_unavailable() as blocked_env:
             try:
                 result = _run_hook(
                     _make_payload(tmp_path),
-                    env={"PATH": empty_dir, "PYTHONNOUSERSITE": "1"},
+                    env=blocked_env,
                 )
                 self.assertEqual(
                     result.returncode,
@@ -292,7 +295,7 @@ class TestExceptionHookStderrRouting(unittest.TestCase):
         Environment corrected per GE-108e, for the same reason as
         TestExceptionHookRuffNotFound above: emptying PATH alone no longer
         represents an absent ruff now that the hook resolves it as a module,
-        so genuine absence needs PYTHONNOUSERSITE=1 as well.
+        so genuine absence goes through `ruff_made_unavailable()`.
         """
         good_python = textwrap.dedent("""\
             def hello() -> str:
@@ -304,11 +307,11 @@ class TestExceptionHookStderrRouting(unittest.TestCase):
             f.write(good_python)
             tmp_path = f.name
 
-        with tempfile.TemporaryDirectory() as empty_dir:
+        with ruff_made_unavailable() as blocked_env:
             try:
                 result = _run_hook(
                     _make_payload(tmp_path),
-                    env={"PATH": empty_dir, "PYTHONNOUSERSITE": "1"},
+                    env=blocked_env,
                 )
                 self.assertEqual(
                     result.returncode,
