@@ -84,6 +84,7 @@ _SUBPROCESS_TIMEOUT = 90
 _MODULE_FILES = (
     "done_proof.py",
     "test_enforcement.py",
+    "yaml_safe_loader.py",
     "_done_proof_phase_helpers.py",
     "_done_proof_composite.py",
     "_done_proof_entry_point_gate.py",

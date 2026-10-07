@@ -69,6 +69,29 @@ ARCHITECTURE: A single, uncached accessor module, generalising the one
       ``SafeLoader`` -- neither the unsafe full loader (``yaml.Loader`) nor
       ``yaml.load`` without an explicit ``Loader=`` is used anywhere in this
       module.
+
+    - 2026-10-07 [python-coder/TQ-600a-11 fix-pass]: A FIFTH divergence class
+      was found, where the four named above read as an exhaustive list but
+      are not: a TAB CHARACTER INSIDE A FLOW-CONTEXT SEQUENCE, e.g.
+      ``"key: [\\t]\\n"``. The pure-Python ``SafeLoader`` correctly raises
+      ``yaml.scanner.ScannerError`` on this input (a tab is not valid YAML
+      whitespace inside flow context); ``CSafeLoader`` parses it
+      PERMISSIVELY as ``{'key': []}``, silently dropping the malformed
+      content instead of rejecting it. Unlike the recursion-depth divergence
+      above, this one is NOT accepted package-wide: it was found because it
+      defeats the specific fail-open ``except yaml.YAMLError`` guard in the
+      AC store's own malformed-file detection
+      (``_ac_store_index._load_one_yaml_file``, fed by
+      ``templates/scripts/commit_guardian/_ac_schema_validators.load_yaml``)
+      -- with ``CSafeLoader`` in place there, a malformed AC file was
+      silently accepted as valid instead of being skipped with a warning,
+      precisely the phantom-done failure class this repository's guardrails
+      exist to prevent. That ONE call site was reverted to the pure-Python
+      ``yaml.SafeLoader`` for this reason (see its own DECISION HISTORY for
+      the measured cost); every other call site in this package is
+      unaffected and stays on the fast accessor. A reader relying on "four
+      divergence classes, all checked and found to agree" as exhaustive
+      would be misled without this entry.
 """
 
 from __future__ import annotations

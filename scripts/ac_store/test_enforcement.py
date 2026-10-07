@@ -46,7 +46,29 @@ from pathlib import Path
 
 import yaml
 
-from yaml_safe_loader import get_safe_yaml_loader
+# Sibling modules live alongside this file; ensure this directory is on
+# sys.path so the bare import below resolves both when this module is
+# imported directly (sys.path[0] is already this directory in that case)
+# and when it is imported via the dotted path
+# `from scripts.ac_store import test_enforcement` -- the real caller,
+# pytest_ac_enforcement.py, uses exactly that dotted form, including from
+# an isolated subprocess whose PYTHONPATH is only the repo root. In that
+# dotted case only the repo root lands on sys.path, not scripts/ac_store
+# itself, so the bare `yaml_safe_loader` import below would otherwise raise
+# ModuleNotFoundError and silently disable AC-enforcement masking. This
+# mirrors the identical bootstrap already used by cross_reference_audit.py
+# and done_proof.py, both siblings in this same directory -- the
+# `_ac_store_locator.ensure_ac_store_on_syspath()` helper is a different
+# idiom for a different problem (letting templates/scripts/commit_guardian/
+# hooks, which live in another directory entirely, locate ac_store/ across
+# several possible deploy layouts); it has no role here since this module
+# IS inside scripts/ac_store/ and only needs to guarantee its OWN directory
+# is on sys.path for its own sibling import.
+_SCRIPT_DIR = Path(__file__).resolve().parent
+if str(_SCRIPT_DIR) not in sys.path:
+    sys.path.insert(0, str(_SCRIPT_DIR))
+
+from yaml_safe_loader import get_safe_yaml_loader  # noqa: E402
 
 # ---------------------------------------------------------------------------
 # Constants
