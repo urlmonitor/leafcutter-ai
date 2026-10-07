@@ -1,0 +1,197 @@
+id: TQ-600a-9-ii
+components:
+  - testing_quality
+  - build_pipeline
+title: "The file that exists to prove the self-targeting bootstrap keeps self-targeting"
+component: testing-quality
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given the tracked-files file, the one file of the thirteen that genuinely self-targets
+    — it clones the checkout with no local hardlinks and then builds the clone against
+    itself — and does so because the criterion it covers is literally whether the
+    worktree bootstrap's own self-targeting build stays idempotent and leaves no
+    tracked file altered,
+  And its measured cost of about 43 s per build, which matches the self-targeting rate
+    and confirms the expensive shape is real rather than imagined,
+  And the single inefficiency in it: of its three clone-and-build cycles, one is
+    structurally identical to a cycle the same module already performs and already
+    caches for another test,
+  And the reason the obvious saving is safe: idempotence is the property under test, so
+    the state of a shared clone after a second build is byte-identical to its state
+    after the first, whichever test looks at it,
+  When the duplicate cycle is removed and the two remaining tests work from the cached
+    clone,
+  Then the file starts two real builds where it started three, and both of its
+    build-running tests still pass,
+  And the build those tests observe still runs with its target directory and its package
+    root resolving to the same tree, rather than to two different trees,
+  And the clone those builds run against is still made without local hardlinks into the
+    real repository, so a build inside the clone still cannot reach the real object
+    store,
+  And the second build still runs against a tree a first build has already touched,
+    because a second build on an untouched tree would assert idempotence over nothing,
+  And the two tests that never start a build at all are untouched by this change.
+depends_on:
+  - TQ-600a-9
+doc_links:
+  - path: unit_tests/build_guards/test_build_leaves_tracked_files_clean.py
+    relationship: modifies
+    status: exists
+    relevance: >-
+      EDIT SURFACE and subject. Its module docstring states the build is run exactly as
+      the worktree bootstrap runs it; that sentence is the constraint this record
+      protects. The module-level cached clone is the thing the duplicate cycle should
+      defer to.
+  - path: CLAUDE.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      Records the worktree-bootstrap-leaves-tracked-files-dirty history this file
+      covers, and why the self-targeting pattern is the one under test rather than an
+      oversight.
+  - path: scripts/suite_performance/_shared_layout_coordination.py
+    relationship: describes
+    status: exists
+    relevance: >-
+      Owns `emit_execution_signal` (line 100), the counter the count descriptor reads.
+      This file's own `_run_build()` at line 29 does not call it today, so the count
+      descriptor is unimplementable until it does.
+  - path: unit_tests/suite_performance/_test_helpers_tq_600a_5.py
+    relationship: describes
+    status: exists
+    relevance: >-
+      `run_child_session()` at line 44 is how the count is taken in one process with
+      the execution-log variable set. Do not write a second session runner.
+declared_files:
+  - path: unit_tests/build_guards/test_build_leaves_tracked_files_clean.py
+    state: existing
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - >-
+    THE CLONE WITH NO LOCAL HARDLINKS IS A SAFETY PROPERTY, NOT A DETAIL. It is what
+    stops a build inside the clone corrupting the real repository's object store. Reuse
+    the cached clone; do not replace the clone step with anything cheaper.
+  - >-
+    DO NOT MAKE THIS BUILD DIRECTED. It is the single file in the set where
+    self-targeting is correct, and converting it would exercise a different code path
+    from the one the originating ticket exists to cover. This is the conversion the
+    parent record's boundary descriptor is aimed at.
+  - >-
+    THE SECOND BUILD MUST STILL FOLLOW A FIRST. Sharing the cached clone is only sound
+    because the cached clone has already been built once. If the caching is ever changed
+    so the clone is handed out unbuilt, the idempotence assertion becomes vacuous.
+  - >-
+    ABOUT 43 s IS THE PRIZE AND IT IS A SINGLE BUILD. Do not reach for a second saving
+    in this file; there is not one that preserves what it proves.
+  - >-
+    THE BUILDER TO INSTRUMENT IS `_run_build()` AT LINE 29, AND IT IS THIS FILE'S OWN.
+    Unlike the six adopter files, which share `run_build()` in
+    unit_tests/portability/_bp1500g1_harness.py, this file defines its own three-line
+    builder that calls subprocess.run on the CLONE's scripts/build.py (line 30). The
+    count descriptor below needs `emit_execution_signal` from
+    scripts/suite_performance/_shared_layout_coordination.py called there. Note the
+    builder runs the clone's build.py, not this worktree's — so the signal must be
+    emitted from the calling test process, not from inside the built tree.
+  - >-
+    THE MODULE-LEVEL CACHE IS ALREADY THERE; FIND IT BEFORE ADDING ONE. The criteria say
+    a cycle "the same module already performs and already caches". Reuse that cache.
+    Adding a second caching mechanism beside it gives the file two notions of "the
+    clone" and reintroduces the duplicate this record exists to remove.
+  - >-
+    THE COUNT IS TAKEN IN ONE PROCESS. The cache is process-scoped and CI shards this
+    suite with pytest-split (.github/workflows/ci.yml lines 405-410) at per-test
+    granularity. Count from a single child session with no --splits, or "two builds, not
+    three" is a statement about which shard you happened to look at.
+delivers_to: null
+expects_from:
+  - ac_id: TQ-600a-9
+    contract: >-
+      The produce-once-then-copy pattern, applied here to a clone that is already
+      cached rather than to a new mechanism.
+test_spec:
+  - name: test_tq600a_9_ii_the_tracked_files_file_starts_two_builds_not_three
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: integration
+    angle: criterion
+    surface_invoked: "run_child_session() over unit_tests/build_guards/test_build_leaves_tracked_files_clean.py, no --splits, LEAFCUTTER_SHARED_LAYOUT_EXECUTION_LOG set"
+    description: >-
+      Run the file in ONE child session with the execution log pointed at a scratch
+      file, and count the `deploy_executed` lines it received. The count is 2, and all
+      four of its tests pass. Counted from real emitted signals, never from a patched
+      subprocess.run — a mocked build cannot leave a tracked file dirty, which is the
+      only thing this file exists to detect.
+  - name: test_tq600a_9_ii_the_build_still_targets_the_tree_it_was_cloned_into
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: integration
+    angle: discrimination
+    must_catch:
+      - "the target directory is pointed at a sibling directory, so the build stops self-targeting and exercises the directed path instead of the worktree-bootstrap path this file covers"
+    description: >-
+      Read the `target_dir` field of the `deploy_executed` entries the run emitted and
+      assert the target directory and the package root resolve to the same tree.
+  - name: test_tq600a_9_ii_the_clone_has_no_hardlinks_into_the_real_repository
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: integration
+    angle: discrimination
+    must_catch:
+      - "the --no-local option is dropped from the git clone at line 25, so the clone's object store is hardlinked into the real repository and a build inside the clone can reach it"
+    description: >-
+      Inspect the clone the run produces and assert its object store is independent of
+      the real repository's — not that the option string is present at the call site,
+      but that the produced clone's objects are its own.
+  - name: test_tq600a_9_ii_the_second_build_runs_on_an_already_built_tree
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: integration
+    angle: discrimination
+    must_catch:
+      - "the caching is changed so the clone is handed out unbuilt, which leaves the file green while its idempotence assertion compares an untouched tree against itself"
+    description: >-
+      Assert the tree the second build runs against carries the output of a prior
+      build — check for the artifacts a completed build leaves, such as the
+      .build_manifest.json the shared-layout publish gate already keys on. This is what
+      stops the idempotence assertion becoming an assertion about an untouched clone.
+  - name: test_tq600a_9_ii_the_two_non_building_tests_are_unaffected
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: >-
+      The two tests in the file that never start a build pass unchanged and start no
+      build after the change either.
+test_rationale: |
+  Every descriptor here except the count is a guard on a property that the saving could
+  plausibly destroy, and each names the mutation that would destroy it. That shape is
+  deliberate: the saving itself is one build and is trivially verifiable, while the
+  three properties it endangers — self-targeting, clone independence, and a second
+  build that actually follows a first — are each the kind of thing that can be broken
+  without any test noticing.
+
+  The idempotence descriptor is the subtle one. Sharing a cached clone is sound only
+  because the clone has already been built once; a future change to the caching that
+  handed out an unbuilt clone would leave the file green while asserting nothing.
+origin_agent: business-analyst
+created: 2026-10-07
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: internal
+notes: |
+  This record exists mostly to say no. The originating hypothesis for this whole branch
+  of work was that the slow files self-target and should be converted; this is the one
+  file where that is true, and it is also the one file where the conversion would be
+  most damaging. Recording the refusal as a criterion with a named mutation is the only
+  form in which the refusal survives the next person who reads the timing table and
+  reaches for the obvious fix.

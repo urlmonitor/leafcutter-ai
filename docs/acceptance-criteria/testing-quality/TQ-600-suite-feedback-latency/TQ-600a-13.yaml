@@ -1,0 +1,305 @@
+id: TQ-600a-13
+components:
+  - testing_quality
+title: "A test the documentation says the default run skips is a test the default run skips"
+component: testing-quality
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given the naming convention by which an expensive test is suffixed to mark it as one
+    the default run does not pay for,
+  And two documents that state the convention has an effect: the suite-performance
+    guide says of the shared-layout tests that most "are excluded from the fast default
+    run; only the boundary test that mocks-but-forwards subprocess.run runs by
+    default", and the testing guide says "The pre-commit suite excludes _MANUAL tests"
+    and that they "are excluded from both suites",
+  And the verified absence of anything that could produce that effect: the test
+    configuration registers two custom markers and no marker for this convention; the
+    continuous-integration invocation carries no name selection, no marker selection
+    and no deselection of any kind; and none of the repository's per-directory
+    collection files implements a skip based on the suffix,
+  And the independent confirmation that the claim is false rather than merely
+    unenforced: the run's own duration record lists a suffixed test at 13.8 s, and a
+    test that was timed is a test that ran,
+  And the conclusion this record does not overturn, reached by reading what those tests
+    contain: they must not simply be dropped. The suffixed tests in the
+    suite-performance directory are the ones that would notice the shared-layout
+    routing silently handing a mutator the shared root and corrupting every reader, so
+    removing them from the default run would remove the only quick warning of that
+    regression,
+  When a default collection of the suite is performed and the set of tests it collects
+    is compared with the set the documentation claims is excluded,
+  Then the two agree — either every suffixed test is genuinely absent from the default
+    collection and reachable through a named opt-in, or no document claims an exclusion
+    the collection does not perform,
+  And the comparison is made by performing a collection and examining what it
+    collected, never by searching a document or a configuration file for a phrase,
+  And when the two disagree, the comparison fails and names both the specific tests and
+    the specific document sentence that disagree, rather than reporting a count or a
+    warning,
+  And that failure is demonstrated by introducing a disagreement and observing it,
+    because a comparison that has never failed has not been shown to be able to.
+depends_on:
+  - TQ-600a
+doc_links:
+  - path: scripts/suite_performance/README.md
+    relationship: modifies
+    status: exists
+    relevance: >-
+      One of the two documents making the false claim, at the bullet beginning "Unit
+      tests live in". Either its sentence changes or the run changes to match it; this
+      record does not pick, but it does forbid leaving them in disagreement.
+  - path: docs/testing/README.md
+    relationship: modifies
+    status: exists
+    relevance: >-
+      The second document, in two places: "The pre-commit suite excludes _MANUAL
+      tests" and "_MANUAL tests are excluded from both suites". Both are false today.
+  - path: pytest.ini
+    relationship: modifies
+    status: exists
+    relevance: >-
+      Registers two custom markers and no marker for this convention, and carries no
+      deselection. If the exclusion branch is chosen, the registered marker belongs
+      here, next to the two that already work.
+  - path: .github/workflows/ci.yml
+    relationship: modifies
+    status: exists
+    relevance: >-
+      The continuous-integration invocation. Verified to carry no name selection, no
+      marker selection and no deselection. If the exclusion branch is chosen, this is
+      where the opt-in cadence has to actually be invoked, or the exclusion is a quiet
+      loss of coverage.
+  - path: docs/analysis/2026-10-05-slowest-tests-and-what-to-do-about-them-5-skipping-and-run-once.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      Found this gap first and recommended against simply adding deselection, for the
+      reason recorded in the criteria. This record was corroborated against the same
+      evidence independently rather than inherited from it.
+  - path: CLAUDE.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      Names three precedents in this repository of a documented defence that was a
+      no-op and reported clean the whole time, and states the rule that a check which
+      examined nothing must not look like a check that found nothing. This is a fourth
+      instance of the same class.
+  - path: .github/test_durations.json
+    relationship: describes
+    status: exists
+    relevance: >-
+      THE CORROBORATING ARTIFACT, and the reason the claim is known false rather than
+      merely unverified. It records a per-test-id duration for a `_MANUAL` test, and a
+      test that was timed is a test that ran. It is evidence, not an edit surface — do
+      not change it from this record.
+  - path: docs/acceptance-criteria/testing-quality/TQ-600-suite-feedback-latency/TQ-600a-9.yaml
+    relationship: describes
+    status: exists
+    relevance: >-
+      One of the two siblings that now declares an expects_from on this record. Its
+      verification tests re-run eight build-spawning files, so whichever branch is
+      chosen here determines whether those tests can be kept out of the default run.
+  - path: docs/acceptance-criteria/testing-quality/TQ-600-suite-feedback-latency/TQ-600a-10.yaml
+    relationship: describes
+    status: exists
+    relevance: >-
+      The second sibling with the same dependency, for the same reason.
+declared_files:
+  - path: scripts/suite_performance/README.md
+    state: existing
+  - path: docs/testing/README.md
+    state: existing
+  - path: pytest.ini
+    state: existing
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - >-
+    THE TWO ACCEPTABLE OUTCOMES ARE NOT EQUIVALENT IN COST, AND THE CHEAPER ONE IS
+    PROBABLY RIGHT. Correcting the two documents costs almost nothing and removes the
+    false claim immediately. Implementing real deselection is more work AND carries the
+    coverage risk the criteria name. Prefer correcting the documents unless the owner
+    of the suite-performance work wants the exclusion for a reason this record does not
+    know about.
+  - >-
+    DO NOT ADD A BARE DESELECTION. If the exclusion branch is taken, the suffixed tests
+    must still run somewhere that fails the build. A deselection with no invoked
+    cadence trades a false claim of exclusion for a real loss of the only tests that
+    notice shared-layout corruption, which is strictly worse than the situation today.
+  - >-
+    THE AGREEMENT CHECK IS NOT A GREP TEST, AND MUST NOT BE BUILT AS ONE. Reading the
+    document to learn what it claims is gathering an input. The assertion is on a set
+    of tests a real collection produced. A check that only searches the configuration
+    for a flag passes on a flag that has no effect — which is precisely how the inert
+    strict-markers spelling survived in this repository for as long as the file existed.
+  - >-
+    REGISTER ANY NEW MARKER AS A DIRECT CONFIGURATION KEY, NOT INSIDE THE OPTIONS
+    STRING. This repository has already measured that the options-string spelling of
+    marker strictness has no effect on the installed pytest. The two working markers
+    are the shape to copy.
+  - >-
+    THE EVIDENCE IN THE CRITERIA WAS RE-VERIFIED AT ENRICHMENT AND HOLDS. pytest.ini
+    registers `shared_layout_reader` and `shared_layout_mutator` and nothing for this
+    convention; its addopts (line 13) carries three -p plugin registrations,
+    --continue-on-collection-errors, and no selection of any kind. The CI invocation at
+    .github/workflows/ci.yml lines 405-410 is `python -m pytest tests/ unit_tests/ -q
+    --continue-on-collection-errors --splits N --group M --durations-path ...` — no -k,
+    no -m, no --deselect. The two false sentences are scripts/suite_performance/
+    README.md lines 84-86 and docs/testing/README.md lines 148 and 202. An implementer
+    need not re-derive this, but should re-confirm the line numbers before editing.
+  - >-
+    THE TWO BRANCHES HAVE DIFFERENT OWNERS, AND THE DOCUMENTS BRANCH IS NOT THIS
+    AGENT'S. The agreement-check harness and any pytest.ini or ci.yml change are
+    python-coder's, which is why this record is assigned there. But the preferred
+    outcome — correcting two prose sentences in two README files — is
+    documentation-expert's surface, and the correction has to say what is true rather
+    than merely delete the claim: that `_MANUAL` is a naming convention with no
+    enforcement, and how an expensive test is actually invoked. Hand that half over
+    rather than editing prose in passing. See delivers_to.
+  - >-
+    THIS RECORD GATES TWO SIBLINGS, WHICH RAISES ITS PRIORITY ABOVE WHAT ITS OWN
+    SAVING JUSTIFIES. TQ-600a-9 and TQ-600a-10 both add verification tests that re-run
+    whole build-spawning files several times each, and both now declare an expects_from
+    on this record for that reason. Their natural gate is the `_MANUAL` suffix, which
+    this record proves inert. So the "correct the documents" outcome preferred above
+    leaves those two siblings with no gate at all and they must then supply their own
+    invoked cadence. That consequence was not visible when the criteria were written
+    and is not an argument for the exclusion branch — it is an argument for deciding
+    this record BEFORE those two are built, not after.
+delivers_to:
+  - agent: python-coder
+    ac_id: TQ-600a-13-i
+    contract: >-
+      The chosen outcome — corrected documents or a real deselection — whose coverage
+      consequences TQ-600a-13-i constrains.
+  - agent: documentation-expert
+    contract: >-
+      IF AND ONLY IF the documents branch is chosen: the corrected sentences at
+      scripts/suite_performance/README.md lines 84-86 and docs/testing/README.md lines
+      148 and 202. The correction must state the true position — that `_MANUAL` is a
+      naming convention carrying no collection effect, and what the real way to run or
+      skip an expensive test is — rather than deleting the claim and leaving a reader
+      to assume the exclusion happens silently. Handed to documentation-expert because
+      it is prose in two reference documents, not a code change; the agreement-check
+      harness that proves the outcome stays with python-coder.
+  - agent: python-coder
+    ac_id: TQ-600a-9
+    contract: >-
+      The resolution itself, as the thing TQ-600a-9 and TQ-600a-10 need before their
+      own expensive verification tests can be placed behind a working gate.
+expects_from: null
+test_spec:
+  - name: test_tq600a_13_a_real_collection_is_compared_with_the_documented_exclusion
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: integration
+    angle: real_artifact
+    surface_invoked: "python -m pytest tests/ unit_tests/ --collect-only -q, run as a real subprocess with no extra selection, reading pytest.ini exactly as CI does"
+    description: >-
+      Perform a default collection of the suite — a real `--collect-only` subprocess,
+      reading the real pytest.ini — and compare the collected node ids with the
+      exclusion the documents claim. The two agree. The collected set comes from a real
+      collection, never from a fixture list and never from parsing a config file.
+      Collection is cheap here (measured at about 5.33 s for the whole suite), so this
+      descriptor executes the real thing without paying for a single build.
+  - name: test_tq600a_13_the_comparison_fails_and_names_the_disagreement
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: integration
+    angle: discrimination
+    must_catch:
+      - "a document claims an exclusion the collection does not perform and the comparison still passes — which is today's state, reproduced one level up"
+      - "the comparison fails but reports only a count or a warning, naming neither the specific tests nor the specific document sentence"
+    description: >-
+      Introduce a disagreement and assert the comparison fails, naming both the tests
+      and the document sentence. THIS IS THE DESCRIPTOR THAT CANNOT BE DROPPED: an
+      agreement check that has never been seen to fail is the defect this record is
+      about.
+  - name: test_tq600a_13_a_suffixed_test_that_runs_today_is_observed_running
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: integration
+    angle: reachability
+    surface_invoked: "python -m pytest tests/ unit_tests/ --collect-only -q as a real subprocess"
+    description: >-
+      Before the change, a default collection includes at least one `_MANUAL` test —
+      the red baseline that proves the documented exclusion is absent rather than
+      merely unverified. The independent corroboration already in hand is
+      .github/test_durations.json, which carries a timed `_MANUAL` entry: a test that
+      was timed is a test that ran. Use the collection as the assertion and the
+      durations file as the corroboration, not the other way round.
+  - name: test_tq600a_13_the_check_does_not_pass_on_a_flag_that_has_no_effect
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: integration
+    angle: discrimination
+    must_catch:
+      - "a selection flag is added in a position where the installed pytest accepts and ignores it — the measured behaviour of --strict-markers inside addopts on pytest 9.0.3 — and the check reports agreement because it inspected the configuration rather than the collection"
+      - "the check reads the document and the config file and compares them to each other, never performing a collection at all"
+    description: >-
+      Add a selection flag in a position where it is accepted and ignored. The check
+      must STILL report the disagreement, because the collection it examines is
+      unchanged. This is the descriptor that keeps the check behavioural, and it is
+      modelled on a defect this repository has actually shipped.
+test_rationale: |
+  The weak form of this check is obvious and must be refused explicitly: search the
+  configuration for a deselection flag and the documents for a sentence, and assert
+  they match. That check passes on a flag that is accepted and ignored — which is not
+  hypothetical here, since this repository has already measured exactly that outcome
+  for the marker-strictness spelling, and a presence-only test stayed green for as long
+  as the file had existed.
+
+  So the collected set must come from a real collection. The document is read only to
+  learn what claim is being made; every assertion is against what the run actually
+  collected.
+
+  The before-the-change descriptor is a red baseline rather than a regression test. It
+  exists because the premise of this whole record is a claim about the current state —
+  that the suffixed tests run today — and a premise that is never executed is an
+  assumption.
+origin_agent: business-analyst
+created: 2026-10-07
+amended_by: []
+superseded_by: null
+covered_by:
+  - TQ-600a-13-i
+implemented_by: []
+change_target:
+  - pipeline
+  - docs
+risk_surface: internal
+notes: |
+  THIS IS A CORRECTNESS DEFECT WEARING A PERFORMANCE DEFECT'S CLOTHES. The cost is
+  real — suffixed tests each pay a full real deploy and at least one of them is timed
+  at 13.8 s in the duration record — but the reason it belongs in the store is that two
+  documents state a protection the code does not implement. This repository's own
+  guidance names three precedents of exactly that shape and calls each one out: the
+  feedback-categories path that reported missing on every worktree, the store validator
+  that exited zero having inspected nothing for eight days, and the merge audit that
+  compared against a stale reference. This is the fourth.
+
+  FIT, STATED PLAINLY. This record is the weakest fit of the three authored in this
+  pass. Its parent L1's subject is expensive preparation paid for once rather than
+  repeatedly; this record's subject is a claim about the suite that is untrue. Its
+  natural home is TQ-600c, whose subject is the suite's cost being honestly measured
+  and reported, and whose own notes define the "a check that examined nothing looked
+  like a check that found nothing" failure class this record instantiates. It is filed
+  here because the suffixed population includes this L1's own test files and the work
+  is wanted now — the same reason, and the same imperfect fit, the parent already
+  records for TQ-600a-11.
+
+  RE-PARENT THIS RECORD onto TQ-600c when a product-owned split rebalances the TQ-600
+  tree, or sooner if the product owner frees a slot under TQ-600c. The move is a
+  two-field change: this record's depends_on, and the two parents' covered_by.
+
+  WHAT THIS RECORD DELIBERATELY DOES NOT DECIDE. Whether to implement the exclusion or
+  to correct the documents is left open, because the evidence supports correcting the
+  documents and the suite-performance owner may have a reason to want the exclusion
+  that this analysis cannot see. What is NOT left open is leaving the two in
+  disagreement.

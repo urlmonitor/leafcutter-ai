@@ -1,0 +1,189 @@
+id: TQ-600a-10-ii
+components:
+  - testing_quality
+title: "An unmeasured saving is measured before it is claimed, and abandoned if it is not there"
+component: testing-quality
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given a proposed saving whose size has never been measured — the copy step was never
+    timed, and the case for it rests entirely on a file count of over eleven thousand
+    against about five hundred,
+  And the specific way this fails: the structural argument is persuasive enough that a
+    disappointing measurement will be explained away rather than acted on, unless the
+    response to a disappointing measurement is agreed in advance,
+  And this workspace's measuring conditions, which rule out absolute thresholds: a
+    shared host under variable load, where the figures already in these records were
+    taken under load and are upper bounds,
+  When the copy step is timed with the whole-checkout copy and with the smaller copy,
+    on the same machine, in the same sitting, with the same number of copies,
+  Then both figures are reported alongside the change, and the claim made for the
+    change is the measured ratio between them rather than any figure stated in advance,
+  And the comparison is a ratio taken in one sitting, never an absolute number of
+    seconds compared against a threshold, so that a loaded host produces a smaller
+    claim rather than a false failure,
+  And when the measured ratio shows no reduction, the change is reverted and the
+    finding reported as a negative result, rather than kept on the strength of the file
+    count,
+  And no record, message or summary accompanying this change states a figure that was
+    not produced by that measurement.
+depends_on:
+  - TQ-600a-10
+doc_links:
+  - path: unit_tests/test_bp_900g_8_ii.py
+    relationship: modifies
+    status: exists
+    relevance: >-
+      The file whose copy step is the thing being timed. Time the copy, not the file:
+      its ten unchanged builds dominate its total and would hide the signal either way.
+  - path: docs/analysis/2026-10-05-slowest-tests-and-what-to-do-about-them-4-per-item-verdicts.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      Marks this item explicitly as not reliably quantifiable and states that the copy
+      was never instrumented. That admission is what this record is built around.
+  - path: docs/acceptance-criteria/testing-quality/TQ-600-suite-feedback-latency/TQ-600a-11.yaml
+    relationship: describes
+    status: exists
+    relevance: >-
+      The in-store precedent for the ratio-in-one-sitting rule, and the cautionary tale
+      for the opposite. Its amended_by records a threshold that was arithmetically
+      unreachable because an end-to-end figure was derived from a component ratio: the
+      implementation measured 4.33x against a demand for 5x and had BEATEN its own
+      prediction. Read it before choosing any threshold here — this record's job is to
+      avoid inventing a figure in the first place.
+  - path: scripts/suite_performance/README.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      Holds the only prior file-count comparison for the two copy shapes in this
+      repository (roughly 11,675 against roughly 775). It is a count, not a timing,
+      which is precisely the substitution this record forbids.
+declared_files:
+  - path: unit_tests/test_bp_900g_8_ii.py
+    state: existing
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - >-
+    TIME THE COPY STEP, NOT THE FILE. Ten real builds at roughly thirteen seconds each
+    dominate this file's total. A before-and-after of the whole file will show noise and
+    the change will be judged on it.
+  - >-
+    RATIO, ONE SITTING, SAME MACHINE. An absolute second threshold on this host will be
+    flaky, will fail on a loaded day, and will be deleted by whoever is unlucky enough
+    to hit it.
+  - >-
+    A NULL RESULT IS A RESULT AND MUST BE REPORTED AS ONE. The point of agreeing the
+    revert in advance is that the file-count argument is strong enough to win an
+    argument it should lose. If the measurement disagrees, the measurement wins.
+  - >-
+    DO NOT RESTATE THE ESTIMATE AS A FINDING. "Tens of seconds" is a ballpark offered
+    with its uncertainty attached in the source analysis. It must not reappear anywhere
+    as an achieved saving.
+  - >-
+    THE VERDICT FUNCTION TAKES TWO DURATIONS AND RETURNS A VERDICT, AND THAT SHAPE IS
+    WHAT MAKES THIS RECORD CHEAP TO PROVE. Two of the four descriptors feed it
+    constructed timings. Keep the comparison in a pure function with no I/O, separate
+    from the harness that produces real timings, so the scaling descriptor and the
+    null-result descriptor cost microseconds instead of two real copies of an
+    eleven-thousand-file checkout. If the verdict logic is inlined into the measuring
+    code, those two descriptors become expensive and will be dropped.
+  - >-
+    SAME NUMBER OF COPIES ON BOTH SIDES, AND STATE IT. The criteria require "the same
+    number of copies". The file makes eight; a before-and-after that times one copy
+    against eight is a ratio about arithmetic rather than about copy size. Record the
+    copy count alongside both durations so the comparison is auditable later.
+  - >-
+    REPORT WHERE THE MEASUREMENT CAN BE FOUND, NOT ONLY THAT IT HAPPENED. The parent's
+    criteria require the measured figures to be reported "in place of the estimate".
+    Put them somewhere durable — the AC's amended_by, or the changelog entry for the
+    change — not only in a commit message body or an agent transcript, both of which
+    this repository has already lost findings to.
+delivers_to: null
+expects_from:
+  - ac_id: TQ-600a-10
+    contract: >-
+      The smaller package copy, and the before-and-after copy timings taken around it.
+test_spec:
+  - name: test_tq600a_10_ii_both_copy_timings_are_taken_in_the_same_run
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: >-
+      Execute the measurement harness once. It produces a whole-checkout copy timing
+      and a synthetic copy timing from that ONE invocation, over the same number of
+      copies, and reports both figures and the copy count. The two timings coming from
+      one invocation is the assertion — two numbers obtained separately satisfy the
+      words and not the point.
+  - name: test_tq600a_10_ii_the_claim_is_a_ratio_and_survives_a_slow_host
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: unit
+    angle: discrimination
+    must_catch:
+      - "the verdict compares against an absolute second threshold instead of a ratio, so scaling both durations by the same factor flips it"
+    description: >-
+      Call the verdict function with a pair of durations, then with both scaled by the
+      same factor as a loaded host would scale them, and assert the verdict is
+      unchanged. Constructed durations, no real copy: the behaviour under test is the
+      comparison, and making it depend on a real measurement would make it flaky in
+      exactly the way it exists to prevent.
+  - name: test_tq600a_10_ii_a_measurement_showing_no_reduction_fails_the_change
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: unit
+    angle: discrimination
+    must_catch:
+      - "a pair of timings in which the smaller copy is not faster is reported as a success, so the agreed revert never triggers"
+      - "the no-reduction case is reported as a warning rather than a failure, which is the same thing one step quieter"
+    description: >-
+      Feed the verdict function a pair of timings in which the smaller copy is not
+      faster. It reports failure, not a warning. THIS IS THE DESCRIPTOR THAT CANNOT
+      BE DROPPED: it is the only one that makes the agreed revert real rather than an
+      intention, and it is cheap precisely because it feeds constructed numbers.
+  - name: test_tq600a_10_ii_a_genuine_reduction_passes
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: >-
+      The paired control. A pair of timings in which the smaller copy is faster is
+      reported as a success, so a harness that rejects everything does not satisfy this
+      record.
+test_rationale: |
+  Two of the four descriptors feed the harness constructed timings rather than real
+  ones, which is deliberate: the behaviour under test is how the harness responds to a
+  measurement, and the response to a disappointing measurement cannot be exercised by
+  hoping for a disappointing measurement.
+
+  The scaling descriptor is the mechanical form of the one-sitting-ratio rule. Scaling
+  both figures by the same factor is exactly what a loaded host does, and a verdict that
+  changes under that scaling is a verdict about the host rather than about the change.
+
+  This repository has three recorded precedents of a check that examined nothing looking
+  like a check that found nothing. A saving that was never measured looking like a saving
+  that was measured is the same defect pointed at a performance claim.
+origin_agent: business-analyst
+created: 2026-10-07
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: internal
+notes: |
+  This record exists because its parent is the one item in the evidence base with a
+  large claimed upside and no measurement behind it. Every other saving in this branch
+  of work was derived by counting real build subprocesses against known per-build rates;
+  this one was derived by counting files.
+
+  The response to a null result is specified in advance on purpose. Agreeing it
+  afterwards, with the change already written and the argument still sounding good, is
+  not a decision anybody makes well.

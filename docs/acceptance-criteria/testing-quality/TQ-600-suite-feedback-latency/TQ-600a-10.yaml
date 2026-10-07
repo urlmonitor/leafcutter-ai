@@ -1,0 +1,290 @@
+id: TQ-600a-10
+components:
+  - testing_quality
+  - build_pipeline
+title: "A test that mutates the package copies the part it mutates, not the whole repository"
+component: testing-quality
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given the deploy-declaration file: five tests, about 133 s, ten real builds, and
+    eight whole-repository copies made before them,
+  And what those copies contain: the entire checkout, over eleven thousand tracked
+    files, with only caches, the version-control directory and the package manager's
+    module directory left out — documentation, tickets and the whole unit-test tree are
+    all copied, eight times, so that five tests can edit three script files and one
+    configuration file,
+  And the alternative that is already proven in this repository rather than proposed
+    here: two sibling files meet the identical need — mutate package source, then build,
+    without touching the real checkout — using a shared helper that assembles a
+    synthetic package root from the template, script and configuration directories plus
+    a few derived ones, roughly twenty times smaller,
+  And the confirmed fact that makes the swap plausible: every mutation this file makes
+    targets a file inside the directories the smaller helper already provides,
+  And the honest state of the evidence, which this record does not overstate: the copy
+    was never timed. Copying about five hundred files instead of over eleven thousand,
+    eight times, is very unlikely to be free, but no second count is claimed and none
+    may be asserted in place of a measurement,
+  When the file assembles its package copy with the existing synthetic-package helper
+    instead of copying the whole checkout,
+  Then the copy the file makes contains the directories the helper provides and does
+    not contain the documentation, ticket or unit-test trees,
+  And the file still performs the same ten real builds, applies the same mutations, and
+    runs the same five tests to the same verdicts,
+  And the time the file spends making its copies is measured before the change and
+    after it, on the same machine in the same sitting, and the measured figures are
+    reported as the saving — in place of the estimate this record declines to make,
+  And if that measurement shows no reduction, the change is reverted rather than kept
+    on the strength of the file-count argument, because a structural argument that
+    survives a contrary measurement is a belief.
+depends_on:
+  - TQ-600a
+doc_links:
+  - path: unit_tests/test_bp_900g_8_ii.py
+    relationship: modifies
+    status: exists
+    relevance: >-
+      EDIT SURFACE and sole subject. Its package-copy helper copies the whole checkout
+      with an ignore list that omits only caches, the version-control directory and the
+      module directory. That one call is the entire change.
+  - path: unit_tests/build_guards/test_bp_100k_2.py
+    relationship: describes
+    status: exists
+    relevance: >-
+      Owns the synthetic full-package helper this record adopts. Do not copy or fork it
+      — call it. Two sibling files already use it successfully for the identical need,
+      which is why this is a reuse rather than a new mechanism.
+  - path: unit_tests/test_bp_900g_8_i.py
+    relationship: describes
+    status: exists
+    relevance: >-
+      One of the two sibling files that already uses the smaller helper for the same
+      purpose. It is the working precedent, and it is deliberately NOT otherwise in
+      scope — see the parent record's exclusions.
+  - path: unit_tests/build_guards/test_acd_2100d_2_i.py
+    relationship: describes
+    status: exists
+    relevance: >-
+      The second sibling already using the smaller helper. Its docstring also explains
+      why a self-hosting layout is required when the criterion inspects output
+      mappings, which is the same constraint this file operates under.
+  - path: docs/analysis/2026-10-05-slowest-tests-and-what-to-do-about-them-4-per-item-verdicts.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      The per-item verdict set this row belongs to. Note this row is the highest
+      uncertainty and highest potential value in that set, which is why the criteria
+      require measurement rather than stating a number.
+  - path: CLAUDE.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      The standing rule that a test which mutates the package before building keeps
+      building its own copy, and names this very file family as the canonical example.
+      This record makes the copy smaller; it does not move the file onto the shared
+      layout, and must not.
+  - path: scripts/suite_performance/README.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      Carries the only measured file-count figures for the two copy shapes in this
+      repository — roughly 11,675 files for a tree that includes package source
+      against roughly 775 for deployed output alone. It is the nearest thing to a prior
+      measurement this record has, and it is a file count rather than a timing, which
+      is exactly the gap TQ-600a-10-ii exists to close.
+  - path: scripts/suite_performance/_shared_layout_coordination.py
+    relationship: describes
+    status: exists
+    relevance: >-
+      Owns `emit_execution_signal` (line 100), which the still-ten-builds descriptor
+      reads. It counts DEPLOYS only — the copy timing must be taken separately, around
+      the copy call, not from this log.
+declared_files:
+  - path: unit_tests/test_bp_900g_8_ii.py
+    state: existing
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - >-
+    CALL THE EXISTING HELPER, DO NOT WRITE A SECOND ONE. Two files already depend on
+    the synthetic-package helper. A near-duplicate assembled inside this file would
+    drift from them silently and is the cheapest way to turn one maintained thing into
+    two unmaintained ones.
+  - >-
+    THE MUTATION SITES WERE READ FROM SOURCE, NOT GUESSED, AND STILL NEED RUNNING TO
+    CONFIRM. Every mutation in the file was confirmed to target a script or
+    configuration file the smaller helper provides. That was established by reading,
+    not by executing. Run the file against the smaller copy and confirm every test
+    still passes before believing it.
+  - >-
+    THIS FILE STAYS ON THE MUTATE SIDE OF THE BOUNDARY. It alters package source and
+    then asserts the build fails. It must keep building its own copy and must never be
+    routed onto the shared reference layout. The change is to the copy's size, nothing
+    else.
+  - >-
+    MEASURE THE COPY, NOT THE WHOLE FILE. The file's total time includes ten real
+    builds that this change does not touch. Time the copy step specifically, before and
+    after, or the saving will be lost in the noise of the builds and the change will
+    look like it did nothing.
+  - >-
+    REVERT ON A NULL RESULT. The criteria require this explicitly because the structural
+    argument here is persuasive enough to survive a disappointing measurement if nobody
+    writes down in advance that it must not.
+  - >-
+    THE EDIT SURFACE IS THREE NAMED THINGS IN ONE FILE, AND THEY WERE LOCATED, NOT
+    INFERRED. `_copy_package_tree()` at unit_tests/test_bp_900g_8_ii.py line 215 calls
+    `shutil.copytree(_REPO_ROOT, dest, ignore=_COPY_IGNORE, symlinks=True)` at line 230;
+    `_COPY_IGNORE` is the ignore_patterns at line 150; `_run_build_in_copy()` at line
+    234 is the builder. The helper to adopt is `_build_synthetic_full_package` in
+    unit_tests/build_guards/test_bp_100k_2.py, which test_acd_2100d_2_i.py loads BY FILE
+    PATH under a unique module name rather than importing — copy that loading idiom, it
+    exists because these files live in different test directories.
+  - >-
+    `symlinks=True` IS LOAD-BEARING AND MUST SURVIVE THE SWAP. The current copy
+    preserves symlinks. This repository's deployed layout is substantially symlinks —
+    `install_shims` creates them, and a worktree whose `.leafcutter` or
+    `.pre-commit-config.yaml` symlink is broken silently disables every hook, which
+    CLAUDE.md records as a live and repeated incident. If the synthetic helper resolves
+    symlinks into regular files, the copy is not equivalent and the swap is not the
+    no-op this record assumes. Check this explicitly; it is the most likely way the
+    swap changes behaviour without changing a verdict.
+  - >-
+    TQ-600a-9-iii IS EDITING THE SAME HELPER'S CONSUMERS AT THE SAME TIME. Both records
+    depend on `_build_synthetic_full_package`. Neither may change it. If one of them
+    turns out to need a change there, the two must be sequenced and the second re-run
+    against the first's result, because a helper change breaks both files and neither
+    file's tests would attribute it correctly.
+  - >-
+    DO NOT ROUTE THE COPY TIMING THROUGH THE BUILD COUNTER. `emit_execution_signal`
+    counts deploys, not copies, and this record's whole point is that the ten deploys
+    are unchanged. Time the copy step directly around the `_copy_package_tree()` call.
+delivers_to:
+  - agent: python-coder
+    ac_id: TQ-600a-10-i
+    contract: >-
+      The smaller package copy, whose omissions TQ-600a-10-i requires be loud rather
+      than silent.
+  - agent: python-coder
+    ac_id: TQ-600a-10-ii
+    contract: >-
+      The before-and-after copy timing, whose discipline TQ-600a-10-ii constrains.
+expects_from:
+  - ac_id: TQ-600a-13
+    contract: >-
+      A gate that genuinely keeps an expensive test out of the default collection.
+      ADDED AT TECHNICAL ENRICHMENT, as an ordering constraint rather than a
+      behavioural one. This file holds ten real builds at roughly 13 s each, and the
+      before-and-after descriptor runs it twice; added unguarded to the default
+      collection that is a standing cost larger than anything this record saves. The
+      `_MANUAL` suffix is not that gate — TQ-600a-13 establishes it has no
+      enforcement whatsoever.
+test_spec:
+  - name: test_tq600a_10_the_package_copy_omits_the_documentation_ticket_and_unit_test_trees
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: integration
+    angle: real_artifact
+    description: >-
+      Inspect the copy the file actually produces during a run — walk the directory
+      `_copy_package_tree()` returned, not a list of what the helper claims to provide.
+      The template, script and configuration directories are present; the
+      documentation, ticket and unit-test trees are absent. Assert too that entries
+      which were symlinks in the source are still symlinks in the copy, since the
+      current call passes symlinks=True and the swap must not quietly resolve them.
+  - name: test_tq600a_10_all_five_tests_reach_the_same_verdicts_against_the_smaller_copy
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: >-
+      Run the file before and after the change and compare the verdict of each of its
+      five tests. Identical. This is the descriptor that converts a source reading into
+      a result.
+  - name: test_tq600a_10_the_file_still_performs_ten_real_builds
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: integration
+    angle: discrimination
+    surface_invoked: "run_child_session() over unit_tests/test_bp_900g_8_ii.py, no --splits, LEAFCUTTER_SHARED_LAYOUT_EXECUTION_LOG set"
+    must_catch:
+      - "one copy is shared across two tests so the build count drops below ten, which is a different change with a different risk and is not what this record authorises"
+    description: >-
+      Count `deploy_executed` lines emitted by `_run_build_in_copy()` (line 234) in one
+      child session. Still ten. This descriptor is a fence against scope creep, not a
+      goal.
+  - name: test_tq600a_10_the_copy_step_is_measured_before_and_after_in_one_sitting
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: integration
+    angle: criterion
+    must_catch:
+      - "the whole file is timed instead of the copy step, so ten unchanged builds at roughly 13 s each swamp the signal and a real saving reads as noise"
+      - "the two figures are taken in separate runs rather than one sitting, so host load rather than copy size decides the verdict"
+    description: >-
+      Time the copy step specifically — wrap the `_copy_package_tree()` call, not the
+      file — on the same machine in the same run, with the whole-checkout copy and with
+      the synthetic copy, and with the same number of copies. Report both figures and
+      assert the RATIO favours the second. Never an absolute second count.
+  - name: test_tq600a_10_the_file_uses_the_shared_helper_rather_than_its_own_copy_of_it
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: integration
+    angle: discrimination
+    must_catch:
+      - "the file carries its own near-duplicate of the helper, so a controlled change to the shared helper's output leaves this file's copy unchanged"
+      - "the file imports the helper and never calls it, which a name search in the source cannot distinguish from calling it"
+    description: >-
+      Change the shared helper's output in a controlled way and observe that this
+      file's PRODUCED copy changes with it. Executed against the real produced
+      directory, never by searching the source for the helper's name.
+test_rationale: |
+  The structural argument for this change is strong and the measurement behind it does
+  not exist, so the descriptor set is arranged to stop the argument standing in for the
+  measurement. The timing descriptor times the copy step rather than the file, because
+  the file's ten unchanged builds would swamp the signal and make a real saving look
+  like nothing.
+
+  The build-count descriptor is a fence, not a goal. The tempting next step in this file
+  is to share copies between tests and cut the ten builds — a different change, with the
+  vacuity risk the sibling record addresses, and one this record does not authorise. The
+  named mutation makes the scope creep fail rather than merely be discouraged.
+
+  The helper descriptor is behavioural on purpose. The natural weak form is to search
+  the file for the helper's name, which passes equally well on a file that imports the
+  helper and never calls it, and on a file that has pasted a copy of it.
+origin_agent: business-analyst
+created: 2026-10-07
+amended_by: []
+superseded_by: null
+covered_by:
+  - TQ-600a-10-i
+  - TQ-600a-10-ii
+implemented_by: []
+change_target: pipeline
+risk_surface: internal
+notes: |
+  THE BIGGEST UPSIDE AND THE THINNEST EVIDENCE IN THE SET, AND THOSE ARE THE SAME FACT.
+  The analysis this record is specified against marks this item explicitly as "not
+  reliably quantifiable" — the copy was never instrumented. Copying over eleven thousand
+  files instead of about five hundred, eight times per run, is very unlikely to be free,
+  but the only honest form for that sentence in an acceptance criterion is a requirement
+  to measure, which is what the criteria say.
+
+  WHY THIS SITS UNDER THIS L1 AT ALL. The parent's subject is expensive preparation paid
+  for once rather than repeatedly. This record is a cheaper-preparation lever rather than
+  a shared-preparation one, which is the same imperfect fit the parent already records
+  for TQ-600a-11 and accepts for the same reason: the preparation in question is a
+  package copy made so a build can run against it, which is squarely this L1's cost
+  centre. If a product-owned split of the TQ-600 tree creates a home for cheaper-work
+  levers, re-parent this record alongside TQ-600a-11.
+
+  WHAT IS NOT HERE. The sibling file that also uses the smaller helper has its own
+  identified saving of about 37 s, by merging three mutation shapes so that one execution
+  serves both the message assertions and the produced-tree assertion. That is deliberately
+  excluded — see TQ-600a-9's notes for the reasoning. This record changes copy size in one
+  file and nothing else.

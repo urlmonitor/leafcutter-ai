@@ -1,0 +1,222 @@
+id: TQ-600a-9-i
+components:
+  - testing_quality
+  - build_pipeline
+title: "A shared preparation is never handed to a test that writes to it, and never makes an assertion true by construction"
+component: testing-quality
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given a group of tests that now obtain one preparation between them instead of one
+    each,
+  And the two ways this change can be wrong while every test still passes: a member
+    that alters the shared artifact leaves the next member reading something no build
+    produced, and a member whose assertion was previously independent now inspects a
+    property the shared artifact carries regardless of the behaviour under test,
+  And the specific shape the second failure takes here, which is not hypothetical:
+    four tests that assert survival of a planted file, the content of a message, the
+    agreement between a declared winner and a resolved one, and the agreement between
+    winners on different platforms — three of which could be satisfied by a fixture
+    that always produces the expected artifact,
+  When a member of a group alters anything the shared preparation contains,
+  Then it receives its own copy before the alteration, and the shared artifact the
+    other members see is unchanged by it,
+  And when the members of a group are run in any order, and when any single member is
+    run alone, each member reaches the same verdict it reaches in every other
+    arrangement,
+  And for each member of a group, breaking only the property that member names turns
+    that member red and leaves the other members of the group green,
+  And a member that cannot be made red by breaking its own subject is reported as a
+    failure of this change rather than accepted as a passing test.
+depends_on:
+  - TQ-600a-9
+doc_links:
+  - path: unit_tests/portability/test_bp_1500g_2_i.py
+    relationship: modifies
+    status: exists
+    relevance: >-
+      The four-way group that makes the vacuity hazard concrete. Three of its four
+      assertions read properties of the one produced artifact; the discrimination test
+      is what separates "four assertions about one build" from "one assertion and three
+      restatements".
+  - path: unit_tests/portability/test_inf_400c_4_i.py
+    relationship: modifies
+    status: exists
+    relevance: >-
+      The group where the write hazard is live: four parametrised instances each alter
+      the produced tree. Each must alter a copy, or instance two reads instance one's
+      edit.
+  - path: CLAUDE.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      The read-versus-mutate boundary, stated there as a rule rather than a
+      description. This record applies the same rule inside a single file, between
+      tests, rather than between a file and the shared layout.
+  - path: unit_tests/portability/_bp1500g1_harness.py
+    relationship: modifies
+    status: exists
+    relevance: >-
+      Where copy-on-write actually lands for the four-way group. `run_build()` at line
+      97 is the shared builder; the produce-once cache and the hand-out-a-copy decision
+      belong beside it, not duplicated into each test file.
+  - path: unit_tests/suite_performance/_test_helpers_tq_600a_5.py
+    relationship: describes
+    status: exists
+    relevance: >-
+      `run_child_session()` at line 44 is how the three arrangements and the four
+      discrimination runs each get their own process. Both descriptors are unsound in a
+      single process, because a memoised artifact survives across arrangements.
+  - path: scripts/suite_performance/pytest_shared_reference_layout.py
+    relationship: describes
+    status: exists
+    relevance: >-
+      `_produce_private_copy` is this repository's existing worked answer to "hand out a
+      copy, never the shared root". Read it for the shape before writing a per-file one;
+      the hazard it guards is the same hazard this record names.
+declared_files:
+  - path: unit_tests/portability/test_bp_1500g_2_i.py
+    state: existing
+  - path: unit_tests/portability/test_inf_400c_4_i.py
+    state: existing
+  - path: unit_tests/portability/_bp1500g1_harness.py
+    state: existing
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - >-
+    COPY-ON-WRITE, NOT SHARE-AND-HOPE. The cheap implementation is to share one
+    directory and rely on the members being well behaved. Do not. A member that writes
+    gets a copy of the finished artifact; the copy is cheap precisely because the build
+    already happened.
+  - >-
+    THE DISCRIMINATION CHECK IS THE POINT OF THIS RECORD. One build plus four
+    assertions is only worth the same as four builds plus four assertions if each
+    assertion can still fail on its own. Prove it by breaking each subject in turn, not
+    by reasoning about it.
+  - >-
+    ORDER INDEPENDENCE IS CHECKED BY RUNNING, NOT BY INSPECTION. Run the group
+    forwards, run it reversed, and run each member alone. Three arrangements, same
+    verdicts.
+  - >-
+    A MEMBER THAT WILL NOT GO RED IS A FINDING, NOT A PASS. If breaking a member's own
+    subject leaves it green, the sharing has hollowed it out and the member must be
+    restored to its own build rather than left in the group.
+  - >-
+    THE COPY IS A FILESYSTEM COPY OF A FINISHED TREE, AND ITS COST IS THE WHOLE REASON
+    THIS IS WORTH DOING. A directed build measures about 13.3 s; a copy of the finished
+    adopter tree is a fraction of that. If the copy approaches the build in cost — which
+    is plausible for the self-hosting shapes, where the produced tree runs to roughly
+    11,675 files against roughly 775 for a directed one, as recorded in
+    scripts/suite_performance/README.md — then the group is not worth sharing and should
+    be left alone. Measure the copy against the build in the same sitting before
+    committing to a group, and report the ratio.
+  - >-
+    THE THREE ARRANGEMENTS MUST RUN IN THREE SEPARATE PROCESSES. Order independence is
+    meaningless inside one process that has already memoised the artifact: a reversed
+    run that reuses the forward run's cache is not a reversed run. Use
+    `run_child_session()` at unit_tests/suite_performance/_test_helpers_tq_600a_5.py
+    line 44, one child session per arrangement, and make each one produce its own
+    preparation.
+  - >-
+    THE DISCRIMINATION RUNS MUST NOT SHARE A PREPARATION WITH EACH OTHER. Four runs that
+    each break one subject are four separate child sessions. If they share one produced
+    tree, run two inherits run one's breakage, more than one member goes red, and the
+    descriptor fails for a reason that has nothing to do with the property under test —
+    which reads as a real finding and will cost an afternoon.
+delivers_to: null
+expects_from:
+  - ac_id: TQ-600a-9
+    contract: >-
+      The produce-once-then-copy mechanism and the identified groups of tests that
+      share a preparation.
+test_spec:
+  - name: test_tq600a_9_i_a_member_that_writes_receives_its_own_copy
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: >-
+      A group member alters the artifact it was handed. The artifact the other members
+      receive afterwards is byte-identical to the one the producer finished with.
+  - name: test_tq600a_9_i_a_mutation_by_one_member_is_invisible_to_the_next
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: integration
+    angle: discrimination
+    must_catch:
+      - "the writing member is handed the shared artifact itself instead of a copy of it"
+      - "the member is handed a copy made by reference or by symlink rather than by content, so a write through it still reaches the shared tree"
+    description: >-
+      Execute the group and compare the shared artifact's bytes before and after the
+      writing member ran. Without this, copy-on-write is satisfiable by a comment.
+  - name: test_tq600a_9_i_the_group_reaches_the_same_verdicts_in_three_arrangements
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: integration
+    angle: criterion
+    surface_invoked: "run_child_session(), one child pytest session per arrangement, each producing its own preparation"
+    description: >-
+      Run the group in declaration order, in reverse, and each member alone. The set of
+      pass and fail verdicts is identical across all three. Three SEPARATE child
+      sessions: a reversed run that reuses the forward run's memoised artifact is not a
+      reversed run and proves nothing about order.
+  - name: test_tq600a_9_i_breaking_one_members_subject_reddens_only_that_member
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: integration
+    angle: discrimination
+    must_catch:
+      - "breaking the planted adopter file leaves the survival member green, because the shared preparation re-supplies the file regardless of the behaviour under test"
+      - "breaking the collision message leaves the message member green"
+      - "breaking the declared winner leaves the declared-winner member green"
+      - "breaking the cross-platform winner leaves the cross-platform member green"
+      - "breaking any one subject reddens more than one member, which means the four runs shared a preparation instead of each producing their own"
+    description: >-
+      Four runs, one per member of the four-way group, each in its own child session and
+      each breaking only that member's named property. Exactly one member is red in each
+      run. THIS IS THE DESCRIPTOR THAT CANNOT BE DROPPED.
+  - name: test_tq600a_9_i_a_sound_group_passes_whole
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: >-
+      The paired control. With nothing broken, every member of every group passes.
+      Without this, four descriptors that all demand reds are satisfied by a group that
+      fails everything.
+test_rationale: |
+  The vacuity hazard is the reason this record exists and is invisible to any test that
+  only checks the group passes. Sharing one build across four assertions produces a
+  faster suite and, if done carelessly, a weaker one — and the weakening is silent,
+  because every test still goes green. The four-run discrimination descriptor is the
+  only one that can tell the two apart.
+
+  Order independence is asserted by executing three arrangements rather than by
+  reasoning about what the members touch, because the whole class of defect here is a
+  member touching something nobody realised it touched.
+
+  The sound-group control is present because four red-demanding descriptors with no
+  green path are satisfied by a group that refuses to run at all.
+origin_agent: business-analyst
+created: 2026-10-07
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: internal
+notes: |
+  A correct 60-second test beats a fast wrong one. This record is where that principle
+  becomes checkable: it is the only place in this branch of the tree that can detect
+  the failure in which the suite gets faster and quieter at the same time.
+
+  The four-way group in the colliding-capability file is the worked example throughout
+  because its four assertions are the most plausibly collapsible in the set — survival,
+  message, declared winner, cross-platform winner, all read off one produced tree. If
+  the discrimination holds there, it holds for the two-way and three-way groups.
