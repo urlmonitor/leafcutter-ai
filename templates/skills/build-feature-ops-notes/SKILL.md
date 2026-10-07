@@ -329,6 +329,42 @@ on the ticket (`not_needed` is honoured), a deferred target such as `pull-reques
 
 ---
 
+## KI-9: A halted ticket no longer ends the epic run — read what was withheld
+
+**Old behaviour.** The first halted ticket ended the whole run. Every later batch and look
+went unbuilt, even work that had nothing to do with the halt.
+
+**Now (BO-100e-4, `build-feature.js`).** The run continues past a halt and builds every
+independent later ticket. After a batch that holds a halt or an incomplete ticket, the
+driver reads the worktree's dirty files once (`worktree_repo_facts.py dirty`). The final
+return is always `status: "blocked"`, `epic_complete: false`, `ended_because: "halted"`,
+with `halted_at_batch` set to the first halt. `build-epic.js` (legacy) still halts all.
+
+**Reading the return.**
+- `halted_tickets` — the tickets that halted; `completed_batches` also lists successes after
+  the first halt.
+- `unbuilt` — withheld tickets. `withheld_by` names the halted ticket a dependant waits on.
+  `withheld_by_shared_files` names the paths a later ticket shares with files the halt left
+  modified. Siblings in the same batch are never withheld for overlap.
+- A read-back without `files_touched` means no overlap can be detected for that ticket. That
+  is not a failure; the ticket is simply not withheld for shared files.
+- The leftover set is replaced at each dirty read, not accumulated, so an old leftover stops
+  withholding once a later read no longer shows it.
+
+**Staged leftovers stop the run.** If the halted ticket left **staged** changes, the run
+stops and the return carries `staged_leftovers` with the paths. The commit agent commits
+whatever is staged, so continuing would sweep them into the next ticket's commit. Commit or
+unstage them (`git restore --staged <path>`), then re-run `/build-feature`. If the message
+says the worktree state **could not be read**, the run also stopped (fail closed): check
+the worktree path and `git status`, then re-run.
+
+**Do not re-drive by hand.** A ticket with a verdict in this run, halted or withheld, is not
+driven again in a later look of the same run (the planner re-offers it every look; the
+driver dedupes). A withheld ticket is also not re-evaluated, which is safe because the
+leftovers that withheld it persist. Fix the cause and re-run to build it.
+
+---
+
 ## References
 
 - `.claude/commands/build-feature.md` — executable workflow; Step A step 6

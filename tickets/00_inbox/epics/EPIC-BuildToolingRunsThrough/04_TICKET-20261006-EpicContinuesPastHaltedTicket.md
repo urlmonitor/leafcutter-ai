@@ -43,12 +43,12 @@ files_touched:
 agents:
   architect-review: signed_off
   test-writer: signed_off
-  python-coder: needed
-  llm-expert: needed
-  test-runner: needed
-  documentation-expert: needed
-  pr-reviewer: needed
-  commit: needed
+  python-coder: signed_off
+  llm-expert: signed_off
+  test-runner: signed_off
+  documentation-expert: signed_off
+  pr-reviewer: signed_off
+  commit: signed_off
   pull-request: not_needed
   status-checker: not_needed
 ---
@@ -257,13 +257,13 @@ tests:
 
 | AC | Test | Implementation | Validated |
 |----|------|----------------|-----------|
-| AC-1 | test_independent_later_batch_ticket_is_built_after_halt, test_ticket_sharing_a_dirty_file_is_withheld | | |
-| AC-2 | test_dependant_of_halted_ticket_is_withheld_and_names_it, test_ticket_sharing_a_dirty_file_is_withheld | | |
-| AC-3 | test_staged_leftovers_stop_the_run_and_name_paths, test_unreadable_dirty_facts_stop_the_run, test_dirty_subcommand_reports_staged_unstaged_untracked, test_dirty_subcommand_outside_a_repo_reports_unreadable | | |
-| AC-4 | test_halted_ticket_is_not_redriven_in_a_later_look | | |
-| AC-5 | test_final_return_carries_halt_fields_and_epic_incomplete, test_all_work_behind_failed_prerequisite_ends_without_claiming_done | | |
-| AC-6 | test_ticket_sharing_a_dirty_file_is_withheld (files_touched read back) | | |
-| AC-7 | pr-reviewer reads the three doc diffs | | |
+| AC-1 | test_independent_later_batch_ticket_is_built_after_halt, test_ticket_sharing_a_dirty_file_is_withheld | | ok — 2026-10-07 |
+| AC-2 | test_dependant_of_halted_ticket_is_withheld_and_names_it, test_ticket_sharing_a_dirty_file_is_withheld | | ok — 2026-10-07 |
+| AC-3 | test_staged_leftovers_stop_the_run_and_name_paths, test_unreadable_dirty_facts_stop_the_run, test_dirty_subcommand_reports_staged_unstaged_untracked, test_dirty_subcommand_outside_a_repo_reports_unreadable | | ok — 2026-10-07 |
+| AC-4 | test_halted_ticket_is_not_redriven_in_a_later_look | | ok — 2026-10-07 |
+| AC-5 | test_final_return_carries_halt_fields_and_epic_incomplete, test_all_work_behind_failed_prerequisite_ends_without_claiming_done | | ok — 2026-10-07 |
+| AC-6 | test_ticket_sharing_a_dirty_file_is_withheld (files_touched read back) | | ok — 2026-10-07 |
+| AC-7 | pr-reviewer reads the three doc diffs | | ok — 2026-10-07 |
 
 ## Implementation Tasks
 
@@ -281,19 +281,19 @@ tests:
   Apply the test-file ratchet.
 
 ### python-coder
-- [ ] `templates/scripts/worktree_repo_facts.py`: add the `dirty` subcommand.
-- [ ] `build-feature.js`:
+- [x] `templates/scripts/worktree_repo_facts.py`: add the `dirty` subcommand.
+- [x] `build-feature.js`:
   - merge the halted return into the final return;
   - add the dirty-facts read after a halt, the staged-leftovers stop, the `withheld_by_shared_files` overlap check in the eligibility step, and the `hasOwnProperty` dedupe at 3133.
-- [ ] Both twins: add the optional `files_touched` to `RECORD_READBACK_SCHEMA` and the read-back prompt.
-- [ ] Run `python scripts/build.py` and stage the tracked outputs.
+- [x] Both twins: add the optional `files_touched` to `RECORD_READBACK_SCHEMA` and the read-back prompt.
+- [x] Run `python scripts/build.py` and stage the tracked outputs.
 
 ### llm-expert
-- [ ] `templates/skills/building-epics/SKILL.md` §1.3 / §6.2: state that the driver now continues past a halted ticket, withholds dependants and tickets sharing leftover-modified files, and stops on staged leftovers or an unreadable worktree state.
-- [ ] `templates/skills/build-feature-ops-notes/SKILL.md`: say how to read `unbuilt`, `withheld_by`, `withheld_by_shared_files` and the staged-leftovers stop, and how to recover.
+- [x] `templates/skills/building-epics/SKILL.md` §1.3 / §6.2: state that the driver now continues past a halted ticket, withholds dependants and tickets sharing leftover-modified files, and stops on staged leftovers or an unreadable worktree state.
+- [x] `templates/skills/build-feature-ops-notes/SKILL.md`: say how to read `unbuilt`, `withheld_by`, `withheld_by_shared_files` and the staged-leftovers stop, and how to recover.
 
 ### documentation-expert
-- [ ] `docs/architecture/components/build-epic-workflow-dispatch.md`:
+- [x] `docs/architecture/components/build-epic-workflow-dispatch.md`:
   - update the agent_flow mermaid diagram and the "A halt from any ticket in a batch stops the outer loop immediately" text (line 83) to the continue-and-withhold flow, including the staged-leftovers stop;
   - bump `last_updated`.
 
@@ -467,6 +467,56 @@ Wrote 31 tests in two new files and left 30 red by assertion (0 errors); the 31s
 - Validation: I built throwaway prototypes of the new loop and of the `dirty` subcommand in the scratchpad (never in the repo) and confirmed all 31 new tests and every adjusted file pass against them, and that union / fail-open-on-missing-flag / `=== true` dedupe mutations each turn a named test red. The incomplete-member return (architect finding 1) cannot be reached through the harness (every exit now reports a failure status), so it has no test of its own; the `halted_tickets` / `incomplete_tickets` key is read by `test_empty_needed_phase_set_completion.py`, which is unchanged and passes.
 - Contract the tests pin for python-coder: label `worktree-dirty`; command text contains `worktree_repo_facts.py dirty`; reply requires `readable === true` and array-typed `staged`/`unstaged`/`untracked`; unreadable stop says "could not be read" (or unreadable / cannot be read); staged stop sets `staged_leftovers: [paths]`; an overlapping ticket is withheld with `withheld_by_shared_files == [shared paths]` read from the record read-back's `files_touched`; the `dirty` subcommand prints one JSON object with `readable` and answers a non-repo as `readable: false` (exit 0), expands untracked directories, unquotes names, names a rename's new path, never mutates the index.
 
+### 2026-10-07 09:30 — llm-expert (status: ok)
+
+feedback-id: (submit-failed)
+completion_manifest:
+  template_written: true
+  prompt_quality_checklist_passed: true
+  convention_violations_resolved: true
+
+- `templates/skills/building-epics/SKILL.md`: §1.3 gains a workflow-driver paragraph (continues past a halt, withholds dependants and shared-file tickets, stops only on staged leftovers or an unreadable worktree state, final return blocked / epic_complete false / halted_at_batch = first halt, build-epic.js legacy keeps halt-all); §6.2 gains two sentences naming the same two driver stops and the `unbuilt` reporting.
+- `templates/skills/build-feature-ops-notes/SKILL.md`: new KI-9 after KI-8 covering how to read `halted_tickets`, `unbuilt`, `withheld_by`, `withheld_by_shared_files`, the no-`files_touched` caveat, replace-not-union leftovers, the staged-leftovers stop (commit or unstage, then re-run), the unreadable-state stop, and the no-re-drive / withheld-not-re-evaluated note.
+- Tests: skill-pinning tests (tests/knowledge/test_native_skill.py, tests/test_skill_registry.py, unit_tests/test_check_skill_refs.py, test_build_ticket_workflow.py, test_bo_2200b_6.py, test_bo_2100a_3_phase_order_gates.py, test_implementation_notes_emission.py) pass under AC_ENFORCE_STRICT=1. The ticket has no `## Sign-offs` section, so there was no checkbox to tick.
+
+### 2026-10-07 08:01 — architecture-diagram-author (status: ok)
+
+feedback-id: (submit-failed)
+completion_manifest:
+  diagram_created: true
+  flight_level_correct: true
+  cross_links_added:
+    result: false
+    reason: "The doc now has a prose Parent: link and Related links, but its parent supervisor-spawn-topology.md still has no children: entry for it. This gap was already there before this ticket. The installed .leafcutter hook copy resolves its root to .leafcutter/ and passes; the scripts/ copy reports ARCH-BIDIRECTIONAL."
+    remediation: "In a follow-up ticket, add docs/architecture/components/build-epic-workflow-dispatch.md to children: of supervisor-spawn-topology.md. That file is outside this ticket's files_touched."
+
+- The architect assigned the doc work to documentation-expert. architecture-diagram-author did it, so the `documentation-expert` row is set to `signed_off` and its task is ticked.
+- `docs/architecture/components/build-epic-workflow-dispatch.md` (L3-Component, agent_flow; flight level and file name unchanged) is rescoped to the build-feature.js epic loop. build-epic.js is named as the legacy halt-all variant that /build-feature does not route to. Both .js files are listed under `related_code`, a validated path field; `related_diagrams` keeps only diagrams.
+- The Epic Loop diagram covers:
+  - the look dedupe: a ticket with any verdict is never re-driven;
+  - accumulation of halted, incomplete and withheld tickets;
+  - one dirty read per halted or incomplete batch, via `worktree_repo_facts.py dirty` through a status-checker repo-facts call, with three exits: unreadable stops the run, staged leftovers stop it and name the paths, otherwise the leftover set is REPLACED with unstaged + untracked;
+  - one final return: blocked, epic_complete false, ended_because halted, halted_at_batch = first halt.
+- A second diagram, the Eligibility Gate, shows the dependant withhold and the shared-file withhold. Both lists are computed for every candidate, and the ticket is withheld if either is non-empty. The Halt Handling text states that same-batch siblings are never overlap-withheld.
+- Removed: the "STOP — do not start next batch" node, the halt-stops-the-outer-loop text and the stale "/build-feature routes to build-epic.js" note.
+- Frontmatter: added `type: architecture` and `source_ticket`. Changed `status: accepted` (invalid) to `active` and `last_updated` to 2026-10-07.
+- Checks: check_doc_frontmatter passes (it failed before this change), check_doc_length passes (200 body lines, limit 300) and check_mermaid_complexity passes (13 nodes / 17 edges and 8 / 8).
+- The diagram was checked against python-coder's build-feature.js edits as they stood in the worktree at 08:03 and aligned with them:
+  - a batch that only withheld work also marks the run halted;
+  - an unreadable stop sets `dirty_state_unreadable`.
+
+  pr-reviewer should re-confirm it against the final driver.
+
+### 2026-10-07 08:08 — python-coder (status: ok)
+
+feedback-id: (submit-failed)
+
+Summary: the epic loop in build-feature.js now continues past a halted ticket. `worktree_repo_facts.py dirty` is new (`git status --porcelain -uall -z`, rename new-path, unquoted names, `readable:false` outside a repo; `_run_git` now decodes utf-8). The three returns (halted, incomplete-member, final) are merged into one continue path with run-level accumulators (`haltedAll`, `incompleteAll`, `unbuiltAll`, `firstHaltBatch`, `leftoverFiles`, `haltStop`); each batch is recorded once; one `worktree-dirty` read per halting or incomplete batch, fail closed (null / readable !== true / non-array / null worktree path), staged leftovers stop with `staged_leftovers`, otherwise the leftover set is replaced by unstaged + untracked; later candidates whose read-back `files_touched` meets the leftovers are withheld with `withheld_by_shared_files`; dedupe uses hasOwnProperty. Final return on any halt: `status: blocked`, `epic_complete: false`, `ended_because: halted`, `halted_at_batch` = first halt, `halted_tickets`, `incomplete_tickets`, `unbuilt`, BO-300d-1 count. `files_touched` added to RECORD_READBACK_SCHEMA and read-back prompt in both twins. build-epic.js unchanged. No tracked build mirrors exist for these files, so build.py was not needed. The doc-enforcer and complexity-reduction skills could not be invoked (no Skill tool in this run); new Python has a full docstring and the loop is straight-line.
+
+Tests (strict, lfopen + lfposix): the ticket's file set 143 passed, 2 failed (both test_bo_3000a_3700_dispatch_defects handoff-target tests, identical on build-tooling-gate-record). Full unit_tests/workflows + prompt_assembly: 68 failing/erroring ids, an identical set to build-tooling-gate-record (diffed, empty). All 31 BO-100e-4 tests pass, including the guard.
+
+Ratchet (check_file_size): build-feature.js 2784 -> 2643 (limit allows 2643, added 141); build-ticket.js 1470 -> 1460 (added 10); worktree_repo_facts.py 221/400.
+
 ## Escalation
 
 Branch: none
@@ -476,3 +526,48 @@ Reason: no always-large trigger fired (no migration, hypertable, FastAPI or ADR 
 {"architectural_note":"see comment","acceptance_adjustments":["fold incomplete-member return into continue path","report staged_leftovers and unreadable reason","assert withheld tickets are not re-dispatched"],"escalation":"none","escalation_reason":"","suggested_adr":null,"suggested_diagrams":[]}
 ```
 
+
+### 2026-10-07 10:05 — pr-reviewer (status: ok)
+
+feedback-id: (submit-failed)
+
+No high-confidence findings. Verdict: ok to commit (F4 option A held; node --check passes on both twins).
+
+Medium:
+- [M-1] templates/workflows-js/build-feature.js:~3470-3500 (chunk loop) vs ~3585 (dirty read): the dirty read and the staged-leftovers stop run only after the WHOLE batch settles. A batch over BATCH_SIZE (12) is run as sequential chunks, so a ticket that halts in chunk 1 and leaves staged files does not stop chunk 2 tickets, whose commit phase could commit those staged files. Pre-existing batch shape, and documented ("dirty read happens only after they have settled"), but it is the one path where F4 option A does not stop a later ticket before it runs.
+- [M-2] build-feature.js:~3426: the shared-file check is an exact string match of files_touched against git paths, and a null/unreadable read-back or a reader that omits files_touched gives no overlap (documented as "not a failure"). Directory or glob entries and `./` forms never match. Fails open for overlap only; staged leftovers and unreadable dirty state still fail closed.
+
+Low (not blocking):
+- worktree_repo_facts.py worktree_dirty: a worktree-side rename/copy (` R`, intent-to-add) is not skipped as two fields; its old name is parsed as a bogus entry and lands in staged, which fails closed. `git status` may refresh index stat data; `--no-optional-locks` would make read-only literal.
+- `_run_git` now decodes utf-8 with errors=replace (was locale encoding, strict). Newline translation is unchanged. Other subcommands only gain correct non-ASCII paths.
+- KI-9 says a withheld ticket is not re-evaluated "because the leftovers persist", but the leftover set is replaced at later dirty reads, so a leftover can clear. Not re-driving is still the specified behaviour.
+
+Checks done: halted ticket verdict is recorded false (also withheld ones), so dependants, including transitive ones, are withheld via prerequisite state; the dedupe uses hasOwnProperty so a halted ticket is not re-driven in a later look; a null reply, readable !== true, non-array lists or a null realWorktreePath all stop the run; the leftover set is replaced, not unioned; a withheld-only batch does no read, which is safe because withheld tickets never ran; one final return (status blocked, epic_complete false, ended_because halted, halted_at_batch = first halt); incomplete_tickets kept; BO-300d-1 count de-duplicated once from one named set; the `detail` key on incomplete tickets is now `error`, with no reader found in templates/, scripts/, tests/ or unit_tests/ (test_empty_needed_phase_set_completion.py:123 reads detail OR error OR message). The legacy build-epic.js keeps its own halted return and is untouched. Ratchet: build-feature.js -141 lines, build-ticket.js -10; every AC or requirement id removed from a comment is still present elsewhere in its file; no executable line joined. Twin schemas agree: both gained the same optional files_touched array. Docs (building-epics, KI-9, component doc) match the implemented behaviour.
+
+### 2026-10-07 10:40 — test-runner (status: ok)
+
+feedback-id: (submit-failed)
+completion_manifest:
+  test_suite_executed: true
+  all_tests_passing:
+    result: false
+    reason: "Full step-2 run (workflows + prompt_assembly + build_orchestration, -n auto, strict, lfopen + lfposix): 53 failed, 1300 passed, 4 xfailed, 43 errors. The baseline worktree build-tooling-gate-record gives 50 failed, 1271 passed, 43 errors. All 95 failing/erroring nodes are pre-existing or flake; 0 are attributable to this ticket."
+    remediation: "None for this ticket. Pre-existing failures (93 nodes, identical in both worktrees: test_acd_2100*, test_inf_700a_5*, test_bo2400* errors, test_tq500f3* and others) belong to separate tickets."
+  failure_report_structured: true
+
+Counts:
+- Step 1 (ticket file set, 7 files incl. test_bo_100e_4_continue_past_halt, test_bo_100e_4_dirty_facts, test_bo_100e_1_i, test_unbuilt_work_count, test_epic_removed_work_verdict, test_epic_outcome_value_agreement, test_bo3900c, test_empty_needed_phase_set_completion): 74 passed, 23 subtests passed, 0 failed.
+- Step 2 here: 53 failed, 1300 passed, 4 xfailed, 43 errors (95 ids). Baseline: 50 failed, 1271 passed, 4 xfailed, 43 errors (93 ids).
+- worktree_repo_facts references: all in unit_tests/workflows (covered by step 2); none in tests/.
+- Split: attributable 0; pre-existing 93; flake 2 (test_tq500f3i_absence_red_refusal::TestGateFailClosed::test_red_baseline_gate_fails_when_any_declared_test_is_absence_only and test_tq500f3i_h1_kind_pairing_bug::TestH1aMixedDeclaredBatchWithBareAssert::test_h1a_declared_absence_plus_declared_bare_assert_in_one_batch; failed only here under -n auto, pass serially in both worktrees).
+- Real check: `worktree_repo_facts.py dirty .` returned readable true with the 7 staged ticket files and empty unstaged/untracked; against a non-repo temp dir returned readable false with empty lists (exit 0).
+
+### 2026-10-07 08:22 — commit (status: ok)
+
+feedback-id: (submit-failed)
+completion_manifest:
+  pre_commit_hooks_pass: true
+  commit_message_valid: true
+  ticket_staged: true
+
+Subject: fix(build-orchestration): continue an epic run past a halted ticket

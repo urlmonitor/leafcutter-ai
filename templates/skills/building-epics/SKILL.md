@@ -240,6 +240,8 @@ Both conditions must hold. The file-touch set is authoritative — it is populat
 - The commit-phase lock (§5) cannot be released after a child crash (lock-recovery requires user intervention).
 
 In all other blocker scenarios, the epic continues with the remaining independent tickets while the blocked ticket awaits user input. See §6.
+
+**Workflow driver (`build-feature.js`, BO-100e-4).** A halted ticket no longer ends the run. Later batches and looks still build every ticket that does not depend on it (transitively) and does not list a file it left modified in `files_touched`. Dependants are withheld (`withheld_by`) and tickets sharing a leftover file are withheld (`withheld_by_shared_files`); both appear in `unbuilt`. Only two further conditions stop the run early, because the commit agent commits whatever is staged: the halted ticket left **staged** changes (the stop names the paths), or the worktree's dirty state **could not be read** (fail closed). The run then ends with `status: "blocked"`, `epic_complete: false`, `ended_because: "halted"` and `halted_at_batch` set to the first halt. The legacy `build-epic.js` still halts the whole run at the first halt.
 ### §1.4 Worktree lifecycle — close-worktree prohibition
 
 `/build-feature` **MUST NOT** invoke `close-worktree`, `git worktree remove`, or
@@ -1103,7 +1105,7 @@ All four fields are required. The values are:
 
 > **`/build-feature` MAY continue processing other tickets in the current batch (and subsequent batches) while a blocked ticket waits for user input**, provided the remaining tickets do not depend on the blocked one (transitively, via either `depends_on` or `files_touched`).
 
-Equivalent phrasing: a single ticket's user-escalation does NOT halt the epic by default. The epic only halts when the §1.3 conditions are met (structural blocker, dependency-cycle invariant violation, or unrecoverable lock state).
+Equivalent phrasing: a single ticket's user-escalation does NOT halt the epic by default. The epic only halts when the §1.3 conditions are met (structural blocker, dependency-cycle invariant violation, or unrecoverable lock state). The workflow driver adds two stops of its own after a halted ticket: staged leftovers, and a worktree state that cannot be read (§1.3). Work behind the halted ticket (dependants, or tickets sharing files it left modified) is withheld and named in `unbuilt`; everything else still builds, and the final return never reports the epic complete.
 
 When the user replies and resolves the blocker, the supervisor flow is:
 

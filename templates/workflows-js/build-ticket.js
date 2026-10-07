@@ -207,31 +207,20 @@ const RECORD_READBACK_SCHEMA = {
         properties: {
           agent: { type: 'string' },
           status: { type: 'string' },
-          // handoff_target (BO-400e-1-i): present ONLY on an entry whose
-          // status is "handoff" — the name of the agent that entry's OWN
-          // comment text names as the recipient. The signoff skill requires
-          // a handoff comment to name who it is handing off to, so this is
-          // read FROM the comment, not supplied by any caller. Optional: an
-          // older record, or a reader that predates this field, simply
-          // omits it, and isHandoffResolved() treats an absent target as
-          // UNRESOLVED rather than falling back to any proxy — see that
-          // function's docstring.
+          // handoff_target (BO-400e-1-i): ONLY on a "handoff" entry, read FROM
+          // that comment's own text. Optional: an absent target is UNRESOLVED
+          // (see isHandoffResolved()), never replaced by a proxy.
           handoff_target: { type: 'string' },
         },
       },
     },
     signed_off_agents: { type: 'array', items: { type: 'string' } },
-    // failed_phases (BO-400e-1, pr-reviewer H-1, 2026-09-14): every agent in
-    // the frontmatter agents: map whose value is literally "failed" at this
-    // instant. Neither `needed_phases` (status is "failed", not "needed") nor
-    // `signed_off_agents` (a failed phase that left NO ## Comments heading —
-    // the documented BUG-23 self-report-vs-persisted-evidence divergence —
-    // has zero entries there) captures it, so a `failed`-with-no-comment
-    // phase silently dropped out of the demanded set entirely and the ticket
-    // could be recorded done having had a phase actively fail and leave no
-    // trace. See demandedPhasesFromRecord's header for the union this feeds.
+    // failed_phases (BO-400e-1, H-1): agents literally marked "failed" — no
+    // other list catches one with no ## Comments heading (BUG-23); see
+    // demandedPhasesFromRecord's header.
     // TWIN: mirrors build-feature.js RECORD_READBACK_SCHEMA. Keep in sync.
     failed_phases: { type: 'array', items: { type: 'string' } },
+    files_touched: { type: 'array', items: { type: 'string' } },
     error: { type: 'string' },
   },
   required: ['readable'],
@@ -1136,11 +1125,12 @@ async function readTicketRecordBack(recordPath) {
     `Do not infer, do not remember, do not trust any earlier report about this ticket — open the file. ` +
     `Report: "lifecycle_status" (the frontmatter status: value), "needed_phases" (every agent in the frontmatter agents: map whose value is "needed"), ` +
     `"failed_phases" (every agent in the frontmatter agents: map whose value is literally "failed" — report it even when that agent has no ## Comments heading at all), ` +
+    `"files_touched" (the frontmatter files_touched: list, as an array of paths verbatim, or [] if the key is absent), ` +
     `and "signoffs": one entry per sign-off heading in the ## Comments section, in the order they appear, as {"agent": "<name>", "status": "<status>"} ` +
     `(heading form: "### YYYY-MM-DD HH:MM — <agent> (status: <status>)"). List EVERY matching heading, including repeats — do not de-duplicate them. ` +
     `For any entry whose status is "handoff", ALSO report "handoff_target": "<name>" — the agent that entry's OWN comment text names as the one it is handing off to (the signoff skill requires a handoff comment to name its recipient in its own prose; report exactly who that comment names, verbatim). Omit the "handoff_target" key entirely on that entry if the comment does not name a recipient — do not guess one. ` +
     `If the record cannot be opened for any reason, return {"readable": false, "error": "<what went wrong>"} — an unreadable record is a real answer and will be treated as a failure, so never guess its contents. ` +
-    `Otherwise return {"readable": true, "ticket_path": "${recordPath}", "lifecycle_status": "...", "needed_phases": [...], "failed_phases": [...], "signoffs": [{"agent": "...", "status": "...", "handoff_target": "..."}, ...], "signed_off_agents": [...]}. ` +
+    `Otherwise return {"readable": true, "ticket_path": "${recordPath}", "lifecycle_status": "...", "needed_phases": [...], "failed_phases": [...], "files_touched": [...], "signoffs": [{"agent": "...", "status": "...", "handoff_target": "..."}, ...], "signed_off_agents": [...]}. ` +
     `Return ONLY the JSON object, no prose.`,
     {
       agentType: "status-checker",
