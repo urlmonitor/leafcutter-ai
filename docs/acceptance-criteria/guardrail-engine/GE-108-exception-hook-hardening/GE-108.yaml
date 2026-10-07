@@ -48,6 +48,7 @@ covered_by:
   - GE-108b
   - GE-108c
   - GE-108d
+  - GE-108e
 implemented_by: []
 change_target: code
 risk_surface: contract_boundary
