@@ -5,7 +5,7 @@ type: reference
 category: reference
 status: active
 created: '2026-08-18'
-last_updated: '2026-08-18'
+last_updated: '2026-10-07'
 components:
   - commit_guardian
 related_docs:
@@ -21,9 +21,9 @@ related_docs:
 > original grading is the `**Severity:**` line below, unchanged.
 
 - **Severity:** medium. PostToolUse cannot undo the write, so no work is lost. But every `.py` Write or Edit reports a blocking hook error with no text, the check it exists to run never runs, and an agent learns to ignore the error.
-- **Status:** open
-- **Occurrences:** every Python Write/Edit in one session on 2026-09-14 (dozens)
-- **First seen:** 2026-09-14 · **Last seen:** 2026-09-14
+- **Status:** open — **half fixed.** Defect 2 (the wrong stream) is resolved 2026-10-07 by PR #1038, covered by `GE-108d`. Defect 1 (the hook's view of ruff) is untouched and this entry stays open for it. See "Partial resolution" below before reading the fix direction, which was written when both halves were open.
+- **Occurrences:** every Python Write/Edit in one session on 2026-09-14 (dozens); reproduced again throughout 2026-10-07, where every Edit to the hook's own source — including the edits fixing it — emitted the same empty blocking error from the still-unbuilt deployed copy
+- **First seen:** 2026-09-14 · **Last seen:** 2026-10-07
 - **Where:** `.claude/hooks/check_exception_handling_hook.py`, in `_run_ruff()` (which invokes the bare `ruff` executable) and in `main()`'s `FileNotFoundError` branch (which `print()`s to stdout and then `sys.exit(2)`)
 
 **Symptom.** After each Python file write, the harness shows:
@@ -47,6 +47,12 @@ EXCEPTION HANDLING HOOK: ruff not found on PATH.
 2. **The wrong stream.** The hook writes its explanation, including the install instructions, to **stdout** and exits 2. For exit code 2, Claude Code surfaces **stderr** to the model. The message that would have explained the block is discarded, and what remains reads "No stderr output". The reader cannot tell a missing tool from a lint violation from a crash.
 
 **Fix direction.** Run ruff as `[sys.executable, "-m", "ruff", ...]`, falling back to the bare binary only if the module is absent. Send every blocking message (`_build_block_message` and `_build_ruff_not_found_message`) to `sys.stderr`. Add a test that runs the hook as a subprocess with ruff unavailable and asserts the exit code is non-zero *and* the stderr text names the missing tool. The test must not assert on stdout.
+
+**Partial resolution, 2026-10-07 (PR #1038, `GE-108d`).** The second half of that fix direction is done and the first half is not. Both blocking `print()` calls now pass `file=sys.stderr`, and the module docstring's hook-contract line — which had documented **stdout** as the correct channel, and is the reason the code was written this way — is corrected with it. Three tests were added that run the hook as a subprocess and read the two streams separately; each refusal arm asserts stderr carries the message **and** that stdout is empty, so an implementation writing to both cannot pass. Two pre-existing tests asserting on `result.stdout` encoded the defect and were moved to `result.stderr` in the same change. Proven by mutation: red with the fix reverted, green with it applied.
+
+**What remains open is defect 1, and it is the half that produced the original report.** `_run_ruff()` still invokes the bare `ruff` executable. On a machine where ruff is importable but has no console script on PATH — the Windows configuration this entry was first filed from — the hook still takes the `FileNotFoundError` branch and still blocks every Python write. The only change there is that the author can now *read* the install instruction instead of seeing an empty error. That is a real improvement to diagnosis and no improvement at all to the outcome: the check still never runs, and the advice it now successfully delivers ("pip install ruff") is advice the reader has already followed. Do not read the stderr fix as closing this entry.
+
+**A note on how the remaining half will look when it bites.** Because the message now arrives, the next report of this will not be "empty blocking error" — it will be "the hook insists ruff is not installed when it is". Same defect, unrecognisable symptom.
 
 **Pattern:** a guard whose failure message is written where its host never reads it, so a blocked action and an unexplained one look identical.
 
