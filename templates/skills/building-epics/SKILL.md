@@ -240,6 +240,8 @@ Both conditions must hold. The file-touch set is authoritative — it is populat
 - The commit-phase lock (§5) cannot be released after a child crash (lock-recovery requires user intervention).
 
 In all other blocker scenarios, the epic continues with the remaining independent tickets while the blocked ticket awaits user input. See §6.
+
+**Workflow driver (`build-feature.js`, BO-100e-4).** A halted ticket no longer ends the run. Later batches and looks still build every ticket that does not depend on it (transitively) and does not list a file it left modified in `files_touched`. Dependants are withheld (`withheld_by`) and tickets sharing a leftover file are withheld (`withheld_by_shared_files`); both appear in `unbuilt`. Only two further conditions stop the run early, because the commit agent commits whatever is staged: the halted ticket left **staged** changes (the stop names the paths), or the worktree's dirty state **could not be read** (fail closed). The run then ends with `status: "blocked"`, `epic_complete: false`, `ended_because: "halted"` and `halted_at_batch` set to the first halt. The legacy `build-epic.js` still halts the whole run at the first halt.
 ### §1.4 Worktree lifecycle — close-worktree prohibition
 
 `/build-feature` **MUST NOT** invoke `close-worktree`, `git worktree remove`, or
@@ -669,6 +671,18 @@ ticket, and inferring a target from it would re-dispatch an agent on a handoff t
 nobody deliberately. Every phase agent template must set `handoff_target` on the
 machine-parsed dispatch path for this reason — see `signoff` §3.
 
+A valid `handoff_target` does not end the run. The driver queues the target next, runs it
+through the normal phase loop (pointer block, test guard, red-baseline gate before a coder,
+record read-back), and re-queues the handing phase after it if that phase is still `needed`
+or `failed` in the record. Chains A→B→C re-queue B, then A. An epic ticket whose handoff
+resolves completes in the same run. The driver refuses, dispatching nobody and naming the
+case: a self-handoff, a target that is not a key in the ticket's `agents` map (a
+`not_needed` key is honoured), and a deferred target such as `pull-request`. Confirmation
+fails closed: the target must leave a new sign-off entry after the handoff, since an older
+passing entry does not count. Otherwise the ticket stops as `cross_agent` and no later phase
+runs. A repeated (from→to) pair, or a fourth handoff on one ticket, halts with
+classification `handoff_loop`, naming the chain.
+
 ### §2.3 Completion Manifest Validation (post-comment-parse step)
 
 After parsing the latest comment status tag (step 3 of the §2.1 pseudocode) and **before** routing on it (step 4), the ticket-supervisor MUST read the `completion_manifest:` YAML block in that comment body. The manifest format is defined in [`signoff` §2b](../signoff/SKILL.md) — this section describes only the **supervisory actions** taken based on its contents.
@@ -797,6 +811,7 @@ Every cap below is a hard ceiling enforced per-ticket. When exceeded, the superv
 |---|---|---|
 | **Coder respawn after own failure** (§3.1) | **1 per phase per ticket** | A second consecutive failure of the same coder agent on the same phase → fall through to §3.4. |
 | **Sibling respawn from review** (§3.2) | **1 per phase pair per ticket** | A "phase pair" is the (reviewer, coder) tuple, e.g. (pr-reviewer, python-coder). After one round-trip, a second blocker from the same reviewer against the same coder → fall through to §3.4. |
+| **Handoff continuation** (BO-3000a, workflow drivers) | **1 per (from→to) pair, 3 per ticket** | Honoured `handoff_target` re-dispatches. A repeat of a pair, or a fourth handoff, halts with classification `handoff_loop` naming the chain; no later phase runs. Counted by the drivers per drive, separate from the §3.2 sibling respawn. |
 | **test-failure rework** (BO-530-3-i) | **2 per ticket (configurable)** | When test-runner returns a blocker, the originating coder is re-dispatched for rework. After 2 rework attempts on the same ticket the loop is exhausted — fall through to §3.4. The default of 2 is configurable per-ticket via `test_failure_rework_cap:` in the ticket frontmatter; if absent, 2 applies. |
 | **brainstorm-lead invocations** (§3.3) | **1 per ticket** | A ticket gets at most one brainstorm. A second design-class blocker on the same ticket → fall through to §3.4 directly (do not spawn brainstorm-lead again). |
 | **Commit hook autofix loop** | inherited from `precommit-autofix` skill (1 retry) | Owned by the commit phase agent itself; supervisor does not retry commits. |
@@ -1090,7 +1105,7 @@ All four fields are required. The values are:
 
 > **`/build-feature` MAY continue processing other tickets in the current batch (and subsequent batches) while a blocked ticket waits for user input**, provided the remaining tickets do not depend on the blocked one (transitively, via either `depends_on` or `files_touched`).
 
-Equivalent phrasing: a single ticket's user-escalation does NOT halt the epic by default. The epic only halts when the §1.3 conditions are met (structural blocker, dependency-cycle invariant violation, or unrecoverable lock state).
+Equivalent phrasing: a single ticket's user-escalation does NOT halt the epic by default. The epic only halts when the §1.3 conditions are met (structural blocker, dependency-cycle invariant violation, or unrecoverable lock state). The workflow driver adds two stops of its own after a halted ticket: staged leftovers, and a worktree state that cannot be read (§1.3). Work behind the halted ticket (dependants, or tickets sharing files it left modified) is withheld and named in `unbuilt`; everything else still builds, and the final return never reports the epic complete.
 
 When the user replies and resolves the blocker, the supervisor flow is:
 

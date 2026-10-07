@@ -139,6 +139,10 @@ def _reference_argument(tokens: list[str]) -> tuple[str, str | None]:
         return subcommand, positional[0] if positional else None
     if subcommand == "branch-standing":
         return subcommand, _flag_value(tokens, "--repo")
+    if subcommand == "dirty":
+        # `dirty [repo]`: the worktree to inspect is the first positional.
+        positional = [t for t in tokens[2:] if not t.startswith("-")]
+        return subcommand, positional[0] if positional else None
     raise AssertionError(
         f"unrecognised worktree_repo_facts.py subcommand {subcommand!r}; teach "
         "this test where that subcommand's repository reference goes before "
