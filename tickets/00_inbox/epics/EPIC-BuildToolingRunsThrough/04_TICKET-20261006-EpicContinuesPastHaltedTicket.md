@@ -41,8 +41,8 @@ files_touched:
   - templates/skills/building-epics/SKILL.md
   - templates/skills/build-feature-ops-notes/SKILL.md
 agents:
-  architect-review: needed
-  test-writer: needed
+  architect-review: signed_off
+  test-writer: signed_off
   python-coder: needed
   llm-expert: needed
   test-runner: needed
@@ -268,12 +268,12 @@ tests:
 ## Implementation Tasks
 
 ### architect-review
-- [ ] Review the single-final-return shape (`halted_tickets`, `unbuilt`, `ended_because`, `halted_at_batch`) and confirm that every consumer of the old halted return still reads what it needs. Confirm the contamination guard and the fail-closed read.
+- [x] Review the single-final-return shape (`halted_tickets`, `unbuilt`, `ended_because`, `halted_at_batch`) and confirm that every consumer of the old halted return still reads what it needs. Confirm the contamination guard and the fail-closed read.
 
 ### test-writer
-- [ ] Add a dirty-facts label to the harness (`harness_build_ticket_guard.mjs`), answering from the scenario. A missing scenario value must not read as clean.
-- [ ] Write `unit_tests/workflows/test_bo_100e_4_continue_past_halt.py` (driver harness `epic_scenario`) and `unit_tests/workflows/test_bo_100e_4_dirty_facts.py` (real git).
-- [ ] Update fixtures whose premise changes:
+- [x] Add a dirty-facts label to the harness (`harness_build_ticket_guard.mjs`), answering from the scenario. A missing scenario value must not read as clean.
+- [x] Write `unit_tests/workflows/test_bo_100e_4_continue_past_halt.py` (driver harness `epic_scenario`) and `unit_tests/workflows/test_bo_100e_4_dirty_facts.py` (real git).
+- [x] Update fixtures whose premise changes:
   - `unit_tests/prompt_assembly/test_unbuilt_work_count.py`: its 19 "batch 3, which the halt never reaches" tickets must now depend on the failing ticket, so BO-300d-1's count of 20 still holds;
   - re-check `test_epic_removed_work_verdict.py:351-373`, `test_epic_outcome_value_agreement.py:279` and `unit_tests/workflows/test_bo3900c_unrecognised_path_refusal.py:50`;
   - fix the stale premise in `unit_tests/workflows/test_bo_100e_1_i.py`'s docstring (15-30).
@@ -317,3 +317,162 @@ tests:
 ## Comments
 
 _(Append-only log — leave blank when authoring.)_
+
+### 2026-10-06 15:37 — architect-review (status: ok)
+
+feedback-id: (submit-failed)
+
+**Classification: large (judgment; no always-large trigger fires).** 15 files, 2 components (build_orchestration, supervisor_system), the workflow's return contract changes, and this is the largest ticket in the epic. Reviewed against HEAD 119fca8e2 by reading the code directly (no research-agent fan-out; the surface is two files plus one helper). requires_adr stays false (see decisions). Line numbers below are build-feature.js at HEAD and will shift once tickets 01-03 land.
+
+**Findings (build-feature.js)**
+1. The run stops in THREE returns, not one. (a) The halted return, 3507-3662, guarded by `haltedTickets.length > 0 || withheldResults.length > 0`. (b) The incomplete-member return, about 3664-3725 (a ticket ran, was not `ticket_completed`, but was not halted; `ended_because: "halted"`, `incomplete_tickets`). (c) The final return, 3744-3796. The ticket text only names (a). Fold (b) into the same continue path, or the run still stops at the first unconfirmed ticket and AC-1 is not met. Keep the `incomplete_tickets` key in the final return (test_empty_needed_phase_set_completion.py:111 reads `incomplete_tickets` or `halted_tickets`).
+2. The guard fires on a WITHHELD ticket alone, not only on a halt, so a withheld dependant ends the run today. Under the new flow withheld and halted are both accumulated and the loop continues. `unbuiltSummary` is built per batch today; it must become a run-level accumulator.
+3. The accounting in the halted return (`cmpForHalt`, `notYetAttemptedPaths`, `unbuiltNamedPaths`, `unbuiltCount`, the message) should run once at the end over run-level accumulators, not be duplicated. Today the BO-400e-2 block (`succeededInBatch`) pushes a batch's successes into `completedBatches` only inside the halted branch, and the bottom `completedBatches.push` (about 3818) records the batch otherwise. With the halted branch no longer returning, record each batch exactly once (successes only), or the batch is double-counted.
+4. Dirty read. `repoFactsCall` (1614) dispatches `agentType: "status-checker"`; status-checker has Bash, and the helper already carries the other `worktree_repo_facts.py` subcommands (calls at 1624-1639). It returns null on a non-zero exit or unparseable output, which is the fail-closed marker needed. Caveats: (i) `phase: "Resolve Target"` is hard-coded in `repoFactsCall`; accept the mislabel (a new parameter costs lines). (ii) `realWorktreePath` can be null; treat that as unreadable and stop. (iii) The driver must require `readable === true` and array-typed `staged`/`unstaged`/`untracked`; null, a missing key or a non-array stops the run, and a missing key is never read as an empty list. (iv) Use label `worktree-dirty`. Ticket 05's F5 swap only touches guardrail cells and does not affect this dispatch.
+5. Dirty semantics. Read once per batch that contains a halted or incomplete ticket (after the whole batch has settled, not once per ticket). Staged non-empty on any read: stop and name the staged paths (add a field such as `staged_leftovers: [paths]`; keep `ended_because: "halted"`). Otherwise REPLACE the run-level leftover set with `unstaged + untracked` from that read (dirty state is whole-worktree: replace, do not union). Use `git status --porcelain -uall` so untracked directories expand to files, and handle rename entries (`R  old -> new`) and path normalisation in Python, not JS. H's own ticket-file and sign-off edits will show as dirty; harmless, since no `files_touched` lists a ticket file.
+6. Overlap check. The candidate's `files_touched` is available cheaply: `dependencyRecord = await readTicketRecordBack(...)` (3352ff) runs per ticket before the prerequisite loop, so the optional `files_touched` in RECORD_READBACK_SCHEMA (185-231) plus the prompt (1270ff) gives it. Intersect in JS against the run-level leftover set (a few lines). Same-batch siblings are never overlap-withheld (the planner already separates tickets sharing files), so `withheld_by_shared_files` only fires on a later batch or look. A read-back with no `files_touched` means no overlap is detectable; say so in the ops notes rather than treating it as failure.
+7. Dedupe at 3133: change `=== true` to `Object.prototype.hasOwnProperty.call(completedTicketOutcomes, normalized)`. Withheld tickets are also written into `completedTicketOutcomes` as `false` (3473/3486; `r.result` is null), so a withheld ticket is never re-evaluated in a later look either. Acceptable (leftovers persist, so the verdict would not change); document it in the ops notes. The planner prompt only receives the true-set (`completedBeforeThisLook`), so it re-offers H every look; this dedupe is what bounds the looks (BO-100e-2). Confirm the terminating-look `break` treats "offered but all deduped" as nothing new.
+8. Final return. `status: epicOutcomeStatus(finalRecheck)` (about 3752) derives from the recheck only. With any halt it must be forced to "blocked" with `epic_complete: false` (test_epic_outcome_value_agreement requires the outcome value never to read success when the completion verdict is withheld). The message, BO-300d-1 count line and `suggested_action` move from the old halted return. `halted_at_batch` is the first halt only. `ended_because` is "halted" with any halt or any stop for staged/unreadable state, and stays "no_further_work_eligible" otherwise.
+9. Interaction with ticket 02 (handoff continues the ticket). 02 changes the per-ticket drive (`driveTicketPhases`, build-ticket.js and the twin); the repeated-pair and loop-cap halts it keeps still arrive here as ordinary `halt/blocked` results, and 04 does not edit `driveTicketPhases`, so there is no logic overlap. The conflict risk is textual: RECORD_READBACK_SCHEMA and the read-back prompt, which 02 (handoff target confirmation) and 03 (the reader recording its own pass) may also edit. Land 04 last and rebase on those hunks. A ticket that now continues past a handoff runs more phases before halting, so it is more likely to leave staged changes; the F4 stop matters more, not less. No contradiction with the design.
+10. build-epic.js is not changed and diverges: templates/workflows-js/build-epic.js:480-504 still halts the whole run at the first halt. The documentation target build-epic-workflow-dispatch.md actually describes build-epic.js (title, mermaid, line 85), while the live epic driver is build-feature.js. See the diagram decision.
+
+**Existing tests: what changes, what stays**
+- Scripted `reads` (planner/recheck replies) assume a halt returns after one planner look and one recheck. After the change a halt is followed by another planner look (terminating, `{"batches": [], ...}` as in scenario_nothing_missing) and then the final recheck. Every halted fixture in these files needs an extra terminating-look read: mechanical, not semantic.
+- Must change: test_unbuilt_work_count.py (`drive_multi_batch_halt`: batch-3 tickets are independent today and must depend on the failing ticket so the count of 20 holds; docstrings at 24-36, 185, 249-258, 346). test_bo_100e_1_i.py docstring 15-30 (stale premise); its withhold-by-prerequisite tests (147-251) must pass unchanged and keep pinning the `completedTicketOutcomes` gate.
+- Must stay: test_epic_removed_work_verdict.py `site: "halted"` cases (351-373 want `halted_at_batch` on the payload; keep it; only the extra read changes). test_epic_outcome_value_agreement.py:279 (same check). BO-300a-5 and BO-300d-1: the count equals the named set; removed-work and discovered-after-planning partitions unchanged. test_bo3900c_unrecognised_path_refusal.py:50 reads `halted_tickets`; an unrecognised-path refusal is a `blocked` outcome and must stay in `halted_tickets`. Those tests must not start failing on the dirty read, so the harness needs an explicit clean default for scenarios that declare no dirty facts.
+- Harness: for the NEW tests, an absent dirty value must read as unreadable (never clean). For pre-existing halt fixtures, the default must keep their outcome. Resolve with one explicit scenario key (for example `dirty`), whose absence for legacy scenarios answers clean in the .mjs and whose explicit null marker answers unreadable. test-writer decides the exact form; both defaults must be tested.
+
+**Diagram and ADR decisions**
+- Diagram: yes. Update docs/architecture/components/build-epic-workflow-dispatch.md (agent_flow, L3-Component). It must show: after `batch_results`, a halt/withhold branch that accumulates halted, withheld and incomplete tickets; a decision `read dirty state once (worktree_repo_facts.py dirty, via status-checker)` with three exits: unreadable -> stop (reason named), staged non-empty -> stop (staged paths named), clean or unstaged/untracked only -> record leftovers and continue; the per-ticket eligibility step (dependants and shared-file overlap -> withheld, listed in `unbuilt`); the look dedupe (a ticket with a verdict is never re-driven); and one final return carrying halted/unbuilt/epic_complete false. Remove the `STOP — do not start next batch` node and the line-83 text. Because the doc is titled for `build-epic.js`, documentation-expert should rescope it to the live driver build-feature.js's epic loop (preferred; add build-feature.js to related_diagrams and note build-epic.js is the legacy halt-all variant), or state explicitly that the legacy script keeps halt-all. Do not leave the doc claiming both. Bump `last_updated`. suggested_diagrams: none new (existing file updated), so no next_diagram_seq run.
+- ADR: not needed. No new cross-cutting policy; it implements the approved BO-100e / BO-100e-4 and user decision F4 inside one workflow, and ADR-030's E2 constraint is honoured because the body reads nothing itself (an agent runs the helper). requires_adr: false stands.
+
+**File-size ratchet**
+The measure excludes block comments and docstrings but counts blank lines and `//` comments; every changed line counts as added. It fits if built as designed. Lines out: the halted return (3507-3662) is about 155 lines (roughly 60 are `//` comments) and the incomplete-member return about 60; replace both with run-level accumulators plus the existing final return. Lines in: schema field and prompt clause about 3, dirty read and decision about 18, overlap check about 8, dedupe 1 changed, accumulators and final-return fields about 15. Net is clearly negative once the two old returns go. Do not convert saved lines into long `//` blocks. build-ticket.js: the schema field and prompt clause add about 3 lines, which must be paid inside build-ticket.js: trim the 10+ line comment blocks on `handoff_target` and `failed_phases` in its RECORD_READBACK_SCHEMA without losing the contract statements. worktree_repo_facts.py (182/400) has room. Over-limit test files: put new scenarios only in the two new test files, shorten docstrings in the three existing ones as they are edited, and do not touch `_driver_harness.py`; handle the dirty label in the .mjs (873/1000, stay under 1000).
+
+**Acceptance adjustments**
+- AC-1/AC-5: treat incomplete-member tickets as halts for continuation; keep the `incomplete_tickets` key. AC-5 also carries `staged_leftovers` (paths) when the run stopped for staged state and a reason string when it stopped for an unreadable state.
+- AC-3: the dirty read happens once per batch containing a halt/incomplete ticket, after the batch settles; null, unparseable, non-array, missing-key and null-worktree-path all stop the run.
+- AC-4: also assert a withheld ticket is not re-dispatched in a later look.
+- AC-7: scope the architecture doc to the live driver (see diagram decision); ops notes also say a read-back without `files_touched` means no overlap detection, and that a same-batch parallel sibling's commit can sweep up H's staged files before the F4 check (pre-existing, out of scope).
+- Run `python scripts/build.py` and stage every mirror it changes.
+
+### 2026-10-07 07:45 — test-writer (status: ok)
+
+feedback-id: (submit-failed)
+completion_manifest:
+  tests_written_and_red_for_the_right_reason: true
+  existing_tests_adjusted_mechanically_only: true
+  cross_layer_seam_answer:
+    result: covered
+    producing_side: "templates/scripts/worktree_repo_facts.py `dirty` subcommand, run as a real subprocess against a real temporary git repository"
+    consuming_side: "templates/workflows-js/build-feature.js epic loop, executed under the driver harness (test_real_dirty_script_output_drives_the_epic_loop pipes the producer's real JSON into the real loop)"
+  reachability_entry_point_answer:
+    result: resolved
+    entry_point: "build-feature.js top-level body (workflow dispatch with args target=<epic folder>) run through unit_tests/prompt_assembly/harness_build_ticket_guard.mjs; and `python templates/scripts/worktree_repo_facts.py dirty <repo>` as a CLI subprocess"
+red_baseline:
+  - test_name: test_independent_later_batch_ticket_is_built_after_halt
+    file: unit_tests/workflows/test_bo_100e_4_continue_past_halt.py
+    error: "AssertionError: D was never dispatched; touched=['.../EPIC-Continue/01_a.md']"
+  - test_name: test_dependant_of_halted_ticket_is_withheld_and_names_it
+    file: unit_tests/workflows/test_bo_100e_4_continue_past_halt.py
+    error: "AssertionError: B missing from unbuilt: []"
+  - test_name: test_ticket_sharing_a_dirty_file_is_withheld[unstaged]
+    file: unit_tests/workflows/test_bo_100e_4_continue_past_halt.py
+    error: "AssertionError: E missing from unbuilt: []"
+  - test_name: test_ticket_sharing_a_dirty_file_is_withheld[untracked]
+    file: unit_tests/workflows/test_bo_100e_4_continue_past_halt.py
+    error: "AssertionError: E missing from unbuilt: []"
+  - test_name: test_staged_leftovers_stop_the_run_and_name_paths
+    file: unit_tests/workflows/test_bo_100e_4_continue_past_halt.py
+    error: "AssertionError: {\"completed_batches\": [], \"ended_because\": \"halted\", ... no staged_leftovers key}"
+  - test_name: test_unreadable_dirty_facts_stop_the_run[builder_default_is_unreadable]
+    file: unit_tests/workflows/test_bo_100e_4_continue_past_halt.py
+    error: "AssertionError: the return never says the worktree state could not be read: {\"completed_batches\": [], \"ended_because\": \"halted\", ...}"
+  - test_name: test_unreadable_dirty_facts_stop_the_run[null_marker]
+    file: unit_tests/workflows/test_bo_100e_4_continue_past_halt.py
+    error: "AssertionError: the return never says the worktree state could not be read: {...}"
+  - test_name: test_unreadable_dirty_facts_stop_the_run[unparseable_text]
+    file: unit_tests/workflows/test_bo_100e_4_continue_past_halt.py
+    error: "AssertionError: the return never says the worktree state could not be read: {...}"
+  - test_name: test_unreadable_dirty_facts_stop_the_run[readable_false]
+    file: unit_tests/workflows/test_bo_100e_4_continue_past_halt.py
+    error: "AssertionError: the return never says the worktree state could not be read: {...}"
+  - test_name: test_unreadable_dirty_facts_stop_the_run[missing_untracked_key]
+    file: unit_tests/workflows/test_bo_100e_4_continue_past_halt.py
+    error: "AssertionError: the return never says the worktree state could not be read: {...}"
+  - test_name: test_unreadable_dirty_facts_stop_the_run[staged_not_an_array]
+    file: unit_tests/workflows/test_bo_100e_4_continue_past_halt.py
+    error: "AssertionError: the return never says the worktree state could not be read: {...}"
+  - test_name: test_unreadable_dirty_facts_stop_the_run[no_readable_flag]
+    file: unit_tests/workflows/test_bo_100e_4_continue_past_halt.py
+    error: "AssertionError: the return never says the worktree state could not be read: {...}"
+  - test_name: test_absent_dirty_key_answers_clean_for_legacy_halt_fixtures
+    file: unit_tests/workflows/test_bo_100e_4_continue_past_halt.py
+    error: "AssertionError: a scenario with no dirty key should read clean: {\"completed_batches\": [], \"ended_because\": \"halted\", ...}"
+  - test_name: test_halted_ticket_is_not_redriven_in_a_later_look
+    file: unit_tests/workflows/test_bo_100e_4_continue_past_halt.py
+    error: "AssertionError: expected one further, terminating look; got 1"
+  - test_name: test_withheld_ticket_is_not_redispatched_or_rereported_in_a_later_look
+    file: unit_tests/workflows/test_bo_100e_4_continue_past_halt.py
+    error: "AssertionError: [] (unbuilt is empty; B was never evaluated)"
+  - test_name: test_final_return_carries_halt_fields_and_epic_incomplete
+    file: unit_tests/workflows/test_bo_100e_4_continue_past_halt.py
+    error: "AssertionError: unbuilt: [] (expected [B])"
+  - test_name: test_all_work_behind_failed_prerequisite_ends_without_claiming_done
+    file: unit_tests/workflows/test_bo_100e_4_continue_past_halt.py
+    error: "AssertionError: unbuilt: [] (expected B and C)"
+  - test_name: test_leftover_set_is_replaced_not_unioned_at_each_read
+    file: unit_tests/workflows/test_bo_100e_4_continue_past_halt.py
+    error: "AssertionError: one read per batch that halted"
+  - test_name: test_one_dirty_read_covers_every_halt_in_a_batch
+    file: unit_tests/workflows/test_bo_100e_4_continue_past_halt.py
+    error: "AssertionError: 0 reads for one batch"
+  - test_name: test_real_dirty_script_output_drives_the_epic_loop[staged]
+    file: unit_tests/workflows/test_bo_100e_4_continue_past_halt.py
+    error: "AssertionError: `dirty` failed: rc=2 ... argument command: invalid choice: 'dirty'"
+  - test_name: test_real_dirty_script_output_drives_the_epic_loop[unstaged]
+    file: unit_tests/workflows/test_bo_100e_4_continue_past_halt.py
+    error: "AssertionError: `dirty` failed: rc=2 ... argument command: invalid choice: 'dirty'"
+  - test_name: test_dirty_subcommand_reports_staged_unstaged_untracked
+    file: unit_tests/workflows/test_bo_100e_4_dirty_facts.py
+    error: "AssertionError: `dirty` printed no JSON object: rc=2 out='' err=\"... invalid choice: 'dirty'\""
+  - test_name: test_dirty_subcommand_outside_a_repo_reports_unreadable
+    file: unit_tests/workflows/test_bo_100e_4_dirty_facts.py
+    error: "AssertionError: `dirty` printed no JSON object: rc=2 ..."
+  - test_name: test_dirty_subcommand_reports_a_clean_repository_as_readable_and_empty
+    file: unit_tests/workflows/test_bo_100e_4_dirty_facts.py
+    error: "AssertionError: `dirty` printed no JSON object: rc=2 ..."
+  - test_name: test_dirty_subcommand_expands_untracked_directories_to_files
+    file: unit_tests/workflows/test_bo_100e_4_dirty_facts.py
+    error: "AssertionError: `dirty` printed no JSON object: rc=2 ..."
+  - test_name: test_dirty_subcommand_names_the_new_path_of_a_staged_rename
+    file: unit_tests/workflows/test_bo_100e_4_dirty_facts.py
+    error: "AssertionError: `dirty` printed no JSON object: rc=2 ..."
+  - test_name: test_dirty_subcommand_reports_a_file_staged_and_then_modified_in_both_lists
+    file: unit_tests/workflows/test_bo_100e_4_dirty_facts.py
+    error: "AssertionError: `dirty` printed no JSON object: rc=2 ..."
+  - test_name: test_dirty_subcommand_reports_awkward_filenames_unquoted[my file.txt]
+    file: unit_tests/workflows/test_bo_100e_4_dirty_facts.py
+    error: "AssertionError: `dirty` printed no JSON object: rc=2 ..."
+  - test_name: test_dirty_subcommand_reports_awkward_filenames_unquoted[caf\xe9.txt]
+    file: unit_tests/workflows/test_bo_100e_4_dirty_facts.py
+    error: "AssertionError: `dirty` printed no JSON object: rc=2 ..."
+  - test_name: test_dirty_subcommand_is_read_only
+    file: unit_tests/workflows/test_bo_100e_4_dirty_facts.py
+    error: "AssertionError: `dirty` printed no JSON object: rc=2 ..."
+
+Wrote 31 tests in two new files and left 30 red by assertion (0 errors); the 31st, `test_same_batch_sibling_sharing_the_leftover_file_is_not_withheld`, is `green_at_baseline (guard)` on purpose (a same-batch sibling runs before any leftover is known, so it must stay built and unreported; it is not in `red_baseline`).
+- Harness: `harness_build_ticket_guard.mjs` (907/1000 measured) gained a `worktree-dirty` label answered from `scenario["dirty"]` (absent key = clean for every pre-existing halt fixture; `null` = unreadable; string = unparseable; object = verbatim; array = one answer per read), a `dirty_reads` observation, and `files_touched` in the read-back record. `_driver_harness.py` is untouched; the new file's `drive()` always writes the key, so a missing `dirty=` becomes `null`, i.e. unreadable, never clean.
+- Existing tests, mechanical only (extra terminating-look read, batch-3 dependency, premise docstrings): `test_unbuilt_work_count.py` 467 -> 459 (batch-3 tickets now depend on the failing ticket; their stubs are declared so the gate can read them); `test_epic_removed_work_verdict.py` 715 -> 713 (two halted scenarios); `test_bo_100e_1_i.py` 383 (pair fixture + docstring). `test_epic_outcome_value_agreement.py` and `test_bo3900c_unrecognised_path_refusal.py` re-checked and left unchanged (no halted fixture / reads `halted_tickets`, which both stop and continue paths still fill). All pass against the CURRENT driver; they flip only where the ticket says so.
+- Validation: I built throwaway prototypes of the new loop and of the `dirty` subcommand in the scratchpad (never in the repo) and confirmed all 31 new tests and every adjusted file pass against them, and that union / fail-open-on-missing-flag / `=== true` dedupe mutations each turn a named test red. The incomplete-member return (architect finding 1) cannot be reached through the harness (every exit now reports a failure status), so it has no test of its own; the `halted_tickets` / `incomplete_tickets` key is read by `test_empty_needed_phase_set_completion.py`, which is unchanged and passes.
+- Contract the tests pin for python-coder: label `worktree-dirty`; command text contains `worktree_repo_facts.py dirty`; reply requires `readable === true` and array-typed `staged`/`unstaged`/`untracked`; unreadable stop says "could not be read" (or unreadable / cannot be read); staged stop sets `staged_leftovers: [paths]`; an overlapping ticket is withheld with `withheld_by_shared_files == [shared paths]` read from the record read-back's `files_touched`; the `dirty` subcommand prints one JSON object with `readable` and answers a non-repo as `readable: false` (exit 0), expands untracked directories, unquotes names, names a rename's new path, never mutates the index.
+
+## Escalation
+
+Branch: none
+Reason: no always-large trigger fired (no migration, hypertable, FastAPI or ADR contract change). Large by threshold (more than 5 files, 2 components, return-contract change), handled inline: one workflow loop plus one helper script; no Opus escalation needed.
+
+```json
+{"architectural_note":"see comment","acceptance_adjustments":["fold incomplete-member return into continue path","report staged_leftovers and unreadable reason","assert withheld tickets are not re-dispatched"],"escalation":"none","escalation_reason":"","suggested_adr":null,"suggested_diagrams":[]}
+```
+

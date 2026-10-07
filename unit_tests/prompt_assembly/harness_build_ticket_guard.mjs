@@ -145,6 +145,16 @@
  * Without this mode the flag is always present and always agrees with the
  * outcome, so a fail-open re-check and a fail-closed one are indistinguishable.
  *
+ * DIRTY-STATE READ (BO-100e-4)   label: "worktree-dirty"
+ *                         reply: the repo-facts envelope { output, exit_code }.
+ *                         Answered from scenario.dirty — an ABSENT key answers
+ *                         CLEAN (so every pre-existing halt fixture keeps its
+ *                         outcome); explicit null answers UNREADABLE (non-zero
+ *                         exit); a string is served as raw (unparseable) output;
+ *                         an object is served verbatim as JSON; an array answers
+ *                         one entry per read, the last repeated. Every read is
+ *                         recorded in the `dirty_reads` output array.
+ *
  * Any other label is treated as a phase-agent dispatch — that is what the
  * `dispatched` array measures.
  * ---------------------------------------------------------------------------
@@ -234,6 +244,7 @@ const readbacks = [];
 const writes = [];
 const enumerations = [];
 const planReplies = [];
+const dirtyReads = [];
 const logs = [];
 const unreadableOnce = new Set(); // BO-3000a: one-shot unreadable read-backs
 const attemptCounts = {}; // "<ticket>::<phase>" -> n
@@ -310,6 +321,13 @@ function parseRecord(path) {
       }
       dependsOn.push(value);
     }
+  }
+
+  const filesTouched = [];
+  const filesTouchedBlock = frontmatter.match(/^files_touched:\n((?:^-[^\n]*\n?)*)/m);
+  for (const line of filesTouchedBlock ? filesTouchedBlock[1].split("\n") : []) {
+    const m = line.match(/^-\s*(.+?)\s*$/);
+    if (m) filesTouched.push(m[1].replace(/^(["'])(.*)\1$/, "$2"));
   }
 
   // handoff_target (BO-400e-1-i): an OPTIONAL line in a signoff's own comment
@@ -413,6 +431,7 @@ function parseRecord(path) {
     // because demandedPhasesFromRecord's union has nothing to union in.
     failed_phases: Object.keys(agents).filter((a) => agents[a] === "failed"),
     depends_on: dependsOn,
+    files_touched: filesTouched,
     implementation_task_agents: implementationTaskAgents,
     signoffs,
     signed_off_agents: signoffs.map((s) => s.agent),
@@ -761,6 +780,17 @@ async function agent(prompt, opts = {}) {
       }),
       exit_code: 0,
     };
+  }
+
+  // BO-100e-4: the dirty-state read; absent scenario.dirty = clean, null = unreadable.
+  if (label === "worktree-dirty") {
+    const spec = scenario.dirty;
+    const one = Array.isArray(spec) ? spec[Math.min(dirtyReads.length, spec.length - 1)] : spec;
+    dirtyReads.push({ prompt: String(prompt) });
+    if (one === null) return { output: "", exit_code: 128 };
+    if (typeof one === "string") return { output: one, exit_code: 0 };
+    const clean = { readable: true, staged: [], unstaged: [], untracked: [] };
+    return { output: JSON.stringify(one === undefined ? clean : one), exit_code: 0 };
   }
 
   // BO-4000: the "name a new location" branch's own repo-facts checks. Every
@@ -1144,6 +1174,7 @@ console.log(
     writes,
     enumerations,
     plan_replies: planReplies,
+    dirty_reads: dirtyReads,
     logs,
     records,
     result,
