@@ -35,11 +35,6 @@ import re
 
 import yaml
 
-from _ac_store_locator import ensure_ac_store_on_syspath
-
-ensure_ac_store_on_syspath()
-from yaml_safe_loader import get_safe_yaml_loader
-
 # ---------------------------------------------------------------------------
 # Raw-text block extraction
 # ---------------------------------------------------------------------------
@@ -123,7 +118,13 @@ def _parse_seam_answer_occurrence(
 
     text = "cross_layer_seam_answer:\n" + "\n".join(body_lines)
     try:
-        parsed = yaml.load(text, Loader=get_safe_yaml_loader())
+        # Reverted to the pure-Python loader (loader-audit, TQ-600a-11
+        # fix-pass, 2026-10-07): already SAFE either way (this check's
+        # fail-open path was independently confirmed to converge on the
+        # stricter outcome, not silent approval), but had no measured speed
+        # case -- one small nested block per staged ticket. Reverted for
+        # consistency.
+        parsed = yaml.load(text, Loader=yaml.SafeLoader)
     except yaml.YAMLError:
         return {}
     if not isinstance(parsed, dict):

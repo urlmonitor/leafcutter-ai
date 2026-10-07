@@ -103,14 +103,18 @@ def _parse_frontmatter(content: str) -> dict | None:
     # yaml.YAMLError cannot be named once `import yaml` itself has failed.
     try:
         import yaml
-
-        sys.path.insert(0, str(Path(__file__).resolve().parent / "ac_store"))
-        from yaml_safe_loader import get_safe_yaml_loader
     except ImportError:
         return _frontmatter_by_regex(yaml_block)
 
     try:
-        parsed = yaml.load(yaml_block, Loader=get_safe_yaml_loader())
+        # Reverted to the pure-Python loader (loader-audit, TQ-600a-11
+        # fix-pass, 2026-10-07): on a parse failure this falls through to a
+        # regex-based fallback parser that is NOT guaranteed to agree with
+        # the full parse on the same malformed input -- which parser "wins"
+        # changes the depends_on/priority/status used for ticket selection.
+        # A more permissive loader shifts which inputs take which path. No
+        # measured whole-tree volume justifies the risk either.
+        parsed = yaml.load(yaml_block, Loader=yaml.SafeLoader)
     except yaml.YAMLError:
         return _frontmatter_by_regex(yaml_block)
 

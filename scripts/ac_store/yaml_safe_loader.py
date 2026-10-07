@@ -1,18 +1,45 @@
 """
 MODULE: yaml_safe_loader
-GOAL: Give every reader of the acceptance-criteria store (and every other
-    first-party YAML reader in this package) one shared accessor that picks
-    PyYAML's C-backed safe loader when it is available and falls back to the
-    pure-Python one when it is not -- instead of each of the 70+ call sites
-    naming ``yaml.safe_load`` directly.
+GOAL: Give the FEW YAML readers in this package that genuinely earn it --
+    readers that parse a large, bounded chunk of the AC store often enough
+    for the parser choice to matter, never gate a commit-guardian hook or CI
+    check, and carry no equivalence contract with the pure-Python parser --
+    one shared accessor that picks PyYAML's C-backed safe loader when
+    available and falls back to the pure-Python one when it is not.
+
+    NARROWED SCOPE (loader-audit, TQ-600a-11 fix-pass, 2026-10-07): this
+    module originally migrated ~113 call sites across 67 files. A systematic
+    audit found 12+ real defects from that wholesale migration -- cases where
+    CSafeLoader's permissiveness on malformed YAML (see the DECISION HISTORY
+    below) silently defeated a guardrail's error-path detection, or where a
+    fallback/equivalence contract assumed byte-for-byte agreement with
+    ``yaml.safe_load`` that CSafeLoader does not always honour. Every call
+    site was re-examined against four criteria (measured benefit; no
+    error-path dependence on a safety-relevant outcome; no equivalence
+    contract with the pure-Python parser; not a guardrail decision point),
+    and ALL FOUR had to hold for the site to keep the accessor. The outcome:
+    only ONE caller still uses it --
+    ``scripts/generate_agent_cards.py``'s ``_scan_ac_assignments`` /
+    ``_scan_all_ac_assignments`` (a single whole-AC-store walk run once per
+    `build.py` invocation, never gating, no equivalence claim; measured on
+    the real store at ~1.7-2.1s via the accessor vs ~20.6-22.7s forced
+    pure-Python across two sittings, ~10-13x). Every other former call site,
+    including the one this module's own headline number below was measured
+    on (``validate_ac_schema.py``, the required "AC store valid" gate), has
+    been reverted to ``yaml.SafeLoader`` directly. This module itself is
+    unchanged and remains the right tool for a FUTURE call site that earns
+    it the same way -- the empirically-derived divergence documentation
+    below is the main reason to keep it rather than delete it outright. See
+    /home/henzeh/tq600a1-backup/narrow_report.md for the full per-site
+    accounting.
 BUSINESS CONTEXT: Measured over the real 4,635-file AC store on 2026-10-05: a
     full sweep with the pure-Python safe parser takes 24.68s; the identical
-    sweep through ``yaml.CSafeLoader`` takes 1.86s -- a 13.25x difference. The
-    two headline consumers of a full sweep -- the required "AC store valid"
-    pull-request gate (``validate_ac_schema.py``) and a ticket-generation dry
-    run -- each spend about 95% of their wall-clock time inside the parser.
-    The store only grows (3,340 records in August 2026, 4,635 in October), so
-    this cost compounds every month it is deferred.
+    sweep through ``yaml.CSafeLoader`` takes 1.86s -- a 13.25x difference.
+    This number motivated the original migration, but the specific site it
+    was measured on (``validate_ac_schema.py``) is no longer on the fast
+    accessor -- see NARROWED SCOPE above. It is retained here as the
+    historical record of the magnitude of the effect this module produces
+    when a call site's volume and safety profile genuinely warrant it.
 ARCHITECTURE: A single, uncached accessor module, generalising the one
     existing in-repo precedent at scripts/render_effective_prompt.py:57
     (``_YAML_LOADER = getattr(yaml, "CSafeLoader", yaml.SafeLoader)``). Three

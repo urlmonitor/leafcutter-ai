@@ -267,26 +267,19 @@ def _load_yaml_minimal_fallback(content: str) -> dict | None:
 def _load_yaml_safe(content: str, source_label: str) -> dict | None:
     """Parse a YAML string, returning a dict or None on failure.
 
-    Two genuinely different failure modes are distinguished here, where an
-    earlier version of this function conflated them under one
-    ``except ImportError``:
-
-    1. PyYAML itself is not importable at all. This is the documented
-       DEGRADED mode: fall back to :func:`_load_yaml_minimal_fallback`,
-       which cannot parse list-valued fields correctly but is the best
-       available without PyYAML.
-    2. PyYAML IS importable, but the shared fast-accessor sibling
-       (``_ac_store_locator`` / ``yaml_safe_loader``) is not reachable from
-       this deployment -- e.g. a minimal hook-only install that ships only
-       this file and ``ac_parent_id.py`` (``unit_tests/portability/
-       test_ge_120a_1.py`` builds exactly this layout on purpose). PyYAML
-       being present means full-fidelity parsing is available; this must
-       NOT silently degrade to the line-based fallback, which cannot read
-       list-valued fields (e.g. ``covered_by: [ACS-100a, ACS-100b]``) and
-       so would let real parent/covered_by violations go undetected. Parse
-       via plain ``yaml.SafeLoader`` instead -- the fast accessor is a
-       performance optimisation, not a correctness requirement, so losing
-       it only costs speed, never fidelity.
+    Reverted to plain ``yaml.SafeLoader`` (loader-audit, TQ-600a-11 fix-pass,
+    2026-10-07). This function previously routed through the shared
+    ``yaml_safe_loader`` fast-accessor sibling when reachable, with a
+    documented fallback to ``yaml.SafeLoader`` for a minimal hook-only
+    deployment where the accessor is absent. That accessor path is removed
+    entirely now: this hook backs a required AC-store gate
+    (``check-ac-parent-covered-by``), and CSafeLoader's permissiveness on
+    separator-position tabs lets a malformed ``covered_by``/parent file parse
+    "successfully" instead of raising -- the exact shape that let real
+    parent/covered_by violations go undetected elsewhere in this audit. Only
+    the genuine PyYAML-absent case still degrades, to
+    :func:`_load_yaml_minimal_fallback`, which cannot parse list-valued
+    fields correctly but is the best available without PyYAML.
 
     Args:
         content: Raw YAML string.
@@ -306,26 +299,8 @@ def _load_yaml_safe(content: str, source_label: str) -> dict | None:
         )
         return _load_yaml_minimal_fallback(content)
 
-    loader = yaml.SafeLoader
     try:
-        from _ac_store_locator import ensure_ac_store_on_syspath
-
-        ensure_ac_store_on_syspath()
-        from yaml_safe_loader import get_safe_yaml_loader
-
-        loader = get_safe_yaml_loader()
-    except ImportError as exc:
-        # PyYAML is present; only the fast-accessor sibling is unreachable
-        # from this deployment. Stay on full-fidelity yaml.SafeLoader rather
-        # than falling through to the line-based parser -- see docstring.
-        print(
-            f"{_HOOK_PREFIX} WARNING: yaml_safe_loader accessor unavailable "
-            f"({exc}); parsing {source_label} via plain yaml.SafeLoader",
-            file=sys.stderr,
-        )
-
-    try:
-        data = yaml.load(content, Loader=loader)
+        data = yaml.load(content, Loader=yaml.SafeLoader)
         return data if isinstance(data, dict) else None
     except yaml.YAMLError as exc:
         print(

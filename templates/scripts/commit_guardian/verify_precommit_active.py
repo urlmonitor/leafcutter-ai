@@ -108,11 +108,6 @@ def check_b_config() -> bool:
     """
     import yaml  # noqa: PLC0415
 
-    from _ac_store_locator import ensure_ac_store_on_syspath
-
-    ensure_ac_store_on_syspath()
-    from yaml_safe_loader import get_safe_yaml_loader
-
     cwd = Path.cwd()
     config_path = _resolve_config_path(cwd)
     if config_path is None:
@@ -126,7 +121,13 @@ def check_b_config() -> bool:
         return False
 
     try:
-        parsed = yaml.load(content, Loader=get_safe_yaml_loader())
+        # Reverted to the pure-Python loader (loader-audit, TQ-600a-11
+        # fix-pass, 2026-10-07): this diagnostic self-check's error path
+        # decides whether an agent is told the pre-commit config is healthy
+        # or broken -- a false "fine" here could make an agent trust a
+        # broken guardrail setup. One small config file read once per check
+        # -- no speed case for the fast loader here.
+        parsed = yaml.load(content, Loader=yaml.SafeLoader)
     except yaml.YAMLError as exc:
         _log.warning("check_b_config: YAML parse error in %s: %s", config_path, exc)
         return False

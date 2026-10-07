@@ -60,13 +60,21 @@ DECISION HISTORY:
     (_ac_store_index.get_ac_index(), consumed by four commit-guardian hooks),
     so the extra cost is paid once per commit that touches any AC YAML file
     (whichever hook runs first triggers the rebuild; the other three hit the
-    disk cache), not four times. It is NOT the PR's headline 13.25x measurement:
-    the required "AC store valid" gate (scripts/ac_store/validate_ac_schema.py)
-    and check_ac_schema.py's own per-staged-file validation both call
-    yaml.load(..., Loader=get_safe_yaml_loader()) directly and are UNCHANGED by
-    this revert -- only the shared full-store index's single parse helper moved
-    back to pure-Python. Every other call site in this package stays on the
-    fast accessor; this is the one intentional, documented exception.
+    disk cache), not four times.
+  - 2026-10-07 [SUPERSEDES the two sentences this entry replaces]: the entry
+    above originally went on to say that the required "AC store valid" gate
+    (scripts/ac_store/validate_ac_schema.py) still called the fast accessor
+    directly, was UNCHANGED by this revert, and that "every other call site in
+    this package stays on the fast accessor". All three claims are now FALSE
+    and are struck rather than left to mislead. A subsequent whole-PR narrowing
+    reverted 83 call sites across 61 files -- including validate_ac_schema.py
+    itself -- leaving exactly TWO accessor call sites in the entire package,
+    both in scripts/generate_agent_cards.py's whole-AC-store walk, which is the
+    only site that passed a measured-benefit test. So this file's revert is no
+    longer "the one intentional exception"; it is one of many, and the headline
+    13.25x figure no longer describes any gate. Recorded here because a
+    DECISION HISTORY that asserts a state the code has since left is the same
+    defect class this session spent the day removing elsewhere.
 """
 
 from __future__ import annotations

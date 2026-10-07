@@ -11,8 +11,20 @@ ARCHITECTURE: Single public entry point `generate_card()` returns a complete
     card markdown string for one agent. Section-rendering helpers (one per
     card section) encapsulate the rendering logic for each block. A top-level
     `build_agent_cards()` function drives the full-tree pass for `build.py`.
-    YAML frontmatter is parsed through the shared fast-vs-pure-Python
-    accessor (scripts/ac_store/yaml_safe_loader.py). All file I/O is
+    YAML parsing is split (loader-audit, TQ-600a-11 fix-pass, 2026-10-07):
+    `_parse_frontmatter` (one small agent-template frontmatter block at a
+    time, dozens of files) uses the pure-Python `yaml.SafeLoader` directly --
+    no speed case at that volume. `_scan_ac_assignments` /
+    `_scan_all_ac_assignments` (a single whole-AC-store walk per build,
+    thousands of files) keep the shared fast accessor
+    (scripts/ac_store/yaml_safe_loader.py): measured on the real store,
+    ~1.7-2.1s via the accessor vs ~20.6-22.7s forced pure-Python across two
+    sittings (~10-13x, consistent with this file's own 2026-08-12 DECISION
+    HISTORY entry sizing the walk at "~16s vs ~775s" before the accessor
+    existed), output is byte-identical on the real store in every run, this
+    path never gates a commit or CI check (pure documentation generation),
+    and nothing asserts its parse must agree with `yaml.safe_load` as a
+    reference implementation. All file I/O is
     wrapped in `try/except OSError`. Hyperlink helpers convert doc_links and
     knowledge_channel sources that resolve to real files into relative Markdown
     links from the card output path. doc_links entries that reference files not
@@ -91,7 +103,18 @@ def _parse_frontmatter(template_text: str) -> dict[str, Any]:
         return {}
     fm_text = "\n".join(lines[1:end_idx])
     try:
-        parsed = yaml.load(fm_text, Loader=get_safe_yaml_loader())
+        # Reverted to the pure-Python loader (loader-audit, TQ-600a-11
+        # fix-pass, 2026-10-07): a parse failure here degrades to {} for
+        # this one agent template, the same KI-BP-019 "silent degrade"
+        # shape documented in template_compiler.py (already reverted). One
+        # small frontmatter block per agent template (dozens of files, not
+        # thousands) -- no speed case for the fast loader at this volume.
+        # NOTE: this file's OTHER two call sites
+        # (_scan_ac_assignments/_scan_all_ac_assignments below) DO keep the
+        # fast accessor -- see their own docstrings for the measured,
+        # whole-AC-store justification. See this module's own docstring for
+        # the split.
+        parsed = yaml.load(fm_text, Loader=yaml.SafeLoader)
     except yaml.YAMLError as exc:
         _log.warning("YAML parse error in frontmatter: %s", exc)
         return {}
@@ -598,6 +621,10 @@ def _scan_ac_assignments(
         List of ``{"id": ..., "title": ..., "assigned_agent": ...}`` dicts
         for each matching active AC, sorted by AC ``id``.  Empty list when
         the AC store directory does not exist or no matching ACs are found.
+
+    KEPT on the fast accessor (loader-audit, TQ-600a-11 fix-pass,
+    2026-10-07) -- see this module's own docstring for the measured
+    whole-AC-store justification shared with :func:`_scan_all_ac_assignments`.
     """
     ac_dir = docs_root / "docs" / "acceptance-criteria"
     if not ac_dir.exists():
@@ -655,6 +682,18 @@ def _scan_all_ac_assignments(
     Returns:
         Mapping of agent id to its list of matching active AC dicts.  Empty
         mapping when the AC store directory does not exist.
+
+    KEPT on the fast accessor (loader-audit, TQ-600a-11 fix-pass,
+    2026-10-07). This is the one call site in this file where the fast
+    accessor earns its keep: a single whole-AC-store walk, run once per
+    `build.py` invocation. Measured on the real on-disk store (two sittings,
+    this host): fast-accessor ~1.7-2.1s vs forced-pure-Python ~20.6-22.7s
+    (~10-13x), output byte-identical both times. A parse failure here
+    degrades a single AC out of one agent's "AC Assignments" documentation
+    section -- it never gates a commit-guardian hook or CI check, and
+    nothing asserts this parse must agree with `yaml.safe_load` as a
+    reference implementation, so none of the three disqualifying criteria
+    from the loader audit apply.
     """
     ac_dir = docs_root / "docs" / "acceptance-criteria"
     grouped: dict[str, list[dict[str, Any]]] = {}

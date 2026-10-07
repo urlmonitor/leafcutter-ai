@@ -17,11 +17,6 @@ from pathlib import Path
 
 import yaml
 
-from _ac_store_locator import ensure_ac_store_on_syspath
-
-ensure_ac_store_on_syspath()
-from yaml_safe_loader import get_safe_yaml_loader
-
 from _resolve_root import find_project_root
 
 _project_root = find_project_root()
@@ -221,7 +216,14 @@ def _parse_frontmatter(content: str) -> dict | None:
         return None
     raw = content[3:end].strip()
     try:
-        parsed = yaml.load(raw, Loader=get_safe_yaml_loader())
+        # Reverted to the pure-Python loader (loader-audit, TQ-600a-11
+        # fix-pass, 2026-10-07): backs the required check-ticket-signoff-
+        # parity gate. A parse failure here is an explicit BLOCK ("could not
+        # parse YAML frontmatter"), so a more permissive parser can turn a
+        # legitimate block into a pass -- the same shape as the already-fixed
+        # validate_ac_schema.py/validate_ac.py sites. Staged-ticket volume
+        # per commit is small -- no speed case for the fast loader here.
+        parsed = yaml.load(raw, Loader=yaml.SafeLoader)
     except yaml.YAMLError:
         return None
     return parsed if isinstance(parsed, dict) else None

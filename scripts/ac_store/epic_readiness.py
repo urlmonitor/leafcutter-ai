@@ -31,8 +31,6 @@ from pathlib import Path
 
 import yaml
 
-from yaml_safe_loader import get_safe_yaml_loader
-
 from epic_runtime import get_logger
 
 # ---------------------------------------------------------------------------
@@ -59,8 +57,13 @@ def _index_store_by_ac_id(store_root: Path) -> dict[str, Path]:
     try:
         for yaml_path in store_root.rglob("*.yaml"):
             try:
+                # Reverted (loader-audit, TQ-600a-11 fix-pass, 2026-10-07):
+                # this index feeds epic build-readiness lookups; a silently
+                # excluded AC reads as "not found" rather than a real
+                # readiness failure. No measured benefit established either
+                # (criterion 1).
                 with open(yaml_path, encoding="utf-8") as fh:
-                    data = yaml.load(fh, Loader=get_safe_yaml_loader())
+                    data = yaml.load(fh, Loader=yaml.SafeLoader)
             except (yaml.YAMLError, OSError) as exc:
                 _log.warning("Skipping unreadable YAML %s: %s", yaml_path, exc)
                 continue
@@ -87,8 +90,10 @@ def _read_readiness(yaml_path: Path) -> str:
         read or parsed, does not parse to a mapping, or has no readiness field.
     """
     try:
+        # Reverted (loader-audit, TQ-600a-11 fix-pass, 2026-10-07): same
+        # reasoning as _index_store_by_ac_id above.
         with open(yaml_path, encoding="utf-8") as fh:
-            data = yaml.load(fh, Loader=get_safe_yaml_loader())
+            data = yaml.load(fh, Loader=yaml.SafeLoader)
     except (yaml.YAMLError, OSError):
         return "unknown"
     if isinstance(data, dict):

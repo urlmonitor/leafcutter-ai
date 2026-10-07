@@ -68,9 +68,6 @@ from typing import Any
 
 import yaml
 
-sys.path.insert(0, str(Path(__file__).resolve().parent / "ac_store"))
-from yaml_safe_loader import get_safe_yaml_loader  # noqa: E402
-
 _log = logging.getLogger(__name__)
 
 
@@ -494,9 +491,14 @@ def check_knowledge_routing_wiring_guard(output_root: Path) -> int:
         return 0
 
     try:
+        # Reverted to the pure-Python loader (loader-audit, TQ-600a-11
+        # fix-pass, 2026-10-07): a parse failure here returns 1, aborting
+        # the build -- a guardrail decision point (criterion 4). Single
+        # config file read once per build -- no speed case for the fast
+        # loader here.
         guardrail_config = yaml.load(
             guardrail_config_path.read_text(encoding="utf-8"),
-            Loader=get_safe_yaml_loader(),
+            Loader=yaml.SafeLoader,
         ) or {}
     except (OSError, yaml.YAMLError) as exc:
         print(

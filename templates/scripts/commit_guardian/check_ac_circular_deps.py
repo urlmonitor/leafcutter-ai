@@ -167,13 +167,15 @@ def _load_yaml_safe(content: str, source_label: str) -> dict | None:
     try:
         import yaml  # type: ignore[import]
 
-        from _ac_store_locator import ensure_ac_store_on_syspath
-
-        ensure_ac_store_on_syspath()
-        from yaml_safe_loader import get_safe_yaml_loader
-
         try:
-            data = yaml.load(content, Loader=get_safe_yaml_loader())
+            # Reverted to the pure-Python loader (loader-audit, TQ-600a-11
+            # fix-pass, 2026-10-07): a parse failure here means the AC is
+            # silently excluded from the depends_on graph, so a more
+            # permissive parser only narrows cycle detection. Volume per
+            # commit is the staged files plus a cached whole-store read via
+            # _ac_store_index (already reverted at its own call site) -- no
+            # independent speed case for the fast loader at this call site.
+            data = yaml.load(content, Loader=yaml.SafeLoader)
             return data if isinstance(data, dict) else None
         except yaml.YAMLError as exc:
             print(

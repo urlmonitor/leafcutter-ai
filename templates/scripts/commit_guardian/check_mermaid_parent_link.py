@@ -46,11 +46,6 @@ from typing import Optional
 
 import yaml
 
-from _ac_store_locator import ensure_ac_store_on_syspath
-
-ensure_ac_store_on_syspath()
-from yaml_safe_loader import get_safe_yaml_loader
-
 REPO_ROOT = Path(__file__).resolve().parents[2]
 
 # ---------------------------------------------------------------------------
@@ -124,7 +119,13 @@ def _parse_frontmatter(content: str) -> Optional[dict]:
     if end == -1:
         return None
     try:
-        return yaml.load(content[3:end], Loader=get_safe_yaml_loader()) or {}
+        # Reverted to the pure-Python loader (loader-audit, TQ-600a-11
+        # fix-pass, 2026-10-07): a parse failure here means "skip the
+        # parent/child link requirement entirely", so a loader that is more
+        # permissive than SafeLoader only narrows that requirement. One small
+        # frontmatter block per staged diagram -- no speed case for the fast
+        # loader at this volume.
+        return yaml.load(content[3:end], Loader=yaml.SafeLoader) or {}
     except yaml.YAMLError:
         return None
 

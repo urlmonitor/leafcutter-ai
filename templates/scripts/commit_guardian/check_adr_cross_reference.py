@@ -57,11 +57,6 @@ from pathlib import Path
 
 import yaml
 
-from _ac_store_locator import ensure_ac_store_on_syspath
-
-ensure_ac_store_on_syspath()
-from yaml_safe_loader import get_safe_yaml_loader
-
 # ---------------------------------------------------------------------------
 # Constants
 # ---------------------------------------------------------------------------
@@ -122,7 +117,12 @@ def _extract_frontmatter(path: Path) -> dict:
     if end == -1:
         return {}
     try:
-        fm = yaml.load(text[3:end], Loader=get_safe_yaml_loader())
+        # Reverted to the pure-Python loader (loader-audit, TQ-600a-11
+        # fix-pass, 2026-10-07): a parse failure here is indistinguishable
+        # from "no frontmatter", silently dropping the ADR cross-reference
+        # check for this file. One small frontmatter block per staged file --
+        # no speed case for the fast loader at this volume.
+        fm = yaml.load(text[3:end], Loader=yaml.SafeLoader)
         return fm if isinstance(fm, dict) else {}
     except yaml.YAMLError:
         return {}

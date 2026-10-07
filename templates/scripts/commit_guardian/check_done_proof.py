@@ -95,6 +95,30 @@ DECISION HISTORY:
     test file(s) (e.g. this very AC's own record), and the first version of
     the fix misread every such leaf's test path as an unresolved child,
     which would have blocked this very commit.
+  - 2026-10-07 [loader-audit/TQ-600a-11 fix-pass]: Reverted all four
+    get_safe_yaml_loader() call sites in this file (_load_ac_yaml_or_none,
+    check_staged_done_proofs, check_all_done_acs, check_changed_done_acs)
+    back to yaml.SafeLoader. Direction question resolved, for the record:
+    the pre-existing design already treated a parse failure as "exclude
+    this file from the sweep" (warn + skip, never block), so on files where
+    CSafeLoader's tab-permissiveness lets a PREVIOUSLY-unparseable file
+    parse successfully, the net effect is closer to neutral-to-positive
+    (more done ACs get examined by verify_done_eligible, not fewer) than to
+    the "silently approved" failure shape seen elsewhere in this audit.
+    Reverted anyway, for three reasons that outweigh that mixed-to-positive
+    reading: (1) check_all_done_acs backs the required "Proof-of-done
+    coverage check" CI gate -- a guardrail decision point per the audit's
+    own criterion 4, regardless of which direction a given divergence
+    happens to point; (2) the measured benefit is real only at full-store
+    scale (this file's rglob over ac_root is exactly that scale -- measured
+    on the real 4766-file store: SafeLoader ~22-36s vs CSafeLoader
+    ~1.9-3.2s across two sittings) but no test or production evidence rules
+    out the audit's own worry that SOME tab-corruption could coincidentally
+    produce a parseable-but-wrong record that happens to pass
+    verify_done_eligible; (3) "when in doubt, revert" is the audit's stated
+    default, and this site's direction, while argued through above, was
+    never fully provable either way. See
+    /home/henzeh/tq600a1-backup/narrow_report.md for the full writeup.
 """
 from __future__ import annotations
 
@@ -120,7 +144,6 @@ from _staged_ac_yaml_paths import (  # noqa: E402
 )
 
 ensure_ac_store_on_syspath()
-from yaml_safe_loader import get_safe_yaml_loader  # noqa: E402
 
 # ---------------------------------------------------------------------------
 # BO-2900d-2: shared reachability-exemption seam (same module BO-2900d-1's
@@ -368,8 +391,14 @@ def _load_ac_yaml_or_none(path: Path) -> dict | None:
         or does not contain a YAML mapping.
     """
     try:
+        # Reverted to the pure-Python loader (loader-audit, TQ-600a-11
+        # fix-pass, 2026-10-07): backs the required "Proof-of-done coverage
+        # check" gate. See the module-level DECISION HISTORY note dated
+        # 2026-10-07 for the full reasoning on why all four call sites in
+        # this file revert together despite the ambiguous pre-existing
+        # "warn + skip" direction.
         with open(path, encoding="utf-8") as fh:
-            data = yaml.load(fh, Loader=get_safe_yaml_loader())
+            data = yaml.load(fh, Loader=yaml.SafeLoader)
     except (yaml.YAMLError, OSError) as exc:
         print(
             f"WARNING: check_done_proof: cannot read {path}: {exc}",
@@ -635,8 +664,10 @@ def check_staged_done_proofs(
     violations: list[dict] = []
     for yaml_path in staged_yaml_paths:
         try:
+            # Reverted (loader-audit, TQ-600a-11 fix-pass, 2026-10-07) --
+            # see module-level DECISION HISTORY note dated 2026-10-07.
             with open(yaml_path, encoding="utf-8") as fh:
-                data = yaml.load(fh, Loader=get_safe_yaml_loader())
+                data = yaml.load(fh, Loader=yaml.SafeLoader)
         except (yaml.YAMLError, OSError) as exc:
             print(
                 f"WARNING: check_done_proof: cannot read {yaml_path}: {exc}",
@@ -733,8 +764,10 @@ def check_all_done_acs(
         return violations
     for yaml_path in yaml_files:
         try:
+            # Reverted (loader-audit, TQ-600a-11 fix-pass, 2026-10-07) --
+            # see module-level DECISION HISTORY note dated 2026-10-07.
             with open(yaml_path, encoding="utf-8") as fh:
-                data = yaml.load(fh, Loader=get_safe_yaml_loader())
+                data = yaml.load(fh, Loader=yaml.SafeLoader)
         except (yaml.YAMLError, OSError) as exc:
             print(
                 f"WARNING: check_done_proof: cannot read {yaml_path}: {exc}",
@@ -808,8 +841,10 @@ def check_changed_done_acs(
     violations: list[dict] = []
     for yaml_path in changed_yaml_paths:
         try:
+            # Reverted (loader-audit, TQ-600a-11 fix-pass, 2026-10-07) --
+            # see module-level DECISION HISTORY note dated 2026-10-07.
             with open(yaml_path, encoding="utf-8") as fh:
-                data = yaml.load(fh, Loader=get_safe_yaml_loader())
+                data = yaml.load(fh, Loader=yaml.SafeLoader)
         except (yaml.YAMLError, OSError) as exc:
             print(
                 f"WARNING: check_done_proof: cannot read {yaml_path}: {exc}",

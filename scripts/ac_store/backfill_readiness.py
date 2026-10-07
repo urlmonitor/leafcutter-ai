@@ -25,9 +25,6 @@ from pathlib import Path
 
 import yaml
 
-from yaml_safe_loader import get_safe_yaml_loader
-
-
 # ---------------------------------------------------------------------------
 # Repo root discovery
 # ---------------------------------------------------------------------------
@@ -60,8 +57,10 @@ def _parse_args() -> argparse.Namespace:
 def _file_is_ac(path: Path) -> bool:
     """Return True if the YAML file contains an 'id:' field (looks like an AC)."""
     try:
+        # Reverted (loader-audit, TQ-600a-11 fix-pass, 2026-10-07): one-off
+        # backfill tool, not CI-wired -- no speed case for the fast loader.
         content = path.read_text(encoding="utf-8")
-        data = yaml.load(content, Loader=get_safe_yaml_loader())
+        data = yaml.load(content, Loader=yaml.SafeLoader)
         return isinstance(data, dict) and "id" in data
     except (yaml.YAMLError, OSError):
         return False
@@ -101,8 +100,10 @@ def _backfill_file(path: Path, dry_run: bool) -> bool:
     Returns True if the file was (or would be) modified, False if skipped.
     """
     try:
+        # Reverted (loader-audit, TQ-600a-11 fix-pass, 2026-10-07): same
+        # one-off-tool reasoning as _file_is_ac above.
         content = path.read_text(encoding="utf-8")
-        data = yaml.load(content, Loader=get_safe_yaml_loader())
+        data = yaml.load(content, Loader=yaml.SafeLoader)
     except (yaml.YAMLError, OSError) as exc:
         print(f"WARNING: Cannot read {path}: {exc}", file=sys.stderr)
         return False

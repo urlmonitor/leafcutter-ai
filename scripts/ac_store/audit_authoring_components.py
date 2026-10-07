@@ -46,8 +46,6 @@ from typing import Any
 
 import yaml
 
-from yaml_safe_loader import get_safe_yaml_loader
-
 # _ac_components lives alongside this script in scripts/ac_store/.
 # When invoked directly (python scripts/ac_store/audit_authoring_components.py),
 # the script directory is sys.path[0] so the import resolves automatically.
@@ -141,7 +139,9 @@ def _load_yaml_file(path: Path) -> dict | None:
         return None
 
     try:
-        data = yaml.load(content, Loader=get_safe_yaml_loader())
+        # Reverted (loader-audit, TQ-600a-11 fix-pass, 2026-10-07): no
+        # measured benefit (criterion 1); advisory audit tool, never blocks.
+        data = yaml.load(content, Loader=yaml.SafeLoader)
     except yaml.YAMLError as exc:
         print(f"WARNING: YAML parse error in {path}: {exc}", file=sys.stderr)
         return None

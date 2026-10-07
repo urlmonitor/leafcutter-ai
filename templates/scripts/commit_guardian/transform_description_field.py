@@ -38,11 +38,6 @@ from pathlib import Path
 try:
     import yaml as _yaml
 
-    from _ac_store_locator import ensure_ac_store_on_syspath
-
-    ensure_ac_store_on_syspath()
-    from yaml_safe_loader import get_safe_yaml_loader
-
     _YAML_AVAILABLE = True
 except ImportError:
     _YAML_AVAILABLE = False
@@ -95,7 +90,12 @@ def _parse_frontmatter(fm_body: str) -> dict | None:
     if not _YAML_AVAILABLE:
         return None
     try:
-        parsed = _yaml.load(fm_body, Loader=get_safe_yaml_loader())
+        # Reverted to the pure-Python loader (loader-audit, TQ-600a-11
+        # fix-pass, 2026-10-07): SAFE either way (an explicitly fail-open-by-
+        # design auto-filler that never gates; the real validating hook
+        # re-parses independently), but one small frontmatter block per
+        # staged doc has no measured speed case. Reverted for consistency.
+        parsed = _yaml.load(fm_body, Loader=_yaml.SafeLoader)
     except _yaml.YAMLError as exc:
         print(
             f"[transform-description-field] WARNING: YAML parse failed: {exc}",

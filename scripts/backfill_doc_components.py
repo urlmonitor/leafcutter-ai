@@ -71,9 +71,6 @@ from pathlib import Path
 
 import yaml
 
-sys.path.insert(0, str(Path(__file__).resolve().parent / "ac_store"))
-from yaml_safe_loader import get_safe_yaml_loader  # noqa: E402
-
 _SCRIPT_DIR = Path(__file__).resolve().parent
 _REPO_ROOT = _SCRIPT_DIR.parent
 _DEFAULT_DOCS_DIR = _REPO_ROOT / "docs"
@@ -227,7 +224,10 @@ def _extract_frontmatter(content: str) -> dict | None:
         return None
     raw_yaml = content[3:end_idx].strip()
     try:
-        parsed = yaml.load(raw_yaml, Loader=get_safe_yaml_loader())
+        # Reverted to the pure-Python loader (loader-audit, TQ-600a-11
+        # fix-pass, 2026-10-07): one-off manual backfill tool, not CI-wired
+        # -- no speed case for the fast loader here.
+        parsed = yaml.load(raw_yaml, Loader=yaml.SafeLoader)
     except yaml.YAMLError:
         return None
     return parsed if isinstance(parsed, dict) else None

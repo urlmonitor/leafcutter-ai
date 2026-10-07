@@ -52,9 +52,6 @@ from pathlib import Path
 
 import yaml
 
-sys.path.insert(0, str(Path(__file__).resolve().parent / "ac_store"))
-from yaml_safe_loader import get_safe_yaml_loader  # noqa: E402
-
 _SCRIPT_DIR = Path(__file__).resolve().parent
 _REPO_ROOT = _SCRIPT_DIR.parent
 _FRONTMATTER_RE = re.compile(r"^---\n(.*?)\n---", re.DOTALL)
@@ -116,10 +113,20 @@ def _check_file(repo_root: Path, rel: str, registry: set[str]) -> list[str]:
     if not p.is_file():
         return []
 
+    # Reverted to the pure-Python loader (loader-audit, TQ-600a-11 fix-pass,
+    # 2026-10-07): this is the required "Component vocab" CI gate. Both
+    # except branches below silently drop a file from the check (fail-open),
+    # so a more permissive parser can make an off-registry `components` value
+    # go undetected on a REQUIRED check. Full-tree scope is genuinely
+    # high-volume (whole ac_dir + tickets/ + docs/ rglob -- the same order of
+    # magnitude as the measured 4766-file AC store), so there IS a real speed
+    # case at scale; it does not change the verdict because criterion 2
+    # (error-path dependence changing a block/pass outcome on a required
+    # gate) disqualifies it regardless of volume.
     if rel.startswith(_AC_PREFIX) and rel.endswith(".yaml") and not rel.endswith("index.yaml"):
         try:
             return _check_yaml_doc(
-                yaml.load(p.read_text(encoding="utf-8"), Loader=get_safe_yaml_loader()), registry
+                yaml.load(p.read_text(encoding="utf-8"), Loader=yaml.SafeLoader), registry
             )
         except (OSError, yaml.YAMLError):
             return []
@@ -133,7 +140,7 @@ def _check_file(repo_root: Path, rel: str, registry: set[str]) -> list[str]:
         if not m:
             return []
         try:
-            return _check_yaml_doc(yaml.load(m.group(1), Loader=get_safe_yaml_loader()), registry)
+            return _check_yaml_doc(yaml.load(m.group(1), Loader=yaml.SafeLoader), registry)
         except yaml.YAMLError:
             return []
 

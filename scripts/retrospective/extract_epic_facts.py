@@ -83,14 +83,14 @@ def _parse_frontmatter(content: str) -> dict | None:
     raw = content[3:end].strip()
     try:
         import yaml  # type: ignore[import]
-
-        sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "ac_store"))
-        from yaml_safe_loader import get_safe_yaml_loader
     except ImportError as exc:
         print(f"WARNING: PyYAML not available, cannot parse frontmatter: {exc}", file=sys.stderr)
         return None
     try:
-        parsed = yaml.load(raw, Loader=get_safe_yaml_loader())
+        # Reverted to the pure-Python loader (loader-audit, TQ-600a-11
+        # fix-pass, 2026-10-07): one-off retrospective tooling, run once per
+        # epic close -- no speed case for the fast loader here.
+        parsed = yaml.load(raw, Loader=yaml.SafeLoader)
     except yaml.YAMLError as exc:
         print(f"WARNING: could not parse frontmatter YAML: {exc}", file=sys.stderr)
         return None

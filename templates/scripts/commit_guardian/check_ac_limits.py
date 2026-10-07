@@ -171,14 +171,18 @@ def _load_yaml_data(path: Path) -> dict | None:
     try:
         import yaml  # type: ignore[import]
 
-        from _ac_store_locator import ensure_ac_store_on_syspath
-
-        ensure_ac_store_on_syspath()
-        from yaml_safe_loader import get_safe_yaml_loader
-
         try:
+            # Reverted to the pure-Python loader (loader-audit, TQ-600a-11
+            # fix-pass, 2026-10-07): a parse failure excludes the node from
+            # the child-count/tree-limit computation entirely, so a more
+            # permissive parser only narrows this gate. This IS a whole-store
+            # rglob (_load_ac_store, not staged-only) -- measured on the real
+            # 4766-file store: SafeLoader ~22-36s vs CSafeLoader ~1.9-3.2s
+            # across two sittings, so the speed case is real here. It does
+            # not change the verdict: criterion 2 (error-path dependence on
+            # a skip/accept outcome) disqualifies it regardless of volume.
             with path.open(encoding="utf-8") as fh:
-                data = yaml.load(fh, Loader=get_safe_yaml_loader())
+                data = yaml.load(fh, Loader=yaml.SafeLoader)
         except (OSError, yaml.YAMLError) as exc:
             print(f"[check-ac-limits] WARNING: cannot parse {path}: {exc}", file=sys.stderr)
             return None

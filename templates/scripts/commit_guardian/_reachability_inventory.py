@@ -95,11 +95,6 @@ from pathlib import Path
 
 import yaml
 
-from _ac_store_locator import ensure_ac_store_on_syspath
-
-ensure_ac_store_on_syspath()
-from yaml_safe_loader import get_safe_yaml_loader
-
 # BO-2900b-1/BO-2900b-3/BO-2900c seam: Invocation and collected_invocations()
 # are implemented in the sibling module (file-size split, NOT a second
 # collector -- see that module's docstring and this module's ARCHITECTURE
@@ -154,7 +149,13 @@ def load_exemptions(registry_path: Path) -> list[dict]:
             f"cannot read reachability exemption registry {registry_path}: {exc}"
         ) from exc
     try:
-        data = yaml.load(raw, Loader=get_safe_yaml_loader())
+        # Reverted to the pure-Python loader (loader-audit, TQ-600a-11
+        # fix-pass, 2026-10-07): this function is already fail-closed (a
+        # parse failure raises ReachabilityRegistryError, never silently
+        # treated as zero exemptions), and it reads a single config file --
+        # no measured speed case for the fast loader. Reverted for
+        # consistency.
+        data = yaml.load(raw, Loader=yaml.SafeLoader)
     except yaml.YAMLError as exc:
         raise ReachabilityRegistryError(  # noqa: TRY003
             f"cannot parse reachability exemption registry {registry_path}: {exc}"

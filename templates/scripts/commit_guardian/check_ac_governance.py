@@ -170,13 +170,14 @@ def _load_yaml_safe(content: str, source_label: str) -> dict | None:
     try:
         import yaml  # type: ignore[import]
 
-        from _ac_store_locator import ensure_ac_store_on_syspath
-
-        ensure_ac_store_on_syspath()
-        from yaml_safe_loader import get_safe_yaml_loader
-
         try:
-            data = yaml.load(content, Loader=get_safe_yaml_loader())
+            # Reverted to the pure-Python loader (loader-audit, TQ-600a-11
+            # fix-pass, 2026-10-07): a parse failure here is fail-open ("can
+            # parse staged file -- fail-open" above), so a more permissive
+            # parser directly narrows the protected-field write-lock check.
+            # Staged-files-only scope per commit (a handful of files) -- no
+            # speed case for the fast loader here.
+            data = yaml.load(content, Loader=yaml.SafeLoader)
             return data if isinstance(data, dict) else None
         except yaml.YAMLError as exc:
             print(

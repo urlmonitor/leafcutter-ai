@@ -53,9 +53,6 @@ except ImportError:
     )
     sys.exit(2)
 
-sys.path.insert(0, str(Path(__file__).resolve().parent / "ac_store"))
-from yaml_safe_loader import get_safe_yaml_loader  # noqa: E402
-
 logger = logging.getLogger("check_fixture_schema")
 
 _REPO_ROOT = Path(__file__).resolve().parent.parent
@@ -308,7 +305,10 @@ def check_ac_index(fixture_root: Path) -> list[str]:
         return errors
 
     try:
-        doc = yaml.load(index_path.read_text(encoding="utf-8"), Loader=get_safe_yaml_loader())
+        # Reverted to the pure-Python loader (loader-audit, TQ-600a-11
+        # fix-pass, 2026-10-07): single fixture index.yaml read per test run,
+        # not the real store -- no speed case for the fast loader here.
+        doc = yaml.load(index_path.read_text(encoding="utf-8"), Loader=yaml.SafeLoader)
     except yaml.YAMLError as exc:
         return [f"{index_path}: YAML parse error — {exc}"]
     except OSError as exc:

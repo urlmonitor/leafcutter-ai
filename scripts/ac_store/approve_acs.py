@@ -50,8 +50,6 @@ from typing import Optional
 
 import yaml
 
-from yaml_safe_loader import get_safe_yaml_loader
-
 
 # Matches the amended_by key line itself, including any inline value such as
 # "[]". Deliberately does NOT try to also match the continuation lines of a
@@ -85,7 +83,10 @@ def _find_ac_file(ac_root: Path, ac_id: str) -> Optional[Path]:
     """
     for candidate in ac_root.rglob("*.yaml"):
         try:
-            data = yaml.load(candidate.read_text(encoding="utf-8"), Loader=get_safe_yaml_loader())
+            # Reverted (loader-audit, TQ-600a-11 fix-pass, 2026-10-07): no
+            # measured benefit (criterion 1) -- see
+            # /home/henzeh/tq600a1-backup/narrow_report.md.
+            data = yaml.load(candidate.read_text(encoding="utf-8"), Loader=yaml.SafeLoader)
         except (yaml.YAMLError, OSError):
             continue
         if isinstance(data, dict) and data.get("id") == ac_id:
@@ -188,8 +189,10 @@ def _promote_leaf(ac_file: Path, dry_run: bool = False) -> int:
         readiness.
     """
     try:
+        # Reverted (loader-audit, TQ-600a-11 fix-pass, 2026-10-07): no
+        # measured benefit (criterion 1); single AC file read.
         raw_text = ac_file.read_text(encoding="utf-8")
-        data = yaml.load(raw_text, Loader=get_safe_yaml_loader())
+        data = yaml.load(raw_text, Loader=yaml.SafeLoader)
     except (OSError, yaml.YAMLError) as exc:
         print(f"ERROR: Cannot read AC file {ac_file}: {exc}", file=sys.stderr)
         return 1
@@ -258,8 +261,18 @@ def _promote_leaf(ac_file: Path, dry_run: bool = False) -> int:
     # just wrote BEFORE reporting success. A writer that cannot tell whether
     # its own output is valid must not report success for it.
     try:
+        # Reverted (loader-audit, TQ-600a-11 fix-pass, 2026-10-07): this is a
+        # self-validation re-parse gating whether a write is reported as
+        # successful (criterion 4 -- a decision point, even though it is
+        # this script's own output rather than hand-typed input). The hooks
+        # that will later re-read this same file are themselves now back on
+        # yaml.SafeLoader after this audit's revert pass, so using the same
+        # parser here keeps the self-check honest about what those hooks
+        # will actually see (criterion 3 -- equivalence with the rest of
+        # the system, not just with the historical yaml.safe_load entry
+        # point).
         written_text = ac_file.read_text(encoding="utf-8")
-        yaml.load(written_text, Loader=get_safe_yaml_loader())
+        yaml.load(written_text, Loader=yaml.SafeLoader)
     except (OSError, yaml.YAMLError) as exc:
         try:
             ac_file.write_text(raw_text, encoding="utf-8")
@@ -308,7 +321,9 @@ def _do_approve_goal(goal_ac_id: str, ac_root: Path, dry_run: bool = False) -> i
         return 1
 
     try:
-        goal_data = yaml.load(goal_file.read_text(encoding="utf-8"), Loader=get_safe_yaml_loader())
+        # Reverted (loader-audit, TQ-600a-11 fix-pass, 2026-10-07): no
+        # measured benefit (criterion 1); single goal-AC file read.
+        goal_data = yaml.load(goal_file.read_text(encoding="utf-8"), Loader=yaml.SafeLoader)
     except (OSError, yaml.YAMLError) as exc:
         print(
             f"ERROR: Cannot read goal AC file {goal_file}: {exc}",

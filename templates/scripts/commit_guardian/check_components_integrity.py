@@ -88,11 +88,6 @@ from pathlib import Path
 
 import yaml
 
-from _ac_store_locator import ensure_ac_store_on_syspath
-
-ensure_ac_store_on_syspath()
-from yaml_safe_loader import get_safe_yaml_loader
-
 # ---------------------------------------------------------------------------
 # Constants
 # ---------------------------------------------------------------------------
@@ -620,7 +615,12 @@ def _extract_flight_level(doc_path: Path) -> str | None:
 
     fm_text = text[3:end]
     try:
-        fm = yaml.load(fm_text, Loader=get_safe_yaml_loader())
+        # Reverted to the pure-Python loader (loader-audit, TQ-600a-11
+        # fix-pass, 2026-10-07): no measured speed case at this volume (one
+        # small frontmatter block per staged doc); reverted for consistency
+        # to keep the fast accessor's footprint limited to sites that earn
+        # it.
+        fm = yaml.load(fm_text, Loader=yaml.SafeLoader)
         if isinstance(fm, dict):
             return fm.get("flight_level")
     except yaml.YAMLError:

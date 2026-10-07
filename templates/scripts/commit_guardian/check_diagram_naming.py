@@ -29,11 +29,6 @@ from pathlib import Path
 
 import yaml
 
-from _ac_store_locator import ensure_ac_store_on_syspath
-
-ensure_ac_store_on_syspath()
-from yaml_safe_loader import get_safe_yaml_loader
-
 _BYPASS_TOKEN = "[NO-ARCH-UPDATE]"
 _FILENAME_RE = re.compile(r"^c([1-4])-(\d{3})-([a-z0-9-]+)\.md$")
 _FLIGHT_LEVEL_MAP = {
@@ -96,7 +91,15 @@ def _parse_frontmatter(content: str) -> dict:
     if end == -1:
         return {}
     try:
-        return yaml.load(content[3:end], Loader=get_safe_yaml_loader()) or {}
+        # Reverted to the pure-Python loader (loader-audit, TQ-600a-11
+        # fix-pass, 2026-10-07): this hook's except branch treats a parse
+        # failure as "skip the naming check for this file" -- a permissive
+        # parse that swallows malformed frontmatter instead of raising
+        # silently narrows that check. One small frontmatter block per
+        # staged diagram, so there is no speed case for the fast loader here
+        # (measured: ~4ms per 5-file staged batch either way, noise against
+        # the hook's own subprocess/git overhead).
+        return yaml.load(content[3:end], Loader=yaml.SafeLoader) or {}
     except yaml.YAMLError:
         return {}
 

@@ -40,9 +40,6 @@ from pathlib import Path
 
 import yaml
 
-sys.path.insert(0, str(Path(__file__).resolve().parent / "ac_store"))
-from yaml_safe_loader import get_safe_yaml_loader  # noqa: E402
-
 logger = logging.getLogger(__name__)
 
 _EPIC_PATH_SEGMENT = "00_inbox/epics/"
@@ -105,7 +102,13 @@ def _parse_frontmatter(text: str) -> dict:
         raise ValueError("no YAML frontmatter block found (missing '---' delimiters)")
     raw = match.group(1)
     try:
-        data = yaml.load(raw, Loader=get_safe_yaml_loader())
+        # Reverted to the pure-Python loader (loader-audit, TQ-600a-11
+        # fix-pass, 2026-10-07): the re-raise here is fail-closed by design
+        # (a ticket that should be refused for manual review must actually
+        # raise), and CSafeLoader not raising on a tab-malformed ticket would
+        # let it be processed as clean instead. One-off repair tool, one
+        # ticket at a time -- no speed case for the fast loader here.
+        data = yaml.load(raw, Loader=yaml.SafeLoader)
     except yaml.YAMLError as exc:
         raise ValueError(f"invalid YAML frontmatter: {exc}") from exc
     if not isinstance(data, dict):

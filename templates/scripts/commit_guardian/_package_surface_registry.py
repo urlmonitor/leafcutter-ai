@@ -183,16 +183,16 @@ def read_declaration(record_path: Path) -> bool | None:
     """
     try:
         import yaml  # noqa: PLC0415
-
-        from _ac_store_locator import ensure_ac_store_on_syspath
-
-        ensure_ac_store_on_syspath()
-        from yaml_safe_loader import get_safe_yaml_loader
     except ImportError:
         return None
 
     try:
-        data = yaml.load(record_path.read_text(encoding="utf-8"), Loader=get_safe_yaml_loader())
+        # Reverted to the pure-Python loader (loader-audit, TQ-600a-11
+        # fix-pass, 2026-10-07): already SAFE either way (confirmed by
+        # reading the caller: fail-open here converges on the refusal
+        # outcome, not silent approval), but a single cited-AC-record lookup
+        # has no measured speed case. Reverted for consistency.
+        data = yaml.load(record_path.read_text(encoding="utf-8"), Loader=yaml.SafeLoader)
     except (OSError, yaml.YAMLError):
         return None
 

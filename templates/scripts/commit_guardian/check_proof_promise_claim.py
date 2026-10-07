@@ -85,11 +85,6 @@ from pathlib import Path
 
 import yaml
 
-from _ac_store_locator import ensure_ac_store_on_syspath
-
-ensure_ac_store_on_syspath()
-from yaml_safe_loader import get_safe_yaml_loader
-
 _HERE = Path(__file__).resolve().parent
 
 from _resolve_root import find_project_root  # noqa: E402
@@ -202,7 +197,12 @@ def extract_promised_kinds(ticket_content: str) -> list[dict]:
     if not yaml_block.strip():
         return []
     try:
-        parsed = yaml.load(yaml_block, Loader=get_safe_yaml_loader())
+        # Reverted to the pure-Python loader (loader-audit, TQ-600a-11
+        # fix-pass, 2026-10-07): a parse failure here silently drops this
+        # ticket's test-requirement promises from the promise-vs-claim
+        # cross-check below. One fenced YAML block per staged ticket -- no
+        # speed case for the fast loader here.
+        parsed = yaml.load(yaml_block, Loader=yaml.SafeLoader)
     except yaml.YAMLError as exc:
         print(
             f"WARNING: check_proof_promise_claim: cannot parse Test "
@@ -270,7 +270,14 @@ def _read_ticket_lifecycle_status(ticket_content: str) -> str | None:
         return None
     frontmatter_yaml = match.group(1)
     try:
-        parsed = yaml.load(frontmatter_yaml, Loader=get_safe_yaml_loader())
+        # Reverted to the pure-Python loader (loader-audit, TQ-600a-11
+        # fix-pass, 2026-10-07): this site is already fail-closed (a parse
+        # failure means the ticket is examined, never skipped), so the
+        # revert is not safety-motivated here -- it is for consistency and
+        # to keep the fast accessor's footprint limited to call sites that
+        # actually earn it, since one ticket frontmatter per staged file has
+        # no measurable speed case either way.
+        parsed = yaml.load(frontmatter_yaml, Loader=yaml.SafeLoader)
     except yaml.YAMLError as exc:
         print(
             f"WARNING: check_proof_promise_claim: cannot parse ticket "
