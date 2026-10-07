@@ -156,7 +156,8 @@ class Decision(PersistedModel):
     approved_by: str | None = None
     #: Why the kernel stopped researching and ranked the options for a human (design_judgement,
     #: no_progress, research_cap, no_research_targets, design_round_done,
-    #: budget_reserve); null while the decision is not a design one.
+    #: budget_reserve), or human_ruling when a human chose an option at an escalation
+    #: (awaiting_human) with no ranking shown; null while the decision is not a design one.
     design_reason: str | None = None
     #: When the human approved (UTC); set by the kernel at the human answer, never by a model.
     approved_at: datetime | None = None
@@ -229,6 +230,8 @@ class RoutingAssessment(PersistedModel):
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-06 [python-coder]: design_reason comment lists human_ruling (a human chose at an
+#   escalation). (#KernelChoiceWithCondition)
 # - 2026-10-01 [python-coder]: Decision.approved_at (when the human approved) and precedent_ids
 #   (earlier decisions used as evidence) back the decision store: a record is filed only from a
 #   decision a human approved, and says which precedents it used. (#KernelDecisionStore)

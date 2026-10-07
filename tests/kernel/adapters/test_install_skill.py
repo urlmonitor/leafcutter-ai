@@ -26,6 +26,7 @@ from kernel.adapters.claude_code.install import (
     render_skill,
 )
 from kernel.adapters.cli import main
+from kernel.adapters.codex.install import render_codex_skill
 
 HAND_WRITTEN = "---\nname: leafcutter\n---\nThe hub command.\n"
 
@@ -74,6 +75,14 @@ class TestRenderedSkill(InstallCase):
             with self.assertRaises(InstallRefused, msg=bad) as caught:
                 render_skill(bad)
             self.assertEqual(caught.exception.code, "invalid_name")
+
+    def test_skills_tell_the_host_it_may_send_choice_plus_condition(self) -> None:
+        pair = '{"choice_id": "<id>", "free_text": "<condition>"}'
+        for text in (render_skill("leafcutter", Path("/r"), "python"),
+                     render_codex_skill("leafcutter", Path("/r"), "python")):
+            self.assertIn(pair, text)
+            self.assertIn("verbatim", text)
+            self.assertIn("send both", text)
 
 
 class TestInstallSafety(InstallCase):

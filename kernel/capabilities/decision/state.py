@@ -53,6 +53,8 @@ class DecisionContinuation(KernelModel):
     #: What the latest synthesis said it could not find; the next research round aims at it.
     gaps: list[str] = Field(default_factory=list)
     human_inputs: list[str] = Field(default_factory=list)
+    #: Verbatim conditions a human attached to a choice (the choice stays authoritative).
+    conditions: list[str] = Field(default_factory=list)
     pending_subjects: list[str] = Field(default_factory=list)
     pending_reason: str = ""
     candidate_option_id: str | None = None
