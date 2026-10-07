@@ -188,6 +188,7 @@ task, then pull only those files.
 | verify precommit active | [docs/how-to/verify-precommit-active.md](how-to/verify-precommit-active.md) | Step-by-step guide to running the verify_precommit_active.py probe and interpreting its four checks to confirm that pre-commit hooks will fire in a git worktree. |
 | verify shared layout stays read only | [docs/how-to/verify-shared-layout-stays-read-only.md](how-to/verify-shared-layout-stays-read-only.md) | How to run and read the shared_layout_integrity guard so a test that dirties the shared deployed layout (TQ-600a-1) is caught and named, instead of silently corrupting every test that runs after it. |
 | working with leafcutter | [docs/how-to/working-with-leafcutter.md](how-to/working-with-leafcutter.md) | How to work with leafcutter end-to-end |
+| write a test that catches the wrong version | [docs/how-to/write-a-test-that-catches-the-wrong-version.md](how-to/write-a-test-that-catches-the-wrong-version.md) | Guard a bug fix or a gate change with a test that goes red under named wrong versions of the code, not only when the code is missing. Worked through on the refresh-gate retry storm. |
 | writing a tdd ticket | [docs/how-to/writing-a-tdd-ticket.md](how-to/writing-a-tdd-ticket.md) | This guide walks you through writing a ticket that will go through the leafcutter |
 
 ## Reference
@@ -240,8 +241,8 @@ task, then pull only those files.
 
 | Name | Path | Description |
 |------|------|-------------|
-| PROJECT CONTEXT injection | [docs/conventions/PROJECT_CONTEXT-injection.md](conventions/PROJECT_CONTEXT-injection.md) | Overview of Convention: PROJECT_CONTEXT Injection for Portable Agents. |
 | adr numbering | [docs/conventions/adr-numbering.md](conventions/adr-numbering.md) | Overview of Convention: ADR Numbering and Collision Prevention. |
+| PROJECT CONTEXT injection | [docs/conventions/PROJECT_CONTEXT-injection.md](conventions/PROJECT_CONTEXT-injection.md) | Overview of Convention: PROJECT_CONTEXT Injection for Portable Agents. |
 
 ## Retrospectives
 
@@ -249,9 +250,9 @@ task, then pull only those files.
 |------|------|-------------|
 | 2026 05 22 epic antigravity support | [docs/retrospectives/2026-05-22-epic-antigravity-support.md](retrospectives/2026-05-22-epic-antigravity-support.md) | Retrospective: Dual Platform Antigravity Support |
 | EPIC ACDrivenDevelopment | [docs/retrospectives/EPIC-ACDrivenDevelopment.md](retrospectives/EPIC-ACDrivenDevelopment.md) | Date: 2026-06-05 |
-| EPIC ACTraceabilityStore | [docs/retrospectives/EPIC-ACTraceabilityStore.md](retrospectives/EPIC-ACTraceabilityStore.md) | Date: 2026-06-04 |
 | EPIC AcPatternEnforcementIsMechanically | [docs/retrospectives/EPIC-AcPatternEnforcementIsMechanically.md](retrospectives/EPIC-AcPatternEnforcementIsMechanically.md) | Retrospective for EPIC-AcPatternEnforcementIsMechanically (ACS-500f) |
 | EPIC AcPipelineDeployGaps | [docs/retrospectives/EPIC-AcPipelineDeployGaps.md](retrospectives/EPIC-AcPipelineDeployGaps.md) | Post-merge retrospective for EPIC-AcPipelineDeployGaps (PR #88), covering |
+| EPIC ACTraceabilityStore | [docs/retrospectives/EPIC-ACTraceabilityStore.md](retrospectives/EPIC-ACTraceabilityStore.md) | Date: 2026-06-04 |
 | EPIC BOPhantomDoneRemediation | [docs/retrospectives/EPIC-BOPhantomDoneRemediation.md](retrospectives/EPIC-BOPhantomDoneRemediation.md) | Overview of Retrospective: EPIC-BOPhantomDoneRemediation. |
 | EPIC CodeQualityHooks | [docs/retrospectives/EPIC-CodeQualityHooks.md](retrospectives/EPIC-CodeQualityHooks.md) | Epic retrospective for EPIC-CodeQualityHooks — jscpd duplicate-code detection and diff-cover test-coverage enforcement hooks. |
 | EPIC CompletionManifestSignoff | [docs/retrospectives/EPIC-CompletionManifestSignoff.md](retrospectives/EPIC-CompletionManifestSignoff.md) | Date: 2026-05-30 |
