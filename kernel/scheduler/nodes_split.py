@@ -108,13 +108,24 @@ class SplitStep:
 
     def split_applies(self, item: WorkItem, result: RouteResult) -> bool:
         """Return True when routing turned the root away (jev_none) and it is a bundled subject."""
+        return JEV_NONE in result.reason_codes and self._root_bundled(item)
+
+    def _root_bundled(self, item: WorkItem) -> bool:
+        """Return True for a root with no split yet whose subject kind allows one and is bundled."""
         task = self._task()
-        if item.id != task.root_work_item_id or JEV_NONE not in result.reason_codes:
+        if item.id != task.root_work_item_id:
             return False
         known = split_id(item.id) in self.state.get("splits", {}) or split_id(item.id) in self.splits
         if known or not kind_allows_split(task.intent, task.requested_output_schema):
             return False
         return is_bundled(item.bundle_probability, self.cfg.split.bundle_threshold)
+
+    def ambiguous_split(self, entry: RouteEntry, routing_ref: str) -> bool:
+        """Start a split (trigger ambiguous) for a bundled root routing could not decide for."""
+        item = self.draft.items[entry.item_id]
+        if not self._root_bundled(item):
+            return False
+        return self.start_split(entry, routing_ref, SplitTrigger.AMBIGUOUS)
 
     def no_match(self, entry: RouteEntry, result: RouteResult, routing_ref: str) -> None:
         """Handle a no-match outcome: a split for a bundled turned-away root, else a gap."""
@@ -124,7 +135,8 @@ class SplitStep:
         self.draft.put_item(item, status=WorkItemStatus.DISPATCHED, routing_ref=routing_ref)
         self.plan["gap"].append(item.id)
 
-    def start_split(self, entry: RouteEntry, routing_ref: str) -> bool:
+    def start_split(self, entry: RouteEntry, routing_ref: str,
+                    trigger: SplitTrigger = SplitTrigger.JEV_NONE) -> bool:
         """Start the split of a turned-away root; False leaves the item for today's gap path."""
         item = self.draft.items[entry.item_id]
         task = self._task()
@@ -133,7 +145,7 @@ class SplitStep:
         record = Decomposition(
             id=split_id(item.id), run_id=self.state["run_id"], work_item_id=item.id,
             subject_kind=kind, subject_text=subject, found_at=FoundAt.ROUTING,
-            work_item_depth=item.depth, trigger=SplitTrigger.JEV_NONE)
+            work_item_depth=item.depth, trigger=trigger)
         payload = GoalDecompositionRequestPayload(
             subject_text=subject, subject_kind=kind, max_parts=self.cfg.split.max_parts,
             split_id=record.id, allowed_capabilities=list(GOAL_CHILD_CAPABILITIES))
@@ -151,10 +163,10 @@ class SplitStep:
         self.splits[record.id] = record
         item = self.draft.put_item(item, routing_ref=routing_ref)
         self._wait_on(item, create_children(self.draft, item, plan.accepted))
-        self.draft.emit("split.started", JEV_NONE, work_item_id=item.id, split_id=record.id)
+        self.draft.emit("split.started", trigger.value, work_item_id=item.id, split_id=record.id)
         self.ctx.tracer.event(
             "split.started", run_corr(self.state, work_item_id=item.id),
-            payload={"split_id": record.id, "trigger": JEV_NONE, "subject_kind": kind.value,
+            payload={"split_id": record.id, "trigger": trigger.value, "subject_kind": kind.value,
                      "subject_chars": len(subject)})
         return True
 
@@ -166,4 +178,5 @@ class SplitStep:
 #   (the formulate_question pattern) instead of a new pause mechanism, so the host handoff,
 #   budget and tracing machinery is reused. Telemetry carries the subject length, never its text
 #   (data_policy redaction). (#TICKET-20261006-DK-400a-1)
+# - 2026-10-06 19:00 [python-coder]: Add the ambiguous split trigger: a bundled root routing cannot decide for is split, not clarified. (#TICKET-20261006-DK-400a-1-i)
 # ====================================================================

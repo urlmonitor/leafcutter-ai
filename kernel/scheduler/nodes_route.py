@@ -278,7 +278,7 @@ class _Router(SplitStep, IntentStep):
             code = result.failure if failed else "unavailable"
             self._set(item, status, f"{code}: {codes}", routing_ref=ref)
             self.draft.progress = True
-        else:
+        elif not self.ambiguous_split(entry, ref):
             self.draft.put_item(item, routing_ref=ref)
             self._unclear(entry, result)
 
@@ -410,4 +410,5 @@ def _packet(state: KernelState, invocation_id: str, shares: dict[str, int]) -> d
 # - 2026-10-02 16:54 [python-coder]: Bind typed research only after eligibility. (#KM-500a/2)
 # - 2026-10-03 15:10 [python-coder]: Preserve verbatim goals and separate meaning, caller and clarification channels. (#DK-300/entity-context)
 # - 2026-10-06 18:00 [python-coder]: Start a split instead of ending a bundled jev_none root as a gap. (#TICKET-20261006-DK-400a-1)
+# - 2026-10-06 19:00 [python-coder]: Try the ambiguous split before the clarification question for an insufficient_context result. (#TICKET-20261006-DK-400a-1-i)
 # ====================================================================
