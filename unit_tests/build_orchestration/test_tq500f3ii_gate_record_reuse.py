@@ -42,6 +42,8 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import os
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -152,6 +154,11 @@ def _code(fixture: Fixture) -> None:
         fixture.work / "prodmod.py",
         "def value():\n    return 2\n\n\ndef name():\n    return 'final'\n",
     )
+    # Same byte size as the draft and possibly the same whole second: a stale
+    # .pyc from an earlier gate pass would pass Python's size+mtime freshness
+    # check and keep the covered tests red. Drop every cached bytecode dir.
+    for cache in fixture.work.rglob("__pycache__"):
+        shutil.rmtree(cache, ignore_errors=True)
 
 
 def _run_gate(
@@ -169,7 +176,10 @@ def _run_gate(
     ]
     if ticket is not None:
         argv += ["--ticket", str(fixture.ticket if ticket == "default" else ticket)]
-    proc = subprocess.run(argv, capture_output=True, text=True, timeout=180, cwd=cwd)
+    env = {**os.environ, "PYTHONDONTWRITEBYTECODE": "1"}
+    proc = subprocess.run(
+        argv, capture_output=True, text=True, timeout=180, cwd=cwd, env=env
+    )
     try:
         return proc, json.loads(proc.stdout)
     except json.JSONDecodeError:
