@@ -1,0 +1,1384 @@
+{
+  "review_version": 1,
+  "kind": "AcceptanceCriterion",
+  "neo4j_label": "AC",
+  "review_date": "2026-10-02",
+  "worktree": "C:/Users/Hendrik/Code/leafcutter/worktrees/aura-domain-graph",
+  "sources": [
+    {
+      "path": "config/ac_store_schema.json",
+      "authority": "Canonical AC YAML record schema; all 47 fields, root additionalProperties false."
+    },
+    {
+      "path": "config/ac_schema.json",
+      "authority": "NOT the AC record schema: AC-triage routing output. Excluded from field inventory."
+    },
+    {
+      "path": "scripts/ac_store/validate_ac_schema.py",
+      "authority": "Actual projection validation path via knowledge/projection/validation.py; additionally requires readiness/priority and registry-valid components."
+    },
+    {
+      "path": "scripts/ac_store/_ac_schema_test_spec_validators.py",
+      "authority": "Schema-derived angle and must_catch rules."
+    },
+    {
+      "path": "templates/scripts/commit_guardian/_ac_schema_validators.py",
+      "authority": "Commit-time semantic checks incl test contract and side effects; not all run in current projection validator."
+    },
+    {
+      "path": "docs/reference/ac-schema.md",
+      "authority": "Field semantics, with stale nullable/docs/nested coverage differences noted below."
+    },
+    {
+      "path": "knowledge/projection/answer_fields.py",
+      "authority": "Current 12-name allowlist copies 11 values into Entity.properties, explicitly excluding criteria."
+    },
+    {
+      "path": "knowledge/projection/canonical_loader.py",
+      "authority": "Current entity extraction assigns id/title/source but drops other native fields."
+    },
+    {
+      "path": "knowledge/adapters/domain_schema.py",
+      "authority": "Current metadata projection exposes only display identity/provenance, reconstructed components, and five AC fields."
+    },
+    {
+      "path": "knowledge/adapters/neo4j_domain_build.py",
+      "authority": "Storage also exposes status and derived parent_id; payload is not a complete source AC record."
+    }
+  ],
+  "corpus": {
+    "root": "docs/acceptance-criteria",
+    "selection": "All *.yaml mappings with id; index/scaffolding excluded; current uncommitted worktree (not a claim about active Aura revision).",
+    "records": 4535,
+    "unknown_top_level_fields": [],
+    "fully_validated_in_this_review": false
+  },
+  "raw_extraction_contract": {
+    "input": "The already validated records[node.id] dict returned by knowledge.projection.validation.validate_acs for the immutable checkout.",
+    "output": "A lossless copy of all authored top-level keys and nested values, including id/title/criteria. Keep separate from derived/entity transport properties so source field collisions cannot overwrite provenance.",
+    "schema_field_selection": "Every authored key in config/ac_store_schema.json/properties, including optional fields absent from today's corpus. Prefer schema-backed enumeration to a new hand-maintained subset. Existing validator rejects unknown top-level keys.",
+    "defaults": "No default insertion, scalar-to-array normalization, trimming, sorting, deduplication, parent derivation, date/string conflation, truthiness-based dropping, or lifecycle substitution.",
+    "migration": "Rehydrate omitted raw fields from source.path at entity.source.source_sha with content_hash verification. Current Entity payload cannot reconstruct dropped fields. Never enrich a historical entity using the current working file; if pinned source is unavailable report incomplete rather than invent values.",
+    "transport": "The current Pydantic JSON payload serializes dates to strings; use a typed source manifest or separate extraction-to-property step if temporal type preservation is required. Do not change immutable payload content silently in place without corresponding mapper/generation change."
+  },
+  "fields": [
+    {
+      "name": "id",
+      "source_pointer": "/id",
+      "schema_pointer": "#/properties/id",
+      "types": [
+        "string"
+      ],
+      "required_schema": true,
+      "required_projection": true,
+      "allows_null": false,
+      "absent": "Omit property and mark absent only in explicit source field presence metadata; never insert a schema default.",
+      "present_in_corpus": 4535,
+      "currently_in_entity_payload": "Entity.canonical_id",
+      "projection_strategy": "Same-named native scalar/list property for authored non-null values; explicit null path metadata for null.",
+      "neo4j_existing": "id, name, canonical_id",
+      "notes": "One canonical identity; id/name are deliberate display aliases and must equal canonical_id."
+    },
+    {
+      "name": "title",
+      "source_pointer": "/title",
+      "schema_pointer": "#/properties/title",
+      "types": [
+        "string"
+      ],
+      "required_schema": true,
+      "required_projection": true,
+      "allows_null": false,
+      "absent": "Omit property and mark absent only in explicit source field presence metadata; never insert a schema default.",
+      "present_in_corpus": 4535,
+      "currently_in_entity_payload": "Entity.title",
+      "projection_strategy": "Same-named native scalar/list property for authored non-null values; explicit null path metadata for null.",
+      "neo4j_existing": "title",
+      "notes": "Source title stored on Entity.title, not Entity.properties."
+    },
+    {
+      "name": "component",
+      "source_pointer": "/component",
+      "schema_pointer": "#/properties/component",
+      "types": [
+        "string"
+      ],
+      "required_schema": true,
+      "required_projection": true,
+      "allows_null": false,
+      "absent": "Omit property and mark absent only in explicit source field presence metadata; never insert a schema default.",
+      "present_in_corpus": 4535,
+      "currently_in_entity_payload": "omitted",
+      "projection_strategy": "Same-named native scalar/list property for authored non-null values; explicit null path metadata for null.",
+      "notes": "AC-store namespace used for file placement and ID-prefix resolution, separate from components."
+    },
+    {
+      "name": "components",
+      "source_pointer": "/components",
+      "schema_pointer": "#/properties/components",
+      "types": [
+        "array<string>"
+      ],
+      "required_schema": true,
+      "required_projection": true,
+      "allows_null": false,
+      "absent": "Omit property and mark absent only in explicit source field presence metadata; never insert a schema default.",
+      "present_in_corpus": 4535,
+      "currently_in_entity_payload": "omitted",
+      "projection_strategy": "Same-named native scalar/list property for authored non-null values; explicit null path metadata for null.",
+      "notes": "Nonempty graph component IDs from docs/components.json; preserve authored order and duplicates in metadata; edges may deduplicate without mutating this source field.",
+      "neo4j_existing": "components is currently reconstructed as sorted unique resolved relationship targets, not source-exact."
+    },
+    {
+      "name": "status",
+      "source_pointer": "/status",
+      "schema_pointer": "#/properties/status",
+      "types": [
+        "string"
+      ],
+      "required_schema": true,
+      "required_projection": true,
+      "allows_null": false,
+      "absent": "Omit property and mark absent only in explicit source field presence metadata; never insert a schema default.",
+      "present_in_corpus": 4535,
+      "currently_in_entity_payload": "Entity.properties.status",
+      "projection_strategy": "Same-named native scalar/list property for authored non-null values; explicit null path metadata for null.",
+      "enum": [
+        "active",
+        "deprecated",
+        "superseded_by",
+        "superseded"
+      ],
+      "notes": "Canonical lifecycle, never substitute for work_status or req_status.",
+      "neo4j_existing": "status"
+    },
+    {
+      "name": "criteria",
+      "source_pointer": "/criteria",
+      "schema_pointer": "#/properties/criteria",
+      "types": [
+        "string"
+      ],
+      "required_schema": true,
+      "required_projection": true,
+      "allows_null": false,
+      "absent": "Omit property and mark absent only in explicit source field presence metadata; never insert a schema default.",
+      "present_in_corpus": 4535,
+      "currently_in_entity_payload": "omitted",
+      "projection_strategy": "Same-named native scalar/list property for authored non-null values; explicit null path metadata for null.",
+      "notes": "Exact full multiline text; current payload excludes criteria deliberately despite source_fields reporting availability."
+    },
+    {
+      "name": "created_by",
+      "source_pointer": "/created_by",
+      "schema_pointer": "#/properties/created_by",
+      "types": [
+        "string"
+      ],
+      "required_schema": false,
+      "required_projection": false,
+      "allows_null": false,
+      "absent": "Omit property and mark absent only in explicit source field presence metadata; never insert a schema default.",
+      "present_in_corpus": 896,
+      "currently_in_entity_payload": "omitted",
+      "projection_strategy": "Same-named native scalar/list property for authored non-null values; explicit null path metadata for null.",
+      "notes": "Legacy provenance ticket path, not an author-name alias."
+    },
+    {
+      "name": "created",
+      "source_pointer": "/created",
+      "schema_pointer": "#/properties/created",
+      "types": [
+        "any"
+      ],
+      "required_schema": false,
+      "required_projection": false,
+      "allows_null": true,
+      "absent": "Omit property and mark absent only in explicit source field presence metadata; never insert a schema default.",
+      "present_in_corpus": 4410,
+      "currently_in_entity_payload": "omitted",
+      "projection_strategy": "Direct scalar/scalar-list when representable; otherwise recursive RFC6901 leaf properties plus typed container/null manifest.",
+      "observed_types": {
+        "date": 4337,
+        "string": 73
+      },
+      "notes": "Schema has description only and no type restriction; description intends string/date. Preserve YAML date as typed date or ISO value plus date path type metadata, quoted string as string. Do not invent validation narrowing."
+    },
+    {
+      "name": "created_by_ticket",
+      "source_pointer": "/created_by_ticket",
+      "schema_pointer": "#/properties/created_by_ticket",
+      "types": [
+        "string",
+        "null"
+      ],
+      "required_schema": false,
+      "required_projection": false,
+      "allows_null": true,
+      "absent": "Omit property and mark absent only in explicit source field presence metadata; never insert a schema default.",
+      "present_in_corpus": 209,
+      "currently_in_entity_payload": "omitted",
+      "projection_strategy": "Same-named native scalar/list property for authored non-null values; explicit null path metadata for null.",
+      "null_count": 79,
+      "notes": "Newer provenance ticket path; retain separately from created_by."
+    },
+    {
+      "name": "superseded_by",
+      "source_pointer": "/superseded_by",
+      "schema_pointer": "#/properties/superseded_by",
+      "types": [
+        "string",
+        "array<string>",
+        "null"
+      ],
+      "required_schema": false,
+      "required_projection": false,
+      "allows_null": true,
+      "absent": "Omit property and mark absent only in explicit source field presence metadata; never insert a schema default.",
+      "present_in_corpus": 4503,
+      "currently_in_entity_payload": "omitted",
+      "projection_strategy": "Same-named native scalar/list property for authored non-null values; explicit null path metadata for null.",
+      "null_count": 4458,
+      "observed_types": {
+        "null": 4458,
+        "array": 28,
+        "string": 17
+      },
+      "notes": "Successor single/multiple forms, no coercion; string AC ID pattern, array nonempty. Preserve legacy status spelling."
+    },
+    {
+      "name": "amended_by",
+      "source_pointer": "/amended_by",
+      "schema_pointer": "#/properties/amended_by",
+      "types": [
+        "array<string|object>"
+      ],
+      "required_schema": false,
+      "required_projection": false,
+      "allows_null": false,
+      "absent": "Omit property and mark absent only in explicit source field presence metadata; never insert a schema default.",
+      "present_in_corpus": 4504,
+      "currently_in_entity_payload": "omitted",
+      "projection_strategy": "Direct scalar/scalar-list when representable; otherwise recursive RFC6901 leaf properties plus typed container/null manifest.",
+      "nested_shape": "amended_by",
+      "schema_default": [],
+      "notes": "Objects have arbitrary keys; schema does not require reason despite descriptive example."
+    },
+    {
+      "name": "covered_by",
+      "source_pointer": "/covered_by",
+      "schema_pointer": "#/properties/covered_by",
+      "types": [
+        "array<string>"
+      ],
+      "required_schema": false,
+      "required_projection": false,
+      "allows_null": false,
+      "absent": "Omit property and mark absent only in explicit source field presence metadata; never insert a schema default.",
+      "present_in_corpus": 4514,
+      "currently_in_entity_payload": "Entity.properties.covered_by",
+      "projection_strategy": "Same-named native scalar/list property for authored non-null values; explicit null path metadata for null.",
+      "schema_default": [],
+      "notes": "Authored direct-child AC IDs or tests/other references; preserve order, duplicates, anchors, and unresolved references."
+    },
+    {
+      "name": "implemented_by",
+      "source_pointer": "/implemented_by",
+      "schema_pointer": "#/properties/implemented_by",
+      "types": [
+        "array<string>"
+      ],
+      "required_schema": false,
+      "required_projection": false,
+      "allows_null": false,
+      "absent": "Omit property and mark absent only in explicit source field presence metadata; never insert a schema default.",
+      "present_in_corpus": 4514,
+      "currently_in_entity_payload": "Entity.properties.implemented_by",
+      "projection_strategy": "Same-named native scalar/list property for authored non-null values; explicit null path metadata for null.",
+      "schema_default": [],
+      "notes": "Source path or path#anchor exactly authored, including unresolved references."
+    },
+    {
+      "name": "origin_agent",
+      "source_pointer": "/origin_agent",
+      "schema_pointer": "#/properties/origin_agent",
+      "types": [
+        "string"
+      ],
+      "required_schema": false,
+      "required_projection": false,
+      "allows_null": false,
+      "absent": "Omit property and mark absent only in explicit source field presence metadata; never insert a schema default.",
+      "present_in_corpus": 4529,
+      "currently_in_entity_payload": "omitted",
+      "projection_strategy": "Same-named native scalar/list property for authored non-null values; explicit null path metadata for null.",
+      "notes": "Historical free-form identity, not limited to current agent registry."
+    },
+    {
+      "name": "readiness",
+      "source_pointer": "/readiness",
+      "schema_pointer": "#/properties/readiness",
+      "types": [
+        "string"
+      ],
+      "required_schema": false,
+      "required_projection": true,
+      "allows_null": false,
+      "absent": "Omit property and mark absent only in explicit source field presence metadata; never insert a schema default.",
+      "present_in_corpus": 4535,
+      "currently_in_entity_payload": "Entity.properties.readiness",
+      "projection_strategy": "Same-named native scalar/list property for authored non-null values; explicit null path metadata for null.",
+      "enum": [
+        "draft",
+        "reviewed",
+        "approved"
+      ],
+      "neo4j_existing": "readiness",
+      "notes": "Optional in JSON schema but required by projection's standalone validator. Null is invalid although prose reference table says nullable."
+    },
+    {
+      "name": "priority",
+      "source_pointer": "/priority",
+      "schema_pointer": "#/properties/priority",
+      "types": [
+        "string"
+      ],
+      "required_schema": false,
+      "required_projection": true,
+      "allows_null": false,
+      "absent": "Omit property and mark absent only in explicit source field presence metadata; never insert a schema default.",
+      "present_in_corpus": 4535,
+      "currently_in_entity_payload": "Entity.properties.priority",
+      "projection_strategy": "Same-named native scalar/list property for authored non-null values; explicit null path metadata for null.",
+      "enum": [
+        "critical",
+        "high",
+        "medium",
+        "low"
+      ],
+      "neo4j_existing": "priority",
+      "notes": "Optional in JSON schema but required by projection's standalone validator. Null is invalid although prose reference table says nullable."
+    },
+    {
+      "name": "documentation_triggers",
+      "source_pointer": "/documentation_triggers",
+      "schema_pointer": "#/properties/documentation_triggers",
+      "types": [
+        "array<string>",
+        "null"
+      ],
+      "required_schema": false,
+      "required_projection": false,
+      "allows_null": true,
+      "absent": "Omit property and mark absent only in explicit source field presence metadata; never insert a schema default.",
+      "present_in_corpus": 474,
+      "currently_in_entity_payload": "omitted",
+      "projection_strategy": "Same-named native scalar/list property for authored non-null values; explicit null path metadata for null.",
+      "enum_items": [
+        "how-to",
+        "sequence-diagram",
+        "state-diagram",
+        "component-diagram",
+        "reference-doc"
+      ],
+      "notes": "Unique items. Non-null values allowed only on L1 by standalone validator; empty list is distinct from absent/null."
+    },
+    {
+      "name": "documentation_rationale",
+      "source_pointer": "/documentation_rationale",
+      "schema_pointer": "#/properties/documentation_rationale",
+      "types": [
+        "string",
+        "null"
+      ],
+      "required_schema": false,
+      "required_projection": false,
+      "allows_null": true,
+      "absent": "Omit property and mark absent only in explicit source field presence metadata; never insert a schema default.",
+      "present_in_corpus": 99,
+      "currently_in_entity_payload": "omitted",
+      "projection_strategy": "Same-named native scalar/list property for authored non-null values; explicit null path metadata for null.",
+      "null_count": 5,
+      "notes": "Prose says required when L1 has empty documentation_triggers; do not insert a placeholder."
+    },
+    {
+      "name": "work_status",
+      "source_pointer": "/work_status",
+      "schema_pointer": "#/properties/work_status",
+      "types": [
+        "string",
+        "null"
+      ],
+      "required_schema": false,
+      "required_projection": false,
+      "allows_null": true,
+      "absent": "Omit property and mark absent only in explicit source field presence metadata; never insert a schema default.",
+      "present_in_corpus": 4386,
+      "currently_in_entity_payload": "Entity.properties.work_status",
+      "projection_strategy": "Same-named native scalar/list property for authored non-null values; explicit null path metadata for null.",
+      "null_count": 1,
+      "enum": [
+        "not_started",
+        "todo",
+        "in_progress",
+        "done"
+      ],
+      "neo4j_existing": "work_status",
+      "notes": "Keep not_started/todo source spellings; absence/null is not todo."
+    },
+    {
+      "name": "level",
+      "source_pointer": "/level",
+      "schema_pointer": "#/properties/level",
+      "types": [
+        "string",
+        "null"
+      ],
+      "required_schema": false,
+      "required_projection": false,
+      "allows_null": true,
+      "absent": "Omit property and mark absent only in explicit source field presence metadata; never insert a schema default.",
+      "present_in_corpus": 4465,
+      "currently_in_entity_payload": "Entity.properties.level",
+      "projection_strategy": "Same-named native scalar/list property for authored non-null values; explicit null path metadata for null.",
+      "enum": [
+        "L0",
+        "L1",
+        "L2",
+        "L3"
+      ],
+      "neo4j_existing": "level",
+      "notes": "No derived level written back over absence."
+    },
+    {
+      "name": "depends_on",
+      "source_pointer": "/depends_on",
+      "schema_pointer": "#/properties/depends_on",
+      "types": [
+        "array<string>",
+        "null"
+      ],
+      "required_schema": false,
+      "required_projection": false,
+      "allows_null": true,
+      "absent": "Omit property and mark absent only in explicit source field presence metadata; never insert a schema default.",
+      "present_in_corpus": 4434,
+      "currently_in_entity_payload": "Entity.properties.depends_on",
+      "projection_strategy": "Same-named native scalar/list property for authored non-null values; explicit null path metadata for null.",
+      "notes": "Unique IDs; structural-parent and pattern composition references, DAG enforced separately. Preserve empty vs missing vs null."
+    },
+    {
+      "name": "implements_pattern",
+      "source_pointer": "/implements_pattern",
+      "schema_pointer": "#/properties/implements_pattern",
+      "types": [
+        "string",
+        "null"
+      ],
+      "required_schema": false,
+      "required_projection": false,
+      "allows_null": true,
+      "absent": "Omit property and mark absent only in explicit source field presence metadata; never insert a schema default.",
+      "present_in_corpus": 0,
+      "currently_in_entity_payload": "omitted",
+      "projection_strategy": "Same-named native scalar/list property for authored non-null values; explicit null path metadata for null.",
+      "notes": "Declared optional even though absent from current corpus; nonempty pattern ID."
+    },
+    {
+      "name": "pattern_bindings",
+      "source_pointer": "/pattern_bindings",
+      "schema_pointer": "#/properties/pattern_bindings",
+      "types": [
+        "object",
+        "null"
+      ],
+      "required_schema": false,
+      "required_projection": false,
+      "allows_null": true,
+      "absent": "Omit property and mark absent only in explicit source field presence metadata; never insert a schema default.",
+      "present_in_corpus": 0,
+      "currently_in_entity_payload": "omitted",
+      "projection_strategy": "Direct scalar/scalar-list when representable; otherwise recursive RFC6901 leaf properties plus typed container/null manifest.",
+      "nested_shape": "pattern_bindings",
+      "notes": "Arbitrary nested keys/value types; meaningful with implements_pattern."
+    },
+    {
+      "name": "pattern_slots",
+      "source_pointer": "/pattern_slots",
+      "schema_pointer": "#/properties/pattern_slots",
+      "types": [
+        "array<string>",
+        "null"
+      ],
+      "required_schema": false,
+      "required_projection": false,
+      "allows_null": true,
+      "absent": "Omit property and mark absent only in explicit source field presence metadata; never insert a schema default.",
+      "present_in_corpus": 0,
+      "currently_in_entity_payload": "omitted",
+      "projection_strategy": "Same-named native scalar/list property for authored non-null values; explicit null path metadata for null.",
+      "notes": "Unique nonempty slot strings. No inference from criteria."
+    },
+    {
+      "name": "assigned_agent",
+      "source_pointer": "/assigned_agent",
+      "schema_pointer": "#/properties/assigned_agent",
+      "types": [
+        "string",
+        "null"
+      ],
+      "required_schema": false,
+      "required_projection": false,
+      "allows_null": true,
+      "absent": "Omit property and mark absent only in explicit source field presence metadata; never insert a schema default.",
+      "present_in_corpus": 3912,
+      "currently_in_entity_payload": "omitted",
+      "projection_strategy": "Same-named native scalar/list property for authored non-null values; explicit null path metadata for null.",
+      "null_count": 394
+    },
+    {
+      "name": "estimated_complexity",
+      "source_pointer": "/estimated_complexity",
+      "schema_pointer": "#/properties/estimated_complexity",
+      "types": [
+        "string",
+        "null"
+      ],
+      "required_schema": false,
+      "required_projection": false,
+      "allows_null": true,
+      "absent": "Omit property and mark absent only in explicit source field presence metadata; never insert a schema default.",
+      "present_in_corpus": 3868,
+      "currently_in_entity_payload": "omitted",
+      "projection_strategy": "Same-named native scalar/list property for authored non-null values; explicit null path metadata for null.",
+      "null_count": 329,
+      "enum": [
+        "XS",
+        "S",
+        "M",
+        "L",
+        "XL"
+      ]
+    },
+    {
+      "name": "delivers_to",
+      "source_pointer": "/delivers_to",
+      "schema_pointer": "#/properties/delivers_to",
+      "types": [
+        "string",
+        "object",
+        "array<any>",
+        "null"
+      ],
+      "required_schema": false,
+      "required_projection": false,
+      "allows_null": true,
+      "absent": "Omit property and mark absent only in explicit source field presence metadata; never insert a schema default.",
+      "present_in_corpus": 4219,
+      "currently_in_entity_payload": "omitted",
+      "projection_strategy": "Direct scalar/scalar-list when representable; otherwise recursive RFC6901 leaf properties plus typed container/null manifest.",
+      "null_count": 3002,
+      "nested_shape": "delivers_to",
+      "observed_types": {
+        "null": 3002,
+        "object": 864,
+        "array": 289,
+        "string": 64
+      },
+      "notes": "Arbitrary object or unconstrained array items; agent/contract are examples, not required keys."
+    },
+    {
+      "name": "expects_from",
+      "source_pointer": "/expects_from",
+      "schema_pointer": "#/properties/expects_from",
+      "types": [
+        "string",
+        "object",
+        "array<any>",
+        "null"
+      ],
+      "required_schema": false,
+      "required_projection": false,
+      "allows_null": true,
+      "absent": "Omit property and mark absent only in explicit source field presence metadata; never insert a schema default.",
+      "present_in_corpus": 4219,
+      "currently_in_entity_payload": "omitted",
+      "projection_strategy": "Direct scalar/scalar-list when representable; otherwise recursive RFC6901 leaf properties plus typed container/null manifest.",
+      "null_count": 1667,
+      "nested_shape": "expects_from",
+      "observed_types": {
+        "null": 1667,
+        "object": 2165,
+        "array": 338,
+        "string": 49
+      },
+      "notes": "Examples contain ac_id/contract or agent/contract; neither shape is globally mandatory."
+    },
+    {
+      "name": "package_surface",
+      "source_pointer": "/package_surface",
+      "schema_pointer": "#/properties/package_surface",
+      "types": [
+        "boolean",
+        "null"
+      ],
+      "required_schema": false,
+      "required_projection": false,
+      "allows_null": true,
+      "absent": "Omit property and mark absent only in explicit source field presence metadata; never insert a schema default.",
+      "present_in_corpus": 173,
+      "currently_in_entity_payload": "omitted",
+      "projection_strategy": "Same-named native scalar/list property for authored non-null values; explicit null path metadata for null.",
+      "notes": "Only true requires structured it_requirements; false/absent/null remain distinct."
+    },
+    {
+      "name": "it_requirements",
+      "source_pointer": "/it_requirements",
+      "schema_pointer": "#/properties/it_requirements",
+      "types": [
+        "string",
+        "array<string>",
+        "object",
+        "null"
+      ],
+      "required_schema": false,
+      "required_projection": false,
+      "allows_null": true,
+      "absent": "Omit property and mark absent only in explicit source field presence metadata; never insert a schema default.",
+      "present_in_corpus": 3055,
+      "currently_in_entity_payload": "omitted",
+      "projection_strategy": "Direct scalar/scalar-list when representable; otherwise recursive RFC6901 leaf properties plus typed container/null manifest.",
+      "null_count": 1,
+      "nested_shape": "it_requirements",
+      "observed_types": {
+        "array": 2438,
+        "object": 361,
+        "string": 255,
+        "null": 1
+      },
+      "notes": "Object requires all five implementation fields even when package_surface not true; arbitrary extra keys allowed."
+    },
+    {
+      "name": "test_spec",
+      "source_pointer": "/test_spec",
+      "schema_pointer": "#/properties/test_spec",
+      "types": [
+        "array<object>",
+        "null"
+      ],
+      "required_schema": false,
+      "required_projection": false,
+      "allows_null": true,
+      "absent": "Omit property and mark absent only in explicit source field presence metadata; never insert a schema default.",
+      "present_in_corpus": 1591,
+      "currently_in_entity_payload": "omitted",
+      "projection_strategy": "Direct scalar/scalar-list when representable; otherwise recursive RFC6901 leaf properties plus typed container/null manifest.",
+      "null_count": 2,
+      "nested_shape": "test_spec",
+      "notes": "Nonempty if array. Planned test descriptors, not evidence the named tests exist or pass."
+    },
+    {
+      "name": "test_required",
+      "source_pointer": "/test_required",
+      "schema_pointer": "#/properties/test_required",
+      "types": [
+        "boolean",
+        "null"
+      ],
+      "required_schema": false,
+      "required_projection": false,
+      "allows_null": true,
+      "absent": "Omit property and mark absent only in explicit source field presence metadata; never insert a schema default.",
+      "present_in_corpus": 647,
+      "currently_in_entity_payload": "Entity.properties.test_required",
+      "projection_strategy": "Same-named native scalar/list property for authored non-null values; explicit null path metadata for null.",
+      "notes": "false intentionally no tests; absent/null means no authored declaration. Never materialize contextual generator defaults."
+    },
+    {
+      "name": "test_rationale",
+      "source_pointer": "/test_rationale",
+      "schema_pointer": "#/properties/test_rationale",
+      "types": [
+        "string",
+        "null"
+      ],
+      "required_schema": false,
+      "required_projection": false,
+      "allows_null": true,
+      "absent": "Omit property and mark absent only in explicit source field presence metadata; never insert a schema default.",
+      "present_in_corpus": 1141,
+      "currently_in_entity_payload": "omitted",
+      "projection_strategy": "Same-named native scalar/list property for authored non-null values; explicit null path metadata for null.",
+      "notes": "String only; not a list; string can be empty in schema."
+    },
+    {
+      "name": "doc_links",
+      "source_pointer": "/doc_links",
+      "schema_pointer": "#/properties/doc_links",
+      "types": [
+        "array<string|object>"
+      ],
+      "required_schema": false,
+      "required_projection": false,
+      "allows_null": false,
+      "absent": "Omit property and mark absent only in explicit source field presence metadata; never insert a schema default.",
+      "present_in_corpus": 4433,
+      "currently_in_entity_payload": "omitted",
+      "projection_strategy": "Direct scalar/scalar-list when representable; otherwise recursive RFC6901 leaf properties plus typed container/null manifest.",
+      "nested_shape": "doc_links",
+      "schema_default": [],
+      "notes": "Preserve mixed forms and arbitrary extra object keys; only path required in object schema."
+    },
+    {
+      "name": "declared_files",
+      "source_pointer": "/declared_files",
+      "schema_pointer": "#/properties/declared_files",
+      "types": [
+        "array<object>"
+      ],
+      "required_schema": false,
+      "required_projection": false,
+      "allows_null": false,
+      "absent": "Omit property and mark absent only in explicit source field presence metadata; never insert a schema default.",
+      "present_in_corpus": 4,
+      "currently_in_entity_payload": "omitted",
+      "projection_strategy": "Direct scalar/scalar-list when representable; otherwise recursive RFC6901 leaf properties plus typed container/null manifest.",
+      "nested_shape": "declared_files",
+      "notes": "Paths preserved exactly; additional validator owns empty-list/path existence rules."
+    },
+    {
+      "name": "req_status",
+      "source_pointer": "/req_status",
+      "schema_pointer": "#/properties/req_status",
+      "types": [
+        "string"
+      ],
+      "required_schema": false,
+      "required_projection": false,
+      "allows_null": false,
+      "absent": "Omit property and mark absent only in explicit source field presence metadata; never insert a schema default.",
+      "present_in_corpus": 4200,
+      "currently_in_entity_payload": "Entity.properties.req_status",
+      "projection_strategy": "Same-named native scalar/list property for authored non-null values; explicit null path metadata for null.",
+      "enum": [
+        "active",
+        "draft",
+        "approved",
+        "superseded"
+      ],
+      "neo4j_existing": "req_status",
+      "notes": "Requirement lifecycle distinct from status/work_status; no fallback."
+    },
+    {
+      "name": "roadmap_phase",
+      "source_pointer": "/roadmap_phase",
+      "schema_pointer": "#/properties/roadmap_phase",
+      "types": [
+        "string"
+      ],
+      "required_schema": false,
+      "required_projection": false,
+      "allows_null": false,
+      "absent": "Omit property and mark absent only in explicit source field presence metadata; never insert a schema default.",
+      "present_in_corpus": 2197,
+      "currently_in_entity_payload": "omitted",
+      "projection_strategy": "Same-named native scalar/list property for authored non-null values; explicit null path metadata for null."
+    },
+    {
+      "name": "target_epic",
+      "source_pointer": "/target_epic",
+      "schema_pointer": "#/properties/target_epic",
+      "types": [
+        "string"
+      ],
+      "required_schema": false,
+      "required_projection": false,
+      "allows_null": false,
+      "absent": "Omit property and mark absent only in explicit source field presence metadata; never insert a schema default.",
+      "present_in_corpus": 218,
+      "currently_in_entity_payload": "omitted",
+      "projection_strategy": "Same-named native scalar/list property for authored non-null values; explicit null path metadata for null."
+    },
+    {
+      "name": "notes",
+      "source_pointer": "/notes",
+      "schema_pointer": "#/properties/notes",
+      "types": [
+        "string"
+      ],
+      "required_schema": false,
+      "required_projection": false,
+      "allows_null": false,
+      "absent": "Omit property and mark absent only in explicit source field presence metadata; never insert a schema default.",
+      "present_in_corpus": 2247,
+      "currently_in_entity_payload": "omitted",
+      "projection_strategy": "Same-named native scalar/list property for authored non-null values; explicit null path metadata for null.",
+      "notes": "Exact free-form text; no truncation."
+    },
+    {
+      "name": "parent",
+      "source_pointer": "/parent",
+      "schema_pointer": "#/properties/parent",
+      "types": [
+        "string"
+      ],
+      "required_schema": false,
+      "required_projection": false,
+      "allows_null": false,
+      "absent": "Omit property and mark absent only in explicit source field presence metadata; never insert a schema default.",
+      "present_in_corpus": 145,
+      "currently_in_entity_payload": "Entity.properties.parent",
+      "projection_strategy": "Same-named native scalar/list property for authored non-null values; explicit null path metadata for null.",
+      "notes": "Explicit parent override only; keep separate from derived structural_parent/parent_id."
+    },
+    {
+      "name": "scope",
+      "source_pointer": "/scope",
+      "schema_pointer": "#/properties/scope",
+      "types": [
+        "string"
+      ],
+      "required_schema": false,
+      "required_projection": false,
+      "allows_null": false,
+      "absent": "Omit property and mark absent only in explicit source field presence metadata; never insert a schema default.",
+      "present_in_corpus": 3,
+      "currently_in_entity_payload": "omitted",
+      "projection_strategy": "Same-named native scalar/list property for authored non-null values; explicit null path metadata for null."
+    },
+    {
+      "name": "example_product",
+      "source_pointer": "/example_product",
+      "schema_pointer": "#/properties/example_product",
+      "types": [
+        "string"
+      ],
+      "required_schema": false,
+      "required_projection": false,
+      "allows_null": false,
+      "absent": "Omit property and mark absent only in explicit source field presence metadata; never insert a schema default.",
+      "present_in_corpus": 18,
+      "currently_in_entity_payload": "omitted",
+      "projection_strategy": "Same-named native scalar/list property for authored non-null values; explicit null path metadata for null.",
+      "notes": "Slug pattern ^[a-z0-9-]+$; absent means project's own work. Null/empty are invalid despite prose table saying nullable. Retired product spelling must not be synthesized."
+    },
+    {
+      "name": "child_limit_override",
+      "source_pointer": "/child_limit_override",
+      "schema_pointer": "#/properties/child_limit_override",
+      "types": [
+        "integer",
+        "null"
+      ],
+      "required_schema": false,
+      "required_projection": false,
+      "allows_null": true,
+      "absent": "Omit property and mark absent only in explicit source field presence metadata; never insert a schema default.",
+      "present_in_corpus": 54,
+      "currently_in_entity_payload": "omitted",
+      "projection_strategy": "Same-named native scalar/list property for authored non-null values; explicit null path metadata for null.",
+      "minimum": 1,
+      "notes": "Temporary cap override, do not derive child count/default cap into this field."
+    },
+    {
+      "name": "change_target",
+      "source_pointer": "/change_target",
+      "schema_pointer": "#/properties/change_target",
+      "types": [
+        "string",
+        "array<string>"
+      ],
+      "required_schema": false,
+      "required_projection": false,
+      "allows_null": false,
+      "absent": "Omit property and mark absent only in explicit source field presence metadata; never insert a schema default.",
+      "present_in_corpus": 4061,
+      "currently_in_entity_payload": "omitted",
+      "projection_strategy": "Same-named native scalar/list property for authored non-null values; explicit null path metadata for null.",
+      "enum": [
+        "code",
+        "schema",
+        "ui",
+        "infrastructure",
+        "pipeline",
+        "prompt",
+        "model",
+        "config",
+        "docs",
+        "dependency"
+      ],
+      "observed_types": {
+        "string": 3745,
+        "array": 316
+      },
+      "notes": "Nonempty arrays; retain original scalar/list form."
+    },
+    {
+      "name": "risk_surface",
+      "source_pointer": "/risk_surface",
+      "schema_pointer": "#/properties/risk_surface",
+      "types": [
+        "string"
+      ],
+      "required_schema": false,
+      "required_projection": false,
+      "allows_null": false,
+      "absent": "Omit property and mark absent only in explicit source field presence metadata; never insert a schema default.",
+      "present_in_corpus": 4068,
+      "currently_in_entity_payload": "omitted",
+      "projection_strategy": "Same-named native scalar/list property for authored non-null values; explicit null path metadata for null.",
+      "enum": [
+        "internal",
+        "contract_boundary",
+        "auth",
+        "privacy",
+        "safety",
+        "cost"
+      ]
+    },
+    {
+      "name": "declares_side_effect",
+      "source_pointer": "/declares_side_effect",
+      "schema_pointer": "#/properties/declares_side_effect",
+      "types": [
+        "boolean",
+        "null"
+      ],
+      "required_schema": false,
+      "required_projection": false,
+      "allows_null": true,
+      "absent": "Omit property and mark absent only in explicit source field presence metadata; never insert a schema default.",
+      "present_in_corpus": 176,
+      "currently_in_entity_payload": "omitted",
+      "projection_strategy": "Same-named native scalar/list property for authored non-null values; explicit null path metadata for null.",
+      "notes": "Authored value is checked against Then-clause derivation by commit hook; projection must preserve declared value, not recompute/overwrite."
+    },
+    {
+      "name": "product_truth",
+      "source_pointer": "/product_truth",
+      "schema_pointer": "#/properties/product_truth",
+      "types": [
+        "array<object>"
+      ],
+      "required_schema": false,
+      "required_projection": false,
+      "allows_null": false,
+      "absent": "Omit property and mark absent only in explicit source field presence metadata; never insert a schema default.",
+      "present_in_corpus": 95,
+      "currently_in_entity_payload": "omitted",
+      "projection_strategy": "Direct scalar/scalar-list when representable; otherwise recursive RFC6901 leaf properties plus typed container/null manifest.",
+      "nested_shape": "product_truth",
+      "notes": "Tool-owned back-reference list; retain exact authored order and values; do not infer active/newer product truth."
+    }
+  ],
+  "nested_shapes": {
+    "amended_by": {
+      "type": "array",
+      "items": [
+        "string",
+        {
+          "type": "object",
+          "required": [],
+          "additional_properties": true
+        }
+      ],
+      "notes": "Each string/object position is meaningful; arbitrary nested keys permitted."
+    },
+    "pattern_bindings": {
+      "type": "object|null",
+      "required": [],
+      "additional_properties": true
+    },
+    "delivers_to": {
+      "type": "object|array<any>|string|null",
+      "object_required": [],
+      "additional_properties": true
+    },
+    "expects_from": {
+      "type": "object|array<any>|string|null",
+      "object_required": [],
+      "additional_properties": true
+    },
+    "it_requirements": {
+      "type": "object|string|array<string>|null",
+      "object_required": [
+        "config_schema_fragment",
+        "reference_file_path",
+        "n_location_rule",
+        "required_skills",
+        "post_write_commands"
+      ],
+      "additional_properties": true,
+      "properties": {
+        "config_schema_fragment": {
+          "types": [
+            "any"
+          ],
+          "required": true
+        },
+        "reference_file_path": {
+          "types": [
+            "string"
+          ],
+          "required": true,
+          "minLength": 1
+        },
+        "n_location_rule": {
+          "types": [
+            "string"
+          ],
+          "required": true,
+          "minLength": 1
+        },
+        "required_skills": {
+          "types": [
+            "array<string>"
+          ],
+          "required": true,
+          "minItems": 1,
+          "item_minLength": 1
+        },
+        "post_write_commands": {
+          "types": [
+            "array<string>"
+          ],
+          "required": true,
+          "item_minLength": 1
+        }
+      }
+    },
+    "test_spec": {
+      "type": "array<object>|null",
+      "minItems": 1,
+      "item_required": [
+        "name",
+        "target_dir"
+      ],
+      "item_additional_properties": false,
+      "item_properties": {
+        "name": {
+          "types": [
+            "string"
+          ],
+          "minLength": 1
+        },
+        "target_dir": {
+          "types": [
+            "string"
+          ],
+          "minLength": 1
+        },
+        "framework": {
+          "types": [
+            "string"
+          ],
+          "enum": [
+            "unittest",
+            "pytest",
+            "vitest",
+            "playwright"
+          ],
+          "note": "Do not project the generator's default unittest when absent."
+        },
+        "type": {
+          "types": [
+            "string"
+          ],
+          "enum": [
+            "unit",
+            "integration",
+            "e2e",
+            "behavioral",
+            "component"
+          ]
+        },
+        "angle": {
+          "types": [
+            "string"
+          ],
+          "enum": [
+            "criterion",
+            "reachability",
+            "seam",
+            "real_artifact",
+            "deployed",
+            "boundary",
+            "failure",
+            "discrimination"
+          ]
+        },
+        "must_catch": {
+          "types": [
+            "array<string>"
+          ],
+          "minItems": 1,
+          "item_pattern": "\\S",
+          "note": "Exact ordered strings, no trimming/case changes/deduplication."
+        },
+        "surface_invoked": {
+          "types": [
+            "string"
+          ],
+          "minLength": 1
+        },
+        "description": {
+          "types": [
+            "string"
+          ],
+          "minLength": 1
+        },
+        "covers": {
+          "types": [
+            "array<string>"
+          ],
+          "item_minLength": 1,
+          "note": "Do not insert own AC id when absent."
+        },
+        "requires_db": {
+          "types": [
+            "boolean"
+          ]
+        }
+      }
+    },
+    "doc_links": {
+      "type": "array<string|object>",
+      "object_required": [
+        "path"
+      ],
+      "object_additional_properties": true,
+      "object_properties": {
+        "path": {
+          "types": [
+            "string"
+          ],
+          "minLength": 1
+        },
+        "relationship": {
+          "types": [
+            "string"
+          ]
+        },
+        "status": {
+          "types": [
+            "string"
+          ],
+          "enum": [
+            "exists",
+            "planned"
+          ]
+        },
+        "relevance": {
+          "types": [
+            "string"
+          ]
+        }
+      }
+    },
+    "declared_files": {
+      "type": "array<object>",
+      "item_required": [
+        "path",
+        "state"
+      ],
+      "item_additional_properties": false,
+      "item_properties": {
+        "path": {
+          "types": [
+            "string"
+          ],
+          "minLength": 1
+        },
+        "state": {
+          "types": [
+            "string"
+          ],
+          "enum": [
+            "existing",
+            "to_be_created"
+          ]
+        }
+      }
+    },
+    "product_truth": {
+      "type": "array<object>",
+      "item_required": [
+        "flow",
+        "node",
+        "node_kind",
+        "flow_kind",
+        "screen",
+        "mock_data",
+        "entities",
+        "source",
+        "asof"
+      ],
+      "item_additional_properties": false,
+      "item_properties": {
+        "flow": {
+          "types": [
+            "string"
+          ]
+        },
+        "node": {
+          "types": [
+            "string"
+          ]
+        },
+        "node_kind": {
+          "types": [
+            "string"
+          ],
+          "enum": [
+            "step",
+            "branch"
+          ]
+        },
+        "flow_kind": {
+          "types": [
+            "string"
+          ]
+        },
+        "screen": {
+          "types": [
+            "string",
+            "null"
+          ]
+        },
+        "mock_data": {
+          "types": [
+            "string",
+            "null"
+          ]
+        },
+        "entities": {
+          "types": [
+            "array<string>"
+          ]
+        },
+        "source": {
+          "types": [
+            "string"
+          ]
+        },
+        "asof": {
+          "types": [
+            "string"
+          ],
+          "note": "Date-looking source string, retain as string; no type coercion."
+        }
+      }
+    }
+  },
+  "conditional_requirements": [
+    {
+      "when": "package_surface == true",
+      "requires": "it_requirements object with config_schema_fragment, reference_file_path, n_location_rule, required_skills, post_write_commands."
+    },
+    {
+      "when": "it_requirements is object",
+      "requires": "Same five fields regardless of package_surface; arbitrary extra keys remain legal."
+    },
+    {
+      "when": "documentation_triggers non-null",
+      "requires": "level == L1 in standalone validator."
+    },
+    {
+      "when": "approved, not-done leaf code AC",
+      "requires": "Commit hook requires nonempty test_spec; test_required=false is rejected for this case. Projection must not author this contract."
+    },
+    {
+      "when": "criteria asserts durable side effect",
+      "requires": "Commit hook checks authored declares_side_effect consistency; projection preserves source."
+    }
+  ],
+  "representation_review": {
+    "verdict": "Shared pointer-leaf representation is suitable when it is lossless and every leaf is queryable with native Cypher dynamic/backtick property access.",
+    "native_leaf_example": "MATCH (a:AC) WHERE a.current = true AND a.`/test_spec/0/framework` = 'pytest' RETURN a",
+    "top_level_example": "MATCH (a:AC) WHERE a.current = true AND a.component = 'finalize' AND 'finalize' IN a.components RETURN a",
+    "requirements": [
+      "Same-named top-level scalar and homogeneous scalar-list values are ordinary native properties. No JSON string is a substitute for nested queryable metadata.",
+      "For nested maps and heterogeneous arrays, map every leaf to RFC6901 path keys; escape ~ as ~0 and / as ~1 in each string segment, use decimal indices for array positions.",
+      "Retain container kind and array length at every nested container path, including empty objects/arrays. Retain explicit null paths separately. Record root field presence to distinguish absent/null/empty.",
+      "Preserve array item order, duplicate values, scalar-versus-list union form, booleans including false, zero, empty string where valid, integer versus float, date versus quoted date string.",
+      "Reserve one collision-safe metadata namespace; source map keys may contain slashes, tildes, metadata-prefix-looking names, and numeric strings. Nested properties must not collide with plain field names or representation bookkeeping.",
+      "No stripping/truncating free text or limiting nested depth without surfacing a diagnostic. Arbitrary schema fragments can be deeply nested.",
+      "Preserve correlation by index for list objects. Do not collapse test names/frameworks into independent lists that falsely match values from different entries.",
+      "Remove stale projected source metadata during a refresh when a field disappears or changes shape; preserve system key/generation/current/payload fields.",
+      "If Neo4j cannot represent a legal leaf (e.g. oversized integer/nonfinite float/unsupported YAML type), fail visibly or use explicit typed fallback metadata, never silently drop/coerce.",
+      "Top-level id/title/status/components intentionally overlap existing canonical/display properties. Assert identical source identity/title/status; replace reconstructed components with exact source list only if graph-membership filtering remains separately correct."
+    ],
+    "source_collision_policy": "Source nested keys cannot overwrite key, generation_key, current, payload, canonical_id, kind, content_hash, repository_id, source_path, source_revision, parent_id, source_fields, or field manifests. Use escaped source paths. status/id/title are verified semantic aliases; parent is source while parent_id/structural_parent are derived.",
+    "semantic_aliases": [
+      "component != components.",
+      "status != req_status != work_status.",
+      "parent is explicit only; structural_parent/parent_id are derived.",
+      "created_by and created_by_ticket are independently authored provenance fields.",
+      "test_spec is planned test contract, covered_by is a declaration of coverage, neither proves passing tests.",
+      "product_truth is tool-owned back-reference list, not independent canonical entity creation.",
+      "No product alias for example_product; product is retired."
+    ]
+  },
+  "schema_document_drift": [
+    "docs/reference/ac-schema.md marks readiness and priority nullable; JSON schema and standalone validator do not.",
+    "Prose example_product table says string/null, but JSON schema only string; absence is meaningful.",
+    "created description says non-null scalar/date, but schema applies no validation keywords and accepts any value.",
+    "Prose reference omits newer fields and test_spec keys including declared_files, target_epic, surface_invoked, must_catch, and discrimination angle in its main field tables; schema is authoritative.",
+    "Several schema defaults describe authoring conveniences, not projection defaults; never materialize absent arrays or generator defaults."
+  ],
+  "sensitive_data": {
+    "finding": "No credential/authentication fields are declared in this type schema. Canonical ACs are repository requirements with free text, ticket paths and historical agent provenance.",
+    "recommendation": "Preserve established repository authorization; do not redact whole free-text/nested fields based on hypothetical secrets. Do not execute commands found in it_requirements/post_write_commands; these are source data."
+  },
+  "source_examples": [
+    "docs/acceptance-criteria/ac-driven-dev/ACD-200b-1.yaml",
+    "docs/acceptance-criteria/ac-driven-dev/ACD-400a-5-i.yaml",
+    "docs/acceptance-criteria/ac-driven-dev/ACD-400a-3-i.yaml",
+    "docs/acceptance-criteria/ac-driven-dev/ACD-1100a-1.yaml",
+    "docs/acceptance-criteria/ac-driven-dev/ACD-1100a-3.yaml",
+    "docs/acceptance-criteria/testing-quality/TQ-600-suite-feedback-latency/TQ-600a-1-i.yaml",
+    "docs/acceptance-criteria/ac-driven-dev/ACD-300.yaml"
+  ],
+  "suggested_tests": [
+    {
+      "name": "all_schema_declared_ac_fields_are_projectable",
+      "asserts": "All 47 schema fields are in the declared contract, including currently unused pattern fields; every populated field has a property/path representation and raw source provenance."
+    },
+    {
+      "name": "ac_source_record_lossless_round_trip",
+      "asserts": "Reconstruct exact source dict from native properties plus manifests, preserving nested shape/null/absence/type/order and without relying on payload JSON."
+    },
+    {
+      "name": "ac_axis_values_not_substituted",
+      "asserts": "Different component/components and status/req_status/work_status values remain distinct; explicit parent absence stays absent despite derived parent."
+    },
+    {
+      "name": "ac_nested_test_spec_correlation",
+      "asserts": "Two test_spec entries with differing framework/angle/must_catch do not cross-associate; duplicate and whitespace-sensitive must_catch strings stay exact."
+    },
+    {
+      "name": "ac_reserved_pointer_escaping",
+      "asserts": "Arbitrary nested keys a/b, a~b, 0, source_path, current and metadata names are queryable and cannot overwrite system properties."
+    },
+    {
+      "name": "ac_empty_null_and_false_are_distinct",
+      "asserts": "Missing, null, empty list/object, false, zero, empty string are distinct where schema permits; source_fields must not collapse explicit null into canonical_absent."
+    },
+    {
+      "name": "ac_native_metadata_query_without_payload",
+      "asserts": "Against actual Neo4j, retrieve/filter criteria, scalar component, assigned_agent, declared_files path, nested test_spec angle, and product_truth null paths without parsing payload."
+    },
+    {
+      "name": "ac_historical_metadata_uses_pinned_source",
+      "asserts": "Changing the working copy cannot change metadata projected for an older source_sha; hash mismatch/unavailable historical source fails closed."
+    },
+    {
+      "name": "ac_changed_field_shape_removes_stale_properties",
+      "asserts": "A refresh from object/list to null/absent or shorter list removes obsolete projected pointers without touching identity/current/payload."
+    },
+    {
+      "name": "ac_date_string_distinction",
+      "asserts": "Unquoted YAML created date and quoted same-looking string preserve their source types; product_truth.asof remains string."
+    }
+  ]
+}

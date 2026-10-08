@@ -207,6 +207,11 @@ def init_repo(root: Path) -> None:
     git(["init", "-q"], root)
     git(["config", "user.email", "test-writer@example.com"], root)
     git(["config", "user.name", "GE-127e-1 test fixture"], root)
+    # Keep git's own background work (auto-gc/maintenance) from writing
+    # transient files (e.g. .git/objects/pack/tmp_pack_*) mid-test.
+    git(["config", "gc.auto", "0"], root)
+    git(["config", "gc.autoDetach", "false"], root)
+    git(["config", "maintenance.auto", "false"], root)
 
 
 def commit_all(root: Path, message: str) -> None:

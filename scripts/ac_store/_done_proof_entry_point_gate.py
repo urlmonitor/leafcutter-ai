@@ -124,6 +124,31 @@ def _detect_module_entry_point(
     return None
 
 
+def _report_only(
+    reason: str, refusal_cause: str, module_path: Path, entry_point: str
+) -> None:
+    """Announce a reachability finding WITHOUT refusing the verdict.
+
+    The rule is report-only pending its own repair; see the DECISION HISTORY entry
+    of 2026-09-30 for why, and for the conditions under which it is re-armed. Every
+    finding is still printed in full so the population stays countable and a later
+    sweep can measure whether re-arming would be safe.
+
+    Args:
+        reason: Operator-facing sentence, identical to the refusal text it replaces.
+        refusal_cause: The cause this WOULD have refused with.
+        module_path: The unit the finding is about.
+        entry_point: The ``<module>:main`` spec that was or was not entered.
+    """
+    print(
+        f"[check-done-proof] REPORT-ONLY reachability finding "
+        f"({refusal_cause}, unit {module_path.stem}, entry point {entry_point}): "
+        f"{reason}. This does NOT block; the rule is suspended pending repair of its "
+        f"own observer, which cannot see a proof that drives the unit as a subprocess.",
+        file=sys.stderr,
+    )
+
+
 def _apply_entry_point_reachability_gate(
     verdict: dict, *, py_linked: list[dict], project_root: Path, test_root: Path
 ) -> dict:
@@ -160,10 +185,11 @@ def _apply_entry_point_reachability_gate(
         test_root: Root directory of the test tree.
 
     Returns:
-        *verdict* unchanged when no linked test's unit defines a runtime
-        way in, or every way in found was entered by its own proof test; an
-        ``eligible: False`` verdict carrying ``refusal_cause``, ``unit``,
-        ``entry_point``, and ``offending_test`` otherwise.
+        *verdict*, ALWAYS unchanged. This rule is REPORT-ONLY as of 2026-09-30:
+        every finding it would have refused on is printed by :func:`_report_only`
+        and the verdict is passed through untouched. It cannot currently fail an
+        AC. See the DECISION HISTORY entry for the defect that suspended it and
+        the conditions for re-arming.
     """
     from done_proof import _observe_reachability
 
@@ -184,32 +210,49 @@ def _apply_entry_point_reachability_gate(
                     f"cannot determine whether it reached {entry_point}"
                 )
             )
-            return {
-                **verdict,
-                "eligible": False,
-                "reason": reason,
-                "refusal_cause": "observation_unavailable",
-                "unit": module_path.stem,
-                "entry_point": entry_point,
-                "offending_test": offending_test,
-            }
+            _report_only(reason, "observation_unavailable", module_path, entry_point)
+            continue
         if not observation["entered_entry_point"]:
-            return {
-                **verdict,
-                "eligible": False,
-                "reason": (
-                    f"the proof for {offending_test} reached the code by "
-                    f"direct import instead of through {entry_point}"
-                ),
-                "refusal_cause": "proof_not_through_entry_point",
-                "unit": module_path.stem,
-                "entry_point": entry_point,
-                "offending_test": offending_test,
-            }
+            _report_only(
+                f"the proof for {offending_test} reached the code by "
+                f"direct import instead of through {entry_point}",
+                "proof_not_through_entry_point",
+                module_path,
+                entry_point,
+            )
+            continue
     return verdict
 
 
 # DECISION HISTORY
+# ================================================================================
+# - 2026-09-30 [BrainCandy]: SUSPENDED TO REPORT-ONLY. Both refusal paths now
+#   print and continue instead of returning eligible: False. Three measured
+#   reasons, any one of which is sufficient:
+#     1. It accepts the ritual it exists to refuse. The gate passes target_spec=""
+#        to _observe_reachability, so reached_through is structurally always False
+#        and the predicate degenerates to entered_entry_point. A proof that calls
+#        main(["noop"]) and then calls the function directly is ACCEPTED; an
+#        ordinary direct-import proof is REFUSED. Verified by execution.
+#     2. It cannot see the proof shape this repository mandates. _gtfa_constants
+#        _REACHABILITY_ASSERTS instructs authors to "invoke the production entry
+#        point ... as a subprocess/dispatch" and NOT to import directly; 164 ticket
+#        files carry that instruction. sys.setprofile observes only the runner's own
+#        process, so a subprocess proof is invisible: a pure spawn resolves no entry
+#        point and passes silently, a hybrid spawn is refused outright.
+#     3. It names the wrong unit. _detect_module_entry_point picks the
+#        alphabetically first import defining a main, with no tie to the AC's
+#        implemented_by; 29 of 54 in-scope ACs that declare a file are judged
+#        against a different one. KM-KGS-100e-1 (implemented_by _ac_components.py)
+#        is refused naming backfill_components:main.
+#   Suspension, not removal: findings are still printed in full so the population
+#   remains countable. Re-arm only when the observer follows the process tree
+#   (BO-2900a-2, still todo, specifies hosting it in the existing pytest run rather
+#   than a second bespoke runner) and the unit is resolved from the AC rather than
+#   from the proof's import list. Analysis:
+#   docs/analysis/2026-09-29-the-entry-point-gate-refuses-the-proof-it-wants-and-
+#   accepts-the-one-it-does-not-3-scoping-recommendation.md
+# ================================================================================
 # ================================================================================
 # - 2026-09-25 [python-coder/BO-2900a-1]: Created this sibling module (a
 #   THIRD extraction out of done_proof.py, alongside _done_proof_phase_helpers.py)

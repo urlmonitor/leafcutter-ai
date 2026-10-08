@@ -1,0 +1,237 @@
+id: KM-500e-1
+title: Resolve the facts and scope needed to answer the original question
+component: knowledge-management
+components:
+- knowledge_management
+level: L2
+status: active
+req_status: active
+work_status: in_progress
+readiness: approved
+priority: medium
+parent: KM-500e
+criteria: 'Given an agent asks how many test-writing requirements are done without defining whether it means one
+  named family or the whole project
+
+  When research prepares to answer
+
+  Then it identifies the requested fact as implementation work status and states the required population, hierarchy
+  inclusion rule, project revision and completeness requirement
+
+  And unresolved choices that change the answer are returned as focused clarification before a definitive count
+  is produced
+
+  And an explicit request for all L2 and L3 descendants of TQ-500f excluding only TQ-500f is accepted without asking
+  the same scope question again
+
+  And a request to exclude all parent requirements is distinguished from excluding only that selected root
+
+  And the original question and the resolved answer requirements remain available to later query selection, result
+  assessment and any resumed research
+
+  And a required answer field cannot be removed merely because the first available query does not return it.
+
+  '
+depends_on:
+- KM-500e
+- KM-500a-1
+doc_links:
+- path: docs/analysis/2026-10-01-repository-query-catalog.md
+  relationship: context
+  status: exists
+  relevance: Twenty-five role questions consolidated into eight answer families; desired answers are not current
+    tool guarantees.
+- path: docs/analysis/2026-10-01-repository-query-evaluation-cases.json
+  relationship: context
+  status: exists
+  relevance: Twelve planned source-anchored cases and controls; not executed acceptance proof.
+- path: docs/architecture/adrs/ADR-062-standalone-knowledge-retrieval.md
+  relationship: context
+  status: exists
+  relevance: Retain immutable source provenance, registered bounded execution and existing ownership.
+- path: docs/acceptance-criteria/ac-store/ACS-1100-honest-coverage-answers/ACS-1100.yaml
+  relationship: context
+  status: exists
+  relevance: Inherited coverage and denominator contract; no duplicate enforcement rule.
+- path: docs/architecture/components/knowledge-retrieval.md
+  relationship: context
+  status: exists
+  relevance: Existing public boundaries, canonical projection ownership and bounded research integration.
+- path: docs/testing/test-angles.md
+  relationship: context
+  status: exists
+  relevance: Public reachability, producer-consumer seams and discriminating proof expectations; these descriptors
+    are planned.
+assigned_agent: python-coder
+estimated_complexity: L
+delivers_to:
+- ac_id: KM-500e-2
+  agent: python-coder
+  contract: 'Answer requirements: original_question, required_fields with meanings, repository_id, requested_source_sha,
+    population/root_id, levels, root_excluded versus terminal_leaf_only inclusion rule, completeness_required, unresolved_scope
+    and clarification state, preserved across run/resume.'
+- ac_id: KM-500e-3
+  agent: python-coder
+  contract: 'Answer requirements: original_question, required_fields with meanings, repository_id, requested_source_sha,
+    population/root_id, levels, root_excluded versus terminal_leaf_only inclusion rule, completeness_required, unresolved_scope
+    and clarification state, preserved across run/resume.'
+- ac_id: KM-500e-4
+  agent: python-coder
+  contract: 'Answer requirements: original_question, required_fields with meanings, repository_id, requested_source_sha,
+    population/root_id, levels, root_excluded versus terminal_leaf_only inclusion rule, completeness_required, unresolved_scope
+    and clarification state, preserved across run/resume.'
+- ac_id: KM-500e-5
+  agent: documentation-expert
+  contract: 'Answer requirements: original_question, required_fields with meanings, repository_id, requested_source_sha,
+    population/root_id, levels, root_excluded versus terminal_leaf_only inclusion rule, completeness_required, unresolved_scope
+    and clarification state, preserved across run/resume.'
+- ac_id: KM-500f-3
+  agent: python-coder
+  contract: 'Answer requirements: original_question, required_fields with meanings, repository_id, requested_source_sha,
+    population/root_id, levels, root_excluded versus terminal_leaf_only inclusion rule, completeness_required, unresolved_scope
+    and clarification state, preserved across run/resume.'
+- ac_id: KM-500g-1
+  agent: python-coder
+  contract: 'Answer requirements: original_question, required_fields with meanings, repository_id, requested_source_sha,
+    population/root_id, levels, root_excluded versus terminal_leaf_only inclusion rule, completeness_required, unresolved_scope
+    and clarification state, preserved across run/resume.'
+- ac_id: KM-500d-3
+  agent: python-coder
+  contract: 'Answer requirements: original_question, required_fields with meanings, repository_id, requested_source_sha,
+    population/root_id, levels, root_excluded versus terminal_leaf_only inclusion rule, completeness_required, unresolved_scope
+    and clarification state, preserved across run/resume.'
+expects_from:
+  agent: research-agent
+  contract: Original repository research question, explicit user-supplied scope and existing authorization context;
+    no implied provider permission.
+origin_agent: business-analyst
+created: '2026-10-01'
+created_by: docs/acceptance-criteria/knowledge-management/KM-500-research-capability-growth/KM-500e.yaml
+amended_by:
+- '2026-10-01: User explicitly approved the new ACs and directed implementation with agents and an independent evaluator. Approval records authorization, not implementation or execution proof.'
+superseded_by: null
+covered_by:
+- tests/knowledge/test_query_answer_contract_acceptance_kernel.py
+- tests/knowledge/test_query_answer_contract_acceptance_research_assessment.py
+implemented_by:
+- tickets/00_inbox/epics/EPIC-RepositoryResearchAnswers/TICKET-20261001-KM-500e-1.md
+change_target: code
+risk_surface: contract_boundary
+notes: RQ1/RQ2/RQ7; BA-01, BA-02, BA-05, ITPO-01, ITPO-03, CODER-02, QA-01. Extends input clarification to answer
+  semantics and counting scope; does not replace the completed clarification control flow. Authored using the business-analyst
+  template under explicit user authorization to draft ACs; not approval or implementation proof.
+it_requirements:
+- Retain immutable repository/source SHA provenance, bounded registered read-only queries and existing kernel authorization,
+  budgets and retries. This contract adds no arbitrary Cypher, new network endpoint, source-write permission or
+  automatic query activation.
+- The named fields below describe the planned observable semantic contract; preserve compatible existing envelope
+  fields and version any incompatible extension. Required unavailable values stay explicit and are never inferred
+  from an evaluation oracle.
+- Resolve count semantics before capability selection. The canonical work_status field must not alias graph lifecycle
+  status; record the population and whether only the selected root or every parent is excluded.
+- Preserve the original question, explicit user answers and unresolved scope in the existing serialized run/resume
+  state and pass the same requirements to query selection and final sufficiency assessment. Previously resolved
+  material choices must not be asked again.
+- A supported operation may expose fewer fields than requested; retain those requirements and report a gap instead
+  of weakening the question. Clarification is bounded and uses the existing continuation contract.
+test_required: true
+test_rationale: Planned criterion and public reachability proof includes real producer/consumer boundaries and named
+  plausible wrong outcomes. No descriptor is executed coverage; no provider, database or deployment result is asserted.
+test_spec:
+- name: test_research_resolves_count_scope_and_preserves_explicit_choices
+  target_dir: tests/kernel/
+  framework: pytest
+  type: integration
+  angle: reachability
+  description: Invoke the public research entry point with an ambiguous test-writing status question and then an
+    explicit TQ-500f all-L2/L3-descendants request; assert focused clarification only for the ambiguous input, work_status
+    as the requested fact and the explicit root-excluded scope preserved.
+  must_catch:
+  - Accepting an ambiguous global count or repeatedly asking an already answered scope question.
+  covers:
+  - KM-500e-1
+  requires_db: false
+  surface_invoked: Existing kernel research run/resume entry point using retrieve.repository
+- name: test_answer_requirements_keep_root_only_and_terminal_leaf_distinct
+  target_dir: tests/kernel/
+  framework: pytest
+  type: integration
+  angle: criterion
+  description: Using the pinned RQE-01 population, assert the requirements distinguish all 15 descendants from 11
+    terminal leaves without substituting lifecycle status or hard-coding those totals for other revisions.
+  must_catch:
+  - Treating root-excluded and terminal-leaf-only populations as interchangeable.
+  covers:
+  - KM-500e-1
+  requires_db: false
+- name: test_answer_requirements_survive_real_run_resume_handoff
+  target_dir: tests/kernel/
+  framework: pytest
+  type: integration
+  angle: real_artifact
+  description: Serialize a real clarification result through the existing checkpoint producer, reopen it in a fresh
+    process and resume through the real consumer; assert original question, required fields, scope and explicit
+    answers survive unchanged.
+  must_catch:
+  - A resume dropping work_status or replacing the original question with the first query output.
+  covers:
+  - KM-500e-1
+  requires_db: false
+- name: test_query_selection_cannot_remove_unavailable_required_field
+  target_dir: tests/kernel/
+  framework: pytest
+  type: integration
+  angle: seam
+  description: Pass requirements from the real planning producer to capability selection and sufficiency assessment
+    with an operation lacking work_status; assert the original field obligation remains unresolved.
+  must_catch:
+  - Declaring fulfillment after silently deleting the unavailable field from answer requirements.
+  covers:
+  - KM-500e-1
+  requires_db: false
+product_truth:
+  - flow: leafcutter/retrieval-current-baseline
+    node: clarify
+    node_kind: branch
+    flow_kind: data
+    screen: null
+    mock_data: null
+    entities: []
+    source: real
+    asof: '2026-10-02'
+  - flow: leafcutter/retrieval-current-baseline
+    node: clarify-2
+    node_kind: branch
+    flow_kind: data
+    screen: null
+    mock_data: null
+    entities: []
+    source: real
+    asof: '2026-10-02'
+  - flow: leafcutter/retrieval-current-baseline
+    node: clarify-3
+    node_kind: branch
+    flow_kind: data
+    screen: null
+    mock_data: null
+    entities: []
+    source: real
+    asof: '2026-10-02'
+  - flow: leafcutter/retrieval-current-baseline
+    node: request
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: null
+    entities: []
+    source: real
+    asof: '2026-10-02'
+  - flow: leafcutter/retrieval-current-baseline
+    node: understand
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: null
+    entities: []
+    source: real
+    asof: '2026-10-02'

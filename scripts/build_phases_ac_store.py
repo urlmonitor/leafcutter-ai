@@ -141,6 +141,7 @@ AC_STORE_DEPLOY_MAP: tuple[tuple[str, str], ...] = (
     # name — unit_tests/ac_store/test_bp_1100g_3_ii.py::_MODULE_FILES builds its
     # own simulated deployed tree and does not read this map.
     ("scripts/ac_store/_done_proof_phase_helpers.py", "_done_proof_phase_helpers.py"),
+    ("scripts/ac_store/_done_proof_composite.py", "_done_proof_composite.py"),
     # _done_proof_entry_point_gate.py (BO-2900a-1) is a THIRD sibling
     # extracted out of done_proof.py, alongside _done_proof_phase_helpers.py,
     # and done_proof.py imports it at MODULE scope too. Same fast-lane gate,
@@ -154,6 +155,7 @@ AC_STORE_DEPLOY_MAP: tuple[tuple[str, str], ...] = (
     # (BP-900h-4): an underscore reads to the declaring-files inspector as
     # "same-dir sibling", wrong for this cross-directory import.
     ("scripts/ac_store/done_proof_kind_support.py", "done_proof_kind_support.py"),
+    ("scripts/ac_store/pytest_outcome_reader.py", "pytest_outcome_reader.py"),  # TQ-500g-4
     # _kind_plugin.py (TQ-500f-3-i H-1) -- the pytest plugin (-p _kind_plugin)
     # done_proof_kind_support.py loads to read each test's real exception
     # type from pytest's own hook data. Must deploy alongside it.
@@ -552,3 +554,6 @@ def build_ac_store(target_root: Path, config: dict[str, Any],
 #   _declared_files_path_form.py, split out of declared_files.py to stay
 #   under check-file-size. Same reasoning as the entry above: declared_files.py
 #   imports it at module scope, so it must deploy alongside it.
+# - 2026-10-05 07:01 UTC [python-coder]: Deploy the composite proof sibling
+#   imported by done_proof so consumer installations retain language-aware proof.
+#   (#TICKETLESS reason=user-authorized-composite-proof-ci-repair)

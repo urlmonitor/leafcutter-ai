@@ -7,7 +7,7 @@ status: active
 level: L3
 readiness: approved
 priority: high
-work_status: done
+work_status: todo
 origin_agent: BrainCandy
 change_target: pipeline
 risk_surface: contract_boundary
@@ -18,10 +18,55 @@ criteria: |
   And the agent's own result is therefore the only place the driver looks for the
     identity of the agent a handoff is addressed to,
   When a phase agent returns a handoff whose `handoff_target` names an agent the
-    driver recognises as one of its phase agents,
+    driver recognises as one of its phase agents, and that agent is a key in the
+    ticket's own agents map (a key whose phase is marked not needed still counts),
   Then the driver re-dispatches exactly that agent before any later phase runs,
+    And it dispatches that agent the way it dispatches any phase in its order, so
+      every check the driver runs before dispatching a phase, and every read-back
+      of the ticket record after it, applies to the re-dispatched agent as well,
     And the phase that handed off is not recorded as completed,
-    And the drive does not advance to the next phase in its phase order.
+    And the drive does not advance to the next phase in its phase order while the
+      handoff is unresolved.
+
+  Given a phase H has handed off to a target T, and the driver has re-dispatched T,
+  When T returns ok and the ticket record read back after T's dispatch confirms
+    T's sign-off,
+  Then the ticket continues in the same drive instead of stopping,
+    And if that same read-back shows H still needed or failed, H is the next
+      phase dispatched,
+    And if it shows H already signed off, the drive resumes its normal phase
+      order,
+    And the ticket can reach completion in that drive, with no re-run required,
+    And a T that itself returns a handoff is adjudicated by these same rules,
+      while a T that returns a blocker or fails is adjudicated as any phase that
+      does.
+
+  Given a phase agent returns a handoff in one drive of one ticket,
+  When any one of these holds:
+      the same handing phase has already handed off to the same target once in
+        this drive — a repeated from-to pair,
+      honouring it would be the fourth handoff honoured for this ticket in this
+        drive — no more than 3 are honoured,
+      the target names the handing phase itself,
+      the target is a phase agent the driver recognises but is not a key in this
+        ticket's agents map,
+      the target's phase is deferred for this drive, so it cannot run in it — for
+        example pull-request on a ticket driven as an epic member, whose pull
+        request the epic opens,
+      the target was re-dispatched and returned ok, but the ticket record cannot
+        confirm its sign-off — the record does not show it signed off, or the
+        record cannot be read,
+  Then the driver stops the ticket and its report states which of these held,
+    And for a repeated pair or the per-ticket cap, the report names the chain of
+      handoffs that led there and the target is not dispatched again,
+    And for a self-handoff or a target missing from the agents map, no agent is
+      dispatched,
+    And for a deferred target, no agent is dispatched and the report names the
+      deferred target,
+    And for a target the record cannot confirm, no later phase is dispatched,
+    And in none of these cases is the handing phase recorded as completed,
+    So these six conditions, together with the two refusals below, are the only
+      ways a handoff stops a ticket.
 
   Given a phase agent returns a handoff carrying no target at all — the key absent,
     empty, blank, or not a name,
@@ -80,6 +125,53 @@ criteria: |
       presence of a branch, or for the absence of a ticket-body scan — is not
       accepted as coverage, because the honoured path, the two refusals and the
       no-inference guarantee differ only in what the running driver does.
+doc_links:
+  - path: docs/architecture/adrs/ADR-019-build-feature-inline-phase-dispatch.md
+    relationship: describes
+    status: exists
+    relevance: "The driver inlines one phase-dispatch loop. An honoured handoff must re-enter that loop, not a second inline dispatch."
+  - path: docs/architecture/adrs/ADR-048-order-independent-per-ticket-completion.md
+    relationship: describes
+    status: exists
+    relevance: "One answer per condition: the read-back that decides whether the handing phase runs next is the same evidence the completion decision's handoff-resolution rule (BO-400e-1-i) reads."
+  - path: docs/architecture/components/build-ticket-workflow-dispatch.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/components/build-epic-workflow-dispatch.md
+    relationship: describes
+    status: exists
+    relevance: "Epic loop: a member ticket whose handoff resolves must no longer surface as a halted ticket."
+  - path: templates/skills/building-epics/SKILL.md
+    relationship: relates-to
+    status: exists
+    relevance: "Section 4 handoff budget (1 per phase pair per ticket), which the per-pair cap mirrors. Its handoff text (around lines 659-670) is updated to the continuation rule in the same ticket."
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  config_schema_fragment: null
+  reference_file_path: templates/workflows-js/build-feature.js
+  n_location_rule: "2 -- the handoff branch in build-feature.js and its twin in build-ticket.js, which change in the same commit and must behave identically"
+  required_skills:
+    - python-coder
+    - test-writer
+  post_write_commands:
+    - "python scripts/build.py"
+    - "python -m pytest unit_tests/workflows/test_bo_3000_handoff_routing.py unit_tests/workflows/test_bo_3000a_3700_dispatch_defects.py unit_tests/workflows/test_bo_3000b_statusless_reply_schema.py unit_tests/workflows/test_bo_3000c_handoff_continuation.py unit_tests/workflows/test_bo_3701_build_ticket_dispatch.py"
+  constraints:
+    - "Twin parity: build-feature.js and build-ticket.js change in the same commit and produce the same dispatch sequence and the same stop report for every case in this record. The covering tests are parametrised over TWIN_DRIVERS (unit_tests/prompt_assembly/_driver_harness.py), so drift between the twins fails a test. Cases that need an epic drive (the deferred pull-request target; an epic ticket completing after a resolved handoff) are build-feature.js only, because build-ticket.js has no epic loop."
+    - "One dispatch path: an honoured handoff target is dispatched through the same per-phase dispatch every phase uses: the pointer block (BO-1900d-1), the test-requirements guard, the red-baseline gate, the record read-back and its check, the dispatched-agent bookkeeping, promoted-phase absorption and the tests_written evidence. No separate inline dispatch of the target may remain. The inline path is what let a handoff to python-coder run the coder with no red-baseline gate."
+    - "Handoff budget: at most 1 honoured handoff per (from-phase, to-phase) pair per drive, matching building-epics section 4 ('1 per phase pair per ticket'), and at most 3 honoured handoffs per ticket per drive as a backstop against cycles. Exceeding either stops the ticket with classification handoff_loop, and the report lists the chain of from-to handoffs honoured so far. The budget is per drive, so a re-run starts with a fresh budget."
+    - "Fail closed on confirmation: the only evidence that the target's ok resolved the handoff is the ticket-record read-back after the target's dispatch (a verified sign-off). An unverified sign-off or an unreadable record stops the ticket exactly as today (status blocked, classification cross_agent, handoff_target named) and dispatches no later phase. The target's own ok reply is never enough by itself."
+    - "Handing-phase decision: whether H runs next is decided from that same post-target read-back. If H is needed or failed, it runs next, ahead of every other pending phase. If H is signed_off, the normal phase order resumes. The decision must agree with the completion decision's handoff-resolution rule (BO-400e-1-i), so one run gives one answer per condition (ADR-048)."
+    - "Refusals that dispatch nobody: a self-handoff, a recognised phase agent that is not a key in the ticket's agents map, and a target whose phase is deferred for this drive. Each stops the ticket with a reason the report distinguishes from every other stop condition, and the deferred refusal names the deferred target. A target present in the agents map as not_needed is honoured. No stop of any kind records the handing phase as completed."
+    - "Handoff context: the re-dispatched target's prompt names the handing phase and carries its handoff message (the existing re-dispatch and handoff-message sentence), so the target knows what it was asked to do."
+    - "No regression: the two existing refusals (no target; an unrecognised target, reproduced verbatim), the no-inference-from-ticket-body guarantee and the distinguishable unobtainable-versus-targetless refusals are unchanged. test_bo_3000_handoff_routing.py (five tests), test_bo_3000b_statusless_reply_schema.py and the BO-3700/BO-3701 tests pass unchanged. Only test_handoff_naming_a_known_agent_redispatches_exactly_that_agent is re-cast (see test_spec)."
+    - "Size ratchet: build-feature.js and build-ticket.js are both over the 1000-line .js limit, and the check-file-size growth ratchet (GE-127b-1) refuses any commit that makes either longer. Lines starting with // count toward the limit. Each file must end net-zero or shorter; deleting the inline re-dispatch block pays for the additions. If that budget cannot be met, move the decision logic into a Python helper the driver calls (the heavy_lane_gate precedent) instead of asking for a ratchet skip."
+    - "ADR-001: edit only the templates/workflows-js/ sources, run python scripts/build.py, and stage the regenerated mirrors in the same commit, or check-build-drift fails."
+    - "Test harness: the E2 harness (unit_tests/prompt_assembly/harness_build_ticket_guard.mjs, appendSignoff) gains two opt-in spec keys, record_handoff_target and flips_signed_off. They must be opt-in so every existing harness test keeps its behaviour. The default signoff-readback stub stays unconfirmed, which is why test_bo_3000_handoff_routing.py still halts before pr-reviewer."
+    - "Companion prose in the same ticket: templates/skills/building-epics/SKILL.md (the handoff text around lines 659-670) and templates/skills/build-feature-ops-notes/SKILL.md must describe the continuation rule and the stop conditions. This is skill-body text, the llm-expert surface, and the ticket's agents map should include llm-expert for it. Out of scope: the status-checker handoff loop. A status-checker that hands off and stays needed now hits the pair cap; design defect 4 (ticket T5) fixes it separately."
+delivers_to: null
+expects_from: null
 test_required: true
 test_spec:
   - name: test_handoff_naming_a_known_agent_redispatches_exactly_that_agent
@@ -87,7 +179,7 @@ test_spec:
     framework: unittest
     type: behavioral
     angle: criterion
-    description: "Drive a phase that returns a handoff naming a known agent and assert that agent was dispatched next, the handing-off phase was not recorded completed, and no later phase ran."
+    description: "The unresolved case, re-cast 2026-10-06. A phase returns a handoff naming a known agent that is a key in the ticket's agents map, and the record read-back does not confirm the re-dispatched agent's sign-off (record: false). Assert that agent was dispatched next through the normal phase dispatch, the handing-off phase was not recorded completed, no later phase ran, and the ticket stopped as cross_agent naming the target. Parametrised over TWIN_DRIVERS."
   - name: test_handoff_with_no_target_refuses_and_dispatches_no_agent
     target_dir: unit_tests/workflows/
     framework: unittest
@@ -124,7 +216,74 @@ test_spec:
     type: behavioral
     angle: reachability
     surface_invoked: templates/workflows-js/build-feature.js
-    description: "Every case above is driven through _driver_harness.py executing build-feature.js's own top-level body, not an extracted helper and not a source scan."
+    description: "Every case above, and every continuation case below, is driven through unit_tests/prompt_assembly/_driver_harness.py executing the driver's own top-level body (build-feature.js, and build-ticket.js through TWIN_DRIVERS). No case uses an extracted helper or a source scan."
+  - name: test_resolved_handoff_with_handing_phase_signed_off_resumes_normal_order
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "architect-review approves and hands off to test-writer. The record confirms test-writer's sign-off and shows architect-review signed_off. The dispatch sequence is [architect-review, test-writer, python-coder, pr-reviewer], test-writer runs once, and the ticket completes in the same drive with no re-run. Parametrised over TWIN_DRIVERS."
+  - name: test_resolved_handoff_with_handing_phase_still_needed_runs_it_next
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "python-coder hands off to test-writer. The record confirms test-writer and shows python-coder still needed. The dispatch sequence is [test-writer, python-coder, test-writer, python-coder, pr-reviewer], the second python-coder returns ok, and the ticket completes. Parametrised over TWIN_DRIVERS."
+  - name: test_repeated_handoff_pair_stops_as_handoff_loop
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    angle: failure
+    description: "The same handing phase hands off to the same target a second time in one drive. The ticket stops with classification handoff_loop and the report names the chain. The target is not dispatched again, the handing phase is not recorded completed, and pr-reviewer never runs. Parametrised over TWIN_DRIVERS."
+  - name: test_fourth_handoff_in_one_drive_stops_at_the_per_ticket_cap
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    angle: boundary
+    description: "A chain of distinct from-to handoffs, each target itself returning a handoff, is honoured three times. The fourth stops the ticket as handoff_loop, the report names all four links, and the fourth target is not dispatched. This also proves that a target which returns a handoff is judged by the same rules. Parametrised over TWIN_DRIVERS."
+  - name: test_self_handoff_is_refused_and_dispatches_no_agent
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    angle: failure
+    description: "A phase whose handoff_target names itself stops the ticket with a self-handoff reason. No agent is dispatched after it, and it is not recorded completed. Parametrised over TWIN_DRIVERS."
+  - name: test_target_missing_from_agents_map_is_refused_and_dispatches_no_agent
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    angle: failure
+    description: "A handoff naming a recognised phase agent that is not a key in this ticket's agents map stops the ticket. The reason is distinct from the unrecognised-target refusal, and no agent is dispatched. Parametrised over TWIN_DRIVERS."
+  - name: test_target_marked_not_needed_in_agents_map_is_honoured
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    angle: boundary
+    description: "A handoff naming an agent that is in the agents map as not_needed is honoured, and that agent is dispatched next. Parametrised over TWIN_DRIVERS."
+  - name: test_deferred_target_is_refused_and_the_report_names_it
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    angle: failure
+    description: "In an epic drive through build-feature.js, a member ticket's phase hands off to pull-request, whose phase is deferred for that drive. No agent is dispatched, the ticket stops, the report names pull-request as the deferred target, and the handing phase is not recorded completed. build-feature.js only, because build-ticket.js has no epic loop."
+  - name: test_unconfirmed_target_signoff_stops_the_ticket_and_dispatches_no_later_phase
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    angle: failure
+    description: "Two variants: the target returns ok but the record read-back does not show it signed off, and the record cannot be read at all. Each stops the ticket as cross_agent naming handoff_target, dispatches no later phase, and does not record the handing phase completed. Parametrised over TWIN_DRIVERS."
+  - name: test_handoff_to_python_coder_runs_the_red_baseline_gate_before_the_coder
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    angle: reachability
+    description: "Through the E2 harness (unit_tests/prompt_assembly/harness_build_ticket_guard.mjs), a handoff to python-coder runs the test-requirements guard and dispatches red-baseline-gate before python-coder, exactly as a normal coder dispatch does. Parametrised over TWIN_DRIVERS."
+  - name: test_epic_ticket_whose_handoff_resolves_completes_in_the_same_run
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "In an epic drive through build-feature.js, a member ticket whose handoff resolves completes in that run and is not reported as a halted ticket. This is the field case where every honoured handoff ended the ticket as blocked with 're-run /build-feature'. build-feature.js only."
+test_rationale: "Handoff continuation is a property of the running driver. The same reply leads to a continued, stopped or looping ticket depending only on the record read-back and the per-drive handoff budget, so only driving the real workflow body and asserting on the dispatched agents and the reported stop can prove it. The cases are parametrised over TWIN_DRIVERS because the two drivers are separate files that ship the same behaviour, and a single-driver test would let build-ticket.js drift unnoticed, as the original scope note did. The red-baseline-gate case uses the E2 harness because that is the harness that dispatches the gate."
 amended_by:
   - date: 2026-09-07
     agent: business-analyst
@@ -132,6 +291,12 @@ amended_by:
   - date: 2026-09-07
     agent: business-analyst
     reason: "notes only — corrected a passage that had gone stale between amendments. The first amendment left a present-tense warning that the covering tests in unit_tests/workflows/test_bo_3000a_3700_dispatch_defects.py still encoded the REJECTED inference design, so that a green run of them was evidence against this record rather than for it. That was true when written and is now false: commit 5d997855a rewrote the file, DELETING the tests that asserted the rejected inference (test_handoff_without_target_field_resolves_target_from_implementation_tasks, test_agent_contracts_subsection_is_not_read_as_a_handoff_target, test_two_candidate_agents_in_implementation_tasks_still_refuses, test_explicit_handoff_target_field_takes_precedence_over_the_record) and implementing this record's seven test_spec entries name for name; an AC-fulfilment gate verified the mapping 1:1 and flipped work_status to done on that basis. Verified before editing: the rejected-design test name no longer occurs in the file, all seven spec names are present, and the class named in covered_by still exists. Left standing as history is the sequence itself — criteria rewritten first, coverage rewritten second, and the window between them in which the record and its own tests disagreed — since that window, and the decision not to reconcile status inside it, is what the note exists to preserve; only the claim that the disagreement STILL holds was removed, because a reader hitting it would reasonably distrust a work_status the evidence supports. No other passage altered: the field evidence on the dropped GE-122d-1 ticket, the three grounds for rejecting inference, the observation about BO-3000's own unreconciled state, and the build-ticket.js scope note are all still accurate. work_status, covered_by and implemented_by deliberately untouched — the gate set them against verified evidence."
+  - date: 2026-10-06
+    agent: business-analyst
+    reason: "user decision 2026-10-06, flag F1 (build-tooling fix design, sections 1a and 8; delivered by ticket T2). Field evidence: in an epic, every honoured handoff ended the ticket as blocked with 're-run /build-feature', and the epic loop treated that as a halt, so a handoff that had already resolved still stopped the whole run. The first scenario now also requires the target to be a key in the ticket's agents map, requires the re-dispatch to go through the normal phase dispatch (the inline re-dispatch skipped the record read-back and the checks run before a phase, so a handoff to python-coder ran the coder with no red-baseline gate), and limits 'does not advance' to while the handoff is unresolved. Two scenarios were added: once the record confirms the target's sign-off, the ticket continues, with the handing phase next if it is still needed or failed and normal order otherwise; and a handoff stops the ticket only on a repeated from-to pair in one drive, a fourth honoured handoff on the ticket in one drive, a self-handoff, a target that is not a key in the agents map, a target whose phase is deferred for this drive, or a target the record cannot confirm. The deferred-target condition is design section 1a refusal (e), for example pull-request on an epic member whose pull request the epic opens. It dispatches no agent, and the report names the deferred target. It was added at the coordinator's direction on 2026-10-06 as part of the approved T2 design, within the user's F1 approval, because a deferred phase cannot run in that drive. The two existing refusals (no target; a target that is not a phase agent) and the no-inference, distinguishable-refusal and harness-coverage scenarios are unchanged. BO-3000's 'must not advance to the next phase' still holds, because the order resumes only after the handoff is resolved. work_status moved done -> todo because the amended behaviour is not built. readiness stays approved because the user approved the amendment. covered_by and implemented_by were left as history. The test_spec entry test_handoff_naming_a_known_agent_redispatches_exactly_that_agent ('no later phase ran') and its covering test still pin the old halt-after-resolve behaviour; the IT PO re-specifies them next."
+  - date: 2026-10-06
+    agent: it-po
+    reason: "it-po-build-tooling-fix: user decision 2026-10-06, flag F1 (build-tooling fix design, sections 1a and 8; ticket T2). Technical fields re-specified to match the amended criteria; criteria untouched. Added doc_links, assigned_agent python-coder (the surface is the two twin workflow-JS drivers), estimated_complexity M, delivers_to/expects_from null, and a structured it_requirements object, required because this AC is package-surface (python-coder + build-orchestration). It covers twin parity, the single dispatch path, the 1-per-pair and 3-per-ticket handoff budget (handoff_loop), the fail-closed confirmation, the handing-phase decision, the refusals, the size ratchet and the build.py mirrors. test_spec: test_handoff_naming_a_known_agent_redispatches_exactly_that_agent was re-cast as the unresolved case (record: false); its assertions, including 'no later phase ran', still hold. Eleven entries were added for the new unit_tests/workflows/test_bo_3000c_handoff_continuation.py, parametrised over TWIN_DRIVERS in unit_tests/prompt_assembly/_driver_harness.py. The reachability entry now names both twins. test_rationale added. In notes, the SCOPE paragraph now says both twins change. work_status, readiness, covered_by and implemented_by untouched."
 covered_by:
   - unit_tests/workflows/test_bo_3000a_3700_dispatch_defects.py::TestHandoffTargetResolvedFromRecord
 implemented_by:
@@ -239,8 +404,13 @@ notes: |
   here — reconciling an unrelated record's status from inside a fix commit is how
   the store's history stops being auditable. Recorded as an observation only.
 
-  SCOPE. templates/workflows-js/build-feature.js only. build-ticket.js carries the
-  twin handoff handler (BO-3000 required both) and the same refusal behaviour should
-  follow there, but the frozen-list defect this fix ships alongside (BO-3700) is
-  build-feature-specific, and widening this pass to a second driver without its own
-  red baseline is how a fix becomes a rewrite. Recorded as follow-up, not done here.
+  SCOPE (revised 2026-10-06 by it-po, user decision F1, ticket T2). Both twin drivers
+  change, in the same commit: templates/workflows-js/build-feature.js and
+  templates/workflows-js/build-ticket.js. The continuation rule, the stop conditions
+  and the handoff budget must behave identically in both, and the covering tests are
+  parametrised over TWIN_DRIVERS so the twins cannot drift. Cases that need an epic
+  drive stay build-feature.js only, because build-ticket.js has no epic loop. The
+  original note limited the first pass to build-feature.js and left build-ticket.js
+  as follow-up, because the frozen-list defect shipped alongside it (BO-3700) is
+  build-feature-specific. That reason no longer limits this record. BO-3700 itself
+  stays build-feature-specific.

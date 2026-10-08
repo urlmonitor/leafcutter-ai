@@ -1,0 +1,79 @@
+id: DK-500d-1-i
+title: A category limited to other components or to another decision type is not offered
+component: decision-kernel
+components:
+- decision_kernel
+level: L3
+status: active
+readiness: approved
+req_status: draft
+priority: high
+work_status: todo
+roadmap_phase: phase_kernel_2_knowledge
+criteria: |
+  Given a published category limited to the component ux_prototyping, a published category for the decision type planning, and cat-1dc11c5a2ffa7310, for design and not limited to a component,
+  When a design decision scoped to decision_kernel is framed,
+  Then of these three only cat-1dc11c5a2ffa7310 is offered,
+  And when a design decision scoped to ux_prototyping is framed, both cat-1dc11c5a2ffa7310 and the ux_prototyping category are offered.
+depends_on:
+- DK-500d-1
+covered_by: []
+implemented_by: []
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: DK-500d-1
+  contract: Category lookup by decision_types and components (fit rule).
+change_target: code
+risk_surface: internal
+it_requirements:
+- The fit rule of DK-500d-1 is one deterministic function used by every caller (reuse here, and the cold-start check of DK-500e-3-i). Component matching uses component registry ids exactly, with no prefix or fuzzy match.
+test_required: true
+test_spec:
+- name: test_other_component_and_type_not_offered
+  target_dir: tests/kernel/capabilities/
+  framework: pytest
+  type: behavioral
+  angle: criterion
+  description: For a design decision scoped to decision_kernel only cat-1dc11c5a2ffa7310 of the three is offered.
+- name: test_matching_component_category_offered
+  target_dir: tests/kernel/capabilities/
+  framework: pytest
+  type: behavioral
+  angle: boundary
+  description: For a design decision scoped to ux_prototyping both cat-1dc11c5a2ffa7310 and the ux_prototyping category are offered.
+test_rationale: Run the decision capability through the public run/resume boundary with a scripted Jev provider and a recording host port over a fixture category library; assert the approval payload, call counts and staged files rather than internal helpers.
+doc_links:
+- path: docs/decisions/dec-93c1c730463c1f3c.yaml
+  relationship: governs
+  status: exists
+- path: docs/product-truth/flows/leafcutter/decision-forming.flow.json
+  relationship: implements
+  status: exists
+- path: docs/product-truth/mock-data/leafcutter/criterion-categories.mock.json
+  relationship: specified-by
+  status: exists
+origin_agent: business-analyst
+created: 2026-10-04
+amended_by:
+- reason: it-po-technical-enrichment
+  date: '2026-10-05'
+  by: it-po
+  summary: 'Technical enrichment: assigned_agent confirmed, estimated_complexity, change_target, risk_surface, it_requirements, contracts, doc_links and the test contract set; readiness draft -> reviewed. BA criteria unchanged.'
+superseded_by: null
+notes: |
+  The ux_prototyping and planning categories are illustrative (every mock category is design and unlimited). The second clause is the positive control: a filter that offers only unlimited categories passes the first clause.
+  FLOW BACK-LINK (for step.implements, to be applied by the store owner): leafcutter/decision-forming: reuse-criteria.
+  Authored by the business-analyst stage of /plan-feature (route strategic) under decision dec-93c1c730463c1f3c; readiness draft, no product approval implied.
+product_truth:
+  - flow: leafcutter/decision-forming
+    node: reuse-criteria
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: leafcutter/decisions
+    entities:
+      - CriterionCategory
+    source: real
+    asof: '2026-10-04'

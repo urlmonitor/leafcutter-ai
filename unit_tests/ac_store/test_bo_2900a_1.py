@@ -97,6 +97,22 @@ from _bo_2900a_1_fixtures import write_ac, write_fixture_file  # noqa: E402
 
 from done_proof import verify_done_eligible  # noqa: E402
 
+# BO-2900a-1's rule was SUSPENDED to report-only on 2026-09-30 (see
+# scripts/ac_store/_done_proof_entry_point_gate.py DECISION HISTORY): it announces
+# its findings and returns the verdict unchanged, so nothing it judges is refused.
+# The assertions below state what a-1 REQUIRES, which is currently unmet -- a-1 is
+# `work_status: todo` for exactly that reason. They are marked expected-failure
+# rather than rewritten, because rewriting them to assert the weaker report-only
+# behaviour would erase the record of what a-1 actually demands.
+#
+# These markers are SELF-CLEANING and must not be made lenient: `expectedFailure`
+# reports an unexpected PASS as a failure, so re-arming the rule turns this file red
+# until the markers are removed. That is the intended signal. CI runs with
+# AC_ENFORCE_STRICT=1 (.github/workflows/ci.yml), so the AC-enforcement plugin does
+# NOT mask these on the strength of a-1 being todo -- the marker is what keeps the
+# required pytest gate honest and green at the same time.
+_SUSPENDED_RULE = "BO-2900a-1 rule suspended to report-only; see a-1-ii / a-1-iii"
+
 
 # ---------------------------------------------------------------------------
 # Test 1 -- direct-import proof over a unit with a genuine entry point
@@ -147,6 +163,7 @@ class TestDirectImportProofIsRefusedWhenUnitHasAnEntryPoint(unittest.TestCase):
     def tearDown(self) -> None:
         self._tmp.cleanup()
 
+    @unittest.expectedFailure  # _SUSPENDED_RULE
     def test_direct_import_proof_is_refused_when_unit_has_an_entry_point(self) -> None:
         # covers: BO-2900a-1
         # angle: criterion

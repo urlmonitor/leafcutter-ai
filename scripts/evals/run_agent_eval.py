@@ -18,7 +18,7 @@ BUSINESS CONTEXT: pt-classifier is the first consumer. Its gold set lives at
     where `expected` is either LABELS (exact-match) or ASSERTIONS + a judge RUBRIC
     (artifact/markup agents). New agents slot in via agent_eval_config.json.
 
-ARCHITECTURE: Single-module script + importable functions.
+ARCHITECTURE: CLI orchestration with bounded sandbox, validation and label-scoring helpers.
     - CONFIG (scripts/evals/agent_eval_config.json) maps agent -> eval-set path,
       scoring mode, input field, model, and threshold. Paths resolve against the
       repo root (parents[2] of this file).
@@ -38,7 +38,8 @@ ARCHITECTURE: Single-module script + importable functions.
     - SCORING: label mode computes per-row exact-match accuracy over the label
       axes, per-axis precision/recall, and (optionally) derived-outcome accuracy.
       Artifact mode (mock-data-author, flow-author) copies the product-truth store
-      into a throwaway /tmp sandbox, invokes the WRITE-capable agent there (cwd =
+      and its declared contract dependencies into a throwaway /tmp sandbox,
+      invokes the WRITE-capable agent there (cwd =
       sandbox, LEAFCUTTER_REPO_ROOT = sandbox, tools ENABLED, --append-system-prompt
       = the agent template, permissions bypassed) so every write lands in the
       sandbox, then scores the produced *.mock.json / *.flow.json with the
@@ -47,7 +48,9 @@ ARCHITECTURE: Single-module script + importable functions.
       does NOT check this), referenced-records-exist, one acceptance_scenario per
       step AND per branch, id path-stable — plus a DELTA validator gate (the run may
       introduce no NEW product-truth validator errors vs the reconciled baseline,
-      robust to a store a concurrent session is mid-editing) and an optional per-row
+      robust to a store a concurrent session is mid-editing). Target flow contracts
+      must independently validate; missing inputs and target errors cannot be
+      subtracted as baseline noise. An optional per-row
       LLM-judge rubric. The sandbox is discarded after scoring. --score-gold feeds
       the gold artifact through the scorer without a model call (proves the scorer).
     - SELF-TEST mode feeds each row's OWN expected labels back through the scorer,
@@ -91,6 +94,13 @@ Usage:
 #   not false-fail a good run; the sandbox baseline registry is normalized to cover
 #   entities already present so a peer's transient registry gap is not charged to
 #   the agent. Live result: both agents 3/3 (golden + held-out + negative).
+# - 2026-10-06 [python-coder]: Both CLI invokers read the envelope through
+#   cli_envelope.envelope_result. A non-zero exit with EMPTY stderr (the CI case:
+#   no credential, stdout {"is_error":true,"result":"Not logged in ..."}) now
+#   reports the stdout `result` text instead of a blank error. invoke_via_cli runs
+#   with check=False so it shares that one path. Moving the duplicated reader out
+#   shrinks this oversized file (GE-127b-1 ratchet).
+#   (#TICKET-20261006-AgentEvalGateHonestAboutCredentials)
 # ====================================================================
 """
 
@@ -127,6 +137,11 @@ except ImportError:
 # apples-to-apples. eval_selector lives beside this script.
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from eval_selector import resolve_trigger_shas  # noqa: E402
+from artifact_dependencies import checked_path, copy_sandbox_inputs  # noqa: E402
+from artifact_validation import store_errors, target_errors  # noqa: E402
+from cli_envelope import envelope_result  # noqa: E402
+from label_scoring import OUTCOME_BY_COMBO as OUTCOME_BY_COMBO  # noqa: E402
+from label_scoring import aggregate_label, derive_outcome, print_report, score_label_row  # noqa: E402
 
 
 # ---------------------------------------------------------------------------
@@ -146,33 +161,6 @@ class EvalDataError(EvalHarnessError):
 
 class ModelInvocationError(EvalHarnessError):
     """Raised when the model cannot be invoked or returns an unparseable reply."""
-
-
-# ---------------------------------------------------------------------------
-# Outcome derivation (pure) — mirrors OUTCOME_BY_COMBO in the classifier schema
-# ---------------------------------------------------------------------------
-# key = (needs_flow, needs_mock_data, needs_mockup)
-OUTCOME_BY_COMBO: dict[tuple[bool, bool, bool], str] = {
-    (True, True, True): "full-set",
-    (False, True, True): "mockup+data",
-    (False, False, True): "mockup-only",
-    (False, True, False): "mock-data-only",
-    (False, False, False): "none",
-}
-
-
-def derive_outcome(labels: dict[str, bool]) -> str:
-    """Derive the routing outcome from the three classifier booleans.
-
-    Pure function. Returns "inconsistent" for any combination the schema does not
-    allow (the validator flags these; the harness records them rather than crash).
-    """
-    key = (
-        bool(labels.get("needs_flow")),
-        bool(labels.get("needs_mock_data")),
-        bool(labels.get("needs_mockup")),
-    )
-    return OUTCOME_BY_COMBO.get(key, "inconsistent")
 
 
 # ---------------------------------------------------------------------------
@@ -300,33 +288,17 @@ def invoke_via_cli(
             capture_output=True,
             text=True,
             timeout=timeout,
-            check=True,
+            check=False,
         )
     except subprocess.TimeoutExpired as exc:
         logger.exception("claude CLI timed out after %ss", timeout)
         msg = f"claude CLI timed out after {timeout}s"
         raise ModelInvocationError(msg) from exc
-    except subprocess.CalledProcessError as exc:
-        logger.exception("claude CLI exited %s", exc.returncode)
-        msg = f"claude CLI exited {exc.returncode}: {(exc.stderr or '').strip()[:400]}"
-        raise ModelInvocationError(msg) from exc
     except OSError as exc:
         logger.exception("claude CLI could not be launched")
         msg = "claude CLI could not be launched"
         raise ModelInvocationError(msg) from exc
-
-    try:
-        envelope = json.loads(completed.stdout)
-    except json.JSONDecodeError as exc:
-        logger.exception("claude CLI returned non-JSON envelope")
-        msg = "claude CLI returned non-JSON envelope"
-        raise ModelInvocationError(msg) from exc
-
-    result = envelope.get("result")
-    if not isinstance(result, str):
-        msg = "claude CLI envelope has no string 'result'"
-        raise ModelInvocationError(msg)
-    return result
+    return envelope_result(completed, "claude CLI", ModelInvocationError)
 
 
 def invoke_via_api(
@@ -426,81 +398,8 @@ def _first_balanced_object(text: str) -> str | None:
 # ---------------------------------------------------------------------------
 # Scoring — label mode
 # ---------------------------------------------------------------------------
-def score_label_row(
-    predicted: dict[str, Any],
-    expected: dict[str, Any],
-    axes: list[str],
-) -> dict[str, Any]:
-    """Score one label row. Pure function.
-
-    Returns per-axis correctness plus a row-level `passed` (all axes exact-match).
-    """
-    per_axis: dict[str, dict[str, bool]] = {}
-    all_correct = True
-    for axis in axes:
-        exp = bool(expected.get(axis))
-        pred = bool(predicted.get(axis))
-        correct = exp == pred
-        all_correct = all_correct and correct
-        per_axis[axis] = {"expected": exp, "predicted": pred, "correct": correct}
-    return {"passed": all_correct, "per_axis": per_axis}
 
 
-def aggregate_label(
-    row_results: list[dict[str, Any]],
-    axes: list[str],
-    derive_outcome_flag: bool,
-) -> dict[str, Any]:
-    """Aggregate label-mode row results into accuracy + per-axis precision/recall.
-
-    Pure function.
-    """
-    total = len(row_results)
-    passed = sum(1 for r in row_results if r["score"]["passed"])
-    accuracy = passed / total if total else 0.0
-
-    per_axis_stats: dict[str, dict[str, float | int]] = {}
-    for axis in axes:
-        tp = fp = fn = tn = 0
-        for r in row_results:
-            cell = r["score"]["per_axis"][axis]
-            exp, pred = cell["expected"], cell["predicted"]
-            if pred and exp:
-                tp += 1
-            elif pred and not exp:
-                fp += 1
-            elif not pred and exp:
-                fn += 1
-            else:
-                tn += 1
-        precision = tp / (tp + fp) if (tp + fp) else 0.0
-        recall = tp / (tp + fn) if (tp + fn) else 0.0
-        f1 = (2 * precision * recall / (precision + recall)) if (precision + recall) else 0.0
-        per_axis_stats[axis] = {
-            "tp": tp,
-            "fp": fp,
-            "fn": fn,
-            "tn": tn,
-            "precision": round(precision, 4),
-            "recall": round(recall, 4),
-            "f1": round(f1, 4),
-        }
-
-    aggregate: dict[str, Any] = {
-        "rows": total,
-        "passed": passed,
-        "accuracy": round(accuracy, 4),
-        "per_axis": per_axis_stats,
-    }
-    if derive_outcome_flag:
-        outcome_correct = sum(
-            1
-            for r in row_results
-            if r.get("expected_outcome") is not None
-            and r.get("predicted_outcome") == r.get("expected_outcome")
-        )
-        aggregate["outcome_accuracy"] = round(outcome_correct / total, 4) if total else 0.0
-    return aggregate
 
 
 # ---------------------------------------------------------------------------
@@ -630,28 +529,28 @@ def _store_dir(sandbox: Path) -> Path:
 
 
 def make_sandbox(repo_root: Path, copy_dirs: list[str]) -> Path:
-    """Create a /tmp sandbox and copy each repo-relative dir into it. I/O boundary."""
+    """Copy configured inputs and bounded contract dependencies into a /tmp sandbox."""
     try:
         sandbox = Path(tempfile.mkdtemp(prefix="lc_eval_"))
     except OSError as exc:
         logger.exception("Cannot create sandbox tempdir")
         msg = "Cannot create sandbox tempdir"
         raise EvalDataError(msg) from exc
-    for rel in copy_dirs:
-        src = repo_root / rel
-        dst = sandbox / rel
-        try:
-            dst.parent.mkdir(parents=True, exist_ok=True)
-            shutil.copytree(src, dst, ignore=shutil.ignore_patterns("__pycache__", "*.pyc"))
-        except OSError as exc:
-            logger.exception("Cannot copy %s into sandbox", src)
-            msg = f"Cannot copy {src} into sandbox"
-            raise EvalDataError(msg) from exc
+    try:
+        copy_sandbox_inputs(repo_root, sandbox, copy_dirs)
+    except (OSError, ValueError, TypeError, KeyError, SyntaxError, ImportError) as exc:
+        logger.exception("Cannot prepare dependency-complete artifact sandbox")
+        discard_sandbox(sandbox)
+        raise EvalDataError(f"Cannot prepare artifact sandbox: {exc}") from exc
     return sandbox
 
 
 def discard_sandbox(sandbox: Path) -> None:
     """Remove a sandbox tree, best-effort. I/O boundary (logs, never raises)."""
+    temporary_root = Path(tempfile.gettempdir()).resolve()
+    if sandbox.resolve() == temporary_root or not sandbox.resolve().is_relative_to(temporary_root):
+        logger.warning("Refusing to remove non-temporary sandbox %s", sandbox)
+        return
     try:
         shutil.rmtree(sandbox, ignore_errors=True)
     except OSError as exc:  # pragma: no cover - ignore_errors makes this rare
@@ -661,12 +560,16 @@ def discard_sandbox(sandbox: Path) -> None:
 def _run_pt_script(sandbox: Path, script_rel: str, args: list[str], timeout: int) -> subprocess.CompletedProcess:
     """Run a product-truth script inside the sandbox (cwd=sandbox). I/O boundary."""
     cmd = [sys.executable, str(sandbox / script_rel), *args]
+    env = dict(os.environ, LEAFCUTTER_REPO_ROOT=str(sandbox), PYTHONIOENCODING="utf-8")
+    env.pop("PYTHONPATH", None)
     try:
         return subprocess.run(  # noqa: S603 - fixed argv, no shell
             cmd,
             capture_output=True,
             text=True,
+            encoding="utf-8",
             cwd=str(sandbox),
+            env=env,
             timeout=timeout,
             check=False,
         )
@@ -693,10 +596,22 @@ def reconcile_store(sandbox: Path, timeout: int = 180) -> None:
 
 
 def validator_errors(sandbox: Path, timeout: int = 180) -> set[str]:
-    """Return the set of validator ERROR lines (the 'FAIL: ' payloads) for the store."""
+    """Return completed store errors; unavailable validation is a harness failure."""
     proc = _run_pt_script(sandbox, _VALIDATE_REL, ["--quiet"], timeout)
-    prefix = "FAIL: "
-    return {ln[len(prefix):] for ln in (proc.stderr or "").splitlines() if ln.startswith(prefix)}
+    try:
+        return store_errors(proc)
+    except ValueError as exc:
+        raise EvalDataError(str(exc)) from exc
+
+
+
+
+def _target_contract_errors(store: Path, target_obj: dict | None) -> list[str]:
+    """Validate target contracts without subtracting errors found in the baseline."""
+    try:
+        return target_errors(store, target_obj, _run_pt_script)
+    except ValueError as exc:
+        raise EvalDataError(str(exc)) from exc
 
 
 def _read_json(path: Path) -> Any:
@@ -868,21 +783,7 @@ def invoke_agent_writer(
         logger.exception("agent CLI could not be launched")
         msg = "agent CLI could not be launched"
         raise ModelInvocationError(msg) from exc
-
-    if completed.returncode != 0:
-        msg = f"agent CLI exited {completed.returncode}: {(completed.stderr or '').strip()[:400]}"
-        raise ModelInvocationError(msg)
-    try:
-        envelope = json.loads(completed.stdout)
-    except json.JSONDecodeError as exc:
-        logger.exception("agent CLI returned non-JSON envelope")
-        msg = "agent CLI returned non-JSON envelope"
-        raise ModelInvocationError(msg) from exc
-    result = envelope.get("result")
-    if not isinstance(result, str):
-        msg = "agent CLI envelope has no string 'result'"
-        raise ModelInvocationError(msg)
-    return result
+    return envelope_result(completed, "agent CLI", ModelInvocationError)
 
 
 def _parse_report(reply: str) -> dict[str, Any]:
@@ -1086,6 +987,13 @@ def _a_mock_data_ref_resolves(ctx: dict, spec: dict) -> tuple[bool, str]:
 
 
 def _a_validator_clean(ctx: dict, spec: dict) -> tuple[bool, str]:
+    """Require a valid flow target as well as no newly introduced store errors."""
+    if ctx.get("artifact_type") == "flow":
+        target_errors = ctx.get("target_contract_errors")
+        if target_errors is None:
+            return False, "target contract validation is unavailable"
+        if target_errors:
+            return False, f"target contract error(s): {target_errors[:3]}"
     new_errors = ctx["validator_new_errors"]
     return (not new_errors), (
         "no new validator errors" if not new_errors else f"{len(new_errors)} NEW error(s): {sorted(new_errors)[:3]}"
@@ -1115,7 +1023,7 @@ def evaluate_artifact_assertions(ctx: dict, assertions: list[dict]) -> list[dict
     results: list[dict[str, Any]] = []
     for spec in assertions:
         kind = spec.get("kind")
-        checker = _ASSERTIONS.get(kind)
+        checker = _ASSERTIONS.get(kind) if isinstance(kind, str) else None
         if checker is None:
             results.append({"kind": kind, "passed": False, "detail": f"unknown assertion kind {kind!r}"})
             continue
@@ -1136,7 +1044,11 @@ def build_artifact_context(
     target_rel = target_info.get("target_rel")
     target_obj = None
     if target_rel is not None:
-        target_obj = _read_json(store / target_rel)
+        try:
+            target_path = checked_path(store, Path(target_rel).as_posix())
+        except ValueError as exc:
+            raise EvalDataError(f"Unsafe artifact target: {target_rel}") from exc
+        target_obj = _read_json(target_path)
     return {
         "artifact_type": artifact_type,
         "ext": _ARTIFACT_EXT[artifact_type],
@@ -1146,6 +1058,7 @@ def build_artifact_context(
         "matching_added": target_info.get("matching_added", []),
         "matching_modified": target_info.get("matching_modified", []),
         "validator_new_errors": validator_new_errors,
+        "target_contract_errors": _target_contract_errors(store, target_obj) if artifact_type == "flow" else [],
         **view,
     }
 
@@ -1416,23 +1329,26 @@ def run_label_eval(
                 reply = _dispatch(backend, system_prompt, user_input, model, timeout)
                 raw = extract_json_object(reply)
                 predicted = _extract_labels(raw, response_label_field)
+                if any(not isinstance(predicted.get(axis), bool) for axis in axes):
+                    raise ModelInvocationError("Model response must supply an explicit boolean for every label axis")
             except ModelInvocationError as exc:
                 logger.warning("Row %s: model invocation/parse failed: %s", row_id, exc)
                 predicted = {}
-                parse_error = str(exc)
+                parse_error = str(exc) or "Model invocation or response validation failed"
 
-        score = score_label_row(predicted, expected, axes)
+        score = {"passed": False, "per_axis": {}} if parse_error is not None else score_label_row(predicted, expected, axes)
         record: dict[str, Any] = {
             "id": row_id,
             "input": row.get(input_field, ""),
             "predicted": predicted,
             "score": score,
         }
-        if parse_error:
+        if parse_error is not None:
             record["parse_error"] = parse_error
         if derive_flag:
             record["expected_outcome"] = derive_outcome(expected)
-            record["predicted_outcome"] = derive_outcome(predicted)
+            if parse_error is None:
+                record["predicted_outcome"] = derive_outcome(predicted)
         row_results.append(record)
     return row_results
 
@@ -1440,31 +1356,6 @@ def run_label_eval(
 # ---------------------------------------------------------------------------
 # Reporting
 # ---------------------------------------------------------------------------
-def print_report(agent: str, mode: str, row_results: list[dict], aggregate: dict) -> None:
-    """Print a human-readable per-row + aggregate report to stdout."""
-    print(f"\n=== Agent eval: {agent}  (mode={mode}) ===")
-    for r in row_results:
-        mark = "PASS" if r["score"]["passed"] else "FAIL"
-        detail = ""
-        if "predicted_outcome" in r:
-            oc = "ok" if r["predicted_outcome"] == r["expected_outcome"] else "MISS"
-            detail = f"  outcome[{oc}] exp={r['expected_outcome']} got={r['predicted_outcome']}"
-        print(f"  [{mark}] {r['id']}{detail}")
-        if not r["score"]["passed"]:
-            for axis, cell in r["score"]["per_axis"].items():
-                if not cell["correct"]:
-                    print(f"         axis {axis}: expected {cell['expected']} got {cell['predicted']}")
-
-    print("\n  --- Aggregate ---")
-    print(f"  rows={aggregate['rows']} passed={aggregate['passed']} accuracy={aggregate['accuracy']:.2%}")
-    if "outcome_accuracy" in aggregate:
-        print(f"  outcome_accuracy={aggregate['outcome_accuracy']:.2%}")
-    for axis, stats in aggregate.get("per_axis", {}).items():
-        print(
-            f"  axis {axis:16s} precision={stats['precision']:.2f} "
-            f"recall={stats['recall']:.2f} f1={stats['f1']:.2f} "
-            f"(tp={stats['tp']} fp={stats['fp']} fn={stats['fn']} tn={stats['tn']})"
-        )
 
 
 def write_results(results_path: Path, payload: dict[str, Any]) -> None:
@@ -1482,6 +1373,7 @@ def write_results(results_path: Path, payload: dict[str, Any]) -> None:
 # CLI
 # ---------------------------------------------------------------------------
 def build_parser() -> argparse.ArgumentParser:
+    """Describe the existing label, artifact and offline harness modes."""
     parser = argparse.ArgumentParser(description="Run a gold-set eval for a pipeline agent.")
     parser.add_argument("--agent", required=True, help="Agent key in agent_eval_config.json")
     parser.add_argument(
@@ -1641,6 +1533,7 @@ def _run_artifact_mode(args: argparse.Namespace, agent_cfg: dict, rows: list[dic
 
 
 def main(argv: list[str] | None = None) -> int:
+    """Load configuration, dispatch the selected evaluation mode and return its gate."""
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s: %(message)s")
     args = build_parser().parse_args(argv)
     repo_root = find_repo_root()
@@ -1662,3 +1555,7 @@ def main(argv: list[str] | None = None) -> int:
 
 if __name__ == "__main__":
     sys.exit(main())
+
+# DECISION HISTORY
+# ================================================================================
+# - 2026-10-05 06:37 [python-coder]: Keep missing validation and absent model answers from earning eval passes. (#TICKETLESS reason=user-authorized-evaluation-repair)

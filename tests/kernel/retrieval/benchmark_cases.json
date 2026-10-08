@@ -1,0 +1,532 @@
+{
+ "version": 1,
+ "corpus_commit": "2bb82cf98df721c489d38c1fc52c638cffaced20",
+ "cases": [
+  {
+   "id": "goal5_how_kernel_stores_decisions",
+   "note": "live regression on round E, goal 5",
+   "category": "existing_patterns",
+   "goal": "How does the Leafcutter kernel store decisions today, and do later runs learn from earlier decisions?",
+   "must_include": [
+    {
+     "name": "design-3 section Persistence layout",
+     "any_of": [
+      {
+       "path": "docs/analysis/2026-09-30-decision-kernel-design-3-kernel-scheduler.md",
+       "label": "Persistence layout"
+      }
+     ]
+    },
+    {
+     "name": "kernel/persistence/run_store.py",
+     "any_of": [
+      {
+       "path": "kernel/persistence/run_store.py"
+      }
+     ]
+    },
+    {
+     "name": "kernel/persistence/gap_store.py",
+     "any_of": [
+      {
+       "path": "kernel/persistence/gap_store.py"
+      }
+     ]
+    }
+   ],
+   "must_not_dominate": [
+    {
+     "pattern": "commit_guardian.json",
+     "max": 1
+    },
+    {
+     "pattern": "agent_registry",
+     "max": 1
+    },
+    {
+     "pattern": "test-angles",
+     "max": 1
+    },
+    {
+     "pattern": "docs/acceptance-criteria/",
+     "max": 3
+    },
+    {
+     "pattern": "tickets/",
+     "max": 3
+    }
+   ],
+   "baseline": {
+    "round": "E (cd2fd56c)",
+    "reached": [],
+    "pool_position": {
+     "design-3 section Persistence layout": null,
+     "kernel/persistence/run_store.py": 24,
+     "kernel/persistence/gap_store.py": null
+    },
+    "crowding": {
+     "commit_guardian.json": 1,
+     "agent_registry": 1,
+     "test-angles": 1,
+     "docs/acceptance-criteria/": 1,
+     "tickets/": 0
+    },
+    "judged": {
+     "reached": [
+      "kernel/persistence/run_store.py"
+     ],
+     "calls": 2
+    }
+   },
+   "current": {
+    "round": "F",
+    "note": "re-measured 2026-10-01 at CI's checkout path after the checkout-folder fix (#KernelV01/CI); the earlier round F values came from a `kernel-v01` worktree folder",
+    "reached": [
+     "kernel/persistence/run_store.py",
+     "kernel/persistence/gap_store.py"
+    ],
+    "pool_position": {
+     "design-3 section Persistence layout": 24,
+     "kernel/persistence/run_store.py": 11,
+     "kernel/persistence/gap_store.py": 8
+    },
+    "crowding": {
+     "commit_guardian.json": 0,
+     "agent_registry": 0,
+     "test-angles": 0,
+     "docs/acceptance-criteria/": 1,
+     "tickets/": 0
+    },
+    "judged": {
+     "reached": [
+      "design-3 section Persistence layout",
+      "kernel/persistence/run_store.py",
+      "kernel/persistence/gap_store.py"
+     ],
+     "calls": 2
+    }
+   }
+  },
+  {
+   "id": "goal2_where_tests_are_saved",
+   "note": "live regression on round E, goal 2",
+   "category": "existing_patterns",
+   "goal": "Where are tests saved in leafcutter?",
+   "must_include": [
+    {
+     "name": "tests/README.md",
+     "any_of": [
+      {
+       "path": "tests/README.md"
+      }
+     ]
+    },
+    {
+     "name": "unit_tests/README.md",
+     "any_of": [
+      {
+       "path": "unit_tests/README.md"
+      }
+     ]
+    },
+    {
+     "name": "design-6 section Test layout",
+     "any_of": [
+      {
+       "path": "docs/analysis/2026-09-30-decision-kernel-design-6-tests-phases-risks.md",
+       "label": "Test layout"
+      }
+     ]
+    }
+   ],
+   "must_not_dominate": [
+    {
+     "pattern": "commit_guardian.json",
+     "max": 1
+    },
+    {
+     "pattern": "agent_registry",
+     "max": 1
+    },
+    {
+     "pattern": "test-angles",
+     "max": 1
+    },
+    {
+     "pattern": "docs/acceptance-criteria/",
+     "max": 3
+    },
+    {
+     "pattern": "tickets/",
+     "max": 3
+    }
+   ],
+   "baseline": {
+    "round": "E (cd2fd56c)",
+    "reached": [
+     "tests/README.md"
+    ],
+    "pool_position": {
+     "tests/README.md": 8,
+     "unit_tests/README.md": null,
+     "design-6 section Test layout": null
+    },
+    "crowding": {
+     "commit_guardian.json": 1,
+     "agent_registry": 1,
+     "test-angles": 1,
+     "docs/acceptance-criteria/": 6,
+     "tickets/": 0
+    },
+    "judged": {
+     "reached": [
+      "tests/README.md"
+     ],
+     "calls": 1
+    }
+   },
+   "current": {
+    "round": "F",
+    "reached": [
+     "tests/README.md",
+     "unit_tests/README.md",
+     "design-6 section Test layout"
+    ],
+    "pool_position": {
+     "tests/README.md": 5,
+     "unit_tests/README.md": 3,
+     "design-6 section Test layout": 2
+    },
+    "crowding": {
+     "commit_guardian.json": 0,
+     "agent_registry": 0,
+     "test-angles": 1,
+     "docs/acceptance-criteria/": 1,
+     "tickets/": 0
+    },
+    "judged": {
+     "reached": [
+      "tests/README.md",
+      "unit_tests/README.md",
+      "design-6 section Test layout"
+     ],
+     "calls": 1
+    }
+   }
+  },
+  {
+   "id": "decision_records_existing_patterns",
+   "note": "rounds 5 to 7 goal; the decision cites kernel/contracts/decision.py and asks for filters",
+   "category": "existing_patterns",
+   "goal": "Decide how Leafcutter should file decision records as JSON or YAML files under docs so later kernel runs can find and reuse them as precedent: which fields a record needs and how human approval and later corrections are recorded.",
+   "hints": [
+    "Decide how Leafcutter should file decision records as JSON or YAML files under docs so later kernel runs can find and reuse them as precedent: which fields a record needs and how human approval and later corrections are recorded.",
+    "Can a later run find records by filters such as component, phase or file type?"
+   ],
+   "explicit_locators": [
+    "kernel/contracts/decision.py"
+   ],
+   "must_include": [
+    {
+     "name": "kernel/contracts/decision.py (cited)",
+     "any_of": [
+      {
+       "path": "kernel/contracts/decision.py"
+      }
+     ]
+    },
+    {
+     "name": "docs/components.json (filter terms)",
+     "any_of": [
+      {
+       "path": "docs/components.json"
+      }
+     ]
+    },
+    {
+     "name": "Stage-0 delta part 4",
+     "any_of": [
+      {
+       "path": "docs/analysis/2026-10-01-colony-memory-stage0-delta-4-decisions-needed.md"
+      }
+     ]
+    },
+    {
+     "name": "concept part 3 or 4 body",
+     "any_of": [
+      {
+       "path": "docs/analysis/2026-10-01-neo4j-colony-memory-concept-3-graph-model-ids-provenance.md"
+      },
+      {
+       "path": "docs/analysis/2026-10-01-neo4j-colony-memory-concept-4-retrieval-and-memory-capture.md"
+      }
+     ]
+    }
+   ],
+   "must_not_dominate": [
+    {
+     "pattern": "commit_guardian.json",
+     "max": 1
+    },
+    {
+     "pattern": "agent_registry",
+     "max": 1
+    },
+    {
+     "pattern": "test-angles",
+     "max": 1
+    },
+    {
+     "pattern": "docs/acceptance-criteria/",
+     "max": 3
+    },
+    {
+     "pattern": "tickets/",
+     "max": 3
+    }
+   ],
+   "baseline": {
+    "round": "E (cd2fd56c)",
+    "reached": [
+     "kernel/contracts/decision.py (cited)",
+     "docs/components.json (filter terms)"
+    ],
+    "pool_position": {
+     "kernel/contracts/decision.py (cited)": 1,
+     "docs/components.json (filter terms)": 7,
+     "Stage-0 delta part 4": null,
+     "concept part 3 or 4 body": null
+    },
+    "crowding": {
+     "commit_guardian.json": 1,
+     "agent_registry": 2,
+     "test-angles": 1,
+     "docs/acceptance-criteria/": 1,
+     "tickets/": 0
+    },
+    "judged": {
+     "reached": [
+      "kernel/contracts/decision.py (cited)",
+      "docs/components.json (filter terms)"
+     ],
+     "calls": 1
+    }
+   },
+   "current": {
+    "round": "F",
+    "note": "re-measured 2026-10-01 at CI's checkout path after the checkout-folder fix (#KernelV01/CI); the earlier round F values came from a `kernel-v01` worktree folder",
+    "reached": [
+     "kernel/contracts/decision.py (cited)",
+     "docs/components.json (filter terms)"
+    ],
+    "pool_position": {
+     "kernel/contracts/decision.py (cited)": 1,
+     "docs/components.json (filter terms)": 2,
+     "Stage-0 delta part 4": null,
+     "concept part 3 or 4 body": null
+    },
+    "crowding": {
+     "commit_guardian.json": 0,
+     "agent_registry": 0,
+     "test-angles": 0,
+     "docs/acceptance-criteria/": 1,
+     "tickets/": 0
+    },
+    "judged": {
+     "reached": [
+      "kernel/contracts/decision.py (cited)",
+      "docs/components.json (filter terms)"
+     ],
+     "calls": 1
+    }
+   }
+  },
+  {
+   "id": "lessons_thresholds_config",
+   "note": "lessons row 18: where the decision thresholds are configured",
+   "category": "existing_patterns",
+   "goal": "Where are the decision thresholds of the kernel configured and what do they mean?",
+   "must_include": [
+    {
+     "name": "config/kernel_config.default.json",
+     "any_of": [
+      {
+       "path": "config/kernel_config.default.json"
+      }
+     ]
+    },
+    {
+     "name": "kernel/config.py",
+     "any_of": [
+      {
+       "path": "kernel/config.py"
+      }
+     ]
+    }
+   ],
+   "must_not_dominate": [
+    {
+     "pattern": "commit_guardian.json",
+     "max": 1
+    },
+    {
+     "pattern": "agent_registry",
+     "max": 1
+    },
+    {
+     "pattern": "test-angles",
+     "max": 1
+    },
+    {
+     "pattern": "docs/acceptance-criteria/",
+     "max": 3
+    },
+    {
+     "pattern": "tickets/",
+     "max": 3
+    }
+   ],
+   "baseline": {
+    "round": "E (cd2fd56c)",
+    "reached": [],
+    "pool_position": {
+     "config/kernel_config.default.json": null,
+     "kernel/config.py": 44
+    },
+    "crowding": {
+     "commit_guardian.json": 0,
+     "agent_registry": 0,
+     "test-angles": 0,
+     "docs/acceptance-criteria/": 1,
+     "tickets/": 0
+    },
+    "judged": {
+     "reached": [
+      "kernel/config.py"
+     ],
+     "calls": 3
+    }
+   },
+   "current": {
+    "round": "F",
+    "note": "re-measured 2026-10-01 at CI's checkout path after the checkout-folder fix (#KernelV01/CI); the earlier round F values came from a `kernel-v01` worktree folder",
+    "reached": [
+     "kernel/config.py"
+    ],
+    "pool_position": {
+     "config/kernel_config.default.json": null,
+     "kernel/config.py": 7
+    },
+    "crowding": {
+     "commit_guardian.json": 0,
+     "agent_registry": 0,
+     "test-angles": 0,
+     "docs/acceptance-criteria/": 1,
+     "tickets/": 0
+    },
+    "judged": {
+     "reached": [
+      "kernel/config.py"
+     ],
+     "calls": 3
+    }
+   }
+  },
+  {
+   "id": "lessons_approval_provenance",
+   "note": "lessons row 16: who approved generated options and criteria",
+   "category": "existing_patterns",
+   "goal": "How does the kernel record who approved generated options and criteria?",
+   "must_include": [
+    {
+     "name": "kernel/capabilities/decision/approvals.py",
+     "any_of": [
+      {
+       "path": "kernel/capabilities/decision/approvals.py"
+      }
+     ]
+    },
+    {
+     "name": "design-4 section Decision capability",
+     "any_of": [
+      {
+       "path": "docs/analysis/2026-09-30-decision-kernel-design-4-jev-and-capabilities.md",
+       "label": "Decision capability"
+      }
+     ]
+    }
+   ],
+   "must_not_dominate": [
+    {
+     "pattern": "commit_guardian.json",
+     "max": 1
+    },
+    {
+     "pattern": "agent_registry",
+     "max": 1
+    },
+    {
+     "pattern": "test-angles",
+     "max": 1
+    },
+    {
+     "pattern": "docs/acceptance-criteria/",
+     "max": 3
+    },
+    {
+     "pattern": "tickets/",
+     "max": 3
+    }
+   ],
+   "baseline": {
+    "round": "E (cd2fd56c)",
+    "reached": [
+     "design-4 section Decision capability"
+    ],
+    "pool_position": {
+     "kernel/capabilities/decision/approvals.py": 51,
+     "design-4 section Decision capability": 3
+    },
+    "crowding": {
+     "commit_guardian.json": 0,
+     "agent_registry": 1,
+     "test-angles": 1,
+     "docs/acceptance-criteria/": 6,
+     "tickets/": 0
+    },
+    "judged": {
+     "reached": [
+      "design-4 section Decision capability"
+     ],
+     "calls": 1
+    }
+   },
+   "current": {
+    "round": "F",
+    "note": "re-measured 2026-10-01 at CI's checkout path after the checkout-folder fix (#KernelV01/CI); the earlier round F values came from a `kernel-v01` worktree folder",
+    "reached": [
+     "kernel/capabilities/decision/approvals.py",
+     "design-4 section Decision capability"
+    ],
+    "pool_position": {
+     "kernel/capabilities/decision/approvals.py": 5,
+     "design-4 section Decision capability": 14
+    },
+    "crowding": {
+     "commit_guardian.json": 0,
+     "agent_registry": 0,
+     "test-angles": 0,
+     "docs/acceptance-criteria/": 1,
+     "tickets/": 0
+    },
+    "judged": {
+     "reached": [
+      "kernel/capabilities/decision/approvals.py",
+      "design-4 section Decision capability"
+     ],
+     "calls": 3
+    }
+   }
+  }
+ ]
+}

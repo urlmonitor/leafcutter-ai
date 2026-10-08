@@ -433,9 +433,9 @@ def _print_grown_file(filepath: str, previous_length: int, current_length: int, 
     _print_measures_line()
     print()
     _print_file_description(filepath, current_length)
-    print("   An already-oversized file may still be worked on, but a change")
-    print("   that puts more measured lines into it than it takes out is")
-    print("   refused. Shrink it, or add no more than you remove, to commit this edit.")
+    print("   An already-oversized file may still be worked on, but a change that")
+    print("   puts lines into it must take out about twice as many to compensate,")
+    print("   until the file is back at the required length stated above (never more).")
     _print_asymmetry_advice()
     print()
 
@@ -718,6 +718,28 @@ if __name__ == "__main__":
 ====================================================================
 DECISION HISTORY
 ====================================================================
+- 2026-10-07 [python-coder/GE-127f-4]: `_print_grown_file`'s closing advice
+  sentence stated a ONE-for-one obligation ("Shrink it, or add no more than
+  you remove, to commit this edit") while the enforced rule
+  (`required = max(limit, previous_length - added)`, unchanged by this
+  record) is a TWO-for-one obligation below the cap: a change adding A
+  measured lines must take out at least 2A, not A. An author who removed
+  exactly as many lines as they added followed the printed advice to the
+  letter and was still refused -- the AC's reported cost was three commit
+  cycles to discover the real obligation by trial and error. Replaced the
+  two misleading sentences with wording that states the ratio in the
+  author's terms ("must take out about twice as many to compensate") and
+  stays true at the cap by pointing at the already-printed `Required
+  length:` figure ("until the file is back at the required length stated
+  above (never more)") rather than re-deriving the cap in prose. PROSE ONLY:
+  `required = max(limit, previous_length - added)` in both `_print_grown_file`
+  and `_classify_file`, and every printed figure (Previous length, New
+  length, Limit, This change added, Required length), are byte-for-byte
+  unchanged -- confirmed by diff review before sign-off. Did NOT relax the
+  enforcement to net growth (`lines > previous`); GE-127f-2's own
+  Implementation Notes name that the single most likely wrong
+  implementation, and GE-127f's criteria states the two-for-one obligation
+  as the intended outcome -- the message was the defect, not the arithmetic.
 - 2026-09-30 [python-coder/GE-127f-1]: `_classify_file` and
   `_print_grown_file` both computed the already-oversized-file requirement
   as the uncapped `previous - added`, so a file only modestly over its

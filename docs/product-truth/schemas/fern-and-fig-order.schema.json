@@ -1,0 +1,79 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Order illustrative mock-record design",
+  "description": "Transcribed from docs/product-truth/mock-data/fern-and-fig/catalog.mock.json entities.Order.fields. All listed fields are present in the complete mock-record design. No production API, processor/auth request or runtime validation is implied; the canonical dataset remains unchanged.",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "id": {
+      "type": "string",
+      "description": "string"
+    },
+    "customer": {
+      "type": "string",
+      "description": "string — Customer.id"
+    },
+    "item": {
+      "type": "string",
+      "description": "string — Plant.id"
+    },
+    "qty": {
+      "type": "integer",
+      "description": "integer"
+    },
+    "total": {
+      "type": "number",
+      "description": "number"
+    },
+    "currency": {
+      "type": "string",
+      "description": "string"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "pending",
+        "paid",
+        "shipped",
+        "refunded"
+      ],
+      "description": "enum: pending | paid | shipped | refunded — payment/lifecycle state (pending == open cart)"
+    },
+    "stage": {
+      "type": "string",
+      "enum": [
+        "not-shipped",
+        "shipped",
+        "in-transit",
+        "delivered"
+      ],
+      "description": "enum: not-shipped | shipped | in-transit | delivered — fulfilment/delivery stage"
+    },
+    "carrier": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "string | null — shipping carrier once the parcel is dispatched, else null"
+    },
+    "tracking_number": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "string | null — carrier tracking code once dispatched, else null"
+    }
+  },
+  "required": [
+    "id",
+    "customer",
+    "item",
+    "qty",
+    "total",
+    "currency",
+    "status",
+    "stage",
+    "carrier",
+    "tracking_number"
+  ]
+}

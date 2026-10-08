@@ -1,0 +1,881 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Source-reviewed Atlas Flow documentation",
+  "description": "Source-reviewed documentation of leafcutter-web/lib/data/types.ts and flow-contracts.ts, plus flows.ts normalization. Optional ioContracts and contractDefinitions retain canonical authored metadata; this schema checks documentation examples, not runtime behavior or automatic TypeScript parity. Optional graph arrays remain opaque.",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "id": {
+      "type": "string"
+    },
+    "component": {
+      "type": "string"
+    },
+    "product": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "name": {
+      "type": "string"
+    },
+    "summary": {
+      "type": "string"
+    },
+    "kind": {
+      "type": "string",
+      "enum": [
+        "user",
+        "data",
+        "architecture"
+      ]
+    },
+    "source": {
+      "type": "string",
+      "enum": [
+        "mock",
+        "real"
+      ]
+    },
+    "level": {
+      "type": "string",
+      "enum": [
+        "journey",
+        "pipeline",
+        "agent"
+      ]
+    },
+    "realization": {
+      "type": "string",
+      "enum": [
+        "built",
+        "spec",
+        "mock"
+      ]
+    },
+    "status": {
+      "type": "string"
+    },
+    "readiness": {
+      "type": "string"
+    },
+    "entities": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "mockDataRef": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "steps": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "label": {
+            "type": "string"
+          },
+          "human": {
+            "type": "string"
+          },
+          "order": {
+            "type": "number"
+          },
+          "screen": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "agent": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "produces": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "consumes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "reads": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "writes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "implements": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "implStatus": {
+            "type": "string",
+            "enum": [
+              "done",
+              "in_progress",
+              "todo",
+              "blocked",
+              "not_started",
+              "unknown"
+            ]
+          },
+          "fallbackStatus": {
+            "type": "string",
+            "enum": [
+              "done",
+              "in_progress",
+              "todo",
+              "blocked",
+              "not_started",
+              "unknown"
+            ]
+          },
+          "acs": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "title": {
+                  "type": "string"
+                },
+                "level": {
+                  "type": "string",
+                  "enum": [
+                    "L0",
+                    "L1",
+                    "L2",
+                    "L3"
+                  ]
+                },
+                "workStatus": {
+                  "type": "string",
+                  "enum": [
+                    "done",
+                    "in_progress",
+                    "todo",
+                    "blocked",
+                    "not_started",
+                    "unknown"
+                  ]
+                },
+                "resolved": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "id",
+                "title",
+                "level",
+                "workStatus",
+                "resolved"
+              ]
+            }
+          },
+          "expandsTo": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "ioContracts": {
+            "$ref": "#/$defs/IOContracts",
+            "description": "Optional normalized copy of authored io_contracts after the display guard accepts its shape. Internal member names and JSON values are retained."
+          }
+        },
+        "required": [
+          "id",
+          "label",
+          "human",
+          "order",
+          "screen",
+          "agent",
+          "produces",
+          "consumes",
+          "reads",
+          "writes",
+          "implements",
+          "implStatus",
+          "fallbackStatus",
+          "acs",
+          "expandsTo"
+        ]
+      }
+    },
+    "branches": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "label": {
+            "type": "string"
+          },
+          "human": {
+            "type": "string"
+          },
+          "screen": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "agent": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "produces": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "consumes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "reads": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "writes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "implements": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "implStatus": {
+            "type": "string",
+            "enum": [
+              "done",
+              "in_progress",
+              "todo",
+              "blocked",
+              "not_started",
+              "unknown"
+            ]
+          },
+          "fallbackStatus": {
+            "type": "string",
+            "enum": [
+              "done",
+              "in_progress",
+              "todo",
+              "blocked",
+              "not_started",
+              "unknown"
+            ]
+          },
+          "acs": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "title": {
+                  "type": "string"
+                },
+                "level": {
+                  "type": "string",
+                  "enum": [
+                    "L0",
+                    "L1",
+                    "L2",
+                    "L3"
+                  ]
+                },
+                "workStatus": {
+                  "type": "string",
+                  "enum": [
+                    "done",
+                    "in_progress",
+                    "todo",
+                    "blocked",
+                    "not_started",
+                    "unknown"
+                  ]
+                },
+                "resolved": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "id",
+                "title",
+                "level",
+                "workStatus",
+                "resolved"
+              ]
+            }
+          },
+          "expandsTo": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "from": {
+            "type": "string"
+          },
+          "condition": {
+            "type": "string"
+          },
+          "ioContracts": {
+            "$ref": "#/$defs/IOContracts",
+            "description": "Optional normalized copy of authored io_contracts after the display guard accepts its shape. Internal member names and JSON values are retained."
+          }
+        },
+        "required": [
+          "id",
+          "label",
+          "human",
+          "screen",
+          "agent",
+          "produces",
+          "consumes",
+          "reads",
+          "writes",
+          "implements",
+          "implStatus",
+          "fallbackStatus",
+          "acs",
+          "expandsTo",
+          "from",
+          "condition"
+        ]
+      }
+    },
+    "scenarios": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "for": {
+            "type": "string"
+          },
+          "given": {
+            "type": "string"
+          },
+          "when": {
+            "type": "string"
+          },
+          "then": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "for",
+          "given",
+          "when",
+          "then"
+        ]
+      }
+    },
+    "implSummary": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "done": {
+          "type": "number"
+        },
+        "in_progress": {
+          "type": "number"
+        },
+        "not_started": {
+          "type": "number"
+        },
+        "total": {
+          "type": "number"
+        },
+        "acDone": {
+          "type": "number"
+        },
+        "acTotal": {
+          "type": "number"
+        },
+        "asof": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "done",
+        "in_progress",
+        "not_started",
+        "total",
+        "acDone",
+        "acTotal",
+        "asof"
+      ]
+    },
+    "filePath": {
+      "type": "string"
+    },
+    "graphNodes": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      }
+    },
+    "graphEdges": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      }
+    },
+    "contractDefinitions": {
+      "type": "object",
+      "additionalProperties": {
+        "$ref": "#/$defs/ContractDefinition"
+      },
+      "description": "Optional normalized copy of authored contract_definitions; retains canonical model/schema authority metadata."
+    }
+  },
+  "required": [
+    "id",
+    "component",
+    "product",
+    "name",
+    "summary",
+    "kind",
+    "source",
+    "level",
+    "realization",
+    "status",
+    "readiness",
+    "entities",
+    "mockDataRef",
+    "steps",
+    "branches",
+    "scenarios",
+    "implSummary",
+    "filePath"
+  ],
+  "$defs": {
+    "ContractDefinition": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "model": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "\\S"
+        },
+        "schema": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "\\S"
+        },
+        "authority": {
+          "enum": [
+            "runtime",
+            "source_reviewed",
+            "illustrative_design"
+          ]
+        },
+        "note": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "\\S"
+        }
+      },
+      "required": [],
+      "anyOf": [
+        {
+          "required": [
+            "model"
+          ]
+        },
+        {
+          "required": [
+            "schema"
+          ]
+        }
+      ],
+      "allOf": [
+        {
+          "if": {
+            "required": [
+              "authority"
+            ],
+            "properties": {
+              "authority": {
+                "enum": [
+                  "source_reviewed",
+                  "illustrative_design"
+                ]
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "note"
+            ]
+          }
+        }
+      ]
+    },
+    "IOContracts": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "not_applicable": {
+              "type": "string",
+              "minLength": 1,
+              "pattern": "\\S"
+            }
+          },
+          "required": [
+            "not_applicable"
+          ]
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "consumes": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "contract": {
+                    "type": "string",
+                    "minLength": 1,
+                    "pattern": "\\S"
+                  },
+                  "fields": {
+                    "type": "array",
+                    "minItems": 1,
+                    "items": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "properties": {
+                        "path": {
+                          "type": "string",
+                          "pattern": "^(/.*)?$"
+                        },
+                        "types": {
+                          "type": "array",
+                          "minItems": 1,
+                          "uniqueItems": true,
+                          "items": {
+                            "enum": [
+                              "object",
+                              "array",
+                              "string",
+                              "integer",
+                              "number",
+                              "boolean",
+                              "null"
+                            ]
+                          }
+                        },
+                        "required": {
+                          "type": "boolean"
+                        },
+                        "default": {},
+                        "applies": {
+                          "type": "string",
+                          "minLength": 1,
+                          "pattern": "\\S"
+                        }
+                      },
+                      "required": [
+                        "path",
+                        "types",
+                        "required"
+                      ]
+                    }
+                  }
+                },
+                "required": [
+                  "contract",
+                  "fields"
+                ]
+              }
+            },
+            "produces": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "contract": {
+                    "type": "string",
+                    "minLength": 1,
+                    "pattern": "\\S"
+                  },
+                  "fields": {
+                    "type": "array",
+                    "minItems": 1,
+                    "items": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "properties": {
+                        "path": {
+                          "type": "string",
+                          "pattern": "^(/.*)?$"
+                        },
+                        "types": {
+                          "type": "array",
+                          "minItems": 1,
+                          "uniqueItems": true,
+                          "items": {
+                            "enum": [
+                              "object",
+                              "array",
+                              "string",
+                              "integer",
+                              "number",
+                              "boolean",
+                              "null"
+                            ]
+                          }
+                        },
+                        "required": {
+                          "type": "boolean"
+                        },
+                        "default": {},
+                        "applies": {
+                          "type": "string",
+                          "minLength": 1,
+                          "pattern": "\\S"
+                        }
+                      },
+                      "required": [
+                        "path",
+                        "types",
+                        "required"
+                      ]
+                    }
+                  }
+                },
+                "required": [
+                  "contract",
+                  "fields"
+                ]
+              }
+            },
+            "examples": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "contract": {
+                    "type": "string",
+                    "minLength": 1,
+                    "pattern": "\\S"
+                  },
+                  "mode": {
+                    "enum": [
+                      "full",
+                      "projection"
+                    ]
+                  },
+                  "origin": {
+                    "enum": [
+                      "observed",
+                      "illustrative",
+                      "reconstructed"
+                    ]
+                  },
+                  "label": {
+                    "type": "string",
+                    "minLength": 1,
+                    "pattern": "\\S"
+                  },
+                  "source": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                      "path": {
+                        "type": "string",
+                        "minLength": 1,
+                        "pattern": "\\S"
+                      },
+                      "pointer": {
+                        "type": "string",
+                        "pattern": "^(/.*)?$"
+                      }
+                    },
+                    "required": [
+                      "path",
+                      "pointer"
+                    ]
+                  },
+                  "value": {}
+                },
+                "required": [
+                  "contract",
+                  "mode",
+                  "origin",
+                  "label",
+                  "value"
+                ],
+                "allOf": [
+                  {
+                    "if": {
+                      "properties": {
+                        "origin": {
+                          "const": "observed"
+                        }
+                      }
+                    },
+                    "then": {
+                      "required": [
+                        "source"
+                      ]
+                    }
+                  }
+                ]
+              }
+            },
+            "missing_bindings": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "name",
+                  "direction",
+                  "reason",
+                  "source"
+                ],
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "minLength": 1,
+                    "pattern": "\\S"
+                  },
+                  "direction": {
+                    "enum": [
+                      "consumes",
+                      "produces",
+                      "both"
+                    ]
+                  },
+                  "reason": {
+                    "type": "string",
+                    "minLength": 1,
+                    "pattern": "\\S"
+                  },
+                  "source": {
+                    "type": "string",
+                    "minLength": 1,
+                    "pattern": "\\S"
+                  }
+                }
+              }
+            }
+          },
+          "required": [
+            "consumes",
+            "produces",
+            "examples"
+          ]
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "missing_bindings"
+          ],
+          "properties": {
+            "missing_bindings": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "name",
+                  "direction",
+                  "reason",
+                  "source"
+                ],
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "minLength": 1,
+                    "pattern": "\\S"
+                  },
+                  "direction": {
+                    "enum": [
+                      "consumes",
+                      "produces",
+                      "both"
+                    ]
+                  },
+                  "reason": {
+                    "type": "string",
+                    "minLength": 1,
+                    "pattern": "\\S"
+                  },
+                  "source": {
+                    "type": "string",
+                    "minLength": 1,
+                    "pattern": "\\S"
+                  }
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,6 @@
+AC-ENFORCEMENT [STRICT]: tests/knowledge/test_native_decision.py::test_decision_absent_or_empty_store_needs_no_schema_or_kernel covers not-done AC KM-400a-3-i — NOT masked (AC_ENFORCE_STRICT=1); reported as a real failure.
+F                                                                        [100%]
+shared-layout-routing: declared_mutators=0 undeclared=0
+=========================== short test summary info ===========================
+FAILED tests/knowledge/test_native_decision.py::test_decision_absent_or_empty_store_needs_no_schema_or_kernel
+1 failed in 0.20s

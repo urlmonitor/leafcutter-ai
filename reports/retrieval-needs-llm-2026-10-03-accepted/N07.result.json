@@ -1,0 +1,281 @@
+{
+  "case_id": "N07",
+  "question": "For KM-500c-2, show both its lifecycle status and its implementation work_status, keeping the two separate.",
+  "human_gold": "Both fields are explicitly required and distinct. Neither readiness nor lifecycle active can substitute for implementation done. Missing fields remain a gap after actual retrieval.",
+  "actor_id": "codex:root:needs_llm_host",
+  "model_id": null,
+  "underlying_model_requests": null,
+  "tokens": null,
+  "error": null,
+  "result": {
+    "schema_version": "1.0",
+    "original_question": "For KM-500c-2, show both its lifecycle status and its implementation work_status, keeping the two separate.",
+    "source_scope": {
+      "allow_retrieval": false,
+      "read_roots": [
+        "docs",
+        "kernel",
+        "knowledge",
+        "integrations"
+      ],
+      "repository": "leafcutter",
+      "source_revision": "planning-probe-only"
+    },
+    "selections": {
+      "entity_types": [
+        "ac"
+      ],
+      "target_ids": [
+        "KM-500c-2"
+      ],
+      "required_fields": [
+        "status",
+        "work_status"
+      ],
+      "document_types": [
+        "ac_yaml"
+      ],
+      "relationships": []
+    },
+    "uncertain": {
+      "entity_types": [],
+      "target_ids": [],
+      "required_fields": [],
+      "document_types": [],
+      "relationships": []
+    },
+    "detail_mode": "fields",
+    "completeness": "single_entity",
+    "hierarchy_scope": "not_applicable",
+    "scope_resolution": "sufficient",
+    "unresolved": [],
+    "rationale": "The named criterion's lifecycle status and implementation work_status are two separately requested facts. Neither can stand in for the other; no other fields or related entities are requested.",
+    "engine": "host_llm",
+    "status": "decided",
+    "model_id": null
+  },
+  "envelope": {
+    "schema_version": "1.0",
+    "run_id": "run-8048ece7b25f428a",
+    "root_task_id": "task-1c25cec75b914d49",
+    "state_revision": 3,
+    "status": "completed",
+    "output": {
+      "schema_version": "1.0",
+      "schema_id": "leafcutter.retrieval_needs_output.v1",
+      "payload": {
+        "schema_version": "1.0",
+        "original_question": "For KM-500c-2, show both its lifecycle status and its implementation work_status, keeping the two separate.",
+        "source_scope": {
+          "allow_retrieval": false,
+          "read_roots": [
+            "docs",
+            "kernel",
+            "knowledge",
+            "integrations"
+          ],
+          "repository": "leafcutter",
+          "source_revision": "planning-probe-only"
+        },
+        "selections": {
+          "entity_types": [
+            "ac"
+          ],
+          "target_ids": [
+            "KM-500c-2"
+          ],
+          "required_fields": [
+            "status",
+            "work_status"
+          ],
+          "document_types": [
+            "ac_yaml"
+          ],
+          "relationships": []
+        },
+        "uncertain": {
+          "entity_types": [],
+          "target_ids": [],
+          "required_fields": [],
+          "document_types": [],
+          "relationships": []
+        },
+        "detail_mode": "fields",
+        "completeness": "single_entity",
+        "hierarchy_scope": "not_applicable",
+        "scope_resolution": "sufficient",
+        "unresolved": [],
+        "rationale": "The named criterion's lifecycle status and implementation work_status are two separately requested facts. Neither can stand in for the other; no other fields or related entities are requested.",
+        "engine": "host_llm",
+        "status": "decided",
+        "model_id": null
+      }
+    },
+    "report_ref": "C:\\Users\\Hendrik\\AppData\\Local\\Temp\\leafcutter-needs-llm-host-nsvsjpd2\\kernel-runs\\runs\\run-8048ece7b25f428a\\artifacts\\report.md",
+    "decision_ids": [],
+    "evidence_ids": [],
+    "open_questions": [],
+    "pending_interaction": null,
+    "limitations": [
+      "host-reported; not verified by the kernel",
+      "Interpretation only; no retrieval executed and no answer correctness or classifier approval established."
+    ],
+    "gaps": [
+      {
+        "schema_version": "1.0",
+        "id": "gap-e1dd0d47d2dd9dcd",
+        "created_at": "2026-10-03T09:45:55.132213Z",
+        "updated_at": "2026-10-03T09:45:55.132213Z",
+        "created_seq": 0,
+        "gap_key": "fe8706e6649c5b32ca76c253dfab3fccc4cc11dc3ab46465c2d8e3f79bd038fb",
+        "gap_type": "host_only",
+        "goal": "For KM-500c-2, show both its lifecycle status and its implementation work_status, keeping the two separate.",
+        "normalized_need": "2 500c both implementation its keeping km lifecycle separate show status two",
+        "request_kind": "capability",
+        "input_schema": "leafcutter.retrieval_needs_request.v1",
+        "output_schema": "leafcutter.retrieval_needs_output.v1",
+        "scope_component_ids": [],
+        "registry_snapshot_hash": "6254ab0e7d0f4b5762d692522440d7a3b484f0c67dfe16bc699d49ea1f5fe6c9",
+        "candidates_considered": [
+          "host.retrieval_needs"
+        ],
+        "candidate_exclusions": {},
+        "need_title": "For KM-500c-2, show both its lifecycle status and its implementation work_sta...",
+        "why_insufficient": "host-backed only; no native implementation exists",
+        "occurrence_count": 1,
+        "example_run_ids": [
+          "run-8048ece7b25f428a"
+        ],
+        "example_trace_urls": [],
+        "fallback_outcome": "host_completed",
+        "missing_native_capability": "native implementation of host.retrieval_needs",
+        "proposal": {
+          "schema_version": "1.0",
+          "author": "template",
+          "title": "Capability for: For KM-500c-2, show both its lifecycle status and its implementation work_sta...",
+          "purpose": "host_only need",
+          "draft_ref": "drafts/fe8706e6649c5b32ca76c253dfab3fccc4cc11dc3ab46465c2d8e3f79bd038fb.md"
+        },
+        "first_seen": "2026-10-03T09:45:55.132213Z",
+        "last_seen": "2026-10-03T09:45:55.132213Z"
+      }
+    ],
+    "usage_summary": {
+      "schema_version": "1.0",
+      "jev_calls": 0,
+      "host_operations": 1,
+      "input_tokens": null,
+      "output_tokens": null,
+      "cost_usd_known": null,
+      "cost_unknown_calls": 1,
+      "usage": [
+        {
+          "schema_version": "1.0",
+          "provider": "host",
+          "model_id": null,
+          "input_tokens": null,
+          "output_tokens": null,
+          "duration_ms": 624626,
+          "cost_usd": null,
+          "cost_provenance": "unavailable",
+          "calls": 1
+        }
+      ]
+    },
+    "trace_refs": {
+      "schema_version": "1.0",
+      "trace_id": "ea41b01d872b7acd21ac581c8c1780d4",
+      "trace_url": null,
+      "observability": "ok"
+    },
+    "errors": []
+  },
+  "shared_semantics": {
+    "passed": true,
+    "checks": [
+      {
+        "name": "original_question",
+        "passed": true,
+        "actual": "For KM-500c-2, show both its lifecycle status and its implementation work_status, keeping the two separate.",
+        "expected": "For KM-500c-2, show both its lifecycle status and its implementation work_status, keeping the two separate."
+      },
+      {
+        "name": "include.entity_types",
+        "passed": true,
+        "actual": [
+          "ac"
+        ],
+        "expected": [
+          "ac"
+        ]
+      },
+      {
+        "name": "include.target_ids",
+        "passed": true,
+        "actual": [
+          "KM-500c-2"
+        ],
+        "expected": [
+          "KM-500c-2"
+        ]
+      },
+      {
+        "name": "include.required_fields",
+        "passed": true,
+        "actual": [
+          "status",
+          "work_status"
+        ],
+        "expected": [
+          "status",
+          "work_status"
+        ]
+      },
+      {
+        "name": "include.document_types",
+        "passed": true,
+        "actual": [
+          "ac_yaml"
+        ],
+        "expected": [
+          "ac_yaml"
+        ]
+      },
+      {
+        "name": "completeness",
+        "passed": true,
+        "actual": "single_entity",
+        "expected": [
+          "single_entity"
+        ]
+      },
+      {
+        "name": "hierarchy_scope",
+        "passed": true,
+        "actual": "not_applicable",
+        "expected": [
+          "not_applicable"
+        ]
+      },
+      {
+        "name": "status",
+        "passed": true,
+        "actual": "decided",
+        "expected": [
+          "decided"
+        ]
+      }
+    ]
+  },
+  "overlay": {
+    "applicable": true,
+    "passed": true,
+    "checks": [
+      {
+        "id": "M02",
+        "passed": true,
+        "reason": "A question explicitly requesting two status fields requires those statuses and attribution, not full criteria or test specifications."
+      }
+    ]
+  }
+}

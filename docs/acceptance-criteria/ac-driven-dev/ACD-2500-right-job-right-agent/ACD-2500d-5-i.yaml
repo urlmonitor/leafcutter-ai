@@ -2,7 +2,7 @@ id: ACD-2500d-5-i
 components:
 - ac_driven_dev
 - testing_quality
-readiness: reviewed
+readiness: approved
 priority: high
 title: The mechanical file facts the code-aware agent needs come from a deterministic pre-pass script
 component: ac-driven-dev
@@ -109,6 +109,10 @@ test_spec:
 origin_agent: it-po
 created: '2026-09-25'
 amended_by:
+- reason: "hold released: ACD-1600c-4 done (PR #948); promoted reviewed -> approved"
+  date: '2026-09-30'
+  by: it-po
+  directed_by: user
 - reason: "depends_on gains the declared-files schema AC ACD-1600c-4 (and ACD-1600c-4-ii where the record's criteria use the 'no declared files' state); BLOCKED AT FINAL GATE note updated to name it. Criteria, it_requirements and readiness unchanged."
   date: '2026-09-27'
   by: business-analyst
@@ -123,6 +127,8 @@ implemented_by: []
 change_target: code
 risk_surface: contract_boundary
 notes: |
+  RELEASED 2026-09-30 (user): the declared-files AC ACD-1600c-4 (and -4-i..-iv) is done
+  (PR #948), so the hold above no longer applies; promoted from reviewed to approved.
   BLOCKED AT FINAL GATE (user, 2026-09-25): held at readiness: reviewed until a
   declared-files schema AC (AC-level list of files a piece of work changes, with a
   to-be-created marker) is authored via a separate /plan-feature run and added to

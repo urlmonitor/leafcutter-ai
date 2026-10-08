@@ -41,6 +41,8 @@ if str(_UNIT_TESTS_DIR) not in sys.path:
 
 from _workflow_engine_harness import HarnessResult, run_workflow_under_e2  # noqa: E402
 
+import workflows._fast_lane_claim_fixtures as _claim_fx  # noqa: E402
+
 _WORKFLOW_PATH = _REPO_ROOT / "templates" / "workflows-js" / "fast-lane-ship.js"
 
 # The literal refusal shape observed on run wf_bd4984e8-438 (KI-BO-020) — a
@@ -93,12 +95,9 @@ def _base_label_responses(worktree_root: Path, ac_ids: list[str]) -> dict[str, A
     return {
         "fastlane-worktree": _worktree_label_response(worktree_root),
         "resolve-connected": {"ac_ids": ac_ids, "message": f"{len(ac_ids)} to build"},
-        "claim-connected": {
-            "claimed": ac_ids,
-            "excluded_claimed": [],
-            "target_refused": False,
-            "message": f"claimed {len(ac_ids)} ACs",
-        },
+        "claim-connected": _claim_fx.claim_ran(
+            ac_ids, message=f"claimed {len(ac_ids)} ACs"
+        ),
         # Force a halt at the earliest available gate (test-writer) so every
         # test in this file exercises the SAME halting phase and only the
         # release reply varies between scenarios.

@@ -8,7 +8,7 @@ component: infrastructure
 level: L2
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 created_by: "docs/acceptance-criteria/infrastructure/INF-600-self-describing-agents/INF-600k.yaml"
 criteria: |
   Given an agent's registry entry lists a workflow filename (for example
@@ -30,28 +30,169 @@ doc_links:
   - path: docs/agents/README.md
     relationship: describes
     status: exists
+  - path: docs/architecture/components/agent-registry.md
+    relationship: describes
+    status: exists
+  - path: docs/reference/workflow-constraints.md
+    relationship: describes
+    status: exists
+    relevance: "What a workflow is in this package: templates/workflows-js/*.js, deployed by the build to .claude/workflows/."
+  - path: docs/acceptance-criteria/infrastructure/INF-600-self-describing-agents/INF-600k-3.yaml
+    relationship: related
+    status: exists
+    relevance: "The negative guarantee this relaxation must not break: a name that is neither an agent nor a recognised external caller is still an unknown agent."
+  - path: docs/acceptance-criteria/build-orchestration/BO-2400-fast-lane-build/BO-2400a-1-i.yaml
+    relationship: related
+    status: exists
+    relevance: "command-step-runner shipped with spawned_by ['user'] because fast-lane-ship.js was rejected; it can list fast-lane-ship.js once this record is built."
 assigned_agent: python-coder
-estimated_complexity: S
+estimated_complexity: M
 it_requirements:
-  - "Behavior is ALREADY SHIPPED in scripts/registry_validator.py via the _EXTERNAL_CALLERS set; this AC formalizes and regression-protects it. Implementation work is documentation/test coverage that locks the existing behavior, not a new feature build — do not reimplement what exists."
+  - >-
+    CORRECTED 2026-09-28: this is NEW implementation work, not regression cover for
+    shipped behaviour. On origin/main 2c000a9e both checks hold a closed literal set,
+    _EXTERNAL_CALLERS = {"user", "finalize-feature.js"}. The copies are
+    scripts/registry_validator.py (build.py --validate-only and check-agent-registry)
+    and scripts/commit_guardian/hooks/check_agent_spawn_consistency.py (packaged copy
+    templates/scripts/commit_guardian/hooks/, deployed copy .leafcutter/scripts/commit_guardian/hooks/).
+    Every other workflow, including fast-lane-ship.js, is rejected as an unknown agent.
+  - >-
+    A spawned_by entry that is not a registry agent counts as a recognised external
+    caller when it is either a literal external trigger ('user') or the filename of a
+    workflow that really exists in the package. Nothing else counts. The workflow part
+    is derived from files on disk, not from a list in code, so adding a workflow file
+    makes its name acceptable with no code edit.
+  - >-
+    The authoritative workflow set is templates/workflows-js/*.js under the package
+    root: the tracked source the build deploys from. .claude/workflows/ is a gitignored
+    build output that can be stale or missing in a fresh worktree, so it is never the
+    authority. It may be read only as a fallback where the package source is absent
+    (a consumer layout running the deployed hook). Where both exist, a name present
+    only in the deployed directory is not accepted. The package root is located the
+    way the other commit-time checks locate it (GE-113c-1-vi / GE-113c-1-iv
+    convention), not by a new rule.
+  - >-
+    Both checks classify every spawned_by entry identically. The literal triggers and
+    the workflow-set rule have one definition that both callers use. If
+    registry_validator.py (which has no packaged copy) and the packaged hook cannot
+    share a module in every layout they run in, they read the same data source, and a
+    parity test pins them to the same verdicts. Two independently maintained literal
+    sets are the defect being fixed and must not be recreated.
+  - >-
+    The hook's live, packaged and deployed copies stay in parity through the build
+    (check-hook-parity passes). The edit site is the templates/ copy, and the
+    scripts/ copy follows the build round-trip.
   - "A spawned_by entry that is not a known agent must be checked against the recognized-external-caller set (workflow *.js filenames and the literal external triggers) BEFORE being treated as an unknown agent; a recognized external caller must not raise an 'unknown agent' error and must not fail the build."
   - "Must preserve the INF-600g registry-validation strength for genuine unknown agents (the relaxation is exercised here; the negative guarantee is pinned by INF-600k-3) — do not broaden _EXTERNAL_CALLERS into a blanket accept."
   - "Must handle errors gracefully per the project error handling policy (CLAUDE.md Rules 1-3)."
+test_required: true
+test_spec:
+  - name: test_real_workflow_filename_in_spawned_by_is_accepted_by_both_checks
+    target_dir: unit_tests/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: "A tmp package root holds a real config/agent_registry.json fixture and templates/workflows-js/fast-lane-ship.js, with an agent whose spawned_by lists 'fast-lane-ship.js'. The registry validator's build entry point and the spawn-consistency hook (as a subprocess in a tmp git repository) both pass with no unknown-agent error. Fails today."
+    must_catch:
+      - "the closed literal set {user, finalize-feature.js} still in either check (today's state)"
+      - "only one of the two checks updated"
+  - name: test_nonexistent_workflow_filename_is_rejected_by_both_checks_as_unknown_agent
+    target_dir: unit_tests/
+    framework: pytest
+    type: integration
+    angle: failure
+    covers: [INF-600k-1, INF-600k-3]
+    description: "Same fixture with spawned_by ['nonexistent-flow.js'] and no such file: both checks fail and name 'nonexistent-flow.js' as an unknown agent."
+    must_catch:
+      - "a blanket accept of any name ending in .js"
+  - name: test_user_and_finalize_feature_remain_accepted
+    target_dir: unit_tests/
+    framework: pytest
+    type: integration
+    angle: boundary
+    description: "With finalize-feature.js present in the fixture workflow directory, spawned_by ['user'] and ['finalize-feature.js'] each pass both checks. 'user' passes even when the workflow directory is empty."
+  - name: test_new_workflow_file_is_accepted_without_a_code_change
+    target_dir: unit_tests/
+    framework: pytest
+    type: integration
+    angle: discrimination
+    description: "spawned_by ['brand-new-flow.js'] fails both checks. After templates/workflows-js/brand-new-flow.js is created in the fixture, the same registry passes both, with neither check's source touched."
+    must_catch:
+      - "fast-lane-ship.js added to a literal list instead of reading the workflow directory"
+  - name: test_both_checks_classify_every_spawned_by_entry_identically
+    target_dir: unit_tests/
+    framework: pytest
+    type: integration
+    angle: seam
+    description: "Parametrised over a registry agent id, 'user', a real workflow filename, a missing workflow filename and an arbitrary non-agent name: the registry validator and the hook give the same accept/reject verdict for each."
+  - name: test_deployed_only_workflow_is_not_accepted_when_package_source_exists
+    target_dir: unit_tests/
+    framework: pytest
+    type: integration
+    angle: boundary
+    description: "The fixture's .claude/workflows/ holds stale-flow.js that is absent from templates/workflows-js/. With the package source present, spawned_by ['stale-flow.js'] is rejected by both checks, because the source directory is the authority."
+  - name: test_shipped_registry_validates_under_both_checks
+    target_dir: unit_tests/
+    framework: pytest
+    type: integration
+    angle: real_artifact
+    description: "The real config/agent_registry.json and the real templates/workflows-js/ pass both the registry validator and the spawn-consistency hook."
+  - name: test_spawn_consistency_hook_copies_are_in_parity
+    target_dir: unit_tests/
+    framework: pytest
+    type: unit
+    angle: deployed
+    description: "templates/scripts/commit_guardian/hooks/check_agent_spawn_consistency.py and scripts/commit_guardian/hooks/check_agent_spawn_consistency.py are equal after the build's normal transform, so consumer projects get the same rule."
+test_rationale: |
+  The defect is two closed literal sets that disagree with the workflows that actually
+  exist, so every behavioural test runs both checks through their real entry points against
+  real files in tmp fixtures: a registry JSON and a templates/workflows-js/ directory. A
+  unit test of an in-memory set would only prove that the set contains a string, which is
+  exactly what the current code does wrong.
+
+  The first test fails today. The second is its counterweight, shared with INF-600k-3: "any
+  .js passes" satisfies the first and fails the second. The new-file test separates reading
+  the directory from adding fast-lane-ship.js to the literal list, which would pass the
+  first three tests and fail this one. The identical-classification test pins the two checks
+  to one rule, and the deployed-only test pins the authority decision (the source directory,
+  not the gitignored build output). The real-artifact test proves the shipped registry still
+  validates. The parity test covers the packaged hook that consumer projects run.
+
+  Everything is a temporary directory: no model, no network.
 delivers_to:
   agent: python-coder
-  contract: "The registry validator's spawned_by-entry classification: an entry that is not a known agent is checked against the recognized-external-caller set (workflow filenames and the literal external triggers) before being treated as an unknown agent. This classification is the single load-bearing primitive consumed by the user-caller behavior (INF-600k-2) and the genuine-unknown-rejection behavior (INF-600k-3)."
+  contract: "The registry validator's spawned_by-entry classification: an entry that is not a known agent is checked against the recognized-external-caller set (workflow filenames that exist under the package's templates/workflows-js/, and the literal 'user') before being treated as an unknown agent, with one definition shared by registry_validator.py and check_agent_spawn_consistency.py. This classification is the single load-bearing primitive consumed by the user-caller behavior (INF-600k-2) and the genuine-unknown-rejection behavior (INF-600k-3)."
 expects_from: null
 origin_agent: business-analyst-v3
 created: 2026-06-24
-amended_by: []
+amended_by:
+  - action: technical-amendment
+    agent: it-po
+    date: '2026-09-28'
+    reason: "Corrected the first it_requirement, which claimed the behaviour was already shipped via _EXTERNAL_CALLERS. On origin/main 2c000a9e that is a closed literal set {user, finalize-feature.js} in both registry_validator.py and check_agent_spawn_consistency.py, so fast-lane-ship.js and every other workflow are rejected (command-step-runner had to ship with spawned_by [user]). Marked the work as new, defined the recognised-external-caller rule (literal 'user' or a real workflow file in templates/workflows-js/), named the authoritative workflow set, required one shared definition across both checks, and added the missing test contract. Complexity S -> M. Criteria, title, depends_on and req_status unchanged."
 superseded_by: null
 covered_by: []
 implemented_by:
   - "scripts/registry_validator.py"
+  - "scripts/commit_guardian_module_loader.py"
+  - "scripts/spawn_bidirectionality_validator.py"
+  - "templates/scripts/commit_guardian/agent_spawn_external_callers.py"
+  - "templates/scripts/commit_guardian/card_mermaid_parser.py"
+  - "templates/scripts/commit_guardian/_resolve_root.py"
+  - "templates/scripts/commit_guardian/check_agent_registry.py"
+  - "templates/scripts/commit_guardian/hooks/check_agent_spawn_consistency.py"
 notes: |
-  Origin: EPIC-FinalizeFeatureHardening retrospective KI-4. Already implemented
-  in scripts/registry_validator.py via the _EXTERNAL_CALLERS set (per the task
-  brief). This AC documents and locks the behavior so the relaxation is
+  Origin: EPIC-FinalizeFeatureHardening retrospective KI-4. CORRECTED 2026-09-28:
+  the behaviour was only partly present. _EXTERNAL_CALLERS = {"user",
+  "finalize-feature.js"} is a closed literal set in both registry checks, so only
+  those two names pass; every other workflow file (for example fast-lane-ship.js)
+  is rejected. The earlier statement that this was "already implemented in
+  scripts/registry_validator.py" was false. The general rule, that any real
+  workflow file is recognised as an external caller, is built by this AC (see the
+  it-po amended_by entry of 2026-09-28 for the corrected it_requirements).
+  Why now: BO-2400a-1-i's command-step-runner, dispatched by fast-lane-ship.js,
+  had to ship with spawned_by: ["user"] because the workflow's own filename would
+  have been rejected. This AC also locks the behaviour so the relaxation is
   traceable and regression-protected. Per BO PROJECT_CONTEXT this refines the
   INF-600g registry-validation family rather than landing under build-orchestration.
 change_target: code

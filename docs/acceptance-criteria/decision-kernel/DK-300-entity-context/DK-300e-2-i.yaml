@@ -1,0 +1,76 @@
+id: DK-300e-2-i
+title: "Evaluation cannot pass with no cases or a violated recognition label"
+component: decision-kernel
+components: [decision_kernel]
+level: L3
+status: active
+readiness: reviewed
+req_status: draft
+priority: high
+work_status: done
+criteria: |
+  Given an evaluation selects no corpus cases or a controlled fault changes an expected entity identity, bypasses a denied-source rule or omits the end of an admitted goal,
+  When the same recognition evaluation is run,
+  Then it reports a failed or invalid evaluation rather than a passing empty aggregate,
+  And each affected case reports the expected label and observed violation,
+  And a correct final answer or passing unrelated cases cannot conceal that failure.
+depends_on: [DK-300e-2]
+doc_links:
+  - path: docs/analysis/2026-10-03-kernel-entity-context-concept.md
+    relationship: specified-by
+    status: exists
+  - path: docs/product-truth/flows/leafcutter/decision-forming.flow.json
+    relationship: implements
+    status: exists
+  - path: docs/architecture/components/decision-kernel.md
+    relationship: describes
+    status: exists
+assigned_agent: test-writer
+delivers_to: {"agent":"python-coder","contract":"Executable recognition evaluation report: {corpus_version:string,case_count:int,passed:boolean,cases:list[{id,expected,observed,violations}],by_family:dict[family,{precision:number,recall:number,coverage:number}],paired_intent:{baseline,entity_context,caller_context_equal:boolean,model_call_counts}}. Empty cases are invalid; each named negative control must fail. Tests and harness reside in tests/kernel/entity_context/ and the repository's evaluation surface."}
+expects_from: {"ac_id":"DK-300e-2","contract":"Executable recognition evaluation report: {corpus_version:string,case_count:int,passed:boolean,cases:list[{id,expected,observed,violations}],by_family:dict[family,{precision:number,recall:number,coverage:number}],paired_intent:{baseline,entity_context,caller_context_equal:boolean,model_call_counts}}. Empty cases are invalid; each named negative control must fail. Tests and harness reside in tests/kernel/entity_context/ and the repository's evaluation surface."}
+origin_agent: business-analyst
+created: 2026-10-03
+amended_by:
+  - reason: "IT PO review on 2026-10-03 adds technical contracts and planned test specifications under existing user authorization; readiness is now reviewed. BA criteria, implementation status and historical evidence are preserved."
+superseded_by: null
+covered_by:
+  - 'tests/kernel/entity_context/test_evaluation.py::test_empty_recognition_corpus_cannot_pass'
+  - 'tests/kernel/entity_context/test_evaluation.py::test_labelled_evaluation_rejects_identity_permission_and_tail_faults'
+implemented_by:
+  - "tests/kernel/entity_context/eval_runner.py"
+notes: |
+  New behavioral requirement derived from the user-authorized entity-context concept.
+  BA behavior and IT PO technical contracts are reviewed; implementation is verified by the independent strict entity suite and recognition corpus.
+  Verification evidence: reports/entity-context-verification.md. No human approval is implied.
+  Historical DK-200 direct-gather tests and evaluation reports are preserved.
+  Fresh-run wiring criteria were explicitly reconciled to EntityContext on 2026-10-04.
+estimated_complexity: M
+it_requirements:
+  - "An evaluation with zero selected cases is invalid, never a success-shaped empty aggregate."
+  - "Fault injection must exercise a plausible wrong version of the production result/policy/scan and make the labelled evaluation fail even if unrelated outcomes pass."
+test_required: true
+test_spec:
+  - name: "test_empty_recognition_corpus_cannot_pass"
+    target_dir: "tests/kernel/entity_context/"
+    framework: "pytest"
+    type: "behavioral"
+    angle: "criterion"
+    description: "tests/kernel/entity_context/test_evaluation.py::test_empty_recognition_corpus_cannot_pass: Run the harness with zero selected cases and assert explicit invalid/failed result without passing aggregate."
+  - name: "test_labelled_evaluation_rejects_identity_permission_and_tail_faults"
+    target_dir: "tests/kernel/entity_context/"
+    framework: "pytest"
+    type: "behavioral"
+    angle: "discrimination"
+    description: "tests/kernel/entity_context/test_evaluation.py::test_labelled_evaluation_rejects_identity_permission_and_tail_faults: Inject wrong identity, denied-source leakage and dropped-goal-tail faults separately; assert affected case expected/observed violations and failed aggregate despite unrelated correct answers."
+    must_catch: ["A report that computes a passing result from an empty case list.","Checking final-answer quality while ignoring entity-label, permission or tail-scan failures."]
+test_rationale: "Exercise production public boundaries with real canonical-source fixtures and an injected recording classifier; assert observable outputs and side effects, not source strings. Capture red results before runtime implementation; no live provider is required."
+product_truth:
+  - flow: leafcutter/decision-forming
+    node: enrich-context
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: leafcutter/decisions
+    entities: []
+    source: real
+    asof: '2026-10-03'

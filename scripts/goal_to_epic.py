@@ -256,7 +256,7 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.ids is not None:
         # --ids mode (BO-2600a-5): explicit id-list entrypoint.
-        return _run_ids_mode(args.ids, ac_store_root, inbox_dir)
+        return _run_ids_mode(args.ids, ac_store_root, inbox_dir, dry_run=args.dry_run)
 
     # --ac mode: existing tree-traversal path (unchanged).
     run(
@@ -488,5 +488,8 @@ DECISION HISTORY
       to logging's lastResort handler, which prints the message alone), so no
       stdout/stderr output changes.
   (#TICKETLESS reason=file-size-decomposition-refactor)
+- 2026-10-06 18:00 [ACD-1200a-3-iii]: --ids honours --dry-run; main passes
+  dry_run=args.dry_run to _run_ids_mode, so the id-list path writes nothing.
+  (EPIC-BuildToolingRunsThrough/07)
 ====================================================================
 """

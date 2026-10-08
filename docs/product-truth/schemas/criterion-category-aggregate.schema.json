@@ -1,0 +1,89 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "PROPOSED CriterionCategoryAggregate illustrative mock-row design",
+  "description": "Transcribed from docs/product-truth/mock-data/leafcutter/criterion-categories.mock.json entities.CriterionCategoryAggregate.fields. ADR-065 leaves the aggregate model open; these rows are derived, rebuildable Neo4j statistics that are never written into Git. All listed fields are present in every complete mock row; source is fixture provenance. No Neo4j writer or reader exists for these rows, and the count-sum invariants are stated in the dataset, not here.",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "id": {
+      "type": "string",
+      "description": "string — fixture handle: <category_id>@<context> (the store keys rows by repository_id, kind, category_id and context)"
+    },
+    "repository_id": {
+      "type": "string",
+      "description": "string — first part of the key, as on the category"
+    },
+    "kind": {
+      "type": "string",
+      "enum": ["criterion_category"],
+      "description": "enum: criterion_category — the kind of the record the aggregate is keyed on"
+    },
+    "category_id": {
+      "type": "string",
+      "pattern": "^cat-[0-9a-f]{16}$",
+      "description": "string — the published CriterionCategory.id the statistics are keyed on"
+    },
+    "context": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "capability": {"type": "string"},
+        "task_type": {"type": "null"},
+        "decision_type": {"type": "string"},
+        "components": {"type": "array", "items": {"type": "string"}},
+        "repository_wide": {"type": "boolean"},
+        "repository_id": {"type": "string"},
+        "policy_version": {"type": "null"}
+      },
+      "required": ["capability", "task_type", "decision_type", "components", "repository_wide", "repository_id", "policy_version"],
+      "description": "object { capability, task_type: null in V0, decision_type, components, repository_wide, repository_id, policy_version } — ADR-057 section 7 context; no global rate is ever kept"
+    },
+    "decision_count": {
+      "type": "integer",
+      "description": "integer — published decisions in this context whose criteria are members of the category"
+    },
+    "confirmed_count": {
+      "type": "integer",
+      "description": "integer — of those, final_outcome.status == confirmed"
+    },
+    "corrected_count": {
+      "type": "integer",
+      "description": "integer — of those, final_outcome.status == corrected"
+    },
+    "abandoned_count": {
+      "type": "integer",
+      "description": "integer — of those, final_outcome.status == abandoned"
+    },
+    "pending_count": {
+      "type": "integer",
+      "description": "integer — of those, final_outcome.status == pending (no outcome observed yet)"
+    },
+    "rebuilt_at": {
+      "type": "string",
+      "description": "string — ISO-8601 UTC time of the full rebuild that produced the row"
+    },
+    "rebuilt_after": {
+      "type": "string",
+      "description": "string — the added item that triggered that rebuild"
+    },
+    "source": {
+      "type": "string",
+      "description": "string — where this sample row comes from (fixture provenance, not a stored statistic)"
+    }
+  },
+  "required": [
+    "id",
+    "repository_id",
+    "kind",
+    "category_id",
+    "context",
+    "decision_count",
+    "confirmed_count",
+    "corrected_count",
+    "abandoned_count",
+    "pending_count",
+    "rebuilt_at",
+    "rebuilt_after",
+    "source"
+  ]
+}

@@ -48,6 +48,7 @@ superseded_by: null
 covered_by:
 - UXP-700e-2-i
 - unit_tests/product_truth/test_uxp_700e_2.py
+- UXP-700e-2-ii
 implemented_by:
 - docs/product-truth/scripts/generate_product_truth.py
 implemented_by:

@@ -85,8 +85,10 @@ _MODULE_FILES = (
     "done_proof.py",
     "test_enforcement.py",
     "_done_proof_phase_helpers.py",
+    "_done_proof_composite.py",
     "_done_proof_entry_point_gate.py",
     "_done_proof_automation_gate.py",
+    "pytest_outcome_reader.py",  # TQ-500g-4: done_proof imports it at module scope
 )
 
 

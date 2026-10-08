@@ -54,7 +54,7 @@ origin_agent: BrainCandy
 created: 2026-07-21
 amended_by: []
 superseded_by: null
-covered_by: [BO-2400a-1-i, BO-2400a-1-ii, BO-2400a-1-iii, BO-2400a-1-iv]
+covered_by: [BO-2400a-1-i, BO-2400a-1-ii, BO-2400a-1-iii, BO-2400a-1-iv, BO-2400a-1-v]
 implemented_by:
   - "templates/workflows-js/fast-lane-ship.js"
   - "scripts/build_orchestration/fast_lane.py"
@@ -65,3 +65,9 @@ notes: |
   coder total of 2. Return this criterion to done once BO-2400a-1-i is built and
   covered, and BO-2400a-1-ii (large-output hand-off by file, deferred follow-up)
   is built or moved.
+
+  2026-09-30: BO-2400a-1-v added. BO-2400a-1-i built the agent; nothing covered the
+  lane actually dispatching to it, and that gap was invisible because the agent's own
+  adopter_notes recorded the adoption as routed elsewhere. -v is the claim step's
+  adoption. This criterion stays in_progress: -ii remains todo, and -v is todo until
+  its tests are signed off.

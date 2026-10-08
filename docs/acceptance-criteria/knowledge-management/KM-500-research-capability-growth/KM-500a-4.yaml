@@ -1,0 +1,124 @@
+id: KM-500a-4
+title: Measure real planning and selection quality before claiming readiness
+component: knowledge-management
+components:
+- knowledge_management
+level: L2
+status: active
+req_status: active
+readiness: approved
+priority: medium
+work_status: todo
+parent: KM-500a
+criteria: 'Given independently reviewed research cases distinguish missing input, an explicit known operation,
+  suitable registered queries, unsupported source data and a genuinely missing query
+
+  And use of the selected external judgment provider has been authorized for the disclosed context
+
+  When the configured real judgment service processes those cases through the public research entry point
+
+  Then the evaluation records the selected outcome against the reviewed expectation and identifies the source
+  revision, catalog version and provider settings
+
+  And incomplete questions ask for the missing input while explicit known operations preserve deterministic
+  execution
+
+  And unsupported data, unavailable providers, denied access and exhausted budgets never count as correct missing-query
+  decisions
+
+  And provider calls, latency, failures and unresolved cases remain visible in the measured report
+
+  And scripted judgments and synthetic examples are labeled separately from real-provider evidence
+
+  And absent authorization or credentials produces not-run with the unmet prerequisite, never a passing quality
+  claim.'
+depends_on:
+- KM-500a
+doc_links:
+- path: docs/acceptance-criteria/knowledge-management/KM-500-research-capability-growth/KM-500a-1.yaml
+  relationship: context
+  status: exists
+  relevance: Reuse the existing bounded behavior; this pending criterion adds validation, operation or lifecycle
+    scope without replacing completed proof.
+- path: docs/acceptance-criteria/knowledge-management/KM-500-research-capability-growth/KM-500a-2.yaml
+  relationship: context
+  status: exists
+  relevance: Reuse the existing bounded behavior; this pending criterion adds validation, operation or lifecycle
+    scope without replacing completed proof.
+- path: docs/acceptance-criteria/knowledge-management/KM-500-research-capability-growth/KM-500a-3.yaml
+  relationship: context
+  status: exists
+  relevance: Reuse the existing bounded behavior; this pending criterion adds validation, operation or lifecycle
+    scope without replacing completed proof.
+- path: docs/acceptance-criteria/knowledge-management/KM-400-trustworthy-project-knowledge/KM-400c-5.yaml
+  relationship: context
+  status: exists
+  relevance: Reuse the existing bounded behavior; this pending criterion adds validation, operation or lifecycle
+    scope without replacing completed proof.
+- path: docs/architecture/components/knowledge-retrieval.md
+  relationship: context
+  status: exists
+  relevance: Neutral projection/catalog ownership and existing kernel integration boundaries.
+origin_agent: business-analyst
+created: '2026-10-01'
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: 'PO/BA/IT PO coverage audit at user request. This is a pending behavioral obligation, not an implementation
+  or execution claim. Existing KM-400 and KM-500 completed mechanics retain their evidence. Authoring this
+  criterion does not authorize external provider data transfer, merge, deployment or implementation during
+  the AC-only audit. IT PO supplies technical constraints and test contracts. IT PO 2026-10-01: technical constraints
+  and planned public proof supplied; todo and empty covered_by/implemented_by are intentional. No implementation,
+  provider call or deployment was performed during this acceptance audit.'
+assigned_agent: python-coder
+estimated_complexity: L
+it_requirements:
+- Reuse existing ask_jev, provider secret loader and reserve-before-use task budgets through the public KernelService/run
+  interface; deterministic explicit operation selection must make zero additional semantic calls.
+- Use independently reviewed cases covering ready, missing typed input, supported missing query, unsupported
+  source, ambiguous selection and provider failure. Record provider/model and prompt/settings identifiers,
+  source SHA, catalog descriptor digests, expected/actual outcome, calls, latency and unresolved cases without
+  credentials or unnecessary raw context.
+- Require explicit authorization for real external context transfer before opt-in evaluation. Missing authorization
+  or credentials is not_run, distinct from failed quality. Scripted controls remain separately labeled; this
+  AC authoring does not authorize a provider call.
+- Freeze quality thresholds and evaluation cases before scoring the proposed planner; count unavailable/denied/exhausted
+  cases explicitly rather than relabeling them successful capability gaps.
+test_required: true
+test_rationale: Planned public-interface and separately labeled real-artifact proof covers the full observable
+  obligation. Existing mechanism tests are reusable but do not establish real-agent, provider or deployment
+  readiness. No planned test is represented as existing coverage.
+expects_from:
+  ac_id: KM-500a-2
+  contract: Reuse the existing bounded implementation and canonical contracts; add only this explicit lifecycle
+    or readiness obligation.
+delivers_to:
+  agent: python-coder
+  contract: Implement and prove KM-500a-4 through the existing knowledge/kernel or operational interface; return
+    measured evidence and preserve explicit not-run prerequisites.
+test_spec:
+- name: test_jev_evaluation_public_contract
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: integration
+  angle: reachability
+  description: 'Exercise the public research evaluation runner with deterministic controls: missing authorization
+    returns not_run before provider setup; explicit operation consumes no Jev call; report includes versions,
+    budgets, failures and case denominators.'
+  covers:
+  - KM-500a-4
+  requires_db: false
+- name: test_authorized_real_jev_planning_evaluation
+  target_dir: tests/knowledge_live/
+  framework: pytest
+  type: integration
+  angle: real_artifact
+  description: After explicit authorization, run reviewed cases through the configured real Jev and pinned
+    actual graph/catalog. Compare clarify/select/build/unsupported outcomes with independent labels and retain
+    measured call and latency evidence; never substitute scripted Jev.
+  covers:
+  - KM-500a-4
+  requires_db: true

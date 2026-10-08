@@ -1,0 +1,119 @@
+id: GE-108e
+components:
+  - commit_guardian
+title: "The exception hook finds ruff the same way the rest of the project does, so an installed ruff is never reported as missing"
+component: guardrail-engine
+level: L2
+status: active
+req_status: draft
+work_status: done
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  GE-108d made the PostToolUse hook's refusals readable by routing them to
+  stderr. It did not change which refusals happen. The remaining half of
+  KI-CG-20260914 is that the hook asks the operating system for a `ruff`
+  executable, while the project's own lint step and every other caller reach
+  ruff as a Python module (`python -m ruff`). On a machine where ruff is
+  installed but exposes no console script on PATH — the configuration the
+  known issue was first reported from — the hook takes its not-installed
+  branch and blocks every Python write, while `python -m ruff --version`
+  answers perfectly well two lines away.
+
+  "Is ruff installed" must get the same answer here as it gets everywhere
+  else in the project.
+
+  Scenario: An importable ruff with no console script is found and used
+    Given ruff is importable as a module,
+    And no `ruff` executable is resolvable on PATH,
+    When the hook runs over a Python file containing a bare `except:`,
+    Then the hook finds ruff, analyses the file, and refuses with the E722
+      violation,
+    And it does NOT emit the not-installed message,
+    Because the file genuinely has a violation and the tool to see it was
+      available the whole time.
+
+  Scenario: A clean file is still allowed through that path
+    Given the same environment — ruff importable, nothing on PATH,
+    When the hook runs over a clean Python file,
+    Then it exits 0 and writes nothing to either stream,
+    Because finding ruff by a different route must not change what a clean
+      file does.
+
+  Scenario: A genuinely absent ruff still reports itself as absent
+    Given ruff is neither importable as a module nor resolvable on PATH,
+    When the hook runs over any Python file,
+    Then it still exits 2 and still emits the install instruction on stderr,
+    Because the not-installed branch is correct behaviour when ruff really is
+      not installed, and GE-108d's routing of that message must survive.
+depends_on:
+  - GE-108
+doc_links:
+  - path: "docs/acceptance-criteria/guardrail-engine/GE-108-exception-hook-hardening/GE-108.yaml"
+    relationship: parent
+    status: exists
+  - path: "templates/hooks/check_exception_handling_hook.py"
+    relationship: specifies
+    status: exists
+    relevance: "`_run_ruff` builds the subprocess argv; `main()`'s FileNotFoundError branch is the not-installed path GE-108d routed to stderr and this record must leave reachable."
+  - path: "docs/known-issues/commit-guardian/open-low-ki-cg-20260914-exception-hook-blocks-silently.md"
+    relationship: context
+    status: exists
+    relevance: "Defect 1 of that entry. GE-108d closed defect 2 and the entry was explicitly left open for this half."
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "CANONICAL SOURCE, ADR-001. Edit templates/hooks/check_exception_handling_hook.py. The .claude/hooks/ and .leafcutter/hooks/ copies are build.py outputs."
+  - "MODULE FORM FIRST, EXECUTABLE AS FALLBACK, in that order — the project's own lint step uses the module form, so it is the one that agrees with the rest of the repo."
+  - "A MISSING MODULE DOES NOT RAISE FileNotFoundError. `python -m ruff` with ruff absent exits non-zero and prints 'No module named ruff' to stderr; it does not raise. Detect that case explicitly and fall through to the bare executable. Do NOT treat a non-zero exit as module-absent on its own — a real E722 violation also exits non-zero, and conflating them would make every violation fall through to the second invocation."
+  - "PRESERVE THE FileNotFoundError CONTRACT. When the fallback executable is also absent, subprocess raises FileNotFoundError and main()'s existing branch turns it into the install instruction on stderr. _run_ruff must keep letting that propagate; its docstring already documents it."
+  - "SELF-CONTAINED. The hook must not import any leafcutter-internal module; it already says so in its header. sys is already imported."
+  - "DO NOT CHANGE RUFF_SELECT, the exit codes, the message text, or any skip condition. This record changes how ruff is located and nothing else."
+  - "TESTS MUST MANIPULATE THE ENVIRONMENT, NOT MOCK THE LOOKUP. Run the hook as a subprocess with PATH emptied so the console script is unresolvable while the module remains importable — the existing test module already empties PATH for its not-installed arm and that mechanism is the right one to reuse. A test that patches an internal helper proves nothing about what the hook does on the reporter's machine."
+test_spec:
+  - name: test_importable_ruff_with_no_console_script_is_found_and_reports_the_violation
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "PATH emptied so no ruff executable resolves, but the running interpreter can import ruff. A file with a bare except: is checked; asserts exit 2, E722 on stderr, and that the install instruction is absent. RED today — the hook reports ruff missing."
+  - name: test_clean_file_still_passes_when_ruff_is_module_only
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "Same environment, clean file: exit 0, both streams empty. RED today for the same reason — the current hook blocks even a clean file when the console script is missing."
+  - name: test_truly_absent_ruff_still_reports_the_install_instruction
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "Neither module nor executable available (PATH emptied and the module made unimportable for the child). Asserts exit 2 and the install instruction on stderr. GREEN ON ARRIVAL — the regression guard that keeps GE-108d's routing and the not-installed branch alive."
+test_rationale: |
+  The first two arms are red today and are the criterion. The third is green
+  on arrival and is the fence: the cheapest wrong fix is to stop refusing when
+  ruff cannot be found, which would make the first two arms pass by removing
+  the not-installed branch altogether and silently disable the guard on
+  machines that genuinely lack ruff.
+
+  All three arms drive the hook as a subprocess with a real environment rather
+  than patching the lookup helper, because the defect is entirely about what
+  the process discovers in the environment it is actually given — a patched
+  helper would have reported success on the reporter's machine too.
+origin_agent: BrainCandy
+created: 2026-10-07
+amended_by: []
+superseded_by: null
+covered_by:
+  - unit_tests/commit_guardian/test_exception_hook.py
+implemented_by:
+  - templates/hooks/check_exception_handling_hook.py
+change_target: code
+risk_surface: internal
+notes: |
+  This is defect 1 of KI-CG-20260914, left deliberately open when GE-108d
+  closed defect 2 on 2026-10-07. Note that the symptom has changed in the
+  meantime: with GE-108d merged, the remaining failure presents as "the hook
+  insists ruff is not installed when it is" rather than the original "blocking
+  error with no output". Same defect, different-looking report.

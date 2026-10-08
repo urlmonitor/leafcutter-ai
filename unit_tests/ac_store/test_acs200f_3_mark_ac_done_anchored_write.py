@@ -160,3 +160,59 @@ def test_lf_record_stays_lf_and_only_one_line_changes(tmp_path: Path) -> None:
     assert b"\r" not in after
     assert _differing_line_indices(before, after) == [_KEY_INDEX]
     assert after.splitlines(keepends=True)[_KEY_INDEX] == b"work_status: done\n"
+
+
+# ---------------------------------------------------------------------------
+# BO-202: the in_progress write for a composite uses the same anchored write.
+# ---------------------------------------------------------------------------
+
+_PARENT_ID = "ZZ-300a"
+_CHILD_IDS = ["ZZ-300a-1", "ZZ-300a-2"]
+_COMPOSITE_LINES = [
+    f"id: {_PARENT_ID}",
+    "title: \"Composite whose prose quotes the key\"",
+    "component: ac-store",
+    "level: L2",
+    "status: active",
+    "notes: |",
+    "  Reset to work_status: todo after the revert of the earlier fix.",
+    "criteria: |",
+    "  Given children",
+    "  When marked",
+    "  Then in progress",
+    "covered_by:",
+    f"  - {_CHILD_IDS[0]}",
+    f"  - {_CHILD_IDS[1]}",
+    "work_status: todo",
+    "readiness: approved",
+]
+
+
+def test_in_progress_write_is_anchored_and_preserves_line_endings(tmp_path: Path) -> None:
+    """A todo composite goes in_progress: only the key line changes, prose and LF endings intact."""
+    # covers: BO-202
+    # covers: ACS-200f-3
+    # angle: real_artifact
+    ac_root = tmp_path / "acs"
+    ac_root.mkdir()
+    path = ac_root / f"{_PARENT_ID}.yaml"
+    path.write_bytes(("\n".join(_COMPOSITE_LINES) + "\n").encode("utf-8"))
+    for child in _CHILD_IDS:
+        data = {"id": child, "status": "active", "work_status": "todo", "covered_by": []}
+        (ac_root / f"{child}.yaml").write_text(yaml.safe_dump(data), encoding="utf-8")
+    before = path.read_bytes()
+
+    result = subprocess.run(
+        [sys.executable, str(_MARK_AC_DONE_CLI), "--ac", _PARENT_ID, "--ac-root", str(ac_root)],
+        capture_output=True, text=True, timeout=60, check=False,
+    )
+
+    after = path.read_bytes()
+    assert result.returncode == 0, result.stderr
+    data = yaml.safe_load(after.decode("utf-8"))
+    assert data["work_status"] == "in_progress", result.stdout
+    assert "Reset to work_status: todo after the revert" in data["notes"]
+    assert b"\r" not in after
+    key_index = _COMPOSITE_LINES.index("work_status: todo")
+    assert _differing_line_indices(before, after) == [key_index]
+    assert after.splitlines(keepends=True)[key_index] == b"work_status: in_progress\n"

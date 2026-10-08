@@ -87,6 +87,7 @@ superseded_by: null
 covered_by:
   - BO-1500a-5-i
   - BO-1500a-5-ii
+  - BO-1500a-5-iii
 implemented_by: []
 change_target: pipeline
 risk_surface: safety

@@ -1,0 +1,135 @@
+{
+  "kind": "Flow",
+  "review": "reports/native-fields/review-Flow.json",
+  "implementation": "knowledge/native_types/flow.py",
+  "tests": "tests/knowledge/test_native_flow.py",
+  "source_count": 14,
+  "preservation": "Every canonical JSON field is copied exactly, including nested source rollups, unions, null, empty containers and future fields. Manifest context never overwrites the source.",
+  "validation_scope": "Required envelope and step/branch shapes, canonical paths, exact identity, duplicate registrations and missing sources. Does not perform changing business freshness validation or generator normalization.",
+  "derived_context": [
+    "registered",
+    "manifest_entry",
+    "manifest_source_path",
+    "manifest_locator",
+    "stored_derived_paths"
+  ],
+  "red_baseline": {
+    "receipt": "reports/native-fields/flow-red.xml",
+    "failed": 27,
+    "cause": "module missing before implementation"
+  },
+  "green": {
+    "receipt": "reports/native-fields/flow-green.xml",
+    "passed": 35
+  },
+  "mutation_method": "Each defect was injected into the production module namespace in one process. The named test function ran directly against that module to bypass the repository hook that masks failures for in-progress ACs. Each test failed with its mutation and passed after restoring the module. Source files remained unchanged.",
+  "mutations": [
+    {
+      "mutation": "discard nested future fields",
+      "test": "tests/knowledge/test_native_flow.py::test_flow_all_nested_fields_preserved_and_manifest_separate",
+      "parameters": [],
+      "result": "killed",
+      "failure": "AssertionError: ",
+      "restored_result": "passed"
+    },
+    {
+      "mutation": "overwrite source using manifest",
+      "test": "tests/knowledge/test_native_flow.py::test_flow_all_nested_fields_preserved_and_manifest_separate",
+      "parameters": [],
+      "result": "killed",
+      "failure": "AssertionError: ",
+      "restored_result": "passed"
+    },
+    {
+      "mutation": "normalize old expands_to strings",
+      "test": "tests/knowledge/test_native_flow.py::test_flow_all_nested_fields_preserved_and_manifest_separate",
+      "parameters": [],
+      "result": "killed",
+      "failure": "AssertionError: ",
+      "restored_result": "passed"
+    },
+    {
+      "mutation": "silently omit unregistered source",
+      "test": "tests/knowledge/test_native_flow.py::test_flow_unregistered_sources_and_empty_shapes_stay_visible",
+      "parameters": [],
+      "result": "killed",
+      "failure": "ValueError: not enough values to unpack (expected 1, got 0)",
+      "restored_result": "passed"
+    },
+    {
+      "mutation": "materialize absent schema default",
+      "test": "tests/knowledge/test_native_flow.py::test_flow_unregistered_sources_and_empty_shapes_stay_visible",
+      "parameters": [],
+      "result": "killed",
+      "failure": "AssertionError: ",
+      "restored_result": "passed"
+    },
+    {
+      "mutation": "rewrite source during extraction",
+      "test": "tests/knowledge/test_native_flow.py::test_flow_all_nested_fields_preserved_and_manifest_separate",
+      "parameters": [],
+      "result": "killed",
+      "failure": "AssertionError: ",
+      "restored_result": "passed"
+    },
+    {
+      "mutation": "invent record for absent store",
+      "test": "tests/knowledge/test_native_flow.py::test_flow_missing_store_is_empty",
+      "parameters": [],
+      "result": "killed",
+      "failure": "AssertionError: ",
+      "restored_result": "passed"
+    },
+    {
+      "mutation": "bypass required source shape validation",
+      "test": "tests/knowledge/test_native_flow.py::test_flow_required_source_shapes_fail_explicitly",
+      "parameters": [
+        "version",
+        true
+      ],
+      "result": "killed",
+      "failure": "Failed: DID NOT RAISE ValueError",
+      "restored_result": "passed"
+    },
+    {
+      "mutation": "ignore declared path and substitute existing source",
+      "test": "tests/knowledge/test_native_flow.py::test_flow_unsafe_or_noncanonical_declared_path_fails",
+      "parameters": [
+        "../escape.flow.json"
+      ],
+      "result": "killed",
+      "failure": "Failed: DID NOT RAISE ValueError",
+      "restored_result": "passed"
+    },
+    {
+      "mutation": "remove duplicate registration refusal",
+      "test": "tests/knowledge/test_native_flow.py::test_flow_invalid_registration_or_identity_fails",
+      "parameters": [
+        "duplicate_path"
+      ],
+      "result": "killed",
+      "failure": "AssertionError: Regex pattern did not match.\n  Expected regex: 'duplicate Flow registration'\n  Actual message: 'Flow manifest/source identity mismatch: leafcutter/example'",
+      "restored_result": "passed"
+    },
+    {
+      "mutation": "remove duplicate source identity refusal",
+      "test": "tests/knowledge/test_native_flow.py::test_flow_invalid_registration_or_identity_fails",
+      "parameters": [
+        "duplicate_unregistered"
+      ],
+      "result": "killed",
+      "failure": "Failed: DID NOT RAISE ValueError",
+      "restored_result": "passed"
+    },
+    {
+      "mutation": "ignore manifest source identity mismatch",
+      "test": "tests/knowledge/test_native_flow.py::test_flow_invalid_registration_or_identity_fails",
+      "parameters": [
+        "mismatch"
+      ],
+      "result": "killed",
+      "failure": "Failed: DID NOT RAISE ValueError",
+      "restored_result": "passed"
+    }
+  ]
+}

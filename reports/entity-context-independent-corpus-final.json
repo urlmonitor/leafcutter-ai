@@ -1,0 +1,1463 @@
+{
+  "schema_version": "1.0",
+  "evaluation": "independent_entity_recognition",
+  "rows": [
+    {
+      "id": "glossary",
+      "expected": [
+        [
+          "glossary",
+          "decision kernel"
+        ]
+      ],
+      "observed": [
+        [
+          "glossary",
+          "decision kernel"
+        ]
+      ],
+      "failures": [],
+      "passed": true,
+      "lookups": 1,
+      "coverage": {
+        "schema_version": "1.0",
+        "scan_complete": true,
+        "index_status": "current",
+        "index_fingerprint": "3742a423ed9ce34ee988ef1da4a1b3db2fba2430148ccff562183b7daff75da8",
+        "families": {
+          "doc_type": "current",
+          "native_kind": "current",
+          "symbol": "current",
+          "entry_kind": "current",
+          "glossary": "current",
+          "artifact_id": "current"
+        },
+        "counts": {
+          "schema_version": "1.0",
+          "detected": 1,
+          "resolved": 1,
+          "returned": 1,
+          "omitted": 0,
+          "unknown": 0,
+          "ambiguous": 0
+        },
+        "by_family": {
+          "glossary": {
+            "schema_version": "1.0",
+            "detected": 1,
+            "resolved": 1,
+            "returned": 1,
+            "omitted": 0,
+            "unknown": 0,
+            "ambiguous": 0
+          }
+        }
+      },
+      "by_family": {
+        "glossary": {
+          "expected": 1,
+          "observed": 1,
+          "correct": 1
+        },
+        "doc_type": {
+          "expected": 0,
+          "observed": 0,
+          "correct": 0
+        },
+        "native_kind": {
+          "expected": 0,
+          "observed": 0,
+          "correct": 0
+        },
+        "symbol": {
+          "expected": 0,
+          "observed": 0,
+          "correct": 0
+        },
+        "entry_kind": {
+          "expected": 0,
+          "observed": 0,
+          "correct": 0
+        },
+        "artifact_id": {
+          "expected": 0,
+          "observed": 0,
+          "correct": 0
+        }
+      }
+    },
+    {
+      "id": "doc_alias",
+      "expected": [
+        [
+          "doc_type",
+          "how_to"
+        ]
+      ],
+      "observed": [
+        [
+          "doc_type",
+          "how_to"
+        ]
+      ],
+      "failures": [],
+      "passed": true,
+      "lookups": 1,
+      "coverage": {
+        "schema_version": "1.0",
+        "scan_complete": true,
+        "index_status": "current",
+        "index_fingerprint": "3742a423ed9ce34ee988ef1da4a1b3db2fba2430148ccff562183b7daff75da8",
+        "families": {
+          "doc_type": "current",
+          "native_kind": "current",
+          "symbol": "current",
+          "entry_kind": "current",
+          "glossary": "current",
+          "artifact_id": "current"
+        },
+        "counts": {
+          "schema_version": "1.0",
+          "detected": 1,
+          "resolved": 1,
+          "returned": 1,
+          "omitted": 0,
+          "unknown": 0,
+          "ambiguous": 0
+        },
+        "by_family": {
+          "doc_type": {
+            "schema_version": "1.0",
+            "detected": 1,
+            "resolved": 1,
+            "returned": 1,
+            "omitted": 0,
+            "unknown": 0,
+            "ambiguous": 0
+          }
+        }
+      },
+      "by_family": {
+        "glossary": {
+          "expected": 0,
+          "observed": 0,
+          "correct": 0
+        },
+        "doc_type": {
+          "expected": 1,
+          "observed": 1,
+          "correct": 1
+        },
+        "native_kind": {
+          "expected": 0,
+          "observed": 0,
+          "correct": 0
+        },
+        "symbol": {
+          "expected": 0,
+          "observed": 0,
+          "correct": 0
+        },
+        "entry_kind": {
+          "expected": 0,
+          "observed": 0,
+          "correct": 0
+        },
+        "artifact_id": {
+          "expected": 0,
+          "observed": 0,
+          "correct": 0
+        }
+      }
+    },
+    {
+      "id": "destination",
+      "expected": [
+        [
+          "entry_kind",
+          "glossary"
+        ]
+      ],
+      "observed": [
+        [
+          "entry_kind",
+          "glossary"
+        ]
+      ],
+      "failures": [],
+      "passed": true,
+      "lookups": 1,
+      "coverage": {
+        "schema_version": "1.0",
+        "scan_complete": true,
+        "index_status": "current",
+        "index_fingerprint": "3742a423ed9ce34ee988ef1da4a1b3db2fba2430148ccff562183b7daff75da8",
+        "families": {
+          "doc_type": "current",
+          "native_kind": "current",
+          "symbol": "current",
+          "entry_kind": "current",
+          "glossary": "current",
+          "artifact_id": "current"
+        },
+        "counts": {
+          "schema_version": "1.0",
+          "detected": 1,
+          "resolved": 1,
+          "returned": 1,
+          "omitted": 0,
+          "unknown": 0,
+          "ambiguous": 0
+        },
+        "by_family": {
+          "entry_kind": {
+            "schema_version": "1.0",
+            "detected": 1,
+            "resolved": 1,
+            "returned": 1,
+            "omitted": 0,
+            "unknown": 0,
+            "ambiguous": 0
+          }
+        }
+      },
+      "by_family": {
+        "glossary": {
+          "expected": 0,
+          "observed": 0,
+          "correct": 0
+        },
+        "doc_type": {
+          "expected": 0,
+          "observed": 0,
+          "correct": 0
+        },
+        "native_kind": {
+          "expected": 0,
+          "observed": 0,
+          "correct": 0
+        },
+        "symbol": {
+          "expected": 0,
+          "observed": 0,
+          "correct": 0
+        },
+        "entry_kind": {
+          "expected": 1,
+          "observed": 1,
+          "correct": 1
+        },
+        "artifact_id": {
+          "expected": 0,
+          "observed": 0,
+          "correct": 0
+        }
+      }
+    },
+    {
+      "id": "native",
+      "expected": [
+        [
+          "native_kind",
+          "AcceptanceCriterion"
+        ]
+      ],
+      "observed": [
+        [
+          "native_kind",
+          "AcceptanceCriterion"
+        ]
+      ],
+      "failures": [],
+      "passed": true,
+      "lookups": 1,
+      "coverage": {
+        "schema_version": "1.0",
+        "scan_complete": true,
+        "index_status": "current",
+        "index_fingerprint": "3742a423ed9ce34ee988ef1da4a1b3db2fba2430148ccff562183b7daff75da8",
+        "families": {
+          "doc_type": "current",
+          "native_kind": "current",
+          "symbol": "current",
+          "entry_kind": "current",
+          "glossary": "current",
+          "artifact_id": "current"
+        },
+        "counts": {
+          "schema_version": "1.0",
+          "detected": 1,
+          "resolved": 1,
+          "returned": 1,
+          "omitted": 0,
+          "unknown": 0,
+          "ambiguous": 0
+        },
+        "by_family": {
+          "native_kind": {
+            "schema_version": "1.0",
+            "detected": 1,
+            "resolved": 1,
+            "returned": 1,
+            "omitted": 0,
+            "unknown": 0,
+            "ambiguous": 0
+          }
+        }
+      },
+      "by_family": {
+        "glossary": {
+          "expected": 0,
+          "observed": 0,
+          "correct": 0
+        },
+        "doc_type": {
+          "expected": 0,
+          "observed": 0,
+          "correct": 0
+        },
+        "native_kind": {
+          "expected": 1,
+          "observed": 1,
+          "correct": 1
+        },
+        "symbol": {
+          "expected": 0,
+          "observed": 0,
+          "correct": 0
+        },
+        "entry_kind": {
+          "expected": 0,
+          "observed": 0,
+          "correct": 0
+        },
+        "artifact_id": {
+          "expected": 0,
+          "observed": 0,
+          "correct": 0
+        }
+      }
+    },
+    {
+      "id": "symbol",
+      "expected": [
+        [
+          "symbol",
+          "pkg.alpha.TaskInput.perform"
+        ]
+      ],
+      "observed": [
+        [
+          "symbol",
+          "pkg.alpha.TaskInput.perform"
+        ]
+      ],
+      "failures": [],
+      "passed": true,
+      "lookups": 1,
+      "coverage": {
+        "schema_version": "1.0",
+        "scan_complete": true,
+        "index_status": "current",
+        "index_fingerprint": "3742a423ed9ce34ee988ef1da4a1b3db2fba2430148ccff562183b7daff75da8",
+        "families": {
+          "doc_type": "current",
+          "native_kind": "current",
+          "symbol": "current",
+          "entry_kind": "current",
+          "glossary": "current",
+          "artifact_id": "current"
+        },
+        "counts": {
+          "schema_version": "1.0",
+          "detected": 1,
+          "resolved": 1,
+          "returned": 1,
+          "omitted": 0,
+          "unknown": 0,
+          "ambiguous": 0
+        },
+        "by_family": {
+          "symbol": {
+            "schema_version": "1.0",
+            "detected": 1,
+            "resolved": 1,
+            "returned": 1,
+            "omitted": 0,
+            "unknown": 0,
+            "ambiguous": 0
+          }
+        }
+      },
+      "by_family": {
+        "glossary": {
+          "expected": 0,
+          "observed": 0,
+          "correct": 0
+        },
+        "doc_type": {
+          "expected": 0,
+          "observed": 0,
+          "correct": 0
+        },
+        "native_kind": {
+          "expected": 0,
+          "observed": 0,
+          "correct": 0
+        },
+        "symbol": {
+          "expected": 1,
+          "observed": 1,
+          "correct": 1
+        },
+        "entry_kind": {
+          "expected": 0,
+          "observed": 0,
+          "correct": 0
+        },
+        "artifact_id": {
+          "expected": 0,
+          "observed": 0,
+          "correct": 0
+        }
+      }
+    },
+    {
+      "id": "artifact",
+      "expected": [
+        [
+          "artifact_id",
+          "EC-1100a-1-i"
+        ]
+      ],
+      "observed": [
+        [
+          "artifact_id",
+          "EC-1100a-1-i"
+        ]
+      ],
+      "failures": [],
+      "passed": true,
+      "lookups": 1,
+      "coverage": {
+        "schema_version": "1.0",
+        "scan_complete": true,
+        "index_status": "current",
+        "index_fingerprint": "3742a423ed9ce34ee988ef1da4a1b3db2fba2430148ccff562183b7daff75da8",
+        "families": {
+          "doc_type": "current",
+          "native_kind": "current",
+          "symbol": "current",
+          "entry_kind": "current",
+          "glossary": "current",
+          "artifact_id": "current"
+        },
+        "counts": {
+          "schema_version": "1.0",
+          "detected": 1,
+          "resolved": 1,
+          "returned": 1,
+          "omitted": 0,
+          "unknown": 0,
+          "ambiguous": 0
+        },
+        "by_family": {
+          "artifact_id": {
+            "schema_version": "1.0",
+            "detected": 1,
+            "resolved": 1,
+            "returned": 1,
+            "omitted": 0,
+            "unknown": 0,
+            "ambiguous": 0
+          }
+        }
+      },
+      "by_family": {
+        "glossary": {
+          "expected": 0,
+          "observed": 0,
+          "correct": 0
+        },
+        "doc_type": {
+          "expected": 0,
+          "observed": 0,
+          "correct": 0
+        },
+        "native_kind": {
+          "expected": 0,
+          "observed": 0,
+          "correct": 0
+        },
+        "symbol": {
+          "expected": 0,
+          "observed": 0,
+          "correct": 0
+        },
+        "entry_kind": {
+          "expected": 0,
+          "observed": 0,
+          "correct": 0
+        },
+        "artifact_id": {
+          "expected": 1,
+          "observed": 1,
+          "correct": 1
+        }
+      }
+    },
+    {
+      "id": "ordinary",
+      "expected": [],
+      "observed": [],
+      "failures": [],
+      "passed": true,
+      "lookups": 0,
+      "coverage": {
+        "schema_version": "1.0",
+        "scan_complete": true,
+        "index_status": "current",
+        "index_fingerprint": "3742a423ed9ce34ee988ef1da4a1b3db2fba2430148ccff562183b7daff75da8",
+        "families": {
+          "doc_type": "current",
+          "native_kind": "current",
+          "symbol": "current",
+          "entry_kind": "current",
+          "glossary": "current",
+          "artifact_id": "current"
+        },
+        "counts": {
+          "schema_version": "1.0",
+          "detected": 0,
+          "resolved": 0,
+          "returned": 0,
+          "omitted": 0,
+          "unknown": 0,
+          "ambiguous": 0
+        },
+        "by_family": {}
+      },
+      "by_family": {
+        "glossary": {
+          "expected": 0,
+          "observed": 0,
+          "correct": 0
+        },
+        "doc_type": {
+          "expected": 0,
+          "observed": 0,
+          "correct": 0
+        },
+        "native_kind": {
+          "expected": 0,
+          "observed": 0,
+          "correct": 0
+        },
+        "symbol": {
+          "expected": 0,
+          "observed": 0,
+          "correct": 0
+        },
+        "entry_kind": {
+          "expected": 0,
+          "observed": 0,
+          "correct": 0
+        },
+        "artifact_id": {
+          "expected": 0,
+          "observed": 0,
+          "correct": 0
+        }
+      }
+    },
+    {
+      "id": "boundaries",
+      "expected": [],
+      "observed": [],
+      "failures": [],
+      "passed": true,
+      "lookups": 0,
+      "coverage": {
+        "schema_version": "1.0",
+        "scan_complete": true,
+        "index_status": "current",
+        "index_fingerprint": "3742a423ed9ce34ee988ef1da4a1b3db2fba2430148ccff562183b7daff75da8",
+        "families": {
+          "doc_type": "current",
+          "native_kind": "current",
+          "symbol": "current",
+          "entry_kind": "current",
+          "glossary": "current",
+          "artifact_id": "current"
+        },
+        "counts": {
+          "schema_version": "1.0",
+          "detected": 0,
+          "resolved": 0,
+          "returned": 0,
+          "omitted": 0,
+          "unknown": 0,
+          "ambiguous": 0
+        },
+        "by_family": {}
+      },
+      "by_family": {
+        "glossary": {
+          "expected": 0,
+          "observed": 0,
+          "correct": 0
+        },
+        "doc_type": {
+          "expected": 0,
+          "observed": 0,
+          "correct": 0
+        },
+        "native_kind": {
+          "expected": 0,
+          "observed": 0,
+          "correct": 0
+        },
+        "symbol": {
+          "expected": 0,
+          "observed": 0,
+          "correct": 0
+        },
+        "entry_kind": {
+          "expected": 0,
+          "observed": 0,
+          "correct": 0
+        },
+        "artifact_id": {
+          "expected": 0,
+          "observed": 0,
+          "correct": 0
+        }
+      }
+    },
+    {
+      "id": "long_tail",
+      "expected": [
+        [
+          "artifact_id",
+          "EC-1100a-1-i"
+        ]
+      ],
+      "observed": [
+        [
+          "artifact_id",
+          "EC-1100a-1-i"
+        ]
+      ],
+      "failures": [],
+      "passed": true,
+      "lookups": 1,
+      "coverage": {
+        "schema_version": "1.0",
+        "scan_complete": true,
+        "index_status": "current",
+        "index_fingerprint": "3742a423ed9ce34ee988ef1da4a1b3db2fba2430148ccff562183b7daff75da8",
+        "families": {
+          "doc_type": "current",
+          "native_kind": "current",
+          "symbol": "current",
+          "entry_kind": "current",
+          "glossary": "current",
+          "artifact_id": "current"
+        },
+        "counts": {
+          "schema_version": "1.0",
+          "detected": 1,
+          "resolved": 1,
+          "returned": 1,
+          "omitted": 0,
+          "unknown": 0,
+          "ambiguous": 0
+        },
+        "by_family": {
+          "artifact_id": {
+            "schema_version": "1.0",
+            "detected": 1,
+            "resolved": 1,
+            "returned": 1,
+            "omitted": 0,
+            "unknown": 0,
+            "ambiguous": 0
+          }
+        }
+      },
+      "by_family": {
+        "glossary": {
+          "expected": 0,
+          "observed": 0,
+          "correct": 0
+        },
+        "doc_type": {
+          "expected": 0,
+          "observed": 0,
+          "correct": 0
+        },
+        "native_kind": {
+          "expected": 0,
+          "observed": 0,
+          "correct": 0
+        },
+        "symbol": {
+          "expected": 0,
+          "observed": 0,
+          "correct": 0
+        },
+        "entry_kind": {
+          "expected": 0,
+          "observed": 0,
+          "correct": 0
+        },
+        "artifact_id": {
+          "expected": 1,
+          "observed": 1,
+          "correct": 1
+        }
+      }
+    },
+    {
+      "id": "repetition",
+      "expected": [
+        [
+          "glossary",
+          "zephyr"
+        ]
+      ],
+      "observed": [
+        [
+          "glossary",
+          "zephyr"
+        ]
+      ],
+      "failures": [],
+      "passed": true,
+      "lookups": 1,
+      "coverage": {
+        "schema_version": "1.0",
+        "scan_complete": true,
+        "index_status": "current",
+        "index_fingerprint": "3742a423ed9ce34ee988ef1da4a1b3db2fba2430148ccff562183b7daff75da8",
+        "families": {
+          "doc_type": "current",
+          "native_kind": "current",
+          "symbol": "current",
+          "entry_kind": "current",
+          "glossary": "current",
+          "artifact_id": "current"
+        },
+        "counts": {
+          "schema_version": "1.0",
+          "detected": 1,
+          "resolved": 1,
+          "returned": 1,
+          "omitted": 0,
+          "unknown": 0,
+          "ambiguous": 0
+        },
+        "by_family": {
+          "glossary": {
+            "schema_version": "1.0",
+            "detected": 1,
+            "resolved": 1,
+            "returned": 1,
+            "omitted": 0,
+            "unknown": 0,
+            "ambiguous": 0
+          }
+        }
+      },
+      "by_family": {
+        "glossary": {
+          "expected": 1,
+          "observed": 1,
+          "correct": 1
+        },
+        "doc_type": {
+          "expected": 0,
+          "observed": 0,
+          "correct": 0
+        },
+        "native_kind": {
+          "expected": 0,
+          "observed": 0,
+          "correct": 0
+        },
+        "symbol": {
+          "expected": 0,
+          "observed": 0,
+          "correct": 0
+        },
+        "entry_kind": {
+          "expected": 0,
+          "observed": 0,
+          "correct": 0
+        },
+        "artifact_id": {
+          "expected": 0,
+          "observed": 0,
+          "correct": 0
+        }
+      }
+    },
+    {
+      "id": "ambiguous",
+      "expected": [],
+      "observed": [],
+      "failures": [],
+      "passed": true,
+      "lookups": 1,
+      "coverage": {
+        "schema_version": "1.0",
+        "scan_complete": true,
+        "index_status": "current",
+        "index_fingerprint": "ca16b1a5f2a3a51fe15b19be62fc822916111ff731df7ba90a7e3ce780951732",
+        "families": {
+          "doc_type": "current",
+          "native_kind": "current",
+          "symbol": "current",
+          "entry_kind": "current",
+          "glossary": "current",
+          "artifact_id": "current"
+        },
+        "counts": {
+          "schema_version": "1.0",
+          "detected": 1,
+          "resolved": 2,
+          "returned": 2,
+          "omitted": 0,
+          "unknown": 0,
+          "ambiguous": 1
+        },
+        "by_family": {
+          "symbol": {
+            "schema_version": "1.0",
+            "detected": 1,
+            "resolved": 2,
+            "returned": 2,
+            "omitted": 0,
+            "unknown": 0,
+            "ambiguous": 1
+          }
+        }
+      },
+      "by_family": {
+        "glossary": {
+          "expected": 0,
+          "observed": 0,
+          "correct": 0
+        },
+        "doc_type": {
+          "expected": 0,
+          "observed": 0,
+          "correct": 0
+        },
+        "native_kind": {
+          "expected": 0,
+          "observed": 0,
+          "correct": 0
+        },
+        "symbol": {
+          "expected": 0,
+          "observed": 0,
+          "correct": 0
+        },
+        "entry_kind": {
+          "expected": 0,
+          "observed": 0,
+          "correct": 0
+        },
+        "artifact_id": {
+          "expected": 0,
+          "observed": 0,
+          "correct": 0
+        }
+      }
+    },
+    {
+      "id": "absent",
+      "expected": [],
+      "observed": [],
+      "failures": [],
+      "passed": true,
+      "lookups": 1,
+      "coverage": {
+        "schema_version": "1.0",
+        "scan_complete": true,
+        "index_status": "current",
+        "index_fingerprint": "3742a423ed9ce34ee988ef1da4a1b3db2fba2430148ccff562183b7daff75da8",
+        "families": {
+          "doc_type": "current",
+          "native_kind": "current",
+          "symbol": "current",
+          "entry_kind": "current",
+          "glossary": "current",
+          "artifact_id": "current"
+        },
+        "counts": {
+          "schema_version": "1.0",
+          "detected": 1,
+          "resolved": 0,
+          "returned": 0,
+          "omitted": 0,
+          "unknown": 1,
+          "ambiguous": 0
+        },
+        "by_family": {
+          "artifact_id": {
+            "schema_version": "1.0",
+            "detected": 1,
+            "resolved": 0,
+            "returned": 0,
+            "omitted": 0,
+            "unknown": 1,
+            "ambiguous": 0
+          }
+        }
+      },
+      "by_family": {
+        "glossary": {
+          "expected": 0,
+          "observed": 0,
+          "correct": 0
+        },
+        "doc_type": {
+          "expected": 0,
+          "observed": 0,
+          "correct": 0
+        },
+        "native_kind": {
+          "expected": 0,
+          "observed": 0,
+          "correct": 0
+        },
+        "symbol": {
+          "expected": 0,
+          "observed": 0,
+          "correct": 0
+        },
+        "entry_kind": {
+          "expected": 0,
+          "observed": 0,
+          "correct": 0
+        },
+        "artifact_id": {
+          "expected": 0,
+          "observed": 0,
+          "correct": 0
+        }
+      }
+    },
+    {
+      "id": "malformed",
+      "expected": [],
+      "observed": [],
+      "failures": [],
+      "passed": true,
+      "lookups": 1,
+      "coverage": {
+        "schema_version": "1.0",
+        "scan_complete": true,
+        "index_status": "current",
+        "index_fingerprint": "3742a423ed9ce34ee988ef1da4a1b3db2fba2430148ccff562183b7daff75da8",
+        "families": {
+          "doc_type": "current",
+          "native_kind": "current",
+          "symbol": "current",
+          "entry_kind": "current",
+          "glossary": "current",
+          "artifact_id": "current"
+        },
+        "counts": {
+          "schema_version": "1.0",
+          "detected": 1,
+          "resolved": 0,
+          "returned": 0,
+          "omitted": 0,
+          "unknown": 1,
+          "ambiguous": 0
+        },
+        "by_family": {
+          "artifact_id": {
+            "schema_version": "1.0",
+            "detected": 1,
+            "resolved": 0,
+            "returned": 0,
+            "omitted": 0,
+            "unknown": 1,
+            "ambiguous": 0
+          }
+        }
+      },
+      "by_family": {
+        "glossary": {
+          "expected": 0,
+          "observed": 0,
+          "correct": 0
+        },
+        "doc_type": {
+          "expected": 0,
+          "observed": 0,
+          "correct": 0
+        },
+        "native_kind": {
+          "expected": 0,
+          "observed": 0,
+          "correct": 0
+        },
+        "symbol": {
+          "expected": 0,
+          "observed": 0,
+          "correct": 0
+        },
+        "entry_kind": {
+          "expected": 0,
+          "observed": 0,
+          "correct": 0
+        },
+        "artifact_id": {
+          "expected": 0,
+          "observed": 0,
+          "correct": 0
+        }
+      }
+    },
+    {
+      "id": "unsupported",
+      "expected": [],
+      "observed": [],
+      "failures": [],
+      "passed": true,
+      "lookups": 1,
+      "coverage": {
+        "schema_version": "1.0",
+        "scan_complete": true,
+        "index_status": "current",
+        "index_fingerprint": "3742a423ed9ce34ee988ef1da4a1b3db2fba2430148ccff562183b7daff75da8",
+        "families": {
+          "doc_type": "current",
+          "native_kind": "current",
+          "symbol": "current",
+          "entry_kind": "current",
+          "glossary": "current",
+          "artifact_id": "current"
+        },
+        "counts": {
+          "schema_version": "1.0",
+          "detected": 1,
+          "resolved": 0,
+          "returned": 0,
+          "omitted": 0,
+          "unknown": 1,
+          "ambiguous": 0
+        },
+        "by_family": {
+          "symbol": {
+            "schema_version": "1.0",
+            "detected": 1,
+            "resolved": 0,
+            "returned": 0,
+            "omitted": 0,
+            "unknown": 1,
+            "ambiguous": 0
+          }
+        }
+      },
+      "by_family": {
+        "glossary": {
+          "expected": 0,
+          "observed": 0,
+          "correct": 0
+        },
+        "doc_type": {
+          "expected": 0,
+          "observed": 0,
+          "correct": 0
+        },
+        "native_kind": {
+          "expected": 0,
+          "observed": 0,
+          "correct": 0
+        },
+        "symbol": {
+          "expected": 0,
+          "observed": 0,
+          "correct": 0
+        },
+        "entry_kind": {
+          "expected": 0,
+          "observed": 0,
+          "correct": 0
+        },
+        "artifact_id": {
+          "expected": 0,
+          "observed": 0,
+          "correct": 0
+        }
+      }
+    },
+    {
+      "id": "denied",
+      "expected": [],
+      "observed": [],
+      "failures": [],
+      "passed": true,
+      "lookups": 2,
+      "coverage": {
+        "schema_version": "1.0",
+        "scan_complete": true,
+        "index_status": "current",
+        "index_fingerprint": "ca16b1a5f2a3a51fe15b19be62fc822916111ff731df7ba90a7e3ce780951732",
+        "families": {
+          "doc_type": "current",
+          "native_kind": "current",
+          "symbol": "current",
+          "entry_kind": "current",
+          "glossary": "current",
+          "artifact_id": "current"
+        },
+        "counts": {
+          "schema_version": "1.0",
+          "detected": 2,
+          "resolved": 2,
+          "returned": 2,
+          "omitted": 0,
+          "unknown": 1,
+          "ambiguous": 1
+        },
+        "by_family": {
+          "symbol": {
+            "schema_version": "1.0",
+            "detected": 2,
+            "resolved": 2,
+            "returned": 2,
+            "omitted": 0,
+            "unknown": 1,
+            "ambiguous": 1
+          }
+        }
+      },
+      "by_family": {
+        "glossary": {
+          "expected": 0,
+          "observed": 0,
+          "correct": 0
+        },
+        "doc_type": {
+          "expected": 0,
+          "observed": 0,
+          "correct": 0
+        },
+        "native_kind": {
+          "expected": 0,
+          "observed": 0,
+          "correct": 0
+        },
+        "symbol": {
+          "expected": 0,
+          "observed": 0,
+          "correct": 0
+        },
+        "entry_kind": {
+          "expected": 0,
+          "observed": 0,
+          "correct": 0
+        },
+        "artifact_id": {
+          "expected": 0,
+          "observed": 0,
+          "correct": 0
+        }
+      }
+    },
+    {
+      "id": "stale",
+      "expected": [],
+      "observed": [],
+      "failures": [],
+      "passed": true,
+      "lookups": 0,
+      "coverage": {
+        "schema_version": "1.0",
+        "scan_complete": false,
+        "index_status": "stale",
+        "index_fingerprint": null,
+        "families": {},
+        "counts": {
+          "schema_version": "1.0",
+          "detected": 0,
+          "resolved": 0,
+          "returned": 0,
+          "omitted": 0,
+          "unknown": 0,
+          "ambiguous": 0
+        },
+        "by_family": {}
+      },
+      "by_family": {
+        "glossary": {
+          "expected": 0,
+          "observed": 0,
+          "correct": 0
+        },
+        "doc_type": {
+          "expected": 0,
+          "observed": 0,
+          "correct": 0
+        },
+        "native_kind": {
+          "expected": 0,
+          "observed": 0,
+          "correct": 0
+        },
+        "symbol": {
+          "expected": 0,
+          "observed": 0,
+          "correct": 0
+        },
+        "entry_kind": {
+          "expected": 0,
+          "observed": 0,
+          "correct": 0
+        },
+        "artifact_id": {
+          "expected": 0,
+          "observed": 0,
+          "correct": 0
+        }
+      }
+    },
+    {
+      "id": "small_budget",
+      "expected": [
+        [
+          "artifact_id",
+          "EC-1100a-1-i"
+        ]
+      ],
+      "observed": [
+        [
+          "artifact_id",
+          "EC-1100a-1-i"
+        ]
+      ],
+      "failures": [],
+      "passed": true,
+      "lookups": 2,
+      "coverage": {
+        "schema_version": "1.0",
+        "scan_complete": true,
+        "index_status": "current",
+        "index_fingerprint": "3742a423ed9ce34ee988ef1da4a1b3db2fba2430148ccff562183b7daff75da8",
+        "families": {
+          "doc_type": "current",
+          "native_kind": "current",
+          "symbol": "current",
+          "entry_kind": "current",
+          "glossary": "current",
+          "artifact_id": "current"
+        },
+        "counts": {
+          "schema_version": "1.0",
+          "detected": 2,
+          "resolved": 2,
+          "returned": 1,
+          "omitted": 1,
+          "unknown": 0,
+          "ambiguous": 0
+        },
+        "by_family": {
+          "artifact_id": {
+            "schema_version": "1.0",
+            "detected": 1,
+            "resolved": 1,
+            "returned": 1,
+            "omitted": 0,
+            "unknown": 0,
+            "ambiguous": 0
+          },
+          "glossary": {
+            "schema_version": "1.0",
+            "detected": 1,
+            "resolved": 1,
+            "returned": 0,
+            "omitted": 1,
+            "unknown": 0,
+            "ambiguous": 0
+          }
+        }
+      },
+      "by_family": {
+        "glossary": {
+          "expected": 0,
+          "observed": 0,
+          "correct": 0
+        },
+        "doc_type": {
+          "expected": 0,
+          "observed": 0,
+          "correct": 0
+        },
+        "native_kind": {
+          "expected": 0,
+          "observed": 0,
+          "correct": 0
+        },
+        "symbol": {
+          "expected": 0,
+          "observed": 0,
+          "correct": 0
+        },
+        "entry_kind": {
+          "expected": 0,
+          "observed": 0,
+          "correct": 0
+        },
+        "artifact_id": {
+          "expected": 1,
+          "observed": 1,
+          "correct": 1
+        }
+      }
+    },
+    {
+      "id": "hostile",
+      "expected": [
+        [
+          "glossary",
+          "hostile"
+        ]
+      ],
+      "observed": [
+        [
+          "glossary",
+          "hostile"
+        ]
+      ],
+      "failures": [],
+      "passed": true,
+      "lookups": 1,
+      "coverage": {
+        "schema_version": "1.0",
+        "scan_complete": true,
+        "index_status": "current",
+        "index_fingerprint": "3742a423ed9ce34ee988ef1da4a1b3db2fba2430148ccff562183b7daff75da8",
+        "families": {
+          "doc_type": "current",
+          "native_kind": "current",
+          "symbol": "current",
+          "entry_kind": "current",
+          "glossary": "current",
+          "artifact_id": "current"
+        },
+        "counts": {
+          "schema_version": "1.0",
+          "detected": 1,
+          "resolved": 1,
+          "returned": 1,
+          "omitted": 0,
+          "unknown": 0,
+          "ambiguous": 0
+        },
+        "by_family": {
+          "glossary": {
+            "schema_version": "1.0",
+            "detected": 1,
+            "resolved": 1,
+            "returned": 1,
+            "omitted": 0,
+            "unknown": 0,
+            "ambiguous": 0
+          }
+        }
+      },
+      "by_family": {
+        "glossary": {
+          "expected": 1,
+          "observed": 1,
+          "correct": 1
+        },
+        "doc_type": {
+          "expected": 0,
+          "observed": 0,
+          "correct": 0
+        },
+        "native_kind": {
+          "expected": 0,
+          "observed": 0,
+          "correct": 0
+        },
+        "symbol": {
+          "expected": 0,
+          "observed": 0,
+          "correct": 0
+        },
+        "entry_kind": {
+          "expected": 0,
+          "observed": 0,
+          "correct": 0
+        },
+        "artifact_id": {
+          "expected": 0,
+          "observed": 0,
+          "correct": 0
+        }
+      }
+    }
+  ],
+  "by_family": {
+    "artifact_id": {
+      "expected": 3,
+      "observed": 3,
+      "correct": 3,
+      "precision": 1.0,
+      "recall": 1.0,
+      "covered_cases": 3
+    },
+    "doc_type": {
+      "expected": 1,
+      "observed": 1,
+      "correct": 1,
+      "precision": 1.0,
+      "recall": 1.0,
+      "covered_cases": 1
+    },
+    "entry_kind": {
+      "expected": 1,
+      "observed": 1,
+      "correct": 1,
+      "precision": 1.0,
+      "recall": 1.0,
+      "covered_cases": 1
+    },
+    "glossary": {
+      "expected": 3,
+      "observed": 3,
+      "correct": 3,
+      "precision": 1.0,
+      "recall": 1.0,
+      "covered_cases": 3
+    },
+    "native_kind": {
+      "expected": 1,
+      "observed": 1,
+      "correct": 1,
+      "precision": 1.0,
+      "recall": 1.0,
+      "covered_cases": 1
+    },
+    "symbol": {
+      "expected": 1,
+      "observed": 1,
+      "correct": 1,
+      "precision": 1.0,
+      "recall": 1.0,
+      "covered_cases": 1
+    }
+  },
+  "total": 18,
+  "passed": 18,
+  "historical_evidence": "DK-200 gather_context tests and enrichment scores prove historical lexical enrichment only."
+}

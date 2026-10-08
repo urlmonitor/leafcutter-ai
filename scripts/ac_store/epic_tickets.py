@@ -231,13 +231,15 @@ def _translate_ticket_depends_on(
     epic-folder filename (falling back to the raw id unchanged when it is not
     a key in the map — e.g. a dependency outside the generated set), and writes
     the result as the ticket's ``depends_on`` field. No-ops when the file has no
-    frontmatter or *raw_deps* is empty.
+    frontmatter. An empty *raw_deps* is written as ``depends_on: []``.
 
     This is the generation-time AC-id -> ticket-filename translation required by
     BO-2600a-5 AC-4 so ``ticket_frontmatter_guard`` passes without a downstream
     hook auto-fix.
 
     DECISION HISTORY:
+        2026-10-06 (BO-2600a-5): an empty *raw_deps* is written as ``[]`` rather
+        than skipped, replacing any stale generator value.
         2026-08-13 (tgh-build regression fix): *raw_deps* is now supplied by the
         caller (sourced from :func:`resolve_leaf_dependencies`'s dependency graph,
         already built before ticket generation) instead of being read back from
@@ -257,9 +259,6 @@ def _translate_ticket_depends_on(
             corresponding epic-folder filename (e.g. ``"01_TICKET-BO-5C1.md"``).
     """
     _log = get_logger()
-
-    if not raw_deps:
-        return
 
     try:
         content = ticket_file.read_text(encoding="utf-8")
@@ -344,5 +343,9 @@ DECISION HISTORY
   rebind a name goal_to_epic re-exports but never calls. All nine were
   retargeted to `epic_tickets`; no assertion was changed.
   (#TICKETLESS reason=file-size-decomposition-refactor)
+- 2026-10-06 [BO-2600a-5, EPIC-BuildToolingRunsThrough/08]:
+  _translate_ticket_depends_on no longer returns early on an empty *raw_deps*.
+  It always writes the epic's own NN_-prefixed list, [] included, so a stale
+  loose name left by the standalone generator is replaced.
 ====================================================================
 """
