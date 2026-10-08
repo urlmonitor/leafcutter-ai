@@ -23,7 +23,7 @@ from frontmatter_path_resolver import (  # noqa: E402
     resolve_frontmatter_path_entry,
 )
 
-from unit_tests.commit_guardian import _ge_118e_fixtures as fx  # noqa: E402
+from . import _ge_118e_fixtures as fx  # noqa: E402
 
 _DOCS = (fx.FRONTMATTER_DOC, fx.README_DOC)
 
@@ -67,7 +67,7 @@ class TestGe118eExecutableDocumentation(unittest.TestCase):
                             f"{doc.name}:{example.line} presented as refused but the guard accepted it:\n{output}",
                         )
                         self.assertTrue(
-                            any(l.startswith("Unsupported entry") for l in example.refusal_lines),
+                            any(line.startswith("Unsupported entry") for line in example.refusal_lines),
                             f"{doc.name}:{example.line} quoted text has no 'Unsupported entry' line",
                         )
                         for expected in example.refusal_lines:
@@ -111,8 +111,8 @@ class TestGe118eSupersededDescription(unittest.TestCase):
         # angle: criterion
         """README row no longer says path-existence-only, and its reference link resolves."""
         rows = [
-            l for l in fx.read_document(fx.README_DOC).splitlines()
-            if l.startswith("| `check_doc_frontmatter.py`")
+            line for line in fx.read_document(fx.README_DOC).splitlines()
+            if line.startswith("| `check_doc_frontmatter.py`")
         ]
         self.assertEqual(len(rows), 1, "expected exactly one check_doc_frontmatter.py row in the README")
         row = rows[0]

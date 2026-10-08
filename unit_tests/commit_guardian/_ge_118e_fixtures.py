@@ -20,6 +20,7 @@ import sys
 import tempfile
 from dataclasses import dataclass
 from pathlib import Path
+from typing import NoReturn
 
 import yaml
 
@@ -36,7 +37,7 @@ _FENCE_OPEN = re.compile(r"^\s*```(.*)$")
 _FENCE_CLOSE = re.compile(r"^\s*```\s*$")
 
 
-def fail(message: str, cause: BaseException | None = None) -> None:
+def fail(message: str, cause: BaseException | None = None) -> NoReturn:
     """Fail the calling test with *message* (chained to *cause* when given)."""
     raise AssertionError(message) from cause
 
