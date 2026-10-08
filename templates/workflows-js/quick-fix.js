@@ -47,8 +47,6 @@ export const meta = {
 // a harness can stub the check's answer and assert whether self-isolation actually
 // fired, which a single combined call would hide.
 
-// Every *_SCHEMA below shares a "status" enum and trailing "message"; each call
-// site supplies only its own extra properties and which of them are required.
 function schema(properties, required = []) {
   return {
     type: 'object',
@@ -146,9 +144,6 @@ function blocked(phase, message, extra = {}) {
   return { status: 'blocked', phase, message, ...extra }
 }
 
-// Shared shape for the nine `if (!x || x.status === 'blocked') return {...}` guards
-// below. The mutation-proof and changelog-authoring checks build different messages
-// entirely and call `blocked()` directly instead.
 function blockedOnFailure(result, phase, agentLabel, extra = {}) {
   if (!result || result.status === 'blocked') {
     return blocked(phase, result ? result.message : `${agentLabel} returned null`, { detail: result, ...extra })
@@ -515,8 +510,6 @@ boolean:
 An error is NOT a red result. A run that never reached the assertion proves nothing about
 the bug, and treating it as a healthy red would send a fix at a test that never executed.`
 
-// Red and Green share these two failure shapes (strict-flag missing; outcome:"error").
-// Only the explanation differs between the phases; the rest is written once.
 function strictFlagMissingBlock(phase, result, explanation) {
   return blocked(phase,
     `${phase} was not verified under AC_ENFORCE_STRICT=1.\n\nCommand reported: ${result.strict_command_run || '(none)'}\n\n${explanation}`,
@@ -566,16 +559,7 @@ if (redResult.passed === true || redResult.outcome === 'passed') {
 
 log(`Red phase confirmed under AC_ENFORCE_STRICT=1: test fails as expected.`)
 
-/* Check for root-cause divergence (BP-600e-2)
-
-   The previous check asked whether the FIRST WHITESPACE TOKEN of the prose
-   root cause appeared anywhere in the pytest output. That fails in both
-   directions and for the same reason: one word is not a topic. A root cause
-   beginning "the ..." matched almost any failure text, so real divergence went
-   unreported; a correct diagnosis paraphrased without its own first word was
-   reported as divergent. What distinguishes the two cases is whether the two
-   texts are ABOUT the same thing, so the comparison is over their content
-   vocabulary rather than over any single token. */
+// Check for root-cause divergence (BP-600e-2) — see divergenceContentWords below.
 const failureMsg = redResult.failure_message || redResult.output_summary || ''
 
 // Words that carry no diagnostic weight. Counting these is what let the old
@@ -592,6 +576,15 @@ const DIVERGENCE_STOPWORDS = new Set([
  * non-alphanumerics, drop stopwords and 1-2 character fragments, and strip
  * common inflectional endings so "exhausted"/"exhausts" and
  * "header"/"headers" compare as the same word.
+ *
+ * Why content vocabulary (BP-600e-2): the previous check asked whether the FIRST
+ * WHITESPACE TOKEN of the prose root cause appeared anywhere in the pytest output.
+ * That fails in both directions and for the same reason: one word is not a topic.
+ * A root cause beginning "the ..." matched almost any failure text, so real
+ * divergence went unreported; a correct diagnosis paraphrased without its own first
+ * word was reported as divergent. What distinguishes the two cases is whether the
+ * two texts are ABOUT the same thing, so the comparison is over their content
+ * vocabulary rather than over any single token.
  */
 function divergenceContentWords(text) {
   const words = new Set()
@@ -613,28 +606,13 @@ const failureWords = divergenceContentWords(failureMsg)
 
 const sharedWords = [...diagnosisWords].filter((word) => failureWords.has(word)).length
 
-// With no failure text, or a diagnosis carrying no content words at all, there
-// is nothing to compare. Say so rather than inventing a verdict in either
-// direction — an unanalysable diagnosis is not evidence of divergence.
 const comparable = failureMsg.length > 0 && diagnosisWords.size > 0
 
-/* The test is TOTAL DISJOINTNESS: warn only when the two texts share no
-   substantive vocabulary whatsoever.
-
-   A proportional threshold was tried first and rejected on evidence. Requiring
-   some fraction of the diagnosis's vocabulary to reappear means picking a
-   number, and any number is wrong somewhere: at 0.3 a real diagnosis paired
-   with a terse one-line assertion ("stub root cause for harness execution" vs
-   "stub AssertionError: bug not fixed", overlap 0.2) is flagged as divergent
-   and a correct run halts. Halting correct work is the more expensive error
-   here, because this gate sits in front of every fix the workflow makes, and a
-   missed warning still faces human review of the fix itself.
-
-   Being explicit about the limitation: one incidental shared word suppresses
-   the warning. That is the honest ceiling of a lexical comparison and the
-   reason BP-600e-2's it_requirements ask for a semantic one. What this rule
-   does guarantee is that it never fires on a pair that genuinely shares a
-   topic — which is what makes it safe to run unattended. */
+// TOTAL DISJOINTNESS: warn only when the two texts share no content word at all. A
+// proportional threshold was rejected on evidence: at 0.3 a correct diagnosis with a
+// terse assertion (overlap 0.2) halted a correct run, and halting correct work costs
+// more than a missed warning the fix's human review still catches. Limitation: one
+// incidental shared word suppresses the warning (BP-600e-2 asks for a semantic check).
 const divergenceCheck = comparable && sharedWords === 0
 
 if (!comparable && failureMsg.length > 0) {
@@ -780,8 +758,6 @@ if (!greenResult.strict_command_run || !greenResult.strict_command_run.includes(
     'A default pytest run cannot distinguish a real pass from an xfail-masked failure on a not-done AC. Re-run /quick-fix.')
 }
 
-// BP-600c-2-i, green side: an error is not a failure to diagnose as "the fix
-// did not work" — it is a run that never happened. Say which it was.
 if (greenResult.outcome === 'error') {
   return unrunnableTestBlock('Green Phase', 'green_phase_error', greenResult, 'a failing test',
     `The assertion was never evaluated, so this says nothing about whether the fix worked. The fix IS still applied to ${target_file}. Repair whatever stopped the test executing, then re-run /quick-fix.`)
@@ -885,7 +861,6 @@ fix_restored=true.`,
   { label: 'mutation-proof', phase: 'Green Phase', schema: MUTATION_SCHEMA }
 )
 
-// The two mutation-proof failures below differ only in halt_reason and message.
 function mutationProofBlock(haltReason, message) {
   return blocked('Green Phase (mutation proof)', message,
     { halt_reason: haltReason, test_file: testFile, ac_id, detail: mutationResult })
@@ -983,8 +958,6 @@ log(`Committed: ${commitResult.commit_sha || '(sha pending)'}`)
 // ---------------------------------------------------------------------------
 // Phase 6 — Changelog
 // ---------------------------------------------------------------------------
-// "Changelog entry present" is a REQUIRED status check on main. Without this
-// phase every quick-fix PR is born failing a required check.
 
 phase('Changelog')
 
