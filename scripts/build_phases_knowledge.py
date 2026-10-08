@@ -496,8 +496,14 @@ def check_knowledge_routing_wiring_guard(output_root: Path) -> int:
         return 0
 
     try:
-        guardrail_config = yaml.safe_load(
-            guardrail_config_path.read_text(encoding="utf-8")
+        # Reverted to the pure-Python loader (loader-audit, TQ-600a-11
+        # fix-pass, 2026-10-07): a parse failure here returns 1, aborting
+        # the build -- a guardrail decision point (criterion 4). Single
+        # config file read once per build -- no speed case for the fast
+        # loader here.
+        guardrail_config = yaml.load(
+            guardrail_config_path.read_text(encoding="utf-8"),
+            Loader=yaml.SafeLoader,
         ) or {}
     except (OSError, yaml.YAMLError) as exc:
         print(

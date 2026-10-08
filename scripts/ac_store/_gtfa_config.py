@@ -61,8 +61,11 @@ def _load_guardrail_gates(guardrail_config_path: Path) -> dict[str, Any]:
         OSError: When the file cannot be read.
     """
     try:
+        # Reverted (loader-audit, TQ-600a-11 fix-pass, 2026-10-07): already
+        # fail-closed (raises); single config file read. No measured
+        # benefit (criterion 1).
         with open(guardrail_config_path, encoding="utf-8") as fh:
-            data = yaml.safe_load(fh)
+            data = yaml.load(fh, Loader=yaml.SafeLoader)
     except (yaml.YAMLError, OSError) as exc:
         print(
             f"ERROR: could not load guardrail config {guardrail_config_path}: {exc}",

@@ -169,6 +169,7 @@ def _copy_acs(source: Path, destination: Path, required: set[str]) -> None:
     if not required:
         return
     import yaml
+
     candidates: dict[str, list[Path]] = {}
     for path in ac_root.rglob("*.yaml"):
         if path.stem in required:
@@ -179,7 +180,23 @@ def _copy_acs(source: Path, destination: Path, required: set[str]) -> None:
             raise ValueError(f"AC {ac_id}: expected one source record, found {len(matches)}")
         relative = matches[0].relative_to(source).as_posix()
         path = checked_path(source, relative, ("docs/acceptance-criteria/",))
-        record = yaml.safe_load(path.read_text(encoding="utf-8"))
+        # Reverted to the pure-Python loader, resolving the prior audit's
+        # UNKNOWN (loader-audit, TQ-600a-11 fix-pass, 2026-10-07): there is
+        # no try/except at all here, and the enclosing harness's
+        # OSError/ValueError/ImportError wrapper does not cover
+        # yaml.YAMLError, so a parse failure already propagates uncaught
+        # either way -- CSafeLoader does not change that. What it DOES
+        # change: the very next line raises ValueError when a successfully
+        # parsed record's `id` field disagrees with the requested AC id,
+        # which signals this function's intended posture is "crash rather
+        # than silently accept a malformed/mismatched AC record" headed into
+        # an eval sandbox. A tab-corrupted record that CSafeLoader parses
+        # "successfully" (rather than raising) could still carry a correct
+        # `id` field with other fields silently mangled, passing this one
+        # check while carrying corrupted content into the sandbox. Reverted
+        # to restore the stricter parse; volume is also low (the `required`
+        # AC set for one eval fixture, not the whole store).
+        record = yaml.load(path.read_text(encoding="utf-8"), Loader=yaml.SafeLoader)
         if not isinstance(record, dict) or record.get("id") != ac_id:
             raise ValueError(f"AC {ac_id}: filename and record identity disagree")
         _copy_file(source, destination, relative)
