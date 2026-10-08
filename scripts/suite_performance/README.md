@@ -84,4 +84,14 @@ for the full measured evidence and the read-vs-mutate boundary this fixture sits
 - Unit tests live in `unit_tests/suite_performance/test_tq_600a_1.py`. Most are suffixed
   `_MANUAL` (they pay a real ~60s deploy) and are excluded from the fast default run;
   only the boundary test that mocks-but-forwards `subprocess.run` runs by default.
+- **How `_MANUAL` exclusion works (TQ-600a-13).** The plugin
+  `pytest_manual_deselect.py` (registered via `-p` in `pytest.ini`'s `addopts`) auto-marks
+  every test whose name -- the node id up to any `[` -- ends in `_MANUAL` with the
+  registered `manual` marker, and `addopts` carries `-m "not manual"`, so the default
+  collection deselects them. No decorator or list is needed; the suffix alone is the rule.
+  Opt in with `python -m pytest -m manual tests/ unit_tests/` (a command-line `-m`
+  overrides the one in `addopts`); `-m "manual or not manual"` collects everything.
+- **Known, accepted gap.** The excluded `_MANUAL` tests currently run nowhere in CI: the
+  scheduled (nightly) run that TQ-600a-13-i requires does not exist yet, so do not read
+  the exclusion as "covered elsewhere".
 - Locking is POSIX-only (`fcntl.flock`); there is no Windows fallback.
