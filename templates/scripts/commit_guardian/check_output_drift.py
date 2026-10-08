@@ -127,6 +127,33 @@ ARCHITECTURE: Reads the ``output_mappings`` section of the
     run (B-1): the ``verified == 0`` floor in ``check_output_drift()`` fires
     whether the manifest recorded zero mappings outright or recorded some
     that all failed to resolve — see that function's docstring.
+
+    IMPORT FALLBACK: some synthetic test fixtures deploy this hook file alone
+    rather than the whole scripts/commit_guardian/ tree (the real build.py
+    always deploys the directory verbatim, so the fallback never fires in
+    production). Without ``_drift_exemptions`` the hook degrades to "every
+    uncomparable artifact is a GAP, never a declared exemption" instead of
+    crashing. The fallback ``_ScanResult`` MUST mirror
+    ``_drift_exemptions.ScanResult`` field-for-field: it is the path that runs
+    precisely when nothing else can catch a mismatch, so a missing field would
+    raise TypeError at the one moment the degraded path is needed.
+
+    LAYOUT AND WHY THERE IS NO NEW SIBLING MODULE (2026-10-08 size paydown):
+    the file was 630 measured lines against a 400 limit. ``#`` comments are
+    measured but docstrings are not, so the prose that used to sit in
+    function-body comments now lives in the docstrings of the functions it
+    explains (nothing was deleted), and the three oversized functions were
+    split along their own seams: ``_scan_output_files`` into Pass 1
+    (``_scan_unrecorded``) and Pass 2 (``_reconcile_recorded`` over
+    ``_hash_recorded``); ``check_output_drift`` into
+    ``_load_mappings_or_verdict`` / ``_print_result_line`` / ``_verdict``;
+    ``main`` into ``_manifest_blocker`` / ``_default_floor_dirs``. All of it
+    is output-drift-specific, so it was NOT put in the shared
+    ``_drift_exemptions`` (also imported by check_build_drift.py) or
+    ``_resolve_root``. A new sibling was rejected: minimal-deploy test
+    fixtures ship only the hook plus ``_resolve_root``/``_drift_exemptions``,
+    so it would raise ModuleNotFoundError there, and it would need a
+    deploy-manifest entry. Every stderr line and exit code is unchanged.
 """
 
 from __future__ import annotations
@@ -150,11 +177,7 @@ try:
         validate_exemption_registry as _validate_exemption_registry,
     )
 except ImportError:
-    # Deploy-manifest gap fallback: some synthetic test fixtures deploy this
-    # hook file alone rather than the whole scripts/commit_guardian/ tree
-    # (the real build.py always deploys the directory verbatim, so this
-    # never fires in production). Degrade to "every uncomparable artifact is
-    # a GAP, never a declared exemption" instead of crashing the hook.
+    # Deploy-manifest gap fallback — see IMPORT FALLBACK in the module docstring.
     from typing import NamedTuple
 
     logger.warning(
@@ -162,11 +185,6 @@ except ImportError:
         "exemption registry disabled for this run."
     )
 
-    # MUST mirror _drift_exemptions._ScanResult field-for-field. This fallback
-    # exists for installs where the helper is not deployed alongside the hook,
-    # so it is the path that runs precisely when nothing else can catch a
-    # mismatch — a missing field here raises TypeError at the one moment the
-    # degraded path is needed, turning a graceful degradation into a crash.
     class _ScanResult(NamedTuple):  # type: ignore[no-redef]
         verified: int
         uncomparable: int
@@ -181,17 +199,17 @@ except ImportError:
     def _validate_exemption_registry(_entries: list) -> dict[str, str]:  # type: ignore[misc]
         return {}
 
-# ---------------------------------------------------------------------------
-# Constants
-# ---------------------------------------------------------------------------
-
 _HOOK_FILE = Path(__file__).resolve()
 _GATE_NAME = "check-output-drift"
 
 
-# ---------------------------------------------------------------------------
-# Manifest resolution (GE-118b)
-# ---------------------------------------------------------------------------
+def _err(message: str = "") -> None:
+    """Write one line to stderr, the hook's only diagnostic channel.
+
+    Args:
+        message: Text to print; an empty string emits a bare blank line.
+    """
+    print(message, file=sys.stderr)
 
 
 def _warn_manifest_not_found(tried: list[Path]) -> None:
@@ -201,17 +219,11 @@ def _warn_manifest_not_found(tried: list[Path]) -> None:
         tried: Every absolute candidate path that was checked.
     """
     tried_str = "\n  ".join(str(p) for p in tried)
-    print(
+    _err(
         "check-output-drift: WARNING — .build_manifest.json not found. "
         f"Tried:\n  {tried_str}\n"
-        "Run build.py to generate it. Skipping output drift check.",
-        file=sys.stderr,
+        "Run build.py to generate it. Skipping output drift check."
     )
-
-
-# ---------------------------------------------------------------------------
-# Helpers
-# ---------------------------------------------------------------------------
 
 
 def _sha256_of_file(path: Path) -> str:
@@ -249,11 +261,7 @@ def _load_manifest(manifest_path: Path) -> dict | None:
     try:
         return json.loads(manifest_path.read_text(encoding="utf-8"))
     except (json.JSONDecodeError, OSError) as exc:
-        print(
-            f"check-output-drift: WARNING — cannot read manifest "
-            f"{manifest_path}: {exc}",
-            file=sys.stderr,
-        )
+        _err(f"check-output-drift: WARNING — cannot read manifest {manifest_path}: {exc}")
         return None
 
 
@@ -279,9 +287,7 @@ def _collect_output_files(output_dirs: list[Path]) -> list[Path]:
     for d in output_dirs:
         if d.is_dir():
             seen.update(d.rglob("*"))
-    return sorted(
-        f for f in seen if f.is_file() and "__pycache__" not in f.parts
-    )
+    return sorted(f for f in seen if f.is_file() and "__pycache__" not in f.parts)
 
 
 def _derive_scan_dirs(
@@ -308,6 +314,10 @@ def _derive_scan_dirs(
     disagreement produced neither a GAP nor an EXEMPT line — it was silent.
     A hardcoded list can drift from the build; a derived one cannot.
 
+    Defensive: a malformed key such as an absolute path or one using ".."
+    must not widen the scan outside the tree the manifest describes, so a
+    candidate that is not under ``repo_root`` is skipped.
+
     Args:
         repo_root: Absolute path every manifest key is relative to.
         output_mappings: The manifest's ``output_mappings`` dict.
@@ -320,8 +330,6 @@ def _derive_scan_dirs(
     dirs: set[Path] = set(floor_dirs)
     for key in output_mappings:
         candidate = (repo_root / key).parent
-        # Defensive: a malformed key such as an absolute path or one using
-        # ".." must not widen the scan outside the tree the manifest describes.
         try:
             candidate.relative_to(repo_root)
         except ValueError:
@@ -346,9 +354,132 @@ def _make_output_key(output_path: Path, repo_root: Path) -> str:
     return output_path.relative_to(repo_root).as_posix()
 
 
-# ---------------------------------------------------------------------------
-# Output scanning (BP-100k-3 — exemption registry lives in _drift_exemptions)
-# ---------------------------------------------------------------------------
+def _scan_unrecorded(
+    output_files: list[Path],
+    output_mappings: dict,
+    repo_root: Path,
+    exemptions: dict[str, str],
+) -> tuple[int, int]:
+    """Pass 1: name real on-disk files ABSENT from the manifest (gap/exempt).
+
+    This is the ONLY thing the rglob()-derived ``output_files`` still drives:
+    naming a real, deployed file the manifest never recorded. Each such file
+    prints ``UNCOMPARABLE: EXEMPT`` (valid registry ground) or
+    ``UNCOMPARABLE: GAP``.
+
+    A scanned path outside ``repo_root`` cannot arise from the derived scan
+    dirs (always repo_root-relative), but a caller-supplied ``output_dirs``
+    could in principle produce one. It was once skipped silently; it is now
+    named on an ``UNCOMPARABLE: UNREADABLE`` line (B-2's "never skipped
+    silently") — but deliberately NOT added to any returned count, exactly as
+    before this refactor.
+
+    Args:
+        output_files: Absolute paths to the output files to check.
+        output_mappings: The manifest's output_mappings section.
+        repo_root: Repository root used to form relative manifest keys.
+        exemptions: Valid declared-exemption map (key -> ground text).
+
+    Returns:
+        ``(uncomparable, gaps)`` — ``uncomparable`` is gaps plus exempt.
+    """
+    uncomparable = gaps = 0
+    for out_path in output_files:
+        try:
+            out_key = _make_output_key(out_path, repo_root)
+        except ValueError:
+            _err(f"UNCOMPARABLE: UNREADABLE {out_path} reason=path is outside repo_root {repo_root}")
+            continue
+        if out_key in output_mappings:
+            continue
+        uncomparable += 1
+        ground = exemptions.get(out_key)
+        if ground:
+            _err(f"UNCOMPARABLE: EXEMPT {out_key} ground={ground}")
+        else:
+            gaps += 1
+            _err(f"UNCOMPARABLE: GAP {out_key} action=run build.py to register it")
+    return uncomparable, gaps
+
+
+def _hash_recorded(out_key: str, out_path: Path) -> tuple[str, str | None]:
+    """Resolve one recorded key DIRECTLY against disk and hash it if possible.
+
+    Deliberately independent of ``output_files``/rglob(): a manifest key is
+    resolved by stat-ing ``repo_root/key`` itself, so a key that is present
+    but unreadable, or present as something other than a regular file, cannot
+    silently avoid every bucket.
+
+    - Absent from disk: ``missing`` (BP-100n-1) — deletion is the most
+      complete form of drift there is.
+    - Present but not a regular file (a directory, FIFO, symlink to a
+      directory): ``unreadable`` — not deleted (a bare ``.exists()`` is True
+      for a directory too) and not a permission error, but just as
+      uncomparable: there is no file content to hash.
+    - Present but ``OSError`` while reading (e.g. ``chmod 000``): ``unreadable``
+      (B-2) — the purest "could not compare" case, which must land in a
+      counted, verdict-affecting bucket, never in none.
+
+    Args:
+        out_key: The manifest key (printed in diagnostics).
+        out_path: ``repo_root / out_key``.
+
+    Returns:
+        ``(status, hash)`` where status is ``"missing"``, ``"unreadable"`` or
+        ``"verified"``; hash is the digest only for ``"verified"``.
+    """
+    if not out_path.exists():
+        _err(f"UNCOMPARABLE: MISSING {out_key} reason=recorded but not found on disk")
+        return "missing", None
+    if not out_path.is_file():
+        _err(f"UNCOMPARABLE: UNREADABLE {out_key} reason=path exists but is not a regular file")
+        return "unreadable", None
+    try:
+        return "verified", _sha256_of_file(out_path)
+    except OSError as exc:
+        _err(f"UNCOMPARABLE: UNREADABLE {out_key} reason={exc}")
+        return "unreadable", None
+
+
+def _reconcile_recorded(
+    output_mappings: dict, repo_root: Path, exemptions: dict[str, str]
+) -> tuple[dict[str, int], int, list[tuple[str, str]]]:
+    """Pass 2: reconcile EVERY recorded key against disk (see RECONCILIATION).
+
+    Every key lands in EXACTLY ONE of verified / drifted (a violation) /
+    missing / unreadable. A hash mismatch on a key carrying a valid exemption
+    is reported as ``DIRECT-DRIFT: EXEMPT <key> ground=<ground>`` and counted
+    in the returned drift-exempt total instead of as a violation (see
+    DRIFT-EXEMPT REPORTING in the module docstring).
+
+    Args:
+        output_mappings: The manifest's output_mappings section.
+        repo_root: Repository root every key is relative to.
+        exemptions: Valid declared-exemption map (key -> ground text).
+
+    Returns:
+        ``(counts, drift_exempt, violations)``: ``counts`` maps
+        ``verified``/``unreadable``/``missing`` to totals; ``violations`` is
+        a list of ``(output_key, template_key)`` pairs.
+    """
+    counts = {"verified": 0, "unreadable": 0, "missing": 0}
+    drift_exempt = 0
+    violations: list[tuple[str, str]] = []
+    for out_key, entry in output_mappings.items():
+        status, current_hash = _hash_recorded(out_key, repo_root / out_key)
+        counts[status] += 1
+        if status != "verified":
+            continue
+        fields = entry if isinstance(entry, dict) else {}
+        if current_hash == fields.get("expected_output_hash", ""):
+            continue
+        ground = exemptions.get(out_key)
+        if ground:
+            drift_exempt += 1
+            _err(f"DIRECT-DRIFT: EXEMPT {out_key} ground={ground}")
+        else:
+            violations.append((out_key, fields.get("template", "<unknown>")))
+    return counts, drift_exempt, violations
 
 
 def _scan_output_files(
@@ -362,8 +493,8 @@ def _scan_output_files(
     RECONCILIATION INVARIANT (adversarial review round 2, B-2 + the
     reconciliation finding it was unified with): every key in
     ``output_mappings`` must land in EXACTLY ONE of verified / drifted
-    (a violation) / missing / unreadable. This function resolves each
-    manifest key DIRECTLY against disk (Pass 2 below) rather than relying on
+    (a violation) / missing / unreadable. Pass 2 (``_reconcile_recorded``)
+    resolves each manifest key DIRECTLY against disk rather than relying on
     whether ``output_files`` — built from ``rglob()`` over the scan
     directories — happened to enumerate it. Before this fix, "seen by
     rglob() and comparable" was the only path into ``verified``/violations,
@@ -372,10 +503,10 @@ def _scan_output_files(
     fell through EVERY bucket: not verified, not a gap, not exempt, and
     ``.exists()`` still returned True for a directory so it was not "missing"
     either — the run reported clean because nothing OTHER than "verified"
-    could describe what happened to it. Pass 1 below keeps its original,
-    narrower job: finding real on-disk files ABSENT from the manifest
-    (gap/exempt detection) — it no longer has anything to do with whether a
-    RECORDED key is comparable.
+    could describe what happened to it. Pass 1 (``_scan_unrecorded``) keeps
+    its original, narrower job: finding real on-disk files ABSENT from the
+    manifest (gap/exempt detection) — it has nothing to do with whether a
+    RECORDED key is comparable. Pass 1 output is printed before Pass 2's.
 
     Args:
         output_files: Absolute paths to the output files to check.
@@ -391,109 +522,15 @@ def _scan_output_files(
         absent from disk (BP-100n-1), and one ``UNCOMPARABLE: UNREADABLE``
         line per recorded key present on disk but not hash-comparable (B-2).
     """
-    # --- Pass 1: gap / exempt detection over real files found on disk ------
-    # Unchanged in spirit from before this fix — this is the ONLY thing
-    # rglob()-derived ``output_files`` still drives: naming a real,
-    # deployed file the manifest never recorded.
-    uncomparable = 0
-    gaps = 0
-
-    for out_path in output_files:
-        try:
-            out_key = _make_output_key(out_path, repo_root)
-        except ValueError:
-            # A scanned path outside repo_root cannot happen via the derived
-            # scan dirs (always repo_root-relative), but a caller-supplied
-            # output_dirs could in principle produce one. Previously skipped
-            # silently — now named and counted so "could not identify this
-            # artifact" is never invisible (B-2's "never skipped silently").
-            print(
-                f"UNCOMPARABLE: UNREADABLE {out_path} "
-                f"reason=path is outside repo_root {repo_root}",
-                file=sys.stderr,
-            )
-            continue
-
-        if out_key not in output_mappings:
-            uncomparable += 1
-            ground = exemptions.get(out_key)
-            if ground:
-                print(f"UNCOMPARABLE: EXEMPT {out_key} ground={ground}", file=sys.stderr)
-            else:
-                gaps += 1
-                print(
-                    f"UNCOMPARABLE: GAP {out_key} action=run build.py to register it",
-                    file=sys.stderr,
-                )
-
-    # --- Pass 2: reconcile EVERY recorded key directly against disk --------
-    # Deliberately independent of output_files/rglob(): a manifest key is
-    # resolved by stat-ing repo_root/key itself, so a key that is present but
-    # unreadable, or present as something other than a regular file, cannot
-    # silently avoid every bucket the way it could when membership in
-    # "verified" depended on having first been enumerated by rglob().
-    verified = 0
-    unreadable = 0
-    missing = 0
-    violations: list[tuple[str, str]] = []
-
-    for out_key, entry in output_mappings.items():
-        out_path = repo_root / out_key
-
-        if not out_path.exists():
-            # BP-100n-1: deletion is the most complete form of drift there is.
-            missing += 1
-            print(
-                f"UNCOMPARABLE: MISSING {out_key} reason=recorded but not found on disk",
-                file=sys.stderr,
-            )
-            continue
-
-        if not out_path.is_file():
-            # Recorded as a file, but the path now resolves to a directory,
-            # a FIFO, a symlink to a directory, etc. — not deleted (so not
-            # MISSING) and not a permission error (so not caught below), but
-            # just as uncomparable as either: there is no file content here
-            # to hash. This is exactly the "replaced by a directory" gap a
-            # bare ``.exists()`` check on the missing-sweep alone could not
-            # see (a directory "exists" too).
-            unreadable += 1
-            print(
-                f"UNCOMPARABLE: UNREADABLE {out_key} "
-                "reason=path exists but is not a regular file",
-                file=sys.stderr,
-            )
-            continue
-
-        try:
-            current_hash = _sha256_of_file(out_path)
-        except OSError as exc:
-            # B-2: an unreadable-but-present file (e.g. chmod 000) is the
-            # purest "could not compare" case there is. It must land in a
-            # counted, verdict-affecting bucket — never in neither.
-            unreadable += 1
-            print(f"UNCOMPARABLE: UNREADABLE {out_key} reason={exc}", file=sys.stderr)
-            continue
-
-        verified += 1
-        expected_hash = entry.get("expected_output_hash", "") if isinstance(entry, dict) else ""
-        template_key = entry.get("template", "<unknown>") if isinstance(entry, dict) else "<unknown>"
-        if current_hash != expected_hash:
-            # See DRIFT-EXEMPT REPORTING in the module docstring.
-            ground = exemptions.get(out_key)
-            if ground:
-                uncomparable += 1
-                print(f"DIRECT-DRIFT: EXEMPT {out_key} ground={ground}", file=sys.stderr)
-            else:
-                violations.append((out_key, template_key))
-
+    uncomparable, gaps = _scan_unrecorded(output_files, output_mappings, repo_root, exemptions)
+    counts, drift_exempt, violations = _reconcile_recorded(output_mappings, repo_root, exemptions)
     return _ScanResult(
-        verified=verified,
-        uncomparable=uncomparable,
+        verified=counts["verified"],
+        uncomparable=uncomparable + drift_exempt,
         gaps=gaps,
-        missing=missing,
+        missing=counts["missing"],
         violations=violations,
-        unreadable=unreadable,
+        unreadable=counts["unreadable"],
     )
 
 
@@ -513,23 +550,19 @@ def _load_output_mappings(manifest_path: Path) -> dict | None:
     """
     manifest = _load_manifest(manifest_path)
     if manifest is None:
-        print(
+        _err(
             "check-output-drift: WARNING — .build_manifest.json not found. "
-            "Run build.py to generate it. Skipping output drift check.",
-            file=sys.stderr,
+            "Run build.py to generate it. Skipping output drift check."
         )
         return None
-
     output_mappings = manifest.get("output_mappings")
     if not isinstance(output_mappings, dict):
-        print(
+        _err(
             "check-output-drift: WARNING — manifest has no output_mappings section. "
             "Re-run build.py to regenerate the manifest with Direction B support. "
-            "Skipping output drift check.",
-            file=sys.stderr,
+            "Skipping output drift check."
         )
         return None
-
     return output_mappings
 
 
@@ -540,26 +573,155 @@ def _print_blocked_block(violations: list[tuple[str, str]]) -> None:
         violations: (output_key, template_key) pairs whose current hash
             differs from the expected hash.
     """
-    print(
+    _err(
         "\n[check-output-drift] BLOCKED — output file(s) were directly edited "
-        "instead of their source templates:\n",
-        file=sys.stderr,
+        "instead of their source templates:\n"
     )
     for out_key, tpl_key in violations:
-        print(f"  output:   {out_key}", file=sys.stderr)
-        print(f"  template: {tpl_key}", file=sys.stderr)
-        print(file=sys.stderr)
-    print(
+        _err(f"  output:   {out_key}")
+        _err(f"  template: {tpl_key}")
+        _err()
+    _err(
         "Fix: Edit the template at the path shown above, re-run\n"
         "  build.py  (or: python leafcutter/scripts/build.py --force)\n"
-        "then stage both the template and the updated output.\n",
-        file=sys.stderr,
+        "then stage both the template and the updated output.\n"
     )
 
 
-# ---------------------------------------------------------------------------
-# Public API
-# ---------------------------------------------------------------------------
+def _load_mappings_or_verdict(manifest_path: Path) -> tuple[dict | None, int]:
+    """Load ``output_mappings`` or decide the early exit code.
+
+    Edge cases, in order:
+
+    - Manifest genuinely absent from disk (fresh clone, never built): warn,
+      verdict 0 — no false-block on first-time setup.
+    - Manifest present but unparseable (``_load_manifest`` already printed the
+      "cannot read manifest" WARNING with the parse error): INDETERMINATE,
+      verdict 2 (H-1) — a broken build artifact, never treated like the
+      absent-manifest fresh-clone case.
+    - Manifest present with no valid ``output_mappings`` section:
+      INDETERMINATE, verdict 2 (H-1).
+
+    Args:
+        manifest_path: Path to .build_manifest.json written by build.py.
+
+    Returns:
+        ``(output_mappings, 0)`` when the scan should proceed, otherwise
+        ``(None, exit_code)``.
+    """
+    if not manifest_path.exists():
+        _err(
+            f"{_GATE_NAME}: WARNING — .build_manifest.json not found at "
+            f"{manifest_path}. Run build.py to generate it. Skipping output "
+            "drift check."
+        )
+        return None, 0
+    manifest = _load_manifest(manifest_path)
+    if manifest is None:
+        _err(
+            f"{_GATE_NAME}: INDETERMINATE - manifest at {manifest_path} "
+            "exists but could not be parsed as JSON. This gate cannot "
+            "verify anything against a build artifact it cannot read, so "
+            "this run is not clean."
+        )
+        return None, 2
+    output_mappings = manifest.get("output_mappings")
+    if not isinstance(output_mappings, dict):
+        _err(
+            f"{_GATE_NAME}: INDETERMINATE - manifest at {manifest_path} "
+            "exists but has no valid output_mappings section. Re-run "
+            "build.py to regenerate the manifest with Direction B support; "
+            "this gate cannot verify anything until it does."
+        )
+        return None, 2
+    return output_mappings, 0
+
+
+def _print_result_line(result: _ScanResult) -> None:
+    """Print the aggregate ``RESULT`` summary line to stderr.
+
+    ``uncomparable`` is retained as the gaps+exempt total so BP-100k-3's
+    "states a non-zero count of artifacts it could not compare" clause reads
+    off one number, while ``exempt`` and ``gaps`` break that total down.
+    Without the breakdown the two counts were indistinguishable, which put
+    BP-100k-3 ("a non-zero uncomparable count must not describe the run as
+    clean") in apparent contradiction with BP-100k-3-i ("each gate reports the
+    run as clean and exits zero" on a freshly built tree that legitimately
+    carries grounded exemptions). Reporting them separately lets both hold:
+    only GAPS drive the verdict.
+
+    ``drifted`` is the total count of artifacts whose on-disk content no
+    longer matches what was recorded — a hash mismatch AND a deletion are both
+    instances of that (BP-100n-1: "deletion is the most complete form of
+    drift there is"). ``missing`` is then reported as its own field breaking
+    that total down, mirroring the ``uncomparable = gaps + exempt`` pattern
+    (BP-100k-3) rather than a sixth, independent bucket.
+
+    Args:
+        result: The scan outcome to summarise.
+    """
+    exempt_count = result.uncomparable - result.gaps
+    drifted_total = len(result.violations) + result.missing
+    _err(
+        f"{_GATE_NAME}: RESULT verified={result.verified} "
+        f"uncomparable={result.uncomparable} exempt={exempt_count} "
+        f"gaps={result.gaps} drifted={drifted_total} "
+        f"missing={result.missing} unreadable={result.unreadable}"
+    )
+
+
+def _verdict(result: _ScanResult, output_mappings: dict, manifest_path: Path) -> int:
+    """Turn a scan outcome into the hook's exit code (0 / 1 / 2).
+
+    A deleted, still-recorded output (BP-100n-1) and an unreadable,
+    still-recorded output (B-2) are both the most complete forms of "could not
+    vouch for this content" there is — exit 1, the same BLOCKED severity as a
+    hash-mismatch violation, never merely an uncomparable gap (a coverage
+    question, not a content question).
+
+    The ``verified == 0`` floor: a run that compared nothing must not exit as
+    if it had compared everything (BP-100k-3 it_requirements; sharpened by B-1
+    in round 2). Reaching it means either every recorded mapping failed to
+    resolve to a file on disk, OR ``output_mappings`` was itself the empty
+    dict ``{}`` — the latter is INCLUDED, not exempted: an empty
+    ``output_mappings`` is evidence Direction B detection produced nothing to
+    compare, exactly as blind as "compared 0 of N". Observed live at
+    verified=0 against 275 recorded mappings before this floor existed, and
+    again against an EMPTY ``output_mappings`` once build_helpers.py started
+    existence-gating every section of ``_compute_output_mappings()`` (B-1).
+    The floor is safe for a direct caller scanning a deliberately narrow
+    ``output_dirs`` subset: every existing direct caller's fixture manifest
+    only records mappings for the files it places under that same subset.
+
+    Args:
+        result: The scan outcome.
+        output_mappings: The manifest's output_mappings (for the floor text).
+        manifest_path: Manifest path, named in the floor diagnostic.
+
+    Returns:
+        1 when drifted/missing/unreadable; 2 when only gaps, or when nothing
+        was verified; otherwise 0.
+    """
+    if result.violations or result.missing or result.unreadable:
+        return 1
+    if result.gaps:
+        return 2
+    if result.verified == 0:
+        if output_mappings:
+            detail = f"the build manifest records {len(output_mappings)} output mapping(s)"
+        else:
+            detail = (
+                "the build manifest records ZERO output mappings — "
+                "Direction B detection produced nothing to compare this run"
+            )
+        _err(
+            f"{_GATE_NAME}: BLOCKED - compared 0 artifacts while {detail}. "
+            f"The gate could not verify anything, so this run is not clean. "
+            f"Re-run build.py, or check that the manifest at {manifest_path} "
+            f"describes the tree being scanned."
+        )
+        return 2
+    return 0
 
 
 def check_output_drift(
@@ -621,7 +783,7 @@ def check_output_drift(
       verified.
     - A run that compared zero artifacts is treated as "could not verify
       anything" (BLOCKED, return 2), not as clean — see the
-      ``verified == 0`` floor below. This now fires even when
+      ``verified == 0`` floor in ``_verdict``. This fires even when
       ``output_mappings`` itself is the empty dict ``{}`` (B-1): an empty
       output_mappings from a build that had templates to deploy is itself
       the loudest possible signal that Direction B detection is blind this
@@ -643,124 +805,83 @@ def check_output_drift(
         artifacts (see DECISION HISTORY), or when the manifest exists but is
         corrupt / has no valid output_mappings section (H-1, INDETERMINATE).
     """
-    if not manifest_path.exists():
-        print(
-            f"{_GATE_NAME}: WARNING — .build_manifest.json not found at "
-            f"{manifest_path}. Run build.py to generate it. Skipping output "
-            "drift check.",
-            file=sys.stderr,
-        )
-        return 0
-
-    manifest = _load_manifest(manifest_path)
-    if manifest is None:
-        # _load_manifest() already printed the "cannot read manifest" WARNING
-        # with the parse error. H-1: the manifest EXISTS (checked above) but
-        # could not be parsed — a broken build artifact, never treated the
-        # same as the absent-manifest fresh-clone case.
-        print(
-            f"{_GATE_NAME}: INDETERMINATE - manifest at {manifest_path} "
-            "exists but could not be parsed as JSON. This gate cannot "
-            "verify anything against a build artifact it cannot read, so "
-            "this run is not clean.",
-            file=sys.stderr,
-        )
-        return 2
-
-    output_mappings = manifest.get("output_mappings")
-    if not isinstance(output_mappings, dict):
-        print(
-            f"{_GATE_NAME}: INDETERMINATE - manifest at {manifest_path} "
-            "exists but has no valid output_mappings section. Re-run "
-            "build.py to regenerate the manifest with Direction B support; "
-            "this gate cannot verify anything until it does.",
-            file=sys.stderr,
-        )
-        return 2
+    output_mappings, early_exit = _load_mappings_or_verdict(manifest_path)
+    if output_mappings is None:
+        return early_exit
 
     output_files = _collect_output_files(output_dirs)
-
     exemptions = _validate_exemption_registry(_load_exemption_registry(_GATE_NAME))
     result = _scan_output_files(output_files, output_mappings, repo_root, exemptions)
 
     if result.violations:
         _print_blocked_block(result.violations)
+    _print_result_line(result)
+    return _verdict(result, output_mappings, manifest_path)
 
-    # ``uncomparable`` is retained as the gaps+exempt total so BP-100k-3's
-    # "states a non-zero count of artifacts it could not compare" clause reads
-    # off one number, while ``exempt`` and ``gaps`` break that total down.
-    # Without the breakdown the two counts were indistinguishable in the
-    # summary, which is what put BP-100k-3 ("a non-zero uncomparable count
-    # must not describe the run as clean") in apparent contradiction with
-    # BP-100k-3-i ("each gate reports the run as clean and exits zero" on a
-    # freshly built tree that legitimately carries grounded exemptions).
-    # Reporting them separately lets both hold at once: only GAPS drive the
-    # verdict, and a non-zero gaps count is never described as clean.
-    exempt_count = result.uncomparable - result.gaps
-    # ``drifted`` is the total count of artifacts whose on-disk content no
-    # longer matches what was recorded — a hash mismatch (changed in place)
-    # AND a deletion (missing entirely) are both instances of that (BP-100n-1:
-    # "deletion is the most complete form of drift there is"). ``missing`` is
-    # then reported as its own field breaking that total down, mirroring the
-    # existing ``uncomparable = gaps + exempt`` breakdown pattern (BP-100k-3)
-    # rather than a sixth, independent bucket.
-    drifted_total = len(result.violations) + result.missing
-    print(
-        f"{_GATE_NAME}: RESULT verified={result.verified} "
-        f"uncomparable={result.uncomparable} exempt={exempt_count} "
-        f"gaps={result.gaps} drifted={drifted_total} "
-        f"missing={result.missing} unreadable={result.unreadable}",
-        file=sys.stderr,
-    )
 
-    if result.violations or result.missing or result.unreadable:
-        # A deleted, still-recorded output (BP-100n-1) and an unreadable,
-        # still-recorded output (B-2) are both the most complete forms of
-        # "could not vouch for this content" there is — reported with the
-        # same BLOCKED severity as a hash-mismatch violation, never merely
-        # as an uncomparable gap (which is a coverage question, not a
-        # content question).
-        return 1
-    if result.gaps:
-        return 2
+def _manifest_blocker(manifest: dict) -> str | None:
+    """Return the BLOCKED message when build.py recorded a computation failure.
 
-    # A run that compared nothing must not exit as if it had compared
-    # everything (BP-100k-3 it_requirements; sharpened by B-1 in round 2).
-    # Reaching here with verified == 0 means either every recorded mapping
-    # failed to resolve to a file on disk, OR output_mappings was itself the
-    # empty dict {} — the latter is now INCLUDED, not exempted: an empty
-    # output_mappings is not evidence of a clean tree, it is evidence
-    # Direction B detection produced nothing to compare, which is exactly as
-    # blind as "compared 0 of N". Observed live at verified=0 against 275
-    # recorded mappings before this floor existed, and reproduced again at
-    # verified=0 against an EMPTY output_mappings once build_helpers.py
-    # started existence-gating every section of _compute_output_mappings()
-    # (adversarial review round 2, B-1). This floor is safe for a direct
-    # caller scanning a deliberately narrow ``output_dirs`` subset too: every
-    # existing direct caller's fixture manifest only records mappings for the
-    # files it places under that same subset, so verified is never 0 there
-    # unless the scan is genuinely unable to compare anything.
-    if result.verified == 0:
-        if output_mappings:
-            detail = (
-                f"the build manifest records {len(output_mappings)} output "
-                "mapping(s)"
-            )
-        else:
-            detail = (
-                "the build manifest records ZERO output mappings — "
-                "Direction B detection produced nothing to compare this run"
-            )
-        print(
-            f"{_GATE_NAME}: BLOCKED - compared 0 artifacts while {detail}. "
-            f"The gate could not verify anything, so this run is not clean. "
-            f"Re-run build.py, or check that the manifest at {manifest_path} "
-            f"describes the tree being scanned.",
-            file=sys.stderr,
+    Two manifest fields are honoured, in this order:
+
+    - ``output_mappings_error``: build.py records the reason output_mappings
+      could not be computed rather than leaving an empty dict for the gate to
+      misread as "nothing to police". Direction B is unavailable, so the run
+      cannot be described as clean no matter what the scan finds.
+    - ``output_mappings_skipped_sections``: a PARTIAL failure — one section
+      (e.g. agents/commands/workflows/hooks) could not be enumerated while the
+      rest completed and returned a normal-looking dict. Nothing else would
+      ever notice: every file under the skipped section's directories would
+      simply never appear as a key, and an absent directory means
+      ``_collect_output_files`` finds nothing there either — silent on both
+      ends, exactly the shape BP-100k-3 forbids. BLOCKED, not clean.
+
+    Args:
+        manifest: The best-effort-loaded manifest (``{}`` when unreadable).
+
+    Returns:
+        The diagnostic text, or None when neither field signals a failure.
+    """
+    mappings_error = manifest.get("output_mappings_error") or ""
+    if mappings_error:
+        return (
+            f"{_GATE_NAME}: BLOCKED - the build could not compute "
+            f"output_mappings, so no deployed artifact can be compared "
+            f"against its template. Recorded cause: {mappings_error}. "
+            f"Re-run build.py and address the cause; this gate will not "
+            f"report a clean run while Direction B detection is unavailable."
         )
-        return 2
+    skipped_sections = manifest.get("output_mappings_skipped_sections") or []
+    if skipped_sections:
+        return (
+            f"{_GATE_NAME}: BLOCKED - the build could not enumerate "
+            f"output_mappings for {len(skipped_sections)} section(s), so this "
+            f"manifest is partial and no deployed artifact in those sections "
+            f"can be compared against its template. Recorded cause(s): "
+            f"{'; '.join(skipped_sections)}. Re-run build.py and address the "
+            f"cause(s); this gate will not report a clean run while any "
+            f"section of Direction B detection is incomplete."
+        )
+    return None
 
-    return 0
+
+def _default_floor_dirs(repo_root: Path) -> list[Path]:
+    """Return the canonical tool directories that are always scanned.
+
+    Floor only — the authoritative scan set is derived from the manifest's own
+    keys (see ``_derive_scan_dirs``). Listing a directory here can only ADD
+    coverage, never define it, so this list drifting from the build is no
+    longer able to open a hole the way the hardcoded ``.agents/rules`` entry
+    did (BP-100k-2).
+
+    Args:
+        repo_root: Absolute path every manifest key is relative to.
+
+    Returns:
+        The agents, skills, commands, hooks and workflows directories.
+    """
+    names = ("agents", "skills", "commands", "hooks", "workflows")
+    return [repo_root / ".claude" / name for name in names]
 
 
 def main() -> int:
@@ -770,13 +891,30 @@ def main() -> int:
     — see GE-118b docstring note above), checks the three conditions that are
     specific to running as the hook itself (manifest wholly absent; build.py
     recorded an ``output_mappings_error`` instead of computing mappings;
-    build.py recorded a non-empty ``output_mappings_skipped_sections`` — a
-    PARTIAL enumeration failure limited to one section, e.g. agents/commands/
-    workflows/hooks, while the rest of ``output_mappings`` still computed
-    normally), then derives the output directories to scan and DELEGATES the
-    actual scan+report+verdict to ``check_output_drift()`` — the single
-    shared implementation direct callers use too (see that function's
+    build.py recorded a non-empty ``output_mappings_skipped_sections`` — see
+    ``_manifest_blocker``), then derives the output directories to scan and
+    DELEGATES the actual scan+report+verdict to ``check_output_drift()`` — the
+    single shared implementation direct callers use too (see that function's
     docstring for why this delegation is the fix, not an optimisation).
+
+    The manifest is loaded twice on purpose (best-effort here, then again via
+    ``_load_output_mappings``) and ``output_mappings`` is loaded best-effort
+    ONLY to derive the scan set. An absent or malformed manifest must NOT
+    short-circuit here: main()'s contract is that it always hands a directory
+    list to check_output_drift(), which owns the manifest-absent warning and
+    the verdict. Returning early instead meant a resolved-but-unreadable
+    manifest made the gate scan nothing while never entering the function that
+    reports what it scanned — tests/test_build_artifact_parity.py exists to
+    catch exactly that ("main() never reached check_output_drift(); the drift
+    gate would scan nothing"), and it caught this.
+
+    ``repo_root == manifest_path.parent`` by construction: the manifest is
+    written into target_root (write_build_manifest() falls back to
+    package_root only when target_root is absent), and this hook found the
+    manifest via _resolve_manifest_path() — wherever it actually is IS the
+    base every key in it was computed relative to. No layout detection needed
+    (BP-100k-3-i follow-up: the git-based heuristic this replaced failed open
+    for any git-unavailable layout — see DECISION HISTORY).
 
     Returns:
         0 when gaps == 0, drifted == 0, missing == 0, and unreadable == 0
@@ -798,79 +936,14 @@ def main() -> int:
         _warn_manifest_not_found(tried)
         return 0
 
-    # build.py records the reason output_mappings could not be computed rather
-    # than leaving an empty dict behind for the gate to misread as "nothing to
-    # police". Honour it: Direction B is unavailable, so this run cannot be
-    # described as clean no matter what the scan finds.
-    manifest_for_error = _load_manifest(manifest_path) or {}
-    mappings_error = manifest_for_error.get("output_mappings_error") or ""
-    if mappings_error:
-        print(
-            f"{_GATE_NAME}: BLOCKED - the build could not compute "
-            f"output_mappings, so no deployed artifact can be compared "
-            f"against its template. Recorded cause: {mappings_error}. "
-            f"Re-run build.py and address the cause; this gate will not "
-            f"report a clean run while Direction B detection is unavailable.",
-            file=sys.stderr,
-        )
+    blocker = _manifest_blocker(_load_manifest(manifest_path) or {})
+    if blocker:
+        _err(blocker)
         return 2
 
-    # build.py also records a PARTIAL failure — one section of output_mappings
-    # (e.g. agents/commands/workflows/hooks) could not be enumerated while the
-    # rest of the computation completed and returned a normal-looking dict.
-    # Unlike ``output_mappings_error`` above, ``output_mappings`` is NOT empty
-    # here, so nothing else in this function would ever notice the gap: every
-    # file under the skipped section's directories would simply never appear
-    # as a key, and an absent directory means ``_collect_output_files`` finds
-    # nothing there to scan either — silent on both ends, exactly the shape
-    # BP-100k-3 forbids. Honour it the same way: BLOCKED, not clean.
-    skipped_sections = manifest_for_error.get("output_mappings_skipped_sections") or []
-    if skipped_sections:
-        print(
-            f"{_GATE_NAME}: BLOCKED - the build could not enumerate "
-            f"output_mappings for {len(skipped_sections)} section(s), so this "
-            f"manifest is partial and no deployed artifact in those sections "
-            f"can be compared against its template. Recorded cause(s): "
-            f"{'; '.join(skipped_sections)}. Re-run build.py and address the "
-            f"cause(s); this gate will not report a clean run while any "
-            f"section of Direction B detection is incomplete.",
-            file=sys.stderr,
-        )
-        return 2
-
-    # Load best-effort ONLY to derive the scan set. An absent or malformed
-    # manifest must NOT short-circuit here: main()'s contract is that it always
-    # hands a directory list to check_output_drift(), which owns the
-    # manifest-absent warning and the verdict. Returning early instead meant a
-    # resolved-but-unreadable manifest made the gate scan nothing while never
-    # entering the function that reports what it scanned —
-    # tests/test_build_artifact_parity.py exists to catch exactly that
-    # ("main() never reached check_output_drift(); the drift gate would scan
-    # nothing"), and it caught this.
     output_mappings = _load_output_mappings(manifest_path) or {}
-
-    # repo_root == manifest_path.parent by construction: the manifest is
-    # written into target_root (write_build_manifest() falls back to
-    # package_root only when target_root is absent), and this hook found the
-    # manifest via _resolve_manifest_path() — wherever it actually is IS the
-    # base every key in it was computed relative to. No layout detection
-    # needed (BP-100k-3-i follow-up: the git-based heuristic this replaced
-    # failed open for any git-unavailable layout — see DECISION HISTORY).
     repo_root = manifest_path.parent
-    # Floor only — the authoritative scan set is derived from the manifest's
-    # own keys (see _derive_scan_dirs). Listing a directory here can only ADD
-    # coverage, never define it, so this list drifting from the build is no
-    # longer able to open a hole the way the hardcoded ".agents/rules" entry
-    # did (BP-100k-2).
-    floor_dirs = [
-        repo_root / ".claude" / "agents",
-        repo_root / ".claude" / "skills",
-        repo_root / ".claude" / "commands",
-        repo_root / ".claude" / "hooks",
-        repo_root / ".claude" / "workflows",
-    ]
-    output_dirs = _derive_scan_dirs(repo_root, output_mappings, floor_dirs)
-
+    output_dirs = _derive_scan_dirs(repo_root, output_mappings, _default_floor_dirs(repo_root))
     return check_output_drift(
         output_dirs=output_dirs,
         manifest_path=manifest_path,
@@ -878,14 +951,11 @@ def main() -> int:
     )
 
 
-# ---------------------------------------------------------------------------
-# Entry point (called by run_hook.py / pre-commit)
-# ---------------------------------------------------------------------------
-
 if __name__ == "__main__":
     sys.exit(main())
 
 
+"""
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
@@ -1002,4 +1072,8 @@ if __name__ == "__main__":
 #   consults the exemption registry before recording a violation — see
 #   DRIFT-EXEMPT REPORTING in the module docstring for the contract, the
 #   registry-widening it implies, and the open counting question.
+# - 2026-10-08 [python-coder/file-size-paydown]: Behaviour-neutral split of
+#   the three oversized functions; see LAYOUT in the module docstring.
+#   (#TICKETLESS reason=file-size-debt-paydown)
 # ====================================================================
+"""
