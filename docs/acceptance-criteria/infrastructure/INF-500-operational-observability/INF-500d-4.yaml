@@ -75,6 +75,7 @@ amended_by: []
 superseded_by: null
 covered_by:
   - INF-500d-4-i
+  - INF-500d-4-ii
 implemented_by: []
 change_target:
   - code
