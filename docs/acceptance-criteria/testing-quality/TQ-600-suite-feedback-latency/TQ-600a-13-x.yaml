@@ -1,7 +1,7 @@
 id: TQ-600a-13-x
 components:
   - testing_quality
-title: "The hold only blocks merges once the ruleset requires it, and is described as advisory until then"
+title: "The hold is rolled out advisory first, becomes required only after its prerequisites and correct verdicts are observed, is demoted on repeated false reds, and is described as advisory whenever it is not required"
 component: testing-quality
 level: L3
 status: active
@@ -11,33 +11,47 @@ readiness: reviewed
 priority: high
 roadmap_phase: phase_1
 criteria: |
-  Given that a failing status check blocks a merge only when the branch-protection
-    ruleset for the main branch lists it as required, and that this repository's required
-    checks are configured in the ruleset `require-ci-lint` (id 17810993), not in any
-    workflow file,
-  And that adding `Nightly suite status` to that ruleset is a one-time action needing
-    administrative rights the automation's credential does not have, which the owner will
-    perform by hand,
-  And the defect this record exists to prevent: "the check exists and fails" being read
-    as "merges are held", when without the ruleset entry a held pull request can be
-    merged with one click,
-  When the hold of TQ-600a-13-vi is described as protecting the main branch — in the
-    closure of this family's records, in documentation, or in a change note,
-  Then that description is made only after the ruleset has been read and observed to list
-    a required check whose name equals exactly the name the hold check reports under, and
-    until then every such description states that the hold is advisory,
-  And the hold check reports its status under the single name `Nightly suite status` on
-    every pull request that targets the main branch, whatever files the pull request
-    changes — because a required check that is not reported leaves every pull request
-    waiting on it indefinitely, and one reported under any other name never satisfies the
-    requirement,
-  And after the ruleset entry is added, the hold is observed once on the real repository:
-    with a flag open, a pull request carrying no fix declaration is reported unmergeable
-    by the hosting service, and the observation is recorded with its date and pull
-    request number,
-  And the name and every-pull-request clauses are demonstrated by opening pull requests
-    that touch only documentation, only tests, and only workflow files, and observing a
-    status under exactly that name on each, never by reading the workflow's triggers.
+  Given that a failing status check blocks a merge only when the main branch's ruleset
+    (`require-ci-lint`, id 17810993) lists it as required, that the ruleset is edited by
+    hand by the owner, and that on 2026-10-08 it listed six required checks, all sourced
+    from GitHub Actions, of which `Post-merge suite status` was not one,
+  And the platform facts that make the order of rollout matter: a check triggered by
+    `pull_request_target` does not run on the pull request that introduces it; GitHub
+    will block `pull_request_target` by default in public repositories from 2026-11-02
+    unless an explicit Actions event policy allows it, and this repository had no such
+    policy on 2026-10-08; and a required check that never reports leaves every pull
+    request waiting on it forever,
+  And the defect this record exists to prevent in two directions: "the check exists and
+    fails" being read as "merges are held", and a required check that cannot report — or
+    that holds on noise — freezing every merge,
+  When the hold is moved from advisory to required, or described as protecting the main
+    branch, or kept required,
+  Then it is added to the ruleset only after each of these has been observed on the real
+    repository and recorded with its date and evidence, in this order: the correctness
+    workflow has at least one completed run on main; the labels the family uses exist; an
+    Actions event policy explicitly allowing `pull_request_target` exists, read back from
+    the repository; the hold has reported under exactly `Post-merge suite status` on a
+    pull request opened after the hold workflow reached main, on pull requests touching
+    only documentation, only tests, and only a workflow file, and on opened, synchronize
+    and edited events; a re-evaluation by TQ-600a-13-xv has been observed; the owner's
+    break-glass procedure of TQ-600a-13-xvii is documented; and an advisory period of at least 7 days has produced at least 20 hold evaluations whose verdict
+    matched the run history, including at least one hold and one lift,
+  And the ruleset entry is added with its source set to GitHub Actions, like the other six,
+  And after the entry is added, with the run red, a pull request carrying no exemption is
+    observed reported unmergeable by the hosting service, and the observation is recorded,
+  And until that last observation is recorded, and at any time the entry is absent, every
+    description of the hold — in this family's closure, in documentation, in a change note
+    — states that the hold is advisory,
+  And while required, the hold is demoted to advisory (the entry removed and the removal
+    recorded) when more than one in three red verdicts in the first 14 days, or three red
+    verdicts in any later 14 days, are not reproduced at the same commit — that is, a red
+    run on main is followed by a green run with the same head commit — and that count is
+    reported where the owner reads the notice,
+  And the hold check reports its status under the single name `Post-merge suite status` on
+    every pull request that targets the main branch, whatever files it changes,
+  And the name and every-pull-request clauses are demonstrated by observing a status under
+    exactly that name on the real pull requests named above, never by reading the
+    workflow's triggers.
 depends_on:
   - TQ-600a-13
   - TQ-600a-13-vi
@@ -46,134 +60,225 @@ doc_links:
     relationship: describes
     status: exists
     relevance: >-
-      TQ-600a-13-i's enrichment notes that this file's aggregator job exists to carry one
-      stable required-check name across a matrix, and that a new job is not blocking
-      merely by existing because required checks live in a ruleset. The same reasoning
-      applies here.
+      Its aggregator job exists to carry one stable required-check name; a new job is not
+      blocking merely by existing because required checks live in a ruleset.
   - path: docs/acceptance-criteria/testing-quality/TQ-600-suite-feedback-latency/TQ-600a-13-i.yaml
     relationship: describes
     status: exists
     relevance: >-
       Already warns "verify against the branch-protection ruleset rather than assuming a
-      new job is automatically blocking". This record makes that a criterion for the
-      nightly hold.
+      new job is automatically blocking".
+  - path: docs/acceptance-criteria/testing-quality/TQ-600-suite-feedback-latency/TQ-600a-13-xvii.yaml
+    relationship: describes
+    status: exists
+    relevance: >-
+      The owner's break-glass for when the required hold itself is broken.
 declared_files:
-  - path: scripts/ci/nightly_hold.py
+  - path: scripts/ci/post_merge_hold.py
+    state: to_be_created
+  - path: scripts/ci/post_merge_notice.py
+    state: to_be_created
+  - path: scripts/ci/post_merge_tunables.json
     state: to_be_created
 assigned_agent: python-coder
-estimated_complexity: S
+estimated_complexity: M
 it_requirements:
   - >-
-    ASSIGNED python-coder FOR THE PART AN AGENT CAN DO; THE REST IS A HUMAN STEP. Adding
-    `Nightly suite status` to ruleset `require-ci-lint` (id 17810993) needs administrative
-    rights the automation's credential does not have; the owner performs it by hand and
-    no agent is assigned it. python-coder implements only the enforcement-state reader.
-    The live observation below is recorded by whoever performs or witnesses it.
+    ASSIGNED python-coder FOR THE PARTS AN AGENT CAN DO; THE REST IS A HUMAN STEP. Editing
+    the ruleset and creating the Actions event policy need admin rights; the owner
+    performs them by hand. python-coder implements the enforcement-state reader and the
+    not-reproduced-red count (reported on the notice by the notice job). The live
+    observations are recorded by whoever performs or witnesses them.
   - >-
-    THE RULESET IS READABLE WITHOUT ADMIN RIGHTS — VERIFIED AT ENRICHMENT. On 2026-10-08
-    `GET /repos/urlmonitor/leafcutter-ai/rules/branches/main` returned the active
-    required_status_checks with a read credential (this repository is public). Its
-    contexts were exactly: "Lint (ruff)", "Component vocab style (components.json)",
-    "Proof-of-done coverage check (BO-2500b)", "Changelog entry present", "AC store
-    valid". `Nightly suite status` is absent, so as of enrichment the hold is ADVISORY.
-    (Also absent: `Test suite (pytest)`, which bears on TQ-600a-13-i's aggregator
-    reasoning.) This answers the notes' open question: the enforcement read can be
-    automated; editing cannot.
+    THE RULESET AS READ ON 2026-10-08 (the earlier "five contexts" statement was stale and
+    is retired). VERIFIED (GitHub expert, API, ruleset updated 2026-10-08T14:30): six
+    contexts — Lint (ruff), Component vocab style (components.json), Proof-of-done
+    coverage check (BO-2500b), Changelog entry present, AC store valid, Test suite
+    (pytest) — each pinned to `integration_id: 15368` (the github-actions app);
+    `strict_required_status_checks_policy: false`; `bypass_actors: []`; no pull-request
+    review rule. `Post-merge suite status` absent: ADVISORY.
   - >-
-    THE ENFORCEMENT-STATE READER IS PURE AND EXACT. Input: that endpoint's response body.
-    Output: "enforced" only when a required_status_checks rule lists a context exactly
-    equal to `Nightly suite status` — no case folding, no trimming, no prefix or suffix
-    match; anything else, including an unreadable or empty response, is "advisory" with
-    a reason. Where the rule pins the check to a specific integration, it must be the
-    one that reports Actions jobs, else advisory.
+    THE ENFORCEMENT-STATE READER IS PURE AND EXACT. "enforced" only when a
+    required_status_checks rule lists a context exactly equal to `Post-merge suite status`
+    pinned to integration 15368; anything else, including an unreadable response,
+    "advisory" with a reason.
   - >-
-    THE REPORTED NAME CANNOT DRIFT OR BE SKIPPED. The job's `name:` is exactly
-    `Nightly suite status`; the job has no matrix (which suffixes the reported name) and
-    NO job-level `if:` — the hosting service reports a skipped job as a passing check, so
-    a condition that skips the job on some pull requests would make the required check
-    pass without evaluating anything. The workflow trigger has no path filters, so every
-    pull request to main receives the status (the criteria's every-pull-request clause).
+    THE EVENT POLICY IS A HARD PREREQUISITE — VERIFIED (GitHub expert, docs, 2026-10-08):
+    "For public repositories that do not already have an applicable Actions event policy,
+    GitHub adds a default policy that blocks workflows triggered by `pull_request_target`"
+    and "On November 2, 2026, GitHub will enforce the default policy". `GET /repos/
+    urlmonitor/leafcutter-ai/actions/policies` returned `{"total_count":0}`. What a
+    blocked run looks like is UNVERIFIED, and whether an event policy can be created on a
+    personal-account repository is UNVERIFIED. If the policy cannot be created, or a run
+    is not observed after it exists, the FALLBACK is a `workflow_run`-triggered job on the
+    default branch that computes the verdict and posts a check run named `Post-merge
+    suite status` on the PR head via `POST /check-runs` (`checks: write`); adopting it
+    requires amending TQ-600a-13-xi's allowed writes, which this record does not
+    pre-authorise. Do not add the check to the ruleset on either route until a run of
+    that route has been observed reporting.
   - >-
-    THE EVERY-PULL-REQUEST AND HOLDS-MERGES CLAUSES ARE A RECORDED LIVE OBSERVATION, NOT A
-    TEST — CANNOT BE TESTED CHEAPLY, STATED EXPLICITLY. They are properties of the hosting
-    service's event delivery and ruleset evaluation, which no unit test can exercise;
-    automating them would put live GitHub calls and real pull requests in the default
-    suite, which this family's cost constraint forbids. After the ruleset entry is added,
-    record in this record's notes, with the date and pull request numbers: (a) with a
-    flag open, a pull request carrying no declaration is reported unmergeable; (b) a
-    status named exactly `Nightly suite status` appears on three pull requests touching
-    only documentation, only tests, and only a workflow file; (c) evaluations were
-    observed on opened, synchronize and labeled events (the trigger set TQ-600a-13-vi and
-    -viii depend on). Until (a) is recorded, this record is not done.
+    ROLLOUT ORDER (user decisions H and J; VERIFIED that a `pull_request_target` check
+    does not run on the PR that introduces it). TQ-600a-13-xix (with its minimal timing
+    workflow) may land before step (1) and is independent of everything below. (1) merge the
+    correctness workflow; dispatch it once on main; (2) owner pre-creates labels
+    `post-merge-red`, `post-merge-timing`, `post-merge-flaky`; (3) owner creates the event
+    policy; read it back; (4) merge the hold and follow-up workflows; (5) observe the hold
+    on later PRs and a re-evaluation; (6) advisory period, with the break-glass procedure
+    documented (TQ-600a-13-xvii); (7) add to the ruleset; (8)
+    observe a held PR reported unmergeable; (9) rehearse the break-glass within the first
+    day (TQ-600a-13-xvii). Steps (3) to (8) before 2026-11-02 if
+    possible; after that date (3) blocks everything after it.
   - >-
-    NOTHING DESCRIBES THE HOLD AS PROTECTING MAIN UNTIL (a) IS RECORDED. That covers this
-    family's closure, the contributor documentation (TQ-600a-13-vi's delivers_to to
-    documentation-expert) and any change note. Until then every such text says
-    "advisory".
+    THE REPORTED NAME CANNOT DRIFT OR BE SKIPPED — VERIFIED (GitHub expert): a skipped job
+    reports success even when required; a job whose `needs:` failed is skipped; path,
+    branch or commit-message filtering leaves the check pending; a matrix suffixes the
+    name. So: `name: Post-merge suite status`, no matrix, no job-level `if:`, no `needs:`,
+    no path filter, and no branch filter that could exclude a PR to main.
   - >-
-    THE TESTS COST UNDER 0.2 s. The reader is called in-process on captured response
-    shapes; the name descriptor reuses the shared workflow-step executor on the real
-    workflow file with one synthetic event and the recording fake server.
+    DEMOTION AND ADVISORY NUMBERS — ACCEPTED BY THE OWNER AS TUNABLE DEFAULTS (2026-10-08):
+    demote when more than one in three red verdicts in the first 14 days, or three in any
+    later 14 days, are not reproduced at the same commit; advisory period at least 7 days
+    and at least 20 evaluations matching the run history. "Not reproduced at the same
+    commit" is computed mechanically from the run history (a failure-concluded run
+    followed by a success-concluded run with the same `head_sha`), not judged by a
+    person. The numbers live in the family's ONE tunables file (see the next entry); the
+    mechanism stays.
+  - >-
+    ONE NAMED TUNABLES LOCATION FOR THE WHOLE FAMILY: `scripts/ci/post_merge_tunables.json`
+    (JSON so the stdlib-only hold can read it; beside the modules so the hold's sparse
+    checkout of scripts/ci already carries it and no build deploy rule touches it — the
+    repo's config/ directory is deployed to consumers and this file must not be; read
+    from the default-branch checkout, so a PR cannot retune its own hold). Keys and
+    accepted defaults: `heartbeat_max_hours`
+    12 (documentation of the cron; the cron string itself is in the workflow and a test
+    asserts it fires at least this often), `staleness_hours` 30 (-xiv),
+    `flaky_window_runs` 5 and `flaky_red_threshold` 2 (-xiii), `run_history_page` 30
+    (-v), `advisory_min_days` 7 and `advisory_min_evaluations` 20 (this record),
+    `demotion_first_window_days` 14, `demotion_first_ratio` "1/3",
+    `demotion_later_window_days` 14, `demotion_later_count` 3 (this record). No module
+    in scripts/ci/ carries any of these as a literal; a missing or malformed file fails
+    the consuming job closed (for the hold: could_not_read-style failure naming the
+    file), never falls back to a hard-coded value silently. Created by whichever family
+    record lands first that reads a tunable (normally -ii, for the window), extended by
+    the rest.
+  - >-
+    `Post-merge fix proof` (TQ-600a-13-xvi) IS NEVER ADDED TO THE RULESET. It runs only on
+    declaring PRs and is read by the hold; requiring it would hold every undeclared PR on
+    a check that never reports.
+  - >-
+    THE ENFORCEMENT-STATE READ: `GET /repos/{o}/{r}/rules/branches/main` (readable without
+    admin — VERIFIED twice). Pure parsing of the response is the unit under test; the
+    live read is made by whoever records the observation, and by the notice job when it
+    reports the demotion count (a read, no new write).
+  - >-
+    MERGE QUEUE IS NOT AN OPTION HERE — VERIFIED (GitHub expert): merge queues are
+    available only in organisation-owned public repositories; this one is user-owned.
+    Recorded so nobody designs the stale-pass fix around it.
+  - >-
+    THE EVERY-PULL-REQUEST, EVENT-POLICY AND HOLDS-MERGES CLAUSES ARE RECORDED LIVE
+    OBSERVATIONS, NOT TESTS. They are properties of the hosting service. Until every
+    observation in the criteria is recorded in this record's notes, this record is not
+    done.
+  - >-
+    THE TESTS COST UNDER 0.3 s. The reader in-process on captured response shapes; the
+    not-reproduced-red count and the tunables descriptor in-process; the name descriptor
+    via the shared workflow-step executor.
 delivers_to:
   - agent: documentation-expert
     contract: >-
       The enforcement state ("advisory" | "enforced", with the date and evidence of the
-      recorded observation) that the docs/testing/README.md hold section must reflect.
-      Until the observation is recorded the text says the hold is advisory.
+      recorded observation) and the demotion rule, which the docs/testing/README.md hold
+      section must reflect. Until the observation is recorded the text says advisory.
 expects_from:
   - ac_id: TQ-600a-13-vi
     contract: >-
-      One job in .github/workflows/nightly-hold.yml named exactly `Nightly suite status`,
-      no matrix, no job-level `if:`, no path filters on the trigger.
+      One job in .github/workflows/post-merge-hold.yml named exactly `Post-merge suite
+      status`, under `pull_request_target`, no matrix, no job-level `if:`, no `needs:`,
+      no path filter.
 test_spec:
-  - name: test_tq600a_13_x_the_status_is_reported_on_every_pull_request_under_one_name
+  - name: test_tq600a_13_x_the_status_is_reported_under_one_name
     target_dir: unit_tests/suite_performance/
     framework: unittest
     type: integration
     angle: seam
-    surface_invoked: "the shared workflow-step executor locating the job in .github/workflows/nightly-hold.yml by the exact name `Nightly suite status` and executing it with one synthetic event against the recording fake server"
+    surface_invoked: "the shared workflow-step executor locating the job in .github/workflows/post-merge-hold.yml by the exact name `Post-merge suite status` and executing it with one synthetic event against the recording fake server"
     must_catch:
-      - "the job is renamed or reported under a different case, so the ruleset entry is never satisfied and every PR waits indefinitely"
-      - "the job gains a matrix, so its reported name carries a suffix the ruleset entry does not match"
-      - "the job gains a job-level `if:` that can skip it, and a skipped required check reports as passing"
+      - "the job is renamed or reported under a different case"
+      - "the job gains a matrix"
+      - "the job gains a job-level `if:` or a `needs:`, so a skip reports as passing"
     description: >-
       The executor finds exactly one job with that exact name and executes it to a
-      verdict; it refuses a job with a matrix, and the test fails if the executor reports
-      having evaluated any job-level condition for this job (the nightly's flag job
-      legitimately carries one; this job must not). This covers the NAME half of the criterion only. The
-      every-pull-request half — that the service delivers the status to documentation-,
-      test- and workflow-only pull requests — is not testable in the unit layer and is
-      discharged by the recorded live observation in this record's it_requirements.
+      verdict; it refuses a matrix; the test fails if the executor reports a job-level
+      condition or a dependency for this job. Covers the NAME half only; the
+      every-pull-request half is a recorded live observation.
   - name: test_tq600a_13_x_enforcement_is_claimed_only_from_an_observed_ruleset
     target_dir: unit_tests/suite_performance/
     framework: unittest
     type: unit
     angle: discrimination
-    surface_invoked: "scripts/ci/nightly_hold.py's enforcement-state reader, in-process, on response bodies shaped like the real branch-rules response captured at enrichment"
+    surface_invoked: "scripts/ci/post_merge_hold.py's enforcement-state reader, in-process, on response bodies shaped like the real branch-rules response"
     must_catch:
-      - "the family is closed as protecting main because the check exists and fails, with the ruleset never read"
-      - "a near-miss context ('nightly suite status', 'Nightly suite status ', 'Nightly suite status (1)') is accepted as the required check"
-      - "an empty, malformed or unreadable rules response is reported as enforced"
+      - "the family is closed as protecting main with the ruleset never read"
+      - "a near-miss context ('post-merge suite status', a trailing space, a suffix) is accepted"
+      - "the context is accepted with source 'any' rather than integration 15368"
+      - "an empty, malformed or unreadable response is reported as enforced"
     description: >-
-      Given the response captured at enrichment (five contexts, this check absent):
-      advisory. Given the same with `Nightly suite status` added: enforced. Given each
-      near-miss name, an empty list, and a malformed body: advisory, with a reason.
+      The six-context response: advisory. With `Post-merge suite status` pinned to 15368
+      added: enforced. Each near-miss, an unpinned entry, an empty list and a malformed
+      body: advisory with a reason.
+  - name: test_tq600a_13_x_not_reproduced_reds_are_counted_from_run_history
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: unit
+    angle: criterion
+    surface_invoked: "scripts/ci/post_merge_notice.py's demotion counter, in-process, on served run histories"
+    must_catch:
+      - "a red followed by a green on a DIFFERENT commit is counted as not reproduced"
+      - "superseded cancellations are counted as reds"
+    description: >-
+      History: red at X then green at X (counted); red at X then green at Y (not
+      counted); a superseded cancellation (ignored). The count over 14 days is as stated.
+  - name: test_tq600a_13_x_thresholds_come_from_the_tunables_file
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: unit
+    angle: discrimination
+    surface_invoked: "scripts/ci/post_merge_notice.py's demotion counter and post_merge_hold.py's staleness bound, in-process, each given a scratch copy of scripts/ci/post_merge_tunables.json"
+    must_catch:
+      - "a threshold is a literal in code, so changing the config file changes nothing"
+      - "a missing or malformed tunables file silently falls back to a built-in default"
+    description: >-
+      With `demotion_later_count` 3, two not-reproduced reds do not demote; with it set to
+      2 in the scratch file, they do. With `staleness_hours` 30 a 31 h run is stale; set
+      to 32, it passes. A missing file and a malformed file each fail closed naming the
+      file. The real committed file parses and carries exactly the accepted defaults.
 test_rationale: |
-  Most of this record cannot be proven by a unit test, because the property is in the
-  hosting service's configuration, not in the repository. That is why it is a separate
-  record: it is the one place in the family where the done-proof is a recorded live
-  observation, and naming that keeps "the check exists" from closing it.
-
-  At enrichment the live descriptor the BA proposed was restructured rather than kept as
-  a test: a unit test that opens real pull requests would put live calls in the default
-  suite, and one that is skipped when it cannot is a test that never runs. The name half
-  of the criterion IS cheaply testable — the executor finds the job by its exact name and
-  refuses the shapes that would change or skip the reported name — so that half stays a
-  test. The reader is tested against the real response shape captured on 2026-10-08.
-  Cost: milliseconds plus one short subprocess.
+  Most of this record is not provable by a unit test, because the property lives in the
+  hosting service's configuration. That is why it is separate: it is the one place in
+  the family whose done-proof is a list of recorded live observations, and the
+  2026-11-02 event-policy change makes one of those observations a hard deadline rather
+  than a formality. The name, the enforcement reader and the demotion counter are cheaply
+  testable and stay tests.
 origin_agent: business-analyst
 created: 2026-10-08
-amended_by: []
+amended_by:
+  - reason: >-
+      USER-APPROVED REDESIGN AFTER TWO EXPERT REVIEWS (2026-10-08), decisions B, H and J.
+      (B) Name `Nightly suite status` -> `Post-merge suite status`. (H) Added the
+      event-policy prerequisite (GitHub blocks `pull_request_target` by default in public
+      repos from 2026-11-02 without an explicit policy; none exists here), the
+      introducing-PR caveat, the source-GitHub-Actions requirement, the fallback route,
+      and the no-`needs:` rule. (J) Added the rollout order, the advisory period with an
+      observed-correct-verdicts threshold, the label prerequisite, and the demotion rule.
+      SUPERSEDED criteria: "after the ruleset entry is added, the hold is observed once
+      ... with a flag open" (now "with the run red"); the prerequisite list replaces the
+      single "ruleset has been read and observed" condition. Stale fact corrected:
+      SUPERSEDED it_requirement "Its contexts were exactly ... five ... (Also absent:
+      `Test suite (pytest)`)" — six contexts as of 2026-10-08T14:30. Sized up S -> M.
+      Title widened. Readiness returned to draft for IT PO re-enrichment. Full prior
+      text: commit e79d35ef4.
+    by: business-analyst
+    at: 2026-10-08
 superseded_by: null
 covered_by: []
 implemented_by: []
@@ -182,11 +287,12 @@ change_target:
   - infrastructure
 risk_surface: internal
 notes: |
-  The ruleset name and id are the requester's; the BA did not read the ruleset. Whether
-  the automation's credential can READ the ruleset (as opposed to edit it) is not known
-  here; if it cannot, the enforcement observation is a human step and is recorded by
-  hand.
+  RESOLVED: the ruleset is readable without admin rights (VERIFIED twice, 2026-10-08).
 
-  The "every pull request, whatever it changes" clause is not in the approved design. It
-  is a consequence of making the check required: a required check whose workflow does not
-  run on some pull requests blocks those pull requests forever.
+  OBSERVATIONS TO RECORD HERE, each with date and evidence (none recorded yet): first
+  completed correctness run on main; labels present; event policy read back; hold
+  reported on a docs-only, a tests-only and a workflow-only PR; opened / synchronize /
+  edited evaluations seen; a re-evaluation seen; advisory-period tally; ruleset entry
+  added; held PR reported unmergeable.
+
+  DEADLINE: 2026-11-02, when the default `pull_request_target` block is enforced.

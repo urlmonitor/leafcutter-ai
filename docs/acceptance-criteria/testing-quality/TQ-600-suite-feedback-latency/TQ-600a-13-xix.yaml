@@ -1,0 +1,252 @@
+id: TQ-600a-13-xix
+components:
+  - testing_quality
+title: "A timing-ratio test in the default run stops making the required pytest check flaky, by moving to the timing lane once that lane runs"
+component: testing-quality
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given that `Test suite (pytest)` became a required check on 2026-10-08, so every test the
+    default run collects can now block every merge,
+  And that the default run collects wall-clock ratio assertions — at least TQ-600a-11's
+    store-sweep test whose name says it is at least five times faster than the
+    pure-Python parser, and its agent-card store-walk test whose name says it beats a
+    fifth — which on shared runners with 3.8x to 10.74x measured host variance will fail
+    on noise,
+  And TQ-600a-13-i's rule that a test is excluded from the default run only when an
+    invoked cadence collects it, and its carve-out that a timing-marked test's failure
+    turns its own run red without blocking merges,
+  When a timing lane — a run that collects only tests carrying the timing marker — is
+    invoked after every merge to main and on a stated heartbeat, whether this record
+    supplies that lane in its first minimal form or TQ-600a-13-xii has already extended
+    it,
+  Then each default-run test that asserts a wall-clock ratio carries the timing marker,
+    is absent from the default collection, and is collected by the timing lane,
+  And a moved test that fails in the timing lane turns that lane's run red, and a lane
+    that collects no test at all also concludes red rather than green,
+  And every such test is named in the change that moves it, which a human reviews,
+  And before the timing lane is invoked, no timing-ratio test is removed from the default
+    run,
+  And the move is demonstrated by real collections — default and timing lane — before and
+    after, showing each moved test in exactly one of them, never by searching the
+    configuration for the marker.
+depends_on:
+  - TQ-600a-13
+doc_links:
+  - path: docs/acceptance-criteria/testing-quality/TQ-600-suite-feedback-latency/TQ-600a-11.yaml
+    relationship: describes
+    status: exists
+    relevance: >-
+      Owns the store-sweep ratio test named in the criteria. Moving it changes where
+      TQ-600a-11's own verification runs; that record's owner should confirm.
+  - path: docs/acceptance-criteria/testing-quality/TQ-600-suite-feedback-latency/TQ-600a-13-xii.yaml
+    relationship: describes
+    status: exists
+    relevance: >-
+      The record that later extends the timing lane this record bootstraps (retry,
+      verdict file, `post-merge-timing` notice); it depends on this record.
+  - path: pytest.ini
+    relationship: modifies
+    status: exists
+    relevance: >-
+      The default run's addopts selection gains the timing-marker exclusion.
+declared_files:
+  - path: pytest.ini
+    state: existing
+  - path: .github/workflows/post-merge-timing.yml
+    state: to_be_created
+  - path: scripts/suite_performance/README.md
+    state: existing
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - >-
+    URGENT, AND BUILT FIRST, INDEPENDENTLY OF THE REST OF THE FAMILY (re-enrichment
+    2026-10-08). `Test suite (pytest)` is required since 2026-10-08, and the two TQ-600a-11
+    ratio tests in the default run can fail it on runner noise and block every merge
+    (last local measurement 10.84x against a 5x floor; measured host variance 3.8x to
+    10.74x with no code change, so a 5x floor is inside the noise band). They are also
+    EXPENSIVE: each walks the whole store twice (about 2 s fast arm + about 20 s
+    pure-Python arm, per the test file's own docstring), so together they cost about 44 s
+    of every default run. Moving them pays for this whole family's test budget several
+    times over.
+  - >-
+    THE MINIMAL TIMING-LANE BOOTSTRAP THIS RECORD SHIPS, so it needs nothing from -ii, -iii
+    or -xii. One change, landed atomically:
+    (1) pytest.ini: register `timing_ratio` as a direct `markers =` entry ("asserts a
+    wall-clock ratio; runs in the timing lane, reports, never holds") and change addopts'
+    `-m "not manual"` to `-m "not manual and not timing_ratio"` in the SAME commit
+    (otherwise a marked test sits in both collections);
+    (2) mark the two tests — `test_tq600a_11_store_sweep_is_at_least_five_times_faster_than_the_pure_python_parser`
+    and `test_tq600a_11_the_agent_card_store_walk_beats_a_fifth_of_its_same_sitting_pure_python_baseline`
+    in unit_tests/ac_store/test_tq_600a_11.py (on origin/main; NOT in declared_files only
+    because this authoring branch predates it and the store validator checks presence —
+    add it to the ticket's files_touched when the record is built off current main) — with
+    `@pytest.mark.timing_ratio` on the method (or on their two single-test classes), plus
+    any other default-run ratio assertion the implementer finds by review, each named in
+    the PR description;
+    (3) `.github/workflows/post-merge-timing.yml`, name `Post-merge timing suite`:
+    triggers `push` to main, `schedule` at least every 12 hours off the hour (for example
+    `41 2,14 * * *`, deliberately not the correctness suite's minute), and
+    `workflow_dispatch`; workflow-level `permissions: {}` and `concurrency` (own fixed
+    group, `cancel-in-progress: false`); ONE job, `contents: read`, full checkout without
+    persisted credentials, dev dependencies, `AC_ENFORCE_STRICT=1`, then `python -m
+    pytest tests/ unit_tests/ -m timing_ratio -p no:cacheprovider` with an explicit
+    timeout. The job's exit status is the run's conclusion, and exit 5 (nothing
+    collected) is made a failure, so an empty lane is red rather than green. No build
+    step is needed for these two tests; -xii adds the shared run conditions when it
+    extends the file.
+    (4) scripts/suite_performance/README.md and docs/testing/README.md: one sentence each
+    that `timing_ratio` tests run after every merge in `Post-merge timing suite` and never
+    in the default run (handed to documentation-expert, see delivers_to).
+    That satisfies every clause of the criteria: the timing lane is invoked on a stated
+    cadence before (in the same change as) the tests leave the default run, and a failure
+    turns its own run red. It does NOT hold merges and writes no notice — both are -xii's.
+  - >-
+    BUILD ORDER — RESOLVED (BA amendment 2026-10-08): depends_on is now [TQ-600a-13] only
+    and TQ-600a-13-xii depends on this record, so this record always lands first and
+    -xii extends what it ships. -xii must keep the selections and the workflow's name,
+    triggers and concurrency group unchanged (stated in -xii's expects_from).
+  - >-
+    INTERIM OPTIONS (until this record merges) — FOR THE OWNER TO CHOOSE, WITH THE
+    IT PO's RECOMMENDATION:
+    (a) RECOMMENDED: build this record now. One small PR (pytest.ini two lines, two
+    decorators, one ~40-line workflow, one test). It removes the flake source AND about
+    44 s from every default run, and it is the end state, not a stopgap. Until it merges,
+    a red `Test suite (pytest)` caused only by one of these two tests is re-run, not
+    debugged.
+    (b) Widen the floor (for example 5x -> 2x). Cheap, but it CONTRADICTS TQ-600a-11's
+    criteria ("at most one fifth"), so it needs a BA amendment of TQ-600a-11 first; it
+    keeps the 44 s cost and still leaves a timing assertion in a required check. Not
+    recommended except as a same-hour patch if (a) cannot land today.
+    (c) Rename to `_MANUAL` now. Removes them from the default run immediately but runs
+    them NOWHERE (the README's own "known, accepted gap"), violates TQ-600a-13-i and this
+    record's "never before the lane is invoked" clause, and would later put them in the
+    HOLDING correctness lane — the wrong lane. Not recommended.
+    (d) Quarantine (skip or non-strict xfail). Silent loss of the only speed guard; under
+    the strict CI run an xfail can also mask a real regression. Not recommended.
+    (e) Best-of-N measurement inside the tests. Cuts noise but multiplies an already
+    44 s cost. Not recommended.
+  - >-
+    DECISION RECORDED (user decision C asked the BA to decide coverage or follow-up): the
+    family COVERS these tests, through this separately buildable record, because the lane
+    marker is the right mechanism and inventing a second one would split the policy. It
+    is a distinct record because it changes the default required run and another L2's
+    verification home, and because it can land as soon as the timing lane runs — before
+    the hold is built or made required.
+  - >-
+    INVENTORY. The two named tests are the minimum; the test names are given as their
+    recorded descriptions because the second one is on main and not in this record's
+    branch. The implementer lists every default-run wall-clock ratio assertion found by
+    review in the change. Mechanical detection of "asserts a ratio" is not required.
+  - >-
+    DURATIONS. Removing tests from the default collection changes pytest-split's id set;
+    regenerate .github/test_durations.json through test-durations.yml once, after the
+    move (the coupling TQ-600a-9 and TQ-600a-13-i already record). Not part of this PR:
+    a stale entry for a deselected id only skews shard balance, it fails nothing.
+  - >-
+    TUNABLES: the 12-hour heartbeat is the family's `heartbeat_max_hours` default
+    (TQ-600a-13-x). This record does not wait for the tunables file; if the file exists
+    when it lands, its schedule descriptor reads the bound from it, otherwise from 12 and
+    -ii's descriptor takes over when the file arrives.
+  - >-
+    THE TESTS COST UNDER 2.5 s, IN THE DEFAULT RUN — and they stay there, because they
+    guard a property of the required run. Real collections are SCOPED to
+    unit_tests/ac_store/test_tq_600a_11.py (plus any other file the change marks), reading
+    the real pytest.ini: about 1 s each, not the 5.33 s of a whole-suite collection. The
+    workflow seam runs in a synthetic project with plugin autoload off.
+delivers_to:
+  - agent: python-coder
+    ac_id: TQ-600a-13-xii
+    contract: >-
+      The registered `timing_ratio` marker, the partitioning addopts
+      `-m "not manual and not timing_ratio"`, and `.github/workflows/post-merge-timing.yml`
+      (name `Post-merge timing suite`, its triggers and concurrency group) in minimal
+      one-job form, which -xii extends to the run / retry / verdict shape and the
+      `post-merge-timing` notice.
+  - agent: documentation-expert
+    contract: >-
+      One sentence each in scripts/suite_performance/README.md and docs/testing/README.md:
+      tests marked `timing_ratio` are excluded from the default run and run after every
+      merge to main (and on a 12-hour heartbeat) in `Post-merge timing suite`, which goes
+      red on failure and never holds a merge.
+expects_from: null
+test_spec:
+  - name: test_tq600a_13_xix_ratio_tests_leave_the_default_run_only_into_the_timing_lane
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: integration
+    angle: real_artifact
+    surface_invoked: "two real `python -m pytest --collect-only -q unit_tests/ac_store/test_tq_600a_11.py` subprocesses in the repository root reading the real pytest.ini: one with the default selection, one with `-m timing_ratio`"
+    must_catch:
+      - "a ratio test is deselected from the default run and collected nowhere"
+      - "a ratio test is collected by both (addopts not changed with the marker)"
+      - "the marker is registered inside addopts, or misspelled, so `-m timing_ratio` selects nothing"
+      - "the marker is applied but pytest ignores it on the unittest.TestCase method"
+    description: >-
+      Each of the two named tests appears in the timing-lane collection and not in the
+      default collection; the other TQ-600a-11 tests stay in the default collection (so
+      the move did not take the whole file).
+  - name: test_tq600a_13_xix_the_timing_workflow_goes_red_on_a_failing_ratio_test
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: integration
+    angle: seam
+    surface_invoked: "the pytest `run:` step of the single job in .github/workflows/post-merge-timing.yml, executed verbatim with bash in a synthetic project (one `timing_ratio` test, one unmarked test, the repository's marker registration copied) with PYTEST_DISABLE_PLUGIN_AUTOLOAD=1"
+    must_catch:
+      - "the step runs the default selection, so the timing tests never execute"
+      - "the job has continue-on-error or swallows the exit status, so a failing ratio test leaves the run green"
+      - "an empty selection (exit 5) concludes success"
+      - "the workflow has no push-to-main trigger or its heartbeat is less often than every 12 hours"
+    description: >-
+      Failing marked test: non-zero exit. Passing marked test: zero, and the unmarked test
+      did not run. No marked tests (the criteria's "a lane that collects no test at all
+      concludes red"): non-zero. The trigger half is read from the workflow
+      (structural by necessity: a schedule cannot be executed offline) and the first live
+      run on main is recorded in notes.
+test_rationale: |
+  The record is small; its risk is ordering — removing a flaky test from the required run
+  before anything runs it — which shipping the lane in the same change, the
+  real-collection descriptor and the workflow seam together guard. Collections are scoped
+  to the moved tests' file so the guard costs about 2 s, not two whole-suite collections
+  (about 11 s), and it stays in the default run.
+origin_agent: business-analyst
+created: 2026-10-08
+amended_by:
+  - reason: >-
+      BUILD-FIRST INDEPENDENCE (2026-10-08). `Test suite (pytest)` became a required check
+      today, so the two TQ-600a-11 timing-ratio tests in the default run can block every
+      merge on runner noise; the IT PO specified this record to be built first, shipping
+      its own minimal timing lane that TQ-600a-13-xii later extends. Changes: (1)
+      depends_on: TQ-600a-13-xii REMOVED — it blocked building this record first; the
+      dependency is reversed (TQ-600a-13-xii now depends on this record). (2) criteria:
+      the When clause no longer assumes "the timing lane of TQ-600a-13-xii" exists — it
+      names a timing lane invoked after every merge and on a heartbeat, supplied in
+      minimal form by this record or already extended by -xii; added that a failing moved
+      test and an empty lane both conclude the run red (stated in it_requirements and
+      test_spec, absent from the criteria); the Given now cites TQ-600a-13-i's amended
+      carve-out (timing failures do not block merges). Prior text: this record as enriched
+      by the IT PO on 2026-10-08 (not yet committed).
+    by: business-analyst
+    at: 2026-10-08
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target:
+  - config
+  - pipeline
+risk_surface: internal
+notes: |
+  ADDED 2026-10-08 for user decision C's note on default-run timing tests.
+
+  URGENT: THE INTERIM. Re-enrichment made this record buildable on its own (it ships the
+  minimal timing lane itself), which is the IT PO's recommended interim AND end state. The
+  alternatives and why each is weaker are in it_requirements; the owner chooses.
+
+  LIVE OBSERVATION TO RECORD HERE: the first `Post-merge timing suite` run on main, its
+  conclusion, and the two tests' measured ratios on the hosted runner.

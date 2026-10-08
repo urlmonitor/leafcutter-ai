@@ -1,7 +1,7 @@
 id: TQ-600a-13-ii
 components:
   - testing_quality
-title: "The nightly run executes the excluded tests and re-runs only the failures, once, before calling the night red"
+title: "The post-merge run executes the correctness lane after every merge to main, and re-runs only its failures once on a fresh machine before calling the run red"
 component: testing-quality
 level: L3
 status: active
@@ -12,36 +12,52 @@ priority: high
 roadmap_phase: phase_1
 criteria: |
   Given the tests the default run does not collect — the population TQ-600a-13 and
-    TQ-600a-13-i define, which this record references and does not redefine,
-  And the measured reason that population runs on a schedule rather than on every pull
-    request: TQ-600a-9's sixteen verification tests cost about 667 s per run while the
-    refactor they verify saves about 190 s, so on the per-PR path they make the suite
-    about 477 s slower, and they are expensive because they are honest — one builds a
-    second worktree at the merge-base to get a same-sitting ratio — so they cannot be
-    made cheap without becoming vacuous,
-  And the property that makes a single failure weak evidence: several of those tests
-    assert same-sitting timing ratios on a shared, variably loaded host, and a nightly
-    run that goes red on noise is ignored within a week, which is coverage deleted by a
-    different route,
-  And the opposite property that makes a silent retry dangerous: TQ-600a-13-i records
-    that the shared-layout tests in this population guard a corruption that presents
-    nondeterministically, so a failure that disappears on retry may be the defect itself,
-  When the scheduled run starts once per day with no human action, executes that
-    population, and some of its tests fail on the first execution,
-  Then it executes again exactly the tests that failed — each once, and no test that
-    passed on the first execution,
-  And a test that fails on both executions makes the night red, and the night's result
-    names that test by its full node id,
-  And a test that fails and then passes leaves the night green, and the night's result
-    names it as passed-on-retry, so it is distinguishable from a test that passed the
-    first time rather than absorbed into the green total,
-  And a night with no first-execution failure is green and performs zero re-executions,
-  And the scheduled run's own conclusion is failure on a red night and success on a green
-    one, which is the "turns the invoking job red" that TQ-600a-13-i requires of the
-    cadence,
-  And each of those outcomes is demonstrated by executing the run's selection-and-verdict
-    behaviour against a population whose tests are made to pass, fail, or fail-then-pass,
-    never by reading the workflow definition for a retry setting.
+    TQ-600a-13-i define, which this record references and does not redefine — and, within
+    it, the CORRECTNESS LANE that TQ-600a-13-xii separates from the timing lane: the
+    tests whose failure is a real defect, such as the shared-layout corruption guards,
+    and not the wall-clock ratio assertions,
+  And the measured reason that population runs off the per-PR path: TQ-600a-9's sixteen
+    verification tests cost about 667 s per run while the refactor they verify saves
+    about 190 s, and they are expensive because they are honest, so they cannot be made
+    cheap without becoming vacuous,
+  And the reason the run follows every merge rather than once a day: on a repository
+    merging about ten pull requests a day, a once-daily run detects a regression up to
+    about 24 hours late and leaves about ten suspect commits, while a run after each
+    merge detects it in about 30 to 60 minutes and leaves one to three,
+  And the property that makes a single failure weak evidence and a same-machine retry
+    weak evidence too: a retry on the same machine shares the load that may have caused
+    the first failure, so its result is not independent of it,
+  And the opposite property that makes a silent retry dangerous: the shared-layout
+    guards in this population catch a corruption that presents nondeterministically, so
+    a failure that disappears on retry may be the defect itself (TQ-600a-13-xiii),
+  When a commit lands on the main branch, or the scheduled heartbeat fires, or a person
+    starts the run by hand, and the run executes the correctness lane,
+  Then runs triggered by successive merges are coalesced: at most one run is in progress
+    and at most one is waiting, a newer waiting run replaces an older waiting one, and an
+    in-progress run is never cancelled to make room,
+  And the heartbeat fires on a schedule with no human action, at intervals of no more
+    than 12 hours and off the hour, so a repository with no merges still produces a fresh
+    verdict within the staleness bound of TQ-600a-13-xiv,
+  And when some correctness-lane tests fail on the first execution, exactly those tests
+    are executed again — each once, and no test that passed — in a separate job that
+    starts on a fresh machine and receives nothing from the first job except the list of
+    tests to re-execute,
+  And a test that fails on both executions makes the run red, and the run's result names
+    that test by its full node id,
+  And a test that fails and then passes does not by itself make the run red, and the
+    run's result names it as passed-on-retry, distinguishable from a test that passed the
+    first time, for TQ-600a-13-xiii to track,
+  And a run with no first-execution failure is green and performs zero re-executions,
+  And the run's own conclusion as recorded by the hosting service is success exactly when
+    the run is green and failure otherwise, and nothing in the run except the verdict can
+    make it fail on a green outcome — in particular, writing the human-facing notice is
+    not part of this run, so a failure to write the notice can neither turn a green run
+    red nor a red run green,
+  And each of those outcomes is demonstrated by executing the run's selection, retry and
+    verdict behaviour against a population whose tests are made to pass, fail, or
+    fail-then-pass, with the first execution and the retry executed as two separate jobs
+    that share only the handed-over list, never by reading the workflow definition for a
+    trigger, a concurrency setting or a retry setting.
 depends_on:
   - TQ-600a-13
   - TQ-600a-13-i
@@ -51,21 +67,24 @@ doc_links:
     status: exists
     relevance: >-
       Requires that an excluded test be run "on a stated cadence by something whose
-      failure fails the build". This record is that cadence; the records after it define
-      what "fails the build" means once the cadence is nightly.
+      failure fails the build". This record is that cadence for the correctness lane;
+      TQ-600a-13-xii is the cadence for the timing lane.
+  - path: docs/acceptance-criteria/testing-quality/TQ-600-suite-feedback-latency/TQ-600a-13-xii.yaml
+    relationship: describes
+    status: exists
+    relevance: >-
+      Defines the correctness lane this run executes and the timing lane it does not.
   - path: docs/acceptance-criteria/testing-quality/TQ-600-suite-feedback-latency/TQ-600a-9.yaml
     relationship: describes
     status: exists
     relevance: >-
-      The measured case: verification tests whose cost exceeds the saving they verify,
-      and whose expects_from on TQ-600a-13 asks for an invoked cadence of their own.
+      The measured case: verification tests whose cost exceeds the saving they verify.
   - path: .github/workflows/test-durations.yml
     relationship: describes
     status: exists
     relevance: >-
-      Reported by the requester as the only scheduled workflow in the repository today —
-      the precedent for a scheduled trigger. Not re-verified by the BA, which does not
-      read workflow files.
+      The precedent for a scheduled trigger, an off-the-hour cron and an always-run
+      artifact upload.
   - path: .github/workflows/ci.yml
     relationship: describes
     status: exists
@@ -83,317 +102,414 @@ doc_links:
     relationship: modifies
     status: exists
     relevance: >-
-      Describes the `manual` opt-in (`-m manual`) as of PR #1050 but not where it is
-      invoked. Gains the nightly cadence and the per-PR hold (see TQ-600a-13-vi's
-      delivers_to); prose is documentation-expert's surface.
+      Describes the `manual` opt-in (`-m manual`) but not where it is invoked. Gains the
+      post-merge cadence, the two lanes and the per-PR hold; documentation-expert's
+      surface.
   - path: docs/analysis/2026-10-05-pytest-ten-minute-target-4-ci-sharding.md
     relationship: describes
     status: exists
     relevance: >-
-      The sharding design ci.yml cites. The nightly runs UNSHARDED in one process
-      because produce-once layouts are per process (TQ-600a-9's it_requirements) and
-      because the population is ~1,004 s — small enough for one runner.
-  - path: docs/analysis/2026-10-05-slowest-tests-and-what-to-do-about-them-5-skipping-and-run-once.md
-    relationship: describes
-    status: exists
-    relevance: >-
-      The analysis that recommended against a bare deselection. This family is the
-      invoked cadence that makes PR #1050's deselection safe after the fact.
+      The sharding design ci.yml cites. The post-merge run is UNSHARDED in one process
+      because produce-once layouts are per process and the population is small enough for
+      one runner.
 declared_files:
-  - path: scripts/ci/nightly_suite.py
+  - path: scripts/ci/post_merge_suite.py
     state: to_be_created
-  - path: .github/workflows/nightly-suite.yml
+  - path: scripts/ci/_run_history.py
     state: to_be_created
+  - path: scripts/ci/post_merge_tunables.json
+    state: to_be_created
+  - path: .github/workflows/post-merge-suite.yml
+    state: to_be_created
+  - path: scripts/suite_performance/README.md
+    state: existing
 assigned_agent: python-coder
 estimated_complexity: M
 it_requirements:
   - >-
+    NAMES SETTLED 2026-10-08 (user decision B). Nothing in this family is called
+    "nightly" any more, because the run no longer happens nightly. Workflow file
+    `.github/workflows/post-merge-suite.yml`, workflow name `Post-merge suite`; module
+    `scripts/ci/post_merge_suite.py`. The per-PR check is `Post-merge suite status`
+    (TQ-600a-13-vi, -x). Earlier names, all retired before anything was built:
+    nightly-suite.yml, nightly_suite.py, `Nightly suite status`, `nightly-red`,
+    `nightly-fix`.
+  - >-
     AGENT ASSIGNMENT CONFIRMED, WITH THE REASON. No agent in config/agent_registry.json
-    owns GitHub Actions YAML. `workflow-architect` is a user-spawned orchestration
-    supervisor for the package's agent/skill/hook surfaces (`is_ticket_phase: false`,
-    no `owns_file_extensions`), so an AC assigned to it is undispatchable by the AC build
-    loop. python-coder owns `.py` (and `.js` by expedient), and every prior AC in this
-    tree that edits a workflow file assigns python-coder (TQ-600a-13, TQ-600a-13-i,
-    TQ-600a-9). The architecture below makes that assignment correct rather than merely
-    conventional: the executable contract is a Python module plus unittest, and the
-    workflow file is glue. Intent-vs-surface check (S2.8): `.py` and `.yml` are both
-    within python-coder's surface — pass, no split.
+    owns GitHub Actions YAML; python-coder owns `.py` and every prior AC in this tree that
+    edits a workflow file assigns python-coder. The executable contract is a Python module
+    plus unittest, and the workflow file is glue.
   - >-
     FAMILY ARCHITECTURE — ALL DECISION LOGIC IN PYTHON, THE WORKFLOW A THIN CALLER.
-    Every verdict, retry selection, classification, flag write plan, hold verdict and
-    escape-hatch match in this family lives in small modules under scripts/ci/, which
-    take the run results / issue data / pull-request data as input and return the
-    verdict and the writes to perform. Workflow steps only prepare the environment and
-    invoke a module with arguments — no retry logic, no parsing and no verdict in shell,
-    in `if:` expressions, or in a third-party action. In-repo precedent: ci.yml's
-    `consumer-install-sim` job ("All job logic lives in check_consumer_install.py; this
-    step supplies only arguments"). Proposed split, which the declared_files of the ten
-    records follow: scripts/ci/nightly_suite.py (this record and -v: execute, retry,
-    classify), scripts/ci/nightly_flag.py (-iii, -iv, -v: flag lifecycle and commit
-    range), scripts/ci/nightly_hold.py (-vi to -x: per-PR verdict, escape hatch, comment,
-    fail-closed, enforcement state), scripts/ci/_github_rest.py (-iii, -vi, -ix, -xi: the
-    one REST client). Names may change; if they do, update every sibling's
-    declared_files in the same change. scripts/ci/ is package-internal CI tooling with no
-    templates/scripts/ counterpart and is not deployed to consumers, so no build
-    deploy-manifest entry is needed — a module imported by a commit-guardian hook would
-    be a different case.
+    Every verdict, retry selection, classification, notice write plan, hold verdict and
+    exemption match in this family lives in small modules under scripts/ci/, which take
+    the run results / run history / issue data / pull-request data as input and return
+    the verdict and the writes to perform. Workflow steps only prepare the environment and
+    invoke a module. Module split (re-enriched 2026-10-08): scripts/ci/post_merge_suite.py
+    (this record, -v, -xii, -xiii: execute, retry, classify, lane verdicts, pass-on-retry
+    window); scripts/ci/_run_history.py (CREATED HERE, because this record's own
+    superseded-run descriptor needs it; its ending set is constrained by -v: the ONE
+    settled-run rule and verdict-change detection, pure and stdlib-only — every consumer
+    imports it, none re-implements it);
+    scripts/ci/post_merge_notice.py (-iii, -iv, -x counter, -xii, -xiii: notice lifecycle
+    for all three labels and the commit range); scripts/ci/post_merge_hold.py (-vi to -ix,
+    -x reader, -xiv: per-PR verdict, exemption, comment, fail-closed, enforcement state);
+    scripts/ci/post_merge_reeval.py (-xv, and -xvi's proof re-trigger: re-run fan-out);
+    scripts/ci/post_merge_fix_proof.py (-xvi: proof selection and judgement); scripts/ci/
+    _github_rest.py (the one REST client and the allowed-write list of -xi). Workflows:
+    post-merge-suite.yml (this record), post-merge-timing.yml (-xii; bootstrap in -xix),
+    post-merge-followup.yml (-iii notice job, -xv reevaluate job), post-merge-hold.yml
+    (-vi), post-merge-fix-proof.yml (-xvi). scripts/ci/ is package-internal CI tooling,
+    not deployed to consumers, so no build deploy-manifest entry is needed.
   - >-
-    THE SELECTION IS TQ-600a-13's OPT-IN, NEVER A COPY OF IT. The nightly collects the
-    excluded population with exactly the opt-in PR #1050 implements — `-m manual`, the
-    marker that scripts/suite_performance/pytest_manual_deselect.py applies to every node
-    id ending in `_MANUAL` — over `tests/ unit_tests/`, unsharded, in one process. Never a
-    hard-coded file or node-id list, and never `-k _MANUAL`, which under PR #1050 collects
-    nothing because the addopts `-m "not manual"` still applies (PR #1050's own
-    docs/testing/README.md correction). This record therefore depends on PR #1050 being
-    merged first; before it is, no `manual` marker exists and the selection is empty,
-    which TQ-600a-13-v requires be reported as did-not-complete, never green.
+    TUNABLES IN ONE FILE (owner decision 2026-10-08: the proposed defaults are accepted and
+    must be tunable without a code edit). Every threshold in the family — heartbeat 12 h,
+    staleness 30 h, flaky window 5 / threshold 2, run-history page 30, advisory 7 days /
+    20 evaluations, demotion windows — is read from `scripts/ci/post_merge_tunables.json`
+    (key list in TQ-600a-13-x). This record creates the file with the keys it reads
+    (`flaky_window_runs`, `flaky_red_threshold`, `run_history_page`, `heartbeat_max_hours`);
+    the heartbeat cron in post-merge-suite.yml must fire at least every
+    `heartbeat_max_hours`, which a descriptor checks by parsing the cron string against
+    the tunable (the one structural assertion in this record, because a schedule cannot
+    be executed in the unit layer).
   - >-
-    THE RETRY MUST CARRY THE OPT-IN — MEASURED, NOT ASSUMED. At enrichment (2026-10-08),
-    in a synthetic project whose pytest.ini carries `addopts = -m "not manual"`, re-running
-    two failing node ids by id WITHOUT `-m manual` reported "2 deselected" and exited 5
-    with zero tests executed; the same ids WITH `-m manual` executed exactly those two.
-    So a retry that names the failures but drops the opt-in executes nothing, and a
-    verdict read as "the retry had no failures" turns every red night green. The retry's
-    outcome must be read per node id from the retry's own per-test report, and a
-    first-run failure that is absent from the retry report counts as failed on both
-    executions — never as passed-on-retry.
+    THE HOLD-SIDE MODULES ARE STDLIB-ONLY AND IMPORT NOTHING FROM THE TEST SIDE.
+    post_merge_hold.py, _run_history.py and _github_rest.py must import without pytest,
+    PyYAML or any dev dependency, because the hold job installs nothing (-vi). The suite
+    and proof modules may import pytest-side code; the hold-side modules must not import
+    them.
+  - >-
+    THE SELECTION IS TQ-600a-13's OPT-IN, NARROWED BY TQ-600a-13-xii's LANE MARKER, NEVER A
+    COPY. The correctness lane is collected with the `manual` marker of PR #1050 minus the
+    timing marker of TQ-600a-13-xii (proposed: `-m "manual and not timing_ratio"`) over
+    `tests/ unit_tests/`, unsharded, in one process. Never a hard-coded list, never
+    `-k _MANUAL` (which under PR #1050's addopts collects nothing).
+  - >-
+    THE RETRY MUST CARRY THE SAME SELECTION — MEASURED, NOT ASSUMED. At enrichment
+    (2026-10-08), re-running two failing node ids WITHOUT `-m manual` under addopts
+    `-m "not manual"` reported "2 deselected" and executed nothing. The retry job's
+    outcome is read per node id from its own per-test report, and a first-run failure
+    absent from the retry report counts as failed on both executions — never as
+    passed-on-retry.
+  - >-
+    THE RETRY IS A SEPARATE JOB (user decision D; the earlier same-job retry is retired).
+    Three jobs, job-level permissions `contents: read` (plus `actions: read` on `verdict`):
+    `run` executes the lane and uploads the first-run per-test report as an artifact with
+    `if: always()`, and exits zero whenever it produced a readable report (test failures
+    are data, not a job failure); `retry` needs `run`, starts on a fresh runner, downloads
+    only the list of first-run failures, performs its own checkout and build, executes
+    exactly those ids, uploads its report; `verdict` needs both, runs always, classifies
+    (green / red / did_not_complete per TQ-600a-13-v), writes the verdict artifact and
+    exits with the verdict. That each GitHub-hosted job gets a fresh VM is a CI/CD-expert
+    claim marked UNVERIFIED: record once, from a live run, that `run` and `retry` reported
+    different runner names, in this record's notes. The verdict file records the runner
+    name of each job for that purpose. The `retry` job is skipped (job-level `if:` on the
+    run job's failure-count output) when there were no first-run failures; this workflow
+    is not a required check, so a skipped job is harmless here, and `verdict` reads a
+    skipped retry as "zero re-executions".
+  - >-
+    THE VERDICT JOB NAMES ITS OUTCOME IN A STEP THE HOLD CAN READ. The verdict job's last
+    two steps are named exactly `Verdict: red` and `Verdict: did not complete`, exactly
+    one of which runs and fails on a non-green verdict (both skipped on green). The hold
+    (-vi) distinguishes red from did-not-complete with ONE read of the run's jobs
+    (`GET /actions/runs/{id}/jobs?filter=latest`) instead of downloading the artifact or
+    depending on the notice, so the wording survives a failed notice write.
   - >-
     THE VERDICT COMES FROM PER-TEST RESULTS, NOT EXIT STATUSES. pytest.ini's addopts
-    carries `--continue-on-collection-errors`, so an exit status alone does not separate
-    a test failure from a collection error, and exit 5 (nothing collected) is not a
-    failure status at all. Classify from the machine-readable per-test report of each
-    execution. The job's conclusion (failure on red, success on green) is the module's
-    exit status computed from the verdict, never pytest's exit status passed through.
+    carries `--continue-on-collection-errors`, and exit 5 (nothing collected) is not a
+    failure status. Classify from the machine-readable per-test report of each execution.
+    The run's conclusion is the verdict job's exit status computed from the verdict.
   - >-
-    RUN CONDITIONS MATCH THE GATE THAT RUNS TODAY. Strict mode (`AC_ENFORCE_STRICT=1`, as
-    ci.yml's test-shard sets it), so AC-enforcement xfail-masking cannot turn a real
-    failure into a green night. The same preparation test-shard performs — full-history
-    checkout, dev dependencies, `python scripts/build.py --target-dir .` (the population
-    needs a deployed layout), and whatever the population's tests fetch — because a
-    nightly that differs from CI in environment reports a different suite's health. An
-    explicit job timeout, bounded at no more than three times the measured population
-    cost including build and retry (population ~1,004 s on the durations map, so on the
-    order of 60 minutes), so a hang ends as did-not-complete in bounded time.
+    RUN CONDITIONS MATCH THE GATE THAT RUNS TODAY. Strict mode (`AC_ENFORCE_STRICT=1`),
+    full-history checkout, dev dependencies, `python scripts/build.py --target-dir .`,
+    and an explicit timeout on each job bounded at no more than three times its measured
+    cost, so a hang ends as did-not-complete in bounded time.
   - >-
-    CADENCE AND SERIALISATION. Scheduled once per day, off the hour (precedent:
-    test-durations.yml, "Off-the-hour on purpose: :00 is when every scheduled job on the
-    platform fires at once"), plus workflow_dispatch for a manual re-run. Two nightly
-    runs must never apply the flag concurrently — serialise the workflow without
-    cancelling an in-progress run — which removes the most likely source of two open
-    flags (TQ-600a-13-iii's notes). A run that never starts at all produces no verdict:
-    PENDING USER DECISION: nightly never runs (schedule removed, workflow disabled, or
-    scheduled runs suspended by the hosting service after a period without repository
-    activity). Do not add a staleness mechanism from this record.
+    TRIGGERS AND COALESCING (user decision B; the once-a-day schedule is retired). `push`
+    to `main`; `schedule` as a heartbeat at least every 12 hours, off the hour (for
+    example `17 3,15 * * *`); `workflow_dispatch`. Workflow-level `concurrency` with a
+    fixed group and `cancel-in-progress: false`. VERIFIED (GitHub expert, docs): at most
+    one run is pending per group and a newer pending run replaces the older, which ends
+    `cancelled`. That displacement is intended here, and every consumer of the run
+    history treats a cancelled run that a newer run superseded as no verdict at all,
+    through scripts/ci/_run_history.py (TQ-600a-13-v) and nowhere else. No path filter:
+    every merge to main is a candidate.
   - >-
-    PERMISSIONS ARE PER JOB AND MINIMAL. The job that executes ~1,000 s of test code
-    holds `contents: read` and nothing else. Writing the flag happens in a separate job
-    (TQ-600a-13-iii) so a token able to write issues never coexists with the test
-    session. Set permissions at job level, not workflow level, so adding a job cannot
-    silently inherit a write scope.
+    EVERY RUN-HISTORY READ IN THE FAMILY IS FILTERED TO RUNS THAT TESTED MAIN.
+    `branch=main` on the query, and client-side the run's `event` in {push, schedule,
+    workflow_dispatch} and `head_branch == "main"`. A pull request that adds a
+    `pull_request` trigger to its own copy of post-merge-suite.yml produces runs of the
+    same workflow file on its own branch; those never reach a consumer.
   - >-
-    THE VERDICT LEAVES THE RUN JOB AS AN ARTIFACT THAT SURVIVES FAILURE. The run job
-    writes the verdict file (shape in delivers_to) and uploads it with `if: always()` —
-    precedent: test-durations.yml's upload step, added after run 37317817836 lost 110
-    minutes of results to a last-step failure. Upload and download use the same
-    workspace-relative path, so the seam test's shared workspace stands in for the
-    artifact store; a wrong artifact name in production then surfaces as a nightly
-    reported "did not complete" every night (loud), never as a green one (silent).
+    PERMISSIONS ARE PER JOB AND MINIMAL, AND THIS WORKFLOW WRITES NOTHING. Every job in
+    post-merge-suite.yml holds `contents: read` only (`actions: read` additionally on the
+    verdict job if it reads previous verdicts for TQ-600a-13-xiii). The notice and the
+    re-evaluation fan-out run in a separate workflow triggered by this one's completion
+    (TQ-600a-13-iii, -xv), so a token able to write issues or re-run workflows never
+    coexists with the test session, and their failures cannot change this run's
+    conclusion — which is what lets the hold (TQ-600a-13-vi) read this run's conclusion
+    as the verdict.
   - >-
     RUN STEPS CARRY NO `${{ }}` EXPRESSIONS. Context reaches the module through `env:`
-    mappings and the runner's standard variables (GITHUB_SHA, GITHUB_REF, GITHUB_RUN_ID,
-    GITHUB_SERVER_URL, GITHUB_REPOSITORY). Two reasons: the seam test below executes run
-    steps verbatim, which it cannot do through unresolved expressions; and an expression
-    interpolated into a shell line is the script-injection form, which matters most in
-    TQ-600a-13-vi where the inputs are attacker-controlled pull-request text.
+    and the runner's standard variables, so the seam test can execute steps verbatim and
+    no shell line interpolates untrusted text.
   - >-
-    THE TESTS OF THIS RECORD RUN IN THE DEFAULT SUITE AND COST UNDER 1.5 s. They guard
-    the gate, so none may be `_MANUAL`, carry the `manual` marker, start a build, or call
-    GitHub. Real child pytest sessions are used ONLY in the seam descriptor, against a
-    three-test synthetic project with its own pytest.ini and
-    PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 in the child environment — measured at enrichment at
-    0.21 s per session against 1.39 s with autoload on — so the seam's sessions total
-    well under a second. Every other descriptor calls the module in-process with a fake
-    runner returning per-test results. Measure the family's test files with
-    `--durations=0` at sign-off and record the figure in this record's notes. The whole
-    family's tests (all ten records) must total under ~10 s; exceeding that is a
-    sign-off blocker, not a wall-clock assertion inside a test, because a timing
-    assertion on this shared host is flaky and gets deleted.
+    THE TESTS OF THIS RECORD RUN IN THE DEFAULT SUITE AND COST UNDER 1.2 s. None may be
+    `_MANUAL`, carry the `manual` or `timing_ratio` marker, start a build, or call GitHub.
+    Real child pytest sessions only in the seam descriptor, against a synthetic project
+    with PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 (measured 0.21 s per session).
   - >-
-    THE SHARED TEST HARNESS IS BUILT HERE AND REUSED BY ALL TEN RECORDS. One helper module
-    under unit_tests/suite_performance/ providing: (1) a recording fake of the GitHub REST
-    API — a stdlib HTTP server on 127.0.0.1 with an ephemeral port, serving a stated set
-    of issues, comments, workflow runs and branch rules, recording every request
-    (method, path, query, body) — used in-process by every module test through the REAL
-    REST client, and by the seam tests through GITHUB_API_URL; (2) a workflow-step
+    FAMILY TEST BUDGET: UNDER 15 s TOTAL, IN THE DEFAULT RUN (re-enriched 2026-10-08 for 18
+    records). Per-record ceilings: -ii 1.2, -iii 0.8, -iv 0.4, -v 1.2, -vi 1.0, -vii 0.3,
+    -viii 0.3, -ix 0.5, -x 0.3, -xi 1.0, -xii 1.2, -xiii 0.3, -xiv 0.2, -xv 0.4, -xvi 1.2,
+    -xix 2.5 (the one record that collects the real repository), -xvii and -xviii 0 (no
+    unit tests) — 12.8 s, leaving about 2 s for harness start-up. The shared fake server
+    and scratch repositories are built once per test class, never per test. Measure with
+    `--durations=0` over the family's files at sign-off and record the figure in -ii's
+    notes; exceeding 15 s is a sign-off blocker, never a wall-clock assertion inside a
+    test. For scale: TQ-600a-13-xix removes two default-run tests that cost about 22 s
+    EACH, so the family's whole test cost is repaid about three times over.
+  - >-
+    THE SHARED TEST HARNESS IS BUILT HERE AND REUSED BY THE WHOLE FAMILY. (1) a recording
+    fake of the GitHub REST API on 127.0.0.1, serving issues, comments, workflows (with
+    `state`), workflow runs (with `status`, `conclusion`, `run_started_at`, `head_sha`,
+    `event`), artifacts and branch rules, recording every request; (2) a workflow-step
     executor that loads a workflow file, locates a job by its exact `name:`, and executes
-    its `run:` steps verbatim with `bash -e` in a given directory and environment,
-    skipping only `uses:` steps and an explicit, exact-match list of environment
-    preparation steps (dependency install, build), and FAILING — never skipping — on a
-    `run:` step containing `${{`, on a job with a `strategy.matrix`, or on an `if:` it
-    cannot evaluate; (3) a scratch git repository builder with a known commit graph and a
-    local bare repository as its origin. No test in the family patches urllib or
-    subprocess to fake GitHub or git.
+    its `run:` steps verbatim with `bash -e`, skipping `uses:` steps and an explicit
+    exact-match list of preparation steps EXCEPT `actions/checkout`, which it EMULATES
+    against the scratch repository from the step's own `with:` inputs (`ref` absent ->
+    the scratch default-branch commit; `ref` present -> that ref resolved from the
+    synthetic event payload; `sparse-checkout`, `path` honoured) so that the trust
+    descriptors of -vi and -xvi observe what a checkout would really place on disk rather
+    than reading the YAML for a `ref:` key — and FAILING on a `run:` step containing `${{`,
+    on a job with a `strategy.matrix`, or on an `if:` it cannot evaluate — and able to
+    execute two jobs of one workflow in two separate directories with only a named
+    artifact handed between them (needed for the separate retry job); (3) a scratch git
+    repository builder with a local bare origin. No test patches urllib or subprocess to
+    fake GitHub or git.
   - >-
     THIS FAMILY IS THE CADENCE TQ-600a-13-i REQUIRES, AND IT RESOLVES THAT RECORD'S
-    AGGREGATOR QUESTION. TQ-600a-13-i's enrichment says a second cadence must feed the
-    `Test suite (pytest)` aggregator or become a required check of its own. A scheduled
-    run can be neither — it is not attached to any pull request. This family carries the
-    nightly's result into merges through the per-PR `Nightly suite status` check
-    (TQ-600a-13-vi), and it is THAT check which must become required (TQ-600a-13-x).
-    BRANCH RECORDED, as this record's notes ask: TQ-600a-13 was resolved on its
-    exclusion branch by PR #1050 (commit 71b84fe2, "as the user decided"), contingent on
-    that PR merging.
+    AGGREGATOR QUESTION. A post-merge run is not attached to any pull request, so it can
+    neither feed `Test suite (pytest)` nor be required itself. Its result reaches merges
+    through the per-PR `Post-merge suite status` check (TQ-600a-13-vi), and it is THAT
+    check which becomes required (TQ-600a-13-x). BRANCH RECORDED: TQ-600a-13 was resolved
+    on its exclusion branch by PR #1050 (commit 71b84fe2).
 delivers_to:
+  - agent: python-coder
+    ac_id: TQ-600a-13-vi
+    contract: >-
+      The run history itself is the verdict the hold reads: each completed run of
+      `post-merge-suite.yml` on `refs/heads/main` (event push / schedule /
+      workflow_dispatch) has conclusion `success` exactly when the correctness lane was
+      green, and any other conclusion otherwise. A cancelled run superseded by a newer run
+      carries no verdict. On a non-green run, exactly one of the verdict job's steps named
+      `Verdict: red` / `Verdict: did not complete` has conclusion `failure`, readable with
+      one `GET /actions/runs/{id}/jobs?filter=latest`.
   - agent: python-coder
     ac_id: TQ-600a-13-iii
     contract: >-
-      The night verdict file, written by scripts/ci/nightly_suite.py at the workspace-
-      relative path `nightly-verdict.json` and uploaded as artifact `nightly-verdict`
-      with `if: always()`. JSON object: `schema_version` (int, 1); `verdict` (string, one
-      of "green" | "red" | "did_not_complete"); `stage` (string or null — null unless
-      verdict is did_not_complete, then one of "setup" | "collection" |
-      "empty_selection" | "cancelled_or_timed_out" | "result_unreadable", see
-      TQ-600a-13-v); `collected` (int >= 0, tests collected by the first execution);
-      `first_run_failures` (list of full node-id strings); `failing` (list of node ids
-      that failed both executions — non-empty iff verdict is red); `passed_on_retry`
-      (list of node ids that failed then passed); `head_sha` (40-hex commit the run
-      tested); `ref` (string, e.g. "refs/heads/main"); `run_id` (int); `run_url`
-      (https URL of the run's log, built from GITHUB_SERVER_URL, GITHUB_REPOSITORY and
-      GITHUB_RUN_ID). Lists are sorted for determinism.
+      The run verdict file, written by the verdict job at the workspace-relative path
+      `post-merge-verdict.json` and uploaded as artifact `post-merge-verdict` with
+      `if: always()`. JSON object: `schema_version` (int, 2); `lane` ("correctness" |
+      "timing"); `verdict` ("green" | "red" | "did_not_complete"); `stage` (null unless
+      did_not_complete, then as TQ-600a-13-v lists); `collected` (int >= 0);
+      `collected_ids` (sorted list of node ids — read by -xii to name lane entrants);
+      `first_run_failures`, `failing`, `passed_on_retry`, `repeated_pass_on_retry` (sorted
+      lists of full node ids; the last per TQ-600a-13-xiii, always empty for timing);
+      `pass_on_retry_window` (object node id -> int count over the last five settled
+      runs, current included); `window_runs_read` (int 1..5); `run_runner`,
+      `retry_runner` (runner names, null when that job did not run); `head_sha` (40-hex);
+      `ref`; `event` ("push" | "schedule" | "workflow_dispatch"); `run_id` (int);
+      `run_url`.
+  - agent: python-coder
+    ac_id: TQ-600a-13-xvi
+    contract: >-
+      The same `post-merge-verdict` artifact of the current red run, whose `failing` list
+      is the exact set the proof run executes and whose `run_id` the proof records.
+  - agent: python-coder
+    ac_id: TQ-600a-13-xiii
+    contract: >-
+      The per-run `passed_on_retry` list and the verdict job's slot for the
+      `repeated_pass_on_retry` escalation, computed in the same verdict job before it
+      exits.
   - agent: python-coder
     ac_id: TQ-600a-13-v
     contract: >-
-      The same verdict object, with `verdict: did_not_complete` and a `stage` for every
-      ending in which the run job itself observes the stop (collection error, empty
-      selection). Endings the run job cannot observe (cancellation, timeout, setup
-      failure before the module ran, unreadable artifact) are classified downstream by
-      TQ-600a-13-v from the runner-reported job result plus the artifact's presence.
+      The same verdict object with `verdict: did_not_complete` and a `stage` for every
+      ending the verdict job can observe.
   - agent: python-coder
     ac_id: TQ-600a-13-i
     contract: >-
-      The invoked cadence TQ-600a-13-i requires: `.github/workflows/nightly-suite.yml`,
-      scheduled daily, whose run job executes `-m manual` and concludes failure on a red
-      night. TQ-600a-13-i's "a failing excluded test turns the invoking job red" is
-      discharged by this record's seam descriptor, which executes that job's real step.
+      The invoked cadence TQ-600a-13-i requires for the correctness lane:
+      `.github/workflows/post-merge-suite.yml`, on every merge to main plus a heartbeat,
+      whose conclusion is failure on a red run. The timing lane's cadence is
+      TQ-600a-13-xii's.
   - agent: documentation-expert
     contract: >-
-      Correct scripts/suite_performance/README.md's "Known, accepted gap" bullet (added by
-      PR #1050: the excluded tests "currently run nowhere in CI") in the same change that
-      lands the nightly. State the true position: the excluded population runs nightly
-      via .github/workflows/nightly-suite.yml with `-m manual`, failures are retried once
-      and a fail-then-pass is reported as passed-on-retry, and a red night raises the
-      `nightly-red` issue that holds pull requests. Do not delete the sentence and leave
-      the reader to assume coverage.
+      Correct scripts/suite_performance/README.md's "Known, accepted gap" bullet in the
+      same change that lands this run. State the true position: the excluded population
+      runs after every merge to main and on a heartbeat, in two lanes (correctness holds
+      pull requests, timing reports only), failures are re-executed once on a fresh
+      machine, a fail-then-pass is reported and tracked, and a red correctness run holds
+      pull requests through the `Post-merge suite status` check. Do not delete the
+      sentence and leave the reader to assume coverage.
 expects_from:
   - ac_id: TQ-600a-13-i
     contract: >-
-      The named opt-in that collects every test the default run excluded. This record
-      invokes it; it does not decide its membership.
+      The named opt-in that collects every test the default run excluded.
+  - ac_id: TQ-600a-13-xii
+    contract: >-
+      The lane marker and the correctness-lane selection.
   - ac_id: TQ-600a-13
     contract: >-
-      The exclusion mechanism of PR #1050, merged: the `manual` marker registered as a
-      direct pytest.ini `markers =` key, auto-applied to node ids ending `_MANUAL` by
-      scripts/suite_performance/pytest_manual_deselect.py, deselected by the addopts
-      `-m "not manual"`, opt-in by a command-line `-m manual`. Measured by PR #1050: 43
-      tests, ~1,004 s.
+      The exclusion mechanism of PR #1050, merged: the `manual` marker auto-applied to
+      node ids ending `_MANUAL`, deselected by the addopts `-m "not manual"`, opt-in by a
+      command-line `-m`. Measured by PR #1050: 43 tests, ~1,004 s.
 test_spec:
   - name: test_tq600a_13_ii_only_first_run_failures_are_rerun_and_only_once
     target_dir: unit_tests/suite_performance/
     framework: unittest
     type: unit
     angle: criterion
-    surface_invoked: "scripts/ci/nightly_suite.py's execute-retry-classify entry point, called in-process with a fake test runner that records every invocation and returns per-test results"
+    surface_invoked: "scripts/ci/post_merge_suite.py's execute, retry and classify entry points, called in-process with a fake test runner that records every invocation and returns per-test results"
     description: >-
-      Population of three: A always passes, B fails on its first execution and passes on
-      its second, C always fails. Record every execution the runner is asked for. A runs
-      once; B and C run twice; nothing runs a third time. Verdict red, `failing` is [C]
-      only; B is in `passed_on_retry`; the module's exit status is non-zero. In-process,
-      milliseconds; the real-pytest form of the same scenario is the seam descriptor.
+      Population of three: A always passes, B fails then passes, C always fails. A runs
+      once; B and C run twice; nothing runs a third time. Verdict red, `failing` is [C];
+      B is in `passed_on_retry`; the verdict step's exit status is non-zero.
   - name: test_tq600a_13_ii_a_retry_does_not_hide_a_flaky_pass
     target_dir: unit_tests/suite_performance/
     framework: unittest
     type: unit
     angle: discrimination
-    surface_invoked: "scripts/ci/nightly_suite.py in-process with a fake runner"
+    surface_invoked: "scripts/ci/post_merge_suite.py in-process with a fake runner"
     must_catch:
-      - "the whole population is re-executed rather than only the failures, doubling the nightly cost"
-      - "a failure is retried more than once, so a test that fails two times in three is reported green"
+      - "the whole population is re-executed rather than only the failures"
+      - "a failure is retried more than once"
       - "a fail-then-pass test is counted as an ordinary pass and named nowhere"
-      - "C fails on both executions and the verdict is still green because the retry step's own exit status is what is reported"
-      - "the retry report omits a first-run failure entirely (the retry selected nothing) and that failure is counted as passed-on-retry"
+      - "C fails on both executions and the verdict is still green because the retry's own exit status is what is reported"
+      - "the retry report omits a first-run failure entirely and that failure is counted as passed-on-retry"
     description: >-
-      Same population with B and C varied independently, plus a runner whose retry
-      returns an EMPTY report — the shape a retry that dropped the opt-in produces. Each
-      named mutation turns this descriptor red. The fail-then-pass case is the one that
-      cannot be dropped: these tests guard a nondeterministic corruption, and a retry
-      that erases the evidence is the defect they exist to catch.
-  - name: test_tq600a_13_ii_a_clean_night_is_green_with_zero_reruns
+      Same population with B and C varied independently, plus a retry that returns an
+      EMPTY report. Each named mutation turns this descriptor red.
+  - name: test_tq600a_13_ii_a_clean_run_is_green_with_zero_reruns
     target_dir: unit_tests/suite_performance/
     framework: unittest
     type: unit
     angle: criterion
-    surface_invoked: "scripts/ci/nightly_suite.py in-process with a fake runner"
+    surface_invoked: "scripts/ci/post_merge_suite.py in-process with a fake runner"
     description: >-
-      The paired control. All three pass first time: verdict green, zero re-executions,
-      exit status zero. A run that is red on every night does not satisfy this record.
-  - name: test_tq600a_13_ii_the_nightly_workflow_step_runs_the_module_against_real_pytest
+      The paired control. All three pass first time: green, zero re-executions, exit zero.
+  - name: test_tq600a_13_ii_the_retry_is_a_separate_job_fed_only_the_failure_list
     target_dir: unit_tests/suite_performance/
     framework: unittest
     type: integration
     angle: seam
-    surface_invoked: "the run job's `run:` steps of .github/workflows/nightly-suite.yml, executed verbatim by the shared workflow-step executor in a synthetic three-test project (own pytest.ini registering `manual` and carrying addopts -m \"not manual\"), real child pytest sessions, PYTEST_DISABLE_PLUGIN_AUTOLOAD=1"
+    surface_invoked: "the `run`, `retry` and `verdict` jobs of .github/workflows/post-merge-suite.yml, each located by exact name and executed verbatim by the shared workflow-step executor in its OWN fresh directory, with only the named artifacts handed between them, in a synthetic three-test project with real child pytest sessions and PYTEST_DISABLE_PLUGIN_AUTOLOAD=1"
     must_catch:
-      - "the workflow's step invokes pytest directly and decides the verdict in shell, so the module is never exercised by the real workflow"
-      - "the retry is invoked by node id without -m manual, so under the addopts deselection it executes nothing and the night reads green"
-      - "the step's exit status is pytest's, not the verdict's, so a fail-then-pass night exits non-zero or a red night exits zero"
-      - "the module parses a per-test report shape that real pytest does not produce, which only a real child session exposes"
+      - "the retry is performed inside the run job, so no separate retry job exists for the executor to find"
+      - "the retry job depends on state left in the run job's workspace and fails or selects nothing in a fresh directory"
+      - "the retry is invoked by node id without the lane selection, so it executes nothing and the run reads green"
+      - "the run job exits non-zero on a test failure, so a fail-then-pass run concludes failure"
+      - "the module parses a per-test report shape real pytest does not produce"
+      - "the verdict job fails on red without running the step named `Verdict: red`, so the hold cannot tell red from did-not-complete"
     description: >-
-      THE ONE SEAM FOR THIS WORKFLOW FILE. Execute the nightly run job's real `run:`
-      steps — not a copy of their command — in the synthetic project: A passes, B fails
-      then passes (a marker file in the project directory flips it), C always fails. The
-      verdict file names C in `failing`, B in `passed_on_retry`, `collected` is 3, and the
-      step's exit status is non-zero; with C made to pass, a second execution exits zero
-      with verdict green and B still named. Three real child sessions in total, about
-      0.2 s each. This is what proves the workflow invokes the module; every other
-      descriptor in the family calls the module directly.
+      THE ONE SEAM FOR THIS WORKFLOW FILE. A passes, B fails then passes, C always fails.
+      The verdict file names C in `failing` and B in `passed_on_retry`, the run job exits
+      zero, the verdict job exits non-zero at the step named `Verdict: red`; with C made
+      to pass, the verdict job exits zero with B still named. Three real child sessions,
+      about 0.2 s each. The verdict job's -xiii history read is served by the fake server
+      (no earlier runs) in this descriptor.
+  - name: test_tq600a_13_ii_the_heartbeat_fires_within_the_tunable_bound
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: unit
+    angle: boundary
+    surface_invoked: "the `schedule` cron strings of .github/workflows/post-merge-suite.yml, expanded over one week by a small stdlib cron expander, against `heartbeat_max_hours` read from scripts/ci/post_merge_tunables.json"
+    must_catch:
+      - "the heartbeat is once a day, so a quiet repository's verdict can age past the staleness bound"
+      - "the cron fires on the hour"
+      - "the bound is a literal in the test rather than the tunable"
+    description: >-
+      The largest gap between consecutive fire times over a week is at most
+      `heartbeat_max_hours`, and no fire time has minute 0. Structural by necessity (a
+      schedule cannot be executed offline); the live firing is a recorded observation.
+  - name: test_tq600a_13_ii_successive_merges_never_cancel_the_run_in_progress
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: unit
+    angle: criterion
+    surface_invoked: "scripts/ci/_run_history.py's settled-run function, in-process, on served run lists (the shape of GET /actions/workflows/{file}/runs) containing in-progress, waiting, superseded-cancelled and pull_request-event runs"
+    must_catch:
+      - "a cancelled run superseded by a newer run is read as did_not_complete"
+      - "every cancelled run is skipped, so a lone cancellation reads the older green run"
+      - "the list is trusted to be newest-first rather than ordered by run_number"
+      - "a run of the same workflow file triggered by pull_request on a PR branch is accepted as a main-branch verdict"
+    description: >-
+      The coalescing itself is the hosting service's behaviour and is recorded live (see
+      notes); what the unit layer proves is that a cancelled run superseded by a newer
+      run is classified as carrying no verdict, while a cancelled run with no newer run
+      is did_not_complete, on a served list deliberately NOT in newest-first order.
 test_rationale: |
-  The retry exists to stop the nightly being ignored, and the passed-on-retry clause
-  exists to stop the retry from becoming the thing that hides the bug. Both halves are
-  asserted by executing a population whose failures are controlled, because a retry
-  setting read out of a workflow file says nothing about whether only the failures are
-  retried, or whether the retried pass is reported.
+  The retry exists to stop the run being ignored, and the passed-on-retry clause exists
+  to stop the retry from becoming the thing that hides the bug. Both are asserted by
+  executing a population whose failures are controlled.
 
-  The shape follows the family architecture: the decision logic is a module, so three of
-  the four descriptors call it in-process with a fake runner and cost milliseconds. The
-  fourth is the seam, and it is the only one allowed to start real pytest: it executes the
-  workflow's own run step against a synthetic population, because two defects in this
-  record are invisible to an in-process test — a retry that drops `-m manual` (measured at
-  enrichment to execute nothing under PR #1050's addopts) and a parser written against a
-  report shape real pytest does not emit. Reading the workflow file to find the step is
-  gathering an input; the assertion is on what executing that step did, the same
-  distinction TQ-600a-13's it_requirements draw for its own collection check.
+  The amendment of 2026-10-08 moves the retry into its own job. The seam therefore
+  executes the three jobs as three separate executions in three directories with only
+  the named artifacts between them: a retry that silently relies on the first job's
+  workspace, or a retry folded back into the first job, fails that seam. Whether the
+  hosting service actually puts the second job on a different machine cannot be shown in
+  the unit layer and is recorded once from a live run.
 
-  Cost, stated so it can be checked: in-process descriptors in milliseconds, the seam's
-  three child sessions about 0.2 s each with plugin autoload off. Under 1.5 s for the
-  record, inside the family's ~10 s ceiling.
+  The superseded-run descriptor lives here, not only in -v, because this record creates
+  the run-history module and its coalescing produces the displaced runs; -v adds the hold
+  and notice consequences on top.
+
+  Cost: in-process descriptors in milliseconds, the seam's three child sessions about
+  0.2 s each. Under 1.2 s for the record.
 origin_agent: business-analyst
 created: 2026-10-08
-amended_by: []
+amended_by:
+  - reason: >-
+      USER-APPROVED REDESIGN AFTER TWO EXPERT REVIEWS (CI/CD and GitHub platform,
+      2026-10-08), decisions B, C and D. (B) Cadence: the run now follows every merge to
+      main, coalesced to one running and one waiting, with a heartbeat schedule at most 12
+      hours apart and manual dispatch. SUPERSEDED clause: "When the scheduled run starts
+      once per day with no human action". Reason: detection drops from up to ~24 h to
+      ~30-60 min and the suspect range from ~10 commits to 1-3. All "nightly" names are
+      retired (workflow, module, check, labels) — see it_requirements. (C) The run now
+      executes only the CORRECTNESS lane; timing-ratio tests move to a reporting lane
+      (TQ-600a-13-xii). SUPERSEDED premise: "several of those tests assert same-sitting
+      timing ratios ... a nightly run that goes red on noise is ignored within a week" —
+      that risk is now handled by the lane split rather than absorbed by the retry. (D)
+      The single retry now runs as a separate job on a fresh machine fed only the list of
+      failures. SUPERSEDED clause: "it executes again exactly the tests that failed" with
+      no statement of where. Added: the run's conclusion is the verdict alone, and the
+      notice is written outside this run (consequence of decision A in TQ-600a-13-vi), so
+      a notice failure cannot change the conclusion. Passed-on-retry is now tracked and
+      can escalate (TQ-600a-13-xiii) — SUPERSEDES the note "If the owner wants a
+      passed-on-retry to also surface on the flag, that is a design change and is not
+      made here". The PENDING USER DECISION "nightly never runs" in it_requirements is
+      resolved by TQ-600a-13-xiv. Readiness returned to draft for IT PO re-enrichment.
+      Full prior text: commit e79d35ef4.
+    by: business-analyst
+    at: 2026-10-08
 superseded_by: null
 covered_by: []
 implemented_by: []
 change_target: pipeline
 risk_surface: internal
 notes: |
-  THIS FAMILY PRESUPPOSES THE EXCLUSION BRANCH OF TQ-600a-13. TQ-600a-13 deliberately
-  leaves open whether to implement the exclusion or correct the documents, and
-  TQ-600a-13-i is conditional on the exclusion branch. A nightly run of the excluded
-  population only has a subject if something is excluded. These records therefore make
-  that choice in practice — or, if the documents branch is still chosen, they describe
-  the invoked cadence TQ-600a-9's verification tests need before they may land (see
-  TQ-600a-9's expects_from). Whoever approves these should record which.
+  THIS FAMILY PRESUPPOSES THE EXCLUSION BRANCH OF TQ-600a-13, which PR #1050 took.
 
-  PASSED-ON-RETRY IS AN ADDITION TO THE APPROVED DESIGN, NOT A CHANGE TO IT. The night is
-  still green. The addition is only that the retried pass is named, for the reason in
-  the criteria. If the owner wants a passed-on-retry to also surface on the flag, that is
-  a design change and is not made here.
+  LIVE OBSERVATIONS STILL TO RECORD HERE (owner or whoever witnesses them), because the
+  unit layer cannot show them: (1) two merges landing while a run is in progress produce
+  one waiting run, and a third displaces the second, which ends cancelled — the VERIFIED
+  documented behaviour, observed once on this repository; (2) the `run` and `retry` jobs
+  of one run report different runner names (the fresh-machine claim, UNVERIFIED);
+  (3) the heartbeat fires on schedule on a day with no merges.
+
+  COST, STATED SO IT CAN BE WEIGHED. About ten merges a day at roughly 25 minutes each
+  plus two heartbeats is about five runner-hours a day on free public-repository runners,
+  one job at a time because of the coalescing, against a GitHub Free 20-concurrent-job
+  cap that ci.yml's eight shards also draw on. The coalescing is what bounds it.
