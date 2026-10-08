@@ -7,7 +7,7 @@ level: L3
 status: active
 req_status: draft
 work_status: todo
-readiness: reviewed
+readiness: approved
 priority: high
 roadmap_phase: phase_1
 criteria: |
@@ -262,23 +262,25 @@ test_rationale: |
 origin_agent: business-analyst
 created: 2026-10-08
 amended_by:
-  - reason: >-
-      USER-APPROVED REDESIGN AFTER TWO EXPERT REVIEWS (2026-10-08), decisions B, H and J.
-      (B) Name `Nightly suite status` -> `Post-merge suite status`. (H) Added the
-      event-policy prerequisite (GitHub blocks `pull_request_target` by default in public
-      repos from 2026-11-02 without an explicit policy; none exists here), the
-      introducing-PR caveat, the source-GitHub-Actions requirement, the fallback route,
-      and the no-`needs:` rule. (J) Added the rollout order, the advisory period with an
-      observed-correct-verdicts threshold, the label prerequisite, and the demotion rule.
-      SUPERSEDED criteria: "after the ruleset entry is added, the hold is observed once
-      ... with a flag open" (now "with the run red"); the prerequisite list replaces the
-      single "ruleset has been read and observed" condition. Stale fact corrected:
-      SUPERSEDED it_requirement "Its contexts were exactly ... five ... (Also absent:
-      `Test suite (pytest)`)" — six contexts as of 2026-10-08T14:30. Sized up S -> M.
-      Title widened. Readiness returned to draft for IT PO re-enrichment. Full prior
-      text: commit e79d35ef4.
-    by: business-analyst
-    at: 2026-10-08
+- reason: 'USER-APPROVED REDESIGN AFTER TWO EXPERT REVIEWS (2026-10-08), decisions
+    B, H and J. (B) Name `Nightly suite status` -> `Post-merge suite status`. (H)
+    Added the event-policy prerequisite (GitHub blocks `pull_request_target` by default
+    in public repos from 2026-11-02 without an explicit policy; none exists here),
+    the introducing-PR caveat, the source-GitHub-Actions requirement, the fallback
+    route, and the no-`needs:` rule. (J) Added the rollout order, the advisory period
+    with an observed-correct-verdicts threshold, the label prerequisite, and the demotion
+    rule. SUPERSEDED criteria: "after the ruleset entry is added, the hold is observed
+    once ... with a flag open" (now "with the run red"); the prerequisite list replaces
+    the single "ruleset has been read and observed" condition. Stale fact corrected:
+    SUPERSEDED it_requirement "Its contexts were exactly ... five ... (Also absent:
+    `Test suite (pytest)`)" — six contexts as of 2026-10-08T14:30. Sized up S -> M.
+    Title widened. Readiness returned to draft for IT PO re-enrichment. Full prior
+    text: commit e79d35ef4.'
+  by: business-analyst
+  at: 2026-10-08
+- action: approved
+  agent: approve_acs
+  date: '2026-10-08'
 superseded_by: null
 covered_by: []
 implemented_by: []

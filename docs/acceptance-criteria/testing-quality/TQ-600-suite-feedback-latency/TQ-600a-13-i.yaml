@@ -7,7 +7,7 @@ level: L3
 status: active
 req_status: draft
 work_status: todo
-readiness: reviewed
+readiness: approved
 priority: high
 roadmap_phase: phase_1
 criteria: |
@@ -251,30 +251,33 @@ amended_by:
 - action: approved
   agent: approve_acs
   date: '2026-10-07'
-- reason: >-
-    OWNER DECISION 2026-10-08 resolving the open question on "something whose failure
-    fails the build": it means BLOCKS MERGES. Applied without contradicting owner
-    decision C (timing-ratio tests report but never hold pull requests). Changes: (1) the
-    When clause now covers any excluded test — a suffixed test or a test carrying the
-    timing marker — because TQ-600a-13-xii and TQ-600a-13-xix route timing-marked tests
-    out of the default run under this record's rule; (2) "invoked ... by something whose
-    failure fails the build" is replaced by two clauses: a CORRECTNESS-lane failure (an
-    excluded test without the timing marker) blocks merges through the required `Post-merge
-    suite status` check, and a TIMING-lane failure turns its own run red and is named on
-    the `post-merge-timing` notice but does not block merges. REASON FOR THE CARVE-OUT: a
-    wall-clock ratio measured on shared runners varies 3.8x to 10.74x with no code
-    change, so a timing test fails on noise; letting that block merges would freeze
-    roughly ten merges a day per false red, and a gate that holds on noise gets turned
-    off — which would also stop it holding on the correctness tests this record exists to
-    protect. (3) The union clause is pluralised to "the opt-in collections". Unchanged:
-    every excluded test is collected by an invoked opt-in, a failing excluded test turns
-    its invoking job red, the union of collections is the whole suite, and the exclusion
-    is refused while no invoked opt-in exists. Readiness and test_spec are IT PO fields
-    and were not touched; test_spec's must_catch "a job outside the required-check set"
-    now applies to the correctness lane only. Full prior text: HEAD of
-    ac-authoring/nightly-hold / origin/main.
+- reason: 'OWNER DECISION 2026-10-08 resolving the open question on "something whose
+    failure fails the build": it means BLOCKS MERGES. Applied without contradicting
+    owner decision C (timing-ratio tests report but never hold pull requests). Changes:
+    (1) the When clause now covers any excluded test — a suffixed test or a test carrying
+    the timing marker — because TQ-600a-13-xii and TQ-600a-13-xix route timing-marked
+    tests out of the default run under this record''s rule; (2) "invoked ... by something
+    whose failure fails the build" is replaced by two clauses: a CORRECTNESS-lane
+    failure (an excluded test without the timing marker) blocks merges through the
+    required `Post-merge suite status` check, and a TIMING-lane failure turns its
+    own run red and is named on the `post-merge-timing` notice but does not block
+    merges. REASON FOR THE CARVE-OUT: a wall-clock ratio measured on shared runners
+    varies 3.8x to 10.74x with no code change, so a timing test fails on noise; letting
+    that block merges would freeze roughly ten merges a day per false red, and a gate
+    that holds on noise gets turned off — which would also stop it holding on the
+    correctness tests this record exists to protect. (3) The union clause is pluralised
+    to "the opt-in collections". Unchanged: every excluded test is collected by an
+    invoked opt-in, a failing excluded test turns its invoking job red, the union
+    of collections is the whole suite, and the exclusion is refused while no invoked
+    opt-in exists. Readiness and test_spec are IT PO fields and were not touched;
+    test_spec''s must_catch "a job outside the required-check set" now applies to
+    the correctness lane only. Full prior text: HEAD of ac-authoring/nightly-hold
+    / origin/main.'
   by: business-analyst
   at: 2026-10-08
+- action: approved
+  agent: approve_acs
+  date: '2026-10-08'
 superseded_by: null
 covered_by: []
 implemented_by: []
