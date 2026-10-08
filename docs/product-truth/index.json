@@ -30,6 +30,9 @@
     "Decision",
     "CriterionCategory",
     "CriterionCategoryAggregate",
+    "FlowRoute",
+    "FlowAppearance",
+    "FlowNavigation",
     "Decomposition"
   ],
   "artifacts": [
@@ -1247,6 +1250,34 @@
         "progress",
         "report"
       ]
+    },
+    {
+      "id": "leafcutter/atlas-flows",
+      "type": "mock_data",
+      "title": "Atlas flows view and canonical flow URLs",
+      "summary": "The canonical Flow dataset for the Atlas /flows view: real flows with their canonical /flows/<flow id> URLs, how each address resolves (default entry, selected, 404 not-found), step links /flows/<flow id>?step=<step id> that open a step's or branch's drawer (and a 'Step not found' notice for an unknown step), the redirect of legacy /flows?flow=<id>&step=<step> links, the AC drawer's 'Appears in flows' step links, and browser sessions covering select, drill, breadcrumb, back and forward.",
+      "component": "ux-prototyping",
+      "path": "mock-data/leafcutter/atlas-flows.mock.json",
+      "status": "active",
+      "readiness": "draft",
+      "version": 1,
+      "entities": [
+        "Flow",
+        "FlowRoute",
+        "FlowAppearance",
+        "FlowNavigation"
+      ],
+      "tags": [
+        "atlas",
+        "flows",
+        "canonical-url",
+        "deep-link",
+        "step-link",
+        "legacy-redirect",
+        "browser-history",
+        "not-found",
+        "ac-appearances"
+      ]
     }
   ],
   "by_component": {
@@ -1316,7 +1347,8 @@
         "leafcutter/product-truth-architecture"
       ],
       "mock_data": [
-        "fern-and-fig/catalog"
+        "fern-and-fig/catalog",
+        "leafcutter/atlas-flows"
       ],
       "mockups": [
         "fern-and-fig/cart",
@@ -1436,13 +1468,33 @@
       }
     },
     "Flow": {
-      "canonical_mock_data": {},
+      "canonical_mock_data": {
+        "ux-prototyping": "leafcutter/atlas-flows"
+      },
       "flows": {
         "ux-prototyping": [
           "leafcutter/author-product-truth",
           "leafcutter/define-a-feature"
         ]
       }
+    },
+    "FlowAppearance": {
+      "canonical_mock_data": {
+        "ux-prototyping": "leafcutter/atlas-flows"
+      },
+      "flows": {}
+    },
+    "FlowNavigation": {
+      "canonical_mock_data": {
+        "ux-prototyping": "leafcutter/atlas-flows"
+      },
+      "flows": {}
+    },
+    "FlowRoute": {
+      "canonical_mock_data": {
+        "ux-prototyping": "leafcutter/atlas-flows"
+      },
+      "flows": {}
     },
     "FrontendComponent": {
       "canonical_mock_data": {
