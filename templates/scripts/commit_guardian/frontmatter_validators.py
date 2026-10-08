@@ -283,7 +283,8 @@ def validate_paths(fm: dict[str, Any], project_root_path: Path) -> list[str]:
             resolved = resolve_frontmatter_path_entry(entry, field)
             if isinstance(resolved, PathEntryRefusal):
                 errors.append(
-                    f"Unsupported entry in '{field}': accepted shapes are "
+                    f"Unsupported entry in '{field}': {resolved.entry!r} "
+                    f"({resolved.reason}); accepted shapes are "
                     f"{', '.join(resolved.accepted_shapes)}"
                 )
                 continue
