@@ -60,9 +60,11 @@ Checks performed:
      behind (never an error). A BEHIND verdict is made durable on the journey
      as a `behind` mark, written/removed by `_sync_behind_marks` (ADR-043).
 
-SCHEMA VALIDATION IS MANDATORY: jsonschema is a hard dependency. When it is not
-importable the validator exits non-zero (2) up front rather than warn-and-skip —
-a missing package must never silently disable every schema check.
+SCHEMA VALIDATION IS MANDATORY: jsonschema is a hard dependency. When it, or a
+module the validator needs alongside it (e.g. `referencing`), is not importable the
+validator exits non-zero (2) up front rather than warn-and-skip — a missing package
+must never silently disable every schema check. The refusal names the module that
+actually failed to import, not always jsonschema.
 
 REALIZATION AXIS: flows/mockups/mock-data may carry an optional top-level
 `realization` in {built, spec, mock} (absent → built). It is orthogonal to
@@ -98,6 +100,14 @@ DECISION HISTORY
 - 2026-07-14 00:00: Added derived-vs-source checks (D1-D4), mockup schema validation, and
   the screen->mockup resolution gate. Derivation logic is now shared with
   generate_product_truth (the single writer). (product-truth linking infrastructure)
+- 2026-10-08 00:00 [python-coder]: UXP-300-4 — the guarded import no longer wraps
+  `import jsonschema` and `from product_truth_contracts import ...` in one
+  try/except. The ImportError is kept and main() names the module that actually
+  failed; a missing `referencing` reports the installed jsonschema version and that
+  it is too old (< 4.18) instead of falsely claiming jsonschema is not installed.
+  Still a hard refusal (exit 2) in every case. The guarded imports and the refusal
+  logic now live in the sibling product_truth_dependencies.py (this file was over
+  its 400-line ratchet); main() calls its dependency_refusal(). (UXP-300-4)
 - 2026-07-14 00:00: Trustworthy-status hardening. jsonschema made a HARD dependency
   (exit 2 when absent, no more warn-and-skip). Added the anti-phantom-done
   truth-evidence gate (check 10) keyed on the new `realization` axis. Declared
@@ -337,16 +347,9 @@ from product_truth_label_checks import (  # noqa: F401  # re-exported for caller
     load_component_registry,
 )
 
-# jsonschema is a HARD dependency. A missing import used to warn-and-skip, which
-# silently no-oped every schema check on hosts without the package — the exact
-# "green sign-off on a broken feature" failure this store exists to prevent. We
-# import it at module load and surface the absence as a hard, non-zero exit in
-# main() (see JSONSCHEMA_MISSING) instead of degrading to no validation.
-try:
-    import jsonschema
-    from product_truth_contracts import check_contracts, contract_summary
-except ImportError:
-    jsonschema = None  # type: ignore[assignment]
+# jsonschema is a HARD dependency: its guarded import, and the refusal main() returns
+# (exit 2) when it or `referencing` cannot load, live in product_truth_dependencies.
+from product_truth_dependencies import check_contracts, contract_summary, dependency_refusal
 
 logger = logging.getLogger("validate_product_truth")
 
@@ -677,12 +680,9 @@ def main() -> int:
     args = parser.parse_args()
     logging.basicConfig(level=logging.WARNING if args.quiet else logging.INFO, format="%(message)s")
 
-    if jsonschema is None:
-        logger.error(
-            "FAIL: jsonschema is required for product-truth validation but is not installed. "
-            "Install it (pip install 'jsonschema>=4.0', or pip install -r requirements-dev.txt). "
-            "Refusing to run — schema validation must not silently no-op."
-        )
+    refusal_text = dependency_refusal()
+    if refusal_text is not None:
+        logger.error("%s", refusal_text)
         return 2
 
     report = run_checks()
