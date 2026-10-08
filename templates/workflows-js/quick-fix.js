@@ -168,6 +168,7 @@ const KNOWLEDGE_ROUTING_SCHEMA = {
     written: { type: 'integer' },
     unwritten: { type: 'integer' },
     detail: { type: ['string', 'null'] },
+    written_paths: { type: 'array', items: { type: 'string' } },
   },
   required: ['case'],
 }
@@ -208,6 +209,20 @@ function classifyKnowledgeRouting(reply) {
         ? reply.detail
         : null,
   }
+}
+
+/* INF-700a-1-iii: the files the routing step reports it wrote inside the worktree, as
+   extra numbered entries (5., 6., ...) for the fix commit's stage list, so they are
+   staged BY NAME and not lost with the worktree. Fail-open: '' when the step did not
+   run or wrote nothing, which leaves the commit prompt exactly as it was. Paths outside
+   the worktree, the harvester's own bookkeeping, and already-staged paths are dropped. */
+function routedStageEntries(reply, root, alreadyStaged) {
+  if (classifyKnowledgeRouting(reply).case === 'did_not_run' || !Array.isArray(reply.written_paths)) return ''
+  const inTree = (p) => typeof p === 'string' && p !== '' && !/[\n"]/.test(p) && (p.startsWith(`${root}/`) || !/^([a-zA-Z]:|[\\/])/.test(p))
+  const staged = new Set(alreadyStaged.map((p) => normalizeArtifactPath(p, root)))
+  return [...new Set(reply.written_paths.filter(inTree).map((p) => normalizeArtifactPath(p, root)))]
+    .filter((p) => p && !p.split('/').includes('..') && !p.startsWith('debugging/logs/') && !staged.has(p))
+    .map((p, i) => `\n  ${i + 5}. ${p}  — learning written by the Knowledge Routing step`).join('')
 }
 
 // ---------------------------------------------------------------------------
@@ -551,16 +566,16 @@ if (redResult.passed === true || redResult.outcome === 'passed') {
 
 log(`Red phase confirmed under AC_ENFORCE_STRICT=1: test fails as expected.`)
 
-// Check for root-cause divergence (BP-600e-2)
-//
-// The previous check asked whether the FIRST WHITESPACE TOKEN of the prose
-// root cause appeared anywhere in the pytest output. That fails in both
-// directions and for the same reason: one word is not a topic. A root cause
-// beginning "the ..." matched almost any failure text, so real divergence went
-// unreported; a correct diagnosis paraphrased without its own first word was
-// reported as divergent. What distinguishes the two cases is whether the two
-// texts are ABOUT the same thing, so the comparison is over their content
-// vocabulary rather than over any single token.
+/* Check for root-cause divergence (BP-600e-2)
+
+   The previous check asked whether the FIRST WHITESPACE TOKEN of the prose
+   root cause appeared anywhere in the pytest output. That fails in both
+   directions and for the same reason: one word is not a topic. A root cause
+   beginning "the ..." matched almost any failure text, so real divergence went
+   unreported; a correct diagnosis paraphrased without its own first word was
+   reported as divergent. What distinguishes the two cases is whether the two
+   texts are ABOUT the same thing, so the comparison is over their content
+   vocabulary rather than over any single token. */
 const failureMsg = redResult.failure_message || redResult.output_summary || ''
 
 // Words that carry no diagnostic weight. Counting these is what let the old
@@ -596,33 +611,30 @@ function divergenceContentWords(text) {
 const diagnosisWords = divergenceContentWords(root_cause)
 const failureWords = divergenceContentWords(failureMsg)
 
-let sharedWords = 0
-for (const word of diagnosisWords) {
-  if (failureWords.has(word)) sharedWords += 1
-}
+const sharedWords = [...diagnosisWords].filter((word) => failureWords.has(word)).length
 
 // With no failure text, or a diagnosis carrying no content words at all, there
 // is nothing to compare. Say so rather than inventing a verdict in either
 // direction — an unanalysable diagnosis is not evidence of divergence.
 const comparable = failureMsg.length > 0 && diagnosisWords.size > 0
 
-// The test is TOTAL DISJOINTNESS: warn only when the two texts share no
-// substantive vocabulary whatsoever.
-//
-// A proportional threshold was tried first and rejected on evidence. Requiring
-// some fraction of the diagnosis's vocabulary to reappear means picking a
-// number, and any number is wrong somewhere: at 0.3 a real diagnosis paired
-// with a terse one-line assertion ("stub root cause for harness execution" vs
-// "stub AssertionError: bug not fixed", overlap 0.2) is flagged as divergent
-// and a correct run halts. Halting correct work is the more expensive error
-// here, because this gate sits in front of every fix the workflow makes, and a
-// missed warning still faces human review of the fix itself.
-//
-// Being explicit about the limitation: one incidental shared word suppresses
-// the warning. That is the honest ceiling of a lexical comparison and the
-// reason BP-600e-2's it_requirements ask for a semantic one. What this rule
-// does guarantee is that it never fires on a pair that genuinely shares a
-// topic — which is what makes it safe to run unattended.
+/* The test is TOTAL DISJOINTNESS: warn only when the two texts share no
+   substantive vocabulary whatsoever.
+
+   A proportional threshold was tried first and rejected on evidence. Requiring
+   some fraction of the diagnosis's vocabulary to reappear means picking a
+   number, and any number is wrong somewhere: at 0.3 a real diagnosis paired
+   with a terse one-line assertion ("stub root cause for harness execution" vs
+   "stub AssertionError: bug not fixed", overlap 0.2) is flagged as divergent
+   and a correct run halts. Halting correct work is the more expensive error
+   here, because this gate sits in front of every fix the workflow makes, and a
+   missed warning still faces human review of the fix itself.
+
+   Being explicit about the limitation: one incidental shared word suppresses
+   the warning. That is the honest ceiling of a lexical comparison and the
+   reason BP-600e-2's it_requirements ask for a semantic one. What this rule
+   does guarantee is that it never fires on a pair that genuinely shares a
+   topic — which is what makes it safe to run unattended. */
 const divergenceCheck = comparable && sharedWords === 0
 
 if (!comparable && failureMsg.length > 0) {
@@ -722,9 +734,7 @@ const expectedArtifacts = new Set(
   [ac_path, parent_ac_path, testFile, ...((baselineResult && Array.isArray(baselineResult.dirty_paths)) ? baselineResult.dirty_paths : [])].map((p) => normalizeArtifactPath(p, worktreeRoot))
 )
 
-const genuineExtraFiles = (fixResult.extra_files || []).filter(
-  (f) => !expectedArtifacts.has(normalizeArtifactPath(f, worktreeRoot))
-)
+const genuineExtraFiles = (fixResult.extra_files || []).filter((f) => !expectedArtifacts.has(normalizeArtifactPath(f, worktreeRoot)))
 
 // modified_files gets the same treatment, plus target_file itself. scope_expanded
 // is NOT the trigger on its own — the agent can set it true while naming nothing in
@@ -913,6 +923,8 @@ const knowledgeRoutingReply = await agent(
   `Run this single Bash command from the repository root and read its JSON ` +
   `summary and exit code:\n` +
   `   python3 {{config.output_root}}/scripts/knowledge/harvest_learnings.py\n\n` +
+  `Immediately before AND after it, run: git -C "${worktreeRoot}" status --porcelain --untracked-files=all\n` +
+  `Return every repo-relative path in the AFTER output that is absent from BEFORE as "written_paths" ([] if none).\n\n` +
   `Classify the outcome as exactly one of three cases:\n` +
   `  - "completed": the harvester ran to completion (exit 0 or 3 — some ` +
   `records left unroutable is still a completed run).\n` +
@@ -944,7 +956,7 @@ const commitResult = await agent(
                           the AC guardian hooks read the git index, not the store, so an
                           unstaged parent is never checked and the back-link silently rots)
   3. ${testFile}        — new test covering the bug
-  4. ${target_file}     — bug fix
+  4. ${target_file}     — bug fix${routedStageEntries(knowledgeRoutingReply, worktreeRoot, [ac_path, parent_ac_path, testFile, target_file])}
 
 Before staging, flip work_status on ${ac_path} from todo to done and add ${testFile} to its
 covered_by list — the test is green and mutation-proved, so the record should say so.
