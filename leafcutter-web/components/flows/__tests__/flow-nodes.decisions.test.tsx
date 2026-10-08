@@ -40,6 +40,7 @@ beforeAll(() => {
 
 import { FlowStepNode, FlowDecisionNode } from "@/components/flows/flow-nodes";
 import { FlowExplorer } from "@/components/flows/flow-explorer";
+import { testFlow } from "./flow-decisions.fixture";
 
 // ---------------------------------------------------------------------------
 // Wrap any component that uses React Flow handles / hooks in a Provider
@@ -60,71 +61,6 @@ const BASE_NODE_PROPS = {
   zIndex: 0,
   sourcePosition: "bottom" as any,
   targetPosition: "top" as any,
-};
-
-// ---------------------------------------------------------------------------
-// Minimal Flow object for FlowExplorer tests.
-// FlowExplorer reads: flow.steps, flow.branches, flow.scenarios,
-// flow.realization, flow.implSummary (acDone, acTotal), flow.id.
-// All fields use the processed (camelCase) FlowStep/FlowBranch shape.
-// ---------------------------------------------------------------------------
-
-function mkAcRef(id: string, status: "done" | "not_started") {
-  return { id, title: id, level: "L2" as any, workStatus: status, resolved: true };
-}
-
-function mkFlowStep(id: string, order: number, implements_: string[], status: "done" | "not_started") {
-  return {
-    id,
-    order,
-    label: id,
-    human: `${id}`,
-    screen: null,
-    agent: null,
-    produces: [],
-    consumes: [],
-    reads: [],
-    writes: [],
-    implements: implements_,
-    implStatus: status,
-    fallbackStatus: status,
-    acs: implements_.map((a) => mkAcRef(a, status)),
-    expandsTo: null,
-  };
-}
-
-/** A fully-typed Flow object that FlowExplorer can render without crashing. */
-const testFlow: any = {
-  id: "test/deliver-a-feature",
-  component: "build-pipeline",
-  product: "Leafcutter",
-  name: "Deliver a feature end-to-end",
-  summary: "Test flow",
-  kind: "user",
-  source: "real",
-  level: "journey",
-  realization: "built",
-  status: "active",
-  readiness: "approved",
-  entities: [],
-  mockDataRef: null,
-  steps: [
-    mkFlowStep("plan", 1, ["UXP-550"], "done"),
-    mkFlowStep("build", 2, ["UXP-551"], "done"),
-    mkFlowStep("finalize", 3, ["UXP-552"], "done"),
-  ],
-  branches: [],
-  scenarios: [],
-  implSummary: {
-    done: 3,
-    in_progress: 0,
-    not_started: 0,
-    total: 3,
-    asof: null,
-    acDone: 3,
-    acTotal: 3,
-  },
-  filePath: "/test/deliver-a-feature.flow.json",
 };
 
 // ===========================================================================
@@ -395,7 +331,7 @@ describe("UXP-602 — FlowExplorer: AC nodes off by default", () => {
     // false so no AC nodes render initially."
     // We confirm (a) the toggle is present in the off state, and
     // (b) no AC id text appears in the rendered output.
-    render(<FlowExplorer flow={testFlow} />);
+    render(<FlowExplorer flow={testFlow} mock={null} />);
 
     // The toggle button in off state has title "Show AC nodes in graph"
     const toggle = screen.queryByTitle("Show AC nodes in graph");
@@ -421,7 +357,7 @@ describe("UXP-605 — Show AC nodes in graph toggle", () => {
   it("show_acs_toggle_defaults_off", () => {
     // covers: UXP-605
     // "The toggle defaults to off."
-    render(<FlowExplorer flow={testFlow} />);
+    render(<FlowExplorer flow={testFlow} mock={null} />);
     // In the off state, the button title is "Show AC nodes in graph"
     const toggle = screen.getByTitle("Show AC nodes in graph");
     expect(toggle).toBeInTheDocument();
@@ -434,7 +370,7 @@ describe("UXP-605 — Show AC nodes in graph toggle", () => {
     // "When the person turns the toggle on, the graph restores the fully-wired
     // AC-node view." After clicking, localStorage is updated and (if React Flow
     // renders in jsdom) AC node content appears.
-    render(<FlowExplorer flow={testFlow} />);
+    render(<FlowExplorer flow={testFlow} mock={null} />);
     const toggle = screen.getByTitle("Show AC nodes in graph");
     fireEvent.click(toggle);
     // At minimum: localStorage must reflect the preference change
@@ -458,7 +394,7 @@ describe("UXP-605a — Show AC nodes preference persisted in localStorage", () =
     // "With localStorage 'flows:showAcNodes' set to '1', a fresh mount …
     // initializes showAcNodes true."
     localStorage.setItem("flows:showAcNodes", "1");
-    render(<FlowExplorer flow={testFlow} />);
+    render(<FlowExplorer flow={testFlow} mock={null} />);
     // In the ON state the toggle title is "Hide AC nodes from graph"
     expect(screen.queryByTitle("Hide AC nodes from graph")).not.toBeNull();
     // The "Show" title should NOT be present (toggle is on)
@@ -468,7 +404,7 @@ describe("UXP-605a — Show AC nodes preference persisted in localStorage", () =
   it("show_acs_preference_off_when_localstorage_absent", () => {
     // covers: UXP-605a
     // "With '0' or absent it initializes false."
-    render(<FlowExplorer flow={testFlow} />);
+    render(<FlowExplorer flow={testFlow} mock={null} />);
     expect(screen.queryByTitle("Show AC nodes in graph")).not.toBeNull();
     expect(screen.queryByTitle("Hide AC nodes from graph")).toBeNull();
   });
@@ -477,7 +413,7 @@ describe("UXP-605a — Show AC nodes preference persisted in localStorage", () =
     // covers: UXP-605a
     // Explicit '0' must also initialize to off.
     localStorage.setItem("flows:showAcNodes", "0");
-    render(<FlowExplorer flow={testFlow} />);
+    render(<FlowExplorer flow={testFlow} mock={null} />);
     expect(screen.queryByTitle("Show AC nodes in graph")).not.toBeNull();
     expect(screen.queryByTitle("Hide AC nodes from graph")).toBeNull();
   });
@@ -491,7 +427,7 @@ describe("UXP-605a — Show AC nodes preference persisted in localStorage", () =
       throw new Error("Storage quota exceeded");
     };
     try {
-      expect(() => render(<FlowExplorer flow={testFlow} />)).not.toThrow();
+      expect(() => render(<FlowExplorer flow={testFlow} mock={null} />)).not.toThrow();
       // Falls back to off when storage throws
       expect(screen.queryByTitle("Show AC nodes in graph")).not.toBeNull();
     } finally {
@@ -504,7 +440,7 @@ describe("UXP-605a — Show AC nodes preference persisted in localStorage", () =
     // "The toggle state is persisted as a view preference." After clicking the
     // toggle on, localStorage 'flows:showAcNodes' must be set to '1'. After
     // clicking off again, it must be set to '0'.
-    render(<FlowExplorer flow={testFlow} />);
+    render(<FlowExplorer flow={testFlow} mock={null} />);
 
     // Turn on
     fireEvent.click(screen.getByTitle("Show AC nodes in graph"));

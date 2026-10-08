@@ -1,0 +1,173 @@
+"""
+MODULE: test_kernel_run
+GOAL: Prove optional graph evidence survives the full kernel run and checkpoint.
+BUSINESS CONTEXT: Retrieval must ground actual decisions rather than only helper outputs.
+ARCHITECTURE: Existing ScenarioCase real service/stores/checkpoint with an offline knowledge port.
+"""
+
+import json
+from pathlib import Path
+
+from kernel.bootstrap import build_bindings
+from kernel.config import SourceConfig
+from kernel.contracts import RunStatus, new_id, schema_ids
+from kernel.providers.fakes import choice_answer
+from knowledge.config import KnowledgeConfig
+from knowledge.contracts import Entity, KnowledgeEvidence, KnowledgeRetrievalResult, SourceReference
+from tests.kernel.integration.scenario_support import (
+    ScenarioCase,
+    FakeHostResponder,
+    options_response,
+    answer_human,
+)
+
+
+async def resume_supplied_synthesis(case, envelope):
+    """Answer one actual synthesis wait using only its supplied evidence excerpts."""
+    if envelope.status != RunStatus.WAITING_HOST or envelope.pending_interaction.operation != "synthesize_evidence":
+        return envelope
+    packet = envelope.pending_interaction
+    assert packet.output_schema_id == schema_ids.FINDINGS
+    assert len(packet.input_artifact_refs) == 1
+    artifact = json.loads(Path(packet.input_artifact_refs[0]).read_text(encoding="utf-8"))
+    assert artifact["operation"] == "synthesize_evidence"
+    assert {row["id"] for row in artifact["evidence"]} == set(packet.input_evidence_ids)
+    findings = [
+        {"id": new_id("find"), "kind": "inference", "claim": row["excerpt"],
+         "supporting_evidence_ids": [row["id"]], "producer": "controlled-host"}
+        for row in artifact["evidence"] if row.get("excerpt")
+    ]
+    assert findings, "This positive fixture must actually receive source excerpts"
+    responder = FakeHostResponder({schema_ids.FINDINGS: {
+        "findings": findings, "unknowns": ["No independent execution proof is supplied."]}})
+    resumed = await case.service().resume_run(envelope.run_id, responder.answer(envelope))
+    assert resumed.run_id == envelope.run_id
+    assert not (resumed.status == RunStatus.WAITING_HOST
+                and resumed.pending_interaction.operation == "synthesize_evidence"), "Unexpected repeated synthesis"
+    return resumed
+
+
+class TestKnowledgeRun(ScenarioCase):
+    """Complete a grounded decision and reopen its persisted checkpoint."""
+
+    domains = ("primary",)
+
+    def setUp(self):
+        """Bind the trusted fixture repository to a graph source without network setup."""
+        super().setUp()
+        self.config = self.config.model_copy(
+            update={
+                "knowledge": KnowledgeConfig(
+                    backend="neo4j", repository_id="fixture", repository_root=str(self.repo)
+                ),
+                "sources": [
+                    SourceConfig(
+                        id="knowledge.graph",
+                        kind="graph_query",
+                        categories=[
+                            "prior_decisions",
+                            "task_context",
+                            "existing_patterns",
+                            "internal_principles",
+                        ],
+                    )
+                ],
+            }
+        )
+        self.calls = []
+        # Natural-language retrieval asks Jev to pick the graph read (DK-300d-4); answer it here,
+        # not in the shared ScenarioCase, so selector regressions stay visible elsewhere.
+        self.jev.script("knowledge.operation_select", "operation", choice_answer("get_component_context"))
+
+    def service(self):
+        """Inject the fake port through the real production binding builder."""
+        service = super().service()
+        owner = self
+
+        class Port:
+            """Return attributable fixture evidence at the selected disclosure."""
+
+            async def capabilities(self):
+                """Advertise graph only so no semantic service is needed."""
+                return {"graph": True}
+
+            async def retrieve(self, request):
+                """Record the actual request and return the declared fixture source."""
+                owner.calls.append(request)
+                return KnowledgeRetrievalResult(
+                    request_id=request.request_id,
+                    retrieval_id="run-retrieval",
+                    status="ok",
+                    requested_mode=request.mode,
+                    executed_mode=request.mode,
+                    source_sha="a" * 40,
+                    generation_id="fixture-generation",
+                    evidence=[
+                        KnowledgeEvidence(
+                            entity=Entity(
+                                canonical_id="ADR-900",
+                                kind="ADR",
+                                title="Capability shape",
+                                source=SourceReference(
+                                    repository_id="fixture",
+                                    source_sha="a" * 40,
+                                    path="docs/architecture/adrs/ADR-900-capability-shape.md",
+                                ),
+                            ),
+                            content="Use an encapsulated subgraph for isolated state."
+                            if request.disclosure_level
+                            else None,
+                            disclosure_level=request.disclosure_level,
+                        )
+                    ],
+                )
+
+        self.env.bindings = build_bindings(self.snapshot, knowledge_retriever=Port())
+        return service
+
+    async def test_full_run_persists_attributable_knowledge_evidence(self):
+        """A host sees the evidence, the run completes, and fresh checkpoint reads retain it."""
+        # angle: criterion
+        # angle: reachability
+        # covers: KM-400e-3
+        task = self.task("primary", request=False)
+        task = task.model_copy(
+            update={"scope": task.scope.model_copy(update={"component_ids": ["decision_kernel"]})}
+        )
+        self.params["satisfies"] = {("c1", "A"): 0.95, ("c2", "A"): 0.9}
+        paused = await self.service().start_run(task)
+        assert "knowledge.operation_select" in {batch.purpose for batch in self.jev.batches}, (
+            "The graph read ran without the Jev operation selection (DK-300d-4).")
+        selected_operations = [
+            item.diagnostics.get("knowledge_selected_operation")
+            for item in (await self.checkpoint_values(paused.run_id))["results"].values()
+            if "knowledge_selection" in item.diagnostics
+        ]
+        assert selected_operations and set(selected_operations) == {"get_component_context"}, (
+            selected_operations, paused.model_dump_json())
+        paused = await resume_supplied_synthesis(self, paused)
+        assert paused.status == RunStatus.WAITING_HOST
+        assert paused.pending_interaction.input_evidence_ids
+        responder = FakeHostResponder({schema_ids.OPTIONS: options_response("primary")})
+        approval = await self.service().resume_run(paused.run_id, responder.answer(paused))
+        assert approval.status == RunStatus.WAITING_HUMAN
+        final = await self.service().resume_run(
+            paused.run_id, answer_human(approval, {"choice_id": "approve"})
+        )
+        assert final.status == RunStatus.COMPLETED
+        values = await self.checkpoint_values(final.run_id)
+        assert "retrieve.repository" in self.capabilities_used(values)
+        evidence = list(values["evidence"].values())
+        selected = [e for e in evidence if e.source.id == "knowledge.retrieval"]
+        assert selected and all(e.source.source_version.commit == "a" * 40 for e in selected)
+        assert all("run-retrieval" in e.provenance.strategy for e in selected)
+        assert any(e.excerpt and "subgraph" in e.excerpt for e in selected)
+        assert self.calls
+
+
+# DECISION HISTORY
+# ================================================================================
+# - 2026-10-01 20:00 [python-coder]: Verify integration through persisted full decision flow. (#TICKET-20261001-KM-400e-3)
+
+# - 2026-10-02 17:00 [test-writer]: Answer the actual configured synthesis packet before options without inventing facts. (#TICKETLESS reason=main-integration-fixture-repair)
+# - 2026-10-06 12:00 [test-writer]: Script the operation_select question in this fixture (not the shared ScenarioCase) and assert the persisted selection, so a selector bypass fails. (#KnowledgeFixturesOpSelect)

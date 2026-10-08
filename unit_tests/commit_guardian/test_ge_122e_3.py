@@ -181,7 +181,6 @@ DECISION HISTORY
 
 from __future__ import annotations
 
-import hashlib
 import importlib.util as _ilu
 import inspect
 import io
@@ -833,66 +832,9 @@ class TestNoExemptionConfigurationExistsOnAnySurface(unittest.TestCase):
 
 
 # ---------------------------------------------------------------------------
-# AC-4: unnumbered diagrams unchanged by name and location.
+# AC-4 (unnumbered diagrams unchanged by name and location) lives in
+# test_ge_122e_3_protected_diagrams.py (pinned-by-name set; see its DECISION HISTORY).
 # ---------------------------------------------------------------------------
-
-
-class TestUnnumberedArtifactsUnchangedByNameAndLocation(_RealCollectionCopyTestCase):
-    def test_unnumbered_artifacts_unchanged_by_name_and_location(self):
-        # covers: GE-122e-3
-        """AC-4: every diagram in the copied collection that legitimately
-        carries no level-and-sequence number is unchanged in name AND
-        location after the pass runs -- asserted per-file by name/path/
-        content-hash, never by count (a count is preserved by renaming one
-        of them, which is exactly the tidy-up this clause exists to fail).
-
-        ``README.md`` is excluded from this AC's population on purpose: it is
-        the folder-INDEX artifact ``build_architecture_namespace_scaffolds``
-        writes to ``docs/architecture/diagrams/`` (KI-BO-030 / GE-122d-3-ii),
-        not a diagram. Counting a folder index as an "unnumbered diagram"
-        would be a category error that recurs every time the scaffold lands
-        (it also seeds an equivalent ``docs/architecture/adrs/README.md``,
-        confirmed absent from that namespace as of this writing, so the
-        decisions namespace has no equivalent hardcoded-count assertion to
-        carry the same defect today -- see this test's own DECISION HISTORY
-        entry below). Production's own scanner
-        (``_uniqueness_scanners._scan_filename_numbered``) deliberately keeps
-        counting README.md toward ``inspected_count`` -- that contract is
-        unchanged and still covered by
-        ``TestInspectedCountsEqualActualArtifactCounts`` above, which computes
-        its own expected count via an unfiltered ``*.md`` glob. Only THIS
-        test's unnumbered-diagrams population, which is specifically about
-        diagram identity, narrows.
-        """
-        diagrams_dir = self.root / "docs" / "architecture" / "diagrams"
-        unnumbered_before = {
-            path.name: (path, hashlib.sha256(path.read_bytes()).hexdigest())
-            for path in sorted(diagrams_dir.glob("*.md"))
-            if not _DIAGRAM_FILENAME_RE.match(path.name) and path.name != "README.md"
-        }
-        self.assertEqual(
-            len(unnumbered_before),
-            11,
-            msg=(
-                f"fixture sanity check: expected 11 unnumbered diagrams (excluding the folder-index "
-                f"README.md) in the current repaired collection, found {len(unnumbered_before)}: "
-                f"{sorted(unnumbered_before)}. This is a secondary sanity check on today's known repo "
-                "state -- the load-bearing assertions below are by name and location, not this count."
-            ),
-        )
-
-        _mod.run_uniqueness_pass(self.root)  # read-only; must not touch anything
-
-        remaining_names = {path.name for path in diagrams_dir.glob("*.md")}
-        for name, (path, digest_before) in unnumbered_before.items():
-            self.assertIn(name, remaining_names, msg=f"unnumbered diagram {name!r} is no longer present by name at {diagrams_dir}.")
-            self.assertTrue(path.exists(), msg=f"unnumbered diagram {name!r} is no longer present at its original location {path}.")
-            digest_after = hashlib.sha256(path.read_bytes()).hexdigest()
-            self.assertEqual(
-                digest_after,
-                digest_before,
-                msg=f"unnumbered diagram {name!r} at {path} changed content after the pass ran -- it must be deliberately outside the repair.",
-            )
 
 
 # ---------------------------------------------------------------------------

@@ -15,3 +15,8 @@
 *.zip binary
 *.tar.gz binary
 *.pdf binary
+
+# Preserve immutable evaluation receipt bytes and the exact recorded replay source.
+reports/retrieval-scenarios-2026-10-02/**/*.json -text
+reports/retrieval-scenarios-2026-10-02-post-sync-84006ac3/**/*.json -text
+reports/retrieval-scenarios-2026-10-02-post-sync-84006ac3/replay-recorded.py.txt -text

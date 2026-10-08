@@ -1,0 +1,3376 @@
+{
+  "id": "leafcutter/retrieve-project-knowledge",
+  "component": "knowledge-management",
+  "product": "Leafcutter",
+  "name": "Ask a question. Get an answer with sources.",
+  "level": "journey",
+  "summary": "Ask a question; Jev chooses retrieval, evaluates evidence and returns an answer or a bounded next step.",
+  "kind": "data",
+  "source": "real",
+  "realization": "spec",
+  "status": "active",
+  "readiness": "draft",
+  "version": 6,
+  "tags": [
+    "retrieval",
+    "target-design"
+  ],
+  "entities": [],
+  "steps": [
+    {
+      "id": "question",
+      "label": "Ask the question",
+      "agent": "Caller",
+      "human": "Provide the retrieval question. Workspace and authorized repository context come from the host; keywords, known IDs or constraints are optional.\n\nThe caller does not choose a query operation, retrieval method, storage source or component filter.\n\nI/O boundary: The caller supplies the question. Jev selects retrieval methods later; no method choice is required in this existing generic kernel task boundary.\n\nContract fields and examples (generated)\nConsumes:\n  task_input/goal: string (required)\n  task_input/caller: object (required)\n  task_input/scope: object (required)\n  task_input/requested_output_schema: null|string (optional; default null)\n  task_input/input_payload_schema: null|string (optional; default null)\n  task_input/input_payload: null|object (optional; default null)\n  task_input/permissions: array (optional)\n  Runtime contract: [task_input](kernel/contracts/task.py)\nProduces:\n  No checked JSON binding documented in this direction.\n\nPROPOSED - missing JSON binding (both): Question-first retrieval entry composition\nTaskInput already accepts a goal with trusted scope and no caller-selected operation. The new retrieval-specific intake/catalog provisioning route is not wired.\nDesign source: [docs/product-truth/flows/leafcutter/retrieve-project-knowledge.flow.json](docs/product-truth/flows/leafcutter/retrieve-project-knowledge.flow.json)\n\nInput illustrative task_input projection; not an execution receipt — task_input; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"goal\": \"For KM-500c-2, what must tests demonstrate?\",\n  \"caller\": {\n    \"id\": \"agent-example\",\n    \"kind\": \"service\"\n  },\n  \"scope\": {\n    \"workspace_id\": \"example-workspace\",\n    \"repository_root\": \"C:/example/leafcutter\",\n    \"revision\": {\n      \"commit\": \"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\n      \"dirty\": false\n    },\n    \"component_ids\": [\n      \"knowledge-retrieval\"\n    ],\n    \"read_roots\": [\n      \"docs/acceptance-criteria\"\n    ],\n    \"source_ids\": [\n      \"repository\"\n    ]\n  },\n  \"requested_output_schema\": null,\n  \"input_payload_schema\": null,\n  \"input_payload\": null,\n  \"permissions\": [\n    \"read_repo\"\n  ]\n}",
+      "order": 1,
+      "implements": [],
+      "produces": [],
+      "impl_asof": "2026-10-02",
+      "impl_status": "not_started",
+      "consumes": [
+        "task_input/goal: string (required)",
+        "task_input/caller: object (required)",
+        "task_input/scope: object (required)",
+        "task_input/requested_output_schema: null|string (optional; default null)",
+        "task_input/input_payload_schema: null|string (optional; default null)",
+        "task_input/input_payload: null|object (optional; default null)",
+        "task_input/permissions: array (optional)"
+      ],
+      "io_contracts": {
+        "consumes": [
+          {
+            "contract": "task_input",
+            "fields": [
+              {
+                "path": "/goal",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/caller",
+                "types": [
+                  "object"
+                ],
+                "required": true
+              },
+              {
+                "path": "/scope",
+                "types": [
+                  "object"
+                ],
+                "required": true
+              },
+              {
+                "path": "/requested_output_schema",
+                "types": [
+                  "null",
+                  "string"
+                ],
+                "required": false,
+                "default": null
+              },
+              {
+                "path": "/input_payload_schema",
+                "types": [
+                  "null",
+                  "string"
+                ],
+                "required": false,
+                "default": null
+              },
+              {
+                "path": "/input_payload",
+                "types": [
+                  "null",
+                  "object"
+                ],
+                "required": false,
+                "default": null
+              },
+              {
+                "path": "/permissions",
+                "types": [
+                  "array"
+                ],
+                "required": false
+              }
+            ]
+          }
+        ],
+        "produces": [],
+        "examples": [
+          {
+            "contract": "task_input",
+            "mode": "projection",
+            "origin": "illustrative",
+            "label": "Input illustrative task_input projection; not an execution receipt",
+            "value": {
+              "goal": "For KM-500c-2, what must tests demonstrate?",
+              "caller": {
+                "id": "agent-example",
+                "kind": "service"
+              },
+              "scope": {
+                "workspace_id": "example-workspace",
+                "repository_root": "C:/example/leafcutter",
+                "revision": {
+                  "commit": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+                  "dirty": false
+                },
+                "component_ids": [
+                  "knowledge-retrieval"
+                ],
+                "read_roots": [
+                  "docs/acceptance-criteria"
+                ],
+                "source_ids": [
+                  "repository"
+                ]
+              },
+              "requested_output_schema": null,
+              "input_payload_schema": null,
+              "input_payload": null,
+              "permissions": [
+                "read_repo"
+              ]
+            }
+          }
+        ],
+        "missing_bindings": [
+          {
+            "name": "Question-first retrieval entry composition",
+            "direction": "both",
+            "reason": "TaskInput already accepts a goal with trusted scope and no caller-selected operation. The new retrieval-specific intake/catalog provisioning route is not wired.",
+            "source": "docs/product-truth/flows/leafcutter/retrieve-project-knowledge.flow.json"
+          }
+        ]
+      }
+    },
+    {
+      "id": "interpret-needs",
+      "label": "Interpret needs (proposed call-site)",
+      "agent": "System",
+      "order": 2,
+      "human": "Proposed integration only: dispatch the original question and offered meanings to [Interpret what a retrieval question needs](docs/product-truth/flows/leafcutter/retrieval-needs-interpretation.flow.json), then carry its typed needs into planning. The child is implemented as an isolated experiment; this parent call-site is unwired and does not run before existing retrievals. It neither selects methods nor replaces Jev's later planning.\n\nProduction adoption and handling unresolved or semantically incorrect interpretations remain open. The current experiment is called directly through its own KernelService setup; its result is not yet consumed by this journey.\n\nThis proposed call requires an externally supplied finite needs catalog, source_scope metadata, actual kernel Scope and caller Actor in addition to the question. Catalog supply is not implemented by this parent. Context and echoed metadata cannot grant permission.\n\nConcrete contracts and actual N03 examples are now visible at each child step: [prepared request](docs/product-truth/flows/leafcutter/retrieval-needs-interpretation.flow.json#prepare-request) and [returned typed payload](docs/product-truth/flows/leafcutter/retrieval-needs-interpretation.flow.json#return-needs). These links describe the implemented isolated contract; this parent binding remains proposed. Field paths identify the child contract only: no serialized parent planning-input shape or binding is implemented or defined here.\n\nI/O boundary: Exact existing child contracts; these are illustrative independent examples, not the observed N03 receipt. The isolated implementation is not silently integrated into this spec parent.\n\nContract fields and examples (generated)\nConsumes:\n  retrieval_needs_request/original_question: string (required)\n  retrieval_needs_request/context: array (optional; default [])\n  retrieval_needs_request/known_ids: array (optional; default [])\n  retrieval_needs_request/source_scope: object (optional; default {})\n  retrieval_needs_request/catalog: object (required)\n  Runtime contract: [retrieval_needs_request](kernel/contracts/retrieval_needs.py)\nProduces:\n  retrieval_needs_output/original_question: string (required)\n  retrieval_needs_output/selections: object (required)\n  retrieval_needs_output/uncertain: object (required)\n  retrieval_needs_output/detail_mode: string (required)\n  retrieval_needs_output/completeness: string (required)\n  retrieval_needs_output/hierarchy_scope: string (required)\n  retrieval_needs_output/scope_resolution: string (required)\n  retrieval_needs_output/unresolved: array (optional; default [])\n  retrieval_needs_output/status: string (optional; default \"decided\")\n  retrieval_needs_output/engine: string (optional; default \"host_llm\")\n  Runtime contract: [retrieval_needs_output](kernel/contracts/retrieval_needs.py)\n\nPROPOSED - missing JSON binding (both): Production invocation of isolated needs interpreter\nThe typed standalone interpreter exists, but the production retrieval parent has no invocation/normalization/catalog-provisioning edge to it.\nDesign source: [docs/product-truth/flows/leafcutter/retrieve-project-knowledge.flow.json](docs/product-truth/flows/leafcutter/retrieve-project-knowledge.flow.json)\n\nInput illustrative retrieval_needs_request projection; not an execution receipt — retrieval_needs_request; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"original_question\": \"For KM-500c-2, what must tests demonstrate?\",\n  \"context\": [],\n  \"known_ids\": [\n    \"KM-500c-2\"\n  ],\n  \"source_scope\": {\n    \"repository_id\": \"leafcutter\"\n  },\n  \"catalog\": {\n    \"entity_types\": {\n      \"AcceptanceCriterion\": \"An acceptance criterion record\"\n    },\n    \"target_ids\": {\n      \"KM-500c-2\": \"Literal requested acceptance criterion\"\n    },\n    \"required_fields\": {\n      \"criteria\": \"Source acceptance clauses\",\n      \"test_required\": \"Declared test requirement\"\n    },\n    \"document_types\": {\n      \"acceptance_criterion\": \"AC record\"\n    },\n    \"relationships\": {}\n  }\n}\n\nOutput illustrative retrieval_needs_output projection; not an execution receipt — retrieval_needs_output; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"original_question\": \"For KM-500c-2, what must tests demonstrate?\",\n  \"selections\": {\n    \"entity_types\": [\n      \"AcceptanceCriterion\"\n    ],\n    \"target_ids\": [\n      \"KM-500c-2\"\n    ],\n    \"required_fields\": [\n      \"criteria\",\n      \"test_required\"\n    ],\n    \"document_types\": [\n      \"acceptance_criterion\"\n    ],\n    \"relationships\": []\n  },\n  \"uncertain\": {\n    \"entity_types\": [],\n    \"target_ids\": [],\n    \"required_fields\": [],\n    \"document_types\": [],\n    \"relationships\": []\n  },\n  \"detail_mode\": \"fields\",\n  \"completeness\": \"single_entity\",\n  \"hierarchy_scope\": \"not_applicable\",\n  \"scope_resolution\": \"sufficient\",\n  \"unresolved\": [],\n  \"engine\": \"host_llm\",\n  \"status\": \"decided\"\n}",
+      "consumes": [
+        "retrieval_needs_request/original_question: string (required)",
+        "retrieval_needs_request/context: array (optional; default [])",
+        "retrieval_needs_request/known_ids: array (optional; default [])",
+        "retrieval_needs_request/source_scope: object (optional; default {})",
+        "retrieval_needs_request/catalog: object (required)"
+      ],
+      "produces": [
+        "retrieval_needs_output/original_question: string (required)",
+        "retrieval_needs_output/selections: object (required)",
+        "retrieval_needs_output/uncertain: object (required)",
+        "retrieval_needs_output/detail_mode: string (required)",
+        "retrieval_needs_output/completeness: string (required)",
+        "retrieval_needs_output/hierarchy_scope: string (required)",
+        "retrieval_needs_output/scope_resolution: string (required)",
+        "retrieval_needs_output/unresolved: array (optional; default [])",
+        "retrieval_needs_output/status: string (optional; default \"decided\")",
+        "retrieval_needs_output/engine: string (optional; default \"host_llm\")"
+      ],
+      "expands_to": [
+        "leafcutter/retrieval-needs-interpretation"
+      ],
+      "implements": [],
+      "impl_asof": "2026-10-03",
+      "impl_status": "not_started",
+      "io_contracts": {
+        "consumes": [
+          {
+            "contract": "retrieval_needs_request",
+            "fields": [
+              {
+                "path": "/original_question",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/context",
+                "types": [
+                  "array"
+                ],
+                "required": false,
+                "default": []
+              },
+              {
+                "path": "/known_ids",
+                "types": [
+                  "array"
+                ],
+                "required": false,
+                "default": []
+              },
+              {
+                "path": "/source_scope",
+                "types": [
+                  "object"
+                ],
+                "required": false,
+                "default": {}
+              },
+              {
+                "path": "/catalog",
+                "types": [
+                  "object"
+                ],
+                "required": true
+              }
+            ]
+          }
+        ],
+        "produces": [
+          {
+            "contract": "retrieval_needs_output",
+            "fields": [
+              {
+                "path": "/original_question",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/selections",
+                "types": [
+                  "object"
+                ],
+                "required": true
+              },
+              {
+                "path": "/uncertain",
+                "types": [
+                  "object"
+                ],
+                "required": true
+              },
+              {
+                "path": "/detail_mode",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/completeness",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/hierarchy_scope",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/scope_resolution",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/unresolved",
+                "types": [
+                  "array"
+                ],
+                "required": false,
+                "default": []
+              },
+              {
+                "path": "/status",
+                "types": [
+                  "string"
+                ],
+                "required": false,
+                "default": "decided"
+              },
+              {
+                "path": "/engine",
+                "types": [
+                  "string"
+                ],
+                "required": false,
+                "default": "host_llm"
+              }
+            ]
+          }
+        ],
+        "examples": [
+          {
+            "contract": "retrieval_needs_request",
+            "mode": "projection",
+            "origin": "illustrative",
+            "label": "Input illustrative retrieval_needs_request projection; not an execution receipt",
+            "value": {
+              "original_question": "For KM-500c-2, what must tests demonstrate?",
+              "context": [],
+              "known_ids": [
+                "KM-500c-2"
+              ],
+              "source_scope": {
+                "repository_id": "leafcutter"
+              },
+              "catalog": {
+                "entity_types": {
+                  "AcceptanceCriterion": "An acceptance criterion record"
+                },
+                "target_ids": {
+                  "KM-500c-2": "Literal requested acceptance criterion"
+                },
+                "required_fields": {
+                  "criteria": "Source acceptance clauses",
+                  "test_required": "Declared test requirement"
+                },
+                "document_types": {
+                  "acceptance_criterion": "AC record"
+                },
+                "relationships": {}
+              }
+            }
+          },
+          {
+            "contract": "retrieval_needs_output",
+            "mode": "projection",
+            "origin": "illustrative",
+            "label": "Output illustrative retrieval_needs_output projection; not an execution receipt",
+            "value": {
+              "original_question": "For KM-500c-2, what must tests demonstrate?",
+              "selections": {
+                "entity_types": [
+                  "AcceptanceCriterion"
+                ],
+                "target_ids": [
+                  "KM-500c-2"
+                ],
+                "required_fields": [
+                  "criteria",
+                  "test_required"
+                ],
+                "document_types": [
+                  "acceptance_criterion"
+                ],
+                "relationships": []
+              },
+              "uncertain": {
+                "entity_types": [],
+                "target_ids": [],
+                "required_fields": [],
+                "document_types": [],
+                "relationships": []
+              },
+              "detail_mode": "fields",
+              "completeness": "single_entity",
+              "hierarchy_scope": "not_applicable",
+              "scope_resolution": "sufficient",
+              "unresolved": [],
+              "engine": "host_llm",
+              "status": "decided"
+            }
+          }
+        ],
+        "missing_bindings": [
+          {
+            "name": "Production invocation of isolated needs interpreter",
+            "direction": "both",
+            "reason": "The typed standalone interpreter exists, but the production retrieval parent has no invocation/normalization/catalog-provisioning edge to it.",
+            "source": "docs/product-truth/flows/leafcutter/retrieve-project-knowledge.flow.json"
+          }
+        ]
+      }
+    },
+    {
+      "id": "offer-methods",
+      "label": "Offer permitted methods and contracts",
+      "agent": "System",
+      "human": "Resolve host scope/source identity and remaining budget; offer available method/query input-output contracts and compatible advisory records with provenance. Do not ask the caller to choose an operation or storage source. Preserve prior attempts and visited state on resume. A missing endpoint or candidate is not evidence that the question has no answer.\n\nI/O boundary: Existing query descriptor and trusted Scope provide known subsets; neither is a complete multi-method offer contract.\n\nContract fields and examples (generated)\nConsumes:\n  retrieval_needs_output/original_question: string (required)\n  retrieval_needs_output/selections: object (required)\n  retrieval_needs_output/completeness: string (required)\n  Runtime contract: [retrieval_needs_output](kernel/contracts/retrieval_needs.py)\n  scope/component_ids: array (optional; default [])\n  scope/read_roots: array (optional; default [])\n  scope/source_ids: array (optional; default [])\n  Runtime contract: [scope](kernel/contracts/task.py)\n  query_descriptor/operation: string (required)\n  query_descriptor/version: string (required)\n  query_descriptor/description: string (required)\n  query_descriptor/parameters: object (required)\n  query_descriptor/result_meaning: string (optional; default \"Canonical entities reached by the declared scoped relationship path\")\n  Runtime contract: [query_descriptor](knowledge/query_models.py)\nProduces:\n  No checked JSON binding documented in this direction.\n\nPROPOSED - missing JSON binding (both): Compatible method offers and advice\nNo target method-offer schema unifies query contracts, vector readiness, traversal options, budget and advisory strategy references.\nDesign source: [docs/product-truth/flows/leafcutter/retrieve-project-knowledge.flow.json](docs/product-truth/flows/leafcutter/retrieve-project-knowledge.flow.json)\n\nInput illustrative retrieval_needs_output projection; not an execution receipt — retrieval_needs_output; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"original_question\": \"For KM-500c-2, what must tests demonstrate?\",\n  \"selections\": {\n    \"entity_types\": [\n      \"AcceptanceCriterion\"\n    ],\n    \"target_ids\": [\n      \"KM-500c-2\"\n    ],\n    \"required_fields\": [\n      \"criteria\",\n      \"test_required\"\n    ],\n    \"document_types\": [\n      \"acceptance_criterion\"\n    ],\n    \"relationships\": []\n  },\n  \"completeness\": \"single_entity\"\n}\n\nInput illustrative scope projection; not an execution receipt — scope; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"component_ids\": [\n    \"knowledge-retrieval\"\n  ],\n  \"read_roots\": [\n    \"docs/acceptance-criteria\"\n  ],\n  \"source_ids\": [\n    \"repository\"\n  ]\n}\n\nInput illustrative query_descriptor projection; not an execution receipt — query_descriptor; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"operation\": \"example_ac_requirements\",\n  \"version\": \"1\",\n  \"description\": \"Retrieve the exact acceptance criteria supplied by their canonical IDs.\",\n  \"result_meaning\": \"Canonical AcceptanceCriterion entities and their declared test requirement fields.\",\n  \"parameters\": {\n    \"ac_ids\": {\n      \"type\": \"string_list\",\n      \"required\": true\n    }\n  }\n}",
+      "order": 3,
+      "implements": [],
+      "consumes": [
+        "retrieval_needs_output/original_question: string (required)",
+        "retrieval_needs_output/selections: object (required)",
+        "retrieval_needs_output/completeness: string (required)",
+        "scope/component_ids: array (optional; default [])",
+        "scope/read_roots: array (optional; default [])",
+        "scope/source_ids: array (optional; default [])",
+        "query_descriptor/operation: string (required)",
+        "query_descriptor/version: string (required)",
+        "query_descriptor/description: string (required)",
+        "query_descriptor/parameters: object (required)",
+        "query_descriptor/result_meaning: string (optional; default \"Canonical entities reached by the declared scoped relationship path\")"
+      ],
+      "produces": [],
+      "impl_asof": "2026-10-02",
+      "impl_status": "not_started",
+      "io_contracts": {
+        "consumes": [
+          {
+            "contract": "retrieval_needs_output",
+            "fields": [
+              {
+                "path": "/original_question",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/selections",
+                "types": [
+                  "object"
+                ],
+                "required": true
+              },
+              {
+                "path": "/completeness",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              }
+            ]
+          },
+          {
+            "contract": "scope",
+            "fields": [
+              {
+                "path": "/component_ids",
+                "types": [
+                  "array"
+                ],
+                "required": false,
+                "default": []
+              },
+              {
+                "path": "/read_roots",
+                "types": [
+                  "array"
+                ],
+                "required": false,
+                "default": []
+              },
+              {
+                "path": "/source_ids",
+                "types": [
+                  "array"
+                ],
+                "required": false,
+                "default": []
+              }
+            ]
+          },
+          {
+            "contract": "query_descriptor",
+            "fields": [
+              {
+                "path": "/operation",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/version",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/description",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/parameters",
+                "types": [
+                  "object"
+                ],
+                "required": true
+              },
+              {
+                "path": "/result_meaning",
+                "types": [
+                  "string"
+                ],
+                "required": false,
+                "default": "Canonical entities reached by the declared scoped relationship path"
+              }
+            ]
+          }
+        ],
+        "produces": [],
+        "examples": [
+          {
+            "contract": "retrieval_needs_output",
+            "mode": "projection",
+            "origin": "illustrative",
+            "label": "Input illustrative retrieval_needs_output projection; not an execution receipt",
+            "value": {
+              "original_question": "For KM-500c-2, what must tests demonstrate?",
+              "selections": {
+                "entity_types": [
+                  "AcceptanceCriterion"
+                ],
+                "target_ids": [
+                  "KM-500c-2"
+                ],
+                "required_fields": [
+                  "criteria",
+                  "test_required"
+                ],
+                "document_types": [
+                  "acceptance_criterion"
+                ],
+                "relationships": []
+              },
+              "completeness": "single_entity"
+            }
+          },
+          {
+            "contract": "scope",
+            "mode": "projection",
+            "origin": "illustrative",
+            "label": "Input illustrative scope projection; not an execution receipt",
+            "value": {
+              "component_ids": [
+                "knowledge-retrieval"
+              ],
+              "read_roots": [
+                "docs/acceptance-criteria"
+              ],
+              "source_ids": [
+                "repository"
+              ]
+            }
+          },
+          {
+            "contract": "query_descriptor",
+            "mode": "projection",
+            "origin": "illustrative",
+            "label": "Input illustrative query_descriptor projection; not an execution receipt",
+            "value": {
+              "operation": "example_ac_requirements",
+              "version": "1",
+              "description": "Retrieve the exact acceptance criteria supplied by their canonical IDs.",
+              "result_meaning": "Canonical AcceptanceCriterion entities and their declared test requirement fields.",
+              "parameters": {
+                "ac_ids": {
+                  "type": "string_list",
+                  "required": true
+                }
+              }
+            }
+          }
+        ],
+        "missing_bindings": [
+          {
+            "name": "Compatible method offers and advice",
+            "direction": "both",
+            "reason": "No target method-offer schema unifies query contracts, vector readiness, traversal options, budget and advisory strategy references.",
+            "source": "docs/product-truth/flows/leafcutter/retrieve-project-knowledge.flow.json"
+          }
+        ]
+      }
+    },
+    {
+      "id": "plan",
+      "label": "Jev chooses how to answer",
+      "agent": "Jev",
+      "human": "Choose one OR multiple compatible offered methods for the ORIGINAL question: registered query, keyword/vector search, graph-node/edge navigation, or repository folder/file navigation. Judge compatible advisory strategy records for applicability; they do not grant authority or replace evidence.\n\nChoose useful alternatives or complementary methods, not every method automatically. Preserve the pinned scope/source, visited locations, prior attempts, useful evidence and remaining budget. Delegate preparation to the selected child. Missing-query build is conditional capability repair, not another generic search method. Select only offered method/query IDs and candidate actions. If the offer is insufficient, request a supported capability-gap or clarification outcome rather than inventing a path, operation or scope.\n\nProposed needs handoff: when integrated, also consume the typed interpretation from the proposed interpret-needs step without treating decided as correctness or allowing unresolved needs to disappear. This consumer binding is unwired; current planning does not receive that experimental result.\n\nContract fields and examples (generated)\nConsumes:\n  No checked JSON binding documented in this direction.\nProduces:\n  No checked JSON binding documented in this direction.\n\nPROPOSED - missing JSON binding (both): Multiple selected retrieval methods\nThe target permits several compatible methods and later retries. No persisted multi-selection/ordering record or Jev question/template binds these choices to all offered contracts.\nDesign source: [docs/product-truth/flows/leafcutter/retrieve-project-knowledge.flow.json](docs/product-truth/flows/leafcutter/retrieve-project-knowledge.flow.json)",
+      "order": 4,
+      "implements": [],
+      "produces": [],
+      "impl_asof": "2026-10-02",
+      "impl_status": "not_started",
+      "consumes": [],
+      "io_contracts": {
+        "missing_bindings": [
+          {
+            "name": "Multiple selected retrieval methods",
+            "direction": "both",
+            "reason": "The target permits several compatible methods and later retries. No persisted multi-selection/ordering record or Jev question/template binds these choices to all offered contracts.",
+            "source": "docs/product-truth/flows/leafcutter/retrieve-project-knowledge.flow.json"
+          }
+        ]
+      }
+    },
+    {
+      "id": "retrieve",
+      "label": "Retrieve the evidence",
+      "agent": "System",
+      "human": "Dispatch the selected method children within the pinned scope and cumulative budget. Each child executes its own attempt once and returns separately attributable outcomes. Multiple selection does not promise simultaneous or parallel execution.\n\nRetain useful earlier evidence and continue other permitted selected options when one fails. Missing input/authority waits remain explicit. Return the attempt collection to [shared comparison](docs/product-truth/flows/leafcutter/retrieve-project-knowledge.flow.json#compare); never execute a returned child again. Use governed query creation only for a proven query gap over supported data.\n\nI/O boundary: This reference shows one neutral operation only. It does not claim registered-query, five-term search and traversal are already composed.\n\nContract fields and examples (generated)\nConsumes:\n  knowledge_request/operation: string (optional; default \"get_entities\")\n  knowledge_request/operation_version: string (optional; default \"1\")\n  knowledge_request/arguments: object (optional; default {})\n  knowledge_request/revision: string (optional; default \"latest\")\n  knowledge_request/budget: object (optional)\n  Runtime contract: [knowledge_request](knowledge/contracts.py)\nProduces:\n  knowledge_result/operation: string (optional; default \"\")\n  knowledge_result/operation_version: string (optional; default \"1\")\n  knowledge_result/status: string (required)\n  knowledge_result/evidence: array (optional; default [])\n  knowledge_result/warnings: array (optional; default [])\n  Runtime contract: [knowledge_result](knowledge/contracts.py)\n\nPROPOSED - missing JSON binding (both): Dispatch selected methods with shared attempt identity\nChild execution can reuse the neutral request/result boundaries, but the parent multi-method dispatch and cumulative attempt envelope is undefined.\nDesign source: [docs/product-truth/flows/leafcutter/retrieve-project-knowledge.flow.json](docs/product-truth/flows/leafcutter/retrieve-project-knowledge.flow.json)\n\nInput illustrative knowledge_request projection; not an execution receipt — knowledge_request; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"operation\": \"example_ac_requirements\",\n  \"operation_version\": \"1\",\n  \"arguments\": {\n    \"ac_ids\": [\n      \"KM-500c-2\"\n    ]\n  },\n  \"revision\": \"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\n  \"budget\": {\n    \"max_results\": 20,\n    \"max_hops\": 2\n  }\n}\n\nOutput illustrative knowledge_result projection; not an execution receipt — knowledge_result; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"status\": \"partial\",\n  \"operation\": \"example_ac_requirements\",\n  \"operation_version\": \"1\",\n  \"evidence\": [\n    {\n      \"entity\": {\n        \"canonical_id\": \"KM-500c-2\",\n        \"kind\": \"AcceptanceCriterion\",\n        \"title\": \"Illustrative AC title\",\n        \"source\": {\n          \"repository_id\": \"leafcutter\",\n          \"source_sha\": \"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\n          \"path\": \"docs/acceptance-criteria/knowledge-retrieval/KM-500c-2.yaml\",\n          \"locator\": \"criteria\"\n        },\n        \"properties\": {\n          \"criteria\": \"Illustrative acceptance clause; no real requirement text is asserted.\"\n        }\n      },\n      \"content\": \"Illustrative acceptance clause; no real requirement text is asserted.\",\n      \"field_availability\": {\n        \"test_required\": \"unknown\"\n      },\n      \"limitations\": [\n        \"The requested test_required field is not available in this illustrative result.\"\n      ]\n    }\n  ],\n  \"warnings\": [\n    \"The test_required field is unresolved.\"\n  ]\n}",
+      "order": 5,
+      "implements": [],
+      "produces": [
+        "knowledge_result/operation: string (optional; default \"\")",
+        "knowledge_result/operation_version: string (optional; default \"1\")",
+        "knowledge_result/status: string (required)",
+        "knowledge_result/evidence: array (optional; default [])",
+        "knowledge_result/warnings: array (optional; default [])"
+      ],
+      "expands_to": [
+        "leafcutter/retrieval-registered-query",
+        "leafcutter/retrieval-search-preparation",
+        "leafcutter/retrieval-source-traversal",
+        "leafcutter/retrieval-query-build"
+      ],
+      "impl_asof": "2026-10-02",
+      "impl_status": "not_started",
+      "consumes": [
+        "knowledge_request/operation: string (optional; default \"get_entities\")",
+        "knowledge_request/operation_version: string (optional; default \"1\")",
+        "knowledge_request/arguments: object (optional; default {})",
+        "knowledge_request/revision: string (optional; default \"latest\")",
+        "knowledge_request/budget: object (optional)"
+      ],
+      "io_contracts": {
+        "consumes": [
+          {
+            "contract": "knowledge_request",
+            "fields": [
+              {
+                "path": "/operation",
+                "types": [
+                  "string"
+                ],
+                "required": false,
+                "default": "get_entities"
+              },
+              {
+                "path": "/operation_version",
+                "types": [
+                  "string"
+                ],
+                "required": false,
+                "default": "1"
+              },
+              {
+                "path": "/arguments",
+                "types": [
+                  "object"
+                ],
+                "required": false,
+                "default": {}
+              },
+              {
+                "path": "/revision",
+                "types": [
+                  "string"
+                ],
+                "required": false,
+                "default": "latest"
+              },
+              {
+                "path": "/budget",
+                "types": [
+                  "object"
+                ],
+                "required": false
+              }
+            ]
+          }
+        ],
+        "produces": [
+          {
+            "contract": "knowledge_result",
+            "fields": [
+              {
+                "path": "/operation",
+                "types": [
+                  "string"
+                ],
+                "required": false,
+                "default": ""
+              },
+              {
+                "path": "/operation_version",
+                "types": [
+                  "string"
+                ],
+                "required": false,
+                "default": "1"
+              },
+              {
+                "path": "/status",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/evidence",
+                "types": [
+                  "array"
+                ],
+                "required": false,
+                "default": []
+              },
+              {
+                "path": "/warnings",
+                "types": [
+                  "array"
+                ],
+                "required": false,
+                "default": []
+              }
+            ]
+          }
+        ],
+        "examples": [
+          {
+            "contract": "knowledge_request",
+            "mode": "projection",
+            "origin": "illustrative",
+            "label": "Input illustrative knowledge_request projection; not an execution receipt",
+            "value": {
+              "operation": "example_ac_requirements",
+              "operation_version": "1",
+              "arguments": {
+                "ac_ids": [
+                  "KM-500c-2"
+                ]
+              },
+              "revision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+              "budget": {
+                "max_results": 20,
+                "max_hops": 2
+              }
+            }
+          },
+          {
+            "contract": "knowledge_result",
+            "mode": "projection",
+            "origin": "illustrative",
+            "label": "Output illustrative knowledge_result projection; not an execution receipt",
+            "value": {
+              "status": "partial",
+              "operation": "example_ac_requirements",
+              "operation_version": "1",
+              "evidence": [
+                {
+                  "entity": {
+                    "canonical_id": "KM-500c-2",
+                    "kind": "AcceptanceCriterion",
+                    "title": "Illustrative AC title",
+                    "source": {
+                      "repository_id": "leafcutter",
+                      "source_sha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+                      "path": "docs/acceptance-criteria/knowledge-retrieval/KM-500c-2.yaml",
+                      "locator": "criteria"
+                    },
+                    "properties": {
+                      "criteria": "Illustrative acceptance clause; no real requirement text is asserted."
+                    }
+                  },
+                  "content": "Illustrative acceptance clause; no real requirement text is asserted.",
+                  "field_availability": {
+                    "test_required": "unknown"
+                  },
+                  "limitations": [
+                    "The requested test_required field is not available in this illustrative result."
+                  ]
+                }
+              ],
+              "warnings": [
+                "The test_required field is unresolved."
+              ]
+            }
+          }
+        ],
+        "missing_bindings": [
+          {
+            "name": "Dispatch selected methods with shared attempt identity",
+            "direction": "both",
+            "reason": "Child execution can reuse the neutral request/result boundaries, but the parent multi-method dispatch and cumulative attempt envelope is undefined.",
+            "source": "docs/product-truth/flows/leafcutter/retrieve-project-knowledge.flow.json"
+          }
+        ]
+      }
+    },
+    {
+      "id": "compare",
+      "label": "Compare attempts against the original question",
+      "agent": "Jev",
+      "human": "Judge which observed attempts best support the ORIGINAL question, using their evidence, requested facts and explicit limits. Choose a preferred attempt, complementary attempts, a tie, no useful result or incomparable results; a null winner is valid.\n\nA preference is only among this run’s observed attempts under these conditions, not verified correctness or a universal best method. Different scopes, source revisions or budgets must not be interpreted as causal method superiority. Preserve useful complementary evidence; do not discard it merely because another attempt ranks first.\n\nInclude registered queries, searches and traversal attempts in the same original-question comparison. With one attempt, report its usefulness without claiming a comparative winner. Select retained complementary evidence or a bounded changed-method/next-frontier plan; empty and failed attempts remain distinct. Only observed candidates and supported methods may be selected.\n\nI/O boundary: The input result is a known per-operation subset. Jev cannot infer comparative effectiveness from a single schema-valid response.\n\nContract fields and examples (generated)\nConsumes:\n  retrieval_needs_output/original_question: string (required)\n  retrieval_needs_output/selections: object (required)\n  retrieval_needs_output/completeness: string (required)\n  Runtime contract: [retrieval_needs_output](kernel/contracts/retrieval_needs.py)\n  knowledge_result/status: string (required)\n  knowledge_result/operation: string (optional; default \"\")\n  knowledge_result/evidence: array (optional; default [])\n  knowledge_result/warnings: array (optional; default [])\n  Runtime contract: [knowledge_result](knowledge/contracts.py)\nProduces:\n  No checked JSON binding documented in this direction.\n\nPROPOSED - missing JSON binding (both): Original-question attempt comparison\nNo output schema defines best/tied/not-useful/incomparable judgments across attributable attempts while retaining method/source/budget limits.\nDesign source: [docs/product-truth/flows/leafcutter/retrieve-project-knowledge.flow.json](docs/product-truth/flows/leafcutter/retrieve-project-knowledge.flow.json)\n\nInput illustrative retrieval_needs_output projection; not an execution receipt — retrieval_needs_output; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"original_question\": \"For KM-500c-2, what must tests demonstrate?\",\n  \"selections\": {\n    \"entity_types\": [\n      \"AcceptanceCriterion\"\n    ],\n    \"target_ids\": [\n      \"KM-500c-2\"\n    ],\n    \"required_fields\": [\n      \"criteria\",\n      \"test_required\"\n    ],\n    \"document_types\": [\n      \"acceptance_criterion\"\n    ],\n    \"relationships\": []\n  },\n  \"completeness\": \"single_entity\"\n}\n\nInput illustrative knowledge_result projection; not an execution receipt — knowledge_result; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"status\": \"partial\",\n  \"operation\": \"example_ac_requirements\",\n  \"evidence\": [\n    {\n      \"entity\": {\n        \"canonical_id\": \"KM-500c-2\",\n        \"kind\": \"AcceptanceCriterion\",\n        \"title\": \"Illustrative AC title\",\n        \"source\": {\n          \"repository_id\": \"leafcutter\",\n          \"source_sha\": \"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\n          \"path\": \"docs/acceptance-criteria/knowledge-retrieval/KM-500c-2.yaml\",\n          \"locator\": \"criteria\"\n        },\n        \"properties\": {\n          \"criteria\": \"Illustrative acceptance clause; no real requirement text is asserted.\"\n        }\n      },\n      \"content\": \"Illustrative acceptance clause; no real requirement text is asserted.\",\n      \"field_availability\": {\n        \"test_required\": \"unknown\"\n      },\n      \"limitations\": [\n        \"The requested test_required field is not available in this illustrative result.\"\n      ]\n    }\n  ],\n  \"warnings\": [\n    \"The test_required field is unresolved.\"\n  ]\n}",
+      "order": 6,
+      "implements": [],
+      "consumes": [
+        "retrieval_needs_output/original_question: string (required)",
+        "retrieval_needs_output/selections: object (required)",
+        "retrieval_needs_output/completeness: string (required)",
+        "knowledge_result/status: string (required)",
+        "knowledge_result/operation: string (optional; default \"\")",
+        "knowledge_result/evidence: array (optional; default [])",
+        "knowledge_result/warnings: array (optional; default [])"
+      ],
+      "produces": [],
+      "impl_asof": "2026-10-02",
+      "impl_status": "not_started",
+      "io_contracts": {
+        "consumes": [
+          {
+            "contract": "retrieval_needs_output",
+            "fields": [
+              {
+                "path": "/original_question",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/selections",
+                "types": [
+                  "object"
+                ],
+                "required": true
+              },
+              {
+                "path": "/completeness",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              }
+            ]
+          },
+          {
+            "contract": "knowledge_result",
+            "fields": [
+              {
+                "path": "/status",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/operation",
+                "types": [
+                  "string"
+                ],
+                "required": false,
+                "default": ""
+              },
+              {
+                "path": "/evidence",
+                "types": [
+                  "array"
+                ],
+                "required": false,
+                "default": []
+              },
+              {
+                "path": "/warnings",
+                "types": [
+                  "array"
+                ],
+                "required": false,
+                "default": []
+              }
+            ]
+          }
+        ],
+        "produces": [],
+        "examples": [
+          {
+            "contract": "retrieval_needs_output",
+            "mode": "projection",
+            "origin": "illustrative",
+            "label": "Input illustrative retrieval_needs_output projection; not an execution receipt",
+            "value": {
+              "original_question": "For KM-500c-2, what must tests demonstrate?",
+              "selections": {
+                "entity_types": [
+                  "AcceptanceCriterion"
+                ],
+                "target_ids": [
+                  "KM-500c-2"
+                ],
+                "required_fields": [
+                  "criteria",
+                  "test_required"
+                ],
+                "document_types": [
+                  "acceptance_criterion"
+                ],
+                "relationships": []
+              },
+              "completeness": "single_entity"
+            }
+          },
+          {
+            "contract": "knowledge_result",
+            "mode": "projection",
+            "origin": "illustrative",
+            "label": "Input illustrative knowledge_result projection; not an execution receipt",
+            "value": {
+              "status": "partial",
+              "operation": "example_ac_requirements",
+              "evidence": [
+                {
+                  "entity": {
+                    "canonical_id": "KM-500c-2",
+                    "kind": "AcceptanceCriterion",
+                    "title": "Illustrative AC title",
+                    "source": {
+                      "repository_id": "leafcutter",
+                      "source_sha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+                      "path": "docs/acceptance-criteria/knowledge-retrieval/KM-500c-2.yaml",
+                      "locator": "criteria"
+                    },
+                    "properties": {
+                      "criteria": "Illustrative acceptance clause; no real requirement text is asserted."
+                    }
+                  },
+                  "content": "Illustrative acceptance clause; no real requirement text is asserted.",
+                  "field_availability": {
+                    "test_required": "unknown"
+                  },
+                  "limitations": [
+                    "The requested test_required field is not available in this illustrative result."
+                  ]
+                }
+              ],
+              "warnings": [
+                "The test_required field is unresolved."
+              ]
+            }
+          }
+        ],
+        "missing_bindings": [
+          {
+            "name": "Original-question attempt comparison",
+            "direction": "both",
+            "reason": "No output schema defines best/tied/not-useful/incomparable judgments across attributable attempts while retaining method/source/budget limits.",
+            "source": "docs/product-truth/flows/leafcutter/retrieve-project-knowledge.flow.json"
+          }
+        ]
+      }
+    },
+    {
+      "id": "remember",
+      "label": "Record advisory strategy decision",
+      "agent": "System",
+      "human": "Record Jev’s bounded comparison in a proposed typed advisory memory record before combining evidence. Store original question/context, attempt IDs, method/query/version, terms/filters, source/model versions, budgets, evidence links, comparison outcome and limits. Do not manufacture free-form Jev prose or human approval.\n\nAt this point final answer fulfillment is pending. If a later main assessment is attached, bind it to the same run and explicitly preserve its status; do not invent that outcome now. Record ties, no useful result and incomparable outcomes as such. A failed write is visible but does not erase retrieved evidence or force repeated searches.\n\nFuture planning may read these suggestions after deterministic compatibility checks and Jev applicability judgment. Stale or incompatible advice is ignored or flagged, never used to widen permissions, replace evidence or copy an old answer. This read/write integration is proposed: the current human-approved DecisionRecord/file publication contract cannot honestly store automatic advice or a no-winner judgment. No model training or approved product-decision mutation is implied.\n\nRecord selected method combinations and visited/frontier history where applicable. If Jev selects another method or traversal continuation, return through the explicit plan route after recording this comparison; no unchanged retry and no budget reset.\n\nContract fields and examples (generated)\nConsumes:\n  No checked JSON binding documented in this direction.\nProduces:\n  No checked JSON binding documented in this direction.\n\nPROPOSED - missing JSON binding (both): Advisory retrieval-strategy memory record\nThe target advisory strategy/outcome record and later applicability lookup are undefined. Human-approved DecisionRecord is a different authority contract and must not be reused as automatic learning approval.\nDesign source: [docs/product-truth/flows/leafcutter/retrieve-project-knowledge.flow.json](docs/product-truth/flows/leafcutter/retrieve-project-knowledge.flow.json)",
+      "order": 7,
+      "implements": [],
+      "consumes": [],
+      "produces": [],
+      "impl_asof": "2026-10-02",
+      "impl_status": "not_started",
+      "io_contracts": {
+        "missing_bindings": [
+          {
+            "name": "Advisory retrieval-strategy memory record",
+            "direction": "both",
+            "reason": "The target advisory strategy/outcome record and later applicability lookup are undefined. Human-approved DecisionRecord is a different authority contract and must not be reused as automatic learning approval.",
+            "source": "docs/product-truth/flows/leafcutter/retrieve-project-knowledge.flow.json"
+          }
+        ]
+      }
+    },
+    {
+      "id": "combine",
+      "label": "Combine and deduplicate useful evidence",
+      "agent": "System",
+      "human": "Combine selected complementary evidence only after comparison and advisory recording. Deduplicate canonical identities and overlapping chunks while retaining every supporting attempt/source locator. Preserve source/scope differences and coverage limits; combining partial sets does not prove an exhaustive population. Combine only when comparison selected evidence for an answer attempt; a changed-plan choice routes back without discarding existing evidence. Do not merge different revisions or incompatible populations as one canonical set. Keep such evidence separately attributed and qualify comparisons. Finding useful files/nodes does not establish corpus-wide coverage or exact totals.\n\nI/O boundary: The bundle is a reusable output container, not an implemented deduplication policy. The example remains partial because a requested field is unknown.\n\nContract fields and examples (generated)\nConsumes:\n  knowledge_result/evidence: array (optional; default [])\n  knowledge_result/status: string (required)\n  knowledge_result/warnings: array (optional; default [])\n  Runtime contract: [knowledge_result](knowledge/contracts.py)\nProduces:\n  bundle/evidence: array (optional)\n  bundle/evidence_ids: array (optional)\n  bundle/coverage: object (optional)\n  bundle/limitations: array (optional)\n  bundle/truncated: boolean (optional; default false)\n  Schema: [bundle](kernel/schemas/leafcutter.evidence_bundle.v1.schema.json)\n\nPROPOSED - missing JSON binding (both): Deduplicated cross-method evidence with attribution\nThe existing EvidenceBundle can contain evidence and limitations, but no target merge contract specifies attempt membership, duplicate equivalence and count-preserving provenance.\nDesign source: [docs/product-truth/flows/leafcutter/retrieve-project-knowledge.flow.json](docs/product-truth/flows/leafcutter/retrieve-project-knowledge.flow.json)\n\nInput illustrative knowledge_result projection; not an execution receipt — knowledge_result; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"status\": \"partial\",\n  \"evidence\": [\n    {\n      \"entity\": {\n        \"canonical_id\": \"KM-500c-2\",\n        \"kind\": \"AcceptanceCriterion\",\n        \"title\": \"Illustrative AC title\",\n        \"source\": {\n          \"repository_id\": \"leafcutter\",\n          \"source_sha\": \"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\n          \"path\": \"docs/acceptance-criteria/knowledge-retrieval/KM-500c-2.yaml\",\n          \"locator\": \"criteria\"\n        },\n        \"properties\": {\n          \"criteria\": \"Illustrative acceptance clause; no real requirement text is asserted.\"\n        }\n      },\n      \"content\": \"Illustrative acceptance clause; no real requirement text is asserted.\",\n      \"field_availability\": {\n        \"test_required\": \"unknown\"\n      },\n      \"limitations\": [\n        \"The requested test_required field is not available in this illustrative result.\"\n      ]\n    }\n  ],\n  \"warnings\": [\n    \"The test_required field is unresolved.\"\n  ]\n}\n\nOutput illustrative bundle projection; not an execution receipt — bundle; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"evidence\": [\n    {\n      \"schema_version\": \"1.0\",\n      \"id\": \"ev-b999f7a0f7a64ea2\",\n      \"created_at\": \"2026-10-03T14:45:04.749280Z\",\n      \"updated_at\": \"2026-10-03T14:45:04.749286Z\",\n      \"created_seq\": 0,\n      \"category\": \"task_context\",\n      \"semantic_type\": \"repository_fact\",\n      \"excerpt\": \"Illustrative acceptance clause; no real requirement text is asserted.\",\n      \"artifact_ref\": null,\n      \"source\": {\n        \"schema_version\": \"1.0\",\n        \"id\": \"source-example\",\n        \"kind\": \"repository_file\",\n        \"locator\": \"docs/acceptance-criteria/knowledge-retrieval/KM-500c-2.yaml#criteria\",\n        \"title\": \"Illustrative AC excerpt\",\n        \"source_version\": null,\n        \"retrieved_at\": null,\n        \"observed_modified_at\": null,\n        \"section_locator\": null\n      },\n      \"content_hash\": \"e6b8db0ee5d71fdfdcef40465cf7e507b76739c69d3e60653ded1a9263c8fb52\",\n      \"provenance\": {\n        \"schema_version\": \"1.0\",\n        \"producer\": \"knowledge-retrieval\",\n        \"invocation_id\": null,\n        \"strategy\": \"example_ac_requirements\",\n        \"query\": null,\n        \"terms\": [],\n        \"rank\": null,\n        \"relevance\": null,\n        \"actor\": null,\n        \"relayed_by\": null\n      },\n      \"access\": \"internal\",\n      \"verification\": \"unverified\",\n      \"limitations\": [\n        \"Illustrative content; not a real source receipt.\"\n      ],\n      \"truncated\": false\n    }\n  ],\n  \"evidence_ids\": [\n    \"ev-b999f7a0f7a64ea2\"\n  ],\n  \"coverage\": {\n    \"need-example\": \"partial\"\n  },\n  \"limitations\": [\n    \"test_required remains unknown.\"\n  ],\n  \"truncated\": false\n}",
+      "order": 8,
+      "implements": [],
+      "consumes": [
+        "knowledge_result/evidence: array (optional; default [])",
+        "knowledge_result/status: string (required)",
+        "knowledge_result/warnings: array (optional; default [])"
+      ],
+      "produces": [
+        "bundle/evidence: array (optional)",
+        "bundle/evidence_ids: array (optional)",
+        "bundle/coverage: object (optional)",
+        "bundle/limitations: array (optional)",
+        "bundle/truncated: boolean (optional; default false)"
+      ],
+      "impl_asof": "2026-10-02",
+      "impl_status": "not_started",
+      "io_contracts": {
+        "consumes": [
+          {
+            "contract": "knowledge_result",
+            "fields": [
+              {
+                "path": "/evidence",
+                "types": [
+                  "array"
+                ],
+                "required": false,
+                "default": []
+              },
+              {
+                "path": "/status",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/warnings",
+                "types": [
+                  "array"
+                ],
+                "required": false,
+                "default": []
+              }
+            ]
+          }
+        ],
+        "produces": [
+          {
+            "contract": "bundle",
+            "fields": [
+              {
+                "path": "/evidence",
+                "types": [
+                  "array"
+                ],
+                "required": false
+              },
+              {
+                "path": "/evidence_ids",
+                "types": [
+                  "array"
+                ],
+                "required": false
+              },
+              {
+                "path": "/coverage",
+                "types": [
+                  "object"
+                ],
+                "required": false
+              },
+              {
+                "path": "/limitations",
+                "types": [
+                  "array"
+                ],
+                "required": false
+              },
+              {
+                "path": "/truncated",
+                "types": [
+                  "boolean"
+                ],
+                "required": false,
+                "default": false
+              }
+            ]
+          }
+        ],
+        "examples": [
+          {
+            "contract": "knowledge_result",
+            "mode": "projection",
+            "origin": "illustrative",
+            "label": "Input illustrative knowledge_result projection; not an execution receipt",
+            "value": {
+              "status": "partial",
+              "evidence": [
+                {
+                  "entity": {
+                    "canonical_id": "KM-500c-2",
+                    "kind": "AcceptanceCriterion",
+                    "title": "Illustrative AC title",
+                    "source": {
+                      "repository_id": "leafcutter",
+                      "source_sha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+                      "path": "docs/acceptance-criteria/knowledge-retrieval/KM-500c-2.yaml",
+                      "locator": "criteria"
+                    },
+                    "properties": {
+                      "criteria": "Illustrative acceptance clause; no real requirement text is asserted."
+                    }
+                  },
+                  "content": "Illustrative acceptance clause; no real requirement text is asserted.",
+                  "field_availability": {
+                    "test_required": "unknown"
+                  },
+                  "limitations": [
+                    "The requested test_required field is not available in this illustrative result."
+                  ]
+                }
+              ],
+              "warnings": [
+                "The test_required field is unresolved."
+              ]
+            }
+          },
+          {
+            "contract": "bundle",
+            "mode": "projection",
+            "origin": "illustrative",
+            "label": "Output illustrative bundle projection; not an execution receipt",
+            "value": {
+              "evidence": [
+                {
+                  "schema_version": "1.0",
+                  "id": "ev-b999f7a0f7a64ea2",
+                  "created_at": "2026-10-03T14:45:04.749280Z",
+                  "updated_at": "2026-10-03T14:45:04.749286Z",
+                  "created_seq": 0,
+                  "category": "task_context",
+                  "semantic_type": "repository_fact",
+                  "excerpt": "Illustrative acceptance clause; no real requirement text is asserted.",
+                  "artifact_ref": null,
+                  "source": {
+                    "schema_version": "1.0",
+                    "id": "source-example",
+                    "kind": "repository_file",
+                    "locator": "docs/acceptance-criteria/knowledge-retrieval/KM-500c-2.yaml#criteria",
+                    "title": "Illustrative AC excerpt",
+                    "source_version": null,
+                    "retrieved_at": null,
+                    "observed_modified_at": null,
+                    "section_locator": null
+                  },
+                  "content_hash": "e6b8db0ee5d71fdfdcef40465cf7e507b76739c69d3e60653ded1a9263c8fb52",
+                  "provenance": {
+                    "schema_version": "1.0",
+                    "producer": "knowledge-retrieval",
+                    "invocation_id": null,
+                    "strategy": "example_ac_requirements",
+                    "query": null,
+                    "terms": [],
+                    "rank": null,
+                    "relevance": null,
+                    "actor": null,
+                    "relayed_by": null
+                  },
+                  "access": "internal",
+                  "verification": "unverified",
+                  "limitations": [
+                    "Illustrative content; not a real source receipt."
+                  ],
+                  "truncated": false
+                }
+              ],
+              "evidence_ids": [
+                "ev-b999f7a0f7a64ea2"
+              ],
+              "coverage": {
+                "need-example": "partial"
+              },
+              "limitations": [
+                "test_required remains unknown."
+              ],
+              "truncated": false
+            }
+          }
+        ],
+        "missing_bindings": [
+          {
+            "name": "Deduplicated cross-method evidence with attribution",
+            "direction": "both",
+            "reason": "The existing EvidenceBundle can contain evidence and limitations, but no target merge contract specifies attempt membership, duplicate equivalence and count-preserving provenance.",
+            "source": "docs/product-truth/flows/leafcutter/retrieve-project-knowledge.flow.json"
+          }
+        ]
+      }
+    },
+    {
+      "id": "rank",
+      "label": "Judge relevance",
+      "agent": "Jev",
+      "human": "Choose relevance ordering over offered combined evidence against the original question; do not promote incomplete coverage.\n\nI/O boundary: Existing native reranking is shown in retrieval-current-baseline. This target step does not claim its cross-method wiring exists.\n\nContract fields and examples (generated)\nConsumes:\n  bundle/evidence: array (optional)\n  bundle/limitations: array (optional)\n  Schema: [bundle](kernel/schemas/leafcutter.evidence_bundle.v1.schema.json)\nProduces:\n  No checked JSON binding documented in this direction.\n\nPROPOSED - missing JSON binding (both): Cross-method relevance ordering\nNative relevance judgment exists, but the target after-comparison ordering and its candidate/attempt mapping have no composed operation binding.\nDesign source: [docs/product-truth/flows/leafcutter/retrieve-project-knowledge.flow.json](docs/product-truth/flows/leafcutter/retrieve-project-knowledge.flow.json)\n\nInput illustrative bundle projection; not an execution receipt — bundle; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"evidence\": [\n    {\n      \"schema_version\": \"1.0\",\n      \"id\": \"ev-b999f7a0f7a64ea2\",\n      \"created_at\": \"2026-10-03T14:45:04.749280Z\",\n      \"updated_at\": \"2026-10-03T14:45:04.749286Z\",\n      \"created_seq\": 0,\n      \"category\": \"task_context\",\n      \"semantic_type\": \"repository_fact\",\n      \"excerpt\": \"Illustrative acceptance clause; no real requirement text is asserted.\",\n      \"artifact_ref\": null,\n      \"source\": {\n        \"schema_version\": \"1.0\",\n        \"id\": \"source-example\",\n        \"kind\": \"repository_file\",\n        \"locator\": \"docs/acceptance-criteria/knowledge-retrieval/KM-500c-2.yaml#criteria\",\n        \"title\": \"Illustrative AC excerpt\",\n        \"source_version\": null,\n        \"retrieved_at\": null,\n        \"observed_modified_at\": null,\n        \"section_locator\": null\n      },\n      \"content_hash\": \"e6b8db0ee5d71fdfdcef40465cf7e507b76739c69d3e60653ded1a9263c8fb52\",\n      \"provenance\": {\n        \"schema_version\": \"1.0\",\n        \"producer\": \"knowledge-retrieval\",\n        \"invocation_id\": null,\n        \"strategy\": \"example_ac_requirements\",\n        \"query\": null,\n        \"terms\": [],\n        \"rank\": null,\n        \"relevance\": null,\n        \"actor\": null,\n        \"relayed_by\": null\n      },\n      \"access\": \"internal\",\n      \"verification\": \"unverified\",\n      \"limitations\": [\n        \"Illustrative content; not a real source receipt.\"\n      ],\n      \"truncated\": false\n    }\n  ],\n  \"limitations\": [\n    \"test_required remains unknown.\"\n  ]\n}",
+      "order": 9,
+      "implements": [],
+      "consumes": [
+        "bundle/evidence: array (optional)",
+        "bundle/limitations: array (optional)"
+      ],
+      "produces": [],
+      "impl_asof": "2026-10-02",
+      "impl_status": "not_started",
+      "io_contracts": {
+        "consumes": [
+          {
+            "contract": "bundle",
+            "fields": [
+              {
+                "path": "/evidence",
+                "types": [
+                  "array"
+                ],
+                "required": false
+              },
+              {
+                "path": "/limitations",
+                "types": [
+                  "array"
+                ],
+                "required": false
+              }
+            ]
+          }
+        ],
+        "produces": [],
+        "examples": [
+          {
+            "contract": "bundle",
+            "mode": "projection",
+            "origin": "illustrative",
+            "label": "Input illustrative bundle projection; not an execution receipt",
+            "value": {
+              "evidence": [
+                {
+                  "schema_version": "1.0",
+                  "id": "ev-b999f7a0f7a64ea2",
+                  "created_at": "2026-10-03T14:45:04.749280Z",
+                  "updated_at": "2026-10-03T14:45:04.749286Z",
+                  "created_seq": 0,
+                  "category": "task_context",
+                  "semantic_type": "repository_fact",
+                  "excerpt": "Illustrative acceptance clause; no real requirement text is asserted.",
+                  "artifact_ref": null,
+                  "source": {
+                    "schema_version": "1.0",
+                    "id": "source-example",
+                    "kind": "repository_file",
+                    "locator": "docs/acceptance-criteria/knowledge-retrieval/KM-500c-2.yaml#criteria",
+                    "title": "Illustrative AC excerpt",
+                    "source_version": null,
+                    "retrieved_at": null,
+                    "observed_modified_at": null,
+                    "section_locator": null
+                  },
+                  "content_hash": "e6b8db0ee5d71fdfdcef40465cf7e507b76739c69d3e60653ded1a9263c8fb52",
+                  "provenance": {
+                    "schema_version": "1.0",
+                    "producer": "knowledge-retrieval",
+                    "invocation_id": null,
+                    "strategy": "example_ac_requirements",
+                    "query": null,
+                    "terms": [],
+                    "rank": null,
+                    "relevance": null,
+                    "actor": null,
+                    "relayed_by": null
+                  },
+                  "access": "internal",
+                  "verification": "unverified",
+                  "limitations": [
+                    "Illustrative content; not a real source receipt."
+                  ],
+                  "truncated": false
+                }
+              ],
+              "limitations": [
+                "test_required remains unknown."
+              ]
+            }
+          }
+        ],
+        "missing_bindings": [
+          {
+            "name": "Cross-method relevance ordering",
+            "direction": "both",
+            "reason": "Native relevance judgment exists, but the target after-comparison ordering and its candidate/attempt mapping have no composed operation binding.",
+            "source": "docs/product-truth/flows/leafcutter/retrieve-project-knowledge.flow.json"
+          }
+        ]
+      }
+    },
+    {
+      "id": "return-evidence",
+      "label": "Return ranked evidence",
+      "agent": "System",
+      "human": "Apply the accepted order and retain per-attempt/source provenance and limits. Pass evidence to [final answer sufficiency](docs/product-truth/flows/leafcutter/retrieve-project-knowledge.flow.json#assess) without another retrieval.\n\nI/O boundary: Known bundle output fields are preserved; schema validity alone does not establish a correct ranking.\n\nContract fields and examples (generated)\nConsumes:\n  No checked JSON binding documented in this direction.\nProduces:\n  bundle/evidence: array (optional)\n  bundle/evidence_ids: array (optional)\n  bundle/limitations: array (optional)\n  Schema: [bundle](kernel/schemas/leafcutter.evidence_bundle.v1.schema.json)\n\nPROPOSED - missing JSON binding (both): Apply target ranking to evidence\nThe composed ranked candidate IDs must map to retained evidence and attempts; no target ordering-validation contract defines that relationship.\nDesign source: [docs/product-truth/flows/leafcutter/retrieve-project-knowledge.flow.json](docs/product-truth/flows/leafcutter/retrieve-project-knowledge.flow.json)\n\nOutput illustrative bundle projection; not an execution receipt — bundle; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"evidence\": [\n    {\n      \"schema_version\": \"1.0\",\n      \"id\": \"ev-b999f7a0f7a64ea2\",\n      \"created_at\": \"2026-10-03T14:45:04.749280Z\",\n      \"updated_at\": \"2026-10-03T14:45:04.749286Z\",\n      \"created_seq\": 0,\n      \"category\": \"task_context\",\n      \"semantic_type\": \"repository_fact\",\n      \"excerpt\": \"Illustrative acceptance clause; no real requirement text is asserted.\",\n      \"artifact_ref\": null,\n      \"source\": {\n        \"schema_version\": \"1.0\",\n        \"id\": \"source-example\",\n        \"kind\": \"repository_file\",\n        \"locator\": \"docs/acceptance-criteria/knowledge-retrieval/KM-500c-2.yaml#criteria\",\n        \"title\": \"Illustrative AC excerpt\",\n        \"source_version\": null,\n        \"retrieved_at\": null,\n        \"observed_modified_at\": null,\n        \"section_locator\": null\n      },\n      \"content_hash\": \"e6b8db0ee5d71fdfdcef40465cf7e507b76739c69d3e60653ded1a9263c8fb52\",\n      \"provenance\": {\n        \"schema_version\": \"1.0\",\n        \"producer\": \"knowledge-retrieval\",\n        \"invocation_id\": null,\n        \"strategy\": \"example_ac_requirements\",\n        \"query\": null,\n        \"terms\": [],\n        \"rank\": null,\n        \"relevance\": null,\n        \"actor\": null,\n        \"relayed_by\": null\n      },\n      \"access\": \"internal\",\n      \"verification\": \"unverified\",\n      \"limitations\": [\n        \"Illustrative content; not a real source receipt.\"\n      ],\n      \"truncated\": false\n    }\n  ],\n  \"evidence_ids\": [\n    \"ev-b999f7a0f7a64ea2\"\n  ],\n  \"limitations\": [\n    \"test_required remains unknown.\"\n  ]\n}",
+      "order": 10,
+      "implements": [],
+      "consumes": [],
+      "produces": [
+        "bundle/evidence: array (optional)",
+        "bundle/evidence_ids: array (optional)",
+        "bundle/limitations: array (optional)"
+      ],
+      "impl_asof": "2026-10-02",
+      "impl_status": "not_started",
+      "io_contracts": {
+        "consumes": [],
+        "produces": [
+          {
+            "contract": "bundle",
+            "fields": [
+              {
+                "path": "/evidence",
+                "types": [
+                  "array"
+                ],
+                "required": false
+              },
+              {
+                "path": "/evidence_ids",
+                "types": [
+                  "array"
+                ],
+                "required": false
+              },
+              {
+                "path": "/limitations",
+                "types": [
+                  "array"
+                ],
+                "required": false
+              }
+            ]
+          }
+        ],
+        "examples": [
+          {
+            "contract": "bundle",
+            "mode": "projection",
+            "origin": "illustrative",
+            "label": "Output illustrative bundle projection; not an execution receipt",
+            "value": {
+              "evidence": [
+                {
+                  "schema_version": "1.0",
+                  "id": "ev-b999f7a0f7a64ea2",
+                  "created_at": "2026-10-03T14:45:04.749280Z",
+                  "updated_at": "2026-10-03T14:45:04.749286Z",
+                  "created_seq": 0,
+                  "category": "task_context",
+                  "semantic_type": "repository_fact",
+                  "excerpt": "Illustrative acceptance clause; no real requirement text is asserted.",
+                  "artifact_ref": null,
+                  "source": {
+                    "schema_version": "1.0",
+                    "id": "source-example",
+                    "kind": "repository_file",
+                    "locator": "docs/acceptance-criteria/knowledge-retrieval/KM-500c-2.yaml#criteria",
+                    "title": "Illustrative AC excerpt",
+                    "source_version": null,
+                    "retrieved_at": null,
+                    "observed_modified_at": null,
+                    "section_locator": null
+                  },
+                  "content_hash": "e6b8db0ee5d71fdfdcef40465cf7e507b76739c69d3e60653ded1a9263c8fb52",
+                  "provenance": {
+                    "schema_version": "1.0",
+                    "producer": "knowledge-retrieval",
+                    "invocation_id": null,
+                    "strategy": "example_ac_requirements",
+                    "query": null,
+                    "terms": [],
+                    "rank": null,
+                    "relevance": null,
+                    "actor": null,
+                    "relayed_by": null
+                  },
+                  "access": "internal",
+                  "verification": "unverified",
+                  "limitations": [
+                    "Illustrative content; not a real source receipt."
+                  ],
+                  "truncated": false
+                }
+              ],
+              "evidence_ids": [
+                "ev-b999f7a0f7a64ea2"
+              ],
+              "limitations": [
+                "test_required remains unknown."
+              ]
+            }
+          }
+        ],
+        "missing_bindings": [
+          {
+            "name": "Apply target ranking to evidence",
+            "direction": "both",
+            "reason": "The composed ranked candidate IDs must map to retained evidence and attempts; no target ordering-validation contract defines that relationship.",
+            "source": "docs/product-truth/flows/leafcutter/retrieve-project-knowledge.flow.json"
+          }
+        ]
+      }
+    },
+    {
+      "id": "assess",
+      "label": "Jev checks what the evidence answers",
+      "agent": "Jev",
+      "human": "Judge the combined evidence against the ORIGINAL question within deterministic completeness/provenance limits. Choose finish, changed-method retry, continued traversal, focused clarification or honest stop. Preserve useful evidence, visited/attempt history and remaining budget.\n\nA return route must change the selected method, inputs or observed frontier, or have a specifically justified bounded transient retry. Identical no-progress retries cannot loop. No budget resets or scope widening. Attempt comparison is not final answer completeness; a positive vote cannot turn a partial page into an exact total.\n\nI/O boundary: Illustrative proposed result chooses retry for the shown partial evidence. ChoiceAnswer is reusable transport, not an implemented target decision tree.\n\nContract fields and examples (generated)\nConsumes:\n  retrieval_needs_output/original_question: string (required)\n  retrieval_needs_output/selections: object (required)\n  retrieval_needs_output/completeness: string (required)\n  Runtime contract: [retrieval_needs_output](kernel/contracts/retrieval_needs.py)\n  bundle/evidence: array (optional)\n  bundle/coverage: object (optional)\n  bundle/limitations: array (optional)\n  Schema: [bundle](kernel/schemas/leafcutter.evidence_bundle.v1.schema.json)\nProduces:\n  choice_answer/question_id: string (optional; default \"\")\n  choice_answer/choice: string (required)\n  choice_answer/probabilities: object (required)\n  choice_answer/confidence: null|number (optional; default null)\n  Runtime contract: [choice_answer](kernel/providers/base.py)\n\nPROPOSED - missing JSON binding (both): Finish/retry/clarify/stop decision with history\nNo target sufficiency decision binds original needs, all method history, remaining budget and no-progress limits.\nDesign source: [docs/product-truth/flows/leafcutter/retrieve-project-knowledge.flow.json](docs/product-truth/flows/leafcutter/retrieve-project-knowledge.flow.json)\n\nInput illustrative retrieval_needs_output projection; not an execution receipt — retrieval_needs_output; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"original_question\": \"For KM-500c-2, what must tests demonstrate?\",\n  \"selections\": {\n    \"entity_types\": [\n      \"AcceptanceCriterion\"\n    ],\n    \"target_ids\": [\n      \"KM-500c-2\"\n    ],\n    \"required_fields\": [\n      \"criteria\",\n      \"test_required\"\n    ],\n    \"document_types\": [\n      \"acceptance_criterion\"\n    ],\n    \"relationships\": []\n  },\n  \"completeness\": \"single_entity\"\n}\n\nInput illustrative bundle projection; not an execution receipt — bundle; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"evidence\": [\n    {\n      \"schema_version\": \"1.0\",\n      \"id\": \"ev-b999f7a0f7a64ea2\",\n      \"created_at\": \"2026-10-03T14:45:04.749280Z\",\n      \"updated_at\": \"2026-10-03T14:45:04.749286Z\",\n      \"created_seq\": 0,\n      \"category\": \"task_context\",\n      \"semantic_type\": \"repository_fact\",\n      \"excerpt\": \"Illustrative acceptance clause; no real requirement text is asserted.\",\n      \"artifact_ref\": null,\n      \"source\": {\n        \"schema_version\": \"1.0\",\n        \"id\": \"source-example\",\n        \"kind\": \"repository_file\",\n        \"locator\": \"docs/acceptance-criteria/knowledge-retrieval/KM-500c-2.yaml#criteria\",\n        \"title\": \"Illustrative AC excerpt\",\n        \"source_version\": null,\n        \"retrieved_at\": null,\n        \"observed_modified_at\": null,\n        \"section_locator\": null\n      },\n      \"content_hash\": \"e6b8db0ee5d71fdfdcef40465cf7e507b76739c69d3e60653ded1a9263c8fb52\",\n      \"provenance\": {\n        \"schema_version\": \"1.0\",\n        \"producer\": \"knowledge-retrieval\",\n        \"invocation_id\": null,\n        \"strategy\": \"example_ac_requirements\",\n        \"query\": null,\n        \"terms\": [],\n        \"rank\": null,\n        \"relevance\": null,\n        \"actor\": null,\n        \"relayed_by\": null\n      },\n      \"access\": \"internal\",\n      \"verification\": \"unverified\",\n      \"limitations\": [\n        \"Illustrative content; not a real source receipt.\"\n      ],\n      \"truncated\": false\n    }\n  ],\n  \"coverage\": {\n    \"need-example\": \"partial\"\n  },\n  \"limitations\": [\n    \"test_required remains unknown.\"\n  ]\n}\n\nOutput illustrative choice_answer projection; not an execution receipt — choice_answer; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"question_id\": \"next\",\n  \"choice\": \"retry\",\n  \"probabilities\": {\n    \"finish\": 0.03333333333333333,\n    \"retry\": 0.9,\n    \"clarify\": 0.03333333333333333,\n    \"stop\": 0.03333333333333333\n  },\n  \"confidence\": 0.9\n}",
+      "order": 11,
+      "implements": [],
+      "produces": [
+        "choice_answer/question_id: string (optional; default \"\")",
+        "choice_answer/choice: string (required)",
+        "choice_answer/probabilities: object (required)",
+        "choice_answer/confidence: null|number (optional; default null)"
+      ],
+      "impl_asof": "2026-10-02",
+      "impl_status": "not_started",
+      "consumes": [
+        "retrieval_needs_output/original_question: string (required)",
+        "retrieval_needs_output/selections: object (required)",
+        "retrieval_needs_output/completeness: string (required)",
+        "bundle/evidence: array (optional)",
+        "bundle/coverage: object (optional)",
+        "bundle/limitations: array (optional)"
+      ],
+      "io_contracts": {
+        "consumes": [
+          {
+            "contract": "retrieval_needs_output",
+            "fields": [
+              {
+                "path": "/original_question",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/selections",
+                "types": [
+                  "object"
+                ],
+                "required": true
+              },
+              {
+                "path": "/completeness",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              }
+            ]
+          },
+          {
+            "contract": "bundle",
+            "fields": [
+              {
+                "path": "/evidence",
+                "types": [
+                  "array"
+                ],
+                "required": false
+              },
+              {
+                "path": "/coverage",
+                "types": [
+                  "object"
+                ],
+                "required": false
+              },
+              {
+                "path": "/limitations",
+                "types": [
+                  "array"
+                ],
+                "required": false
+              }
+            ]
+          }
+        ],
+        "produces": [
+          {
+            "contract": "choice_answer",
+            "fields": [
+              {
+                "path": "/question_id",
+                "types": [
+                  "string"
+                ],
+                "required": false,
+                "default": ""
+              },
+              {
+                "path": "/choice",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/probabilities",
+                "types": [
+                  "object"
+                ],
+                "required": true
+              },
+              {
+                "path": "/confidence",
+                "types": [
+                  "null",
+                  "number"
+                ],
+                "required": false,
+                "default": null
+              }
+            ]
+          }
+        ],
+        "examples": [
+          {
+            "contract": "retrieval_needs_output",
+            "mode": "projection",
+            "origin": "illustrative",
+            "label": "Input illustrative retrieval_needs_output projection; not an execution receipt",
+            "value": {
+              "original_question": "For KM-500c-2, what must tests demonstrate?",
+              "selections": {
+                "entity_types": [
+                  "AcceptanceCriterion"
+                ],
+                "target_ids": [
+                  "KM-500c-2"
+                ],
+                "required_fields": [
+                  "criteria",
+                  "test_required"
+                ],
+                "document_types": [
+                  "acceptance_criterion"
+                ],
+                "relationships": []
+              },
+              "completeness": "single_entity"
+            }
+          },
+          {
+            "contract": "bundle",
+            "mode": "projection",
+            "origin": "illustrative",
+            "label": "Input illustrative bundle projection; not an execution receipt",
+            "value": {
+              "evidence": [
+                {
+                  "schema_version": "1.0",
+                  "id": "ev-b999f7a0f7a64ea2",
+                  "created_at": "2026-10-03T14:45:04.749280Z",
+                  "updated_at": "2026-10-03T14:45:04.749286Z",
+                  "created_seq": 0,
+                  "category": "task_context",
+                  "semantic_type": "repository_fact",
+                  "excerpt": "Illustrative acceptance clause; no real requirement text is asserted.",
+                  "artifact_ref": null,
+                  "source": {
+                    "schema_version": "1.0",
+                    "id": "source-example",
+                    "kind": "repository_file",
+                    "locator": "docs/acceptance-criteria/knowledge-retrieval/KM-500c-2.yaml#criteria",
+                    "title": "Illustrative AC excerpt",
+                    "source_version": null,
+                    "retrieved_at": null,
+                    "observed_modified_at": null,
+                    "section_locator": null
+                  },
+                  "content_hash": "e6b8db0ee5d71fdfdcef40465cf7e507b76739c69d3e60653ded1a9263c8fb52",
+                  "provenance": {
+                    "schema_version": "1.0",
+                    "producer": "knowledge-retrieval",
+                    "invocation_id": null,
+                    "strategy": "example_ac_requirements",
+                    "query": null,
+                    "terms": [],
+                    "rank": null,
+                    "relevance": null,
+                    "actor": null,
+                    "relayed_by": null
+                  },
+                  "access": "internal",
+                  "verification": "unverified",
+                  "limitations": [
+                    "Illustrative content; not a real source receipt."
+                  ],
+                  "truncated": false
+                }
+              ],
+              "coverage": {
+                "need-example": "partial"
+              },
+              "limitations": [
+                "test_required remains unknown."
+              ]
+            }
+          },
+          {
+            "contract": "choice_answer",
+            "mode": "projection",
+            "origin": "illustrative",
+            "label": "Output illustrative choice_answer projection; not an execution receipt",
+            "value": {
+              "question_id": "next",
+              "choice": "retry",
+              "probabilities": {
+                "finish": 0.03333333333333333,
+                "retry": 0.9,
+                "clarify": 0.03333333333333333,
+                "stop": 0.03333333333333333
+              },
+              "confidence": 0.9
+            }
+          }
+        ],
+        "missing_bindings": [
+          {
+            "name": "Finish/retry/clarify/stop decision with history",
+            "direction": "both",
+            "reason": "No target sufficiency decision binds original needs, all method history, remaining budget and no-progress limits.",
+            "source": "docs/product-truth/flows/leafcutter/retrieve-project-knowledge.flow.json"
+          }
+        ]
+      }
+    },
+    {
+      "id": "dispatch-wording",
+      "label": "Dispatch wording only when needed",
+      "agent": "System",
+      "human": "For a finish decision requiring prose, construct the typed host synthesis request from accepted evidence and limitations, then persist its matching wait. Otherwise pass unchanged structured facts directly to response assembly, bypassing LLM wording and its extra judgment. No wording request is issued for retry, clarification or stop.\n\nI/O boundary: The existing synthesis contract is reusable; it does not approve unsupported wording or automatically execute the target parent.\n\nContract fields and examples (generated)\nConsumes:\n  bundle/evidence_ids: array (optional)\n  bundle/limitations: array (optional)\n  Schema: [bundle](kernel/schemas/leafcutter.evidence_bundle.v1.schema.json)\nProduces:\n  synthesis/operation: string (required)\n  synthesis/question: string (required)\n  synthesis/evidence_ids: array (optional)\n  synthesis/output_requirements: array (optional)\n  Schema: [synthesis](kernel/schemas/leafcutter.synthesis_request.v1.schema.json)\n\nPROPOSED - missing JSON binding (both): Retrieval wording dispatch integration\nThe existing synthesis payload can bind question and evidence IDs. The proposed evidence-to-wording or structured-fact bypass selection is not wired into this parent.\nDesign source: [docs/product-truth/flows/leafcutter/retrieve-project-knowledge.flow.json](docs/product-truth/flows/leafcutter/retrieve-project-knowledge.flow.json)\n\nInput illustrative bundle projection; not an execution receipt — bundle; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"evidence_ids\": [\n    \"ev-b999f7a0f7a64ea2\"\n  ],\n  \"limitations\": [\n    \"test_required remains unknown.\"\n  ]\n}\n\nOutput illustrative synthesis projection; not an execution receipt — synthesis; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"operation\": \"research.synthesize\",\n  \"question\": \"For KM-500c-2, what must tests demonstrate?\",\n  \"evidence_ids\": [\n    \"ev-b999f7a0f7a64ea2\"\n  ],\n  \"output_requirements\": [\n    \"Preserve unknowns; cite only supplied evidence.\"\n  ]\n}",
+      "order": 12,
+      "implements": [],
+      "produces": [
+        "synthesis/operation: string (required)",
+        "synthesis/question: string (required)",
+        "synthesis/evidence_ids: array (optional)",
+        "synthesis/output_requirements: array (optional)"
+      ],
+      "impl_asof": "2026-10-02",
+      "impl_status": "not_started",
+      "consumes": [
+        "bundle/evidence_ids: array (optional)",
+        "bundle/limitations: array (optional)"
+      ],
+      "io_contracts": {
+        "consumes": [
+          {
+            "contract": "bundle",
+            "fields": [
+              {
+                "path": "/evidence_ids",
+                "types": [
+                  "array"
+                ],
+                "required": false
+              },
+              {
+                "path": "/limitations",
+                "types": [
+                  "array"
+                ],
+                "required": false
+              }
+            ]
+          }
+        ],
+        "produces": [
+          {
+            "contract": "synthesis",
+            "fields": [
+              {
+                "path": "/operation",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/question",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/evidence_ids",
+                "types": [
+                  "array"
+                ],
+                "required": false
+              },
+              {
+                "path": "/output_requirements",
+                "types": [
+                  "array"
+                ],
+                "required": false
+              }
+            ]
+          }
+        ],
+        "examples": [
+          {
+            "contract": "bundle",
+            "mode": "projection",
+            "origin": "illustrative",
+            "label": "Input illustrative bundle projection; not an execution receipt",
+            "value": {
+              "evidence_ids": [
+                "ev-b999f7a0f7a64ea2"
+              ],
+              "limitations": [
+                "test_required remains unknown."
+              ]
+            }
+          },
+          {
+            "contract": "synthesis",
+            "mode": "projection",
+            "origin": "illustrative",
+            "label": "Output illustrative synthesis projection; not an execution receipt",
+            "value": {
+              "operation": "research.synthesize",
+              "question": "For KM-500c-2, what must tests demonstrate?",
+              "evidence_ids": [
+                "ev-b999f7a0f7a64ea2"
+              ],
+              "output_requirements": [
+                "Preserve unknowns; cite only supplied evidence."
+              ]
+            }
+          }
+        ],
+        "missing_bindings": [
+          {
+            "name": "Retrieval wording dispatch integration",
+            "direction": "both",
+            "reason": "The existing synthesis payload can bind question and evidence IDs. The proposed evidence-to-wording or structured-fact bypass selection is not wired into this parent.",
+            "source": "docs/product-truth/flows/leafcutter/retrieve-project-knowledge.flow.json"
+          }
+        ]
+      }
+    },
+    {
+      "id": "wording",
+      "label": "Optionally formulate the answer",
+      "agent": "Host LLM",
+      "human": "Only when wording is needed, synthesize from the accepted evidence and supplied limitations through a typed kernel handoff. Do not invent facts or remove qualifications. Otherwise bypass this step and use structured facts directly.\n\nI/O boundary: An LLM produces language through the host path. The partial example states the unknown instead of inventing a test requirement.\n\nContract fields and examples (generated)\nConsumes:\n  synthesis/question: string (required)\n  synthesis/evidence_ids: array (optional)\n  synthesis/output_requirements: array (optional)\n  Schema: [synthesis](kernel/schemas/leafcutter.synthesis_request.v1.schema.json)\nProduces:\n  findings/findings: array (optional)\n  findings/unknowns: array (optional)\n  findings/assumptions: array (optional)\n  findings/constraints: array (optional)\n  Schema: [findings](kernel/schemas/leafcutter.findings.v1.schema.json)\n\nPROPOSED - missing JSON binding (both): Target wording response integration\nThe existing FindingsPayload is known, but the retrieval-specific dispatch/input binding and final wording requirements have not been integrated.\nDesign source: [docs/product-truth/flows/leafcutter/retrieve-project-knowledge.flow.json](docs/product-truth/flows/leafcutter/retrieve-project-knowledge.flow.json)\n\nInput illustrative synthesis projection; not an execution receipt — synthesis; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"question\": \"For KM-500c-2, what must tests demonstrate?\",\n  \"evidence_ids\": [\n    \"ev-b999f7a0f7a64ea2\"\n  ],\n  \"output_requirements\": [\n    \"Preserve unknowns; cite only supplied evidence.\"\n  ]\n}\n\nOutput illustrative findings projection; not an execution receipt — findings; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"findings\": [],\n  \"unknowns\": [\n    \"test_required remains unknown.\"\n  ],\n  \"assumptions\": [],\n  \"constraints\": []\n}",
+      "order": 13,
+      "implements": [],
+      "produces": [
+        "findings/findings: array (optional)",
+        "findings/unknowns: array (optional)",
+        "findings/assumptions: array (optional)",
+        "findings/constraints: array (optional)"
+      ],
+      "impl_asof": "2026-10-02",
+      "impl_status": "not_started",
+      "consumes": [
+        "synthesis/question: string (required)",
+        "synthesis/evidence_ids: array (optional)",
+        "synthesis/output_requirements: array (optional)"
+      ],
+      "io_contracts": {
+        "consumes": [
+          {
+            "contract": "synthesis",
+            "fields": [
+              {
+                "path": "/question",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/evidence_ids",
+                "types": [
+                  "array"
+                ],
+                "required": false
+              },
+              {
+                "path": "/output_requirements",
+                "types": [
+                  "array"
+                ],
+                "required": false
+              }
+            ]
+          }
+        ],
+        "produces": [
+          {
+            "contract": "findings",
+            "fields": [
+              {
+                "path": "/findings",
+                "types": [
+                  "array"
+                ],
+                "required": false
+              },
+              {
+                "path": "/unknowns",
+                "types": [
+                  "array"
+                ],
+                "required": false
+              },
+              {
+                "path": "/assumptions",
+                "types": [
+                  "array"
+                ],
+                "required": false
+              },
+              {
+                "path": "/constraints",
+                "types": [
+                  "array"
+                ],
+                "required": false
+              }
+            ]
+          }
+        ],
+        "examples": [
+          {
+            "contract": "synthesis",
+            "mode": "projection",
+            "origin": "illustrative",
+            "label": "Input illustrative synthesis projection; not an execution receipt",
+            "value": {
+              "question": "For KM-500c-2, what must tests demonstrate?",
+              "evidence_ids": [
+                "ev-b999f7a0f7a64ea2"
+              ],
+              "output_requirements": [
+                "Preserve unknowns; cite only supplied evidence."
+              ]
+            }
+          },
+          {
+            "contract": "findings",
+            "mode": "projection",
+            "origin": "illustrative",
+            "label": "Output illustrative findings projection; not an execution receipt",
+            "value": {
+              "findings": [],
+              "unknowns": [
+                "test_required remains unknown."
+              ],
+              "assumptions": [],
+              "constraints": []
+            }
+          }
+        ],
+        "missing_bindings": [
+          {
+            "name": "Target wording response integration",
+            "direction": "both",
+            "reason": "The existing FindingsPayload is known, but the retrieval-specific dispatch/input binding and final wording requirements have not been integrated.",
+            "source": "docs/product-truth/flows/leafcutter/retrieve-project-knowledge.flow.json"
+          }
+        ]
+      }
+    },
+    {
+      "id": "check-wording",
+      "label": "Validate response material",
+      "agent": "System",
+      "human": "Validate matching resume, schema, citations and retained limits. Invalid material follows bounded correction or partial stop.\n\nI/O boundary: This example is a host findings submission, not a human answer or approval.\n\nContract fields and examples (generated)\nConsumes:\n  interaction_submission/run_id: string (required)\n  interaction_submission/interaction_id: string (required)\n  interaction_submission/expected_state_revision: integer (required)\n  interaction_submission/actor: object (required)\n  interaction_submission/response_schema_id: string (required)\n  interaction_submission/response: object (required)\n  Runtime contract: [interaction_submission](kernel/contracts/interaction.py)\nProduces:\n  findings/findings: array (optional)\n  findings/unknowns: array (optional)\n  Schema: [findings](kernel/schemas/leafcutter.findings.v1.schema.json)\n\nPROPOSED - missing JSON binding (both): Retrieval-specific citation/response validation\nThe generic strict submission envelope exists. The target citation/claim checks and retrieval-specific accepted-wording binding are not defined.\nDesign source: [docs/product-truth/flows/leafcutter/retrieve-project-knowledge.flow.json](docs/product-truth/flows/leafcutter/retrieve-project-knowledge.flow.json)\n\nInput illustrative interaction_submission projection; not an execution receipt — interaction_submission; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"run_id\": \"run-example\",\n  \"interaction_id\": \"interaction-example\",\n  \"expected_state_revision\": 1,\n  \"actor\": {\n    \"kind\": \"host\",\n    \"id\": \"host-agent\"\n  },\n  \"response_schema_id\": \"leafcutter.findings.v1\",\n  \"response\": {\n    \"findings\": [],\n    \"unknowns\": [\n      \"test_required remains unknown.\"\n    ]\n  }\n}\n\nOutput illustrative findings projection; not an execution receipt — findings; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"findings\": [],\n  \"unknowns\": [\n    \"test_required remains unknown.\"\n  ]\n}",
+      "order": 14,
+      "implements": [],
+      "produces": [
+        "findings/findings: array (optional)",
+        "findings/unknowns: array (optional)"
+      ],
+      "impl_asof": "2026-10-02",
+      "impl_status": "not_started",
+      "consumes": [
+        "interaction_submission/run_id: string (required)",
+        "interaction_submission/interaction_id: string (required)",
+        "interaction_submission/expected_state_revision: integer (required)",
+        "interaction_submission/actor: object (required)",
+        "interaction_submission/response_schema_id: string (required)",
+        "interaction_submission/response: object (required)"
+      ],
+      "io_contracts": {
+        "consumes": [
+          {
+            "contract": "interaction_submission",
+            "fields": [
+              {
+                "path": "/run_id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/interaction_id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/expected_state_revision",
+                "types": [
+                  "integer"
+                ],
+                "required": true
+              },
+              {
+                "path": "/actor",
+                "types": [
+                  "object"
+                ],
+                "required": true
+              },
+              {
+                "path": "/response_schema_id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/response",
+                "types": [
+                  "object"
+                ],
+                "required": true
+              }
+            ]
+          }
+        ],
+        "produces": [
+          {
+            "contract": "findings",
+            "fields": [
+              {
+                "path": "/findings",
+                "types": [
+                  "array"
+                ],
+                "required": false
+              },
+              {
+                "path": "/unknowns",
+                "types": [
+                  "array"
+                ],
+                "required": false
+              }
+            ]
+          }
+        ],
+        "examples": [
+          {
+            "contract": "interaction_submission",
+            "mode": "projection",
+            "origin": "illustrative",
+            "label": "Input illustrative interaction_submission projection; not an execution receipt",
+            "value": {
+              "run_id": "run-example",
+              "interaction_id": "interaction-example",
+              "expected_state_revision": 1,
+              "actor": {
+                "kind": "host",
+                "id": "host-agent"
+              },
+              "response_schema_id": "leafcutter.findings.v1",
+              "response": {
+                "findings": [],
+                "unknowns": [
+                  "test_required remains unknown."
+                ]
+              }
+            }
+          },
+          {
+            "contract": "findings",
+            "mode": "projection",
+            "origin": "illustrative",
+            "label": "Output illustrative findings projection; not an execution receipt",
+            "value": {
+              "findings": [],
+              "unknowns": [
+                "test_required remains unknown."
+              ]
+            }
+          }
+        ],
+        "missing_bindings": [
+          {
+            "name": "Retrieval-specific citation/response validation",
+            "direction": "both",
+            "reason": "The generic strict submission envelope exists. The target citation/claim checks and retrieval-specific accepted-wording binding are not defined.",
+            "source": "docs/product-truth/flows/leafcutter/retrieve-project-knowledge.flow.json"
+          }
+        ]
+      }
+    },
+    {
+      "id": "judge-wording",
+      "label": "Accept synthesized wording when needed",
+      "agent": "Jev",
+      "human": "For generated wording choose accept, bounded revision or stop against supplied evidence. Structured facts bypass this wording judgment. Only accept or the unchanged structured-facts bypass reaches response assembly; revision returns to wording and stop returns the qualified terminal outcome.\n\nI/O boundary: No Jev-generated prose or successful wording approval is invented in this metadata.\n\nContract fields and examples (generated)\nConsumes:\n  findings/findings: array (optional)\n  findings/unknowns: array (optional)\n  Schema: [findings](kernel/schemas/leafcutter.findings.v1.schema.json)\nProduces:\n  No checked JSON binding documented in this direction.\n\nPROPOSED - missing JSON binding (both): Accept/revise/stop wording judgment\nThe target needs a scoped question/template and persisted accepted/revised wording decision. Generic schema validation cannot establish semantic adequacy.\nDesign source: [docs/product-truth/flows/leafcutter/retrieve-project-knowledge.flow.json](docs/product-truth/flows/leafcutter/retrieve-project-knowledge.flow.json)\n\nInput illustrative findings projection; not an execution receipt — findings; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"findings\": [],\n  \"unknowns\": [\n    \"No test requirements were retrieved in this illustrative example.\"\n  ]\n}",
+      "order": 15,
+      "implements": [],
+      "produces": [],
+      "impl_asof": "2026-10-02",
+      "impl_status": "not_started",
+      "consumes": [
+        "findings/findings: array (optional)",
+        "findings/unknowns: array (optional)"
+      ],
+      "io_contracts": {
+        "consumes": [
+          {
+            "contract": "findings",
+            "fields": [
+              {
+                "path": "/findings",
+                "types": [
+                  "array"
+                ],
+                "required": false
+              },
+              {
+                "path": "/unknowns",
+                "types": [
+                  "array"
+                ],
+                "required": false
+              }
+            ]
+          }
+        ],
+        "produces": [],
+        "examples": [
+          {
+            "contract": "findings",
+            "mode": "projection",
+            "origin": "illustrative",
+            "label": "Input illustrative findings projection; not an execution receipt",
+            "value": {
+              "findings": [],
+              "unknowns": [
+                "No test requirements were retrieved in this illustrative example."
+              ]
+            }
+          }
+        ],
+        "missing_bindings": [
+          {
+            "name": "Accept/revise/stop wording judgment",
+            "direction": "both",
+            "reason": "The target needs a scoped question/template and persisted accepted/revised wording decision. Generic schema validation cannot establish semantic adequacy.",
+            "source": "docs/product-truth/flows/leafcutter/retrieve-project-knowledge.flow.json"
+          }
+        ]
+      }
+    },
+    {
+      "id": "respond",
+      "label": "Return the result",
+      "agent": "System",
+      "human": "Assemble answer, evidence, status, limits and continuation references. Append only an actual matching final outcome to advisory strategy memory when available. Never assemble unaccepted candidate wording as an answer.\n\nI/O boundary: A partial generic run illustrates truthful limits. This does not register a production answer schema.\n\nContract fields and examples (generated)\nConsumes:\n  No checked JSON binding documented in this direction.\nProduces:\n  run_envelope/run_id: string (required)\n  run_envelope/status: string (required)\n  run_envelope/output: null|object (optional; default null)\n  run_envelope/pending_interaction: null|object (optional; default null)\n  run_envelope/limitations: array (optional; default [])\n  Runtime contract: [run_envelope](kernel/contracts/run.py)\n\nPROPOSED - missing JSON binding (both): Final question-first retrieval answer envelope\nRunEnvelope is the known generic caller boundary. The new parent final answer, evidence, per-method status and continuation composition has no registered output contract.\nDesign source: [docs/product-truth/flows/leafcutter/retrieve-project-knowledge.flow.json](docs/product-truth/flows/leafcutter/retrieve-project-knowledge.flow.json)\n\nOutput illustrative run_envelope projection; not an execution receipt — run_envelope; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"run_id\": \"run-example\",\n  \"status\": \"partial\",\n  \"output\": {\n    \"schema_id\": \"leafcutter.evidence_bundle.v1\",\n    \"payload\": {\n      \"request_id\": \"example-request\",\n      \"evidence\": [\n        {\n          \"schema_version\": \"1.0\",\n          \"id\": \"ev-b999f7a0f7a64ea2\",\n          \"created_at\": \"2026-10-03T14:45:04.749280Z\",\n          \"updated_at\": \"2026-10-03T14:45:04.749286Z\",\n          \"created_seq\": 0,\n          \"category\": \"task_context\",\n          \"semantic_type\": \"repository_fact\",\n          \"excerpt\": \"Illustrative acceptance clause; no real requirement text is asserted.\",\n          \"artifact_ref\": null,\n          \"source\": {\n            \"schema_version\": \"1.0\",\n            \"id\": \"source-example\",\n            \"kind\": \"repository_file\",\n            \"locator\": \"docs/acceptance-criteria/knowledge-retrieval/KM-500c-2.yaml#criteria\",\n            \"title\": \"Illustrative AC excerpt\",\n            \"source_version\": null,\n            \"retrieved_at\": null,\n            \"observed_modified_at\": null,\n            \"section_locator\": null\n          },\n          \"content_hash\": \"e6b8db0ee5d71fdfdcef40465cf7e507b76739c69d3e60653ded1a9263c8fb52\",\n          \"provenance\": {\n            \"schema_version\": \"1.0\",\n            \"producer\": \"knowledge-retrieval\",\n            \"invocation_id\": null,\n            \"strategy\": \"example_ac_requirements\",\n            \"query\": null,\n            \"terms\": [],\n            \"rank\": null,\n            \"relevance\": null,\n            \"actor\": null,\n            \"relayed_by\": null\n          },\n          \"access\": \"internal\",\n          \"verification\": \"unverified\",\n          \"limitations\": [\n            \"Illustrative content; not a real source receipt.\"\n          ],\n          \"truncated\": false\n        }\n      ],\n      \"evidence_ids\": [\n        \"ev-b999f7a0f7a64ea2\"\n      ],\n      \"coverage\": {\n        \"need-example\": \"partial\"\n      },\n      \"attempted_sources\": [\n        \"repository\"\n      ],\n      \"unavailable_sources\": [],\n      \"limitations\": [\n        \"test_required remains unknown.\"\n      ],\n      \"truncated\": false\n    }\n  },\n  \"pending_interaction\": null,\n  \"limitations\": [\n    \"test_required remains unknown.\"\n  ]\n}",
+      "order": 16,
+      "implements": [],
+      "produces": [
+        "run_envelope/run_id: string (required)",
+        "run_envelope/status: string (required)",
+        "run_envelope/output: null|object (optional; default null)",
+        "run_envelope/pending_interaction: null|object (optional; default null)",
+        "run_envelope/limitations: array (optional; default [])"
+      ],
+      "impl_asof": "2026-10-02",
+      "impl_status": "not_started",
+      "consumes": [],
+      "io_contracts": {
+        "consumes": [],
+        "produces": [
+          {
+            "contract": "run_envelope",
+            "fields": [
+              {
+                "path": "/run_id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/status",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/output",
+                "types": [
+                  "null",
+                  "object"
+                ],
+                "required": false,
+                "default": null
+              },
+              {
+                "path": "/pending_interaction",
+                "types": [
+                  "null",
+                  "object"
+                ],
+                "required": false,
+                "default": null
+              },
+              {
+                "path": "/limitations",
+                "types": [
+                  "array"
+                ],
+                "required": false,
+                "default": []
+              }
+            ]
+          }
+        ],
+        "examples": [
+          {
+            "contract": "run_envelope",
+            "mode": "projection",
+            "origin": "illustrative",
+            "label": "Output illustrative run_envelope projection; not an execution receipt",
+            "value": {
+              "run_id": "run-example",
+              "status": "partial",
+              "output": {
+                "schema_id": "leafcutter.evidence_bundle.v1",
+                "payload": {
+                  "request_id": "example-request",
+                  "evidence": [
+                    {
+                      "schema_version": "1.0",
+                      "id": "ev-b999f7a0f7a64ea2",
+                      "created_at": "2026-10-03T14:45:04.749280Z",
+                      "updated_at": "2026-10-03T14:45:04.749286Z",
+                      "created_seq": 0,
+                      "category": "task_context",
+                      "semantic_type": "repository_fact",
+                      "excerpt": "Illustrative acceptance clause; no real requirement text is asserted.",
+                      "artifact_ref": null,
+                      "source": {
+                        "schema_version": "1.0",
+                        "id": "source-example",
+                        "kind": "repository_file",
+                        "locator": "docs/acceptance-criteria/knowledge-retrieval/KM-500c-2.yaml#criteria",
+                        "title": "Illustrative AC excerpt",
+                        "source_version": null,
+                        "retrieved_at": null,
+                        "observed_modified_at": null,
+                        "section_locator": null
+                      },
+                      "content_hash": "e6b8db0ee5d71fdfdcef40465cf7e507b76739c69d3e60653ded1a9263c8fb52",
+                      "provenance": {
+                        "schema_version": "1.0",
+                        "producer": "knowledge-retrieval",
+                        "invocation_id": null,
+                        "strategy": "example_ac_requirements",
+                        "query": null,
+                        "terms": [],
+                        "rank": null,
+                        "relevance": null,
+                        "actor": null,
+                        "relayed_by": null
+                      },
+                      "access": "internal",
+                      "verification": "unverified",
+                      "limitations": [
+                        "Illustrative content; not a real source receipt."
+                      ],
+                      "truncated": false
+                    }
+                  ],
+                  "evidence_ids": [
+                    "ev-b999f7a0f7a64ea2"
+                  ],
+                  "coverage": {
+                    "need-example": "partial"
+                  },
+                  "attempted_sources": [
+                    "repository"
+                  ],
+                  "unavailable_sources": [],
+                  "limitations": [
+                    "test_required remains unknown."
+                  ],
+                  "truncated": false
+                }
+              },
+              "pending_interaction": null,
+              "limitations": [
+                "test_required remains unknown."
+              ]
+            }
+          }
+        ],
+        "missing_bindings": [
+          {
+            "name": "Final question-first retrieval answer envelope",
+            "direction": "both",
+            "reason": "RunEnvelope is the known generic caller boundary. The new parent final answer, evidence, per-method status and continuation composition has no registered output contract.",
+            "source": "docs/product-truth/flows/leafcutter/retrieve-project-knowledge.flow.json"
+          }
+        ]
+      }
+    }
+  ],
+  "branches": [
+    {
+      "id": "clarification",
+      "label": "Ask only when necessary",
+      "condition": "An essential intent or authority choice cannot be resolved from context",
+      "human": "Select the offered clarification outcome for a material unresolved intent or authority choice. Do not author question prose or execute the wait.\n\nContract fields and examples (generated)\nConsumes:\n  No checked JSON binding documented in this direction.\nProduces:\n  No checked JSON binding documented in this direction.\n\nPROPOSED - missing JSON binding (both): Target clarification decision context\nThe proposed route must retain original need, scoped missing fact, complete attempt history and bounded retry identity. No target continuation schema binds these fields.\nDesign source: [docs/product-truth/flows/leafcutter/retrieve-project-knowledge.flow.json](docs/product-truth/flows/leafcutter/retrieve-project-knowledge.flow.json)",
+      "agent": "Jev",
+      "outcome_kind": "alternative",
+      "implements": [],
+      "from": "plan",
+      "impl_asof": "2026-10-02",
+      "impl_status": "not_started",
+      "io_contracts": {
+        "missing_bindings": [
+          {
+            "name": "Target clarification decision context",
+            "direction": "both",
+            "reason": "The proposed route must retain original need, scoped missing fact, complete attempt history and bounded retry identity. No target continuation schema binds these fields.",
+            "source": "docs/product-truth/flows/leafcutter/retrieve-project-knowledge.flow.json"
+          }
+        ]
+      },
+      "consumes": [],
+      "produces": []
+    },
+    {
+      "id": "retry",
+      "label": "Try a better plan",
+      "condition": "Evidence has a resolvable gap and budget remains",
+      "human": "Return to [method selection](docs/product-truth/flows/leafcutter/retrieve-project-knowledge.flow.json#plan) with the original question, gap, retained evidence, attempt/visited history and remaining budget. Choose a different or complementary method, changed valid inputs, or [an observed next frontier](docs/product-truth/flows/leafcutter/retrieval-source-traversal.flow.json#frontier). Do not repeat an unchanged no-progress attempt.\n\nContract fields and examples (generated)\nConsumes:\n  No checked JSON binding documented in this direction.\nProduces:\n  No checked JSON binding documented in this direction.\n\nPROPOSED - missing JSON binding (both): Target retry decision context\nThe proposed route must retain original need, scoped missing fact, complete attempt history and bounded retry identity. No target continuation schema binds these fields.\nDesign source: [docs/product-truth/flows/leafcutter/retrieve-project-knowledge.flow.json](docs/product-truth/flows/leafcutter/retrieve-project-knowledge.flow.json)",
+      "agent": "Jev",
+      "outcome_kind": "alternative",
+      "implements": [],
+      "from": "assess",
+      "impl_asof": "2026-10-02",
+      "impl_status": "not_started",
+      "io_contracts": {
+        "missing_bindings": [
+          {
+            "name": "Target retry decision context",
+            "direction": "both",
+            "reason": "The proposed route must retain original need, scoped missing fact, complete attempt history and bounded retry identity. No target continuation schema binds these fields.",
+            "source": "docs/product-truth/flows/leafcutter/retrieve-project-knowledge.flow.json"
+          }
+        ]
+      },
+      "consumes": [],
+      "produces": []
+    },
+    {
+      "id": "partial",
+      "label": "Return the useful partial answer",
+      "condition": "Some evidence is useful but completeness cannot be established",
+      "human": "Return supported partial findings and missing facts when progress, frontier or budget is exhausted. Retain their exact source/attempt provenance; do not claim completeness.\n\nI/O boundary: Partial explicitly retains the unknown test requirement; it does not become a completed exact answer.\n\nContract fields and examples (generated)\nConsumes:\n  No checked JSON binding documented in this direction.\nProduces:\n  bundle/evidence: array (optional)\n  bundle/coverage: object (optional)\n  bundle/limitations: array (optional)\n  Schema: [bundle](kernel/schemas/leafcutter.evidence_bundle.v1.schema.json)\n\nPROPOSED - missing JSON binding (both): Final partial answer composition\nThe generic evidence bundle supports partial facts, but the new parent output contract and multi-method outcome mapping are undefined.\nDesign source: [docs/product-truth/flows/leafcutter/retrieve-project-knowledge.flow.json](docs/product-truth/flows/leafcutter/retrieve-project-knowledge.flow.json)\n\nOutput illustrative bundle projection; not an execution receipt — bundle; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"evidence\": [\n    {\n      \"schema_version\": \"1.0\",\n      \"id\": \"ev-b999f7a0f7a64ea2\",\n      \"created_at\": \"2026-10-03T14:45:04.749280Z\",\n      \"updated_at\": \"2026-10-03T14:45:04.749286Z\",\n      \"created_seq\": 0,\n      \"category\": \"task_context\",\n      \"semantic_type\": \"repository_fact\",\n      \"excerpt\": \"Illustrative acceptance clause; no real requirement text is asserted.\",\n      \"artifact_ref\": null,\n      \"source\": {\n        \"schema_version\": \"1.0\",\n        \"id\": \"source-example\",\n        \"kind\": \"repository_file\",\n        \"locator\": \"docs/acceptance-criteria/knowledge-retrieval/KM-500c-2.yaml#criteria\",\n        \"title\": \"Illustrative AC excerpt\",\n        \"source_version\": null,\n        \"retrieved_at\": null,\n        \"observed_modified_at\": null,\n        \"section_locator\": null\n      },\n      \"content_hash\": \"e6b8db0ee5d71fdfdcef40465cf7e507b76739c69d3e60653ded1a9263c8fb52\",\n      \"provenance\": {\n        \"schema_version\": \"1.0\",\n        \"producer\": \"knowledge-retrieval\",\n        \"invocation_id\": null,\n        \"strategy\": \"example_ac_requirements\",\n        \"query\": null,\n        \"terms\": [],\n        \"rank\": null,\n        \"relevance\": null,\n        \"actor\": null,\n        \"relayed_by\": null\n      },\n      \"access\": \"internal\",\n      \"verification\": \"unverified\",\n      \"limitations\": [\n        \"Illustrative content; not a real source receipt.\"\n      ],\n      \"truncated\": false\n    }\n  ],\n  \"coverage\": {\n    \"need-example\": \"partial\"\n  },\n  \"limitations\": [\n    \"test_required remains unknown.\"\n  ]\n}",
+      "agent": "System",
+      "outcome_kind": "alternative",
+      "implements": [],
+      "from": "assess",
+      "impl_asof": "2026-10-02",
+      "impl_status": "not_started",
+      "io_contracts": {
+        "consumes": [],
+        "produces": [
+          {
+            "contract": "bundle",
+            "fields": [
+              {
+                "path": "/evidence",
+                "types": [
+                  "array"
+                ],
+                "required": false
+              },
+              {
+                "path": "/coverage",
+                "types": [
+                  "object"
+                ],
+                "required": false
+              },
+              {
+                "path": "/limitations",
+                "types": [
+                  "array"
+                ],
+                "required": false
+              }
+            ]
+          }
+        ],
+        "examples": [
+          {
+            "contract": "bundle",
+            "mode": "projection",
+            "origin": "illustrative",
+            "label": "Output illustrative bundle projection; not an execution receipt",
+            "value": {
+              "evidence": [
+                {
+                  "schema_version": "1.0",
+                  "id": "ev-b999f7a0f7a64ea2",
+                  "created_at": "2026-10-03T14:45:04.749280Z",
+                  "updated_at": "2026-10-03T14:45:04.749286Z",
+                  "created_seq": 0,
+                  "category": "task_context",
+                  "semantic_type": "repository_fact",
+                  "excerpt": "Illustrative acceptance clause; no real requirement text is asserted.",
+                  "artifact_ref": null,
+                  "source": {
+                    "schema_version": "1.0",
+                    "id": "source-example",
+                    "kind": "repository_file",
+                    "locator": "docs/acceptance-criteria/knowledge-retrieval/KM-500c-2.yaml#criteria",
+                    "title": "Illustrative AC excerpt",
+                    "source_version": null,
+                    "retrieved_at": null,
+                    "observed_modified_at": null,
+                    "section_locator": null
+                  },
+                  "content_hash": "e6b8db0ee5d71fdfdcef40465cf7e507b76739c69d3e60653ded1a9263c8fb52",
+                  "provenance": {
+                    "schema_version": "1.0",
+                    "producer": "knowledge-retrieval",
+                    "invocation_id": null,
+                    "strategy": "example_ac_requirements",
+                    "query": null,
+                    "terms": [],
+                    "rank": null,
+                    "relevance": null,
+                    "actor": null,
+                    "relayed_by": null
+                  },
+                  "access": "internal",
+                  "verification": "unverified",
+                  "limitations": [
+                    "Illustrative content; not a real source receipt."
+                  ],
+                  "truncated": false
+                }
+              ],
+              "coverage": {
+                "need-example": "partial"
+              },
+              "limitations": [
+                "test_required remains unknown."
+              ]
+            }
+          }
+        ],
+        "missing_bindings": [
+          {
+            "name": "Final partial answer composition",
+            "direction": "both",
+            "reason": "The generic evidence bundle supports partial facts, but the new parent output contract and multi-method outcome mapping are undefined.",
+            "source": "docs/product-truth/flows/leafcutter/retrieve-project-knowledge.flow.json"
+          }
+        ]
+      },
+      "consumes": [],
+      "produces": [
+        "bundle/evidence: array (optional)",
+        "bundle/coverage: object (optional)",
+        "bundle/limitations: array (optional)"
+      ]
+    },
+    {
+      "id": "blocked",
+      "label": "Explain why retrieval cannot proceed",
+      "condition": "No permitted useful alternative remains, or a non-bypassable authority/source boundary prevents progress",
+      "human": "Return blocked with the actual reason when no permitted progress remains. A single failed method is not automatically terminal: otherwise send its explicit failure to [comparison](docs/product-truth/flows/leafcutter/retrieve-project-knowledge.flow.json#compare) and select an alternative. Never treat outage/denial as empty success.\n\nI/O boundary: Illustrative blocked result uses a missing-data reason, not a false retrieval-not-needed success.\n\nContract fields and examples (generated)\nConsumes:\n  No checked JSON binding documented in this direction.\nProduces:\n  capability_result/status: string (required)\n  capability_result/error: null|object (optional; default null)\n  capability_result/limitations: array (optional; default [])\n  Runtime contract: [capability_result](kernel/contracts/capability.py)\n\nPROPOSED - missing JSON binding (both): Final blocked answer composition\nThe target answer envelope is undefined; the existing blocked CapabilityResult can express a limitation but not all target attempt history.\nDesign source: [docs/product-truth/flows/leafcutter/retrieve-project-knowledge.flow.json](docs/product-truth/flows/leafcutter/retrieve-project-knowledge.flow.json)\n\nOutput illustrative capability_result projection; not an execution receipt — capability_result; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"status\": \"blocked\",\n  \"limitations\": [\n    \"The test requirement is still unknown.\"\n  ],\n  \"error\": {\n    \"code\": \"unresolved_retrieval_need\",\n    \"message\": \"No permitted useful method remains.\",\n    \"retryable\": false\n  }\n}",
+      "agent": "System",
+      "outcome_kind": "alternative",
+      "implements": [],
+      "from": "retrieve",
+      "impl_asof": "2026-10-02",
+      "impl_status": "not_started",
+      "io_contracts": {
+        "consumes": [],
+        "produces": [
+          {
+            "contract": "capability_result",
+            "fields": [
+              {
+                "path": "/status",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/error",
+                "types": [
+                  "null",
+                  "object"
+                ],
+                "required": false,
+                "default": null
+              },
+              {
+                "path": "/limitations",
+                "types": [
+                  "array"
+                ],
+                "required": false,
+                "default": []
+              }
+            ]
+          }
+        ],
+        "examples": [
+          {
+            "contract": "capability_result",
+            "mode": "projection",
+            "origin": "illustrative",
+            "label": "Output illustrative capability_result projection; not an execution receipt",
+            "value": {
+              "status": "blocked",
+              "limitations": [
+                "The test requirement is still unknown."
+              ],
+              "error": {
+                "code": "unresolved_retrieval_need",
+                "message": "No permitted useful method remains.",
+                "retryable": false
+              }
+            }
+          }
+        ],
+        "missing_bindings": [
+          {
+            "name": "Final blocked answer composition",
+            "direction": "both",
+            "reason": "The target answer envelope is undefined; the existing blocked CapabilityResult can express a limitation but not all target attempt history.",
+            "source": "docs/product-truth/flows/leafcutter/retrieve-project-knowledge.flow.json"
+          }
+        ]
+      },
+      "consumes": [],
+      "produces": [
+        "capability_result/status: string (required)",
+        "capability_result/error: null|object (optional; default null)",
+        "capability_result/limitations: array (optional; default [])"
+      ]
+    },
+    {
+      "id": "clarify-after-evidence",
+      "label": "Ask a focused follow-up",
+      "condition": "Retrieved evidence reveals an unresolved intent or authority choice",
+      "human": "Select the offered clarification outcome for a material unresolved intent or authority choice. Do not author question prose or execute the wait.\n\nContract fields and examples (generated)\nConsumes:\n  No checked JSON binding documented in this direction.\nProduces:\n  No checked JSON binding documented in this direction.\n\nPROPOSED - missing JSON binding (both): Target clarify-after-evidence decision context\nThe proposed route must retain original need, scoped missing fact, complete attempt history and bounded retry identity. No target continuation schema binds these fields.\nDesign source: [docs/product-truth/flows/leafcutter/retrieve-project-knowledge.flow.json](docs/product-truth/flows/leafcutter/retrieve-project-knowledge.flow.json)",
+      "agent": "Jev",
+      "outcome_kind": "alternative",
+      "implements": [],
+      "from": "assess",
+      "impl_asof": "2026-10-02",
+      "impl_status": "not_started",
+      "io_contracts": {
+        "missing_bindings": [
+          {
+            "name": "Target clarify-after-evidence decision context",
+            "direction": "both",
+            "reason": "The proposed route must retain original need, scoped missing fact, complete attempt history and bounded retry identity. No target continuation schema binds these fields.",
+            "source": "docs/product-truth/flows/leafcutter/retrieve-project-knowledge.flow.json"
+          }
+        ]
+      },
+      "consumes": [],
+      "produces": []
+    },
+    {
+      "id": "finish",
+      "label": "Finish with an evidenced answer",
+      "condition": "The requested facts are supported and deterministic completeness checks pass",
+      "human": "Proceed to the structured result, with cited evidence and any remaining non-blocking limitations.\n\nContract fields and examples (generated)\nConsumes:\n  No checked JSON binding documented in this direction.\nProduces:\n  No checked JSON binding documented in this direction.\n\nPROPOSED - missing JSON binding (both): Completed target answer composition\nThe target final schema has not been defined. A finish decision must require actual complete evidence; the partial running example cannot be upgraded to finished.\nDesign source: [docs/product-truth/flows/leafcutter/retrieve-project-knowledge.flow.json](docs/product-truth/flows/leafcutter/retrieve-project-knowledge.flow.json)",
+      "agent": "Jev",
+      "outcome_kind": "alternative",
+      "implements": [],
+      "from": "assess",
+      "impl_asof": "2026-10-02",
+      "impl_status": "not_started",
+      "io_contracts": {
+        "missing_bindings": [
+          {
+            "name": "Completed target answer composition",
+            "direction": "both",
+            "reason": "The target final schema has not been defined. A finish decision must require actual complete evidence; the partial running example cannot be upgraded to finished.",
+            "source": "docs/product-truth/flows/leafcutter/retrieve-project-knowledge.flow.json"
+          }
+        ]
+      },
+      "consumes": [],
+      "produces": []
+    },
+    {
+      "id": "clarification-dispatch",
+      "label": "Dispatch the focused clarification",
+      "condition": "An essential intent or authority choice cannot be resolved from context",
+      "human": "Use a bounded question template, preserve original need/source/state, and issue the matching human interaction.\n\nI/O boundary: Existing human question payload is reusable. The illustrative missing component differs from the single-AC main example and is a separate branch scenario.\n\nContract fields and examples (generated)\nConsumes:\n  No checked JSON binding documented in this direction.\nProduces:\n  human_request/question: string (required)\n  human_request/free_text_allowed: boolean (optional; default false)\n  human_request/subject_ids: array (optional)\n  human_request/why_research_cannot_settle: string (optional; default \"\")\n  Schema: [human_request](kernel/schemas/leafcutter.human_question_request.v1.schema.json)\n\nPROPOSED - missing JSON binding (both): Target clarification continuation\nThe HumanQuestionRequest contract is known; retaining the new parent attempt/history context across this wait is not yet bound.\nDesign source: [docs/product-truth/flows/leafcutter/retrieve-project-knowledge.flow.json](docs/product-truth/flows/leafcutter/retrieve-project-knowledge.flow.json)\n\nOutput illustrative human_request projection; not an execution receipt — human_request; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"question\": \"Which component should I research?\",\n  \"free_text_allowed\": true,\n  \"why_research_cannot_settle\": \"The intended component was not supplied.\",\n  \"subject_ids\": [\n    \"need-example\"\n  ]\n}",
+      "agent": "System",
+      "outcome_kind": "alternative",
+      "implements": [],
+      "from": "plan",
+      "impl_asof": "2026-10-02",
+      "impl_status": "not_started",
+      "io_contracts": {
+        "consumes": [],
+        "produces": [
+          {
+            "contract": "human_request",
+            "fields": [
+              {
+                "path": "/question",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/free_text_allowed",
+                "types": [
+                  "boolean"
+                ],
+                "required": false,
+                "default": false
+              },
+              {
+                "path": "/subject_ids",
+                "types": [
+                  "array"
+                ],
+                "required": false
+              },
+              {
+                "path": "/why_research_cannot_settle",
+                "types": [
+                  "string"
+                ],
+                "required": false,
+                "default": ""
+              }
+            ]
+          }
+        ],
+        "examples": [
+          {
+            "contract": "human_request",
+            "mode": "projection",
+            "origin": "illustrative",
+            "label": "Output illustrative human_request projection; not an execution receipt",
+            "value": {
+              "question": "Which component should I research?",
+              "free_text_allowed": true,
+              "why_research_cannot_settle": "The intended component was not supplied.",
+              "subject_ids": [
+                "need-example"
+              ]
+            }
+          }
+        ],
+        "missing_bindings": [
+          {
+            "name": "Target clarification continuation",
+            "direction": "both",
+            "reason": "The HumanQuestionRequest contract is known; retaining the new parent attempt/history context across this wait is not yet bound.",
+            "source": "docs/product-truth/flows/leafcutter/retrieve-project-knowledge.flow.json"
+          }
+        ]
+      },
+      "consumes": [],
+      "produces": [
+        "human_request/question: string (required)",
+        "human_request/free_text_allowed: boolean (optional; default false)",
+        "human_request/subject_ids: array (optional)",
+        "human_request/why_research_cannot_settle: string (optional; default \"\")"
+      ]
+    },
+    {
+      "id": "clarification-answer",
+      "label": "Supply the clarification",
+      "condition": "An essential intent or authority choice cannot be resolved from context",
+      "human": "Answer the requested intent or factual choice without broadening authority.\n\nI/O boundary: The actual person supplies the missing value; this typed answer alone never grants wider read or write authority.\n\nContract fields and examples (generated)\nConsumes:\n  human_request/question: string (required)\n  human_request/free_text_allowed: boolean (optional; default false)\n  Schema: [human_request](kernel/schemas/leafcutter.human_question_request.v1.schema.json)\nProduces:\n  human_answer/free_text: null|string (optional; default null)\n  Schema: [human_answer](kernel/schemas/leafcutter.human_answer.v1.schema.json)\n\nInput illustrative human_request projection; not an execution receipt — human_request; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"question\": \"Which component should I research?\",\n  \"free_text_allowed\": true\n}\n\nOutput illustrative human_answer projection; not an execution receipt — human_answer; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"free_text\": \"knowledge-retrieval\"\n}",
+      "agent": "Human",
+      "outcome_kind": "alternative",
+      "implements": [],
+      "from": "plan",
+      "impl_asof": "2026-10-02",
+      "impl_status": "not_started",
+      "io_contracts": {
+        "consumes": [
+          {
+            "contract": "human_request",
+            "fields": [
+              {
+                "path": "/question",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/free_text_allowed",
+                "types": [
+                  "boolean"
+                ],
+                "required": false,
+                "default": false
+              }
+            ]
+          }
+        ],
+        "produces": [
+          {
+            "contract": "human_answer",
+            "fields": [
+              {
+                "path": "/free_text",
+                "types": [
+                  "null",
+                  "string"
+                ],
+                "required": false,
+                "default": null
+              }
+            ]
+          }
+        ],
+        "examples": [
+          {
+            "contract": "human_request",
+            "mode": "projection",
+            "origin": "illustrative",
+            "label": "Input illustrative human_request projection; not an execution receipt",
+            "value": {
+              "question": "Which component should I research?",
+              "free_text_allowed": true
+            }
+          },
+          {
+            "contract": "human_answer",
+            "mode": "projection",
+            "origin": "illustrative",
+            "label": "Output illustrative human_answer projection; not an execution receipt",
+            "value": {
+              "free_text": "knowledge-retrieval"
+            }
+          }
+        ]
+      },
+      "consumes": [
+        "human_request/question: string (required)",
+        "human_request/free_text_allowed: boolean (optional; default false)"
+      ],
+      "produces": [
+        "human_answer/free_text: null|string (optional; default null)"
+      ]
+    },
+    {
+      "id": "clarification-resume",
+      "label": "Validate and resume",
+      "condition": "An essential intent or authority choice cannot be resolved from context",
+      "human": "Validate matching interaction/state and apply only the allowed answer. Resume the original need once; reject stale or conflicting replies. Return to [method selection](docs/product-truth/flows/leafcutter/retrieve-project-knowledge.flow.json#plan) with the same need, evidence and remaining budget.\n\nI/O boundary: The human answer must match the pending revision and actor. No production parent resume integration is claimed.\n\nContract fields and examples (generated)\nConsumes:\n  interaction_submission/run_id: string (required)\n  interaction_submission/interaction_id: string (required)\n  interaction_submission/expected_state_revision: integer (required)\n  interaction_submission/actor: object (required)\n  interaction_submission/response_schema_id: string (required)\n  interaction_submission/response: object (required)\n  Runtime contract: [interaction_submission](kernel/contracts/interaction.py)\nProduces:\n  No checked JSON binding documented in this direction.\n\nPROPOSED - missing JSON binding (both): Target resumed planning context\nStrict interaction identity validation exists, but restoring the new multi-method history and re-entering its plan has no target binding.\nDesign source: [docs/product-truth/flows/leafcutter/retrieve-project-knowledge.flow.json](docs/product-truth/flows/leafcutter/retrieve-project-knowledge.flow.json)\n\nInput illustrative interaction_submission projection; not an execution receipt — interaction_submission; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"run_id\": \"run-example\",\n  \"interaction_id\": \"interaction-example\",\n  \"expected_state_revision\": 1,\n  \"actor\": {\n    \"kind\": \"human\",\n    \"id\": \"reviewer\"\n  },\n  \"response_schema_id\": \"leafcutter.human_answer.v1\",\n  \"response\": {\n    \"free_text\": \"knowledge-retrieval\"\n  }\n}",
+      "agent": "System",
+      "outcome_kind": "alternative",
+      "implements": [],
+      "from": "plan",
+      "impl_asof": "2026-10-02",
+      "impl_status": "not_started",
+      "io_contracts": {
+        "consumes": [
+          {
+            "contract": "interaction_submission",
+            "fields": [
+              {
+                "path": "/run_id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/interaction_id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/expected_state_revision",
+                "types": [
+                  "integer"
+                ],
+                "required": true
+              },
+              {
+                "path": "/actor",
+                "types": [
+                  "object"
+                ],
+                "required": true
+              },
+              {
+                "path": "/response_schema_id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/response",
+                "types": [
+                  "object"
+                ],
+                "required": true
+              }
+            ]
+          }
+        ],
+        "produces": [],
+        "examples": [
+          {
+            "contract": "interaction_submission",
+            "mode": "projection",
+            "origin": "illustrative",
+            "label": "Input illustrative interaction_submission projection; not an execution receipt",
+            "value": {
+              "run_id": "run-example",
+              "interaction_id": "interaction-example",
+              "expected_state_revision": 1,
+              "actor": {
+                "kind": "human",
+                "id": "reviewer"
+              },
+              "response_schema_id": "leafcutter.human_answer.v1",
+              "response": {
+                "free_text": "knowledge-retrieval"
+              }
+            }
+          }
+        ],
+        "missing_bindings": [
+          {
+            "name": "Target resumed planning context",
+            "direction": "both",
+            "reason": "Strict interaction identity validation exists, but restoring the new multi-method history and re-entering its plan has no target binding.",
+            "source": "docs/product-truth/flows/leafcutter/retrieve-project-knowledge.flow.json"
+          }
+        ]
+      },
+      "consumes": [
+        "interaction_submission/run_id: string (required)",
+        "interaction_submission/interaction_id: string (required)",
+        "interaction_submission/expected_state_revision: integer (required)",
+        "interaction_submission/actor: object (required)",
+        "interaction_submission/response_schema_id: string (required)",
+        "interaction_submission/response: object (required)"
+      ],
+      "produces": []
+    },
+    {
+      "id": "clarify-after-evidence-dispatch",
+      "label": "Dispatch the focused clarification",
+      "condition": "Retrieved evidence reveals an unresolved intent or authority choice",
+      "human": "Use a bounded question template, preserve original need/source/state, and issue the matching human interaction.\n\nI/O boundary: Existing human question payload is reusable. The illustrative missing component differs from the single-AC main example and is a separate branch scenario.\n\nContract fields and examples (generated)\nConsumes:\n  No checked JSON binding documented in this direction.\nProduces:\n  human_request/question: string (required)\n  human_request/free_text_allowed: boolean (optional; default false)\n  human_request/subject_ids: array (optional)\n  human_request/why_research_cannot_settle: string (optional; default \"\")\n  Schema: [human_request](kernel/schemas/leafcutter.human_question_request.v1.schema.json)\n\nPROPOSED - missing JSON binding (both): Target clarification continuation\nThe HumanQuestionRequest contract is known; retaining the new parent attempt/history context across this wait is not yet bound.\nDesign source: [docs/product-truth/flows/leafcutter/retrieve-project-knowledge.flow.json](docs/product-truth/flows/leafcutter/retrieve-project-knowledge.flow.json)\n\nOutput illustrative human_request projection; not an execution receipt — human_request; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"question\": \"Which component should I research?\",\n  \"free_text_allowed\": true,\n  \"why_research_cannot_settle\": \"The intended component was not supplied.\",\n  \"subject_ids\": [\n    \"need-example\"\n  ]\n}",
+      "agent": "System",
+      "outcome_kind": "alternative",
+      "implements": [],
+      "from": "assess",
+      "impl_asof": "2026-10-02",
+      "impl_status": "not_started",
+      "io_contracts": {
+        "consumes": [],
+        "produces": [
+          {
+            "contract": "human_request",
+            "fields": [
+              {
+                "path": "/question",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/free_text_allowed",
+                "types": [
+                  "boolean"
+                ],
+                "required": false,
+                "default": false
+              },
+              {
+                "path": "/subject_ids",
+                "types": [
+                  "array"
+                ],
+                "required": false
+              },
+              {
+                "path": "/why_research_cannot_settle",
+                "types": [
+                  "string"
+                ],
+                "required": false,
+                "default": ""
+              }
+            ]
+          }
+        ],
+        "examples": [
+          {
+            "contract": "human_request",
+            "mode": "projection",
+            "origin": "illustrative",
+            "label": "Output illustrative human_request projection; not an execution receipt",
+            "value": {
+              "question": "Which component should I research?",
+              "free_text_allowed": true,
+              "why_research_cannot_settle": "The intended component was not supplied.",
+              "subject_ids": [
+                "need-example"
+              ]
+            }
+          }
+        ],
+        "missing_bindings": [
+          {
+            "name": "Target clarification continuation",
+            "direction": "both",
+            "reason": "The HumanQuestionRequest contract is known; retaining the new parent attempt/history context across this wait is not yet bound.",
+            "source": "docs/product-truth/flows/leafcutter/retrieve-project-knowledge.flow.json"
+          }
+        ]
+      },
+      "consumes": [],
+      "produces": [
+        "human_request/question: string (required)",
+        "human_request/free_text_allowed: boolean (optional; default false)",
+        "human_request/subject_ids: array (optional)",
+        "human_request/why_research_cannot_settle: string (optional; default \"\")"
+      ]
+    },
+    {
+      "id": "clarify-after-evidence-answer",
+      "label": "Supply the clarification",
+      "condition": "Retrieved evidence reveals an unresolved intent or authority choice",
+      "human": "Answer the requested intent or factual choice without broadening authority.\n\nI/O boundary: The actual person supplies the missing value; this typed answer alone never grants wider read or write authority.\n\nContract fields and examples (generated)\nConsumes:\n  human_request/question: string (required)\n  human_request/free_text_allowed: boolean (optional; default false)\n  Schema: [human_request](kernel/schemas/leafcutter.human_question_request.v1.schema.json)\nProduces:\n  human_answer/free_text: null|string (optional; default null)\n  Schema: [human_answer](kernel/schemas/leafcutter.human_answer.v1.schema.json)\n\nInput illustrative human_request projection; not an execution receipt — human_request; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"question\": \"Which component should I research?\",\n  \"free_text_allowed\": true\n}\n\nOutput illustrative human_answer projection; not an execution receipt — human_answer; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"free_text\": \"knowledge-retrieval\"\n}",
+      "agent": "Human",
+      "outcome_kind": "alternative",
+      "implements": [],
+      "from": "assess",
+      "impl_asof": "2026-10-02",
+      "impl_status": "not_started",
+      "io_contracts": {
+        "consumes": [
+          {
+            "contract": "human_request",
+            "fields": [
+              {
+                "path": "/question",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/free_text_allowed",
+                "types": [
+                  "boolean"
+                ],
+                "required": false,
+                "default": false
+              }
+            ]
+          }
+        ],
+        "produces": [
+          {
+            "contract": "human_answer",
+            "fields": [
+              {
+                "path": "/free_text",
+                "types": [
+                  "null",
+                  "string"
+                ],
+                "required": false,
+                "default": null
+              }
+            ]
+          }
+        ],
+        "examples": [
+          {
+            "contract": "human_request",
+            "mode": "projection",
+            "origin": "illustrative",
+            "label": "Input illustrative human_request projection; not an execution receipt",
+            "value": {
+              "question": "Which component should I research?",
+              "free_text_allowed": true
+            }
+          },
+          {
+            "contract": "human_answer",
+            "mode": "projection",
+            "origin": "illustrative",
+            "label": "Output illustrative human_answer projection; not an execution receipt",
+            "value": {
+              "free_text": "knowledge-retrieval"
+            }
+          }
+        ]
+      },
+      "consumes": [
+        "human_request/question: string (required)",
+        "human_request/free_text_allowed: boolean (optional; default false)"
+      ],
+      "produces": [
+        "human_answer/free_text: null|string (optional; default null)"
+      ]
+    },
+    {
+      "id": "clarify-after-evidence-resume",
+      "label": "Validate and resume",
+      "condition": "Retrieved evidence reveals an unresolved intent or authority choice",
+      "human": "Validate matching interaction/state and apply only the allowed answer. Resume the original need once; reject stale or conflicting replies. Return to [method selection](docs/product-truth/flows/leafcutter/retrieve-project-knowledge.flow.json#plan) with the same need, evidence and remaining budget.\n\nI/O boundary: The human answer must match the pending revision and actor. No production parent resume integration is claimed.\n\nContract fields and examples (generated)\nConsumes:\n  interaction_submission/run_id: string (required)\n  interaction_submission/interaction_id: string (required)\n  interaction_submission/expected_state_revision: integer (required)\n  interaction_submission/actor: object (required)\n  interaction_submission/response_schema_id: string (required)\n  interaction_submission/response: object (required)\n  Runtime contract: [interaction_submission](kernel/contracts/interaction.py)\nProduces:\n  No checked JSON binding documented in this direction.\n\nPROPOSED - missing JSON binding (both): Target resumed planning context\nStrict interaction identity validation exists, but restoring the new multi-method history and re-entering its plan has no target binding.\nDesign source: [docs/product-truth/flows/leafcutter/retrieve-project-knowledge.flow.json](docs/product-truth/flows/leafcutter/retrieve-project-knowledge.flow.json)\n\nInput illustrative interaction_submission projection; not an execution receipt — interaction_submission; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"run_id\": \"run-example\",\n  \"interaction_id\": \"interaction-example\",\n  \"expected_state_revision\": 1,\n  \"actor\": {\n    \"kind\": \"human\",\n    \"id\": \"reviewer\"\n  },\n  \"response_schema_id\": \"leafcutter.human_answer.v1\",\n  \"response\": {\n    \"free_text\": \"knowledge-retrieval\"\n  }\n}",
+      "agent": "System",
+      "outcome_kind": "alternative",
+      "implements": [],
+      "from": "assess",
+      "impl_asof": "2026-10-02",
+      "impl_status": "not_started",
+      "io_contracts": {
+        "consumes": [
+          {
+            "contract": "interaction_submission",
+            "fields": [
+              {
+                "path": "/run_id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/interaction_id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/expected_state_revision",
+                "types": [
+                  "integer"
+                ],
+                "required": true
+              },
+              {
+                "path": "/actor",
+                "types": [
+                  "object"
+                ],
+                "required": true
+              },
+              {
+                "path": "/response_schema_id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/response",
+                "types": [
+                  "object"
+                ],
+                "required": true
+              }
+            ]
+          }
+        ],
+        "produces": [],
+        "examples": [
+          {
+            "contract": "interaction_submission",
+            "mode": "projection",
+            "origin": "illustrative",
+            "label": "Input illustrative interaction_submission projection; not an execution receipt",
+            "value": {
+              "run_id": "run-example",
+              "interaction_id": "interaction-example",
+              "expected_state_revision": 1,
+              "actor": {
+                "kind": "human",
+                "id": "reviewer"
+              },
+              "response_schema_id": "leafcutter.human_answer.v1",
+              "response": {
+                "free_text": "knowledge-retrieval"
+              }
+            }
+          }
+        ],
+        "missing_bindings": [
+          {
+            "name": "Target resumed planning context",
+            "direction": "both",
+            "reason": "Strict interaction identity validation exists, but restoring the new multi-method history and re-entering its plan has no target binding.",
+            "source": "docs/product-truth/flows/leafcutter/retrieve-project-knowledge.flow.json"
+          }
+        ]
+      },
+      "consumes": [
+        "interaction_submission/run_id: string (required)",
+        "interaction_submission/interaction_id: string (required)",
+        "interaction_submission/expected_state_revision: integer (required)",
+        "interaction_submission/actor: object (required)",
+        "interaction_submission/response_schema_id: string (required)",
+        "interaction_submission/response: object (required)"
+      ],
+      "produces": []
+    },
+    {
+      "id": "alternative-method",
+      "from": "remember",
+      "label": "Try another method or frontier",
+      "agent": "System",
+      "condition": "Jev selected a changed plan or observed traversal continuation and budget remains",
+      "human": "After recording the bounded comparison, route to [method selection](docs/product-truth/flows/leafcutter/retrieve-project-knowledge.flow.json#plan) or [the retained traversal frontier](docs/product-truth/flows/leafcutter/retrieval-source-traversal.flow.json#frontier). Preserve useful evidence and attempt IDs. If no changed action or budget remains, return the explicit partial/blocked stop instead.\n\nContract fields and examples (generated)\nConsumes:\n  No checked JSON binding documented in this direction.\nProduces:\n  No checked JSON binding documented in this direction.\n\nPROPOSED - missing JSON binding (both): Target alternative-method decision context\nThe proposed route must retain original need, scoped missing fact, complete attempt history and bounded retry identity. No target continuation schema binds these fields.\nDesign source: [docs/product-truth/flows/leafcutter/retrieve-project-knowledge.flow.json](docs/product-truth/flows/leafcutter/retrieve-project-knowledge.flow.json)",
+      "outcome_kind": "alternative",
+      "implements": [],
+      "impl_asof": "2026-10-02",
+      "impl_status": "not_started",
+      "io_contracts": {
+        "missing_bindings": [
+          {
+            "name": "Target alternative-method decision context",
+            "direction": "both",
+            "reason": "The proposed route must retain original need, scoped missing fact, complete attempt history and bounded retry identity. No target continuation schema binds these fields.",
+            "source": "docs/product-truth/flows/leafcutter/retrieve-project-knowledge.flow.json"
+          }
+        ]
+      },
+      "consumes": [],
+      "produces": []
+    }
+  ],
+  "acceptance_scenarios": [
+    {
+      "given": "Original question and trusted host context",
+      "when": "Ask the question",
+      "then": "The original question and optional context",
+      "for": "question"
+    },
+    {
+      "given": "The original question and optional context",
+      "when": "Offer permitted methods and contracts",
+      "then": "Offered method contracts, trusted scope/source, retained history and remaining budget",
+      "for": "offer-methods"
+    },
+    {
+      "given": "Offered method contracts, trusted scope/source, retained history and remaining budget",
+      "when": "Jev chooses how to answer",
+      "then": "One or more selected method plans and preparation decisions",
+      "for": "plan"
+    },
+    {
+      "given": "One or more selected method plans and preparation decisions",
+      "when": "Retrieve the evidence",
+      "then": "Retained attributable attempt results",
+      "for": "retrieve"
+    },
+    {
+      "given": "Retained attributable attempt results",
+      "when": "Compare attempts against the original question",
+      "then": "Bounded comparative judgment with attempt references and limitations",
+      "for": "compare"
+    },
+    {
+      "given": "Bounded comparative judgment with attempt references and limitations",
+      "when": "Record advisory strategy decision",
+      "then": "Advisory strategy record reference or explicit storage limitation",
+      "for": "remember"
+    },
+    {
+      "given": "Retained attempt evidence, comparison and advisory record outcome",
+      "when": "Combine and deduplicate useful evidence",
+      "then": "Deduplicated evidence with per-attempt provenance",
+      "for": "combine"
+    },
+    {
+      "given": "Deduplicated evidence",
+      "when": "Judge relevance",
+      "then": "Bounded relevance order",
+      "for": "rank"
+    },
+    {
+      "given": "Evidence and relevance order",
+      "when": "Return ranked evidence",
+      "then": "Ranked attributable evidence",
+      "for": "return-evidence"
+    },
+    {
+      "given": "Attributable evidence and retrieval limitations",
+      "when": "Jev checks what the evidence answers",
+      "then": "A finish, retry, clarification or stop decision",
+      "for": "assess"
+    },
+    {
+      "given": "Finish decision and accepted evidence",
+      "when": "Dispatch wording only when needed",
+      "then": "Typed wording request or structured-facts bypass",
+      "for": "dispatch-wording"
+    },
+    {
+      "given": "Accepted evidence and wording request",
+      "when": "Optionally formulate the answer",
+      "then": "Candidate answer wording or structured-facts bypass",
+      "for": "wording"
+    },
+    {
+      "given": "Candidate wording or structured facts",
+      "when": "Validate response material",
+      "then": "Validated response material",
+      "for": "check-wording"
+    },
+    {
+      "given": "Validated response material",
+      "when": "Accept synthesized wording when needed",
+      "then": "Accept, bounded revision or stop decision",
+      "for": "judge-wording"
+    },
+    {
+      "given": "Explicitly accepted wording or unchanged structured-facts bypass",
+      "when": "Return the result",
+      "then": "Caller-visible result",
+      "for": "respond"
+    },
+    {
+      "given": "An essential intent or authority choice cannot be resolved from context",
+      "when": "Ask only when necessary",
+      "then": "Select the offered clarification outcome for a material unresolved intent or authority choice. Do not author question prose or execute the wait.",
+      "for": "clarification"
+    },
+    {
+      "given": "Evidence has a resolvable gap and budget remains",
+      "when": "Try a better plan",
+      "then": "Return to [method selection](docs/product-truth/flows/leafcutter/retrieve-project-knowledge.flow.json#plan) with the original question, gap, retained evidence, attempt/visited history and remaining budget. Choose a different or complementary method, changed valid inputs, or [an observed next frontier](docs/product-truth/flows/leafcutter/retrieval-source-traversal.flow.json#frontier). Do not repeat an unchanged no-progress attempt.",
+      "for": "retry"
+    },
+    {
+      "given": "Some evidence is useful but completeness cannot be established",
+      "when": "Return the useful partial answer",
+      "then": "Return supported partial findings and missing facts when progress, frontier or budget is exhausted. Retain their exact source/attempt provenance; do not claim completeness.",
+      "for": "partial"
+    },
+    {
+      "given": "No permitted useful alternative remains, or a non-bypassable authority/source boundary prevents progress",
+      "when": "Explain why retrieval cannot proceed",
+      "then": "Return blocked with the actual reason when no permitted progress remains. A single failed method is not automatically terminal: otherwise send its explicit failure to [comparison](docs/product-truth/flows/leafcutter/retrieve-project-knowledge.flow.json#compare) and select an alternative. Never treat outage/denial as empty success.",
+      "for": "blocked"
+    },
+    {
+      "given": "Retrieved evidence reveals an unresolved intent or authority choice",
+      "when": "Ask a focused follow-up",
+      "then": "Select the offered clarification outcome for a material unresolved intent or authority choice. Do not author question prose or execute the wait.",
+      "for": "clarify-after-evidence"
+    },
+    {
+      "given": "The requested facts are supported and deterministic completeness checks pass",
+      "when": "Finish with an evidenced answer",
+      "then": "Proceed to the structured result, with cited evidence and any remaining non-blocking limitations.",
+      "for": "finish"
+    },
+    {
+      "given": "An essential intent or authority choice cannot be resolved from context",
+      "when": "Dispatch the focused clarification",
+      "then": "Use a bounded question template, preserve original need/source/state, and issue the matching human interaction.",
+      "for": "clarification-dispatch"
+    },
+    {
+      "given": "An essential intent or authority choice cannot be resolved from context",
+      "when": "Supply the clarification",
+      "then": "Answer the requested intent or factual choice without broadening authority.",
+      "for": "clarification-answer"
+    },
+    {
+      "given": "An essential intent or authority choice cannot be resolved from context",
+      "when": "Validate and resume",
+      "then": "Validate matching interaction/state and apply only the allowed answer. Resume the original need once; reject stale or conflicting replies. Return to [method selection](docs/product-truth/flows/leafcutter/retrieve-project-knowledge.flow.json#plan) with the same need, evidence and remaining budget.",
+      "for": "clarification-resume"
+    },
+    {
+      "given": "Retrieved evidence reveals an unresolved intent or authority choice",
+      "when": "Dispatch the focused clarification",
+      "then": "Use a bounded question template, preserve original need/source/state, and issue the matching human interaction.",
+      "for": "clarify-after-evidence-dispatch"
+    },
+    {
+      "given": "Retrieved evidence reveals an unresolved intent or authority choice",
+      "when": "Supply the clarification",
+      "then": "Answer the requested intent or factual choice without broadening authority.",
+      "for": "clarify-after-evidence-answer"
+    },
+    {
+      "given": "Retrieved evidence reveals an unresolved intent or authority choice",
+      "when": "Validate and resume",
+      "then": "Validate matching interaction/state and apply only the allowed answer. Resume the original need once; reject stale or conflicting replies. Return to [method selection](docs/product-truth/flows/leafcutter/retrieve-project-knowledge.flow.json#plan) with the same need, evidence and remaining budget.",
+      "for": "clarify-after-evidence-resume"
+    },
+    {
+      "given": "Jev selected a changed plan or observed traversal continuation and budget remains",
+      "when": "Try another method or frontier",
+      "then": "After recording the bounded comparison, route to [method selection](docs/product-truth/flows/leafcutter/retrieve-project-knowledge.flow.json#plan) or [the retained traversal frontier](docs/product-truth/flows/leafcutter/retrieval-source-traversal.flow.json#frontier). Preserve useful evidence and attempt IDs. If no changed action or budget remains, return the explicit partial/blocked stop instead.",
+      "for": "alternative-method"
+    },
+    {
+      "for": "interpret-needs",
+      "given": "The isolated host interpreter exists but the normal retrieval journey has no call-site",
+      "when": "A reviewer opens this proposed handoff",
+      "then": "The proposed contract names its external catalog/Scope/Actor inputs and typed output consumed by planning; both call-site and consumer binding remain unwired and the parent remains spec/draft."
+    }
+  ],
+  "provenance": [
+    {
+      "action": "authored",
+      "by": "product-owner/business-analyst/flow-author",
+      "date": "2026-10-02",
+      "note": "Target design — not a delivery claim\nUser-requested question-first design. This flow is spec/draft; existing runtime and test evidence do not establish this full contract. Existing acceptance criteria are context pending behavioral mapping, not new completion proof."
+    },
+    {
+      "action": "authored",
+      "by": "product-owner",
+      "date": "2026-10-02",
+      "note": "Input example\nQuestion: How many L2/L3 descendants of TQ-500f, excluding only TQ-500f itself, are done or todo?\n\nThe question is sufficient. Optional context or keywords may help, but they are hints, never authority to widen scope. Host-provided context supplies authorized workspace and source constraints.\n\nIf instead the caller says “test-writing ACs; exclude parent requirements”, clarify the family and parent rule only if they cannot be inferred safely."
+    },
+    {
+      "action": "authored",
+      "by": "product-owner",
+      "date": "2026-10-02",
+      "note": "Output example — illustrative contract\nStatus: answered. Answer: 15 ACs — 5 done and 10 todo. Evidence: the 15 canonical records, their work-status field locators and pinned source revision. Limitations: this specific TQ-500f population only; not all test-related requirements across the repository. Clarification: none.\n\nThese numbers illustrate the historical reviewed corpus, not a new execution of this proposed interface. Other valid statuses: partial, clarification_required and blocked.\n\nThese are answer-outcome labels for the proposed UI contract, not a replacement kernel lifecycle. Reuse the existing envelope/run/continuation statuses and expose run/retrieval references for inspection.\n\nHistorical example source: 9d11594782abfb417d0f3a826bfb1f91f3a523ac; the later hosted direct canary used 59269e024e4d0290b68b03d0d382745966e67e29. Neither is a claim about the current uncommitted population."
+    },
+    {
+      "action": "authored",
+      "by": "flow-author",
+      "date": "2026-10-02",
+      "note": "Current delivery is a separate comparison\n[Current implementation and proof](docs/product-truth/flows/leafcutter/retrieval-current-baseline.flow.json) preserves the committed e056ccd baseline, tested pending decision-store candidate, historical Aura reads and controlled-Jev test limits. It is not a mandatory runtime subflow of this target design."
+    },
+    {
+      "action": "authored",
+      "by": "flow-author",
+      "date": "2026-10-02",
+      "note": "Generation ownership and existing kernel reuse\nJev makes bounded decisions: choose, request, accept, refine, clarify or stop. A host LLM authors generative arguments, terms or wording; deterministic validation checks the result before use. Existing kernel host_handoff transport supports typed HostWorkRequest / InteractionSubmission and durable waiting_host / resume. The retrieval-input and LLM-term operation bindings and schemas are still proposed; there is no registered generic argument-generator endpoint. No new runtime flow was implemented."
+    },
+    {
+      "action": "extended",
+      "by": "flow-author",
+      "date": "2026-10-02",
+      "note": "Traversal and multiple-method design extension\nAdded bounded method selection/return routes and a shared attempt-comparison handoff. Target specification only; no runtime or acceptance-status change."
+    },
+    {
+      "action": "authored",
+      "by": "business-analyst",
+      "date": "2026-10-02",
+      "note": "Draft acceptance mapping — not implementation proof\nKM-500a-1/e-1: amend the normal agent contract to a question-only required input, host context, optional hints and clarification only for unresolved intent. KM-500a-2 and KM-400e-2 currently preserve deterministic explicit-operation paths: retain those low-level compatibility contracts, but explicitly scope the proposed Jev-owned normal-agent facade rather than silently overriding them.\n\nKM-500c-2/c-3: map Jev assessment after every retrieval to finish, changed-plan retry, clarification or honest stop with the original question preserved. KM-500e-4 and b-1..3 remain reusable deterministic source-fit/build/admission boundaries. KM-400c-2..5 provide existing semantic mechanics, not proof of this composition. Optional model-neutral five-term generation, adaptive method/component selection, per-attempt comparison before combination, and advisory strategy persistence/reuse are proposed behaviors needing substantive AC coverage in this design. They are not implemented learning or proof of correctness. No existing criteria, readiness or completion is changed by this design.\n\nThe draft input-preparation contract must explicitly separate Jev decisions, delegated LLM authorship, deterministic validation and bounded resume. Existing host transport is reused; preparation-specific operation/schema registration remains a design gap, not delivered functionality.\n\nDraft gaps: preserve comparable per-attempt evidence and tie/complementary/no-useful/incomparable outcomes; record machine-assessed strategy advice separately from human-approved decisions; read it during later planning with source/query/model compatibility and Jev applicability checks. KM-500c-2/c-3/e-4 supply assessment and boundary context; KM-500d-3 evaluation controls and KM-400c-1 reviewed-memory rules do not establish this new advisory loop. No approved AC or work status changes.\n\nNew draft traversal/multi-method gap: Jev chooses only offered node/edge or folder/file candidates; System performs scoped pinned reads. Support one or multiple compatible method plans and bounded backtracking/continuation with retained evidence, visited/attempt history, cumulative budgets and explicit no-progress stops. Existing KM-500a-2/c-2/c-3/e-4 and KM-400d bounds are context, not proof of this unbuilt adaptive orchestration. No AC approval or work status changes."
+    },
+    {
+      "action": "extended",
+      "by": "product-truth-expert / flow-author",
+      "date": "2026-10-03",
+      "note": "Isolated needs interpreter, proposed parent handoff\nAdded one explicitly unwired call-site and a bounded child rather than duplicating this overall journey. [Interpret what a retrieval question needs](docs/product-truth/flows/leafcutter/retrieval-needs-interpretation.flow.json) now records the experimental typed host operation, durable wait/resume, deterministic checks, unresolved outcomes and frozen evidence. This does not deliver the earlier proposed generic argument, term or answer-generation integrations. Existing planning, retrieval, assessment and advisory-memory choices are unchanged; no AC status or approval changed."
+    },
+    {
+      "action": "extended",
+      "by": "product-truth-expert / flow-author",
+      "date": "2026-10-03",
+      "note": "Concrete needs handoff\nNamed the actual proposed request/output fields and linked to the child step-local N03 JSON examples. The caller-facing interpretation fields and transport wrappers are distinct. Parent producer/consumer integration remains unwired; existing method planning and approvals are unchanged."
+    },
+    {
+      "action": "extended",
+      "by": "flow-author (agent-led I/O contract migration)",
+      "date": "2026-10-03",
+      "note": "Added source-bound field/type/requiredness/default metadata and explicitly illustrative JSON projections. Preserved topology, actor ownership, realization and AC status. Non-JSON artifacts and genuinely undefined proposed interfaces remain explicit."
+    }
+  ],
+  "impl_summary": {
+    "done": 0,
+    "in_progress": 0,
+    "not_started": 29,
+    "total": 29,
+    "asof": "2026-10-03"
+  },
+  "shape_version": 2,
+  "contract_definitions": {
+    "task_input": {
+      "model": "task_input"
+    },
+    "retrieval_needs_request": {
+      "model": "retrieval_needs_request"
+    },
+    "retrieval_needs_output": {
+      "model": "retrieval_needs_output"
+    },
+    "scope": {
+      "model": "scope"
+    },
+    "query_descriptor": {
+      "model": "query_descriptor"
+    },
+    "knowledge_request": {
+      "model": "knowledge_request"
+    },
+    "knowledge_result": {
+      "model": "knowledge_result"
+    },
+    "bundle": {
+      "schema": "kernel/schemas/leafcutter.evidence_bundle.v1.schema.json"
+    },
+    "choice_answer": {
+      "model": "choice_answer"
+    },
+    "synthesis": {
+      "schema": "kernel/schemas/leafcutter.synthesis_request.v1.schema.json"
+    },
+    "findings": {
+      "schema": "kernel/schemas/leafcutter.findings.v1.schema.json"
+    },
+    "interaction_submission": {
+      "model": "interaction_submission"
+    },
+    "run_envelope": {
+      "model": "run_envelope"
+    },
+    "capability_result": {
+      "model": "capability_result"
+    },
+    "human_request": {
+      "schema": "kernel/schemas/leafcutter.human_question_request.v1.schema.json"
+    },
+    "human_answer": {
+      "schema": "kernel/schemas/leafcutter.human_answer.v1.schema.json"
+    }
+  }
+}

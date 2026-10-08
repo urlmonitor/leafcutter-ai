@@ -1,0 +1,568 @@
+id: TQ-600a-11
+components:
+  - testing_quality
+  - ac_store
+title: "The fast YAML parser earns its place at the one whole-store walk whose volume pays for it, and nowhere else"
+component: testing-quality
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  AMENDED 2026-10-08. Three clauses of the original text are RETRACTED, not merely
+    unmet — one of them has had its intent reversed. The retracted text is preserved
+    verbatim under "WHAT WAS STRUCK" in this record's notes, and the reasoning is in
+    the second amended_by entry. Read those before reinstating anything below.
+
+  Given the acceptance-criteria store as it stands on disk — 4,781 record files
+    counted 2026-10-08, 4,635 when this record was first written, 3,340 in August —
+    a population that only grows, and whose cost to any reader that walks it is
+    dominated by YAML parsing,
+  And the shared parser accessor, which resolves the libyaml-backed safe parser where
+    the installed YAML library exposes the C extension and the pure-Python safe parser
+    where it does not, both being implementations of the same safe schema,
+  And a four-part admission test, ALL FOUR parts of which must hold before any call
+    site may resolve the C-backed parser:
+      (1) VOLUME — the call site parses a large, bounded portion of the store in one
+          operation, so parse time dominates its cost. Volume is the test, not the
+          file or the function's subject matter: the same source file may qualify at
+          one call site and fail at another, and a call site that parses a handful of
+          small documents per invocation does not qualify however often it runs,
+      (2) NO ERROR-PATH DEPENDENCE — nothing in it treats a RAISED parse failure as a
+          signal, in particular no fail-open "skip this malformed record" branch,
+      (3) NO EQUIVALENCE CONTRACT — nothing requires its parse to agree with the
+          pure-Python parser as a reference implementation,
+      (4) NOT A DECISION POINT — it does not decide BLOCK or PASS for a guardrail
+          hook, a required pull-request check, or a done-proof claim,
+  When the package is inventoried for which parser each call site resolves,
+  Then naming the pure-Python safe parser directly is the DEFAULT and needs no
+    justification, and resolving the C-backed parser is the EXCEPTION — admissible
+    only at a call site that satisfies all four parts and records, at the call site,
+    the measured volume figure that earned it,
+  And resolving the C-backed parser by an inline `getattr(yaml, "CSafeLoader", ...)`
+    idiom counts as the same decision as resolving it through the shared accessor, so
+    copying the inline idiom is not a way around this criterion,
+  And the inventory of C-parser call sites is derived mechanically from the source
+    rather than copied from this record, and every member of it is declared and
+    justified: a call site that resolves the C-backed parser without a declaration
+    fails this criterion, whether it is newly added or was overlooked,
+  And no member of that inventory is a commit-guardian hook, the store-wide schema
+    validation, or any other module that decides BLOCK or PASS,
+  And the whole-AC-store walk that agent-card generation performs once per build —
+    one traversal of every record file, each parsed once, to group active records by
+    their assigned agent — is a call site that satisfies all four parts and resolves
+    the C-backed parser,
+  And over the real on-disk store that walk completes in at most ONE FIFTH of the
+    time the SAME walk takes with the parser forced to pure-Python, both arms measured
+    in the same process or the same script run and compared as a RATIO, never against
+    an absolute number of seconds,
+  And the two arms produce identical output for the same store, so the ratio is a
+    claim about doing the same work faster and not about doing less work,
+  And each arm reports how many record files it parsed, and the two counts are equal
+    to each other and to the number of record files on disk, so an arm that parsed
+    nothing is distinguishable from an arm that was fast,
+  And the one-fifth threshold is a floor with deliberate headroom, not the expected
+    result: the walk measured ~1.7-2.1 s through the accessor against ~20.6-22.7 s
+    forced pure-Python across two separate sittings on the real store, roughly 10x to
+    13x, and this host has shown 3.8x to 10.74x variation in timing figures with no
+    code change at all, so a measured ratio below five means either the walk has left
+    the accessor or the host is pathologically loaded — and the test reports both arms
+    so those two causes are told apart rather than averaged,
+  And the store-wide schema validation behind the required pull-request check is NOT
+    admitted and keeps the pure-Python parser deliberately, because it fails part (2):
+    its parse failure is turned into a REPORTED VIOLATION rather than a skipped file,
+    and the C-backed parser accepts inputs the pure-Python one rejects — a tab
+    character inside a flow sequence parses as an empty list instead of raising —
+    which at that call site silently converts a malformed record into an accepted one.
+    Error fidelity is chosen over speed there. Its parse cost is unchanged by this
+    record and no speedup for it is claimed anywhere in this record,
+  And no call site reaches for the unsafe full loader, or for a parse with no explicit
+    loader named, as a way to go faster: the admitted parser is the C implementation of
+    the same safe schema, never a wider one.
+depends_on:
+  - TQ-600a
+doc_links:
+  - path: scripts/render_effective_prompt.py
+    relationship: describes
+    status: exists
+    relevance: >-
+      THE IN-REPO PRECEDENT the accessor generalises — line 57 reads
+      `_YAML_LOADER = getattr(yaml, "CSafeLoader", yaml.SafeLoader)` under a comment
+      that states why — and, after the 2026-10-08 amendment, also a DECLARED C-parser
+      call site in its own right. It predates the accessor and is not routed through
+      it, which is why the criterion counts the inline idiom as the same decision:
+      otherwise the seam check is bypassed by copying this one line.
+  - path: scripts/generate_agent_cards.py
+    relationship: modifies
+    status: exists
+    relevance: >-
+      THE EDIT SURFACE, and after the 2026-10-08 amendment the ONLY one that carries
+      the speed claim. `_scan_ac_assignments` / `_scan_all_ac_assignments` walk the
+      whole AC store once per build.py run and are the admitted C-parser call site.
+      The contrast inside this one file is the clearest statement of the volume rule:
+      the sibling `_parse_frontmatter` — one small agent-template frontmatter block at
+      a time — was REVERTED to the pure-Python parser, because the same file does not
+      earn the same verdict at a different volume.
+  - path: scripts/ac_store/yaml_safe_loader.py
+    relationship: modifies
+    status: planned
+    relevance: >-
+      EDIT SURFACE. The shared accessor itself, plus the empirically-derived record of
+      where the two parsers diverge — which is now the main reason to keep the module
+      rather than inline its three lines at its one remaining caller. Marked planned
+      because the module exists only on the implementation branch
+      (feat/ac-store-c-yaml-loader) and is not yet reachable from main.
+  - path: scripts/ac_store/validate_ac_schema.py
+    relationship: modifies
+    status: exists
+    relevance: >-
+      EDIT SURFACE, but as a RETAINED PURE-PYTHON SITE, not a beneficiary. This is the
+      script behind the required "AC store valid" pull-request check. Its parse failure
+      becomes a reported violation rather than a skipped file, so the C parser's
+      permissiveness erodes exactly the detection it exists for. The change here is the
+      comment and DECISION HISTORY recording that choice — its parse cost is unchanged
+      (measured 1.00x) and this record claims no speedup for it.
+  - path: templates/scripts/commit_guardian/_ac_store_index.py
+    relationship: describes
+    status: exists
+    relevance: >-
+      REVERTED SITE, kept as the worked example of why. The shared store index every AC
+      commit hook loads has a fail-open `except yaml.YAMLError` that means "skip this
+      malformed file"; under the C parser a record containing a tab inside a flow
+      sequence was accepted as valid instead, which is a phantom-done vector. Do not
+      re-migrate this or any other commit-guardian path.
+  - path: scripts/build_phases_ac_store.py
+    relationship: modifies
+    status: exists
+    relevance: >-
+      Carries the deploy-map entry for the accessor (added on the implementation
+      branch; the path was scripts/build_phases.py before that module was split). After
+      the narrowing NO deployed hook imports the accessor, so the entry and its comment
+      are now vestigial — the comment still claims every store reader resolves through
+      it. Either prune the entry or correct the comment; leaving it is how the retracted
+      claim survives in the build layer.
+  - path: CLAUDE.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      Carries the deploy-manifest rule, and the standing reminder that a guard's
+      silence is not a pass — which is precisely how the permissive parser defeated
+      the malformed-record detection.
+  - path: docs/analysis/2026-10-05-slowest-tests-and-what-to-do-about-them-3-the-yaml-parser.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      The original measurement and probe. Status corrected from `planned` to `exists`
+      on 2026-10-08 — the document is present on main. Read it as the record of the
+      PARSER's magnitude, not as evidence about any particular entry point: the entry
+      point it was measured on is no longer on the fast accessor.
+declared_files:
+  - path: scripts/generate_agent_cards.py
+    state: existing
+  - path: scripts/ac_store/yaml_safe_loader.py
+    state: to_be_created
+  - path: scripts/ac_store/validate_ac_schema.py
+    state: existing
+  - path: scripts/build_phases_ac_store.py
+    state: existing
+assigned_agent: python-coder
+estimated_complexity: L
+it_requirements:
+  - >-
+    THE ACCESSOR IS A GUARDED IMPORT, NEVER A HARD ONE. The C parser class is absent
+    whenever PyYAML was built without libyaml, which is a real configuration for
+    adopters of this package. The accessor must take the shape the in-repo precedent
+    already uses — `getattr(yaml, "CSafeLoader", yaml.SafeLoader)`, or the equivalent
+    `try: from yaml import CSafeLoader as _Loader / except ImportError: from yaml
+    import SafeLoader as _Loader`. A bare `from yaml import CSafeLoader` makes the
+    package uninstallable for those adopters, and the failure arrives at import time
+    on an unrelated command.
+  - >-
+    DO NOT RE-MIGRATE. SUPERSEDES THE ORIGINAL "ADOPT IT EVERYWHERE" INSTRUCTION.
+    The wholesale migration this record originally demanded was built (~113 call sites
+    across 67 files) and produced 12+ real defects over two verification rounds, all
+    from one cause: the two parsers differ in ERROR behaviour, and several sites
+    depended on that. 83 of 85 call sites were reverted on 2026-10-07. A later agent
+    reading this record must not read the remaining accessor usage as an incomplete
+    rollout and finish it. Widening the accessor's footprint is a REGRESSION of this
+    AC, not progress toward it.
+  - >-
+    THE INVENTORY IS DERIVED, AND IT IS NOW THE INVENTORY OF ADOPTERS, NOT OF
+    HOLDOUTS. Search the source at implementation time for every site that resolves
+    the C-backed parser — accessor import or inline `getattr(yaml, "CSafeLoader", …)`
+    — and compare that derived set against the declared set. The old direction (list
+    every reader naming the pure-Python parser, demand each one change) is retracted:
+    that list is now ~81 source files and growing, and each of them is correct as it
+    stands. An allowlist of exceptions is the wrong shape when the exception is the
+    rule; invert it, so the small bounded list is the one that needs maintaining.
+  - >-
+    REACHABILITY STILL MATTERS, BUT THE CONTEXT CHANGED. No deployed commit-guardian
+    hook imports the accessor any more, so the deployed-hook reachability check is
+    retired. The accessor's one caller is a build.py PHASE running from the package
+    tree, which reaches it through a `sys.path` insertion of scripts/ac_store/ — a
+    fragile seam of a different kind. Verify by running the card-generation phase the
+    way build.py runs it, and decide explicitly whether the now-vestigial deploy-map
+    entry in scripts/build_phases_ac_store.py is pruned or kept with a corrected
+    comment. Either answer is acceptable; leaving the stale comment is not.
+  - >-
+    ERROR FIDELITY OUTRANKS SPEED AT EVERY DECISION POINT. Before admitting any new
+    call site, read its `except` branches. If a raised parse failure means "reject",
+    "report a violation", "skip as malformed", or "block the commit", the site is
+    disqualified no matter how much volume it parses. The defect class is silent: the
+    fast arm returns a VALUE where the slow arm raised, so a fail-open guard turns
+    from "skip this file" into "accept this file" with nothing in the logs.
+  - >-
+    GREP FOR PARSER-ERROR STRING ASSERTIONS BEFORE CHANGING ANYTHING. The two parsers
+    raise the same exception family but differ in message text and in some mark
+    positions. Any existing test that asserts on a parser error STRING will change
+    behaviour. Find them first; a surprise at green phase reads as a regression.
+  - >-
+    THE SPEED CLAIM IS COMPARED WITHIN ONE SITTING. This workspace is a shared WSL
+    host under variable agent load, so an absolute second count measured today is not
+    reproducible tomorrow. Take the pure-Python baseline and the accessor figure in
+    the same process or the same script run, and assert the RATIO. A test that pins
+    an absolute wall-clock number will be flaky and will be disabled, which is the
+    same as not having it.
+  - >-
+    DO NOT WIDEN THE SAFETY POSTURE. CSafeLoader is the C implementation of the SAME
+    safe schema; the change must never reach for yaml.load with the unsafe full
+    loader, or for yaml.Loader, as a way to go faster.
+delivers_to:
+  - agent: python-coder
+    ac_id: TQ-600a-11-ii
+    contract: >-
+      The shared parser accessor, as the thing whose output the record-by-record
+      agreement comparison checks against the pure-Python parser's output.
+expects_from: null
+test_spec:
+  - name: test_tq600a_11_store_sweep_is_at_least_five_times_faster_than_the_pure_python_parser
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: real_artifact
+    description: >-
+      Over the REAL on-disk store, in one process, time a full sweep with the
+      pure-Python parser and a full sweep through the shared accessor. The accessor
+      sweep takes at most one fifth of the pure-Python sweep. Assert the ratio, never
+      an absolute number of seconds. UNCHANGED BY THE 2026-10-08 AMENDMENT, with one
+      clarification: this descriptor measures the PARSER, not any entry point, so a
+      green result here is NOT evidence that any gate, hook or check got faster. The
+      descriptor below is the one that measures an entry point.
+  - name: test_tq600a_11_the_agent_card_store_walk_beats_a_fifth_of_its_same_sitting_pure_python_baseline
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: real_artifact
+    description: >-
+      REPLACES test_tq600a_11_the_required_store_validation_check_beats_a_quarter_of_its_baseline,
+      whose name encoded the retracted claim and which cannot pass: that gate is
+      pure-Python by design now and both of its arms are identical code (measured
+      forced-pure=28.81s, fast=28.78s, 1.00x). Run the agent-card generator's
+      whole-AC-store walk over the REAL store twice in one process: once as shipped,
+      once with the loader forced to pure-Python. Exercise the walk the BUILD calls
+      (`_scan_all_ac_assignments`) — its sibling `_scan_ac_assignments` has no
+      production caller, so timing that one measures dead code. Assert (a) the accessor arm takes at
+      most ONE FIFTH of the forced-pure arm, as a RATIO — never an absolute second
+      count, this host has shown 3.8x-10.74x variation with no code change; (b) the two
+      arms return EQUAL output, so the ratio is about the same work; (c) each arm
+      reports the number of record files it parsed, the two counts are equal, and the
+      count equals the files on disk, so a fast arm that parsed nothing fails; (d) both
+      raw arm figures are printed on failure, so "the host was loaded" and "the walk
+      left the accessor" are distinguishable. Expected ~10-13x; the floor is five.
+  - name: test_tq600a_11_no_undeclared_call_site_resolves_the_c_backed_parser
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    angle: seam
+    description: >-
+      REPLACES test_tq600a_11_no_store_reader_names_the_pure_python_parser_directly AND
+      its _DOCUMENTED_EXCEPTIONS allowlist, both of which are inverted by the
+      amendment. Derive mechanically from the source the set of call sites that resolve
+      the C-backed parser — importing/calling the shared accessor, OR the inline
+      `getattr(yaml, "CSafeLoader", …)` idiom, which must count the same or the seam is
+      bypassable by copy-paste. Assert that derived set equals a small DECLARED set
+      (currently: the two whole-store-walk call sites in scripts/generate_agent_cards.py,
+      plus the pre-existing inline site in scripts/render_effective_prompt.py). An
+      undeclared adopter FAILS. Also assert the declared set contains no
+      commit-guardian hook, not scripts/ac_store/validate_ac_schema.py, and nothing that
+      decides BLOCK or PASS. Assert the set is NON-EMPTY, so deleting the last adopter
+      is a failure rather than a vacuous pass. Do NOT assert anything about the ~81
+      files that name the pure-Python parser: that is the default and needs no test.
+  - name: test_tq600a_11_the_required_store_validation_gate_rejects_a_record_the_c_parser_accepts
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: discrimination
+    description: >-
+      The behavioural guard on the RETRACTION, so the choice of error fidelity over
+      speed at the required gate is enforced rather than merely documented. Feed the
+      store-wide schema validation entry point a record containing a tab character
+      inside a flow sequence (`key: [\t]`). Assert it reports a violation / exits
+      non-zero. In the SAME test, assert the accessor parses that identical input to
+      `{'key': []}` without raising — so the test proves the divergence is real on this
+      install and that the gate sits on the strict side of it. This test must go RED if
+      anyone re-routes that gate onto the accessor; a version that only greps the
+      source for `yaml.SafeLoader` does not satisfy this descriptor.
+  - name: test_tq600a_11_the_accessor_is_reachable_the_way_the_build_reaches_it
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: reachability
+    description: >-
+      REPLACES test_tq600a_11_the_accessor_is_reachable_from_a_deployed_commit_hook,
+      which now tests a relationship that no longer exists — no deployed hook imports
+      the accessor. The real seam is that the accessor's one caller is a build.py phase
+      running from the package tree and reaching scripts/ac_store/ through a `sys.path`
+      insertion. Import and run the card-generation walk the way the build phase does
+      and assert it completes and returns non-empty agent groupings. If the
+      now-vestigial deploy-map entry is kept, assert the deployed copy still imports;
+      if it is pruned, assert no deployed module imports it.
+test_rationale: |
+  The obvious weak test for this change is a unit test that imports the accessor and
+  asserts it returned the C class. That test passes on a change nobody adopted, on a
+  store of three fixture files, and at a call site that must not have it — which are
+  precisely the ways this has already shipped broken, twice in opposite directions.
+
+  So: the speed claim is asserted over the REAL store, because the cost is entirely a
+  function of the store's size and a synthetic fixture reproduces none of it; it is
+  asserted at the ENTRY POINT that is supposed to benefit, not at the parser, because
+  a fast parser attached to nothing is what the first round of this AC shipped; and it
+  is paired with an output-equality and a parsed-count assertion, because the cheapest
+  way to make any of this look fast is to parse fewer files.
+
+  The seam test is INVERTED relative to the original. Asserting "no reader names the
+  pure-Python parser" was a demand on a population of ~81 files that grows every week,
+  and the _DOCUMENTED_EXCEPTIONS allowlist that softened it had to grow with them.
+  Asserting "no UNDECLARED site resolves the C parser" is a demand on a bounded set of
+  three, and it fails in the direction that actually hurt: silent re-spread of a
+  permissive parser into a guardrail path. One of those two framings has to be
+  maintained forever; it should be the short one.
+
+  The discrimination descriptor exists because a retraction that lives only in prose
+  gets re-litigated. Someone will read the 13x figure and re-route the required gate.
+  A test that goes red when they do is the only durable form of that decision.
+
+  The ratio form is deliberate. An absolute threshold on a shared host under agent
+  load is a flaky test, and a flaky guard is removed within a month. This record's own
+  first amendment was caused by reasoning from absolute figures taken in a different
+  sitting; do not do it a third time.
+origin_agent: BrainCandy
+created: 2026-10-05
+amended_by:
+  - reason: >-
+      THE END-TO-END THRESHOLD WAS ARITHMETICALLY UNREACHABLE AND IS CORRECTED, after
+      the implementation measured 4.33x against a demand for 5x. This is not the
+      target being relaxed because it was missed; the original number was derived
+      wrongly and could never have been met. The record asserted that the two
+      headline consumers "spend about 95% of their time inside the parser" and then
+      applied the parser's own 13.25x ratio to an end-to-end figure. Measured at
+      implementation time the parser is 81.8% of the validation run, not 95% —
+      24.68s of parsing inside 30.16s, leaving a 5.48s floor of globbing, schema
+      checking and process start-up that no parser choice touches. By Amdahl that
+      caps the end-to-end gain at 30.16/5.48 = 5.50x even with an INSTANTANEOUS
+      parser, so the old "one fifth" sat within 10% of an unreachable ceiling and
+      would have required parsing to become 3.4x faster than the C loader already
+      is. The implementation reached 6.96s against a predicted 7.34s — it BEAT its
+      own prediction and still could not pass. Corrected two ways: the criterion now
+      pins the parse portion at a tenth or better, which is the part this change
+      actually governs and where the real 13x lives, and keeps an end-to-end clause
+      at a quarter as a REGRESSION FLOOR rather than a target. The premise sentence
+      is corrected from 95% to the measured 81.8% so the same mis-derivation cannot
+      be repeated from this record. Evidence: unit_tests/ac_store/test_tq_600a_11.py
+      measured forced-pure=30.16s, fast=6.96s with 13 of its 14 sibling assertions
+      green at the same commit.
+    by: claude-opus-5
+    at: 2026-10-05
+  - reason: >-
+      THE SCOPE WAS NARROWED FROM "EVERY ENTRY POINT" TO ONE CALL SITE, AND THREE
+      CLAUSES ARE STRUCK. This is a retraction of intent, not a relaxed threshold, and
+      one of the three clauses now requires the OPPOSITE of what it said. The full
+      store-wide migration this record demanded WAS built — ~113 call sites across 67
+      files — and then produced 12+ real defects across two verification rounds. The
+      cause was uniform and is not a speed question at all: CSafeLoader and the
+      pure-Python SafeLoader differ in ERROR behaviour, and several sites depended on
+      that difference. CSafeLoader accepts inputs SafeLoader rejects — `"key: [\t]\n"`
+      returns `{'key': []}` where SafeLoader raises ScannerError — so a fail-open
+      `except yaml.YAMLError` guarding "skip this malformed file" silently became
+      "accept it as valid", which is the phantom-done class this repository's
+      guardrails exist to prevent. Every call site was then re-tested against four
+      conditions, ALL of which had to hold (measured benefit on the real store; no
+      error-path dependence; no equivalence contract with the pure-Python parser; not a
+      guardrail BLOCK/PASS decision point). 83 of 85 call sites were REVERTED on
+      2026-10-07; two remain, both in scripts/generate_agent_cards.py.
+      STRUCK CLAUSE 1 — "in each of the two headline consumers the parsing itself drops
+      to at most a tenth of its pure-Python cost". One of those two consumers is the
+      store-wide schema validation behind a required pull-request check. It was
+      reverted to pure-Python deliberately: its `except` branch turns a parse failure
+      into a REPORTED VIOLATION rather than a skipped file, and the C parser's
+      permissiveness erodes exactly that detection. ERROR FIDELITY WAS CHOSEN OVER
+      SPEED THERE. Its parsing now drops by 1.00x and no speedup for it is claimed.
+      STRUCK CLAUSE 2 — "each of those consumers finishes end to end in at most a
+      quarter of its own same-sitting baseline". Same cause. The covering test
+      test_tq600a_11_the_required_store_validation_check_beats_a_quarter_of_its_baseline
+      currently FAILS in CI (forced-pure=28.81s, fast=28.78s, 1.00x) because both arms
+      are now identical code. The test descriptor is renamed, not softened: the
+      threshold moves to the site where the claim is true, and a new discrimination
+      test makes the gate's pure-Python choice itself enforced.
+      STRUCK CLAUSE 3 — "no entry point in the package names the pure-Python safe
+      parser directly". This one is REVERSED, not merely unmet: roughly 81 source
+      files now name the pure-Python parser DELIBERATELY, by design, at 83 reverted
+      call sites. The seam test's _DOCUMENTED_EXCEPTIONS frozenset in
+      unit_tests/ac_store/test_tq_600a_11.py is the wrong shape for that reality — an
+      allowlist of exceptions cannot describe a world where the exception is the rule.
+      The criterion is inverted: naming the pure-Python parser is the DEFAULT and needs
+      no justification; resolving the C-backed parser is the EXCEPTION, admissible only
+      against the four-part test and only from a small DECLARED set. The seam test
+      becomes "no UNDECLARED call site resolves the C parser", which is a bounded list
+      of three rather than an unbounded list of eighty-one.
+      WHERE THE CLAIM IS REPOINTED: scripts/generate_agent_cards.py's
+      `_scan_ac_assignments` / `_scan_all_ac_assignments` — ONE whole-AC-store walk per
+      build.py run. Measured twice in separate sittings on the real store: ~1.7-2.1s
+      through the accessor vs ~20.6-22.7s forced pure-Python (~10-13x), output
+      byte-identical both times; non-gating documentation generation, no equivalence
+      contract, no error-path dependence. Expressed as a RATIO against a same-sitting
+      baseline with the floor at five, never as an absolute second count — this host
+      documents 3.8x-10.74x variation with zero code change, and the first amendment to
+      this very record was caused by reasoning from absolute figures taken in another
+      sitting. The sibling `_parse_frontmatter` in that same file — one small template
+      at a time — was reverted, which is why the criterion now tests VOLUME rather than
+      files: the same file earns different verdicts at different volumes. Also recorded
+      for the next reader: a realistic 5-file staged-commit batch shows only an ~18ms
+      difference between the two parsers, noise against process start-up, and that is
+      what nearly every commit-guardian hook parses — which is why almost nothing else
+      qualified.
+      FIELDS CHANGED: title (it named the retracted half-minute claim); criteria
+      (rewritten; struck text preserved verbatim in notes); doc_links (reverted sites
+      demoted or removed, scripts/generate_agent_cards.py and
+      scripts/ac_store/yaml_safe_loader.py added as the real edit surface,
+      scripts/build_phases.py repointed to scripts/build_phases_ac_store.py, the
+      analysis doc's status corrected from planned to exists); declared_files (narrowed
+      to the four files that actually change); it_requirements (the "adopt everywhere"
+      and "deploy manifest" items superseded; a DO-NOT-RE-MIGRATE item and an
+      error-fidelity item added); test_spec and test_rationale (two descriptors
+      renamed/repointed, one added, one retired). delivers_to and expects_from are
+      UNCHANGED — the accessor is still the artefact TQ-600a-11-ii compares.
+      NOT DONE HERE, FLAGGED INSTEAD: the children TQ-600a-11-i / -ii / -iii were not
+      edited. -ii's "four classes of input on which the two parsers are known to
+      differ" is now demonstrably non-exhaustive — the tab-in-flow-sequence case is a
+      fifth, and it is the one that caused the defects — and its scope is now one call
+      site rather than the whole package. TQ-600a-9's test_spec cites "3.8x to 10.74x
+      variance ... recorded in TQ-600a-11", but that figure was not in this record
+      until now; it is recorded in the criteria and in this entry so the citation
+      resolves.
+    by: claude-opus-5
+    at: 2026-10-08
+superseded_by: null
+covered_by:
+  - TQ-600a-11-i
+  - TQ-600a-11-ii
+  - TQ-600a-11-iii
+implemented_by: []
+change_target: pipeline
+risk_surface: internal
+notes: |
+  WHY THIS LEVER IS DIFFERENT FROM EVERY OTHER CHILD OF TQ-600a. The rest of this L1
+  is about not repeating an expensive deploy. This one is about a single operation
+  being 13x slower than it needs to be in a library the package already depends on.
+  Three consequences follow, and they are the reason it should be built first:
+
+    - IT DOES NOT DECAY AS THE TQ-600a MIGRATION LANDS. The deploy-sharing levers are
+      worth less as the migration completes. The store is not a build artifact; it
+      only gets bigger. 3,340 records in August, 4,635 in October — a 39% rise in
+      seven weeks. Every month this is deferred, it is worth more.
+    - IT IS PARTLY A CORRECTNESS CONCERN, NOT ONLY A SPEED ONE. The done-proof gate
+      runs an AC's linked tests under a 60 s budget. A test that sweeps the store
+      inside that budget is on a timer, and when it trips, the gate reports every
+      linked test as "not run" — which reads as a COVERAGE FAILURE, not as a timeout.
+      That is a false phantom-done signal produced by a parser. One author already
+      worked around it with a raw-text pre-filter; at 1.86 s a sweep the workaround
+      is unnecessary.
+    - IT PAYS OUTSIDE THE TEST SUITE. The required "AC store valid" pull-request
+      check and the AC pre-commit hooks both pay it, on every pull request and every
+      commit respectively.
+
+  PLACEMENT, STATED HONESTLY. This record and its three children are filed under
+  TQ-600a because TQ-600a is where the suite-cost work lives and the user needs this
+  built now. It is an imperfect fit: TQ-600a's criteria name SHARING as the mechanism
+  ("produced once and shared"), and a parse cannot be shared across operating-system
+  processes — this lever makes the work cheap rather than making it happen once. The
+  natural home is a fourth L1 under TQ-600 along the lines of "the tools stop reading
+  the store the slow way", which only the product owner may author. Re-parenting is
+  two fields (this record's depends_on and the parent's covered_by) and should happen
+  at the next PO pass over the TQ-600 tree.
+
+  ==========================================================================
+  WHAT WAS STRUCK (2026-10-08). DO NOT REINSTATE ANY OF THE THREE.
+  ==========================================================================
+  The three clauses below are the ORIGINAL TEXT, verbatim, as it stood before the
+  2026-10-08 amendment. They are preserved so the history is readable and so a later
+  reader can see that the change was a retraction rather than a lost requirement. The
+  reasoning for each is in the second amended_by entry.
+
+  STRUCK 1, verbatim:
+    "And in each of the two headline consumers the parsing itself drops to at most a
+      tenth of its pure-Python cost, measured against a baseline taken in the same
+      sitting rather than against the figures quoted above, because that portion is
+      the only part this change governs,"
+
+  STRUCK 2, verbatim:
+    "And each of those consumers finishes end to end in at most a quarter of its own
+      same-sitting baseline, which is a floor against regression rather than the
+      target: with parsing at 81.8% of the run, even an instantaneous parser caps the
+      end-to-end gain at 5.50x, so a fifth is within 10% of a ceiling that no parser
+      choice can reach and demanding it would be demanding the impossible,"
+
+  STRUCK 3, verbatim — and this is the one whose INTENT IS REVERSED, not merely unmet:
+    "And no entry point in the package names the pure-Python safe parser directly: an
+      inventory of readers derived mechanically from the source at implementation time
+      lists every one of them, and every one resolves through the shared accessor,
+    And that inventory is derived mechanically rather than copied from this record,
+      because the reader population and the store both keep growing — 76 source files
+      named the pure-Python parser at origin/main d4ee594d, 26 of them under
+      scripts/ac_store/ and 30 under templates/scripts/commit_guardian/, and the store
+      grew from 3,340 records in August to 4,635 in October."
+
+  Also struck, as a premise rather than a requirement: the Given/And block that
+  introduced "the two headline consumers of such a sweep" (store-wide schema
+  validation at 23.16 s and a ticket-generation dry run at 24.00 s, parser at 81.8% of
+  a 30.16 s run with a 5.48 s non-parse floor). Those measurements are still true of
+  the pure-Python parser and of those two scripts; what is no longer true is that
+  either script is a BENEFICIARY of this record. The Amdahl arithmetic in the first
+  amended_by entry is correct and is retained there for its own sake — it is simply no
+  longer load-bearing for anything this record requires.
+
+  ==========================================================================
+  WHAT A READER OF THIS RECORD COULD STILL BE MISLED ABOUT
+  ==========================================================================
+    - THE 13.25x FIGURE IS STILL QUOTED, in the first amended_by entry, in the
+      analysis doc this record links, and in yaml_safe_loader.py's own BUSINESS
+      CONTEXT. It was measured on validate_ac_schema.py, which is NOT on the fast
+      accessor any more. It is a true fact about the PARSER and a false implication
+      about that script. Every surface that quotes it now says so, but a reader who
+      sees the number alone will reach the wrong conclusion.
+    - THE SURVIVING BENEFIT IS SMALL IN ABSOLUTE TERMS: ~19-21 s per build.py run, in
+      documentation generation. Whether the test suite's repeated build spawns multiply
+      that is NOT MEASURED and must not be assumed — if someone wants that figure, it
+      has to be measured, not inferred from the per-build number.
+    - THIS RECORD'S CENTRE OF GRAVITY HAS MOVED from a speed claim to a NEGATIVE
+      INVARIANT — where the permissive parser may not go. The speed clause is the
+      falsifiable anchor; the invariant is what is actually worth the most, and it is
+      the part a future "let's finish the rollout" pass would destroy.
+    - "TWO REMAINING CALL SITES" OVERSTATES THE LIVE SURFACE. Both are in
+      generate_agent_cards.py, and only ONE of them is reachable in production:
+      build_agent_cards() calls `_scan_all_ac_assignments`, while
+      `_scan_ac_assignments` has no production caller at all — grep at 2026-10-08
+      finds its definition, its own DECISION HISTORY comments (which say it was "left
+      in place" after the single-walk perf fix), and two unit tests. So the accessor's
+      live production footprint is ONE call site, and the paired-arm timing test must
+      exercise `_scan_all_ac_assignments` or it measures dead code.
+    - THE DEPLOY-MAP ENTRY for the accessor still exists with a comment asserting
+      every store reader resolves through it. Nothing deployed imports it. A reader who
+      trusts that comment will reconstruct the retracted claim from the build layer.
+    - "FOUR CLASSES OF INPUT ON WHICH THE TWO PARSERS ARE KNOWN TO DIFFER", as
+      TQ-600a-11-ii still words it, reads as exhaustive and is not. The fifth class —
+      a tab inside a flow sequence — is the one that caused the defects, and it was
+      found after that list was written. Treat any such list as a floor.

@@ -1,0 +1,119 @@
+{
+  "checked_at": "2026-10-01T12:55:21.313643+00:00",
+  "env_file": "C:\\Users\\Hendrik\\Code\\leafcutter\\.env",
+  "resolver": "knowledge.environment.resolve_neo4j",
+  "driver_version": "6.0.3",
+  "protocol": "neo4j+s",
+  "database": "2fb38dda",
+  "username_default_used": false,
+  "connection_attempted": true,
+  "authenticated_read_succeeded": true,
+  "schema_or_data_writes": false,
+  "server_version": "5.27-aura",
+  "official_sources": [
+    "https://neo4j.com/docs/python-manual/current/connect/",
+    "https://neo4j.com/docs/python-manual/current/connect-advanced/"
+  ],
+  "status": "authenticated_read_verified",
+  "limitations": [
+    "No schema/index creation or projection writes were attempted.",
+    "Full canonical ingestion remains blocked by three historical required references.",
+    "Existing indexes do not establish knowledge-generation readiness."
+  ],
+  "configured_trust": {
+    "SSL_CERT_FILE": {
+      "configured": false,
+      "existing_file": false,
+      "existing_directory": false
+    },
+    "SSL_CERT_DIR": {
+      "configured": false,
+      "existing_file": false,
+      "existing_directory": false
+    },
+    "REQUESTS_CA_BUNDLE": {
+      "configured": false,
+      "existing_file": false,
+      "existing_directory": false
+    },
+    "CURL_CA_BUNDLE": {
+      "configured": false,
+      "existing_file": false,
+      "existing_directory": false
+    },
+    "NEO4J_CA_FILE": {
+      "configured": false,
+      "existing_file": false,
+      "existing_directory": false
+    },
+    "NEO4J_TRUSTED_CERTIFICATES": {
+      "configured": false,
+      "existing_file": false,
+      "existing_directory": false
+    }
+  },
+  "default_ca_stats": {
+    "x509": 69,
+    "crl": 0,
+    "x509_ca": 64
+  },
+  "tls_resolution": {
+    "windows_native_validation": true,
+    "python_fresh_default_context": true,
+    "tls_version": "TLSv1.3",
+    "public_root_subject": "SSL.com Root Certification Authority RSA",
+    "public_root_thumbprint": "B7AB3308D1EA4477BA1480125A6FBDA936490CBB",
+    "manual_trust_changes": false,
+    "inference": "Native Windows chain validation appears to have populated its approved public root cache; fresh Python context contains one additional CA."
+  },
+  "prior_network_checks": {
+    "dns_resolved": true,
+    "dns_address_count": 1,
+    "tcp_7687_connected": true,
+    "transport_error_class": "SSLCertVerificationError",
+    "certificate_verify_code": 19,
+    "certificate_verify_reason": "self-signed certificate in certificate chain",
+    "execution": "authorized network outside restricted sandbox"
+  },
+  "configured_database_key_present": true,
+  "prior_database_error": "Neo.ClientError.Database.DatabaseNotFound for configured default neo4j",
+  "authentication_succeeded": true,
+  "resolved_home_database": "2fb38dda",
+  "server_components": [
+    {
+      "versions": [
+        "5.27-aura"
+      ],
+      "edition": "enterprise"
+    },
+    {
+      "versions": [
+        "5",
+        "25"
+      ],
+      "edition": ""
+    }
+  ],
+  "index_metadata": {
+    "count": 2,
+    "by_type": {
+      "LOOKUP": 2
+    },
+    "by_state": {
+      "ONLINE": 2
+    }
+  },
+  "database_key_matches_verified_home": true,
+  "explicit_database_read_succeeded": true,
+  "vector_procedures_available": [
+    "db.create.setNodeVectorProperty",
+    "db.index.vector.queryNodes"
+  ],
+  "factory_verification": {
+    "factory": "knowledge.config.build_retriever",
+    "selected_database": "2fb38dda",
+    "read_succeeded": true,
+    "uses_external_env_file": true,
+    "writes": false
+  }
+}

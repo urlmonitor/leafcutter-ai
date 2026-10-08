@@ -41,6 +41,7 @@ from pathlib import Path
 
 try:
     import yaml as _yaml
+
     _YAML_AVAILABLE = True
 except ImportError:
     _YAML_AVAILABLE = False
@@ -100,7 +101,12 @@ def _parse_frontmatter(fm_body: str) -> dict | None:
     if not _YAML_AVAILABLE:
         return None
     try:
-        parsed = _yaml.safe_load(fm_body)
+        # Reverted to the pure-Python loader (loader-audit, TQ-600a-11
+        # fix-pass, 2026-10-07): same shape as the sibling
+        # transform_description_field.py -- a fail-open-by-design auto-
+        # filler that never gates, with no measured speed case at this
+        # volume. Reverted for consistency.
+        parsed = _yaml.load(fm_body, Loader=_yaml.SafeLoader)
     except _yaml.YAMLError as exc:
         print(
             f"[transform-doc-frontmatter] WARNING: YAML parse failed: {exc}",

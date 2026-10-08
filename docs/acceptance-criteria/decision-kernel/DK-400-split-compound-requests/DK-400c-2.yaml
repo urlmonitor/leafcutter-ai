@@ -1,0 +1,121 @@
+id: DK-400c-2
+title: "A proposed part that does not quote your words is set aside and shown with its reason"
+component: decision-kernel
+components:
+  - decision_kernel
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_kernel_1_founding
+criteria: |
+  Given the reusable-criteria goal waiting for its split proposal,
+  When the host proposes the four parts p1 to p4 with verbatim quotes, and a fifth part "Decide
+    when an LLM may generate further categories" quoting "generate new categories only when Jev
+    finds some missing", words the goal does not contain (it says "generate further categories if
+    jev thinks some are missing"),
+  Then the fifth proposal is not one of the split's parts,
+  And the split gate lists it read-only with its text, its quote and the reason "quote not found
+    in the goal",
+  And it can be neither approved, ticked nor run,
+  And p1 to p4 are offered for approval.
+depends_on:
+  - DK-400c
+  - DK-400c-1
+doc_links:
+  - path: docs/product-truth/flows/leafcutter/decision-forming.flow.json
+    relationship: implements
+    status: exists
+    relevance: "Flow v5 node(s) split-dropped, with their acceptance scenarios."
+  - path: docs/product-truth/mock-data/leafcutter/decisions.mock.json
+    relationship: specified-by
+    status: exists
+    relevance: "dropped[] { text, covers, reason }; record dcp-reusable-criteria-proposed."
+  - path: docs/product-truth/mockups/leafcutter/decision-split-approve.mockup.json
+    relationship: specified-by
+    status: exists
+    relevance: "Screen decision-split-approve (v2)."
+  - path: docs/analysis/2026-09-30-decision-kernel-design-4-jev-and-capabilities.md
+    relationship: describes
+    status: exists
+    relevance: Jev template rules, host operations and their conversion, capability gaps, the precedent node.
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to:
+  agent: python-coder
+  contract: 'dropped[] entries {text: string, covers: string, reason: string} on the split record, shown read-only
+    at the gate; consumed by DK-400d-2-ii (rewording may absorb a set-aside question) and DK-400c-3-i (count after
+    set-aside).'
+expects_from:
+  ac_id: DK-400c-1
+  contract: The host's leafcutter.goal_decomposition.v1 answer after schema and dependency validation, before conversion
+    into the split.
+it_requirements:
+  - 'The quote check is deterministic: subject_text and the quote are both normalised by collapsing every run of
+    whitespace (spaces, tabs, line breaks) to one space and trimming the ends, then compared as an exact, case-sensitive
+    substring; nothing else is normalised (DK-400c-2-i).'
+  - A proposal whose quote fails moves to dropped[] as {text, covers, reason}, with the reason from a template by
+    subject kind ('quote not found in the goal' for a goal). It gets no part id in the split, no gate answer may
+    name it, and it is never run.
+  - The gate shows each set-aside proposal read-only with its text, quote and reason.
+  - Set-aside proposals count for nothing in the part count or in the per-run part allowance.
+  - 'Tests enable splitting explicitly: split.enabled true through a config override (false only where a test compares
+    with the off switch). None relies on the shipped default, which stays false until E3 merges (dec-9925ebf1895222f4,
+    see DK-400a-1). A test asserting that no split starts must run with splitting on, or it passes for the wrong
+    reason.'
+change_target: code
+risk_surface: contract_boundary
+test_required: true
+test_spec:
+  - name: test_unquoted_fifth_proposal_set_aside_with_reason
+    target_dir: tests/kernel/split/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: The fifth proposal quoting words the goal does not contain is listed read-only with text, quote
+      and 'quote not found in the goal', and p1 to p4 are offered.
+  - name: test_set_aside_proposal_cannot_be_approved_or_run
+    target_dir: tests/kernel/split/
+    framework: pytest
+    type: integration
+    angle: failure
+    description: An answer that ticks or edits the set-aside proposal is refused, and after approval no work item
+      exists for it.
+test_rationale: The set-aside proposal must be unreachable from the answer path as well as hidden from the offer,
+  so both are tested through real submissions.
+origin_agent: business-analyst
+created: 2026-10-05
+amended_by:
+  - reason: it-po-technical-enrichment
+    date: '2026-10-05'
+    by: it-po
+    summary: 'Technical enrichment: assigned_agent confirmed, estimated_complexity, change_target, risk_surface,
+      it_requirements, delivers_to/expects_from contracts, doc_links and the test contract set; readiness draft
+      -> reviewed. BA criteria and product_truth unchanged.'
+  - reason: it-po-build-slice-amendment
+    date: '2026-10-05'
+    by: it-po
+    summary: 'Build-slice amendment (dec-9925ebf1895222f4): its tests enable splitting explicitly, because split.enabled
+      ships false in E1 and E2.'
+superseded_by: null
+covered_by:
+  - DK-400c-2-i
+implemented_by: []
+notes: |
+  Flow branch split-dropped. The person can still add the set-aside question by rewording a
+  part (DK-400d-2-ii).
+  OPEN for the IT PO: a kept part that waits for a set-aside proposal (its dependency would name a
+  part that is not in the split).
+product_truth:
+  - flow: leafcutter/decision-forming
+    node: split-dropped
+    node_kind: branch
+    flow_kind: data
+    screen: decision-split-approve
+    mock_data: leafcutter/decisions
+    entities:
+      - Decomposition
+    source: real
+    asof: '2026-10-05'

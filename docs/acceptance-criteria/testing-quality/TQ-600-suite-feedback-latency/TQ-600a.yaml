@@ -88,6 +88,86 @@ amended_by:
       undeclared-test safety net toward supersession at the same moment.
     by: business-analyst
     at: 2026-09-28
+  - reason: >-
+      child_limit_override raised 8 -> 12 to admit TQ-600a-11 and TQ-600a-12, and to
+      leave room for TQ-600a-9 and TQ-600a-10, which were authored on a separate
+      branch and are not yet reachable from main (that branch raises the override to
+      10 on its own; the correct resolution of the resulting conflict is 12, not
+      either side alone). WHAT THE OVERRIDE ADMITS: two further behavioural children,
+      from two independently measured suite-speed levers that share no code and no
+      ordering. TQ-600a-12 is squarely this L1's subject: the fixture that exists to
+      produce the deployed layout once currently produces it about 23 times to run
+      its own 27 tests, because the run identity it caches is per operating-system
+      process and every one of those tests starts a child session in a new process.
+      Fixing it is worth about 950 s and needs no migration to land first. TQ-600a-11
+      is the imperfect fit and is recorded as such in its own notes: its subject is
+      the YAML parser, where a store sweep costs 24.68 s with the pure-Python safe
+      parser and 1.86 s with the libyaml-backed one already present in the same
+      installed library. WHY REDISTRIBUTING WOULD BE WORSE, FOR a-12: separating the
+      fixture's own cost from the fixture would put the single largest consumer of
+      build subprocesses in the suite under a different L1 from the mechanism that
+      exists to remove build subprocesses, and TQ-600a-12-iv's cost bound is a
+      precondition of TQ-600a-8's migration, which lives here. WHY a-11 IS HERE ANYWAY:
+      this L1's criteria name SHARING as the mechanism, and a parse cannot be shared
+      across processes, so a-11 is a cheaper-work lever rather than a shared-work one.
+      It is filed here because TQ-600 is where suite cost lives and the work is wanted
+      now; its natural home is a fourth L1 under TQ-600, which only the product owner
+      may author. REMOVE THIS OVERRIDE, or reduce it, when a PO-owned split rebalances
+      the TQ-600 tree — and at that split, re-parent TQ-600a-11 and its three children
+      onto the new L1, which is a two-field change (a-11's depends_on and the two
+      parents' covered_by).
+    by: business-analyst
+    at: 2026-10-05
+  - reason: >-
+      child_limit_override raised 12 -> 13 to admit TQ-600a-9, TQ-600a-10 and
+      TQ-600a-13. The slots reserved for ids 9 and 10 by the 8 -> 12 override above
+      are now taken, and that override's premise about them is CORRECTED here: it
+      said they "were authored on a separate branch and are not yet reachable from
+      main". No file named TQ-600a-9 or TQ-600a-10 has ever existed on any local or
+      remote reference — verified by searching every ref for an addition of either
+      filename, which returns nothing, and by searching every commit touching the
+      store for the string, which returns only the 8 -> 12 override itself. The ids
+      were reserved in prose and never used; they are allocated here for the first
+      time. WHAT THE OVERRIDE ADMITS: one child beyond the twelve already reserved.
+      TQ-600a-9 and TQ-600a-10 fit the reserved slots and need no new room.
+      TQ-600a-13 is the thirteenth. All three come from one measured, per-file
+      analysis of the thirteen slowest build-spawning test files, which corrected the
+      originating hypothesis: the lever is how many real builds a file performs, not
+      whether a build is directed or self-targeting, and twelve of the thirteen files
+      are already correct on that axis. TQ-600a-9 is this L1's subject exactly —
+      groups of tests that differ only in what they assert about one build stop
+      producing one build each, worth about 592 s of the roughly 1,700 s this bucket
+      costs. TQ-600a-10 is a cheaper-preparation lever rather than a shared-
+      preparation one: a file that copies the whole eleven-thousand-file checkout
+      eight times so five tests can edit four files, where two sibling files already
+      meet the identical need with a twentyfold smaller synthetic package. WHY
+      REDISTRIBUTING a-9 AND a-10 WOULD BE WORSE: a-9 is the residue TQ-600a-8's
+      migration cannot move — files that build fresh adopter projects from an empty
+      directory, or alter package source before building, and so can never be
+      read-only consumers of one shared artifact. Separating the residue from the
+      migration would let both be closed with the residue untouched, which is the
+      exact shape of the condition the 7 -> 8 override had to correct. a-10's
+      preparation is a package copy made so a build can run against it, which is this
+      L1's cost centre whichever way the copy is produced. WHY a-13 IS HERE ANYWAY,
+      AND IT IS THE WEAKEST FIT IN THE TREE: its subject is that two documents claim
+      the default run excludes the expensive tests suffixed _MANUAL, and nothing
+      implements that exclusion — no registered marker, no selection or deselection in
+      the test configuration or the continuous-integration invocation, no collection
+      hook, and a duration record that times one of those tests at 13.8 s, which a
+      test that did not run cannot be. That is a documentation-truth defect, and its
+      natural home is TQ-600c, whose own notes define this exact failure class and
+      name three precedents of it. It is filed here because the suffixed population
+      includes this L1's own test files and the work is wanted now — the same reason,
+      and the same confessed misfit, recorded above for TQ-600a-11. Two confessed
+      misfits out of thirteen children is itself the argument for the split both
+      overrides keep deferring. REMOVE OR REDUCE THIS OVERRIDE when a product-owned
+      split rebalances the TQ-600 tree; at that split, re-parent TQ-600a-11 and
+      TQ-600a-13 onto their proper L1s, each a two-field change (the child's
+      depends_on and the two parents' covered_by). A slot also frees when TQ-600a-13
+      closes, which it can do cheaply: correcting the two documents satisfies it, and
+      the evidence favours that branch over implementing the exclusion.
+    by: business-analyst
+    at: 2026-10-07
 superseded_by: null
 covered_by:
   - TQ-600a-1
@@ -98,8 +178,13 @@ covered_by:
   - TQ-600a-6
   - TQ-600a-7
   - TQ-600a-8
+  - TQ-600a-9
+  - TQ-600a-10
+  - TQ-600a-11
+  - TQ-600a-12
+  - TQ-600a-13
 implemented_by: []
-child_limit_override: 8
+child_limit_override: 13
 change_target: pipeline
 risk_surface: internal
 documentation_triggers:

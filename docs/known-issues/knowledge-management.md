@@ -56,7 +56,7 @@ Severity in the **filename** is a three-level index bucket (`blocker` / `high` /
 
 Fixed issues move to [`knowledge-management/resolved/`](knowledge-management/resolved/) and are no longer listed as open. They are kept, not deleted.
 
-**Open: 11** (0 blocker, 6 high, 5 low) · **Resolved: 2**
+**Open: 12** (0 blocker, 7 high, 5 low) · **Resolved: 2**
 
 ## Open
 
@@ -68,6 +68,7 @@ Fixed issues move to [`knowledge-management/resolved/`](knowledge-management/res
 | `high` | KI-KM-008 — 241 ACs are marked `todo` while a covering test already exists, so the store also lies in the direction that hides finished work | [open-high-ki-km-008.md](knowledge-management/open-high-ki-km-008.md) |
 | `high` | KI-KM-009 — ADR-034 says the knowledge loop "has never closed"; nine files on disk say otherwise, and work was specified against the wrong premise | [open-high-ki-km-009.md](knowledge-management/open-high-ki-km-009.md) |
 | `high` | KI-KM-010 — The emission event is a receipt with no payload, and `_event_hash` keys on a field that is empty in every real record | [open-high-ki-km-010.md](knowledge-management/open-high-ki-km-010.md) |
+| `high` | KI-KM-20260930-entry-kind-vocabulary-has-no-known-issues-member — the declared `entry_kind` vocabulary has no known-issues member, so defect findings fall through route-knowledge to Step 17 and the harvester retains them as permanently unroutable | [open-high-ki-km-20260930-entry-kind-vocabulary-has-no-known-issues-member.md](knowledge-management/open-high-ki-km-20260930-entry-kind-vocabulary-has-no-known-issues-member.md) |
 | `low` | KI-KM-003 — The map understates `ticket-touches`: config flipped to strict, the rating and both notes did not | [open-low-ki-km-003.md](knowledge-management/open-low-ki-km-003.md) |
 | `low` | KI-KM-004 — `check_ac_coverage.py` exists on disk but is registered nowhere, so `covered_by` test entries are never read | [open-low-ki-km-004.md](knowledge-management/open-low-ki-km-004.md) |
 | `low` | KI-KM-006 — The artifact graph is a hand-authored type-level schema; no AC covers making it dynamic | [open-low-ki-km-006.md](knowledge-management/open-low-ki-km-006.md) |

@@ -166,6 +166,8 @@ import build as _build  # noqa: E402 — after sys.path setup
 from injection_builders import assemble_context_bundle  # noqa: E402
 from _workflow_engine_harness import HarnessResult, run_workflow_under_e2  # noqa: E402
 
+import workflows._fast_lane_claim_fixtures as _claim_fx  # noqa: E402
+
 _INJECTION_BUILDERS_PY = _SCRIPTS_DIR / "injection_builders.py"
 _FAST_LANE_SHIP_JS = _REPO_ROOT / "templates" / "workflows-js" / "fast-lane-ship.js"
 
@@ -484,11 +486,7 @@ _GREEN_LABELS: dict = {
         "ac_ids": ["BO-STUB-1"],
         "message": "1 to build",
     },
-    "claim-connected": {
-        "claimed": ["BO-STUB-1"],
-        "excluded_claimed": [],
-        "target_refused": False,
-    },
+    "claim-connected": _claim_fx.claim_ran(["BO-STUB-1"]),
     "test-writer-connected": {
         "status": "ok",
         "tests_written": ["unit_tests/test_stub.py"],

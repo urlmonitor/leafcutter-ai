@@ -59,7 +59,10 @@ def _insert_fields(fm_text: str, fields: dict) -> str:
     Appends new fields at the end of the frontmatter.
     """
     try:
-        fm = yaml.safe_load(fm_text.strip()) or {}
+        # Reverted to the pure-Python loader (loader-audit, TQ-600a-11
+        # fix-pass, 2026-10-07): one-off migration tooling, one agent
+        # template at a time -- no speed case for the fast loader here.
+        fm = yaml.load(fm_text.strip(), Loader=yaml.SafeLoader) or {}
     except yaml.YAMLError:
         fm = {}
 
@@ -163,7 +166,11 @@ def main() -> int:
             continue
 
         try:
-            proposal = yaml.safe_load(pf.read_text(encoding="utf-8"))
+            # Reverted to the pure-Python loader (loader-audit, TQ-600a-11
+            # fix-pass, 2026-10-07): one-off migration tooling parsing
+            # machine-generated proposal files, few in number -- no speed
+            # case for the fast loader here.
+            proposal = yaml.load(pf.read_text(encoding="utf-8"), Loader=yaml.SafeLoader)
         except yaml.YAMLError as exc:
             print(f"  ERROR loading {pf.name}: {exc}", file=sys.stderr)
             continue

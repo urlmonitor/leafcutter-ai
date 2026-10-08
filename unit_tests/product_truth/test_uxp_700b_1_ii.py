@@ -135,6 +135,7 @@ def _build_fixture(tmp: Path) -> Path:
                     "id": "step-a",
                     "label": "Step A",
                     "human": "Do the thing.",
+                    "io_contracts": {"not_applicable": "User-action fixture for mixed artifact counts; no JSON handoff is modeled."},
                     "order": 1,
                     "impl_status": "not_started",
                 }
@@ -150,7 +151,7 @@ def _build_fixture(tmp: Path) -> Path:
     # fixture's flows; it does not (re)populate "artifacts" from scratch, so
     # that key is deliberately left empty — this fixture makes no assertion
     # about it.
-    index = {
+    index: dict[str, object] = {
         "artifacts": [],
         "entity_registry": [],
         "by_component": {},
@@ -219,6 +220,9 @@ def _parse_outcome_payload(stdout: str) -> dict:
 class TestMixedStoreEmptyTypeNaming(unittest.TestCase):
     """UXP-700b-1-ii: three journeys, zero example data, zero screens — the
     report must name only the empty types."""
+
+    _tmp_dir: tempfile.TemporaryDirectory[str]
+    result: subprocess.CompletedProcess[str]
 
     @classmethod
     def setUpClass(cls) -> None:

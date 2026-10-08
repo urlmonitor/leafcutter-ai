@@ -1,0 +1,91 @@
+{
+  "$defs": {
+    "JsonValue": {}
+  },
+  "$id": "leafcutter.query_build_request.v1",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "A trusted missing-query need supplied to a coding host.",
+  "properties": {
+    "attempt_id": {
+      "minLength": 1,
+      "title": "Attempt Id",
+      "type": "string"
+    },
+    "available_queries": {
+      "items": {
+        "additionalProperties": {
+          "$ref": "#/$defs/JsonValue"
+        },
+        "type": "object"
+      },
+      "maxItems": 50,
+      "title": "Available Queries",
+      "type": "array"
+    },
+    "component_ids": {
+      "items": {
+        "type": "string"
+      },
+      "maxItems": 20,
+      "minItems": 1,
+      "title": "Component Ids",
+      "type": "array"
+    },
+    "expected_result": {
+      "default": "Attributable canonical entities for the original evidence need",
+      "title": "Expected Result",
+      "type": "string"
+    },
+    "generation_id": {
+      "minLength": 1,
+      "title": "Generation Id",
+      "type": "string"
+    },
+    "need_id": {
+      "minLength": 1,
+      "title": "Need Id",
+      "type": "string"
+    },
+    "question": {
+      "maxLength": 8000,
+      "minLength": 1,
+      "title": "Question",
+      "type": "string"
+    },
+    "remaining_budget": {
+      "additionalProperties": {
+        "$ref": "#/$defs/JsonValue"
+      },
+      "title": "Remaining Budget",
+      "type": "object"
+    },
+    "repository_id": {
+      "minLength": 1,
+      "title": "Repository Id",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": "1.0",
+      "default": "1.0",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "source_sha": {
+      "pattern": "^[a-f0-9]{40}$",
+      "title": "Source Sha",
+      "type": "string"
+    }
+  },
+  "required": [
+    "question",
+    "repository_id",
+    "source_sha",
+    "generation_id",
+    "component_ids",
+    "need_id",
+    "attempt_id"
+  ],
+  "title": "QueryBuildRequest",
+  "type": "object"
+}

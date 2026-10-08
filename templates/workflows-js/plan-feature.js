@@ -2545,9 +2545,7 @@ if (wtParsed.exit_code != null && wtParsed.exit_code !== 0) {
 
 let wtPayload = null;
 try {
-  if (typeof wtParsed.output === "string" && wtParsed.output.trim()) {
-    wtPayload = JSON.parse(wtParsed.output.trim());
-  }
+  if (typeof wtParsed.output === "string" && wtParsed.output.trim()) wtPayload = JSON.parse(wtParsed.output.trim().split(/\r?\n/).filter((l) => l.trim()).pop().trim());
 } catch (_parseErr) {
   // Unparseable payload — handled by the no-worktree-path check below.
   wtPayload = null;

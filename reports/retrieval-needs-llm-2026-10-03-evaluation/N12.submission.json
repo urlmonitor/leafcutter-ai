@@ -1,0 +1,59 @@
+{
+  "run_id": "run-a472ae6b468148e2",
+  "interaction_id": "int-83cbeee2f9574563",
+  "expected_state_revision": 1,
+  "actor": {
+    "id": "codex:/root/needs_llm_host",
+    "kind": "host"
+  },
+  "relayed_by": "isolated-evaluation-controller",
+  "response_schema_id": "leafcutter.retrieval_needs_output.v1",
+  "response": {
+    "schema_version": "1.0",
+    "original_question": "Which ADRs and contracts govern adding a retrieval operation, and what must remain compatible?",
+    "source_scope": {
+      "allow_retrieval": false,
+      "read_roots": [
+        "docs",
+        "kernel",
+        "knowledge",
+        "integrations"
+      ],
+      "repository": "leafcutter",
+      "source_revision": "planning-probe-only"
+    },
+    "selections": {
+      "entity_types": [
+        "adr",
+        "schema"
+      ],
+      "target_ids": [],
+      "required_fields": [
+        "content",
+        "compatibility",
+        "provenance"
+      ],
+      "document_types": [
+        "adr",
+        "schema"
+      ],
+      "relationships": []
+    },
+    "uncertain": {
+      "entity_types": [],
+      "target_ids": [],
+      "required_fields": [],
+      "document_types": [],
+      "relationships": []
+    },
+    "detail_mode": "fields",
+    "completeness": "exhaustive_set",
+    "hierarchy_scope": "not_applicable",
+    "scope_resolution": "discovery_needed",
+    "unresolved": [],
+    "rationale": "Discover the ADRs and versioned contracts governing addition of a retrieval operation, identify those governing records, and obtain their relevant provisions and compatibility obligations. No particular IDs are supplied. The request concerns the governing set, not examples or an acceptance-criterion hierarchy.",
+    "engine": "host_llm",
+    "status": "decided",
+    "model_id": null
+  }
+}

@@ -7,7 +7,7 @@ component: testing-quality
 level: L2
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 readiness: approved
 priority: high
 roadmap_phase: phase_1
@@ -31,7 +31,7 @@ criteria: |
 depends_on:
   - TQ-500g
 doc_links:
-  - path: docs/known-issues/testing-quality/open-low-ki-tq-20260928-subtest-failures-read-as-passed.md
+  - path: docs/known-issues/testing-quality/resolved/resolved-low-ki-tq-20260928-subtest-failures-read-as-passed.md
     relationship: describes
     status: planned
     relevance: "The defect this AC closes: the pytest outcome reader shared by done_proof and verify_red_baseline reads a unittest test whose only failures are inside self.subTest() as PASSED (SUBFAILED lines are not recognised). Contains the five-line reproduction. On branch feature/kis-from-test-discrimination (PR #928) at the time of writing."

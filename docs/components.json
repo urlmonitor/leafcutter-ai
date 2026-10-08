@@ -104,6 +104,19 @@
         "scripts/changelog/"
       ]
     },
+    "colony_memory": {
+      "id": "colony_memory",
+      "name": "Colony Memory",
+      "type": "infrastructure",
+      "description": "Optional cross-run learning layer: learned statistics as derived aggregates in Neo4j (ADR-065) behind the ColonyMemory port (ADR-059), fed by a learning evaluator from Langfuse traces and scores; statistics are off when no Neo4j store is configured, while decision records follow memory.backend (ADR-059).",
+      "detail_ref": "docs/architecture/components/colony-memory.md",
+      "status": "planned",
+      "primary_code": [
+        "kernel/memory"
+      ],
+      "agent_affinity": [],
+      "exposed_interfaces": []
+    },
     "commit_guardian": {
       "id": "commit_guardian",
       "name": "Commit Guardian",
@@ -125,6 +138,40 @@
       "status": "active",
       "primary_code": [
         "scripts/config_loader.py"
+      ]
+    },
+    "decision_kernel": {
+      "id": "decision_kernel",
+      "name": "Decision Kernel",
+      "type": "orchestration",
+      "description": "Resumable LangGraph decision-and-research runtime (kernel/): Jev-routed capabilities over its own capability registry, native decision and research graphs, read-only repository retrieval, cooperative Claude Code handoff, capability-gap records and Langfuse tracing. leafcutter-ai only; not shipped to adopters.",
+      "detail_ref": "docs/architecture/components/decision-kernel.md",
+      "status": "active",
+      "primary_code": [
+        "kernel/",
+        "config/capability_registry.json",
+        "config/kernel_config.default.json"
+      ],
+      "agent_affinity": [],
+      "exposed_interfaces": [
+        {
+          "name": "kernel-cli",
+          "type": "cli_command",
+          "path": "kernel/adapters/cli.py",
+          "shape": "python -m kernel <run|resume|status|cancel|gaps|decisions|install-skill> [--config FILE] [--env-file FILE] [--input-file FILE|-] --json. Prints exactly one JSON document on stdout (a RunEnvelope, a gaps document, a decisions result or an error payload). `decisions validate|index|publish --run-id R [--correct OLD_ID]` validates, indexes or explicitly publishes staged decision records into docs/decisions/ (no Jev key needed). Exit codes: 0 envelope produced, 2 usage error, 3 input or submission rejected with state unchanged, 4 unknown run, 5 internal or environment error."
+        },
+        {
+          "name": "run-service-api",
+          "type": "function_signature",
+          "path": "kernel/service.py",
+          "shape": "RunService protocol: start_run(task_input: TaskInput, *, run_id: str | None = None) -> RunEnvelope; resume_run(run_id: str, submission: InteractionSubmission | Mapping) -> RunEnvelope; get_run(run_id: str) -> RunEnvelope; cancel_run(run_id: str, actor: Actor) -> RunEnvelope; list_gaps() -> list[CapabilityGap]. All coroutines except list_gaps. A refused submission raises SubmissionRejected carrying the current envelope; a status such as waiting_host or blocked is a normal envelope, not an exception."
+        },
+        {
+          "name": "leafcutter-skill",
+          "type": "file_contract",
+          "path": "kernel/adapters/claude_code/SKILL.md",
+          "shape": "Claude Code project skill (transport only), installed with python -m kernel install-skill --target-dir <workspace>/.claude/skills --name <name>. Writes <target>/<name>/SKILL.md, carries the marker <!-- leafcutter-kernel-skill -->, and refuses to overwrite a SKILL.md without that marker unless --force is given."
+        }
       ]
     },
     "doc_compliance": {
@@ -254,13 +301,35 @@
       "id": "knowledge_management",
       "name": "Knowledge Management",
       "type": "analysis",
-      "description": "Cross-surface knowledge graph: surface ingestion from paths.json, node/edge derivation, AC-to-code traceability, the query layer, and graph visualisation.",
+      "description": "Cross-surface canonical graph assembly and traceability, plus optional immutable Git-to-Neo4j projection and bounded exact/graph/semantic retrieval. Knowledge owns infrastructure; the thin integrations adapter consumes existing kernel evidence/capability contracts.",
       "detail_ref": "docs/architecture/components/knowledge-management.md",
       "status": "active",
       "primary_code": [
         "scripts/knowledge_query.py",
         "scripts/visualise_knowledge_graph.py",
-        "templates/skills/knowledge-query/"
+        "templates/skills/knowledge-query/",
+        "knowledge/",
+        "integrations/"
+      ],
+      "exposed_interfaces": [
+        {
+          "name": "knowledge-cli",
+          "type": "cli_command",
+          "path": "knowledge/__main__.py",
+          "shape": "python -m knowledge <capabilities|retrieve|evaluate|validate|plan|sync|status|rollback|cleanup>. Versioned JSON requests/results, explicit immutable source SHA and repository scope; disabled by default, separate writer credentials for publication."
+        },
+        {
+          "name": "knowledge-retriever-port",
+          "type": "function_signature",
+          "path": "knowledge/ports.py",
+          "shape": "KnowledgeRetriever: async capabilities() -> dict; async retrieve(KnowledgeRetrievalRequest) -> KnowledgeRetrievalResult; async close(). Neutral versioned transport with bounded disclosure, generation/source provenance and typed readiness/failure status."
+        },
+        {
+          "name": "kernel-knowledge-adapter",
+          "type": "function_signature",
+          "path": "integrations/knowledge_capability.py",
+          "shape": "KnowledgeRetrievalExecutor.ainvoke(invocation, ctx) -> CapabilityResult via existing retrieve.repository binding. Canonical Evidence conversion and trusted scope checks; database resources remain outside kernel state."
+        }
       ]
     },
     "knowledge_system": {

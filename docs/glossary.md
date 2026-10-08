@@ -74,3 +74,155 @@ The public entry-point function (`scripts/suite_performance/_shared_layout_produ
 
 ### emit_execution_signal
 A function (`scripts/suite_performance/_shared_layout_coordination.py`) that records when a shared reference layout subprocess actually executes (vs. hitting the cache), appending a JSONL event to a log file specified by `EXECUTION_LOG_ENV_VAR`. Used to verify — independently of any run's reported deploy count — that the `shared_reference_layout` fixture's production phase was genuinely reached, not skipped. TQ-600a-1-i's zero-consumer / one-consumer boundary tests observe this signal rather than the reported count, which has no instrumentation yet (deferred to TQ-600a-6). See also `worker_name()` in the same module, which attributes a signal to the pytest-xdist worker that emitted it.
+
+### INSUFFICIENT_EVIDENCE
+
+The explicit answer path every Jev decision specification carries for when the task or policy does not establish the facts needed to decide. It keeps an unanswerable question from being forced into a guess. See ADR-052 §8.
+
+### NEEDS_HUMAN
+
+Earlier discussion name for a result that needs a human answer: a preference, an authority decision or a risk acceptance. The kernel spec normalizes it to status `waiting` plus a persisted human interaction (a `human_question_request.v1`); the matching decision assessment status is `needs_human` (spec §7.6–7.7). See ADR-053.
+
+### NEEDS_INFORMATION
+
+Earlier discussion name for a result that lacks evidence. The kernel spec normalizes it to status `waiting` plus evidence (retrieval or research) requests; the matching decision assessment status is `needs_evidence` (spec §7.6–7.7). See ADR-053.
+
+### NEEDS_OPTIONS
+
+Earlier discussion name for a result whose decision options are not yet known. The kernel spec normalizes it to status `waiting` plus an options request (`options_request.v1`, served by `host.generate_options`); the matching decision assessment status is `needs_options` (spec §7.6–7.7). See ADR-053.
+
+### NEEDS_REASONING
+
+Earlier discussion name, grouped with `NEEDS_SYNTHESIS`, for a result whose evidence is sufficient but whose answer needs generative reasoning. The kernel spec normalizes both to status `waiting` plus a generative request (spec §7.6). See ADR-053.
+
+### NEEDS_SYNTHESIS
+
+Earlier discussion name for a result whose evidence is sufficient but needs synthesis by a generative model. The kernel spec normalizes it to status `waiting` plus a generative request such as `synthesis_request.v1`, served by `host.synthesize`; the matching decision assessment status is `needs_synthesis` (spec §7.6–7.7). See ADR-053.
+
+### NO_CAPABILITY
+
+Earlier discussion name for the case where no registered capability can serve a request. The kernel spec normalizes it to routing outcome `no_match`, a capability-gap record, and either an approved fallback or a `blocked` result (spec §7.6). See ADR-054 §5 and ADR-056 §6.
+
+### choose_next_step
+
+One of the operations forbidden to every host (`host.*`) operation in the Decision Kernel, alongside `edit_repository`, `approve_policy`, `change_permissions` and `run_other_leafcutter_commands`. Choosing the next process step stays with the kernel scheduler, never with the host doing the work (kernel design part 4).
+
+### example_run_ids
+
+Field of an aggregated capability-gap record: up to five run IDs that exemplify the gap. `load_gaps()` fills it together with `occurrence_count` and `first_seen`/`last_seen` (kernel design parts 2 and 4, spec §14).
+
+### fallback_on_no_match
+
+Kernel config flag `host.fallback_on_no_match` (default `true`) that lets an approved `host.*` capability take over a request that routed to `no_match`. Fallback also requires that the request kind maps to an eligible `host.*` capability, that budget remains, and that the gap type is not `permission` (kernel design part 4).
+
+### human_question_request
+
+Kernel request contract `leafcutter.human_question_request.v1` for a persisted human interaction, with fields `question`, `choices`, `free_text_allowed`, `why_research_cannot_settle` and `decision_id` (spec §7). Used when work needs a human answer (the `NEEDS_HUMAN` case).
+
+### write_if_absent
+
+A `build_behavior` frontmatter value for templated docs: `build.py` writes the file only when it does not exist yet, so a human-curated living document such as `docs/vision.md` is never overwritten by a later build (enforced in `scripts/build_phases_docs.py`).
+
+### Decision Kernel
+
+The resumable runtime in leafcutter-ai (package `kernel/`) that takes a free-form engineering goal, routes it to a registered capability using Jev's bounded judgments, gathers evidence through native decision and research capabilities, hands generative or human work out as checkpointed handoffs, and ends every run in a typed terminal state with evidence and a Langfuse trace. Its capability registry starts empty (ADR-055). Not yet shipped to adopters. See `docs/architecture/components/decision-kernel.md` and ADR-052 to ADR-056.
+
+### capability
+
+In the Decision Kernel, the contract-driven unit of work that replaces the agent: an input contract, applicable policies, evidence preparation, decisions, an execution strategy, verification and a typed result. A capability may contain no model, one model call or a bounded worker loop, and callers do not depend on which. Every capability runs the same lifecycle: PREPARE → PRE-CHECK → COMPILE INVOCATION → EXECUTE → POST-CHECK → ACCEPT, REPAIR, REQUEST INFORMATION or ESCALATE (ADR-052 §4; see `docs/architecture/diagrams/c3-015-decision-kernel-flows-capability-lifecycle.md`). See ADR-052.
+
+### Jev
+
+TypeSafe's bounded decision model (jev-1.13), used through `langchain-typesafe`. Jev receives a state and typed questions (kinds `noul`, `choice` and `score`) and returns bounded answers with probabilities. In the Decision Kernel it answers semantic questions against known options and criteria, such as routing and criterion assessment; it does not invent criteria or generate content. See ADR-053.
+
+### invocation compiler
+
+The deterministic code in the Decision Kernel design that builds a model's focused instructions from the capability definition, applicable policies, task, retrieved evidence, approved decisions and output contract. It is ordinary code, never an LLM that improvises prompts, so prompts become versioned compiled outputs rather than the source of truth. See ADR-052 §3.
+
+### decision specification
+
+A small, bounded, testable instruction for a Jev decision: it evaluates only the supplied criteria and has an explicit `INSUFFICIENT_EVIDENCE` path. It replaces open-ended judgement prompts such as "is this implementation good?". See ADR-052 §8.
+
+### process maturity level
+
+One of five levels describing how well an engineering process is understood: 0 Unknown, 1 LLM-guided, 2 Policy-guided, 3 Workflow-guided, 4 Deterministic. The kernel uses the most mature representation available, and knowledge is promoted upward as it recurs. Not every capability reaches Level 4. See ADR-054 §2.
+
+### promotion rule
+
+The ADR-054 principle to convert repeated LLM reasoning into policies and repeated policies into workflows whenever practical, moving process knowledge to cheaper, more reliable forms. Promotion is proposed from recorded outcome evidence and activated only after review (ADR-056). See ADR-054 §3.
+
+### capability gap
+
+A recorded observation that the kernel lacked a suitable native capability: a request that routed to `no_match`, or work only a `host.*` fallback could do. Gap types are `unsupported`, `host_only`, `provider_failure`, `permission` and `ambiguous`. Observations are deduplicated by `gap_key` and aggregated (`occurrence_count`, `example_run_ids`). Repeated gaps are the colony's pressure signal for new capabilities. See ADR-054 §5 and ADR-056 §6.
+
+### colony memory
+
+The execution statistics and decision outcomes the Decision Kernel records from capability invocations and important decisions. Verified outcomes strengthen a path, wrong decisions and dead ends weaken it, and usage alone is never evidence of correctness. See ADR-056 and `docs/vision.md`.
+
+### stigmergy
+
+Coordination without a central planner through traces left in a shared environment, as when ants follow each other's pheromone trails. In Leafcutter, run traces and decision outcomes are those traces, and routing and promotion read them. See ADR-056 §1 and `docs/vision.md`.
+
+### pheromone trail
+
+Colony-model name for a learned routing preference built from verified outcomes (post-check passed, tests green, human accepted). Trails fade through evaporation and may rank and propose but never legislate: turning a trail into a policy or workflow stays a reviewed step. A dead-end trail is a failed path or a decision later proven wrong. See ADR-056.
+
+### evaporation
+
+The rule that colony-memory evidence is scoped to the policy, template and model versions that produced it and decays over time, so a record made under an old version carries little weight once a new one exists. A fading trail can lead to a proposal to retire a capability. See ADR-056 §3.
+
+### performance store
+
+ADR-056's name for the store of compact routing statistics that a learning evaluator derives from Langfuse traces and scores. ADR-057 named it the **colony memory store**; ADR-065 keeps it in Neo4j as derived aggregates behind the `ColonyMemory` port of ADR-059. The kernel reads these statistics and never queries Langfuse directly, so observability data does not become operational state. See ADR-056 §8, ADR-057 and ADR-065.
+
+### confidence calibration
+
+How closely Jev's stated confidence matches observed accuracy: answers given at .95 should be right about 95% of the time. ADR-056 tracks calibration per decision type, and a poorly calibrated type is first read as a deficient decision basis (the policy or ADR behind it), not necessarily a Jev fault. See ADR-056 §4.
+
+### policy gap
+
+A proposal to change a decision rule (a policy, checklist or ADR) because recorded outcomes show it repeatedly produces wrong decisions, usually because a criterion or evidence is missing. It comes from decision-rule reinforcement in Stage 4 and is activated only after review. See ADR-056 §5.
+
+### scout
+
+Colony-model name for research and capability-gap handling: the work that goes where no capability exists yet. At founding the general-purpose model does scout work through approved fallback, and repeated gaps for the same need are the signal to build a specialized capability. See ADR-056 §6 and `docs/vision.md`.
+
+### LEAFCUTTER_COLONY_DB_URL
+
+Superseded. ADR-057 (2026-09-30) defined it as the `.env` variable holding a PostgreSQL connection URL for the colony memory store. ADR-065 (2026-10-02) moved the learned statistics to Neo4j, configured through the `LEAFCUTTER_NEO4J_*` settings, so this variable is no longer used. Kept so older documents stay readable. See ADR-057 §4 and ADR-065.
+
+### LEAFCUTTER_SELF_LEARNING
+
+Optional opt-out in the project-root `.env`: `LEAFCUTTER_SELF_LEARNING=false` keeps learned statistics off, even when a colony memory store is configured. Approved decision records and precedent are unaffected; they follow ADR-059's `memory.backend` setting. Otherwise enablement follows the store configuration (ADR-065). See ADR-057 §4 and ADR-065.
+
+### JEV_API_KEY
+
+The Jev credential, kept in the project-root `.env` next to the Langfuse keys (`LANGFUSE_PUBLIC_KEY`, `LANGFUSE_SECRET_KEY`, `LANGFUSE_BASE_URL`). The Decision Kernel needs it to call Jev.
+
+### NEEDS_CONTEXT
+
+A sentinel choice in the Decision Kernel's routing question (`kernel.route`). When Jev selects it, the request lacks the information needed to pick a capability safely: the routing outcome is `insufficient_context` and the kernel asks for clarification instead of routing. It sits alongside the `__NONE__` sentinel for "no matching capability". See `kernel/scheduler/routing.py`.
+
+### PROJECT_CONTEXT
+
+A `PROJECT_CONTEXT.md` file in an agent, skill or component directory that supplies project-specific context to legacy Leafcutter agents at spawn time. It is one of the channels of the agent knowledge plane. See `docs/architecture/agent_knowledge_plane.md`.
+
+### assemble_context_bundle
+
+A pure function in `scripts/injection_builders.py` that assembles the layered context bundle for agents dispatched by the fast-lane build: architecture docs, acceptance criteria, prior tests and working changes, ordered from most stable to most volatile so the stable prefix stays byte-identical for prompt caching. Exposed as the `assemble-bundle` CLI subcommand. See `docs/reference/fast-lane-prompt-caching.md`.
+
+### agent_knowledge_plane
+
+The architecture reference (`docs/architecture/agent_knowledge_plane.md`) for how legacy Leafcutter agents receive context at spawn time through the harness's injection channels, such as `CLAUDE.md`, auto-memory, the glossary, skills, agent frontmatter, folder `README.md` and `PROJECT_CONTEXT.md`. The Decision Kernel's context map contrasts with it (`docs/architecture/diagrams/c3-016-decision-kernel-context-map.md`).
+
+### agent_knowledge_system
+
+The architecture reference (`docs/architecture/agent_knowledge_system.md`) for how legacy Leafcutter agents persist learnings after work completes. It is the persistence-side complement to `agent_knowledge_plane`.
+
+### LEAFCUTTER_NEO4J_URI
+
+The connection URI of Leafcutter's Neo4j settings family: `LEAFCUTTER_NEO4J_URI`, `LEAFCUTTER_NEO4J_USERNAME`, `LEAFCUTTER_NEO4J_PASSWORD`, `LEAFCUTTER_NEO4J_DATABASE`, and the writer pair `LEAFCUTTER_NEO4J_WRITER_USERNAME` / `LEAFCUTTER_NEO4J_WRITER_PASSWORD`. ADR-062 (knowledge retrieval) introduced them, and ADR-065 also uses them to configure the colony memory store for learned statistics, replacing `LEAFCUTTER_COLONY_DB_URL`. Without them, or with `LEAFCUTTER_SELF_LEARNING=false`, learned statistics are off; decision records and precedent are unaffected (ADR-059). Whether statistics share ADR-062's database and credentials is ADR-065 Open Question 4.
+
+### out_of_domain
+
+A `GapType` value in the Decision Kernel (`kernel/contracts/enums.py`) and a choice of the intake intent classification (`kernel/intent/classify.py`): the request is not about software engineering in the repository. The kernel declines it and records it as a capability gap.

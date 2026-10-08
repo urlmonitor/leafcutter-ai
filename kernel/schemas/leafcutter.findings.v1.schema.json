@@ -1,0 +1,157 @@
+{
+  "$defs": {
+    "Finding": {
+      "additionalProperties": false,
+      "description": "A source-linked claim: fact, inference, assumption or reported human input.",
+      "properties": {
+        "claim": {
+          "minLength": 1,
+          "title": "Claim",
+          "type": "string"
+        },
+        "contradicting_evidence_ids": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Contradicting Evidence Ids",
+          "type": "array"
+        },
+        "created_at": {
+          "format": "date-time",
+          "title": "Created At",
+          "type": "string"
+        },
+        "created_seq": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Created Seq",
+          "type": "integer"
+        },
+        "id": {
+          "pattern": "^[a-z]+-[0-9a-f]{16}$",
+          "title": "Id",
+          "type": "string"
+        },
+        "kind": {
+          "$ref": "#/$defs/FindingKind"
+        },
+        "limitations": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Limitations",
+          "type": "array"
+        },
+        "producer": {
+          "title": "Producer",
+          "type": "string"
+        },
+        "producer_version": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Producer Version"
+        },
+        "schema_version": {
+          "const": "1.0",
+          "default": "1.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "supporting_evidence_ids": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Supporting Evidence Ids",
+          "type": "array"
+        },
+        "updated_at": {
+          "format": "date-time",
+          "title": "Updated At",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "claim",
+        "kind",
+        "producer"
+      ],
+      "title": "Finding",
+      "type": "object"
+    },
+    "FindingKind": {
+      "description": "Nature of a Finding.",
+      "enum": [
+        "source_fact",
+        "inference",
+        "assumption",
+        "human_input"
+      ],
+      "title": "FindingKind",
+      "type": "string"
+    }
+  },
+  "$id": "leafcutter.findings.v1",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "leafcutter.findings.v1.",
+  "properties": {
+    "agreements": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Agreements",
+      "type": "array"
+    },
+    "assumptions": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Assumptions",
+      "type": "array"
+    },
+    "constraints": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Constraints",
+      "type": "array"
+    },
+    "disagreements": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Disagreements",
+      "type": "array"
+    },
+    "findings": {
+      "items": {
+        "$ref": "#/$defs/Finding"
+      },
+      "title": "Findings",
+      "type": "array"
+    },
+    "schema_version": {
+      "const": "1.0",
+      "default": "1.0",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "unknowns": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Unknowns",
+      "type": "array"
+    }
+  },
+  "title": "FindingsPayload",
+  "type": "object"
+}

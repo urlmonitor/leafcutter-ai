@@ -488,7 +488,7 @@ def _compute_phase_mappings(
 #   (#EPIC-TruthfulProjectRecord/04)
 # - 2026-09-13 [python-coder/BP-1000a-7]: Fixed _write()'s compare-before-write
 #   guard and the write itself to operate on raw UTF-8 bytes instead of text
-#   mode. Previously target.write_text(content, encoding="utf-8") let Python's
+#   mode. Previously target.write_text(content, encoding="utf-8", newline="\n") let Python's
 #   text-mode newline translation widen every LF in content to os.linesep, so
 #   on Windows every deployed text artifact landed CRLF while its source
 #   template stayed LF, producing check-hook-parity / check-output-drift

@@ -1,0 +1,894 @@
+id: KM-400a-3-i
+title: Explore native project types, complete metadata and declared component membership in Aura
+component: knowledge-management
+components: [knowledge_management]
+level: L3
+status: active
+req_status: active
+readiness: approved
+priority: medium
+work_status: done
+parent: KM-400a-3
+criteria: |
+  Given a published repository graph contains acceptance criteria, ADRs, components, source files and tests
+  When the user explores the current repository snapshot in Aura
+  Then those entities have the native labels AC, ADR, Component, SourceFile and Test respectively
+  And each entity exposes its readable canonical identifier, name or source path for its caption
+  And connections have meaningful native relationship types while retaining their declared direction and provenance
+  And the normal domain exploration excludes repository and snapshot bookkeeping and retired snapshots
+
+  Given some entities explicitly declare membership of finalize and others only connect indirectly to those entities
+  When the user filters current entities by finalize in their components property
+  Then the result is exactly the entities with declared finalize membership in that repository snapshot
+  And entities with multiple declared components remain filterable by each component
+  And no inferred or transitive membership is presented as a declared component assignment
+
+  Given the existing Aura database contains retained generations and registered retrieval queries
+  When the representation is migrated and a subsequent snapshot is published or rolled back
+  Then canonical identities, source revisions, payloads, relationship counts and retained generations are preserved
+  And the current marker agrees with the active repository snapshot after the atomic switch
+  And existing registered retrieval queries and their validation digests remain valid and return the same scoped evidence
+  And invalid, unowned or cross-generation records cause the migration to refuse before changing the graph
+
+  Given Leafcutter defines native artifact types and their authored fields in schemas, registries or validated source conventions
+  When each type is reviewed and projected into Neo4j
+  Then every present native field is exposed as a typed queryable node property or a documented queryable nested leaf
+  And an auditable type and field inventory names each authoritative source, implementation and verification result
+  And absent, explicit null and empty values remain distinguishable without inventing schema defaults
+  And nested objects and lists retain their field identity, ordering and same-object correlation
+  And projection bookkeeping cannot overwrite authored metadata or be overwritten by it
+  And future imports and the existing published graph use the reviewed field mapping
+depends_on: [KM-400a-3]
+doc_links:
+- path: docs/how-to/run-knowledge-retrieval.md
+  relationship: describes
+  status: exists
+  relevance: Document domain labels, captions, declared-components filtering and migration verification.
+- path: docs/architecture/adrs/ADR-062-standalone-knowledge-retrieval.md
+  relationship: context
+  status: exists
+  relevance: Neo4j remains a rebuildable projection with unchanged retrieval and evidence ownership.
+- path: docs/architecture/components/knowledge-retrieval.md
+  relationship: context
+  status: exists
+- path: docs/reference/artifact-knowledge-graph-data-map.md
+  relationship: context
+  status: exists
+  relevance: Preserve canonical field directions and the distinction between declared links and proof.
+- path: docs/acceptance-criteria/knowledge-management/KM-400-trustworthy-project-knowledge/KM-400a-3.yaml
+  relationship: context
+  status: exists
+  relevance: Existing registered operations retain their canonical relationship semantics.
+- path: docs/acceptance-criteria/knowledge-management/KM-400-trustworthy-project-knowledge/KM-400a-5.yaml
+  relationship: context
+  status: exists
+  relevance: Preserve repository and generation isolation in every retrieval path.
+- path: docs/acceptance-criteria/ac-store/ACS-1100-honest-coverage-answers/ACS-1100.yaml
+  relationship: context
+  status: exists
+  relevance: Counts and validation claims state their measured scope and method.
+- path: reports/aura-domain-migration.json
+  relationship: evidence
+  status: exists
+  relevance: Actual Aura migration counts and matching canonical-evidence fingerprint for four retained snapshots.
+- path: reports/aura-domain-verification.xml
+  relationship: evidence
+  status: exists
+  relevance: Focused 63-test regression result before the indexed migration lookup adjustment.
+- path: reports/aura-domain-migration-indexed.xml
+  relationship: evidence
+  status: exists
+  relevance: Four migration tests rerun after the indexed lookup adjustment.
+- path: reports/aura-domain-migration-boundaries.xml
+  relationship: evidence
+  status: exists
+  relevance: All seven migration checks pass, including cross-generation and unowned-record refusal and retained-catalog
+    comparison.
+- path: reports/aura-domain-hosted-verification.json
+  relationship: evidence
+  status: exists
+  relevance: Hosted native-label counts, no legacy labels, and sampled public retrieval payload parity against
+    the original backup across all four retained generations.
+- path: reports/native-fields/field-coverage.json
+  relationship: evidence
+  status: exists
+  relevance: Executed native-field delivery evidence; scope and limitations are explicit in the report.
+- path: reports/native-fields/native-final-strict.xml
+  relationship: evidence
+  status: exists
+  relevance: Executed native-field delivery evidence; scope and limitations are explicit in the report.
+- path: reports/native-fields/core-regression.xml
+  relationship: evidence
+  status: exists
+  relevance: Executed native-field delivery evidence; scope and limitations are explicit in the report.
+- path: reports/native-fields/refresh-recovery-complete-green.xml
+  relationship: evidence
+  status: exists
+  relevance: Executed native-field delivery evidence; scope and limitations are explicit in the report.
+- path: reports/native-fields/aura-publication.json
+  relationship: evidence
+  status: exists
+  relevance: Executed native-field delivery evidence; scope and limitations are explicit in the report.
+- path: reports/native-fields/aura-readback.json
+  relationship: evidence
+  status: exists
+  relevance: Executed native-field delivery evidence; scope and limitations are explicit in the report.
+- path: reports/native-fields/aura-ui.json
+  relationship: evidence
+  status: exists
+  relevance: Executed native-field delivery evidence; scope and limitations are explicit in the report.
+- path: reports/native-fields/delivery.json
+  relationship: evidence
+  status: exists
+  relevance: Executed native-field delivery evidence; scope and limitations are explicit in the report.
+assigned_agent: python-coder
+declared_files:
+- path: knowledge/adapters/domain_schema.py
+  state: existing
+- path: knowledge/adapters/neo4j_domain_build.py
+  state: existing
+- path: knowledge/adapters/neo4j_domain_migration.py
+  state: existing
+- path: knowledge/adapters/neo4j_domain_batches.py
+  state: existing
+- path: knowledge/adapters/neo4j_backend.py
+  state: existing
+- path: knowledge/adapters/neo4j_projection.py
+  state: existing
+- path: knowledge/migrations/001_projection.cypher
+  state: existing
+- path: tests/knowledge_live/domain_graph_checks.py
+  state: existing
+- path: tests/knowledge_live/domain_migration_checks.py
+  state: existing
+- path: knowledge/domain_migrate.py
+  state: existing
+- path: docs/how-to/run-knowledge-retrieval.md
+  state: existing
+- path: docs/architecture/components/knowledge-retrieval.md
+  state: existing
+- path: knowledge/README.md
+  state: existing
+- path: knowledge/native_types/__init__.py
+  state: existing
+- path: knowledge/native_types/acceptance_criterion.py
+  state: existing
+- path: knowledge/native_types/adr.py
+  state: existing
+- path: knowledge/native_types/agent.py
+  state: existing
+- path: knowledge/native_types/capability.py
+  state: existing
+- path: knowledge/native_types/changelog_entry.py
+  state: existing
+- path: knowledge/native_types/common.py
+  state: existing
+- path: knowledge/native_types/component.py
+  state: existing
+- path: knowledge/native_types/decision.py
+  state: existing
+- path: knowledge/native_types/document.py
+  state: existing
+- path: knowledge/native_types/flow.py
+  state: existing
+- path: knowledge/native_types/glossary_term.py
+  state: existing
+- path: knowledge/native_types/mock_data.py
+  state: existing
+- path: knowledge/native_types/mockup.py
+  state: existing
+- path: knowledge/native_types/registry.py
+  state: existing
+- path: knowledge/native_types/roadmap_phase.py
+  state: existing
+- path: knowledge/native_types/skill.py
+  state: existing
+- path: knowledge/native_types/source_file.py
+  state: existing
+- path: knowledge/native_types/test.py
+  state: existing
+- path: knowledge/native_types/ticket.py
+  state: existing
+- path: knowledge/native_types/decision_schema.json
+  state: existing
+- path: knowledge/native_properties.py
+  state: existing
+- path: knowledge/native_refresh.py
+  state: existing
+- path: knowledge/projection/native_metadata.py
+  state: existing
+- path: knowledge/projection/canonical_loader.py
+  state: existing
+- path: knowledge/projection/validation.py
+  state: existing
+- path: knowledge/cli_sync.py
+  state: existing
+- path: knowledge/adapters/native_verification.py
+  state: existing
+- path: tests/knowledge/test_native_acceptance_criterion.py
+  state: existing
+- path: tests/knowledge/test_native_adr.py
+  state: existing
+- path: tests/knowledge/test_native_agent.py
+  state: existing
+- path: tests/knowledge/test_native_capability.py
+  state: existing
+- path: tests/knowledge/test_native_changelog_entry.py
+  state: existing
+- path: tests/knowledge/test_native_component.py
+  state: existing
+- path: tests/knowledge/test_native_decision.py
+  state: existing
+- path: tests/knowledge/test_native_document.py
+  state: existing
+- path: tests/knowledge/test_native_flow.py
+  state: existing
+- path: tests/knowledge/test_native_glossary_term.py
+  state: existing
+- path: tests/knowledge/test_native_metadata_integration.py
+  state: existing
+- path: tests/knowledge/test_native_mock_data.py
+  state: existing
+- path: tests/knowledge/test_native_mockup.py
+  state: existing
+- path: tests/knowledge/test_native_properties.py
+  state: existing
+- path: tests/knowledge/test_native_refresh_recovery.py
+  state: existing
+- path: tests/knowledge/test_native_roadmap_phase.py
+  state: existing
+- path: tests/knowledge/test_native_skill.py
+  state: existing
+- path: tests/knowledge/test_native_source_file.py
+  state: existing
+- path: tests/knowledge/test_native_test.py
+  state: existing
+- path: tests/knowledge/test_native_ticket.py
+  state: existing
+- path: tests/knowledge_live/native_metadata_checks.py
+  state: existing
+- path: tests/knowledge_live/native_refresh_recovery_checks.py
+  state: existing
+estimated_complexity: L
+delivers_to: null
+expects_from:
+  ac_id: KM-400a-3
+  contract: Existing canonical entities, relationship directions and registered query semantics are preserved.
+origin_agent: business-analyst
+created: '2026-10-02'
+amended_by:
+  - '2026-10-02: Hendrik explicitly requested a native-type inventory agent, field review per type and a coder per type to expose native fields in Neo4j; scope expanded to schema-backed metadata completeness.'
+  - '2026-10-02: Reconcile actual implementation and executed test references; Aura presentation and remaining evidence checks still pending.'
+superseded_by: null
+covered_by:
+- tests/knowledge_live/domain_graph_checks.py::test_native_labels_membership_and_retrieval
+- tests/knowledge_live/domain_graph_checks.py::test_current_filter_tracks_publication_and_rollback
+- tests/knowledge_live/domain_graph_checks.py::test_same_generation_publish_cannot_clear_current_markers
+- tests/knowledge_live/domain_migration_checks.py::test_legacy_migration_is_idempotent_and_preserves_evidence
+- tests/knowledge_live/domain_migration_checks.py::test_corrupt_legacy_data_is_rejected_before_mutation
+- tests/knowledge_live/domain_migration_checks.py::test_legacy_rollback_does_not_create_duplicate_repository
+- tests/knowledge_live/domain_migration_checks.py::test_contradictory_labels_are_rejected
+- tests/knowledge_live/domain_migration_checks.py::test_cross_generation_edge_refuses_migration_without_changes
+- tests/knowledge_live/domain_migration_checks.py::test_unowned_node_refuses_migration_without_changes
+- tests/knowledge_live/domain_migration_checks.py::test_retained_catalog_digest_and_result_survive_migration
+- tests/knowledge/test_native_acceptance_criterion.py::test_all_schema_fields_survive_validated_source_extraction
+- tests/knowledge/test_native_acceptance_criterion.py::test_absent_defaults_and_yaml_date_strings_remain_authored
+- tests/knowledge/test_native_acceptance_criterion.py::test_configured_surface_is_used_and_non_records_are_excluded
+- tests/knowledge/test_native_acceptance_criterion.py::test_invalid_source_is_rejected_by_existing_validator
+- tests/knowledge/test_native_acceptance_criterion.py::test_duplicate_ids_are_not_collapsed
+- tests/knowledge/test_native_acceptance_criterion.py::test_source_cannot_escape_supplied_snapshot
+- tests/knowledge/test_native_acceptance_criterion.py::test_metadata_does_not_alias_another_extraction
+- tests/knowledge/test_native_adr.py::test_native_adr_preserves_all_frontmatter_types_without_defaults
+- tests/knowledge/test_native_adr.py::test_native_adr_legacy_missing_frontmatter_remains_a_record
+- tests/knowledge/test_native_adr.py::test_native_adr_distinguishes_document_status_and_guide_disagreements
+- tests/knowledge/test_native_adr.py::test_native_adr_only_reads_first_direct_status_table_and_keeps_unknown_rows
+- tests/knowledge/test_native_adr.py::test_native_adr_respects_configured_surface_and_existing_id_override
+- tests/knowledge/test_native_adr.py::test_native_adr_real_sources_retain_complete_fields_and_legacy_body
+- tests/knowledge/test_native_agent.py::test_agent_preserves_all_registry_fields_and_separate_template_meanings
+- tests/knowledge/test_native_agent.py::test_agent_real_registry_preserves_all_entries_and_registered_templates
+- tests/knowledge/test_native_agent.py::test_agent_absent_registry_does_not_discover_unregistered_templates
+- tests/knowledge/test_native_agent.py::test_agent_invalid_registry_envelope_or_identity_fails
+- tests/knowledge/test_native_agent.py::test_agent_template_reference_cannot_escape_snapshot
+- tests/knowledge/test_native_agent.py::test_agent_missing_template_fails_explicitly
+- tests/knowledge/test_native_agent.py::test_agent_missing_and_null_template_fields_remain_distinct
+- tests/knowledge/test_native_capability.py::test_capability_all_fields_and_nested_extensions_round_trip
+- tests/knowledge/test_native_capability.py::test_capability_real_registry_exact_fields_and_no_defaults
+- tests/knowledge/test_native_capability.py::test_capability_legacy_admission_does_not_read_references
+- tests/knowledge/test_native_capability.py::test_capability_source_order_and_changed_values_are_visible
+- tests/knowledge/test_native_capability.py::test_capability_absent_and_empty_registry_do_not_invent_records
+- tests/knowledge/test_native_capability.py::test_capability_malformed_envelope_fails_explicitly
+- tests/knowledge/test_native_capability.py::test_capability_invalid_registry_identity_fails
+- tests/knowledge/test_native_capability.py::test_capability_malformed_entry_fails_explicitly
+- tests/knowledge/test_native_capability.py::test_capability_duplicate_ids_fail_without_source_changes
+- tests/knowledge/test_native_capability.py::test_capability_resolved_source_cannot_escape_snapshot
+- tests/knowledge/test_native_capability.py::test_capability_metadata_and_context_are_independent_copies
+- tests/knowledge/test_native_changelog_entry.py::test_changelog_preserves_every_field_body_and_authored_types
+- tests/knowledge/test_native_changelog_entry.py::test_changelog_legacy_identity_absence_and_presentation_fallbacks
+- tests/knowledge/test_native_changelog_entry.py::test_changelog_configured_store_and_guidance_exclusions
+- tests/knowledge/test_native_changelog_entry.py::test_changelog_absent_stores_and_overlapping_configuration
+- tests/knowledge/test_native_changelog_entry.py::test_changelog_rejects_unsafe_or_invalid_store
+- tests/knowledge/test_native_changelog_entry.py::test_changelog_recovers_only_failing_literal_description
+- tests/knowledge/test_native_changelog_entry.py::test_changelog_recovers_failing_literal_list_but_retains_valid_maps
+- tests/knowledge/test_native_changelog_entry.py::test_changelog_recovery_payload_is_independent_of_checkout_path
+- tests/knowledge/test_native_changelog_entry.py::test_changelog_rejects_ambiguous_or_unrelated_malformations
+- tests/knowledge/test_native_changelog_entry.py::test_changelog_real_corpus_accounts_for_all_fields_and_three_recoveries
+- tests/knowledge/test_native_changelog_entry.py::test_changelog_without_frontmatter_fails_naming_source_and_reason
+- tests/knowledge/test_native_component.py::test_component_preserves_every_field_and_registry_identity
+- tests/knowledge/test_native_component.py::test_component_real_registry_fields_match_exact_entries
+- tests/knowledge/test_native_component.py::test_component_absent_registry_ignores_architecture_documents
+- tests/knowledge/test_native_component.py::test_component_malformed_registry_fails_explicitly
+- tests/knowledge/test_native_component.py::test_component_identity_conflict_fails_without_rewriting
+- tests/knowledge/test_native_component.py::test_component_reference_cannot_escape_snapshot
+- tests/knowledge/test_native_component.py::test_component_nonstring_presentation_fields_remain_authored
+- tests/knowledge/test_native_decision.py::test_decision_complete_source_is_lossless_and_schema_pinned
+- tests/knowledge/test_native_decision.py::test_decision_minimal_retains_omission_null_and_empty
+- tests/knowledge/test_native_decision.py::test_decision_absent_or_empty_store_needs_no_schema_or_kernel
+- tests/knowledge/test_native_decision.py::test_decision_invalid_authored_fields_rejected_without_mutating
+- tests/knowledge/test_native_decision.py::test_decision_duplicate_local_ids_rejected
+- tests/knowledge/test_native_decision.py::test_decision_missing_approval_or_classification_rejected
+- tests/knowledge/test_native_decision.py::test_decision_filename_must_match_canonical_identity
+- tests/knowledge/test_native_decision.py::test_decision_unknown_filter_value_rejected
+- tests/knowledge/test_native_decision.py::test_decision_unresolved_store_links_rejected
+- tests/knowledge/test_native_decision.py::test_decision_supersession_requires_reciprocal_source_and_preserves_original
+- tests/knowledge/test_native_decision.py::test_decision_plain_yaml_and_size_bound_enforced
+- tests/knowledge/test_native_decision.py::test_decision_changed_source_schema_cannot_weaken_trusted_validator
+- tests/knowledge/test_native_decision.py::test_decision_malformed_source_fails_explicitly
+- tests/knowledge/test_native_decision.py::test_decision_source_resolution_cannot_escape_snapshot
+- tests/knowledge/test_native_document.py::test_document_preserves_complete_frontmatter_and_body
+- tests/knowledge/test_native_document.py::test_document_legacy_memory_identity_and_safe_display_fallback
+- tests/knowledge/test_native_document.py::test_document_excludes_owned_views_without_dropping_authored_guides
+- tests/knowledge/test_native_document.py::test_document_configured_surfaces_and_product_manifest_views
+- tests/knowledge/test_native_document.py::test_document_malformed_frontmatter_fails_explicitly
+- tests/knowledge/test_native_document.py::test_document_refuses_invalid_or_escaping_surface
+- tests/knowledge/test_native_document.py::test_document_missing_roots_is_empty
+- tests/knowledge/test_native_document.py::test_document_real_corpus_full_metadata_fidelity
+- tests/knowledge/test_native_flow.py::test_flow_all_nested_fields_preserved_and_manifest_separate
+- tests/knowledge/test_native_flow.py::test_flow_unregistered_sources_and_empty_shapes_stay_visible
+- tests/knowledge/test_native_flow.py::test_flow_real_corpus_deep_equality_and_no_rewrites
+- tests/knowledge/test_native_flow.py::test_flow_missing_store_is_empty
+- tests/knowledge/test_native_flow.py::test_flow_malformed_manifest_fails
+- tests/knowledge/test_native_flow.py::test_flow_unsafe_or_noncanonical_declared_path_fails
+- tests/knowledge/test_native_flow.py::test_flow_invalid_registration_or_identity_fails
+- tests/knowledge/test_native_flow.py::test_flow_invalid_source_fails
+- tests/knowledge/test_native_flow.py::test_flow_required_source_shapes_fail_explicitly
+- tests/knowledge/test_native_flow.py::test_flow_no_manifest_and_normalized_registration_spelling
+- tests/knowledge/test_native_glossary_term.py::test_native_glossary_preserves_fields_and_exact_markdown
+- tests/knowledge/test_native_glossary_term.py::test_native_glossary_ignores_comments_and_fences_without_truncation
+- tests/knowledge/test_native_glossary_term.py::test_native_glossary_fence_info_does_not_open_html_comment
+- tests/knowledge/test_native_glossary_term.py::test_native_glossary_true_section_boundaries_and_empty_definition
+- tests/knowledge/test_native_glossary_term.py::test_native_glossary_identities_survive_insertion_and_reordering
+- tests/knowledge/test_native_glossary_term.py::test_native_glossary_duplicate_normalized_terms_fail
+- tests/knowledge/test_native_glossary_term.py::test_native_glossary_custom_path_and_absent_surface_default
+- tests/knowledge/test_native_glossary_term.py::test_native_glossary_invalid_configuration_fails
+- tests/knowledge/test_native_glossary_term.py::test_native_glossary_symlink_outside_snapshot_fails
+- tests/knowledge/test_native_glossary_term.py::test_native_glossary_malformed_frontmatter_fails
+- tests/knowledge/test_native_glossary_term.py::test_native_glossary_missing_and_empty_store_emit_no_placeholder
+- tests/knowledge/test_native_glossary_term.py::test_native_glossary_real_corpus_matches_all_authored_sections
+- tests/knowledge/test_native_metadata_integration.py::test_authored_and_derived_fields_survive_payload_and_physical_projection
+- tests/knowledge/test_native_metadata_integration.py::test_distinct_native_types_keep_colliding_names_and_explicit_memberships
+- tests/knowledge/test_native_metadata_integration.py::test_property_readback_rejects_missing_or_changed_data
+- tests/knowledge/test_native_metadata_integration.py::test_native_record_flag_cannot_bypass_decision_approval
+- tests/knowledge/test_native_metadata_integration.py::test_scoped_native_import_keeps_declared_component_filter_and_reports_unresolved
+- tests/knowledge/test_native_metadata_integration.py::test_reference_readers_reach_projection_without_refreshing_historical_evidence
+- tests/knowledge/test_native_mock_data.py::test_mock_data_all_native_fields_and_nested_sample_values_are_preserved
+- tests/knowledge/test_native_mock_data.py::test_mock_data_manifest_is_separate_and_unregistered_files_are_discovered
+- tests/knowledge/test_native_mock_data.py::test_mock_data_real_corpus_preserves_all_records_and_unregistered_dataset
+- tests/knowledge/test_native_mock_data.py::test_mock_data_missing_store_and_absent_values_are_not_defaulted
+- tests/knowledge/test_native_mock_data.py::test_mock_data_bad_source_fails_with_path
+- tests/knowledge/test_native_mock_data.py::test_mock_data_duplicate_native_ids_are_rejected
+- tests/knowledge/test_native_mock_data.py::test_mock_data_manifest_escape_is_rejected
+- tests/knowledge/test_native_mock_data.py::test_mock_data_manifest_duplicate_and_mismatched_source_fail
+- tests/knowledge/test_native_mock_data.py::test_mock_data_resolved_symlink_escape_fails_before_read
+- tests/knowledge/test_native_mock_data.py::test_mock_data_unreadable_source_is_explicit
+- tests/knowledge/test_native_mockup.py::test_mockup_all_fields_unknown_extensions_and_shape_are_preserved
+- tests/knowledge/test_native_mockup.py::test_mockup_manifest_and_render_remain_separate_exact_supporting_sources
+- tests/knowledge/test_native_mockup.py::test_mockup_real_canonical_population_includes_unregistered_and_null_renders
+- tests/knowledge/test_native_mockup.py::test_mockup_missing_store_and_absent_optional_fields_are_not_manufactured
+- tests/knowledge/test_native_mockup.py::test_mockup_safe_missing_render_is_reported_without_losing_record
+- tests/knowledge/test_native_mockup.py::test_mockup_malformed_records_fail_explicitly
+- tests/knowledge/test_native_mockup.py::test_mockup_duplicate_records_and_manifest_ids_fail_explicitly
+- tests/knowledge/test_native_mockup.py::test_mockup_render_paths_cannot_escape_or_fetch_urls
+- tests/knowledge/test_native_mockup.py::test_mockup_manifest_path_and_identity_conflicts_fail
+- tests/knowledge/test_native_mockup.py::test_mockup_resolved_escape_is_rejected_before_read
+- tests/knowledge/test_native_properties.py::test_nested_metadata_round_trips_without_json_value_blobs
+- tests/knowledge/test_native_properties.py::test_authored_reserved_names_cannot_replace_graph_bookkeeping
+- tests/knowledge/test_native_properties.py::test_missing_null_empty_and_scalar_union_stay_distinct
+- tests/knowledge/test_native_properties.py::test_unsupported_values_fail_instead_of_silently_disappearing
+- tests/knowledge/test_native_properties.py::test_large_integer_values_and_keys_remain_driver_safe_and_lossless
+- tests/knowledge/test_native_refresh_recovery.py::test_inspection_retains_partial_stages_without_weakening_ready_evidence
+- tests/knowledge/test_native_refresh_recovery.py::test_recovery_rejects_invalid_ready_data_and_unsafe_stages
+- tests/knowledge/test_native_refresh_recovery.py::test_resume_requires_the_exact_same_snapshot_and_partial_contents
+- tests/knowledge/test_native_refresh_recovery.py::test_unrelated_failed_stage_does_not_become_the_resume_target
+- tests/knowledge/test_native_roadmap_phase.py::test_phase_fields_context_order_and_future_fields_are_lossless
+- tests/knowledge/test_native_roadmap_phase.py::test_optional_fields_remain_absent_and_empty_lists_remain_present
+- tests/knowledge/test_native_roadmap_phase.py::test_configured_source_and_nonempty_description
+- tests/knowledge/test_native_roadmap_phase.py::test_absent_optional_source_returns_no_records
+- tests/knowledge/test_native_roadmap_phase.py::test_malformed_source_fails
+- tests/knowledge/test_native_roadmap_phase.py::test_invalid_phase_shape_fails
+- tests/knowledge/test_native_roadmap_phase.py::test_duplicate_ids_fail
+- tests/knowledge/test_native_roadmap_phase.py::test_invalid_root_context_fails
+- tests/knowledge/test_native_roadmap_phase.py::test_configured_path_escape_fails_even_when_target_absent
+- tests/knowledge/test_native_roadmap_phase.py::test_real_roadmap_all_fields_and_context_match_source
+- tests/knowledge/test_native_skill.py::test_skill_preserves_all_registry_fields_and_independent_template_fields
+- tests/knowledge/test_native_skill.py::test_skill_real_registry_retains_all_42_skills_and_legacy_frontmatter
+- tests/knowledge/test_native_skill.py::test_skill_absent_registry_does_not_admit_unregistered_templates
+- tests/knowledge/test_native_skill.py::test_skill_malformed_registry_or_identity_fails
+- tests/knowledge/test_native_skill.py::test_skill_template_path_cannot_escape_snapshot
+- tests/knowledge/test_native_skill.py::test_skill_missing_referenced_template_fails_explicitly
+- tests/knowledge/test_native_skill.py::test_skill_missing_null_and_empty_optional_fields_remain_distinct
+- tests/knowledge/test_native_skill.py::test_skill_template_description_fallback_does_not_create_registry_field
+- tests/knowledge/test_native_skill.py::test_skill_unclosed_template_frontmatter_fails
+- tests/knowledge/test_native_source_file.py::test_source_file_complete_contract_and_nested_future_fields
+- tests/knowledge/test_native_source_file.py::test_source_file_never_refreshes_pinned_existence_or_hash
+- tests/knowledge/test_native_source_file.py::test_source_file_absence_empty_and_false_are_distinct
+- tests/knowledge/test_native_source_file.py::test_source_file_repeat_enrichment_removes_only_exact_internal_keys
+- tests/knowledge/test_native_source_file.py::test_source_file_nested_values_are_independent_copies
+- tests/knowledge/test_native_source_file.py::test_source_file_rejects_other_entity_kinds
+- tests/knowledge/test_native_source_file.py::test_source_file_revalidates_invalid_source_path
+- tests/knowledge/test_native_source_file.py::test_source_file_rejects_non_entity_and_invalid_reference
+- tests/knowledge/test_native_test.py::test_test_reference_exposes_complete_contract_and_future_fields
+- tests/knowledge/test_native_test.py::test_test_reference_never_observes_current_filesystem
+- tests/knowledge/test_native_test.py::test_test_reference_absent_empty_null_and_false_remain_distinct
+- tests/knowledge/test_native_test.py::test_test_reference_removes_only_exact_adapter_keys
+- tests/knowledge/test_native_test.py::test_test_reference_copies_nested_data_in_both_directions
+- tests/knowledge/test_native_test.py::test_test_reference_rejects_other_kinds_without_path_reclassification
+- tests/knowledge/test_native_test.py::test_test_reference_revalidates_source_paths_without_repair
+- tests/knowledge/test_native_test.py::test_test_reference_rejects_non_entity_and_invalid_pinned_source
+- tests/knowledge/test_native_test.py::test_test_reference_preserves_existing_classification_without_invention
+- tests/knowledge/test_native_ticket.py::test_ticket_preserves_full_metadata_nested_shapes_dates_and_body
+- tests/knowledge/test_native_ticket.py::test_ticket_distinct_paths_and_epic_subtype_provenance
+- tests/knowledge/test_native_ticket.py::test_ticket_excludes_readme_generic_notes_and_missing_frontmatter
+- tests/knowledge/test_native_ticket.py::test_ticket_never_defaults_missing_fields_or_normalizes_historical_values
+- tests/knowledge/test_native_ticket.py::test_ticket_invalid_frontmatter_is_explicit_failure
+- tests/knowledge/test_native_ticket.py::test_ticket_absent_store_returns_no_records
+- tests/knowledge/test_native_ticket.py::test_ticket_real_store_preserves_every_frontmatter_field
+- tests/knowledge_live/native_metadata_checks.py::test_native_metadata_is_typed_queryable_and_round_trips_in_neo4j
+- tests/knowledge_live/native_refresh_recovery_checks.py::test_native_refresh_resumes_a_committed_partial_batch_without_changing_history
+implemented_by:
+- tickets/00_inbox/TICKET-20261002-KM-400a-3-i.md
+- knowledge/adapters/domain_schema.py
+- knowledge/adapters/neo4j_domain_build.py
+- knowledge/adapters/neo4j_domain_migration.py
+- knowledge/adapters/neo4j_domain_batches.py
+- knowledge/adapters/neo4j_backend.py
+- knowledge/adapters/neo4j_projection.py
+- knowledge/migrations/001_projection.cypher
+- knowledge/domain_migrate.py
+- knowledge/native_types/__init__.py
+- knowledge/native_types/acceptance_criterion.py
+- knowledge/native_types/adr.py
+- knowledge/native_types/agent.py
+- knowledge/native_types/capability.py
+- knowledge/native_types/changelog_entry.py
+- knowledge/native_types/common.py
+- knowledge/native_types/component.py
+- knowledge/native_types/decision.py
+- knowledge/native_types/document.py
+- knowledge/native_types/flow.py
+- knowledge/native_types/glossary_term.py
+- knowledge/native_types/mock_data.py
+- knowledge/native_types/mockup.py
+- knowledge/native_types/registry.py
+- knowledge/native_types/roadmap_phase.py
+- knowledge/native_types/skill.py
+- knowledge/native_types/source_file.py
+- knowledge/native_types/test.py
+- knowledge/native_types/ticket.py
+- knowledge/native_types/decision_schema.json
+- knowledge/native_properties.py
+- knowledge/native_refresh.py
+- knowledge/projection/native_metadata.py
+- knowledge/projection/canonical_loader.py
+- knowledge/projection/validation.py
+- knowledge/cli_sync.py
+- knowledge/adapters/native_verification.py
+change_target: code
+risk_surface: contract_boundary
+it_requirements:
+  - Expose domain labels without KREntity or other KR-prefixed labels on the resulting projection; preserve existing Decision and Lesson kinds where applicable without inventing records.
+  - Map existing edge types to validated meaningful native relationship types, preserving edge_type, endpoint direction, anchors, source revision and payload; do not duplicate edges to simulate labels.
+  - Expose caption properties and a deduplicated components list from authored component declarations and explicit component_membership edges in the same repository and generation; unresolved declared components remain filterable and receive a diagnostic. Do not infer ownership through transitive links.
+  - Use Repository and Snapshot for bookkeeping; provide an Aura domain perspective or equivalent normal exploration configuration that excludes those labels, uses readable captions and limits the scene to current content. Database publication alone is not proof that a saved Aura perspective was configured.
+  - Maintain current markers consistently with the repository active pointer in the same atomic publication or rollback operation; preserve pinned reads of retired generations and fail closed on interrupted migration.
+  - Preserve stored registered-query text, validation receipts and digests; any compatibility mapping belongs to the trusted execution boundary and must retain parameterization, read-only enforcement, repository scope and generation scope.
+  - The migration must be idempotent, validate the owned graph before mutation, and preserve canonical keys, raw payloads, source revisions, entity and relationship counts, active pointers, historical generations and retrieval results; reject malformed or foreign records and cross-generation edges rather than partially rewriting them.
+  - Preserve optional/disabled startup and existing exact, graph, semantic, hybrid and kernel evidence contracts; do not require credentials for offline validation or publish new content during a representation-only migration.
+test_required: true
+test_spec:
+- name: test_native_labels_membership_and_retrieval
+  target_dir: tests/knowledge_live/
+  framework: pytest
+  type: integration
+  angle: criterion
+  description: In domain_graph_checks.py, publish synthetic canonical records on local Neo4j; assert AC label
+    and captions, two declared components, exact finalize membership, native edge types and unchanged registered
+    AC/test retrieval.
+  covers:
+  - KM-400a-3-i
+  requires_db: true
+- name: test_current_filter_tracks_publication_and_rollback
+  target_dir: tests/knowledge_live/
+  framework: pytest
+  type: integration
+  angle: seam
+  description: In domain_graph_checks.py, publish two synthetic snapshots and roll back; assert current AC
+    source revision follows the active pointer while the retired manifest remains readable.
+  covers:
+  - KM-400a-3-i
+  requires_db: true
+- name: test_same_generation_publish_cannot_clear_current_markers
+  target_dir: tests/knowledge_live/
+  framework: pytest
+  type: integration
+  angle: boundary
+  description: In domain_graph_checks.py, pause one publisher before its AC batch, let another publish the
+    same generation, then resume; assert AC and outgoing relationship current markers remain true.
+  covers:
+  - KM-400a-3-i
+  requires_db: true
+- name: test_legacy_migration_is_idempotent_and_preserves_evidence
+  target_dir: tests/knowledge_live/
+  framework: pytest
+  type: integration
+  angle: reachability
+  description: In domain_migration_checks.py, directly seed a synthetic legacy graph, migrate it twice, and
+    assert the canonical fingerprint, AC label, retrieved entity payload and original generation digest are
+    preserved.
+  covers:
+  - KM-400a-3-i
+  requires_db: true
+- name: test_corrupt_legacy_data_is_rejected_before_mutation
+  target_dir: tests/knowledge_live/
+  framework: pytest
+  type: integration
+  angle: failure
+  description: In domain_migration_checks.py, corrupt a persisted entity kind; assert inspection refuses it
+    and repository metadata retains its legacy label.
+  covers:
+  - KM-400a-3-i
+  requires_db: true
+- name: test_legacy_rollback_does_not_create_duplicate_repository
+  target_dir: tests/knowledge_live/
+  framework: pytest
+  type: integration
+  angle: boundary
+  description: In domain_migration_checks.py, request rollback against a legacy repository; assert migration
+    is required and the active-repository count stays one.
+  covers:
+  - KM-400a-3-i
+  requires_db: true
+- name: test_contradictory_labels_are_rejected
+  target_dir: tests/knowledge_live/
+  framework: pytest
+  type: integration
+  angle: failure
+  description: In domain_migration_checks.py, give a legacy AcceptanceCriterion an ADR label; assert inspection
+    refuses the conflicting classification.
+  covers:
+  - KM-400a-3-i
+  requires_db: true
+- name: test_cross_generation_edge_refuses_migration_without_changes
+  target_dir: tests/knowledge_live/
+  framework: pytest
+  type: integration
+  angle: failure
+  description: In domain_migration_checks.py, inspect two valid retained generations, add an edge crossing
+    their boundary, then attempt migration with the earlier plan; assert rejection and byte-equivalent captured
+    graph properties, labels, endpoints and active pointer.
+  covers:
+  - KM-400a-3-i
+  requires_db: true
+- name: test_unowned_node_refuses_migration_without_changes
+  target_dir: tests/knowledge_live/
+  framework: pytest
+  type: integration
+  angle: failure
+  description: In domain_migration_checks.py, inspect a valid legacy snapshot, then add an ExternalRecord node
+    in its generation; assert migration refuses it and all captured graph properties, labels, endpoints and
+    active pointer remain unchanged.
+  covers:
+  - KM-400a-3-i
+  requires_db: true
+- name: test_retained_catalog_digest_and_result_survive_migration
+  target_dir: tests/knowledge_live/
+  framework: pytest
+  type: integration
+  angle: seam
+  description: In domain_migration_checks.py, admit two catalog versions against the legacy graph and pin the
+    inactive version; compare exact catalog.json bytes, stored compiled and verification digests, source revision
+    and public retrieval evidence before and after migration.
+  covers:
+  - KM-400a-3-i
+  requires_db: true
+- name: test_all_schema_fields_survive_validated_source_extraction
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: unit
+  angle: criterion
+  description: In test_native_acceptance_criterion.py, verify the reviewed native fields and their exact source
+    meaning; remaining boundary/failure checks are listed in covered_by.
+  covers:
+  - KM-400a-3-i
+  requires_db: false
+- name: test_native_adr_preserves_all_frontmatter_types_without_defaults
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: unit
+  angle: criterion
+  description: In test_native_adr.py, verify the reviewed native fields and their exact source meaning; remaining
+    boundary/failure checks are listed in covered_by.
+  covers:
+  - KM-400a-3-i
+  requires_db: false
+- name: test_agent_preserves_all_registry_fields_and_separate_template_meanings
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: unit
+  angle: criterion
+  description: In test_native_agent.py, verify the reviewed native fields and their exact source meaning; remaining
+    boundary/failure checks are listed in covered_by.
+  covers:
+  - KM-400a-3-i
+  requires_db: false
+- name: test_capability_all_fields_and_nested_extensions_round_trip
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: unit
+  angle: criterion
+  description: In test_native_capability.py, verify the reviewed native fields and their exact source meaning;
+    remaining boundary/failure checks are listed in covered_by.
+  covers:
+  - KM-400a-3-i
+  requires_db: false
+- name: test_changelog_preserves_every_field_body_and_authored_types
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: unit
+  angle: criterion
+  description: In test_native_changelog_entry.py, verify the reviewed native fields and their exact source
+    meaning; remaining boundary/failure checks are listed in covered_by.
+  covers:
+  - KM-400a-3-i
+  requires_db: false
+- name: test_component_preserves_every_field_and_registry_identity
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: unit
+  angle: criterion
+  description: In test_native_component.py, verify the reviewed native fields and their exact source meaning;
+    remaining boundary/failure checks are listed in covered_by.
+  covers:
+  - KM-400a-3-i
+  requires_db: false
+- name: test_decision_complete_source_is_lossless_and_schema_pinned
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: unit
+  angle: criterion
+  description: In test_native_decision.py, verify the reviewed native fields and their exact source meaning;
+    remaining boundary/failure checks are listed in covered_by.
+  covers:
+  - KM-400a-3-i
+  requires_db: false
+- name: test_document_preserves_complete_frontmatter_and_body
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: unit
+  angle: criterion
+  description: In test_native_document.py, verify the reviewed native fields and their exact source meaning;
+    remaining boundary/failure checks are listed in covered_by.
+  covers:
+  - KM-400a-3-i
+  requires_db: false
+- name: test_flow_all_nested_fields_preserved_and_manifest_separate
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: unit
+  angle: criterion
+  description: In test_native_flow.py, verify the reviewed native fields and their exact source meaning; remaining
+    boundary/failure checks are listed in covered_by.
+  covers:
+  - KM-400a-3-i
+  requires_db: false
+- name: test_native_glossary_preserves_fields_and_exact_markdown
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: unit
+  angle: criterion
+  description: In test_native_glossary_term.py, verify the reviewed native fields and their exact source meaning;
+    remaining boundary/failure checks are listed in covered_by.
+  covers:
+  - KM-400a-3-i
+  requires_db: false
+- name: test_authored_and_derived_fields_survive_payload_and_physical_projection
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: integration
+  angle: criterion
+  description: In test_native_metadata_integration.py, verify the reviewed native fields and their exact source
+    meaning; remaining boundary/failure checks are listed in covered_by.
+  covers:
+  - KM-400a-3-i
+  requires_db: false
+- name: test_mock_data_all_native_fields_and_nested_sample_values_are_preserved
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: unit
+  angle: criterion
+  description: In test_native_mock_data.py, verify the reviewed native fields and their exact source meaning;
+    remaining boundary/failure checks are listed in covered_by.
+  covers:
+  - KM-400a-3-i
+  requires_db: false
+- name: test_mockup_all_fields_unknown_extensions_and_shape_are_preserved
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: unit
+  angle: criterion
+  description: In test_native_mockup.py, verify the reviewed native fields and their exact source meaning;
+    remaining boundary/failure checks are listed in covered_by.
+  covers:
+  - KM-400a-3-i
+  requires_db: false
+- name: test_nested_metadata_round_trips_without_json_value_blobs
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: unit
+  angle: criterion
+  description: In test_native_properties.py, verify the reviewed native fields and their exact source meaning;
+    remaining boundary/failure checks are listed in covered_by.
+  covers:
+  - KM-400a-3-i
+  requires_db: false
+- name: test_inspection_retains_partial_stages_without_weakening_ready_evidence
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: unit
+  angle: criterion
+  description: In test_native_refresh_recovery.py, verify the reviewed native fields and their exact source
+    meaning; remaining boundary/failure checks are listed in covered_by.
+  covers:
+  - KM-400a-3-i
+  requires_db: false
+- name: test_phase_fields_context_order_and_future_fields_are_lossless
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: unit
+  angle: criterion
+  description: In test_native_roadmap_phase.py, verify the reviewed native fields and their exact source meaning;
+    remaining boundary/failure checks are listed in covered_by.
+  covers:
+  - KM-400a-3-i
+  requires_db: false
+- name: test_skill_preserves_all_registry_fields_and_independent_template_fields
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: unit
+  angle: criterion
+  description: In test_native_skill.py, verify the reviewed native fields and their exact source meaning; remaining
+    boundary/failure checks are listed in covered_by.
+  covers:
+  - KM-400a-3-i
+  requires_db: false
+- name: test_source_file_complete_contract_and_nested_future_fields
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: unit
+  angle: criterion
+  description: In test_native_source_file.py, verify the reviewed native fields and their exact source meaning;
+    remaining boundary/failure checks are listed in covered_by.
+  covers:
+  - KM-400a-3-i
+  requires_db: false
+- name: test_test_reference_exposes_complete_contract_and_future_fields
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: unit
+  angle: criterion
+  description: In test_native_test.py, verify the reviewed native fields and their exact source meaning; remaining
+    boundary/failure checks are listed in covered_by.
+  covers:
+  - KM-400a-3-i
+  requires_db: false
+- name: test_ticket_preserves_full_metadata_nested_shapes_dates_and_body
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: unit
+  angle: criterion
+  description: In test_native_ticket.py, verify the reviewed native fields and their exact source meaning;
+    remaining boundary/failure checks are listed in covered_by.
+  covers:
+  - KM-400a-3-i
+  requires_db: false
+- name: test_native_metadata_is_typed_queryable_and_round_trips_in_neo4j
+  target_dir: tests/knowledge_live/
+  framework: pytest
+  type: integration
+  angle: real_artifact
+  description: In native_metadata_checks.py, verify the reviewed native fields and their exact source meaning;
+    remaining boundary/failure checks are listed in covered_by.
+  covers:
+  - KM-400a-3-i
+  requires_db: true
+- name: test_native_refresh_resumes_a_committed_partial_batch_without_changing_history
+  target_dir: tests/knowledge_live/
+  framework: pytest
+  type: integration
+  angle: failure
+  description: In native_refresh_recovery_checks.py, interrupt a real Neo4j publication after 250 of 251 nodes,
+    retry through native refresh and verify full activation and preserved history.
+  covers:
+  - KM-400a-3-i
+  requires_db: true
+test_rationale: |
+  The change alters persisted graph representation and the trusted query execution seam.
+  Public-entry and real-database checks are required in addition to structural unit checks;
+  generated Cypher strings alone cannot establish a safe migration or usable Aura view.
+  The ten named tests exist and ran against synthetic fixtures on actual local Neo4j;
+  they are not tests of the human Aura interface or a production source-format fixture.
+  The actual hosted migration receipt is separate evidence. The broader 63-test run
+  covers existing query admission, vectors, projection and environment regressions.
+  Remaining acceptance evidence is tracked explicitly below instead of represented by
+  invented test names or inferred from a successful database operation.
+notes: |
+  Authorization: in this Codex chat on 2026-10-02, Hendrik asked why the graph exposes KR
+  categories instead of AC/ADR concepts and how to filter on component finalize, then
+  explicitly instructed: "Yes, please change the approach to what you say". This approves
+  the domain presentation and filtering behavior described here. Medium priority is
+  inherited from KM-400a, not represented as a newly supplied user priority.
+  Triage: a scoped representation constraint under KM-400a-3's canonical relationship
+  behavior; no new capability, UI product, roadmap goal or source ontology. L3 keeps
+  the existing L1's five L2 behavior groups intact without a child-limit override.
+  KM-400a-1 through KM-400a-5 do not require native Aura labels, caption properties or a
+  direct declared-membership property, so this child captures that bounded gap.
+  Product-truth applicability: none; the change configures the existing external Aura
+  exploration surface and its backend projection. No new project mockup or flow is needed.
+  ADR-064 applicability: the consumer is the human Aura user whose concrete screenshot,
+  expectation and finalize query appear in this chat. Existing agent-facing retrieval
+  outputs, field meanings, scope and failure contracts remain unchanged and are regression
+  obligations. New proxy-persona interviews would not add authority to that human request.
+  Verified delivery evidence as of 2026-10-02: reports/aura-domain-migration.json records
+  migration of 24,116 domain nodes and 77,934 relationships across four retained snapshots;
+  the current snapshot retains 6,092 nodes and 19,686 relationships. The before/after
+  canonical fingerprint is 5f40b2089672ea825eb5fe6d90f4c9a0af9ba9a6ac1e98f5656b818a76ccdeba.
+  reports/aura-domain-verification.xml records 63 passed, zero failed/skipped; after the
+  indexed migration lookup adjustment, reports/aura-domain-migration-indexed.xml records
+  four migration checks passed. No claim is made that all 63 were rerun after that adjustment.
+  reports/aura-domain-hosted-verification.json records current labels AC 4,528; ADR 56;
+  Component 71; SourceFile 1,006; Test 431, zero legacy nodes, native relationship types,
+  and exact public get_entities payload parity for FIN-100, TQ-500f and finalize against
+  the original backup in each of the four retained generations. This is sampled retrieval
+  parity alongside whole-projection fingerprint preservation, not exhaustive query evaluation.
+  Follow-up reports/aura-domain-migration-boundaries.xml records all seven migration
+  tests passed, including cross-generation and unowned-node refusal before mutation
+  and preservation of a retained inactive catalog version's exact bytes, digests and
+  public retrieval answer. These tests write only to the isolated loopback Neo4j server.
+  The catalog is the runtime's atomic local catalog.json store, not Aura data.
+  The orchestrator reports an observed Aura scene with 65 nodes and 65 relationships
+  (63 AC, one ADR, one Component), In Scene selected, and saved name/title-hover styles
+  for AC, ADR and Component. The browser disconnected during save/reload verification.
+  Acceptance remains in_progress: saved-scene name/persistence, final screenshot and
+  full five-category caption verification remain unverified unless later evidence closes
+  them. No commit, PR or unperformed review sign-off is asserted.
+
+  Native metadata implementation evidence: each of the 17 reviewed native kinds has its own
+  reader and behavioral tests. reports/native-fields contains the per-type reviews, coder
+  receipts, strict results and mutation controls. Nested leaves use JSON Pointer property
+  names; source metadata, derived context and graph bookkeeping remain distinct.
+  Final native Aura publication and refreshed visual verification are complete; see the final evidence below.
+
+  Final evidence (supersedes earlier pending UI/native notes): mapper 7 published at the
+  existing source SHA 59269e024e4d0290b68b03d0d382745966e67e29 with 9047 nodes and
+  23612 relationships. All four retained generations passed canonical preservation
+  verification; every new node batch passed physical field readback before activation.
+  9017 canonical/native-reference records carry full native metadata; 30 compatibility
+  Component hubs retain their original properties without invented registry fields.
+  Strict aggregate: 389 metadata tests passed, one Windows symlink privilege skip;
+  74 core regressions passed, 16 recovery checks including actual Neo4j passed, and
+  27 installed-checkout smoke tests passed. Per-type mutation receipts remain separate.
+  The saved Aura scene survives reload with 74 nodes and 74 relationships in six
+  categories. Eight configured category captions and Component $component search
+  phrase survive reload. Aura resets its legend filter to All; choose In Scene again.
+  Screenshot and direct AC field inspection are recorded in reports/native-fields/aura-ui.json.
+  Decision support is implemented, but this published source contains no Decision records.
+  No commit, PR, unperformed sign-off, or unrelated merge resolution is asserted.

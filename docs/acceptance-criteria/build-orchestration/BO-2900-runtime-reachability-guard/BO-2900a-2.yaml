@@ -53,7 +53,44 @@ it_requirements:
   config_schema_fragment:
     reach_record:
       type: object
-      description: "One record per (proof test, code under proof): { test_nodeid: str, target: '<module>:<callable>', entry_point: '<module>:main'|null, entered_entry_point: bool, reached_through: bool, observation_ok: bool }. reached_through is true only when target was entered while an entry_point frame was an ancestor on the same call stack."
+      description: >-
+        AMENDED 2026-09-30 (IT PO) — the single-process shape below replaced a
+        narrower one that carried one target, one entry point, two booleans and
+        one process, and could not express what BO-2900a-2-i/-ii/-iii require.
+        This AC's criteria are unchanged; only the record underneath them grew.
+        One record per (proof test, declared unit):
+        { test_nodeid: str,
+          unit: '<repo-relative source path>',
+          entry_points: ['<repo-relative source path>:<callable>'],
+          entered_entry_point: bool,
+          reached_code: ['<repo-relative source path>:<qualname>'],
+          reached_through: 'reached'|'not_reached'|'undecidable',
+          undecidable_cause: 'subject_not_named'|null,
+          observation: 'watched'|'unwatched',
+          unwatchable_cause: 'non_python_child'|'isolated_interpreter'|'observer_displaced'|'recorded_nothing'|'propagation_failed'|'unknown'|null,
+          observation_ok: bool,
+          processes: [{ pid: int, ppid: int, program_file: str|null, spawned_under_entry_point: bool }] }.
+        Four things changed and each is load-bearing.
+        (1) target became reached_code, a SET derived from the run against the
+        declared unit rather than a '<module>:<callable>' string looked up in a
+        store field — no store field names a callable (surface_invoked: 271
+        records, 368 occurrences, zero of that shape, 166 free prose), and asking
+        the store for one is how target_spec="" arose (BO-2900a-2-iii).
+        (2) reached_through became tri-state, so an unnamed question and an
+        unwatched run stop being expressible as a plausible negative; the refusal
+        path must test for the literal 'not_reached', never for falsiness.
+        (3) observation_ok: bool became observation + unwatchable_cause; the
+        boolean is RETAINED as a derived alias (observation == 'watched') only so
+        existing call sites do not silently change meaning, and no new consumer
+        may derive a verdict from it (BO-2900a-2-ii).
+        (4) the record gained a processes list, because one test's run spans a
+        tree of programs; ancestry is joined across the boundary by pid/ppid plus
+        the entry-point frame live at spawn time, never by "both happened
+        somewhere in the run" (BO-2900a-2-i).
+        Identity everywhere in this record is a RESOLVED FILE PATH, never a module
+        stem and never frame.f_globals['__name__'] — a script run as
+        `python hook.py` reports '__main__', and .leafcutter/ and scripts/ hold
+        same-stem copies of the same file.
   reference_file_path: "scripts/ac_store/done_proof.py"
   n_location_rule: "1"
   required_skills:
@@ -67,9 +104,12 @@ it_requirements:
     - "SELF-VALIDATION, FAIL LOUD. The recorder must confirm it observed at least one frame; an observation that recorded nothing returns observation_ok: false and is reported as 'observation unavailable', never as 'did not reach'. An observer that silently records nothing makes every test look like test Q and blocks the whole store; one that records everything makes every test look like test P and restores the original defect. Both are silent failures unless this flag exists."
     - "Overhead budget: the recorder must be installed only around the proof run and must not more than double the wall-clock time of a single-file proof run; done_proof already invokes pytest per AC in the required CI gate."
     - "scripts/ac_store/run_observer.py MUST be added to build_ac_store's deploy_map (scripts/build_phases.py:794) in the same change, or the deployed check_done_proof hook and the required CI done-proof job crash with ModuleNotFoundError."
+    - "AMENDMENT 2026-09-30 (IT PO) — THE SHIPPED CODE VIOLATED THE HOSTING CONSTRAINT ABOVE AND MUST BE UNWOUND. 11b92057 added a second, bespoke non-pytest runner (_REACHABILITY_RUNNER_SCRIPT, scripts/ac_store/done_proof.py:433-557, driven by _observe_reachability) instead of calling the observation from _run_pytest_and_parse. That runner calls _test_func() with ZERO arguments (done_proof.py:522), so every proof whose test function takes pytest fixture arguments — 47% of an in-scope sample — cannot execute at all, and its verdict is therefore manufactured rather than observed. Retire it; do not widen it to the process tree. The hosting constraint is unchanged, not relaxed."
+    - "AMENDMENT 2026-09-30 (IT PO) — FRAME IDENTITY IS A RESOLVED FILE PATH. The runner's spec f\"{frame.f_globals.get('__name__')}:{frame.f_code.co_name}\" (done_proof.py:479) cannot match a program launched as `python hook.py`, which reports __name__ == '__main__'. Match Path(frame.f_code.co_filename).resolve(); stem matching is also forbidden because .leafcutter/ and scripts/ hold same-stem copies of the same file."
+    - "AMENDMENT 2026-09-30 (IT PO) — THE OBSERVATION SPANS THE PROCESS TREE AND CARRIES A THIRD STATE. observe_test_run's signature grows accordingly: the *targets* argument is replaced by the declared unit whose code set is derived from the run (no '<module>:<callable>' may be required from any caller or any store field), and the return records carry the amended shape above. Details and their tests: BO-2900a-2-i (span), BO-2900a-2-ii (unwatched), BO-2900a-2-iii (question well-formedness)."
 delivers_to:
   agent: python-coder
-  contract: "list[ReachRecord] as above, one per (proof test, code under proof). Consumed by BO-2900a-1 (the direct-import refusal), BO-2900a-1-i (the reached-through distinction) and BO-2900a-3 (the no-way-in refusal)."
+  contract: "list[ReachRecord] in the AMENDED shape stated in it_requirements.config_schema_fragment above, one per (proof test, declared unit) — carrying reached_code as a set, reached_through as one of reached/not_reached/undecidable, observation as watched/unwatched with its cause, and a processes list spanning every program the test reached into. Consumed by BO-2900a-1 (the direct-import refusal), BO-2900a-1-i (the reached-through distinction) and BO-2900a-3 (the no-way-in refusal). NOTE FOR THE IMPLEMENTER: BO-2900a-1's expects_from still quotes the pre-amendment shape (one target, two booleans, observation_ok) and its refusal_cause vocabulary still spells the third state 'observation_unavailable'; both need the same amendment before that AC is built, and this contract is the authoritative one."
 expects_from: null
 test_spec:
   - name: test_entry_point_proof_and_direct_import_proof_get_opposite_verdicts_in_one_run
@@ -92,7 +132,10 @@ origin_agent: BrainCandy
 created: 2026-08-13
 amended_by: []
 superseded_by: null
-covered_by: []
+covered_by:
+  - BO-2900a-2-i
+  - BO-2900a-2-ii
+  - BO-2900a-2-iii
 implemented_by: []
 change_target: pipeline
 risk_surface: internal
@@ -130,6 +173,50 @@ notes: |
   fixture pair in the criteria is the minimum viable check, and both verdicts must be
   asserted in the same run — asserting only the rejection lets a
   reject-everything implementation pass.
+
+  2026-09-30 (BA). Three L3 children added: BO-2900a-2-i (the observation spans
+  the tree of programs a proof launches, not only the process it runs in),
+  BO-2900a-2-ii (a run that could not be watched is a third answer, never a
+  negative one) and BO-2900a-2-iii (the question must name the code under proof;
+  an unnamed question returns undecidable). All three are edge cases of THIS AC's
+  existing guarantee — the judgement comes from watching the run — so none of them
+  is a new L2, which was unavailable anyway: BO-2900a is at its five-L2 cap and
+  BO-2900 at its seven-L1 cap.
+
+  CONTRACT GAP FLAGGED FOR THE IT PO, NOT DECIDED HERE. The record shape stated in
+  this AC's it_requirements and delivers_to — one named piece of code, one entry
+  point, two booleans, one process — cannot express what the three children
+  require: a run spanning several programs, an undecidable third state, and a
+  subject derived from the unit rather than from a field. This AC needs AMENDING,
+  not replacing; its criteria (execution-derived, decoy-immune, per-test,
+  ancestry-aware, loud when unavailable) are right and unchanged, and the
+  BA pass deliberately left the contract to the technical layer that owns it.
+  Note also that the empty subject in the consuming rule's question is what makes
+  reached_through structurally unreachable today; see BO-2900a-2-iii.
+
+  2026-09-30 (IT PO enrichment — the contract amendment the BA pass flagged and left
+  here). it_requirements.config_schema_fragment.reach_record and delivers_to were
+  AMENDED, not replaced, and criteria, title, req_status and depends_on are untouched;
+  it_requirements and delivers_to are not in check_ac_governance._PROTECTED_FIELDS
+  (verified: {criteria, title, req_status, depends_on}), so no amended_by entry is
+  required. Four changes, one per thing the three children need and the old shape
+  could not carry: target -> reached_code as a SET derived from the run; reached_through
+  bool -> tri-state so an unnamed question and an unwatched run stop being expressible
+  as a plausible negative; observation_ok -> observation + a closed unwatchable_cause
+  vocabulary, with the boolean retained only as a derived alias so existing call sites
+  do not silently change meaning; and a new processes list so ancestry joins across the
+  process boundary by pid/ppid rather than by "both happened somewhere in the run".
+  The subject of the question is deliberately NOT looked up in a store field: no field
+  anywhere names a callable (surface_invoked — 271 records, 368 occurrences, zero of
+  '<module>:<callable>' shape, 166 free prose), and asking the store for one is exactly
+  how target_spec="" arose. Three constraints were APPENDED rather than edited: retire
+  the bespoke non-pytest runner that violated this AC's own hosting constraint, match
+  frames on the resolved file path, and grow observe_test_run's signature accordingly.
+  Open item carried out of this pass and NOT edited here, because it belongs to a
+  different record: BO-2900a-1's expects_from still quotes the pre-amendment shape and
+  its refusal_cause vocabulary still spells the third state 'observation_unavailable'
+  rather than distinguishing unwatched from undecidable. That AC needs the same
+  amendment before it is built.
 
   2026-08-13 (IT PO enrichment). Mechanism chosen: a call-level execution recorder
   (sys.monitoring, sys.setprofile fallback) rather than coverage.py line/arc data.

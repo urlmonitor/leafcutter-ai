@@ -55,6 +55,25 @@ MISSING_STATUS_FALLBACK: str = "todo"
 # ---------------------------------------------------------------------------
 
 
+def _frontmatter_by_regex(yaml_block: str) -> dict | None:
+    """Parse a frontmatter block with regex, for when PyYAML is unavailable.
+
+    Args:
+        yaml_block: The raw text between the frontmatter delimiters.
+
+    Returns:
+        A dict of the simple ``key: value`` pairs found, or None when the
+        block yielded nothing parseable.
+    """
+    result: dict = {}
+    for line in yaml_block.splitlines():
+        m = re.match(r"^(\w+):\s*(.*)$", line)
+        if m:
+            key, value = m.group(1), m.group(2).strip()
+            result[key] = value if value else None
+    return result if result else None
+
+
 def _parse_frontmatter(content: str) -> dict | None:
     """Parse the YAML frontmatter block from ticket content.
 
@@ -78,22 +97,30 @@ def _parse_frontmatter(content: str) -> dict | None:
 
     yaml_block = content[4 : end_idx + 1]
 
+    # PyYAML is an OPTIONAL dependency here (see the docstring above), so the
+    # import stays lazy and a missing parser degrades to the regex fallback
+    # rather than failing. The two failure modes are caught separately because
+    # yaml.YAMLError cannot be named once `import yaml` itself has failed.
     try:
         import yaml
+    except ImportError:
+        return _frontmatter_by_regex(yaml_block)
 
-        parsed = yaml.safe_load(yaml_block)
-        if not isinstance(parsed, dict):
-            return None
-        return parsed
-    except Exception:
-        # Fallback: regex-based parsing for the fields we need
-        result: dict = {}
-        for line in yaml_block.splitlines():
-            m = re.match(r"^(\w+):\s*(.*)$", line)
-            if m:
-                key, value = m.group(1), m.group(2).strip()
-                result[key] = value if value else None
-        return result if result else None
+    try:
+        # Reverted to the pure-Python loader (loader-audit, TQ-600a-11
+        # fix-pass, 2026-10-07): on a parse failure this falls through to a
+        # regex-based fallback parser that is NOT guaranteed to agree with
+        # the full parse on the same malformed input -- which parser "wins"
+        # changes the depends_on/priority/status used for ticket selection.
+        # A more permissive loader shifts which inputs take which path. No
+        # measured whole-tree volume justifies the risk either.
+        parsed = yaml.load(yaml_block, Loader=yaml.SafeLoader)
+    except yaml.YAMLError:
+        return _frontmatter_by_regex(yaml_block)
+
+    if not isinstance(parsed, dict):
+        return None
+    return parsed
 
 
 def _get_status(fm: dict, ticket_path: Path) -> str:

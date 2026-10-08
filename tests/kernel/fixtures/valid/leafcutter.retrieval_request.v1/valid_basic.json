@@ -1,0 +1,15 @@
+{
+  "need": {
+    "id": "need-1",
+    "category": "prior_decisions",
+    "question": "Which store does the cache use?"
+  },
+  "source_ids": [
+    "repo.decisions"
+  ],
+  "detail": "excerpt",
+  "limits": {
+    "top_k": 3,
+    "max_chars": 1000
+  }
+}

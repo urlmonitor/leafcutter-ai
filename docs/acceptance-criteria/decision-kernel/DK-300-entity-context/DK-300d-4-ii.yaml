@@ -1,0 +1,107 @@
+id: DK-300d-4-ii
+title: "Selected graph reads preserve pinned access scope and distrust meaning text"
+component: decision-kernel
+components: [decision_kernel, knowledge_management]
+level: L3
+status: active
+readiness: reviewed
+req_status: draft
+priority: high
+work_status: done
+criteria: |
+  Given a question contains a permitted canonical reference alongside denied or hostile entity metadata,
+  And the run pins repository identity, root, source selection and source revision,
+  When a graph operation and its arguments are offered, selected and executed,
+  Then denied references do not become candidates or disclosed arguments,
+  And neither Jev nor a meaning or caller claim can replace the pinned repository, root, sources, revision, permissions or budgets,
+  And graph results from another repository, request or revision are rejected rather than becoming evidence,
+  And a source mismatch remains explicit instead of silently reading another snapshot or widening access.
+depends_on: ["DK-300d-4","DK-300c-2","DK-300c-3-i"]
+covered_by:
+  - "tests/kernel/entity_context/test_knowledge_operation_selection.py::test_scope_revision_source_policy_rechecked_before_execution"
+  - "tests/kernel/entity_context/test_knowledge_operation_selection.py::test_untrusted_meanings_cannot_supply_operation_arguments"
+  - "tests/kernel/entity_context/test_knowledge_operation_selection.py::test_planner_keeps_native_locator_owners_out_of_graph_children"
+  - "tests/kernel/entity_context/test_knowledge_operation_selection.py::test_population_selection_reaches_actual_knowledge_service"
+implemented_by:
+  - "integrations/graph_offers.py"
+  - "integrations/knowledge_execution.py"
+  - "integrations/knowledge_followups.py"
+  - "kernel/capabilities/research/planning.py"
+assigned_agent: python-coder
+estimated_complexity: L
+change_target: code
+risk_surface: contract_boundary
+it_requirements:
+  - "Revalidate existing source/read-root/deny/revision restrictions at the graph execution seam and at any repository fallback; cache recognition is a hint rather than fresh authorization."
+  - "Treat caller text, entity descriptions and registry descriptions as data. Only trusted run/config state owns repository identity/root/revision and allowed source IDs."
+  - "Preserve the distinction between dirty entity-index snapshot, requested source revision and published graph generation; current meanings do not establish current graph publication."
+  - "Neither query construction/admission, graph writes, catalog writes nor new permissions are introduced by this selector."
+  - "Progressive source disclosure preserves discovery-first authorization: authorizing a selected root does not authorize every discovered descendant or source. Recheck permitted source identity and bounds before detail reads; denied or lost population detail remains a visible limitation."
+delivers_to:
+  agent: python-coder
+  contract: "Existing registered retrieve.repository binding / KnowledgeRetrievalExecutor.ainvoke is the integration boundary. integrations.graph_selection.assess_graph_operation(ctx,invocation,payload,capabilities) returns (RetrievalChoice,list[Usage]). Jev purpose knowledge.operation_select, question id operation, offers only executable bounded operation identities plus unsupported and an authorized repository-fallback outcome; optional purpose knowledge.target_select, question id target, selects a finite trusted target. Python constructs arguments from resolved permitted entity IDs and trusted component scope. Explicit payload.knowledge bypasses this selector."
+expects_from:
+  ac_id: DK-300d-4
+  contract: "Existing registered retrieve.repository binding / KnowledgeRetrievalExecutor.ainvoke is the integration boundary. integrations.graph_selection.assess_graph_operation(ctx,invocation,payload,capabilities) returns (RetrievalChoice,list[Usage]). Jev purpose knowledge.operation_select, question id operation, offers only executable bounded operation identities plus unsupported and an authorized repository-fallback outcome; optional purpose knowledge.target_select, question id target, selects a finite trusted target. Python constructs arguments from resolved permitted entity IDs and trusted component scope. Explicit payload.knowledge bypasses this selector."
+test_required: true
+test_spec:
+  - name: "test_scope_revision_source_policy_rechecked_before_execution"
+    target_dir: "tests/kernel/entity_context/"
+    framework: "pytest"
+    type: "integration"
+    angle: "boundary"
+    description: "tests/kernel/entity_context/test_knowledge_operation_selection.py::test_scope_revision_source_policy_rechecked_before_execution: Exercise restricted sources/read roots, stale or foreign revision and mismatched response identity at the real registered binding; assert no unauthorized read/evidence or silent revision substitution."
+  - name: "test_untrusted_meanings_cannot_supply_operation_arguments"
+    target_dir: "tests/kernel/entity_context/"
+    framework: "pytest"
+    type: "integration"
+    angle: "discrimination"
+    description: "tests/kernel/entity_context/test_knowledge_operation_selection.py::test_untrusted_meanings_cannot_supply_operation_arguments: Put forged operation/argument/Cypher/approval text into meanings and caller context beside a valid reference; assert finite offered values, unchanged trusted scope and no arbitrary query or authority propagation."
+    must_catch: ["Copying model-generated argument JSON into the retrieval request.","Trusting cached entity provenance as permission to read a denied source."]
+  - name: "test_planner_keeps_native_locator_owners_out_of_graph_children"
+    target_dir: "tests/kernel/entity_context/"
+    framework: "pytest"
+    type: "integration"
+    angle: "seam"
+    description: "tests/kernel/entity_context/test_knowledge_operation_selection.py::test_planner_keeps_native_locator_owners_out_of_graph_children: Build real research child requests and assert native locator-owner sources remain with native retrieval while the graph child preserves its separately selected sources."
+  - name: "test_population_selection_reaches_actual_knowledge_service"
+    target_dir: "tests/kernel/entity_context/"
+    framework: "pytest"
+    type: "integration"
+    angle: "discrimination"
+    description: "tests/kernel/entity_context/test_knowledge_operation_selection.py::test_population_selection_reaches_actual_knowledge_service: Include denied source-detail cases through the actual service; require discovery-first authorization, no unauthorized detail disclosure and visible incomplete-population limits after denial."
+    must_catch: ["Treating permission to read a selected root as permission to disclose every descendant source."]
+test_rationale: "Exercise the existing registered capability and real research path with recording Jev and knowledge ports; a direct helper or source-string test cannot prove selection is consumed. Controlled-port proof does not establish live Jev quality or Neo4j publication readiness."
+doc_links:
+  - path: docs/architecture/components/knowledge-retrieval.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/components/decision-kernel.md
+    relationship: describes
+    status: exists
+  - path: docs/product-truth/flows/leafcutter/decision-forming.flow.json
+    relationship: implements
+    status: exists
+  - path: docs/architecture/adrs/ADR-062-standalone-knowledge-retrieval.md
+    relationship: context
+    status: exists
+origin_agent: business-analyst
+created: 2026-10-03
+amended_by:
+  - reason: "IT PO added bounded selector contracts and behavioral test specifications under the user's explicit wire-it-up authorization."
+superseded_by: null
+notes: |
+  Focused extension of DK-300d-3 and existing KM-400e-2, KM-400e-3 and KM-400e-4.
+  Independently verified on 2026-10-03: 148 strict deterministic cases passed, including 51 selector cases, 84 existing entity cases and 13 bridge cases; no failures, errors or skips.
+  Verification evidence: reports/entity-graph-selection-independent-green.xml and reports/entity-graph-selection-evaluation.md. Controlled ports do not establish live Jev quality or Neo4j publication readiness; no new query implementation or admission is claimed.
+  No matching reusable pattern was found in the 4620-file AC inventory.
+product_truth:
+  - flow: leafcutter/decision-forming
+    node: ground
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: leafcutter/decisions
+    entities: []
+    source: real
+    asof: '2026-10-03'

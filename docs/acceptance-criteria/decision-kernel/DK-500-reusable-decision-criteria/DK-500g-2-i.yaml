@@ -1,0 +1,90 @@
+id: DK-500g-2-i
+title: An empty answer is distinct from a graph that could not answer
+component: decision-kernel
+components:
+- decision_kernel
+- knowledge_management
+level: L3
+status: active
+readiness: approved
+req_status: draft
+priority: high
+work_status: todo
+roadmap_phase: phase_kernel_2_knowledge
+criteria: |
+  Given dec-5e7445182eaec1f2, which no published category lists as a member,
+  When a person asks which categories it used against a published generation,
+  Then the answer is an empty list, marked as a complete answer from that generation,
+  And when no knowledge graph is configured, the same question answers "disabled", and when the configured graph cannot be reached it answers "unavailable", each with its reason and never as an empty list.
+depends_on:
+- DK-500g-2
+covered_by: []
+implemented_by: []
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: DK-500g-2
+  contract: Registered query get_decision_categories.
+change_target: code
+risk_surface: internal
+it_requirements:
+- 'Reuse ADR-062''s distinct non-answers: backend none gives disabled, a configured but unreachable backend gives unavailable, a missing generation gives stale, each with a reason and never as an empty list. An empty list is returned only for a decision known in the generation that has no memberships, with answer.completeness.complete true.'
+test_required: true
+test_spec:
+- name: test_no_memberships_returns_complete_empty_list
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: behavioral
+  angle: criterion
+  description: Asking about dec-5e7445182eaec1f2 returns an empty list marked complete for that generation.
+- name: test_disabled_and_unavailable_are_not_empty_lists
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: behavioral
+  angle: criterion
+  description: With no knowledge graph configured the answer is disabled, with an unreachable graph unavailable, each with a reason and never an empty list.
+test_rationale: Build real generations through the knowledge sync and registered-operation entry points from a fixture commit (offline fixture backend), and assert node identities, links and answers against the category records of that commit; a live Neo4j test proves server compatibility. Unit tests of the reader alone would not prove that the Decision kind is unchanged in a full generation.
+doc_links:
+- path: docs/decisions/dec-93c1c730463c1f3c.yaml
+  relationship: governs
+  status: exists
+- path: docs/product-truth/flows/leafcutter/criteria-library.flow.json
+  relationship: implements
+  status: exists
+- path: docs/architecture/adrs/ADR-062-standalone-knowledge-retrieval.md
+  relationship: constrains
+  status: exists
+  relevance: Immutable generations from one commit, validated and published atomically; a failed build leaves the active generation untouched; registered parameterized queries only; finite native reader registry; disabled, unavailable and stale are distinct from an empty answer. On this branch since the 2026-10-05 merge of origin/main.
+- path: docs/architecture/components/knowledge-retrieval.md
+  relationship: describes
+  status: exists
+  relevance: Finite native reader registry (knowledge/native_types/registry.py), generation publication, registered operations and the optional authored query catalog.
+- path: docs/reference/knowledge-retrieval-answers.md
+  relationship: describes
+  status: exists
+  relevance: Answer fields, completeness and the distinct non-answers the two category queries reuse.
+origin_agent: business-analyst
+created: 2026-10-04
+amended_by:
+- reason: it-po-technical-enrichment
+  date: '2026-10-05'
+  by: it-po
+  summary: 'Technical enrichment: assigned_agent confirmed, estimated_complexity, change_target, risk_surface, it_requirements, contracts, doc_links and the test contract set; readiness draft -> reviewed. BA criteria unchanged.'
+superseded_by: null
+notes: |
+  ADR-062: disabled, unavailable, unsupported and stale are distinct from an empty successful search. dec-5e7445182eaec1f2's only proposed membership is in the candidate cat-73d233fc8b15c735, which is not in Git.
+  FLOW BACK-LINK (for step.implements, to be applied by the store owner): leafcutter/criteria-library: explore.
+  Authored by the business-analyst stage of /plan-feature (route strategic) under decision dec-93c1c730463c1f3c; readiness draft, no product approval implied.
+product_truth:
+  - flow: leafcutter/criteria-library
+    node: explore
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: leafcutter/criterion-categories
+    entities:
+      - CriterionCategory
+      - Decision
+    source: mock
+    asof: '2026-10-04'

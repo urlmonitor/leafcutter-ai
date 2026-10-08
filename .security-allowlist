@@ -9,6 +9,10 @@ ENTROPY_HIGH:docs/agents/README.md:430
 ENTROPY_HIGH:docs/agents/README.md:431
 ENTROPY_HIGH:docs/agents/README.md:432
 ENTROPY_HIGH:docs/how-to/working-with-leafcutter.md:63
+# False positive: shell example in a how-to doc setting a long SCREAMING_SNAKE env-var
+# name (LEAFCUTTER_SHARED_LAYOUT_INTEGRITY_REPORT) to a file path -- not a secret.
+# Glob, not per-line, per CLAUDE.md: line numbers in how-to prose shift.
+ENTROPY_HIGH:docs/how-to/verify-shared-layout-stays-read-only.md:*
 ENTROPY_HIGH:templates/skills/ticket-authoring/SKILL.md:42
 ENTROPY_HIGH:templates/agents/llm-expert.md:39
 ENTROPY_HIGH:templates/agents/llm-expert.md:104
@@ -27,6 +31,10 @@ ENTROPY_HIGH:docs/agents/coding/python-coder.md:91
 ENTROPY_HIGH:templates/scripts/commit_guardian/INTEGRATION.md:59
 ENTROPY_HIGH:templates/scripts/commit_guardian/INTEGRATION.md:125
 ENTROPY_HIGH:templates/scripts/commit_guardian/INTEGRATION.md:382
+# False positive: line 539 is a DECISION HISTORY comment whose tail tag
+# (#TICKET-20261002-GlossaryHookStubBlacklistsNewTerms) scores high entropy. No credential.
+# Per-line on purpose (narrowest exemption); if the line shifts the finding returns.
+ENTROPY_HIGH:templates/scripts/commit_guardian/check_glossary_coverage.py:539
 
 # ---------------------------------------------------------------------------
 # GE-113c-3 backfill (2026-08-18)
@@ -52,12 +60,23 @@ ENTROPY_HIGH:templates/scripts/commit_guardian/INTEGRATION.md:382
 ENTROPY_HIGH:leafcutter-web/package-lock.json:*
 # Generated artifact: build dataflow graph — "path": "docs/acceptance-criteria/..." slugs (26)
 ENTROPY_HIGH:docs/build-dataflow.json:*
+# Generated artifact: pytest-split durations map — ~9,559 test node ids, many of which
+# contain long parametrised id segments that score as high entropy. Emitted by
+# .github/workflows/test-durations.yml, never hand-edited. Glob rather than per-line:
+# the file is regenerated wholesale, so every line number shifts on each refresh.
+ENTROPY_HIGH:.github/test_durations.json:*
 
 # Sentinel string constants, not credentials. Replaces the stale line-22/27 entries
 # whose target (_SPECIAL_TOKEN) has since drifted to line 29 — glob per the
 # "use globs not line numbers for drifting targets" rule in CLAUDE.md.
 GENERIC_SECRET:scripts/registry_validator.py:*
 ENTROPY_HIGH:scripts/registry_validator.py:*
+# INF-600k-1 (2026-09-28): the same _SPECIAL_TOKEN sentinel, moved with the code it
+# belongs to (spawn-bidirectionality checks, card mermaid parser) and present in the
+# canonical templates/ copy of the spawn-consistency hook. Sentinel, not a credential.
+GENERIC_SECRET:scripts/spawn_bidirectionality_validator.py:*
+GENERIC_SECRET:templates/scripts/commit_guardian/card_mermaid_parser.py:*
+GENERIC_SECRET:templates/scripts/commit_guardian/hooks/check_agent_spawn_consistency.py:*
 
 # Doc-path / identifier strings in source and prompt text
 ENTROPY_HIGH:scripts/ac_store/generate_ticket_from_ac.py:*
@@ -319,6 +338,27 @@ GENERIC_SECRET:templates/scripts/commit_guardian/check_file_size_rule_parity.py:
 GENERIC_SECRET:unit_tests/commit_guardian/_ge_127d_1_fixture.py:*
 ENTROPY_HIGH:unit_tests/commit_guardian/test_ge_127d_1.py:*
 
+# BO-2400a-1-v (2026-09-30). The entry the comment four paragraphs above already
+# claimed was here.
+#
+# That comment cites "the `_SPECIAL_TOKEN` entries for registry_validator.py and
+# check_agent_spawn_consistency.py" as established precedent. Only the first of
+# those two entries existed (line ~59); this file's never did. The two modules
+# carry the SAME module-level sentinel — a constant whose assigned value restates
+# its own name, matched against registry data — so the scanner treats them
+# identically, and the name containing "TOKEN" is what trips it rather than
+# anything about the value.
+#
+# It went unnoticed because check-secrets scans STAGED files, and this hook had
+# not been staged since the entry was written. Adding a dispatcher to an agent's
+# spawned_by staged it for the first time and the omission surfaced at once.
+#
+# Glob rather than a line number, matching every neighbour here: the constant
+# sits near the top of a file under active change, so a pinned line would rot
+# silently — and a suppression that has drifted off its target is worse than
+# none, because it still reads as covered.
+GENERIC_SECRET:templates/scripts/commit_guardian/hooks/check_agent_spawn_consistency.py:*
+
 # A keyword argument passing a module-level constant of edit-surface relationship
 # names into a helper call -- ordinary code, no credential (not reproduced here for
 # the same reason as the entries above: quoting it would trip the scanner this entry
@@ -334,6 +374,319 @@ ENTROPY_HIGH:scripts/ac_store/_gtfa_files_touched.py:*
 # credential. Glob, not per-line: matches the treatment of every other changelog entry
 # in this file.
 ENTROPY_HIGH:changelogs/2026-09-23-1030-an-ambiguous-reference-pattern-is-now-refused-instead-of-silently-resolving-to-an-arbitrary-file.md:*
+
+# GE-127e-3-i. A module-level constant holding the name of the outcome token this
+# gate prints when it cannot describe a file -- the third member of the same family
+# as the INDETERMINATE and EMPTY HISTORY tokens already in this component. It is a
+# fixed English label printed to stdout, not a credential. The value is not
+# reproduced here on purpose: quoting it would itself trip the scanner this entry
+# exists to suppress, which is how an earlier attempt in this epic blocked on its own
+# explanatory comment. Glob, not per-line: the constant sits near the top of a file
+# that is still being added to, so a line number would silently go stale.
+GENERIC_SECRET:templates/scripts/commit_guardian/_file_description.py:*
+
+# GE-127e-3-i. Two unittest class names long enough to read as high entropy. This
+# repo's test-naming convention spells the behaviour under test out in full, so a
+# class name that states a whole Gherkin clause is normal here rather than unusual.
+# No credential. Glob, not per-line: both sit above code that will move as these
+# files grow, and per-line entries break silently when lines shift.
+ENTROPY_HIGH:unit_tests/commit_guardian/test_ge_127e_3_i_no_substitute_and_verdict_independence.py:*
+ENTROPY_HIGH:unit_tests/commit_guardian/test_ge_127e_3_i_reachability_and_deployed.py:*
+
+# KM-400 safe example contains placeholders only; actual credentials remain outside Git.
+ENV_FILE:knowledge/.env.example:0
+
+# KM-400 reviewed false positives: placeholder assignments, synthetic test strings,
+# and optional unresolved canonical documentation paths in sanitized reports.
+ENTROPY_HIGH:knowledge/.env.example:5
+ENTROPY_HIGH:knowledge/.env.example:7
+ENTROPY_HIGH:knowledge/.env.example:10
+ENTROPY_HIGH:reports/knowledge-retrieval-real-subset-status.json:93
+ENTROPY_HIGH:reports/knowledge-retrieval-real-subset-status.json:97
+ENTROPY_HIGH:reports/knowledge-retrieval-real-subset-sync.json:90
+ENTROPY_HIGH:reports/knowledge-retrieval-real-subset-sync.json:94
+ENTROPY_HIGH:tests/knowledge/test_environment.py:55
+ENTROPY_HIGH:tests/knowledge/test_environment.py:75
+ENTROPY_HIGH:tests/knowledge/test_environment.py:105
+ENTROPY_HIGH:tests/knowledge/test_environment.py:107
+ENTROPY_HIGH:tests/knowledge/test_environment.py:139
+ENTROPY_HIGH:tests/knowledge/test_environment.py:187
+
+# Verified public pytest command and immutable canonical ADR locator; no credential values.
+ENTROPY_HIGH:docs/analysis/2026-10-01-knowledge-retrieval-aura-acceptance.md:54
+ENTROPY_HIGH:reports/knowledge-retrieval-aura-kernel.json:16
+
+# Reviewed immutable native metadata receipts: canonical acceptance criterion paths
+# and historical pytest temporary directory paths only. Exact lines; all other
+# entropy findings and every credential-pattern rule remain enabled.
+ENTROPY_HIGH:reports/native-fields/ac-install-baseline.json:153
+ENTROPY_HIGH:reports/native-fields/ac-install-baseline.json:157
+ENTROPY_HIGH:reports/native-fields/ac-install-baseline.json:161
+ENTROPY_HIGH:reports/native-fields/ac-install-baseline.json:165
+ENTROPY_HIGH:reports/native-fields/ac-install-receipt.json:166
+ENTROPY_HIGH:reports/native-fields/ac-install-receipt.json:171
+ENTROPY_HIGH:reports/native-fields/ac-install-receipt.json:176
+ENTROPY_HIGH:reports/native-fields/ac-install-receipt.json:181
+ENTROPY_HIGH:reports/native-fields/ac-traceability.json:166
+ENTROPY_HIGH:reports/native-fields/ac-traceability.json:177
+ENTROPY_HIGH:reports/native-fields/ac-traceability.json:188
+ENTROPY_HIGH:reports/native-fields/ac-traceability.json:199
+ENTROPY_HIGH:reports/native-fields/ac-validation.json:16
+ENTROPY_HIGH:reports/native-fields/ac-validation.json:17
+ENTROPY_HIGH:reports/native-fields/ac-validation.json:18
+ENTROPY_HIGH:reports/native-fields/ac-validation.json:19
+ENTROPY_HIGH:reports/native-fields/changelog-mutation-coerce_valid_map.xml:1
+ENTROPY_HIGH:reports/native-fields/changelog-mutation-drop_extension.xml:1
+ENTROPY_HIGH:reports/native-fields/changelog-mutation-drop_recovery_error.xml:1
+ENTROPY_HIGH:reports/native-fields/changelog-mutation-duplicate_store.xml:1
+ENTROPY_HIGH:reports/native-fields/changelog-mutation-duplicate_store.xml:14
+ENTROPY_HIGH:reports/native-fields/changelog-mutation-ignore_bad_store.xml:1
+ENTROPY_HIGH:reports/native-fields/changelog-mutation-ignore_bad_store.xml:15
+ENTROPY_HIGH:reports/native-fields/changelog-mutation-ignore_bad_store.xml:29
+ENTROPY_HIGH:reports/native-fields/changelog-mutation-ignore_bad_store.xml:43
+ENTROPY_HIGH:reports/native-fields/changelog-mutation-ignore_configuration.xml:1
+ENTROPY_HIGH:reports/native-fields/changelog-mutation-ignore_configuration.xml:30
+ENTROPY_HIGH:reports/native-fields/changelog-mutation-inject_default.xml:1
+ENTROPY_HIGH:reports/native-fields/changelog-mutation-leak_checkout_path.xml:1
+ENTROPY_HIGH:reports/native-fields/changelog-mutation-strip_backslashes.xml:1
+ENTROPY_HIGH:reports/native-fields/changelog-mutation-swallow_malformed.xml:1
+ENTROPY_HIGH:reports/native-fields/changelog-mutation-swallow_malformed.xml:24
+ENTROPY_HIGH:reports/native-fields/changelog-mutation-swallow_malformed.xml:47
+ENTROPY_HIGH:reports/native-fields/changelog-mutation-swallow_malformed.xml:70
+ENTROPY_HIGH:reports/native-fields/changelog-mutation-swallow_malformed.xml:93
+ENTROPY_HIGH:reports/native-fields/changelog-mutation-swallow_malformed.xml:116
+ENTROPY_HIGH:reports/native-fields/changelog-mutation-swallow_malformed.xml:139
+ENTROPY_HIGH:reports/native-fields/changelog-red.xml:1
+ENTROPY_HIGH:reports/native-fields/changelog-red.xml:45
+ENTROPY_HIGH:reports/native-fields/changelog-red.xml:76
+ENTROPY_HIGH:reports/native-fields/changelog-red.xml:113
+ENTROPY_HIGH:reports/native-fields/changelog-red.xml:150
+ENTROPY_HIGH:reports/native-fields/changelog-red.xml:178
+ENTROPY_HIGH:reports/native-fields/changelog-red.xml:211
+ENTROPY_HIGH:reports/native-fields/changelog-red.xml:244
+ENTROPY_HIGH:reports/native-fields/changelog-red.xml:277
+ENTROPY_HIGH:reports/native-fields/changelog-red.xml:310
+ENTROPY_HIGH:reports/native-fields/changelog-red.xml:342
+ENTROPY_HIGH:reports/native-fields/changelog-red.xml:374
+ENTROPY_HIGH:reports/native-fields/changelog-red.xml:413
+ENTROPY_HIGH:reports/native-fields/changelog-red.xml:452
+ENTROPY_HIGH:reports/native-fields/changelog-red.xml:491
+ENTROPY_HIGH:reports/native-fields/changelog-red.xml:530
+ENTROPY_HIGH:reports/native-fields/changelog-red.xml:569
+ENTROPY_HIGH:reports/native-fields/changelog-red.xml:608
+ENTROPY_HIGH:reports/native-fields/code-GlossaryTerm-red.xml:39
+ENTROPY_HIGH:reports/native-fields/code-GlossaryTerm-red.xml:94
+ENTROPY_HIGH:reports/native-fields/code-GlossaryTerm-red.xml:151
+ENTROPY_HIGH:reports/native-fields/code-GlossaryTerm-red.xml:181
+ENTROPY_HIGH:reports/native-fields/code-GlossaryTerm-red.xml:211
+ENTROPY_HIGH:reports/native-fields/code-GlossaryTerm-red.xml:241
+ENTROPY_HIGH:reports/native-fields/code-GlossaryTerm-red.xml:270
+ENTROPY_HIGH:reports/native-fields/code-GlossaryTerm-red.xml:300
+ENTROPY_HIGH:reports/native-fields/code-GlossaryTerm-red.xml:330
+ENTROPY_HIGH:reports/native-fields/code-GlossaryTerm-red.xml:360
+ENTROPY_HIGH:reports/native-fields/code-GlossaryTerm-red.xml:390
+ENTROPY_HIGH:reports/native-fields/code-GlossaryTerm-red.xml:420
+ENTROPY_HIGH:reports/native-fields/code-GlossaryTerm-red.xml:450
+ENTROPY_HIGH:reports/native-fields/code-GlossaryTerm-red.xml:480
+ENTROPY_HIGH:reports/native-fields/code-GlossaryTerm-red.xml:510
+ENTROPY_HIGH:reports/native-fields/code-GlossaryTerm-red.xml:540
+ENTROPY_HIGH:reports/native-fields/code-GlossaryTerm-red.xml:570
+ENTROPY_HIGH:reports/native-fields/code-GlossaryTerm-red.xml:600
+ENTROPY_HIGH:reports/native-fields/document-red.xml:43
+ENTROPY_HIGH:reports/native-fields/document-red.xml:76
+ENTROPY_HIGH:reports/native-fields/document-red.xml:113
+ENTROPY_HIGH:reports/native-fields/document-red.xml:156
+ENTROPY_HIGH:reports/native-fields/document-red.xml:189
+ENTROPY_HIGH:reports/native-fields/document-red.xml:222
+ENTROPY_HIGH:reports/native-fields/document-red.xml:255
+ENTROPY_HIGH:reports/native-fields/document-red.xml:287
+ENTROPY_HIGH:reports/native-fields/document-red.xml:319
+ENTROPY_HIGH:reports/native-fields/document-red.xml:351
+ENTROPY_HIGH:reports/native-fields/flow-red.xml:1
+ENTROPY_HIGH:reports/native-fields/flow-red.xml:59
+ENTROPY_HIGH:reports/native-fields/flow-red.xml:126
+ENTROPY_HIGH:reports/native-fields/flow-red.xml:155
+ENTROPY_HIGH:reports/native-fields/flow-red.xml:188
+ENTROPY_HIGH:reports/native-fields/flow-red.xml:221
+ENTROPY_HIGH:reports/native-fields/flow-red.xml:254
+ENTROPY_HIGH:reports/native-fields/flow-red.xml:287
+ENTROPY_HIGH:reports/native-fields/flow-red.xml:320
+ENTROPY_HIGH:reports/native-fields/flow-red.xml:352
+ENTROPY_HIGH:reports/native-fields/flow-red.xml:384
+ENTROPY_HIGH:reports/native-fields/flow-red.xml:416
+ENTROPY_HIGH:reports/native-fields/flow-red.xml:448
+ENTROPY_HIGH:reports/native-fields/flow-red.xml:480
+ENTROPY_HIGH:reports/native-fields/flow-red.xml:512
+ENTROPY_HIGH:reports/native-fields/flow-red.xml:544
+ENTROPY_HIGH:reports/native-fields/flow-red.xml:576
+ENTROPY_HIGH:reports/native-fields/flow-red.xml:608
+ENTROPY_HIGH:reports/native-fields/flow-red.xml:650
+ENTROPY_HIGH:reports/native-fields/flow-red.xml:692
+ENTROPY_HIGH:reports/native-fields/flow-red.xml:734
+ENTROPY_HIGH:reports/native-fields/flow-red.xml:776
+ENTROPY_HIGH:reports/native-fields/flow-red.xml:818
+ENTROPY_HIGH:reports/native-fields/flow-red.xml:851
+ENTROPY_HIGH:reports/native-fields/flow-red.xml:884
+ENTROPY_HIGH:reports/native-fields/flow-red.xml:917
+ENTROPY_HIGH:reports/native-fields/itpo-ac-enrichment.json:210
+ENTROPY_HIGH:reports/native-fields/itpo-ac-enrichment.json:224
+ENTROPY_HIGH:reports/native-fields/itpo-ac-enrichment.json:238
+ENTROPY_HIGH:reports/native-fields/itpo-ac-enrichment.json:252
+ENTROPY_HIGH:reports/native-fields/refresh-recovery-live-mutation.xml:1
+
+# Historical checkpoint paths and explicit local consent label; no credential.
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02/RS-02.live-response.json:491
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02/RS-03.live-response.json:491
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02/rerun-recipe.json:13
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02/rerun-recipe.json:17
+
+# Reviewed 2026-10-05: immutable historical manifest pathname keys and one
+# documented backup path. These exact lines contain path metadata, not credentials.
+# Only the entropy heuristic is suppressed; all credential-pattern rules remain active.
+# Preserve the original receipts rather than rewriting their historical bytes.
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:74
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:76
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:107
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:116
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:150
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:155
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:157
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:190
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:323
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:413
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:420
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:506
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:2778
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:3179
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:3180
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:3182
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:3185
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:3187
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:3188
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:3198
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:3199
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:3200
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:3202
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:3203
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:4309
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:4310
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:4311
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:4312
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:4410
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:4414
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:4415
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:4416
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:4417
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:4418
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:4419
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:4420
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:4421
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:4422
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:4423
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:4425
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:4426
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:4427
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:4428
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:4429
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:4430
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:4431
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:4432
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:4433
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:4434
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:4435
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:4436
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:4437
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:4438
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:4439
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:4440
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:4441
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:4442
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:4443
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:4444
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:4445
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:4446
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:4447
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:4451
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:4452
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:4453
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:4456
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:4457
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:4458
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:4459
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:4460
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:4461
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:4462
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:4463
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:4464
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:4534
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:4535
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:4538
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:4539
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:4540
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:4541
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:4542
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:4545
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:4546
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:4547
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:4548
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:4549
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:4550
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:4553
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:4554
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:4555
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:4558
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:4559
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:4560
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:4561
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:4562
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:4563
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:4564
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:4565
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:4566
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:4570
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:4571
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:4572
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:4573
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:4574
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:4576
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:4577
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:5082
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:5110
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:5112
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:5113
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:5114
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:5115
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:5134
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:5135
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:5137
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:5138
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:5139
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:5141
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:5142
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:5145
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:5311
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:5865
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:5927
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:6544
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:6545
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:6546
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:6547
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:7266
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:7523
+ENTROPY_HIGH:reports/retrieval-scenarios-2026-10-02-retest-887c66d3/default-source/source-pin.json:9477
+ENTROPY_HIGH:docs/analysis/retrieval-issue-review-2026-10-02/15-typing.md:21
+# DK-300 delivery evidence: trace URL and identifiers, synthetic fixture identifiers,
+# and pytest temporary paths; verified not to contain credential material.
+# Immutable report lines are pinned; other secret rules remain active.
+ENTROPY_HIGH:reports/entity-ac-live-demo/demo.md:11
+ENTROPY_HIGH:reports/entity-context-independent-final.xml:1
+ENTROPY_HIGH:reports/entity-context-kernel-verified.xml:1
+ENTROPY_HIGH:reports/entity-context-vocabulary.xml:1
+ENTROPY_HIGH:reports/entity-context-vocabulary.xml:37
+ENTROPY_HIGH:reports/entity-graph-selection-independent-green.xml:1
+ENTROPY_HIGH:reports/entity-native-pointer-core-broad.xml:1
+# Deliberately fake redaction fixture; test-file line wildcard follows CLAUDE.md.
+GENERIC_SECRET:tests/kernel/entity_context/test_permissions.py:*
 
 # Committed snapshot of the agent feedback corpus (787 records, 18 sinks, KI-FC-001).
 # Every line is a JSONL record whose feedback_id carries an 8-hex-character suffix

@@ -1,0 +1,53 @@
+AC-ENFORCEMENT [STRICT]: tests/knowledge/test_native_test.py::test_test_reference_never_observes_current_filesystem[True-e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855-True] covers not-done AC KM-400a-3-i — NOT masked (AC_ENFORCE_STRICT=1); reported as a real failure.
+FAC-ENFORCEMENT [STRICT]: tests/knowledge/test_native_test.py::test_test_reference_never_observes_current_filesystem[False-historical-present-hash-False] covers not-done AC KM-400a-3-i — NOT masked (AC_ENFORCE_STRICT=1); reported as a real failure.
+FAC-ENFORCEMENT [STRICT]: tests/knowledge/test_native_test.py::test_test_reference_never_observes_current_filesystem[True--True] covers not-done AC KM-400a-3-i — NOT masked (AC_ENFORCE_STRICT=1); reported as a real failure.
+FAC-ENFORCEMENT [STRICT]: tests/knowledge/test_native_test.py::test_test_reference_never_observes_current_filesystem[False-e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855-False] covers not-done AC KM-400a-3-i — NOT masked (AC_ENFORCE_STRICT=1); reported as a real failure.
+F                                                                        [100%]
+================================== FAILURES ===================================
+_ test_test_reference_never_observes_current_filesystem[True-e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855-True] _
+tests\knowledge\test_native_test.py:108: in test_test_reference_never_observes_current_filesystem
+    record = reader.from_entity(tmp_path, entity)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+knowledge\native_types\test.py:33: in from_entity
+    metadata = deepcopy(entity.model_dump(mode="python"))
+    ^^^^^^^^^^^^^
+tests\knowledge\test_native_test.py:100: in forbidden
+    raise AssertionError("Test enrichment must not observe current files")
+E   AssertionError: Test enrichment must not observe current files
+_ test_test_reference_never_observes_current_filesystem[False-historical-present-hash-False] _
+tests\knowledge\test_native_test.py:108: in test_test_reference_never_observes_current_filesystem
+    record = reader.from_entity(tmp_path, entity)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+knowledge\native_types\test.py:33: in from_entity
+    metadata = deepcopy(entity.model_dump(mode="python"))
+    ^^^^^^^^^^^^^
+tests\knowledge\test_native_test.py:100: in forbidden
+    raise AssertionError("Test enrichment must not observe current files")
+E   AssertionError: Test enrichment must not observe current files
+______ test_test_reference_never_observes_current_filesystem[True--True] ______
+tests\knowledge\test_native_test.py:108: in test_test_reference_never_observes_current_filesystem
+    record = reader.from_entity(tmp_path, entity)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+knowledge\native_types\test.py:33: in from_entity
+    metadata = deepcopy(entity.model_dump(mode="python"))
+    ^^^^^^^^^^^^^
+tests\knowledge\test_native_test.py:100: in forbidden
+    raise AssertionError("Test enrichment must not observe current files")
+E   AssertionError: Test enrichment must not observe current files
+_ test_test_reference_never_observes_current_filesystem[False-e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855-False] _
+tests\knowledge\test_native_test.py:108: in test_test_reference_never_observes_current_filesystem
+    record = reader.from_entity(tmp_path, entity)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+knowledge\native_types\test.py:33: in from_entity
+    metadata = deepcopy(entity.model_dump(mode="python"))
+    ^^^^^^^^^^^^^
+tests\knowledge\test_native_test.py:100: in forbidden
+    raise AssertionError("Test enrichment must not observe current files")
+E   AssertionError: Test enrichment must not observe current files
+shared-layout-routing: declared_mutators=0 undeclared=0
+=========================== short test summary info ===========================
+FAILED tests/knowledge/test_native_test.py::test_test_reference_never_observes_current_filesystem[True-e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855-True]
+FAILED tests/knowledge/test_native_test.py::test_test_reference_never_observes_current_filesystem[False-historical-present-hash-False]
+FAILED tests/knowledge/test_native_test.py::test_test_reference_never_observes_current_filesystem[True--True]
+FAILED tests/knowledge/test_native_test.py::test_test_reference_never_observes_current_filesystem[False-e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855-False]
+4 failed in 21.60s
