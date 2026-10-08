@@ -1,0 +1,115 @@
+id: AR-300b-4
+title: "A run that recognised no per-agent preparations reports that, rather than reporting nothing wrong"
+component: agent-registry
+components:
+  - template_compiler
+  - build_pipeline
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given a build in which the delivery guarantee recognises no per-agent
+    preparation at all, or recognises preparations but finds no compiled prompt
+    to compare them against,
+  When the build finishes,
+  Then it reports a failure stating that the guarantee had nothing to examine,
+    And that report is distinguishable from the report of a run in which every
+      preparation arrived, without the reader comparing two runs,
+    And the same failure occurs when the number of compiled prompts examined is
+      smaller than the number of agents the build compiled, so a guarantee that
+      silently reached part of the tree is not read as a clean one,
+  So the guarantee cannot pass by looking at nothing, which is the failure mode
+    it was created to remove one level down.
+depends_on:
+  - AR-300b
+doc_links:
+  - path: docs/acceptance-criteria/build_pipeline/BP-1500-honest-builds/BP-1500d-4.yaml
+    relationship: related
+    status: exists
+    relevance: "Prior art: a check that found nothing to examine must not return the all-clear it returns when nothing is wrong. This criterion applies that rule to the guarantee introduced by its own siblings."
+  - path: scripts/template_compiler.py
+    relationship: describes
+    status: exists
+    relevance: "Supplies both populations the guarantee compares; an empty result from either is the state this criterion names."
+assigned_agent: python-coder
+estimated_complexity: S
+change_target: code
+risk_surface: internal
+it_requirements:
+  - "Both populations are guarded independently and the failure says which came back empty: the derived set of per-agent preparations (from AR-300b-2's registration) and the set of compiled prompts to compare them against."
+  - "The short-population case compares the number of compiled prompts examined against the number the build compiled on that run, taken from the build itself. A guarantee that silently reached part of the tree fails."
+  - "The three concrete ways the compiled-prompt side goes empty must all fail loudly rather than skip: the build has not run (a fresh worktree has no compiled tree -- verified), the `.claude/agents` shim symlink is broken, or a Windows copy-shim is stale. Resolve through the declared output root (skills_config `output_root`, default `.leafcutter`), never the hard-coded shim path."
+  - "The empty-population report is distinguishable from the every-preparation-arrived report within a single run's output. Do not rely on the reader comparing runs, and do not let both states produce an empty findings list with no other difference."
+  - "Refuse, never warn (ADR-050): an empty or short population exits non-zero."
+  - "This guard is a SIBLING of AR-300a-1-i, not a duplicate: that one guards the abilities comparison's population, this one guards the delivery guarantee's derived population. They are derived differently and go vacuous for different reasons. Share the reporting shape (ADR-037 verdict object) but keep the two derivations separate -- collapsing them makes one guard cover for the other's silence."
+test_spec:
+  - name: test_zero_recognised_preparations_fails_naming_the_preparation_side
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: unit
+    angle: failure
+    description: "With the derived preparation set empty, the guarantee reports it had nothing to examine rather than reporting no failures."
+  - name: test_zero_compiled_prompts_fails_naming_the_prompt_side
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: unit
+    angle: failure
+    description: "With preparations recognised but no compiled prompt to compare against, the guarantee fails and names the prompt side."
+  - name: test_nothing_to_examine_output_differs_from_everything_arrived_output
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: unit
+    angle: boundary
+    description: "The two reports are distinguishable from one run's output alone."
+  - name: test_fewer_prompts_examined_than_the_build_compiled_fails
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: unit
+    angle: boundary
+    description: "Examining a subset of the compiled prompts fails; a partial reach is not read as clean."
+  - name: test_unresolvable_output_root_fails_rather_than_resolving_to_empty
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: unit
+    angle: deployed
+    description: "An absent compiled tree or a broken shim symlink fails loudly instead of yielding an empty population and a clean exit."
+test_rationale: >-
+  The guarantee is the same class of artifact as the defect: correct-looking
+  machinery gated on a set it derives at run time, where an empty derivation
+  produces silence and silence reads as delivery. This repository has shipped that
+  failure twice -- a validator whose directory argument matched nothing and exited
+  clean for eight days (KI-ACS-001), and a strictness setting with no effect for as
+  long as the file existed. The unresolvable-output-root descriptor is the live
+  version of it: the compiled tree is gitignored and verifiably absent from a fresh
+  worktree, so an unguarded gate ships vacuous on day one.
+delivers_to: null
+expects_from:
+  ac_id: AR-300b-2
+  contract: "The derived set of per-agent preparations whose emptiness this criterion makes a reported failure"
+origin_agent: BrainCandy
+created: 2026-09-30
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-10-01'
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  THE GUARANTEE IS THE SAME CLASS OF ARTIFACT AS THE DEFECT. AR-300b exists
+  because correct-looking machinery reached nobody while the build reported
+  success. Its remedy is more machinery, gated on a set it derives at run time.
+  A derivation that comes back empty produces silence, and silence from this
+  guarantee reads as delivery. This repository has shipped exactly that failure
+  twice -- a validator whose directory argument matched nothing and exited clean
+  for eight days (KI-ACS-001), and a strictness setting that had no effect for
+  as long as the file existed.
+
+  THIS IS DELIBERATELY A SIBLING OF AR-300a-1-i, NOT A DUPLICATE OF IT.
+  AR-300a-1-i guards the population of the abilities comparison; this guards the
+  population of the delivery guarantee, which is derived differently and can be
+  empty for different reasons. The two go vacuous independently.

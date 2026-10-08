@@ -25,7 +25,7 @@ task, then pull only those files.
 | agent registry | [docs/architecture/components/agent-registry.md](architecture/components/agent-registry.md) | Central registry of all phase agents with is_ticket_phase flags, produces traits, and model tier assignments used by ticket-supervisor for dispatch and validation. |
 | agent telemetry | [docs/architecture/components/agent-telemetry.md](architecture/components/agent-telemetry.md) | Per-invocation metric emitter and lane comparison reporter. Appends structured JSONL records to the telemetry sink after each agent call, exposing duration, token volumes, and cache-hit counts for fast-lane vs heavy-pipeline cost comparison. |
 | bootstrap installer | [docs/architecture/components/bootstrap-installer.md](architecture/components/bootstrap-installer.md) | Self-hosting installation system that deploys leafcutter-ai agents, skills, hooks, and config scaffolds into consumer projects with zero manual setup. |
-| build epic workflow dispatch | [docs/architecture/components/build-epic-workflow-dispatch.md](architecture/components/build-epic-workflow-dispatch.md) | build-epic.js Workflow Dispatch — Agent Flow |
+| build epic workflow dispatch | [docs/architecture/components/build-epic-workflow-dispatch.md](architecture/components/build-epic-workflow-dispatch.md) | Overview of build-feature.js Epic Loop — Agent Flow. |
 | build orchestration | [docs/architecture/components/build-orchestration.md](architecture/components/build-orchestration.md) | Build orchestration: pre-dispatch sequencing gates, dependency-cycle detection, parallelism limits, file-conflict isolation, and pre-drive reachability checks. |
 | build ticket workflow dispatch | [docs/architecture/components/build-ticket-workflow-dispatch.md](architecture/components/build-ticket-workflow-dispatch.md) | build-ticket.js Workflow Dispatch — Agent Flow |
 | changelog | [docs/architecture/components/changelog.md](architecture/components/changelog.md) | Automated changelog entry management system that tracks feature delivery history with structured YAML entries linked to tickets and commits. |
@@ -241,8 +241,8 @@ task, then pull only those files.
 
 | Name | Path | Description |
 |------|------|-------------|
-| adr numbering | [docs/conventions/adr-numbering.md](conventions/adr-numbering.md) | Overview of Convention: ADR Numbering and Collision Prevention. |
 | PROJECT CONTEXT injection | [docs/conventions/PROJECT_CONTEXT-injection.md](conventions/PROJECT_CONTEXT-injection.md) | Overview of Convention: PROJECT_CONTEXT Injection for Portable Agents. |
+| adr numbering | [docs/conventions/adr-numbering.md](conventions/adr-numbering.md) | Overview of Convention: ADR Numbering and Collision Prevention. |
 
 ## Retrospectives
 
@@ -250,9 +250,9 @@ task, then pull only those files.
 |------|------|-------------|
 | 2026 05 22 epic antigravity support | [docs/retrospectives/2026-05-22-epic-antigravity-support.md](retrospectives/2026-05-22-epic-antigravity-support.md) | Retrospective: Dual Platform Antigravity Support |
 | EPIC ACDrivenDevelopment | [docs/retrospectives/EPIC-ACDrivenDevelopment.md](retrospectives/EPIC-ACDrivenDevelopment.md) | Date: 2026-06-05 |
+| EPIC ACTraceabilityStore | [docs/retrospectives/EPIC-ACTraceabilityStore.md](retrospectives/EPIC-ACTraceabilityStore.md) | Date: 2026-06-04 |
 | EPIC AcPatternEnforcementIsMechanically | [docs/retrospectives/EPIC-AcPatternEnforcementIsMechanically.md](retrospectives/EPIC-AcPatternEnforcementIsMechanically.md) | Retrospective for EPIC-AcPatternEnforcementIsMechanically (ACS-500f) |
 | EPIC AcPipelineDeployGaps | [docs/retrospectives/EPIC-AcPipelineDeployGaps.md](retrospectives/EPIC-AcPipelineDeployGaps.md) | Post-merge retrospective for EPIC-AcPipelineDeployGaps (PR #88), covering |
-| EPIC ACTraceabilityStore | [docs/retrospectives/EPIC-ACTraceabilityStore.md](retrospectives/EPIC-ACTraceabilityStore.md) | Date: 2026-06-04 |
 | EPIC BOPhantomDoneRemediation | [docs/retrospectives/EPIC-BOPhantomDoneRemediation.md](retrospectives/EPIC-BOPhantomDoneRemediation.md) | Overview of Retrospective: EPIC-BOPhantomDoneRemediation. |
 | EPIC CodeQualityHooks | [docs/retrospectives/EPIC-CodeQualityHooks.md](retrospectives/EPIC-CodeQualityHooks.md) | Epic retrospective for EPIC-CodeQualityHooks — jscpd duplicate-code detection and diff-cover test-coverage enforcement hooks. |
 | EPIC CompletionManifestSignoff | [docs/retrospectives/EPIC-CompletionManifestSignoff.md](retrospectives/EPIC-CompletionManifestSignoff.md) | Date: 2026-05-30 |

@@ -14,74 +14,22 @@ Hook contract:
 """
 from __future__ import annotations
 
-import json
-import subprocess
 import sys
 import tempfile
 import textwrap
 import unittest
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-# ---------------------------------------------------------------------------
-# Helpers
-# ---------------------------------------------------------------------------
-
-def _hook_path() -> Path:
-    """Resolve the hook script path relative to this test file.
-
-    The test lives at unit_tests/commit_guardian/test_exception_hook.py,
-    and the hook lives at templates/hooks/check_exception_handling_hook.py.
-    Walk up two levels to reach the repo root, then descend into templates.
-    """
-    repo_root = Path(__file__).resolve().parents[2]
-    return repo_root / "templates" / "hooks" / "check_exception_handling_hook.py"
-
-
-def _run_hook(payload: dict, *, env: dict | None = None) -> subprocess.CompletedProcess:
-    """Run the hook script as a subprocess, sending *payload* on stdin.
-
-    Args:
-        payload: Dict to serialise as JSON on stdin.
-        env: Optional environment overrides (merged onto os.environ).
-
-    Returns:
-        CompletedProcess with stdout, stderr, and returncode.
-    """
-    import os
-    merged_env = os.environ.copy()
-    if env:
-        merged_env.update(env)
-
-    return subprocess.run(
-        [sys.executable, str(_hook_path())],
-        input=json.dumps(payload),
-        capture_output=True,
-        text=True,
-        encoding="utf-8",
-        errors="replace",
-        env=merged_env,
-    )
-
-
-def _make_payload(file_path: str) -> dict:
-    """Build a minimal PostToolUse payload for the hook.
-
-    The hook reads ``tool_response.path`` (or ``tool_input.file_path``)
-    to find the edited file. Claude Code's hook contract passes the path
-    in the tool_response or tool_input depending on the tool.
-
-    Args:
-        file_path: Absolute path string of the file that was just written.
-
-    Returns:
-        A dict matching the shape the hook expects on stdin.
-    """
-    return {
-        "tool": "Write",
-        "tool_input": {"file_path": file_path, "content": "..."},
-        "tool_response": {"path": file_path},
-    }
+# Shared with test_ge_108e.py — see _exception_hook_fixture.py for why these
+# moved out of this file (GE-108e pushed it past its 400-line limit, and the
+# two files must launch the hook identically to be testing the same thing).
+from _exception_hook_fixture import (  # noqa: E402
+    _make_payload,
+    _run_hook,
+    ruff_made_unavailable,
+)
 
 
 # ---------------------------------------------------------------------------
@@ -203,7 +151,7 @@ class TestExceptionHookNonPython(unittest.TestCase):
 
 
 class TestExceptionHookRuffNotFound(unittest.TestCase):
-    """When ruff is not on PATH, hook must exit 2 with an install message."""
+    """When ruff is genuinely absent, hook must exit 2 with an install message."""
 
     def test_ruff_not_found_produces_install_message(self) -> None:
         # covers: GE-108d
@@ -215,11 +163,22 @@ class TestExceptionHookRuffNotFound(unittest.TestCase):
         originally asserted on result.stdout.lower(), which encoded the very
         defect GE-108d exists to fix (see it_requirements: "TWO EXISTING
         TESTS ENCODE THE DEFECT").
+
+        Environment corrected per GE-108e: this test used to simulate "ruff
+        is missing" by emptying PATH alone. That stopped being a simulation
+        of absence once the hook learned to look ruff up as a MODULE --
+        `subprocess.run([sys.executable, "-m", "ruff", ...])` execs the
+        interpreter by absolute path and never consults PATH, so an
+        importable ruff is still found with PATH empty, and the hook
+        correctly reports the clean file as clean. Emptying PATH now means
+        "no console script", which GE-108e exists to distinguish FROM
+        absence. `ruff_made_unavailable()` closes both routes.
         """
-        # We patch subprocess.run inside the hook module.  Because the hook
-        # runs as a subprocess we cannot use unittest.mock.patch directly on
-        # the hook module; instead we manipulate PATH to a sentinel empty dir
-        # so that ruff is genuinely not found.
+        # We cannot patch inside the hook module because the hook runs as a
+        # subprocess; instead we remove BOTH resolution mechanisms from the
+        # child's environment -- see ruff_made_unavailable() for why an
+        # import blocker is used rather than PYTHONNOUSERSITE (which is
+        # install-location dependent and was green here, red on CI).
 
         good_python = textwrap.dedent("""\
             def hello() -> str:
@@ -231,18 +190,18 @@ class TestExceptionHookRuffNotFound(unittest.TestCase):
             f.write(good_python)
             tmp_path = f.name
 
-        # Create an empty temp dir so PATH contains nothing useful
-        with tempfile.TemporaryDirectory() as empty_dir:
+        with ruff_made_unavailable() as blocked_env:
             try:
                 result = _run_hook(
                     _make_payload(tmp_path),
-                    env={"PATH": empty_dir},
+                    env=blocked_env,
                 )
                 self.assertEqual(
                     result.returncode,
                     2,
                     msg=(
-                        f"Expected exit 2 when ruff is not on PATH, "
+                        f"Expected exit 2 when ruff is genuinely absent "
+                        f"(no executable on PATH and no importable module), "
                         f"got {result.returncode}.\n"
                         f"stdout: {result.stdout!r}\nstderr: {result.stderr!r}"
                     ),
@@ -332,6 +291,11 @@ class TestExceptionHookStderrRouting(unittest.TestCase):
         FileNotFoundError branch calls bare print() (stdout) for the install
         instruction, so it is absent from stderr and present on stdout
         instead.
+
+        Environment corrected per GE-108e, for the same reason as
+        TestExceptionHookRuffNotFound above: emptying PATH alone no longer
+        represents an absent ruff now that the hook resolves it as a module,
+        so genuine absence goes through `ruff_made_unavailable()`.
         """
         good_python = textwrap.dedent("""\
             def hello() -> str:
@@ -343,17 +307,18 @@ class TestExceptionHookStderrRouting(unittest.TestCase):
             f.write(good_python)
             tmp_path = f.name
 
-        with tempfile.TemporaryDirectory() as empty_dir:
+        with ruff_made_unavailable() as blocked_env:
             try:
                 result = _run_hook(
                     _make_payload(tmp_path),
-                    env={"PATH": empty_dir},
+                    env=blocked_env,
                 )
                 self.assertEqual(
                     result.returncode,
                     2,
                     msg=(
-                        f"Expected exit 2 when ruff is not on PATH, "
+                        f"Expected exit 2 when ruff is genuinely absent "
+                        f"(no executable on PATH and no importable module), "
                         f"got {result.returncode}.\n"
                         f"stdout: {result.stdout!r}\nstderr: {result.stderr!r}"
                     ),
@@ -452,5 +417,12 @@ DECISION HISTORY
     4. ruff not on PATH → exit 2 with install message
   Written BEFORE the hook implementation (check_exception_handling_hook.py)
   exists so all tests start red (ImportError or subprocess non-zero).
+- 2026-10-07 [test-writer/GE-108e]: Added TestExceptionHookModuleOnlyRuffLookup
+  (3 tests) per GE-108e's test_spec. Reuses the existing _run_hook/_make_payload
+  helpers and the PATH-emptying technique TestExceptionHookRuffNotFound already
+  established. Two arms are RED today (module-only ruff is wrongly reported as
+  missing); the third is a GREEN-ON-ARRIVAL regression fence protecting the
+  genuinely-absent-ruff install-instruction path GE-108d's stderr routing
+  depends on.
 ====================================================================
 """

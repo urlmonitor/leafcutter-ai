@@ -1,0 +1,104 @@
+id: AR-300a-3
+title: "An agent granted nothing receives no abilities section at all"
+component: agent-registry
+components:
+  - agent_registry
+  - template_compiler
+  - skills_system
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given an agent whose declaration grants no abilities -- either the declaration
+    is absent or it is present and empty,
+  When that agent's compiled prompt is read,
+  Then it contains no abilities section, and in particular no section heading
+    followed by an empty list,
+    And the absence is the same for both forms of the declaration, so an author
+      who writes an explicit empty grant gets the same result as one who omits
+      it,
+    And every agent the build compiled a prompt for falls into exactly one of
+      the two cases -- a complete section, or no section -- with none carrying a
+      section that names fewer abilities than it was granted,
+  So an agent is never handed an empty promise, and a reader of any compiled
+    prompt can tell a granted agent from an ungranted one without consulting
+    anything else.
+depends_on:
+  - AR-300a
+doc_links:
+  - path: config/agent_registry.json
+    relationship: describes
+    status: exists
+    relevance: "Holds both shapes today: agents with grants and agents with none. 31 of 60 hold a grant, so roughly half the population is the case this criterion governs."
+  - path: scripts/template_compiler.py
+    relationship: modifies
+    status: exists
+    relevance: "Where the per-agent section is assembled, and therefore where the empty case is decided."
+assigned_agent: python-coder
+estimated_complexity: S
+change_target: code
+risk_surface: internal
+it_requirements:
+  - "Absent declaration and present-but-empty declaration must take the SAME code path to the same result. Do not let a `key missing` branch and a `key == []` branch diverge -- normalise once, at the point the declaration is read, and derive the emit/skip decision from the normalised value."
+  - "The decision is emit-or-omit on the whole section, never emit-a-heading-then-filter-the-entries. A per-ability filter is the shape that silently produces both the bare heading this AC forbids and the short section its third clause forbids."
+  - "Every compiled prompt must be classified into exactly one of the two cases and the two counts reported, so the partition is asserted over the whole population rather than spot-checked. A prompt that is neither (a section shorter than its grant) is a failure, not a third category."
+  - "Evidence is the compiled prompt across every platform root resolved from the declared output root; the registry's notion of who holds a grant is not admissible."
+  - "AR-300d-3-i asserts the same end state reached by revocation. Both must land in the identical branch -- one shared emit/omit decision, not two -- or a revoked agent and an ungranted agent become distinguishable."
+test_spec:
+  - name: test_agent_with_absent_grant_declaration_gets_no_abilities_section
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: integration
+    angle: deployed
+    description: "An agent whose frontmatter omits the grant key entirely compiles to a prompt with no abilities heading and no empty list."
+  - name: test_agent_with_explicitly_empty_grant_gets_the_identical_result
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: integration
+    angle: boundary
+    description: "An explicit empty grant produces a compiled prompt byte-identical in the relevant region to the omitted-key case."
+  - name: test_every_compiled_prompt_is_complete_section_or_no_section
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: integration
+    angle: deployed
+    description: "Across every compiled prompt in every platform root, each falls into exactly one of the two cases; a section naming fewer abilities than the agent's grant fails, and both counts are reported."
+test_rationale: >-
+  The cheapest way to satisfy AR-300a-1 is an unconditional append that comes out
+  empty for the roughly 29 ungranted agents, and that implementation passes any
+  test written only against granted agents. The discriminating evidence is the
+  ungranted agent's compiled prompt, so the descriptors are deployed-angle reads of
+  the negative population plus a whole-population partition assertion -- the latter
+  because a spot-check of one ungranted agent cannot exclude the short-section
+  shape a per-ability filter produces.
+delivers_to: null
+expects_from:
+  ac_id: AR-300a-1
+  contract: "The abilities section whose presence AR-300a-1 requires for granted agents; this criterion governs its absence for the rest"
+origin_agent: BrainCandy
+created: 2026-09-30
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-10-01'
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  WHY THIS EARNS ITS OWN CRITERION. The cheapest way to satisfy AR-300a-1 is to
+  append a section unconditionally and let it come out empty for the 29 agents
+  with no grant. That adds a heading claiming a category of capability to every
+  agent that has none, and it destroys the only cheap signal a reader has for
+  telling the two states apart -- which matters because the existing
+  hand-written section, discussed in AR-300a-4, is exactly such a heading with
+  no delivery behind it.
+
+  THE PARTIAL CASE IS NAMED HERE ON PURPOSE. 'Complete section or no section,
+  never a short one' is the same population claim AR-300a-1 makes, stated from
+  the other end. A section naming 2 of an agent's 4 granted abilities is the
+  failure this clause exists to exclude, and it is the shape a per-ability
+  filter would silently produce.

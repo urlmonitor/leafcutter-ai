@@ -1,0 +1,489 @@
+schema_version: '1.0'
+kind: decision
+id: dec-46476988badbd5e6
+repository_id: leafcutter-ai
+title: Parent link yields, other cycles fail naming the edges, plus a data-fix ticket
+description: Ticket 08 (BO-2600a-5) makes goal_to_epic order an epic by expects_from edges as well as ...
+decision_type: design
+question: Ticket 08 (BO-2600a-5) makes goal_to_epic order an epic by expects_from edges as well as depends_on. On the real
+  AC store that exposes cycles that depends_on alone never had. What should ticket 08 ship for an expects_from edge that closes
+  a cycle, and what follow-up work (if any) goes into separate tickets?
+components: []
+change_target: []
+risk_surface: []
+roadmap_phase: []
+file_globs: []
+repository_wide: true
+selected_option_id: opt.added.1
+supersedes: []
+superseded_by: []
+related: []
+task_context:
+  goal: Ticket 08 (BO-2600a-5) makes goal_to_epic order an epic by expects_from edges as well as depends_on. On the real AC
+    store that exposes cycles that depends_on alone never had. What should ticket 08 ship for an expects_from edge that closes
+    a cycle, and what follow-up work (if any) goes into separate tickets?
+  component_ids: []
+  technologies: []
+  constraints:
+    - '[must] requirement: Every code or AC change is driven by a ticket or the user''s approval (CLAUDE.md ticket mandate);
+      edits to ACs outside ticket 08 need their own ticket and the user''s approval.'
+rationale:
+  text: 'Design decision settled by a human. Kernel ranking (Jev''s per-criterion judgement, evidence not authority; stopped
+    researching because design_judgement after 1 research round(s)): 1. [opt.fail_then_data_ticket] fail naming the edges
+    now; a separate ticket fixes the live cycles in the store (required mean 0.81, 3/6 passed); 2. [opt.fail_naming_edge]
+    fail with an error naming every AC and edge kind; nothing else (required mean 0.70, 3/6 passed); 3. [opt.fail_then_marker_ticket]
+    fail naming the edges now; a separate ticket adds a non-ordering marker (required mean 0.75, 2/6 passed); 4. [opt.added.1]
+    Parent link yields, other cycles fail naming the edges, plus a data-fix ticket (required mean 0.53, 1/6 passed); 5. [opt.parent_link_yields]
+    a child''s structural-parent depends_on yields to the parent''s expects_from on it (required mean 0.47, 1/6 passed); 6.
+    [opt.expects_from_names_only] expects_from only renames ticket dependencies; it does not order the epic (required mean
+    0.26, 0/6 passed); 7. [opt.depends_on_wins] depends_on wins: drop an expects_from edge whose reverse is depends_on (required
+    mean 0.20, 0/6 passed). user chose option [opt.added.1] Parent link yields, other cycles fail naming the edges, plus a
+    data-fix ticket (kernel rank 4 of 7).'
+  origin: template
+assumptions: []
+unresolved_risks: []
+assessment:
+  basis: kernel_ranking
+  design_reason: design_judgement
+  confidence: 0.5333
+  selected_rank: 4
+  ranking:
+    - option_id: opt.fail_then_data_ticket
+      rank: 1
+      required_passed: 3
+      required_total: 6
+      required_mean: 0.805
+      scores:
+        crit.conflict_order_correct: 0.67
+        crit.defined_for_every_shape: 0.78
+        crit.follows_recorded_remediation: 0.86
+        crit.keeps_ac3: 0.88
+        crit.live_cycles_unblocked: 0.76
+        crit.message_actionable: 0.93
+        crit.no_ticket_cycle: 0.65
+        crit.one_shared_rule: 0.75
+        crit.verdict_shows_conflict: 0.92
+        crit.within_ticket_scope: 0.84
+    - option_id: opt.fail_naming_edge
+      rank: 2
+      required_passed: 3
+      required_total: 6
+      required_mean: 0.7017
+      scores:
+        crit.conflict_order_correct: 0.31
+        crit.defined_for_every_shape: 0.8
+        crit.follows_recorded_remediation: 0.22
+        crit.keeps_ac3: 0.78
+        crit.live_cycles_unblocked: 0.05
+        crit.message_actionable: 0.69
+        crit.no_ticket_cycle: 0.81
+        crit.one_shared_rule: 0.68
+        crit.verdict_shows_conflict: 0.82
+        crit.within_ticket_scope: 0.9
+    - option_id: opt.fail_then_marker_ticket
+      rank: 3
+      required_passed: 2
+      required_total: 6
+      required_mean: 0.7467
+      scores:
+        crit.conflict_order_correct: 0.48
+        crit.defined_for_every_shape: 0.71
+        crit.follows_recorded_remediation: 0.11
+        crit.keeps_ac3: 0.72
+        crit.live_cycles_unblocked: 0.7
+        crit.message_actionable: 0.93
+        crit.no_ticket_cycle: 0.75
+        crit.one_shared_rule: 0.27
+        crit.verdict_shows_conflict: 0.89
+        crit.within_ticket_scope: 0.54
+    - option_id: opt.added.1
+      rank: 4
+      required_passed: 1
+      required_total: 6
+      required_mean: 0.5333
+      scores:
+        crit.conflict_order_correct: 0.44
+        crit.defined_for_every_shape: 0.26
+        crit.follows_recorded_remediation: 0.76
+        crit.keeps_ac3: 0.47
+        crit.live_cycles_unblocked: 0.55
+        crit.message_actionable: 0.78
+        crit.no_ticket_cycle: 0.41
+        crit.one_shared_rule: 0.2
+        crit.verdict_shows_conflict: 0.84
+        crit.within_ticket_scope: 0.63
+    - option_id: opt.parent_link_yields
+      rank: 5
+      required_passed: 1
+      required_total: 6
+      required_mean: 0.4683
+      scores:
+        crit.conflict_order_correct: 0.49
+        crit.defined_for_every_shape: 0.15
+        crit.follows_recorded_remediation: 0.14
+        crit.keeps_ac3: 0.38
+        crit.live_cycles_unblocked: 0.11
+        crit.message_actionable: 0.49
+        crit.no_ticket_cycle: 0.46
+        crit.one_shared_rule: 0.15
+        crit.verdict_shows_conflict: 0.84
+        crit.within_ticket_scope: 0.74
+    - option_id: opt.expects_from_names_only
+      rank: 6
+      required_passed: 0
+      required_total: 6
+      required_mean: 0.2617
+      scores:
+        crit.conflict_order_correct: 0.11
+        crit.defined_for_every_shape: 0.56
+        crit.follows_recorded_remediation: 0.22
+        crit.keeps_ac3: 0.05
+        crit.live_cycles_unblocked: 0.26
+        crit.message_actionable: 0.07
+        crit.no_ticket_cycle: 0.65
+        crit.one_shared_rule: 0.58
+        crit.verdict_shows_conflict: 0.13
+        crit.within_ticket_scope: 0.73
+    - option_id: opt.depends_on_wins
+      rank: 7
+      required_passed: 0
+      required_total: 6
+      required_mean: 0.2033
+      scores:
+        crit.conflict_order_correct: 0.27
+        crit.defined_for_every_shape: 0.26
+        crit.follows_recorded_remediation: 0.07
+        crit.keeps_ac3: 0.06
+        crit.live_cycles_unblocked: 0.19
+        crit.message_actionable: 0.05
+        crit.no_ticket_cycle: 0.49
+        crit.one_shared_rule: 0.09
+        crit.verdict_shows_conflict: 0.09
+        crit.within_ticket_scope: 0.66
+final_outcome:
+  status: pending
+  observed_at: null
+  note: ''
+options:
+  - id: opt.depends_on_wins
+    title: 'depends_on wins: drop an expects_from edge whose reverse is depends_on'
+    description: 'Within each cyclic group, drop every expects_from edge whose reverse is a depends_on edge, with a WARNING
+      on a successful run; any cycle left still fails. 5 groups still fail (4 live: ACD-2500d-1/d-3/d-3-i, BO-2400f-3-ii/f-5-iii,
+      BO-2900b-3/c-1/c-4, BO-4300a-1/c-2). Breaks ticket 08 AC-3. In 7 of the 12 pairs the dropped edge is the one the producer''s
+      delivers_to backs, so the consumer is built first. Needs a whole-graph rule in the epic index, separate from the shared
+      per-record rule.'
+    assumptions: []
+    evidence_ids: []
+    proposed_by: claude_code:host_proposed
+    approved_by: user
+  - id: opt.fail_naming_edge
+    title: fail with an error naming every AC and edge kind; nothing else
+    description: Ticket 08 keeps every expects_from edge as a hard ordering edge. A cycle stops generation with an error that
+      names every AC on the cycle (including ACs outside the requested set it passes through), each edge's field (depends_on
+      or expects_from) and whether it is a structural-parent link. 10 live groups then block epic generation over their ACs
+      (e.g. ACD-2500b-1/-i, BO-2900a-1/a-2, BO-4300a-1/c-2, INF-1300d-1/-i, TQ-500g-1-vii/viii); the DK-400 E1/E2 sets are
+      unaffected; the existing BO-4300 epic is not regenerated. No follow-up ticket.
+    assumptions: []
+    evidence_ids: []
+    proposed_by: claude_code:host_proposed
+    approved_by: user
+  - id: opt.fail_then_data_ticket
+    title: fail naming the edges now; a separate ticket fixes the live cycles in the store
+    description: 'Ticket 08 keeps every expects_from edge as a hard ordering edge. A cycle stops generation with an error
+      that names every AC on the cycle (including ACs outside the requested set it passes through), each edge''s field (depends_on
+      or expects_from) and whether it is a structural-parent link. 10 live groups then block epic generation over their ACs
+      (e.g. ACD-2500b-1/-i, BO-2900a-1/a-2, BO-4300a-1/c-2, INF-1300d-1/-i, TQ-500g-1-vii/viii); the DK-400 E1/E2 sets are
+      unaffected; the existing BO-4300 epic is not regenerated. A separate, user-approved ticket then resolves the 10 live
+      groups by shape: remove sibling depends_on edges that point the wrong way (e.g. BO-2900a-2 -> a-1); two-way handshakes
+      and child/parent cycles follow the user''s answers on what the edges mean. Not ''drop or invert the wrong edge in each''
+      - several pairs have no wrong edge.'
+    assumptions: []
+    evidence_ids: []
+    proposed_by: claude_code:host_proposed
+    approved_by: user
+  - id: opt.fail_then_marker_ticket
+    title: fail naming the edges now; a separate ticket adds a non-ordering marker
+    description: 'Ticket 08 keeps every expects_from edge as a hard ordering edge. A cycle stops generation with an error
+      that names every AC on the cycle (including ACs outside the requested set it passes through), each edge''s field (depends_on
+      or expects_from) and whether it is a structural-parent link. 10 live groups then block epic generation over their ACs
+      (e.g. ACD-2500b-1/-i, BO-2900a-1/a-2, BO-4300a-1/c-2, INF-1300d-1/-i, TQ-500g-1-vii/viii); the DK-400 E1/E2 sets are
+      unaffected; the existing BO-4300 epic is not regenerated. A separate ticket adds a machine-readable flag on an expects_from
+      entry (e.g. build_order: false), honoured by _prerequisite_ac_ids and therefore by the generator, the epic index and
+      check_ac_circular_deps; authors mark relation-only edges (today 4 are marked in prose only, e.g. TQ-600a-5 -> TQ-600a-2).
+      Needs a schema change.'
+    assumptions: []
+    evidence_ids: []
+    proposed_by: claude_code:host_proposed
+    approved_by: user
+  - id: opt.parent_link_yields
+    title: a child's structural-parent depends_on yields to the parent's expects_from on it
+    description: In the epic index, a child's depends_on on its own structural parent is not an ordering edge when the parent's
+      expects_from names that child (the generator already drops parent edges, _gtfa_store.py:351-361); the child (producer)
+      is built first. Resolves 7 of 15 groups; 8 remain (6 live) and fail naming the edges. Conflicts with KI-ACD-021's view
+      that a parent can be a real build predecessor.
+    assumptions: []
+    evidence_ids: []
+    proposed_by: claude_code:host_proposed
+    approved_by: user
+  - id: opt.expects_from_names_only
+    title: expects_from only renames ticket dependencies; it does not order the epic
+    description: Revert expects_from from ordering and cycle detection; use it only to translate a ticket's depends_on entry
+      to the epic's NN_ name. Breaks AC-3 (the producer is no longer placed first). A mutual pair inside one epic gives two
+      tickets that depend on each other; /build-feature never releases either, and its recheck reports them as discovered_after_planning,
+      which names the wrong cause.
+    assumptions: []
+    evidence_ids: []
+    proposed_by: claude_code:host_proposed
+    approved_by: user
+  - id: opt.added.1
+    title: Parent link yields, other cycles fail naming the edges, plus a data-fix ticket
+    description: 'Ticket 08: the ordering graph is depends_on plus expects_from, except that a child''s depends_on on its
+      own structural parent is not an ordering edge when the parent''s expects_from names that child (the user''s answer:
+      the parent link is hierarchy only and the parent''s expects_from decides; the child is built first). This resolves 7
+      of the 15 cycle groups without dropping any expects_from edge. Any remaining cycle fails generation with an error naming
+      every AC on the cycle (including ACs outside the requested set), each edge''s field (depends_on or expects_from) and
+      whether it is a structural-parent link. A separate, user-approved data-fix ticket resolves the remaining live cycles
+      in the AC store (wrong-way sibling depends_on edges, two-way handshakes).'
+    assumptions: []
+    evidence_ids: []
+    proposed_by: user
+    approved_by: user
+criteria:
+  - id: crit.keeps_ac3
+    question: Does the option keep ticket 08 AC-3 and BO-2600a-5, so that every expects_from edge between two ACs in the epic
+      either orders the epic producer-first or stops generation, and none is dropped while an epic is still written?
+    priority: required
+    kind: design_judgement
+    evidence_ids:
+      - ev-e28abbce6cf68813
+      - ev-ea728583eccc440b
+      - ev-6ed1e7ed97bf8398
+      - ev-0f2dd1179bc3647a
+      - ev-c89c04b599fc44df
+  - id: crit.no_ticket_cycle
+    question: Is every epic the option writes free of ticket-level depends_on cycles, so /build-feature's planner can eventually
+      release every ticket?
+    priority: required
+    kind: design_judgement
+    evidence_ids:
+      - ev-7acf4633935e48d9
+      - ev-ea728583eccc440b
+      - ev-02378d4a5e97cc0c
+      - ev-8a9d8f97eea58b07
+      - ev-c89c04b599fc44df
+  - id: crit.conflict_order_correct
+    question: For an epic written over one of the store's cycles, is each producer (the AC whose delivers_to names the consumer,
+      or whose contract the consumer's expects_from cites) built before its consumer - or does the option write no epic for
+      that cycle?
+    priority: required
+    kind: design_judgement
+    evidence_ids:
+      - ev-c89c04b599fc44df
+      - ev-78b1e123e612fb18
+      - ev-6ed1e7ed97bf8398
+      - ev-abafb7bd6177ae3c
+      - ev-7acf4633935e48d9
+  - id: crit.defined_for_every_shape
+    question: Is the option's result defined and independent of traversal order for every cycle shape in the store (expects_from-only
+      2-cycles, 3- and 4-node cycles, a cycle through an AC outside the requested set)?
+    priority: required
+    kind: design_judgement
+    evidence_ids:
+      - ev-78b1e123e612fb18
+      - ev-8a9d8f97eea58b07
+      - ev-1cafceba41896bee
+      - ev-abafb7bd6177ae3c
+      - ev-7acf4633935e48d9
+  - id: crit.verdict_shows_conflict
+    question: When a cycle is found, does the run's outcome (exit status or verdict) show it, rather than a WARNING on a successful
+      run?
+    priority: required
+    kind: design_judgement
+    evidence_ids:
+      - ev-0f2dd1179bc3647a
+      - ev-f62f8d6fb5b8983b
+      - ev-c89c04b599fc44df
+      - ev-78b1e123e612fb18
+      - ev-e76679f1c524e356
+  - id: crit.message_actionable
+    question: Does the report name every AC on the cycle (including ACs outside the set it passes through) and, for each edge,
+      its field (depends_on or expects_from) and whether it is a structural-parent link?
+    priority: required
+    kind: design_judgement
+    evidence_ids:
+      - ev-78b1e123e612fb18
+      - ev-02378d4a5e97cc0c
+      - ev-c89c04b599fc44df
+      - ev-abafb7bd6177ae3c
+      - ev-8a9d8f97eea58b07
+  - id: crit.within_ticket_scope
+    question: Can ticket 08 land with this option without editing any AC record (AC edits go to their own ticket)?
+    priority: supporting
+    kind: design_judgement
+    evidence_ids:
+      - ev-e28abbce6cf68813
+      - ev-0f2dd1179bc3647a
+      - ev-c89c04b599fc44df
+      - ev-ea728583eccc440b
+      - ev-78b1e123e612fb18
+  - id: crit.one_shared_rule
+    question: Do the ticket generator and the epic index still apply the same edge rule, including on a cycle (ticket 08 AC-6)?
+    priority: supporting
+    kind: design_judgement
+    evidence_ids:
+      - ev-e28abbce6cf68813
+      - ev-02378d4a5e97cc0c
+      - ev-0f2dd1179bc3647a
+      - ev-ea728583eccc440b
+      - ev-78b1e123e612fb18
+  - id: crit.live_cycles_unblocked
+    question: Once the option and any follow-up ticket it names are done, can epics be generated over the 10 live cyclic groups?
+    priority: supporting
+    kind: design_judgement
+    evidence_ids:
+      - ev-78b1e123e612fb18
+      - ev-0f2dd1179bc3647a
+      - ev-c89c04b599fc44df
+      - ev-e28abbce6cf68813
+      - ev-8a9d8f97eea58b07
+  - id: crit.follows_recorded_remediation
+    question: 'Does it follow KI-ACD-20260929: decide which edge is spurious and delete it in the store, rather than let the
+      generator choose?'
+    priority: supporting
+    kind: design_judgement
+    evidence_ids:
+      - ev-f62f8d6fb5b8983b
+      - ev-0f2dd1179bc3647a
+      - ev-7acf4633935e48d9
+      - ev-78b1e123e612fb18
+      - ev-1cafceba41896bee
+evidence:
+  - id: ev-78b1e123e612fb18
+    locator: independent review 2026-10-07, scratchpad t8_replay_classify.py over the worktree store
+    category: task_context
+    content_hash: d846be27c448ca49153c5a2c29cb19ec1b9ac49f988727cb0729abfa48e86283
+    verification: unverified
+    relevance: null
+    source_version: null
+  - id: ev-6ed1e7ed97bf8398
+    locator: scripts/ac_store/_gtfa_store.py:362-373 at HEAD; BO-4300 epic tickets
+    category: existing_patterns
+    content_hash: 36a0e80f909651d6ffce6b5cd1242a4ad6a6c567e0f01eeddb821784ba538c30
+    verification: unverified
+    relevance: null
+    source_version: null
+  - id: ev-e28abbce6cf68813
+    locator: tickets/00_inbox/epics/EPIC-BuildToolingRunsThrough/08_TICKET-20261006-ExpectsFromEdgesGetEpicPrefixes.md:56-92
+    category: task_context
+    content_hash: f18401677f4121cde041d7289b86a171250913683260b9b7e384842d27900319
+    verification: unverified
+    relevance: null
+    source_version: null
+  - id: ev-02378d4a5e97cc0c
+    locator: docs/reference/ac-schema.md:44,623; _gtfa_store.py:323-325; epic_dependencies.py:73
+    category: authoritative_guidance
+    content_hash: 034eedf2bf66f9c2402a5c6a28f229278ba3f123f5f1c62a56223669ea7111f7
+    verification: unverified
+    relevance: null
+    source_version: null
+  - id: ev-f62f8d6fb5b8983b
+    locator: docs/known-issues/ac-driven-dev/open-high-ki-acd-20260929-cross-field-dependency-cycle-is-invisible-to-both-tools.md:45-47,70-72
+    category: prior_decisions
+    content_hash: 04dac2d63ec60e1205f8b197783f0fe856c2bee9743c406c17ad5323d0b890b9
+    verification: unverified
+    relevance: null
+    source_version: null
+  - id: ev-1cafceba41896bee
+    locator: KI-ACD-021; KI-ACD-20260921; commit 92923a262; TQ-600a-5.yaml:142
+    category: prior_decisions
+    content_hash: a42b79dca550f8bc88175b2e99a63bb5c5e750de7d1be55136d8e4a3d424739a
+    verification: unverified
+    relevance: null
+    source_version: null
+  - id: ev-abafb7bd6177ae3c
+    locator: independent review 2026-10-07, scratchpad t8_corrob.py
+    category: task_context
+    content_hash: 2aabf39e868c762eba86dcbd4193db2420476e2080d2e494bdd7c1b3131f32ec
+    verification: unverified
+    relevance: null
+    source_version: null
+  - id: ev-8a9d8f97eea58b07
+    locator: independent review 2026-10-07, scratchpad t8_real_sort.py; epic_dependencies.py:338-344
+    category: task_context
+    content_hash: adf33a4df039ef5fbb226863cfad4a38d3a7609355321c7aa4ae0fcd53fff767
+    verification: unverified
+    relevance: null
+    source_version: null
+  - id: ev-0f2dd1179bc3647a
+    locator: docs/known-issues/ac-driven-dev/open-high-ki-acd-20260929-cross-field-dependency-cycle-is-invisible-to-both-tools.md#L16-L44
+      (§KI-ACD-20260929 — a dependency cycle spanning `depends_on` …)
+    category: existing_patterns
+    content_hash: 38e4eb8eb92236db32a24d04403026ec9a02e0f3e239b3766101fb65ca0f89bf
+    verification: source_verified
+    relevance: 0.9
+    source_version:
+      commit: 7924f5d06d81d19cd6abb3ecc7028135ed3853d7
+      dirty: false
+  - id: ev-c89c04b599fc44df
+    locator: scripts/ac_store/_gtfa_store.py#L273-L310 (def _build_ticket_depends_on)
+    category: existing_patterns
+    content_hash: 5ce76b4b105003cc8358ba03f8392ed1ad0de36ded91ea19fb7cb3edd5b28234
+    verification: source_verified
+    relevance: 0.85
+    source_version:
+      commit: 7924f5d06d81d19cd6abb3ecc7028135ed3853d7
+      dirty: false
+  - id: ev-7acf4633935e48d9
+    locator: docs/known-issues/ac-driven-dev/open-low-ki-acd-015.md#L16-L52 (§KI-ACD-015 — Epic ordering reads `depends_on`
+      only, so `exp…)
+    category: existing_patterns
+    content_hash: 43243b7f60eb801e817df54a52b5b7fb373bcb80ab9e395b91d0bf096879eae6
+    verification: source_verified
+    relevance: 0.77
+    source_version:
+      commit: 7924f5d06d81d19cd6abb3ecc7028135ed3853d7
+      dirty: false
+  - id: ev-ea728583eccc440b
+    locator: scripts/goal_to_epic.py#L429-L453 (module level)
+    category: existing_patterns
+    content_hash: a85a4b932b25cdc5858768ca6bd0b9b3899427c10e19e1c0d5322c0526b84ed0
+    verification: source_verified
+    relevance: 0.69
+    source_version:
+      commit: 7924f5d06d81d19cd6abb3ecc7028135ed3853d7
+      dirty: false
+  - id: ev-e76679f1c524e356
+    locator: scripts/ac_store/epic_pipeline.py#L222-L246 (def build_epic_from_ids)
+    category: existing_patterns
+    content_hash: 14bc33275da8b638a7781344728dcf326242db404f62e891542e5f02f8ea6b7c
+    verification: source_verified
+    relevance: 0.63
+    source_version:
+      commit: 7924f5d06d81d19cd6abb3ecc7028135ed3853d7
+      dirty: false
+precedents_considered: []
+approval:
+  approval_status: approved
+  approved_by: human:user
+  approved_at: '2026-10-07T07:06:03Z'
+  note: ''
+provenance:
+  origin: learned
+  created_by_capability: decision
+  created_at: '2026-10-07T07:06:03Z'
+  run_id: run-e02f770927304a29
+  root_task_id: task-72e8d886ac144e6e
+  langfuse_trace_id: 663c2e435b6d690f6cc1776d4bd9dd77
+  langfuse_trace_url: null
+  repository_revision:
+    commit: null
+    dirty: false
+  policy_version: null
+  template_version: decision.assess@1
+  model_version: jev-latest
+  kernel_version: 0.1.0.dev0
+  decision_versions:
+    options: 22c19237dd7b
+    criteria: c3b07837d247
+    templates: decision.assess@1
+corrections: []

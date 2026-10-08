@@ -6,7 +6,7 @@ components:
 title: "Registry declares every skill an agent invokes, with invocation mode"
 component: infrastructure
 level: L2
-status: active
+status: superseded_by
 work_status: todo
 criteria: |
   Given an agent registry entry for an agent that invokes skills
@@ -43,9 +43,74 @@ delivers_to:
 expects_from: null
 origin_agent: business-analyst-v3
 created: 2026-06-05
-amended_by: []
-superseded_by: null
+amended_by:
+  - reason: >-
+      2026-09-30, business-analyst: SUPERSEDED, not amended. See notes for the
+      full audit trail. Superseded by AR-300c-1 (single declaration, in the
+      agent's own definition beside its permitted tools) and AR-300c-3 (the
+      central record becomes derived and a disagreement is reported). Never
+      implemented -- work_status was todo for 117 days -- so there is no shipped
+      behaviour to preserve by amendment.
+superseded_by:
+  - AR-300c-1
+  - AR-300c-3
 covered_by: [INF-600a-1-i]
 implemented_by: []
 change_target: schema
 risk_surface: contract_boundary
+notes: |
+  SUPERSEDED 2026-09-30 BY AR-300c-1 AND AR-300c-3. Audit trail.
+
+  WHAT THIS RECORD SAID. Lines 23-25 of the criteria made the central registry's
+  `skills_invoked` array the source of truth for an agent's abilities, and
+  retained `skills_used` "as an alias for backward compatibility but no longer
+  the sole source of truth".
+
+  WHY IT IS SUPERSEDED RATHER THAN AMENDED. Three reasons, in order of weight:
+
+    1. DIRECTIONAL OPPOSITION, NOT A DETAIL. The user has since decided that an
+       agent's abilities are declared in the agent's own definition, beside the
+       declaration of what it is permitted to use, and that the central record's
+       ability fields become derived and validated rather than authoritative.
+       This record says the central field IS the truth. There is no wording of
+       this record that survives that decision -- amending it would replace its
+       entire load-bearing claim, which is a supersession wearing an
+       amendment's clothes.
+    2. IT IS THE ORIGIN OF A MEASURED DEFECT. The two-field arrangement this
+       record established is a half-completed migration, and the halves now hold
+       different populations: 32 agents in `skills_used`, 40 in
+       `skills_invoked`, 12 present only in the latter. Repairing delivery alone
+       would leave those 12 receiving nothing. AR-300c-2 owns the union
+       migration and AR-300c-2-i names the 12.
+    3. NOTHING WAS BUILT ON IT. work_status was `todo` from 2026-06-05 to
+       2026-09-30. No implementation depends on the alias arrangement, so
+       nothing is orphaned by retiring the record whole.
+
+  WHY LEAVING IT ACTIVE WAS NOT AN OPTION. It was at readiness `reviewed`. Two
+  live reviewed statements about where the truth of an ability grant lives is the
+  same defect AR-300c exists to end, relocated one level up into the AC store.
+
+  WHAT SURVIVES, AND WHERE IT WENT.
+
+    - "One authoritative account of an agent's abilities" -> AR-300c-1, re-homed
+      onto the agent's own declaration.
+    - "The other copy must not be believed over it" -> AR-300c-3, which reports a
+      disagreement between the derived central copy and the declaration, and
+      keeps the declaration's answer in the compiled prompt.
+    - "An ability grant carries when it applies, not only a bare name"
+      (the mode/condition fields) -> AR-300a-2, which requires that distinction
+      to survive into the prompt the agent actually receives.
+
+  ITS CHILD IS LEFT ACTIVE, DELIBERATELY. INF-600a-1-i requires that an
+  unresolvable ability id be rejected with the packaged-versus-project-local
+  distinction spelled out. That is not a claim about where truth lives, so it is
+  not part of the contradiction and is not superseded here. The same obligation
+  re-homed onto the declaration is AR-300c-3-i, worded closely on purpose. The
+  two must not both be implemented against different sources -- for the IT PO to
+  resolve, either by superseding INF-600a-1-i in favour of AR-300c-3-i or by
+  re-parenting it.
+
+  CROSS-REFERENCES. AR-300c (the L1 carrying the user's decision) names this
+  record as a direct contradiction to be reconciled explicitly; AR-300 (the L0)
+  flags it as a standing record that must not be silently overridden. This note
+  is that reconciliation.

@@ -74,7 +74,9 @@ ARCHITECTURE: verify_red_baseline itself (and the ``_run_pytest_and_parse``
 
 from __future__ import annotations
 
+import importlib.util
 import subprocess
+import sys
 from pathlib import Path
 
 from _fl_common import (
@@ -402,17 +404,34 @@ def _red_baseline_verdict(
 
     Returns:
         Dict with exactly the keys ``gate_passed``, ``reason``, ``red``,
-        ``green_at_baseline``, ``inconclusive``, ``preexisting``, ``refused``.
+        ``green_at_baseline``, ``inconclusive``, ``preexisting``, ``refused``,
+        plus ``interpreter`` (``sys.executable``, the Python that judged the tests).
     """
     return {
         "gate_passed": gate_passed,
         "reason": reason,
+        "interpreter": sys.executable,
         "red": red or [],
         "green_at_baseline": green_at_baseline or [],
         "inconclusive": inconclusive or [],
         "preexisting": preexisting or [],
         "refused": refused or [],
     }
+
+
+def _interpreter_unusable_verdict() -> dict | None:
+    """Return a refusal verdict when this interpreter cannot import pytest.
+
+    Tests run as ``sys.executable -m pytest``; if that interpreter lacks pytest
+    every test would ERROR and surface as a misleading
+    ``no_red_outcome_among_new_tests`` (TQ-500f-3-ii).
+
+    Returns:
+        A ``test_interpreter_unusable`` verdict, or ``None`` when pytest imports.
+    """
+    if importlib.util.find_spec("pytest") is not None:
+        return None
+    return _red_baseline_verdict(gate_passed=False, reason="test_interpreter_unusable")
 
 
 # ---------------------------------------------------------------------------
