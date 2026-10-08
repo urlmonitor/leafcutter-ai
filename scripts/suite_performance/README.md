@@ -87,11 +87,15 @@ for the full measured evidence and the read-vs-mutate boundary this fixture sits
 - **How `_MANUAL` exclusion works (TQ-600a-13).** The plugin
   `pytest_manual_deselect.py` (registered via `-p` in `pytest.ini`'s `addopts`) auto-marks
   every test whose name -- the node id up to any `[` -- ends in `_MANUAL` with the
-  registered `manual` marker, and `addopts` carries `-m "not manual"`, so the default
+  registered `manual` marker, and `addopts` carries `-m "not manual and not timing_ratio"`, so the default
   collection deselects them. No decorator or list is needed; the suffix alone is the rule.
   Opt in with `python -m pytest -m manual tests/ unit_tests/` (a command-line `-m`
   overrides the one in `addopts`); `-m "manual or not manual"` collects everything.
 - **Known, accepted gap.** The excluded `_MANUAL` tests currently run nowhere in CI: the
   scheduled (nightly) run that TQ-600a-13-i requires does not exist yet, so do not read
   the exclusion as "covered elsewhere".
+- **`timing_ratio` tests.** Tests marked `timing_ratio` are excluded from the default run
+  and run in `Post-merge timing suite` (`.github/workflows/post-merge-timing.yml`) after
+  every merge to main and on a 12-hour heartbeat; that suite goes red on failure and never
+  holds a merge. Opt in locally with `python -m pytest -m timing_ratio <path>`.
 - Locking is POSIX-only (`fcntl.flock`); there is no Windows fallback.

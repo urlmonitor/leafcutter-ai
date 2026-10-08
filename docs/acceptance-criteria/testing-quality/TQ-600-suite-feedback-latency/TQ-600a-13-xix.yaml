@@ -6,7 +6,7 @@ component: testing-quality
 level: L3
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 readiness: approved
 priority: high
 roadmap_phase: phase_1
@@ -237,8 +237,12 @@ amended_by:
   agent: approve_acs
   date: '2026-10-08'
 superseded_by: null
-covered_by: []
-implemented_by: []
+covered_by:
+- unit_tests/suite_performance/test_tq_600a_13_xix.py
+implemented_by:
+- pytest.ini
+- unit_tests/ac_store/test_tq_600a_11.py
+- .github/workflows/post-merge-timing.yml
 change_target:
   - config
   - pipeline

@@ -110,9 +110,15 @@ def _write_project(tmp, new_manual_name):
 class TestTq600a13(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        # Three real full-suite collections, shared by every test below.
+        # Four real full-suite collections, shared by every test below. The fourth
+        # (`-m timing_ratio`, TQ-600a-13-xix) is a real collection, not default/manual
+        # subtracted from the unfiltered set: a residual derived by subtraction would make
+        # the partition's union check true by construction.
         cls.default_rc, cls.default_ids, cls.default_out = _collect(["tests/", "unit_tests/"], REPO_ROOT)
         cls.optin_rc, cls.optin_ids, cls.optin_out = _collect(["tests/", "unit_tests/", "-m", "manual"], REPO_ROOT)
+        cls.timing_rc, cls.timing_ids, cls.timing_out = _collect(
+            ["tests/", "unit_tests/", "-m", "timing_ratio"], REPO_ROOT
+        )
         cls.all_rc, cls.all_ids, cls.all_out = _collect(
             ["tests/", "unit_tests/", "-m", "manual or not manual"], REPO_ROOT
         )
@@ -135,16 +141,25 @@ class TestTq600a13(unittest.TestCase):
         """AC-13: the exclusion is a partition, never a deletion.
 
         Must be implemented: `-m manual` collects exactly the `_MANUAL` tests; default and
-        opt-in are disjoint and their union equals the unfiltered collection. The population
+        opt-in are disjoint and, together with the timing lane (`-m timing_ratio`, TQ-600a-13-xix,
+        the only other deliberate exclusion from the default run), their union equals the
+        unfiltered collection. The three collections are pairwise disjoint. The population
         is derived from the unfiltered collection, never hardcoded.
         """
         self.assertTrue(self.all_manual, f"unfiltered collection found no _MANUAL test:\n{self.all_out[-800:]}")
         self.assertEqual(
             self.all_manual, sorted(self.optin_ids), "opt-in `-m manual` must collect exactly every _MANUAL test"
         )
-        default, optin = set(self.default_ids), set(self.optin_ids)
+        self.assertTrue(self.timing_ids, f"timing lane collected nothing:\n{self.timing_out[-800:]}")
+        default, optin, timing = set(self.default_ids), set(self.optin_ids), set(self.timing_ids)
         self.assertEqual(set(), default & optin, "default and opt-in collections must be disjoint")
-        self.assertEqual(set(self.all_ids), default | optin, "default + opt-in must equal the unfiltered collection")
+        self.assertEqual(set(), default & timing, "default and timing-lane collections must be disjoint")
+        self.assertEqual(set(), optin & timing, "opt-in and timing-lane collections must be disjoint")
+        self.assertEqual(
+            set(self.all_ids),
+            default | optin | timing,
+            "default + opt-in + timing lane must equal the unfiltered collection",
+        )
 
     def test_ac13_documented_exclusion_agrees_with_the_real_default_collection(self):
         # covers: TQ-600a-13
