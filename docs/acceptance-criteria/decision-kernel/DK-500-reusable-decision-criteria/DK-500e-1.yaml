@@ -1,0 +1,107 @@
+id: DK-500e-1
+title: Jev states whether the reused criteria miss something the decision needs, and the verdict reaches the approval
+component: decision-kernel
+components:
+- decision_kernel
+level: L2
+status: active
+readiness: approved
+req_status: draft
+priority: high
+work_status: todo
+roadmap_phase: phase_kernel_2_knowledge
+criteria: |
+  Given a design decision on a storage format whose findings say the format must be readable into the knowledge graph,
+  And the reused criteria of cat-1dc11c5a2ffa7310, cat-d15d52392d7aa94c, cat-52b16c7b5a23106f, cat-d6ce5f78c181ebd1 and cat-1df63b670163b54e, none of which asks about the knowledge graph,
+  When Jev judges whether the reused criteria cover what the decision needs,
+  Then the verdict states that a concern is missing and names it: readability into the knowledge graph,
+  And the verdict is shown beside the proposals at the approval of proposals,
+  And for a decision whose findings raise no concern outside the reused criteria, the verdict states that nothing is missing and is shown the same way.
+depends_on:
+- DK-500e
+- DK-500d-1
+covered_by:
+- DK-500e-1-i
+- DK-500e-1-ii
+implemented_by: []
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to:
+  agent: python-coder
+  contract: 'Gap verdict: {status: gap|no_gap|not_judged, missing_concerns: [string], reason: string|null}. Consumed by gap drafting (DK-500e-2) and shown at the approval of proposals (DK-500d-2).'
+expects_from:
+  ac_id: DK-500d-1
+  contract: Reused criteria linked to their category ids (DK-500d-1 delivers_to), plus the run's findings and task constraints as the concern list.
+change_target: code
+risk_surface: contract_boundary
+it_requirements:
+- The gap judgement is bounded per ADR-053 section 2, and Jev never writes concern text. The concerns judged are a finite list fixed before this step from the run's findings and task constraints. Jev answers, per concern, whether any reused criterion covers it, and the missing concerns are those concerns verbatim.
+- It is one Jev call (batched questions), counted against the run's Jev budget, and it is made only when at least one category was reused; an empty library makes no call (DK-500e-3).
+- 'Verdict contract {status: gap|no_gap|not_judged, missing_concerns: [string], reason: string|null}. It is shown beside the proposals at the approval, recorded in the run report and emitted as a trace event on the existing tracer.'
+- 'If the findings carry no explicit concern list, the verdict is not_judged with reason no_concerns_listed, never no_gap (see caveat: confirm the findings artifact carries such a list).'
+- 'The verdict is evidence, not authority (ADR-060): it never removes a reused criterion and never approves anything.'
+test_required: true
+test_spec:
+- name: test_missing_concern_named
+  target_dir: tests/kernel/capabilities/
+  framework: pytest
+  type: behavioral
+  angle: criterion
+  description: With five reused criteria and findings requiring knowledge-graph readability, the verdict is gap and names that concern.
+- name: test_verdict_shown_at_approval
+  target_dir: tests/kernel/capabilities/
+  framework: pytest
+  type: behavioral
+  angle: criterion
+  description: The verdict appears beside the proposals in the approval payload.
+- name: test_no_gap_verdict_when_nothing_missing
+  target_dir: tests/kernel/capabilities/
+  framework: pytest
+  type: behavioral
+  angle: criterion
+  description: For findings raising no concern outside the reused criteria, the verdict is no_gap and is shown the same way.
+- name: test_concerns_come_from_findings_not_jev
+  target_dir: tests/kernel/capabilities/
+  framework: pytest
+  type: behavioral
+  angle: boundary
+  description: Missing concerns are always verbatim findings concerns; a scripted Jev answer naming any other text is rejected.
+test_rationale: Run the decision capability through the public run/resume boundary with a scripted Jev provider and a recording host port over a fixture category library; assert the approval payload, the run report, trace events and call counts rather than internal helpers.
+doc_links:
+- path: docs/decisions/dec-93c1c730463c1f3c.yaml
+  relationship: governs
+  status: exists
+- path: docs/product-truth/flows/leafcutter/decision-forming.flow.json
+  relationship: implements
+  status: exists
+- path: docs/architecture/adrs/ADR-053-intelligence-selection-deterministic-jev-llm-human.md
+  relationship: constrains
+  status: exists
+- path: docs/architecture/components/decision-kernel.md
+  relationship: describes
+  status: exists
+origin_agent: business-analyst
+created: 2026-10-04
+amended_by:
+- reason: it-po-technical-enrichment
+  date: '2026-10-05'
+  by: it-po
+  summary: 'Technical enrichment: assigned_agent confirmed, estimated_complexity, change_target, risk_surface, it_requirements, contracts, doc_links and the test contract set; readiness draft -> reviewed. BA criteria unchanged.'
+superseded_by: null
+notes: |
+  SETTLED BY THE FLOW (PO open item "whether the gate shows Jev's gap verdict"): yes. decision-forming v3 judge-gap: "Its verdict, gap or no gap, goes with the proposals to the approval gate"; approve-proposals: "reused ones marked with their category and Jev's gap verdict beside them".
+  USER REQUIREMENT (original idea): "we only need LLMs to generate further categories if jev thinks some are missing to make better decision".
+  The example is grounded in dec-93c1c730463c1f3c, whose crit.projectable_as_native_kind no published mock category asks. Testable with a controlled Jev provider.
+  FLOW BACK-LINK (for step.implements, to be applied by the store owner): leafcutter/decision-forming: judge-gap.
+  Authored by the business-analyst stage of /plan-feature (route strategic) under decision dec-93c1c730463c1f3c; readiness draft, no product approval implied.
+product_truth:
+  - flow: leafcutter/decision-forming
+    node: judge-gap
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: leafcutter/decisions
+    entities:
+      - CriterionCategory
+    source: real
+    asof: '2026-10-04'

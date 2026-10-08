@@ -93,7 +93,15 @@ def _load_yaml_safe(content: str, source_label: str) -> dict | None:
         import yaml  # type: ignore[import]
 
         try:
-            data = yaml.safe_load(content)
+            # Reverted to the pure-Python loader (loader-audit, TQ-600a-11
+            # fix-pass, 2026-10-07): a parse error here is fail-open (file
+            # skipped, per this function's own docstring) so a more
+            # permissive parser silently narrows implements_pattern reference
+            # validation and the pattern-deletion safety check. Routed
+            # through the shared _ac_store_index cache for the full-store
+            # case (already reverted at its own call site) -- no independent
+            # speed case for the fast loader at this call site.
+            data = yaml.load(content, Loader=yaml.SafeLoader)
             return data if isinstance(data, dict) else None
         except yaml.YAMLError as exc:
             print(

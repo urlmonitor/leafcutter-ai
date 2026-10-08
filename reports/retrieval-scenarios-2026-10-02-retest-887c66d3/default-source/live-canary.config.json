@@ -1,0 +1,24 @@
+{
+  "paths": {
+    "run_root": "C:\\Users\\Hendrik\\AppData\\Local\\Temp\\leafcutter-default-source-887c66d3-9eqle_um\\runs",
+    "registry": "C:\\Users\\Hendrik\\AppData\\Local\\Temp\\leafcutter-default-source-887c66d3-9eqle_um\\source\\config\\capability_registry.json"
+  },
+  "limits": {
+    "max_jev_calls": 8,
+    "max_active_seconds": 120,
+    "max_retries": 0,
+    "max_concurrent_native": 1
+  },
+  "jev": {
+    "max_state_chars": 30000,
+    "max_questions_per_call": 20,
+    "timeout_seconds": 30
+  },
+  "langfuse": {
+    "enabled": false
+  },
+  "data_policy": {
+    "send_repo_excerpts_to_jev": true,
+    "telemetry_excerpts": "none"
+  }
+}

@@ -1,0 +1,9 @@
+{
+  "evidence_needs": [
+    {
+      "id": "need-1",
+      "category": "prior_decisions",
+      "question": "Which store does the cache use?"
+    }
+  ]
+}

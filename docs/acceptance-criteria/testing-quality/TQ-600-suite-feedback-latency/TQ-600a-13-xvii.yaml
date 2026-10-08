@@ -1,0 +1,117 @@
+id: TQ-600a-13-xvii
+components:
+  - testing_quality
+title: "When the required hold check itself is broken, the owner has a documented, rehearsed and recorded way to merge its fix"
+component: testing-quality
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given `Post-merge suite status` is a required check (TQ-600a-13-x),
+  And the ways it can break so that no exemption helps: it errors on every pull request,
+    it never reports because `pull_request_target` runs are blocked, the correctness
+    workflow cannot start, or a fix to the hold is itself held by the hold — and in each
+    case every merge in the repository stops,
+  And the fact that every agent acts as the same administrator account as the owner, so
+    any standing bypass granted to that account is a bypass every agent holds for every
+    required check,
+  When the owner judges the hold check broken and follows the documented break-glass
+    procedure,
+  Then the procedure lets a pull request that repairs the hold merge without disabling,
+    weakening or bypassing any of the other required checks,
+  And it uses a deliberate, visible change — removing only `Post-merge suite status` from
+    the ruleset's required checks — rather than a standing bypass,
+  And each use leaves a record with the date, the reason, the repairing pull request and
+    the time the requirement was restored, on the `post-merge-red` notice or, when none is
+    open, in the procedure's own log in the repository's documentation,
+  And the procedure ends by restoring the requirement and re-observing a held pull request
+    reported unmergeable as TQ-600a-13-x requires,
+  And the procedure is documented before the check first becomes required, and rehearsed
+    once on the real repository within the first day after it does — removing and
+    restoring the requirement with no repair pending — and the rehearsal is recorded with
+    its date,
+  And agents are told by the procedure that they never perform it.
+depends_on:
+  - TQ-600a-13
+  - TQ-600a-13-x
+doc_links:
+  - path: docs/acceptance-criteria/testing-quality/TQ-600-suite-feedback-latency/TQ-600a-13-x.yaml
+    relationship: describes
+    status: exists
+    relevance: >-
+      Rollout, enforcement and the observation the procedure ends with.
+  - path: docs/testing/README.md
+    relationship: modifies
+    status: exists
+    relevance: >-
+      Where the procedure is documented, beside the hold section.
+declared_files:
+  - path: docs/testing/README.md
+    state: existing
+assigned_agent: documentation-expert
+estimated_complexity: S
+it_requirements:
+  - >-
+    WHY CONTEXT REMOVAL AND NOT A BYPASS ACTOR. VERIFIED (GitHub expert): the ruleset has
+    `bypass_actors: []` and `current_user_can_bypass: "never"`; every agent acts as
+    `urlmonitor`, the sole admin. A bypass actor for the admin role would let any agent
+    merge past all six required checks without a trace in the ruleset. Removing one
+    context is a visible ruleset edit with history. DECIDED BY THE OWNER 2026-10-08:
+    REMOVAL of `Post-merge suite status` from ruleset 17810993's required contexts; no
+    standing bypass actor is ever added. The procedure must say so, and must say that
+    adding a bypass actor is not an acceptable shortcut.
+  - >-
+    AGENT CONFIRMED: documentation-expert. The deliverable is a procedure section in
+    docs/testing/README.md (beside the hold section other records hand to the same agent)
+    plus a log table there for uses and the rehearsal. The procedure's steps: read the
+    ruleset (`GET /repos/{o}/{r}/rulesets/17810993`) and record it; remove only the one
+    context in the ruleset UI or `PUT /repos/{o}/{r}/rulesets/17810993` with the
+    required_status_checks list minus that entry (owner only — admin rights); merge the
+    repair; restore the identical entry with source GitHub Actions (integration 15368);
+    read the ruleset back and confirm the six original contexts are untouched and the
+    hold is present; re-observe a held PR reported unmergeable (TQ-600a-13-x); write the
+    log entry (date, reason, repairing PR, restore time) on the open `post-merge-red`
+    notice or in the log table. A first line addressed to agents: never perform this.
+  - >-
+    -xviii's agent guidance must reference this procedure as owner-only, so an agent
+    held by a broken check stops and reports instead of attempting it.
+  - >-
+    A DOCUMENTATION RECORD WITH A LIVE REHEARSAL. The behaviour is a human procedure, so
+    its done-proof is the documented procedure plus a recorded rehearsal — like
+    TQ-600a-13-x's observations — not a unit test. Nothing here is verified by searching
+    the document for a phrase.
+  - >-
+    TIES TO THE ROLLOUT: TQ-600a-13-x's prerequisites include the documented procedure,
+    and its rollout order ends with this rehearsal; a required check with no known way
+    back is how a broken gate freezes the repository.
+delivers_to: null
+expects_from:
+  - ac_id: TQ-600a-13-x
+    contract: >-
+      The enforcement state and the held-PR observation the procedure ends by repeating.
+test_required: false
+test_rationale: |
+  No unit test: the behaviour is an owner's procedure on the hosting service, and the
+  record changes only prose (change_target docs + infrastructure, no code). The proof is
+  the documented procedure plus a recorded rehearsal, with date, on the real repository,
+  within the first day the check is required. documentation-verifier's normal gates apply
+  to the prose; nothing is verified by searching it for a phrase.
+origin_agent: business-analyst
+created: 2026-10-08
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target:
+  - docs
+  - infrastructure
+risk_surface: auth
+notes: |
+  ADDED 2026-10-08 for user decision J (owner bypass for when the hold check itself is
+  broken). RESOLVED 2026-10-08 by the owner: the mechanism is removal of the one context,
+  never a bypass actor. REHEARSAL TO RECORD HERE: date, what was removed and restored,
+  and the PR used.

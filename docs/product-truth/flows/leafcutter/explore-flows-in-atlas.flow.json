@@ -11,7 +11,7 @@
   "status": "active",
   "readiness": "approved",
   "superseded_by": null,
-  "version": 1,
+  "version": 4,
   "tags": [
     "product-truth",
     "atlas",
@@ -23,57 +23,560 @@
     {
       "id": "open",
       "label": "Open the Flows view",
-      "human": "The person opens the Atlas /flows view and sees every product-truth flow listed, with the selected one rendered as a graph.",
+      "human": "The server loads flows and hands serializable FlowsView props to the client. The visible list initially follows the client source/kind/realization filters; it is not an unfiltered promise that every flow appears at once. [Page handoff](leafcutter-web/app/flows/page.tsx) and [client filters](leafcutter-web/components/flows/flows-view.tsx).\n\nContract fields and examples (generated)\nConsumes:\n  SOURCE-REVIEWED DOCUMENTATION: Source-reviewed documentation of leafcutter-web/lib/data/types.ts, flow-contracts.ts and flows.ts; no runtime registration or automatic TypeScript/schema parity check.\n  view_props/flows: array (required)\n  view_props/mocks: object (required)\n  view_props/screenTitles: object (optional; default {})\n  Schema: [view_props](docs/product-truth/schemas/atlas-flows-view-props.schema.json)\nProduces:\n  No checked JSON binding documented in this direction.\n\nInput: reconstructed component props projection — view_props; reconstructed; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"flows\": [\n    {\n      \"id\": \"leafcutter/flow-render-pipeline\",\n      \"component\": \"ux-prototyping\",\n      \"name\": \"How a flow renders in the Atlas\",\n      \"kind\": \"data\",\n      \"source\": \"real\",\n      \"level\": \"pipeline\",\n      \"realization\": \"built\",\n      \"mockDataRef\": null,\n      \"filePath\": \"docs/product-truth/flows/leafcutter/flow-render-pipeline.flow.json\",\n      \"steps\": [\n        {\n          \"id\": \"resolve\",\n          \"label\": \"Resolve live AC status\",\n          \"implements\": [\n            \"UXP-411\"\n          ],\n          \"implStatus\": \"done\",\n          \"fallbackStatus\": \"done\",\n          \"acs\": [\n            {\n              \"id\": \"UXP-411\",\n              \"workStatus\": \"done\",\n              \"resolved\": true\n            }\n          ]\n        }\n      ]\n    }\n  ],\n  \"mocks\": {\n    \"leafcutter/flow-render-pipeline\": null\n  },\n  \"screenTitles\": {}\n}",
       "order": 1,
       "implements": [
         "UXP-520"
       ],
       "impl_status": "done",
-      "impl_asof": "2026-07-20"
+      "impl_asof": "2026-07-20",
+      "io_contracts": {
+        "consumes": [
+          {
+            "contract": "view_props",
+            "fields": [
+              {
+                "path": "/flows",
+                "types": [
+                  "array"
+                ],
+                "required": true
+              },
+              {
+                "path": "/mocks",
+                "types": [
+                  "object"
+                ],
+                "required": true
+              },
+              {
+                "path": "/screenTitles",
+                "types": [
+                  "object"
+                ],
+                "required": false,
+                "default": {}
+              }
+            ]
+          }
+        ],
+        "produces": [],
+        "examples": [
+          {
+            "contract": "view_props",
+            "mode": "projection",
+            "origin": "reconstructed",
+            "label": "Input: reconstructed component props projection",
+            "value": {
+              "flows": [
+                {
+                  "id": "leafcutter/flow-render-pipeline",
+                  "component": "ux-prototyping",
+                  "name": "How a flow renders in the Atlas",
+                  "kind": "data",
+                  "source": "real",
+                  "level": "pipeline",
+                  "realization": "built",
+                  "mockDataRef": null,
+                  "filePath": "docs/product-truth/flows/leafcutter/flow-render-pipeline.flow.json",
+                  "steps": [
+                    {
+                      "id": "resolve",
+                      "label": "Resolve live AC status",
+                      "implements": [
+                        "UXP-411"
+                      ],
+                      "implStatus": "done",
+                      "fallbackStatus": "done",
+                      "acs": [
+                        {
+                          "id": "UXP-411",
+                          "workStatus": "done",
+                          "resolved": true
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ],
+              "mocks": {
+                "leafcutter/flow-render-pipeline": null
+              },
+              "screenTitles": {}
+            }
+          }
+        ]
+      },
+      "consumes": [
+        "view_props/flows: array (required)",
+        "view_props/mocks: object (required)",
+        "view_props/screenTitles: object (optional; default {})"
+      ],
+      "produces": []
     },
     {
       "id": "filter",
       "label": "Choose source (mock/real) and kind (user/data/architecture)",
-      "human": "The person uses the source toggle to filter flows by mock vs real.",
+      "human": "The person changes source and realization filters over the already-loaded Flow records. React updates local state and the visible subset; no network request or persisted filter DTO is produced. [Filter implementation](leafcutter-web/components/flows/flows-view.tsx).\n\nContract fields and examples (generated)\nConsumes:\n  SOURCE-REVIEWED DOCUMENTATION: Source-reviewed documentation of leafcutter-web/lib/data/types.ts, flow-contracts.ts and flows.ts; no runtime registration or automatic TypeScript/schema parity check.\n  atlas_flow/id: string (required)\n  atlas_flow/source: string (required)\n  atlas_flow/kind: string (required)\n  atlas_flow/realization: string (required)\n  Schema: [atlas_flow](docs/product-truth/schemas/atlas-normalized-flow.schema.json)\nProduces:\n  No checked JSON binding documented in this direction.\n\nInput: one flow considered by the local filter — atlas_flow; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"id\": \"leafcutter/flow-render-pipeline\",\n  \"source\": \"real\",\n  \"kind\": \"data\",\n  \"realization\": \"built\"\n}",
       "order": 2,
       "implements": [
         "UXP-521"
       ],
       "impl_status": "done",
-      "impl_asof": "2026-07-20"
+      "impl_asof": "2026-07-20",
+      "io_contracts": {
+        "consumes": [
+          {
+            "contract": "atlas_flow",
+            "fields": [
+              {
+                "path": "/id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/source",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/kind",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/realization",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              }
+            ]
+          }
+        ],
+        "produces": [],
+        "examples": [
+          {
+            "contract": "atlas_flow",
+            "mode": "projection",
+            "origin": "illustrative",
+            "label": "Input: one flow considered by the local filter",
+            "value": {
+              "id": "leafcutter/flow-render-pipeline",
+              "source": "real",
+              "kind": "data",
+              "realization": "built"
+            }
+          }
+        ]
+      },
+      "consumes": [
+        "atlas_flow/id: string (required)",
+        "atlas_flow/source: string (required)",
+        "atlas_flow/kind: string (required)",
+        "atlas_flow/realization: string (required)"
+      ],
+      "produces": []
     },
     {
       "id": "select",
       "label": "Select a flow to render its graph",
-      "human": "The person uses the kind chooser to filter flows by user/data/architecture and selects one to render its graph.",
+      "human": "The person chooses a kind and an existing flow ID from the filtered records. Local selectedId/path state drives FlowExplorer; it does not select a retrieval query or create a new server response. [Selection](leafcutter-web/components/flows/flows-view.tsx).\n\nContract fields and examples (generated)\nConsumes:\n  SOURCE-REVIEWED DOCUMENTATION: Source-reviewed documentation of leafcutter-web/lib/data/types.ts, flow-contracts.ts and flows.ts; no runtime registration or automatic TypeScript/schema parity check.\n  atlas_flow/id: string (required)\n  atlas_flow/name: string (required)\n  atlas_flow/kind: string (required)\n  atlas_flow/level: string (required)\n  atlas_flow/steps: array (required)\n  atlas_flow/branches: array (required)\n  Schema: [atlas_flow](docs/product-truth/schemas/atlas-normalized-flow.schema.json)\nProduces:\n  No checked JSON binding documented in this direction.\n\nInput: selected normalized flow projection — atlas_flow; reconstructed; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"id\": \"leafcutter/flow-render-pipeline\",\n  \"component\": \"ux-prototyping\",\n  \"name\": \"How a flow renders in the Atlas\",\n  \"kind\": \"data\",\n  \"source\": \"real\",\n  \"level\": \"pipeline\",\n  \"realization\": \"built\",\n  \"mockDataRef\": null,\n  \"filePath\": \"docs/product-truth/flows/leafcutter/flow-render-pipeline.flow.json\",\n  \"steps\": [\n    {\n      \"id\": \"resolve\",\n      \"label\": \"Resolve live AC status\",\n      \"implements\": [\n        \"UXP-411\"\n      ],\n      \"implStatus\": \"done\",\n      \"fallbackStatus\": \"done\",\n      \"acs\": [\n        {\n          \"id\": \"UXP-411\",\n          \"workStatus\": \"done\",\n          \"resolved\": true\n        }\n      ]\n    }\n  ]\n}",
       "order": 3,
       "implements": [
         "UXP-522"
       ],
       "impl_status": "done",
-      "impl_asof": "2026-07-20"
+      "impl_asof": "2026-07-20",
+      "io_contracts": {
+        "consumes": [
+          {
+            "contract": "atlas_flow",
+            "fields": [
+              {
+                "path": "/id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/name",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/kind",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/level",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/steps",
+                "types": [
+                  "array"
+                ],
+                "required": true
+              },
+              {
+                "path": "/branches",
+                "types": [
+                  "array"
+                ],
+                "required": true
+              }
+            ]
+          }
+        ],
+        "produces": [],
+        "examples": [
+          {
+            "contract": "atlas_flow",
+            "mode": "projection",
+            "origin": "reconstructed",
+            "label": "Input: selected normalized flow projection",
+            "value": {
+              "id": "leafcutter/flow-render-pipeline",
+              "component": "ux-prototyping",
+              "name": "How a flow renders in the Atlas",
+              "kind": "data",
+              "source": "real",
+              "level": "pipeline",
+              "realization": "built",
+              "mockDataRef": null,
+              "filePath": "docs/product-truth/flows/leafcutter/flow-render-pipeline.flow.json",
+              "steps": [
+                {
+                  "id": "resolve",
+                  "label": "Resolve live AC status",
+                  "implements": [
+                    "UXP-411"
+                  ],
+                  "implStatus": "done",
+                  "fallbackStatus": "done",
+                  "acs": [
+                    {
+                      "id": "UXP-411",
+                      "workStatus": "done",
+                      "resolved": true
+                    }
+                  ]
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "consumes": [
+        "atlas_flow/id: string (required)",
+        "atlas_flow/name: string (required)",
+        "atlas_flow/kind: string (required)",
+        "atlas_flow/level: string (required)",
+        "atlas_flow/steps: array (required)",
+        "atlas_flow/branches: array (required)"
+      ],
+      "produces": []
     },
     {
       "id": "inspect",
       "label": "Open a step to see its ACs' live status + mock records + mockup",
-      "human": "The person opens a step in the drawer and sees its acceptance criteria's live work_status, the mock records the step uses, and its mockup.",
+      "human": "The step drawer reads the normalized step and its ioContracts with the flow contractDefinitions. It shows a heading per contract, exact field tables and separate JSON examples, including authority and projection/source labels. It shows the authored narrative once and hides generated compatibility text/badges when valid structured metadata is present. Missing metadata or a shape the display guard cannot use keeps the readable fallback; full repository validation remains separate. Live AC references, mock records and screen titles remain available; opening the drawer changes local selection, not repository data. [Drawer](leafcutter-web/components/flows/flow-drawer.tsx).\n\nThe inspector groups consumed and produced contract fields with their exact keys, types, requiredness and defaults. It shows raw JSON examples with full/projection and provenance labels, preserves the narrative once, and retains the legacy view when structured metadata is unavailable or unusable.\n\nContract fields and examples (generated)\nConsumes:\n  SOURCE-REVIEWED DOCUMENTATION: Source-reviewed documentation of leafcutter-web/lib/data/types.ts, flow-contracts.ts and flows.ts; no runtime registration or automatic TypeScript/schema parity check.\n  atlas_flow/steps/*/id: string (required)\n  atlas_flow/steps/*/human: string (required)\n  atlas_flow/steps/*/consumes: array (required)\n  atlas_flow/steps/*/produces: array (required)\n  atlas_flow/steps/*/screen: null|string (required)\n  atlas_flow/steps/*/acs/*/id: string (required)\n  atlas_flow/steps/*/acs/*/workStatus: string (required)\n  atlas_flow/contractDefinitions: object (optional)\n  atlas_flow/steps/*/ioContracts: object (optional)\n  Schema: [atlas_flow](docs/product-truth/schemas/atlas-normalized-flow.schema.json)\n  SOURCE-REVIEWED DOCUMENTATION: Source-reviewed documentation of leafcutter-web/lib/data/types.ts, flow-contracts.ts and flows.ts; no runtime registration or automatic TypeScript/schema parity check.\n  view_props/mocks: object (required)\n  view_props/screenTitles: object (optional; default {})\n  Schema: [view_props](docs/product-truth/schemas/atlas-flows-view-props.schema.json)\nProduces:\n  No checked JSON binding documented in this direction.\n\nInput: selected resolved step projection — atlas_flow; reconstructed; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"steps\": [\n    {\n      \"id\": \"resolve\",\n      \"label\": \"Resolve live AC status\",\n      \"implements\": [\n        \"UXP-411\"\n      ],\n      \"implStatus\": \"done\",\n      \"fallbackStatus\": \"done\",\n      \"acs\": [\n        {\n          \"id\": \"UXP-411\",\n          \"workStatus\": \"done\",\n          \"resolved\": true\n        }\n      ]\n    }\n  ]\n}\n\nInput: no mock dataset or screen title for this code-flow example — view_props; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"mocks\": {\n    \"leafcutter/flow-render-pipeline\": null\n  },\n  \"screenTitles\": {}\n}\n\nInput: optional structured metadata, one selected input binding only — atlas_flow; reconstructed; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"contractDefinitions\": {\n    \"raw_flow\": {\n      \"schema\": \"docs/product-truth/schemas/flow.schema.json\"\n    }\n  },\n  \"steps\": [\n    {\n      \"id\": \"resolve\",\n      \"ioContracts\": {\n        \"consumes\": [\n          {\n            \"contract\": \"raw_flow\",\n            \"fields\": [\n              {\n                \"path\": \"/steps/*/id\",\n                \"types\": [\n                  \"string\"\n                ],\n                \"required\": true\n              },\n              {\n                \"path\": \"/steps/*/implements\",\n                \"types\": [\n                  \"array\"\n                ],\n                \"required\": false\n              },\n              {\n                \"path\": \"/steps/*/impl_status\",\n                \"types\": [\n                  \"string\"\n                ],\n                \"required\": false\n              }\n            ]\n          }\n        ]\n      }\n    }\n  ]\n}",
       "order": 4,
       "implements": [
-        "UXP-523"
+        "UXP-523",
+        "UXP-523-1",
+        "UXP-523-2",
+        "UXP-523-3",
+        "UXP-523-4"
       ],
       "impl_status": "done",
-      "impl_asof": "2026-07-20"
+      "impl_asof": "2026-07-20",
+      "io_contracts": {
+        "consumes": [
+          {
+            "contract": "atlas_flow",
+            "fields": [
+              {
+                "path": "/steps/*/id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/steps/*/human",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/steps/*/consumes",
+                "types": [
+                  "array"
+                ],
+                "required": true
+              },
+              {
+                "path": "/steps/*/produces",
+                "types": [
+                  "array"
+                ],
+                "required": true
+              },
+              {
+                "path": "/steps/*/screen",
+                "types": [
+                  "null",
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/steps/*/acs/*/id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/steps/*/acs/*/workStatus",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/contractDefinitions",
+                "types": [
+                  "object"
+                ],
+                "required": false
+              },
+              {
+                "path": "/steps/*/ioContracts",
+                "types": [
+                  "object"
+                ],
+                "required": false
+              }
+            ]
+          },
+          {
+            "contract": "view_props",
+            "fields": [
+              {
+                "path": "/mocks",
+                "types": [
+                  "object"
+                ],
+                "required": true
+              },
+              {
+                "path": "/screenTitles",
+                "types": [
+                  "object"
+                ],
+                "required": false,
+                "default": {}
+              }
+            ]
+          }
+        ],
+        "produces": [],
+        "examples": [
+          {
+            "contract": "atlas_flow",
+            "mode": "projection",
+            "origin": "reconstructed",
+            "label": "Input: selected resolved step projection",
+            "value": {
+              "steps": [
+                {
+                  "id": "resolve",
+                  "label": "Resolve live AC status",
+                  "implements": [
+                    "UXP-411"
+                  ],
+                  "implStatus": "done",
+                  "fallbackStatus": "done",
+                  "acs": [
+                    {
+                      "id": "UXP-411",
+                      "workStatus": "done",
+                      "resolved": true
+                    }
+                  ]
+                }
+              ]
+            }
+          },
+          {
+            "contract": "view_props",
+            "mode": "projection",
+            "origin": "illustrative",
+            "label": "Input: no mock dataset or screen title for this code-flow example",
+            "value": {
+              "mocks": {
+                "leafcutter/flow-render-pipeline": null
+              },
+              "screenTitles": {}
+            }
+          },
+          {
+            "contract": "atlas_flow",
+            "mode": "projection",
+            "origin": "reconstructed",
+            "label": "Input: optional structured metadata, one selected input binding only",
+            "value": {
+              "contractDefinitions": {
+                "raw_flow": {
+                  "schema": "docs/product-truth/schemas/flow.schema.json"
+                }
+              },
+              "steps": [
+                {
+                  "id": "resolve",
+                  "ioContracts": {
+                    "consumes": [
+                      {
+                        "contract": "raw_flow",
+                        "fields": [
+                          {
+                            "path": "/steps/*/id",
+                            "types": [
+                              "string"
+                            ],
+                            "required": true
+                          },
+                          {
+                            "path": "/steps/*/implements",
+                            "types": [
+                              "array"
+                            ],
+                            "required": false
+                          },
+                          {
+                            "path": "/steps/*/impl_status",
+                            "types": [
+                              "string"
+                            ],
+                            "required": false
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "consumes": [
+        "atlas_flow/steps/*/id: string (required)",
+        "atlas_flow/steps/*/human: string (required)",
+        "atlas_flow/steps/*/consumes: array (required)",
+        "atlas_flow/steps/*/produces: array (required)",
+        "atlas_flow/steps/*/screen: null|string (required)",
+        "atlas_flow/steps/*/acs/*/id: string (required)",
+        "atlas_flow/steps/*/acs/*/workStatus: string (required)",
+        "atlas_flow/contractDefinitions: object (optional)",
+        "atlas_flow/steps/*/ioContracts: object (optional)",
+        "view_props/mocks: object (required)",
+        "view_props/screenTitles: object (optional; default {})"
+      ],
+      "produces": []
     },
     {
       "id": "cross",
       "label": "Jump from an AC to the flows it appears in",
-      "human": "From an acceptance-criterion node the person jumps to the flows that criterion appears in.",
+      "human": "The AC detail UI looks up its appearances in the internal map built by flowAppearancesByAc, then offers links naming flow and step/branch. The historical stepId property can identify either node kind. Following a link is UI navigation, not a JSON mutation. [Map producer](leafcutter-web/lib/data/flows.ts).\n\nContract fields and examples (generated)\nConsumes:\n  SOURCE-REVIEWED DOCUMENTATION: Source-reviewed documentation of leafcutter-web/lib/data/types.ts, flow-contracts.ts and flows.ts; no runtime registration or automatic TypeScript/schema parity check.\n  appearances/*/*/flowId: string (required)\n  appearances/*/*/flowName: string (required)\n  appearances/*/*/stepId: string (required)\n  appearances/*/*/stepLabel: string (required)\n  Schema: [appearances](docs/product-truth/schemas/atlas-flow-appearances.schema.json)\nProduces:\n  No checked JSON binding documented in this direction.\n\nInput: reconstructed AC appearance map — appearances; reconstructed; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"UXP-411\": [\n    {\n      \"flowId\": \"leafcutter/flow-render-pipeline\",\n      \"flowName\": \"How a flow renders in the Atlas\",\n      \"stepId\": \"resolve\",\n      \"stepLabel\": \"Resolve live AC status\"\n    }\n  ]\n}",
       "order": 5,
       "implements": [
         "UXP-524"
       ],
       "impl_status": "done",
-      "impl_asof": "2026-07-20"
+      "impl_asof": "2026-07-20",
+      "io_contracts": {
+        "consumes": [
+          {
+            "contract": "appearances",
+            "fields": [
+              {
+                "path": "/*/*/flowId",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/*/*/flowName",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/*/*/stepId",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/*/*/stepLabel",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              }
+            ]
+          }
+        ],
+        "produces": [],
+        "examples": [
+          {
+            "contract": "appearances",
+            "mode": "projection",
+            "origin": "reconstructed",
+            "label": "Input: reconstructed AC appearance map",
+            "value": {
+              "UXP-411": [
+                {
+                  "flowId": "leafcutter/flow-render-pipeline",
+                  "flowName": "How a flow renders in the Atlas",
+                  "stepId": "resolve",
+                  "stepLabel": "Resolve live AC status"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "consumes": [
+        "appearances/*/*/flowId: string (required)",
+        "appearances/*/*/flowName: string (required)",
+        "appearances/*/*/stepId: string (required)",
+        "appearances/*/*/stepLabel: string (required)"
+      ],
+      "produces": []
     }
   ],
   "branches": [],
@@ -89,7 +592,7 @@
       "for": "open",
       "given": "the product-truth store has flows",
       "when": "the person opens the Atlas /flows view",
-      "then": "every flow is listed and the selected one renders as a graph"
+      "then": "the current filters determine the visible flows and the selected flow renders as a graph"
     },
     {
       "for": "filter",
@@ -114,6 +617,12 @@
       "given": "an acceptance-criterion node in the graph",
       "when": "the person activates it",
       "then": "they are taken to the flows that criterion appears in"
+    },
+    {
+      "for": "inspect",
+      "given": "the structured JSON contract metadata and the applicable source contracts",
+      "when": "Open a step to see its ACs' live status + mock records + mockup",
+      "then": "The inspector groups consumed and produced contract fields with their exact keys, types, requiredness and defaults. It shows raw JSON examples with full/projection and provenance labels, preserves the narrative once, and retains the legacy view when structured metadata is unavailable or unusable."
     }
   ],
   "provenance": [
@@ -122,6 +631,41 @@
       "by": "BrainCandy (product-truth dogfooding session)",
       "date": "2026-07-14",
       "note": "Real user-flow describing the Atlas /flows explorer that was just built."
+    },
+    {
+      "action": "extended",
+      "by": "product-truth contract migration",
+      "date": "2026-10-03",
+      "note": "Document exact source-reviewed or illustrative inputs/outputs; preserve existing AC and lifecycle status. Generated index refresh follows the complete migration."
+    },
+    {
+      "action": "extended",
+      "by": "product-truth-expert",
+      "date": "2026-10-04",
+      "note": "Documented the structured contract drawer with exact field tables and separate JSON examples; kept checked compatibility fallback and existing topology/approvals."
+    },
+    {
+      "action": "extended",
+      "by": "Codex release integrator",
+      "date": "2026-10-05",
+      "note": "Linked the reviewed contract-display and authoring acceptance criteria to their actual behavior; corrected the validator stdout boundary."
     }
-  ]
+  ],
+  "contract_definitions": {
+    "view_props": {
+      "schema": "docs/product-truth/schemas/atlas-flows-view-props.schema.json",
+      "authority": "source_reviewed",
+      "note": "Source-reviewed documentation of leafcutter-web/lib/data/types.ts, flow-contracts.ts and flows.ts; no runtime registration or automatic TypeScript/schema parity check."
+    },
+    "atlas_flow": {
+      "schema": "docs/product-truth/schemas/atlas-normalized-flow.schema.json",
+      "authority": "source_reviewed",
+      "note": "Source-reviewed documentation of leafcutter-web/lib/data/types.ts, flow-contracts.ts and flows.ts; no runtime registration or automatic TypeScript/schema parity check."
+    },
+    "appearances": {
+      "schema": "docs/product-truth/schemas/atlas-flow-appearances.schema.json",
+      "authority": "source_reviewed",
+      "note": "Source-reviewed documentation of leafcutter-web/lib/data/types.ts, flow-contracts.ts and flows.ts; no runtime registration or automatic TypeScript/schema parity check."
+    }
+  }
 }

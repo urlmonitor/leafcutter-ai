@@ -59,6 +59,33 @@ from declared_files import declared_files_commit_messages  # noqa: E402
 # their verdicts cannot drift apart (ACS-200e).
 _SCHEMA_REL = Path("config") / "ac_store_schema.json"
 
+# Single-slot cache: (schema_object, compiled_validator). TQ-600a-11 measured
+# that once YAML parsing is no longer the bottleneck (the yaml_safe_loader
+# accessor above), *this* line's prior behaviour -- constructing a fresh
+# jsonschema.Draft7Validator(schema) on every one of 4,634 per-file calls --
+# became the new dominant cost (profiled at ~12s of a ~21s full-store run,
+# versus ~3s actually parsing YAML). main() loads the schema dict exactly
+# once and passes the SAME object through every _validate_file() call in its
+# loop, so keying on object IDENTITY (`is`, never `id()` as an integer -- an
+# id() can be recycled for an unrelated object once the original is garbage
+# collected, which would silently return a STALE validator for different
+# content) is sufficient and correct: a cache hit only fires for the exact
+# object main() is still holding a reference to.
+_schema_validator_cache: tuple[dict[str, Any], Any] | None = None
+
+
+def _cached_validator(schema: dict[str, Any]) -> Any:
+    """Return a ``jsonschema.Draft7Validator`` for `schema`, built at most once
+    per distinct schema object held in the single-slot cache above."""
+    global _schema_validator_cache  # noqa: PLW0603 -- single-slot process-local cache, no I/O
+    import jsonschema  # noqa: PLC0415
+
+    if _schema_validator_cache is not None and _schema_validator_cache[0] is schema:
+        return _schema_validator_cache[1]
+    validator = jsonschema.Draft7Validator(schema)
+    _schema_validator_cache = (schema, validator)
+    return validator
+
 
 def _default_schema_path() -> Path:
     """Return the repo-root-relative config/ac_store_schema.json path.
@@ -169,14 +196,14 @@ def _schema_field_errors(path: Path, data: dict[str, Any], schema: dict[str, Any
         rather than silently treating the file as valid.
     """
     try:
-        import jsonschema
+        import jsonschema  # noqa: F401 -- import-availability probe; _cached_validator does the real import
     except ImportError as exc:
         return [
             f"{path}: jsonschema is not importable ({exc}) — schema-level "
             "validation was SKIPPED. Install jsonschema to enable it."
         ]
 
-    validator = jsonschema.Draft7Validator(schema)
+    validator = _cached_validator(schema)
     return [
         f"{path}: schema violation at "
         f"{'.'.join(str(part) for part in err.absolute_path) or '<root>'} — {err.message}"
@@ -213,7 +240,20 @@ def _validate_file(
 
     try:
         content = path.read_text(encoding="utf-8")
-        data = yaml.safe_load(content)
+        # Deliberately yaml.SafeLoader, NOT the shared fast accessor
+        # (yaml_safe_loader.get_safe_yaml_loader) used elsewhere in this
+        # package (loader-audit, TQ-600a-11 fix-pass, 2026-10-07): this
+        # except branch IS the required "AC store valid" gate's own
+        # malformed-YAML detector -- its entire job is to turn an unparseable
+        # file into the reported violation below. CSafeLoader accepts at
+        # least one input class (a tab adjacent to a colon/comma) that
+        # yaml.SafeLoader correctly rejects, so routing this one call through
+        # the fast accessor would silently narrow what this validator catches
+        # -- a malformed AC file that should fail this gate would instead
+        # parse "successfully" and be judged only on field presence, which it
+        # may pass by chance. See scripts/ac_store/yaml_safe_loader.py's own
+        # docstring for the measured divergence classes.
+        data = yaml.load(content, Loader=yaml.SafeLoader)
     except yaml.YAMLError as exc:
         return [f"{path}: YAML parse error — {exc}"]
     except OSError as exc:

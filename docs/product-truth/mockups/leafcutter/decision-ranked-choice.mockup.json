@@ -1,0 +1,40 @@
+{
+  "id": "leafcutter/decision-ranked-choice",
+  "component": "decision_kernel",
+  "screen": "decision-ranked-choice",
+  "title": "The ranked choice",
+  "summary": "Options ranked by Jev's per-criterion judgement, each with its rank, N of 3 required criteria likely met, required-criteria mean and per-criterion lines with evidence, an explicit note that the ranking is evidence and not a decision, and the choose-one / choose-and-add-a-condition / add-your-own / free-text answers, where the choice decides and the condition is kept verbatim. Populated from dec-5e7445182eaec1f2, where the human chose rank 2.",
+  "entities": [
+    "Decision"
+  ],
+  "source": "mock",
+  "realization": "mock",
+  "renders": "decision-ranked-choice.html",
+  "status": "active",
+  "superseded_by": null,
+  "readiness": "draft",
+  "version": 2,
+  "shape_version": 1,
+  "tags": [
+    "decision-kernel",
+    "decision-lifecycle",
+    "ranking",
+    "forming",
+    "human-decision"
+  ],
+  "mock_data_ref": "leafcutter/decisions",
+  "provenance": [
+    {
+      "action": "authored",
+      "by": "mockup-author",
+      "date": "2026-10-02",
+      "note": "Drafted from leafcutter/decisions records; styled from the Atlas tokens via docs/ui-context.md (globals.css, tailwind.config.ts, layout.tsx, kit.tsx)."
+    },
+    {
+      "action": "extended",
+      "by": "mockup-author",
+      "date": "2026-10-06",
+      "note": "Extended for PR #1003: added the fourth answer, choose an option and add a condition (the choice decides; the condition is kept verbatim), from the leafcutter/decisions v8 conditions and rationale_suffix fields."
+    }
+  ]
+}

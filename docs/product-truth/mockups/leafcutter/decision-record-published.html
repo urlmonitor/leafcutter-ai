@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Leafcutter decision lifecycle - Published record in review</title>
+  <!--
+    MOCKUP - screen: decision-record-published
+    Populated from docs/product-truth/mock-data/leafcutter/decisions.mock.json (entity Decision; record dec-d53e1c52cd47c832; correction pair illustrative).
+    Styled from the Atlas design system via docs/ui-context.md pointers (globals.css, tailwind.config.ts, layout.tsx).
+    Self-contained, no external assets. Items tagged "illustrative" are not in the mock data.
+  -->
+  <style>
+    /* Tokens read live from leafcutter-web/app/globals.css (:root); fonts from app/layout.tsx (IBM Plex Sans / Mono). */
+    :root {
+      --background: 158 16% 7%; --foreground: 150 6% 98%;
+      --card: 158 12% 13%; --primary: 150 64% 56%; --primary-foreground: 160 40% 6%;
+      --secondary: 156 12% 19%; --muted: 156 12% 18%; --muted-foreground: 155 7% 80%;
+      --accent: 168 55% 46%; --destructive: 356 78% 64%; --warning: 38 94% 60%;
+      --success: 150 62% 52%; --info: 205 82% 64%;
+      --border: 155 10% 30%; --input: 155 10% 32%; --ring: 150 64% 56%;
+      --radius: 0.75rem;
+      --font-sans: "IBM Plex Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+      --font-mono: "IBM Plex Mono", ui-monospace, monospace;
+    }
+    * { box-sizing: border-box; border-color: hsl(var(--border)); }
+    body { margin: 0; font-family: var(--font-sans); background-color: hsl(var(--background)); color: hsl(var(--foreground));
+      -webkit-font-smoothing: antialiased; font-feature-settings: "cv11", "ss01";
+      background-image: radial-gradient(1200px 800px at 85% -10%, hsl(150 64% 52% / 0.06), transparent 60%), radial-gradient(900px 700px at -10% 110%, hsl(168 60% 46% / 0.05), transparent 55%);
+      background-attachment: fixed; }
+    ::selection { background: hsl(var(--primary) / 0.28); }
+    main { max-width: 1000px; margin: 0 auto; padding: 32px 24px 64px; }
+    .panel { border-radius: calc(var(--radius) + 0.25rem); border: 1px solid hsl(var(--border)); background: hsl(var(--card) / 0.95); padding: 20px; margin-bottom: 16px;
+      box-shadow: 0 1px 0 0 hsl(150 40% 90% / 0.04) inset, 0 20px 40px -24px hsl(0 0% 0% / 0.6); }
+    .panel.pick { border-color: hsl(var(--primary) / 0.6); }
+    .eyebrow { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.16em; color: hsl(var(--muted-foreground)); margin-bottom: 6px; }
+    h1 { font-size: 24px; font-weight: 600; letter-spacing: -0.01em; margin: 0 0 8px; text-wrap: balance; }
+    h2 { font-size: 18px; font-weight: 600; letter-spacing: -0.01em; margin: 0 0 4px; }
+    h3 { font-size: 15px; font-weight: 600; margin: 0; }
+    p { margin: 4px 0; }
+    .sub { font-size: 14px; color: hsl(var(--muted-foreground)); max-width: 46rem; }
+    .small { font-size: 12px; color: hsl(var(--muted-foreground)); }
+    .mono { font-family: var(--font-mono); font-size: 12.5px; }
+    code.mono { background: hsl(var(--muted) / 0.6); border: 1px solid hsl(var(--border)); border-radius: calc(var(--radius) - 4px); padding: 1px 6px; word-break: break-all; }
+    pre.mono { background: hsl(var(--background)); border: 1px solid hsl(var(--border)); border-radius: calc(var(--radius) - 2px); padding: 12px 14px; overflow-x: auto; margin: 8px 0; }
+    .topbar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
+    .badge { display: inline-flex; align-items: center; gap: 6px; border-radius: 999px; border: 1px solid hsl(var(--border)); background: hsl(var(--muted) / 0.4); color: hsl(var(--muted-foreground)); padding: 2px 8px; font-size: 12px; font-weight: 500; white-space: nowrap; }
+    .badge::before { content: ""; width: 6px; height: 6px; border-radius: 999px; background: currentColor; }
+    .badge.success { color: hsl(var(--success)); background: hsl(var(--success) / 0.1); border-color: hsl(var(--success) / 0.3); }
+    .badge.warning { color: hsl(var(--warning)); background: hsl(var(--warning) / 0.1); border-color: hsl(var(--warning) / 0.3); }
+    .badge.destructive { color: hsl(var(--destructive)); background: hsl(var(--destructive) / 0.1); border-color: hsl(var(--destructive) / 0.3); }
+    .badge.info { color: hsl(var(--info)); background: hsl(var(--info) / 0.1); border-color: hsl(var(--info) / 0.3); }
+    .badge.plain::before { display: none; }
+    .row { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+    .between { justify-content: space-between; align-items: flex-start; }
+    .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    @media (max-width: 720px) { .grid2 { grid-template-columns: 1fr; } }
+    ul.list { list-style: none; margin: 10px 0 0; padding: 0; }
+    ul.list li { border-top: 1px solid hsl(var(--border) / 0.6); padding: 10px 0; }
+    ul.list li:first-child { border-top: 0; }
+    .btn { font: inherit; font-size: 14px; font-weight: 500; border-radius: calc(var(--radius) - 2px); border: 1px solid hsl(var(--input)); background: hsl(var(--secondary)); color: hsl(var(--foreground)); padding: 8px 14px; cursor: pointer; }
+    .btn.primary { background: hsl(var(--primary)); color: hsl(var(--primary-foreground)); border-color: hsl(var(--primary)); }
+    .btn:focus-visible { outline: 2px solid hsl(var(--ring)); outline-offset: 2px; }
+    .note { border-left: 3px solid hsl(var(--warning)); background: hsl(var(--warning) / 0.08); border-radius: 0 calc(var(--radius) - 2px) calc(var(--radius) - 2px) 0; padding: 10px 14px; font-size: 14px; }
+    .note.info { border-left-color: hsl(var(--info)); background: hsl(var(--info) / 0.08); }
+    .note.ok { border-left-color: hsl(var(--success)); background: hsl(var(--success) / 0.08); }
+    dl.kv { display: grid; grid-template-columns: 170px 1fr; gap: 8px 16px; margin: 12px 0 0; font-size: 14px; }
+    dl.kv dt { color: hsl(var(--muted-foreground)); } dl.kv dd { margin: 0; word-break: break-word; }
+    .opt { display: flex; gap: 12px; align-items: flex-start; }
+    .rank { flex: none; width: 34px; height: 34px; border-radius: 999px; border: 1px solid hsl(var(--border)); display: grid; place-items: center; font-weight: 600; background: hsl(var(--muted) / 0.5); }
+    .pick .rank { border-color: hsl(var(--primary)); color: hsl(var(--primary)); }
+    .bar { height: 6px; border-radius: 999px; background: hsl(var(--muted)); overflow: hidden; width: 90px; display: inline-block; vertical-align: middle; }
+    .bar > i { display: block; height: 100%; background: hsl(var(--primary)); }
+    .crit { display: grid; grid-template-columns: 1fr auto; gap: 4px 12px; font-size: 13.5px; padding: 8px 0; border-top: 1px dashed hsl(var(--border) / 0.7); }
+    .crit .ev { grid-column: 1 / -1; }
+    .choice { display: flex; gap: 10px; align-items: flex-start; border: 1px solid hsl(var(--border)); border-radius: calc(var(--radius) - 2px); padding: 12px; margin-bottom: 10px; background: hsl(var(--background) / 0.4); }
+    .choice .dot { flex: none; width: 16px; height: 16px; border-radius: 999px; border: 2px solid hsl(var(--input)); margin-top: 3px; }
+    .choice.sel .dot { border-color: hsl(var(--primary)); background: radial-gradient(hsl(var(--primary)) 40%, transparent 45%); }
+    table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+    th { text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: 0.12em; color: hsl(var(--muted-foreground)); font-weight: 600; padding: 6px 8px; border-bottom: 1px solid hsl(var(--border)); }
+    td { padding: 8px; border-bottom: 1px solid hsl(var(--border) / 0.5); vertical-align: top; }
+    .ill { font-size: 11px; color: hsl(var(--warning)); border: 1px solid hsl(var(--warning) / 0.4); border-radius: 999px; padding: 0 6px; margin-left: 6px; white-space: nowrap; }
+</style>
+</head>
+<body>
+<main>
+  <div class="topbar"><span class="eyebrow" style="margin:0">Decision kernel / Published record in review</span><span class="badge warning">mock mode</span></div>
+<div class="panel"><div class="eyebrow">Published record in review</div><h1>Make the kernel the default entry for design, planning and lookup questions in Claude ...</h1><p class="sub">Decide what to build next for the Leafcutter decision kernel so that it is wired into the real development workflow and has direct impact. Today nothing outside kernel/ and the /leafcutter skill calls the kernel, and docs/decisions holds one record.</p><div class="row"><span class="mono">dec-d53e1c52cd47c832</span><span class="badge success">published</span><span class="badge warning">in review, PR #979</span></div></div><div class="panel"><h2>Selected option</h2><p><strong>Make the kernel the default entry for design, planning and lookup questions in Claude Code sessions</strong></p><p class="small">rank 1 of 4, confidence 0.80, kernel_ranking</p>
+<h2 style="margin-top:16px">Approval</h2><dl class="kv"><dt>approval_status</dt><dd>approved</dd><dt>approved_by</dt><dd class="mono">human:user</dd><dt>approved_at</dt><dd class="mono">2026-10-02T05:39:33Z</dd></dl></div><div class="panel"><h2>Precedents considered</h2><table><thead><tr><th>Id</th><th>Applicability</th><th>Action</th><th>Note</th></tr></thead><tbody><tr><td class="mono">dec-ef8ddcb79d668a67</td><td class="mono">0.62</td><td><span class="badge info">used_as_evidence</span></td><td class="small">human:user approved [opt.added.1] on 2026-10-01</td></tr></tbody></table></div><div class="grid2"><div class="panel"><h2>Links</h2><dl class="kv" style="grid-template-columns:110px 1fr"><dt>supersedes</dt><dd>none</dd><dt>superseded_by</dt><dd>none</dd><dt>related</dt><dd class="mono">dec-ef8ddcb79d668a67</dd></dl></div>
+<div class="panel"><h2>Provenance</h2><dl class="kv" style="grid-template-columns:130px 1fr"><dt>run id</dt><dd class="mono">run-f0f15b38791a428f</dd><dt>Langfuse trace</dt><dd class="mono">e944fec7169f6c70f899f3e7f9097fd4</dd><dt>repository revision</dt><dd class="mono">a41c9e7<span class="ill" title="Not in the mock data; illustrative so the screen reads whole">illustrative</span></dd></dl></div></div><div class="panel"><h2>Where it lives</h2><dl class="kv"><dt>Record path</dt><dd class="mono">docs/decisions/dec-d53e1c52cd47c832.yaml</dd><dt>Pull request</dt><dd>#979 on branch <span class="mono">decisions/publish-2026-10-02</span>, open for review</dd></dl>
+<p class="small" style="margin-top:12px">Merging the PR makes it precedent for later runs, like dec-ef8ddcb79d668a67 (merged, #978).</p></div><div class="panel"><h2>After a correction <span class="ill" title="Not in the mock data; illustrative so the screen reads whole">illustrative</span></h2><p class="sub">How a superseded record reads once a later decision corrects it.</p>
+<div class="grid2"><div><div class="row"><span class="mono">dec-dfb0b8d1eb88ec16</span><span class="badge destructive">superseded</span></div><p>Offer reuse at applicability 0.9 or above</p><p class="small">superseded_by <span class="mono">dec-bcae2c02f17508c1</span></p><p class="small">2026-10-02T13:41:18Z, human:user: Decided anew in dec-bcae2c02f17508c1: at 0.9 matching precedents were no longer offered, so the same question kept being decided again; reuse is offered at 0.8 instead.</p></div>
+<div><div class="row"><span class="mono">dec-bcae2c02f17508c1</span><span class="badge warning">published, in review</span></div><p>Offer reuse at applicability 0.8 or above</p><p class="small">supersedes <span class="mono">dec-dfb0b8d1eb88ec16</span></p><p class="small">Condition stated by the human: <em>provided we revisit the threshold after the first ten reuse offers have been answered</em></p></div></div></div>
+</main>
+</body>
+</html>

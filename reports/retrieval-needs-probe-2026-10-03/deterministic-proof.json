@@ -1,0 +1,29 @@
+{
+  "initial_red": {
+    "exit_code": 1,
+    "failure": "ModuleNotFoundError: No module named 'integrations.retrieval_needs_probe'",
+    "duration_seconds": 0.17
+  },
+  "green": {
+    "command": "python -m pytest tests/kernel/retrieval/test_retrieval_needs_probe.py -q -p no:cacheprovider",
+    "exit_code": 0,
+    "tests": 17,
+    "duration_seconds": 0.63
+  },
+  "mutants": [
+    {
+      "mutant": "silently accept unresolved target",
+      "caught": true,
+      "test": "test_uncertain_named_target_is_unresolved_even_with_usable_fields",
+      "error": "AssertionError"
+    },
+    {
+      "mutant": "collapse multiple targets to first target",
+      "caught": true,
+      "test": "test_multiple_ids_and_document_types_survive_without_collapsing_to_one",
+      "error": "AssertionError"
+    }
+  ],
+  "live_provider_calls": 0,
+  "scope": "Only newly added isolated step; scripted transport and real HTTP MockTransport, not semantic model quality"
+}

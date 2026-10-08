@@ -1,0 +1,10 @@
+{
+  "findings": [
+    {
+      "id": "find-0123456789abcdef",
+      "claim": "The ADR mandates sqlite.",
+      "kind": "source_fact",
+      "producer": "host.synthesize"
+    }
+  ]
+}

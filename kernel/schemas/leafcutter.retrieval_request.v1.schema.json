@@ -1,0 +1,293 @@
+{
+  "$defs": {
+    "EvidenceCategory": {
+      "description": "Generic evidence categories (no vendor names).",
+      "enum": [
+        "authoritative_guidance",
+        "internal_principles",
+        "prior_decisions",
+        "existing_patterns",
+        "task_context",
+        "external_practices"
+      ],
+      "title": "EvidenceCategory",
+      "type": "string"
+    },
+    "EvidenceNeed": {
+      "additionalProperties": false,
+      "description": "A piece of evidence the run still needs, with its resolution status.",
+      "properties": {
+        "acceptable_source_kinds": {
+          "items": {
+            "$ref": "#/$defs/SourceKind"
+          },
+          "title": "Acceptable Source Kinds",
+          "type": "array"
+        },
+        "category": {
+          "$ref": "#/$defs/EvidenceCategory"
+        },
+        "id": {
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+          "title": "Id",
+          "type": "string"
+        },
+        "priority": {
+          "$ref": "#/$defs/Priority",
+          "default": "required"
+        },
+        "question": {
+          "minLength": 1,
+          "title": "Question",
+          "type": "string"
+        },
+        "resolution": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Resolution",
+          "type": "array"
+        },
+        "schema_version": {
+          "const": "1.0",
+          "default": "1.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "status": {
+          "$ref": "#/$defs/NeedStatus",
+          "default": "open"
+        }
+      },
+      "required": [
+        "id",
+        "category",
+        "question"
+      ],
+      "title": "EvidenceNeed",
+      "type": "object"
+    },
+    "JsonValue": {},
+    "NeedStatus": {
+      "description": "Completion status of an EvidenceNeed.",
+      "enum": [
+        "open",
+        "satisfied",
+        "partial",
+        "unavailable"
+      ],
+      "title": "NeedStatus",
+      "type": "string"
+    },
+    "Priority": {
+      "description": "Required (blocking) versus supporting work.",
+      "enum": [
+        "required",
+        "supporting"
+      ],
+      "title": "Priority",
+      "type": "string"
+    },
+    "RetrievalLimits": {
+      "additionalProperties": false,
+      "description": "Result limits for one retrieval request.",
+      "properties": {
+        "max_chars": {
+          "anyOf": [
+            {
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Max Chars"
+        },
+        "schema_version": {
+          "const": "1.0",
+          "default": "1.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "top_k": {
+          "anyOf": [
+            {
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Top K"
+        }
+      },
+      "title": "RetrievalLimits",
+      "type": "object"
+    },
+    "SourceKind": {
+      "description": "Kind of evidence source.",
+      "enum": [
+        "repository_file",
+        "knowledge_node",
+        "host_research",
+        "human",
+        "task_input"
+      ],
+      "title": "SourceKind",
+      "type": "string"
+    },
+    "VerbatimJson": {
+      "anyOf": [
+        {
+          "additionalProperties": {
+            "$ref": "#/$defs/VerbatimJson"
+          },
+          "type": "object"
+        },
+        {
+          "items": {
+            "$ref": "#/$defs/VerbatimJson"
+          },
+          "type": "array"
+        },
+        {
+          "type": "string"
+        },
+        {
+          "type": "integer"
+        },
+        {
+          "type": "number"
+        },
+        {
+          "type": "boolean"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    }
+  },
+  "$id": "leafcutter.retrieval_request.v1",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "leafcutter.retrieval_request.v1.",
+  "properties": {
+    "answer_requirements": {
+      "anyOf": [
+        {
+          "additionalProperties": {
+            "$ref": "#/$defs/JsonValue"
+          },
+          "type": "object"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Answer Requirements"
+    },
+    "assessment": {
+      "anyOf": [
+        {
+          "additionalProperties": {
+            "$ref": "#/$defs/VerbatimJson"
+          },
+          "type": "object"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Assessment"
+    },
+    "detail": {
+      "default": "excerpt",
+      "enum": [
+        "excerpt",
+        "summary",
+        "locator"
+      ],
+      "title": "Detail",
+      "type": "string"
+    },
+    "explicit_locators": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Explicit Locators",
+      "type": "array"
+    },
+    "jev_reserve": {
+      "default": 0,
+      "minimum": 0,
+      "title": "Jev Reserve",
+      "type": "integer"
+    },
+    "knowledge": {
+      "anyOf": [
+        {
+          "additionalProperties": {
+            "$ref": "#/$defs/VerbatimJson"
+          },
+          "type": "object"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Knowledge"
+    },
+    "limits": {
+      "$ref": "#/$defs/RetrievalLimits"
+    },
+    "max_rerank_batches": {
+      "anyOf": [
+        {
+          "minimum": 1,
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Max Rerank Batches"
+    },
+    "need": {
+      "$ref": "#/$defs/EvidenceNeed"
+    },
+    "query_hints": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Query Hints",
+      "type": "array"
+    },
+    "schema_version": {
+      "const": "1.0",
+      "default": "1.0",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "source_ids": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Source Ids",
+      "type": "array"
+    }
+  },
+  "required": [
+    "need"
+  ],
+  "title": "RetrievalRequestPayload",
+  "type": "object"
+}

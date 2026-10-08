@@ -1,0 +1,199 @@
+id: TQ-600a-13-xv
+components:
+  - testing_quality
+title: "When the post-merge verdict changes, every open pull request's hold is re-evaluated without anyone pushing, in both directions"
+component: testing-quality
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given that the hold is evaluated on pull request events (TQ-600a-13-vi), so a pull
+    request evaluated before the verdict changed keeps its earlier result until something
+    evaluates it again,
+  And the two ways that goes wrong: a pull request that passed before a red run stays
+    mergeable while main is red (a stale pass), and a pull request held during a red run
+    stays held after main goes green until its author pushes — an agent fleet pushing
+    empty commits to clear a hold that no longer applies (a stale hold),
+  When a correctness run on main settles and its verdict differs from the verdict of the
+    previous settled run — green to not green, or not green to green —
+  Then the most recent hold evaluation of every open pull request targeting main is run
+    again, so each receives a verdict from the new run history without a push,
+  And this happens after the run has settled, so the re-evaluation reads the new run and
+    not the one before it,
+  And a settled run whose verdict equals the previous one, and a superseded cancellation,
+    re-evaluate nothing,
+  And a pull request whose hold evaluation is still in progress is skipped, because it
+    will read the new history itself,
+  And a pull request whose last hold evaluation cannot be run again — for example because
+    it is older than the hosting service allows to re-run, or the re-run is refused — is
+    named, with the reason, in the re-evaluation's output and on the canonical
+    `post-merge-red` notice when one is open, never skipped silently,
+  And the re-evaluation is performed by a job of its own whose only write is re-running
+    runs of the hold workflow,
+  And this is demonstrated by applying a red-after-green and a green-after-red run history
+    against a double serving open pull requests with completed, in-progress and
+    too-old hold runs, and observing exactly which re-runs are requested and which pull
+    requests are named,
+  And whether the hosting service lets the workflow's own credential request those
+    re-runs is observed once on the real repository and recorded before TQ-600a-13-x
+    makes the hold required.
+depends_on:
+  - TQ-600a-13
+  - TQ-600a-13-v
+  - TQ-600a-13-vi
+doc_links:
+  - path: docs/acceptance-criteria/testing-quality/TQ-600-suite-feedback-latency/TQ-600a-13-vi.yaml
+    relationship: describes
+    status: exists
+    relevance: >-
+      The hold whose runs are re-run; its notes record the stale-pass gap this closes.
+  - path: docs/acceptance-criteria/testing-quality/TQ-600-suite-feedback-latency/TQ-600a-13-xi.yaml
+    relationship: describes
+    status: exists
+    relevance: >-
+      Adds "re-run a run of the hold workflow" to the allowed writes, for this record.
+declared_files:
+  - path: scripts/ci/post_merge_reeval.py
+    state: to_be_created
+  - path: .github/workflows/post-merge-followup.yml
+    state: to_be_created
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - >-
+    MECHANISM (user decision E; GitHub expert Q2): the follow-up workflow
+    (`on: workflow_run` for `Post-merge suite`, `types: [completed]`, runs from the
+    default branch — VERIFIED doc; chaining limit 3), job `reevaluate`, separate from the
+    notice job and the ONLY job in the family holding `actions: write`. Two triggers, one
+    job: (a) completion of `Post-merge suite` -> the fan-out below, gated on
+    `verdict_changed(...)` from scripts/ci/_run_history.py (None / False -> nothing);
+    (b) completion of `Post-merge fix proof` (TQ-600a-13-xvi) -> re-run the latest hold
+    run for that proof run's `head_sha` only. Fan-out: `GET /pulls?state=open&base=main&
+    per_page=100` (paginated); per PR `GET /actions/workflows/post-merge-hold.yml/runs?
+    head_sha=<sha>&event=pull_request_target&per_page=5`, take the highest run_number;
+    if `status == completed`, `POST /actions/runs/{id}/rerun`; if not completed, skip
+    (it reads the new history itself); if none exists, name it. About 45 requests for 22
+    open PRs; the limit is 1,000 per hour per repository (VERIFIED doc). The job's
+    `if:` selects the branch by `github.event.workflow_run.name`; that is fine here
+    because this job is not a required check.
+  - >-
+    PERMISSIONS: `actions: write` (re-run) and `pull-requests: read` on this job only;
+    `permissions: {}` at workflow level. `actions: write` is broad on the platform (also
+    dispatch, cancel, enable, disable); TQ-600a-13-xi's client narrows it to re-runs of
+    `post-merge-hold.yml`. This job holds no `issues` scope: the list of pull requests it
+    could not re-run is written to its job output `unrerunnable` (JSON list of {`pr`,
+    `head_sha`, `reason`}), and the notice job (which holds `issues: write` and `needs:`
+    this job with `if: always()`) carries it onto the canonical notice, so the
+    issue-writing token and the re-run token never coexist in one job. The output is
+    also printed to the job log so it is visible when no notice is open.
+  - >-
+    RE-RUN SEMANTICS — VERIFIED (doc): a re-run uses the original event's `GITHUB_SHA`
+    and `GITHUB_REF` and is allowed for 30 days after the initial run. Under
+    `pull_request_target` that means the base commit's copy of the hold at the time of
+    the original event — acceptable — and the new attempt reads the run history afresh.
+    The payload (description) is the original's; the verdict does not depend on it
+    except for the exemption, which a later description edit re-evaluates anyway.
+  - >-
+    UNVERIFIED, MUST BE OBSERVED ONCE LIVE: that GITHUB_TOKEN may call the re-run
+    endpoint (it is an API call, not an event, so the "GITHUB_TOKEN events don't trigger
+    runs" rule should not apply). FALLBACK if refused: a dedicated credential — a GitHub
+    App installation token or a fine-grained token limited to `actions: write` on this
+    repository — stored as an ENVIRONMENT secret whose deployment-branch policy admits
+    only `main`, so a same-repository `pull_request` run cannot read it (plain repository
+    secrets ARE given to same-repository `pull_request` runs — GitHub expert, Q7), used
+    by this one job. Until one route is observed working, held PRs are re-run by hand
+    from the UI, the documentation says so, and TQ-600a-13-x keeps the hold advisory.
+  - >-
+    "VERDICT CHANGED" uses the settled-run rule of TQ-600a-13-v on both sides. did-not-
+    complete to red is not a change (both held). Runs whose verdict is unchanged
+    re-evaluate nothing, so the fan-out happens about twice per red streak.
+  - >-
+    THE TESTS COST UNDER 0.4 s. In-process against the shared fake server, which serves
+    open PRs and hold runs in completed, in-progress and 31-days-old states and refuses
+    one re-run with 403.
+delivers_to:
+  - agent: python-coder
+    ac_id: TQ-600a-13-iii
+    contract: >-
+      Job output `unrerunnable` of the `reevaluate` job: JSON list of {`pr`: int,
+      `head_sha`: 40-hex, `reason`: "older_than_30_days" | "rerun_refused_<status>" |
+      "no_hold_run"}, empty list when all succeeded.
+  - agent: python-coder
+    ac_id: TQ-600a-13-xvi
+    contract: >-
+      On completion of a `Post-merge fix proof` run, one re-run of the latest
+      `pull_request_target` hold run for that run's `head_sha`.
+expects_from:
+  - ac_id: TQ-600a-13-vi
+    contract: >-
+      A hold workflow whose most recent run per PR head SHA can be re-run to produce a
+      fresh verdict.
+  - ac_id: TQ-600a-13-v
+    contract: >-
+      `verdict_changed(runs, triggering_run_id)` from scripts/ci/_run_history.py.
+  - ac_id: TQ-600a-13-iii
+    contract: >-
+      The follow-up workflow file this job is added to.
+test_spec:
+  - name: test_tq600a_13_xv_a_verdict_change_reruns_every_open_hold_both_ways
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: integration
+    angle: criterion
+    surface_invoked: "scripts/ci/post_merge_reeval.py in-process, through the real REST client, against the recording fake server"
+    description: >-
+      Green then red: re-runs requested for every open PR's completed hold run. Red then
+      green: the same. Red then red: none. A superseded cancellation: none.
+  - name: test_tq600a_13_xv_unrerunnable_holds_are_named
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: integration
+    angle: discrimination
+    surface_invoked: "scripts/ci/post_merge_reeval.py against the fake server"
+    must_catch:
+      - "only the red transition re-evaluates, so held PRs stay red after main goes green"
+      - "a 31-day-old hold run or a refused re-run is skipped silently"
+      - "an in-progress hold run is re-run, cancelling it"
+      - "the fan-out runs inside the suite run before it has settled, so it reads the previous run"
+    description: >-
+      The too-old and refused PRs are named in the job output with reasons (and, through
+      the notice job, on the notice); the in-progress one gets no request.
+  - name: test_tq600a_13_xv_a_completed_proof_reruns_only_that_prs_hold
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: integration
+    angle: discrimination
+    surface_invoked: "scripts/ci/post_merge_reeval.py in-process, given a `workflow_run` payload for `Post-merge fix proof`, against the recording fake server"
+    must_catch:
+      - "a proof completion triggers the whole fan-out"
+      - "a hold run with event pull_request (a PR-edited copy of the workflow) is re-run"
+      - "a re-run is requested for a run of any workflow other than post-merge-hold.yml"
+    description: >-
+      Exactly one re-run request, for the latest pull_request_target hold run on the
+      proof's head SHA.
+test_rationale: |
+  The stale hold is the case both earlier drafts missed: without the green-direction
+  re-run, every held PR needs a push after main recovers. The live credential question
+  cannot be answered in the unit layer, so it is a recorded observation with a stated
+  fallback. Milliseconds; under 0.4 s.
+origin_agent: business-analyst
+created: 2026-10-08
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: internal
+notes: |
+  ADDED 2026-10-08 for user decision E. Supersedes the PENDING USER DECISION "stale pass"
+  in TQ-600a-13-vi.
+
+  OBSERVATION TO RECORD HERE: date, run id and outcome of the first live re-run requested
+  by GITHUB_TOKEN; if refused, which fallback was adopted.
+
+  RESIDUAL: pull requests idle for more than 30 days (several exist, for example #375
+  since 2026-07-21) cannot be re-run; they are named, and must be pushed or closed.

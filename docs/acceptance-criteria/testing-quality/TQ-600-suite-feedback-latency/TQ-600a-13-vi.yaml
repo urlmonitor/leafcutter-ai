@@ -1,0 +1,391 @@
+id: TQ-600a-13-vi
+components:
+  - testing_quality
+title: "Every pull request is held while the latest settled post-merge run on main is not green, by a check that reads the run history, runs no tests, and cannot be edited by the pull request it judges"
+component: testing-quality
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given the run history of the correctness-lane workflow on the main branch
+    (TQ-600a-13-ii), in which each settled run's recorded conclusion is success exactly
+    when the lane was green (TQ-600a-13-v defines "settled"),
+  And the decision, reversing the earlier one, that this run history — and not any issue
+    — is the source of the verdict, while the `post-merge-red` issue is only the notice
+    for people (TQ-600a-13-iii),
+  And the owner's decision to hold immediately, with no grace period,
+  And the reason this check exists at all: the expensive tests were taken off the per-PR
+    path to remove their cost from it, so a per-PR check that runs any of them, or builds
+    anything, defeats the change it belongs to,
+  When the check named `Post-merge suite status` evaluates a pull request targeting the
+    main branch that carries no accepted exemption (TQ-600a-13-viii covers those that do),
+    with the hosting service replaced by a double serving a stated workflow state, run
+    history and set of issues,
+  Then when the latest settled run concluded success, and is fresh and its workflow active
+    (TQ-600a-13-xiv), the check passes,
+  And when the latest settled run concluded anything else, the check fails, and its output
+    names that run by link and conclusion, says whether the tests failed or the run did
+    not complete, and links the notice issue when one describes that run,
+  And the verdict for a given run history is the same whether the notice issue is open,
+    closed by a person, closed by a merged closing keyword, duplicated, or was never
+    written because the job that writes it failed — so neither closing nor failing to
+    write the notice releases the hold,
+  And the verdict is computed from a fresh read on every evaluation and never from a
+    stored earlier verdict: a pull request that passed before a red run fails on its next
+    evaluation, and one opened after a red run fails on its first,
+  And the check is evaluated when a pull request is opened, reopened, pushed to, or has its
+    description edited, and when TQ-600a-13-xv re-evaluates it after the verdict changes,
+  And one evaluation makes a small fixed number of reads of the hosting service that does
+    not grow with the number of issues, runs or commits in the repository, starts no test
+    session and no build, and neither checks out nor executes any code from the pull
+    request — shown by counting the requests the double receives, the processes the
+    evaluation starts and the files it opens,
+  And the check that decides the verdict is the one on the main branch: a pull request
+    that edits the hold's workflow or its module is judged by the main branch's unedited
+    copy, and its edit has no effect on its own verdict — shown by evaluating a pull
+    request whose head carries a hold module that always passes and observing the main
+    branch's verdict,
+  And the pass and fail outcomes are shown by executing the check against the double for
+    each run-history state, never by reading the workflow file for the request it makes.
+depends_on:
+  - TQ-600a-13
+  - TQ-600a-13-ii
+  - TQ-600a-13-v
+doc_links:
+  - path: docs/acceptance-criteria/testing-quality/TQ-600-suite-feedback-latency/TQ-600a-13-ii.yaml
+    relationship: describes
+    status: exists
+    relevance: >-
+      Produces the run history this check reads.
+  - path: docs/acceptance-criteria/testing-quality/TQ-600-suite-feedback-latency/TQ-600a-13-v.yaml
+    relationship: describes
+    status: exists
+    relevance: >-
+      Defines a settled run, and why a superseded cancellation is skipped.
+  - path: docs/acceptance-criteria/testing-quality/TQ-600-suite-feedback-latency/TQ-600a-13-iii.yaml
+    relationship: describes
+    status: exists
+    relevance: >-
+      The notice, read on the held path for content only.
+  - path: docs/acceptance-criteria/testing-quality/TQ-600-suite-feedback-latency/TQ-600a-9.yaml
+    relationship: describes
+    status: exists
+    relevance: >-
+      The measured cost — about 667 s per run against a 190 s saving — that this check
+      must not re-introduce.
+  - path: .github/workflows/ci.yml
+    relationship: describes
+    status: exists
+    relevance: >-
+      The existing per-PR workflow. This check is deliberately NOT a job in it.
+  - path: docs/testing/README.md
+    relationship: modifies
+    status: exists
+    relevance: >-
+      Where a contributor will look when a pull request is held — documentation-expert's
+      surface, see delivers_to.
+  - path: docs/acceptance-criteria/testing-quality/TQ-600-suite-feedback-latency/TQ-600a-13-x.yaml
+    relationship: describes
+    status: exists
+    relevance: >-
+      The name, rollout order and enforcement this check depends on to be more than
+      advisory.
+declared_files:
+  - path: scripts/ci/post_merge_hold.py
+    state: to_be_created
+  - path: scripts/ci/_github_rest.py
+    state: to_be_created
+  - path: .github/workflows/post-merge-hold.yml
+    state: to_be_created
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - >-
+    THE CHECK NAME IS SETTLED: `Post-merge suite status` (user decision B, 2026-10-08).
+    It goes into ruleset 17810993 by exact string, so it is settled once here and every
+    sibling uses it verbatim. Retired before anything was built: `Nightly suite status`.
+    Reason for the choice: it states what the check reports (the status of the post-merge
+    suite on main) without naming a cadence that may change again.
+  - >-
+    THE READS, PER PATH (user decisions A and I; the old one-read issue gate is retired).
+    VERDICT READS, every evaluation: (1) `GET /repos/{o}/{r}/actions/workflows/
+    post-merge-suite.yml` — `state` (`active` | `deleted` | `disabled_fork` |
+    `disabled_inactivity` | `disabled_manually`, VERIFIED doc) for TQ-600a-13-xiv;
+    (2) `GET /repos/{o}/{r}/actions/workflows/post-merge-suite.yml/runs?branch=main&
+    exclude_pull_requests=true&per_page=30` in ALL statuses, interpreted ONLY by
+    scripts/ci/_run_history.py (TQ-600a-13-v) — never `status=completed&per_page=1`,
+    which reads a displaced waiting run's `cancelled` as the verdict and freezes every PR
+    during a merge burst. HELD PATH adds: (3) `GET /actions/runs/{id}/jobs?filter=latest`
+    to tell red from did-not-complete (TQ-600a-13-v); (4) `GET /issues?labels=
+    post-merge-red&state=all&sort=updated&direction=desc&per_page=30`, items with
+    `pull_request` excluded, to find the notice whose state block `run_id` equals the
+    verdict run (content only); DECLARED PATH adds TQ-600a-13-viii/-xvi's two proof reads;
+    BOTH PATHS add TQ-600a-13-vii's comment-list pages (bounded by that PR's comment
+    count, not the repository). Ceiling excluding comment pages: 6 reads. Permission
+    `actions: read` for (1)-(3). Never the search API.
+  - >-
+    TRIGGER AND TRUST MODEL — DECIDED 2026-10-08 (user decision H).
+    `.github/workflows/post-merge-hold.yml`, `on: pull_request_target` with types
+    `[opened, reopened, synchronize, edited]` and `branches: [main]` (a base-branch filter
+    that cannot exclude a pull request to main; the ruleset governs only main). VERIFIED
+    (GitHub expert, docs): under `pull_request_target` the workflow, and any checkout
+    without a `ref`, come from the default branch, so a pull request cannot edit the hold
+    to pass its own check. VERIFIED (API, on a public repository): the check run lands on
+    the PR head SHA, which is what the required check reads. The job NEVER checks out,
+    installs, builds or executes pull-request code: no checkout with `ref:` pointing at the
+    head, no `${{ github.event.pull_request.* }}` in any `run:` line. PR number and
+    description come from GITHUB_EVENT_PATH only. The `labeled`/`unlabeled` types are
+    dropped with the `nightly-fix` label (TQ-600a-13-viii).
+  - >-
+    ITS OWN WORKFLOW FILE, NOT A JOB IN ci.yml. Widening ci.yml's trigger would re-run all
+    eight shards on every description edit; and ci.yml is `pull_request`-triggered, so
+    hosting the hold there would let a PR edit it.
+  - >-
+    HOW THE MODULE REACHES THE RUNNER — DECIDED AT RE-ENRICHMENT (technical question 1): a
+    SPARSE CHECKOUT OF `scripts/ci` FROM THE DEFAULT BRANCH IS PERMITTED AND IS THE CHOSEN
+    FORM; vendoring is rejected. Reason, from the GitHub expert's analysis (Q7): a
+    `pull_request_target` job is dangerous only when it EXECUTES PR-SUPPLIED CONTENT while
+    holding the base token or secrets — a checkout with `ref:` set to the PR head followed
+    by running anything from it, or `${{ }}`-interpolated PR text in `run:`. A checkout
+    with no `ref` under `pull_request_target` fetches the default branch's last commit
+    (VERIFIED doc), i.e. the same already-merged code the workflow file itself comes from;
+    trusting it adds no trust the job does not already extend to its own YAML. "No repo
+    checkout" (decision I) is therefore read as "no checkout of PULL-REQUEST content",
+    which this satisfies. Vendoring the module into the YAML would create a second copy
+    of the hold logic that the unit tests (which import scripts/ci/post_merge_hold.py)
+    never execute — a duplicated source whose tested and running copies drift silently.
+    Required form: `actions/checkout` with NO `ref:` input, `sparse-checkout: scripts/ci`
+    (which also carries the family's tunables file, -x),
+    `persist-credentials: false`, `fetch-depth: 1`; no dependency install, no cache, no
+    `setup-python` cache; the module runs on the runner's system Python with the stdlib
+    only. If the owner meant "no checkout of any kind" literally, that is a product
+    reversal of this decision and the fallback is the vendored form, accepted with the
+    drift risk above stated in writing.
+  - >-
+    THE JOB SHAPE THAT A REQUIRED CHECK NEEDS — VERIFIED (GitHub expert, docs): a skipped
+    job reports success and does not block even when required, and a job whose `needs:`
+    failed is skipped; a workflow skipped by path, branch or commit-message filtering
+    leaves the check pending forever. So exactly one job, `name: Post-merge suite status`,
+    no matrix, NO job-level `if:`, NO `needs:`, no `paths:` filter. (Also TQ-600a-13-x.)
+  - >-
+    PERMISSIONS: `permissions: {}` at workflow level; on the job exactly `contents: read`
+    (the sparse default-branch checkout), `actions: read` (verdict, jobs and proof reads),
+    `issues: write` (read the notice, and record an exemption on it — TQ-600a-13-viii; an
+    allowed write per TQ-600a-13-xi), `pull-requests: write` (TQ-600a-13-vii's comment).
+    No `checks`, `statuses`, `actions: write` or `contents: write`. The repo default
+    token is `read` (VERIFIED API), so omitting the block would grant read-all.
+  - >-
+    CONCURRENCY PER PULL REQUEST: `group: post-merge-hold-<PR number>` (expressions are
+    allowed in `concurrency:`), `cancel-in-progress: true`, so two near-simultaneous
+    events cannot both create a comment; the newer run's check replaces the cancelled one.
+  - >-
+    A FRESH READ ON EVERY EVALUATION. No cache, no artifact, no stored verdict.
+  - >-
+    FORMERLY PENDING, NOW OWNED ELSEWHERE (decisions E, F, I): the stale pass is closed by
+    TQ-600a-13-xv's re-evaluation in both directions; stale / disabled / never-run are
+    TQ-600a-13-xiv's, computed from reads (1) and (2) at no extra cost; the read budget is
+    the per-path bound above, asserted by the counting descriptor.
+  - >-
+    EVENT POLICY DEADLINE. After 2026-11-02 GitHub blocks `pull_request_target` in this
+    public repository unless an Actions event policy allows it (VERIFIED doc; none exists
+    — VERIFIED API). This record can be built and merged before the policy exists — the
+    check is advisory until TQ-600a-13-x — but it must not be made required without it.
+  - >-
+    THE TESTS COST UNDER 1.0 s, IN THE DEFAULT SUITE. Verdict descriptors in-process
+    through the real REST client against the shared fake server; the seam executes the
+    real job steps in a subprocess with GITHUB_API_URL pointed at the fake and the sparse
+    checkout simulated by running from a scratch copy of scripts/ci. Process creation and
+    file opens are observed in the evaluating interpreter by a real observer (for example
+    audit events), never by patching subprocess.
+delivers_to:
+  - agent: python-coder
+    ac_id: TQ-600a-13-vii
+    contract: >-
+      The hold verdict object returned by scripts/ci/post_merge_hold.py: `state` (one of
+      "pass" | "red" | "did_not_complete" | "stale" | "disabled" | "never_run" |
+      "could_not_read" | "exempt"); `run` (object {`id`, `html_url`, `conclusion`,
+      `run_started_at`, `head_sha`} or null); `workflow_state` (string or null); `notice`
+      (object {`number`, `html_url`, `state`, `state_block`} or null — present only on the
+      held path when a notice describes the run); `reason` (the check's output line);
+      `cause` (string or null). The comment is written for every state except "pass" and
+      "exempt", and edited to "hold lifted" on those two when a comment exists.
+  - agent: python-coder
+    ac_id: TQ-600a-13-viii
+    contract: >-
+      The same verdict function, into which the exemption is evaluated only when `state`
+      is "red" or "did_not_complete" after successful reads.
+  - agent: python-coder
+    ac_id: TQ-600a-13-x
+    contract: >-
+      One job in .github/workflows/post-merge-hold.yml whose `name:` is exactly
+      `Post-merge suite status`, under `pull_request_target`, with no matrix, no job-level
+      `if:`, no `needs:`, and no path filter.
+  - agent: python-coder
+    ac_id: TQ-600a-13-xv
+    contract: >-
+      A hold workflow whose most recent run for a pull request's head SHA can be re-run
+      to produce a fresh verdict.
+  - agent: documentation-expert
+    contract: >-
+      A section in docs/testing/README.md for contributors: what a failing `Post-merge
+      suite status` means (the correctness lane on main is not green, or has no fresh
+      verdict; the cause is outside your change unless your change is the fix), the six
+      wordings (red / did not complete / stale / disabled / never run / could not read),
+      where the notice and its failing tests are, how a fix is let through (a closing
+      keyword for the notice in the description PLUS a passing proof run —
+      TQ-600a-13-viii, -xvi), that closing the notice releases nothing, that the hold
+      lifts by itself after a green run (TQ-600a-13-xv), and — until TQ-600a-13-x's
+      observation is recorded — that the hold is ADVISORY.
+expects_from:
+  - ac_id: TQ-600a-13-ii
+    contract: >-
+      The suite workflow's run history on main, conclusion success iff green.
+  - ac_id: TQ-600a-13-v
+    contract: >-
+      scripts/ci/_run_history.py: the settled-run selection over one 30-run page in all
+      statuses (kind settled / never_run / no_settled_in_page) and the red vs
+      did-not-complete classifier over the run's jobs list. The hold imports both and
+      re-implements neither.
+test_spec:
+  - name: test_tq600a_13_vi_the_verdict_follows_the_run_history_not_the_issue
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: integration
+    angle: criterion
+    surface_invoked: "scripts/ci/post_merge_hold.py's verdict entry point, in-process, through the real REST client against the shared recording fake server"
+    description: >-
+      Latest settled run success: pass. failure: held, output links the run. For a red
+      latest run, serve each issue state — notice open, closed by a user, closed by a
+      merged pull request, two duplicates, no notice at all: held in every case. For a
+      green latest run with a notice still open: pass.
+  - name: test_tq600a_13_vi_the_check_costs_a_fixed_number_of_reads_and_no_tests
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: integration
+    angle: discrimination
+    surface_invoked: "the `Post-merge suite status` job's real `run:` steps executed by the shared workflow-step executor in a subprocess, GITHUB_API_URL pointed at the fake server, with a process and file-open observer installed in the evaluating interpreter"
+    must_catch:
+      - "the check invokes the test runner to confirm the result itself"
+      - "the check pages through every run or every issue, so its cost grows with the repository"
+      - "the check caches the first verdict per pull request"
+      - "the job step imports pytest or opens a file under tests/ or unit_tests/"
+    description: >-
+      Pass path: exactly the workflow-state read and one run-history read (plus the
+      comment-list read of TQ-600a-13-vii); zero child processes; nothing opened under
+      tests/ or unit_tests/. Serve 500 issues and 500 runs: the same request count. Flip
+      the latest run to failure and evaluate the same pull request again: held, with the
+      held-path reads exactly (1)-(4) plus the comment pages, and no stored state carried
+      between the two evaluations.
+  - name: test_tq600a_13_vi_a_pull_request_cannot_edit_its_own_judge
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: integration
+    angle: discrimination
+    surface_invoked: "the shared workflow-step executor running the hold job of the DEFAULT-branch copy of .github/workflows/post-merge-hold.yml, with a synthetic `pull_request_target` payload whose head is a scratch-repository commit carrying an always-pass hold module"
+    must_catch:
+      - "the job checks out the pull request head and runs the head's module, so a PR that edits the module releases its own hold"
+      - "the checkout step gains `ref: <head sha>` — the executor's checkout emulation then materialises the always-pass module and this descriptor goes red"
+      - "a run step interpolates pull-request text with a `${{ }}` expression — the executor refuses it"
+      - "the job installs dependencies from the checkout (pip install -r ...), which would execute setup code"
+    description: >-
+      With a red latest run, the executed job's verdict is held and no file from the head
+      commit is opened. Whether GitHub runs the default-branch copy is VERIFIED platform
+      behaviour; this descriptor proves the job does not undo it by fetching the head.
+  - name: test_tq600a_13_vi_a_merge_burst_does_not_hold_every_pull_request
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: integration
+    angle: discrimination
+    surface_invoked: "scripts/ci/post_merge_hold.py's verdict entry point, in-process, through the real REST client against the recording fake server serving the run history of a coalesced merge burst"
+    must_catch:
+      - "the hold requests `status=completed&per_page=1` and reads the displaced waiting run's `cancelled` as did-not-complete, holding every pull request for the length of the burst"
+      - "the hold re-implements the settled-run rule instead of calling scripts/ci/_run_history.py, and the private copy skips every cancellation"
+      - "a lone newest cancellation (a human cancelling the only run) releases the hold by falling through to an older green run"
+    description: >-
+      THE BA'S CRITICAL FINDING, PROVED AT THE HOLD. Served (out of order): waiting #104,
+      cancelled #103 (displaced by #104), in-progress #102, green #101 started 2 h ago:
+      pass, output names #101. Then: cancelled #105 with nothing newer, green #101: held
+      as did-not-complete naming #105. The fake server records that no run-history request
+      carried `status=completed`.
+  - name: test_tq600a_13_vi_the_hold_workflow_invokes_the_module
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: integration
+    angle: seam
+    surface_invoked: "the shared workflow-step executor, locating the job in .github/workflows/post-merge-hold.yml by its exact name and executing its `run:` steps verbatim with a synthetic `opened` event payload at GITHUB_EVENT_PATH"
+    must_catch:
+      - "the workflow's step decides the verdict itself and never calls the module"
+      - "the job reports success regardless of the module's verdict"
+    description: >-
+      THE ONE SEAM FOR THIS WORKFLOW FILE. Red latest run: exit non-zero, output names the
+      run; green: exit zero.
+test_rationale: |
+  The verdict descriptor serves every issue state against a fixed red run history because
+  decision A is a claim of independence: the issue may do anything and the verdict must
+  not move. A notice that was never written is included on purpose — that was the gap.
+
+  The cost clause is asserted by counting, against a repository made artificially large,
+  because "does not grow with the repo" is a scaling claim and the cheapest way to break
+  it is to page through history.
+
+  The trust descriptor cannot prove GitHub's behaviour — that is verified platform fact —
+  but it can prove the job never re-fetches the head, which is the one way an
+  implementation could throw the protection away.
+
+  The merge-burst descriptor is the hold-level proof of the superseded-run rule. -v proves
+  the rule in the shared module; this one proves the hold actually uses it, which is
+  where a "read the latest completed run" shortcut would be written.
+
+  Not tested here: whether GitHub delivers each event, and whether `pull_request_target`
+  runs at all after 2026-11-02 (TQ-600a-13-x's recorded observations). Under 1.0 s.
+origin_agent: business-analyst
+created: 2026-10-08
+amended_by:
+  - reason: >-
+      USER-APPROVED REDESIGN AFTER TWO EXPERT REVIEWS (2026-10-08), decisions A, B, E, F,
+      H and I. (A) REVERSAL, RECORDED EXPLICITLY: the verdict now comes from the
+      correctness workflow's run history on main, not from whether a `nightly-red` issue is
+      open. SUPERSEDED criteria: "with no open issue labelled `nightly-red` the check
+      passes, And with one or more open issues labelled `nightly-red` the check fails ...
+      closed `nightly-red` issues and open issues without the label have no effect".
+      Added: closing, duplicating or failing to write the notice does not move the
+      verdict. (B) Check renamed `Nightly suite status` -> `Post-merge suite status`,
+      settled as the ruleset string. (I) SUPERSEDED "one evaluation sends exactly one
+      request to read the flag" -> a small fixed number of reads that does not grow with
+      the repository, no test session, no build, no checkout of pull-request code. (H)
+      SUPERSEDED the PENDING USER DECISION on trust model: `pull_request_target`, judged by
+      the main branch's copy, never executing PR code; added a criterion that a PR editing
+      the hold cannot change its own verdict. Triggers: `labeled`/`unlabeled` dropped with
+      the label escape hatch; re-evaluation by TQ-600a-13-xv added. (E, F) the PENDING
+      USER DECISIONS "stale pass" and "nightly never runs" are resolved by TQ-600a-13-xv
+      and -xiv. depends_on: -iii replaced by -ii and -v (the run history is now the
+      input; the notice is read for content only). Readiness returned to draft for IT PO
+      re-enrichment. Full prior text: commit e79d35ef4.
+    by: business-analyst
+    at: 2026-10-08
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: auth
+declares_side_effect: true
+notes: |
+  RESOLVED 2026-10-08: PULL REQUESTS THAT ARE NOT PUSHED AFTER THE VERDICT CHANGES.
+  TQ-600a-13-xv re-runs this check on every open pull request on each verdict change, in
+  both directions. Residual, named there: a pull request whose last hold run is older
+  than the platform's 30-day re-run limit cannot be re-run and is listed rather than
+  silently left.
+
+  RESIDUAL RISK, KNOWN AND ACCEPTED — NOT SOLVED: any pull request can add a workflow of
+  its own with a job named `Post-merge suite status` that exits zero. The ruleset pins
+  contexts to the GitHub Actions app (15368), which is any Actions job, so such a spoof
+  produces a second check run of the same name. This applies equally to all six existing
+  required checks (any PR could fake `Test suite (pytest)`). Only a dedicated GitHub App
+  with its own integration id closes it. Recorded by user decision H as accepted.
+
+  risk_surface raised from internal to auth: this record now owns the trust boundary of a
+  merge gate.

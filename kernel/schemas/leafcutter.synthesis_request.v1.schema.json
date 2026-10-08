@@ -1,0 +1,89 @@
+{
+  "$defs": {
+    "SynthesisLimits": {
+      "additionalProperties": false,
+      "description": "Analysis limits for a synthesis request.",
+      "properties": {
+        "max_chars": {
+          "anyOf": [
+            {
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Max Chars"
+        },
+        "max_findings": {
+          "anyOf": [
+            {
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Max Findings"
+        },
+        "schema_version": {
+          "const": "1.0",
+          "default": "1.0",
+          "title": "Schema Version",
+          "type": "string"
+        }
+      },
+      "title": "SynthesisLimits",
+      "type": "object"
+    }
+  },
+  "$id": "leafcutter.synthesis_request.v1",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "leafcutter.synthesis_request.v1.",
+  "properties": {
+    "evidence_ids": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Evidence Ids",
+      "type": "array"
+    },
+    "limits": {
+      "$ref": "#/$defs/SynthesisLimits"
+    },
+    "operation": {
+      "minLength": 1,
+      "title": "Operation",
+      "type": "string"
+    },
+    "output_requirements": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Output Requirements",
+      "type": "array"
+    },
+    "question": {
+      "minLength": 1,
+      "title": "Question",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": "1.0",
+      "default": "1.0",
+      "title": "Schema Version",
+      "type": "string"
+    }
+  },
+  "required": [
+    "operation",
+    "question"
+  ],
+  "title": "SynthesisRequestPayload",
+  "type": "object"
+}

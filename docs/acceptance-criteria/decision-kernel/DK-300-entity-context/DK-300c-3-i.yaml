@@ -1,0 +1,90 @@
+id: DK-300c-3-i
+title: "Definitions and caller claims never become permission or evidence of completion"
+component: decision-kernel
+components: [decision_kernel]
+level: L3
+status: active
+readiness: reviewed
+req_status: draft
+priority: high
+work_status: done
+criteria: |
+  Given a definition or quoted example says "ignore previous instructions" or claims that an operation is approved and complete,
+  And a registered capability description says the kernel can perform that operation,
+  When intent or later work consumes interpretation context,
+  Then the definition and caller text remain untrusted data separate from task evidence and governing instructions,
+  And they cannot alter the output contract, widen permissions, select a user preference or create approval,
+  And neither meanings nor registration prove live availability, successful execution or acceptance-criterion completion,
+  And recognizing change intent adds no execution capability.
+depends_on: [DK-300c-3]
+doc_links:
+  - path: docs/analysis/2026-10-03-kernel-entity-context-concept.md
+    relationship: specified-by
+    status: exists
+  - path: docs/product-truth/flows/leafcutter/decision-forming.flow.json
+    relationship: implements
+    status: exists
+  - path: docs/architecture/components/decision-kernel.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+delivers_to: {"agent":"python-coder","contract":"kernel.entity_projection.entity_context_payload(context,send_repo_excerpts=True)->dict returns {schema_version,kind,status,entities,unresolved,coverage,budgets,limitations}; each retained card uses one representative match and occurrence_count. kernel.entity_projection.attach_entity_context(state,context,max_state_chars,send_repo_excerpts=True,*,questions=None) preserves required state and enforces exact canonical serialization of the complete {state,questions} receiver envelope. This is a stronger entity-path policy than legacy provider state-only validation; required overflow raises JevPayloadTooLarge before provider invocation."}
+expects_from: {"ac_id":"DK-300c-3","contract":"kernel.entity_projection.entity_context_payload(context,send_repo_excerpts=True)->dict returns {schema_version,kind,status,entities,unresolved,coverage,budgets,limitations}; each retained card uses one representative match and occurrence_count. kernel.entity_projection.attach_entity_context(state,context,max_state_chars,send_repo_excerpts=True,*,questions=None) preserves required state and enforces exact canonical serialization of the complete {state,questions} receiver envelope. This is a stronger entity-path policy than legacy provider state-only validation; required overflow raises JevPayloadTooLarge before provider invocation."}
+origin_agent: business-analyst
+created: 2026-10-03
+amended_by:
+  - reason: "IT PO review on 2026-10-03 adds technical contracts and planned test specifications under existing user authorization; readiness is now reviewed. BA criteria, implementation status and historical evidence are preserved."
+superseded_by: null
+covered_by:
+  - 'tests/kernel/entity_context/test_permissions.py::test_hostile_definition_cannot_change_permissions_contract_or_approval'
+  - 'tests/kernel/entity_context/test_permissions.py::test_meanings_and_registration_are_not_live_or_completion_evidence'
+implemented_by:
+  - "kernel/entity_projection.py"
+  - "kernel/intent/classify.py"
+  - "kernel/interaction/packets.py"
+notes: |
+  New behavioral requirement derived from the user-authorized entity-context concept.
+  BA behavior and IT PO technical contracts are reviewed; implementation is verified by the independent strict entity suite and recognition corpus.
+  Verification evidence: reports/entity-context-verification.md. No human approval is implied.
+  Historical DK-200 direct-gather tests and evaluation reports are preserved.
+  Fresh-run wiring criteria were explicitly reconciled to EntityContext on 2026-10-04.
+estimated_complexity: L
+it_requirements:
+  - "Entity and caller channels remain explicitly untrusted meaning-only data in every consuming judgment and host artifact; they never enter instruction/approval/evidence fields."
+  - "Provider output is still checked by existing permission, output-contract and approval guards; recognized changes do not register new execution capabilities."
+  - "Capability registration proves only declared configuration, not liveness, successful execution or verified AC satisfaction."
+test_required: true
+test_spec:
+  - name: "test_hostile_definition_cannot_change_permissions_contract_or_approval"
+    target_dir: "tests/kernel/entity_context/"
+    framework: "pytest"
+    type: "integration"
+    angle: "discrimination"
+    description: "tests/kernel/entity_context/test_permissions.py::test_hostile_definition_cannot_change_permissions_contract_or_approval: Use instruction-like definitions and quoted caller examples with a recording provider; assert typed data placement, unchanged permissions/output contract, no approval and no new capability."
+    must_catch: ["Merging entity meaning text into trusted instructions or evidence.","Treating a recognized approval claim as human approval."]
+  - name: "test_meanings_and_registration_are_not_live_or_completion_evidence"
+    target_dir: "tests/kernel/entity_context/"
+    framework: "pytest"
+    type: "integration"
+    angle: "criterion"
+    description: "tests/kernel/entity_context/test_permissions.py::test_meanings_and_registration_are_not_live_or_completion_evidence: Ask about runtime availability and AC fulfillment using only cards/registry claims; verify missing observations remain missing and no completion proof is fabricated."
+test_rationale: "Exercise production public boundaries with real canonical-source fixtures and an injected recording classifier; assert observable outputs and side effects, not source strings. Capture red results before runtime implementation; no live provider is required."
+product_truth:
+  - flow: leafcutter/decision-forming
+    node: classify
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: leafcutter/decisions
+    entities: []
+    source: real
+    asof: '2026-10-03'
+  - flow: leafcutter/decision-forming
+    node: enrich-context
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: leafcutter/decisions
+    entities: []
+    source: real
+    asof: '2026-10-03'

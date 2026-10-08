@@ -1,0 +1,107 @@
+{
+  "$defs": {
+    "Choice": {
+      "additionalProperties": false,
+      "description": "One offered answer to a human question, with its consequences.",
+      "properties": {
+        "consequences": {
+          "default": "",
+          "title": "Consequences",
+          "type": "string"
+        },
+        "id": {
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+          "title": "Id",
+          "type": "string"
+        },
+        "label": {
+          "minLength": 1,
+          "title": "Label",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": "1.0",
+          "default": "1.0",
+          "title": "Schema Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "label"
+      ],
+      "title": "Choice",
+      "type": "object"
+    }
+  },
+  "$id": "leafcutter.human_question_request.v1",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "leafcutter.human_question_request.v1.",
+  "properties": {
+    "choices": {
+      "items": {
+        "$ref": "#/$defs/Choice"
+      },
+      "title": "Choices",
+      "type": "array"
+    },
+    "decision_id": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Decision Id"
+    },
+    "evidence_ids": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Evidence Ids",
+      "type": "array"
+    },
+    "free_text_allowed": {
+      "default": false,
+      "title": "Free Text Allowed",
+      "type": "boolean"
+    },
+    "question": {
+      "minLength": 1,
+      "title": "Question",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": "1.0",
+      "default": "1.0",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "structured_allowed": {
+      "default": false,
+      "title": "Structured Allowed",
+      "type": "boolean"
+    },
+    "subject_ids": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Subject Ids",
+      "type": "array"
+    },
+    "why_research_cannot_settle": {
+      "default": "",
+      "title": "Why Research Cannot Settle",
+      "type": "string"
+    }
+  },
+  "required": [
+    "question"
+  ],
+  "title": "HumanQuestionRequestPayload",
+  "type": "object"
+}

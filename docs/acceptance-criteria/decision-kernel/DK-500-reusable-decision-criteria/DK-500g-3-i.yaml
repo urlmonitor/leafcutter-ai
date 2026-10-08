@@ -1,0 +1,95 @@
+id: DK-500g-3-i
+title: Asking about a retired category leads to its replacement
+component: decision-kernel
+components:
+- decision_kernel
+- knowledge_management
+level: L3
+status: active
+readiness: approved
+req_status: draft
+priority: high
+work_status: todo
+roadmap_phase: phase_kernel_2_knowledge
+criteria: |
+  Given the retired cat-40cc613f737e3323, replaced by cat-d15d52392d7aa94c,
+  When a person asks which decisions used cat-40cc613f737e3323,
+  Then the answer names no decision of its own and names cat-d15d52392d7aa94c as its replacement,
+  And asking about cat-d15d52392d7aa94c names dec-d53e1c52cd47c832 through crit.human_authority and dec-acdfd972fcaca478 through crit.person_authorises,
+  And asking about an id that no category has ever had answers "unknown category", not an empty list.
+depends_on:
+- DK-500g-3
+covered_by: []
+implemented_by: []
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: DK-500g-3
+  contract: Registered query get_category_decisions.
+change_target: code
+risk_surface: internal
+it_requirements:
+- A retired category answers decisions [] with lifecycle_stage retired and replaced_by naming its replacements. An id never seen in the generation answers answer.status unknown_category (execution status ok), distinct from an empty list. This deliberately differs from get_entities, where an absent exact id returns ok with empty evidence.
+test_required: true
+test_spec:
+- name: test_retired_category_names_replacement_not_decisions
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: behavioral
+  angle: criterion
+  description: Asking about cat-40cc613f737e3323 names no decision of its own and names cat-d15d52392d7aa94c as its replacement.
+- name: test_replacement_lists_absorbed_member
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: behavioral
+  angle: criterion
+  description: Asking about cat-d15d52392d7aa94c names dec-d53e1c52cd47c832 through crit.human_authority and dec-acdfd972fcaca478 through crit.person_authorises.
+- name: test_unknown_id_answers_unknown_category
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: behavioral
+  angle: boundary
+  description: An id no category has ever had answers unknown_category, not an empty list.
+test_rationale: Build real generations through the knowledge sync and registered-operation entry points from a fixture commit (offline fixture backend), and assert node identities, links and answers against the category records of that commit; a live Neo4j test proves server compatibility. Unit tests of the reader alone would not prove that the Decision kind is unchanged in a full generation.
+doc_links:
+- path: docs/decisions/dec-93c1c730463c1f3c.yaml
+  relationship: governs
+  status: exists
+- path: docs/product-truth/flows/leafcutter/criteria-library.flow.json
+  relationship: implements
+  status: exists
+- path: docs/product-truth/mock-data/leafcutter/criterion-categories.mock.json
+  relationship: specified-by
+  status: exists
+- path: docs/architecture/adrs/ADR-061-identity-of-declared-and-learned-records.md
+  relationship: constrains
+  status: exists
+- path: docs/architecture/adrs/ADR-062-standalone-knowledge-retrieval.md
+  relationship: constrains
+  status: exists
+  relevance: Immutable generations from one commit, validated and published atomically; a failed build leaves the active generation untouched; registered parameterized queries only; finite native reader registry; disabled, unavailable and stale are distinct from an empty answer. On this branch since the 2026-10-05 merge of origin/main.
+origin_agent: business-analyst
+created: 2026-10-04
+amended_by:
+- reason: it-po-technical-enrichment
+  date: '2026-10-05'
+  by: it-po
+  summary: 'Technical enrichment: assigned_agent confirmed, estimated_complexity, change_target, risk_surface, it_requirements, contracts, doc_links and the test contract set; readiness draft -> reviewed. BA criteria unchanged.'
+superseded_by: null
+notes: |
+  ADR-061 and the decision: a retired id stays resolvable through replaced_by. Distinguishing a retired id from an unknown one keeps a typo from looking like an unused category.
+  FLOW BACK-LINK (for step.implements, to be applied by the store owner): leafcutter/criteria-library: explore.
+  Authored by the business-analyst stage of /plan-feature (route strategic) under decision dec-93c1c730463c1f3c; readiness draft, no product approval implied.
+product_truth:
+  - flow: leafcutter/criteria-library
+    node: explore
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: leafcutter/criterion-categories
+    entities:
+      - CriterionCategory
+      - Decision
+    source: mock
+    asof: '2026-10-04'

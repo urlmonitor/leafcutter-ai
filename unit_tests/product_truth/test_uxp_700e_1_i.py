@@ -129,6 +129,7 @@ def _step(step_id: str, order: int) -> dict:
         "id": step_id,
         "label": step_id,
         "human": f"the actor performs {step_id}",
+        "io_contracts": {"not_applicable": "This actor action tests size-bound transitions and has no JSON handoff."},
         "order": order,
         "impl_status": "not_started",
     }
@@ -156,6 +157,9 @@ def _base_flow(flow_id: str, summary: str, shape_version=None) -> dict:
 
 
 def _write_flow(flows_dir: Path, flow: dict) -> None:
+    from product_truth_contract_render import apply_contract_presentation
+
+    apply_contract_presentation(flow)
     component_dir = flows_dir / flow["component"]
     component_dir.mkdir(parents=True, exist_ok=True)
     name = flow["id"].split("/", 1)[1]

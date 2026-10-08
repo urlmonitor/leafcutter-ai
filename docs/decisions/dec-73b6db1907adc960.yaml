@@ -1,0 +1,357 @@
+schema_version: '1.0'
+kind: decision
+id: dec-73b6db1907adc960
+repository_id: leafcutter-ai
+title: Render the Codex skill from the same in-package source into the workspace root where ...
+description: Decide how to make the Leafcutter kernel procedure (the /leafcutter skill for Claude ...
+decision_type: design
+question: 'Decide how to make the Leafcutter kernel procedure (the /leafcutter skill for Claude Code) usable from OpenAI Codex,
+  both the CLI and the IDE extension. Codex 0.160 has no custom slash commands any more; it runs skills from .agents/skills/<name>/SKILL.md
+  (repo) or ~/.agents/skills (user), invoked explicitly as $leafcutter, with agents/openai.yaml able to forbid implicit invocation;
+  it ignores allowed-tools, blocks network in its default sandbox unless config.toml enables network_access or a .codex/rules
+  prefix_rule allows a command, and offers structured questions only in Plan mode, so kernel questions are asked as plain
+  text. Options: a repo-level skill in .agents/skills/leafcutter with a .codex/rules prefix rule that allows only the kernel
+  command; a user-level skill in ~/.agents/skills/leafcutter with network access enabled in ~/.codex/config.toml; or another
+  option grounded in the repository.'
+components: []
+change_target: []
+risk_surface: []
+roadmap_phase: []
+file_globs: []
+repository_wide: true
+selected_option_id: opt.workspace_skill_rendered_root
+supersedes: []
+superseded_by: []
+related: []
+task_context:
+  goal: 'Decide how to make the Leafcutter kernel procedure (the /leafcutter skill for Claude Code) usable from OpenAI Codex,
+    both the CLI and the IDE extension. Codex 0.160 has no custom slash commands any more; it runs skills from .agents/skills/<name>/SKILL.md
+    (repo) or ~/.agents/skills (user), invoked explicitly as $leafcutter, with agents/openai.yaml able to forbid implicit
+    invocation; it ignores allowed-tools, blocks network in its default sandbox unless config.toml enables network_access
+    or a .codex/rules prefix_rule allows a command, and offers structured questions only in Plan mode, so kernel questions
+    are asked as plain text. Options: a repo-level skill in .agents/skills/leafcutter with a .codex/rules prefix rule that
+    allows only the kernel command; a user-level skill in ~/.agents/skills/leafcutter with network access enabled in ~/.codex/config.toml;
+    or another option grounded in the repository.'
+  component_ids: []
+  technologies: []
+  constraints: []
+rationale:
+  text: 'Design decision settled by a human. Kernel ranking (Jev''s per-criterion judgement, evidence not authority; stopped
+    researching because design_judgement after 1 research round(s)): 1. [opt.workspace_skill_rendered_root] Render the Codex
+    skill from the same in-package source into the workspace root where sessions run, with the repository root fixed at install
+    time and a prefix rule for the kernel command (required mean 0.77, 2/4 passed); 2. [opt.user_skill_network] a user-level
+    skill in ~/.agents/skills/leafcutter with network access enabled in ~/.codex/config.toml (required mean 0.36, 0/4 passed);
+    3. [opt.repo_skill_rules] a repo-level skill in .agents/skills/leafcutter with a .codex/rules prefix rule that allows
+    only the kernel command (required mean 0.27, 0/4 passed). human:user chose option [opt.workspace_skill_rendered_root]
+    Render the Codex skill from the same in-package source into the workspace root where sessions run, with the repository
+    root fixed at install time and a prefix rule for the kernel command (kernel rank 1 of 3).'
+  origin: template
+assumptions: []
+unresolved_risks: []
+assessment:
+  basis: kernel_ranking
+  design_reason: design_judgement
+  confidence: 0.765
+  selected_rank: 1
+  ranking:
+    - option_id: opt.workspace_skill_rendered_root
+      rank: 1
+      required_passed: 2
+      required_total: 4
+      required_mean: 0.765
+      scores:
+        crit.correct_repository: 0.9
+        crit.narrow_permission: 0.59
+        crit.not_shipped: 0.72
+        crit.one_source: 0.87
+        crit.works_from_usual_folder: 0.85
+    - option_id: opt.user_skill_network
+      rank: 2
+      required_passed: 0
+      required_total: 4
+      required_mean: 0.36
+      scores:
+        crit.correct_repository: 0.14
+        crit.narrow_permission: 0.05
+        crit.not_shipped: 0.63
+        crit.one_source: 0.09
+        crit.works_from_usual_folder: 0.62
+    - option_id: opt.repo_skill_rules
+      rank: 3
+      required_passed: 0
+      required_total: 4
+      required_mean: 0.2675
+      scores:
+        crit.correct_repository: 0.21
+        crit.narrow_permission: 0.34
+        crit.not_shipped: 0.22
+        crit.one_source: 0.14
+        crit.works_from_usual_folder: 0.3
+final_outcome:
+  status: pending
+  observed_at: null
+  note: ''
+options:
+  - id: opt.repo_skill_rules
+    title: a repo-level skill in .agents/skills/leafcutter with a .codex/rules prefix rule that allows only the kernel command
+    description: ''
+    assumptions: []
+    evidence_ids:
+      - ev-834e46b924d6d561
+      - ev-68828f7ba78d83ec
+      - ev-cfa5c7d187b7139f
+    proposed_by: caller_goal
+    approved_by: null
+  - id: opt.user_skill_network
+    title: a user-level skill in ~/.agents/skills/leafcutter with network access enabled in ~/.codex/config.toml
+    description: ''
+    assumptions: []
+    evidence_ids:
+      - ev-68828f7ba78d83ec
+      - ev-d186c87dfeb14777
+    proposed_by: caller_goal
+    approved_by: null
+  - id: opt.workspace_skill_rendered_root
+    title: Render the Codex skill from the same in-package source into the workspace root where sessions run, with the repository
+      root fixed at install time and a prefix rule for the kernel command
+    description: 'install-skill gains a host switch: the Codex render (SKILL.md + agents/openai.yaml) goes into the workspace
+      root''s .agents/skills/leafcutter (the folder the user''s sessions start in), the target repository path is rendered
+      into the skill instead of being guessed from the session''s project root (also fixing the Claude Code skill), and a
+      .codex/rules prefix_rule there allows only the rendered kernel command.'
+    assumptions: []
+    evidence_ids:
+      - ev-a1b1334711f30783
+      - ev-68828f7ba78d83ec
+      - ev-0985f9a2dde2dd89
+      - ev-cfa5c7d187b7139f
+    proposed_by: host.generate_options
+    approved_by: human:user
+criteria:
+  - id: crit.works_from_usual_folder
+    question: Does it work from both the Codex CLI and the IDE extension, invoked as $leafcutter, from the folder the user
+      normally starts sessions in?
+    priority: required
+    kind: design_judgement
+    evidence_ids:
+      - ev-d186c87dfeb14777
+      - ev-760a503e844e6199
+      - ev-0985f9a2dde2dd89
+      - ev-a369599fbab87fd5
+      - ev-ff7249ded80f49a7
+  - id: crit.narrow_permission
+    question: Does it give only the kernel command what it needs (network to Jev and Langfuse, writes to its run root) through
+      Codex's own permission controls, without opening the network to every command?
+    priority: required
+    kind: design_judgement
+    evidence_ids:
+      - ev-a1b1334711f30783
+      - ev-0ffc8e9c4c9be296
+      - ev-68828f7ba78d83ec
+      - ev-760a503e844e6199
+      - ev-412112585910c927
+  - id: crit.not_shipped
+    question: Does it keep the kernel skill out of adopter projects (installed explicitly, never through build.py)?
+    priority: required
+    kind: design_judgement
+    evidence_ids:
+      - ev-68828f7ba78d83ec
+      - ev-412112585910c927
+      - ev-a1b1334711f30783
+      - ev-0985f9a2dde2dd89
+      - ev-760a503e844e6199
+  - id: crit.correct_repository
+    question: Does the kernel receive the intended repository as its scope regardless of the folder the session starts in?
+    priority: required
+    kind: design_judgement
+    evidence_ids:
+      - ev-a1b1334711f30783
+      - ev-0ffc8e9c4c9be296
+      - ev-760a503e844e6199
+      - ev-0985f9a2dde2dd89
+      - ev-412112585910c927
+  - id: crit.one_source
+    question: Is the Codex skill rendered from the same in-package source as the Claude Code skill, so the two cannot drift
+      apart?
+    priority: supporting
+    kind: design_judgement
+    evidence_ids:
+      - ev-a1b1334711f30783
+      - ev-834e46b924d6d561
+      - ev-68828f7ba78d83ec
+      - ev-0ffc8e9c4c9be296
+      - ev-0985f9a2dde2dd89
+evidence:
+  - id: ev-a1b1334711f30783
+    locator: docs/analysis/2026-09-30-decision-kernel-design-5-client-observability.md#L73-L86 (§Claude Code skill (P7))
+    category: task_context
+    content_hash: 5c14bfddeb9d0b27612ca70e1863f67c814bc5a9d6815ee0beecd762d97a5865
+    verification: source_verified
+    relevance: 0.82
+    source_version:
+      commit: 4b90cbcde44f2164e0e179c40ab7d414e9423efc
+      dirty: false
+  - id: ev-0ffc8e9c4c9be296
+    locator: docs/how-to/run-the-decision-kernel.md#L238-L264 (§Steps > Step 7 — Install the `/leafcutter` skill for Claude
+      Code)
+    category: task_context
+    content_hash: e9aa99442c3cd39799a5086b0deb0164bfa193aeccba9636322dd57e5e9b1bc0
+    verification: source_verified
+    relevance: 0.79
+    source_version:
+      commit: 4b90cbcde44f2164e0e179c40ab7d414e9423efc
+      dirty: false
+  - id: ev-834e46b924d6d561
+    locator: config/codex_agent_compatibility.v1.json#L58-L70 (references)
+    category: task_context
+    content_hash: c03c1fc3709f4b1390f58ce0b49fe11857995f837e29385bb9c956228ac77412
+    verification: source_verified
+    relevance: 0.77
+    source_version:
+      commit: 4b90cbcde44f2164e0e179c40ab7d414e9423efc
+      dirty: false
+  - id: ev-0985f9a2dde2dd89
+    locator: docs/analysis/2026-09-30-decision-kernel-design.md#L156-L171 (§Deliberate deviations from the specification)
+    category: task_context
+    content_hash: 5a8f46925727c31dcdf58f0af14b78d328ef3c0f6429eeb010872db269a1e6bb
+    verification: source_verified
+    relevance: 0.73
+    source_version:
+      commit: 4b90cbcde44f2164e0e179c40ab7d414e9423efc
+      dirty: false
+  - id: ev-a369599fbab87fd5
+    locator: tickets/00_inbox/TICKET-20260930-RenameLeafcutterHubCommand.md#L37-L64 (§Context)
+    category: task_context
+    content_hash: ed2fdf4158a6ddfec23244913d26d0c090efc079d422ec485402f2602d81e2bf
+    verification: source_verified
+    relevance: 0.7
+    source_version:
+      commit: 4b90cbcde44f2164e0e179c40ab7d414e9423efc
+      dirty: false
+  - id: ev-d186c87dfeb14777
+    locator: docs/analysis/2026-09-30-leafcutter-kernel-spec-rev3-5-client-observability-safeguards.md#L14-L46 (§11. Claude
+      Code client and LLM handoff [MVP] > 11.1 Choose a real invocation mechanism)
+    category: task_context
+    content_hash: 8d0696ff10ea03cbff95c03656c041af920d3e4356eb40908a716288b81ee6ba
+    verification: source_verified
+    relevance: 0.69
+    source_version:
+      commit: 4b90cbcde44f2164e0e179c40ab7d414e9423efc
+      dirty: false
+  - id: ev-68828f7ba78d83ec
+    locator: kernel/adapters/claude_code/install.py#L1-L38 (module level)
+    category: existing_patterns
+    content_hash: 56cab32aa76856907fadf9f7cc5b0d7c8f313f7a49d9ffd701f262347a704270
+    verification: source_verified
+    relevance: 0.7
+    source_version:
+      commit: 4b90cbcde44f2164e0e179c40ab7d414e9423efc
+      dirty: false
+  - id: ev-ff7249ded80f49a7
+    locator: docs/analysis/2026-09-30-decision-kernel-design-5-client-observability.md#L42-L72 (§CLI (`adapters/cli.py`, `adapters/envelope.py`,
+      P7))
+    category: prior_decisions
+    content_hash: 4e7fce67d8ab1f14f2d21adad0ae87bdf8e0a492a8358d16256d156f3135476f
+    verification: source_verified
+    relevance: 0.58
+    source_version:
+      commit: 4b90cbcde44f2164e0e179c40ab7d414e9423efc
+      dirty: false
+  - id: ev-cfa5c7d187b7139f
+    locator: docs/analysis/2026-09-30-leafcutter-kernel-spec-rev3-5-client-observability-safeguards.md#L122-L127 (§11. Claude
+      Code client and LLM handoff [MVP] > 11.5 Limits of the bootstrap host)
+    category: prior_decisions
+    content_hash: 55b9dacefaec58a64f6161c1800468eaeb9c7f71b6067e21879f7783913ad35a
+    verification: source_verified
+    relevance: 0.74
+    source_version:
+      commit: 4b90cbcde44f2164e0e179c40ab7d414e9423efc
+      dirty: false
+  - id: ev-760a503e844e6199
+    locator: docs/architecture/components/decision-kernel.md#L89-L100 (§Containers)
+    category: prior_decisions
+    content_hash: 940f7c17c29de9bea608c2f1dba49bb55843b27cd40bb244e419ee8e8048793d
+    verification: source_verified
+    relevance: 0.52
+    source_version:
+      commit: 4b90cbcde44f2164e0e179c40ab7d414e9423efc
+      dirty: false
+  - id: ev-412112585910c927
+    locator: kernel/adapters/claude_code/SKILL.md#L16-L27 (§1. Start)
+    category: existing_patterns
+    content_hash: ccafe7ee481698455db22dc88bd74692a3aced32d1d4ce0f21b12b95c544bc1e
+    verification: source_verified
+    relevance: 0.72
+    source_version:
+      commit: 4b90cbcde44f2164e0e179c40ab7d414e9423efc
+      dirty: false
+  - id: ev-90f21db2f2b05984
+    locator: config/codex_agent_compatibility.v1.json#L28-L42 (capabilities)
+    category: existing_patterns
+    content_hash: 95e98ed18af047ad79d42f8ca935e67c912bf511dc47e6f4a82c8631e2d5a4b3
+    verification: source_verified
+    relevance: 0.63
+    source_version:
+      commit: 4b90cbcde44f2164e0e179c40ab7d414e9423efc
+      dirty: false
+  - id: ev-364ce98627c53c19
+    locator: kernel/capabilities/retrieval/evidence_build.py#L27-L31 (def _semantic_type)
+    category: existing_patterns
+    content_hash: 49203aac510de0ac216e3d84e469ba8dcf4f3e688cdb24b01123c4c9ff256ac0
+    verification: source_verified
+    relevance: 0.6
+    source_version:
+      commit: 4b90cbcde44f2164e0e179c40ab7d414e9423efc
+      dirty: false
+  - id: ev-abcbd7632d578703
+    locator: kernel/interaction/packets.py#L1-L44 (module level)
+    category: existing_patterns
+    content_hash: 04a59a1a84828cd2f0ac243d025ef0441412f8ebb67388ec78a26c81b86301db
+    verification: source_verified
+    relevance: 0.59
+    source_version:
+      commit: 4b90cbcde44f2164e0e179c40ab7d414e9423efc
+      dirty: false
+  - id: ev-4456c295427a8dff
+    locator: kernel/memory/vocab.py#L1-L31 (module level)
+    category: existing_patterns
+    content_hash: d1b7ad7b2a3febfd76bde6ef1a5970fa63bd9ec2ec96a5c9c389d8f848095222
+    verification: source_verified
+    relevance: 0.51
+    source_version:
+      commit: 4b90cbcde44f2164e0e179c40ab7d414e9423efc
+      dirty: false
+  - id: ev-84209caa55b0be8e
+    locator: scripts/evals/run_agent_eval.py#L1221-L1260 (def _populate_artifact_record)
+    category: existing_patterns
+    content_hash: b10ab84b4abd2465122382530d729f4008accd934ba1f5dd3d0e3387e43345e7
+    verification: source_verified
+    relevance: 0.5
+    source_version:
+      commit: 4b90cbcde44f2164e0e179c40ab7d414e9423efc
+      dirty: false
+precedents_considered: []
+approval:
+  approval_status: approved
+  approved_by: human:user
+  approved_at: '2026-10-02T08:43:44Z'
+  note: ''
+provenance:
+  origin: learned
+  created_by_capability: decision
+  created_at: '2026-10-02T08:43:44Z'
+  run_id: run-c71cd33587cf4f5e
+  root_task_id: task-548ab162c4104502
+  langfuse_trace_id: 4dbef11675b3593f69a9bfa4c36c9854
+  langfuse_trace_url: null
+  repository_revision:
+    commit: null
+    dirty: false
+  policy_version: null
+  template_version: decision.assess@1
+  model_version: jev-latest
+  kernel_version: 0.1.0.dev0
+  decision_versions:
+    options: ce65cf5cc633
+    criteria: d0de4f1e5343
+    templates: decision.assess@1
+corrections: []

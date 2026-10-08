@@ -337,6 +337,7 @@ flowchart TD
 - BO-2300e-1-iii: A stale or expired pause is handled gracefully
 - BO-2400a-1: Exactly one test-writer and one coder agent per batch
 - BO-2400a-1-i: The fast lane has one dedicated command-step-runner, registered to run commands, that runs the given command in the named workspace and hands back its output untouched
+- BO-2400a-1-iv: The lane asks its test-writer for the angles the criterion declares, not for one minimal test
 - BO-2400a-3: Red-baseline verification is a deterministic script gate before the coder runs
 - BO-2400a-3-i: Red-baseline gate halts when the batch will not go red
 - BO-2400a-4-i: Green gate refuses commit staging when the coder cannot make all tests pass
@@ -611,9 +612,14 @@ flowchart TD
 - TQ-500e-1: The record says what was altered and what each test did, in the record's own words
 - TQ-500f-2-ii: Bug-fix and gate requirements arrive at the test writer with their wrong versions already named
 - TQ-500f-3: Failing because the code was missing is recorded as just that, and never proves a test guards code that already exists
+- TQ-500f-3-iv: The /build-epic route runs the same red-baseline reader before the coder, and does not take the test writer's word for it
 - TQ-500f-4: Both test writers ask what small wrong change would keep their test green, and fix the test before handing on
 - TQ-500f-4-i: The database test writer, which does not run its tests, labels its answers as reasoning, not as results
 - TQ-500f-4-ii: A check that passes best when nothing happened is caught by the second question
+- TQ-500g-1-iv: Each named wrong version becomes one alteration of the finished code that does what its name says and nothing else
+- TQ-500g-1-vii: The /build-epic route makes the same wrong-version runs before each ticket is committed
+- TQ-500g-2: The database test writer runs what it writes, including against the code before the fix, and says so only when it did
+- TQ-500g-3: When a shared check changes, every existing test that leans on it is listed, and may be strengthened but never weakened
 - UXP-100a-1: Prototype composition reads the component library catalog before assembly
 - UXP-100a-1-i: Empty or missing component library catalog halts prototype assembly with a diagnostic
 - UXP-100a-2: Prototype output preserves visual and structural consistency with existing pages

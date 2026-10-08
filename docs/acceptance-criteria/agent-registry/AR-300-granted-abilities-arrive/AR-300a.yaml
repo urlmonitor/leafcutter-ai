@@ -1,0 +1,61 @@
+id: AR-300a
+title: "A specialist starts work knowing every ability it has been given"
+component: agent-registry
+components:
+  - agent_registry
+  - template_compiler
+  - skills_system
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  The abilities on a specialist's record are the abilities in its briefing.
+
+  Every specialist that has been granted abilities is told about them in the
+  working instructions it actually receives, before it begins. None is left to
+  discover the long way round that a shortcut it was entitled to existed.
+depends_on:
+  - AR-300
+doc_links:
+  - path: config/agent_registry.json
+    relationship: describes
+    status: exists
+    relevance: "The record of what each specialist was granted -- the side of the comparison that is already correct for 31 specialists."
+  - path: templates/agents/workflow-architect.md
+    relationship: describes
+    status: exists
+    relevance: "The sharpest instance: the abilities on its record are its entire documented purpose, and its briefing mentions none of them."
+  - path: docs/architecture/agent_knowledge_plane.md
+    relationship: describes
+    status: exists
+    relevance: "The account of what reaches a specialist before it starts work -- the surface this criterion is measured against."
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-09-30
+amended_by: []
+superseded_by: null
+covered_by:
+  - AR-300a-1
+  - AR-300a-2
+  - AR-300a-3
+  - AR-300a-4
+implemented_by: []
+documentation_triggers: []
+documentation_rationale: "No new user-facing surface -- specialists begin receiving a declaration they were always granted; nothing changes in how anyone invokes anything."
+notes: |
+  MEASURE THE BRIEFING, NOT THE PREPARATION. The defect behind this criterion is
+  that the abilities table is computed correctly and then discarded. Any proof
+  that reads the computation, the record, or the source template will pass today
+  on 31 specialists that receive nothing. Evidence must be the compiled briefing
+  a specialist actually receives.
+
+  ONE HAND-WRITTEN SECTION EXISTS AND IS NOT COVERAGE. Exactly one specialist's
+  instructions mention its abilities, written by hand rather than delivered. A
+  criterion satisfied by hand-writing the section into 31 templates has answered
+  a question nobody asked -- see AR-300d, which owns the generality this must
+  not be traded against.

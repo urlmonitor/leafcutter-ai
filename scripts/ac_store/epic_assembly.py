@@ -214,7 +214,9 @@ def _read_ac_record(yaml_path: Path) -> tuple[str, dict] | None:
         return None
 
     try:
-        data = yaml.safe_load(content)
+        # Reverted (loader-audit, TQ-600a-11 fix-pass, 2026-10-07): no
+        # measured benefit (criterion 1); single AC file read.
+        data = yaml.load(content, Loader=yaml.SafeLoader)
     except yaml.YAMLError as exc:
         _log.warning("YAML parse error in %s: %s", yaml_path, exc)
         return None

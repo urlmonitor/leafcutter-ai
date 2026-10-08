@@ -1,0 +1,132 @@
+id: DK-400d
+title: "No part runs until you approve the split"
+component: decision-kernel
+components:
+  - decision_kernel
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_kernel_1_founding
+criteria: |
+  Approve, reword, trim or reject the split before any part runs.
+
+  You see your request as you submitted it beside every proposed part, and you
+  can approve the split as shown, reword a part, leave parts out or reject it;
+  only a person can give that answer, and who gave it and when is kept with the
+  split. A reworded part keeps the original proposal beside it and a left-out
+  part never runs. If you reject the split, a request that could have been
+  taken on as one question goes ahead as one decision, exactly as today; an
+  unclear request comes back to you as the clarifying question you would get
+  today; and only a request that nothing could handle ends with a plain note
+  that nothing was decided and a hint to ask again as one question.
+depends_on:
+  - DK-400
+doc_links:
+  - path: docs/product-truth/flows/leafcutter/decision-forming.flow.json
+    relationship: specified-by
+    status: exists
+    relevance: "Flow v5: step split-approve (screen decision-split-approve) and branches split-revise, split-reject (a turned-away request ends blocked) and split-reject-kept-whole (bundled_accepted or mid-run goes ahead as one). v5 still ends an ambiguous rejection blocked, unlike the final-gate rule (see notes)."
+  - path: docs/product-truth/mockups/leafcutter/decision-split-approve.mockup.json
+    relationship: specified-by
+    status: exists
+  - path: docs/product-truth/mock-data/leafcutter/decisions.mock.json
+    relationship: specified-by
+    status: exists
+    relevance: "Mock v5 (v6 in preparation) defines gate_answer, gate_by (human:<name>, never a model), gate_at, gate_note, parts[].review and proposed_text. The seven-state machine runs proposed -> approved -> in_progress -> completed or ended_partial, with rejections ending in rejected or rejected_kept_whole (whole_decision_id). Records: dcp-split-bounds-mid-run (edit and subset), dcp-trace-analyzers-rejected and dcp-decision-records-bundled (kept whole)."
+  - path: docs/architecture/adrs/ADR-060-source-of-truth-and-approval-authority.md
+    relationship: constrains
+    status: exists
+  - path: docs/how-to/run-the-decision-kernel.md
+    relationship: related
+    status: exists
+    relevance: "Where a person learns to answer a kernel gate; answering a split belongs beside it."
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: product-owner
+created: 2026-10-04
+amended_by:
+  - reason: "2026-10-05 PO, user decision: rejecting the split of a request the kernel would have accepted as one decision lets it go ahead as one decision, exactly as today; rejecting the split of a request the kernel turned away still ends with the plain nothing-was-decided note. Title narrowed from 'Nothing runs' to 'No part runs' accordingly."
+  - reason: "2026-10-05 PO, user decision: a rejected split found mid-run also goes ahead as one; only a split of a turned-away request ends blocked when rejected. The open-question hold on L2 work was removed."
+  - reason: "2026-10-05 PO, user's final-gate decision: rejecting the split of an ambiguous (unclear) request falls back to today's clarification question instead of ending blocked; only a request nothing could handle (jev_none) ends with the nothing-was-decided note. Criteria sentence amended to name the three endings; notes refreshed to flow v5 and mock v5."
+superseded_by: null
+covered_by:
+  - DK-400d-1
+  - DK-400d-2
+  - DK-400d-3
+  - DK-400d-4
+  - DK-400d-5
+implemented_by: []
+documentation_triggers:
+  - how-to
+  - state-diagram
+notes: |
+  FLOW NODES: split-approve (step); split-revise, split-reject and
+  split-reject-kept-whole (branches).
+
+  SETTLED: no part runs before a person answers, and the run waits for that
+  answer (run_status waiting_human). Only a person answers, recorded as
+  human:<name> with the time (ADR-060). An approved split keeps at least one
+  part. A rejected split runs no part.
+
+  REJECTION, BY WHY THE SPLIT WAS OFFERED (user decisions 2026-10-05, the last
+  one at the final gate; recorded in DK-400 "DECISIONS AT THE PO GATE" and
+  "FINAL GATE"). Only jev_none ends blocked:
+    - trigger bundled_accepted (routing would have accepted the request as one
+      decision): the request goes ahead as ONE decision, exactly as today, from
+      the precedent step. The run is not blocked, and no part or child work
+      item is created (state rejected_kept_whole).
+    - found_at mid_run (no trigger): the same go-ahead. The work item that held
+      the many-sided question goes ahead as one, because the run had already
+      taken it on. The run is not blocked, and no part or child work item is
+      created (state rejected_kept_whole).
+    - trigger ambiguous (the request was unclear): it falls back to today's
+      clarification question, and the run is not blocked. Customer wording:
+      "an unclear request comes back to you as the clarifying question you
+      would get today". This replaces the earlier rule that ambiguous ends
+      blocked like jev_none.
+    - trigger jev_none (nothing could handle the request): the run ends blocked
+      and still records the capability gap, as today. Its report says plainly
+      that the split was rejected and nothing was decided, with a hint to ask
+      again as one bounded question (state rejected).
+  In every case the report keeps one plain line saying a split was offered and
+  rejected (DK-400f).
+
+  PRODUCT-TRUTH FOLLOW-UP:
+    - RESOLVED: the go-ahead ending for bundled_accepted and mid-run. Flow v5
+      has split-reject-kept-whole, and mock v5 has state rejected_kept_whole
+      with whole_decision_id and record dcp-decision-records-bundled.
+    - OPEN, for the ambiguous fallback decided at the final gate:
+      - Flow v5's split-reject still covers "jev_none or ambiguous" (ends
+        blocked), and so does split-too-few-parts.
+      - In mock v5, state rejected covers a "jev_none or ambiguous subject"
+        whose run ended blocked, and capability_gap_recorded is true for
+        both.
+      Both must be amended so that ambiguous falls back to today's
+      clarification question. The mock-data author is preparing v6; the flow
+      needs the matching change. Confirm both before the BA back-links L2s to
+      split-reject.
+
+  CARRY TO L2:
+    - The gate offers four answers: approve as shown, edit a part's text, untick
+      parts (a subset), or reject. Edits and a subset can be combined in one
+      approval (dcp-split-bounds-mid-run does both).
+    - A person may add back a dropped proposal's question by editing (flow
+      branch split-dropped). Whether a person may also ADD a new part, or change
+      a part's dependencies or whether it needs a decision or research, was
+      SETTLED by the IT PO (DK-400 Q7, approved at the final gate). The person
+      may not; a missing question is added by rewording a part or is asked
+      again as its own request (DK-400d-1).
+    - A skills AC was added at the final gate: DK-400d-1-ii, written by the BA.
+    - Unticking every part is not an approval. Whether the gate forbids it or
+      treats it as a rejection is for the BA to settle.
+    - The gate note (gate_note) keeps the person's words: a rejection reason,
+      why a part was left out, the order picked.
+
+  DOCS: a person answers this gate (how-to). The split has seven states with
+  explicit transitions (state-diagram): proposed, approved, in_progress,
+  completed, ended_partial, rejected and rejected_kept_whole (mock v5).

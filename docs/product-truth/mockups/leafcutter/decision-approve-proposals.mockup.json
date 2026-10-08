@@ -1,0 +1,34 @@
+{
+  "id": "leafcutter/decision-approve-proposals",
+  "component": "decision_kernel",
+  "screen": "decision-approve-proposals",
+  "title": "Approve the generated proposals",
+  "summary": "The kernel's first question after option generation: the options taken from the request (usable as given) and the proposed options, each with what it is grounded in, the proposed criteria marked required or supporting, and the four answers (approve, approve a subset, edit criteria, add an option). Populated from the options and criteria of dec-5e7445182eaec1f2.",
+  "entities": [
+    "Decision"
+  ],
+  "source": "mock",
+  "realization": "mock",
+  "renders": "decision-approve-proposals.html",
+  "status": "active",
+  "superseded_by": null,
+  "readiness": "draft",
+  "version": 1,
+  "shape_version": 1,
+  "tags": [
+    "decision-kernel",
+    "decision-lifecycle",
+    "approval",
+    "forming",
+    "criteria"
+  ],
+  "mock_data_ref": "leafcutter/decisions",
+  "provenance": [
+    {
+      "action": "authored",
+      "by": "mockup-author",
+      "date": "2026-10-02",
+      "note": "Drafted from leafcutter/decisions records; styled from the Atlas tokens via docs/ui-context.md (globals.css, tailwind.config.ts, layout.tsx, kit.tsx)."
+    }
+  ]
+}

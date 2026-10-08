@@ -6,7 +6,7 @@ diagram_type: component
 status: active
 type: reference
 created: 2026-07-14
-last_updated: 2026-09-25
+last_updated: 2026-10-05
 components:
   - ux_prototyping
   - ac_store
@@ -55,10 +55,10 @@ docs/product-truth/
     mock-data.schema.json       shape of a Mock Data artifact
     mockup.schema.json          shape of a Mockup artifact
     classifier-eval.schema.json shape of one classifier eval row
+    <contract>.schema.json      explicitly classified documentation contract schemas
   classifier/
     eval.jsonl                  labelled examples: request -> which artifacts are needed
   flows/<product>/<name>.flow.json   machine-readable flow (source of truth)
-  flows/<product>/<name>.md          human-readable rendering (GENERATED — do not edit)
   mock-data/<product>/<name>.mock.json
   mockups/<product>/…                (HTML; the Atlas is the current renderer)
   scripts/
@@ -148,13 +148,32 @@ generation, not replacement:
 
 ## The Leafcutter Atlas (read surface)
 
-`leafcutter-web/` is a Next.js app that reads both stores **live from the repo on
-each request** (`lib/data/repo.ts` resolves the repo root; `lib/data/flows.ts`
-loads every `*.flow.json`). It resolves each step's `implements` ids to their
+`leafcutter-web/` is a Next.js app that loads both stores from the selected
+repository (`lib/data/repo.ts` resolves the repo root; `lib/data/flows.ts` walks
+the flow directory for `*.flow.json` directly, rather than reading the manifest
+as its flow source). The server reader caches by repository root, so a running
+instance may need a restart to show changed on-disk records. It resolves each step's `implements` ids to their
 **live** AC `work_status` via `acById(id)` and rolls them up into the displayed
 `impl_status` — the stored `impl_status` in the JSON is used only as a fallback
-for AC ids that do not resolve. The Atlas and the generated `.md` rendering of a
-flow are **read-only views**; the `.flow.json` stays the single source of truth.
+for AC ids that do not resolve. Atlas is a **read-only view** of the authored
+`.flow.json`. The generator updates derived fields in that JSON and rebuilds
+`index.json`; it does not emit a separate Markdown file for each flow.
+
+Flow-level `contract_definitions` and each step or branch's `io_contracts`
+are the authored source for input and output details. Atlas passes them from
+the loader through the explorer to the drawer, which groups exact field paths
+under each input or output contract and shows JSON examples separately.
+With usable structured metadata it displays the authored narrative once and
+omits generated compatibility labels and the generated narrative suffix.
+Legacy or unusable metadata retains readable fallback text; this display
+fallback does not waive repository validation.
+
+Contract authority stays visible: runtime models, source-reviewed schema
+transcriptions and illustrative designs are distinct. Proposed missing
+bindings remain explicit gaps, and genuine non-JSON actions carry a specific
+reason. A passing schema check proves neither semantic answer quality nor
+production integration. See the [schema reference](../../how-to/product-truth-schema-reference.md)
+for exact field paths, types, requiredness, defaults and example provenance.
 
 ## Lifecycle & Validation
 
@@ -168,7 +187,11 @@ flow are **read-only views**; the `.flow.json` stays the single source of truth.
   AC id is re-resolved against the AC store as it stands right now (UXP-700c-1):
   an unresolved one is a **hard failure**, naming the holding artifact, position,
   and target; the run states `resolved N pointer(s)` unconditionally. It is wired
-  into the commit gates alongside the AC gates.
+  into the commit gates alongside the AC gates. The same canonical validator
+  checks structured contracts and generated compatibility-text drift in scoped
+  pre-commit checks and an unconditional CI job. All flow steps and branches
+  require metadata; formerly migrated identities have no exemption. The report
+  lists proposed missing bindings separately from validated fields and examples.
 - **Freshness (UXP-700c-2, softer than the pointer check above):** a journey may
   additionally carry a top-level `confirmed` record — an explicit, caller-supplied
   identity (`against`) plus a per-described-thing content snapshot (`state`) taken
@@ -186,7 +209,9 @@ flow are **read-only views**; the `.flow.json` stays the single source of truth.
 ## Entry Points
 
 - `docs/product-truth/index.json` — the searchable manifest (start here).
-- `docs/product-truth/schemas/` — the four artifact schemas.
+- `docs/product-truth/schemas/` - artifact schemas and explicitly classified
+  documentation contract schemas; some definitions instead reference existing
+  runtime models or schemas under `kernel/schemas/` and `config/`.
 - `docs/product-truth/scripts/validate_product_truth.py` — the validator.
 - `leafcutter-web/lib/data/flows.ts` — the Atlas loader for flows and mock data.
 
@@ -197,7 +222,7 @@ flow are **read-only views**; the `.flow.json` stays the single source of truth.
 - [ADR-043 — A Journey Known to Be Behind Carries a Durable `behind` Mark in the Record Itself](../adrs/ADR-043-journey-record-carries-its-own-behind-mark.md) — the `confirmed.against` identity contract and the durable `behind` mark this check's verdict feeds.
 - [ADR-010 — AC Store as Authoritative Backlog](../adrs/ADR-010-ac-store-as-authoritative-backlog.md) — the downstream backlog this store feeds.
 - [How to author product-truth artifacts by hand](../../how-to/authoring-product-truth-artifacts.md) — the search → add-vs-create protocol.
-- [Product-truth schema reference](../../how-to/product-truth-schema-reference.md) — field-by-field reference for the four schemas.
+- [Product-truth schema reference](../../how-to/product-truth-schema-reference.md) - field-by-field artifact and structured contract reference.
 - [docs/product-truth/README.md](../../product-truth/README.md) — the store's operational README.
 - [How example content is kept apart from the project's own record](../../reference/example-content-separation.md) — the product-root ownership rule, every surface that honours the separation, and how to add a new example artifact or product.
 

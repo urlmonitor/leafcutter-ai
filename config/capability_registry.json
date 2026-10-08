@@ -1,0 +1,328 @@
+{
+  "$schema": "./capability_registry.schema.json",
+  "_comment": "Kernel-routable capabilities only. Legacy agent and skill registries are never read, normalised or routed. A legacy asset may enter only with an admission record of kind legacy_admission that names a recorded decision (ADR-nnn). The seven entries below are the V0 native and host-handoff capabilities (native_registration, TICKET-20260930-KernelBootstrapV0). Fixed capabilities are never offered to Jev.",
+  "registry_id": "leafcutter.capabilities",
+  "registry_version": 1,
+  "capabilities": [
+    {
+      "id": "decision",
+      "name": "Decision",
+      "description": "Decides what to do or which option to pick for a bounded question, against approved criteria and using evidence. Also handles questions whose options are not known yet: it asks for options to be generated, then for human approval. Asks for missing evidence, options, synthesis or human approval instead of guessing.",
+      "version": "1.0.0",
+      "request_kinds": [
+        "capability"
+      ],
+      "operations": [
+        "decide"
+      ],
+      "accepts_schemas": [
+        "leafcutter.goal_request.v1",
+        "leafcutter.decision_request.v1"
+      ],
+      "produces_schemas": [
+        "leafcutter.decision_report.v1"
+      ],
+      "execution_mode": "native",
+      "binding": "decision",
+      "side_effect_class": "run_artifacts",
+      "permissions_required": [],
+      "routing": "semantic",
+      "cost_hints": {
+        "jev_calls": 1,
+        "host_operations": 0,
+        "latency_ms": null
+      },
+      "admission": {
+        "kind": "native_registration",
+        "decision_ref": "TICKET-20260930-KernelBootstrapV0",
+        "admitted_on": "2026-09-30",
+        "admitted_by": "BrainCandy"
+      }
+    },
+    {
+      "id": "research",
+      "name": "Research",
+      "description": "Gathers inspectable evidence for a question: selects needed evidence categories, retrieves from available sources, and reports coverage, unavailable sources and contradictions.",
+      "version": "1.0.0",
+      "request_kinds": [
+        "capability",
+        "evidence"
+      ],
+      "operations": [
+        "research"
+      ],
+      "accepts_schemas": [
+        "leafcutter.goal_request.v1",
+        "leafcutter.research_request.v1"
+      ],
+      "produces_schemas": [
+        "leafcutter.evidence_bundle.v1"
+      ],
+      "execution_mode": "native",
+      "binding": "research",
+      "side_effect_class": "read_only",
+      "permissions_required": [
+        "read_repo"
+      ],
+      "routing": "semantic",
+      "cost_hints": {
+        "jev_calls": 2,
+        "host_operations": 0,
+        "latency_ms": null
+      },
+      "admission": {
+        "kind": "native_registration",
+        "decision_ref": "TICKET-20260930-KernelBootstrapV0",
+        "admitted_on": "2026-09-30",
+        "admitted_by": "BrainCandy"
+      }
+    },
+    {
+      "id": "retrieve.repository",
+      "name": "Repository retrieval",
+      "description": "Finds evidence excerpts in allowlisted repository files and the knowledge map; read-only, with locator, revision and content hash on every result.",
+      "version": "1.0.0",
+      "request_kinds": [
+        "evidence"
+      ],
+      "operations": [
+        "retrieve"
+      ],
+      "accepts_schemas": [
+        "leafcutter.retrieval_request.v1"
+      ],
+      "produces_schemas": [
+        "leafcutter.evidence_bundle.v1"
+      ],
+      "execution_mode": "native",
+      "binding": "retrieve.repository",
+      "side_effect_class": "read_only",
+      "permissions_required": [
+        "read_repo"
+      ],
+      "routing": "fixed",
+      "cost_hints": {
+        "jev_calls": 1,
+        "host_operations": 0,
+        "latency_ms": null
+      },
+      "admission": {
+        "kind": "native_registration",
+        "decision_ref": "TICKET-20260930-KernelBootstrapV0",
+        "admitted_on": "2026-09-30",
+        "admitted_by": "BrainCandy"
+      }
+    },
+    {
+      "id": "host.generate_options",
+      "name": "Host option generation",
+      "description": "Host handoff: proposes candidate options and, when asked, candidate criteria from the evidence cited in the request. It has no repository access: each option cites the evidence it rests on. Every output is a proposal until approved.",
+      "version": "1.0.0",
+      "request_kinds": [
+        "options"
+      ],
+      "operations": [
+        "generate_options"
+      ],
+      "accepts_schemas": [
+        "leafcutter.options_request.v1"
+      ],
+      "produces_schemas": [
+        "leafcutter.options.v1"
+      ],
+      "execution_mode": "host_handoff",
+      "binding": "host.generate_options",
+      "side_effect_class": "none",
+      "permissions_required": [],
+      "routing": "fixed",
+      "cost_hints": {
+        "jev_calls": 0,
+        "host_operations": 1,
+        "latency_ms": null
+      },
+      "admission": {
+        "kind": "native_registration",
+        "decision_ref": "TICKET-20260930-KernelBootstrapV0",
+        "admitted_on": "2026-09-30",
+        "admitted_by": "BrainCandy"
+      }
+    },
+    {
+      "id": "host.synthesize",
+      "name": "Host evidence synthesis",
+      "description": "Host handoff: synthesizes supplied evidence into findings, agreements and disagreements without resolving them.",
+      "version": "1.0.0",
+      "request_kinds": [
+        "synthesis"
+      ],
+      "operations": [
+        "synthesize_evidence"
+      ],
+      "accepts_schemas": [
+        "leafcutter.synthesis_request.v1"
+      ],
+      "produces_schemas": [
+        "leafcutter.findings.v1"
+      ],
+      "execution_mode": "host_handoff",
+      "binding": "host.synthesize",
+      "side_effect_class": "none",
+      "permissions_required": [],
+      "routing": "fixed",
+      "cost_hints": {
+        "jev_calls": 0,
+        "host_operations": 1,
+        "latency_ms": null
+      },
+      "admission": {
+        "kind": "native_registration",
+        "decision_ref": "TICKET-20260930-KernelBootstrapV0",
+        "admitted_on": "2026-09-30",
+        "admitted_by": "BrainCandy"
+      }
+    },
+    {
+      "id": "host.research",
+      "name": "Host bounded research",
+      "description": "Host handoff: bounded research in supplied artifacts, allowed repository paths and web sources for evidence the native sources cannot provide.",
+      "version": "1.0.0",
+      "request_kinds": [
+        "evidence"
+      ],
+      "operations": [
+        "bounded_research"
+      ],
+      "accepts_schemas": [
+        "leafcutter.retrieval_request.v1"
+      ],
+      "produces_schemas": [
+        "leafcutter.evidence_bundle.v1"
+      ],
+      "execution_mode": "host_handoff",
+      "binding": "host.research",
+      "side_effect_class": "read_only",
+      "permissions_required": [
+        "read_repo"
+      ],
+      "routing": "fixed",
+      "cost_hints": {
+        "jev_calls": 0,
+        "host_operations": 1,
+        "latency_ms": null
+      },
+      "admission": {
+        "kind": "native_registration",
+        "decision_ref": "TICKET-20260930-KernelBootstrapV0",
+        "admitted_on": "2026-09-30",
+        "admitted_by": "BrainCandy"
+      }
+    },
+    {
+      "id": "host.formulate_question",
+      "name": "Host question formulation",
+      "description": "Host handoff: rewrites a human question for clarity without changing what is asked or its choices.",
+      "version": "1.0.0",
+      "request_kinds": [
+        "human"
+      ],
+      "operations": [
+        "formulate_question"
+      ],
+      "accepts_schemas": [
+        "leafcutter.human_question_request.v1"
+      ],
+      "produces_schemas": [
+        "leafcutter.human_question_request.v1"
+      ],
+      "execution_mode": "host_handoff",
+      "binding": "host.formulate_question",
+      "side_effect_class": "none",
+      "permissions_required": [],
+      "routing": "fixed",
+      "cost_hints": {
+        "jev_calls": 0,
+        "host_operations": 1,
+        "latency_ms": null
+      },
+      "admission": {
+        "kind": "native_registration",
+        "decision_ref": "TICKET-20260930-KernelBootstrapV0",
+        "admitted_on": "2026-09-30",
+        "admitted_by": "BrainCandy"
+      }
+    },
+    {
+      "id": "host.query_build",
+      "name": "host.query_build",
+      "description": "Bounded reusable graph query construction and verified admission.",
+      "version": "1.0.0",
+      "request_kinds": [
+        "capability"
+      ],
+      "operations": [
+        "build_query"
+      ],
+      "accepts_schemas": [
+        "leafcutter.query_build_request.v1"
+      ],
+      "produces_schemas": [
+        "leafcutter.query_candidate.v1"
+      ],
+      "execution_mode": "host_handoff",
+      "binding": "host.query_build",
+      "side_effect_class": "run_artifacts",
+      "permissions_required": [
+        "read_repo"
+      ],
+      "routing": "fixed",
+      "cost_hints": {
+        "jev_calls": 0,
+        "host_operations": 1,
+        "latency_ms": null
+      },
+      "admission": {
+        "kind": "native_registration",
+        "decision_ref": "TICKET-20261001-KM-500b-3",
+        "admitted_on": "2026-09-30",
+        "admitted_by": "BrainCandy"
+      }
+    },
+    {
+      "id": "knowledge.activate_query",
+      "name": "knowledge.activate_query",
+      "description": "Bounded reusable graph query construction and verified admission.",
+      "version": "1.0.0",
+      "request_kinds": [
+        "capability"
+      ],
+      "operations": [
+        "activate_query"
+      ],
+      "accepts_schemas": [
+        "leafcutter.query_activation_request.v1"
+      ],
+      "produces_schemas": [
+        "leafcutter.query_activation_receipt.v1"
+      ],
+      "execution_mode": "native",
+      "binding": "knowledge.activate_query",
+      "side_effect_class": "catalog_write",
+      "permissions_required": [
+        "read_repo",
+        "write_query_catalog"
+      ],
+      "routing": "fixed",
+      "cost_hints": {
+        "jev_calls": 0,
+        "host_operations": 0,
+        "latency_ms": null
+      },
+      "admission": {
+        "kind": "native_registration",
+        "decision_ref": "TICKET-20261001-KM-500b-3",
+        "admitted_on": "2026-09-30",
+        "admitted_by": "BrainCandy"
+      }
+    }
+  ]
+}

@@ -1,0 +1,29 @@
+{
+  "command": "python -m pytest tests/kernel -q",
+  "cwd": "C:/Users/Hendrik/Code/leafcutter/worktrees/kernel-entity-context",
+  "head": "6ce0b21e",
+  "production_changes": false,
+  "failed": 5,
+  "passed": 1543,
+  "skipped": 7,
+  "subtests_passed": 425,
+  "seconds": 605.07,
+  "failures": [
+    {
+      "file": "tests/kernel/grounding/test_retrieval_live_misses.py",
+      "test": "TestRealRepositoryMisses::test_the_design_folder_is_fully_considered_and_the_record_part_is_found",
+      "reason": "72 analysis files exceed candidate cap60; 12 matching files have no section offered"
+    },
+    {
+      "file": "tests/kernel/interaction/test_host_end_to_end.py",
+      "tests": [
+        "TestEveryOperationThroughTheGraph::test_each_operation_completes_with_its_converted_result",
+        "TestEveryOperationThroughTheGraph::test_the_packet_carries_the_compiled_statement_and_fingerprint",
+        "TestEveryOperationThroughTheGraph::test_the_same_request_compiles_to_the_same_packet_text_in_two_runs",
+        "TestHostTelemetry::test_each_operation_emits_its_event_with_the_packet_fingerprint"
+      ],
+      "subtest": "host.query_build",
+      "reason": "tests/kernel/interaction/host_rigs.py KINDS lacks host.query_build"
+    }
+  ]
+}

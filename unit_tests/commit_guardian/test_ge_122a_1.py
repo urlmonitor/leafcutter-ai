@@ -100,6 +100,12 @@ DECISION HISTORY
   test in this file asserted on wall-clock time, which is exactly why the
   regression was invisible to a fully green suite. Verified RED: see the
   test-writer sign-off comment for the measured elapsed time.
+- 2026-10-02 [test-env-fixes]: Performance budget now asserts CPU time
+  (time.process_time, ceiling 5.0s) instead of 8.0s wall-clock. On Windows
+  with other test processes running the pass took 20-25s wall but only
+  ~1.05s CPU (I/O/AV contention), so the wall assertion failed on a healthy
+  pass while passing on Linux CI. CPU time still bites on the CPU-bound
+  regressions this guards (verified by injecting a slowdown).
 """
 
 from __future__ import annotations
@@ -145,7 +151,7 @@ _PERF_DECISION_COUNT = 35
 _PERF_DIAGRAM_COUNT = 24
 _PERF_WORK_ITEM_COUNT = 289
 _PERF_WORK_ITEM_FOLDERS = ("00_inbox", "01_todo", "99_done")
-_PERF_WALLCLOCK_CEILING_SECONDS = 8.0
+_PERF_CPU_CEILING_SECONDS = 5.0
 
 # A representative Gherkin criteria block, repeated to approximate this
 # repo's own real AC record size (measured average 2677 bytes/file across
@@ -196,9 +202,7 @@ def _require_mod(test_case: unittest.TestCase) -> None:
         )
 
 
-# ---------------------------------------------------------------------------
 # Fixture collection builder
-# ---------------------------------------------------------------------------
 
 
 def _write_ac_yaml(path: Path, data: dict) -> None:
@@ -553,9 +557,7 @@ def _number_matches(finding_number, expected: str) -> bool:
     return candidate.lstrip("0") == expected.lstrip("0") and expected.lstrip("0") != ""
 
 
-# ---------------------------------------------------------------------------
 # Behavioral tests 1-4: execute the real pass over a real fixture collection
-# ---------------------------------------------------------------------------
 
 
 class UniquenessPassFixtureTestCase(unittest.TestCase):
@@ -749,9 +751,7 @@ class TestRepairedCollectionPasses(UniquenessPassFixtureTestCase):
             )
 
 
-# ---------------------------------------------------------------------------
 # Integration test 5: the pass must run from the DEPLOYED layout
-# ---------------------------------------------------------------------------
 
 
 class TestDeployedLayoutInvocation(unittest.TestCase):
@@ -837,9 +837,7 @@ class TestDeployedLayoutInvocation(unittest.TestCase):
         )
 
 
-# ---------------------------------------------------------------------------
 # Integration test 6: decision-namespace gate registration + survival + bite
-# ---------------------------------------------------------------------------
 
 
 class TestDecisionNamespaceGateRegistration(unittest.TestCase):
@@ -990,9 +988,7 @@ class TestDecisionNamespaceGateRegistration(unittest.TestCase):
             )
 
 
-# ---------------------------------------------------------------------------
-# Performance regression guard -- wall-clock upper bound
-# ---------------------------------------------------------------------------
+# Performance regression guard -- CPU-time upper bound
 
 
 class TestUniquenessPassPerformanceBudget(UniquenessPassFixtureTestCase):
@@ -1015,18 +1011,17 @@ class TestUniquenessPassPerformanceBudget(UniquenessPassFixtureTestCase):
 
     def test_uniqueness_pass_completes_within_generous_wallclock_ceiling_at_realistic_scale(self):
         # covers: GE-122a-1
-        """Assert an 8-second upper bound -- a GENEROUS ceiling, NOT the
-        ticket's 5-second target.
+        """Assert the pass uses under 5 CPU-seconds (the ticket's budget).
 
-        The 3-second margin above the 5s commit-time target absorbs
-        ordinary machine variance (CI runner contention, cold filesystem
-        cache, a slower dev laptop) so this test is not flaky for reasons
-        unrelated to the code under test. The point of an 8s ceiling is to
-        catch an ORDER-OF-MAGNITUDE regression like the one pr-reviewer
-        actually measured (10.2-11.4s, over 2x budget) -- not to
-        micro-benchmark down to the ticket's literal number, which would
-        make this test a source of noise rather than a real regression
-        guard.
+        CPU time (time.process_time), NOT wall-clock: on Windows the pass
+        measured ~1s CPU but 20-25s wall while other test processes and
+        Defender scanned the ~3300 fixture files, so wall-clock measured
+        the machine's I/O contention, not the code. The CPU-bound defect
+        this guards (full yaml.safe_load per AC file, quadratic scans) is
+        fully visible in CPU time: the 5s ceiling has ~5x headroom over the
+        healthy ~1s and is still crossed by the original 10s regression.
+        Blind spot: a pure I/O-wait regression is not seen. The 5s figure is
+        the ticket's own commit-time budget.
 
         Fixture CONSTRUCTION (writing ~3348 files to disk across all four
         namespaces) is deliberately EXCLUDED from the timed region -- only
@@ -1048,22 +1043,21 @@ class TestUniquenessPassPerformanceBudget(UniquenessPassFixtureTestCase):
         """
         expected_counts = _build_volume_fixture_collection(self.root)
 
-        start = time.perf_counter()
+        start = time.process_time()
         verdict = _mod.run_uniqueness_pass(self.root)
-        elapsed = time.perf_counter() - start
+        elapsed = time.process_time() - start
 
         self.assertLess(
             elapsed,
-            _PERF_WALLCLOCK_CEILING_SECONDS,
+            _PERF_CPU_CEILING_SECONDS,
             msg=(
-                f"run_uniqueness_pass took {elapsed:.2f}s against a fixture sized to "
+                f"run_uniqueness_pass used {elapsed:.2f}s CPU against a fixture sized to "
                 f"roughly this repo's real collection ({sum(expected_counts.values())} "
                 f"total artifacts across {sorted(expected_counts)}) -- over the "
-                f"{_PERF_WALLCLOCK_CEILING_SECONDS}s generous ceiling. The ticket's own "
+                f"{_PERF_CPU_CEILING_SECONDS}s CPU ceiling. The ticket's own "
                 "Implementation Notes budget is under 5s at commit time ('a commit-time "
-                "gate slower than that gets bypassed'); this 8s ceiling only catches an "
-                "order-of-magnitude regression, so overshooting it is a real defect, not "
-                "machine noise."
+                "gate slower than that gets bypassed'); CPU time is insensitive to "
+                "disk/AV/parallel-process stalls, so overshooting it is a real defect."
             ),
         )
 

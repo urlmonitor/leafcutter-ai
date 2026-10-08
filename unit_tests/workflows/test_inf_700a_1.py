@@ -54,6 +54,8 @@ if str(_UNIT_TESTS_DIR) not in sys.path:
 
 from _workflow_engine_harness import HarnessResult, run_workflow_under_e2  # noqa: E402
 
+import workflows._fast_lane_claim_fixtures as _claim_fx  # noqa: E402
+
 _WORKFLOW_PATH = _REPO_ROOT / "templates" / "workflows-js" / "fast-lane-ship.js"
 _TIMEOUT = 30
 
@@ -82,12 +84,9 @@ def _full_success_responses(worktree_root: Path, ac_ids: list[str]) -> dict[str,
     return {
         "fastlane-worktree": _worktree_label_response(worktree_root),
         "resolve-connected": {"ac_ids": ac_ids, "message": f"{len(ac_ids)} to build"},
-        "claim-connected": {
-            "claimed": ac_ids,
-            "excluded_claimed": [],
-            "target_refused": False,
-            "message": f"claimed {len(ac_ids)} ACs",
-        },
+        "claim-connected": _claim_fx.claim_ran(
+            ac_ids, message=f"claimed {len(ac_ids)} ACs"
+        ),
         "test-writer-connected": {
             "status": "ok",
             "tests_written": ["unit_tests/x/test_stub.py"],

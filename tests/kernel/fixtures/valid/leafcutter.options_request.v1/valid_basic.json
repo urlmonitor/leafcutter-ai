@@ -1,0 +1,5 @@
+{
+  "problem": "Choose a cache store",
+  "max_options": 3,
+  "propose_criteria": true
+}

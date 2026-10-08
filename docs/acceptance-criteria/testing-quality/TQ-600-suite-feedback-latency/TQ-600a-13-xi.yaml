@@ -1,0 +1,233 @@
+id: TQ-600a-13-xi
+components:
+  - testing_quality
+title: "Neither the post-merge runs, the notices, the re-evaluation nor the hold ever changes the repository's code"
+component: testing-quality
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given that the tests the post-merge runs execute exist to catch silent corruption, that
+    some of them are guardrail tests, and that an unreviewed automated change to a
+    guardrail test is the riskiest change in this repository to automate,
+  And the owner's decision that triage may be automated in a later piece of work and that
+    fixing may not,
+  When the correctness run, the timing run, the notice job, the re-evaluation job, the fix
+    proof and the hold check each run along every path they have — green, red,
+    did-not-complete, superseded, stale, disabled, never-run, held, pass, exempt, failed
+    read, verdict change, proof passed, proof failed,
+  Then none of them creates a commit, pushes or deletes a branch or tag, opens, edits,
+    approves or merges a pull request, or modifies any file tracked by the repository,
+  And the only writes they make to the hosting service are: creating, editing the
+    description of, commenting on, closing (including as a duplicate) and reopening
+    issues labelled `post-merge-red`, `post-merge-timing` or `post-merge-flaky`; creating
+    and editing the hold check's own marked pull request comment; re-running a run of the
+    hold workflow itself; and reporting check results,
+  And the fix proof makes no write to the hosting service at all,
+  And this is demonstrated by running each path against a recording double of the hosting
+    service and a real scratch repository with a local bare origin, and observing that
+    the recorded writes are a subset of the list above and that the repository's
+    branches, tags and working tree, and the origin's refs, are unchanged,
+  And adding a step that pushes a change, opens a pull request, edits a tracked file,
+    dispatches, cancels, disables or re-runs any other workflow to any of these paths
+    makes that demonstration fail.
+depends_on:
+  - TQ-600a-13
+  - TQ-600a-13-ii
+  - TQ-600a-13-iii
+  - TQ-600a-13-vi
+doc_links:
+  - path: docs/acceptance-criteria/testing-quality/TQ-600-suite-feedback-latency/TQ-600a-13-i.yaml
+    relationship: describes
+    status: exists
+    relevance: >-
+      Records why these tests are the warning system for a corruption that makes
+      unrelated tests fail for unrelated-looking reasons.
+  - path: .github/workflows/test-durations.yml
+    relationship: describes
+    status: exists
+    relevance: >-
+      The ONE workflow allowed to regenerate the durations file, through a pull request.
+      No workflow of this family may become a second one.
+declared_files:
+  - path: scripts/ci/_github_rest.py
+    state: to_be_created
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - >-
+    THE ALLOWED-WRITE LIST IS ENFORCED IN ONE PLACE EVERY WRITE PASSES THROUGH (user
+    decisions B, C, D, E and I). The shared REST client refuses, before
+    sending, every write that is not one of: `POST /issues` carrying exactly one of the
+    labels `post-merge-red`, `post-merge-timing`, `post-merge-flaky`; `PATCH /issues/{n}`
+    (body, state, state_reason) on an issue carrying one of those labels; `POST
+    /issues/{n}/comments` on such an issue; `POST /issues/{pr}/comments` and `PATCH
+    /issues/comments/{id}` for the hold's own marked comment on the pull request being
+    evaluated; `POST /actions/runs/{id}/rerun` where run {id} belongs to the
+    `post-merge-hold.yml` workflow (verified by reading the run before re-running it).
+    Refused by construction: git refs, contents, pull-request create/update/merge/review,
+    labels on other issues or pull requests, label creation, workflow dispatch, enable,
+    disable or cancel, re-runs of any other workflow, check-run creation, statuses,
+    releases. Reads are unrestricted.
+  - >-
+    NEW WRITES, AND WHY EACH IS SAFE. (1) Editing a notice's description (decision I) is
+    the notice's own state, under the `issues: write` the notice job already held —
+    VERIFIED no separate permission exists. (2) Two more labels (`post-merge-timing`,
+    decision C; `post-merge-flaky`, decision D) are non-holding notices of the same kind.
+    (3) Re-running the hold workflow's own runs (decision E) needs `actions: write`, which
+    the platform scopes broadly (it also allows dispatch, cancel, enable and disable —
+    GitHub expert, Q2), so the client narrows it to one endpoint on one workflow and the
+    re-evaluation job holds no other write scope. None of them changes code.
+  - >-
+    DEFENCE IN DEPTH IN THE WORKFLOWS. No job holds `contents: write` or the right to
+    create or merge pull requests; the suite and timing test jobs hold `contents: read`;
+    the fix proof's `Post-merge fix proof` job holds `permissions: {}` and its `Prepare
+    fix proof` job `actions: read` and `issues: read` only (TQ-600a-13-xvi); `actions: write` appears on
+    exactly ONE job in the repository's family workflows — `reevaluate` in
+    post-merge-followup.yml, which serves both the verdict-change fan-out (-xv) and the
+    proof re-trigger (-xvi); checkouts do not persist a git credential. Both the workflow
+    scopes and the client allowlist are required. A descriptor loads every family
+    workflow and asserts these scopes, because a scope is enforced only by the platform
+    and cannot be executed offline (structural by necessity; the behavioural half is the
+    client allowlist).
+  - >-
+    NO RUN EVER REGENERATES A BASELINE. Refreshing .github/test_durations.json — or any
+    baseline a timing-ratio test reads — stays test-durations.yml's job, through a pull
+    request. The timing lane (TQ-600a-13-xii) is where a "fix it by moving the baseline"
+    step would most plausibly be added; it is covered by the mutation descriptor.
+  - >-
+    LATER TRIAGE FITS INSIDE THE LIST. A diagnosis posted as a comment on a notice is an
+    allowed write.
+  - >-
+    A SYNTHETIC SCRATCH REPOSITORY STANDS IN FOR A REAL CLONE — a measured cost
+    substitution (a depth-1 clone took 5.16 s at enrichment), flagged.
+  - >-
+    IF TQ-600a-13-x's FALLBACK IS ADOPTED, this list must be amended to add check-run
+    creation for `Post-merge suite status` on a PR head. It is deliberately not
+    pre-authorised.
+  - >-
+    TUNABLES ARE NOT A WRITE SURFACE. scripts/ci/post_merge_tunables.json (TQ-600a-13-x)
+    changes only by a reviewed pull request; no family job writes it.
+  - >-
+    THE TESTS COST UNDER 1.0 s. The mutation descriptor executes only non-test jobs
+    (notice, re-evaluation, verdict, proof prepare) on mutated workflow copies, so it
+    starts no pytest.
+delivers_to: null
+expects_from:
+  - ac_id: TQ-600a-13-iii
+    contract: >-
+      The notice lifecycle and the shared REST client, whose writes this record bounds.
+  - ac_id: TQ-600a-13-vi
+    contract: >-
+      The hold check's paths and its comment and exemption writes.
+  - ac_id: TQ-600a-13-ii
+    contract: >-
+      The correctness workflow and the shared test harness.
+  - ac_id: TQ-600a-13-xv
+    contract: >-
+      The re-evaluation job and its re-run writes.
+  - ac_id: TQ-600a-13-xvi
+    contract: >-
+      The fix-proof workflow, whose prepare and prove jobs make no write at all.
+  - ac_id: TQ-600a-13-xii
+    contract: >-
+      The timing workflow and the `post-merge-timing` notice writes.
+test_spec:
+  - name: test_tq600a_13_xi_every_path_writes_only_the_allowed_set
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: integration
+    angle: criterion
+    surface_invoked: "every suite, notice, re-evaluation, proof and hold path, through the real REST client against the shared recording fake server, with git operations in a scratch repository whose origin is a local bare repository"
+    description: >-
+      Run every path. The union of write requests RECORDED AT THE SERVER is a subset of
+      the allowed list; the fix proof records none. Branches, tags, index, working tree and
+      the bare origin's refs compare equal before and after.
+  - name: test_tq600a_13_xi_the_client_refuses_a_write_outside_the_list
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: unit
+    angle: discrimination
+    surface_invoked: "scripts/ci/_github_rest.py in-process against the recording fake server"
+    must_catch:
+      - "the allowlist is checked after the request is sent"
+      - "the allowlist matches by method only"
+      - "a comment on an unlabelled issue is allowed because comments as a class are allowed"
+      - "re-running a run of ci.yml or the suite workflow is allowed because re-runs as a class are allowed"
+      - "a workflow dispatch or disable is allowed because the job holds `actions: write`"
+    description: >-
+      Ask the client to create a PR, update a ref, put contents, merge a PR, comment on an
+      unlabelled issue, create a label, re-run a ci.yml run, dispatch a workflow, disable
+      a workflow, and post a check run. Each refused; the fake records none of them.
+  - name: test_tq600a_13_xi_workflow_scopes_are_minimal
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: unit
+    angle: seam
+    surface_invoked: "every family workflow file under .github/workflows/post-merge-*.yml, loaded with PyYAML"
+    must_catch:
+      - "a workflow omits `permissions: {}` at workflow level and inherits read-all"
+      - "`actions: write` appears on a second job"
+      - "the fix proof job gains any scope or references `secrets.`"
+      - "any job holds `contents: write`, `pull-requests: write` outside the hold, `checks` or `statuses`"
+    description: >-
+      Structural by necessity — scopes are enforced only by the platform. Each job's
+      permissions equal its specified set exactly.
+  - name: test_tq600a_13_xi_an_added_fix_step_is_caught
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: integration
+    angle: discrimination
+    surface_invoked: "the shared workflow-step executor running the notice and re-evaluation jobs of MUTATED copies of .github/workflows/post-merge-followup.yml in the scratch repository, against the fake server"
+    must_catch:
+      - "a red-run step regenerates the durations file or a timing baseline and pushes it"
+      - "a red-run step opens a pull request with a proposed fix"
+      - "a step edits a tracked file and a later step commits it"
+      - "the re-evaluation step dispatches or re-runs the suite workflow to 'retry it green'"
+    description: >-
+      Insert each named step and execute on a red verdict. For each, the bound check goes
+      red. The unmutated workflow passes.
+test_rationale: |
+  The rule is a negative, so the behavioural form is a bounded write set over every path
+  plus mutations proving the bound catches an addition. The 2026-10-08 additions —
+  editing a notice's description, two non-holding labels, re-running the hold's own runs
+  — are each narrow; the discrimination descriptor attacks the widest of them, the
+  `actions: write` scope, whose platform meaning is far broader than the one endpoint
+  this family needs. The scope descriptor is structural because the platform alone
+  enforces a `permissions:` block; it is paired with the behavioural allowlist
+  descriptors rather than standing in for them. Under a second.
+
+  BUILD ORDER: this record bounds every path, so its first descriptor is completed as the
+  paths land; it should be built last in the family (after -xvi), or its path list grows
+  record by record.
+origin_agent: business-analyst
+created: 2026-10-08
+amended_by:
+  - reason: >-
+      USER-APPROVED REDESIGN AFTER TWO EXPERT REVIEWS (2026-10-08), decisions B, C, D, E,
+      G and I. SUPERSEDED allowed-write clause: "creating, commenting on, closing and
+      reopening issues labelled `nightly-red`, creating and editing the hold check's own
+      pull request comment, and reporting check results". Now adds: editing a notice's
+      description (I — the GitHub expert verified it needs only the `issues: write` the
+      job already held, so the earlier records were wrong to treat it as a new
+      permission); closing as duplicate; the non-holding labels `post-merge-timing` (C)
+      and `post-merge-flaky` (D); re-running the hold workflow's own runs (E — the one
+      write needing `actions: write`, narrowed to one endpoint on one workflow). Paths
+      extended to the timing run, the re-evaluation job and the fix proof (G), which
+      writes nothing. Mutation set extended to dispatch / cancel / disable / foreign
+      re-runs. Label renamed (B). Readiness returned to draft for IT PO re-enrichment.
+      Full prior text: commit e79d35ef4.
+    by: business-analyst
+    at: 2026-10-08
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: internal
+notes: |
+  Automated TRIAGE is out of scope and not ruled out: a later step that writes a
+  diagnosis as a notice comment falls inside the allowed set.

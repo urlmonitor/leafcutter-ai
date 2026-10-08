@@ -326,6 +326,7 @@ flowchart TD
 - TQ-500e-3: Reference documentation defining the answer's recorded form and every state it can hold
 - TQ-500f-5: Reference guidance names the discrimination-shaped failure family, its catalogue, the new test kind and the wrong-versions field
 - TQ-500f-6: A how-to: write a test that catches the plausible wrong version
+- TQ-500g-5: A reference page explains the wrong-version runs: what runs, what each verdict means, and what stops the work
 - TQ-600a-7: Someone adding a test that needs a deployed package can find out how to reuse the shared one, and the standing rule agrees with them
 - TQ-600b-6: The command for running the suite is written down in the places people look, and so is the way to force it back to one at a time
 - TQ-600c-6: A contributor the cost guard has just failed can find out where the limit came from and what to do about it

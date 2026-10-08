@@ -74,7 +74,9 @@ ARCHITECTURE: verify_red_baseline itself (and the ``_run_pytest_and_parse``
 
 from __future__ import annotations
 
+import importlib.util
 import subprocess
+import sys
 from pathlib import Path
 
 from _fl_common import (
@@ -307,9 +309,17 @@ def _resolve_tag_outcome(tag: dict, pytest_results: dict[str, str]) -> tuple[str
     return nodeid, pytest_results.get(nodeid, "ERROR")
 
 
-def _build_entry(tag: dict, nodeid: str, outcome: str) -> dict:
-    """Build a ``{"nodeid", "ac_id", "outcome"}`` report entry for *tag*."""
-    return {"nodeid": nodeid, "ac_id": tag["ac_id"], "outcome": outcome}
+def _build_entry(tag: dict, nodeid: str, outcome: str, results: dict | None = None) -> dict:
+    """Build a ``{"nodeid", "ac_id", "outcome"}`` report entry for *tag*.
+
+    TQ-500g-4: when *results* (the shared reading) names failed sub-cases for
+    *nodeid*, the entry also carries them under the additive ``"subcases"`` key.
+    """
+    entry = {"nodeid": nodeid, "ac_id": tag["ac_id"], "outcome": outcome}
+    subcases = getattr(results, "subfailed", {}).get(nodeid)
+    if subcases:
+        entry["subcases"] = list(subcases)
+    return entry
 
 
 def _classify_newly_added(
@@ -332,7 +342,7 @@ def _classify_newly_added(
     inconclusive: list[dict] = []
     for tag in newly_added_tags:
         nodeid, outcome = _resolve_tag_outcome(tag, pytest_results)
-        entry = _build_entry(tag, nodeid, outcome)
+        entry = _build_entry(tag, nodeid, outcome, pytest_results)
         bucket = _classify_outcome_bucket(outcome)
         if bucket == "red":
             red.append(entry)
@@ -359,7 +369,7 @@ def _report_preexisting(
         operator can see them.
     """
     return [
-        _build_entry(tag, *_resolve_tag_outcome(tag, pytest_results))
+        _build_entry(tag, *_resolve_tag_outcome(tag, pytest_results), pytest_results)
         for tag in preexisting_tags
     ]
 
@@ -394,17 +404,34 @@ def _red_baseline_verdict(
 
     Returns:
         Dict with exactly the keys ``gate_passed``, ``reason``, ``red``,
-        ``green_at_baseline``, ``inconclusive``, ``preexisting``, ``refused``.
+        ``green_at_baseline``, ``inconclusive``, ``preexisting``, ``refused``,
+        plus ``interpreter`` (``sys.executable``, the Python that judged the tests).
     """
     return {
         "gate_passed": gate_passed,
         "reason": reason,
+        "interpreter": sys.executable,
         "red": red or [],
         "green_at_baseline": green_at_baseline or [],
         "inconclusive": inconclusive or [],
         "preexisting": preexisting or [],
         "refused": refused or [],
     }
+
+
+def _interpreter_unusable_verdict() -> dict | None:
+    """Return a refusal verdict when this interpreter cannot import pytest.
+
+    Tests run as ``sys.executable -m pytest``; if that interpreter lacks pytest
+    every test would ERROR and surface as a misleading
+    ``no_red_outcome_among_new_tests`` (TQ-500f-3-ii).
+
+    Returns:
+        A ``test_interpreter_unusable`` verdict, or ``None`` when pytest imports.
+    """
+    if importlib.util.find_spec("pytest") is not None:
+        return None
+    return _red_baseline_verdict(gate_passed=False, reason="test_interpreter_unusable")
 
 
 # ---------------------------------------------------------------------------
