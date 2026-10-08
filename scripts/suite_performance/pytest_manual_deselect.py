@@ -1,8 +1,10 @@
 """
 MODULE: pytest_manual_deselect
 GOAL: Auto-mark every collected test whose function name ends in ``_MANUAL``
-    with the ``manual`` marker, so the default ``-m "not manual"`` in
-    pytest.ini's ``addopts`` genuinely deselects it and ``-m manual`` opts in.
+    with the ``manual`` marker, so the default ``-m "not manual and not
+    timing_ratio"`` in pytest.ini's ``addopts`` (the ``timing_ratio`` half is
+    TQ-600a-13-xix's timing lane) genuinely deselects it and ``-m manual``
+    opts in.
 BUSINESS CONTEXT: TQ-600a-13. The docs said the default run excludes
     ``_MANUAL`` tests, but nothing excluded them, so they ran (and paid their
     cost) on every run. The suffix is the rule: no enumeration and no

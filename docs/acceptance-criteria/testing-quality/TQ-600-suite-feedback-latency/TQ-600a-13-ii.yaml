@@ -7,7 +7,7 @@ level: L3
 status: active
 req_status: draft
 work_status: todo
-readiness: reviewed
+readiness: approved
 priority: high
 roadmap_phase: phase_1
 criteria: |
@@ -470,30 +470,32 @@ test_rationale: |
 origin_agent: business-analyst
 created: 2026-10-08
 amended_by:
-  - reason: >-
-      USER-APPROVED REDESIGN AFTER TWO EXPERT REVIEWS (CI/CD and GitHub platform,
-      2026-10-08), decisions B, C and D. (B) Cadence: the run now follows every merge to
-      main, coalesced to one running and one waiting, with a heartbeat schedule at most 12
-      hours apart and manual dispatch. SUPERSEDED clause: "When the scheduled run starts
-      once per day with no human action". Reason: detection drops from up to ~24 h to
-      ~30-60 min and the suspect range from ~10 commits to 1-3. All "nightly" names are
-      retired (workflow, module, check, labels) — see it_requirements. (C) The run now
-      executes only the CORRECTNESS lane; timing-ratio tests move to a reporting lane
-      (TQ-600a-13-xii). SUPERSEDED premise: "several of those tests assert same-sitting
-      timing ratios ... a nightly run that goes red on noise is ignored within a week" —
-      that risk is now handled by the lane split rather than absorbed by the retry. (D)
-      The single retry now runs as a separate job on a fresh machine fed only the list of
-      failures. SUPERSEDED clause: "it executes again exactly the tests that failed" with
-      no statement of where. Added: the run's conclusion is the verdict alone, and the
-      notice is written outside this run (consequence of decision A in TQ-600a-13-vi), so
-      a notice failure cannot change the conclusion. Passed-on-retry is now tracked and
-      can escalate (TQ-600a-13-xiii) — SUPERSEDES the note "If the owner wants a
-      passed-on-retry to also surface on the flag, that is a design change and is not
-      made here". The PENDING USER DECISION "nightly never runs" in it_requirements is
-      resolved by TQ-600a-13-xiv. Readiness returned to draft for IT PO re-enrichment.
-      Full prior text: commit e79d35ef4.
-    by: business-analyst
-    at: 2026-10-08
+- reason: 'USER-APPROVED REDESIGN AFTER TWO EXPERT REVIEWS (CI/CD and GitHub platform,
+    2026-10-08), decisions B, C and D. (B) Cadence: the run now follows every merge
+    to main, coalesced to one running and one waiting, with a heartbeat schedule at
+    most 12 hours apart and manual dispatch. SUPERSEDED clause: "When the scheduled
+    run starts once per day with no human action". Reason: detection drops from up
+    to ~24 h to ~30-60 min and the suspect range from ~10 commits to 1-3. All "nightly"
+    names are retired (workflow, module, check, labels) — see it_requirements. (C)
+    The run now executes only the CORRECTNESS lane; timing-ratio tests move to a reporting
+    lane (TQ-600a-13-xii). SUPERSEDED premise: "several of those tests assert same-sitting
+    timing ratios ... a nightly run that goes red on noise is ignored within a week"
+    — that risk is now handled by the lane split rather than absorbed by the retry.
+    (D) The single retry now runs as a separate job on a fresh machine fed only the
+    list of failures. SUPERSEDED clause: "it executes again exactly the tests that
+    failed" with no statement of where. Added: the run''s conclusion is the verdict
+    alone, and the notice is written outside this run (consequence of decision A in
+    TQ-600a-13-vi), so a notice failure cannot change the conclusion. Passed-on-retry
+    is now tracked and can escalate (TQ-600a-13-xiii) — SUPERSEDES the note "If the
+    owner wants a passed-on-retry to also surface on the flag, that is a design change
+    and is not made here". The PENDING USER DECISION "nightly never runs" in it_requirements
+    is resolved by TQ-600a-13-xiv. Readiness returned to draft for IT PO re-enrichment.
+    Full prior text: commit e79d35ef4.'
+  by: business-analyst
+  at: 2026-10-08
+- action: approved
+  agent: approve_acs
+  date: '2026-10-08'
 superseded_by: null
 covered_by: []
 implemented_by: []
