@@ -1,0 +1,145 @@
+id: AR-300a-1
+title: "Every agent with a declared ability grant has those abilities named in its compiled prompt"
+component: agent-registry
+components:
+  - agent_registry
+  - template_compiler
+  - skills_system
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given the set of agents whose own definition declares a non-empty grant of
+    abilities -- 31 agents on the tree this criterion was authored against,
+    among them workflow-architect, whose grant is the four abilities that
+    constitute its entire documented purpose,
+  When the working instructions each of those agents actually receives after the
+    build has compiled them are read,
+  Then each of those compiled instructions carries a section that names that
+    agent's granted abilities,
+    And every ability on that agent's declaration appears in that agent's
+      section, so the section is the whole grant and not a sample of it,
+    And the evidence is taken from the compiled instructions alone -- never from
+      the central registry record and never from the source definition -- since
+      all 31 agents already satisfy a comparison made against either of those
+      while receiving nothing,
+    And the comparison enumerates every agent the build compiled instructions
+      for rather than a list of agent names, and states how many it examined, so
+      a comparison that examined nothing cannot present as one that found
+      nothing wrong,
+  So an ability that was granted is an ability the agent knows it holds before
+    it begins, instead of one it solves around.
+depends_on:
+  - AR-300a
+doc_links:
+  - path: config/agent_registry.json
+    relationship: describes
+    status: exists
+    relevance: "The recorded grants -- the side of the comparison that is already correct for 31 agents, and the side this criterion forbids as evidence."
+  - path: templates/agents/workflow-architect.md
+    relationship: describes
+    status: exists
+    relevance: "The sharpest instance: four recorded abilities that are its whole documented purpose, none of them present in its compiled prompt."
+  - path: scripts/template_compiler.py
+    relationship: modifies
+    status: exists
+    relevance: "Computes the per-agent abilities section and then discards it for all 60 agents, because placement is gated on a marker token no source definition contains."
+  - path: docs/architecture/agent_knowledge_plane.md
+    relationship: describes
+    status: exists
+    relevance: "The canonical account of what reaches an agent before it starts work -- the surface this criterion is measured on."
+assigned_agent: python-coder
+estimated_complexity: L
+change_target: code
+risk_surface: internal
+it_requirements:
+  - "Evidence must be read from the COMPILED agent prompts the build emits. Never from config/agent_registry.json and never from templates/agents/*.md -- a comparison against either passes today for all 31 granted agents that receive nothing."
+  - "Resolve the compiled-prompt directory through the build's declared output root (skills_config key `output_root`, default `.leafcutter`), not through a hard-coded `.claude/agents/`. In this repository `.claude/agents` is a SYMLINK into `<output_root>/agents`, per ADR-004 the shim degrades to a file COPY on Windows, and the directory is absent entirely in a fresh worktree (verified: the skills-injection worktree has no `.claude/agents`). A check that hard-codes the shim path reads zero files and reports clean."
+  - "The compiled-prompt population is every platform root the build writes agent prompts to, derived from the build's declared targets rather than an enumerated list. ADR-002 dual-platform compilation emits two today -- `<output_root>/agents/` and `<output_root>/gemini/agents/`, 60 prompts each. A guarantee scoped to one root leaves the other entirely unguarded."
+  - "Derive the granted population from the declarations on the run. 31, 60, 32, 40 and 12 are measurements taken on 2026-09-30, not constants; a hard-coded figure excludes the next agent granted an ability."
+  - "State the number of compiled prompts examined and the number found to hold a grant, following the ADR-037 verdict-object contract (a mandatory per-namespace inspected count). AR-300a-1-i owns the failing behaviour when either number is zero or short."
+  - "Delivery must be driven by what the template's own frontmatter declares, generalising the `signoff: true` -> append precedent at scripts/template_compiler.py (~line 420) that delivers 23 of 23. It must NOT be gated on a placeholder token in the template body: the `{{my_skills_used}}` guard at ~line 296 delivers 0 of 60 because 0 of 60 templates contain the token (verified)."
+  - "Name every enforcement point and identify the load-bearing one. scripts/build_placeholder_detection.py checks for leftover placeholder tokens and does NOT check either dead injection; a constraint added only there is a no-op for this defect. The authoritative gate is the delivery verification that reads the compiled prompts."
+  - "File-size ratchet: scripts/template_compiler.py (496 lines), scripts/injection_builders.py (876) and scripts/build_placeholder_detection.py (678) are all already above the 400-content-line limit, and a change that leaves an oversized file longer is refused. New verification logic must land in a NEW module; any edit to those files must be net-neutral or shorter."
+  - "templates/agents/*.md is the tracked source; the compiled prompts are gitignored build outputs (.gitignore line 16). Edit source only; never commit a compiled prompt."
+  - "Idempotent: two consecutive builds from the same source produce byte-identical compiled prompts, and the abilities section is derived afresh each build rather than accumulated."
+  - "Failure refuses rather than warns, per ADR-050 -- the build reports failure and exits non-zero."
+test_spec:
+  - name: test_every_granted_agent_compiled_prompt_names_its_whole_grant
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: integration
+    angle: deployed
+    description: "After a real build, every agent whose template frontmatter declares a non-empty grant has a compiled prompt naming every ability in that grant -- read from the compiled tree, not the registry."
+  - name: test_delivery_check_fails_when_only_the_compiled_prompt_is_broken
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: integration
+    angle: real_artifact
+    description: "Mutation proof: strip the abilities section from one compiled prompt while leaving the registry and the source template correct; the comparison must fail. A registry-based or template-based check passes this mutation, which is the defect."
+  - name: test_comparison_covers_every_platform_root_the_build_emitted
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: integration
+    angle: deployed
+    description: "The examined set includes the gemini platform root as well as the claude one; dropping the section from a prompt in the second root alone is still reported."
+  - name: test_examined_count_equals_the_number_of_prompts_the_build_compiled
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: integration
+    angle: boundary
+    description: "The reported examined count equals the count of compiled prompts on that run, and the population is derived from declarations rather than a literal 31."
+test_rationale: >-
+  A direct-import unit test over the section-building function passes today for all
+  31 granted agents that receive nothing -- the section is computed correctly and
+  then discarded. Only a test that builds and then reads the compiled prompt
+  distinguishes the two states, which is why every descriptor is integration-level
+  at the `deployed` or `real_artifact` angle. The mutation descriptor exists because
+  a passing assertion over a correct tree does not prove the assertion is looking at
+  the right artifact.
+delivers_to:
+  agent: python-coder
+  contract: >-
+    An abilities section appended to the compiled prompt of every agent whose
+    template frontmatter declares a non-empty grant, emitted into every platform
+    root the build writes (today <output_root>/agents/ and
+    <output_root>/gemini/agents/). One heading per agent, one entry per granted
+    ability, and no section at all when the grant is empty or absent.
+expects_from:
+  ac_id: AR-300c-1
+  contract: >-
+    The per-agent ability declaration in the template's own YAML frontmatter,
+    sibling of `tools:` -- the sole input this delivery is permitted to read.
+origin_agent: BrainCandy
+created: 2026-09-30
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-10-01'
+superseded_by: null
+covered_by:
+  - AR-300a-1-i
+implemented_by: []
+notes: |
+  THE EVIDENCE RULE IS THE WHOLE CRITERION. The measured defect is that the
+  abilities section is computed correctly per agent and then dropped, for all 60
+  compiled prompts, because substitution is gated on a marker token present in 0
+  of 60 source definitions. A proof that reads the registry, the computation, or
+  the source definition passes today on 31 agents that receive nothing. Only the
+  compiled prompt distinguishes the two states.
+
+  WHY THE COUNT IS ASSERTED RATHER THAN IMPLIED. This repository has already
+  shipped a check whose glob resolved to zero files, printed a success line and
+  exited clean for eight days (KI-ACS-001). A comparison over an empty set of
+  compiled prompts is indistinguishable from a passing one unless the population
+  it examined is itself part of the assertion. AR-300a-1-i states the failing
+  case.
+
+  31 IS THE POPULATION AS MEASURED, NOT A CONSTANT TO HARDCODE. The figure is
+  quoted so the criterion can be falsified against the pre-fix tree. The
+  comparison must derive the population from the declarations, or the next agent
+  granted an ability is outside it -- see AR-300d.

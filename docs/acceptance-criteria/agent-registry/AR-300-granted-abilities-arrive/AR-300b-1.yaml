@@ -1,0 +1,129 @@
+id: AR-300b-1
+title: "A per-agent preparation that does not reach its agent ends the run in failure"
+component: agent-registry
+components:
+  - template_compiler
+  - build_pipeline
+  - agent_registry
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given a build in which content has been prepared for a named agent and that
+    content is absent from the prompt that agent is compiled with,
+  When the build finishes,
+  Then the build reports failure and does not report success,
+    And the failure names the agent and the preparation that did not reach it,
+    And the failure occurs for each of the two per-agent preparations that are
+      undelivered on the tree this criterion was authored against -- the
+      abilities section and the spawn-allowlist section -- so a fix aimed at one
+      of them leaves the other still reported,
+    And the determination is made by reading the compiled prompt, not by
+      confirming that the preparation was computed, since both preparations are
+      computed correctly today and reach nobody,
+  So work done on an agent's behalf can no longer finish inside a run that
+    reports success.
+depends_on:
+  - AR-300b
+doc_links:
+  - path: scripts/template_compiler.py
+    relationship: modifies
+    status: exists
+    relevance: "Prepares per-agent content and discards it when its destination is absent, for both undelivered preparations at once, with no report."
+  - path: docs/acceptance-criteria/build_pipeline/BP-1500-honest-builds/BP-1500.yaml
+    relationship: related
+    status: exists
+    relevance: "FENCED. BP-1500 owns the truthfulness of the build's account of the FILES it wrote; every one of its guarantees passes on this defect. This criterion is about content that never entered a correctly produced file. Cite the honesty posture; do not restate its file-level rules."
+assigned_agent: python-coder
+estimated_complexity: L
+change_target: code
+risk_surface: contract_boundary
+it_requirements:
+  - "The verdict is computed by reading the COMPILED prompt, not by confirming the preparation was computed. Both undelivered preparations are computed correctly today and reach nobody; a check at the point of preparation passes on the current tree, which makes it worse than no check."
+  - "Both currently-dead preparations must be covered by the same pass: the abilities table (`{{my_skills_used}}`, present in 0 of 60 templates) and the spawn allowlist (`{{my_spawn_allowlist}}`, also 0 of 60). There are 8 placeholder-guarded injection types in scripts/template_compiler.py sharing this failure mode -- a fix aimed at one must leave the others still reported."
+  - "Emit one fixed verdict object per run following ADR-037's contract: a mandatory inspected count, the population source, and a findings list with one finding per (agent, preparation, platform root). AR-300b-1-ii constrains the finding's cause field; AR-300b-3 constrains its granularity; AR-300b-4 constrains the empty case. All four consume this one object -- do not grow four reporting paths."
+  - "The compiled-prompt population is resolved through the declared output root (skills_config `output_root`, default `.leafcutter`) across every platform root the build writes -- today <output_root>/agents/ and <output_root>/gemini/agents/ per ADR-002, 60 prompts each. A guarantee that reads the hard-coded `.claude/agents/` shim path reads a symlink that is absent in a fresh worktree and a file copy on Windows."
+  - "The gate runs as part of the build and its verdict decides the build's exit status. It refuses rather than warns (ADR-050). A build in which a preparation reached nobody must not report success -- that is the entire promise."
+  - "scripts/build_placeholder_detection.py is NOT the load-bearing enforcement point: it checks for leftover placeholder tokens and does not check either dead injection. Naming it is fine; relying on it is a no-op. The authoritative gate is this new compiled-prompt delivery verification."
+  - "File-size ratchet: scripts/template_compiler.py (496 lines), scripts/injection_builders.py (876) and scripts/build_placeholder_detection.py (678) are already over the 400-content-line limit. This gate lands in a NEW module; the wiring edits to build_phases_agents_skills.py and template_compiler.py must be net-neutral or shorter."
+  - "The pass must be importable and runnable against a supplied compiled tree, independent of a full build, so its failure branches are reachable from tests without a 60-second build spawn per case."
+test_spec:
+  - name: test_build_fails_when_a_prepared_block_is_absent_from_the_compiled_prompt
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: integration
+    angle: deployed
+    description: "Content prepared for a named agent that does not appear in that agent's compiled prompt makes the build report failure, not success."
+  - name: test_failure_names_the_agent_and_the_preparation
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: "The finding carries both the agent id and the preparation name; neither is inferable rather than stated."
+  - name: test_both_dead_preparations_are_reported_independently
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: integration
+    angle: real_artifact
+    description: "Repairing the abilities table alone still leaves the spawn-allowlist preparation reported; the two are separate findings."
+  - name: test_verdict_is_derived_from_the_compiled_prompt_not_the_preparation
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: integration
+    angle: real_artifact
+    description: "Mutation proof: with the preparation computed correctly but stripped from the compiled prompt, the gate fails. A preparation-side check passes this mutation, which is the defect."
+  - name: test_gate_examines_every_platform_root_the_build_wrote
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: integration
+    angle: deployed
+    description: "A preparation missing only from the gemini platform root is still reported."
+test_rationale: >-
+  The natural implementation of this criterion is a check at the point of
+  preparation, and a check at the point of preparation passes today on a tree where
+  two preparations reach nobody. That is why the mutation descriptor -- correct
+  computation, broken compiled prompt -- is the one that discriminates, and why
+  every other descriptor is read from the compiled artifact. The two-preparation
+  descriptor exists because a guarantee written against the abilities section alone
+  is indistinguishable from AR-300a-1.
+delivers_to:
+  agent: python-coder
+  contract: >-
+    A per-run delivery verdict object following ADR-037's shape --
+    {inspected_prompt_count: int, inspected_preparation_kinds: int,
+    population_source: str, findings: [{agent: str, preparation: str,
+    platform_root: str, cause: "no-destination" | "empty-preparation"}]} --
+    consumed by AR-300b-1-i (clean path), AR-300b-1-ii (cause), AR-300b-2
+    (derived kind set), AR-300b-3 (per-agent granularity) and AR-300b-4
+    (empty population).
+expects_from:
+  ac_id: AR-300a-1
+  contract: >-
+    The delivered abilities section in the compiled prompt -- the first of the
+    two per-agent preparations whose arrival this gate verifies.
+origin_agent: BrainCandy
+created: 2026-09-30
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-10-01'
+superseded_by: null
+covered_by:
+  - AR-300b-1-i
+  - AR-300b-1-ii
+implemented_by: []
+notes: |
+  BOTH INSTANCES ARE NAMED SO THE CRITERION CANNOT BE HALF-SATISFIED. The
+  measured defect hit two independent per-agent preparations simultaneously, by
+  the same silence, and neither was noticed by anything. A guarantee written
+  against the abilities section alone is indistinguishable from AR-300a and
+  would leave the second instance exactly as it is -- which is the live proof
+  that a same-shaped second instance hides behind a fix aimed at one.
+
+  EVIDENCE IS THE COMPILED PROMPT. Stated again here rather than inherited,
+  because the natural implementation of this criterion is a check at the point
+  of preparation, and a check at the point of preparation passes today.
