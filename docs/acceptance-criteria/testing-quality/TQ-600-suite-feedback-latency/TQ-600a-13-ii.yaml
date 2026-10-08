@@ -1,0 +1,399 @@
+id: TQ-600a-13-ii
+components:
+  - testing_quality
+title: "The nightly run executes the excluded tests and re-runs only the failures, once, before calling the night red"
+component: testing-quality
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given the tests the default run does not collect — the population TQ-600a-13 and
+    TQ-600a-13-i define, which this record references and does not redefine,
+  And the measured reason that population runs on a schedule rather than on every pull
+    request: TQ-600a-9's sixteen verification tests cost about 667 s per run while the
+    refactor they verify saves about 190 s, so on the per-PR path they make the suite
+    about 477 s slower, and they are expensive because they are honest — one builds a
+    second worktree at the merge-base to get a same-sitting ratio — so they cannot be
+    made cheap without becoming vacuous,
+  And the property that makes a single failure weak evidence: several of those tests
+    assert same-sitting timing ratios on a shared, variably loaded host, and a nightly
+    run that goes red on noise is ignored within a week, which is coverage deleted by a
+    different route,
+  And the opposite property that makes a silent retry dangerous: TQ-600a-13-i records
+    that the shared-layout tests in this population guard a corruption that presents
+    nondeterministically, so a failure that disappears on retry may be the defect itself,
+  When the scheduled run starts once per day with no human action, executes that
+    population, and some of its tests fail on the first execution,
+  Then it executes again exactly the tests that failed — each once, and no test that
+    passed on the first execution,
+  And a test that fails on both executions makes the night red, and the night's result
+    names that test by its full node id,
+  And a test that fails and then passes leaves the night green, and the night's result
+    names it as passed-on-retry, so it is distinguishable from a test that passed the
+    first time rather than absorbed into the green total,
+  And a night with no first-execution failure is green and performs zero re-executions,
+  And the scheduled run's own conclusion is failure on a red night and success on a green
+    one, which is the "turns the invoking job red" that TQ-600a-13-i requires of the
+    cadence,
+  And each of those outcomes is demonstrated by executing the run's selection-and-verdict
+    behaviour against a population whose tests are made to pass, fail, or fail-then-pass,
+    never by reading the workflow definition for a retry setting.
+depends_on:
+  - TQ-600a-13
+  - TQ-600a-13-i
+doc_links:
+  - path: docs/acceptance-criteria/testing-quality/TQ-600-suite-feedback-latency/TQ-600a-13-i.yaml
+    relationship: describes
+    status: exists
+    relevance: >-
+      Requires that an excluded test be run "on a stated cadence by something whose
+      failure fails the build". This record is that cadence; the records after it define
+      what "fails the build" means once the cadence is nightly.
+  - path: docs/acceptance-criteria/testing-quality/TQ-600-suite-feedback-latency/TQ-600a-9.yaml
+    relationship: describes
+    status: exists
+    relevance: >-
+      The measured case: verification tests whose cost exceeds the saving they verify,
+      and whose expects_from on TQ-600a-13 asks for an invoked cadence of their own.
+  - path: .github/workflows/test-durations.yml
+    relationship: describes
+    status: exists
+    relevance: >-
+      Reported by the requester as the only scheduled workflow in the repository today —
+      the precedent for a scheduled trigger. Not re-verified by the BA, which does not
+      read workflow files.
+  - path: .github/workflows/ci.yml
+    relationship: describes
+    status: exists
+    relevance: >-
+      The default per-PR invocation the excluded population is removed from.
+  - path: scripts/suite_performance/README.md
+    relationship: modifies
+    status: exists
+    relevance: >-
+      Carries, since PR #1050, the bullet "Known, accepted gap. The excluded `_MANUAL`
+      tests currently run nowhere in CI". That sentence becomes false the day this record
+      lands and must be corrected in the same change — handed to documentation-expert,
+      see delivers_to.
+  - path: docs/testing/README.md
+    relationship: modifies
+    status: exists
+    relevance: >-
+      Describes the `manual` opt-in (`-m manual`) as of PR #1050 but not where it is
+      invoked. Gains the nightly cadence and the per-PR hold (see TQ-600a-13-vi's
+      delivers_to); prose is documentation-expert's surface.
+  - path: docs/analysis/2026-10-05-pytest-ten-minute-target-4-ci-sharding.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      The sharding design ci.yml cites. The nightly runs UNSHARDED in one process
+      because produce-once layouts are per process (TQ-600a-9's it_requirements) and
+      because the population is ~1,004 s — small enough for one runner.
+  - path: docs/analysis/2026-10-05-slowest-tests-and-what-to-do-about-them-5-skipping-and-run-once.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      The analysis that recommended against a bare deselection. This family is the
+      invoked cadence that makes PR #1050's deselection safe after the fact.
+declared_files:
+  - path: scripts/ci/nightly_suite.py
+    state: to_be_created
+  - path: .github/workflows/nightly-suite.yml
+    state: to_be_created
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - >-
+    AGENT ASSIGNMENT CONFIRMED, WITH THE REASON. No agent in config/agent_registry.json
+    owns GitHub Actions YAML. `workflow-architect` is a user-spawned orchestration
+    supervisor for the package's agent/skill/hook surfaces (`is_ticket_phase: false`,
+    no `owns_file_extensions`), so an AC assigned to it is undispatchable by the AC build
+    loop. python-coder owns `.py` (and `.js` by expedient), and every prior AC in this
+    tree that edits a workflow file assigns python-coder (TQ-600a-13, TQ-600a-13-i,
+    TQ-600a-9). The architecture below makes that assignment correct rather than merely
+    conventional: the executable contract is a Python module plus unittest, and the
+    workflow file is glue. Intent-vs-surface check (S2.8): `.py` and `.yml` are both
+    within python-coder's surface — pass, no split.
+  - >-
+    FAMILY ARCHITECTURE — ALL DECISION LOGIC IN PYTHON, THE WORKFLOW A THIN CALLER.
+    Every verdict, retry selection, classification, flag write plan, hold verdict and
+    escape-hatch match in this family lives in small modules under scripts/ci/, which
+    take the run results / issue data / pull-request data as input and return the
+    verdict and the writes to perform. Workflow steps only prepare the environment and
+    invoke a module with arguments — no retry logic, no parsing and no verdict in shell,
+    in `if:` expressions, or in a third-party action. In-repo precedent: ci.yml's
+    `consumer-install-sim` job ("All job logic lives in check_consumer_install.py; this
+    step supplies only arguments"). Proposed split, which the declared_files of the ten
+    records follow: scripts/ci/nightly_suite.py (this record and -v: execute, retry,
+    classify), scripts/ci/nightly_flag.py (-iii, -iv, -v: flag lifecycle and commit
+    range), scripts/ci/nightly_hold.py (-vi to -x: per-PR verdict, escape hatch, comment,
+    fail-closed, enforcement state), scripts/ci/_github_rest.py (-iii, -vi, -ix, -xi: the
+    one REST client). Names may change; if they do, update every sibling's
+    declared_files in the same change. scripts/ci/ is package-internal CI tooling with no
+    templates/scripts/ counterpart and is not deployed to consumers, so no build
+    deploy-manifest entry is needed — a module imported by a commit-guardian hook would
+    be a different case.
+  - >-
+    THE SELECTION IS TQ-600a-13's OPT-IN, NEVER A COPY OF IT. The nightly collects the
+    excluded population with exactly the opt-in PR #1050 implements — `-m manual`, the
+    marker that scripts/suite_performance/pytest_manual_deselect.py applies to every node
+    id ending in `_MANUAL` — over `tests/ unit_tests/`, unsharded, in one process. Never a
+    hard-coded file or node-id list, and never `-k _MANUAL`, which under PR #1050 collects
+    nothing because the addopts `-m "not manual"` still applies (PR #1050's own
+    docs/testing/README.md correction). This record therefore depends on PR #1050 being
+    merged first; before it is, no `manual` marker exists and the selection is empty,
+    which TQ-600a-13-v requires be reported as did-not-complete, never green.
+  - >-
+    THE RETRY MUST CARRY THE OPT-IN — MEASURED, NOT ASSUMED. At enrichment (2026-10-08),
+    in a synthetic project whose pytest.ini carries `addopts = -m "not manual"`, re-running
+    two failing node ids by id WITHOUT `-m manual` reported "2 deselected" and exited 5
+    with zero tests executed; the same ids WITH `-m manual` executed exactly those two.
+    So a retry that names the failures but drops the opt-in executes nothing, and a
+    verdict read as "the retry had no failures" turns every red night green. The retry's
+    outcome must be read per node id from the retry's own per-test report, and a
+    first-run failure that is absent from the retry report counts as failed on both
+    executions — never as passed-on-retry.
+  - >-
+    THE VERDICT COMES FROM PER-TEST RESULTS, NOT EXIT STATUSES. pytest.ini's addopts
+    carries `--continue-on-collection-errors`, so an exit status alone does not separate
+    a test failure from a collection error, and exit 5 (nothing collected) is not a
+    failure status at all. Classify from the machine-readable per-test report of each
+    execution. The job's conclusion (failure on red, success on green) is the module's
+    exit status computed from the verdict, never pytest's exit status passed through.
+  - >-
+    RUN CONDITIONS MATCH THE GATE THAT RUNS TODAY. Strict mode (`AC_ENFORCE_STRICT=1`, as
+    ci.yml's test-shard sets it), so AC-enforcement xfail-masking cannot turn a real
+    failure into a green night. The same preparation test-shard performs — full-history
+    checkout, dev dependencies, `python scripts/build.py --target-dir .` (the population
+    needs a deployed layout), and whatever the population's tests fetch — because a
+    nightly that differs from CI in environment reports a different suite's health. An
+    explicit job timeout, bounded at no more than three times the measured population
+    cost including build and retry (population ~1,004 s on the durations map, so on the
+    order of 60 minutes), so a hang ends as did-not-complete in bounded time.
+  - >-
+    CADENCE AND SERIALISATION. Scheduled once per day, off the hour (precedent:
+    test-durations.yml, "Off-the-hour on purpose: :00 is when every scheduled job on the
+    platform fires at once"), plus workflow_dispatch for a manual re-run. Two nightly
+    runs must never apply the flag concurrently — serialise the workflow without
+    cancelling an in-progress run — which removes the most likely source of two open
+    flags (TQ-600a-13-iii's notes). A run that never starts at all produces no verdict:
+    PENDING USER DECISION: nightly never runs (schedule removed, workflow disabled, or
+    scheduled runs suspended by the hosting service after a period without repository
+    activity). Do not add a staleness mechanism from this record.
+  - >-
+    PERMISSIONS ARE PER JOB AND MINIMAL. The job that executes ~1,000 s of test code
+    holds `contents: read` and nothing else. Writing the flag happens in a separate job
+    (TQ-600a-13-iii) so a token able to write issues never coexists with the test
+    session. Set permissions at job level, not workflow level, so adding a job cannot
+    silently inherit a write scope.
+  - >-
+    THE VERDICT LEAVES THE RUN JOB AS AN ARTIFACT THAT SURVIVES FAILURE. The run job
+    writes the verdict file (shape in delivers_to) and uploads it with `if: always()` —
+    precedent: test-durations.yml's upload step, added after run 37317817836 lost 110
+    minutes of results to a last-step failure. Upload and download use the same
+    workspace-relative path, so the seam test's shared workspace stands in for the
+    artifact store; a wrong artifact name in production then surfaces as a nightly
+    reported "did not complete" every night (loud), never as a green one (silent).
+  - >-
+    RUN STEPS CARRY NO `${{ }}` EXPRESSIONS. Context reaches the module through `env:`
+    mappings and the runner's standard variables (GITHUB_SHA, GITHUB_REF, GITHUB_RUN_ID,
+    GITHUB_SERVER_URL, GITHUB_REPOSITORY). Two reasons: the seam test below executes run
+    steps verbatim, which it cannot do through unresolved expressions; and an expression
+    interpolated into a shell line is the script-injection form, which matters most in
+    TQ-600a-13-vi where the inputs are attacker-controlled pull-request text.
+  - >-
+    THE TESTS OF THIS RECORD RUN IN THE DEFAULT SUITE AND COST UNDER 1.5 s. They guard
+    the gate, so none may be `_MANUAL`, carry the `manual` marker, start a build, or call
+    GitHub. Real child pytest sessions are used ONLY in the seam descriptor, against a
+    three-test synthetic project with its own pytest.ini and
+    PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 in the child environment — measured at enrichment at
+    0.21 s per session against 1.39 s with autoload on — so the seam's sessions total
+    well under a second. Every other descriptor calls the module in-process with a fake
+    runner returning per-test results. Measure the family's test files with
+    `--durations=0` at sign-off and record the figure in this record's notes. The whole
+    family's tests (all ten records) must total under ~10 s; exceeding that is a
+    sign-off blocker, not a wall-clock assertion inside a test, because a timing
+    assertion on this shared host is flaky and gets deleted.
+  - >-
+    THE SHARED TEST HARNESS IS BUILT HERE AND REUSED BY ALL TEN RECORDS. One helper module
+    under unit_tests/suite_performance/ providing: (1) a recording fake of the GitHub REST
+    API — a stdlib HTTP server on 127.0.0.1 with an ephemeral port, serving a stated set
+    of issues, comments, workflow runs and branch rules, recording every request
+    (method, path, query, body) — used in-process by every module test through the REAL
+    REST client, and by the seam tests through GITHUB_API_URL; (2) a workflow-step
+    executor that loads a workflow file, locates a job by its exact `name:`, and executes
+    its `run:` steps verbatim with `bash -e` in a given directory and environment,
+    skipping only `uses:` steps and an explicit, exact-match list of environment
+    preparation steps (dependency install, build), and FAILING — never skipping — on a
+    `run:` step containing `${{`, on a job with a `strategy.matrix`, or on an `if:` it
+    cannot evaluate; (3) a scratch git repository builder with a known commit graph and a
+    local bare repository as its origin. No test in the family patches urllib or
+    subprocess to fake GitHub or git.
+  - >-
+    THIS FAMILY IS THE CADENCE TQ-600a-13-i REQUIRES, AND IT RESOLVES THAT RECORD'S
+    AGGREGATOR QUESTION. TQ-600a-13-i's enrichment says a second cadence must feed the
+    `Test suite (pytest)` aggregator or become a required check of its own. A scheduled
+    run can be neither — it is not attached to any pull request. This family carries the
+    nightly's result into merges through the per-PR `Nightly suite status` check
+    (TQ-600a-13-vi), and it is THAT check which must become required (TQ-600a-13-x).
+    BRANCH RECORDED, as this record's notes ask: TQ-600a-13 was resolved on its
+    exclusion branch by PR #1050 (commit 71b84fe2, "as the user decided"), contingent on
+    that PR merging.
+delivers_to:
+  - agent: python-coder
+    ac_id: TQ-600a-13-iii
+    contract: >-
+      The night verdict file, written by scripts/ci/nightly_suite.py at the workspace-
+      relative path `nightly-verdict.json` and uploaded as artifact `nightly-verdict`
+      with `if: always()`. JSON object: `schema_version` (int, 1); `verdict` (string, one
+      of "green" | "red" | "did_not_complete"); `stage` (string or null — null unless
+      verdict is did_not_complete, then one of "setup" | "collection" |
+      "empty_selection" | "cancelled_or_timed_out" | "result_unreadable", see
+      TQ-600a-13-v); `collected` (int >= 0, tests collected by the first execution);
+      `first_run_failures` (list of full node-id strings); `failing` (list of node ids
+      that failed both executions — non-empty iff verdict is red); `passed_on_retry`
+      (list of node ids that failed then passed); `head_sha` (40-hex commit the run
+      tested); `ref` (string, e.g. "refs/heads/main"); `run_id` (int); `run_url`
+      (https URL of the run's log, built from GITHUB_SERVER_URL, GITHUB_REPOSITORY and
+      GITHUB_RUN_ID). Lists are sorted for determinism.
+  - agent: python-coder
+    ac_id: TQ-600a-13-v
+    contract: >-
+      The same verdict object, with `verdict: did_not_complete` and a `stage` for every
+      ending in which the run job itself observes the stop (collection error, empty
+      selection). Endings the run job cannot observe (cancellation, timeout, setup
+      failure before the module ran, unreadable artifact) are classified downstream by
+      TQ-600a-13-v from the runner-reported job result plus the artifact's presence.
+  - agent: python-coder
+    ac_id: TQ-600a-13-i
+    contract: >-
+      The invoked cadence TQ-600a-13-i requires: `.github/workflows/nightly-suite.yml`,
+      scheduled daily, whose run job executes `-m manual` and concludes failure on a red
+      night. TQ-600a-13-i's "a failing excluded test turns the invoking job red" is
+      discharged by this record's seam descriptor, which executes that job's real step.
+  - agent: documentation-expert
+    contract: >-
+      Correct scripts/suite_performance/README.md's "Known, accepted gap" bullet (added by
+      PR #1050: the excluded tests "currently run nowhere in CI") in the same change that
+      lands the nightly. State the true position: the excluded population runs nightly
+      via .github/workflows/nightly-suite.yml with `-m manual`, failures are retried once
+      and a fail-then-pass is reported as passed-on-retry, and a red night raises the
+      `nightly-red` issue that holds pull requests. Do not delete the sentence and leave
+      the reader to assume coverage.
+expects_from:
+  - ac_id: TQ-600a-13-i
+    contract: >-
+      The named opt-in that collects every test the default run excluded. This record
+      invokes it; it does not decide its membership.
+  - ac_id: TQ-600a-13
+    contract: >-
+      The exclusion mechanism of PR #1050, merged: the `manual` marker registered as a
+      direct pytest.ini `markers =` key, auto-applied to node ids ending `_MANUAL` by
+      scripts/suite_performance/pytest_manual_deselect.py, deselected by the addopts
+      `-m "not manual"`, opt-in by a command-line `-m manual`. Measured by PR #1050: 43
+      tests, ~1,004 s.
+test_spec:
+  - name: test_tq600a_13_ii_only_first_run_failures_are_rerun_and_only_once
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: unit
+    angle: criterion
+    surface_invoked: "scripts/ci/nightly_suite.py's execute-retry-classify entry point, called in-process with a fake test runner that records every invocation and returns per-test results"
+    description: >-
+      Population of three: A always passes, B fails on its first execution and passes on
+      its second, C always fails. Record every execution the runner is asked for. A runs
+      once; B and C run twice; nothing runs a third time. Verdict red, `failing` is [C]
+      only; B is in `passed_on_retry`; the module's exit status is non-zero. In-process,
+      milliseconds; the real-pytest form of the same scenario is the seam descriptor.
+  - name: test_tq600a_13_ii_a_retry_does_not_hide_a_flaky_pass
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: unit
+    angle: discrimination
+    surface_invoked: "scripts/ci/nightly_suite.py in-process with a fake runner"
+    must_catch:
+      - "the whole population is re-executed rather than only the failures, doubling the nightly cost"
+      - "a failure is retried more than once, so a test that fails two times in three is reported green"
+      - "a fail-then-pass test is counted as an ordinary pass and named nowhere"
+      - "C fails on both executions and the verdict is still green because the retry step's own exit status is what is reported"
+      - "the retry report omits a first-run failure entirely (the retry selected nothing) and that failure is counted as passed-on-retry"
+    description: >-
+      Same population with B and C varied independently, plus a runner whose retry
+      returns an EMPTY report — the shape a retry that dropped the opt-in produces. Each
+      named mutation turns this descriptor red. The fail-then-pass case is the one that
+      cannot be dropped: these tests guard a nondeterministic corruption, and a retry
+      that erases the evidence is the defect they exist to catch.
+  - name: test_tq600a_13_ii_a_clean_night_is_green_with_zero_reruns
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: unit
+    angle: criterion
+    surface_invoked: "scripts/ci/nightly_suite.py in-process with a fake runner"
+    description: >-
+      The paired control. All three pass first time: verdict green, zero re-executions,
+      exit status zero. A run that is red on every night does not satisfy this record.
+  - name: test_tq600a_13_ii_the_nightly_workflow_step_runs_the_module_against_real_pytest
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: integration
+    angle: seam
+    surface_invoked: "the run job's `run:` steps of .github/workflows/nightly-suite.yml, executed verbatim by the shared workflow-step executor in a synthetic three-test project (own pytest.ini registering `manual` and carrying addopts -m \"not manual\"), real child pytest sessions, PYTEST_DISABLE_PLUGIN_AUTOLOAD=1"
+    must_catch:
+      - "the workflow's step invokes pytest directly and decides the verdict in shell, so the module is never exercised by the real workflow"
+      - "the retry is invoked by node id without -m manual, so under the addopts deselection it executes nothing and the night reads green"
+      - "the step's exit status is pytest's, not the verdict's, so a fail-then-pass night exits non-zero or a red night exits zero"
+      - "the module parses a per-test report shape that real pytest does not produce, which only a real child session exposes"
+    description: >-
+      THE ONE SEAM FOR THIS WORKFLOW FILE. Execute the nightly run job's real `run:`
+      steps — not a copy of their command — in the synthetic project: A passes, B fails
+      then passes (a marker file in the project directory flips it), C always fails. The
+      verdict file names C in `failing`, B in `passed_on_retry`, `collected` is 3, and the
+      step's exit status is non-zero; with C made to pass, a second execution exits zero
+      with verdict green and B still named. Three real child sessions in total, about
+      0.2 s each. This is what proves the workflow invokes the module; every other
+      descriptor in the family calls the module directly.
+test_rationale: |
+  The retry exists to stop the nightly being ignored, and the passed-on-retry clause
+  exists to stop the retry from becoming the thing that hides the bug. Both halves are
+  asserted by executing a population whose failures are controlled, because a retry
+  setting read out of a workflow file says nothing about whether only the failures are
+  retried, or whether the retried pass is reported.
+
+  The shape follows the family architecture: the decision logic is a module, so three of
+  the four descriptors call it in-process with a fake runner and cost milliseconds. The
+  fourth is the seam, and it is the only one allowed to start real pytest: it executes the
+  workflow's own run step against a synthetic population, because two defects in this
+  record are invisible to an in-process test — a retry that drops `-m manual` (measured at
+  enrichment to execute nothing under PR #1050's addopts) and a parser written against a
+  report shape real pytest does not emit. Reading the workflow file to find the step is
+  gathering an input; the assertion is on what executing that step did, the same
+  distinction TQ-600a-13's it_requirements draw for its own collection check.
+
+  Cost, stated so it can be checked: in-process descriptors in milliseconds, the seam's
+  three child sessions about 0.2 s each with plugin autoload off. Under 1.5 s for the
+  record, inside the family's ~10 s ceiling.
+origin_agent: business-analyst
+created: 2026-10-08
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: internal
+notes: |
+  THIS FAMILY PRESUPPOSES THE EXCLUSION BRANCH OF TQ-600a-13. TQ-600a-13 deliberately
+  leaves open whether to implement the exclusion or correct the documents, and
+  TQ-600a-13-i is conditional on the exclusion branch. A nightly run of the excluded
+  population only has a subject if something is excluded. These records therefore make
+  that choice in practice — or, if the documents branch is still chosen, they describe
+  the invoked cadence TQ-600a-9's verification tests need before they may land (see
+  TQ-600a-9's expects_from). Whoever approves these should record which.
+
+  PASSED-ON-RETRY IS AN ADDITION TO THE APPROVED DESIGN, NOT A CHANGE TO IT. The night is
+  still green. The addition is only that the retried pass is named, for the reason in
+  the criteria. If the owner wants a passed-on-retry to also surface on the flag, that is
+  a design change and is not made here.

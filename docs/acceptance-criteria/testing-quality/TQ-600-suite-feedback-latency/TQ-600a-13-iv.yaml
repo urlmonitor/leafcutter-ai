@@ -1,0 +1,152 @@
+id: TQ-600a-13-iv
+components:
+  - testing_quality
+title: "Closing the nightly-red issue without a green night does not end the red streak"
+component: testing-quality
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given an open issue labelled `nightly-red` raised by a red night,
+  And two ways it can be closed while the nightly population is still failing: a person
+    closes it by hand, or a pull request whose description says "Fixes #N" or "Closes #N"
+    for that issue is merged — which the hosting service closes automatically, and which
+    TQ-600a-13-viii's escape hatch makes the normal way a fix arrives,
+  And the rule that closing the flag must not be a way to release the hold on merges,
+  When the issue has been closed by either route and the next night is red,
+  Then after that night an issue labelled `nightly-red` is open again — the closed one
+    reopened or a new one created — so the hold TQ-600a-13-vi reads is restored,
+  And the commit list it carries begins at the head commit of the most recent GREEN run,
+    not at the moment of the close and not at the red night that preceded it, so a
+    culprit merged before the close is still inside the search space,
+  And the close is never treated as a green night by anything the flag lifecycle reads:
+    the next green run, not the close, is what the following commit range starts from,
+  And when the next night is green instead, no issue is opened or reopened and the closed
+    issue is left as it is,
+  And both routes are demonstrated by closing the issue in the issue-service double —
+    once as a person, once as the effect of a merged closing reference — and then
+    applying a red night and a green night, observing the resulting open-issue state.
+depends_on:
+  - TQ-600a-13
+  - TQ-600a-13-iii
+doc_links:
+  - path: docs/acceptance-criteria/testing-quality/TQ-600-suite-feedback-latency/TQ-600a-13-iii.yaml
+    relationship: describes
+    status: exists
+    relevance: >-
+      The lifecycle this record constrains. Its red-night/no-open-issue branch is what
+      re-raises the flag; this record adds that the commit range survives the close.
+  - path: docs/acceptance-criteria/testing-quality/TQ-600-suite-feedback-latency/TQ-600a-13-viii.yaml
+    relationship: describes
+    status: exists
+    relevance: >-
+      The escape hatch whose closing keyword causes the automatic close on merge.
+declared_files:
+  - path: scripts/ci/nightly_flag.py
+    state: to_be_created
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - >-
+    THE CLOSE IS INVISIBLE TO THE ANCHOR BY CONSTRUCTION. TQ-600a-13-iii's enrichment
+    fixes the anchor as the head commit of the most recent SUCCESSFUL nightly run on main,
+    read from the workflow's run history. A close — by a person, or by the service acting
+    on a merged closing reference — produces no successful nightly run, so it cannot move
+    the anchor. Keep it that way: the lifecycle reads no close event, close time,
+    `state_reason`, or timeline entry for any purpose.
+  - >-
+    HOW THE ISSUE WAS CLOSED MUST NOT CHANGE THE OUTCOME. A closed `nightly-red` issue is
+    simply not open; the red-night branch of TQ-600a-13-iii (no open flag, so raise one)
+    applies whatever the close route. Reopening the most recent closed flag or creating a
+    new one are both acceptable per the criteria. If reopening is chosen, the
+    `red_since` field TQ-600a-13-iii delivers must be the reopen time, not the issue's
+    original `created_at`, or TQ-600a-13-vii's comment reports a streak older than the
+    current one.
+  - >-
+    THE WINDOW BETWEEN A CLOSE AND THE NEXT NIGHT IS NOT CLOSED HERE — PENDING USER
+    DECISION: auto-close on merge (a `Fixes #N` pull request closes the flag the moment it
+    merges and releases every other held pull request before any night has confirmed the
+    fix). The approved design accepts "reappears next red night". No test in this record
+    asserts the hold during that window in either direction; if the owner decides the
+    hold must survive until a green night, that lands in TQ-600a-13-vi (a second source
+    for the hold) or TQ-600a-13-viii (a non-closing declaration form), not here.
+  - >-
+    THE TESTS COST UNDER 0.5 s. In-process through the real REST client against the shared
+    recording fake server, reusing TQ-600a-13-iii's scratch-repository builder for the
+    commit graph. The two close routes are represented in the fake by the issue states
+    the service actually reports (closed by a user; closed as completed by a merged pull
+    request) — both are just served data, so no extra cost.
+delivers_to: null
+expects_from:
+  - ac_id: TQ-600a-13-iii
+    contract: >-
+      The open/comment/close lifecycle and the last-green anchor = head commit of the most
+      recent successful nightly run on main, read from the workflow's run history.
+test_spec:
+  - name: test_tq600a_13_iv_a_closed_flag_reappears_on_the_next_red_night
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: integration
+    angle: criterion
+    surface_invoked: "scripts/ci/nightly_flag.py in-process, through the real REST client, against the shared recording fake server"
+    description: >-
+      Open flag; close it in the fake (by a person; separately, as closed by a merged
+      pull request); apply a red night. Afterwards the fake holds exactly one open issue
+      labelled `nightly-red` — reopened or new, either is accepted.
+  - name: test_tq600a_13_iv_the_close_does_not_move_the_commit_anchor
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: integration
+    angle: discrimination
+    surface_invoked: "scripts/ci/nightly_flag.py against the fake server and a real scratch git repository (shared harness)"
+    must_catch:
+      - "the lifecycle records the close as the last green point, so the reappeared flag's commit list starts after the close and omits the culprit merged before it"
+      - "the lifecycle anchors the range at the previous red night, so commits between the last green night and the first red night are dropped"
+      - "the lifecycle treats an existing closed `nightly-red` issue as 'already raised this streak' and creates nothing"
+      - "a reopened flag reports red-since as the issue's original creation time rather than the reopen"
+    description: >-
+      Real scratch repository: green at G, culprit merged at C1, red, flag closed, merge
+      C2, red again. The reappeared flag's commit list contains C1 and C2 and its state
+      block's `anchor_sha` is G.
+  - name: test_tq600a_13_iv_a_green_night_after_a_close_leaves_it_closed
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: integration
+    angle: criterion
+    surface_invoked: "scripts/ci/nightly_flag.py against the fake server"
+    description: >-
+      The paired control: close, then a green night. The fake server records no create
+      and no reopen; the closed issue is untouched.
+test_rationale: |
+  The automatic close on merge is the reason this is not a rare edge case. The escape
+  hatch tells the fixing PR to say "Fixes #N", and merging such a PR closes #N before any
+  night has confirmed the fix. Both close routes are exercised because the second one is
+  the one that will happen every time.
+
+  Both routes cost the same in the fake — they are two served issue states — so covering
+  both adds nothing measurable. The anchor assertion reuses the real scratch repository
+  from TQ-600a-13-iii rather than a list of shas, for the same reason that record gives.
+  What is deliberately NOT tested is the hold during the window between a close and the
+  next night: that behaviour is pending a user decision and a test in either direction
+  would decide it.
+origin_agent: business-analyst
+created: 2026-10-08
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: internal
+notes: |
+  A WINDOW THIS RECORD DOES NOT CLOSE, STATED SO NOBODY BELIEVES IT IS CLOSED. Between a
+  close and the next nightly run there is no open flag, so TQ-600a-13-vi passes every PR
+  for up to a day. The approved design accepts "reappears next red night"; it does not
+  require the hold to survive the close in the meantime. Closing that window would need
+  the per-PR check to consult something besides the open issue (for example the latest
+  nightly verdict), which changes the one-source-of-truth decision and is the owner's to
+  make. Note especially that the escape hatch causes this window on every successful
+  fix: other PRs are released the moment the fix merges, before a night confirms it.

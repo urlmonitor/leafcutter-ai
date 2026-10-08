@@ -1,0 +1,226 @@
+id: TQ-600a-13-v
+components:
+  - testing_quality
+title: "A nightly that did not run to completion is reported as not run, never as green"
+component: testing-quality
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given that the flag is closed by a green night and raised by a red one,
+  And the failure class this repository has documented repeatedly — a check that examined
+    nothing reporting the same result as a check that found nothing — which here takes the
+    form of a nightly that broke before it tested anything being read as a night with no
+    failures,
+  When the scheduled run ends in any of these ways: a setup step before the tests fails
+    (for example installing dependencies), test collection errors, the population
+    collected is empty, the run is cancelled, the run exceeds its time limit, or the
+    run's test result cannot be read,
+  Then the night is not green, and the flag lifecycle treats it as red: it raises the
+    flag when none is open and comments on the open one otherwise,
+  And the issue or comment states that the nightly did not complete, names the stage at
+    which it stopped where that stage is known, and is worded differently from a test
+    failure, so a reader can tell "the tests failed" from "the tests never ran",
+  And no open flag is closed by such a run,
+  And only a run that collected the whole population, executed it, and ended with every
+    test passing — after the single retry of TQ-600a-13-ii — is green and may close the
+    flag,
+  And a run whose collected population is empty is never green, however its exit status
+    reads,
+  And each ending is demonstrated by producing it — a failing setup, a collection error,
+    an empty selection, a cancellation, a timeout, an unreadable result — and observing
+    the verdict and the flag write, never by inspecting the workflow's failure handling.
+depends_on:
+  - TQ-600a-13
+  - TQ-600a-13-ii
+  - TQ-600a-13-iii
+doc_links:
+  - path: CLAUDE.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      Names three precedents of a defence that was a no-op and reported clean the whole
+      time, including a validator that exited zero having inspected zero files for eight
+      days. An empty nightly reporting green is the same shape.
+  - path: docs/acceptance-criteria/testing-quality/TQ-600-suite-feedback-latency/TQ-600a-13-iii.yaml
+    relationship: describes
+    status: exists
+    relevance: >-
+      The lifecycle that consumes the did-not-complete verdict.
+  - path: .github/workflows/test-durations.yml
+    relationship: describes
+    status: exists
+    relevance: >-
+      Precedent for refusing a success-shaped result from a run that did not cover what
+      it claims: its "Confirm the run actually recorded the whole suite" step refuses when
+      it cannot read the collected count. The same posture applies to an empty or
+      unreadable nightly.
+declared_files:
+  - path: scripts/ci/nightly_suite.py
+    state: to_be_created
+  - path: scripts/ci/nightly_flag.py
+    state: to_be_created
+  - path: .github/workflows/nightly-suite.yml
+    state: to_be_created
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - >-
+    GREEN IS A POSITIVE FINDING, NEVER A DEFAULT. The classifier returns green only when
+    all of these hold: the runner reports the run job succeeded; the verdict artifact is
+    present and parses; the first execution's report shows no collection error; at least
+    one test was collected; and every first-run failure passed on the single retry
+    (TQ-600a-13-ii). Any input it does not recognise is did_not_complete. There is no
+    code path on which the absence of a red signal becomes green.
+  - >-
+    WHO OBSERVES WHICH ENDING. Two endings are seen by the run job itself and recorded in
+    the verdict it writes: a collection error (from the per-test report — not from the
+    exit status, because pytest.ini's addopts carries `--continue-on-collection-errors`)
+    and an empty selection (zero collected; pytest exits 5, which is not a failure
+    status). The other four cannot be seen by the run job and are classified by the flag
+    job from what the runner hands it: the run job's result as reported to a dependent
+    job (success / failure / cancelled), plus whether the verdict artifact exists and
+    parses — setup failure before the module ran (failure, no artifact), cancellation
+    and timeout (cancelled or failure, no complete artifact), unreadable result (artifact
+    present, does not parse or lacks required fields).
+  - >-
+    THE FLAG JOB MUST RUN ON EVERY ENDING. It depends on the run job and is conditioned
+    to run always — not "unless cancelled", which skips exactly the cancellation case and
+    leaves the flag untouched with no record. Where the runner's reported result cannot
+    distinguish cancellation from a timeout, the stage is worded as "cancelled or timed
+    out" rather than guessed. A whole-run cancellation that stops the flag job itself
+    from starting writes nothing — that residue belongs to PENDING USER DECISION: nightly
+    never runs, and is not closed here.
+  - >-
+    "THE WHOLE POPULATION" IS THE OPT-IN'S OWN COLLECTION, NON-EMPTY AND ERROR-FREE. This
+    record can enforce non-empty and no-collection-error. It cannot tell a selection that
+    silently lost half the population from a complete one without a second source of
+    truth, and it must not invent one (a hard-coded expected count goes stale the day a
+    `_MANUAL` test is added). Detecting a partial selection is TQ-600a-13-i's union
+    assertion (default plus opt-in equals the whole suite). Recorded as a caveat.
+  - >-
+    DISTINCT WORDING IS PART OF THE CONTRACT. The did-not-complete issue text and comment
+    state that the nightly did not complete, name the stage, and never use the phrasing
+    of a test failure (no "failing tests:" heading over an empty list). The machine-
+    readable state block carries `verdict: did_not_complete` so TQ-600a-13-vii's PR
+    comment can say the same.
+  - >-
+    "PRODUCED, NOT SIMULATED" — WHERE THAT IS CHEAP AND WHERE IT IS NOT. Collection error
+    and empty selection are produced for real: the run job's actual step is executed by
+    the shared workflow-step executor in two synthetic projects (one with a module that
+    fails at import, one with no `manual` tests), real child pytest sessions with plugin
+    autoload off, about 0.2 s each and startable concurrently. Unreadable result is
+    produced for real as a corrupt artifact file. Setup failure, cancellation and timeout
+    CANNOT be produced in the unit layer — they are events of the hosting service's
+    runner — so the honest form is to execute the flag job's real steps with exactly the
+    inputs the runner gives it in those cases (the reported job result and an absent
+    artifact). Stated explicitly so a reviewer does not read the substitution as the
+    expensive thing having been done.
+  - >-
+    THE TESTS COST UNDER 1.5 s, IN THE DEFAULT SUITE. Two real child sessions (above), the
+    flag job's steps executed against the shared recording fake server for the four
+    runner-reported endings, and in-process classification for the rest. No build, no
+    live GitHub, no waiting for a real timeout.
+delivers_to:
+  - agent: python-coder
+    ac_id: TQ-600a-13-iii
+    contract: >-
+      The verdict object of TQ-600a-13-ii's contract with `verdict: did_not_complete` and
+      `stage` one of "setup" | "collection" | "empty_selection" |
+      "cancelled_or_timed_out" | "result_unreadable"; `failing` and `passed_on_retry` are
+      empty; `head_sha`, `ref`, `run_url` are filled from the runner environment even when
+      the artifact is absent. The lifecycle applies it like red (raise or comment, never
+      close) and words it as "did not complete".
+expects_from:
+  - ac_id: TQ-600a-13-ii
+    contract: >-
+      The green/red verdict for runs that did execute the population, in the
+      `nightly-verdict.json` shape TQ-600a-13-ii delivers.
+test_spec:
+  - name: test_tq600a_13_v_every_incomplete_ending_is_not_green
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: integration
+    angle: criterion
+    surface_invoked: "the flag job's `run:` steps of .github/workflows/nightly-suite.yml executed by the shared workflow-step executor, with each runner-reported ending supplied as the dependent-job input, against the recording fake server"
+    description: >-
+      For each of setup failure (run job failure, no artifact), cancelled (run job
+      cancelled, no artifact), failure with a truncated artifact, and a corrupt artifact:
+      verdict did_not_complete with the right stage; with no open flag one is created;
+      with an open flag one comment is added; no close is ever recorded; the text says the
+      nightly did not complete and names the stage.
+  - name: test_tq600a_13_v_an_empty_population_is_never_green
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: integration
+    angle: discrimination
+    surface_invoked: "the run job's real `run:` step executed in a synthetic project with no `manual` tests (real child pytest session, exit 5), then the flag job's steps against the fake server"
+    must_catch:
+      - "the selection that names the excluded population matches nothing — a renamed marker, a moved directory — the test runner exits with its no-tests status, and the run is treated as green because no test failed"
+      - "a setup failure ends the job before the verdict step, the verdict step is skipped, and the absence of a red verdict is read as green"
+      - "a cancelled run closes the open flag"
+      - "the flag job is conditioned to skip when the run is cancelled, so a cancellation leaves no record at all"
+    description: >-
+      Make the selection match nothing and run the real step. The verdict is
+      did_not_complete with stage empty_selection and the open flag stays open. This is
+      the descriptor that cannot be dropped: an empty nightly is the cheapest way for this
+      whole mechanism to report clean forever.
+  - name: test_tq600a_13_v_a_collection_error_is_not_a_test_failure_and_not_green
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: integration
+    angle: real_artifact
+    surface_invoked: "the run job's real `run:` step in a synthetic project where one `manual` module raises at import and one `manual` test passes (real child pytest session under --continue-on-collection-errors)"
+    must_catch:
+      - "the passing test is executed despite the collection error, no test failed, and the night is green"
+      - "the collection error is reported as a failing test by node id, so the issue reads as 'the tests failed' rather than 'the tests never ran'"
+    description: >-
+      The verdict is did_not_complete with stage collection, not red and not green.
+  - name: test_tq600a_13_v_a_complete_passing_run_is_green
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: integration
+    angle: criterion
+    surface_invoked: "scripts/ci/nightly_suite.py + nightly_flag.py in-process against the fake server"
+    description: >-
+      The paired control. A complete run with every test passing is green and closes the
+      open flag, so a lifecycle that never closes anything does not satisfy this record.
+test_rationale: |
+  The empty-selection case is singled out because it is the one most likely to happen by
+  accident — a marker rename in TQ-600a-13's mechanism would do it — and the one whose
+  wrong answer looks most like the right one. The stated endings are produced, not
+  simulated by editing a status value, because the defect is in how the run's end is
+  observed.
+
+  At enrichment that principle was applied as far as it goes cheaply and no further. The
+  two endings pytest itself produces — an empty selection and a collection error — are
+  produced with real child sessions, because their report shapes (exit 5, an error entry
+  under --continue-on-collection-errors) are exactly what a hand-written fixture would get
+  wrong. The endings the hosting service produces — cancellation, timeout, a setup step
+  failing before the module runs — are not reproducible on a developer machine at any
+  price; the test executes the real flag job with the inputs the runner gives it in those
+  cases, and the record says so rather than pretending otherwise.
+
+  Cost: two child sessions at about 0.2 s each, the rest in-process or one short
+  subprocess per runner ending. Under 1.5 s.
+origin_agent: business-analyst
+created: 2026-10-08
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: internal
+notes: |
+  UNDER-SPECIFIED, NOT INVENTED: A NIGHT THAT NEVER STARTS. Every ending above is a run
+  that started. A scheduled run that is never triggered — a schedule removed, the
+  workflow disabled, or the hosting service suspending scheduled runs, which it does for
+  some repositories after a period without activity — produces no verdict at all, so the
+  flag is never raised and the hold passes. The approved design does not say how long
+  without a completed nightly should count as red. A staleness bound (for example, the
+  per-PR check failing when the last completed nightly is older than some number of
+  hours) would close it; the number and whether to do it are the owner's call.

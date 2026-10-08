@@ -1,0 +1,278 @@
+id: TQ-600a-13-vi
+components:
+  - testing_quality
+title: "Every pull request is held while a nightly-red issue is open, by a check that reads one flag and runs no tests"
+component: testing-quality
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given the flag TQ-600a-13-iii maintains — open issues labelled `nightly-red`,
+  And the owner's decision to hold immediately, with no grace period, once the flag is
+    raised,
+  And the reason this check exists at all: the expensive tests were taken off the per-PR
+    path to remove their cost from it, so a per-PR check that runs any of them, or
+    builds anything, defeats the change it belongs to,
+  When the check named `Nightly suite status` evaluates a pull request whose description
+    and labels carry no fix declaration (TQ-600a-13-viii covers those that do), with the
+    issue service replaced by a double serving a stated set of issues,
+  Then with no open issue labelled `nightly-red` the check passes,
+  And with one or more open issues labelled `nightly-red` the check fails, and its output
+    names each open flag by number and link,
+  And closed `nightly-red` issues and open issues without the label have no effect on
+    the verdict,
+  And the verdict is computed from a fresh read of the flag on every evaluation and
+    never from a stored earlier verdict: a pull request that passed before the flag was
+    raised fails on its next evaluation, and a pull request opened after the flag was
+    raised fails on its first,
+  And the check is evaluated when a pull request is opened, when it is reopened, and on
+    every push to it,
+  And one evaluation sends exactly one request to read the flag, starts no test session
+    and no build, and reads nothing from the repository's test suite — shown by counting
+    the requests the double receives and the processes the evaluation starts,
+  And the pass and fail outcomes are shown by executing the check against the double
+    for each flag state, never by reading the workflow file for the request it makes.
+depends_on:
+  - TQ-600a-13
+  - TQ-600a-13-iii
+doc_links:
+  - path: docs/acceptance-criteria/testing-quality/TQ-600-suite-feedback-latency/TQ-600a-13-iii.yaml
+    relationship: describes
+    status: exists
+    relevance: >-
+      Maintains the flag this check reads.
+  - path: docs/acceptance-criteria/testing-quality/TQ-600-suite-feedback-latency/TQ-600a-9.yaml
+    relationship: describes
+    status: exists
+    relevance: >-
+      The measured cost — about 667 s per run against a 190 s saving — that the per-PR
+      path is being relieved of, and which this check must not re-introduce.
+  - path: .github/workflows/ci.yml
+    relationship: describes
+    status: exists
+    relevance: >-
+      The existing per-PR workflow. Whether this check is a job in it or a workflow of its
+      own is an implementation choice; TQ-600a-13-x constrains its reported name.
+  - path: docs/testing/README.md
+    relationship: modifies
+    status: exists
+    relevance: >-
+      Where a contributor will look when a pull request is held. Gains a section on the
+      hold, the escape hatch, and its advisory status until TQ-600a-13-x is observed —
+      documentation-expert's surface, see delivers_to.
+  - path: docs/acceptance-criteria/testing-quality/TQ-600-suite-feedback-latency/TQ-600a-13-x.yaml
+    relationship: describes
+    status: exists
+    relevance: >-
+      The job name, trigger coverage and enforcement this check depends on to be more
+      than advisory.
+declared_files:
+  - path: scripts/ci/nightly_hold.py
+    state: to_be_created
+  - path: scripts/ci/_github_rest.py
+    state: to_be_created
+  - path: .github/workflows/nightly-hold.yml
+    state: to_be_created
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - >-
+    SIZED M, NOT S. The verdict itself is small, but this record lands a new workflow file,
+    the hold module's entry point, its use of the shared REST client, and the seam that
+    executes the workflow's real step. Sizing the glue as free is how the glue goes
+    untested.
+  - >-
+    ITS OWN WORKFLOW FILE, NOT A JOB IN ci.yml. The escape hatch (TQ-600a-13-viii) needs
+    this check to run on label and description-edit events. ci.yml's pull_request trigger
+    uses the default event types; widening it would re-run all eight test shards and every
+    other ci.yml job on each label change or description edit — reintroducing on the
+    per-PR path the cost this family exists to remove. So `.github/workflows/nightly-
+    hold.yml` holds exactly one job, named `Nightly suite status`, triggered by pull
+    requests targeting main for: opened, reopened, synchronize (this record), and edited,
+    labeled, unlabeled (TQ-600a-13-viii). No path filters (TQ-600a-13-x). Whether GitHub
+    actually delivers each of those events is only provable on the real repository and is
+    part of TQ-600a-13-x's recorded observation.
+  - >-
+    THE COST IS ONE READ AND NO SUITE. The job installs no dependencies, runs no build, no
+    pytest, and fetches only what is needed to run the module (a shallow, sparse checkout
+    of scripts/ci/ is enough). The module is stdlib-only so no install step is needed.
+    The verdict needs exactly one request — open issues with the label `nightly-red` —
+    and no pagination, because any item on the first page decides "held" and an empty
+    first page decides "pass". Wall clock is then dominated by runner start-up: seconds.
+  - >-
+    A FRESH READ ON EVERY EVALUATION. No cache, no artifact, no stored verdict, no reuse of
+    an earlier run's result. Each event produces a new check run whose verdict is computed
+    from that run's own read.
+  - >-
+    PULL-REQUEST INPUTS COME FROM THE EVENT PAYLOAD FILE, NEVER FROM INTERPOLATION. The PR
+    number, description and labels are read from the file the runner names in
+    GITHUB_EVENT_PATH. No `${{ github.event.pull_request.* }}` expression appears in a
+    run step: description and title are attacker-controlled text on fork pull requests,
+    and interpolating them into a shell line is script injection. The API base comes from
+    the runner's GITHUB_API_URL, which is also what lets the seam test point the real
+    step at the recording fake server.
+  - >-
+    PERMISSIONS: JOB-LEVEL, `issues: read` FOR THE FLAG AND `pull-requests: write` FOR
+    TQ-600a-13-vii's COMMENT, NOTHING ELSE. No `checks` or `statuses` scope is needed: the
+    job's own conclusion is the reported check. No `contents: write`.
+  - >-
+    TRUST MODEL OF THE HOLD — PENDING USER DECISION: trust model of the hold. Under the
+    `pull_request` event, the workflow file and scripts/ci/nightly_hold.py are taken from
+    the pull request being evaluated, so a pull request that edits either can release its
+    own hold — the same posture as every check in ci.yml today, relying on review. The
+    alternative, `pull_request_target`, runs the base branch's copy (immune to the PR's
+    edits) and receives a write-capable token even on fork pull requests, which also
+    changes TQ-600a-13-ix's premise that fork evaluations carry a reduced credential.
+    Not chosen here. Whatever is chosen, the policy that holds is: no code from the pull
+    request head ever runs with a write-scoped token.
+  - >-
+    STALE PASS — PENDING USER DECISION: stale pass (a pull request evaluated before the
+    flag went up and never pushed again keeps its earlier pass, and is mergeable while the
+    nightly is red). Closing it needs the nightly to re-request this check on open pull
+    requests, which needs an extra permission and a design decision. No test in this
+    record asserts behaviour for an un-re-evaluated pull request.
+  - >-
+    THE ONE-READ BUDGET AND THE COMMENT DISAGREE — PENDING USER DECISION: one-read budget
+    vs comment contents. TQ-600a-13-vii requires the comment to carry the failing node ids
+    "from the flag's most recent night", and TQ-600a-13-xi's allowed writes do not
+    include editing an issue's description, so that state lives in the flag's latest
+    COMMENT, which costs a second read; finding the check's own comment costs more. The
+    reading this enrichment specifies: "exactly one request to read the flag" governs the
+    VERDICT; on the held path only, TQ-600a-13-vii may make a bounded number of further
+    requests. The counting descriptor below asserts one flag-listing request on every
+    path and zero further requests on the pass path. If the owner reads the criterion as
+    a total of one request, TQ-600a-13-vii's content clause cannot be met and the BA must
+    reconcile the two records.
+  - >-
+    NIGHTLY NEVER RUNS — PENDING USER DECISION: nightly never runs. A staleness bound
+    (fail when the last completed nightly is older than N hours) would be implemented
+    HERE and would add a second read (the nightly's run history) to every evaluation. Not
+    added. If chosen, the one-read clause of this record changes with it.
+  - >-
+    THE TESTS COST UNDER 1 s, IN THE DEFAULT SUITE. Verdict descriptors call the module
+    in-process through the real REST client against the shared recording fake server
+    (milliseconds). The seam executes the real job step in a subprocess against the same
+    fake server through GITHUB_API_URL — two scenarios at about 0.1 to 0.2 s each.
+    Process creation is observed in the evaluating process itself, by a real observer
+    (for example interpreter audit events), never by patching subprocess. No child pytest,
+    no build, no live GitHub.
+delivers_to:
+  - agent: python-coder
+    ac_id: TQ-600a-13-vii
+    contract: >-
+      The hold verdict object returned by scripts/ci/nightly_hold.py: `state` (one of
+      "pass" | "held" | "declared_fix" | "could_not_read"); `flags` (list of objects
+      {`number`: int, `html_url`: string, `created_at`: ISO-8601 string}, empty unless at
+      least one open flag was read); `reason` (human-readable string, the check's output
+      line); `cause` (string or null — the read failure for could_not_read). The PR
+      comment is written only when `state` is "held".
+  - agent: python-coder
+    ac_id: TQ-600a-13-viii
+    contract: >-
+      The same verdict function, into which the escape hatch is evaluated after a
+      successful read that found exactly one flag: a matching declaration turns "held"
+      into "declared_fix" (a pass).
+  - agent: python-coder
+    ac_id: TQ-600a-13-x
+    contract: >-
+      One job in .github/workflows/nightly-hold.yml whose `name:` is exactly
+      `Nightly suite status`, with no matrix, no job-level `if:`, and no path filters on
+      its workflow trigger.
+  - agent: documentation-expert
+    contract: >-
+      A section in docs/testing/README.md for contributors: what a failing `Nightly suite
+      status` means (the nightly is red; the cause is outside your change), where the flag
+      issue and its failing tests are, how a fixing pull request is let through (a
+      description containing "Fixes #N" or "Closes #N" for the open flag, or the
+      `nightly-fix` label — TQ-600a-13-viii), that a fix merged with "Fixes #N" closes the
+      flag before a night confirms it, and — until TQ-600a-13-x's observation is recorded —
+      that the hold is ADVISORY. Must not describe any behaviour still pending a user
+      decision as settled.
+expects_from:
+  - ac_id: TQ-600a-13-iii
+    contract: >-
+      The hold signal: open issues (no `pull_request` member) labelled `nightly-red`, with
+      `number`, `html_url`, `created_at`, as read from the issues listing filtered by
+      label and state=open.
+test_spec:
+  - name: test_tq600a_13_vi_the_verdict_follows_the_open_flag
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: integration
+    angle: criterion
+    surface_invoked: "scripts/ci/nightly_hold.py's verdict entry point, in-process, through the real REST client against the shared recording fake server"
+    description: >-
+      Serve: no issues; one open flag; two open flags; one closed flag; one open issue
+      without the label. Verdicts: pass, held, held, pass, pass. The held output names
+      each open flag's number and link.
+  - name: test_tq600a_13_vi_the_check_costs_one_read_and_no_tests
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: integration
+    angle: discrimination
+    surface_invoked: "the `Nightly suite status` job's real `run:` steps executed by the shared workflow-step executor in a subprocess, GITHUB_API_URL pointed at the fake server, with a process and file-open observer installed in the evaluating interpreter"
+    must_catch:
+      - "the check invokes the test runner, even with a narrow selection, to confirm the nightly result itself"
+      - "the check lists every issue page by page rather than asking for open issues with the label, so its cost grows with the repository's issue count"
+      - "the check caches the first verdict per pull request, so a PR that passed before the flag was raised keeps passing on later pushes"
+      - "the job step imports pytest or opens a file under tests/ or unit_tests/"
+    description: >-
+      Execute one evaluation with no flag open: the fake server receives exactly one
+      request, the flag listing filtered by label and open state; the evaluating process
+      creates zero child processes, imports no pytest, and opens nothing under tests/ or
+      unit_tests/; exit status zero. Raise the flag in the fake and execute the same pull
+      request again: exactly one flag-listing request again, exit status non-zero.
+  - name: test_tq600a_13_vi_the_hold_workflow_invokes_the_module
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: integration
+    angle: seam
+    surface_invoked: "the shared workflow-step executor, locating the job in .github/workflows/nightly-hold.yml by its exact name and executing its `run:` steps verbatim with a synthetic `opened` event payload at GITHUB_EVENT_PATH"
+    must_catch:
+      - "the workflow's step decides the verdict itself (for example with a curl and a shell test) and never calls the module the unit tests exercise"
+      - "a run step interpolates pull-request text with a `${{ }}` expression — the executor refuses to run it"
+      - "the job reports success regardless of the module's verdict because the step swallows its exit status"
+    description: >-
+      THE ONE SEAM FOR THIS WORKFLOW FILE. With one open flag served, the executed step
+      exits non-zero and its output names the flag; with none, exit zero. Paired with the
+      in-process descriptors, this proves the job a pull request actually gets is the
+      module under test, not a lookalike.
+test_rationale: |
+  The cost clause is asserted by counting, not by timing, because a wall-clock bound on a
+  hosted runner measures runner start-up rather than the check. One read and no test
+  process is the property that makes the check cheap; "seconds" follows from it.
+
+  The counting is done on the real job step, in its own process, because that is where a
+  stray pytest call or build would actually be — an in-process call to the module would
+  not see a step that runs something besides it. Reading the workflow to find the job by
+  name is gathering an input; every assertion is on what executing it did.
+
+  What is not tested, deliberately: whether GitHub delivers each trigger event (only the
+  real repository can show that — TQ-600a-13-x), and every behaviour pending a user
+  decision (stale pass, staleness bound, trust model, the held-path request budget).
+  Cost: milliseconds in-process plus two short subprocesses for the seam; under 1 s.
+origin_agent: business-analyst
+created: 2026-10-08
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: internal
+notes: |
+  UNDER-SPECIFIED, NOT INVENTED: PULL REQUESTS THAT ARE NOT PUSHED AFTER THE FLAG GOES UP.
+  The approved design evaluates on open and on every push, which catches PRs opened after
+  the failure. It does not catch a PR that was opened before the failure, passed, and is
+  not pushed again: its last reported verdict is the earlier pass, and if that is what the
+  required check reads, it is mergeable while the nightly is red. "Hold immediately" is
+  therefore only true for PRs that are evaluated again. Closing this needs something that
+  re-evaluates open PRs when the flag is raised (for example the nightly re-requesting the
+  check on each open PR), which needs permissions and a design decision this record does
+  not take. Flagged rather than written as a criterion.
+
+  The "two or more open flags fails" clause is the safe direction for the consolidation
+  question TQ-600a-13-iii leaves open.

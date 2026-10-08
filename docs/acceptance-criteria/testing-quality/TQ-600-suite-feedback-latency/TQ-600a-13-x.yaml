@@ -1,0 +1,192 @@
+id: TQ-600a-13-x
+components:
+  - testing_quality
+title: "The hold only blocks merges once the ruleset requires it, and is described as advisory until then"
+component: testing-quality
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given that a failing status check blocks a merge only when the branch-protection
+    ruleset for the main branch lists it as required, and that this repository's required
+    checks are configured in the ruleset `require-ci-lint` (id 17810993), not in any
+    workflow file,
+  And that adding `Nightly suite status` to that ruleset is a one-time action needing
+    administrative rights the automation's credential does not have, which the owner will
+    perform by hand,
+  And the defect this record exists to prevent: "the check exists and fails" being read
+    as "merges are held", when without the ruleset entry a held pull request can be
+    merged with one click,
+  When the hold of TQ-600a-13-vi is described as protecting the main branch — in the
+    closure of this family's records, in documentation, or in a change note,
+  Then that description is made only after the ruleset has been read and observed to list
+    a required check whose name equals exactly the name the hold check reports under, and
+    until then every such description states that the hold is advisory,
+  And the hold check reports its status under the single name `Nightly suite status` on
+    every pull request that targets the main branch, whatever files the pull request
+    changes — because a required check that is not reported leaves every pull request
+    waiting on it indefinitely, and one reported under any other name never satisfies the
+    requirement,
+  And after the ruleset entry is added, the hold is observed once on the real repository:
+    with a flag open, a pull request carrying no fix declaration is reported unmergeable
+    by the hosting service, and the observation is recorded with its date and pull
+    request number,
+  And the name and every-pull-request clauses are demonstrated by opening pull requests
+    that touch only documentation, only tests, and only workflow files, and observing a
+    status under exactly that name on each, never by reading the workflow's triggers.
+depends_on:
+  - TQ-600a-13
+  - TQ-600a-13-vi
+doc_links:
+  - path: .github/workflows/ci.yml
+    relationship: describes
+    status: exists
+    relevance: >-
+      TQ-600a-13-i's enrichment notes that this file's aggregator job exists to carry one
+      stable required-check name across a matrix, and that a new job is not blocking
+      merely by existing because required checks live in a ruleset. The same reasoning
+      applies here.
+  - path: docs/acceptance-criteria/testing-quality/TQ-600-suite-feedback-latency/TQ-600a-13-i.yaml
+    relationship: describes
+    status: exists
+    relevance: >-
+      Already warns "verify against the branch-protection ruleset rather than assuming a
+      new job is automatically blocking". This record makes that a criterion for the
+      nightly hold.
+declared_files:
+  - path: scripts/ci/nightly_hold.py
+    state: to_be_created
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - >-
+    ASSIGNED python-coder FOR THE PART AN AGENT CAN DO; THE REST IS A HUMAN STEP. Adding
+    `Nightly suite status` to ruleset `require-ci-lint` (id 17810993) needs administrative
+    rights the automation's credential does not have; the owner performs it by hand and
+    no agent is assigned it. python-coder implements only the enforcement-state reader.
+    The live observation below is recorded by whoever performs or witnesses it.
+  - >-
+    THE RULESET IS READABLE WITHOUT ADMIN RIGHTS — VERIFIED AT ENRICHMENT. On 2026-10-08
+    `GET /repos/urlmonitor/leafcutter-ai/rules/branches/main` returned the active
+    required_status_checks with a read credential (this repository is public). Its
+    contexts were exactly: "Lint (ruff)", "Component vocab style (components.json)",
+    "Proof-of-done coverage check (BO-2500b)", "Changelog entry present", "AC store
+    valid". `Nightly suite status` is absent, so as of enrichment the hold is ADVISORY.
+    (Also absent: `Test suite (pytest)`, which bears on TQ-600a-13-i's aggregator
+    reasoning.) This answers the notes' open question: the enforcement read can be
+    automated; editing cannot.
+  - >-
+    THE ENFORCEMENT-STATE READER IS PURE AND EXACT. Input: that endpoint's response body.
+    Output: "enforced" only when a required_status_checks rule lists a context exactly
+    equal to `Nightly suite status` — no case folding, no trimming, no prefix or suffix
+    match; anything else, including an unreadable or empty response, is "advisory" with
+    a reason. Where the rule pins the check to a specific integration, it must be the
+    one that reports Actions jobs, else advisory.
+  - >-
+    THE REPORTED NAME CANNOT DRIFT OR BE SKIPPED. The job's `name:` is exactly
+    `Nightly suite status`; the job has no matrix (which suffixes the reported name) and
+    NO job-level `if:` — the hosting service reports a skipped job as a passing check, so
+    a condition that skips the job on some pull requests would make the required check
+    pass without evaluating anything. The workflow trigger has no path filters, so every
+    pull request to main receives the status (the criteria's every-pull-request clause).
+  - >-
+    THE EVERY-PULL-REQUEST AND HOLDS-MERGES CLAUSES ARE A RECORDED LIVE OBSERVATION, NOT A
+    TEST — CANNOT BE TESTED CHEAPLY, STATED EXPLICITLY. They are properties of the hosting
+    service's event delivery and ruleset evaluation, which no unit test can exercise;
+    automating them would put live GitHub calls and real pull requests in the default
+    suite, which this family's cost constraint forbids. After the ruleset entry is added,
+    record in this record's notes, with the date and pull request numbers: (a) with a
+    flag open, a pull request carrying no declaration is reported unmergeable; (b) a
+    status named exactly `Nightly suite status` appears on three pull requests touching
+    only documentation, only tests, and only a workflow file; (c) evaluations were
+    observed on opened, synchronize and labeled events (the trigger set TQ-600a-13-vi and
+    -viii depend on). Until (a) is recorded, this record is not done.
+  - >-
+    NOTHING DESCRIBES THE HOLD AS PROTECTING MAIN UNTIL (a) IS RECORDED. That covers this
+    family's closure, the contributor documentation (TQ-600a-13-vi's delivers_to to
+    documentation-expert) and any change note. Until then every such text says
+    "advisory".
+  - >-
+    THE TESTS COST UNDER 0.2 s. The reader is called in-process on captured response
+    shapes; the name descriptor reuses the shared workflow-step executor on the real
+    workflow file with one synthetic event and the recording fake server.
+delivers_to:
+  - agent: documentation-expert
+    contract: >-
+      The enforcement state ("advisory" | "enforced", with the date and evidence of the
+      recorded observation) that the docs/testing/README.md hold section must reflect.
+      Until the observation is recorded the text says the hold is advisory.
+expects_from:
+  - ac_id: TQ-600a-13-vi
+    contract: >-
+      One job in .github/workflows/nightly-hold.yml named exactly `Nightly suite status`,
+      no matrix, no job-level `if:`, no path filters on the trigger.
+test_spec:
+  - name: test_tq600a_13_x_the_status_is_reported_on_every_pull_request_under_one_name
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: integration
+    angle: seam
+    surface_invoked: "the shared workflow-step executor locating the job in .github/workflows/nightly-hold.yml by the exact name `Nightly suite status` and executing it with one synthetic event against the recording fake server"
+    must_catch:
+      - "the job is renamed or reported under a different case, so the ruleset entry is never satisfied and every PR waits indefinitely"
+      - "the job gains a matrix, so its reported name carries a suffix the ruleset entry does not match"
+      - "the job gains a job-level `if:` that can skip it, and a skipped required check reports as passing"
+    description: >-
+      The executor finds exactly one job with that exact name and executes it to a
+      verdict; it refuses a job with a matrix, and the test fails if the executor reports
+      having evaluated any job-level condition for this job (the nightly's flag job
+      legitimately carries one; this job must not). This covers the NAME half of the criterion only. The
+      every-pull-request half — that the service delivers the status to documentation-,
+      test- and workflow-only pull requests — is not testable in the unit layer and is
+      discharged by the recorded live observation in this record's it_requirements.
+  - name: test_tq600a_13_x_enforcement_is_claimed_only_from_an_observed_ruleset
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: unit
+    angle: discrimination
+    surface_invoked: "scripts/ci/nightly_hold.py's enforcement-state reader, in-process, on response bodies shaped like the real branch-rules response captured at enrichment"
+    must_catch:
+      - "the family is closed as protecting main because the check exists and fails, with the ruleset never read"
+      - "a near-miss context ('nightly suite status', 'Nightly suite status ', 'Nightly suite status (1)') is accepted as the required check"
+      - "an empty, malformed or unreadable rules response is reported as enforced"
+    description: >-
+      Given the response captured at enrichment (five contexts, this check absent):
+      advisory. Given the same with `Nightly suite status` added: enforced. Given each
+      near-miss name, an empty list, and a malformed body: advisory, with a reason.
+test_rationale: |
+  Most of this record cannot be proven by a unit test, because the property is in the
+  hosting service's configuration, not in the repository. That is why it is a separate
+  record: it is the one place in the family where the done-proof is a recorded live
+  observation, and naming that keeps "the check exists" from closing it.
+
+  At enrichment the live descriptor the BA proposed was restructured rather than kept as
+  a test: a unit test that opens real pull requests would put live calls in the default
+  suite, and one that is skipped when it cannot is a test that never runs. The name half
+  of the criterion IS cheaply testable — the executor finds the job by its exact name and
+  refuses the shapes that would change or skip the reported name — so that half stays a
+  test. The reader is tested against the real response shape captured on 2026-10-08.
+  Cost: milliseconds plus one short subprocess.
+origin_agent: business-analyst
+created: 2026-10-08
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target:
+  - pipeline
+  - infrastructure
+risk_surface: internal
+notes: |
+  The ruleset name and id are the requester's; the BA did not read the ruleset. Whether
+  the automation's credential can READ the ruleset (as opposed to edit it) is not known
+  here; if it cannot, the enforcement observation is a human step and is recorded by
+  hand.
+
+  The "every pull request, whatever it changes" clause is not in the approved design. It
+  is a consequence of making the check required: a required check whose workflow does not
+  run on some pull requests blocks those pull requests forever.

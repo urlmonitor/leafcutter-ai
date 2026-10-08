@@ -272,6 +272,16 @@ amended_by:
 superseded_by: null
 covered_by:
   - TQ-600a-13-i
+  - TQ-600a-13-ii
+  - TQ-600a-13-iii
+  - TQ-600a-13-iv
+  - TQ-600a-13-v
+  - TQ-600a-13-vi
+  - TQ-600a-13-vii
+  - TQ-600a-13-viii
+  - TQ-600a-13-ix
+  - TQ-600a-13-x
+  - TQ-600a-13-xi
 implemented_by: []
 change_target:
   - pipeline

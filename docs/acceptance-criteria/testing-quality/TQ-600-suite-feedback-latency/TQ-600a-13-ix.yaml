@@ -1,0 +1,166 @@
+id: TQ-600a-13-ix
+components:
+  - testing_quality
+title: "A hold check that could not read the flag fails and says so, rather than passing"
+component: testing-quality
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given that the check passes when it finds no open issue labelled `nightly-red`,
+  And that "found no open flag" and "could not look" both end with no flag in hand, so a
+    check that does not tell them apart passes every pull request whenever the read
+    fails — the failure class this repository's guidance names three times, of a check
+    that examined nothing looking like a check that found nothing,
+  And that pull requests from forks are evaluated with a credential of reduced rights,
+  When the read of the flag is refused for lack of authorisation or permission, returns
+    not-found, is rate-limited, returns a server error, times out, fails to connect, or
+    returns a body that is not a list of issues,
+  Then the check fails, and its output states that the nightly flag could not be read and
+    names the cause, in wording distinct from the output for an open flag,
+  And the check never passes on any of those outcomes,
+  And when a pull request from a fork is evaluated with a credential that can read the
+    repository's issues, its verdict is the same verdict a pull request from the
+    repository itself receives for the same flag state,
+  And when the verdict has been computed but creating or editing the pull request
+    comment of TQ-600a-13-vii is refused — the expected case for a read-only credential —
+    the verdict is unchanged: a held pull request still fails, a passing one still passes,
+    and the output notes that the comment could not be written,
+  And a successful read returning an empty list is a pass, so the check is not satisfied
+    by failing on everything,
+  And each outcome is demonstrated by executing the check against a double that returns
+    it, never by inspecting the check's error handling.
+depends_on:
+  - TQ-600a-13
+  - TQ-600a-13-vi
+  - TQ-600a-13-vii
+doc_links:
+  - path: CLAUDE.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      The "a check that examined nothing must not look like a check that found nothing"
+      rule and its three precedents, and the mirror-image note that a guard's failure
+      should be confirmed as a real finding rather than a check that could not look —
+      which is why the could-not-read wording must be distinct.
+  - path: docs/acceptance-criteria/testing-quality/TQ-600-suite-feedback-latency/TQ-600a-13-vi.yaml
+    relationship: describes
+    status: exists
+    relevance: >-
+      The verdict this record makes fail closed.
+declared_files:
+  - path: scripts/ci/nightly_hold.py
+    state: to_be_created
+  - path: scripts/ci/_github_rest.py
+    state: to_be_created
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - >-
+    THE READ HAS THREE OUTCOMES, NOT TWO. Flags found / none found / could not read (with
+    a cause). Only a successful response whose body parses as a JSON list counts as "none
+    found"; every other outcome — an error status, a timeout, a refused connection, a
+    body that is not JSON, a JSON object or string where a list was expected — is "could
+    not read". There is no code path on which an exception during the read leads to an
+    empty list.
+  - >-
+    THE CAUSE IS NAMED AND THE WORDING IS DISTINCT. The output states that the nightly flag
+    could not be read and names the cause (the status code, or the kind of failure), in
+    wording that shares no headline with the held output, so an author can tell an outage
+    from a red nightly. Per the project error handling policy the failure is logged at
+    WARNING or above, never swallowed.
+  - >-
+    EVERY REQUEST HAS A BOUNDED TIMEOUT. A hung read fails closed in seconds (on the order
+    of ten), not at the job's timeout. The timeout is configurable so the test can produce
+    a real timeout against a socket that never answers in a fraction of a second — the
+    test must never wait out the production value.
+  - >-
+    A REFUSED COMMENT WRITE LEAVES THE VERDICT ALONE AND IS NOT SILENT. The verdict is
+    computed before any comment write; a refused create or edit (the expected case for a
+    fork's read-only credential) is noted in the output and logged, and the job's
+    conclusion is the verdict's — the comment failure must not raise past it, and must not
+    be converted into success either.
+  - >-
+    FORK PULL REQUESTS READ THE SAME FLAG. Verified at enrichment (2026-10-08): the
+    repository is public with Issues enabled, so the reduced credential a fork's
+    evaluation receives under the `pull_request` event can read open issues; the verdict
+    for a given flag state is therefore the same for fork and same-repository pull
+    requests. This premise changes if the trigger changes — see TQ-600a-13-vi's PENDING
+    USER DECISION: trust model of the hold.
+  - >-
+    TRANSIENT-FAILURE RETRY IS PERMITTED, NOT REQUIRED. The design does not decide it and
+    the BA records that either is acceptable; a bounded retry may be added provided a
+    persistent failure still ends in "could not read" and the whole evaluation stays in
+    seconds. Not a pending user decision.
+  - >-
+    THE TESTS COST UNDER 0.5 s. Every failure is produced for real at the HTTP layer and
+    read through the REAL REST client: the shared recording fake server returns 401, 403,
+    404, 429 and 500 and malformed bodies; a connection failure is a request to a closed
+    local port; a timeout is a local socket that accepts and never answers, with the
+    client's timeout set to a fraction of a second. Faking the client instead would test
+    a mapping the production code does not use.
+delivers_to: null
+expects_from:
+  - ac_id: TQ-600a-13-vi
+    contract: >-
+      The verdict function and its single flag read through scripts/ci/_github_rest.py,
+      returning `state: could_not_read` with a non-null `cause` on any failed read.
+  - ac_id: TQ-600a-13-vii
+    contract: >-
+      The comment create/edit path, whose refusal this record requires to leave the
+      verdict unchanged.
+test_spec:
+  - name: test_tq600a_13_ix_every_failed_read_fails_closed
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: integration
+    angle: failure
+    surface_invoked: "scripts/ci/nightly_hold.py's verdict entry point, in-process, through the real REST client against the shared recording fake server returning each failure, a closed local port, and a non-answering local socket"
+    description: >-
+      For 401, 403, 404, 429, 500, a timeout, a connection failure, a non-JSON body, and a
+      JSON object body: state could_not_read, the check fails, output says the flag could
+      not be read and names the cause. A successful empty list: pass.
+  - name: test_tq600a_13_ix_a_refused_comment_does_not_change_the_verdict
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: integration
+    angle: discrimination
+    surface_invoked: "scripts/ci/nightly_hold.py against the fake server refusing comment writes with 403"
+    must_catch:
+      - "the read error is caught and treated as 'no issues', so the check passes"
+      - "a refused comment write raises and ends the check with an error status that the hosting service reports as neutral or skipped rather than failed"
+      - "a refused comment write is caught and the check then reports success, turning a hold into a pass"
+      - "the could-not-read output is worded like the open-flag output, so an author cannot tell an outage from a red nightly"
+    description: >-
+      Serve one open flag and refuse the comment write: check fails, output notes the
+      comment could not be written. Serve no flag and refuse the comment write: check
+      passes. Serve a read failure: check fails with the could-not-read wording, which
+      shares no headline with the held wording.
+test_rationale: |
+  The paired empty-list pass is required because the cheap way to satisfy "never passes
+  on a failed read" is to fail on everything. The comment-refusal case is separate from
+  the read-failure case because a read-only fork credential will usually be able to read
+  and unable to write, and that combination must leave the verdict alone.
+
+  Every failure is produced at the HTTP layer and read through the real client, because
+  the defect this record guards — an error mapped to "no issues" — lives in exactly the
+  client code a faked client would bypass. The timeout case uses a short configured
+  timeout against a socket that never answers, so it is real and still costs a fraction
+  of a second. Total: under half a second.
+origin_agent: business-analyst
+created: 2026-10-08
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: auth
+notes: |
+  Whether transient failures (rate limit, server error, timeout) are retried before
+  failing closed is not specified by the design and not decided here. Failing closed on
+  the first transient error is the safe reading; a retry policy may be added without
+  contradicting this record so long as the final outcome on persistent failure is a fail.

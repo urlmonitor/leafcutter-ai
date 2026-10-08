@@ -1,0 +1,283 @@
+id: TQ-600a-13-iii
+components:
+  - testing_quality
+title: "A red night raises one nightly-red issue, a further red night updates it, and a green night closes it"
+component: testing-quality
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given the night verdict TQ-600a-13-ii produces — green or red, with the failing node
+    ids, a link to the run's log, and the head commit the run tested,
+  And the decision that the flag is a single open repository issue carrying the label
+    `nightly-red`, and that this open issue is the one source of truth the per-PR hold
+    reads,
+  And the fact, reported by the requester, that no workflow in this repository opens
+    issues today and the repository has never had an issue, so this is a new surface
+    with no prior convention to inherit,
+  When a night's verdict is applied to the flag, with the issue service replaced by a
+    recording double that serves a stated set of existing issues,
+  Then on a red night with no open issue labelled `nightly-red`, exactly one issue is
+    created, carrying that label, whose description contains every failing node id, the
+    link to that night's log, and the list of commits merged to the main branch since
+    the last green night,
+  And on a red night with one open issue labelled `nightly-red`, no issue is created and
+    exactly one comment is added to that issue, containing that night's failing node ids
+    — which may differ from the night that opened it — that night's log link, and the
+    commit list since the last green night,
+  And on a green night with one open issue labelled `nightly-red`, that issue is closed
+    with a comment linking the green run, and no other issue is created, edited or closed,
+  And on a green night with no open issue labelled `nightly-red`, the issue service
+    receives no write request at all,
+  And the commit list is every commit reachable from the red run's head commit and not
+    reachable from the head commit of the most recent green run, so on a nightly cadence
+    the list is the culprit's search space,
+  And when no green run is on record, the issue says in words that no green night is on
+    record, rather than showing an empty list that reads as "nothing changed",
+  And issues that do not carry the `nightly-red` label are never read as the flag and
+    never written to.
+depends_on:
+  - TQ-600a-13
+  - TQ-600a-13-ii
+doc_links:
+  - path: docs/acceptance-criteria/testing-quality/TQ-600-suite-feedback-latency/TQ-600a-13-ii.yaml
+    relationship: describes
+    status: exists
+    relevance: >-
+      Produces the verdict this record applies.
+  - path: CLAUDE.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      "A check that examined nothing must not look like a check that found nothing" —
+      the reason an absent green baseline is stated in words rather than rendered as an
+      empty commit list.
+  - path: docs/acceptance-criteria/testing-quality/TQ-600-suite-feedback-latency/TQ-600a-13-xi.yaml
+    relationship: describes
+    status: exists
+    relevance: >-
+      Bounds every write this record makes to the allowed list. Note that list has no
+      "edit an issue's description" entry, which is why the current state of a streak is
+      carried in comments and not by rewriting the issue body (see delivers_to).
+  - path: .github/workflows/test-durations.yml
+    relationship: describes
+    status: exists
+    relevance: >-
+      The only scheduled workflow today and the shape to copy for job-level permissions
+      and an always-run artifact step. It holds `contents: write` and `pull-requests:
+      write`; the flag job here must hold neither.
+declared_files:
+  - path: scripts/ci/nightly_flag.py
+    state: to_be_created
+  - path: scripts/ci/_github_rest.py
+    state: to_be_created
+  - path: .github/workflows/nightly-suite.yml
+    state: to_be_created
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - >-
+    A PURE PLANNER AND A THIN APPLIER. The lifecycle is a function from (night verdict,
+    the open and closed `nightly-red` issues as read, the last-green anchor, the commit
+    list) to an ordered list of writes; a separate applier performs them through the one
+    REST client (scripts/ci/_github_rest.py). The workflow's flag job only invokes it.
+    Tests assert on the writes OBSERVED AT THE RECORDING FAKE SERVER, not on the plan
+    object, so a plan that the applier fails to perform — or performs differently — is
+    red. Same family architecture as TQ-600a-13-ii.
+  - >-
+    THE FLAG IS IDENTIFIED BY STATE AND LABEL, AND ONLY ISSUES COUNT. Read open issues
+    carrying the label `nightly-red` via the service's own label and state filters; never
+    by title, never by a substring of the body. The service's issues listing also returns
+    pull requests; an item that is a pull request (it carries a `pull_request` member) is
+    neither read as the flag nor written to. This is an enrichment reading of "issue" in
+    the criteria, recorded as a caveat for the BA rather than settled silently.
+  - >-
+    THE LAST-GREEN ANCHOR IS THE NIGHTLY'S OWN RUN HISTORY, NEVER AN ISSUE EVENT. Resolve
+    the notes' open point this way: the anchor is the head commit of the most recent run
+    of the nightly workflow on `main` whose overall conclusion is success. Because a red
+    night and a did-not-complete night both end the workflow in failure (TQ-600a-13-ii,
+    -v), "conclusion success" and "green night" coincide; a green night whose flag job
+    failed to write also ends in failure and is therefore not an anchor, which only ever
+    widens the commit list — the safe direction. Never derive the anchor from a close
+    event, close time or any issue timestamp (TQ-600a-13-iv). This needs `actions: read`
+    on the flag job.
+  - >-
+    ONLY A RUN THAT TESTED MAIN MAY WRITE THE FLAG. workflow_dispatch can run the nightly
+    on any ref. A run whose `ref` is not `refs/heads/main` reports its verdict in its own
+    log and makes no write at all — otherwise a green dispatch on a feature branch closes
+    a flag that main still deserves.
+  - >-
+    THE COMMIT LIST IS A REAL GRAPH WALK. Every commit reachable from the red run's head
+    and not reachable from the anchor — all parents, not first-parent only — computed with
+    git in a full-history checkout in the flag job (or an equivalent walk). Three
+    word-not-list cases: no green run on record (the criterion); an anchor commit that
+    cannot be resolved in the checkout (rewritten history, a missing object) — say so and
+    name the anchor; and a list longer than fits the service's comment size limit —
+    truncate with an explicit count of the commits omitted. An empty list is shown only
+    when the walk genuinely returned none, and is then labelled as such.
+  - >-
+    UNTRUSTED TEXT IS RENDERED INERT. Node ids and test names come from the code under
+    test. Render them as code so they cannot create @-mentions, links or markdown
+    structure in the issue; the same applies to commit subjects in the list.
+  - >-
+    THE STATE OF A STREAK TRAVELS IN A MACHINE-READABLE BLOCK. The issue body (on create)
+    and each later comment carry the same fields in a block the hold check can parse
+    without re-deriving anything — see delivers_to. TQ-600a-13-xi's allowed writes do not
+    include editing an issue's description, so the latest night's state is the LATEST
+    COMMENT (or the body if there is none), never a rewritten body.
+  - >-
+    PERMISSIONS ON THE FLAG JOB, AND NOTHING MORE: `issues: write` (create, comment,
+    close, reopen), `actions: read` (the anchor), `contents: read` (the commit walk).
+    Job-level. No `contents: write`, no `pull-requests`, and checkout with persisted
+    credentials disabled, so no push-capable credential sits in the workspace.
+  - >-
+    A FAILED WRITE FAILS THE JOB, LOUDLY. Per the project error handling policy an API
+    failure during apply is logged and ends the flag job in failure — which also keeps
+    that night from becoming a future anchor. A partial application (comment posted,
+    close refused) is reported as such, naming what was and was not written.
+  - >-
+    FIRST USE IS A NEW SURFACE — VERIFY IT LIVE ONCE. Verified at enrichment
+    (2026-10-08): the repository has Issues enabled (`has_issues: true`) and is public;
+    it has never had an issue nor a `nightly-red` label. Whether creating an issue with a
+    label that does not yet exist produces a labelled issue under the workflow token is
+    observed on the first real red night (or a deliberate dispatch) and recorded in this
+    record's notes; the unit tests cannot establish it.
+  - >-
+    TWO OR MORE OPEN FLAGS — PENDING USER DECISION: two or more open flags (which one a
+    red night comments on, and whether to consolidate). Serialising the nightly
+    (TQ-600a-13-ii) removes the race between two runs; a human-opened second flag
+    remains. Until decided, tests assert only that a red night with two open flags
+    creates no third issue and writes to nothing unlabelled; they must not pin which of
+    the two receives the comment.
+  - >-
+    THE TESTS COST UNDER 1 s, IN THE DEFAULT SUITE. In-process planner and applier
+    through the real REST client against the shared recording fake server (TQ-600a-13-
+    ii's harness); one real scratch git repository with no more than six commits, built
+    once per test class. No subprocess pytest, no build, no live GitHub.
+delivers_to:
+  - agent: python-coder
+    ac_id: TQ-600a-13-vi
+    contract: >-
+      The hold signal: zero or more open GitHub issues (items without a `pull_request`
+      member) whose labels include `nightly-red`; each read from the issues listing with
+      `number` (int), `html_url` (string), `created_at` (ISO-8601 string), `state`
+      ("open"). Normally at most one; the hold treats any number above zero as held.
+  - agent: python-coder
+    ac_id: TQ-600a-13-vii
+    contract: >-
+      The streak state for the PR comment, embedded in the issue body on create and in
+      every later lifecycle comment as one HTML comment line
+      `<!-- nightly-suite-state v1 {json} -->`, where json is an object: `verdict`
+      ("red" | "did_not_complete"); `failing` (list of node-id strings, empty for
+      did_not_complete); `run_url` (string); `head_sha` (40-hex); `anchor_sha` (40-hex or
+      null when no green run is on record); `commits` (list of 40-hex, possibly
+      truncated); `commits_omitted` (int >= 0); `red_since` (ISO-8601 string — when the
+      current streak's flag was opened or reopened). The most recent such block on the
+      flag (latest comment, else the body) is the current state.
+  - agent: python-coder
+    ac_id: TQ-600a-13-iv
+    contract: >-
+      The open/comment/close lifecycle and the run-history anchor, which TQ-600a-13-iv
+      constrains for flags closed without a green night.
+expects_from:
+  - ac_id: TQ-600a-13-ii
+    contract: >-
+      The night verdict file `nightly-verdict.json` (artifact `nightly-verdict`) with
+      `verdict`, `failing`, `passed_on_retry`, `head_sha`, `ref`, `run_id`, `run_url`, as
+      specified in TQ-600a-13-ii's delivers_to.
+  - ac_id: TQ-600a-13-v
+    contract: >-
+      The did_not_complete verdict with its `stage`, which this lifecycle applies like
+      red (raise or comment, never close) but words differently.
+test_spec:
+  - name: test_tq600a_13_iii_each_verdict_and_flag_state_produces_the_stated_writes
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: integration
+    angle: criterion
+    surface_invoked: "scripts/ci/nightly_flag.py planner + applier, in-process, through the real REST client against the shared recording fake GitHub server"
+    description: >-
+      Four cases — red/none-open, red/one-open, green/one-open, green/none-open. For each,
+      assert the exact write set the fake server recorded: one create carrying the label,
+      every failing node id, the log link and the commit list; one comment and no create;
+      one close plus one comment linking the green run; no write request at all.
+  - name: test_tq600a_13_iii_a_second_red_night_never_opens_a_duplicate
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: integration
+    angle: discrimination
+    surface_invoked: "scripts/ci/nightly_flag.py in-process against the recording fake server"
+    must_catch:
+      - "the lifecycle searches for the flag by title rather than by label and state, so a second red night with a changed failing set opens a second issue"
+      - "the open-issue search counts closed issues, so a red night after a previous closed streak comments on the closed issue and nothing is open"
+      - "an unrelated open issue without the label is commented on or closed"
+      - "an open pull request carrying the `nightly-red` label is treated as the flag and commented on"
+    description: >-
+      Serve an open flag, an unrelated open issue, a closed `nightly-red` issue from an
+      earlier streak, and an open pull request that carries the label. A red night
+      produces exactly one comment, on the open flag, and nothing else.
+  - name: test_tq600a_13_iii_only_a_run_that_tested_main_writes_the_flag
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: integration
+    angle: discrimination
+    surface_invoked: "scripts/ci/nightly_flag.py in-process against the recording fake server"
+    must_catch:
+      - "a green workflow_dispatch run on a feature branch closes the open flag"
+      - "a red workflow_dispatch run on a feature branch raises a flag that holds every pull request to main"
+    description: >-
+      Apply a green and a red verdict whose `ref` is `refs/heads/feature-x`, with one open
+      flag and with none. The fake server records zero write requests in all four cases.
+  - name: test_tq600a_13_iii_the_commit_range_starts_at_the_last_green_head
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: integration
+    angle: real_artifact
+    surface_invoked: "a real scratch git repository with a known commit graph (shared harness), and the fake server's workflow-run history naming the green run's head"
+    must_catch:
+      - "the walk follows first parents only, so a commit brought in by a merge is missing from the list"
+      - "the anchor is the most recent run of any conclusion rather than the most recent successful one, so the list starts at the previous red night"
+    description: >-
+      Scratch repository: green run at commit G, three commits merged (one of them via a
+      merge commit with a side-branch commit), red run at R. The commit list is exactly
+      the commits reachable from R and not from G, the side-branch commit included. With
+      no successful run in the served history, the text says in words that no green night
+      is on record and shows no list; with an anchor sha absent from the repository, the
+      text names the unresolved anchor.
+test_rationale: |
+  The single-flag invariant is the property every downstream record relies on, so the
+  discrimination descriptor serves the states most likely to break it at once — now
+  including a labelled pull request, which the service's own issues listing returns. The
+  commit range is asserted against a real repository because a range computed from a
+  fixture list assumes the graph walk it is meant to test.
+
+  Every write assertion is made at the recording fake server, through the real REST
+  client, rather than on the planner's return value. The planner can be right and the
+  applier wrong; only the server sees what was actually sent.
+
+  Cost: in-process calls in milliseconds, one scratch repository of a handful of commits
+  built once per class (well under a second of git). No child pytest and no live calls.
+origin_agent: business-analyst
+created: 2026-10-08
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: internal
+notes: |
+  UNDER-SPECIFIED, NOT INVENTED: WHERE "THE LAST GREEN NIGHT" IS RECORDED. The design
+  says the issue carries the commits merged since the last green night, but not where
+  that green night is remembered. The obvious source is the scheduled workflow's own run
+  history; it is not the close date of the flag (see TQ-600a-13-iv for why). This record
+  fixes the behaviour — the range starts at the head commit of the most recent green run
+  — and leaves the store to the implementer.
+
+  UNDER-SPECIFIED: TWO OR MORE OPEN FLAGS. A race between a scheduled run and a manual
+  re-run, or a human opening a second issue with the label, can produce two. This record
+  does not say which one a red night updates. TQ-600a-13-vi holds the PR when any open
+  flag exists, which is the safe direction; consolidation is left open.

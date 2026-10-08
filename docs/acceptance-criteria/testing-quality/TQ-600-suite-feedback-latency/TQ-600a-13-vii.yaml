@@ -1,0 +1,165 @@
+id: TQ-600a-13-vii
+components:
+  - testing_quality
+title: "A held pull request carries one explanatory comment, updated in place and never duplicated"
+component: testing-quality
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given a pull request that TQ-600a-13-vi holds because an issue labelled `nightly-red` is
+    open,
+  And the reason the comment exists: a failing status alone tells the author their PR is
+    blocked but not that the cause is outside their change, and an author who cannot see
+    that will start debugging their own diff,
+  When the check evaluates the held pull request for the first time,
+  Then exactly one comment is created on it, containing: the failing node ids from the
+    flag's most recent night, the date the flag was raised (red since), a link to the
+    flag issue, and the commit range that issue carries,
+  And when the check evaluates the same pull request again while it is still held — on a
+    later push, or after a further red night has changed the failing set — that same
+    comment is edited to carry the current contents, and the number of comments the
+    check has authored on the pull request remains one,
+  And a comment written by anyone else, including another automated comment, is never
+    edited or removed by the check,
+  And the comment is demonstrated by executing three evaluations of one held pull request
+    against a recording double of the comment service — the second after the failing set
+    has changed — and observing one create, then two edits of that comment, and no second
+    create.
+depends_on:
+  - TQ-600a-13
+  - TQ-600a-13-vi
+doc_links:
+  - path: docs/acceptance-criteria/testing-quality/TQ-600-suite-feedback-latency/TQ-600a-13-vi.yaml
+    relationship: describes
+    status: exists
+    relevance: >-
+      The held verdict this comment explains.
+  - path: docs/acceptance-criteria/testing-quality/TQ-600-suite-feedback-latency/TQ-600a-13-iii.yaml
+    relationship: describes
+    status: exists
+    relevance: >-
+      The source of the failing ids, red-since date and commit range the comment repeats.
+declared_files:
+  - path: scripts/ci/nightly_hold.py
+    state: to_be_created
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - >-
+    THE CHECK'S OWN COMMENT IS IDENTIFIED BY A MARKER UNIQUE TO THIS CHECK, NOT BY AUTHOR.
+    Every workflow in the repository posts as the same automation account, so author
+    alone cannot distinguish this check's comment from another's. The comment body
+    carries a hidden marker naming this check; the search for it covers every page of the
+    pull request's comments and matches on marker AND automation author, so a human
+    pasting the marker cannot have their comment edited.
+  - >-
+    THE CONTENT IS READ FROM THE FLAG'S STATE BLOCK, NOT RE-DERIVED. Failing node ids,
+    red-since, commit range and whether the night was red or did-not-complete come from
+    the most recent `nightly-suite-state v1` block on the flag (TQ-600a-13-iii's
+    delivers_to); the issue link is the flag's `html_url`. This check never recomputes a
+    commit range and never reads the nightly's artifacts. A did_not_complete state is
+    worded as "the nightly did not complete", never as failing tests.
+  - >-
+    THE EXTRA READS THIS NEEDS ARE PENDING USER DECISION: one-read budget vs comment
+    contents. Reading the flag's latest comment and listing the pull request's comments
+    are requests beyond TQ-600a-13-vi's single flag read. This enrichment confines them to
+    the held path; see TQ-600a-13-vi's it_requirements for the conflict.
+  - >-
+    EDIT ON EVERY HELD EVALUATION, AS THE CRITERIA DEMONSTRATE. The demonstration expects
+    one create then two edits across three evaluations, so the check edits its comment on
+    each held evaluation rather than skipping an edit whose text is unchanged.
+  - >-
+    WHAT HAPPENS TO THE COMMENT WHEN THE HOLD LIFTS — PENDING USER DECISION: comment when
+    the hold lifts. Not specified here; no test asserts that a pass evaluation edits,
+    deletes or leaves the comment. Note the coupling: if the owner chooses "edit", the
+    pass path also needs to read the pull request's comments, which changes TQ-600a-13-vi's
+    zero-further-requests-on-pass assertion.
+  - >-
+    UNTRUSTED TEXT IS RENDERED INERT. Node ids and commit subjects are rendered as code so
+    they cannot create @-mentions, links or markdown structure on the pull request.
+  - >-
+    A REFUSED WRITE NEVER CHANGES THE VERDICT. Creating or editing the comment can be
+    refused (fork credentials); that path is TQ-600a-13-ix's, and this record's
+    implementation must leave the verdict computed before any comment write.
+  - >-
+    THE TESTS COST UNDER 0.3 s. In-process through the real REST client against the shared
+    recording fake server, which serves comment pages with real pagination link headers
+    so the multi-page search exercises the client's actual pagination code.
+delivers_to: null
+expects_from:
+  - ac_id: TQ-600a-13-vi
+    contract: >-
+      The hold verdict object with `state: held` and `flags` naming the open flag
+      (`number`, `html_url`, `created_at`).
+  - ac_id: TQ-600a-13-iii
+    contract: >-
+      The `<!-- nightly-suite-state v1 {json} -->` block in the flag's body and lifecycle
+      comments, carrying `verdict`, `failing`, `run_url`, `anchor_sha`, `commits`,
+      `commits_omitted`, `red_since`.
+test_spec:
+  - name: test_tq600a_13_vii_one_comment_is_created_then_edited
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: integration
+    angle: criterion
+    surface_invoked: "scripts/ci/nightly_hold.py's held path, in-process, through the real REST client against the shared recording fake server"
+    description: >-
+      Three evaluations of one held PR; between the first and second the fake adds a flag
+      comment with a different failing set. Writes recorded at the server: one create,
+      two edits of the same comment id, no second create. The final text carries the
+      changed failing set, the red-since date, the issue link and the commit range.
+  - name: test_tq600a_13_vii_the_check_finds_its_own_comment_and_only_its_own
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: integration
+    angle: discrimination
+    surface_invoked: "scripts/ci/nightly_hold.py against the fake server serving paginated PR comments"
+    must_catch:
+      - "the check identifies its comment by author alone, so it edits another workflow's comment posted under the same automation account"
+      - "the check cannot find its earlier comment once the PR has more than one page of comments, and creates a second"
+      - "the comment is created on every evaluation"
+      - "a human comment that quotes the marker is edited because the match is on the marker alone"
+    description: >-
+      Serve a PR with another automated comment from the same account, a human comment
+      quoting the marker, and enough comments to span pages with the check's own on a
+      later page. One edit, to the check's own comment; the others are untouched.
+  - name: test_tq600a_13_vii_a_did_not_complete_flag_is_not_described_as_failing_tests
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: unit
+    angle: criterion
+    surface_invoked: "scripts/ci/nightly_hold.py's comment renderer, in-process"
+    description: >-
+      Given a flag whose latest state block is did_not_complete with stage
+      empty_selection, the comment says the nightly did not complete, names the stage,
+      and contains no failing-tests list.
+test_rationale: |
+  "Updated, never duplicated" fails in practice on the second page of comments and on a
+  shared automation account, so those are the two conditions the discrimination
+  descriptor serves; the human-quoted marker is the third way a marker-only search goes
+  wrong.
+
+  The pagination case is served by the recording fake with real link headers and read
+  through the real client, so the test exercises the code that would miss the later page
+  rather than a fake that hands back everything at once. The did-not-complete wording
+  descriptor is added because TQ-600a-13-v's distinct-wording rule would otherwise stop
+  at the issue and be broken on the pull request. Cost: milliseconds.
+origin_agent: business-analyst
+created: 2026-10-08
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: internal
+notes: |
+  UNDER-SPECIFIED, NOT INVENTED: WHAT HAPPENS TO THE COMMENT WHEN THE HOLD LIFTS. When
+  the flag closes, or the PR declares a fix, the check passes — but a comment saying the
+  PR is held remains on it. The design does not say whether that comment is edited to say
+  the hold has lifted, removed, or left. Leaving it is misleading; editing it is the
+  obvious choice; this record does not make it.

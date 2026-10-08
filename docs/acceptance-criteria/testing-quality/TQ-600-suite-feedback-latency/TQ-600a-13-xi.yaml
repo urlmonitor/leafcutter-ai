@@ -1,0 +1,172 @@
+id: TQ-600a-13-xi
+components:
+  - testing_quality
+title: "Neither the nightly nor the hold ever changes the repository's code"
+component: testing-quality
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given that the tests the nightly runs exist to catch silent corruption, that some of
+    them are guardrail tests, and that an unreviewed overnight change to a guardrail test
+    is the riskiest change in this repository to automate,
+  And the owner's decision that triage may be automated in a later piece of work and that
+    fixing may not,
+  When the nightly run, the flag lifecycle, and the hold check each run along every path
+    they have — green night, red night, did-not-complete night, hold, pass, declared fix,
+    failed read,
+  Then none of them creates a commit, pushes or deletes a branch or tag, opens, edits,
+    approves or merges a pull request, or modifies any file tracked by the repository,
+  And the only writes they make to the hosting service are creating, commenting on,
+    closing and reopening issues labelled `nightly-red`, creating and editing the hold
+    check's own pull request comment, and reporting check results,
+  And this is demonstrated by running each path against a recording double of the
+    hosting service and a real scratch clone of the repository, and observing that the
+    recorded writes are a subset of the list above and that the clone's branches, tags
+    and working tree are unchanged,
+  And adding a step that pushes a change, opens a pull request, or edits a tracked file
+    to any of these paths makes that demonstration fail.
+depends_on:
+  - TQ-600a-13
+  - TQ-600a-13-ii
+  - TQ-600a-13-iii
+  - TQ-600a-13-vi
+doc_links:
+  - path: docs/acceptance-criteria/testing-quality/TQ-600-suite-feedback-latency/TQ-600a-13-i.yaml
+    relationship: describes
+    status: exists
+    relevance: >-
+      Records why these tests are the warning system for a corruption that makes
+      unrelated tests fail for unrelated-looking reasons — the reason a change to them
+      must be reviewed.
+  - path: .github/workflows/test-durations.yml
+    relationship: describes
+    status: exists
+    relevance: >-
+      The ONE workflow allowed to regenerate the durations file, and it does so through a
+      pull request for review, never a push. The nightly must not become a second one.
+declared_files:
+  - path: scripts/ci/_github_rest.py
+    state: to_be_created
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - >-
+    THE ALLOWED-WRITE LIST IS ENFORCED IN ONE PLACE EVERY WRITE PASSES THROUGH. The shared
+    REST client refuses, before sending anything, every write that is not one of: create
+    an issue carrying the label `nightly-red`; comment on a `nightly-red` issue; close or
+    reopen a `nightly-red` issue; create or edit the hold check's own marked comment on
+    the pull request being evaluated. Refused by construction: git refs, repository
+    contents, pull-request create/update/merge/review, merges, labels on other issues or
+    pull requests, workflow dispatch, releases. Reads are unrestricted.
+  - >-
+    DEFENCE IN DEPTH IN THE WORKFLOWS. No job in either workflow holds `contents: write`
+    or the right to create or merge pull requests; the test-running job holds
+    `contents: read` only; checkouts in the flag and hold jobs do not persist a git
+    credential in the workspace. So even a step that bypasses the client cannot push.
+    These are the enforcement points that actually run on the hosting service; the
+    client allowlist is what the unit layer can observe. Both are required.
+  - >-
+    THE NIGHTLY NEVER REGENERATES A BASELINE. Refreshing .github/test_durations.json — or
+    any recorded baseline a timing-ratio test reads — stays the job of test-durations.yml,
+    through a pull request. A red nightly "fixed" by moving the baseline is the named
+    failure this record exists to stop.
+  - >-
+    LATER TRIAGE FITS INSIDE THE LIST. A diagnosis posted as a comment on the flag is an
+    allowed write and needs no change here; anything that opens a pull request does.
+  - >-
+    A SYNTHETIC SCRATCH REPOSITORY STANDS IN FOR "A REAL SCRATCH CLONE OF THE REPOSITORY" —
+    A MEASURED COST SUBSTITUTION, FLAGGED. Measured at enrichment (2026-10-08): a depth-1
+    clone of this repository takes 5.16 s, over half of the whole family's ~10 s test
+    budget, and its tracked content is irrelevant to the property under test (branches,
+    tags, index and working tree unchanged). The descriptors use a real git repository
+    built by the shared harness, with a local bare repository as its origin so a push is
+    observable as a change of the bare repository's refs. If the owner wants the literal
+    clone, it belongs in a `_MANUAL` test run by the nightly itself — not in the default
+    suite. Recorded as a caveat for the BA.
+  - >-
+    THE TESTS COST UNDER 1 s. The in-process paths (green, red, did-not-complete, hold,
+    pass, declared fix, failed read) run against the recording fake server and the scratch
+    repository; the mutation descriptor executes only the nightly's flag job — never its
+    test-running job — on mutated copies of the workflow file, so it starts no pytest.
+delivers_to: null
+expects_from:
+  - ac_id: TQ-600a-13-iii
+    contract: >-
+      The flag lifecycle and the shared REST client, whose writes this record bounds.
+  - ac_id: TQ-600a-13-vi
+    contract: >-
+      The hold check's paths (hold, pass, declared fix, failed read) and its PR comment
+      writes, which this record bounds to the check's own marked comment.
+  - ac_id: TQ-600a-13-ii
+    contract: >-
+      The nightly workflow and the shared test harness (recording fake server,
+      workflow-step executor, scratch repository builder).
+test_spec:
+  - name: test_tq600a_13_xi_every_path_writes_only_issues_comments_and_statuses
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: integration
+    angle: criterion
+    surface_invoked: "every nightly, flag and hold path, through the real REST client against the shared recording fake server, with git operations performed in a scratch repository whose origin is a local bare repository"
+    description: >-
+      Run every path. The union of write requests RECORDED AT THE SERVER is a subset of
+      the allowed list. The scratch repository's branches, tags, index and working tree,
+      and the bare origin's refs, compare equal before and after.
+  - name: test_tq600a_13_xi_the_client_refuses_a_write_outside_the_list
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: unit
+    angle: discrimination
+    surface_invoked: "scripts/ci/_github_rest.py in-process against the recording fake server"
+    must_catch:
+      - "the allowlist is checked after the request is sent, so the forbidden write reaches the service"
+      - "the allowlist matches by method only, so any POST is allowed"
+      - "a comment on an issue that does not carry `nightly-red` is allowed because comments as a class are allowed"
+    description: >-
+      Ask the client to create a pull request, update a git ref, put repository contents,
+      merge a pull request, and comment on an unlabelled issue. Each is refused, and the
+      fake server records no request for any of them.
+  - name: test_tq600a_13_xi_an_added_fix_step_is_caught
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: integration
+    angle: discrimination
+    surface_invoked: "the shared workflow-step executor running the flag job of a MUTATED copy of .github/workflows/nightly-suite.yml in the scratch repository, against the fake server"
+    must_catch:
+      - "a red-night step regenerates the durations file or a baseline and pushes it, so a timing-ratio failure is 'fixed' by moving the baseline"
+      - "a red-night step opens a pull request with a proposed fix — not a merge, but an automated fix in review's clothing"
+      - "a step edits a tracked file in the runner's checkout and a later step commits it"
+    description: >-
+      Insert each named step into a copy of the workflow's flag job and execute it on a
+      red-night verdict. For each, the bound check from the first descriptor goes red — a
+      changed bare-origin ref, a non-allowed write at the server, or a changed working
+      tree or branch. The unmutated workflow passes the same check.
+test_rationale: |
+  The rule is a negative, so the only behavioural form of it is a bounded write set
+  observed over every path plus a mutation proving the bound catches an addition. The
+  durations-file case is named first because regenerating a baseline is the change most
+  likely to be added with good intentions.
+
+  Writes are observed at the server, not at the client, so a step that bypasses the
+  client is still seen; git effects are observed on a real repository with a real bare
+  origin, so a push is a ref change rather than a mocked call. The mutation runs only
+  the nightly's flag job, which is where a "fix it overnight" step would be added and
+  which starts no test session. The scratch repository is synthetic for the measured
+  cost reason in it_requirements. Total under a second.
+origin_agent: business-analyst
+created: 2026-10-08
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: internal
+notes: |
+  Automated TRIAGE is out of scope and not ruled out: a later step that reads the failing
+  tests and the commit range and writes a diagnosis as an issue comment would fall inside
+  the allowed write set and does not contradict this record.

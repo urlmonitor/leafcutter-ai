@@ -1,0 +1,205 @@
+id: TQ-600a-13-viii
+components:
+  - testing_quality
+title: "A pull request that declares it fixes the open nightly-red issue is not held by it"
+component: testing-quality
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given exactly one open issue labelled `nightly-red`, numbered N,
+  And the deadlock this record exists to prevent: without an exception, the pull request
+    that repairs the nightly is itself held by the nightly, nothing can merge, the
+    nightly cannot go green, and the repository stops,
+  When the check `Nightly suite status` evaluates a pull request,
+  Then it passes when the pull request's description contains "Fixes #N" or "Closes #N"
+    — the keyword in any letter case, followed by the number of that open issue — and its
+    output says it is passing because the pull request declares a fix for #N,
+  And it passes when the pull request carries the label `nightly-fix`, and its output
+    says so,
+  And it still fails when the description names a different issue ("Fixes #M" where M is
+    not N), mentions #N without a closing keyword ("see #N", "related to #N"), or names a
+    number that merely begins with N's digits,
+  And when the declaration or the label is added after the pull request's last push, the
+    verdict becomes a pass without a further push — an escape hatch that waits for a push
+    makes the repairer push an empty commit to be let through,
+  And removing the declaration or the label while the flag is still open returns the
+    verdict to a fail on the next evaluation,
+  And each case is demonstrated by evaluating the check against a pull request whose
+    description and labels are supplied, with one open flag served by the double, and
+    observing pass or fail.
+depends_on:
+  - TQ-600a-13
+  - TQ-600a-13-vi
+doc_links:
+  - path: docs/acceptance-criteria/testing-quality/TQ-600-suite-feedback-latency/TQ-600a-13-vi.yaml
+    relationship: describes
+    status: exists
+    relevance: >-
+      The hold this record makes an exception to.
+  - path: docs/acceptance-criteria/testing-quality/TQ-600-suite-feedback-latency/TQ-600a-13-iv.yaml
+    relationship: describes
+    status: exists
+    relevance: >-
+      What happens when the declared-fix PR merges and its closing keyword closes the
+      flag before a night has confirmed the fix.
+declared_files:
+  - path: scripts/ci/nightly_hold.py
+    state: to_be_created
+  - path: .github/workflows/nightly-hold.yml
+    state: to_be_created
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - >-
+    THE MATCH IS EXACTLY WHAT THE CRITERIA NAME. The keyword `Fixes` or `Closes` in any
+    letter case, then `#`, then the open flag's number with no further digit after it, in
+    the pull request's DESCRIPTION. An absent (null) description is no declaration, not an
+    error. The label is exactly `nightly-fix`. Nothing else releases the hold.
+  - >-
+    THE MATCH RUNS ON ATTACKER-CONTROLLED TEXT IN BOUNDED TIME. Descriptions can be as long
+    as the service allows (tens of thousands of characters) and fork authors write them.
+    Matching must complete in time linear in the description's length, with no
+    backtracking blow-up, so a crafted description cannot stall the check into a timeout.
+  - >-
+    THE ESCAPE HATCH DOES NOT WAIT FOR A PUSH. TQ-600a-13-vi's workflow is triggered on
+    edited, labeled and unlabeled as well as on pushes, and each evaluation reads the
+    description and labels from that event's own payload. Re-running an OLD check run from
+    the UI replays that run's original payload and therefore its old labels; the label or
+    edit event itself is what produces the fresh evaluation, and the contributor
+    documentation (TQ-600a-13-vi's delivers_to) should say so.
+  - >-
+    EVALUATED ONLY AFTER A SUCCESSFUL READ. The escape hatch applies when the flag read
+    succeeded and found an open flag. A read that failed is TQ-600a-13-ix's could_not_read
+    and is never turned into a pass by a declaration — otherwise "Fixes #anything" plus an
+    outage releases every hold.
+  - >-
+    PARSING EDGE CASES — PENDING USER DECISION: escape-hatch parsing. Undecided: other
+    keywords and forms the hosting service acts on (Resolves, past tenses, `owner/repo#N`,
+    full issue URLs, a colon after the keyword); whether title or commit messages count;
+    which number must be declared when two or more flags are open; and who may apply
+    `nightly-fix` (anyone able to label a pull request can release its hold). Tests assert
+    ONLY the named passing forms and the named near-misses; they must not assert either
+    outcome for an unnamed form, and with two open flags they must not pin which number
+    releases the hold.
+  - >-
+    THE ESCAPE HATCH CLOSES THE FLAG WHEN IT IS USED — PENDING USER DECISION: auto-close on
+    merge. Both passing keywords are ones the hosting service acts on, so merging the fix
+    closes the flag and releases every other held pull request before any night confirms
+    the fix (TQ-600a-13-iv). A non-closing form would avoid it; that is the owner's call
+    and is not made here.
+  - >-
+    risk_surface IS `auth` FOR A REASON THE IMPLEMENTER MUST KEEP IN VIEW. This record
+    defines who can bypass a merge gate. Together with TQ-600a-13-vi's PENDING USER
+    DECISION: trust model of the hold, it is the family's whole bypass surface; do not
+    widen it in passing (for example by also accepting the label on the flag issue, or a
+    keyword in a comment).
+  - >-
+    THE TESTS COST UNDER 0.2 s. Pure matching in-process plus verdict evaluation through
+    the real REST client against the shared recording fake server; the label-added-after-
+    push case is a second evaluation with a `labeled` event payload — no push, no git.
+delivers_to: null
+expects_from:
+  - ac_id: TQ-600a-13-vi
+    contract: >-
+      The hold verdict function after a successful read: `state: held` with exactly one
+      flag's `number`, into which a matching declaration yields `state: declared_fix` (a
+      pass) and a `reason` naming the declaration or the label.
+test_spec:
+  - name: test_tq600a_13_viii_a_declared_fix_passes
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: integration
+    angle: criterion
+    surface_invoked: "scripts/ci/nightly_hold.py's verdict entry point, in-process, with a supplied pull-request event payload and the recording fake server serving one open flag"
+    description: >-
+      Open flag #12. Descriptions "Fixes #12", "closes #12", "FIXES #12." and a
+      `nightly-fix` label each pass, with output naming the reason (the declaration for
+      #12, or the label).
+  - name: test_tq600a_13_viii_a_near_miss_declaration_is_still_held
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: integration
+    angle: discrimination
+    surface_invoked: "scripts/ci/nightly_hold.py with supplied event payloads (opened, labeled, unlabeled) against the fake server"
+    must_catch:
+      - "the match is on '#12' anywhere, so 'see #12' releases the hold"
+      - "the match is a prefix, so 'Fixes #123' releases the hold on #12"
+      - "any closing keyword for any issue releases the hold, so 'Fixes #7' passes while #12 is open"
+      - "the escape hatch is evaluated only on push, so adding the label to a pushed PR leaves it held"
+      - "a declaration releases the hold when the flag read failed"
+    description: >-
+      Open flag #12. "Fixes #7", "see #12", "related to #12", "Fixes #123", and a null
+      description: all held. Evaluate a `labeled` payload carrying `nightly-fix` with no
+      new head commit: pass. An `unlabeled` payload without it: held. A read failure
+      served by the fake with "Fixes #12" in the description: could_not_read, not a pass.
+  - name: test_tq600a_13_viii_the_repair_is_not_deadlocked
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: integration
+    angle: criterion
+    surface_invoked: "scripts/ci/nightly_hold.py against the fake server, two pull requests evaluated in the same sitting"
+    description: >-
+      THIS IS THE DESCRIPTOR THAT CANNOT BE DROPPED. With the flag open, a PR declaring
+      "Fixes #N" passes while an undeclared PR in the same evaluation set fails — the
+      proof that the mechanism leaves exactly one way through, and that it is open.
+  - name: test_tq600a_13_viii_matching_time_is_linear_in_description_length
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: unit
+    angle: boundary
+    surface_invoked: "scripts/ci/nightly_hold.py's declaration matcher, in-process"
+    must_catch:
+      - "a backtracking pattern takes super-linear time on a long description of repeated near-miss tokens (for example 'Fixes #' repeated), stalling the check"
+    description: >-
+      Match a description of the service's maximum length built from repeated near-miss
+      tokens and assert it completes under a deliberately generous ceiling (about two
+      seconds, three orders of magnitude above the expected milliseconds). Not a
+      performance benchmark and not flaky by construction: catastrophic backtracking on
+      an input this size takes minutes, so the ceiling separates "linear" from "blown up"
+      without measuring anything close to the host's noise.
+test_rationale: |
+  The escape hatch is load-bearing in both directions: if it is too narrow the repository
+  deadlocks, and if it is too wide every PR walks through it. The criterion descriptor
+  proves it opens; the near-miss descriptor proves it does not open for anything else —
+  now including the outage case, because "a declaration releases a hold the check could
+  not read" would make the escape hatch an outage bypass.
+
+  The label-after-push case is exercised as a second evaluation carrying a `labeled`
+  payload with the same head commit, which is how the service delivers it; no push and no
+  git are needed. The bounded-time descriptor uses a ceiling far above any plausible host
+  noise rather than a tight timing, because what it must separate is linear time from a
+  blow-up measured in minutes. Unnamed forms are deliberately absent:
+  testing them in either direction would decide a pending question. Cost: milliseconds.
+origin_agent: business-analyst
+created: 2026-10-08
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: auth
+notes: |
+  UNDER-SPECIFIED, NOT INVENTED — four points the owner should settle:
+
+  1. MERGING THE FIX CLOSES THE FLAG. The hosting service closes issue #N automatically
+     when a PR whose description says "Fixes #N" or "Closes #N" merges to the default
+     branch. So the escape hatch, used as designed, closes the flag the moment the fix
+     merges — releasing every other PR before any night has confirmed the fix.
+     TQ-600a-13-iv makes the flag reappear if the next night is still red; it does not
+     keep the hold in between. If the owner wants the hold kept until a green night, the
+     declaration needs a non-closing form (the `nightly-fix` label alone, or a keyword the
+     hosting service does not act on).
+  2. WHO MAY APPLY `nightly-fix`. Anyone able to label a PR can release its hold, for any
+     change. The design does not restrict it. Whether that is acceptable is a trust
+     decision, not a specification gap the BA can fill.
+  3. OTHER CLOSING KEYWORDS AND FORMS. The design names "Fixes" and "Closes". The hosting
+     service also acts on "Resolves", past tenses, and full issue URLs. This record
+     requires only the two named forms to pass and says nothing about the others.
+  4. WHERE THE DECLARATION IS READ. This record reads the PR description. Title and
+     commit messages are not covered. With two or more open flags, which number must be
+     declared is also unsettled.
