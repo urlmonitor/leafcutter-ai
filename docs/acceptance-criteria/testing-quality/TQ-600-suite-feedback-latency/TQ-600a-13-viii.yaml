@@ -7,7 +7,7 @@ level: L3
 status: active
 req_status: draft
 work_status: todo
-readiness: reviewed
+readiness: approved
 priority: high
 roadmap_phase: phase_1
 criteria: |
@@ -275,24 +275,26 @@ test_rationale: |
 origin_agent: business-analyst
 created: 2026-10-08
 amended_by:
-  - reason: >-
-      USER-APPROVED REDESIGN AFTER TWO EXPERT REVIEWS (2026-10-08), decisions A, B and G.
-      (G) The escape hatch now requires a declaration AND evidence. SUPERSEDED criteria:
-      "it passes when the pull request's description contains 'Fixes #N' or 'Closes #N'"
-      (now: the full closing-keyword family, optional colon, `#N` / `owner/repo#N` / full
-      issue URL, and only with a passing proof run of the current red's failing tests)
-      and "it passes when the pull request carries the label `nightly-fix`" (dropped: all
-      PRs come from the one account every agent uses, so a label is no gate). Added:
-      every exemption is recorded on the notice; no exemption for stale / disabled /
-      never-run / could-not-read; title and commit messages not read, and why that is now
-      harmless (A). The PENDING USER DECISIONS "escape-hatch parsing", "who may apply
-      `nightly-fix`" and "auto-close on merge" are resolved. Precondition changed from
-      "exactly one open issue labelled `nightly-red`" to "the latest settled run is red or
-      did not complete" (A). Sized up from S to M for the proof read and exemption record.
-      Readiness returned to draft for IT PO re-enrichment. Full prior text: commit
-      e79d35ef4.
-    by: business-analyst
-    at: 2026-10-08
+- reason: 'USER-APPROVED REDESIGN AFTER TWO EXPERT REVIEWS (2026-10-08), decisions
+    A, B and G. (G) The escape hatch now requires a declaration AND evidence. SUPERSEDED
+    criteria: "it passes when the pull request''s description contains ''Fixes #N''
+    or ''Closes #N''" (now: the full closing-keyword family, optional colon, `#N`
+    / `owner/repo#N` / full issue URL, and only with a passing proof run of the current
+    red''s failing tests) and "it passes when the pull request carries the label `nightly-fix`"
+    (dropped: all PRs come from the one account every agent uses, so a label is no
+    gate). Added: every exemption is recorded on the notice; no exemption for stale
+    / disabled / never-run / could-not-read; title and commit messages not read, and
+    why that is now harmless (A). The PENDING USER DECISIONS "escape-hatch parsing",
+    "who may apply `nightly-fix`" and "auto-close on merge" are resolved. Precondition
+    changed from "exactly one open issue labelled `nightly-red`" to "the latest settled
+    run is red or did not complete" (A). Sized up from S to M for the proof read and
+    exemption record. Readiness returned to draft for IT PO re-enrichment. Full prior
+    text: commit e79d35ef4.'
+  by: business-analyst
+  at: 2026-10-08
+- action: approved
+  agent: approve_acs
+  date: '2026-10-08'
 superseded_by: null
 covered_by: []
 implemented_by: []

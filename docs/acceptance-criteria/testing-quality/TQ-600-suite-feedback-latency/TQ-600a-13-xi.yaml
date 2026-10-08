@@ -7,7 +7,7 @@ level: L3
 status: active
 req_status: draft
 work_status: todo
-readiness: reviewed
+readiness: approved
 priority: high
 roadmap_phase: phase_1
 criteria: |
@@ -207,22 +207,24 @@ test_rationale: |
 origin_agent: business-analyst
 created: 2026-10-08
 amended_by:
-  - reason: >-
-      USER-APPROVED REDESIGN AFTER TWO EXPERT REVIEWS (2026-10-08), decisions B, C, D, E,
-      G and I. SUPERSEDED allowed-write clause: "creating, commenting on, closing and
-      reopening issues labelled `nightly-red`, creating and editing the hold check's own
-      pull request comment, and reporting check results". Now adds: editing a notice's
-      description (I — the GitHub expert verified it needs only the `issues: write` the
-      job already held, so the earlier records were wrong to treat it as a new
-      permission); closing as duplicate; the non-holding labels `post-merge-timing` (C)
-      and `post-merge-flaky` (D); re-running the hold workflow's own runs (E — the one
-      write needing `actions: write`, narrowed to one endpoint on one workflow). Paths
-      extended to the timing run, the re-evaluation job and the fix proof (G), which
-      writes nothing. Mutation set extended to dispatch / cancel / disable / foreign
-      re-runs. Label renamed (B). Readiness returned to draft for IT PO re-enrichment.
-      Full prior text: commit e79d35ef4.
-    by: business-analyst
-    at: 2026-10-08
+- reason: 'USER-APPROVED REDESIGN AFTER TWO EXPERT REVIEWS (2026-10-08), decisions
+    B, C, D, E, G and I. SUPERSEDED allowed-write clause: "creating, commenting on,
+    closing and reopening issues labelled `nightly-red`, creating and editing the
+    hold check''s own pull request comment, and reporting check results". Now adds:
+    editing a notice''s description (I — the GitHub expert verified it needs only
+    the `issues: write` the job already held, so the earlier records were wrong to
+    treat it as a new permission); closing as duplicate; the non-holding labels `post-merge-timing`
+    (C) and `post-merge-flaky` (D); re-running the hold workflow''s own runs (E —
+    the one write needing `actions: write`, narrowed to one endpoint on one workflow).
+    Paths extended to the timing run, the re-evaluation job and the fix proof (G),
+    which writes nothing. Mutation set extended to dispatch / cancel / disable / foreign
+    re-runs. Label renamed (B). Readiness returned to draft for IT PO re-enrichment.
+    Full prior text: commit e79d35ef4.'
+  by: business-analyst
+  at: 2026-10-08
+- action: approved
+  agent: approve_acs
+  date: '2026-10-08'
 superseded_by: null
 covered_by: []
 implemented_by: []
