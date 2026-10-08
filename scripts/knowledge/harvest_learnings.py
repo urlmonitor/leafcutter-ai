@@ -73,8 +73,8 @@ Options
     instead (INF-700b-3) -- the two never share a figure.
 
 --marker PATH
-    Path to the last-completed-run marker (default:
-    debugging/logs/harvest_last_run.json). An ordinary run writes/updates
+    Path to the last-completed-run marker (default: harvest_last_run.json in
+    the --state file's directory). An ordinary run writes/updates
     this on reaching a completed harvest() call, regardless of --dry-run and
     regardless of the resulting exit code; --status reads it.
 

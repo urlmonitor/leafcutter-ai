@@ -377,5 +377,40 @@ class TestAnswerReportsWhetherTheNamedSinkExistsAndNamesIt(unittest.TestCase):
             self.assertEqual(status_absent.get("sink"), str(sink_absent.resolve()))
 
 
+class TestDefaultMarkerFollowsStateNotWorkingDirectory(unittest.TestCase):
+    """Regression (PR #877 CI): with --marker omitted, the marker must land
+    beside --state, never under the process's working directory. A
+    cwd-relative default made every pre-existing test that runs the
+    harvester with a temp --state from the repo root drop
+    debugging/logs/harvest_last_run.json into the checkout, after which
+    build.py's closure guard (AC BP-900g-8) aborted every later build."""
+
+    def test_an_ordinary_run_without_marker_writes_it_beside_state_and_not_under_cwd(self) -> None:
+        # covers: INF-700a-2
+        # angle: failure
+        with tempfile.TemporaryDirectory() as tmp_tree, tempfile.TemporaryDirectory() as tmp_cwd:
+            tree = Path(tmp_tree)
+            cwd = Path(tmp_cwd)
+            sink = tree / "knowledge_emissions.jsonl"
+            state = tree / "harvest_state.json"
+            _write_sink(sink, [])
+
+            proc = subprocess.run(
+                [sys.executable, str(_HARVEST_PATH), "--sink", str(sink), "--state", str(state)],
+                capture_output=True,
+                text=True,
+                timeout=_TIMEOUT,
+                cwd=str(cwd),
+                check=False,
+            )
+            self.assertEqual(proc.returncode, 0, f"stderr={proc.stderr}")
+            self.assertTrue((tree / "harvest_last_run.json").is_file())
+            self.assertEqual(list(cwd.iterdir()), [], "nothing may be written under the cwd")
+
+            rc, status = _run_status(sink, tree / "harvest_last_run.json")
+            self.assertEqual(rc, 0)
+            self.assertNotEqual(status.get("last_run"), "never-run")
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -44,6 +44,16 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
+# The --marker default is derived from --state (same directory) rather than
+# spelled as a repo-relative path literal, for two reasons. (1) A run whose
+# --state points into a temp tree then records its run in that tree, not in
+# whatever directory the process happens to be standing in -- a test run from
+# the repo root no longer drops a marker into the checkout. (2) build.py's
+# closure guard (AC BP-900g-8) treats a path literal in a deployed script as a
+# data dependency the moment that file exists under the package root, so a
+# literal default plus a stray marker in the checkout aborted every build.
+_MARKER_NAME = "harvest_last_run.json"
+
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     """Parse ``harvest_learnings`` CLI arguments.
@@ -99,12 +109,12 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument(
         "--marker",
         type=Path,
-        default=Path("debugging/logs/harvest_last_run.json"),
+        default=None,
         metavar="PATH",
         help=(
-            "Path to the last-completed-run marker (default: "
-            "debugging/logs/harvest_last_run.json). An ordinary run writes "
-            "this on completion; --status reads it."
+            f"Path to the last-completed-run marker (default: {_MARKER_NAME} "
+            "beside the --state file). An ordinary run writes this on "
+            "completion; --status reads it."
         ),
     )
     parser.add_argument(
@@ -117,4 +127,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         action="store_true",
         help="Log each event as it is processed.",
     )
-    return parser.parse_args(argv)
+    args = parser.parse_args(argv)
+    if args.marker is None:
+        args.marker = args.state.parent / _MARKER_NAME
+    return args
