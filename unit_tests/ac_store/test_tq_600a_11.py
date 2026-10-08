@@ -1,211 +1,77 @@
 """
-RED test stubs for TQ-600a-11 -- "Reading the whole acceptance-criteria store
-stops costing half a minute every time."
+Tests for TQ-600a-11 -- "The fast YAML parser earns its place at the one
+whole-store walk whose volume pays for it, and nowhere else."
 
 Source of truth: docs/acceptance-criteria/testing-quality/TQ-600-suite-feedback-latency/TQ-600a-11.yaml
 (test_spec + test_rationale; that record's YAML wins wherever a summary here
-differs). This file covers test_spec entries 1-3 of that AC's 4-entry
-test_spec; entry 4 ("reachable from a deployed commit hook") lives in
-unit_tests/commit_guardian/test_tq_600a_11_reachability.py per its own
-target_dir.
+differs). This file covers ALL FIVE of that AC's test_spec entries as amended
+2026-10-08 (the second `amended_by` entry). The amendment is a RETRACTION:
+the migration to the fast parser was narrowed from ~85 call sites to the one
+whole-store walk in scripts/generate_agent_cards.py, and three clauses of the
+original text (end-to-end speedups at the validation gate, "every reader
+resolves through the accessor", the deployed-hook reachability check) were
+struck. This file therefore asserts a NEGATIVE invariant -- where the
+permissive C-backed parser may not go -- next to the one speed claim that
+survived. Do not reinstate the struck tests.
 
-======================================================================
-ASSUMED PRODUCTION CONTRACT (written by test-writer; python-coder builds
-this to make the tests below green -- Source-of-Truth Discipline Rule 5:
-expand the test, don't shrink production, and the inverse holds at authoring
-time too -- these tests ARE the contract until a documented, justified
-reason changes them).
+Cost discipline (a previous speed change here added 667s of verification to
+save 190s): the two timing tests each need one whole-store walk per arm
+(~2s fast + ~20s pure-Python) and nothing else -- no deployed layout, no
+second worktree, no build.py spawn. The behavioural gate test runs one small
+subprocess; the reachability tests run the build phases into a tmp dir.
 
-No such module exists yet. Every test below is expected to fail
-(ModuleNotFoundError, raised from inside the test body/helper rather than at
-file collection, so each test reports its own RED independently) until
-python-coder implements it. That is the correct RED state.
-
-New module: scripts/ac_store/yaml_safe_loader.py
-    def get_safe_yaml_loader() -> type:
-        Returns yaml.CSafeLoader when present on the installed `yaml`
-        module, else yaml.SafeLoader -- via
-        getattr(yaml, "CSafeLoader", yaml.SafeLoader), the EXACT idiom
-        already used at scripts/render_effective_prompt.py:57 (the in-repo
-        precedent this AC generalises). MUST be re-resolved on every call
-        (never cached at import time) -- see TQ-600a-11-i's it_requirement
-        about an accessor whose cached choice would make a simulated-absence
-        check measure the wrong thing.
-    def load_yaml_text(text: str) -> Any:
-        yaml.load(text, Loader=get_safe_yaml_loader()).
-    def load_yaml_file(path: str | Path) -> Any:
-        Reads `path` as UTF-8 text and calls load_yaml_text() on it.
-    MUST NOT use yaml.load(..., Loader=yaml.Loader) or the unsafe full
-    loader at any point -- CSafeLoader is the C implementation of the SAME
-    safe schema (AC it_requirement: "DO NOT WIDEN THE SAFETY POSTURE").
-
-Deploy requirement (verified by the sibling reachability test, not by this
-file): this module MUST be added to AC_STORE_DEPLOY_MAP in
-scripts/build_phases_ac_store.py (the deploy declaration
-scripts/build_phases.py re-exports) so it exists at
-<deployed_root>/scripts/ac_store/yaml_safe_loader.py in every built layout.
-
-Mechanical-inventory test (class TestTq600a11NoDirectPureParserUse below) and
-the single documented exception it allows:
-    scripts/render_effective_prompt.py already uses the fast idiom at line 57
-    for STORE reads -- it is excluded from the violation inventory by name,
-    per the AC's own test_spec ("either route it through the accessor too,
-    or name it explicitly in the test" -- this file takes the second
-    option). Its separate, unrelated `yaml.safe_load(parts[1])` call (around
-    line 165) parses TICKET FRONTMATTER, not AC store content, and is
-    excluded for the same reason -- it is not a "store reader" within this
-    AC's scope.
-
-Mechanically-derived inventory, as measured by test-writer at authoring time
-(origin/main HEAD at this worktree's branch point) for the completion
-report ONLY -- never asserted as a literal number anywhere in this file,
-per the AC's own criterion ("that inventory is derived mechanically rather
-than copied from this record, because the reader population and the store
-both keep growing"):
-    grep -rl "yaml.safe_load" scripts/ templates/scripts/commit_guardian/
-    -> 80 files total (26 under scripts/ac_store/, 30 under
-       templates/scripts/commit_guardian/, 24 elsewhere under scripts/) --
-       close to, but not identical to, the AC's own 76/26/30 snapshot,
-       exactly the drift the AC predicts and the reason the real test below
-       re-derives this at run time instead of hardcoding it.
+Helpers (call-site deriver, counting walk runner, tmp-root builder, the
+declared set) live in the sibling _test_helpers_tq_600a_11.py.
 """
 
 from __future__ import annotations
 
-import os
 import subprocess
 import sys
 import tempfile
-import textwrap
 import time
 import unittest
 from pathlib import Path
 
-import pytest
+import yaml
 
-_REPO_ROOT = Path(__file__).resolve().parent.parent.parent
-_AC_STORE_DIR = _REPO_ROOT / "scripts" / "ac_store"
+_HERE = Path(__file__).resolve().parent
+_REPO_ROOT = _HERE.parent.parent
+_SCRIPTS_DIR = _REPO_ROOT / "scripts"
+_AC_STORE_DIR = _SCRIPTS_DIR / "ac_store"
 sys.path.insert(0, str(_AC_STORE_DIR))
+sys.path.insert(0, str(_SCRIPTS_DIR))
+sys.path.insert(0, str(_HERE))
 
-_STORE_ROOT = _REPO_ROOT / "docs" / "acceptance-criteria"
-
-# The documented exceptions this seam test allows. Repo-root-relative,
-# POSIX form. Each is a deliberate revert to the pure-Python
-# `yaml.safe_load`, not an unmigrated oversight:
-_DOCUMENTED_EXCEPTIONS = frozenset(
-    {
-        # The one exception the AC's own test_spec names (see module docstring).
-        "scripts/render_effective_prompt.py",
-        # One small frontmatter-block parse each; the C-loader gain over a
-        # single tiny document is unmeasurable, so there is no speed case
-        # for routing either through the shared accessor.
-        "scripts/injection_builders.py",
-        "scripts/propose_agent_self_description.py",
-        # Same one-small-frontmatter-block rationale as the two scripts/
-        # entries above, PLUS a structural reason: reaching the accessor
-        # from this hooks/ subfolder needs a sys.path insert one directory
-        # up, which scripts/ci/_declaring_files_scan.py cannot statically
-        # resolve (it assumes a bare underscore import is a same-directory
-        # sibling), producing a false "declaring files" violation. Staying
-        # import-free avoids that gate failure outright.
-        "templates/scripts/commit_guardian/hooks/check_ac_done_on_merge.py",
-        "templates/scripts/commit_guardian/hooks/check_agent_verification_consistency.py",
-        # Deliberate revert (loader-audit, TQ-600a-11 fix-pass, 2026-10-07):
-        # _parse_yaml_dict's whole contract, stated repeatedly in its own
-        # module docstring, is that it matches what `yaml.safe_load` itself
-        # would produce -- it is the full-parse fallback the `_read_yaml_id`
-        # regex fast path is checked against, so it must call the literal
-        # reference implementation, not a loader that can disagree with it.
-        # CSafeLoader accepts an input class (a tab in a value) that
-        # `yaml.safe_load` correctly rejects, which broke
-        # test_ge_122a_1_fast_path_equivalence.py before this revert.
-        "templates/scripts/commit_guardian/_uniqueness_scanners.py",
-    }
-)
-
-# Source roots the mechanical inventory walks -- every .py file reachable
-# from these is a candidate "store reader". unit_tests/ and tests/ are never
-# scanned: fixtures and tests are allowed free use of yaml.safe_load.
-_SOURCE_ROOTS = (
-    _REPO_ROOT / "scripts",
-    _REPO_ROOT / "templates" / "scripts" / "commit_guardian",
+from _test_helpers_tq_600a_11 import (  # noqa: E402
+    DECLARED_C_PARSER_SITES,
+    STORE_ROOT as _STORE_ROOT,
+    build_card_phase_root,
+    derive_c_parser_resolutions,
+    is_decision_point,
+    real_store_paths,
+    run_walk_arm,
+    yaml_files_on_disk,
 )
 
 
-def _iter_source_py_files():
-    for root in _SOURCE_ROOTS:
-        if not root.is_dir():
-            continue
-        yield from root.rglob("*.py")
-
-
-def _mechanically_derived_safe_load_violations() -> list[str]:
-    """Grep-at-test-time: every .py file under the source roots whose text
-    contains a direct `yaml.safe_load(` call, excluding the one documented
-    exception. Returns repo-root-relative POSIX paths, sorted.
-
-    Deliberately mechanical (text search over the real file tree at run
-    time, never a hardcoded list or count) per the AC's own criteria: "an
-    inventory of readers derived mechanically from the source at
-    implementation time" -- a hardcoded number would silently go stale as
-    the reader population grows (see module docstring's measured count).
-    """
-    violations: list[str] = []
-    for path in _iter_source_py_files():
-        rel = path.relative_to(_REPO_ROOT).as_posix()
-        if rel in _DOCUMENTED_EXCEPTIONS:
-            continue
-        try:
-            text = path.read_text(encoding="utf-8")
-        except (OSError, UnicodeDecodeError):
-            continue
-        if "yaml.safe_load(" in text:
-            violations.append(rel)
-    return sorted(violations)
-
-
-def _real_store_paths() -> list[Path]:
-    return sorted(
-        p
-        for p in (*_STORE_ROOT.rglob("*.yaml"), *_STORE_ROOT.rglob("*.yml"))
-        if p.is_file() and p.name != "index.yaml"
-    )
-
-
-def _time_subprocess(argv: list[str], timeout: float = 120.0) -> float:
-    start = time.perf_counter()
-    result = subprocess.run(argv, capture_output=True, text=True, timeout=timeout)
-    elapsed = time.perf_counter() - start
-    if result.returncode != 0:
-        raise AssertionError(
-            f"subprocess {argv!r} exited {result.returncode}:\n"
-            f"stdout={result.stdout}\nstderr={result.stderr}"
-        )
-    return elapsed
-
-
-class TestTq600a11StoreSweepSpeed(unittest.TestCase):
-    """TQ-600a-11: full-store sweep through the accessor is >=5x faster."""
+class TestTq600a11ParserSpeed(unittest.TestCase):
+    """The PARSER claim -- measures the parser, not any entry point."""
 
     def test_tq600a_11_store_sweep_is_at_least_five_times_faster_than_the_pure_python_parser(self):
         # covers: TQ-600a-11
         # angle: real_artifact
         """
-        Time a full sweep of the REAL on-disk AC store (every *.yaml/*.yml
-        file under docs/acceptance-criteria/, excluding index.yaml) once
-        with the pure-Python safe parser and once through the shared
-        accessor, in the SAME process and the SAME sitting. Assert the
-        RATIO (pure_seconds / accessor_seconds) is at least 5 -- never an
-        absolute wall-clock number: this workspace is a shared,
-        variably-loaded WSL host, and an absolute threshold would be flaky
-        per the AC's own it_requirements ("a test that pins an absolute
-        wall-clock number will be flaky and will be disabled").
+        Over the REAL on-disk store, in one process, time a full sweep with the
+        pure-Python parser and a full sweep through the shared accessor; assert
+        the RATIO (never an absolute second count) is at least 5. UNCHANGED by
+        the 2026-10-08 amendment: this measures the PARSER, so a green result is
+        NOT evidence that any gate, hook or check got faster -- the next test
+        is the one that measures an entry point.
         """
-        import yaml
-
         from yaml_safe_loader import load_yaml_file  # the module under test
 
-        paths = _real_store_paths()
+        paths = real_store_paths()
         self.assertGreater(
             len(paths),
             0,
@@ -237,188 +103,264 @@ class TestTq600a11StoreSweepSpeed(unittest.TestCase):
         )
 
 
-class TestTq600a11NoDirectPureParserUse(unittest.TestCase):
-    """TQ-600a-11: no store reader names the pure-Python parser directly."""
+class TestTq600a11AgentCardWalk(unittest.TestCase):
+    """The ENTRY-POINT claim, at the one call site where it is true."""
 
-    def test_tq600a_11_no_store_reader_names_the_pure_python_parser_directly(self):
+    def test_tq600a_11_the_agent_card_store_walk_beats_a_fifth_of_its_same_sitting_pure_python_baseline(self):
+        # covers: TQ-600a-11
+        # angle: real_artifact
+        """
+        Run scripts/generate_agent_cards.py::_scan_all_ac_assignments -- the
+        walk build.py actually calls; its sibling _scan_ac_assignments has NO
+        production caller, so timing it would time dead code -- over the REAL
+        store twice in this process: as shipped, then with the loader resolver
+        forced to the pure-Python SafeLoader. Asserts (a) fast <= 1/5 of pure,
+        as a ratio; (b) both arms return EQUAL output; (c) each arm's
+        parsed-file count is equal to the other's AND to the files on disk, so
+        an arm that parsed nothing cannot pass; (d) both raw figures are in the
+        failure message (and printed on every run) so "host loaded" and "walk
+        left the accessor" are distinguishable. Never an absolute threshold.
+
+        The fast arm runs first, so a cold page cache penalises the arm the
+        claim favours -- the conservative direction.
+        """
+        import generate_agent_cards as gac
+
+        on_disk = yaml_files_on_disk()
+        fast_out, fast_n, fast_s = run_walk_arm(gac, gac.get_safe_yaml_loader)
+        pure_out, pure_n, pure_s = run_walk_arm(gac, lambda: yaml.SafeLoader)
+
+        figures = (
+            f"fast={fast_s:.2f}s ({fast_n} files) pure-Python={pure_s:.2f}s "
+            f"({pure_n} files) on_disk={on_disk} "
+            f"ratio={pure_s / fast_s if fast_s else float('inf'):.2f}x (floor 5.0x)"
+        )
+        print(f"\n[TQ-600a-11 agent-card walk] {figures}")
+
+        self.assertGreater(on_disk, 0, f"real store is empty -- {figures}")
+        self.assertEqual(fast_n, pure_n, f"arms parsed different file counts -- {figures}")
+        self.assertEqual(
+            fast_n, on_disk, f"arms did not parse every record file on disk -- {figures}"
+        )
+        self.assertGreater(len(fast_out), 0, f"walk returned no groupings -- {figures}")
+        self.assertEqual(fast_out, pure_out, f"arms returned different output -- {figures}")
+        self.assertLessEqual(
+            fast_s * 5.0,
+            pure_s,
+            f"agent-card store walk is not at least 5x faster than forced "
+            f"pure-Python: either the walk has left the accessor or the host is "
+            f"pathologically loaded -- {figures}",
+        )
+
+
+class TestTq600a11CParserSeam(unittest.TestCase):
+    """The NEGATIVE invariant: where the permissive parser may not go."""
+
+    def test_tq600a_11_no_undeclared_call_site_resolves_the_c_backed_parser(self):
         # covers: TQ-600a-11
         # angle: seam
         """
-        Derive the reader inventory mechanically (a real text search over
-        scripts/ and templates/scripts/commit_guardian/ at run time, never a
-        hardcoded count) and assert NONE of them -- other than the one
-        documented exception, scripts/render_effective_prompt.py -- call
-        `yaml.safe_load(` directly. This is a seam test: it is the
-        mechanically-derived proof that every real reader resolves its
-        parser through the shared accessor rather than naming the
-        pure-Python one itself. The obvious weak version of this test
-        (asserting only that the accessor module exists and returns the C
-        class) would pass on a change adopted by zero of the 70+ real
-        readers; see this AC's own test_rationale.
+        Derive, from the source and never from the declared set, every call
+        site that resolves the C-backed parser (shared accessor OR the inline
+        getattr(yaml, "CSafeLoader", ...) idiom) and assert it EQUALS the
+        declared set. An undeclared adopter fails; so does a declared site that
+        no longer resolves it (stale declaration). Also assert that no derived
+        or declared site is a commit-guardian hook, validate_ac_schema.py or
+        anything else that decides BLOCK or PASS, and that the set is
+        NON-EMPTY so deleting the last adopter is a failure, not a vacuous
+        pass. Nothing is asserted about files that name the pure-Python parser.
         """
-        violations = _mechanically_derived_safe_load_violations()
+        derived = derive_c_parser_resolutions()
+
+        self.assertTrue(
+            derived,
+            "the derivation found NO C-parser call site at all -- either the "
+            "last adopter was removed (update the AC) or the derivation broke",
+        )
+        undeclared = sorted(derived - DECLARED_C_PARSER_SITES)
+        stale = sorted(DECLARED_C_PARSER_SITES - derived)
         self.assertEqual(
-            violations,
+            (undeclared, stale),
+            ([], []),
+            f"derived C-parser call sites differ from the declared set. "
+            f"UNDECLARED (resolve the C parser without a declaration -- admit "
+            f"via the AC's four-part test or revert): {undeclared}; "
+            f"STALE (declared but no longer resolve it): {stale}",
+        )
+        decision_points = sorted(
+            site for site in derived | DECLARED_C_PARSER_SITES if is_decision_point(site[0])
+        )
+        self.assertEqual(
+            decision_points,
             [],
-            f"{len(violations)} source file(s) still call yaml.safe_load( "
-            f"directly instead of resolving through the shared accessor "
-            f"(scripts/ac_store/yaml_safe_loader.get_safe_yaml_loader): "
-            f"{violations}",
+            f"a C-parser call site is a commit-guardian hook, the store-wide "
+            f"schema validation, or another BLOCK/PASS decision point, which "
+            f"the AC forbids: {decision_points}",
         )
 
 
-@pytest.mark.shared_layout_reader
-def test_tq600a_11_the_required_store_validation_check_beats_a_quarter_of_its_baseline(
-    shared_reference_layout,
-):
-    # covers: TQ-600a-11
-    # angle: deployed
-    """
-    Run the DEPLOYED copy of validate_ac_schema.py (reused via the
-    `shared_reference_layout` fixture, per CLAUDE.md's "Tests must not spawn
-    their own build.py" -- this test only READS the deployed layout, it
-    never mutates the package before building, so it is marked
-    `shared_layout_reader`) against the REAL on-disk AC store, twice in the
-    same sitting: once with the C safe parser class made absent for that one
-    subprocess (the same simulated-absence mechanism TQ-600a-11-i uses) and
-    once ordinary. Assert the ratio of wall-clock times is at least 4 (a
-    quarter) -- this is the headline consumer named in the AC's own criteria
-    (measured there at 23.16s). A source-tree read of validate_ac_schema.py
-    would be structurally blind to a deploy-manifest gap (e.g. a new sibling
-    module omitted from AC_STORE_DEPLOY_MAP); running the DEPLOYED copy is
-    what makes that gap visible here instead of only when the required PR
-    gate starts crashing on every merge.
+class TestTq600a11RequiredGateKeepsErrorFidelity(unittest.TestCase):
+    """The behavioural guard on the retraction."""
 
-    THRESHOLD CORRECTED per TQ-600a-11.yaml's `amended_by` entry
-    (2026-10-05, claude-opus-5): the original 5x demand was derived by
-    applying the parser's own 13.25x ratio to an end-to-end figure while
-    wrongly asserting the parser was "about 95%" of the run. Measured at
-    implementation time the parser is 81.8% of this run (24.68s of parsing
-    inside 30.16s), leaving a 5.48s floor of non-parse work no parser choice
-    touches -- by Amdahl that caps the end-to-end gain at 30.16/5.48 = 5.50x
-    even with an INSTANTANEOUS parser, so 5x sat within 10% of an
-    unreachable ceiling. The implementation reached 6.96s against a
-    predicted 7.34s (ratio 4.33) -- it beat its own prediction and still
-    could not pass the old threshold. The corrected AC pins this end-to-end
-    clause at a quarter (4x) as a REGRESSION FLOOR, not a target; the part
-    this change actually governs (the parse portion, >=10x) is asserted
-    separately by TQ-600a-11-i's own tests. Still a ratio assertion, never
-    an absolute wall-clock number, per the AC's own it_requirement.
-
-    CI-GATED ASSERTION (see DECISION HISTORY at the end of this file): the
-    timing always runs and always prints both sides plus the ratio, but the
-    `assert ratio >= 4.0` below only FIRES when `os.environ["CI"] == "true"`
-    (the value GitHub Actions sets on every run). On an uncontrolled,
-    contended developer box this ratio has been measured to swing from
-    3.80x to 10.74x inside the same 15-minute window with zero code change
-    -- an uncontrolled local run that happens to hit a high sample is not
-    evidence the floor holds, and one that hits a low sample is not evidence
-    it is broken. The threshold value itself (4.0) is unchanged.
-    """
-    deployed_ac_store = Path(shared_reference_layout) / ".leafcutter" / "scripts" / "ac_store"
-    deployed_validator = deployed_ac_store / "validate_ac_schema.py"
-    assert deployed_validator.is_file(), f"{deployed_validator} missing from deployed layout"
-
-    forced_pure_wrapper = textwrap.dedent(
-        f"""
-        import sys
-        sys.path.insert(0, {str(deployed_ac_store)!r})
-        import yaml
-        if hasattr(yaml, "CSafeLoader"):
-            delattr(yaml, "CSafeLoader")
-        import validate_ac_schema
-        sys.exit(validate_ac_schema.main([{str(_STORE_ROOT)!r}]))
+    def test_tq600a_11_the_required_store_validation_gate_rejects_a_record_the_c_parser_accepts(self):
+        # covers: TQ-600a-11
+        # angle: discrimination
         """
-    )
-    with tempfile.NamedTemporaryFile("w", suffix=".py", delete=False) as fh:
-        fh.write(forced_pure_wrapper)
-        wrapper_path = fh.name
-    # Best-of-5 (minimum wall-clock): this workspace is a shared,
-    # variably-loaded WSL host (the AC's own it_requirement) -- observed
-    # swings of 2x+ between back-to-back runs of the identical deployed
-    # script during implementation. A single sample can be inflated by
-    # transient contention from an unrelated process; contention can only
-    # ever ADD latency, never subtract it, so the minimum across repeated
-    # samples is the more faithful estimate of each side's true cost --
-    # never widens the ratio by construction, since both sides are measured
-    # the same way.
-    _SAMPLES = 5
-    # Raised from _time_subprocess's old 120.0s default: under heavy host
-    # contention a single best-of-5 sample missed 120s outright
-    # (subprocess.TimeoutExpired, killing the whole test before the ratio
-    # could even be computed) -- see DECISION HISTORY at the end of this
-    # file. Same 600s budget as the sibling fix in test_tq_600a_11_i.py.
-    _SUBPROCESS_TIMEOUT = 600.0
-    is_ci = os.environ.get("CI", "").strip().lower() == "true"
-    try:
-        try:
-            baseline = min(
-                _time_subprocess([sys.executable, wrapper_path], timeout=_SUBPROCESS_TIMEOUT)
-                for _ in range(_SAMPLES)
+        Feed the REAL gate (scripts/ac_store/validate_ac_schema.py, run as the
+        required PR check runs it) a record containing a tab inside a flow
+        sequence. Assert it exits non-zero with a YAML parse error; in the SAME
+        test assert the accessor parses that identical text to {'key': []}
+        without raising, and that the pure-Python parser rejects it -- so the
+        divergence is proven real on this install and the gate sits on the
+        strict side of it. Goes RED if the gate is re-routed onto the accessor
+        (it would then parse to a dict with no 'id', be skipped as "not an AC
+        file", and exit 0). Executes the gate; never greps it for SafeLoader.
+
+        The malformed text is a hand-typed literal on purpose: a serializer
+        cannot emit a tab inside a flow sequence, and the malformation IS the
+        input under test.
+        """
+        from yaml_safe_loader import load_yaml_text
+
+        malformed = "key: [\t]\n"
+
+        self.assertEqual(
+            load_yaml_text(malformed),
+            {"key": []},
+            "the accessor must parse a tab-in-flow-sequence to an empty list "
+            "without raising -- if it raises, this install has no C parser and "
+            "the divergence this AC guards against cannot be demonstrated here",
+        )
+        with self.assertRaises(yaml.YAMLError):
+            yaml.safe_load(malformed)
+
+        with tempfile.TemporaryDirectory() as tmp:
+            record = Path(tmp) / "TQ-600a-11-tab-in-flow-sequence.yaml"
+            record.write_text(malformed, encoding="utf-8")
+            result = subprocess.run(
+                [sys.executable, str(_AC_STORE_DIR / "validate_ac_schema.py"), str(record)],
+                capture_output=True,
+                text=True,
+                timeout=120,
+                cwd=str(_REPO_ROOT),
             )
-        finally:
-            Path(wrapper_path).unlink(missing_ok=True)
+        self.assertNotEqual(
+            result.returncode,
+            0,
+            f"the required gate ACCEPTED a record the pure-Python parser "
+            f"rejects (exit 0) -- it has been re-routed onto the permissive "
+            f"parser. stdout={result.stdout!r} stderr={result.stderr!r}",
+        )
+        self.assertIn(
+            "YAML parse error",
+            result.stderr,
+            f"the gate failed, but not by reporting the parse failure as a "
+            f"violation -- stderr={result.stderr!r}",
+        )
 
-        fast = min(
-            _time_subprocess(
-                [sys.executable, str(deployed_validator), str(_STORE_ROOT)],
-                timeout=_SUBPROCESS_TIMEOUT,
+
+class TestTq600a11Reachability(unittest.TestCase):
+    """The accessor's one caller is a build.py phase running from the package tree."""
+
+    def test_tq600a_11_the_accessor_is_reachable_the_way_the_build_reaches_it(self):
+        # covers: TQ-600a-11
+        # angle: reachability
+        """
+        In a FRESH interpreter whose only sys.path entry is scripts/ (how
+        build.py runs its phases -- the card generator then reaches
+        scripts/ac_store/ through its own sys.path insertion, the fragile
+        seam), run the real "Agent cards" phase
+        (build_phases_agent_validation.build_agent_cards, the function
+        build.py registers) against a tmp target root holding one agent
+        template and one REAL AC record copied verbatim from the store. Assert
+        the phase completes and the written card lists that AC under its
+        agent -- i.e. the walk ran and its grouping was consumed, not merely
+        imported.
+        """
+        records = sorted(_STORE_ROOT.rglob("TQ-600a-11.yaml"))
+        self.assertEqual(len(records), 1, f"expected one TQ-600a-11.yaml, got {records}")
+        record = records[0]
+        data = yaml.safe_load(record.read_text(encoding="utf-8"))
+        agent, ac_id = data["assigned_agent"], data["id"]
+        self.assertEqual(data["status"], "active", "precondition: the walk only groups active ACs")
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            build_card_phase_root(root, agent, record)
+
+            script = (
+                "import sys\n"
+                f"sys.path.insert(0, {str(_SCRIPTS_DIR)!r})\n"
+                "from pathlib import Path\n"
+                "from build_phases_agent_validation import build_agent_cards\n"
+                f"written = build_agent_cards(Path({str(root)!r}), {{}}, False, True)\n"
+                "print('WRITTEN', written)\n"
             )
-            for _ in range(_SAMPLES)
-        )
-    except subprocess.TimeoutExpired as exc:
-        # MEASURE AND REPORT ALWAYS, even when the measurement itself could
-        # not complete.
-        print(
-            f"\n[TQ-600a-11 timing] one of the best-of-{_SAMPLES} timing "
-            f"subprocesses did NOT complete within the "
-            f"{_SUBPROCESS_TIMEOUT:.0f}s per-sample budget ({exc}). A "
-            f"timeout under a loaded box is NOT a loader regression -- see "
-            f"DECISION HISTORY at the end of this file."
-        )
-        if is_ci:
-            raise AssertionError(
-                f"timing subprocess did not complete within the "
-                f"{_SUBPROCESS_TIMEOUT:.0f}s CI budget: {exc}"
-            ) from exc
-        print(
-            "[TQ-600a-11 timing] ASSERTION SKIPPED -- os.environ['CI'] is "
-            "not 'true'. This timeout was NOT treated as a failure on this "
-            "run; it was MEASURED ONLY (the measurement itself did not "
-            "complete)."
-        )
-        return
+            result = subprocess.run(
+                [sys.executable, "-c", script],
+                capture_output=True,
+                text=True,
+                timeout=120,
+                cwd=str(root),
+            )
+            self.assertEqual(
+                result.returncode,
+                0,
+                f"the card-generation phase did not run the way the build runs "
+                f"it -- stdout={result.stdout!r} stderr={result.stderr!r}",
+            )
+            card = root / "docs" / "agents" / "cards" / f"{agent}.card.md"
+            self.assertTrue(card.is_file(), f"phase wrote no card at {card}: {result.stdout!r}")
+            self.assertIn(
+                ac_id,
+                card.read_text(encoding="utf-8"),
+                "the card lacks the AC the store walk should have grouped under "
+                "its agent -- the walk's result was not consumed",
+            )
 
-    assert fast > 0.0, "fast run measured as zero seconds"
-    ratio = baseline / fast
+    def test_tq600a_11_the_vestigial_deploy_map_entry_still_deploys_an_importable_accessor(self):
+        # covers: TQ-600a-11
+        # angle: deployed
+        """
+        The amended AC lets the now-vestigial AC_STORE_DEPLOY_MAP entry for the
+        accessor be pruned OR kept; while it is kept, the DEPLOYED copy must
+        still import. Runs the real deploy phase (build_ac_store) into a tmp
+        target and imports the deployed file in a fresh interpreter -- a
+        source-tree import is blind to a manifest gap. If the entry is pruned,
+        replace this test with "no deployed module imports the accessor".
+        Cheap by design: one phase function, not a build.py spawn.
+        """
+        from build_phases_ac_store import build_ac_store
 
-    # MEASURE AND REPORT ALWAYS -- this print happens on every run, CI or
-    # not, so a human scanning local output still sees a real regression.
-    print(
-        f"\n[TQ-600a-11 timing] forced-pure={baseline:.2f}s fast={fast:.2f}s "
-        f"ratio={ratio:.2f}x (required >=4.0 when enforced)"
-    )
-
-    if not is_ci:
-        print(
-            "[TQ-600a-11 timing] ASSERTION SKIPPED -- os.environ['CI'] is not "
-            "'true'. The >=4.0 ratio requirement was MEASURED ONLY and was "
-            "NOT ENFORCED on this run. Do not read this test's green result "
-            "as proof the regression floor holds; it is proof only that the "
-            "measurement itself completed. See DECISION HISTORY at the end "
-            "of this file."
+        with tempfile.TemporaryDirectory() as tmp:
+            target = Path(tmp)
+            build_ac_store(target, {}, False, True)
+            deployed_dir = target / "scripts" / "ac_store"
+            self.assertTrue(
+                (deployed_dir / "yaml_safe_loader.py").is_file(),
+                "yaml_safe_loader.py is missing from the deployed ac_store/ -- "
+                "the deploy-map entry was pruned (then replace this test) or broke",
+            )
+            script = (
+                "import sys\n"
+                f"sys.path.insert(0, {str(deployed_dir)!r})\n"
+                "from yaml_safe_loader import load_yaml_text\n"
+                "print('LOADED', load_yaml_text('a: 1\\n'))\n"
+            )
+            result = subprocess.run(
+                [sys.executable, "-c", script],
+                capture_output=True,
+                text=True,
+                timeout=60,
+                cwd=tmp,
+            )
+        self.assertEqual(
+            result.returncode,
+            0,
+            f"deployed accessor does not import -- stdout={result.stdout!r} "
+            f"stderr={result.stderr!r}",
         )
-        return
-
-    # ASSERT ONLY WHERE THE ENVIRONMENT IS CONTROLLED -- CI is the
-    # controlled environment, so the threshold is enforced here, verbatim
-    # and unweakened (still 4.0, per TQ-600a-11.yaml's amended_by entry).
-    assert ratio >= 4.0, (
-        f"the deployed validate_ac_schema.py over the real store was only "
-        f"{ratio:.2f}x faster with the accessor (forced-pure={baseline:.2f}s, "
-        f"fast={fast:.2f}s) -- the corrected AC requires at least 4x (a "
-        f"quarter), per TQ-600a-11.yaml's amended_by entry."
-    )
+        self.assertIn("LOADED {'a': 1}", result.stdout)
 
 
 if __name__ == "__main__":
@@ -426,59 +368,15 @@ if __name__ == "__main__":
 
 # DECISION HISTORY
 # ================================================================================
-# - 2026-10-06 [python-coder] (classification: test_drift): CI-gated the
-#   `>=4.0` end-to-end ratio assertion in
-#   test_tq600a_11_the_required_store_validation_check_beats_a_quarter_of_its_baseline
-#   behind `os.environ.get("CI") == "true"`. This is a WHERE-enforced change,
-#   not a WHAT-weakened one -- the threshold value (4.0) is byte-for-byte
-#   unchanged; only the condition under which it is asserted moved.
-#
-#   Evidence this is environmental noise, not a regression, measured on this
-#   host with NO code change between samples:
-#     - the same deployed validate_ac_schema.py fast-path run: 10.48s, then
-#       43.91s minutes later -- a 4.2x swing on ONE side of the ratio alone
-#     - the end-to-end ratio itself: 3.80x in one run, 10.74x in another,
-#       inside the same 15-minute window
-#     - `uptime` load average 3.47 / 4.10 / 5.67 on an 8-core box
-#     - 8 separate /tmp/leafcutter-shared-reference-layout-* rebuilds in
-#       ~6 hours from concurrent agents sharing the host
-#     - the related parse-only ratio (TQ-600a-11-i's sibling tests) measured
-#       9.00x here versus 13.25x when the AC was authored -- the whole box
-#       runs ~3.5x slower than the authoring-time baseline
-#   A ratio assertion cannot be a trustworthy blocking gate against that much
-#   contention; it CAN still be a trustworthy signal when printed every run.
-#
-#   The test now ALWAYS times both sides and ALWAYS prints
-#   forced-pure/fast/ratio, so a developer running this locally still sees a
-#   real regression in the output. The `assert ratio >= 4.0` fires only when
-#   `CI` (the variable GitHub Actions sets to the literal string "true" on
-#   every run; grepped the repo for an existing convention first --
-#   `os.environ.get("CI")` was not already in use anywhere, including the
-#   closest sibling AC_ENFORCE_STRICT, which gates a different concern
-#   (xfail-masking, not timing) -- so CI is the correct, non-invented choice
-#   here) is set. When skipped, the test prints an unmissable
-#   "ASSERTION SKIPPED" line rather than merely passing silently -- a silent
-#   non-assertion is the failure mode this repo cares about most (see
-#   KI-TQ-010 / the red_baseline one-red-rule precedent for why a gate that
-#   can quietly stop checking anything is worse than a known-flaky one).
-#   AC_ENFORCE_STRICT=1 does not change this behavior: both the CI-set and
-#   unset path were re-run with AC_ENFORCE_STRICT=1 and the CI-gating logic
-#   fired identically either way, confirming the two env vars are
-#   orthogonal.
-#
-#   ADDITIONAL FINDING during verification, same date: `_time_subprocess`'s
-#   own `timeout: float = 120.0` default was ALSO too tight for this host --
-#   a live local re-run under heavy load hit `subprocess.TimeoutExpired`
-#   inside the best-of-5 `baseline` sample (killed at exactly 120.0s,
-#   returncode -9), crashing the test with an unhandled exception BEFORE the
-#   ratio could even be computed, let alone printed or CI-gated. This is the
-#   same class of defect the ticket named for the sibling file's 120s cap,
-#   just a second, previously-undocumented instance of it in this file. Both
-#   `_time_subprocess(...)` call sites (`baseline` and `fast`) now pass an
-#   explicit `timeout=_SUBPROCESS_TIMEOUT` (600.0, matching the sibling
-#   fix's budget) and the whole best-of-5 block is wrapped in
-#   `try/except subprocess.TimeoutExpired`, printing loudly and
-#   CI-gating exactly like the ratio assertion below it -- so a timeout
-#   during MEASUREMENT itself is now reported the same way as a timeout
-#   during the subprocess the measurement wraps, not an unhandled crash.
-#   (#TQ-600a-11-noise-stabilization)
+# - 2026-10-08 [test-writer] (classification: test_drift): realigned this file to
+#   TQ-600a-11's 2026-10-08 amendment. Replaced the validation-gate end-to-end
+#   timing test (retracted claim; both arms were identical code, 1.00x), the
+#   "no reader names the pure-Python parser" allowlist seam test (inverted by
+#   the amendment), and the deployed-commit-hook reachability test (no hook
+#   uses the accessor now). The CI-gated ratio and best-of-5 machinery went
+#   with the test it served. The surviving timing test asserts unconditionally,
+#   as the AC specifies; the 5x floor against a 10-13x expectation is its only
+#   headroom for host contention.
+# - 2026-10-08 [test-writer]: moved the helpers into
+#   _test_helpers_tq_600a_11.py to stay under the 400-measured-line file-size
+#   limit; no assertion changed.
