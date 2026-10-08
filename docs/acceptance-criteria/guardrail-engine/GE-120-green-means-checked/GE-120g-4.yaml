@@ -1,0 +1,125 @@
+id: GE-120g-4
+components:
+  - commit_guardian
+title: "A judging check hands back the file it was given to read byte-for-byte, so reading your config cannot be what breaks the next commit"
+component: guardrail-engine
+level: L2
+status: active
+req_status: draft
+work_status: done
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  GE-120g-1 established that being looked at leaves your working copy as it
+  was. It is enforced by `run_hook.py`, which snapshots the working tree around
+  a judging check and reverts what that check changed. That protection has a
+  hole: it reverts tracked working-copy paths, and `.leafcutter/` is build
+  output, untracked. A judging check that writes inside `.leafcutter/` is not
+  caught by it, and nothing else notices.
+
+  `check-negative-control-liveness` writes there. Its own registration hands it
+  the deployed `commit_guardian.json` as its `--manifest` input, and it writes
+  that same file back on every run whether or not anything in the document
+  changed. The next commit then fails `check-output-drift` on a file the author
+  never touched.
+
+  Scenario: A run that changes nothing leaves the file byte-for-byte identical
+    Given a deployed commit-guardian manifest as `build.py` produced it,
+    And a run of the liveness check over that manifest that finds no
+      `currently` block needing an update,
+    When the check runs to completion and exits,
+    Then the manifest file's bytes are exactly what they were before the run,
+    Because the only reliable way for a judging check to leave a file alone is
+      not to write it, and this is the overwhelmingly common case — every
+      ordinary commit.
+
+  Scenario: A run that must record something preserves the characters it read
+    Given a manifest containing non-ASCII characters in its `_comment` prose,
+    When the check runs and does have a genuine update to record,
+    Then the characters it did not change are written back as the characters
+      they were, not as escape sequences,
+    Because a write that silently transliterates the parts it was not asked to
+      touch is a second, quieter version of the same defect.
+
+  Scenario: The verdict is unaffected
+    Given any manifest,
+    When the check runs,
+    Then the pass/fail verdict and the per-check result lines it prints are
+      what they were before this change,
+    Because this criterion governs what the check writes, not what it decides.
+depends_on:
+  - GE-120g
+doc_links:
+  - path: "docs/acceptance-criteria/guardrail-engine/GE-120-green-means-checked/GE-120g.yaml"
+    relationship: parent
+    status: exists
+  - path: "templates/scripts/commit_guardian/check_negative_control_liveness.py"
+    relationship: specifies
+    status: exists
+    relevance: "`main()` calls `_write_manifest` unconditionally; `_write_manifest` is the single `json.dumps` line. Both halves of the fix live here."
+  - path: "docs/known-issues/commit-guardian/open-high-ki-cg-20260929-hook-run-strips-em-dashes-from-deployed-config.md"
+    relationship: context
+    status: exists
+    relevance: "The measured defect and the 0-to-110 isolation proof. This record is its fix."
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "CANONICAL SOURCE, ADR-001. Edit templates/scripts/commit_guardian/check_negative_control_liveness.py. scripts/commit_guardian/ and .leafcutter/scripts/commit_guardian/ are build.py outputs."
+  - "THE LOAD-BEARING FIX IS NOT WRITING, NOT ensure_ascii. Measured 2026-10-07: `json.dumps(data, indent=2, ensure_ascii=False) + chr(10)` does NOT reproduce the deployed file byte-for-byte — the file carries hand-authored indentation (a block indented 2 where json.dumps emits 4), so a re-render differs from build.py's output by 40 bytes even with ensure_ascii fixed. An ensure_ascii-only change would therefore keep rewriting the file and keep tripping check-output-drift, on indentation instead of em-dashes. Do NOT treat the two halves as alternatives."
+  - "DETECT CHANGE ON THE DATA, NOT ON THE RENDERING. Because the rendering never equals the file, a `rendered != current_text` guard is always true and skips nothing. Snapshot the parsed document (e.g. copy.deepcopy) BEFORE _build_records mutates it, compare the mutated document against that snapshot, and write only when they differ."
+  - "_build_records MUTATES data IN PLACE — _write_manifest's own docstring says so ('with currently blocks updated in place'). A shallow copy will not isolate the snapshot."
+  - "KEEP ensure_ascii=False ANYWAY. It is the second scenario and it is cheap: when a genuine write does happen it must not transliterate prose it was not asked to change."
+  - "DO NOT CHANGE THE VERDICT PATH. The records returned by _build_records, the lines printed by _format_result_line, and the exit code must be unchanged. This record governs the write, not the decision."
+  - "Error-handling policy per CLAUDE.md: the existing OSError handling on the write path logs and re-raises; keep it. Any new read must not silently swallow."
+test_spec:
+  - name: test_liveness_run_leaves_an_unchanged_manifest_byte_identical
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "A real deployed commit_guardian.json is copied to a temp path, its bytes hashed, the check run against it as a subprocess, and the bytes re-hashed. Asserts the digests match. RED today — the run rewrites it."
+  - name: test_liveness_run_preserves_non_ascii_characters
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "After the same run, the manifest still contains its literal non-ASCII characters and zero backslash-u escapes of them. RED today — 110 em-dashes become escapes."
+  - name: test_liveness_run_still_reports_its_verdict
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "The same run exits 0 and still prints its per-check result lines. GREEN ON ARRIVAL — the scope fence that catches a fix which stops the check doing its job in order to stop it writing."
+test_rationale: |
+  The first arm is the whole criterion and is the only one red today. It
+  asserts on a byte digest rather than on an em-dash count, because the
+  measured round-trip difference is partly indentation and an em-dash
+  assertion alone would pass a fix that still reformats the file and still
+  trips the drift gate.
+
+  The third arm is green on arrival and exists because the cheapest way to
+  satisfy the first two is to delete the write entirely, including the case
+  where the check genuinely has something to record. It does not fully forbid
+  that — a test that forces a real update would — but it does catch a fix that
+  breaks the check's output or exit code on the way past.
+origin_agent: BrainCandy
+created: 2026-10-07
+amended_by: []
+superseded_by: null
+covered_by:
+  - unit_tests/commit_guardian/test_ge_120g_4.py
+implemented_by:
+  - templates/scripts/commit_guardian/check_negative_control_liveness.py
+change_target: code
+risk_surface: internal
+notes: |
+  Found while acting on KI-CG-20260929, whose cause was identified on
+  2026-10-07 and proven by running this check alone against a repaired file:
+  0 escaped em-dashes before, 110 after, no other hook involved.
+
+  THE GENERAL SHAPE, which is why this sits under GE-120g rather than under the
+  liveness check's own L1: a judging check was handed a path and wrote to it.
+  GE-120g-1's enforcement cannot see it because the path is untracked build
+  output. Any other check registered with a writable `--manifest`-style
+  argument has the same hole available to it.

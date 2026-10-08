@@ -1,0 +1,93 @@
+id: DK-300d-5-i
+title: "Exhaustive Ticket priority filtering remains unsupported by the graph selector"
+component: decision-kernel
+components: [decision_kernel, knowledge_management]
+level: L3
+status: active
+readiness: reviewed
+req_status: draft
+priority: high
+work_status: done
+criteria: |
+  Given the question is "Which tickets have high or critical priority? List all matching tickets.",
+  And the available graph operations do not implement that exhaustive filtered population,
+  When the kernel offers and assesses retrieval choices,
+  Then no Ticket priority enumeration operation is offered or claimed as supported,
+  And recognition of a ticket identity or a single-record lookup does not establish an exhaustive priority-filtered answer,
+  And permitted repository search may return evidence with its actual limits or the run reports the unsupported request,
+  And bounded repository or sibling retrieval evidence does not erase the unresolved completeness limitation,
+  And the kernel does not construct a query or report the complete matching ticket population from that missing operation.
+depends_on: ["DK-300d-5"]
+covered_by:
+  - "tests/kernel/entity_context/test_knowledge_selection_fallback.py::test_ticket_priority_enumeration_is_never_offered_as_graph_supported"
+  - "tests/kernel/entity_context/test_knowledge_selection_fallback.py::test_ticket_completeness_limitation_survives_sibling_merge_and_resume"
+implemented_by:
+  - "integrations/graph_selection_result.py"
+  - "kernel/capabilities/research/assessments.py"
+  - "kernel/capabilities/research/collect.py"
+  - "kernel/capabilities/research/results.py"
+assigned_agent: python-coder
+estimated_complexity: M
+change_target: code
+risk_surface: contract_boundary
+it_requirements:
+  - "Advertised node kinds or stored Ticket fields do not imply a corresponding read-operation contract; only executable offered operations count as supported."
+  - "New exhaustive Ticket-priority filtering queries and autonomous query creation/admission are outside this change; result ordering is not a requirement."
+  - "Unsupported population requests preserve explicit incompleteness even if partial repository or single-entity evidence is obtained."
+  - "The finite unsupported_population outcome carries an unresolved completeness limitation through sibling merges, durable research continuation and synthesis resume. Ordinary unsupported selection alone does not veto useful permitted sibling evidence."
+delivers_to:
+  agent: python-coder
+  contract: "Existing registered retrieve.repository binding / KnowledgeRetrievalExecutor.ainvoke is the integration boundary. integrations.graph_selection.assess_graph_operation(ctx,invocation,payload,capabilities) returns (RetrievalChoice,list[Usage]). Jev purpose knowledge.operation_select, question id operation, offers only executable bounded operation identities plus unsupported and an authorized repository-fallback outcome; optional purpose knowledge.target_select, question id target, selects a finite trusted target. Python constructs arguments from resolved permitted entity IDs and trusted component scope. Explicit payload.knowledge bypasses this selector."
+expects_from:
+  ac_id: DK-300d-5
+  contract: "Existing registered retrieve.repository binding / KnowledgeRetrievalExecutor.ainvoke is the integration boundary. integrations.graph_selection.assess_graph_operation(ctx,invocation,payload,capabilities) returns (RetrievalChoice,list[Usage]). Jev purpose knowledge.operation_select, question id operation, offers only executable bounded operation identities plus unsupported and an authorized repository-fallback outcome; optional purpose knowledge.target_select, question id target, selects a finite trusted target. Python constructs arguments from resolved permitted entity IDs and trusted component scope. Explicit payload.knowledge bypasses this selector."
+test_required: true
+test_spec:
+  - name: "test_ticket_priority_enumeration_is_never_offered_as_graph_supported"
+    target_dir: "tests/kernel/entity_context/"
+    framework: "pytest"
+    type: "integration"
+    angle: "discrimination"
+    description: "tests/kernel/entity_context/test_knowledge_selection_fallback.py::test_ticket_priority_enumeration_is_never_offered_as_graph_supported: Ask for all tickets with high or critical priority using recognized Ticket metadata; assert no fabricated filter/enumeration operation, no arbitrary query build and no exhaustive completion claim from bounded exact-record or sibling repository evidence. Ordering is not required."
+    must_catch: ["Offering exhaustive priority filtering merely because Ticket nodes expose a priority field.","Reporting the complete matching ticket population from bounded single-entity or sibling repository evidence."]
+  - name: "test_ticket_completeness_limitation_survives_sibling_merge_and_resume"
+    target_dir: "tests/kernel/entity_context/"
+    framework: "pytest"
+    type: "integration"
+    angle: "seam"
+    description: "tests/kernel/entity_context/test_knowledge_selection_fallback.py::test_ticket_completeness_limitation_survives_sibling_merge_and_resume: Exercise both sibling arrival orders through the real planner, registered bindings, artifact serialization and research/synthesis resume; assert bounded native evidence cannot erase the unsupported exhaustive population limitation or report a complete answer."
+    must_catch: ["Dropping the incomplete-population diagnostic when sibling evidence is merged or restored.","Allowing synthesis resume to convert bounded ticket examples into the complete matching population."]
+test_rationale: "Exercise the existing registered capability and real research path with recording Jev and knowledge ports; a direct helper or source-string test cannot prove selection is consumed. Controlled-port proof does not establish live Jev quality or Neo4j publication readiness."
+doc_links:
+  - path: docs/architecture/components/knowledge-retrieval.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/components/decision-kernel.md
+    relationship: describes
+    status: exists
+  - path: docs/product-truth/flows/leafcutter/decision-forming.flow.json
+    relationship: implements
+    status: exists
+  - path: docs/architecture/adrs/ADR-062-standalone-knowledge-retrieval.md
+    relationship: context
+    status: exists
+origin_agent: business-analyst
+created: 2026-10-03
+amended_by:
+  - reason: "IT PO added bounded selector contracts and behavioral test specifications under the user's explicit wire-it-up authorization."
+superseded_by: null
+notes: |
+  Focused extension of DK-300d-3 and existing KM-400e-2, KM-400e-3 and KM-400e-4.
+  Independently verified on 2026-10-03: 148 strict deterministic cases passed, including 51 selector cases, 84 existing entity cases and 13 bridge cases; no failures, errors or skips.
+  Verification evidence: reports/entity-graph-selection-independent-green.xml and reports/entity-graph-selection-evaluation.md. Controlled ports do not establish live Jev quality or Neo4j publication readiness; no new query implementation or admission is claimed.
+  No matching reusable pattern was found in the 4620-file AC inventory.
+product_truth:
+  - flow: leafcutter/decision-forming
+    node: ground
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: leafcutter/decisions
+    entities: []
+    source: real
+    asof: '2026-10-03'

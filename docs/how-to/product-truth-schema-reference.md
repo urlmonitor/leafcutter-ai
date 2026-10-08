@@ -4,10 +4,11 @@ description: "Field-by-field reference for the four product-truth schemas — Fl
 type: how-to
 status: active
 created: 2026-07-14
-last_updated: 2026-09-17
+last_updated: 2026-10-05
 components:
   - ux_prototyping
 related_docs:
+  - docs/product-truth/JSON-CONTRACTS.md
   - docs/how-to/authoring-product-truth-artifacts.md
   - docs/architecture/components/ux-prototyping.md
   - docs/architecture/adrs/ADR-023-product-truth-flow-first-upstream-layer.md
@@ -88,8 +89,9 @@ A reviewable user journey; machine-readable for agents and human-readable via
 | `order` | integer | Ordering. |
 | `screen` | string | Mockup `screen` id this step renders, if any. |
 | `agent` | string | The actor running the step — an agent id (`config/agent_registry.json`) or a script/workflow name. |
-| `produces` | string[] | Named artifacts/fields handed DOWNSTREAM (output side of the handoff contract), e.g. `Ticket.test_requirements`. |
-| `consumes` | string[] | Named artifacts/fields required from UPSTREAM. A `consumes` with no matching upstream `produces` is a broken handoff. |
+| `io_contracts` | object | Authored checked bindings/examples, genuine non-JSON reason, or explicit proposed binding gaps; see the [worked example](../product-truth/JSON-CONTRACTS.md#checked-json-handoffs). |
+| `produces` | string[] | **DERIVED** field labels from `io_contracts`; never hand-author free-form output badges. |
+| `consumes` | string[] | **DERIVED** field labels from `io_contracts`. Explain actual mappings in `human`; the gate does not infer cross-step dataflow. |
 | `reads` / `writes` | string[] | Entities the step touches. |
 | `implements` | string[] | **AUTHORED** link: AC ids derived from this step's `acceptance_scenarios`. Source of truth for flow↔AC linkage. |
 | `expands_to` | string[] (a single string is still read) | Ids of the child flows this step drills into (C4-style). Being reshaped from one id to a list: a single id is read as a list of one, and the generator writes it back as a list, so the older shape disappears as journeys are regenerated (UXP-700e-3-i). When set, `impl_status` derives from the child flows' combined rollup (all done → done, none started → not_started, otherwise in_progress), taking precedence over `implements`. |
@@ -229,38 +231,8 @@ The `outcome` must be consistent with `expected{}` — the validator
 
 ## Validator run outcome — `validate_product_truth.py` (not the classifier `outcome` above)
 
-`validate_product_truth.py` prints one JSON object as its **last** stdout line
-(independent of logging), reporting on the run itself rather than on any single
-artifact. This is a different vocabulary from the per-example classifier
-`outcome` field documented above — the two are deliberately distinct enums so
-that reading a value on one axis can never be mistaken for the other.
-
-```json
-{"outcome": "checked-and-sound", "examined": 14, "unreadable": []}
-```
-
-| Field | Type | Notes |
-|---|---|---|
-| `outcome` | enum | `checked-and-sound` (every journey read and no problems found) \| `nothing-examined` (zero journeys were read) \| `degraded` (at least one journey exists but could not be read — see `unreadable`) \| `failed` (a real validation failure was found). |
-| `examined` | int | Count of journeys the run actually read. |
-| `unreadable` | string[] | Store-relative path of each journey file that could not be parsed (empty when nothing was unreadable). |
-| `resolved_labels` | int | How many journey labels (one component each, plus tags) resolved against `docs/acceptance-criteria/index.yaml` and the tag shape (UXP-700e-3). `0` for a record with no labels. |
-| `bounds` | object | One entry per declared size bound (`product_truth_bounds.BOUNDS`), keyed by bound name: `measured` (artifacts measured against it), `exceeded`, `holdouts` (artifacts still on a shape version older than the bound's), and `enforcement` — `warning-period` while any holdout remains, `blocking` once none does. Derived from the artifacts on every run; no date or flag changes it (UXP-700e-1, UXP-700e-1-ii). |
-
-`--tighten BOUND` asks the validator to hold a bound as blocking. While any
-artifact is still on an older shape version, the request is refused: the run
-exits `1` and a `REFUSED:` line names the holdouts. Once none remains, the run
-proceeds, and any artifact over the bound fails it.
-
-The exit code is `0` for every outcome except `failed` — one malformed journey
-file degrades the run and is named in `unreadable`, but does not stop it
-(the project's fail-open convention; see
-[Traceability guardrails, Hole 7](../explanation/traceability-guardrails.md#the-holes)
-and
-[GE-120](../acceptance-criteria/guardrail-engine/GE-120-green-means-checked/GE-120.yaml)).
-The per-file read that can produce `degraded` lives once in
-`generate_product_truth.py::load_flows()`, shared by the generator and this
-validator, so both callers skip-and-continue on the same file the same way.
+The validator's last stdout line is a JSON run report, distinct from the classifier
+example outcome. See its [complete field and exit-code reference](../product-truth/JSON-CONTRACTS.md#validator-run-outcome).
 
 ---
 
@@ -299,6 +271,12 @@ import this module verbatim rather than re-deriving the predicate — see the
 module's own DECISION HISTORY block for the rationale.
 
 ---
+
+## Checked JSON handoffs
+
+Every step and branch needs `io_contracts`. The [JSON contract standard](../product-truth/JSON-CONTRACTS.md#checked-json-handoffs)
+contains the field definitions, complete worked example, authority and validation
+boundaries, proposed-gap rules, generated presentation and author review checklist.
 
 ## See Also
 

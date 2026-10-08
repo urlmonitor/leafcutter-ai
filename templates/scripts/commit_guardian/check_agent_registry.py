@@ -46,9 +46,11 @@ ARCHITECTURE: Thin wrapper around registry_validator.validate_agent_registry()
     subdirectories — lives in exactly ONE module, never a third,
     independently-drifting copy of it; see ``_resolve_root.py``'s own
     docstring for why the shared lookup lives there rather than in a new
-    sibling module). See ``_resolve_package_root`` below,
-    which layers this hook's OWN ``package_root``-field reading on top of the
-    shared manifest-path lookup. ``package_root`` is ``""`` when the package
+    sibling module). ``_resolve_root.resolve_package_root()`` layers the
+    ``package_root``-field reading on top of the shared manifest-path lookup
+    — shared with check_agent_spawn_consistency.py (AC INF-600k-1), the only
+    other caller that needs an actual package_root; this hook imports it as
+    ``_resolve_package_root``. ``package_root`` is ``""`` when the package
     IS that root (this repository's own layout), or a subdirectory name for
     an outer-project consumer layout.
 
@@ -75,13 +77,11 @@ ARCHITECTURE: Thin wrapper around registry_validator.validate_agent_registry()
 
 from __future__ import annotations
 
-import json
 import subprocess
 import sys
 from pathlib import Path
-from typing import Any
 
-from _resolve_root import resolve_manifest_path as _resolve_manifest_path
+from _resolve_root import resolve_package_root as _resolve_package_root
 
 _GATE_NAME = "check-agent-registry"
 _HOOK_FILE = Path(__file__).resolve()
@@ -166,59 +166,6 @@ def _is_registry_related(staged: list[str]) -> bool:
         True if at least one staged file matches ``_in_scope``.
     """
     return any(_in_scope(f) for f in staged)
-
-
-def _resolve_package_root(hook_file: Path) -> tuple[Path | None, list[str]]:
-    """Locate the package root via the shared manifest convention.
-
-    Delegates the candidate-root search to
-    ``_resolve_root.resolve_manifest_path()`` — the SAME lookup
-    check_build_drift.py / check_output_drift.py import (pr-reviewer H-2:
-    a third, independently-maintained copy of the search itself was
-    rejected) — then layers this hook's OWN interpretation of the found
-    manifest's ``package_root`` field on top: ``""`` when the package IS that
-    root, or a subdirectory name for an outer-project layout. Stops at the
-    FIRST candidate the shared resolver reports as holding a manifest.
-
-    Args:
-        hook_file: Absolute, resolved path to this hook module.
-
-    Returns:
-        Tuple of (package_root, tried). ``package_root`` is None when no
-        candidate root holds a readable manifest with a usable
-        ``package_root`` value. ``tried`` describes every location checked,
-        in search order, for the cannot-locate message.
-    """
-    manifest_path, tried_paths = _resolve_manifest_path(hook_file)
-    tried = [f"{p} (no manifest found here)" for p in tried_paths]
-
-    if manifest_path is None:
-        return None, tried
-
-    # The last entry IS manifest_path (the one _resolve_manifest_path()
-    # confirmed exists) — replace its placeholder with the real outcome.
-    tried = tried[:-1]
-
-    try:
-        manifest: dict[str, Any] = json.loads(manifest_path.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError) as exc:
-        tried.append(f"{manifest_path} (could not be read: {exc})")
-        return None, tried
-
-    package_root_value = manifest.get("package_root", "")
-    if not isinstance(package_root_value, str):
-        tried.append(
-            f"{manifest_path} (package_root={package_root_value!r} is "
-            "not a usable string)"
-        )
-        return None, tried
-
-    root = manifest_path.parent
-    candidate = (root / package_root_value) if package_root_value else root
-    tried.append(
-        f"{manifest_path} -> package_root={package_root_value!r} -> {candidate}"
-    )
-    return candidate, tried
 
 
 def _report_could_not_check_staged_files() -> None:
@@ -344,6 +291,14 @@ if __name__ == "__main__":
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-09-28 16:00 [python-coder/AC INF-600k-1, pr-reviewer HIGH-3]: Moved
+#   this file's own ``_resolve_package_root`` to ``_resolve_root.py`` as
+#   ``resolve_package_root()`` (pure move, no behaviour change) so
+#   check_agent_spawn_consistency.py could share the SAME package_root
+#   resolution instead of it becoming a third, independently-drifting copy.
+#   This file now imports it as ``_resolve_package_root`` (same call site,
+#   same behaviour) rather than defining it locally.
+#   (#TICKETLESS reason=inf-600k-1-workflow-callers)
 # - 2026-09-28 08:10 [python-coder/GE-113c-1-vi, pr-reviewer follow-up
 #   IO-001]: check_exception_handling.py flagged the ``subprocess.run()`` in
 #   ``_get_staged_files()`` as an unwrapped I/O boundary call (Error Handling

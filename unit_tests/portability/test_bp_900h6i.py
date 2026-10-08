@@ -124,6 +124,30 @@ def _extract_ci_command() -> str:
     return match.group("cmd").strip()
 
 
+def _link_dir(link: Path, target: Path) -> None:
+    """Symlink ``link`` -> ``target``; on Windows without the symlink privilege
+    (WinError 1314) fall back to a directory junction, which needs no privilege
+    and resolves the same way for the subprocess under test (BP-900h-6 note)."""
+    try:
+        link.symlink_to(target, target_is_directory=True)
+    except OSError:
+        if sys.platform != "win32":
+            raise
+        import _winapi  # type: ignore[import-not-found]
+
+        _winapi.CreateJunction(str(target), str(link))
+
+
+def _can_symlink() -> bool:
+    """Capability probe: actually attempt a symlink in a temp dir."""
+    with tempfile.TemporaryDirectory() as probe:
+        try:
+            (Path(probe) / "link").symlink_to(Path(probe) / "target")
+        except (OSError, NotImplementedError):
+            return False
+    return True
+
+
 def _git(args: list[str], cwd: Path) -> subprocess.CompletedProcess[str]:
     return subprocess.run(["git", *args], cwd=str(cwd), capture_output=True, text=True, check=False)
 
@@ -228,6 +252,7 @@ class TestBp900h6iEntitlement(unittest.TestCase):
                 msg="Every path present beforehand must be byte-identical afterwards.",
             )
 
+    @unittest.skipUnless(_can_symlink(), "platform cannot create symlinks (e.g. Windows without Developer Mode/admin)")
     def test_bp900h6i_shared_artifact_behind_a_symlinked_registry_is_never_written_through(
         self,
     ) -> None:
@@ -315,7 +340,7 @@ class TestBp900h6iReachability(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             workspace_dir = Path(tmp) / "ci_workspace"
             workspace_dir.mkdir()
-            (workspace_dir / "leafcutter-ai").symlink_to(_WORKTREE_ROOT)
+            _link_dir(workspace_dir / "leafcutter-ai", _WORKTREE_ROOT)
 
             _git(["init"], workspace_dir)
             _git(["config", "user.email", "dev@example.invalid"], workspace_dir)
@@ -379,6 +404,12 @@ if __name__ == "__main__":
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-02 [test-writer/test-env-fixes]: Windows without symlink privilege
+#   (WinError 1314) failed two tests at setup. The CI-workspace
+#   `leafcutter-ai` link is incidental, so _link_dir falls back to a directory
+#   junction (tests still run fully). The symlinked-registry test asserts
+#   behaviour OF a symlink, so it is skipped only when _can_symlink() probes
+#   False (a real symlink attempt, never a platform check).
 # - 2026-08-31 [test-writer/BP-900h-6-i]: Initial RED test-first stubs for
 #   all four test_spec descriptors. Entries 1, 2, and 4 fail today (confirmed
 #   by running this file — see the red_baseline in this ticket's sign-off

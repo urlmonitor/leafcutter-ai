@@ -1,0 +1,344 @@
+{
+  "kind": "RoadmapPhase",
+  "status": "implemented_and_verified",
+  "source": "knowledge/native_types/roadmap_phase.py",
+  "tests": "tests/knowledge/test_native_roadmap_phase.py",
+  "fields": [
+    "id",
+    "title",
+    "exit_criteria",
+    "tickets_advancing_outcome",
+    "description",
+    "status",
+    "components"
+  ],
+  "field_policy": "Exact entire authored phase object; known field shape validation permits future fields. Root fields except phases are separately copied into derived.roadmap_context; derived.phase_index records order.",
+  "validation": "Safe configured path resolution, explicit JSON/envelope/core shape errors, exact valid string identities, unique IDs, current_phase reference membership. Optional absent source returns an empty record list.",
+  "actual_source_count": 13,
+  "red_baseline": [
+    {
+      "test": "test_phase_fields_context_order_and_future_fields_are_lossless",
+      "result": "failed_missing_reader"
+    },
+    {
+      "test": "test_optional_fields_remain_absent_and_empty_lists_remain_present",
+      "result": "failed_missing_reader"
+    },
+    {
+      "test": "test_configured_source_and_nonempty_description",
+      "result": "failed_missing_reader"
+    },
+    {
+      "test": "test_absent_optional_source_returns_no_records",
+      "result": "failed_missing_reader"
+    },
+    {
+      "test": "test_malformed_source_fails[{]",
+      "result": "failed_missing_reader"
+    },
+    {
+      "test": "test_malformed_source_fails[[]]",
+      "result": "failed_missing_reader"
+    },
+    {
+      "test": "test_malformed_source_fails[{}]",
+      "result": "failed_missing_reader"
+    },
+    {
+      "test": "test_malformed_source_fails[{\"phases\": []}]",
+      "result": "failed_missing_reader"
+    },
+    {
+      "test": "test_malformed_source_fails[{\"phases\": [42]}]",
+      "result": "failed_missing_reader"
+    },
+    {
+      "test": "test_invalid_phase_shape_fails[changes0]",
+      "result": "failed_missing_reader"
+    },
+    {
+      "test": "test_invalid_phase_shape_fails[changes1]",
+      "result": "failed_missing_reader"
+    },
+    {
+      "test": "test_invalid_phase_shape_fails[changes2]",
+      "result": "failed_missing_reader"
+    },
+    {
+      "test": "test_invalid_phase_shape_fails[changes3]",
+      "result": "failed_missing_reader"
+    },
+    {
+      "test": "test_invalid_phase_shape_fails[changes4]",
+      "result": "failed_missing_reader"
+    },
+    {
+      "test": "test_invalid_phase_shape_fails[changes5]",
+      "result": "failed_missing_reader"
+    },
+    {
+      "test": "test_invalid_phase_shape_fails[changes6]",
+      "result": "failed_missing_reader"
+    },
+    {
+      "test": "test_invalid_phase_shape_fails[changes7]",
+      "result": "failed_missing_reader"
+    },
+    {
+      "test": "test_invalid_phase_shape_fails[changes8]",
+      "result": "failed_missing_reader"
+    },
+    {
+      "test": "test_duplicate_ids_fail",
+      "result": "failed_missing_reader"
+    },
+    {
+      "test": "test_configured_path_escape_fails_even_when_target_absent[../outside.json]",
+      "result": "failed_missing_reader"
+    },
+    {
+      "test": "test_configured_path_escape_fails_even_when_target_absent[C:/outside.json]",
+      "result": "failed_missing_reader"
+    },
+    {
+      "test": "test_configured_path_escape_fails_even_when_target_absent[C:outside.json]",
+      "result": "failed_missing_reader"
+    },
+    {
+      "test": "test_configured_path_escape_fails_even_when_target_absent[/outside.json]",
+      "result": "failed_missing_reader"
+    },
+    {
+      "test": "test_configured_path_escape_fails_even_when_target_absent[\\\\\\\\server\\\\outside.json]",
+      "result": "failed_missing_reader"
+    },
+    {
+      "test": "test_real_roadmap_all_fields_and_context_match_source",
+      "result": "failed_missing_reader"
+    }
+  ],
+  "red_receipt": "reports/native-fields/roadmap-red.xml",
+  "green_receipt": "reports/native-fields/roadmap-green.xml",
+  "mutation_proofs": [
+    {
+      "test": "test_optional_fields_remain_absent_and_empty_lists_remain_present",
+      "alteration": "invent an omitted status default",
+      "result": "red",
+      "failure": "AssertionError",
+      "imported_copy": "C:\\Users\\Hendrik\\Code\\leafcutter\\worktrees\\aura-domain-graph\\knowledge\\native_types\\roadmap_phase.py"
+    },
+    {
+      "test": "test_phase_fields_context_order_and_future_fields_are_lossless",
+      "alteration": "drop an authored future nested field",
+      "result": "red",
+      "failure": "AssertionError",
+      "imported_copy": "C:\\Users\\Hendrik\\Code\\leafcutter\\worktrees\\aura-domain-graph\\knowledge\\native_types\\roadmap_phase.py"
+    },
+    {
+      "test": "test_phase_fields_context_order_and_future_fields_are_lossless",
+      "alteration": "merge root context into phase metadata",
+      "result": "red",
+      "failure": "AssertionError",
+      "imported_copy": "C:\\Users\\Hendrik\\Code\\leafcutter\\worktrees\\aura-domain-graph\\knowledge\\native_types\\roadmap_phase.py"
+    },
+    {
+      "test": "test_absent_optional_source_returns_no_records",
+      "alteration": "invent a phase for an absent source",
+      "result": "red",
+      "failure": "AssertionError",
+      "imported_copy": "C:\\Users\\Hendrik\\Code\\leafcutter\\worktrees\\aura-domain-graph\\knowledge\\native_types\\roadmap_phase.py"
+    },
+    {
+      "test": "test_duplicate_ids_fail",
+      "alteration": "disable duplicate identity rejection",
+      "result": "red",
+      "failure": "Failed",
+      "imported_copy": "C:\\Users\\Hendrik\\Code\\leafcutter\\worktrees\\aura-domain-graph\\knowledge\\native_types\\roadmap_phase.py"
+    },
+    {
+      "test": "test_invalid_phase_shape_fails",
+      "alteration": "disable description type validation",
+      "result": "red",
+      "failure": "Failed",
+      "imported_copy": "C:\\Users\\Hendrik\\Code\\leafcutter\\worktrees\\aura-domain-graph\\knowledge\\native_types\\roadmap_phase.py"
+    },
+    {
+      "test": "test_invalid_root_context_fails",
+      "alteration": "disable current_phase referential validation",
+      "result": "red",
+      "failure": "Failed",
+      "imported_copy": "C:\\Users\\Hendrik\\Code\\leafcutter\\worktrees\\aura-domain-graph\\knowledge\\native_types\\roadmap_phase.py"
+    },
+    {
+      "test": "test_configured_path_escape_fails_even_when_target_absent",
+      "alteration": "ignore configured escaping path and select an absent in-root source",
+      "result": "red",
+      "failure": "Failed",
+      "imported_copy": "C:\\Users\\Hendrik\\Code\\leafcutter\\worktrees\\aura-domain-graph\\knowledge\\native_types\\roadmap_phase.py"
+    },
+    {
+      "test": "test_invalid_root_context_fails",
+      "parameter": {
+        "current_phase": null
+      },
+      "alteration": "disable root field validation for current_phase",
+      "result": "red",
+      "failure": "Failed",
+      "imported_copy": "C:\\Users\\Hendrik\\Code\\leafcutter\\worktrees\\aura-domain-graph\\knowledge\\native_types\\roadmap_phase.py"
+    },
+    {
+      "test": "test_invalid_root_context_fails",
+      "parameter": {
+        "current_outcome": ""
+      },
+      "alteration": "disable root field validation for current_outcome",
+      "result": "red",
+      "failure": "Failed",
+      "imported_copy": "C:\\Users\\Hendrik\\Code\\leafcutter\\worktrees\\aura-domain-graph\\knowledge\\native_types\\roadmap_phase.py"
+    },
+    {
+      "test": "test_invalid_root_context_fails",
+      "parameter": {
+        "last_updated": 42
+      },
+      "alteration": "disable root field validation for last_updated",
+      "result": "red",
+      "failure": "Failed",
+      "imported_copy": "C:\\Users\\Hendrik\\Code\\leafcutter\\worktrees\\aura-domain-graph\\knowledge\\native_types\\roadmap_phase.py"
+    },
+    {
+      "test": "test_invalid_root_context_fails",
+      "parameter": {
+        "_comment": []
+      },
+      "alteration": "disable root field validation for _comment",
+      "result": "red",
+      "failure": "Failed",
+      "imported_copy": "C:\\Users\\Hendrik\\Code\\leafcutter\\worktrees\\aura-domain-graph\\knowledge\\native_types\\roadmap_phase.py"
+    }
+  ],
+  "mutation_scope": "Process-only replacement of the exact imported reader or its output. Disk implementation untouched; original function restored after every mutation.",
+  "green_results": [
+    {
+      "test": "test_phase_fields_context_order_and_future_fields_are_lossless",
+      "result": "passed"
+    },
+    {
+      "test": "test_optional_fields_remain_absent_and_empty_lists_remain_present",
+      "result": "passed"
+    },
+    {
+      "test": "test_configured_source_and_nonempty_description",
+      "result": "passed"
+    },
+    {
+      "test": "test_absent_optional_source_returns_no_records",
+      "result": "passed"
+    },
+    {
+      "test": "test_malformed_source_fails[{]",
+      "result": "passed"
+    },
+    {
+      "test": "test_malformed_source_fails[[]]",
+      "result": "passed"
+    },
+    {
+      "test": "test_malformed_source_fails[{}]",
+      "result": "passed"
+    },
+    {
+      "test": "test_malformed_source_fails[{\"phases\": []}]",
+      "result": "passed"
+    },
+    {
+      "test": "test_malformed_source_fails[{\"phases\": [42]}]",
+      "result": "passed"
+    },
+    {
+      "test": "test_invalid_phase_shape_fails[changes0]",
+      "result": "passed"
+    },
+    {
+      "test": "test_invalid_phase_shape_fails[changes1]",
+      "result": "passed"
+    },
+    {
+      "test": "test_invalid_phase_shape_fails[changes2]",
+      "result": "passed"
+    },
+    {
+      "test": "test_invalid_phase_shape_fails[changes3]",
+      "result": "passed"
+    },
+    {
+      "test": "test_invalid_phase_shape_fails[changes4]",
+      "result": "passed"
+    },
+    {
+      "test": "test_invalid_phase_shape_fails[changes5]",
+      "result": "passed"
+    },
+    {
+      "test": "test_invalid_phase_shape_fails[changes6]",
+      "result": "passed"
+    },
+    {
+      "test": "test_invalid_phase_shape_fails[changes7]",
+      "result": "passed"
+    },
+    {
+      "test": "test_invalid_phase_shape_fails[changes8]",
+      "result": "passed"
+    },
+    {
+      "test": "test_duplicate_ids_fail",
+      "result": "passed"
+    },
+    {
+      "test": "test_invalid_root_context_fails[context0]",
+      "result": "passed"
+    },
+    {
+      "test": "test_invalid_root_context_fails[context1]",
+      "result": "passed"
+    },
+    {
+      "test": "test_invalid_root_context_fails[context2]",
+      "result": "passed"
+    },
+    {
+      "test": "test_invalid_root_context_fails[context3]",
+      "result": "passed"
+    },
+    {
+      "test": "test_invalid_root_context_fails[context4]",
+      "result": "passed"
+    },
+    {
+      "test": "test_configured_path_escape_fails_even_when_target_absent[../outside.json]",
+      "result": "passed"
+    },
+    {
+      "test": "test_configured_path_escape_fails_even_when_target_absent[C:/outside.json]",
+      "result": "passed"
+    },
+    {
+      "test": "test_configured_path_escape_fails_even_when_target_absent[C:outside.json]",
+      "result": "passed"
+    },
+    {
+      "test": "test_configured_path_escape_fails_even_when_target_absent[/outside.json]",
+      "result": "passed"
+    },
+    {
+      "test": "test_configured_path_escape_fails_even_when_target_absent[\\\\\\\\server\\\\outside.json]",
+      "result": "passed"
+    },
+    {
+      "test": "test_real_roadmap_all_fields_and_context_match_source",
+      "result": "passed"
+    }
+  ],
+  "green_count": 30
+}

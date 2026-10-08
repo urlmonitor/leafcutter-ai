@@ -6,7 +6,7 @@ component: build-pipeline
 level: L2
 status: active
 req_status: active
-work_status: done
+work_status: todo
 readiness: approved
 priority: high
 roadmap_phase: phase_1
@@ -139,11 +139,34 @@ amended_by:
       are reported as gaps because nobody has declared them, which this AC's
       second clause correctly treats as a gap. The remedy is three entries in the
       exemption registry with stated grounds -- a declaration, not a record.
+  - reason: record-correction
+    by: claude (main loop, for BrainCandy)
+    at: 2026-10-08
+    entry: >-
+      work_status done -> todo, and covered_by gains BP-100k-3-iv, -v and -vi
+      (all three done, each confirmed by done_proof.verify_done_eligible).
+      criteria, it_requirements, test_spec and notes are untouched.
+
+      WHY TODO. This composite has been falsely done since 2026-09-07, when
+      BP-100k-3-ii was added as an unbuilt child (work_status todo, covered_by
+      empty, no implementation, no covers-tagged test) and this parent's
+      work_status was left at done. check-done-proof could not see it, because
+      the AC hooks read only the staged set and this file was not staged again
+      until today. Staging it to add the three new children made the gate
+      inspect it, and it refused: "composite BP-100k-3 is marked done but its
+      covered_by children are not all done-and-covered -- unproven:
+      BP-100k-3-ii". The gate is correct, so this record is corrected rather
+      than the gate bypassed. It returns to done when BP-100k-3-ii is built.
+      The L1 above (BP-100k) records no work_status of its own, so nothing
+      further up is left falsely done by this change.
 superseded_by: null
 covered_by:
   - BP-100k-3-i
   - BP-100k-3-ii
   - BP-100k-3-iii
+  - BP-100k-3-iv
+  - BP-100k-3-v
+  - BP-100k-3-vi
   - unit_tests/commit_guardian/test_bp_100k_3.py
 implemented_by:
   - tickets/00_inbox/epics/EPIC-BuildPipelinePhantomRemediation/08_bp100k3_drift_gates_report_gaps_not_passes.md

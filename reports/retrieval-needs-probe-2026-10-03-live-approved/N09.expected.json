@@ -1,0 +1,34 @@
+{
+  "expected": {
+    "include": {
+      "entity_types": [
+        "ac"
+      ],
+      "target_ids": [
+        "KM-500c-2"
+      ],
+      "document_types": [
+        "ac_yaml"
+      ]
+    },
+    "exclude": {
+      "target_ids": [
+        "KM-500c-1"
+      ]
+    },
+    "required_fields_if_fields": [
+      "criteria"
+    ],
+    "completeness": [
+      "single_entity"
+    ],
+    "hierarchy_scope": [
+      "not_applicable"
+    ],
+    "status": [
+      "decided",
+      "needs_resolution"
+    ]
+  },
+  "human_gold": "Literal user target remains KM-500c-2. Prior-context candidate cannot replace or add a target the user did not request. Conflict may be surfaced but is not authorization."
+}

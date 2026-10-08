@@ -3,7 +3,7 @@ title: "Test Angles — A Set-Cover Taxonomy for Proof of Done"
 type: reference
 status: active
 created: 2026-08-14
-last_updated: 2026-09-28
+last_updated: 2026-10-07
 components:
 - testing_quality
 - build_orchestration
@@ -12,7 +12,7 @@ related_docs:
 - docs/testing/test-angles-failure-catalogue.md
 - docs/architecture/components/phantom-done-prevention.md
 - docs/reference/ac-schema.md
-description: "The five core + two conditional test angles required per acceptance criterion, the observed repo incidents that justify each, the literature behind them, and the failure classes this taxonomy explicitly does not fix."
+description: "The eight test angles (five core + three conditional) required per acceptance criterion, the wiring-shaped and discrimination-shaped failure families they target, the observed incidents that justify them, the literature behind them, and the failure classes this taxonomy explicitly does not fix."
 ---
 # Test Angles — A Set-Cover Taxonomy for Proof of Done
 
@@ -44,7 +44,7 @@ At HEAD, the ticket generator's fallback path (`_derive_tests_from_criteria` in
 `scripts/ac_store/generate_ticket_from_ac.py`, selected by
 `_build_test_requirements_section` when the AC carries no `test_spec`) emits one test
 descriptor per Gherkin `Then` clause and nothing else. That is the `criterion` angle
-alone — one of seven.
+alone — one of eight.
 
 That fallback is the common case, not the edge case: **1,509 of the 1,886 ACs assigned to
 a coder agent (80%) carry no `test_spec`** and so take it. (Store-wide the share is
@@ -55,23 +55,21 @@ population is the one that matters here.)
 > `angle: criterion` and appends a mandatory `angle: reachability` descriptor — the
 > reachability floor — via `TEST_ANGLE_CRITERION` / `TEST_ANGLE_REACHABILITY`
 > (`generate_ticket_from_ac.py:67-68`). The floor implements the first two rows of the
-> table below. The remaining five angles are still unrepresented in generated tickets.
+> table below. The remaining six angles are still unrepresented in generated tickets.
 >
 > **Known weakness of the floor at that scale.** For the 80% with no `test_spec`, the
 > appended reachability descriptor cannot name an entry point — it says so in its own
-> text ("the entry point is not declared: resolve it before writing this test"). It hands
-> the hardest judgement, *what IS the production entry point*, to `test-writer` — which,
-> as of BP-1100g-1 (2026-08-25), now carries a machine-extractable taught set of all
-> seven angle names and their distinguishing rules (`templates/agents/test-writer.md`
+> text ("the entry point is not declared: resolve it before writing this test"), leaving
+> *what IS the production entry point* to `test-writer`. As of BP-1100g-1 (2026-08-25),
+> `test-writer` carries a machine-extractable taught set of all eight angle names and
+> their distinguishing rules (`templates/agents/test-writer.md`
 > `<!-- TAUGHT-TEST-ANGLES:START/END -->` anchor), kept in cross-source lockstep with
 > `config/ac_store_schema.json`'s `test_spec[].angle` enum by
-> `unit_tests/prompt_assembly/test_bp_1100g_1.py`. That closes the *vocabulary* gap —
-> `test-writer` can no longer be ignorant of the word "angle" or of what separates each
-> kind from a proof of the behaviour alone. It does not by itself close the *judgement*
-> gap this paragraph is about: knowing the seven names and their rules is not the same
-> as knowing which concrete function, script, or command is *this* AC's production entry
-> point. Until that seam is closed, a reachability mandate can still quietly be satisfied
-> by a renamed `criterion` test if the writer picks the wrong entry point.
+> `unit_tests/prompt_assembly/test_bp_1100g_1.py` — closing the *vocabulary* gap only.
+> It does not close the *judgement* gap: knowing the angle names is not knowing which
+> concrete function, script, or command is *this* AC's production entry point. Until
+> that seam closes, a reachability mandate can still be satisfied by a renamed
+> `criterion` test that picks the wrong one.
 
 ## The taxonomy
 
@@ -88,6 +86,7 @@ population is the one that matters here.)
 | `deployed` | the file ships through `build.py`: a hook, a gate, an agent template, a workflow, or anything they import | Does it work in the deployed layout, not just the source tree? |
 | `boundary` | the AC names a range, a limit, a count, or a shape that can be empty / one / many | empty / one / many / limit / malformed-but-parseable |
 | `failure` | the AC names an error path, a fallback, or a fail-open/fail-closed contract | the error path — and does it fail *closed*? |
+| `discrimination` | **conditional, trigger-fired:** the work fixes a bug, or adds or changes a condition of a gate or guard, or a `test_spec` entry carries `must_catch` | Would this test go red under a named plausible wrong version of the code, not only when the code is absent? Incident catalogue: [failure catalogue](test-angles-failure-catalogue.md#discrimination-shaped-failure-family). |
 
 **How to select, given the cap of 4.** `criterion` + `reachability` are the **floor** —
 always both, never negotiable; that pair is what the generator's reachability floor now
@@ -96,9 +95,8 @@ their trigger*, not that all five are always charged. Where a trigger in column 
 that angle is mandatory. Floor (2) + at most two more = the cap of 4. When three or more
 triggers fire, **cover two with one test** rather than dropping one: a subprocess test
 that runs the deployed copy against a real on-disk artifact charges `reachability`,
-`real_artifact` and `deployed` at once. Count angles covered, not tests written. The two
-conditional angles never consume a slot by default — see "the two conditional angles"
-below for why.
+`real_artifact` and `deployed` at once. Count angles covered, not tests written. The three
+conditional angles never take a slot by default; `discrimination` may share one with `criterion`.
 
 **`criterion`** — the AC-literal happy path, asserted on the unit that implements it.
 
@@ -111,12 +109,11 @@ dispatch topology, not execution).
 
 > **Modifier — `must_block`.** For any gate / guard / validator AC: a second test feeds
 > known-bad input through the *same* entry point and asserts it **blocks** (non-zero exit,
-> or the blocker string in the payload). A gate that cannot block is inert, and a
-> positive-path test alone cannot tell the difference. It normally rides the
-> `reachability` entry, because that is where a gate's production entry point lives — but
-> it attaches to whichever angle carries that entry point. When the gate *is* a schema
-> validator the entry point is `real_artifact`; when it is a routing branch, `seam`. The
-> modifier is about what is being guarded, not which slot it occupies.
+> or the blocker string in the payload) — a gate that cannot block is inert, and a
+> positive-path test alone can't tell the difference. It normally rides `reachability`,
+> since that is usually where a gate's entry point lives, but it attaches to whichever
+> angle carries that entry point: `real_artifact` for a schema validator, `seam` for a
+> routing branch. The modifier is about what is being guarded, not which slot it occupies.
 
 **`seam`** — pipe the REAL producer's actual output into the REAL consumer and assert the
 consumer's observable behaviour. Not satisfied by calling an extended function with the
@@ -130,11 +127,21 @@ re-executes in an already-populated namespace and masks cold-import errors.
 **`deployed`** — run `build.py` into a temp target, then exercise the DEPLOYED copy.
 Source-tree imports are structurally blind to deploy-manifest gaps.
 
+**`failure`** — the can-fail proof. A check that only ever reports "clean" licenses the
+assumption it exists to falsify, so the obligation is not "does the error path exist" but
+"can this check observe and report the bad state" — proved by deliberately inducing that
+state via a **named mutation** and asserting the check catches it **by name**, not just
+that something failed (the same discipline as the zero-file incident under "Existing
+machinery" below). [TQ-600a-3](../acceptance-criteria/testing-quality/TQ-600-suite-feedback-latency/TQ-600a-3.yaml)
+is the worked example: it dirties the TQ-600a-1 shared layout inside one consuming test and
+requires the comparison to name both the altered file and the offending test by node id —
+which separates `failure` coverage from a `criterion` test asserting an error message exists.
+
 ## Failure catalogue — the evidence base
 
 > See [test-angles-failure-catalogue.md](test-angles-failure-catalogue.md) for the full
 > incident-by-incident evidence base — reachability, seam, authenticity, deployment, and
-> negative-control gaps, plus the two conditional angles' concentrated evidence — that
+> negative-control gaps, plus the conditional angles' concentrated evidence and the discrimination-shaped family — that
 > justifies every core angle in the taxonomy above.
 
 ## Literature grounding
@@ -209,16 +216,16 @@ All four claims verified against the working tree on 2026-08-14; a fifth was add
 verified on 2026-09-21 (TQ-600a-1), and extended on 2026-09-28 (TQ-600a-1-i).
 
 - **`user-surface-smoker` already implements the reachability angle** for user-facing
-  surfaces, at priority 11.5, with a built-in negative control (`placeholder_signature` —
-  a regex the output must NOT match). Routing is data-driven off `declares_side_effect`
-  (`_build_agents_map` in `generate_ticket_from_ac.py`, BP-1100f-5). **It fires on 0 of the
-  2,888 records in the AC store** (every `.yaml` under `docs/acceptance-criteria/`; all 2,888
-  parse). `declares_side_effect` is absent from `config/ac_store_schema.json` at HEAD,
-  whose root is `additionalProperties: false` (`:15`), so no AC can legally carry it. A
-  sibling change adding the property is in the working tree, uncommitted — but even once it
-  lands, zero AC records carry the field, so authoring is the second half of the fix. This
-  is EPIC-ComputedQualityGates FP-1 layer 2 repeating exactly: the mechanism shipped, the
-  store never carried the data.
+  surfaces, at priority 11.5, with a built-in negative control (`placeholder_signature`
+  — a regex the output must NOT match), routed off `declares_side_effect`
+  (`_build_agents_map` in `generate_ticket_from_ac.py`, BP-1100f-5). **It fires on 0 of
+  the 2,888 records in the AC store** (every `.yaml` under `docs/acceptance-criteria/`,
+  all of which parse). `declares_side_effect` is absent from `config/ac_store_schema.json` at
+  HEAD, whose root is `additionalProperties: false` (`:15`), so no AC can legally carry
+  it — a sibling change adding the property sits uncommitted, and even once it lands,
+  zero records carry the field, so authoring is the second half of the fix. This is
+  EPIC-ComputedQualityGates FP-1 layer 2 repeating: the mechanism shipped, the store
+  never carried the data.
 - **`test_requirements.schema.json` v1.1.0 already defines the vocabulary**:
   `type: live_dispatch` plus the required-when-`live_dispatch` field `surface_invoked`
   (`config/test_requirements.schema.json:48-71`). Outside `docs/`, the string
@@ -237,48 +244,40 @@ verified on 2026-09-21 (TQ-600a-1), and extended on 2026-09-28 (TQ-600a-1-i).
   `_classify_outcomes()` treats `XFAIL`, `XPASS`, `SKIPPED`, `FAILED`, `ERROR` and
   "nodeid not found" as non-passing (fail-closed) — which is what defeats xfail-masking.
   An angle gate should extend this scanner with a second tag axis, not duplicate it.
-- **`shared_reference_layout` (TQ-600a-1) now gives the "deployed exactly once" criterion
+- **`shared_reference_layout` (TQ-600a-1) gives the "deployed exactly once" criterion
   test a fixture to request instead of a harness to invent**: a session-scoped pytest
   fixture in `scripts/suite_performance/pytest_shared_reference_layout.py`, registered
   whole-suite via `pytest.ini`'s `-p scripts.suite_performance.pytest_shared_reference_layout`
-  addopts entry (mirroring the `-p scripts.ac_store.pytest_ac_enforcement` precedent above).
-  The underlying `get_or_produce_shared_layout()` (`scripts/suite_performance/_shared_layout_producer.py`)
-  is lazy, cross-process-lock-safe, and hands every requester — including requesters on
-  different pytest-xdist workers — the identical, fully-produced root path, exactly once
-  per run however many callers ask. It exists specifically so a criterion-angle test
-  asserting "the package is really deployed exactly once for the whole run" can request
-  the fixture directly rather than each test inventing its own deploy-counting harness.
-  **Existence is a `reachability`-angle fact, not a `criterion`-angle one**: the fixture
-  being real does not by itself prove any given test is routed onto it — exactly the
-  `user-surface-smoker` gap above, where the mechanism exists and fires on 0 of 2,888
-  records. A test that never requests `shared_reference_layout` still deploys its own
-  copy. The boundary is read-only: it is only for tests that read a deployed layout
-  without mutating it. A test that mutates the package before building (e.g.
-  `unit_tests/test_bp_900g_8*.py`) still builds its own copy and must not route onto this
-  fixture — sharing would corrupt the shared copy for every other consumer. See CLAUDE.md
-  "Tests must not spawn their own `build.py` — reuse a shared deployed layout" for the
-  standing rule this fixture implements, and TQ-600a-1 for the full contract.
-  **TQ-600a-1-i pins the cheapest boundary case on top of that contract, with no
-  production code changed** — the behaviour already existed, merged under TQ-600a-1
-  (PR #941): a selection with zero consumers of `shared_reference_layout` must never
-  enter `get_or_produce_shared_layout()` at all — no deploy subprocess runs, and the
-  laziness holds per pytest-xdist worker, not merely per run — while widening the same
-  selection by exactly one consumer must trigger exactly one deploy. Three tests in
-  `unit_tests/suite_performance/test_tq_600a_1_i.py` pin this, came up green on first
-  run, and now protect this pre-existing behaviour: one asserts no `build.py
-  --target-dir` subprocess runs for the zero-consumer selection, one asserts an idle
-  pytest-xdist worker with no scheduled consumer produces nothing, and one reaches the
-  fixture only through the real, un-augmented `python -m pytest` entry point
-  (`pytest.ini`'s `-p scripts.suite_performance.pytest_shared_reference_layout`
-  registration), not an import-only path. Both mutations these tests are built to catch
-  land in the fixture itself, `scripts/suite_performance/pytest_shared_reference_layout.py`:
-  making `shared_reference_layout` `autouse=True`, or producing the layout at
-  plugin-import time or in a worker-startup hook instead of on first request. Non-entry
-  into the producer is observed independently of any run report, via
-  `emit_execution_signal()` / `EXECUTION_LOG_ENV_VAR`
-  (`scripts/suite_performance/_shared_layout_coordination.py`); the reported-deploy-count
-  halves of this same boundary are deferred to TQ-600a-6, which has no reporting surface
-  yet to assert against.
+  (mirroring `-p scripts.ac_store.pytest_ac_enforcement` above). The underlying
+  `get_or_produce_shared_layout()` (`scripts/suite_performance/_shared_layout_producer.py`)
+  is lazy and cross-process-lock-safe, handing every requester — including different
+  xdist workers — the identical, fully-produced root path exactly once per run, so a
+  criterion-angle test can request it directly instead of inventing its own
+  deploy-counting harness.
+  **Existence is a `reachability`-angle fact, not a `criterion`-angle one**: being real
+  doesn't prove any given test is routed onto it — the same `user-surface-smoker` gap
+  above. A test that never requests `shared_reference_layout` still deploys its own copy.
+  The boundary is read-only: a test that mutates the package before building (e.g.
+  `unit_tests/test_bp_900g_8*.py`) must keep building its own copy, or it corrupts the
+  shared copy for every consumer. See CLAUDE.md "Tests must not spawn their own
+  `build.py` — reuse a shared deployed layout" for the standing rule, and TQ-600a-1 for
+  the full contract.
+  **TQ-600a-1-i pins the cheapest boundary case, no production code changed** — merged
+  under TQ-600a-1 (PR #941): a zero-consumer selection must never enter
+  `get_or_produce_shared_layout()` (no deploy subprocess, laziness holds per xdist
+  worker), while one consumer must trigger exactly one deploy. Three tests in
+  `unit_tests/suite_performance/test_tq_600a_1_i.py` pin this, green on first run: no
+  subprocess for zero consumers, an idle worker produces nothing, and the fixture is
+  reached only through the real `pytest.ini` `-p` entry point, not an import-only path.
+  The mutations these tests catch both live in `pytest_shared_reference_layout.py`:
+  `autouse=True`, or producing the layout at plugin-import/worker-startup time instead of
+  on first request. Non-entry is observed independently via `emit_execution_signal()` /
+  `EXECUTION_LOG_ENV_VAR` (`scripts/suite_performance/_shared_layout_coordination.py`);
+  the reported-deploy-count half is deferred to TQ-600a-6, which has no reporting
+  surface yet.
+  **TQ-600a-5 (PR #957) made the route a declaration: THREE cases, not two — reader, mutator,
+  and UNDECLARED, whose two-branch default corrupts by routing it to the shared layout. The
+  marker decides, nothing else; CLAUDE.md carries the rule and the exact spellings.**
 
 ## Relationship to BO-2900
 
@@ -297,7 +296,7 @@ and `declares_side_effect`.
 
 - [docs/testing/test-angles-failure-catalogue.md](test-angles-failure-catalogue.md) — the
   per-mechanism incident evidence base extracted from this doc: reachability, seam,
-  authenticity, deployment, and negative-control gaps, plus the two conditional angles.
+  authenticity, deployment, and negative-control gaps, plus the conditional angles.
 - [docs/testing/test-angles.verification.flow.json](test-angles.verification.flow.json) —
   the machine-readable companion to this doc: 16 falsifiable checks, each with a runnable
   command, a negative control, and an observed state, that answer "is this taxonomy live
@@ -310,3 +309,4 @@ and `declares_side_effect`.
 - `config/test_requirements.schema.json` — the `live_dispatch` / `surface_invoked` vocabulary to reuse
 - `templates/agents/test-writer.md` — Rule 3 (cross-layer seam) and the skip rule
 - `scripts/ac_store/done_proof.py` — the fail-closed `# covers:` scanner to extend
+- [TQ-600a-3.yaml](../acceptance-criteria/testing-quality/TQ-600-suite-feedback-latency/TQ-600a-3.yaml) — worked example of the `failure`-angle can-fail-proof pattern

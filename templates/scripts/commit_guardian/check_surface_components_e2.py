@@ -232,7 +232,13 @@ def _extract_frontmatter(content: str) -> dict | None:
     try:
         import yaml  # type: ignore[import]
 
-        data = yaml.safe_load(match.group(1))
+        # Reverted to the pure-Python loader (loader-audit, TQ-600a-11
+        # fix-pass, 2026-10-07): this except clause converts a hard BLOCK
+        # ("components frontmatter missing or empty") into a silent skip, so
+        # a more permissive parser directly erodes this check. One small
+        # frontmatter block per staged file -- no speed case for the fast
+        # loader here.
+        data = yaml.load(match.group(1), Loader=yaml.SafeLoader)
         return data if isinstance(data, dict) else None
     except (ImportError, Exception):  # noqa: BLE001
         # PyYAML unavailable or parse error — skip the file (fail-open)

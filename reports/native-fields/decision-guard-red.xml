@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="1" skipped="0" tests="1" time="0.202" timestamp="2026-10-02T09:11:17.209175+00:00" hostname="BrainDesk"><testcase classname="tests.knowledge.test_native_metadata_integration" name="test_native_record_flag_cannot_bypass_decision_approval" time="0.004"><failure message="Failed: DID NOT RAISE ValueError">def test_native_record_flag_cannot_bypass_decision_approval():
+        # covers: KM-400a-3-i
+        # angle: failure
+        from knowledge.projection.validation import validate_snapshot
+        from tests.knowledge.test_native_decision import _minimal
+    
+        raw = _minimal()
+        raw["approval"]["approval_status"] = "proposed"
+        entity = _entity("Decision:" + raw["id"], "Decision")
+        entity.properties["native_record"] = True
+        entity = native_metadata.apply_record(entity, NativeRecord("Decision", raw["id"], "record.yaml", raw))
+        snapshot = ProjectionSnapshot(repository_id="repo", source_sha="a" * 40, generation_id="one", nodes=[entity])
+&gt;       with pytest.raises(ValueError, match="[Dd]ecision"):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE ValueError
+
+tests\knowledge\test_native_metadata_integration.py:118: Failed</failure></testcase></testsuite></testsuites>

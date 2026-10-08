@@ -38,6 +38,40 @@ ARCHITECTURE: Delegates previous-length resolution and the shared line
     filename, so it can never be mistaken for a file that was measured and
     found within its limit.
 
+    DESCRIPTION UNAVAILABLE (GE-127e-3-i): a file already judged too_large
+    /grew for which no per-file description could be produced (content that
+    would not parse, no extractor registered for its kind, an extractor
+    that located no part, or a part set under-accounting for at least half
+    its quoted length) has its refusal block carry a
+    ``DESCRIPTION UNAVAILABLE: reason=<text>`` line naming the SPECIFIC
+    cause -- reusing _file_size_ratchet.py's INDETERMINATE / EMPTY HISTORY
+    ``TOKEN: reason=<text>`` line shape, but a THIRD, distinctly-named
+    token, and never their exit status. A failure to DESCRIBE leaves the
+    verdict already known (length measured, found over), so it stays inside
+    the SAME exit-1 refusal, on stdout -- never exit 2, and never printed at
+    all for a file that is not already refused.
+
+    ADDED-LINE COUNT UNAVAILABLE (GE-127f-2-i): the opposite shape from the
+    one above -- here the unavailable quantity (the GROSS measured lines a
+    staged change PUT INTO an already-oversized file,
+    ``_file_size_ratchet.resolve_added_measured_lines``) is itself an INPUT
+    the verdict depends on (whether ``lines > previous - added`` can be
+    evaluated at all), not something printed after the verdict is already
+    known. Per architect-review's ruling this REUSES the pinned
+    ``INDETERMINATE`` token and exit 2 rather than minting a fourth token --
+    the same reused vocabulary GE-127b-1-i already established one input
+    earlier in this same pipeline. Both of
+    ``AddedLineCountUnavailableError``'s two situations (the previous
+    content unreachable; the current content reached but uninterpretable)
+    are caught at the two call sites that raise it
+    (``_classify_file``, ``_print_grown_file``) through the shared
+    ``_report_indeterminate`` printer, which every exit-2 site on this
+    module's floor now shares. The genuine-zero arm -- a change that
+    measurably added nothing to an already-oversized file, including a
+    staged DELETION -- never reaches this catch at all: it is a return
+    value (0), never an exception, so it stays on the ordinary exit-0
+    "pass" path and is never mistaken for either refusing situation.
+
 Pre-commit hook to block files exceeding line limits.
 
 Line Limits (see commit_guardian.json's file_size section for the
@@ -53,8 +87,11 @@ Exit Codes:
         the previous-length history is empty)
     1 - One or more files exceed limits, or grew while already over
     2 - INDETERMINATE: the previous-length source could not be reached at
-        all, a resolvable HEAD blob could not be interpreted, or a staged
-        file's CURRENT content could not be opened or decoded (GE-127a-1-i)
+        all, a resolvable HEAD blob could not be interpreted, a staged
+        file's CURRENT content could not be opened or decoded (GE-127a-1-i),
+        or the gross measured lines an already-oversized file's staged
+        change put into it could not be established -- unreachable or
+        uninterpretable (GE-127f-2-i)
 
 Usage:
     poetry run python scripts/commit_guardian/check_file_size.py
@@ -69,13 +106,20 @@ from _resolve_root import find_project_root
 
 project_root = find_project_root()
 
-from _file_description import describe_file, format_description_lines
+from _file_description import (
+    describe_file,
+    describe_file_failure_reason,
+    format_could_not_describe_line,
+    format_description_lines,
+)
 from _file_size_ratchet import (
     EMPTY_HISTORY_REASON,
+    AddedLineCountUnavailableError,
     CurrentLengthUnmeasurableError,
     PreviousLengthSourceError,
     describe_measurement_rule,
     measure_current_length,
+    resolve_added_measured_lines,
     resolve_head_covered_paths,
     resolve_parent_revisions,
     resolve_previous_lengths,
@@ -102,6 +146,32 @@ _NO_HELP_MARKER = (
     "content inside triple-quoted strings or block comments does NOT count toward "
     "this length and removing it will NOT reduce it"
 )
+
+
+def _report_indeterminate(reason: str) -> int:
+    """Print the one, shared ``INDETERMINATE: reason=<text>`` line and return
+    its exit code.
+
+    ONE OUTCOME, NEVER A SECOND SURFACE (GE-127f-2-i), applied to the printer
+    itself rather than just to the message: every call site on this module's
+    fail-closed floor -- the staged-file listing, either half of previous
+    -length source resolution, a staged file's current content, and (as of
+    GE-127f-2-i) either half of establishing what a change added to an
+    already-oversized file -- reuses this single function so the wording and
+    exit status can never drift apart between them. Reuses BP-1600a-2-ii's
+    pinned ``INDETERMINATE`` token and exit-2 contract unchanged; this
+    function mints nothing new.
+
+    Args:
+        reason: The verbatim reason text naming which situation occurred.
+            Printed unparaphrased -- callers pass an exception's own
+            ``.reason`` attribute.
+
+    Returns:
+        2, always -- the pinned INDETERMINATE exit status.
+    """
+    print(f"INDETERMINATE: reason={reason}", file=sys.stderr)
+    return 2
 
 
 def get_staged_files() -> dict[str, bool]:
@@ -249,11 +319,19 @@ def _read_content_for_description(filepath: str) -> str | None:
 
 
 def _print_file_description(filepath: str, quoted_length: int) -> None:
-    """Append the per-file description to the block just printed for *filepath*.
+    """Append the per-file description -- or a could-not-describe line
+    naming why -- to the block just printed for *filepath*.
 
-    Prints nothing when the content cannot be read, cannot be parsed, or
-    the located parts do not account for at least half of *quoted_length*
-    -- see ``_file_description.describe_file``.
+    Prints nothing at all when the content itself cannot be read (a read
+    /decode failure is logged by ``_read_content_for_description`` and
+    withheld here, per this repo's error-handling policy). Otherwise prints
+    exactly one of: the Parts/Division description (``describe_file``
+    succeeded), or a ``DESCRIPTION UNAVAILABLE: reason=<text>`` line naming
+    the SPECIFIC cause (GE-127e-3-i) -- never both, never neither, and
+    never a substitute sentence standing in for either. This function is
+    reached only from the two refusal printers, both of which run only for
+    a file `main()`'s classification loop has ALREADY judged too_large/grew
+    from length alone -- so nothing printed here can move that verdict.
 
     Args:
         filepath: The refused file's path.
@@ -264,11 +342,15 @@ def _print_file_description(filepath: str, quoted_length: int) -> None:
     if content is None:
         return
     description = describe_file(filepath, content, quoted_length)
-    if description is None:
+    if description is not None:
+        for line in format_description_lines(description):
+            print(line)
+        print()
         return
-    for line in format_description_lines(description):
-        print(line)
-    print()
+    reason = describe_file_failure_reason(filepath, content, quoted_length)
+    if reason is not None:
+        print(format_could_not_describe_line(reason))
+        print()
 
 
 def _print_measures_line() -> None:
@@ -309,23 +391,51 @@ def _print_grown_file(filepath: str, previous_length: int, current_length: int, 
     (via the shared ``Measures:`` line and asymmetry advice) what that
     length measures.
 
+    GE-127f-2 / GE-127f-1: also states the GROSS measured lines the change
+    PUT INTO the file and the required length that leaves -- the LESS
+    DEMANDING of ``limit`` and ``previous_length - added``
+    (``max(limit, previous_length - added)``), never the uncapped
+    subtraction alone -- recomputed here (rather than threaded through as a
+    parameter) so this function's own signature stays exactly the four
+    positional arguments every existing call site -- including the
+    disposable-copy fixtures' hand-maintained ``main()`` overrides in this
+    suite's test files, which this ticket must not edit -- already passes
+    it.
+
     Args:
         filepath: The staged file's path.
         previous_length: The length it stood at, at HEAD, before the change.
         current_length: The length it stands at after the staged change.
         limit: The permitted length for this file's extension.
+
+    Raises:
+        AddedLineCountUnavailableError: the gross added-line count could not
+            be re-established for this already-refused file. Left UNCAUGHT
+            here by design -- GE-127f-2-i's own floor in ``main()`` wraps
+            the loop that calls this function and converts it to the same
+            ``INDETERMINATE`` (exit 2) refusal used everywhere else on this
+            module's fail-closed floor, via the shared ``_report_indeterminate``
+            printer. This function itself stays a pure printer that never
+            catches its own callee's failure.
     """
+    added = resolve_added_measured_lines(filepath, resolve_parent_revisions())
+    required = max(limit, previous_length - added)
     print("❌ FILE GREW WHILE ALREADY OVER ITS LIMIT:")
     print(f"   {filepath}")
     print(f"   Previous length: {previous_length} lines")
     print(f"   New length: {current_length} lines")
     print(f"   Limit: {limit} lines")
+    print(f"   This change added {added} measured line(s).")
+    print(
+        f"   Required length: {required} lines or below (the less demanding of the "
+        "permitted length and previous length minus what this change added)."
+    )
     _print_measures_line()
     print()
     _print_file_description(filepath, current_length)
-    print("   An already-oversized file may still be worked on, but a change")
-    print("   that leaves it LONGER than it stood before is refused. Shrink")
-    print("   it, or leave its length unchanged, to commit this edit.")
+    print("   An already-oversized file may still be worked on, but a change that")
+    print("   puts lines into it must take out about twice as many to compensate,")
+    print("   until the file is back at the required length stated above (never more).")
     _print_asymmetry_advice()
     print()
 
@@ -434,8 +544,7 @@ def _resolve_ratchet_or_indeterminate(covered_paths: list[str]) -> tuple[dict[st
     try:
         covered_at_head = resolve_head_covered_paths(CHECKED_EXTENSIONS)
     except PreviousLengthSourceError as exc:
-        print(f"INDETERMINATE: reason={exc.reason}", file=sys.stderr)
-        return None, 2
+        return None, _report_indeterminate(exc.reason)
 
     if not covered_at_head:
         # Empty history (unborn HEAD, or a tree with no covered file) --
@@ -448,8 +557,7 @@ def _resolve_ratchet_or_indeterminate(covered_paths: list[str]) -> tuple[dict[st
         parent_revisions = resolve_parent_revisions()
         previous_lengths = resolve_previous_lengths(covered_paths, parent_revisions)
     except PreviousLengthSourceError as exc:
-        print(f"INDETERMINATE: reason={exc.reason}", file=sys.stderr)
-        return None, 2
+        return None, _report_indeterminate(exc.reason)
 
     return previous_lengths, None
 
@@ -458,6 +566,27 @@ def _classify_file(
     filepath: str, previous_lengths: dict[str, int]
 ) -> tuple[str, int, int | None]:
     """Classify one staged, covered file into pass / grew / too-large.
+
+    GE-127f-2 / GE-127f-1: for a file already past its permitted length, the
+    comparison is no longer `lines > previous` (net growth -- the forbidden,
+    self-referential reading GE-127f-2's own Implementation Notes name as the
+    single most likely wrong implementation). It is
+    `lines > max(limit, previous - added)`, where `added` is the GROSS count
+    of measured lines the staged change PUT INTO the file
+    (resolve_added_measured_lines, denominated in the same unit as
+    `lines`/`previous` via the shared count_content_lines stripping rule --
+    never derived by subtracting `lines` and `previous`, which are already
+    in hand), and the `max(limit, ...)` term (GE-127f-1) caps the demand at
+    the permitted length so an already-oversized file is never asked to give
+    back more than it would take to reach `limit` outright. This strictly
+    generalises the prior comparison: it is recovered EXACTLY when
+    `added == 0` and `previous - added >= limit` (a pure deletion, or an
+    edit touching only unmeasured content, on a file the cap does not
+    reach), which is also GE-127b-1's own reconciled boundary -- see that
+    record's amended descriptor,
+    test_ge_127b_1_an_oversized_file_edited_only_in_unmeasured_content_commits_at_its_previous_length.
+    Per GE-127f-2's COST BUDGET note, `added` is established ONLY inside
+    this branch -- a file that is not already oversized never pays for it.
 
     Args:
         filepath: The staged file's path.
@@ -469,6 +598,16 @@ def _classify_file(
         one of "pass", "grew", or "too_large". reference_length is the
         previous length for "grew", the limit for "too_large", or None for
         "pass".
+
+    Raises:
+        AddedLineCountUnavailableError: the gross added-line count could not
+            be established for an already-oversized file. Left UNCAUGHT
+            here by design -- GE-127f-2-i's own floor in ``main()`` wraps the
+            classification loop that calls this function and converts it to
+            the same ``INDETERMINATE`` (exit 2) refusal used everywhere else
+            on this module's fail-closed floor, via the shared
+            ``_report_indeterminate`` printer. This function itself stays a
+            pure classifier that never catches its own callee's failure.
     """
     lines = count_lines(filepath)
     limit = get_limit_for_extension(filepath)
@@ -476,8 +615,13 @@ def _classify_file(
 
     if previous is not None and previous > limit:
         # This file is already past its permitted length per GE-127b: judge
-        # it against its OWN previous length, never against the fixed limit.
-        if lines > previous:
+        # it against the LESS DEMANDING of its permitted length and its own
+        # previous length less what the change added (GE-127f-2's `-added`
+        # term, floored at `limit` by GE-127f-1's cap) -- never the
+        # uncapped subtraction alone.
+        added = resolve_added_measured_lines(filepath, resolve_parent_revisions())
+        required = max(limit, previous - added)
+        if lines > required:
             return "grew", lines, previous
         return "pass", lines, None
 
@@ -496,8 +640,11 @@ def main() -> int:
         empty), 1 (a file exceeds its limit or grew while already
         oversized), or 2 (INDETERMINATE — the previous-length source could
         not be reached at all, a resolvable HEAD blob could not be
-        interpreted, or a staged file's CURRENT content could not be opened
-        or decoded).
+        interpreted, a staged file's CURRENT content could not be opened or
+        decoded, or (GE-127f-2-i) the gross measured lines an already
+        -oversized file's staged change put into it could not be
+        established -- the account of the change is unreachable, or it is
+        reached but its current content is uninterpretable).
     """
     # Ensure header output (emojis) works on Windows
     if sys.stdout.encoding.lower() != "utf-8":
@@ -510,8 +657,7 @@ def main() -> int:
     try:
         staged_files = get_staged_files()
     except PreviousLengthSourceError as exc:
-        print(f"INDETERMINATE: reason={exc.reason}", file=sys.stderr)
-        return 2
+        return _report_indeterminate(exc.reason)
 
     if not staged_files:
         return 0
@@ -536,17 +682,19 @@ def main() -> int:
                 failed_files.append((filepath, lines, reference))
             else:
                 passed_files.append((filepath, lines, is_new))
-    except CurrentLengthUnmeasurableError as exc:
-        print(f"INDETERMINATE: reason={exc.reason}", file=sys.stderr)
-        return 2
+    except (CurrentLengthUnmeasurableError, AddedLineCountUnavailableError) as exc:
+        return _report_indeterminate(exc.reason)
 
     # Print results
     print("\n📏 File Size Check\n")
     _print_scope_declaration(measured_kinds, unmeasured_kinds)
     print(f"📊 Compared {len(previous_lengths)} file(s) against their previous length.\n")
 
-    for filepath, previous, lines in grown_files:
-        _print_grown_file(filepath, previous, lines, get_limit_for_extension(filepath))
+    try:
+        for filepath, previous, lines in grown_files:
+            _print_grown_file(filepath, previous, lines, get_limit_for_extension(filepath))
+    except AddedLineCountUnavailableError as exc:
+        return _report_indeterminate(exc.reason)
 
     for filepath, lines, limit in failed_files:
         _print_too_large_file(filepath, lines, limit)
@@ -570,6 +718,146 @@ if __name__ == "__main__":
 ====================================================================
 DECISION HISTORY
 ====================================================================
+- 2026-10-07 [python-coder/GE-127f-4]: `_print_grown_file`'s closing advice
+  sentence stated a ONE-for-one obligation ("Shrink it, or add no more than
+  you remove, to commit this edit") while the enforced rule
+  (`required = max(limit, previous_length - added)`, unchanged by this
+  record) is a TWO-for-one obligation below the cap: a change adding A
+  measured lines must take out at least 2A, not A. An author who removed
+  exactly as many lines as they added followed the printed advice to the
+  letter and was still refused -- the AC's reported cost was three commit
+  cycles to discover the real obligation by trial and error. Replaced the
+  two misleading sentences with wording that states the ratio in the
+  author's terms ("must take out about twice as many to compensate") and
+  stays true at the cap by pointing at the already-printed `Required
+  length:` figure ("until the file is back at the required length stated
+  above (never more)") rather than re-deriving the cap in prose. PROSE ONLY:
+  `required = max(limit, previous_length - added)` in both `_print_grown_file`
+  and `_classify_file`, and every printed figure (Previous length, New
+  length, Limit, This change added, Required length), are byte-for-byte
+  unchanged -- confirmed by diff review before sign-off. Did NOT relax the
+  enforcement to net growth (`lines > previous`); GE-127f-2's own
+  Implementation Notes name that the single most likely wrong
+  implementation, and GE-127f's criteria states the two-for-one obligation
+  as the intended outcome -- the message was the defect, not the arithmetic.
+- 2026-09-30 [python-coder/GE-127f-1]: `_classify_file` and
+  `_print_grown_file` both computed the already-oversized-file requirement
+  as the uncapped `previous - added`, so a file only modestly over its
+  limit (e.g. 410 lines against a 400 limit, +50 added) was wrongly asked
+  to shrink to 360 instead of the true, less-demanding requirement of 400
+  -- 100 lines removed instead of the 60 the AC's worked example requires.
+  Changed both call sites to `required = max(limit, previous - added)`:
+  "the less demanding of" means the ceiling that is EASIER to satisfy, i.e.
+  the LARGER of the two candidates (confirmed against GE-127f-1.yaml's own
+  worked arithmetic, "410 with 50 added -> the less demanding of 400 and
+  360 is 400" -- `max()`, not `min()`; `min()` would invert the gate into
+  something harsher than the ratchet is meant to be). `limit` was already
+  in scope at both sites, so NEITHER function's signature changed -- the
+  three fixture files that depend on both signatures verbatim
+  (`_ge_127e_3_i_fixture.py`'s injected `main()`,
+  `_ge_127a_1_ordinary_commit_fixture.py`'s mutation targets,
+  `test_ge_127d_1.py`'s live `inspect.signature` check) are unaffected.
+  Also corrected `_print_grown_file`'s printed parenthetical, which
+  previously read "(previous length minus what this change added)" and
+  became factually wrong the moment the cap binds (a required length of
+  400 is not "410 minus 50"); it now reads "(the less demanding of the
+  permitted length and previous length minus what this change added)".
+  Updated both functions' docstrings and `_classify_file`'s inline comment
+  to state the capped formula rather than the uncapped one they described
+  before this change. PERMISSIVENESS CHECKED, NOT ASSUMED: capping at
+  `limit` makes the gate strictly MORE PERMISSIVE for a file far above its
+  limit (previous - added already exceeds `limit` there, so `max` never
+  binds and the comparison is unchanged) and identical for a file whose
+  uncapped requirement was already below `limit` in the old, buggy sense
+  that never triggered a refusal by itself -- the sibling suites explicitly
+  re-run after this change (GE-127f-2's own 3 files, GE-127f-2-i, all four
+  split GE-127b-1 files plus GE-127b-1-i, GE-127a, GE-127c-1, GE-127d-2,
+  GE-127e-2/3/3-i/4, and the merge-aware suite) all stayed green at their
+  documented counts, confirming no sibling descriptor relied on the
+  uncapped behaviour to refuse something this change now permits. TWO
+  NAMED-MUTATION INJECTIONS BOTH BITE ON THE POST-FIX CODE: THE CAP
+  (dropping `max(limit, ...)` back to the bare subtraction) now finds a
+  real target line and reddens the 410-at-400 arm while leaving every
+  GE-127f-2 arm green; THE MULTIPLIER (reverting to `previous` alone,
+  ignoring `added`) reddens the three previously-already-refused arms
+  while leaving the cap/free/silence arms green. TEMPLATES-ONLY: this
+  change was not built (`scripts/build.py --force` is denied in this
+  workspace); the deployed copy under `.leafcutter/`/`scripts/` reflects
+  the pre-GE-127f-1 (uncapped) behaviour until the next build.
+- 2026-09-29 [python-coder/GE-127f-2-i]: Catches
+  `AddedLineCountUnavailableError` -- deliberately left uncaught by ticket
+  07/GE-127f-2 -- at its two raising call sites: the classification loop in
+  `main()` (extended the existing `except CurrentLengthUnmeasurableError`
+  tuple to also catch it, since both already print the identical
+  `INDETERMINATE: reason=...` shape and return 2) and a NEW `try/except`
+  wrapped around the `grown_files` print loop that calls `_print_grown_file`
+  (kept as a SEPARATE catch site, per architect-review's ruling against
+  collapsing it into `_classify_file`'s: `_print_grown_file`'s four
+  -positional-argument signature is depended on verbatim by hand-maintained
+  disposable `main()` overrides in `_ge_127e_3_i_fixture.py` and mutation
+  targets in `_ge_127a_1_ordinary_commit_fixture.py`, neither in this
+  ticket's scope to edit). REUSES the pinned `INDETERMINATE` token and exit
+  2 unchanged -- does NOT mint a fourth verdict, per architect-review's
+  ruling that this situation (an input the verdict itself depends on) is the
+  opposite shape from GE-127e-3-i's `DESCRIPTION UNAVAILABLE` (which fires
+  after a verdict is already decided). Extracted the previously 4x-duplicated
+  `print(f"INDETERMINATE: reason={exc.reason}", file=sys.stderr); return 2`
+  pattern into one shared `_report_indeterminate(reason)` helper and
+  converted all SIX now-existing call sites (the two pre-existing
+  `_resolve_ratchet_or_indeterminate` sites, `main()`'s `get_staged_files`
+  site, `main()`'s classification-loop site, and this ticket's two new
+  sites) to call it -- this ticket's own "ONE OUTCOME, NEVER A SECOND
+  SURFACE" note applied to the printer itself, verified behaviour
+  -preserving by re-running every sibling AC's own regression suite (see
+  sign-off comment for the exact counts) rather than assumed. The
+  genuine-zero arm (including a staged DELETION) never reaches either new
+  catch: `resolve_added_measured_lines` returns 0 for it, never raises, so
+  it stays on the ordinary exit-0 "pass" path untouched by this change.
+- 2026-09-28 [python-coder/GE-127f-2]: `_classify_file`'s already-oversized
+  branch now judges `lines > previous - added` instead of `lines > previous`
+  -- `added` is the GROSS measured lines the staged change PUT INTO the
+  file (`_file_size_ratchet.resolve_added_measured_lines`), never the net
+  (current-minus-previous) growth, which is self-referential and collapses
+  back to GE-127b unchanged (a same-length replacement would register as
+  having added nothing). The new comparison is a strict generalisation of
+  the old one, recovered exactly when `added == 0` -- also the shape
+  GE-127b-1's own amended boundary descriptor now pins
+  (`test_ge_127b_1_an_oversized_file_edited_only_in_unmeasured_content_commits_at_its_previous_length`).
+  `added` is established ONLY inside this branch, per the AC's own COST
+  BUDGET note -- a file that is not already oversized pays nothing new.
+  `_print_grown_file` now also states the added-line count and the required
+  length, recomputed internally (via the same `resolve_added_measured_lines`
+  call) rather than threaded through as a new parameter, so its own
+  signature -- and `_classify_file`'s, and `_resolve_ratchet_or_
+  indeterminate`'s -- stay byte-for-byte the same as every existing call
+  site already calls them with, including two test/fixture modules in this
+  suite (`_ge_127a_1_ordinary_commit_fixture.py`'s string-replacement
+  mutation targets, `_ge_127e_3_i_fixture.py`'s disposable `main()`
+  override) that this ticket must not edit. Neither function's RETURN
+  shape changed either, for the same reason. Verified: the full
+  commit_guardian regression suite (GE-127a, GE-127b-1's four split files
+  plus `_i`, GE-127c-1, GE-127d-2, GE-127e-2/3/3-i/4, the KI-CG-20260908
+  merge-aware suite, and `test_ac_limits_merge_scope.py`) stayed green
+  throughout, `check_file_size_rule_parity.py` exits 0, and
+  `ruff check scripts unit_tests` is clean. TEMPLATES-ONLY: this change
+  was not built (`scripts/build.py --force` is denied in this workspace);
+  the deployed copy under `.leafcutter/`/`scripts/` reflects the PRE
+  -GE-127f-2 behaviour until the next build.
+- 2026-09-28 [python-coder/GE-127e-3-i]: `_print_file_description` now
+  prints a `DESCRIPTION UNAVAILABLE: reason=<text>` line -- a NEW, third
+  token in `_file_size_ratchet.py`'s `TOKEN: reason=<text>` line shape,
+  never `INDETERMINATE`, never exit 2 -- naming the specific cause when
+  `describe_file` returns None, via the new sibling
+  `_file_description.describe_file_failure_reason`. `describe_file`'s own
+  signature and None-on-failure return contract are UNCHANGED (see
+  `_file_description.py`'s own module docstring for why: every existing
+  caller across GE-127e-1/e-2/e-3's test suites, and this AC's own
+  verdict-independence mutation proofs, matches on `describe_file(...) is
+  None` directly). The verdict is computed by `_classify_file` from length
+  alone, before this function ever runs, so nothing here can move it --
+  descriptors 1/3/4/5 (verdict independence, no substitute advice, never
+  refused for having guidance, never reported for an under-limit file) were
+  already true of the unmodified tree and remain true unchanged.
 - 2026-09-23 [python-coder/GE-127d-2 rework, H-1]: pr-reviewer found
   `_print_grown_file` (the GE-127b-1 ratchet-growth "grew" refusal) was left
   entirely outside the prior round's fix -- no permitted length, no

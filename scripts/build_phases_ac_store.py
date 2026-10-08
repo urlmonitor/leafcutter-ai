@@ -141,6 +141,7 @@ AC_STORE_DEPLOY_MAP: tuple[tuple[str, str], ...] = (
     # name — unit_tests/ac_store/test_bp_1100g_3_ii.py::_MODULE_FILES builds its
     # own simulated deployed tree and does not read this map.
     ("scripts/ac_store/_done_proof_phase_helpers.py", "_done_proof_phase_helpers.py"),
+    ("scripts/ac_store/_done_proof_composite.py", "_done_proof_composite.py"),
     # _done_proof_entry_point_gate.py (BO-2900a-1) is a THIRD sibling
     # extracted out of done_proof.py, alongside _done_proof_phase_helpers.py,
     # and done_proof.py imports it at MODULE scope too. Same fast-lane gate,
@@ -154,6 +155,7 @@ AC_STORE_DEPLOY_MAP: tuple[tuple[str, str], ...] = (
     # (BP-900h-4): an underscore reads to the declaring-files inspector as
     # "same-dir sibling", wrong for this cross-directory import.
     ("scripts/ac_store/done_proof_kind_support.py", "done_proof_kind_support.py"),
+    ("scripts/ac_store/pytest_outcome_reader.py", "pytest_outcome_reader.py"),  # TQ-500g-4
     # _kind_plugin.py (TQ-500f-3-i H-1) -- the pytest plugin (-p _kind_plugin)
     # done_proof_kind_support.py loads to read each test's real exception
     # type from pytest's own hook data. Must deploy alongside it.
@@ -233,6 +235,17 @@ AC_STORE_DEPLOY_MAP: tuple[tuple[str, str], ...] = (
     ("scripts/ac_store/epic_readiness_gate.py",       "epic_readiness_gate.py"),
     ("scripts/ac_store/epic_runtime.py",              "epic_runtime.py"),
     ("scripts/ac_store/epic_tickets.py",              "epic_tickets.py"),
+    # yaml_safe_loader.py (TQ-600a-11): the shared C-vs-pure-Python YAML
+    # parser accessor every store reader resolves through. Imported by
+    # modules in THIS map (e.g. validate_ac_schema.py, scan_ac_store.py,
+    # declared_files.py) at module scope, and reached from
+    # templates/scripts/commit_guardian/*.py hooks via the existing
+    # _ac_store_locator.ensure_ac_store_on_syspath() sibling-import
+    # convention (the same mechanism check_done_proof.py already uses for
+    # done_proof). MUST deploy or every one of those importers crashes with
+    # ModuleNotFoundError in the deployed layout -- the exact done_proof.py
+    # deploy-manifest incident CLAUDE.md documents, one level up.
+    ("scripts/ac_store/yaml_safe_loader.py",          "yaml_safe_loader.py"),
 )
 
 
@@ -513,6 +526,15 @@ def build_ac_store(target_root: Path, config: dict[str, Any],
 
 
 # DECISION HISTORY
+# - 2026-10-05 [python-coder/TQ-600a-11]: Added yaml_safe_loader.py to
+#   AC_STORE_DEPLOY_MAP. New shared accessor (getattr(yaml, "CSafeLoader",
+#   yaml.SafeLoader), generalising the scripts/render_effective_prompt.py:57
+#   precedent) every AC-store reader now resolves its YAML parser through.
+#   Imported at module scope by several scripts already in this map and
+#   reached from the deployed commit_guardian hooks via
+#   _ac_store_locator.ensure_ac_store_on_syspath(); without a deploy_map
+#   entry it would exist in source but not the deployed layout, crashing
+#   every one of those importers with ModuleNotFoundError. (#TQ-600a-11)
 # - 2026-09-28 [python-coder/merge-driven-split, EPIC-AProofThatReachedThe
 #   CodeByDirectImport/BO-2900a-3]: Moved build_ac_store_docs() out again,
 #   verbatim, into the new sibling module build_phases_ac_store_docs.py (and
@@ -552,3 +574,6 @@ def build_ac_store(target_root: Path, config: dict[str, Any],
 #   _declared_files_path_form.py, split out of declared_files.py to stay
 #   under check-file-size. Same reasoning as the entry above: declared_files.py
 #   imports it at module scope, so it must deploy alongside it.
+# - 2026-10-05 07:01 UTC [python-coder]: Deploy the composite proof sibling
+#   imported by done_proof so consumer installations retain language-aware proof.
+#   (#TICKETLESS reason=user-authorized-composite-proof-ci-repair)

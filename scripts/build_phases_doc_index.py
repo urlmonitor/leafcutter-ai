@@ -94,7 +94,7 @@ def build_doc_index(target_root: Path, config: dict, dry_run: bool, force: bool)
             _warn(f"Doc index: found no docs under {docs_path}; kept the populated {output_path} unchanged.")
             return 0
         output_path.parent.mkdir(parents=True, exist_ok=True)
-        output_path.write_text(content, encoding="utf-8")
+        output_path.write_text(content, encoding="utf-8", newline="\n")
     except OSError as exc:
         _warn(f"Failed to read or write {output_path}: {exc}")
         return 0

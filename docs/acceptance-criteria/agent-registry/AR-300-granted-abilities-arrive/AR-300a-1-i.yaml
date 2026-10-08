@@ -1,0 +1,108 @@
+id: AR-300a-1-i
+title: "A delivery comparison that examined no agents fails instead of reporting all-clear"
+component: agent-registry
+components:
+  - agent_registry
+  - template_compiler
+  - build_pipeline
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given the comparison of declared ability grants against compiled agent
+    prompts,
+    And a condition under which it resolves to zero agents -- no compiled
+      prompts available to it, or no declaration recognised in any of them,
+  When the comparison runs,
+  Then it reports a failure naming the empty population, rather than reporting
+    that every granted ability arrived,
+    And the failure states which of the two sides came back empty -- the set of
+      compiled prompts, or the set of declared grants -- so the cause is not
+      guessed at,
+    And the same failure occurs when the population is non-empty but smaller
+      than the number of agents the build compiled prompts for, so a comparison
+      that quietly reached only part of the tree is not read as a clean run,
+  So the comparison cannot pass by looking at nothing.
+depends_on:
+  - AR-300a-1
+doc_links:
+  - path: docs/acceptance-criteria/build_pipeline/BP-1500-honest-builds/BP-1500d-4.yaml
+    relationship: related
+    status: exists
+    relevance: "Prior art for exactly this posture: a check that found nothing to examine must not return the all-clear it returns when nothing is wrong."
+  - path: scripts/template_compiler.py
+    relationship: describes
+    status: exists
+    relevance: "Produces the compiled prompts that form one side of the population; an empty result here is the failure mode this criterion names."
+assigned_agent: python-coder
+estimated_complexity: S
+change_target: code
+risk_surface: internal
+it_requirements:
+  - "Both populations are derived at run time and both must be reported: the set of compiled prompts found, and the set of declared grants recognised. The failure names WHICH of the two came back empty."
+  - "The short-population case is measured against the number of agent prompts the build compiled on THAT run, obtained from the build itself rather than a stored figure. A run that compiled 60 and examined 6 must fail."
+  - "The compiled-prompt side is resolved through the declared output root (skills_config `output_root`, default `.leafcutter`), across every platform root the build wrote. The three concrete ways this side goes empty in practice are: a fresh worktree where the build has not run, a broken `.claude/agents` symlink, and a Windows copy-shim that is stale -- all three must fail loudly rather than skip."
+  - "Refuse, never warn (ADR-050): a zero or short population is a non-zero exit, not a logged notice."
+  - "This guard must itself be exercisable in isolation -- it cannot only be reachable through a full successful build, or the empty-population branch is the one branch no test can enter."
+  - "Follow the ADR-037 verdict-object shape so this failure and AR-300b-4's are consumable by one reader: a fixed object carrying the inspected count, the population source, and the findings list."
+test_spec:
+  - name: test_zero_compiled_prompts_fails_naming_the_prompt_side
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: unit
+    angle: failure
+    description: "With no compiled prompts available, the comparison fails and the message names the compiled-prompt side as the empty one -- it does not report that every granted ability arrived."
+  - name: test_zero_recognised_declarations_fails_naming_the_declaration_side
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: unit
+    angle: failure
+    description: "With compiled prompts present but no grant declaration recognised in any of them, the comparison fails and names the declaration side."
+  - name: test_population_shorter_than_compiled_prompt_count_fails
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: unit
+    angle: boundary
+    description: "Examining 6 of 60 compiled prompts fails; a partial reach is not read as a clean run."
+  - name: test_missing_output_root_fails_rather_than_skipping
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: unit
+    angle: failure
+    description: "An absent or unresolvable compiled-prompt directory (fresh worktree, broken shim symlink) fails rather than resolving to an empty set and exiting clean."
+test_rationale: >-
+  KI-ACS-001 is the precedent: a check whose glob matched zero files printed a
+  success line and exited clean for eight days. Every descriptor here drives the
+  check into a state where it has nothing to examine, because that is the only
+  state in which the difference between "nothing wrong" and "nothing looked at" is
+  observable. The missing-output-root descriptor is not hypothetical -- the
+  compiled tree is gitignored and verifiably absent from a fresh worktree.
+delivers_to: null
+expects_from:
+  ac_id: AR-300a-1
+  contract: "The declared-grant to compiled-prompt comparison whose population this criterion constrains"
+origin_agent: BrainCandy
+created: 2026-09-30
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-10-01'
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  WHY THIS IS NOT PARANOIA. The defect this whole tree exists for is a correct
+  computation whose result reached nobody while the build reported success. The
+  repair is a check, and a check is the same class of artifact: this repository
+  shipped one whose directory argument matched nothing, printed a success line
+  and exited 0 for eight days (KI-ACS-001), and a marker-registration setting
+  that had no effect for as long as the file existed. A rule that resolves to
+  nothing passes forever.
+
+  THE PARTIAL CASE IS THE LESS OBVIOUS HALF. Zero is easy to notice. A
+  comparison that reached 6 of 60 compiled prompts because the rest were read
+  from a stale location also reports clean, and looks like a working check.

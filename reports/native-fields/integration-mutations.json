@@ -1,0 +1,20 @@
+[
+  {
+    "mutation": "authored_fields",
+    "test": "tests/knowledge/test_native_metadata_integration.py::test_authored_and_derived_fields_survive_payload_and_physical_projection",
+    "exit_code": 1,
+    "detected": true
+  },
+  {
+    "mutation": "new_type_identity",
+    "test": "tests/knowledge/test_native_metadata_integration.py::test_distinct_native_types_keep_colliding_names_and_explicit_memberships",
+    "exit_code": 1,
+    "detected": true
+  },
+  {
+    "mutation": "readback_refusal",
+    "test": "tests/knowledge/test_native_metadata_integration.py::test_property_readback_rejects_missing_or_changed_data",
+    "exit_code": 1,
+    "detected": true
+  }
+]

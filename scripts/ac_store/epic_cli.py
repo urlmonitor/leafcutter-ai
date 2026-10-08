@@ -133,7 +133,9 @@ def _build_parser() -> argparse.ArgumentParser:
 # ---------------------------------------------------------------------------
 
 
-def _run_ids_mode(raw_ids: str, ac_store_root: Path, inbox_dir: Path) -> int:
+def _run_ids_mode(
+    raw_ids: str, ac_store_root: Path, inbox_dir: Path, *, dry_run: bool = False
+) -> int:
     """Run --ids mode: parse the id list, build the epic, print its path.
 
     Every failure mode maps onto exit code 1 with an ``ERROR:`` line on stderr;
@@ -144,6 +146,7 @@ def _run_ids_mode(raw_ids: str, ac_store_root: Path, inbox_dir: Path) -> int:
         raw_ids: The raw comma-separated value of the ``--ids`` flag.
         ac_store_root: Root directory of the AC YAML store.
         inbox_dir: Absolute path to the tickets inbox root.
+        dry_run: When True, print the plan and write nothing.
 
     Returns:
         int: 0 on success, 1 on any error.
@@ -153,7 +156,9 @@ def _run_ids_mode(raw_ids: str, ac_store_root: Path, inbox_dir: Path) -> int:
         print("ERROR: --ids requires at least one AC id.", file=sys.stderr)
         return 1
     try:
-        epic_folder = build_epic_from_ids(ids, store_root=ac_store_root, inbox_dir=inbox_dir)
+        epic_folder = build_epic_from_ids(
+            ids, store_root=ac_store_root, inbox_dir=inbox_dir, dry_run=dry_run
+        )
     except (ZeroLeafError, CyclicDependencyError) as exc:
         print(f"ERROR: {exc}", file=sys.stderr)
         return 1
@@ -163,7 +168,8 @@ def _run_ids_mode(raw_ids: str, ac_store_root: Path, inbox_dir: Path) -> int:
     except (OSError, RuntimeError) as exc:
         print(f"ERROR: {exc}", file=sys.stderr)
         return 1
-    print(str(epic_folder))
+    if not dry_run:
+        print(str(epic_folder))
     return 0
 
 
@@ -191,5 +197,8 @@ DECISION HISTORY
   Pre-split history lives in goal_to_epic.py's DECISION HISTORY block (the
   2026-07-20 ACD-1200b-4 and 2026-08-12 BO-2600a-5 entries).
   (#TICKETLESS reason=file-size-decomposition-refactor)
+- 2026-10-06 18:00 [ACD-1200a-3-iii]: _run_ids_mode takes keyword-only dry_run,
+  forwards it to build_epic_from_ids and skips the trailing path print in a
+  dry run. (EPIC-BuildToolingRunsThrough/07)
 ====================================================================
 """

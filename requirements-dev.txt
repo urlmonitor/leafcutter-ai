@@ -25,8 +25,37 @@ mypy>=1.8
 # execution.
 pytest-xdist>=3.5
 
+# Partitions the collected test set across parallel CI shards
+# (`--splits N --group K`), which is how .github/workflows/ci.yml re-enables
+# the full suite that was disabled on 2026-10-02 for runtime. CI-only in
+# practice: the plugin is inert unless --splits is passed, so a local run is
+# unaffected whether or not it is installed. Balance comes from the committed
+# .test_durations file -- see the test-shard job's comment for why count-based
+# splitting is not an acceptable fallback for this suite.
+pytest-split>=0.9
+
 # Runs the AC guardrail hooks in the ac-store-valid CI job. The job invokes the
 # same .pre-commit-config.yaml the local guardrails use so the two rule sets
 # cannot drift (ACS-200i); those hooks are language: system, so pre-commit
 # provisions no environments and only dispatches the commands.
 pre-commit>=3.5
+
+# Decision kernel runtime (kernel/ — leafcutter-ai only, NOT shipped
+# to adopter projects by build.py). Pinned exactly (==), unlike the loose pins
+# above: the kernel's checkpoint serialization, interrupt/resume semantics and
+# provider response shapes are version-sensitive, and langchain-typesafe is a
+# pre-release. Verified together on Python 3.14.2 (local) — all declare
+# Requires-Python >=3.10, so CI's 3.13 is covered. Design and rationale:
+# docs/analysis/2026-09-30-decision-kernel-design.md
+# (TICKET-20260930-KernelBootstrapV0).
+langgraph==1.2.12
+langgraph-checkpoint-sqlite==3.1.1
+# langfuse.langchain.CallbackHandler imports the `langchain` package itself
+# (langchain-core alone raises ModuleNotFoundError), so it is a direct pin.
+langchain==1.4.3
+langchain-typesafe==0.0.1a3
+langfuse==4.16.0
+pydantic==2.13.5
+
+# Real Neo4j acceptance checks are part of the knowledge proof-of-done gate.
+neo4j==6.0.3

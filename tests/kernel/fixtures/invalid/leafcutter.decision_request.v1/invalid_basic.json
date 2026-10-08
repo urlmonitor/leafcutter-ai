@@ -1,0 +1,9 @@
+{
+  "question": "Where should the cache live?",
+  "options": [
+    {
+      "id": "opt-mem",
+      "title": "In memory"
+    }
+  ]
+}

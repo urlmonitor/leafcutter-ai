@@ -141,14 +141,18 @@ Tests that cannot meet this threshold must be marked manual by appending
 
 ```python
 def test_heavy_database_scan_MANUAL(self):
-    """Manual: requires full DB table scan (~30s). Run with pytest -k _MANUAL."""
+    """Manual: requires full DB table scan (~30s). Run with pytest -m manual."""
     ...
 ```
 
-The pre-commit suite excludes `_MANUAL` tests. They are invoked explicitly:
+The default pytest run deselects `_MANUAL` tests: a plugin
+(`scripts/suite_performance/pytest_manual_deselect.py`) auto-marks every test whose name
+ends in `_MANUAL` with the `manual` marker, and `pytest.ini` runs with `-m "not manual"`.
+Opt in explicitly with the marker (`-k "_MANUAL"` alone returns nothing, because the
+default `-m "not manual"` still applies):
 
 ```bash
-python -m pytest unit_tests/ -k "_MANUAL"
+python -m pytest unit_tests/ -m manual
 ```
 
 ---

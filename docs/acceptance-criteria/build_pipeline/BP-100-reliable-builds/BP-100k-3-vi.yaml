@@ -1,0 +1,186 @@
+id: BP-100k-3-vi
+components:
+  - build_pipeline
+title: "An exemption entry on a recorded output excuses changed content only: a recorded output that is absent or unreadable still blocks, ground or no ground"
+component: build-pipeline
+level: L3
+status: active
+req_status: draft
+readiness: reviewed
+priority: high
+roadmap_phase: phase_1
+work_status: done
+criteria: |
+  Given a build manifest recording three deployed outputs, each named in the
+    exemption registry with a non-blank ground,
+  And the first output's content has been hand-edited so it no longer
+    matches its recorded fingerprint,
+  And the second output's file is absent from disk,
+  And the third output's path now resolves to a directory rather than a file,
+  When check-output-drift runs over that workspace,
+  Then the first output is reported as a drift exemption naming its ground,
+  And the second output is reported as recorded but not found on disk, the
+    run summary states missing=1, and the second output is not reported as an
+    exemption,
+  And the third output is reported as unreadable, the run summary states
+    unreadable=1, and the third output is not reported as an exemption,
+  And the run blocks the commit,
+  And given the registry is then emptied and the gate is run again over the
+    same workspace,
+  Then the missing and unreadable counts are identical to the first run's,
+    showing that the registry entries had no effect on either,
+  And every verdict is taken from running the deployed gate as a separate
+    process and reading its emitted lines, RESULT line and exit status.
+depends_on:
+  - BP-100k-3
+doc_links:
+  - path: "docs/acceptance-criteria/build_pipeline/BP-100-reliable-builds/BP-100k-3.yaml"
+    relationship: parent
+    status: exists
+  - path: "docs/acceptance-criteria/build_pipeline/BP-100-reliable-builds/BP-100k-3-v.yaml"
+    relationship: related
+    status: exists
+    relevance: "The sibling constraint on the per-key and ground axes. This record covers the third axis of narrowness: which verdicts an entry can excuse at all."
+  - path: "docs/acceptance-criteria/build_pipeline/BP-100-reliable-builds/BP-100n-1.yaml"
+    relationship: related
+    status: exists
+    relevance: "Owns the missing verdict (a recorded output deleted from disk). Adversarial-review finding B-2 owns unreadable. This record does not redefine either. It only forbids the exemption registry from silencing them."
+  - path: "templates/scripts/commit_guardian/check_output_drift.py"
+    relationship: implements
+    status: exists
+    relevance: "As shipped by PR #1013, the registry lookup sits inside the hash-mismatch branch only, after the missing and unreadable checks. On reading, this record is already satisfied. It exists so that moving the lookup earlier breaks a test."
+  - path: "templates/scripts/commit_guardian/_drift_exemptions.py"
+    relationship: describes
+    status: exists
+    relevance: "ScanResult docstring: missing 'always drives a non-clean exit' and is 'never folded into verified or uncomparable'."
+  - path: "docs/2b_direction_b_output_drift_detection.md"
+    relationship: describes
+    status: exists
+    relevance: "Reader-facing verdict table. Its MISSING and UNREADABLE rows say both 'always drive a non-zero exit'. This record makes that hold even when a grounded exemption names the same key."
+assigned_agent: test-writer
+estimated_complexity: S
+declares_side_effect: false
+package_surface: false
+it_requirements:
+  - "Expected outcome is a REGRESSION GUARD. IT PO code reading on 2026-10-08 found that the constraint already holds on origin/main. In the gate's Pass 2 (the per-recorded-key reconciliation in the output-scan function), the registry lookup happens only inside the hash-mismatch branch. The branch for a key absent from disk (MISSING), the branch for a path that is not a regular file (UNREADABLE) and the branch for a read error (UNREADABLE) each record their verdict and move on to the next key before that lookup is reached. The exit verdict counts missing and unreadable regardless of exemptions. So the new test is expected to go GREEN on first run. For this constraint record, which pins existing behaviour, a green first run is acceptable and is not a TDD-order violation."
+  - "If the test goes RED on the current gate, that is a production defect. Route it to python-coder and record it on this AC. Never resolve it by weakening an assertion."
+  - "The exemption registry must have no effect on the classification of a missing or unreadable recorded output, on the missing and unreadable counts, or on the exit status of a run that contains one."
+  - "The fixture must isolate the registry as the only variable between the two runs: same manifest, same files on disk, same deployed gate. Only the registry content differs."
+  - "The unreadable case must use the criteria's 'path now resolves to a directory' form, and the result must not depend on the uid the suite runs under. A permission-denied form (chmod 000) is not a substitute, because a root-run CI container can read the file anyway and the case silently stops being unreadable."
+  - "Verify behaviorally only (repo rule 'Gate / Workflow ACs: Verify Behaviorally, Not by Grep'). Execute check_output_drift.py as a separate process from a deployed-shaped layout, the same harness shape as the sibling tests in unit_tests/commit_guardian/test_drift_exempt_recorded_key.py, with a fixture registry supplied through HOOK_TEST_CONFIG. Read its stderr lines, RESULT line and exit status. Grepping the gate source is forbidden, and so is importing the scan function to inspect its return value."
+  - "Must NOT assert anything about the uncomparable column, or about a drift_exempt column, for the drift-exempted first output. That counting question is open and going to an ADR (see BP-100k-3-iv notes). Assert only the per-artifact verdict lines, the missing and unreadable counts, and the exit status."
+  - "The test must carry a '# covers: BP-100k-3-vi' tag so check_done_proof can accept it. covered_by must be set to its node id in the same change that adds it."
+  - "SEQUENCING: unit_tests/commit_guardian/ is being refactored by another agent as of 2026-10-08. Do not author this test until that refactor has landed, and then author it against the post-refactor harness, so the two changes do not collide."
+  - "Runtime: two subprocess runs over a tree of three files, each within the existing per-run timeout used by the sibling suite (15 s). No build.py invocation (repo rule: tests must not spawn their own build)."
+test_spec:
+  - name: test_bp_100k_3_vi_drifted_recorded_output_is_still_exempted_in_the_same_run
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    surface_invoked: "check_output_drift.py copied from templates/scripts/commit_guardian/ into a synthesized .leafcutter/scripts/commit_guardian/ layout, run as a subprocess with HOOK_TEST_CONFIG pointing at a fixture registry"
+    description: "In the first run, where all three outputs are grounded, the output contains 'DIRECT-DRIFT: EXEMPT <first key> ground=<ground>'. This proves the registry was read and honoured in that run, so the absence of exemptions for the other two keys cannot come from a registry the gate ignored."
+  - name: test_bp_100k_3_vi_grounded_entry_does_not_excuse_a_missing_recorded_output
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: failure
+    surface_invoked: "same deployed-shaped subprocess run as above"
+    description: "In the first run, the output contains 'UNCOMPARABLE: MISSING <second key>', the RESULT line reads missing=1, and no line reports the second key as exempt under EITHER prefix (neither 'DIRECT-DRIFT: EXEMPT <second key>' nor 'UNCOMPARABLE: EXEMPT <second key>')."
+    must_catch:
+      - "The registry lookup is moved ahead of the on-disk existence check, so a grounded missing key is reported as exempt and never counted in missing."
+  - name: test_bp_100k_3_vi_grounded_entry_does_not_excuse_an_unreadable_recorded_output
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: failure
+    surface_invoked: "same deployed-shaped subprocess run as above"
+    description: "In the first run, where the third key's path is an EMPTY directory, the output contains 'UNCOMPARABLE: UNREADABLE <third key>', the RESULT line reads unreadable=1, and no line reports the third key as exempt under either prefix."
+    must_catch:
+      - "The registry lookup is moved ahead of the regular-file check, so a grounded key whose path became a directory is reported as exempt and never counted in unreadable."
+  - name: test_bp_100k_3_vi_run_with_grounded_missing_and_unreadable_keys_still_blocks
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: reachability
+    surface_invoked: "same deployed-shaped subprocess run as above"
+    description: "The first run, in which every recorded key carries a grounded entry, terminates with exit status 1 (blocking), not 0."
+    must_catch:
+      - "The exit verdict subtracts exempted keys before testing missing/unreadable, so a fully-grounded registry turns a deletion into a clean exit."
+  - name: test_bp_100k_3_vi_missing_and_unreadable_counts_are_identical_with_an_empty_registry
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: discrimination
+    surface_invoked: "same deployed-shaped subprocess run as above"
+    description: "A second run over the same workspace with an empty registry reports the same missing and unreadable values as the first run (both 1) and also exits 1. This ties the result to the registry specifically, not to a gate that miscounts missing outputs in general."
+    must_catch:
+      - "A gate that never prints missing/unreadable keys as exemptions but still lets a registry entry decrement their counts."
+test_rationale: |
+  THIS IS THE ONE RECORD IN THE RETROFIT WITH NO EXISTING TEST, and the five
+  descriptors above are the whole of the new work. Code reading on 2026-10-08
+  found that the constraint already holds (see it_requirements), so the suite
+  is a REGRESSION GUARD and is expected to go green on first run. Each failure
+  or discrimination descriptor names the specific refactor it is there to
+  catch. The most plausible one is moving the registry lookup up to where a
+  recorded key is first resolved.
+
+  The first descriptor is load-bearing for the others. Without a positive
+  DIRECT-DRIFT: EXEMPT line in the same run, a gate that failed to load the
+  registry at all would pass every "not reported as exempt" assertion.
+
+  FIXTURE PITFALL. The third output must be replaced by an EMPTY directory.
+  Pass 1 enumerates real files under the scanned directories, so a populated
+  directory would surface its contents as unregistered GAP lines. Those lines
+  are unrelated to this record and would add a second verdict-driving signal
+  (gaps) to a run whose exit status the test is reading. The first output stays
+  readable and hash-compared, so verified is at least 1 and the gate's
+  "compared zero artifacts" floor is never what drives the exit status.
+
+  The exemption checks cover BOTH prefixes. The constraint is that no
+  exemption of any kind reaches these keys, and the registry is also read by
+  Pass 1, where the UNCOMPARABLE: EXEMPT prefix lives.
+delivers_to: null
+expects_from:
+  ac_id: BP-100k-3-iv
+  contract: "The per-artifact stderr line 'DIRECT-DRIFT: EXEMPT <repo-relative key> ground=<ground text>' for a recorded, readable, hash-compared key whose hash differs and which has a validated registry entry. This record limits that excusal to the hash-mismatch case. It relies on BP-100n-1's 'UNCOMPARABLE: MISSING <key> reason=recorded but not found on disk' and on B-2's 'UNCOMPARABLE: UNREADABLE <key> reason=<detail>' lines and RESULT fields, and does not redefine them."
+origin_agent: BrainCandy
+created: 2026-10-08
+created_by_ticket: null
+amended_by:
+  - reason: "it-po-technical-enrichment"
+    by: it-po
+    at: 2026-10-08
+    entry: "VERDICT: the constraint HOLDS on the current code, so assigned_agent stays test-writer. Evidence: in check_output_drift.py's per-recorded-key reconciliation (Pass 2 of the output-scan function), the MISSING branch, the not-a-regular-file UNREADABLE branch and the read-error UNREADABLE branch all continue before the only registry lookup, which sits inside the hash-mismatch branch. check_output_drift() computes the exit verdict from missing and unreadable regardless of exemptions. Added package_surface: false, it_requirements (10 constraints, including the regression-guard expectation, red routes to python-coder, uid-independent unreadable form, no uncomparable/drift_exempt assertion, covers tag, sequencing behind the commit_guardian test refactor), test_spec (5 behavioral descriptors with must_catch), test_rationale (including the empty-directory fixture pitfall), a doc_link to docs/2b_direction_b_output_drift_detection.md, and a sharper expects_from contract. readiness draft -> reviewed. criteria, estimated_complexity (S), covered_by ([] until the test exists), work_status, req_status and notes are unchanged."
+superseded_by: null
+covered_by:
+  - unit_tests/commit_guardian/test_bp_100k_3_vi.py::TestExemptionNeverExcusesAbsenceOrUnreadability::test_bp_100k_3_vi_drifted_recorded_output_is_still_exempted_in_the_same_run
+  - unit_tests/commit_guardian/test_bp_100k_3_vi.py::TestExemptionNeverExcusesAbsenceOrUnreadability::test_bp_100k_3_vi_grounded_entry_does_not_excuse_a_missing_recorded_output
+  - unit_tests/commit_guardian/test_bp_100k_3_vi.py::TestExemptionNeverExcusesAbsenceOrUnreadability::test_bp_100k_3_vi_grounded_entry_does_not_excuse_an_unreadable_recorded_output
+  - unit_tests/commit_guardian/test_bp_100k_3_vi.py::TestExemptionNeverExcusesAbsenceOrUnreadability::test_bp_100k_3_vi_run_with_grounded_missing_and_unreadable_keys_still_blocks
+  - unit_tests/commit_guardian/test_bp_100k_3_vi.py::TestExemptionNeverExcusesAbsenceOrUnreadability::test_bp_100k_3_vi_missing_and_unreadable_counts_are_identical_with_an_empty_registry
+implemented_by:
+  - templates/scripts/commit_guardian/check_output_drift.py
+change_target: pipeline
+risk_surface: contract_boundary
+notes: |
+  THIS IS THE ONE RECORD IN THE RETROFIT WITHOUT A COVERING TEST, on purpose.
+  None of the five tests in test_drift_exempt_recorded_key.py puts an
+  exemption entry on a missing or unreadable recorded output. On reading, the
+  shipped code already behaves as this record requires, because the lookup sits
+  only in the hash-mismatch branch. Nothing stops a refactor from moving it up
+  to wherever the recorded key is first resolved. That is the most plausible way
+  for "excuse this file's drift" to quietly become "excuse anything about this
+  file", and it would let an exemption hide the very deletion BP-100n-1 exists
+  to report.
+
+  assigned_agent is test-writer because no production change is expected.
+  Only the missing test is. If that test goes red on the current gate, the
+  claim in the doc_link relevance above is wrong and the fix goes to
+  python-coder. covered_by stays empty until the test exists, so the record
+  does not claim coverage it lacks.
+
+  The "emptied registry gives identical counts" clause guards against a vacuous
+  pass. A gate that miscounted missing outputs could still pass the first half
+  as long as it never printed them as exemptions. Comparing against a run with
+  no registry ties the result to the registry specifically.

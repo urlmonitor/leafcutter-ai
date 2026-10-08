@@ -1,0 +1,41 @@
+{
+  "date": "2026-10-02",
+  "url": "https://console.neo4j.io/projects/83c2ca44-5a6b-4f8e-ad21-4bae1b489983/studio/bloom",
+  "scene": "Finalize \u2014 current component",
+  "scene_name_and_contents_survive_reload": true,
+  "nodes": 74,
+  "relationships": 74,
+  "categories": {
+    "AC": 63,
+    "ADR": 1,
+    "Component": 1,
+    "Ticket": 3,
+    "Document": 2,
+    "ChangelogEntry": 4
+  },
+  "search_phrase": "Component $component",
+  "search_phrase_survives_reload": true,
+  "query": "MATCH (n {repository_id: 'leafcutter', current: true}) WHERE $component IN n.components OPTIONAL MATCH p = (n)-[r:COMPONENT_MEMBERSHIP {current: true}]->(c:Component {repository_id: 'leafcutter', current: true}) WHERE c.name = $component RETURN n, p LIMIT 500",
+  "verified_caption_persistence": {
+    "AC": "name",
+    "ADR": "name",
+    "Component": "name",
+    "SourceFile": "name",
+    "Test": "name",
+    "Ticket": "title",
+    "Document": "title",
+    "ChangelogEntry": "title"
+  },
+  "inspected_ac": "FIN-100",
+  "observed_direct_fields": [
+    "criteria",
+    "created",
+    "created_by_ticket",
+    "child_limit_override",
+    "risk_surface",
+    "/product_truth/0/flow"
+  ],
+  "screenshot": "reports/native-fields/aura-native-fields.jpg",
+  "legend_filter": "In Scene",
+  "limitation": "Aura resets the legend filter to All after reload; choose In Scene to hide categories absent from the scene. The free default perspective lists bookkeeping categories under All. The saved query excludes bookkeeping nodes and retired generations."
+}

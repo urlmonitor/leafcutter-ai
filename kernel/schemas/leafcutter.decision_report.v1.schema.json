@@ -1,0 +1,330 @@
+{
+  "$defs": {
+    "ApprovalStatus": {
+      "description": "Approval state of a decision, criterion or constraint.",
+      "enum": [
+        "not_required",
+        "proposed",
+        "approved",
+        "rejected"
+      ],
+      "title": "ApprovalStatus",
+      "type": "string"
+    },
+    "CriterionAssessment": {
+      "additionalProperties": false,
+      "description": "Outcome of assessing one option (or the evidence) against one criterion.",
+      "properties": {
+        "criterion_id": {
+          "title": "Criterion Id",
+          "type": "string"
+        },
+        "evidence_ids": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Evidence Ids",
+          "type": "array"
+        },
+        "limitations": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Limitations",
+          "type": "array"
+        },
+        "option_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Option Id"
+        },
+        "outcome": {
+          "enum": [
+            "pass",
+            "fail",
+            "uncertain"
+          ],
+          "title": "Outcome",
+          "type": "string"
+        },
+        "provider_answer": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ProviderAnswer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "schema_version": {
+          "const": "1.0",
+          "default": "1.0",
+          "title": "Schema Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "criterion_id",
+        "outcome"
+      ],
+      "title": "CriterionAssessment",
+      "type": "object"
+    },
+    "DecisionStatus": {
+      "description": "Assessment status of a Decision.",
+      "enum": [
+        "resolved",
+        "needs_evidence",
+        "needs_options",
+        "needs_synthesis",
+        "needs_human",
+        "blocked"
+      ],
+      "title": "DecisionStatus",
+      "type": "string"
+    },
+    "ObservabilityStatus": {
+      "description": "Whether telemetry export is healthy.",
+      "enum": [
+        "ok",
+        "degraded"
+      ],
+      "title": "ObservabilityStatus",
+      "type": "string"
+    },
+    "ProviderAnswer": {
+      "additionalProperties": false,
+      "description": "Raw provider distribution kept next to the derived outcome.",
+      "properties": {
+        "choice": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Choice"
+        },
+        "confidence": {
+          "anyOf": [
+            {
+              "maximum": 1.0,
+              "minimum": 0.0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Confidence"
+        },
+        "probabilities": {
+          "additionalProperties": {
+            "type": "number"
+          },
+          "title": "Probabilities",
+          "type": "object"
+        },
+        "schema_version": {
+          "const": "1.0",
+          "default": "1.0",
+          "title": "Schema Version",
+          "type": "string"
+        }
+      },
+      "title": "ProviderAnswer",
+      "type": "object"
+    },
+    "Rationale": {
+      "additionalProperties": false,
+      "description": "Concise explanation; origin labels who wrote it (never Jev hidden reasoning).",
+      "properties": {
+        "origin": {
+          "enum": [
+            "template",
+            "host"
+          ],
+          "title": "Origin",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": "1.0",
+          "default": "1.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "text": {
+          "minLength": 1,
+          "title": "Text",
+          "type": "string"
+        }
+      },
+      "required": [
+        "text",
+        "origin"
+      ],
+      "title": "Rationale",
+      "type": "object"
+    },
+    "TraceRefs": {
+      "additionalProperties": false,
+      "description": "Where to inspect the run's trace and whether export is healthy.",
+      "properties": {
+        "observability": {
+          "$ref": "#/$defs/ObservabilityStatus",
+          "default": "ok"
+        },
+        "schema_version": {
+          "const": "1.0",
+          "default": "1.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "trace_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Trace Id"
+        },
+        "trace_url": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Trace Url"
+        }
+      },
+      "title": "TraceRefs",
+      "type": "object"
+    }
+  },
+  "$id": "leafcutter.decision_report.v1",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "leafcutter.decision_report.v1.",
+  "properties": {
+    "approval_status": {
+      "$ref": "#/$defs/ApprovalStatus",
+      "default": "not_required"
+    },
+    "contradicting_evidence_ids": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Contradicting Evidence Ids",
+      "type": "array"
+    },
+    "criterion_assessments": {
+      "items": {
+        "$ref": "#/$defs/CriterionAssessment"
+      },
+      "title": "Criterion Assessments",
+      "type": "array"
+    },
+    "limitations": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Limitations",
+      "type": "array"
+    },
+    "open_questions": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Open Questions",
+      "type": "array"
+    },
+    "rationale": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/Rationale"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "recommendation": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Recommendation"
+    },
+    "schema_version": {
+      "const": "1.0",
+      "default": "1.0",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "selected_option_id": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Selected Option Id"
+    },
+    "status": {
+      "$ref": "#/$defs/DecisionStatus"
+    },
+    "supporting_evidence_ids": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Supporting Evidence Ids",
+      "type": "array"
+    },
+    "trace_refs": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/TraceRefs"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    }
+  },
+  "required": [
+    "status"
+  ],
+  "title": "DecisionReportPayload",
+  "type": "object"
+}

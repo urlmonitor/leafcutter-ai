@@ -1,0 +1,124 @@
+id: DK-400a-3
+title: "A single question routing can give to one capability is never split"
+component: decision-kernel
+components:
+  - decision_kernel
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_kernel_1_founding
+criteria: |
+  Given a run whose root goal is the single question "Which retention period should the
+    kernel's Langfuse traces use?",
+  And routing gives it to the decision capability,
+  When routing runs on the run's root,
+  Then no split is started and the run has no split record,
+  And the person is asked no question about splitting,
+  And the run goes on as one decision from the precedent step,
+  And the run's report has no split section.
+depends_on:
+  - DK-400a
+doc_links:
+  - path: docs/product-truth/flows/leafcutter/decision-forming.flow.json
+    relationship: implements
+    status: exists
+    relevance: "Flow v5 node(s) split-not-needed, with their acceptance scenarios."
+  - path: docs/architecture/adrs/ADR-053-intelligence-selection-deterministic-jev-llm-human.md
+    relationship: constrains
+    status: exists
+    relevance: "Host proposes (generative), Jev only judges, a person approves; cheapest mechanism first."
+  - path: docs/how-to/run-the-decision-kernel.md
+    relationship: context
+    status: exists
+    relevance: "Run statuses, gap records, resume answers and the run report as they are today."
+  - path: docs/analysis/2026-09-30-decision-kernel-design-3-kernel-scheduler.md
+    relationship: describes
+    status: exists
+    relevance: Route node and batched Jev routing, intent step, guards and budgets, root completion, gap recording,
+      resume and restart.
+  - path: docs/architecture/components/decision-kernel.md
+    relationship: describes
+    status: exists
+    relevance: 'Kernel containers: routing, scheduler, host handoffs, run root.'
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: DK-400a-1
+  contract: The detection gate and bundle threshold of DK-400a-1; below the threshold no split record is created.
+it_requirements:
+  - 'A not-bundled single question reaches exactly today''s interactions: the same envelope sequence and the same
+    Jev batches apart from the one added bundle question, no split record, and no split section in report.md.'
+  - The check adds no provider call and no host operation to this run (see DK-400a-1).
+  - 'The no-split outcome is recorded once per item: the item''s split_checked flag (DK-400c-3, ADR-067 Open Question
+    1) is set when its bundle question is asked, so the question is never asked again on a continuation or retry
+    of the same item.'
+  - 'Tests enable splitting explicitly: split.enabled true through a config override (false only where a test compares
+    with the off switch). None relies on the shipped default, which stays false until E3 merges (dec-9925ebf1895222f4,
+    see DK-400a-1). A test asserting that no split starts must run with splitting on, or it passes for the wrong
+    reason.'
+change_target: code
+risk_surface: contract_boundary
+test_required: true
+test_spec:
+  - name: test_single_question_goes_on_as_one_decision_without_split
+    target_dir: tests/kernel/split/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: The retention-period question with bundle 0.1 proceeds to the decision's precedent step with no
+      split record, no split interaction and no split section in report.md.
+  - name: test_single_question_jev_calls_equal_split_disabled
+    target_dir: tests/kernel/split/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: The scripted provider records the same number of provider calls as the split.enabled false run.
+  - name: test_bundle_question_asked_once_per_item
+    target_dir: tests/kernel/split/
+    framework: pytest
+    type: integration
+    angle: boundary
+    description: A continuation or retry of the same item carries no second bundle question.
+test_rationale: This AC guards today's working path; comparing a whole run against the off-switch run is the only
+  way to show nothing else changed.
+origin_agent: business-analyst
+created: 2026-10-05
+amended_by:
+  - reason: it-po-technical-enrichment
+    date: '2026-10-05'
+    by: it-po
+    summary: 'Technical enrichment: assigned_agent confirmed, estimated_complexity, change_target, risk_surface,
+      it_requirements, delivers_to/expects_from contracts, doc_links and the test contract set; readiness draft
+      -> reviewed. BA criteria and product_truth unchanged.'
+  - reason: it-po-build-slice-amendment
+    date: '2026-10-05'
+    by: it-po
+    summary: 'Build-slice amendment (dec-9925ebf1895222f4): its tests enable splitting explicitly, because split.enabled
+      ships false in E1 and E2.'
+  - reason: it-po-adr067-alignment
+    date: '2026-10-05'
+    by: it-po
+    summary: 'Aligned with ADR-067 (Accepted, docs/architecture/adrs/ADR-067-kernel-splits-bundled-requests-into-approved-parts.md):
+      ask-once rule tied to the split_checked flag (Open Question 1).'
+superseded_by: null
+covered_by:
+  - DK-400a-3-i
+  - DK-400a-3-ii
+implemented_by: []
+notes: |
+  Flow branch split-not-needed. The guard against turning today's working path into a
+  gate: a single bounded question must reach the same interactions it reaches today.
+product_truth:
+  - flow: leafcutter/decision-forming
+    node: split-not-needed
+    node_kind: branch
+    flow_kind: data
+    screen: null
+    mock_data: leafcutter/decisions
+    entities: []
+    source: real
+    asof: '2026-10-05'

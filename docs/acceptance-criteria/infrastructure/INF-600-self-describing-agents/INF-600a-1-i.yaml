@@ -6,7 +6,7 @@ components:
 title: "skills_invoked rejects skill IDs that do not resolve to a template or project-local skill"
 component: infrastructure
 level: L3
-status: active
+status: superseded_by
 work_status: todo
 criteria: |
   Given an agent registry entry where `skills_invoked` contains
@@ -26,6 +26,24 @@ doc_links:
   - path: config/agent_registry.json
     relationship: describes
     status: exists
+  - path: docs/acceptance-criteria/agent-registry/AR-300-granted-abilities-arrive/AR-300c-3-i.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      THE SUCCESSOR. AR-300c-3-i states this same resolution requirement --
+      including the packaged-versus-project-local distinction that is the
+      substance of this record -- against the agent's own frontmatter
+      declaration rather than the central registry field. It is the single live
+      record of the rule from 2026-09-30.
+  - path: docs/acceptance-criteria/agent-registry/AR-300-granted-abilities-arrive/AR-300c-1.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      Supersedes this record's parent INF-600a-1 and is the reason this record
+      could not survive as written: it makes the registry's ability fields
+      derived rather than authoritative, so a validation whose stated subject is
+      `skills_invoked` in config/agent_registry.json no longer validates the
+      source of truth.
 assigned_agent: python-coder
 estimated_complexity: S
 delivers_to: null
@@ -34,9 +52,69 @@ expects_from:
   contract: "skills_invoked array exists in registry entries"
 origin_agent: business-analyst-v3
 created: 2026-06-05
-amended_by: []
-superseded_by: null
+amended_by:
+  - reason: >-
+      2026-09-30, it-po: SUPERSEDED in favour of AR-300c-3-i. The Business
+      Analyst superseded this record's parent INF-600a-1 (by AR-300c-1 and
+      AR-300c-3) and deliberately left this child's disposition to the IT PO,
+      with the constraint that the two must not both be implemented against
+      different sources. Decision: supersede rather than re-parent. Never
+      implemented -- work_status was todo from 2026-06-05, so no shipped
+      behaviour is orphaned. See notes for the full rationale.
+superseded_by:
+  - AR-300c-3-i
 covered_by: []
 implemented_by: []
 change_target: code
 risk_surface: internal
+notes: |
+  SUPERSEDED 2026-09-30 BY AR-300c-3-i. IT PO decision and audit trail.
+
+  THE CHOICE PUT TO THIS AGENT. The Business Analyst superseded the parent
+  INF-600a-1 (its criteria made the central registry field the source of truth,
+  the opposite of the direction the user has since chosen) and left this child
+  active, naming two options for the IT PO: supersede it in favour of
+  AR-300c-3-i, or re-parent it. The constraint was explicit -- do not leave two
+  live records pointed at different sources for the same rule.
+
+  WHY SUPERSESSION AND NOT RE-PARENTING. Three reasons, in order of weight.
+
+    1. THE CRITERIA NAME THE DEMOTED SOURCE. This record's Given is "an agent
+       registry entry where `skills_invoked` contains ..." and its Then is
+       "validation fails ... naming the agent entry that contains it". Its
+       subject is a specific field in config/agent_registry.json. AR-300c-1
+       makes that field DERIVED, not authoritative. Re-parenting would preserve
+       a record whose stated validation target is the copy nobody is allowed to
+       believe -- which is not a smaller version of the contradiction the BA
+       retired, it is the same one relocated to the leaf. The criteria are the
+       BA's text and not mine to rewrite, so the only honest disposition of a
+       record whose subject has been demoted is to retire it whole.
+    2. RE-PARENTING IS STRUCTURALLY UNAVAILABLE. The natural new parent is
+       AR-300c-3, which lives in docs/acceptance-criteria/agent-registry/. This
+       record lives in docs/acceptance-criteria/infrastructure/. The store's
+       parent-coverage rules derive a parent from the child's id and require the
+       parent file in the SAME feature folder, so an INF-prefixed L3 cannot be a
+       child of an AR-prefixed L2. Making it one would require moving the file
+       and changing its id -- which is a supersession wearing a re-parent's
+       clothes, and a worse one, because it would silently break the id's
+       traceability to the INF-600 tree it was authored in.
+    3. NOTHING IS LOST. AR-300c-3-i carries this record's substance forward
+       intact and adds to it: the same packaged-versus-project-local
+       distinction, plus a per-ability resolution count and a derived population,
+       which this record never required. The BA worded AR-300c-3-i deliberately
+       close to this text so the two would be recognisable as one requirement in
+       two homes. Retiring this home leaves exactly one.
+
+  WHAT WAS NOT DONE, AND WHY. `readiness` is left at `reviewed` -- changing a
+  readiness field is the user's gate, not this agent's, and a superseded record's
+  readiness is inert in any case. `work_status` stays `todo` because the record
+  was never implemented and marking it done would be a false claim of shipped
+  behaviour. `covered_by` was already empty. The parent INF-600a-1's
+  `covered_by: [INF-600a-1-i]` is left as-is: it is the historical structural
+  link, and INF-600a-1 is itself superseded, so no live parent is left claiming
+  coverage from a retired child.
+
+  FLAGGED, NOT ACTED ON. INF-600a (this record's grandparent, L1) carries
+  `status: active` alongside `superseded_by: [INF-600i, INF-600j]`. That
+  combination is internally inconsistent, but it is an L1 and therefore outside
+  this agent's lane. Raised for the user.

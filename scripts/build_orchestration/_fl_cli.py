@@ -144,6 +144,12 @@ def _build_cli_parser() -> argparse.ArgumentParser:
     )
     hlg.add_argument("--test-root", required=True, metavar="DIR", help="Root of test tree.")
     hlg.add_argument("--ac-root", required=True, metavar="DIR", help="Root of AC YAML store.")
+    hlg.add_argument(
+        "--ticket",
+        default=None,
+        metavar="PATH",
+        help="Ticket file the pass is recorded on (relative: against --test-root).",
+    )
 
     # --- check_producibility ---
     cp2 = subparsers.add_parser(

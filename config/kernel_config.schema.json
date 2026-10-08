@@ -1,0 +1,1241 @@
+{
+  "$defs": {
+    "ContextEnrichmentConfig": {
+      "additionalProperties": false,
+      "description": "Read, time and payload bounds independent of the later research capability.",
+      "properties": {
+        "enabled": {
+          "title": "Enabled",
+          "type": "boolean"
+        },
+        "max_chars": {
+          "maximum": 20000,
+          "minimum": 1,
+          "title": "Max Chars",
+          "type": "integer"
+        },
+        "max_context_chars": {
+          "maximum": 12000,
+          "minimum": 1,
+          "title": "Max Context Chars",
+          "type": "integer"
+        },
+        "max_evidence": {
+          "maximum": 32,
+          "minimum": 1,
+          "title": "Max Evidence",
+          "type": "integer"
+        },
+        "max_excerpt_chars": {
+          "maximum": 4000,
+          "minimum": 1,
+          "title": "Max Excerpt Chars",
+          "type": "integer"
+        },
+        "max_files": {
+          "maximum": 1000,
+          "minimum": 1,
+          "title": "Max Files",
+          "type": "integer"
+        },
+        "max_seconds": {
+          "exclusiveMinimum": 0,
+          "maximum": 30,
+          "title": "Max Seconds",
+          "type": "number"
+        },
+        "max_sources": {
+          "maximum": 32,
+          "minimum": 1,
+          "title": "Max Sources",
+          "type": "integer"
+        },
+        "source_ids": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Source Ids",
+          "type": "array"
+        }
+      },
+      "required": [
+        "enabled",
+        "source_ids",
+        "max_files",
+        "max_sources",
+        "max_evidence",
+        "max_chars",
+        "max_context_chars",
+        "max_excerpt_chars",
+        "max_seconds"
+      ],
+      "title": "ContextEnrichmentConfig",
+      "type": "object"
+    },
+    "DataPolicyConfig": {
+      "additionalProperties": false,
+      "description": "What may leave the process (Jev, Langfuse).",
+      "properties": {
+        "send_repo_excerpts_to_jev": {
+          "title": "Send Repo Excerpts To Jev",
+          "type": "boolean"
+        },
+        "telemetry_excerpts": {
+          "enum": [
+            "truncated",
+            "hash",
+            "none"
+          ],
+          "title": "Telemetry Excerpts",
+          "type": "string"
+        },
+        "telemetry_max_field_chars": {
+          "minimum": 1,
+          "title": "Telemetry Max Field Chars",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "send_repo_excerpts_to_jev",
+        "telemetry_excerpts",
+        "telemetry_max_field_chars"
+      ],
+      "title": "DataPolicyConfig",
+      "type": "object"
+    },
+    "DecisionConfig": {
+      "additionalProperties": false,
+      "description": "Decision-graph thresholds.",
+      "properties": {
+        "conflict_threshold": {
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "Conflict Threshold",
+          "type": "number"
+        },
+        "design_judgement_threshold": {
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "Design Judgement Threshold",
+          "type": "number"
+        },
+        "max_grounding_evidence": {
+          "minimum": 1,
+          "title": "Max Grounding Evidence",
+          "type": "integer"
+        },
+        "max_research_rounds": {
+          "minimum": 1,
+          "title": "Max Research Rounds",
+          "type": "integer"
+        },
+        "missing_min_probability": {
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "Missing Min Probability",
+          "type": "number"
+        },
+        "preference_threshold": {
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "Preference Threshold",
+          "type": "number"
+        },
+        "progress_epsilon": {
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "Progress Epsilon",
+          "type": "number"
+        },
+        "require_option_grounding": {
+          "title": "Require Option Grounding",
+          "type": "boolean"
+        },
+        "reserve_assessments": {
+          "minimum": 0,
+          "title": "Reserve Assessments",
+          "type": "integer"
+        },
+        "reserve_extra_options": {
+          "minimum": 0,
+          "title": "Reserve Extra Options",
+          "type": "integer"
+        },
+        "reserve_margin_calls": {
+          "minimum": 0,
+          "title": "Reserve Margin Calls",
+          "type": "integer"
+        },
+        "satisfies_threshold": {
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "Satisfies Threshold",
+          "type": "number"
+        },
+        "sufficiency_threshold": {
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "Sufficiency Threshold",
+          "type": "number"
+        }
+      },
+      "required": [
+        "sufficiency_threshold",
+        "satisfies_threshold",
+        "preference_threshold",
+        "conflict_threshold",
+        "missing_min_probability",
+        "require_option_grounding",
+        "max_grounding_evidence",
+        "design_judgement_threshold",
+        "progress_epsilon",
+        "max_research_rounds",
+        "reserve_assessments",
+        "reserve_extra_options",
+        "reserve_margin_calls"
+      ],
+      "title": "DecisionConfig",
+      "type": "object"
+    },
+    "EntityContextConfig": {
+      "additionalProperties": false,
+      "description": "Independent entity-index and interpretation limits.",
+      "properties": {
+        "enabled": {
+          "title": "Enabled",
+          "type": "boolean"
+        },
+        "index_path": {
+          "title": "Index Path",
+          "type": "string"
+        },
+        "max_ambiguity_candidates": {
+          "maximum": 3,
+          "minimum": 1,
+          "title": "Max Ambiguity Candidates",
+          "type": "integer"
+        },
+        "max_caller_chars": {
+          "maximum": 12000,
+          "minimum": 1,
+          "title": "Max Caller Chars",
+          "type": "integer"
+        },
+        "max_entities": {
+          "maximum": 16,
+          "minimum": 1,
+          "title": "Max Entities",
+          "type": "integer"
+        },
+        "max_lookups": {
+          "maximum": 64,
+          "minimum": 1,
+          "title": "Max Lookups",
+          "type": "integer"
+        },
+        "max_meaning_chars": {
+          "maximum": 300,
+          "minimum": 1,
+          "title": "Max Meaning Chars",
+          "type": "integer"
+        },
+        "max_seconds": {
+          "exclusiveMinimum": 0,
+          "maximum": 2,
+          "title": "Max Seconds",
+          "type": "number"
+        },
+        "max_serialized_chars": {
+          "maximum": 8000,
+          "minimum": 1000,
+          "title": "Max Serialized Chars",
+          "type": "integer"
+        },
+        "max_unknown_chars": {
+          "maximum": 128,
+          "minimum": 1,
+          "title": "Max Unknown Chars",
+          "type": "integer"
+        },
+        "max_unknowns": {
+          "maximum": 8,
+          "minimum": 1,
+          "title": "Max Unknowns",
+          "type": "integer"
+        },
+        "source_ids": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Source Ids",
+          "type": "array"
+        }
+      },
+      "required": [
+        "enabled",
+        "index_path",
+        "source_ids",
+        "max_caller_chars",
+        "max_lookups",
+        "max_entities",
+        "max_ambiguity_candidates",
+        "max_meaning_chars",
+        "max_serialized_chars",
+        "max_unknowns",
+        "max_unknown_chars",
+        "max_seconds"
+      ],
+      "title": "EntityContextConfig",
+      "type": "object"
+    },
+    "EvidenceCategory": {
+      "description": "Generic evidence categories (no vendor names).",
+      "enum": [
+        "authoritative_guidance",
+        "internal_principles",
+        "prior_decisions",
+        "existing_patterns",
+        "task_context",
+        "external_practices"
+      ],
+      "title": "EvidenceCategory",
+      "type": "string"
+    },
+    "HostConfig": {
+      "additionalProperties": false,
+      "description": "Host-handoff settings.",
+      "properties": {
+        "enabled": {
+          "title": "Enabled",
+          "type": "boolean"
+        },
+        "fallback_on_no_match": {
+          "title": "Fallback On No Match",
+          "type": "boolean"
+        },
+        "formulate_questions": {
+          "title": "Formulate Questions",
+          "type": "boolean"
+        },
+        "max_input_chars": {
+          "minimum": 1,
+          "title": "Max Input Chars",
+          "type": "integer"
+        },
+        "max_repair_attempts": {
+          "minimum": 0,
+          "title": "Max Repair Attempts",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "enabled",
+        "fallback_on_no_match",
+        "max_repair_attempts",
+        "formulate_questions",
+        "max_input_chars"
+      ],
+      "title": "HostConfig",
+      "type": "object"
+    },
+    "IntentConfig": {
+      "additionalProperties": false,
+      "description": "Thresholds for the intake answer-kind classification and the clarification cap.",
+      "properties": {
+        "max_clarifications": {
+          "minimum": 0,
+          "title": "Max Clarifications",
+          "type": "integer"
+        },
+        "min_confidence": {
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "Min Confidence",
+          "type": "number"
+        },
+        "min_selected_probability": {
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "Min Selected Probability",
+          "type": "number"
+        }
+      },
+      "required": [
+        "min_selected_probability",
+        "min_confidence",
+        "max_clarifications"
+      ],
+      "title": "IntentConfig",
+      "type": "object"
+    },
+    "JevConfig": {
+      "additionalProperties": false,
+      "description": "Jev provider settings.",
+      "properties": {
+        "max_questions_per_call": {
+          "minimum": 1,
+          "title": "Max Questions Per Call",
+          "type": "integer"
+        },
+        "max_state_chars": {
+          "minimum": 1,
+          "title": "Max State Chars",
+          "type": "integer"
+        },
+        "model": {
+          "title": "Model",
+          "type": "string"
+        },
+        "price_per_input_token_usd": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Price Per Input Token Usd"
+        },
+        "retry_backoff_seconds": {
+          "minimum": 0,
+          "title": "Retry Backoff Seconds",
+          "type": "number"
+        },
+        "timeout_seconds": {
+          "exclusiveMinimum": 0,
+          "title": "Timeout Seconds",
+          "type": "number"
+        },
+        "transport": {
+          "enum": [
+            "classifier",
+            "http"
+          ],
+          "title": "Transport",
+          "type": "string"
+        }
+      },
+      "required": [
+        "model",
+        "transport",
+        "timeout_seconds",
+        "max_questions_per_call",
+        "max_state_chars",
+        "retry_backoff_seconds",
+        "price_per_input_token_usd"
+      ],
+      "title": "JevConfig",
+      "type": "object"
+    },
+    "KnowledgeBindingConfig": {
+      "additionalProperties": false,
+      "properties": {
+        "backend": {
+          "title": "Backend",
+          "type": "string"
+        },
+        "database": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Database"
+        },
+        "embedding_dimensions": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Embedding Dimensions"
+        },
+        "embedding_endpoint_env": {
+          "title": "Embedding Endpoint Env",
+          "type": "string"
+        },
+        "embedding_model": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Embedding Model"
+        },
+        "embedding_token_env": {
+          "title": "Embedding Token Env",
+          "type": "string"
+        },
+        "embeddings_enabled": {
+          "title": "Embeddings Enabled",
+          "type": "boolean"
+        },
+        "neo4j_password_env": {
+          "title": "Neo4J Password Env",
+          "type": "string"
+        },
+        "neo4j_uri_env": {
+          "title": "Neo4J Uri Env",
+          "type": "string"
+        },
+        "neo4j_username_env": {
+          "title": "Neo4J Username Env",
+          "type": "string"
+        },
+        "query_catalog_root": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Query Catalog Root"
+        },
+        "query_timeout": {
+          "exclusiveMinimum": 0,
+          "maximum": 30,
+          "title": "Query Timeout",
+          "type": "number"
+        },
+        "repository_id": {
+          "title": "Repository Id",
+          "type": "string"
+        },
+        "repository_root": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Repository Root"
+        }
+      },
+      "required": [
+        "backend",
+        "repository_id",
+        "repository_root",
+        "query_catalog_root",
+        "neo4j_uri_env",
+        "neo4j_username_env",
+        "neo4j_password_env",
+        "database",
+        "embeddings_enabled",
+        "embedding_endpoint_env",
+        "embedding_token_env",
+        "embedding_model",
+        "embedding_dimensions",
+        "query_timeout"
+      ],
+      "title": "KnowledgeBindingConfig",
+      "type": "object"
+    },
+    "LangfuseConfig": {
+      "additionalProperties": false,
+      "description": "Langfuse export settings (credentials come from secrets, never from here).",
+      "properties": {
+        "enabled": {
+          "title": "Enabled",
+          "type": "boolean"
+        },
+        "environment": {
+          "title": "Environment",
+          "type": "string"
+        },
+        "flush_on_exit": {
+          "title": "Flush On Exit",
+          "type": "boolean"
+        },
+        "trace_name": {
+          "title": "Trace Name",
+          "type": "string"
+        }
+      },
+      "required": [
+        "enabled",
+        "environment",
+        "trace_name",
+        "flush_on_exit"
+      ],
+      "title": "LangfuseConfig",
+      "type": "object"
+    },
+    "LimitsConfig": {
+      "additionalProperties": false,
+      "description": "Run limits (Rev 3 section 13.2).",
+      "properties": {
+        "capability_timeout_seconds": {
+          "exclusiveMinimum": 0,
+          "title": "Capability Timeout Seconds",
+          "type": "number"
+        },
+        "langgraph_recursion_limit": {
+          "minimum": 1,
+          "title": "Langgraph Recursion Limit",
+          "type": "integer"
+        },
+        "max_active_seconds": {
+          "exclusiveMinimum": 0,
+          "title": "Max Active Seconds",
+          "type": "number"
+        },
+        "max_concurrent_host": {
+          "minimum": 1,
+          "title": "Max Concurrent Host",
+          "type": "integer"
+        },
+        "max_concurrent_native": {
+          "minimum": 1,
+          "title": "Max Concurrent Native",
+          "type": "integer"
+        },
+        "max_cost_usd": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Max Cost Usd"
+        },
+        "max_depth": {
+          "minimum": 1,
+          "title": "Max Depth",
+          "type": "integer"
+        },
+        "max_host_operations": {
+          "minimum": 0,
+          "title": "Max Host Operations",
+          "type": "integer"
+        },
+        "max_jev_calls": {
+          "minimum": 0,
+          "title": "Max Jev Calls",
+          "type": "integer"
+        },
+        "max_retries": {
+          "minimum": 0,
+          "title": "Max Retries",
+          "type": "integer"
+        },
+        "max_scheduler_iterations": {
+          "anyOf": [
+            {
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Max Scheduler Iterations"
+        },
+        "max_work_items": {
+          "minimum": 1,
+          "title": "Max Work Items",
+          "type": "integer"
+        },
+        "no_progress_limit": {
+          "minimum": 1,
+          "title": "No Progress Limit",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "max_work_items",
+        "max_depth",
+        "max_concurrent_native",
+        "max_concurrent_host",
+        "max_retries",
+        "no_progress_limit",
+        "max_jev_calls",
+        "max_host_operations",
+        "max_active_seconds",
+        "max_cost_usd",
+        "capability_timeout_seconds",
+        "langgraph_recursion_limit",
+        "max_scheduler_iterations"
+      ],
+      "title": "LimitsConfig",
+      "type": "object"
+    },
+    "MemoryConfig": {
+      "additionalProperties": false,
+      "description": "Decision store backend and precedent lookup settings.",
+      "properties": {
+        "applies_threshold": {
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "Applies Threshold",
+          "type": "number"
+        },
+        "backend": {
+          "enum": [
+            "file",
+            "null"
+          ],
+          "title": "Backend",
+          "type": "string"
+        },
+        "criterion_evidence_max": {
+          "minimum": 1,
+          "title": "Criterion Evidence Max",
+          "type": "integer"
+        },
+        "criterion_evidence_min_overlap": {
+          "minimum": 1,
+          "title": "Criterion Evidence Min Overlap",
+          "type": "integer"
+        },
+        "decisions_dir": {
+          "title": "Decisions Dir",
+          "type": "string"
+        },
+        "max_precedents": {
+          "minimum": 0,
+          "title": "Max Precedents",
+          "type": "integer"
+        },
+        "min_candidate_score": {
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "Min Candidate Score",
+          "type": "number"
+        },
+        "repository_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Repository Id"
+        },
+        "reuse_threshold": {
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "Reuse Threshold",
+          "type": "number"
+        }
+      },
+      "required": [
+        "backend",
+        "repository_id",
+        "decisions_dir",
+        "max_precedents",
+        "min_candidate_score",
+        "applies_threshold",
+        "reuse_threshold",
+        "criterion_evidence_max",
+        "criterion_evidence_min_overlap"
+      ],
+      "title": "MemoryConfig",
+      "type": "object"
+    },
+    "PathsConfig": {
+      "additionalProperties": false,
+      "description": "File-system locations (relative to the repository root unless absolute).",
+      "properties": {
+        "registry": {
+          "title": "Registry",
+          "type": "string"
+        },
+        "run_root": {
+          "title": "Run Root",
+          "type": "string"
+        }
+      },
+      "required": [
+        "run_root",
+        "registry"
+      ],
+      "title": "PathsConfig",
+      "type": "object"
+    },
+    "ResearchConfig": {
+      "additionalProperties": false,
+      "description": "Research-graph thresholds and category descriptions offered to Jev.",
+      "properties": {
+        "allow_synthesis": {
+          "title": "Allow Synthesis",
+          "type": "boolean"
+        },
+        "answer_aware_coverage": {
+          "title": "Answer Aware Coverage",
+          "type": "boolean"
+        },
+        "answer_threshold": {
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "Answer Threshold",
+          "type": "number"
+        },
+        "category_descriptions": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "propertyNames": {
+            "$ref": "#/$defs/EvidenceCategory"
+          },
+          "title": "Category Descriptions",
+          "type": "object"
+        },
+        "evaluable_threshold": {
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "Evaluable Threshold",
+          "type": "number"
+        },
+        "max_claim_needs": {
+          "minimum": 0,
+          "title": "Max Claim Needs",
+          "type": "integer"
+        },
+        "max_targeted_needs": {
+          "minimum": 0,
+          "title": "Max Targeted Needs",
+          "type": "integer"
+        },
+        "need_required_threshold": {
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "Need Required Threshold",
+          "type": "number"
+        },
+        "need_supporting_threshold": {
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "Need Supporting Threshold",
+          "type": "number"
+        }
+      },
+      "required": [
+        "need_required_threshold",
+        "need_supporting_threshold",
+        "evaluable_threshold",
+        "allow_synthesis",
+        "category_descriptions",
+        "answer_aware_coverage",
+        "answer_threshold",
+        "max_targeted_needs",
+        "max_claim_needs"
+      ],
+      "title": "ResearchConfig",
+      "type": "object"
+    },
+    "RetrievalConfig": {
+      "additionalProperties": false,
+      "description": "Repository retrieval bounds.",
+      "properties": {
+        "bm25_b": {
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "Bm25 B",
+          "type": "number"
+        },
+        "bm25_k1": {
+          "exclusiveMinimum": 0,
+          "title": "Bm25 K1",
+          "type": "number"
+        },
+        "coverage_relevance_threshold": {
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "Coverage Relevance Threshold",
+          "type": "number"
+        },
+        "deny_globs": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Deny Globs",
+          "type": "array"
+        },
+        "excerpt_context_lines": {
+          "minimum": 0,
+          "title": "Excerpt Context Lines",
+          "type": "integer"
+        },
+        "max_candidates": {
+          "minimum": 1,
+          "title": "Max Candidates",
+          "type": "integer"
+        },
+        "max_excerpt_chars": {
+          "minimum": 1,
+          "title": "Max Excerpt Chars",
+          "type": "integer"
+        },
+        "max_explicit_locators": {
+          "minimum": 0,
+          "title": "Max Explicit Locators",
+          "type": "integer"
+        },
+        "max_file_bytes": {
+          "minimum": 1,
+          "title": "Max File Bytes",
+          "type": "integer"
+        },
+        "max_query_terms": {
+          "minimum": 1,
+          "title": "Max Query Terms",
+          "type": "integer"
+        },
+        "max_section_lines": {
+          "minimum": 10,
+          "title": "Max Section Lines",
+          "type": "integer"
+        },
+        "path_match_weight": {
+          "minimum": 0,
+          "title": "Path Match Weight",
+          "type": "integer"
+        },
+        "pool_fair_min_ratio": {
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "Pool Fair Min Ratio",
+          "type": "number"
+        },
+        "pool_fair_share": {
+          "minimum": 0,
+          "title": "Pool Fair Share",
+          "type": "integer"
+        },
+        "pool_sections_per_file": {
+          "minimum": 1,
+          "title": "Pool Sections Per File",
+          "type": "integer"
+        },
+        "registry_pin_min_terms": {
+          "minimum": 1,
+          "title": "Registry Pin Min Terms",
+          "type": "integer"
+        },
+        "relevance_threshold": {
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "Relevance Threshold",
+          "type": "number"
+        },
+        "rerank_max_batches": {
+          "minimum": 1,
+          "title": "Rerank Max Batches",
+          "type": "integer"
+        },
+        "rerank_max_per_need": {
+          "minimum": 1,
+          "title": "Rerank Max Per Need",
+          "type": "integer"
+        },
+        "rerank_min_items": {
+          "minimum": 0,
+          "title": "Rerank Min Items",
+          "type": "integer"
+        },
+        "rerank_stop_ratio": {
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "Rerank Stop Ratio",
+          "type": "number"
+        },
+        "review_path_markers": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Review Path Markers",
+          "type": "array"
+        },
+        "review_quote_ratio": {
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "Review Quote Ratio",
+          "type": "number"
+        },
+        "satisfied_min_items": {
+          "minimum": 1,
+          "title": "Satisfied Min Items",
+          "type": "integer"
+        },
+        "satisfied_strong_threshold": {
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "Satisfied Strong Threshold",
+          "type": "number"
+        },
+        "sections_per_file": {
+          "minimum": 1,
+          "title": "Sections Per File",
+          "type": "integer"
+        },
+        "self_reference_penalty": {
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "Self Reference Penalty",
+          "type": "number"
+        },
+        "self_reference_ratio": {
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "Self Reference Ratio",
+          "type": "number"
+        },
+        "source_candidate_floor": {
+          "minimum": 1,
+          "title": "Source Candidate Floor",
+          "type": "integer"
+        },
+        "source_candidate_ratio": {
+          "exclusiveMinimum": 0,
+          "title": "Source Candidate Ratio",
+          "type": "number"
+        },
+        "top_k": {
+          "minimum": 1,
+          "title": "Top K",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "relevance_threshold",
+        "top_k",
+        "max_candidates",
+        "excerpt_context_lines",
+        "max_excerpt_chars",
+        "max_file_bytes",
+        "deny_globs",
+        "coverage_relevance_threshold",
+        "sections_per_file",
+        "max_section_lines",
+        "source_candidate_floor",
+        "source_candidate_ratio",
+        "max_explicit_locators",
+        "max_query_terms",
+        "rerank_max_per_need",
+        "rerank_max_batches",
+        "satisfied_min_items",
+        "satisfied_strong_threshold",
+        "self_reference_ratio",
+        "self_reference_penalty",
+        "path_match_weight",
+        "bm25_k1",
+        "bm25_b",
+        "pool_sections_per_file",
+        "pool_fair_share",
+        "pool_fair_min_ratio",
+        "rerank_min_items",
+        "rerank_stop_ratio",
+        "review_quote_ratio",
+        "review_path_markers",
+        "registry_pin_min_terms"
+      ],
+      "title": "RetrievalConfig",
+      "type": "object"
+    },
+    "RoutingConfig": {
+      "additionalProperties": false,
+      "description": "Routing thresholds.",
+      "properties": {
+        "min_confidence": {
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "Min Confidence",
+          "type": "number"
+        },
+        "min_selected_probability": {
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "Min Selected Probability",
+          "type": "number"
+        },
+        "on_insufficient_context": {
+          "enum": [
+            "human",
+            "block"
+          ],
+          "title": "On Insufficient Context",
+          "type": "string"
+        }
+      },
+      "required": [
+        "min_selected_probability",
+        "min_confidence",
+        "on_insufficient_context"
+      ],
+      "title": "RoutingConfig",
+      "type": "object"
+    },
+    "SourceConfig": {
+      "additionalProperties": false,
+      "description": "One entry of the source catalog (where evidence may come from).",
+      "properties": {
+        "automatic_research": {
+          "default": true,
+          "title": "Automatic Research",
+          "type": "boolean"
+        },
+        "categories": {
+          "items": {
+            "$ref": "#/$defs/EvidenceCategory"
+          },
+          "minItems": 1,
+          "title": "Categories",
+          "type": "array"
+        },
+        "deny_globs": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Deny Globs",
+          "type": "array"
+        },
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "kind": {
+          "enum": [
+            "repo_text",
+            "knowledge_map",
+            "graph_query",
+            "host_research"
+          ],
+          "title": "Kind",
+          "type": "string"
+        },
+        "max_file_bytes": {
+          "anyOf": [
+            {
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Max File Bytes"
+        },
+        "roots": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Roots",
+          "type": "array"
+        },
+        "surfaces": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Surfaces",
+          "type": "array"
+        }
+      },
+      "required": [
+        "id",
+        "kind",
+        "categories"
+      ],
+      "title": "SourceConfig",
+      "type": "object"
+    }
+  },
+  "$id": "kernel_config.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Complete kernel configuration.",
+  "properties": {
+    "context_enrichment": {
+      "$ref": "#/$defs/ContextEnrichmentConfig"
+    },
+    "data_policy": {
+      "$ref": "#/$defs/DataPolicyConfig"
+    },
+    "decision": {
+      "$ref": "#/$defs/DecisionConfig"
+    },
+    "entity_context": {
+      "$ref": "#/$defs/EntityContextConfig"
+    },
+    "host": {
+      "$ref": "#/$defs/HostConfig"
+    },
+    "intent": {
+      "$ref": "#/$defs/IntentConfig"
+    },
+    "jev": {
+      "$ref": "#/$defs/JevConfig"
+    },
+    "knowledge": {
+      "$ref": "#/$defs/KnowledgeBindingConfig"
+    },
+    "langfuse": {
+      "$ref": "#/$defs/LangfuseConfig"
+    },
+    "limits": {
+      "$ref": "#/$defs/LimitsConfig"
+    },
+    "memory": {
+      "$ref": "#/$defs/MemoryConfig"
+    },
+    "paths": {
+      "$ref": "#/$defs/PathsConfig"
+    },
+    "research": {
+      "$ref": "#/$defs/ResearchConfig"
+    },
+    "retrieval": {
+      "$ref": "#/$defs/RetrievalConfig"
+    },
+    "routing": {
+      "$ref": "#/$defs/RoutingConfig"
+    },
+    "sources": {
+      "items": {
+        "$ref": "#/$defs/SourceConfig"
+      },
+      "title": "Sources",
+      "type": "array"
+    }
+  },
+  "required": [
+    "knowledge",
+    "paths",
+    "limits",
+    "routing",
+    "intent",
+    "context_enrichment",
+    "entity_context",
+    "decision",
+    "research",
+    "retrieval",
+    "sources",
+    "jev",
+    "host",
+    "data_policy",
+    "langfuse",
+    "memory"
+  ],
+  "title": "KernelConfig",
+  "type": "object"
+}

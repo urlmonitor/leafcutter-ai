@@ -79,6 +79,7 @@ from build_phases import (
 )
 from build_placeholder_detection import scan_for_placeholders, format_placeholder_report
 from build_referential_integrity import check_referential_integrity, format_integrity_report
+from build_retired_outputs import run_retired_output_sweep
 
 
 def _build_arg_parser() -> argparse.ArgumentParser:
@@ -411,11 +412,11 @@ def _write_version_files(
     """
     if not dry_run:
         version_file = target_root / "VERSION"
-        version_file.write_text(computed_version + "\n", encoding="utf-8")
+        version_file.write_text(computed_version + "\n", encoding="utf-8", newline="\n")
         # Write LEAFCUTTER_VERSION file so deployed consumers can determine the
         # package version without reading the source package directly (ACD-1100e-2).
         lv_file = target_root / "LEAFCUTTER_VERSION"
-        lv_file.write_text(package_version + "\n", encoding="utf-8")
+        lv_file.write_text(package_version + "\n", encoding="utf-8", newline="\n")
     else:
         _dry_run_msg(f"would write {target_root / 'VERSION'}")
         _dry_run_msg(f"would write {target_root / 'LEAFCUTTER_VERSION'}")
@@ -523,7 +524,13 @@ def _run_shim_and_hook_install(
     BP-1500g-1: any shim result whose ``method`` starts with ``"blocked"``
     appends its canonical path to *blocked_conflicts* (mutated in place)
     instead of being silently treated as installed.
+
+    Retired command outputs are removed FIRST, and even under --no-shims: a
+    copy-strategy shim merges the output root into the canonical directories
+    and would carry a retired file straight back
+    (TICKET-20260930-RetireRenamedCommandOutputs).
     """
+    run_retired_output_sweep(target_root, output_root, config, dry_run)
     if no_shims:
         return
     print()
@@ -582,5 +589,13 @@ DECISION HISTORY
   print, and early-return moved verbatim; nothing was removed. See
   build.py's own DECISION HISTORY entry for the same date for the
   paired change on that side.
+- 2026-09-30 [BrainCandy/TICKET-20260930-RetireRenamedCommandOutputs]:
+  _run_shim_and_hook_install() now runs build_retired_outputs'
+  run_retired_output_sweep() before the --no-shims early return and before
+  shim install, so an installed command file whose template was renamed or
+  deleted is retired when provably unmodified package output, and kept and
+  named otherwise. Wired here rather than in build.py, which the
+  file-size ratchet forbids from growing.
+  (#TICKET-20260930-RetireRenamedCommandOutputs)
 ====================================================================
 """

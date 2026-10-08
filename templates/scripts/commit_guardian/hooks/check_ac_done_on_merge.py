@@ -10,8 +10,16 @@ BUSINESS CONTEXT: After a ticket-linked merge lands, the source AC in the AC
     field in its YAML frontmatter.
     Non-fatal: any per-ticket failure is logged and skipped so the hook never
     blocks a merge (exit code is always 0).
-ARCHITECTURE: Standalone post-merge hook script with no leafcutter-internal
-    imports. Supports LEAFCUTTER_FAKE_GIT_DIFF env var for test injection of
+ARCHITECTURE: Standalone -- no leafcutter-internal imports. Deliberately uses
+    yaml.safe_load rather than the shared get_safe_yaml_loader() accessor:
+    this hook parses exactly one small frontmatter block per changed ticket,
+    so the C-loader gain is unmeasurable, while reaching the accessor from
+    this hooks/ subfolder requires a sys.path insert one directory up that
+    scripts/ci/_declaring_files_scan.py cannot statically resolve -- it
+    assumes a bare underscore import is a same-directory sibling and so
+    reports a false "declaring files" violation. Keeping this hook
+    import-free avoids that gate failure outright.
+    Supports LEAFCUTTER_FAKE_GIT_DIFF env var for test injection of
     diff output, and LEAFCUTTER_AC_ROOT env var for AC root directory override.
     Changed ticket paths are read from the diff; each is parsed for status and
     source_ac frontmatter fields. Qualifying tickets are processed by invoking

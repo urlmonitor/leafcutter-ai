@@ -1,0 +1,217 @@
+id: TQ-600a-13-i
+components:
+  - testing_quality
+title: "Choosing to exclude a test from the default run does not quietly delete it"
+component: testing-quality
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given the branch of the parent record in which real deselection is implemented rather
+    than the documents corrected,
+  And what the suffixed tests in the suite-performance directory actually cover: the
+    routing that decides whether a test is handed the one shared layout or a private
+    copy of its own, which when it breaks hands a mutator the shared root and corrupts
+    every reader nondeterministically,
+  And the asymmetry that makes a careless exclusion worse than today's false claim: a
+    false claim costs the run some seconds it did not expect to spend, while an
+    exclusion with no invoked alternative costs the only quick warning of a corruption
+    that makes unrelated tests fail for unrelated-looking reasons,
+  When a suffixed test is excluded from the default collection,
+  Then a named opt-in exists that collects it, and that opt-in is invoked on a stated
+    cadence by something whose failure fails the build,
+  And a suffixed test that fails under that opt-in turns the invoking job red, shown by
+    making one fail and observing the job's outcome,
+  And the opt-in is shown to collect every test the default collection excluded, so
+    the two sets together are the whole suite and nothing falls between them,
+  And when no such invoked opt-in is in place, the exclusion is refused rather than
+    applied, so the deselection cannot land on its own ahead of the thing that
+    compensates for it.
+depends_on:
+  - TQ-600a-13
+doc_links:
+  - path: .github/workflows/ci.yml
+    relationship: modifies
+    status: exists
+    relevance: >-
+      Where the opt-in has to actually be invoked. An opt-in that exists and is never
+      invoked is the same defect as the documented exclusion that is never performed,
+      pointed the other way.
+  - path: pytest.ini
+    relationship: modifies
+    status: exists
+    relevance: >-
+      Where a registered marker belongs if the exclusion branch is taken. Register it
+      as a direct configuration key; the options-string spelling of marker strictness
+      was measured inert on the installed pytest.
+  - path: scripts/suite_performance/pytest_shared_reference_layout.py
+    relationship: describes
+    status: exists
+    relevance: >-
+      The routing the suffixed suite-performance tests exist to guard. Reading what
+      they cover is what turns "these tests are slow" into "these tests are the warning
+      system", which is the whole argument of this record.
+  - path: docs/analysis/2026-10-05-slowest-tests-and-what-to-do-about-them-5-skipping-and-run-once.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      The analysis that recommended against simply adding deselection, for this reason.
+  - path: .github/test_durations.json
+    relationship: modifies
+    status: exists
+    relevance: >-
+      EDIT SURFACE if the exclusion branch is taken. pytest-split balances the eight
+      CI shards from this file at per-test-id granularity; removing tests from the
+      default collection changes the id set it is balancing, so a stale file degrades
+      the matrix. Same coupling TQ-600a-9 carries — if both land, regenerate once,
+      after both.
+declared_files:
+  - path: .github/workflows/ci.yml
+    state: existing
+  - path: pytest.ini
+    state: existing
+  - path: .github/test_durations.json
+    state: existing
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - >-
+    THIS RECORD IS CONDITIONAL AND MAY END UP NOT APPLYING. If the parent's documents
+    branch is chosen, nothing is excluded, and this record is satisfied vacuously and
+    should be marked so rather than built. It exists to make the exclusion branch
+    safe, not to push toward it.
+  - >-
+    AN OPT-IN NOBODY INVOKES IS NOT AN OPT-IN. The failure here is not forgetting to
+    write the opt-in; it is writing it, documenting it, and never adding it to anything
+    that runs. Assert the invocation, not the existence.
+  - >-
+    THE TWO SETS MUST COVER THE SUITE. Default collection plus opt-in collection equals
+    the whole suite. A test that is in neither is deleted in effect while appearing to
+    exist, which is the quietest way to lose coverage there is.
+  - >-
+    REFUSE THE DESELECTION WHEN THE COMPENSATION IS ABSENT. Ordering matters: the
+    deselection is a one-line change and the invoked cadence is not, so the deselection
+    will land first unless landing it first is made to fail.
+  - >-
+    SIZED AS M WHEN IT APPLIES, NOT S, AND IT MAY APPLY ZERO TIMES. If the parent takes
+    the documents branch this record is vacuous and costs nothing. If the exclusion
+    branch is taken it spans three files — a marker registration in pytest.ini, a new
+    invoked job in .github/workflows/ci.yml, and the refusal gate itself — and the
+    estimate reflects that branch, because sizing the branch that might not happen as S
+    makes the branch that might happen look free.
+  - >-
+    THE AGGREGATOR AT ci.yml LINE 412 IS THE REASON A NEW JOB IS NOT FREE. That job is
+    named `Test suite (pytest)` and exists to carry one stable required-check name
+    across a matrix whose size may change. A second cadence that runs the excluded
+    tests must either feed that aggregator or become its own required check — if it
+    does neither, its failures do not fail anything, which is exactly the shape this
+    record forbids. Decide which, and verify against the branch-protection ruleset
+    rather than assuming a new job is automatically blocking: this repository's
+    required checks are configured in a ruleset, not in the workflow file.
+  - >-
+    A PER-TEST-ID DESELECTION AND A SHARDED RUN INTERACT. CI shards with pytest-split
+    using the committed .github/test_durations.json. Removing tests from the default
+    collection changes which test ids the splitter sees, so the durations file must be
+    regenerated alongside the exclusion or the shard balance drifts. This is the same
+    coupling TQ-600a-9 carries; if both land, regenerate once, after both.
+  - >-
+    THE UNION ASSERTION MUST COMPARE TWO REAL COLLECTIONS. "Default collection plus
+    opt-in collection equals the whole suite" is checkable only by running
+    `--collect-only` three times — default, opt-in, and unfiltered — and comparing node
+    id sets. Deriving the third set by adding the first two together assumes the very
+    property under test. Collection is cheap (about 5.33 s for the whole suite), so
+    three real collections is an affordable descriptor, not an expensive one.
+delivers_to: null
+expects_from:
+  - ac_id: TQ-600a-13
+    contract: >-
+      The chosen outcome and, if it is the exclusion branch, the deselection mechanism
+      this record constrains.
+test_spec:
+  - name: test_tq600a_13_i_the_opt_in_collects_every_test_the_default_run_excluded
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: integration
+    angle: criterion
+    surface_invoked: "three real `python -m pytest --collect-only -q` subprocesses: default, opt-in, and unfiltered"
+    description: >-
+      Collect with the default settings, with the opt-in, and with no filter at all —
+      three real collections — and compare node id sets. The union of the first two
+      equals the third. Do NOT derive the third set by adding the first two: that
+      assumes the property under test.
+  - name: test_tq600a_13_i_a_failing_excluded_test_turns_the_invoking_job_red
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: integration
+    angle: discrimination
+    must_catch:
+      - "the opt-in cadence runs the excluded tests and reports their failure without failing the job — continue-on-error, a non-blocking job, or a job outside the required-check set all produce this"
+      - "the cadence exists in the workflow file and is never triggered by any event, so it never runs at all"
+    description: >-
+      Make one excluded test fail and execute the invoking job's command. The job's
+      exit status is non-zero. THIS IS THE DESCRIPTOR THAT CANNOT BE DROPPED: an opt-in
+      whose failures do not fail anything is a way of not running the tests while
+      appearing to run them. Assert the exit status, not the presence of the job.
+  - name: test_tq600a_13_i_a_deselection_without_an_invoked_opt_in_is_refused
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: integration
+    angle: discrimination
+    must_catch:
+      - "the refusal is downgraded to a warning, so the cheap half of the change lands alone and the compensation becomes a follow-up nobody files"
+      - "the refusal checks that an opt-in is DEFINED rather than that it is INVOKED, so a workflow job that exists and is never triggered satisfies it"
+    description: >-
+      Configure the deselection with no invoked cadence present. The configuration is
+      refused, with a non-zero status, and names what is missing.
+  - name: test_tq600a_13_i_a_complete_arrangement_is_accepted
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: >-
+      The paired control. Deselection plus a registered marker plus an invoked cadence
+      is accepted and both collections work, so a check that refuses every arrangement
+      does not satisfy this record.
+test_rationale: |
+  Every descriptor here is about the gap between a mechanism existing and a mechanism
+  running, because that gap is the entire subject. The opt-in is easy to write and easy
+  to never invoke, and the state in which it exists but is never invoked looks, from
+  every surface anybody reads, identical to the state in which it works.
+
+  The failing-test descriptor is therefore specified as an end-to-end observation of the
+  invoking job rather than as a check that the opt-in collects the right tests. A
+  collection that finds the tests and a job that ignores their result are different
+  things, and only the second one matters.
+
+  The ordering refusal is here because the deselection is one line and the compensation
+  is not. Left to itself, the cheap half lands and the expensive half becomes a
+  follow-up that nobody files.
+origin_agent: business-analyst
+created: 2026-10-07
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-10-07'
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target:
+  - pipeline
+  - config
+risk_surface: internal
+notes: |
+  The prior analysis recommended against deselection and this record agrees with it.
+  Its purpose is not to enable the exclusion but to make sure that if the exclusion is
+  chosen anyway, the choice is made with its cost attached. The suffixed tests in the
+  suite-performance directory are the only quick warning that the shared-layout routing
+  has started handing mutators the shared root, and that failure presents as unrelated
+  tests failing nondeterministically for unrelated-looking reasons — the most expensive
+  kind of bug this suite can have.
+
+  If the parent takes the documents branch, mark this record satisfied without building
+  it, and record which branch was taken so a later reader does not mistake a vacuous
+  satisfaction for an untested one.
