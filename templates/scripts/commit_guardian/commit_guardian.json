@@ -1313,7 +1313,7 @@
         "change_set_source": "handed_by_commit_path",
         "always_run": true,
         "script": "check_folder_density.py",
-        "description": "Refuses a commit that takes a directory from at-or-under to over the permitted count of non-markdown files (folder_density.max_files, default 15).",
+        "description": "Refuses a commit that takes a directory from at-or-under to over the permitted count of non-markdown files (folder_density.max_files_per_folder, default 15).",
         "_comment": "GE-120h-3: documented live at README.md line 42 and configured since the initial extract, but named by no hooks_manifest entry and therefore never run. always_run with no files key because main() resolves its own staged set via get_staged_files() (`git diff --cached`) and ignores argv; a files regex would be a filter the script never consults, which check-hook-trigger-reachability flags as a contradiction. Safe to register as-is: _classify_folders raises a violation only when a folder crosses the threshold IN THIS COMMIT (after > limit and before <= limit), so the 113 directories already over 15 classify as warnings. Verified against a real staged set, where templates/scripts/commit_guardian (109) and unit_tests/commit_guardian (142) both reported PRE-EXISTING rather than blocking."
       },
       {
@@ -1445,6 +1445,10 @@
         "always_run": true,
         "script": "check_ac_done_on_merge.py",
         "description": "After a merge, marks each source AC work_status: done for every ticket the merge moved to status: done.",
+        "negative_control": {
+          "not_applicable": true,
+          "reason": "check-ac-done-on-merge cannot be exercised as a negative control: main() returns 0 unconditionally under every input it is given, and its __main__ guard additionally swallows OSError/ValueError into sys.exit(0), so no input drives it to a non-zero exit. It is a fire-and-forget AC-closer side effect dispatched on the post-merge stage, not a judgment gate that can refuse a commit, so it has no known-bad input for this AC's negative_control shape to reject."
+        },
         "_comment": "GE-120h-3: never registered in either manifest, so no AC has ever been auto-closed on merge. Unlike the four gates above it consults NEITHER argv NOR the staged set — it reads `git diff HEAD~1 HEAD` on the post-merge stage. Cannot block: main() returns 0 unconditionally (:213) and the __main__ guard swallows OSError/ValueError into sys.exit(0) (:219-224). Note the call direction: this script INVOKES scripts/ac_store/mark_ac_done.py by subprocess (:148-162); mark_ac_done.py:6 naming this hook is a back-reference, not an invocation, and has been misread as one. FIRST post-merge entry in this manifest — build_precommit.py renders the stage verbatim, but the git shim is installed by install_pre_commit_shims.collect_stages, which only setup_ticket_worktree.py calls, so an existing checkout that never ran it has no post-merge shim and this gate stays silent there. Verified present in this repository's .git/hooks/post-merge (a genuine pre-commit shim, --hook-type=post-merge)."
       },
       {
