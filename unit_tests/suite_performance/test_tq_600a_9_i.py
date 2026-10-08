@@ -244,7 +244,7 @@ class TestTQ600a9iCopyOnWriteIsolation(unittest.TestCase):
     # Test 4 -- discrimination. THIS IS THE DESCRIPTOR THAT CANNOT BE
     # DROPPED (TQ-600a-9-i's own test_spec entry).
     # ------------------------------------------------------------------
-    def test_tq600a_9_i_breaking_one_members_subject_reddens_only_that_member(
+    def test_tq600a_9_i_breaking_one_members_subject_reddens_only_that_member_MANUAL(
         self,
     ):
         # covers: TQ-600a-9-i

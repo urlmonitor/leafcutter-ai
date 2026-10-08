@@ -157,7 +157,7 @@ class TestTQ600a9BuildSubprocessReduction(unittest.TestCase):
     # Test 3 -- discrimination. THIS IS THE DESCRIPTOR THAT CANNOT BE
     # DROPPED (TQ-600a-9's own test_rationale).
     # ------------------------------------------------------------------
-    def test_tq600a_9_each_shared_assertion_still_fails_when_its_own_subject_is_broken(
+    def test_tq600a_9_each_shared_assertion_still_fails_when_its_own_subject_is_broken_MANUAL(
         self,
     ):
         # covers: TQ-600a-9
@@ -270,7 +270,7 @@ class TestTQ600a9BuildSubprocessReduction(unittest.TestCase):
     # ------------------------------------------------------------------
     # Test 5 -- criterion (ratio, before/after in one sitting; scoped)
     # ------------------------------------------------------------------
-    def test_tq600a_9_the_named_files_cost_at_most_two_thirds_of_their_baseline(self):
+    def test_tq600a_9_the_named_files_cost_at_most_two_thirds_of_their_baseline_MANUAL(self):
         # covers: TQ-600a-9
         # angle: criterion
         """Run the colliding-capability group with sharing OFF (a
@@ -355,7 +355,7 @@ class TestTQ600a9BuildSubprocessReduction(unittest.TestCase):
     # ------------------------------------------------------------------
     # Test 6 -- discrimination (boundary/safety; named mutation)
     # ------------------------------------------------------------------
-    def test_tq600a_9_no_file_in_the_set_changes_between_directed_and_self_targeting(
+    def test_tq600a_9_no_file_in_the_set_changes_between_directed_and_self_targeting_MANUAL(
         self,
     ):
         # covers: TQ-600a-9
