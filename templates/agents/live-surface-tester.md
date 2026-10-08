@@ -14,6 +14,9 @@ description: 'Conditional phase agent that starts a development server, issues H
 model: sonnet
 name: live-surface-tester
 tools: Bash, Read, Edit
+skills:
+- skill_id: signoff
+  mode: always
 portable: true
 signoff: true
 domain: null

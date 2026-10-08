@@ -8,6 +8,9 @@ description: |
 model: sonnet
 name: reference-author
 tools: Bash, Read, Edit, Write, Agent
+skills:
+- skill_id: signoff
+  mode: conditional
 portable: true
 signoff: true
 domain: null

@@ -23,6 +23,9 @@ tools: Bash, Read, Grep, Glob, mcp__jcodemunch__get_blast_radius, mcp__jcodemunc
   mcp__plugin_serena_serena__find_implementations, mcp__plugin_serena_serena__find_referencing_symbols,
   mcp__plugin_serena_serena__search_for_pattern, mcp__plugin_serena_serena__get_symbols_overview,
   mcp__plugin_context7_context7__resolve-library-id, mcp__plugin_context7_context7__query-docs
+skills:
+- skill_id: signoff
+  mode: always
 portable: true
 signoff: false
 domain: null

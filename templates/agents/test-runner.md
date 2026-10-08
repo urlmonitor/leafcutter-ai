@@ -16,6 +16,9 @@ description: 'Picks the right test suite based on what has changed, runs it, and
 model: sonnet
 name: test-runner
 tools: Bash, Read, Edit
+skills:
+- skill_id: signoff
+  mode: always
 portable: true
 signoff: true
 domain: null

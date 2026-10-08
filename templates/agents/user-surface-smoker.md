@@ -14,6 +14,9 @@ memory: true
 model: sonnet
 name: user-surface-smoker
 tools: Bash, Read, Edit, Agent
+skills:
+- skill_id: signoff
+  mode: always
 portable: true
 signoff: true
 domain: null

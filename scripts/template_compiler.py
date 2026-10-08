@@ -25,7 +25,6 @@ ARCHITECTURE: Public functions: parse_frontmatter (YAML header extraction),
 
 from __future__ import annotations
 
-import logging
 import re
 from pathlib import Path
 from typing import Any
@@ -40,6 +39,7 @@ from typing import Any
 # Python's own clear message naming the missing dependency rather than mask it.
 import yaml
 
+from agent_skills_declaration import append_declared_skills
 from injection_builders import (  # noqa: E402
     _load_registry,  # noqa: F401  # re-exported; consumed by build_phases / build_helpers
     build_agent_priority_table,
@@ -51,8 +51,6 @@ from injection_builders import (  # noqa: E402
     build_registry_block,
     build_signoff_block,
 )
-
-_log = logging.getLogger(__name__)
 
 STRIPPED_HEADINGS = {
     "## Configuration",
@@ -365,7 +363,8 @@ def compile_agent_template(
     (3) strip metadata sections from body;
     (4) inject config placeholders;
     (5) inject registry placeholders (Types 1–4) via ``_apply_registry_injection``;
-    (6) conditionally append sign-off block when ``signoff: true`` is set.
+    (6) conditionally append sign-off block when ``signoff: true`` is set;
+    (7) append the frontmatter ``skills`` table (AR-300c-1).
 
     Args:
         template_path: Absolute path to a ``.md`` agent template file with
@@ -419,6 +418,7 @@ def compile_agent_template(
     if fm.get("signoff") is True:
         body = body.rstrip("\n") + build_signoff_block()
 
+    body = append_declared_skills(body, fm, skills_root)  # AR-300c-1
     return header + body
 
 

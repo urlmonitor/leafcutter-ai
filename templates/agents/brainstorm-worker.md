@@ -13,6 +13,11 @@ description: |
   is a single-shot read-only analyst.
 model: sonnet
 tools: Read, Bash
+skills:
+- skill_id: building-epics
+  mode: always
+- skill_id: signoff
+  mode: always
 portable: true
 signoff: false
 domain: null

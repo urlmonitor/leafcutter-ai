@@ -9,6 +9,11 @@ description: |
   reporting; does NOT create SQL schema objects (use sql-coder for that).
 model: sonnet
 tools: Bash, Read, Edit, Write, Agent
+skills:
+- skill_id: sql-query-past-queries
+  mode: always
+- skill_id: signoff
+  mode: conditional
 requires_verification: true
 default_artifact_checklist:
   - query_authored

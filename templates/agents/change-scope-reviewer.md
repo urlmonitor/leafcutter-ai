@@ -9,6 +9,9 @@ description: |
 model: sonnet
 name: change-scope-reviewer
 tools: Bash, Read, Edit
+skills:
+- skill_id: signoff
+  mode: conditional
 portable: true
 signoff: true
 domain: null

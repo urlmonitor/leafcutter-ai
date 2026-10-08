@@ -20,6 +20,9 @@ description: 'Investigates ticket state — answers "is this done? deployed? wha
 model: sonnet
 name: status-checker
 tools: Bash, Read, Edit, Write, Agent
+skills:
+- skill_id: signoff
+  mode: conditional
 portable: true
 signoff: true
 domain: null

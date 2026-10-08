@@ -2,6 +2,9 @@
 name: feedback-analyst
 model: sonnet
 tools: Bash, Read
+skills:
+- skill_id: feedback-analysis
+  mode: always
 portable: true
 signoff: false
 domain: null

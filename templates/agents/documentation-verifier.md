@@ -17,6 +17,9 @@ memory: true
 model: sonnet
 name: documentation-verifier
 tools: Bash, Read, Edit
+skills:
+- skill_id: signoff
+  mode: always
 requires_verification: true
 portable: true
 signoff: true

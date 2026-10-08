@@ -19,6 +19,9 @@ description: |
 model: opus
 name: it-po
 tools: Read, Write, Edit, Bash, Skill  # No source code access — uses architecture docs and registries only. Edit is required by the covered_by update protocol.
+skills:
+- skill_id: knowledge-query
+  mode: always
 portable: true
 requires_verification: true
 signoff: false

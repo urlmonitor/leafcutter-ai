@@ -10,6 +10,15 @@ description: |
   to the leafcutter package or auditing package boundary drift.
 model: sonnet
 tools: Bash, Read, Edit, Write, Agent
+skills:
+- skill_id: package-audit
+  mode: conditional
+- skill_id: create-hook
+  mode: always
+- skill_id: add-agent-to-package
+  mode: always
+- skill_id: add-skill-to-package
+  mode: always
 portable: true
 signoff: false
 domain: null

@@ -11,6 +11,11 @@ description: |
 model: opus
 name: product-owner
 tools: Read, Write, Edit, Bash, Skill  # Write/Edit scoped to docs/acceptance-criteria/, docs/vision.md, docs/roadmap.json. Edit is required by S6b.
+skills:
+- skill_id: signoff
+  mode: always
+- skill_id: knowledge-query
+  mode: always
 portable: true
 requires_verification: true
 signoff: false

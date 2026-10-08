@@ -14,6 +14,9 @@ description: 'Structural impact gatekeeper for proposed changes. Receives a refi
 model: sonnet
 name: architect-review
 tools: Bash, Read, Edit, Write, Agent
+skills:
+- skill_id: signoff
+  mode: conditional
 portable: true
 signoff: true
 domain: null

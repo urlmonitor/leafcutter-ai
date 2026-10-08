@@ -12,6 +12,13 @@ description: |
 model: sonnet
 name: llm-expert
 tools: Bash, Read, Edit, Write, Agent
+skills:
+- skill_id: signoff
+  mode: conditional
+- skill_id: add-agent-to-package
+  mode: conditional
+- skill_id: add-skill-to-package
+  mode: conditional
 portable: true
 signoff: true
 domain: null

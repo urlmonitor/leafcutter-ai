@@ -7,6 +7,9 @@ description: |
   (internal — invoked by parent agents only)
 model: sonnet
 tools: Bash, Read, Edit, Write, Agent
+skills:
+- skill_id: signoff
+  mode: always
 requires_verification: true
 pre_flight_reads:
 - required: true

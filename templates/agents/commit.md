@@ -19,6 +19,11 @@ memory: true
 model: sonnet
 name: commit
 tools: Bash, Read, Edit, Write, Agent
+skills:
+- skill_id: signoff
+  mode: conditional
+- skill_id: precommit-autofix
+  mode: always
 portable: true
 signoff: true
 domain: null

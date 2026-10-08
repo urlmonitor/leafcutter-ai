@@ -7,6 +7,9 @@ description: 'Portable guided installation wizard. Auto-discovers the repo struc
 model: sonnet
 name: onboard
 tools: Bash, Read, Write, Edit, Agent
+skills:
+- skill_id: webapp-testing
+  mode: conditional
 portable: true
 signoff: false
 domain: null

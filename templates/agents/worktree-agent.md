@@ -19,6 +19,11 @@ memory: true
 model: haiku
 name: worktree-agent
 tools: Bash, Read
+skills:
+- skill_id: feature
+  mode: conditional
+- skill_id: signoff
+  mode: always
 portable: true
 signoff: false
 domain: null

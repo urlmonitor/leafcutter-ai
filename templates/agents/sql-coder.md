@@ -10,6 +10,9 @@ description: |
   index/table; asks to refactor SQL or apply a SQL change to the local DB.
 model: sonnet
 tools: Bash, Read, Edit, Write, Agent
+skills:
+- skill_id: signoff
+  mode: conditional
 requires_verification: true
 default_artifact_checklist:
   - sql_file_written

@@ -9,6 +9,11 @@ description: |
 model: opus
 name: adr-author
 tools: Bash, Read, Edit, Write, Agent
+skills:
+- skill_id: signoff
+  mode: always
+- skill_id: doc-enforcer
+  mode: always
 portable: true
 signoff: true
 requires_verification: true

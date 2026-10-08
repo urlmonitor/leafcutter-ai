@@ -19,6 +19,9 @@ description: 'Confirmation-gated PR creation agent. Reads recent commits on the 
 model: sonnet
 name: pull-request
 tools: Bash, Read, Edit, Write, Agent
+skills:
+- skill_id: signoff
+  mode: conditional
 portable: true
 signoff: true
 domain: null

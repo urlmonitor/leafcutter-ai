@@ -16,6 +16,11 @@ description: 'Standards-enforcing Python implementation agent. Writes, edits, an
 model: sonnet
 name: python-coder
 tools: Bash, Read, Edit, Write, Agent
+skills:
+- skill_id: signoff
+  mode: always
+- skill_id: doc-enforcer
+  mode: always
 portable: true
 signoff: true
 domain: null

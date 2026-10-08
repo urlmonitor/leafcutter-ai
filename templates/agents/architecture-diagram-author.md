@@ -9,6 +9,9 @@ description: |
   (internal — dispatched by documentation-expert only, for "design — C4 diagram" intent)
 model: opus
 tools: Bash, Read, Edit, Write, Skill
+skills:
+- skill_id: write-c4-diagram
+  mode: conditional
 portable: true
 signoff: true
 domain: null

@@ -21,6 +21,9 @@ memory: true
 model: sonnet
 name: pr-reviewer
 tools: Bash, Read, Edit, Agent
+skills:
+- skill_id: signoff
+  mode: conditional
 portable: true
 signoff: true
 domain: null

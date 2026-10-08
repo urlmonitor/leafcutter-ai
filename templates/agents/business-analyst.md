@@ -12,6 +12,9 @@ description: |
 model: opus
 name: business-analyst
 tools: Read, Write, Edit, Bash, Skill  # Write/Edit scoped to docs/acceptance-criteria/ only. Edit is required by S6b.
+skills:
+- skill_id: knowledge-query
+  mode: always
 portable: true
 requires_verification: true
 signoff: false

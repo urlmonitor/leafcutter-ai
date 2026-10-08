@@ -16,6 +16,11 @@ description: |
 model: sonnet
 name: frontend-coder
 tools: Bash, Read, Edit, Write, Agent
+skills:
+- skill_id: webapp-testing
+  mode: conditional
+- skill_id: signoff
+  mode: conditional
 portable: true
 signoff: true
 requires_verification: true

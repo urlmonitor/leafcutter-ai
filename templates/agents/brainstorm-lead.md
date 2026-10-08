@@ -14,6 +14,9 @@ description: |
   exhausted; cap is 1 invocation per ticket per `building-epics` §4.
 model: opus
 tools: Read, Bash, Agent
+skills:
+- skill_id: building-epics
+  mode: conditional
 portable: true
 signoff: false
 domain: null

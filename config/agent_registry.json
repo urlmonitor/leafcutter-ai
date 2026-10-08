@@ -477,7 +477,8 @@
             "template_path": "templates/agents/python-coder.md",
             "model": "sonnet",
             "skills_used": [
-                "signoff"
+                "signoff",
+                "doc-enforcer"
             ],
             "skills_invoked": [
                 {
@@ -775,6 +776,7 @@
             "template_path": "templates/agents/documentation-expert.md",
             "model": "sonnet",
             "skills_used": [
+                "route-knowledge",
                 "signoff"
             ],
             "priority": 10,
@@ -1047,8 +1049,14 @@
             "requires_verification": false,
             "category": "supervisor",
             "skills_invoked": [
-                "review-for-code-smells",
-                "review-for-structural-code-smells"
+                {
+                    "skill_id": "review-for-code-smells",
+                    "mode": "always"
+                },
+                {
+                    "skill_id": "review-for-structural-code-smells",
+                    "mode": "always"
+                }
             ],
             "knowledge_channels": [
                 {
@@ -1092,8 +1100,14 @@
             "requires_verification": false,
             "category": "supervisor",
             "skills_invoked": [
-                "review-for-code-smells",
-                "review-for-design-code-smells"
+                {
+                    "skill_id": "review-for-code-smells",
+                    "mode": "always"
+                },
+                {
+                    "skill_id": "review-for-design-code-smells",
+                    "mode": "always"
+                }
             ],
             "knowledge_channels": [
                 {
@@ -1139,7 +1153,8 @@
             "template_path": "templates/agents/commit.md",
             "model": "sonnet",
             "skills_used": [
-                "signoff"
+                "signoff",
+                "precommit-autofix"
             ],
             "priority": 12,
             "priority_rationale": "Atomic commit phase; runs after PR review approves the change",
@@ -1665,8 +1680,8 @@
             "template_path": "templates/agents/frontend-coder.md",
             "model": "sonnet",
             "skills_used": [
-                "signoff",
-                "webapp-testing"
+                "webapp-testing",
+                "signoff"
             ],
             "priority": 8,
             "priority_rationale": "Frontend implementation; runs after sql-coder (7) so database schema changes are complete before UI is built, and before test-runner (9) so tests can verify the rendered output",
@@ -1811,8 +1826,8 @@
             "template_path": "templates/agents/sql-query.md",
             "model": "sonnet",
             "skills_used": [
-                "signoff",
-                "sql-query-past-queries"
+                "sql-query-past-queries",
+                "signoff"
             ],
             "priority": 7,
             "priority_rationale": "Ad-hoc query authoring; co-equal with sql-coder (both priority 7) but for read-only queries",
@@ -2134,16 +2149,28 @@
             "template_path": "templates/agents/workflow-architect.md",
             "model": "sonnet",
             "skills_used": [
+                "package-audit",
                 "create-hook",
                 "add-agent-to-package",
-                "add-skill-to-package",
-                "package-audit"
+                "add-skill-to-package"
             ],
             "category": "supervisor",
             "skills_invoked": [
                 {
                     "skill_id": "package-audit",
                     "mode": "conditional"
+                },
+                {
+                    "skill_id": "create-hook",
+                    "mode": "always"
+                },
+                {
+                    "skill_id": "add-agent-to-package",
+                    "mode": "always"
+                },
+                {
+                    "skill_id": "add-skill-to-package",
+                    "mode": "always"
                 }
             ],
             "knowledge_channels": [
@@ -3083,9 +3110,9 @@
             "template_path": "templates/agents/llm-expert.md",
             "model": "sonnet",
             "skills_used": [
+                "signoff",
                 "add-agent-to-package",
-                "add-skill-to-package",
-                "signoff"
+                "add-skill-to-package"
             ],
             "priority": 6,
             "priority_rationale": "Authoring phase agent; runs after architectural review and before test-runner/pr-reviewer",
@@ -3151,6 +3178,7 @@
             "template_path": "templates/agents/product-owner.md",
             "model": "opus",
             "skills_used": [
+                "signoff",
                 "knowledge-query"
             ],
             "description": "Product Owner for v3 ticket-creation pipeline. Operates at L0/L1 flight level: translates user requests into customer value propositions and feature benefit statements. Speaks customer language, never engineering jargon.",
@@ -3158,6 +3186,10 @@
             "skills_invoked": [
                 {
                     "skill_id": "signoff",
+                    "mode": "always"
+                },
+                {
+                    "skill_id": "knowledge-query",
                     "mode": "always"
                 }
             ],

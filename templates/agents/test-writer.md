@@ -25,6 +25,9 @@ description: 'TDD test-first authoring agent. Spawned by ticket-supervisor at pr
 model: sonnet
 name: test-writer
 tools: Bash, Read, Edit, Write, Agent
+skills:
+- skill_id: signoff
+  mode: conditional
 portable: true
 signoff: true
 domain: null

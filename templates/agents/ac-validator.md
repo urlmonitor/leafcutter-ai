@@ -12,6 +12,9 @@ description: 'Final AC coverage gate. Validates all acceptance criteria are actu
 model: sonnet
 name: ac-validator
 tools: Bash, Read, Edit
+skills:
+- skill_id: signoff
+  mode: always
 portable: true
 signoff: true
 domain: null
