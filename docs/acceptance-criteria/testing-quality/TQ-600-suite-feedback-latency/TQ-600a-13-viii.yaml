@@ -1,0 +1,310 @@
+id: TQ-600a-13-viii
+components:
+  - testing_quality
+title: "A pull request that declares it fixes the current red run, and proves it, is not held by it — and nothing else exempts a pull request"
+component: testing-quality
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given the latest settled post-merge run on main is red or did not complete, and the
+    notice describing it is issue N (TQ-600a-13-iii),
+  And the deadlock this record exists to prevent: without an exception, the pull request
+    that repairs the run is itself held by it, nothing can merge, the run cannot go green,
+    and the repository stops,
+  And the fact that every pull request in this repository is opened by the one account
+    every agent also uses, so anything any pull request can apply to itself — a label, a
+    phrase — is a declaration and not a control,
+  When the check `Post-merge suite status` evaluates a pull request,
+  Then it grants an exemption only when BOTH hold: the pull request's description
+    declares that it fixes issue N, and TQ-600a-13-xvi's proof run shows that the tests
+    which failed in the current red run pass on that pull request's head — and its output
+    then says it is passing because the pull request declares and proves a fix for #N,
+  And a declaration is any of the closing keywords close, closes, closed, fix, fixes,
+    fixed, resolve, resolves, resolved, in any letter case, optionally followed by a
+    colon, followed by a reference to issue N written as `#N`, as `owner/repo#N` for this
+    repository, or as this repository's full issue URL for N,
+  And a declaration naming any open `post-merge-red` issue counts, so a repairer who
+    referenced a duplicate is not blocked,
+  And it still fails when the description names a different issue, mentions N without a
+    closing keyword ("see #N", "related to #N"), names a number that merely begins with
+    N's digits, names another repository's issue N, or declares a fix without a passing
+    proof run for the current red run,
+  And a declaration only in the title or in a commit message is not read as one,
+  And no label exempts a pull request,
+  And when the proof run completes after the pull request's last push, the verdict becomes
+    a pass without a further push, and removing the declaration returns the verdict to a
+    fail on the next evaluation,
+  And every exemption granted is recorded on issue N — which pull request, which head
+    commit, and which proof run — at most once per pull request per red run, so the owner
+    sees every bypass in one place,
+  And no exemption applies when the check holds for any reason other than a red or
+    did-not-complete run — stale, disabled, never run, or could not read,
+  And each case is demonstrated by evaluating the check against a pull request whose
+    description is supplied, with the run history, the notice and the proof run served by
+    the double, and observing pass or fail and the recorded exemption.
+depends_on:
+  - TQ-600a-13
+  - TQ-600a-13-vi
+doc_links:
+  - path: docs/acceptance-criteria/testing-quality/TQ-600-suite-feedback-latency/TQ-600a-13-vi.yaml
+    relationship: describes
+    status: exists
+    relevance: >-
+      The hold this record makes an exception to.
+  - path: docs/acceptance-criteria/testing-quality/TQ-600-suite-feedback-latency/TQ-600a-13-xvi.yaml
+    relationship: describes
+    status: exists
+    relevance: >-
+      The proof run that supplies the evidence half of the exemption.
+  - path: docs/acceptance-criteria/testing-quality/TQ-600-suite-feedback-latency/TQ-600a-13-iv.yaml
+    relationship: describes
+    status: exists
+    relevance: >-
+      Why a merged closing keyword is now harmless to every other pull request's hold.
+declared_files:
+  - path: scripts/ci/post_merge_hold.py
+    state: to_be_created
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - >-
+    THE DECLARATION FORMS ARE GITHUB'S OWN — DECIDED 2026-10-08 (user decision G; the
+    two-keyword form is retired). VERIFIED (GitHub expert, docs): the nine keywords, any
+    case, optional colon, `#N` and `OWNER/REPO#N`. The owner/repo comparison is
+    case-insensitive against the repository from the event payload (`repository.full_name`),
+    never a hard-coded name; the URL form is `https://github.com/<full_name>/issues/N`
+    with an optional trailing slash or fragment.
+    The full-issue-URL form is UNVERIFIED as something GitHub acts on, and is accepted
+    here anyway by the owner's decision. Read from the PR DESCRIPTION only (from
+    GITHUB_EVENT_PATH). Title and commit messages are not read: GitHub reads commit
+    messages for closing and agents write "Fixes #N" by habit, but under decision A that
+    only closes the notice and releases nothing (TQ-600a-13-iv), so it need not be policed.
+    An absent description is no declaration.
+  - >-
+    THE LABEL IS GONE — DECIDED 2026-10-08 (user decision G). VERIFIED (GitHub expert,
+    Q4): applying a label needs Triage,
+    and every agent here acts as the admin owner, so a label could not restrict who
+    bypasses. The `nightly-fix` label is never created.
+  - >-
+    EVIDENCE, NOT TRUST. The proof half is TQ-600a-13-xvi's, whose result the hold reads
+    with TWO bounded reads on the declared path only, and NEVER from an artifact of the
+    proof run (the proof job runs PR code, which can upload artifacts into its own run):
+    (a) `GET /actions/workflows/post-merge-fix-proof.yml/runs?head_sha=<current head>&
+    event=pull_request_target&per_page=5` — the `event` filter matters, because a PR can
+    add a `pull_request` trigger to its own copy of that workflow file and produce
+    same-file runs; take the highest run_number; (b) `GET /actions/runs/{id}/jobs?
+    filter=latest` — the job named exactly `Post-merge fix proof` must have conclusion
+    `success` (a SKIPPED job is not a pass, though the run would conclude success).
+    "AGAINST THE CURRENT RED RUN" is decided from data the hold already holds, not from
+    anything the proof run wrote: the proof run's `run_started_at` (latest attempt) must
+    be later than the verdict run's `updated_at`. Because the proof's default-branch
+    `Prepare fix proof` job reads the newest settled run at its own start, a proof that
+    started after the current red run settled cannot have proved against an older one;
+    the rare race (a newer red settles between the proof's start and its prepare step)
+    is rejected, which is the fail-closed direction. A proof made against an earlier red
+    run, a failed proof, a proof still running, a skipped proof, or no proof: held, with
+    output saying which.
+  - >-
+    THE MATCH RUNS ON PR-AUTHORED TEXT IN LINEAR TIME. Descriptions can be tens of
+    thousands of characters; matching must be linear in length with no backtracking
+    blow-up.
+  - >-
+    EVALUATED ONLY AFTER SUCCESSFUL READS. A failed run-history read is TQ-600a-13-ix's
+    could_not_read and is never turned into a pass by a declaration. A failed notice or
+    proof read means no exemption: held, with the cause.
+  - >-
+    THE EXEMPTION RECORD IS AN ALLOWED WRITE. A comment on a `post-merge-red` issue
+    (TQ-600a-13-xi), carrying a hidden marker with PR number and red-run id so a repeated
+    evaluation finds it and does not post again. Needs `issues: write` on the hold job
+    (TQ-600a-13-vi's permissions). A refused record write is noted in the output and does
+    not change the verdict.
+  - >-
+    THE PROOF RE-TRIGGERS THE HOLD. When the proof run completes, the hold for that PR is
+    re-evaluated without a push — the follow-up workflow's single `reevaluate` job
+    (TQ-600a-13-xv), triggered by `workflow_run` of `Post-merge fix proof`, re-runs that
+    head SHA's latest hold run. `actions: write` stays on that one job.
+  - >-
+    A RED RUN WITH NO NOTICE — DECIDED AT RE-ENRICHMENT (technical question 3): KEEP THE
+    DEPENDENCY ON THE ISSUE NUMBER; no run-id declaration form is added. Reasons: (1) the
+    criteria make the exemption record on issue N part of every grant — with no issue
+    there is nowhere to record the bypass, and an unrecorded bypass is the thing the
+    record forbids; (2) the evidence half is already keyed on the red run (the proof
+    proves against the current verdict run, -xvi), so a run-id declaration would add a
+    second grammar to an `auth` surface without adding evidence; (3) a missing notice is
+    a recoverable, idempotent fault, not a state to design around: the notice job is
+    re-runnable on the same triggering run and produces the notice (TQ-600a-13-iii). So
+    on the held path, when the verdict run is red or did-not-complete and no
+    `post-merge-red` issue carries a state block for it, the hold: grants no exemption
+    whatever the description says; says in its output and comment that the fix route is
+    unavailable until the notice exists; and links the follow-up run whose `notice` job
+    can be re-run. Once the notice exists, the fix author's next description edit (or
+    -xv's re-run on the next verdict change) re-evaluates. If the owner wants a run-id
+    form anyway, its token must contain none of the nine closing keywords (e.g. a line
+    `Post-merge-repair: run <id>`) so it closes nothing — a product decision, not taken
+    here.
+  - >-
+    risk_surface IS `auth`. This record defines the only way past a merge gate. Do not
+    widen it in passing (a keyword in a comment, a label on the notice, a title).
+  - >-
+    THE TESTS COST UNDER 0.3 s. Pure matching in-process plus verdict evaluation through
+    the real REST client against the fake server serving the run history, notices and
+    proof runs.
+delivers_to:
+  - agent: python-coder
+    ac_id: TQ-600a-13-xvi
+    contract: >-
+      The declaration matcher, a pure stdlib function in scripts/ci/post_merge_hold.py
+      `match_declaration(body: str | None, repo_full_name: str, notice_numbers:
+      set[int]) -> int | None` (name indicative), returning the declared open notice
+      number or None; the proof workflow's prepare job calls the SAME function so the
+      hold and the proof can never disagree on what a declaration is.
+expects_from:
+  - ac_id: TQ-600a-13-vi
+    contract: >-
+      The hold verdict after successful reads, `state` "red" or "did_not_complete", with
+      the latest settled run's id, into which an accepted exemption yields `state:
+      exempt`.
+  - ac_id: TQ-600a-13-iii
+    contract: >-
+      The open `post-merge-red` issue numbers and the state block's `run_id`.
+  - ac_id: TQ-600a-13-xvi
+    contract: >-
+      Runs of `.github/workflows/post-merge-fix-proof.yml` with event
+      `pull_request_target` on the PR head SHA, each with a job named exactly `Prepare fix
+      proof` (default-branch code only) and a job named exactly `Post-merge fix proof`
+      whose conclusion is `success` only when every selected test passed; nothing else
+      from the proof run is read.
+test_spec:
+  - name: test_tq600a_13_viii_a_declared_and_proven_fix_passes
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: integration
+    angle: criterion
+    surface_invoked: "scripts/ci/post_merge_hold.py's verdict entry point, in-process, with a supplied event payload and the recording fake server serving a red run, notice #12 and a passing proof for the current red run"
+    description: >-
+      "Fixes #12", "closes: #12", "RESOLVED #12", "fixed urlmonitor/leafcutter-ai#12" and
+      the full issue URL form each pass with a passing current proof; the exemption is
+      recorded on #12 once, and a second evaluation records nothing new.
+  - name: test_tq600a_13_viii_declaration_without_evidence_is_held
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: integration
+    angle: discrimination
+    surface_invoked: "scripts/ci/post_merge_hold.py against the fake server"
+    must_catch:
+      - "a declaration alone passes, with no proof run"
+      - "a failed or still-running proof is accepted"
+      - "a proof made against an earlier red run, whose failing set differed, is accepted"
+      - "a proof run whose `Post-merge fix proof` job was SKIPPED is accepted because the run concluded success"
+      - "a same-file proof run with event `pull_request` (from a PR-edited copy of the workflow) is accepted"
+      - "the proof result is read from an artifact of the proof run"
+      - "a label releases the hold"
+      - "a declaration in the title or a commit message is accepted"
+    description: >-
+      Red run R2 (settled at T), notice #12; descriptions declaring #12 with: no proof, a
+      failed proof, a running proof, a passing proof started before T (proved against R1),
+      a passing run whose proof job was skipped, a passing proof run with event
+      pull_request. All held, each saying why; the fake records no artifact request. A PR
+      carrying any label named `nightly-fix` with no declaration: held.
+  - name: test_tq600a_13_viii_no_notice_means_no_exemption_and_says_how_to_recover
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: integration
+    angle: failure
+    surface_invoked: "scripts/ci/post_merge_hold.py against the fake server serving a red verdict run and no post-merge-red issue describing it"
+    must_catch:
+      - "with no notice, any `Fixes #N` for an unrelated open issue plus a passing proof is accepted"
+      - "the output says only 'held' and does not say the fix route waits for the notice"
+    description: >-
+      Red run, no notice, a description declaring a number and a passing current proof:
+      held; the output names the missing notice and links the follow-up run to re-run.
+  - name: test_tq600a_13_viii_a_near_miss_declaration_is_still_held
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: integration
+    angle: discrimination
+    surface_invoked: "scripts/ci/post_merge_hold.py with supplied event payloads against the fake server"
+    must_catch:
+      - "the match is on '#12' anywhere, so 'see #12' passes"
+      - "the match is a prefix, so 'Fixes #123' passes on #12"
+      - "'Fixes other/repo#12' passes"
+      - "a declaration releases a hold that is stale, disabled, never-run or could-not-read"
+    description: >-
+      "Fixes #7", "see #12", "related to #12", "Fixes #123", "Fixes other/repo#12" and a
+      null description, each with a passing proof: held. A stale latest run with
+      "Fixes #12": held as stale.
+  - name: test_tq600a_13_viii_the_repair_is_not_deadlocked
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: integration
+    angle: criterion
+    surface_invoked: "scripts/ci/post_merge_hold.py against the fake server, two pull requests evaluated in the same sitting"
+    description: >-
+      THE DESCRIPTOR THAT CANNOT BE DROPPED. A declared-and-proven PR passes while an
+      undeclared PR fails — exactly one way through, and it is open.
+  - name: test_tq600a_13_viii_matching_time_is_linear_in_description_length
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: unit
+    angle: boundary
+    surface_invoked: "scripts/ci/post_merge_hold.py's declaration matcher, in-process"
+    must_catch:
+      - "a backtracking pattern takes super-linear time on a long description of repeated near-miss tokens"
+    description: >-
+      A maximum-length description of repeated near-miss tokens completes under a
+      generous ceiling (about two seconds, three orders of magnitude above expectation).
+test_rationale: |
+  The escape hatch is load-bearing in both directions. The 2026-10-08 redesign moves it
+  from trust to evidence: a declaration names the fix, a proof run shows it. The
+  discrimination descriptors therefore attack the evidence half — absent, failed,
+  running, and stale proofs — because a declaration that passes on its own is exactly the
+  self-applied bypass a single shared identity makes worthless.
+
+  The full keyword family is asserted to pass because agents write every spelling;
+  near-misses stay held because a closing keyword for the wrong number must not open the
+  gate. The proof is attacked where it could be forged — a skipped job, a same-file run
+  from a PR-edited workflow, an artifact — because the proof job runs PR code and nothing
+  it writes may be evidence. The linear-time descriptor uses a generous ceiling and
+  normally finishes in milliseconds; it is the only one with a time bound and that bound
+  is a blow-up detector, not a performance assertion. Under 0.3 s in normal runs.
+origin_agent: business-analyst
+created: 2026-10-08
+amended_by:
+  - reason: >-
+      USER-APPROVED REDESIGN AFTER TWO EXPERT REVIEWS (2026-10-08), decisions A, B and G.
+      (G) The escape hatch now requires a declaration AND evidence. SUPERSEDED criteria:
+      "it passes when the pull request's description contains 'Fixes #N' or 'Closes #N'"
+      (now: the full closing-keyword family, optional colon, `#N` / `owner/repo#N` / full
+      issue URL, and only with a passing proof run of the current red's failing tests)
+      and "it passes when the pull request carries the label `nightly-fix`" (dropped: all
+      PRs come from the one account every agent uses, so a label is no gate). Added:
+      every exemption is recorded on the notice; no exemption for stale / disabled /
+      never-run / could-not-read; title and commit messages not read, and why that is now
+      harmless (A). The PENDING USER DECISIONS "escape-hatch parsing", "who may apply
+      `nightly-fix`" and "auto-close on merge" are resolved. Precondition changed from
+      "exactly one open issue labelled `nightly-red`" to "the latest settled run is red or
+      did not complete" (A). Sized up from S to M for the proof read and exemption record.
+      Readiness returned to draft for IT PO re-enrichment. Full prior text: commit
+      e79d35ef4.
+    by: business-analyst
+    at: 2026-10-08
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: auth
+notes: |
+  RESOLVED 2026-10-08 — the four points this record used to list: (1) merging the fix
+  closes the notice, which no longer releases anything; (2) the label is dropped; (3) the
+  full keyword family is accepted; (4) the description is the only place read, and any
+  open notice number counts.
+
+  RESOLVED AT RE-ENRICHMENT: A RED RUN WITH NO NOTICE. The dependency on the issue number
+  is kept; the recovery is re-running the idempotent notice job, which the hold's output
+  links. A run-id declaration form remains available to the owner as a product choice;
+  see it_requirements.

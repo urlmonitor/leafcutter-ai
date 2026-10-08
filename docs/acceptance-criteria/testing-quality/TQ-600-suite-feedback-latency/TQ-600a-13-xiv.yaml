@@ -1,0 +1,162 @@
+id: TQ-600a-13-xiv
+components:
+  - testing_quality
+title: "The hold fails, and says which, when the post-merge verdict is stale, the workflow is disabled, or no run has ever completed"
+component: testing-quality
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given that the hold passes on the latest settled correctness run on main
+    (TQ-600a-13-vi), and that a run which never happens produces no red to hold on,
+  And the platform facts that make "never happens" real here: GitHub disables scheduled
+    workflows in a public repository after 60 days without repository activity, without
+    a documented notification, and anyone with write access — which every agent in this
+    repository has — can disable a workflow silently,
+  And the heartbeat of TQ-600a-13-ii, at most 12 hours apart, plus a run after every
+    merge, which together make a verdict older than 30 hours a sign that runs have
+    stopped rather than a normal gap,
+  When the check `Post-merge suite status` evaluates a pull request,
+  Then when the correctness workflow's state is anything other than active, the check
+    fails with output that says the workflow is disabled and names the state reported,
+    whatever the latest run concluded,
+  And when the workflow is active and no run of it on main has ever settled, the check
+    fails with output that says no post-merge run has ever completed, so there is no
+    verdict,
+  And when the workflow is active and the latest settled run started more than 30 hours
+    before the evaluation, the check fails with output that says the verdict is stale,
+    giving that run's start time and age, even if that run was green,
+  And each of these, together with red, did not complete and could not read, has
+    wording distinct from all the others, and every one of them says the cause is not the
+    pull request's change and how to restore a verdict,
+  And a fresh green run on an active workflow passes, so the check is not satisfied by
+    failing on everything,
+  And these outcomes come from the same reads the verdict already makes — the workflow's
+    state and its run history — with no further request,
+  And each is demonstrated by executing the check against a double serving each workflow
+    state, an empty run history, and a latest run aged 29 and 31 hours, never by reading
+    the workflow file's schedule.
+depends_on:
+  - TQ-600a-13
+  - TQ-600a-13-vi
+doc_links:
+  - path: docs/acceptance-criteria/testing-quality/TQ-600-suite-feedback-latency/TQ-600a-13-vi.yaml
+    relationship: describes
+    status: exists
+    relevance: >-
+      The verdict this record adds the no-fresh-verdict states to.
+  - path: docs/acceptance-criteria/testing-quality/TQ-600-suite-feedback-latency/TQ-600a-13-ii.yaml
+    relationship: describes
+    status: exists
+    relevance: >-
+      The heartbeat interval that makes the 30-hour bound safe.
+declared_files:
+  - path: scripts/ci/post_merge_hold.py
+    state: to_be_created
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - >-
+    PLATFORM FACTS — VERIFIED (GitHub expert, docs, 2026-10-08): "In a public repository,
+    scheduled workflows are automatically disabled when no repository activity has
+    occurred in 60 days"; what counts as activity and whether anyone is notified are not
+    documented. `GET /actions/workflows/{file}` returns `state` in `active | deleted |
+    disabled_fork | disabled_inactivity | disabled_manually`. Manual disable via
+    `PUT /actions/workflows/{id}/disable` or `gh workflow disable` notifies nobody
+    (UNVERIFIED that nothing does; no such feature is documented).
+  - >-
+    AGE IS MEASURED FROM `run_started_at`, which re-runs update and `created_at` does not
+    (UNVERIFIED field semantics — observe one re-run live and record it in the notes).
+    The bound is 30 hours (user decision F; accepted by the owner on 2026-10-08 as a
+    TUNABLE default), read from `staleness_hours` in scripts/ci/post_merge_tunables.json
+    (TQ-600a-13-x) — never a literal in the module; the test asserts 29 h passes and 31 h
+    fails against the committed value, so the bound is observable without a wall-clock
+    dependency (the clock is injected). The tunable must stay above
+    `heartbeat_max_hours` plus the run's own duration; the module refuses to start (fails
+    closed, naming both keys) if `staleness_hours <= heartbeat_max_hours`.
+  - >-
+    "NO SETTLED RUN IN THE PAGE" IS STALE. When TQ-600a-13-v's selection returns
+    `no_settled_in_page`, the state is `stale` with the reason "no settled run among the
+    most recent <run_history_page>", not a seventh wording.
+  - >-
+    DISABLED IS CHECKED FIRST, on every evaluation, before the run-history verdict: any
+    `state` other than `active` is `disabled` whatever the runs say (the BA's choice of
+    reading the state on every evaluation is kept; it is one fixed read).
+  - >-
+    BOOTSTRAP. The never-run state holds everything until the first run completes, which
+    is why TQ-600a-13-x requires a completed run before the check becomes required.
+  - >-
+    RESIDUAL, ACCEPTED. Staleness flips a pull request only on that pull request's next
+    evaluation; when runs have stopped, nothing completes, so TQ-600a-13-xv's
+    re-evaluation does not fire. A pull request evaluated green before the runs stopped
+    and not touched since keeps its pass. Documented, not solved: a second scheduled
+    watchdog would stop for the same reasons.
+  - >-
+    THE TESTS COST UNDER 0.2 s. In-process through the real REST client against the fake
+    server, with an injected clock.
+delivers_to:
+  - agent: documentation-expert
+    contract: >-
+      In docs/testing/README.md's hold section: the stale, disabled and never-run
+      wordings, and for each how to restore a verdict (dispatch the correctness workflow;
+      re-enable it; wait for the first run).
+expects_from:
+  - ac_id: TQ-600a-13-vi
+    contract: >-
+      The workflow-state and run-history reads, and the verdict object's `stale`,
+      `disabled` and `never_run` states.
+  - ac_id: TQ-600a-13-x
+    contract: >-
+      The `staleness_hours` and `heartbeat_max_hours` keys of
+      scripts/ci/post_merge_tunables.json.
+test_spec:
+  - name: test_tq600a_13_xiv_no_fresh_verdict_states_fail_distinctly
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: integration
+    angle: criterion
+    surface_invoked: "scripts/ci/post_merge_hold.py's verdict entry point, in-process, through the real REST client against the recording fake server, clock injected"
+    description: >-
+      State disabled_inactivity with a fresh green run: disabled. disabled_manually,
+      deleted: disabled, naming the state. Active with no runs: never_run. Active, green
+      run 31 h old: stale. Active, green run 29 h old: pass. Active, 30 runs none
+      settled: stale with the no-settled reason. Six distinct headlines across red,
+      did-not-complete, stale, disabled, never-run, could-not-read; each says the cause is
+      not the PR's change and how to restore a verdict.
+  - name: test_tq600a_13_xiv_staleness_costs_no_extra_read
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: integration
+    angle: discrimination
+    surface_invoked: "scripts/ci/post_merge_hold.py against the fake server, counting requests"
+    must_catch:
+      - "the disabled state is read only on the stale path, so a workflow disabled an hour after a green run keeps passing for 30 hours"
+      - "age is taken from `created_at`, so a re-run red run looks older than it is"
+      - "a stale green run passes"
+    description: >-
+      Every evaluation makes exactly the workflow-state read and the run-history read for
+      the verdict; a disabled workflow with a 1-hour-old green run fails as disabled.
+test_rationale: |
+  The run-history verdict makes these states nearly free: the same two reads answer red,
+  stale, disabled and never-run. The discrimination descriptor guards the one cheap
+  shortcut that would reopen the gap — reading the workflow state only when the run is
+  already stale. The 29/31 h pair reads the bound from the committed tunables file, so a
+  retuned bound moves the test with it (TQ-600a-13-x owns the "tunable, not literal"
+  descriptor). Milliseconds.
+origin_agent: business-analyst
+created: 2026-10-08
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: internal
+notes: |
+  ADDED 2026-10-08 for user decision F. Supersedes the PENDING USER DECISION "nightly
+  never runs" that TQ-600a-13-ii, -v and -vi carried. Reading the workflow state on every
+  evaluation, not only when stale, is a BA choice so that a silent manual disable is
+  caught at once; it costs one fixed read.
