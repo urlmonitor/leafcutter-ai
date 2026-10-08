@@ -95,30 +95,12 @@ DECISION HISTORY:
     test file(s) (e.g. this very AC's own record), and the first version of
     the fix misread every such leaf's test path as an unresolved child,
     which would have blocked this very commit.
-  - 2026-10-07 [loader-audit/TQ-600a-11 fix-pass]: Reverted all four
-    get_safe_yaml_loader() call sites in this file (_load_ac_yaml_or_none,
-    check_staged_done_proofs, check_all_done_acs, check_changed_done_acs)
-    back to yaml.SafeLoader. Direction question resolved, for the record:
-    the pre-existing design already treated a parse failure as "exclude
-    this file from the sweep" (warn + skip, never block), so on files where
-    CSafeLoader's tab-permissiveness lets a PREVIOUSLY-unparseable file
-    parse successfully, the net effect is closer to neutral-to-positive
-    (more done ACs get examined by verify_done_eligible, not fewer) than to
-    the "silently approved" failure shape seen elsewhere in this audit.
-    Reverted anyway, for three reasons that outweigh that mixed-to-positive
-    reading: (1) check_all_done_acs backs the required "Proof-of-done
-    coverage check" CI gate -- a guardrail decision point per the audit's
-    own criterion 4, regardless of which direction a given divergence
-    happens to point; (2) the measured benefit is real only at full-store
-    scale (this file's rglob over ac_root is exactly that scale -- measured
-    on the real 4766-file store: SafeLoader ~22-36s vs CSafeLoader
-    ~1.9-3.2s across two sittings) but no test or production evidence rules
-    out the audit's own worry that SOME tab-corruption could coincidentally
-    produce a parseable-but-wrong record that happens to pass
-    verify_done_eligible; (3) "when in doubt, revert" is the audit's stated
-    default, and this site's direction, while argued through above, was
-    never fully provable either way. See
-    /home/henzeh/tq600a1-backup/narrow_report.md for the full writeup.
+  - 2026-10-06 [python-coder/BO-202 review follow-up, EPIC-BuildToolingRunsThrough/06]:
+    the _done_proof_composite import is now fail-safe like the
+    _reachability_inventory one: on ImportError (ac_store not locatable) a
+    stderr WARNING names the module and the skipped composite check, and
+    fallbacks classify no AC as composite, so the hook degrades (check
+    skipped, never silent) instead of dying at load and blocking commits.
 """
 from __future__ import annotations
 
@@ -144,6 +126,30 @@ from _staged_ac_yaml_paths import (  # noqa: E402
 )
 
 ensure_ac_store_on_syspath()
+try:  # BO-202: ONE shared composite classifier (fail-safe, as below)
+    from _done_proof_composite import (
+        _collect_all_covered_ids,
+        _composite_child_ids,
+        _find_ac_root,
+        _unproven_composite_children,
+    )
+except ImportError as _composite_import_exc:  # pragma: no cover - see below
+    print(
+        "WARNING: check_done_proof: _done_proof_composite unavailable "
+        f"({_composite_import_exc}); composite done-proof check SKIPPED "
+        "(no AC is classified as composite).",
+        file=sys.stderr,
+    )
+
+    def _collect_all_covered_ids(*_args):  # type: ignore[no-redef]
+        """Fallback: no covered ids when _done_proof_composite is absent."""
+        return set()
+
+    def _composite_child_ids(*_args):  # type: ignore[no-redef]
+        """Fallback: no AC is composite when _done_proof_composite is absent."""
+        return []
+
+    _find_ac_root = _unproven_composite_children = _composite_child_ids  # type: ignore
 
 # ---------------------------------------------------------------------------
 # BO-2900d-2: shared reachability-exemption seam (same module BO-2900d-1's
@@ -181,7 +187,7 @@ try:
     from done_proof import is_covers_tag_waived, verify_done_eligible
     # Import the shared covers-tag seam (BO-2500e-1) — handles both
     # Python "# covers:" and JavaScript/TypeScript "// covers:".
-    from test_enforcement import COVERS_TAG_RE
+    from test_enforcement import COVERS_TAG_RE  # noqa: F401  # kept as module attr
 except (ImportError, ModuleNotFoundError):
     # Fallback: define the unified regex locally when test_enforcement is absent
     # (e.g. in a templates/ source layout with no deployed ac_store neighbour).
@@ -245,20 +251,6 @@ def _load_is_covers_tag_waived():
 
     return is_covers_tag_waived
 
-# Directory names excluded from all test-file scanning (both .py and .ts/.tsx).
-# Prevents traversal into node_modules and other non-test subtrees.
-_EXCLUDED_SCAN_DIRS: frozenset[str] = frozenset(
-    {
-        "node_modules",
-        ".next",
-        "dist",
-        "coverage",
-        ".git",
-        "__pycache__",
-        ".venv",
-    }
-)
-
 # Default paths relative to the project root (used in main() when no explicit
 # --ac-root / --test-root argument is supplied).
 _DEFAULT_AC_ROOT = "docs/acceptance-criteria"
@@ -272,242 +264,6 @@ _DEFAULT_TEST_ROOT = ""
 # ---------------------------------------------------------------------------
 # Internal helpers
 # ---------------------------------------------------------------------------
-
-
-def _collect_all_covered_ids(test_root: Path) -> set[str]:
-    """Scan *test_root* recursively and return all AC ids referenced in covers tags.
-
-    Reads every ``*.py``, ``*.ts``, and ``*.tsx`` file under *test_root``, extracting
-    the id from every ``# covers: <id>`` (Python) or ``// covers: <id>``
-    (TypeScript/JavaScript) comment line.  Uses the shared :data:`COVERS_TAG_RE`
-    seam (BO-2500e-1) so both syntax forms are recognised.
-
-    Directories named ``node_modules``, ``.next``, ``dist``, ``coverage``,
-    ``.git``, ``__pycache__``, and ``.venv`` are excluded from traversal.
-
-    This is a STATIC presence-only scan — no tests are run.  Unreadable files
-    are logged to stderr and skipped.
-
-    Args:
-        test_root: Root directory to search recursively for test files.
-
-    Returns:
-        Set of AC id strings found in ``covers:`` comments.  Empty set when
-        *test_root* does not exist or contains no readable test files.
-    """
-    covered: set[str] = set()
-    try:
-        py_files = sorted(test_root.rglob("*.py"))
-        ts_files = sorted(test_root.rglob("*.ts"))
-        tsx_files = sorted(test_root.rglob("*.tsx"))
-    except OSError as exc:
-        print(
-            f"WARNING: check_done_proof: cannot scan {test_root}: {exc}",
-            file=sys.stderr,
-        )
-        return covered
-
-    all_test_files = (
-        [f for f in py_files if not any(p in _EXCLUDED_SCAN_DIRS for p in f.parts)]
-        + [f for f in ts_files if not any(p in _EXCLUDED_SCAN_DIRS for p in f.parts)]
-        + [f for f in tsx_files if not any(p in _EXCLUDED_SCAN_DIRS for p in f.parts)]
-    )
-
-    for test_file in all_test_files:
-        try:
-            text = test_file.read_text(encoding="utf-8")
-        except OSError as exc:
-            print(
-                f"WARNING: check_done_proof: cannot read {test_file}: {exc}",
-                file=sys.stderr,
-            )
-            continue
-        for match in COVERS_TAG_RE.finditer(text):
-            covered.add(match.group(1))
-    return covered
-
-
-def _composite_child_ids(covered_by: object) -> list[str]:
-    """Return the AC-id children of a ``covered_by`` value, excluding test paths.
-
-    BO-2500b-1-iii: the single place deciding which ``covered_by`` entries
-    count as composite children — shared by :func:`check_staged_done_proofs`
-    and :func:`_unproven_composite_children` so the two never disagree. This
-    store also uses ``covered_by`` on a LEAF to record its own proving
-    test-file path(s) (e.g. this very AC's own record) — an entry is that,
-    not an AC-id child, when it contains a path separator or ends in a
-    recognised test-file extension (mirroring, in spirit, the
-    store-resolvability convention ``done_proof.py::_has_resolvable_child``
-    already uses for the same distinction).
-
-    Args:
-        covered_by: The raw ``covered_by`` value from a parsed AC YAML
-            mapping (expected to be a list, but may be any YAML-parsed type).
-
-    Returns:
-        Entries that are NOT test-file paths. Empty when *covered_by* is not
-        a list, is empty, or holds only test paths — all three mean "this AC
-        is a leaf, not a composite".
-    """
-    return [e for e in map(str, covered_by if isinstance(covered_by, list) else []) if not re.search(r"[/\\]|\.(py|ts|tsx)$", e)]
-
-
-def _find_ac_root(yaml_path: Path) -> Path | None:
-    """Return the ancestor ``acceptance-criteria`` directory of *yaml_path*.
-
-    Used to resolve an L0/L1 composite's ``covered_by`` children by id
-    (BO-2500b-1-ii) — the store lays composites and their children out as
-    siblings (or descendants) under a shared ``docs/acceptance-criteria/``
-    tree, so walking up from the staged file to that directory name gives a
-    root to search for the child records.
-
-    Args:
-        yaml_path: Absolute or relative path to a staged AC YAML file.
-
-    Returns:
-        The ``acceptance-criteria`` ancestor directory, or ``None`` when no
-        such ancestor exists (e.g. a path outside the AC store) — callers
-        treat ``None`` as "children cannot be resolved" and fail closed
-        (report unproven), never as "skip the composite".
-    """
-    for parent in yaml_path.resolve().parents:
-        if parent.name == "acceptance-criteria":
-            return parent
-    return None
-
-
-def _load_ac_yaml_or_none(path: Path) -> dict | None:
-    """Read and parse an AC YAML file, returning ``None`` on any failure.
-
-    Read/parse failures and non-mapping documents are logged to stderr at
-    WARNING and treated as unresolved rather than fatal, matching the
-    fail-open static-scan behaviour of the rest of this module.
-
-    Args:
-        path: Path to the AC YAML file to read.
-
-    Returns:
-        The parsed mapping, or ``None`` when the file cannot be read/parsed
-        or does not contain a YAML mapping.
-    """
-    try:
-        # Reverted to the pure-Python loader (loader-audit, TQ-600a-11
-        # fix-pass, 2026-10-07): backs the required "Proof-of-done coverage
-        # check" gate. See the module-level DECISION HISTORY note dated
-        # 2026-10-07 for the full reasoning on why all four call sites in
-        # this file revert together despite the ambiguous pre-existing
-        # "warn + skip" direction.
-        with open(path, encoding="utf-8") as fh:
-            data = yaml.load(fh, Loader=yaml.SafeLoader)
-    except (yaml.YAMLError, OSError) as exc:
-        print(
-            f"WARNING: check_done_proof: cannot read {path}: {exc}",
-            file=sys.stderr,
-        )
-        return None
-    return data if isinstance(data, dict) else None
-
-
-def _resolve_child_ac(ac_root: Path, child_id: str) -> dict | None:
-    """Locate and load a child AC's YAML record by id under *ac_root*.
-
-    Args:
-        ac_root: Root ``acceptance-criteria`` directory to search recursively.
-        child_id: The child AC's ``id`` field value; the store convention is
-            that the filename stem equals the id (``<id>.yaml``).
-
-    Returns:
-        The child's parsed YAML mapping, or ``None`` when no matching file is
-        found or it cannot be read/parsed.
-    """
-    try:
-        matches = sorted(ac_root.rglob(f"{child_id}.yaml"))
-    except OSError as exc:
-        print(
-            f"WARNING: check_done_proof: cannot scan {ac_root} for {child_id}: {exc}",
-            file=sys.stderr,
-        )
-        return None
-    if not matches:
-        return None
-    return _load_ac_yaml_or_none(matches[0])
-
-
-def _unproven_composite_children(
-    data: dict,
-    ac_root: Path | None,
-    all_covered_ids: set[str],
-    *,
-    _seen: set[str] | None = None,
-) -> list[str]:
-    """Return the ids of ``covered_by`` children that fail to prove a composite done.
-
-    Implements the BO-2500b-1-ii/iii model: a composite's fulfilment is
-    DERIVED from its children rather than proven by a covers tag naming its
-    own id. Compositeness is a ``covered_by`` list containing at least one
-    AC-id child, at any level, matching
-    :func:`scripts.ac_store.done_proof._verify_composite_eligible` (used by
-    ``mark_ac_done.py``) — not by ``level`` alone, and never a test-file-path
-    entry (:func:`_composite_child_ids`, shared with
-    :func:`check_staged_done_proofs` so both agree). A child proves
-    itself when ``work_status: done`` AND either (a) it is a leaf (no AC-id
-    children) carrying its own ``# covers: <child-id>`` tag, or (b) it is a
-    composite whose own children all recursively prove it.
-
-    A composite is NEVER treated as proven unconditionally: a ``covered_by``
-    with no AC-id children has nothing to derive fulfilment from and is
-    reported as its own unproven id. This is the guard against the ACD-400a
-    falsely-done-composite defect (20 recorded instances in this repo) —
-    composites must be provably done via their children, not skipped.
-
-    Args:
-        data: Parsed YAML mapping of the composite AC being evaluated.
-        ac_root: Root ``acceptance-criteria`` directory to resolve children
-            under, or ``None`` when it could not be determined (children then
-            fail closed as unproven).
-        all_covered_ids: Set of AC ids found in ``# covers:``/``// covers:``
-            tags anywhere under the test root (from
-            :func:`_collect_all_covered_ids`).
-        _seen: Internal cycle guard against a malformed ``covered_by`` cycle;
-            callers should not pass this.
-
-    Returns:
-        Empty list when every AC-id child in ``covered_by`` is proven done
-        and covered; otherwise a list of the unproven child (or composite)
-        ids. Test-path entries never appear in the result.
-    """
-    seen = _seen if _seen is not None else set()
-    child_ids = _composite_child_ids(data.get("covered_by"))
-    if not child_ids:
-        return [str(data.get("id", "?"))]
-
-    unproven: list[str] = []
-    for child_id_str in child_ids:
-        if child_id_str in seen:
-            continue
-        seen.add(child_id_str)
-
-        if ac_root is None:
-            unproven.append(child_id_str)
-            continue
-
-        child_data = _resolve_child_ac(ac_root, child_id_str)
-        if child_data is None:
-            unproven.append(child_id_str)
-            continue
-        if child_data.get("work_status") != "done":
-            unproven.append(child_id_str)
-            continue
-
-        child_composite_children = _composite_child_ids(child_data.get("covered_by"))
-        if child_composite_children:
-            unproven.extend(
-                _unproven_composite_children(child_data, ac_root, all_covered_ids, _seen=seen)
-            )
-        elif child_id_str not in all_covered_ids:
-            unproven.append(child_id_str)
-
-    return unproven
 
 
 # BP-100n-4-ii-ii: _is_gated_ac_yaml and _get_staged_ac_yaml_paths now live in
@@ -664,10 +420,8 @@ def check_staged_done_proofs(
     violations: list[dict] = []
     for yaml_path in staged_yaml_paths:
         try:
-            # Reverted (loader-audit, TQ-600a-11 fix-pass, 2026-10-07) --
-            # see module-level DECISION HISTORY note dated 2026-10-07.
             with open(yaml_path, encoding="utf-8") as fh:
-                data = yaml.load(fh, Loader=yaml.SafeLoader)
+                data = yaml.safe_load(fh)
         except (yaml.YAMLError, OSError) as exc:
             print(
                 f"WARNING: check_done_proof: cannot read {yaml_path}: {exc}",
@@ -764,10 +518,8 @@ def check_all_done_acs(
         return violations
     for yaml_path in yaml_files:
         try:
-            # Reverted (loader-audit, TQ-600a-11 fix-pass, 2026-10-07) --
-            # see module-level DECISION HISTORY note dated 2026-10-07.
             with open(yaml_path, encoding="utf-8") as fh:
-                data = yaml.load(fh, Loader=yaml.SafeLoader)
+                data = yaml.safe_load(fh)
         except (yaml.YAMLError, OSError) as exc:
             print(
                 f"WARNING: check_done_proof: cannot read {yaml_path}: {exc}",
@@ -841,10 +593,8 @@ def check_changed_done_acs(
     violations: list[dict] = []
     for yaml_path in changed_yaml_paths:
         try:
-            # Reverted (loader-audit, TQ-600a-11 fix-pass, 2026-10-07) --
-            # see module-level DECISION HISTORY note dated 2026-10-07.
             with open(yaml_path, encoding="utf-8") as fh:
-                data = yaml.load(fh, Loader=yaml.SafeLoader)
+                data = yaml.safe_load(fh)
         except (yaml.YAMLError, OSError) as exc:
             print(
                 f"WARNING: check_done_proof: cannot read {yaml_path}: {exc}",

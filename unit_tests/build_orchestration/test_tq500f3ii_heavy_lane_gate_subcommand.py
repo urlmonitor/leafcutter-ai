@@ -107,6 +107,7 @@ def test_heavy_lane_gate_with_no_source_ac_reports_not_applicable():
             verdict.get("outcome")
             == "red-baseline reader not applicable: no source requirement"
         ), f"verdict={verdict!r}"
+        assert verdict.get("interpreter") == sys.executable, f"verdict={verdict!r}"
         assert proc.returncode == 0, (
             f"exit code must be 0 (gate_passed=True) when there is no source "
             f"requirement to gate against; got {proc.returncode}, verdict={verdict!r}"
@@ -222,7 +223,9 @@ def test_heavy_lane_gate_verdict_equals_verify_red_baseline_no_second_reader():
                 f"stdout={direct_proc.stdout!r} stderr={direct_proc.stderr!r}"
             ) from None
 
-        wrapper_only_keys = {"applicable", "verified", "outcome"}
+        sys.path.insert(0, str(fx.GATE_SCRIPT.parent))
+        from _fl_heavy_lane_gate import HEAVY_WRAPPER_KEYS as wrapper_only_keys  # noqa: E402
+
         gate_core = {k: v for k, v in gate_verdict.items() if k not in wrapper_only_keys}
 
         assert gate_core == direct_verdict, (
@@ -231,4 +234,74 @@ def test_heavy_lane_gate_verdict_equals_verify_red_baseline_no_second_reader():
             f"applicable/verified/outcome wrapper keys, the remainder must equal "
             f"a direct verify_red_baseline --ac-root call's verdict for the SAME "
             f"inputs: heavy_lane_gate={gate_core!r} direct={direct_verdict!r}"
+        )
+
+
+def test_verify_red_baseline_refuses_when_pytest_not_importable():
+    # covers: TQ-500f-3-ii
+    # angle: failure
+    """The launching interpreter cannot import pytest (the Windows-venv-vs-
+    Store-python3 trap): verify_red_baseline must say so with
+    reason "test_interpreter_unusable", carry the running sys.executable as
+    ``interpreter``, and start no pytest process at all -- instead of running
+    every test to an ERROR and reporting "no_red_outcome_among_new_tests".
+    """
+    import importlib.util
+    from unittest import mock
+
+    sys.path.insert(0, str(fx.GATE_SCRIPT.parent))
+    import fast_lane  # noqa: E402
+
+    real_find_spec = importlib.util.find_spec
+
+    def _find_spec_without_pytest(name, *args, **kwargs):
+        if name == "pytest":
+            return None
+        return real_find_spec(name, *args, **kwargs)
+
+    ac_id = "TQ-FIX-3II-NOPYTEST"
+    with tempfile.TemporaryDirectory() as tmp:
+        work_dir, _base_sha = fx.make_worktree(Path(tmp))
+        ac_root = work_dir / "docs" / "acceptance-criteria"
+        fx.write_ac_yaml(ac_root, ac_id, fx.t1_t2_t3_test_spec())
+        fx.write_t1_t2_t3_test_files(work_dir / "tests", ac_id)
+
+        with mock.patch("importlib.util.find_spec", side_effect=_find_spec_without_pytest), \
+                mock.patch.object(fast_lane, "_run_pytest_and_parse", return_value={}) as plain_runner, \
+                mock.patch.object(
+                    fast_lane, "_run_pytest_and_parse_with_kind", return_value=({}, {})
+                ) as kind_runner:
+            verdict = fast_lane.verify_red_baseline(
+                ac_ids=[ac_id], test_root=work_dir, ac_root=ac_root
+            )
+
+        assert verdict.get("gate_passed") is False, f"verdict={verdict!r}"
+        assert verdict.get("reason") == "test_interpreter_unusable", f"verdict={verdict!r}"
+        assert verdict.get("interpreter") == sys.executable, f"verdict={verdict!r}"
+        assert plain_runner.call_count == 0 and kind_runner.call_count == 0, (
+            "no pytest process may be started once pytest is known to be "
+            f"unimportable; plain={plain_runner.call_count} kind={kind_runner.call_count}"
+        )
+
+
+def test_real_gate_verdict_carries_launching_interpreter():
+    # covers: TQ-500f-3-ii
+    # angle: real_artifact
+    """Run the real CLI as a subprocess against the real git fixture: the
+    printed heavy_lane_gate verdict names the interpreter that launched it,
+    so a halt can say which environment judged the tests.
+    """
+    ac_id = "TQ-FIX-3II-GATE-INTERP"
+    with tempfile.TemporaryDirectory() as tmp:
+        work_dir, _base_sha = fx.make_worktree(Path(tmp))
+        ac_root = work_dir / "docs" / "acceptance-criteria"
+        fx.write_ac_yaml(ac_root, ac_id, fx.t1_t2_t3_test_spec())
+        fx.write_t1_t2_t3_test_files(work_dir / "tests", ac_id, include={fx.T2_NAME, fx.T3_NAME})
+
+        proc = _run_heavy_lane_gate(source_ac=ac_id, test_root=work_dir, ac_root=ac_root)
+        verdict = _parse_stdout(proc)
+
+        assert verdict.get("interpreter") == sys.executable, (
+            "the verdict must carry the interpreter that launched the gate "
+            f"({sys.executable!r}); verdict={verdict!r}"
         )

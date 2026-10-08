@@ -171,17 +171,31 @@ def test_flow_real_corpus_deep_equality_and_no_rewrites():
     before = {p: p.read_bytes() for p in paths}
     source = {json.loads(data)["id"]: json.loads(data) for data in before.values()}
     records = _extract(root)
-    assert len(records) == len(paths) == 25
+    assert paths
+    assert len(records) == len(paths) == len(source)
+    assert {record.source_path for record in records} == {
+        p.relative_to(root).as_posix() for p in paths
+    }
     assert {record.native_id: record.metadata for record in records} == source
-    assert all(record.derived["registered"] for record in records)
     manifest = json.loads((root / "docs/product-truth/index.json").read_text(encoding="utf-8-sig"))
     registered = {row["id"]: row for row in manifest["artifacts"] if row["type"] == "flow"}
-    assert {record.native_id: record.derived["manifest_entry"] for record in records} == registered
-    assert all(record.description == source[record.native_id]["summary"] for record in records)
-    assert (
-        sum(record.description != record.derived["manifest_entry"]["summary"] for record in records)
-        == 14
-    )
+    assert set(registered) <= set(source)
+    assert {
+        record.native_id: record.derived["manifest_entry"]
+        for record in records
+        if record.native_id in registered
+    } == registered
+    for record in records:
+        assert record.description == source[record.native_id]["summary"]
+        assert record.derived["registered"] == (record.native_id in registered)
+        if record.native_id not in registered:
+            assert "manifest_entry" not in record.derived
+    # Reviewed anchor (KM-400a-1-x): the registration carries a shorter summary.
+    finalize = "leafcutter/finalize-feature"
+    assert len(registered[finalize]["summary"]) < len(source[finalize]["summary"])
+    by_id = {record.native_id: record for record in records}
+    assert by_id[finalize].description == source[finalize]["summary"]
+    assert by_id[finalize].derived["manifest_entry"]["summary"] == registered[finalize]["summary"]
     assert all(p.read_bytes() == data for p, data in before.items())
 
 

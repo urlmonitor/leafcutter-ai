@@ -65,6 +65,10 @@ _MISSING_TEXT = {
 }
 
 
+#: Prefix that labels a constraint as stated by a human (not found by the kernel).
+HUMAN_STATED = "human-stated: "
+
+
 @dataclass(frozen=True)
 class Assessment:
     """Parsed Jev answers for one assessment round."""
@@ -86,7 +90,8 @@ class Assessment:
 def _state(ctx: ExecutionContext, work: Working) -> dict[str, JsonValue]:
     """Build the quoted state: question, options, criteria, evidence, constraints, findings."""
     constraints = [*ctx.constraints, *(e.excerpt or "" for e in ctx.evidence(work.constraint_ids))]
-    constraints += work.cont.human_inputs
+    constraints += [f"{HUMAN_STATED}{t}"
+                    for t in (*work.cont.human_inputs, *work.cont.conditions)]
     evidence = evidence_state(ctx, work.evidence)
     for item in work.evidence:
         role = "pattern_only" if item.category in _PATTERN_CATEGORIES else "decision_basis"
@@ -177,6 +182,8 @@ async def assess(ctx: ExecutionContext, invocation: CapabilityInvocation, work: 
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-02 [python-coder]: human-stated text and conditions reach Jev's constraints labelled.
+#   (#KernelChoiceWithCondition)
 # - 2026-10-01 [python-coder]: One `precedent.<decision id>` noul per precedent candidate rides the
 #   assessment batch (no extra Jev call) while the decision has an assessment to send; Jev only
 #   judges whether the earlier decision applies. (#KernelDecisionStore)

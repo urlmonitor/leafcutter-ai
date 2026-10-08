@@ -27,15 +27,53 @@ AC coverage owned by this module:
 
 from __future__ import annotations
 
+import datetime
 import re
+import sys
 from pathlib import Path
 
+import yaml
 from epic_runtime import get_logger
 from epic_tickets import _read_ticket_frontmatter
 
 # ---------------------------------------------------------------------------
 # Collection
 # ---------------------------------------------------------------------------
+
+
+_GATE_KEYS = ("change_target", "risk_surface", "requires_diagram", "requires_adr")
+
+
+def _union(tickets: list[dict], key: str) -> list[str]:
+    """Return the sorted union of a string-or-list ticket field across tickets."""
+    found: set[str] = set()
+    for t in tickets:
+        v = t.get(key)
+        found.update(str(i) for i in (v if isinstance(v, list) else [v] if v else []))
+    return sorted(found)
+
+
+def _roll_up(tickets: list[dict], key: str) -> bool | None:
+    """Tri-state roll-up: any True gives True, else any False gives False, else None."""
+    values = [t.get(key) for t in tickets]
+    if any(v is True for v in values):
+        return True
+    return False if any(v is False for v in values) else None
+
+
+def _warn_empty_gate_fields(data: dict) -> None:
+    """Warn on stderr when change_target/risk_surface unions are empty (plan will fail the gates)."""
+    tickets = data["tickets"]
+    for key in ("change_target", "risk_surface"):
+        if _union(tickets, key):
+            continue
+        lacking = [t["source_ac"] or t["file"] for t in tickets if not t.get(key)]
+        print(
+            f"WARNING: Master_Plan {key} is empty, so the generated Master_Plan will fail "
+            f"the frontmatter gates; fix the source AC(s) lacking {key}: "
+            f"{', '.join(lacking) or '(no tickets in epic)'}",
+            file=sys.stderr,
+        )
 
 
 def _numbered_ticket_files(epic_folder: Path) -> list[Path]:
@@ -79,7 +117,7 @@ def _summarise_ticket(ticket_file: Path) -> tuple[dict, list[str]]:
     title = fm.get("title") or ticket_file.stem
     source_ac = fm.get("source_ac") or ""
     depends_on_raw = fm.get("depends_on") or []
-    # depends_on in ticket frontmatter are AC IDs, not ticket nums
+    # depends_on in ticket frontmatter are epic ticket filenames (wired by _wire_epic_depends_on)
     depends_on = [str(d) for d in depends_on_raw] if isinstance(depends_on_raw, list) else []
 
     # Collect agents (only those marked needed or signed_off — not not_needed)
@@ -100,6 +138,7 @@ def _summarise_ticket(ticket_file: Path) -> tuple[dict, list[str]]:
         "source_ac": source_ac,
         "depends_on": depends_on,
         "agents": needed_agents,
+        **{k: fm.get(k) for k in _GATE_KEYS},
     }
     return row, components
 
@@ -111,6 +150,7 @@ def _collect_master_plan_data(
     goal_ac_id: str,
     goal_summary: str,
     epic_name: str,
+    goal_title: str = "",
 ) -> dict:
     """Collect all data needed to render Master_Plan.md from the assembled epic folder.
 
@@ -125,9 +165,10 @@ def _collect_master_plan_data(
         goal_ac_id: The goal/L0 AC id that was used to generate the epic.
         goal_summary: One-paragraph summary of the goal AC's criteria.
         epic_name: PascalCase EPIC name (without the ``EPIC-`` prefix).
+        goal_title: Goal title for the plan's ``title`` field; falls back to *epic_name*.
 
     Returns:
-        A dict with keys: ``tickets`` (list of dicts), ``agents`` (dict),
+        A dict with keys: ``goal_title``, ``tickets`` (list of dicts), ``agents`` (dict),
         ``components`` (sorted list), ``dep_graph`` (same as input),
         ``topo_order`` (same as input), ``goal_summary``, ``epic_name``,
         ``goal_ac_id``.
@@ -147,6 +188,7 @@ def _collect_master_plan_data(
         "goal_ac_id": goal_ac_id,
         "goal_summary": goal_summary,
         "epic_name": epic_name,
+        "goal_title": goal_title or epic_name,
         "tickets": tickets,
         "agents": all_agents,
         "components": sorted(all_components),
@@ -186,17 +228,26 @@ def _render_master_plan(data: dict, created_date: str) -> str:
     components = data["components"]
     dep_graph = data["dep_graph"]
 
-    # --- Frontmatter ---
-    components_yaml = "\n".join(f"  - {c}" for c in components) if components else "  []"
-    frontmatter = (
-        f"---\n"
-        f"epic_name: EPIC-{epic_name}\n"
-        f"created: {created_date}\n"
-        f"status: in_progress\n"
-        f"components:\n{components_yaml}\n"
-        f"source_ac: {goal_ac_id}\n"
-        f"---\n"
-    )
+    # --- Frontmatter (one yaml.safe_dump mapping, so titles with ":" round-trip) ---
+    try:
+        created: object = datetime.date.fromisoformat(created_date)
+    except ValueError:
+        created = created_date
+    fm = {
+        "title": f"EPIC: {data.get('goal_title') or epic_name}",
+        "type": "epic",
+        "epic_name": f"EPIC-{epic_name}",
+        "created": created,
+        "status": "in_progress",
+        "components": components,
+        "source_ac": goal_ac_id,
+        "depends_on": [],
+        "change_target": _union(tickets, "change_target"),
+        "risk_surface": _union(tickets, "risk_surface"),
+        "requires_diagram": _roll_up(tickets, "requires_diagram"),
+        "requires_adr": _roll_up(tickets, "requires_adr"),
+    }
+    frontmatter = f"---\n{yaml.safe_dump(fm, sort_keys=False, allow_unicode=True)}---\n"
 
     # --- Header ---
     header = f"# EPIC-{epic_name}\n\n"
@@ -251,6 +302,7 @@ def generate_master_plan(
     goal_summary: str,
     epic_name: str,
     created_date: str | None = None,
+    goal_title: str = "",
 ) -> Path:
     """Write a Master_Plan.md file at the root of the assembled EPIC folder.
 
@@ -277,6 +329,7 @@ def generate_master_plan(
                    prefix, e.g. ``"ValidateApiInputs"``).
         created_date: ISO date string for the ``created:`` frontmatter field.
                       Defaults to today's date (``datetime.date.today().isoformat()``).
+        goal_title: Goal title written as ``title: "EPIC: <goal_title>"``.
 
     Returns:
         Absolute path to the written ``Master_Plan.md`` file.
@@ -284,8 +337,6 @@ def generate_master_plan(
     Raises:
         OSError: When the file cannot be written to disk.
     """
-    import datetime  # noqa: PLC0415 — stdlib, deferred for module-load performance
-
     if created_date is None:
         created_date = datetime.date.today().isoformat()
 
@@ -296,8 +347,10 @@ def generate_master_plan(
         goal_ac_id=goal_ac_id,
         goal_summary=goal_summary,
         epic_name=epic_name,
+        goal_title=goal_title,
     )
 
+    _warn_empty_gate_fields(plan_data)
     content = _render_master_plan(plan_data, created_date)
 
     master_plan_path = epic_folder / "Master_Plan.md"
@@ -339,6 +392,14 @@ DECISION HISTORY
   as a non-zero CLI exit. Helper functions: _read_ticket_title(), _read_ac_criteria(),
   generate_master_plan(). Integration point: run() calls generate_master_plan()
   after epic_folder is created, using the already-computed dep_graph and topo_order.
+- 2026-10-06 [EPIC-BuildToolingRunsThrough/09]: Master_Plan passes both frontmatter gates. (#ACD-1200a-8-i)
+  _render_master_plan writes its frontmatter as one yaml.safe_dump mapping adding
+  title ("EPIC: <goal title>"), type, depends_on [], change_target and risk_surface
+  (sorted union over tickets) and requires_diagram / requires_adr (tri-state
+  roll-up). Existing keys unchanged. goal_title is threaded in as an optional arg.
+  Review follow-up (M-1): when either union is empty the honest empty list is still
+  written (never an invented value) and _warn_empty_gate_fields prints one WARNING
+  per field to stderr naming the source ACs that lack it; exit code unchanged.
 - 2026-09-14 12:00 [goal-to-epic-decompose]: Moved here from
   scripts/goal_to_epic.py, which exceeded the 400-line check_file_size limit.
   _render_master_plan and generate_master_plan moved verbatim. Two edits, both

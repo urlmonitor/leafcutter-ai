@@ -1,0 +1,92 @@
+id: AR-300d-3-i
+title: "Revoking an agent's last remaining ability leaves no empty section behind"
+component: agent-registry
+components:
+  - agent_registry
+  - template_compiler
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given an agent whose declaration grants exactly one ability, and whose compiled
+    prompt names it,
+    And that one ability removed from the declaration, leaving the grant empty,
+  When the build compiles agent prompts again,
+  Then that agent's compiled prompt contains no abilities section at all -- no
+    heading, and no heading followed by an empty list,
+    And the result is identical to the prompt of an agent that was never granted
+      anything, so a revoked agent and an ungranted agent are indistinguishable
+      afterwards,
+  So a revocation does not leave behind a heading that claims a category of
+    capability the agent no longer has.
+depends_on:
+  - AR-300d-3
+doc_links:
+  - path: docs/acceptance-criteria/agent-registry/AR-300-granted-abilities-arrive/AR-300a-3.yaml
+    relationship: related
+    status: exists
+    relevance: "The same end state reached from the other direction -- an agent granted nothing receives no section. This criterion asserts revocation lands in that state rather than in a third one."
+  - path: scripts/template_compiler.py
+    relationship: modifies
+    status: exists
+    relevance: "Where the empty case is decided; the revoke-to-empty path is the one an additive implementation never exercises."
+assigned_agent: python-coder
+estimated_complexity: S
+change_target: code
+risk_surface: internal
+it_requirements:
+  - "Revoke-to-empty must land in the SAME emit/omit branch AR-300a-3 governs -- one shared decision, not two. An implementation can easily get the filter right (three abilities down to two) and the branch wrong (one down to zero), emitting a bare heading for an agent whose list just became empty. The boundary is between 'some' and 'none', not between 'many' and 'fewer'."
+  - "The resulting compiled prompt must be indistinguishable in the relevant region from that of an agent never granted anything. Assert that equivalence directly against an ungranted agent's prompt rather than asserting the heading's absence twice -- the two states must not merely both lack a heading, they must be the same state."
+  - "An emptied declaration and an absent declaration must normalise to the same value before the emit/omit decision, consistent with AR-300a-3's requirement."
+  - "Whether the author leaves the key present-but-empty or deletes it entirely, the result is the same -- both are reachable mid-revocation."
+test_spec:
+  - name: test_revoking_the_last_ability_leaves_no_abilities_section
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: integration
+    angle: boundary
+    description: "An agent granted exactly one ability, then revoked, compiles to a prompt with no abilities heading and no heading followed by an empty list."
+  - name: test_revoked_agent_prompt_matches_a_never_granted_agent_prompt
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: integration
+    angle: deployed
+    description: "The revoked agent's compiled prompt is equivalent in the relevant region to an agent that was never granted anything -- the same state, not merely two states that both lack a heading."
+  - name: test_emptied_key_and_deleted_key_produce_the_same_result
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: unit
+    angle: boundary
+    description: "Leaving the declaration key present-but-empty and deleting it entirely both reach the omit branch identically."
+test_rationale: >-
+  AR-300d-3 removes one of three and is satisfied by any implementation that filters
+  a non-empty list; only removing the only one crosses into the branch AR-300a-3
+  governs. The equivalence descriptor is stated against the ungranted agent's actual
+  prompt rather than as a second absence check, because two independent absence
+  assertions can both pass while the two code paths diverge in some other respect --
+  and it is that divergence, not the missing heading, that makes a revoked agent
+  distinguishable.
+delivers_to: null
+expects_from:
+  ac_id: AR-300d-3
+  contract: "The per-agent revocation whose boundary case this criterion pins"
+origin_agent: BrainCandy
+created: 2026-09-30
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-10-01'
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  THE BOUNDARY IS BETWEEN 'SOME' AND 'NONE', NOT BETWEEN 'MANY' AND 'FEWER'.
+  AR-300d-3 removes one of three and is satisfied by any implementation that
+  filters a non-empty list. Removing the only one crosses into the branch
+  AR-300a-3 governs, and an implementation can easily get the filter right and
+  the branch wrong -- emitting a bare heading for an agent whose list just became
+  empty.

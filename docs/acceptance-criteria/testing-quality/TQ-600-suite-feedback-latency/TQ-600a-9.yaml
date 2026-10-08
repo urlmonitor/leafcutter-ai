@@ -1,0 +1,456 @@
+id: TQ-600a-9
+components:
+  - testing_quality
+  - build_pipeline
+title: "Tests that differ only in what they assert about one build stop producing one build each"
+component: testing-quality
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given the population this record addresses: roughly 1,700 s of the 6,432 s suite —
+    about 26% — sits in tests that each start a real build subprocess, at about 13.3 s
+    for a build directed at a separate target directory and about 43 s for one that
+    targets the checkout it was cloned from,
+  And the correction that decides the shape of the work, established by reading every
+    subprocess call site in the thirteen files examined: the lever is HOW MANY real
+    builds a file performs, not whether a build is directed or self-targeting. Twelve
+    of the thirteen are already directed, or are self-hosting because the criterion
+    they test requires the package root and the target root to coincide; the
+    thirteenth clones the checkout and builds against the clone because the
+    self-targeting bootstrap path is the thing it exists to prove. No conversion
+    between the two shapes is in scope here, and proposing one would be acting on a
+    defect that is not present,
+  And the identical-setup groups found by reading those call sites:
+    - in the colliding-capability file, four tests whose setup lines are byte-identical
+      — a fresh scratch adopter, a contested name picked deterministically as the first
+      of the sorted shipped names, a colliding capability planted under that name, and
+      one build — which then assert four different properties of that single result:
+      that the adopter's file survives, what the message says, that the declared winner
+      matches the resolution, and that the winner is the same on every platform. Eight
+      of its sixteen builds serve those four tests, and six of the eight are removable,
+    - in the consumer-install file, one test and all four parametrised instances of a
+      second test that run a byte-identical build before any mutation, the mutation
+      applying strictly afterwards to the produced tree and never to the package
+      source, and the parity check that follows reading a target directory without
+      building again. Five of its ten builds are that one build, and four are
+      removable,
+    - in the adopter-survival file, three tests sharing the same first build, and in the
+      discoverable-symlink file, two tests sharing one build,
+    - in the tracked-files file, one of its three clone-and-build cycles duplicating a
+      cycle the same module already performs and already caches,
+  And the prior count of the adopter family, which this record does not re-derive and
+    must not take on trust: 35 of the 41 builds across six files are the first,
+    declared-as-fixture-setup build that the family's own harness documents as "a
+    fixture failure, never a finding for any AC in this build set" — about 497 s at the
+    directed rate,
+  When each group of tests that needs one identical preparation obtains that
+    preparation once and each member of the group works against it — reading it
+    directly where the member only reads, and against a private copy of it where the
+    member alters anything,
+  Then the real build subprocesses those files start fall by the counts the groups above
+    name — 35 across the six adopter files, 4 in the consumer-install file, 1 in the
+    tracked-files file — each figure obtained by counting the subprocesses the run
+    actually starts, before and after, rather than taken from this record,
+  And every assertion those files make before the change still exists, still runs, and
+    still turns red when the property it names is broken: none is skipped, softened,
+    merged into another, or left asserting something the shared preparation makes true
+    by construction,
+  And the elapsed time for those files, measured before and after on the same machine
+    in the same sitting, is at most two thirds of the baseline,
+  And the 497 s figure is reported as the one measured by that before-and-after count,
+    not as the one inherited from the prior analysis, so a count that turns out smaller
+    is visible rather than absorbed.
+depends_on:
+  - TQ-600a
+doc_links:
+  - path: unit_tests/portability/test_bp_1500g_2_i.py
+    relationship: modifies
+    status: exists
+    relevance: >-
+      EDIT SURFACE, and the cleanest single win in the set. Four tests with byte-identical
+      setup asserting four different properties of one result; 8 builds become 2, about
+      78 s. The contested name is deterministic — the file's own docstring records why —
+      so the four tests genuinely see the same artifact.
+  - path: unit_tests/portability/test_inf_400c_4_i.py
+    relationship: modifies
+    status: exists
+    relevance: >-
+      EDIT SURFACE. One test plus four parametrised instances of a second share an
+      identical pre-mutation build; the mutation lands on the produced tree strictly
+      after the build, and the check that follows reads a target directory without
+      building. 5 builds become 1 build and 4 copies, about 52 s.
+  - path: unit_tests/portability/test_bp_1500g_1.py
+    relationship: modifies
+    status: exists
+    relevance: >-
+      EDIT SURFACE. Tests 1, 2 and 4 share the same first build; test 4 keeps its own
+      second build, and tests 5 to 10 keep their own builds because each applies a
+      genuinely different mutation.
+  - path: unit_tests/portability/test_bp_1500g_1_i.py
+    relationship: modifies
+    status: exists
+    relevance: >-
+      EDIT SURFACE. Tests 2 and 3 assert content survival and discoverability by name
+      from one identical planted-symlink build.
+  - path: unit_tests/portability/test_bp_1500g_1_ii.py
+    relationship: modifies
+    status: exists
+    relevance: >-
+      EDIT SURFACE for the shared setup build only. Its four triggers genuinely differ
+      and its own DECISION HISTORY records why they were deliberately NOT unified —
+      do not unify them. Only the fixture-setup build is addressable here.
+  - path: unit_tests/build_guards/test_bp_1500g_1_i.py
+    relationship: modifies
+    status: exists
+    relevance: >-
+      EDIT SURFACE for the shared setup build only; no further identical-setup pair was
+      found in it.
+  - path: unit_tests/build_guards/test_bp_1500g_2.py
+    relationship: modifies
+    status: exists
+    relevance: >-
+      EDIT SURFACE for the shared setup build only. All three of its tests independently
+      require their own real subprocess per the file's own docstring; only the setup
+      build is addressable.
+  - path: unit_tests/build_guards/test_build_leaves_tracked_files_clean.py
+    relationship: modifies
+    status: exists
+    relevance: >-
+      EDIT SURFACE, and the one file where the expensive shape is correct. See
+      TQ-600a-9-ii before touching it: the clone-and-self-target pattern is the subject
+      under test, and only the duplicate cycle comes out.
+  - path: docs/analysis/2026-10-05-slowest-tests-and-what-to-do-about-them-4-per-item-verdicts.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      The source of the 35-of-41 setup-build count and of the golden-adopter pattern
+      this record generalises. Its premise was verified against the six files; its
+      arithmetic was not re-derived, which is why the last criterion requires the count
+      to be taken from the run.
+  - path: CLAUDE.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      The standing "Tests must not spawn their own build.py" rule and its read-versus-
+      mutate boundary. These files sit on the mutate side of that boundary, so they
+      keep building their own copies; this record reduces how many, and must not route
+      any of them onto the shared reference layout.
+  - path: unit_tests/portability/_bp1500g1_harness.py
+    relationship: modifies
+    status: exists
+    relevance: >-
+      EDIT SURFACE the criteria imply but never name. `run_build()` at line 97 is the
+      SINGLE builder shared by the six adopter files, so it is both the one place the
+      produce-once mechanism can be hung and the one place the execution signal has to
+      be emitted from. The criteria talk about eight files; the code has one chokepoint.
+  - path: scripts/suite_performance/_shared_layout_coordination.py
+    relationship: modifies
+    status: exists
+    relevance: >-
+      Owns `emit_execution_signal` (line 100) and EXECUTION_LOG_ENV_VAR (line 40) — the
+      package's ONLY real build-subprocess counter, and the one every count descriptor
+      here must read. Listed as modifies rather than describes only if the signal needs
+      a new field; the call sites that must start using it are in the test harnesses.
+  - path: unit_tests/suite_performance/_test_helpers_tq_600a_5.py
+    relationship: describes
+    status: exists
+    relevance: >-
+      `run_child_session()` at line 44 already runs a real child pytest session with
+      caller-supplied env overrides. It is how every count descriptor here should set
+      the execution-log variable and read a per-file count. Do not write a new runner.
+  - path: .github/workflows/ci.yml
+    relationship: describes
+    status: exists
+    relevance: >-
+      Lines 405-410 are why a count must be taken in one process: CI shards with
+      pytest-split `--splits 8 --group N`, and produce-once is per OS process. Read
+      before assuming a local count carries over to CI.
+  - path: .github/test_durations.json
+    relationship: modifies
+    status: exists
+    relevance: >-
+      EDIT SURFACE, and the easiest thing in this change to forget. Keyed per TEST ID —
+      test_bp_1500g_2_i.py alone holds nine entries. After this change one member of
+      each sharing group carries the build cost and the rest carry almost none, so a
+      stale file produces exactly the lopsided shard the file exists to prevent.
+declared_files:
+  - path: unit_tests/portability/test_bp_1500g_2_i.py
+    state: existing
+  - path: unit_tests/portability/test_inf_400c_4_i.py
+    state: existing
+  - path: unit_tests/portability/test_bp_1500g_1.py
+    state: existing
+  - path: unit_tests/portability/test_bp_1500g_1_i.py
+    state: existing
+  - path: unit_tests/portability/test_bp_1500g_1_ii.py
+    state: existing
+  - path: unit_tests/portability/_bp1500g1_harness.py
+    state: existing
+  - path: unit_tests/build_guards/test_bp_1500g_1_i.py
+    state: existing
+  - path: unit_tests/build_guards/test_bp_1500g_2.py
+    state: existing
+  - path: unit_tests/build_guards/test_build_leaves_tracked_files_clean.py
+    state: existing
+  - path: scripts/suite_performance/_shared_layout_coordination.py
+    state: existing
+  - path: .github/test_durations.json
+    state: existing
+assigned_agent: python-coder
+estimated_complexity: L
+it_requirements:
+  - >-
+    DO NOT CONVERT ANY FILE BETWEEN SELF-TARGETING AND DIRECTED. The ticket that
+    produced this work assumed these files had the defect a prior change fixed
+    elsewhere. They do not. Twelve are already directed or correctly self-hosting, and
+    the thirteenth self-targets on purpose. A conversion here changes which code path
+    is exercised and silently stops testing the criterion the file names.
+  - >-
+    DO NOT ROUTE THESE FILES ONTO THE SHARED REFERENCE LAYOUT. None of the thirteen
+    references either marker or requests the shared fixture, and most are structurally
+    incompatible with its reader/mutator model: they build fresh adopter projects from
+    an empty directory, or alter package source before building. The fix is a private,
+    per-file produce-once-then-copy pattern, not a migration.
+  - >-
+    THE SHARED PREPARATION IS HANDED OUT AS A COPY WHENEVER THE CONSUMER WRITES. A
+    group member that only reads may use the artifact in place. Any member that
+    alters it gets its own copy first. See TQ-600a-9-i, which is where this is proved.
+  - >-
+    COUNT THE SUBPROCESSES, DO NOT TRUST THE ESTIMATE. The 497 s adopter-family figure
+    rests on a prior analysis's call-site count whose premise was verified but whose
+    arithmetic was not re-derived. Instrument the run to count real build subprocesses
+    before and after and report the measured difference.
+  - >-
+    EVERY TIMING CLAIM IS A RATIO TAKEN IN ONE SITTING. This workspace is a shared host
+    under variable agent load. An absolute second count will be flaky and will be
+    disabled by the next person who sees it fail.
+  - >-
+    TWO FILES ARE DELIBERATELY OUT OF SCOPE AND MUST NOT BE QUIETLY INCLUDED. The
+    authored-test-spec file already memoises per input and is cited as exemplary; the
+    fifth consumer-install file has no identical-setup pair. A change to either is
+    scope creep against a file the evidence says is already minimal.
+  - >-
+    THE COUNTER THIS RECORD KEEPS DEMANDING DOES NOT REACH THESE FILES YET, AND
+    BUILDING IT IS PART OF THIS CHANGE. The package already owns exactly one real
+    build-subprocess counter: `emit_execution_signal` in
+    scripts/suite_performance/_shared_layout_coordination.py line 100, which appends one
+    `{"event": "deploy_executed", ...}` JSONL line per executed deploy and is a no-op
+    unless LEAFCUTTER_SHARED_LAYOUT_EXECUTION_LOG names a file. It is called from
+    exactly two places — _shared_layout_producer.py lines 187 and 200, and
+    pytest_shared_reference_layout.py lines 276 and 290 — and NONE of the thirteen files
+    in scope routes through either. Each runs its own builder: `run_build()` at
+    unit_tests/portability/_bp1500g1_harness.py line 97 (shared by the six adopter
+    files), five inline subprocess.run sites in test_inf_400c_4_i.py (lines 183, 226,
+    271, 659, 667), `_run_build()` at test_build_leaves_tracked_files_clean.py line 29,
+    `_run_build()` at test_acd_2100d_2_i.py line 115, and `_run_build_in_copy()` at
+    test_bp_900g_8_ii.py line 234. Add the existing `emit_execution_signal` call to
+    those builders. Do NOT write a second counter, and do NOT count by patching
+    subprocess.run — a mocked build is not a build, and every count assertion in this
+    record is about builds that really ran.
+  - >-
+    COUNT IN ONE PROCESS, AND REGENERATE THE DURATIONS FILE. Two facts constrain every
+    count and every ratio here. First, produce-once-then-copy is scoped to one operating
+    system process, while CI runs `python -m pytest tests/ unit_tests/ -q --splits 8
+    --group N --durations-path .github/test_durations.json` (.github/workflows/ci.yml
+    lines 405-410) and pytest-split's durations file is keyed per TEST ID, not per file —
+    verified: test_bp_1500g_2_i.py holds nine separate entries. A shard boundary falling
+    inside a sharing group silently restores one build per fragment, so a count taken
+    under --splits is not reproducible. Take every count from a single child session with
+    no --splits, using the existing `run_child_session()` helper at
+    unit_tests/suite_performance/_test_helpers_tq_600a_5.py line 44. Second, after this
+    change one member of each group carries the whole build cost and its siblings carry
+    almost none, which is precisely the imbalance .github/test_durations.json exists to
+    prevent — regenerate it in the same change, or the shard matrix degrades on the
+    change that was meant to speed it up.
+  - >-
+    THE VERIFICATION MUST NOT COST MORE THAN THE SAVING, AND THE OBVIOUS GATE IS BROKEN.
+    The descriptors below re-run whole subject files repeatedly: four runs of the
+    collision file for the discrimination check, and a before-and-after across eight
+    files that together hold roughly 54 builds. At the measured 13.3 s directed and 43 s
+    self-targeting rates that is comfortably more per run than this record saves. The
+    reflex is to suffix them `_MANUAL` — and TQ-600a-13 has just established that the
+    suffix has ZERO enforcement in this repository: no registered marker, no -k/-m/
+    --deselect in pytest.ini or ci.yml, and a `_MANUAL` test timed at 13.8 s in the
+    durations record. So these tests must be placed behind a gate whose effect is shown
+    by performing a collection and observing them absent, never behind a naming
+    convention. See this record's expects_from.
+delivers_to:
+  - agent: python-coder
+    ac_id: TQ-600a-9-i
+    contract: >-
+      The produce-once-then-copy mechanism whose isolation and non-vacuity properties
+      TQ-600a-9-i specifies.
+  - agent: python-coder
+    ac_id: TQ-600a-9-ii
+    contract: >-
+      The de-duplicated clone-and-build cycle in the tracked-files file, whose
+      self-targeting shape TQ-600a-9-ii requires be preserved.
+  - agent: python-coder
+    ac_id: TQ-600a-9-iii
+    contract: >-
+      The produce-once-then-copy mechanism applied to a shared per-class install,
+      whose order-independence TQ-600a-9-iii requires be demonstrated rather than
+      assumed.
+expects_from:
+  - ac_id: TQ-600a-13
+    contract: >-
+      A gate that genuinely keeps an expensive test out of the default collection, and
+      whose effect is demonstrated by performing a collection. ADDED AT TECHNICAL
+      ENRICHMENT, NOT BY THE AUTHOR OF THE CRITERIA, and it is an ordering constraint
+      rather than a behavioural one: this record's own verification tests re-run whole
+      build-spawning files several times each, so without such a gate they are added to
+      every default run and every CI shard and this record makes the suite slower rather
+      than faster. If TQ-600a-13 resolves by correcting the documents instead of
+      implementing an exclusion — which is the branch its own it_requirements prefer —
+      then no gate exists, and these verification tests need an explicitly invoked
+      cadence of their own before they may land. Either resolution discharges this; an
+      unresolved TQ-600a-13 does not.
+test_spec:
+  - name: test_tq600a_9_the_four_collision_tests_start_two_builds_not_eight
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: integration
+    angle: criterion
+    surface_invoked: "run_child_session() over unit_tests/portability/test_bp_1500g_2_i.py, no --splits, LEAFCUTTER_SHARED_LAYOUT_EXECUTION_LOG set"
+    description: >-
+      Run the colliding-capability file in ONE child pytest session with
+      LEAFCUTTER_SHARED_LAYOUT_EXECUTION_LOG pointed at a scratch file, then count the
+      `deploy_executed` lines that file received. The count is 2, not 8, and all seven
+      of the file's tests pass. The count comes from the execution log the real builders
+      emitted, not from a patched subprocess.run — a mocked build would make the count
+      correct and the assertion meaningless.
+  - name: test_tq600a_9_the_consumer_install_file_starts_one_pre_mutation_build
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: integration
+    angle: criterion
+    surface_invoked: "run_child_session() over unit_tests/portability/test_inf_400c_4_i.py, no --splits, LEAFCUTTER_SHARED_LAYOUT_EXECUTION_LOG set"
+    description: >-
+      Run the consumer-install file under the same execution log. The pre-mutation build
+      happens once across the first test and all four parametrised instances of the
+      second, and every one of the nine tests still passes.
+  - name: test_tq600a_9_each_shared_assertion_still_fails_when_its_own_subject_is_broken
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: integration
+    angle: discrimination
+    must_catch:
+      - "the four tests share one produced tree and three of them assert a property the shared fixture supplies unconditionally, so breaking the adopter file, the message, the declared winner or the cross-platform winner reddens fewer than four of the four runs"
+      - "the shared build is reused across the four runs of this descriptor, so a mutation made for run one is still present in run two and more than one test goes red"
+    description: >-
+      For each of the four collision tests, break only the property that test names —
+      the surviving file, the message, the declared winner, the cross-platform winner —
+      and assert that exactly that test goes red while the other three stay green.
+      THIS IS THE DESCRIPTOR THAT CANNOT BE DROPPED: it is the only proof that sharing
+      one build did not turn three of the four assertions into statements the shared
+      artifact makes true by construction.
+  - name: test_tq600a_9_the_build_subprocess_count_for_the_named_files_falls_by_the_declared_counts
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: integration
+    angle: criterion
+    surface_invoked: "run_child_session() over each named file with LEAFCUTTER_SHARED_LAYOUT_EXECUTION_LOG set; deploy_executed lines counted per file"
+    description: >-
+      Count real build subprocesses across the six adopter files, the consumer-install
+      file and the tracked-files file, before and after, by reading the execution log
+      rather than by instrumenting anew. The reduction is at least 35, 4 and 1
+      respectively, and the measured totals are reported rather than the estimates in
+      this record.
+  - name: test_tq600a_9_the_named_files_cost_at_most_two_thirds_of_their_baseline
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: integration
+    angle: criterion
+    must_catch:
+      - "the ratio is replaced by an absolute wall-clock threshold in seconds; scaling both the baseline and the after figure by the same factor, as a loaded host does, must not change the verdict, and an absolute threshold makes it change"
+      - "the baseline is read from a figure recorded in this record or in a previous sitting rather than measured alongside the after figure in the same run"
+    description: >-
+      Run the named files with sharing off and with sharing on, same machine same
+      sitting, same process, and assert the RATIO is at most two thirds. This is the
+      only descriptor that measures the population rather than a mechanism. Never an
+      absolute second count: this host has shown 3.8x to 10.74x variance with no code
+      change at all, recorded in TQ-600a-11.
+  - name: test_tq600a_9_no_file_in_the_set_changes_between_directed_and_self_targeting
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: integration
+    angle: discrimination
+    must_catch:
+      - "the tracked-files file's build is converted to a directed one, so its target directory and its package root stop resolving to the same tree"
+      - "an adopter file's build is converted from directed to self-targeting, so it begins copying package source into its target and exercises the opposite code path"
+    description: >-
+      For each changed file, observe the build invocation the run actually performs —
+      read the `target_dir` field of the `deploy_executed` entries the execution log
+      received — and assert its target directory stands in the same relation to its
+      package root as it did before. This is the plausible-looking change this record
+      exists to forbid, so it is asserted against the invocation the run really made,
+      not against the source of the call site.
+test_rationale: |
+  The whole risk of this change is that sharing a build makes an assertion true by
+  construction instead of by behaviour, so the central descriptor is not a build count
+  but a four-way discrimination: break one property, exactly one test goes red. A build
+  count alone is satisfiable by a change that shares the artifact and quietly leaves
+  three assertions inspecting something the fourth already guaranteed.
+
+  The count descriptors are separate from the timing descriptor on purpose. Counts are
+  deterministic and can be asserted exactly; timings on this shared host cannot, so the
+  timing descriptor is a ratio measured in one sitting and the absolute figures in the
+  criteria are treated as upper bounds.
+
+  The directed-versus-self-targeting descriptor exists because the ticket that produced
+  this work asked for exactly the conversion the evidence says is wrong. A record that
+  only says "do not convert" in prose will be read as advice; a descriptor with a named
+  mutation makes the conversion fail out loud.
+origin_agent: business-analyst
+created: 2026-10-07
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-10-07'
+superseded_by: null
+covered_by:
+  - TQ-600a-9-i
+  - TQ-600a-9-ii
+  - TQ-600a-9-iii
+implemented_by: []
+change_target: pipeline
+risk_surface: internal
+notes: |
+  WHAT THE EVIDENCE ACTUALLY SAID, AND WHAT IT CORRECTED. This record is specified
+  against a per-file analysis of the thirteen slowest build-spawning test files, with a
+  path-and-line citation for every claim. Its headline finding is a correction: the
+  originating hypothesis was that these files "did not move" because they self-target,
+  and that the fix is the same self-targeting-to-directed conversion applied elsewhere.
+  That is true of one file out of thirteen, and in that one file the self-targeting is
+  correct. The lever is the number of real builds a file performs. Every criterion here
+  follows from that correction, and the last test descriptor exists to stop the original
+  hypothesis being acted on anyway.
+
+  HOW THIS RELATES TO TQ-600a-8. TQ-600a-8 is the ratchet that migrates the existing
+  deploy-site population onto the shared layout. This record is the residue that ratchet
+  cannot move: files that build fresh adopter projects from an empty directory, or alter
+  package source before building, and so can never be read-only consumers of one shared
+  artifact. The two do not overlap and do not order against each other.
+
+  WHAT IS DELIBERATELY NOT HERE. Two files were examined and found already minimal, and
+  no criterion covers them: the authored-test-spec file, which already memoises per input
+  and is cited in two independent analyses as exemplary, and the fifth consumer-install
+  file, in which no identical-setup pair was found. A third proposal was examined and
+  rejected: merging the three mutation shapes in the reachability file so that one
+  execution serves both the message assertions and the produced-tree assertion, worth
+  about 37 s. That file's own AC names four distinct test_spec entries, and collapsing
+  four declared executions into one to save 37 s trades a declared per-test-id execution
+  boundary for a small gain. It is the one proposal the evidence itself calls genuinely
+  contestable, and it is left out rather than smuggled in.
+
+  CONFIDENCE, STATED HONESTLY. The 497 s adopter-family figure is the largest number in
+  this record and the least independently verified: it comes from a prior analysis's
+  call-site count whose premise was checked against all six files but whose arithmetic
+  was not recomputed. The 78 s and 52 s figures were derived independently by reading
+  the call sites. That asymmetry is why the criteria require the saving to be counted
+  from the run rather than asserted, and why the timing criterion is a ratio.

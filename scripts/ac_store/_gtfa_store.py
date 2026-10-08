@@ -274,6 +274,39 @@ def _expects_from_ac_ids(value: object) -> list[str]:
     ]
 
 
+def _prerequisite_ac_ids(ac: AcRecord) -> list[str]:
+    """Return the AC ids *ac* must wait for: ``depends_on`` plus ``expects_from``.
+
+    BO-2600a-5 (EPIC-BuildToolingRunsThrough/08): the one shared rule for a
+    record's prerequisites. The generator (:func:`_build_ticket_depends_on`)
+    and the epic dependency index (``epic_dependencies._build_depends_on_index``)
+    both call it, so they cannot disagree about which edges exist.
+
+    Args:
+        ac: Parsed AC record dict.
+
+    Returns:
+        Order-preserved, de-duplicated list of non-empty string AC ids.
+
+    DECISION HISTORY:
+        2026-10-06 (BO-2600a-5, EPIC-BuildToolingRunsThrough/08): Introduced so
+        the generator and the epic index share one prerequisite rule instead of
+        two copies.
+        2026-10-07 (BO-2600a-5, dec-46476988badbd5e6): the epic index reads this
+        rule through ``epic_dependencies._scan_edges``, which then drops a
+        child's parent link when the parent's expects_from names the child.
+    """
+    raw_deps = ac.get("depends_on")
+    if not isinstance(raw_deps, list):
+        raw_deps = []
+    expects_ids = _expects_from_ac_ids(ac.get("expects_from"))
+    merged: dict[str, None] = {}
+    for dep in [*raw_deps, *expects_ids]:
+        if isinstance(dep, str) and dep:
+            merged.setdefault(dep, None)
+    return list(merged)
+
+
 def _build_ticket_depends_on(
     ac: AcRecord,
     ac_id: str,
@@ -322,17 +355,7 @@ def _build_ticket_depends_on(
         Empty when the AC declares no dependencies (from either source), none
         survive classification, or *tickets_root* is ``None``.
     """
-    raw_deps = ac.get("depends_on")
-    if not isinstance(raw_deps, list):
-        raw_deps = []
-    expects_ids = _expects_from_ac_ids(ac.get("expects_from"))
-
-    candidates: list[str] = []
-    seen: set[str] = set()
-    for dep in [*raw_deps, *expects_ids]:
-        if isinstance(dep, str) and dep and dep not in seen:
-            seen.add(dep)
-            candidates.append(dep)
+    candidates = _prerequisite_ac_ids(ac)
 
     if not candidates or tickets_root is None:
         return []

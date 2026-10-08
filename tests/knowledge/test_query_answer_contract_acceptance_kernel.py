@@ -32,6 +32,9 @@ class TestPublicKernelAnswerContract(ScenarioCase):
             "sources": [SourceConfig(id="knowledge.graph", kind="graph_query", categories=["task_context"])],
         })
         self.route_choice = "research"
+        # Natural-language retrieval asks Jev to pick the graph read (DK-300d-4); answer it here,
+        # not in the shared ScenarioCase, so selector regressions stay visible elsewhere.
+        self.jev.script("knowledge.operation_select", "operation", choice_answer("get_component_context"))
         self.calls = []
         self.catalog = None
         self.admission = None
@@ -405,3 +408,8 @@ def _resume_in_child(path):
 if __name__ == "__main__":
     import sys
     _resume_in_child(sys.argv[1])
+
+
+# DECISION HISTORY
+# ================================================================================
+# - 2026-10-06 12:00 [test-writer]: Script the operation_select question in this fixture (not the shared ScenarioCase); #1008 routes natural-language retrieval through it. (#KnowledgeFixturesOpSelect)

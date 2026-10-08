@@ -14,9 +14,14 @@ from __future__ import annotations
 
 from datetime import datetime
 
+from kernel.capabilities.decision.approvals import HUMAN_RULING
 from kernel.capabilities.decision.budget_gate import LIMITATION
 from kernel.capabilities.decision.combine import Verdict
-from kernel.capabilities.decision.design_ending import choice_rationale, ranking_assessments
+from kernel.capabilities.decision.design_ending import (
+    choice_rationale,
+    condition_suffix,
+    ranking_assessments,
+)
 from kernel.capabilities.decision.jev_support import blocked_result
 from kernel.capabilities.decision.ranking import BUDGET_RESERVE, DESIGN_ROUND
 from kernel.capabilities.decision.requests import (
@@ -197,7 +202,8 @@ def resolved_result(invocation: CapabilityInvocation, work: Working, verdict: Ve
     option = next(o for o in work.options if o.id == verdict.selected_option_id)
     required = [c.id for c in work.usable_criteria if c.priority.value == "required"]
     text = (f"Option [{option.id}] {option.title} satisfies the required criteria "
-            f"{required} according to evidence {work.evidence_ids}.")
+            f"{required} according to evidence {work.evidence_ids}."
+            f"{condition_suffix(work.cont.conditions)}")
     rationale = Rationale(text=text, origin="template")
     used: list[Option | Criterion] = [*work.usable_options, *work.usable_criteria]
     approved = (work.cont.decision_approved or any(
@@ -230,6 +236,9 @@ def design_resolved_result(invocation: CapabilityInvocation, work: Working, cfg:
     rationale = Rationale(text=choice_rationale(work), origin="template")
     note = ("design decision: the options were ranked by the kernel and a human chose "
             f"[{option.id}]")
+    if work.cont.design_reason == HUMAN_RULING:  # no ranking was shown at an escalation
+        note = (f"human ruling: {work.cont.approved_by or 'human'} chose [{option.id}] at a "
+                f"{work.cont.pending_reason or 'escalated'} escalation")
     limited = [LIMITATION] if work.cont.design_reason == BUDGET_RESERVE else []
     report = DecisionReportPayload(
         status=DecisionStatus.RESOLVED, recommendation=option.title,
@@ -257,7 +266,9 @@ def precedent_resolved_result(invocation: CapabilityInvocation, work: Working,
     actor = work.cont.approved_by or "human"
     option = reuse_option(record, actor, [evidence_id])
     work.options, work.criteria = [option], []
-    rationale = Rationale(text=reuse_rationale(record, actor), origin="template")
+    rationale = Rationale(
+        text=reuse_rationale(record, actor) + condition_suffix(work.cont.conditions),
+        origin="template")
     note = f"reused the human-approved precedent {record.id} after {actor} confirmed it applies"
     report = DecisionReportPayload(
         status=DecisionStatus.RESOLVED, recommendation=option.title, selected_option_id=option.id,
@@ -284,6 +295,11 @@ def emit_followup(invocation: CapabilityInvocation, work: Working, followup: Fol
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-06 [python-coder]: A condition a human stated at the proposals approval is appended to
+#   the gate-resolved and the precedent-reuse rationales too, via `condition_suffix`, so a record
+#   reader sees the approval came with a condition. (#KernelChoiceWithCondition)
+# - 2026-10-06 [python-coder]: A human ruling's limitation says a human chose at an escalation, not
+#   that the kernel ranked the options (no ranking was shown). (#KernelChoiceWithCondition)
 # - 2026-10-01 [python-coder]: A human-approved resolution records approved_by and approved_at and
 #   the precedents used; a reuse resolves with the precedent's choice approved by the current
 #   human, and results hand the kernel the evidence the decision created (precedent items).

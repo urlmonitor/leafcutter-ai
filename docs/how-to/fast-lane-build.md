@@ -208,7 +208,7 @@ test-writer as its discovery command. The gate itself is not dispatched as an
 LLM — it is a single Python call:
 
 ```bash
-python3 <worktree_path>/scripts/build_orchestration/fast_lane.py select_batch \
+python <worktree_path>/scripts/build_orchestration/fast_lane.py select_batch \
   --ac-store <worktree_path>/docs/acceptance-criteria \
   --batch-size <batch_size>
 ```
@@ -278,7 +278,7 @@ permissive default.
 **Gate invocation:**
 
 ```bash
-python3 <worktree_path>/scripts/build_orchestration/fast_lane.py verify_red_baseline \
+python <worktree_path>/scripts/build_orchestration/fast_lane.py verify_red_baseline \
   --ac-ids <id1,id2,...> --test-root <worktree_path> [--base-ref <ref>]
 ```
 
@@ -301,11 +301,11 @@ linked to any AC id in the batch is classified red.
 }
 ```
 
-`reason` is exactly one of `no_new_covering_tests` (the batch has no
-newly-added covering test at all), `all_new_tests_green_at_baseline` (every
-newly-added test is green), `no_red_outcome_among_new_tests` (the newly-added
-tests are green and inconclusive, with at least one inconclusive), or
-`baseline_partition_unavailable` (the git partition could not be resolved).
+`reason` is exactly one of `no_new_covering_tests` (no newly-added covering
+test), `all_new_tests_green_at_baseline` (every new test is green),
+`no_red_outcome_among_new_tests` (new tests are green or inconclusive, at least
+one inconclusive), `baseline_partition_unavailable` (git partition unresolved),
+or `test_interpreter_unusable` (pytest is not importable by the interpreter that ran the gate; `python` must resolve to the project interpreter).
 
 The coder is NOT dispatched when `gate_passed` is false. Investigate the
 `green_at_baseline` entries and either fix the test stub or confirm that the
@@ -339,7 +339,7 @@ commit staging proceeds.
 **Gate invocation:**
 
 ```bash
-python3 <worktree_path>/scripts/build_orchestration/fast_lane.py verify_green_and_coverage \
+python <worktree_path>/scripts/build_orchestration/fast_lane.py verify_green_and_coverage \
   --worktree <worktree_path> \
   --ac-store <worktree_path>/docs/acceptance-criteria
 ```

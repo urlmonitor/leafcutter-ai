@@ -3,7 +3,7 @@ title: "Test Angles — A Set-Cover Taxonomy for Proof of Done"
 type: reference
 status: active
 created: 2026-08-14
-last_updated: 2026-09-30
+last_updated: 2026-10-07
 components:
 - testing_quality
 - build_orchestration
@@ -12,7 +12,7 @@ related_docs:
 - docs/testing/test-angles-failure-catalogue.md
 - docs/architecture/components/phantom-done-prevention.md
 - docs/reference/ac-schema.md
-description: "The five core + two conditional test angles required per acceptance criterion, the observed repo incidents that justify each, the literature behind them, and the failure classes this taxonomy explicitly does not fix."
+description: "The eight test angles (five core + three conditional) required per acceptance criterion, the wiring-shaped and discrimination-shaped failure families they target, the observed incidents that justify them, the literature behind them, and the failure classes this taxonomy explicitly does not fix."
 ---
 # Test Angles — A Set-Cover Taxonomy for Proof of Done
 
@@ -44,7 +44,7 @@ At HEAD, the ticket generator's fallback path (`_derive_tests_from_criteria` in
 `scripts/ac_store/generate_ticket_from_ac.py`, selected by
 `_build_test_requirements_section` when the AC carries no `test_spec`) emits one test
 descriptor per Gherkin `Then` clause and nothing else. That is the `criterion` angle
-alone — one of seven.
+alone — one of eight.
 
 That fallback is the common case, not the edge case: **1,509 of the 1,886 ACs assigned to
 a coder agent (80%) carry no `test_spec`** and so take it. (Store-wide the share is
@@ -55,18 +55,18 @@ population is the one that matters here.)
 > `angle: criterion` and appends a mandatory `angle: reachability` descriptor — the
 > reachability floor — via `TEST_ANGLE_CRITERION` / `TEST_ANGLE_REACHABILITY`
 > (`generate_ticket_from_ac.py:67-68`). The floor implements the first two rows of the
-> table below. The remaining five angles are still unrepresented in generated tickets.
+> table below. The remaining six angles are still unrepresented in generated tickets.
 >
 > **Known weakness of the floor at that scale.** For the 80% with no `test_spec`, the
 > appended reachability descriptor cannot name an entry point — it says so in its own
 > text ("the entry point is not declared: resolve it before writing this test"), leaving
 > *what IS the production entry point* to `test-writer`. As of BP-1100g-1 (2026-08-25),
-> `test-writer` carries a machine-extractable taught set of all seven angle names and
+> `test-writer` carries a machine-extractable taught set of all eight angle names and
 > their distinguishing rules (`templates/agents/test-writer.md`
 > `<!-- TAUGHT-TEST-ANGLES:START/END -->` anchor), kept in cross-source lockstep with
 > `config/ac_store_schema.json`'s `test_spec[].angle` enum by
 > `unit_tests/prompt_assembly/test_bp_1100g_1.py` — closing the *vocabulary* gap only.
-> It does not close the *judgement* gap: knowing the seven names is not knowing which
+> It does not close the *judgement* gap: knowing the angle names is not knowing which
 > concrete function, script, or command is *this* AC's production entry point. Until
 > that seam closes, a reachability mandate can still be satisfied by a renamed
 > `criterion` test that picks the wrong one.
@@ -86,6 +86,7 @@ population is the one that matters here.)
 | `deployed` | the file ships through `build.py`: a hook, a gate, an agent template, a workflow, or anything they import | Does it work in the deployed layout, not just the source tree? |
 | `boundary` | the AC names a range, a limit, a count, or a shape that can be empty / one / many | empty / one / many / limit / malformed-but-parseable |
 | `failure` | the AC names an error path, a fallback, or a fail-open/fail-closed contract | the error path — and does it fail *closed*? |
+| `discrimination` | **conditional, trigger-fired:** the work fixes a bug, or adds or changes a condition of a gate or guard, or a `test_spec` entry carries `must_catch` | Would this test go red under a named plausible wrong version of the code, not only when the code is absent? Incident catalogue: [failure catalogue](test-angles-failure-catalogue.md#discrimination-shaped-failure-family). |
 
 **How to select, given the cap of 4.** `criterion` + `reachability` are the **floor** —
 always both, never negotiable; that pair is what the generator's reachability floor now
@@ -94,9 +95,8 @@ their trigger*, not that all five are always charged. Where a trigger in column 
 that angle is mandatory. Floor (2) + at most two more = the cap of 4. When three or more
 triggers fire, **cover two with one test** rather than dropping one: a subprocess test
 that runs the deployed copy against a real on-disk artifact charges `reachability`,
-`real_artifact` and `deployed` at once. Count angles covered, not tests written. The two
-conditional angles never consume a slot by default — see "the two conditional angles"
-below for why.
+`real_artifact` and `deployed` at once. Count angles covered, not tests written. The three
+conditional angles never take a slot by default; `discrimination` may share one with `criterion`.
 
 **`criterion`** — the AC-literal happy path, asserted on the unit that implements it.
 
@@ -141,7 +141,7 @@ which separates `failure` coverage from a `criterion` test asserting an error me
 
 > See [test-angles-failure-catalogue.md](test-angles-failure-catalogue.md) for the full
 > incident-by-incident evidence base — reachability, seam, authenticity, deployment, and
-> negative-control gaps, plus the two conditional angles' concentrated evidence — that
+> negative-control gaps, plus the conditional angles' concentrated evidence and the discrimination-shaped family — that
 > justifies every core angle in the taxonomy above.
 
 ## Literature grounding
@@ -296,7 +296,7 @@ and `declares_side_effect`.
 
 - [docs/testing/test-angles-failure-catalogue.md](test-angles-failure-catalogue.md) — the
   per-mechanism incident evidence base extracted from this doc: reachability, seam,
-  authenticity, deployment, and negative-control gaps, plus the two conditional angles.
+  authenticity, deployment, and negative-control gaps, plus the conditional angles.
 - [docs/testing/test-angles.verification.flow.json](test-angles.verification.flow.json) —
   the machine-readable companion to this doc: 16 falsifiable checks, each with a runnable
   command, a negative control, and an observed state, that answer "is this taxonomy live

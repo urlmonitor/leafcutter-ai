@@ -827,7 +827,7 @@
       "path": "flows/leafcutter/decision-lifecycle.flow.json",
       "status": "active",
       "readiness": "draft",
-      "version": 6,
+      "version": 7,
       "entities": [
         "Decision"
       ],
@@ -858,7 +858,7 @@
       "path": "flows/leafcutter/decision-forming.flow.json",
       "status": "active",
       "readiness": "draft",
-      "version": 9,
+      "version": 11,
       "entities": [
         "Decision",
         "Decomposition"
@@ -867,9 +867,9 @@
       "impl_summary": {
         "done": 5,
         "in_progress": 0,
-        "not_started": 33,
-        "total": 38,
-        "asof": "2026-10-05"
+        "not_started": 36,
+        "total": 41,
+        "asof": "2026-10-06"
       },
       "tags": [
         "decision-kernel",
@@ -893,7 +893,7 @@
       "path": "flows/leafcutter/decision-staging.flow.json",
       "status": "active",
       "readiness": "draft",
-      "version": 2,
+      "version": 3,
       "entities": [
         "Decision"
       ],
@@ -923,7 +923,7 @@
       "path": "flows/leafcutter/decision-publishing.flow.json",
       "status": "active",
       "readiness": "draft",
-      "version": 2,
+      "version": 3,
       "entities": [
         "Decision"
       ],
@@ -981,7 +981,7 @@
       "path": "mock-data/leafcutter/decisions.mock.json",
       "status": "active",
       "readiness": "draft",
-      "version": 7,
+      "version": 9,
       "entities": [
         "Decision",
         "Decomposition"
@@ -1023,14 +1023,14 @@
       "id": "leafcutter/decision-ranked-choice",
       "type": "mockup",
       "title": "The ranked choice",
-      "summary": "Options ranked by Jev's per-criterion judgement, each with its rank, N of 3 required criteria likely met, required-criteria mean and per-criterion lines with evidence, an explicit note that the ranking is evidence and not a decision, and the choose-one / add-your-own / free-text answers. Populated from dec-5e7445182eaec1f2, where the human chose rank 2.",
+      "summary": "Options ranked by Jev's per-criterion judgement, each with its rank, N of 3 required criteria likely met, required-criteria mean and per-criterion lines with evidence, an explicit note that the ranking is evidence and not a decision, and the choose-one / choose-and-add-a-condition / add-your-own / free-text answers, where the choice decides and the condition is kept verbatim. Populated from dec-5e7445182eaec1f2, where the human chose rank 2.",
       "screen": "decision-ranked-choice",
       "source": "mock",
       "component": "decision_kernel",
       "path": "mockups/leafcutter/decision-ranked-choice.mockup.json",
       "status": "active",
       "readiness": "draft",
-      "version": 1,
+      "version": 2,
       "entities": [
         "Decision"
       ],
@@ -1071,14 +1071,14 @@
       "id": "leafcutter/decision-record-staged",
       "type": "mockup",
       "title": "Record staged",
-      "summary": "The completed run's result: status completed, the decision and approver, the staged record path, the python -m kernel decisions publish command, and a note that publishing writes into the repository and is the user's to run. Populated from dec-7cdc61ea41a206e0, staged and never published.",
+      "summary": "The completed run's result: status completed, the decision and approver, the staged record path, the decisions publish command (the kernel's own interpreter and scripts/run_kernel.py, runnable as printed from any shell) with the publish_folder it writes into, and a note that publishing writes into the repository and is the user's to run. Populated from dec-7cdc61ea41a206e0, staged and never published.",
       "screen": "decision-record-staged",
       "source": "mock",
       "component": "decision_kernel",
       "path": "mockups/leafcutter/decision-record-staged.mockup.json",
       "status": "active",
       "readiness": "draft",
-      "version": 1,
+      "version": 2,
       "entities": [
         "Decision"
       ],
@@ -1094,14 +1094,14 @@
       "id": "leafcutter/decision-record-published",
       "type": "mockup",
       "title": "Published record in review",
-      "summary": "A decision record as reviewed in git or a detail view: title, question, selected option, approval block, precedents considered, supersedes and superseded_by, provenance (run id, Langfuse trace id, repository revision), record path and PR. Populated from dec-d53e1c52cd47c832 (PR #979), with the superseded pair dec-dfb0b8d1eb88ec16 and dec-bcae2c02f17508c1 shown as an illustrative correction.",
+      "summary": "A decision record as reviewed in git or a detail view: title, question, selected option, approval block, precedents considered, supersedes and superseded_by, provenance (run id, Langfuse trace id, repository revision), record path and PR. Populated from dec-d53e1c52cd47c832 (PR #979), with the superseded pair dec-dfb0b8d1eb88ec16 and dec-bcae2c02f17508c1 shown as an illustrative correction, with the condition the human stated on dec-bcae2c02f17508c1.",
       "screen": "decision-record-published",
       "source": "mock",
       "component": "decision_kernel",
       "path": "mockups/leafcutter/decision-record-published.mockup.json",
       "status": "active",
       "readiness": "draft",
-      "version": 1,
+      "version": 2,
       "entities": [
         "Decision"
       ],
@@ -1691,9 +1691,9 @@
       "impl_summary": {
         "done": 5,
         "in_progress": 0,
-        "not_started": 33,
-        "total": 38,
-        "asof": "2026-10-05"
+        "not_started": 36,
+        "total": 41,
+        "asof": "2026-10-06"
       },
       "expands": [
         "leafcutter/decision-retrieval"

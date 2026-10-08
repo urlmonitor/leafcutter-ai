@@ -1,0 +1,147 @@
+id: GE-127f-4
+title: "The refusal states the two-for-one obligation it actually enforces, not a one-for-one one the author can satisfy and still be refused"
+component: guardrail-engine
+components:
+  - commit_guardian
+level: L2
+status: active
+req_status: draft
+work_status: done
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  GE-127f's rule is that an oversized file "gets smaller by about twice what
+  the change adds to it" -- GE-127f-1 implements that as
+  `lines > max(limit, previous - added)`, with `added` the GROSS measured
+  lines the change PUT INTO the file (GE-127f-2). Below the cap that resolves
+  to: a change adding A measured lines must take out at least 2A.
+
+  The closing advice of the grown-file refusal states a DIFFERENT, weaker
+  rule. It reads "Shrink it, or add no more than you remove, to commit this
+  edit" -- that is, remove at least as many as you add (R >= A). An author who
+  does exactly that is still refused, because R >= A is not R >= 2A.
+
+  The refusal already prints the correct REQUIRED LENGTH as a number on the
+  line above. So the block as a whole contradicts itself: a correct figure
+  followed by prose advice that, if followed, does not reach it. The number is
+  not the problem and must not be changed -- the prose is.
+
+  Scenario: Removing exactly as many lines as were added is still refused, and
+            the advice no longer claims otherwise
+    Given a tracked file of a kind the size standard covers has a permitted
+      length of 400 measured lines,
+    And it stood at 500 measured lines before the change, so it is already
+      over its permitted length,
+    And the staged change puts 10 measured lines into it and takes 10 measured
+      lines out, leaving it at 500,
+    When the size standard judges the staged change,
+    Then the change is refused, because the required length is 490 and the
+      file stands at 500,
+    And the refusal's closing advice does NOT tell the author that adding no
+      more than they remove is sufficient,
+    And the refusal's closing advice states that reaching the required length
+      means taking out about twice what the change puts in,
+    Because advice an author can follow exactly and still be refused is worse
+      than no advice: it sends them round the loop a second time having done
+      what they were told.
+
+  Scenario: Removing twice what was added is accepted
+    Given the same file at 500 measured lines with a permitted length of 400,
+    And the staged change puts 10 measured lines into it and takes 20 out,
+      leaving it at 490,
+    When the size standard judges the staged change,
+    Then the change is accepted,
+    Because 490 is the required length (previous 500 less the 10 added), and
+      this is the case the corrected advice now describes.
+
+  Scenario: The stated required length is unchanged
+    Given any file and change reaching the grown-file refusal,
+    When the refusal block is produced,
+    Then the "Required length:" figure it states is the same figure it stated
+      before this change,
+    And the "Previous length:", "New length:", "Limit:" and "This change
+      added" figures are likewise unchanged,
+    Because this criterion corrects a sentence of prose only; the arithmetic
+      and every number derived from it belong to GE-127f-1 and GE-127f-2 and
+      are not touched here.
+depends_on:
+  - GE-127f
+doc_links:
+  - path: "docs/acceptance-criteria/guardrail-engine/GE-127-files-stay-workable/GE-127f.yaml"
+    relationship: parent
+    status: exists
+    relevance: "Its criteria is the authority for the ratio: 'it gets smaller by about twice what the change adds to it'. That sentence is what the refusal's prose must agree with, and is why the enforcement -- not the message -- is the correct side of the contradiction."
+  - path: "templates/scripts/commit_guardian/check_file_size.py"
+    relationship: specifies
+    status: exists
+    relevance: "_print_grown_file holds the misleading sentence. _classify_file holds the rule it misdescribes; both compute required = max(limit, previous - added) and neither is changed by this record."
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "CANONICAL SOURCE, ADR-001. The edit belongs in templates/scripts/commit_guardian/check_file_size.py. scripts/commit_guardian/ and .leafcutter/scripts/commit_guardian/ are build.py outputs; a fix applied to a deployed copy alone is reverted by the next build."
+  - "PROSE ONLY -- DO NOT TOUCH THE ARITHMETIC. `required = max(limit, previous_length - added)` appears in BOTH _print_grown_file and _classify_file and must be identical and unchanged in both. Every printed figure (Previous length, New length, Limit, This change added, Required length) must be byte-for-byte what it was. The ONLY line that changes is the closing advice sentence containing 'add no more than you remove'."
+  - "DO NOT 'FIX' THE RULE INSTEAD. The tempting alternative reading is that the enforcement is too strict and should be relaxed to net growth (refuse only when lines > previous). That is explicitly the wrong move: GE-127f-2's own Implementation Notes name net growth as 'the single most likely wrong implementation', and GE-127f's criteria states the two-for-one obligation as the intended outcome. The message is the defect."
+  - "SAY IT IN THE AUTHOR'S TERMS, NOT THE FORMULA'S. The replacement sentence should express the two-for-one obligation plainly (take out about twice what you put in) rather than restating `max(limit, previous - added)`. It must also stay true at the cap: once previous - added falls to or below the permitted length, reaching the permitted length is all that is asked, and the sentence must not tell an author to remove more than that."
+  - "THE TEST MUST EXECUTE THE PRINTER, per this repository's standing rule for gate and hook criteria. Capture the real refusal block from a real run over a real staged file and assert on the captured text. A test that greps check_file_size.py for the new sentence passes on dead code and cannot tell a printed sentence from a defined one. unit_tests/commit_guardian/test_ge_127d_2.py and its _ge_127d_2_fixture.py are the established precedent for driving this printer; follow them."
+  - "ASSERT THE ABSENCE AS WELL AS THE PRESENCE. The arm must assert the old misleading claim is GONE from the block, not only that a new sentence is present -- an implementation that appends corrected advice while leaving the wrong sentence in place would satisfy a presence-only assertion and leave the contradiction on screen."
+  - "Error-handling policy per CLAUDE.md applies to any new code. The printers are pure output functions and must NOT acquire try/except."
+delivers_to: null
+expects_from:
+  ac_id: GE-127f
+  contract: "The closing advice lines of _print_grown_file in templates/scripts/commit_guardian/check_file_size.py -- the three-line sentence ending 'refused. Shrink it, or add no more than you remove, to commit this edit.'"
+test_spec:
+  - name: test_equal_add_and_remove_is_refused_and_advice_does_not_claim_it_suffices
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "A real staged file at 500 measured lines with a 400 limit, changed by +10/-10 so it stays at 500, is run through the size standard. Asserts the change is refused, that the captured refusal text no longer contains the 'add no more than you remove' claim, and that it states the take-out-about-twice obligation. RED today."
+  - name: test_removing_twice_what_was_added_is_accepted
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "The same file changed by +10/-20, landing at 490, is accepted. GREEN ON ARRIVAL -- a regression guard proving the corrected prose describes the boundary the code actually enforces, not evidence the prose changed."
+  - name: test_every_stated_figure_in_the_refusal_block_is_unchanged
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "The refusal block from the +10/-10 case still states Previous length 500, New length 500, Limit 400, added 10, Required length 490. GREEN ON ARRIVAL -- the scope fence that catches a fix which 'corrects' the arithmetic instead of the sentence."
+test_rationale: |
+  Two of the three arms are green on arrival by design, and that is the point
+  of the shape rather than a weakness in it: this record's whole risk is that
+  an implementer corrects the wrong side of the contradiction. The figures arm
+  and the accepted-at-2A arm exist to fail loudly if the arithmetic is touched,
+  which is the likeliest wrong fix. Only the first arm is RED today, and a
+  red-baseline gate for this record must be satisfied by that arm alone.
+
+  The first arm asserts both the absence of the old claim and the presence of
+  the corrected one. Presence alone would be satisfied by appending new advice
+  beside the wrong sentence, which leaves the author reading a contradiction --
+  the exact defect, now twice as long.
+origin_agent: BrainCandy
+created: 2026-10-07
+amended_by: []
+superseded_by: null
+covered_by:
+  - unit_tests/commit_guardian/test_ge_127f_4.py
+implemented_by:
+  - templates/scripts/commit_guardian/check_file_size.py
+change_target: code
+risk_surface: internal
+notes: |
+  Reported upstream as an unfiled finding, with the cost attached: it took
+  three commit cycles to discover the real obligation, because each cycle the
+  author did what the sentence said, was refused again, and had no way to tell
+  from the block whether they had mis-measured or been mis-told.
+
+  WHY THIS IS A MESSAGE DEFECT AND NOT A RULE DEFECT, recorded here because
+  the opposite conclusion is easy to reach from the code alone. Reading only
+  check_file_size.py, `required = previous - added` looks like it could be an
+  off-by-one-factor slip, and "add no more than you remove" looks like the
+  intended rule. GE-127f's criteria settles it the other way in plain words --
+  "it gets smaller by about twice what the change adds to it" -- and GE-127f-2
+  independently records the net-growth reading as the known wrong turn. Both
+  point the same direction: the arithmetic is intended, the sentence is not.
