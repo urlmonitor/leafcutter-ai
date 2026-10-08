@@ -3,7 +3,7 @@ title: Direction B — Output Drift Detection
 type: how-to
 status: active
 created: 2026-09-22
-last_updated: 2026-09-22
+last_updated: 2026-10-08
 components:
 - commit_guardian
 - infrastructure
@@ -90,7 +90,31 @@ maintained list.
 | Output file on disk but NOT in `output_mappings`, with no grounded exemption declared | `UNCOMPARABLE: GAP <key> action=run build.py to register it` on stderr, counted in the `gaps` field, drives a non-clean, non-zero exit |
 | Output file in `output_mappings` but missing on disk | `UNCOMPARABLE: MISSING <key> reason=recorded but not found on disk` on stderr, counted in the `missing` field, always drives a non-zero exit — deletion is the most complete form of drift |
 | Output file in `output_mappings`, present on disk, but unreadable (permission error, or not a regular file) | `UNCOMPARABLE: UNREADABLE <key> reason=<detail>` on stderr, counted in the `unreadable` field, always drives a non-zero exit |
+| Output file in `output_mappings`, present and readable, hash does NOT match, with a grounded exemption declared for that key | `DIRECT-DRIFT: EXEMPT <key> ground=<ground>` on stderr, counted in the `exempt` field (and so also in `uncomparable`) of the `RESULT` line, does not block |
+| Output file in `output_mappings`, present and readable, hash does NOT match, with no exemption entry, or an entry whose `ground` is blank or whitespace-only | Drift: the offending output and its template are named and the commit is blocked (exit 1). A blank-ground entry is first rejected with `REJECTED EXEMPTION ENTRY: <key> reason=no ground stated` |
 | Template AND output both changed in same commit, output matches re-render | Exit 0 (hashes agree) |
+
+**Two different `EXEMPT` lines: recorded versus unrecorded.** Both come from the shared
+`drift_gate_exemption_registry`, but they answer different questions, so read the prefix:
+
+| Line | The output is... | Question it answers |
+|---|---|---|
+| `UNCOMPARABLE: EXEMPT <key> ground=<g>` | on disk but **never recorded** by the build (not in `output_mappings`) | Registration: nothing was compared, because there is no recorded hash. |
+| `DIRECT-DRIFT: EXEMPT <key> ground=<g>` | **recorded** in `output_mappings`, and its hash was compared and **did not match** | Content: the comparison ran and failed, and the registry excuses that specific mismatch. |
+
+Rules for the `DIRECT-DRIFT: EXEMPT` case:
+
+- The exemption is **per key**. Exempting one output never excuses another.
+- A non-blank `ground` is required. Without one the mismatch is ordinary drift and blocks.
+- It excuses **changed content only**. A recorded output that is missing from disk
+  (`UNCOMPARABLE: MISSING`) or unreadable (`UNCOMPARABLE: UNREADABLE`) still blocks,
+  whatever the registry says.
+- Because the registry can now excuse a recorded key's drift, an entry should state a real
+  ground. It is not a way to silence a finding the gate got right.
+
+The authoritative description is the `DRIFT-EXEMPT REPORTING` section of the module
+docstring in `check_output_drift.py`; the acceptance criteria are `BP-100k-3-iv`, `-v` and
+`-vi`.
 
 **This table describes the current, verified behaviour as of `BP-100k-3` / `BP-100k-6`
 (2026-08-18) plus the adversarial-review `UNREADABLE` case added afterward.** Before those
@@ -108,6 +132,14 @@ The `RESULT` line format is `RESULT verified=<N> uncomparable=<M> exempt=<E> gap
 drifted=<D> missing=<X> unreadable=<Y>`. Only `drifted`, `gaps`, `missing`, and `unreadable`
 drive a non-zero exit; `exempt` entries are reported for visibility but never block, per the
 grounded-exemption contract above.
+
+`exempt` covers both kinds of exemption: unrecorded outputs (`UNCOMPARABLE: EXEMPT`) and
+recorded-but-drifted outputs (`DIRECT-DRIFT: EXEMPT`). Current counting behaviour, stated as
+it is rather than as a settled design: a `DIRECT-DRIFT: EXEMPT` output is counted in
+`uncomparable` and `exempt`, and is also counted in `verified`, because it was hash-compared.
+There is no separate column that distinguishes it. Whether it should get one is an open
+decision, pending an ADR, so do not build tooling that depends on either outcome.
+Consumers can still rely on `uncomparable == gaps + exempt`.
 
 **The hook's pre-commit trigger does not filter by staged path.** `check-output-drift`'s
 entry in `scripts/commit_guardian/commit_guardian.json` carries `"always_run": true` rather
