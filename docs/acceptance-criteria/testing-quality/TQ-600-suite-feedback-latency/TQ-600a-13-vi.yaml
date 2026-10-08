@@ -7,7 +7,7 @@ level: L3
 status: active
 req_status: draft
 work_status: todo
-readiness: reviewed
+readiness: approved
 priority: high
 roadmap_phase: phase_1
 criteria: |
@@ -345,28 +345,30 @@ test_rationale: |
 origin_agent: business-analyst
 created: 2026-10-08
 amended_by:
-  - reason: >-
-      USER-APPROVED REDESIGN AFTER TWO EXPERT REVIEWS (2026-10-08), decisions A, B, E, F,
-      H and I. (A) REVERSAL, RECORDED EXPLICITLY: the verdict now comes from the
-      correctness workflow's run history on main, not from whether a `nightly-red` issue is
-      open. SUPERSEDED criteria: "with no open issue labelled `nightly-red` the check
-      passes, And with one or more open issues labelled `nightly-red` the check fails ...
-      closed `nightly-red` issues and open issues without the label have no effect".
-      Added: closing, duplicating or failing to write the notice does not move the
-      verdict. (B) Check renamed `Nightly suite status` -> `Post-merge suite status`,
-      settled as the ruleset string. (I) SUPERSEDED "one evaluation sends exactly one
-      request to read the flag" -> a small fixed number of reads that does not grow with
-      the repository, no test session, no build, no checkout of pull-request code. (H)
-      SUPERSEDED the PENDING USER DECISION on trust model: `pull_request_target`, judged by
-      the main branch's copy, never executing PR code; added a criterion that a PR editing
-      the hold cannot change its own verdict. Triggers: `labeled`/`unlabeled` dropped with
-      the label escape hatch; re-evaluation by TQ-600a-13-xv added. (E, F) the PENDING
-      USER DECISIONS "stale pass" and "nightly never runs" are resolved by TQ-600a-13-xv
-      and -xiv. depends_on: -iii replaced by -ii and -v (the run history is now the
-      input; the notice is read for content only). Readiness returned to draft for IT PO
-      re-enrichment. Full prior text: commit e79d35ef4.
-    by: business-analyst
-    at: 2026-10-08
+- reason: 'USER-APPROVED REDESIGN AFTER TWO EXPERT REVIEWS (2026-10-08), decisions
+    A, B, E, F, H and I. (A) REVERSAL, RECORDED EXPLICITLY: the verdict now comes
+    from the correctness workflow''s run history on main, not from whether a `nightly-red`
+    issue is open. SUPERSEDED criteria: "with no open issue labelled `nightly-red`
+    the check passes, And with one or more open issues labelled `nightly-red` the
+    check fails ... closed `nightly-red` issues and open issues without the label
+    have no effect". Added: closing, duplicating or failing to write the notice does
+    not move the verdict. (B) Check renamed `Nightly suite status` -> `Post-merge
+    suite status`, settled as the ruleset string. (I) SUPERSEDED "one evaluation sends
+    exactly one request to read the flag" -> a small fixed number of reads that does
+    not grow with the repository, no test session, no build, no checkout of pull-request
+    code. (H) SUPERSEDED the PENDING USER DECISION on trust model: `pull_request_target`,
+    judged by the main branch''s copy, never executing PR code; added a criterion
+    that a PR editing the hold cannot change its own verdict. Triggers: `labeled`/`unlabeled`
+    dropped with the label escape hatch; re-evaluation by TQ-600a-13-xv added. (E,
+    F) the PENDING USER DECISIONS "stale pass" and "nightly never runs" are resolved
+    by TQ-600a-13-xv and -xiv. depends_on: -iii replaced by -ii and -v (the run history
+    is now the input; the notice is read for content only). Readiness returned to
+    draft for IT PO re-enrichment. Full prior text: commit e79d35ef4.'
+  by: business-analyst
+  at: 2026-10-08
+- action: approved
+  agent: approve_acs
+  date: '2026-10-08'
 superseded_by: null
 covered_by: []
 implemented_by: []

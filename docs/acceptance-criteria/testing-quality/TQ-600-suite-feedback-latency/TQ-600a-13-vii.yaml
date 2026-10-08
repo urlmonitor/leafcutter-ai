@@ -7,7 +7,7 @@ level: L3
 status: active
 req_status: draft
 work_status: todo
-readiness: reviewed
+readiness: approved
 priority: high
 roadmap_phase: phase_1
 criteria: |
@@ -163,19 +163,21 @@ test_rationale: |
 origin_agent: business-analyst
 created: 2026-10-08
 amended_by:
-  - reason: >-
-      USER-APPROVED REDESIGN AFTER TWO EXPERT REVIEWS (2026-10-08), decisions A, F and I,
-      plus the comment-lift recommendation both reviews made. SUPERSEDED premise "a pull
-      request that TQ-600a-13-vi holds because an issue labelled `nightly-red` is open" —
-      now held by the run history (A) and also for stale / disabled / never-run /
-      could-not-read (F). Content now comes from the notice DESCRIPTION (I); SUPERSEDED
-      "the failing node ids from the flag's most recent night". The PENDING USER DECISION
-      "what happens to the comment when the hold lifts" is resolved as edit in place;
-      the demonstration grows from three evaluations to four to cover it. Added: when no
-      notice describes the run the comment still explains the hold. Readiness returned to
-      draft for IT PO re-enrichment. Full prior text: commit e79d35ef4.
-    by: business-analyst
-    at: 2026-10-08
+- reason: 'USER-APPROVED REDESIGN AFTER TWO EXPERT REVIEWS (2026-10-08), decisions
+    A, F and I, plus the comment-lift recommendation both reviews made. SUPERSEDED
+    premise "a pull request that TQ-600a-13-vi holds because an issue labelled `nightly-red`
+    is open" — now held by the run history (A) and also for stale / disabled / never-run
+    / could-not-read (F). Content now comes from the notice DESCRIPTION (I); SUPERSEDED
+    "the failing node ids from the flag''s most recent night". The PENDING USER DECISION
+    "what happens to the comment when the hold lifts" is resolved as edit in place;
+    the demonstration grows from three evaluations to four to cover it. Added: when
+    no notice describes the run the comment still explains the hold. Readiness returned
+    to draft for IT PO re-enrichment. Full prior text: commit e79d35ef4.'
+  by: business-analyst
+  at: 2026-10-08
+- action: approved
+  agent: approve_acs
+  date: '2026-10-08'
 superseded_by: null
 covered_by: []
 implemented_by: []
