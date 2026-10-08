@@ -1,8 +1,9 @@
 """
 MODULE: harvest_cli
 GOAL: Define the ``harvest_learnings`` command-line argument surface --
-    ``--sink``, ``--state``, ``--print-sink``, ``--dry-run``, ``--verbose``
-    -- as a concern separate from parsing them into a run.
+    ``--sink``, ``--state``, ``--print-sink``, ``--status``, ``--marker``,
+    ``--dry-run``, ``--verbose`` -- as a concern separate from parsing them
+    into a run.
 BUSINESS CONTEXT: The CLI surface is stable and independently documented
     (see ``harvest_learnings.py``'s own module docstring, which mirrors each
     of these flags' help text for `--help`-free reference). Isolating the
@@ -26,12 +27,32 @@ ARCHITECTURE: Helper module for the Knowledge System component
 #   real subprocess invocations of the deployed script), so the rename and
 #   the move are both invisible to every existing test. (#INF-400c-5,
 #   GE-127b-1)
+# - 2026-09-23 [python-coder/INF-700a-2]: Added ``--status`` and ``--marker``
+#   for the run-recency signal INF-700a-2 requires now that
+#   ``HarvestResult.outstanding`` reads zero for both a healthy loop and a
+#   loop that has never run. The ``--status`` help text is this flag's
+#   discharge of the AC's "names no figure that is also produced by the
+#   capture-health report ... and says which of the two a reader should
+#   consult" clause -- the capture-health report is not covered by any
+#   automated test asserting on help text, per this AC's own test_rationale
+#   (a string match on help text is brittle), so it is satisfied here
+#   directly rather than via a sibling test.
 """
 
 from __future__ import annotations
 
 import argparse
 from pathlib import Path
+
+# The --marker default is derived from --state (same directory) rather than
+# spelled as a repo-relative path literal, for two reasons. (1) A run whose
+# --state points into a temp tree then records its run in that tree, not in
+# whatever directory the process happens to be standing in -- a test run from
+# the repo root no longer drops a marker into the checkout. (2) build.py's
+# closure guard (AC BP-900g-8) treats a path literal in a deployed script as a
+# data dependency the moment that file exists under the package root, so a
+# literal default plus a stray marker in the checkout aborted every build.
+_MARKER_NAME = "harvest_last_run.json"
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
@@ -74,6 +95,29 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         ),
     )
     parser.add_argument(
+        "--status",
+        action="store_true",
+        help=(
+            "Print JSON {last_run, sink, sink_exists} for the routing step "
+            "in THIS tree and exit 0 -- always, even if it has never run. "
+            "Side-effect free: never creates the marker or any sink "
+            "directory. For agent-run / capture-attempt counts, see the "
+            "capture-health report instead; this flag only answers whether "
+            "the routing step has completed here, and over which sink."
+        ),
+    )
+    parser.add_argument(
+        "--marker",
+        type=Path,
+        default=None,
+        metavar="PATH",
+        help=(
+            f"Path to the last-completed-run marker (default: {_MARKER_NAME} "
+            "beside the --state file). An ordinary run writes this on "
+            "completion; --status reads it."
+        ),
+    )
+    parser.add_argument(
         "--dry-run",
         action="store_true",
         help="Log routing decisions but do not write to knowledge surfaces.",
@@ -83,4 +127,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         action="store_true",
         help="Log each event as it is processed.",
     )
-    return parser.parse_args(argv)
+    args = parser.parse_args(argv)
+    if args.marker is None:
+        args.marker = args.state.parent / _MARKER_NAME
+    return args
