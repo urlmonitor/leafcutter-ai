@@ -147,6 +147,7 @@ task, then pull only those files.
 | choose build path | [docs/how-to/choose-build-path.md](how-to/choose-build-path.md) | Decide whether to invoke the fast-lane or heavy-pipeline build path for a ticket based on scope, attended mode, and defect cost. |
 | compare build lanes | [docs/how-to/compare-build-lanes.md](how-to/compare-build-lanes.md) | Step-by-step guide to generating and interpreting the fast-lane vs heavy-pipeline cost and time comparison report from agent telemetry data. |
 | configure workflow allowlist | [docs/how-to/configure-workflow-allowlist.md](how-to/configure-workflow-allowlist.md) | How to configure the workflow shell-command allowlist |
+| confirm or route a captured learning | [docs/how-to/confirm-or-route-a-captured-learning.md](how-to/confirm-or-route-a-captured-learning.md) | Confirm from a finished piece of work's result and from the destination file that an agent's learning was written, establish whether the routing step has ever run in your tree, and run it by hand against an explicitly named sink. |
 | creating a claude code hook | [docs/how-to/creating-a-claude-code-hook.md](how-to/creating-a-claude-code-hook.md) | How to create a Claude Code hook |
 | creating a skill | [docs/how-to/creating-a-skill.md](how-to/creating-a-skill.md) | How to create a skill |
 | creating an agent template | [docs/how-to/creating-an-agent-template.md](how-to/creating-an-agent-template.md) | Overview of How to create an agent template. |
@@ -218,6 +219,7 @@ task, then pull only those files.
 | kernel request splitting 2 conversion gate runs config | [docs/reference/kernel-request-splitting-2-conversion-gate-runs-config.md](reference/kernel-request-splitting-2-conversion-gate-runs-config.md) | The full rules behind ADR-067 sections 5 to 11, read when building or reviewing a split: proposal conversion, the split gate, endings by trigger, bounds, order and budgets, the split output, gap accounting, and configuration with the staged rollout. |
 | kernel request splitting | [docs/reference/kernel-request-splitting.md](reference/kernel-request-splitting.md) | The full rules behind ADR-067 sections 1 to 4, read when building or reviewing a split: the mechanism of each step, bundle detection and its triggers, the host.decompose_goal operation and registry entry, and the fields of the four split schemas. |
 | knowledge retrieval answers | [docs/reference/knowledge-retrieval-answers.md](reference/knowledge-retrieval-answers.md) | Request fields, status meanings, population rules, evidence assessment, evaluation contracts and explicit limits for repository research answers. |
+| knowledge routing step | [docs/reference/knowledge-routing-step.md](reference/knowledge-routing-step.md) | Lookup for where the knowledge-routing step runs, which completion paths carry it, what its reported outcome and figures mean to the caller, and what the routing-run recency answer reports versus the waiting count and capture-health figures. |
 | plan feature layout and startup checks | [docs/reference/plan-feature-layout-and-startup-checks.md](reference/plan-feature-layout-and-startup-checks.md) | Which copy of each /plan-feature support file runs depending on where the route is started, which directory a repair to that file has to land in for an install to carry it, and the complete set of startup checks that can halt the route before its first question to the user. |
 | product truth checker outcomes | [docs/reference/product-truth-checker-outcomes.md](reference/product-truth-checker-outcomes.md) | The four-value outcome vocabulary validate_product_truth.py reports on its last stdout line -- checked-and-sound, nothing-examined, degraded, failed -- what a reader may and may not conclude from each, the soundness rule that produces nothing-examined, how that rule differs from the project's fail-open convention, and which checks are deliberately exempt from it. |
 | product truth size bounds | [docs/reference/product-truth-size-bounds.md](reference/product-truth-size-bounds.md) | Every declared size bound on the product-truth record, with its value, field and shape version; the order a new bound or reshaped field is rolled out in; which fields are authored and which are derived; and the measurement behind the bounds. |
@@ -241,8 +243,8 @@ task, then pull only those files.
 
 | Name | Path | Description |
 |------|------|-------------|
-| adr numbering | [docs/conventions/adr-numbering.md](conventions/adr-numbering.md) | Overview of Convention: ADR Numbering and Collision Prevention. |
 | PROJECT CONTEXT injection | [docs/conventions/PROJECT_CONTEXT-injection.md](conventions/PROJECT_CONTEXT-injection.md) | Overview of Convention: PROJECT_CONTEXT Injection for Portable Agents. |
+| adr numbering | [docs/conventions/adr-numbering.md](conventions/adr-numbering.md) | Overview of Convention: ADR Numbering and Collision Prevention. |
 
 ## Retrospectives
 
@@ -250,9 +252,9 @@ task, then pull only those files.
 |------|------|-------------|
 | 2026 05 22 epic antigravity support | [docs/retrospectives/2026-05-22-epic-antigravity-support.md](retrospectives/2026-05-22-epic-antigravity-support.md) | Retrospective: Dual Platform Antigravity Support |
 | EPIC ACDrivenDevelopment | [docs/retrospectives/EPIC-ACDrivenDevelopment.md](retrospectives/EPIC-ACDrivenDevelopment.md) | Date: 2026-06-05 |
+| EPIC ACTraceabilityStore | [docs/retrospectives/EPIC-ACTraceabilityStore.md](retrospectives/EPIC-ACTraceabilityStore.md) | Date: 2026-06-04 |
 | EPIC AcPatternEnforcementIsMechanically | [docs/retrospectives/EPIC-AcPatternEnforcementIsMechanically.md](retrospectives/EPIC-AcPatternEnforcementIsMechanically.md) | Retrospective for EPIC-AcPatternEnforcementIsMechanically (ACS-500f) |
 | EPIC AcPipelineDeployGaps | [docs/retrospectives/EPIC-AcPipelineDeployGaps.md](retrospectives/EPIC-AcPipelineDeployGaps.md) | Post-merge retrospective for EPIC-AcPipelineDeployGaps (PR #88), covering |
-| EPIC ACTraceabilityStore | [docs/retrospectives/EPIC-ACTraceabilityStore.md](retrospectives/EPIC-ACTraceabilityStore.md) | Date: 2026-06-04 |
 | EPIC BOPhantomDoneRemediation | [docs/retrospectives/EPIC-BOPhantomDoneRemediation.md](retrospectives/EPIC-BOPhantomDoneRemediation.md) | Overview of Retrospective: EPIC-BOPhantomDoneRemediation. |
 | EPIC CodeQualityHooks | [docs/retrospectives/EPIC-CodeQualityHooks.md](retrospectives/EPIC-CodeQualityHooks.md) | Epic retrospective for EPIC-CodeQualityHooks — jscpd duplicate-code detection and diff-cover test-coverage enforcement hooks. |
 | EPIC CompletionManifestSignoff | [docs/retrospectives/EPIC-CompletionManifestSignoff.md](retrospectives/EPIC-CompletionManifestSignoff.md) | Date: 2026-05-30 |

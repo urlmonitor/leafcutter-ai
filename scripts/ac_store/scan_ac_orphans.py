@@ -75,7 +75,7 @@ from pathlib import Path
 from typing import Any
 
 try:
-    import yaml  # type: ignore[import]
+    import yaml
     _YAML_AVAILABLE = True
 except ImportError:
     _YAML_AVAILABLE = False
@@ -142,7 +142,15 @@ def _load_ac(path: Path) -> AcRecord | None:
 
     if _YAML_AVAILABLE:
         try:
-            data = yaml.safe_load(content)
+            # Reverted to the pure-Python loader (loader-audit, TQ-600a-11
+            # fix-pass, 2026-10-07): this CI-gate orphan scanner aborts the
+            # WHOLE scan (fail-closed, exit 2) when a file fails to parse. A
+            # more permissive parser that silently accepts a tab-corrupted
+            # covered_by: block instead of raising could let a real orphan
+            # slip past undetected rather than correctly halting the scan --
+            # the removal of a fail-closed crash is itself the unsafe
+            # direction here, regardless of the real whole-store speed case.
+            data = yaml.load(content, Loader=yaml.SafeLoader)
         except yaml.YAMLError as exc:
             print(f"ERROR: {path}: YAML parse error: {exc}", file=sys.stderr)
             return None

@@ -687,3 +687,15 @@ ENTROPY_HIGH:reports/entity-graph-selection-independent-green.xml:1
 ENTROPY_HIGH:reports/entity-native-pointer-core-broad.xml:1
 # Deliberately fake redaction fixture; test-file line wildcard follows CLAUDE.md.
 GENERIC_SECRET:tests/kernel/entity_context/test_permissions.py:*
+
+# Committed snapshot of the agent feedback corpus (787 records, 18 sinks, KI-FC-001).
+# Every line is a JSONL record whose feedback_id carries an 8-hex-character suffix
+# (fb_YYYY-MM-DD_xxxxxxxx), and a dense one-line JSON object of ids, phases, tags and
+# prose reads as high entropy to the scanner. There is no credential here, and that
+# was checked rather than assumed before this entry was added: the file was swept for
+# AKIA*, PEM private-key headers, ghp_/github_pat_, sk-*, xox[baprs]-, AIza*, JWTs and
+# user:pass@host URIs (0 hits), and separately for password/secret_key/api_key/bearer/
+# authorization wording (0 hits).
+# Glob, not per-line: this is a 787-line data file and a later snapshot will be longer,
+# so a pinned line number would silently stop matching.
+ENTROPY_HIGH:reports/feedback-snapshots/feedback-corpus-2026-09-30.jsonl:*

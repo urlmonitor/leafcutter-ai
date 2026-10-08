@@ -101,8 +101,15 @@ def _build_ac_status_map(ac_root: Path) -> dict[str, dict]:
         return status_map
     for yaml_path in sorted(ac_root.rglob("*.yaml")):
         try:
+            # Reverted (loader-audit, TQ-600a-11 fix-pass, 2026-10-07): this
+            # helper feeds the same done-proof family as
+            # check_done_proof.py, which this audit already reverted in
+            # full -- see that file's own DECISION HISTORY entry dated
+            # 2026-10-07. Keeping this shared helper on the fast loader
+            # while its callers are back on yaml.SafeLoader would leave the
+            # required Proof-of-done gate partially migrated.
             with open(yaml_path, encoding="utf-8") as fh:
-                data = yaml.safe_load(fh)
+                data = yaml.load(fh, Loader=yaml.SafeLoader)
         except (yaml.YAMLError, OSError) as exc:
             print(
                 f"WARNING: done_proof: cannot read {yaml_path}: {exc}",

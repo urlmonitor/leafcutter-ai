@@ -10,7 +10,15 @@ BUSINESS CONTEXT: An agent that declares requires_verification: true commits
     template leads to runtime failures that are difficult to diagnose.  This hook
     catches the contradiction at commit time and names both fixes so the author
     can resolve it before the offending template reaches the main branch.
-ARCHITECTURE: Standalone script (no leafcutter-internal imports). Scans STAGED
+ARCHITECTURE: Standalone -- no leafcutter-internal imports. Deliberately uses
+    yaml.safe_load rather than the shared get_safe_yaml_loader() accessor:
+    this hook parses one small frontmatter block per staged agent template,
+    so the C-loader gain is unmeasurable, while reaching the accessor from
+    this hooks/ subfolder requires a sys.path insert one directory up that
+    scripts/ci/_declaring_files_scan.py cannot statically resolve -- it
+    assumes a bare underscore import is a same-directory sibling and so
+    reports a false "declaring files" violation. Keeping this hook
+    import-free avoids that gate failure outright. Scans STAGED
     templates/agents/*.md files by file identity only (git diff --cached
     --name-only). For each staged agent template, reads its content via
     _read_staged_file() (patchable for unit tests) and parses YAML frontmatter.

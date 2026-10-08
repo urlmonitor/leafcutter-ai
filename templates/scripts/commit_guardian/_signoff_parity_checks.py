@@ -216,7 +216,14 @@ def _parse_frontmatter(content: str) -> dict | None:
         return None
     raw = content[3:end].strip()
     try:
-        parsed = yaml.safe_load(raw)
+        # Reverted to the pure-Python loader (loader-audit, TQ-600a-11
+        # fix-pass, 2026-10-07): backs the required check-ticket-signoff-
+        # parity gate. A parse failure here is an explicit BLOCK ("could not
+        # parse YAML frontmatter"), so a more permissive parser can turn a
+        # legitimate block into a pass -- the same shape as the already-fixed
+        # validate_ac_schema.py/validate_ac.py sites. Staged-ticket volume
+        # per commit is small -- no speed case for the fast loader here.
+        parsed = yaml.load(raw, Loader=yaml.SafeLoader)
     except yaml.YAMLError:
         return None
     return parsed if isinstance(parsed, dict) else None

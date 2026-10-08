@@ -31,7 +31,6 @@ import re
 import subprocess
 import sys
 from pathlib import Path
-from typing import Any
 
 import yaml
 
@@ -170,7 +169,13 @@ def parse_frontmatter_related_code(md_content: str) -> list[str]:
 
     raw_yaml = md_content[3:end_idx].strip()
     try:
-        parsed = yaml.safe_load(raw_yaml)
+        # Reverted to the pure-Python loader (loader-audit, TQ-600a-11
+        # fix-pass, 2026-10-07): this hook is advisory-only (always exits 0,
+        # per its own module docstring), so there is no safety case either
+        # way; reverted for consistency, since the volume (one frontmatter
+        # block per referenced doc) has no measured speed case for the fast
+        # loader.
+        parsed = yaml.load(raw_yaml, Loader=yaml.SafeLoader)
     except yaml.YAMLError:
         return []
 

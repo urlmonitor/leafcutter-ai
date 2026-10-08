@@ -141,15 +141,24 @@ Tests that cannot meet this threshold must be marked manual by appending
 
 ```python
 def test_heavy_database_scan_MANUAL(self):
-    """Manual: requires full DB table scan (~30s). Run with pytest -k _MANUAL."""
+    """Manual: requires full DB table scan (~30s). Run with pytest -m manual."""
     ...
 ```
 
-The pre-commit suite excludes `_MANUAL` tests. They are invoked explicitly:
+The default pytest run deselects `_MANUAL` tests: a plugin
+(`scripts/suite_performance/pytest_manual_deselect.py`) auto-marks every test whose name
+ends in `_MANUAL` with the `manual` marker, and `pytest.ini` runs with
+`-m "not manual and not timing_ratio"`. Opt in explicitly with the marker (`-k "_MANUAL"`
+alone returns nothing, because the default `-m` selection still applies):
 
 ```bash
-python -m pytest unit_tests/ -k "_MANUAL"
+python -m pytest unit_tests/ -m manual
 ```
+
+Tests marked `timing_ratio` (wall-clock ratio assertions that are flaky on shared runners)
+are likewise excluded from the default run; they run in `Post-merge timing suite` after
+every merge to main and on a 12-hour heartbeat, which goes red on failure and never holds
+a merge. Opt in locally with `python -m pytest -m timing_ratio <path>`.
 
 ---
 

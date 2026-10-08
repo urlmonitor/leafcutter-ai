@@ -1,0 +1,190 @@
+id: TQ-600a-13-vii
+components:
+  - testing_quality
+title: "A held pull request carries one explanatory comment, updated in place, never duplicated, and edited to say the hold lifted when it does"
+component: testing-quality
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given a pull request that TQ-600a-13-vi holds — because the latest settled post-merge run
+    on main is red or did not complete, or because there is no fresh verdict
+    (TQ-600a-13-xiv), or because the run history could not be read (TQ-600a-13-ix),
+  And the reason the comment exists: a failing status alone tells the author their PR is
+    blocked but not that the cause is outside their change, and an author — usually an
+    agent here — who cannot see that will start debugging their own diff,
+  When the check evaluates the held pull request for the first time,
+  Then exactly one comment is created on it, stating which of the held states applies in
+    that state's distinct wording, and for a red or did-not-complete run carrying: the
+    failing node ids (or the stage at which the run stopped), the date the streak began,
+    a link to the run, a link to the notice issue when one describes that run, and the
+    commit range that notice carries,
+  And when the check evaluates the same pull request again while it is still held — on a
+    later push, a description edit, a re-evaluation after a further red run changed the
+    failing set, or a change of held state — that same comment is edited to carry the
+    current contents, and the number of comments the check has authored on the pull
+    request remains one,
+  And when a later evaluation passes or grants an exemption, that same comment is edited
+    to say the hold lifted, when, and why (a green run, with its link; or the accepted
+    exemption), keeping the last held details collapsed beneath — it is neither deleted
+    nor left saying the pull request is held,
+  And when a passing evaluation finds no earlier comment by the check, no comment is
+    written at all,
+  And a comment written by anyone else, including another automated comment, is never
+    edited or removed by the check,
+  And the comment is demonstrated by executing four evaluations of one pull request
+    against a recording double of the comment service — held, held after the failing set
+    changed, held, then passing — and observing one create, then three edits of that one
+    comment, the last saying the hold lifted, and no second create.
+depends_on:
+  - TQ-600a-13
+  - TQ-600a-13-vi
+doc_links:
+  - path: docs/acceptance-criteria/testing-quality/TQ-600-suite-feedback-latency/TQ-600a-13-vi.yaml
+    relationship: describes
+    status: exists
+    relevance: >-
+      The verdict this comment explains.
+  - path: docs/acceptance-criteria/testing-quality/TQ-600-suite-feedback-latency/TQ-600a-13-iii.yaml
+    relationship: describes
+    status: exists
+    relevance: >-
+      The notice whose description carries the failing ids, red-since and commit range.
+declared_files:
+  - path: scripts/ci/post_merge_hold.py
+    state: to_be_created
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - >-
+    THE CHECK'S OWN COMMENT IS IDENTIFIED BY MARKER AND AUTHOR TOGETHER. First line
+    `<!-- post-merge-suite-status v1 -->`; author `user.login == "github-actions[bot]"`
+    and `user.type == "Bot"` (VERIFIED: GITHUB_TOKEN comments post as that bot, id
+    41898282). Humans cannot post as that bot, so a human quoting the marker is never
+    edited. The search covers every page of the PR's comments (`GET /issues/{pr}/
+    comments?per_page=100`, paginated by the Link header — VERIFIED doc).
+  - >-
+    THE CONTENT IS READ FROM THE NOTICE'S DESCRIPTION, NOT RE-DERIVED (user decision I).
+    The `post-merge-suite-state v2` block in the description of the notice whose `run_id`
+    matches the latest settled run. When no notice describes that run (the notice job
+    failed or has not run yet), the comment still states the held state from the run
+    itself (red vs did-not-complete comes from the jobs read, -v), links the run, and says
+    the notice for that run was not found — and, for a red run, that the fix route of
+    TQ-600a-13-viii is unavailable until the notice exists, with a link to the follow-up
+    run whose notice job can be re-run. The hold does not wait for the notice.
+  - >-
+    THE EXTRA READS (decided 2026-10-08). The comment-list read happens on the held path
+    and on the pass path (to find a comment to mark lifted); the notice read on the held
+    path only. Both are within TQ-600a-13-vi's per-path bound; the comment pages grow
+    with that pull request's comment count, not with the repository.
+  - >-
+    WHEN THE HOLD LIFTS (decided 2026-10-08): edit in place, recommended by both reviews.
+    Editing
+    keeps the history visible, creates no new notification (UNVERIFIED that edits do not
+    notify), and keeps the one-comment invariant. Deleting would erase why the PR sat red;
+    leaving it would tell an agent it is still held.
+  - >-
+    EDIT ON EVERY HELD EVALUATION, AS THE CRITERIA DEMONSTRATE — including one whose
+    content is unchanged (the demonstration's third evaluation); the body carries the
+    evaluation time and head SHA, so every edit records when the PR was last judged.
+  - >-
+    CONCURRENT EVALUATIONS cannot both create: -vi's per-PR concurrency group with
+    cancel-in-progress serialises them. A re-run requested by -xv while a push-triggered
+    evaluation is running is the same group.
+  - >-
+    UNTRUSTED TEXT IS RENDERED INERT. Node ids and commit subjects as code.
+  - >-
+    A REFUSED WRITE NEVER CHANGES THE VERDICT. The verdict is computed before any comment
+    write (TQ-600a-13-ix).
+  - >-
+    THE TESTS COST UNDER 0.3 s. In-process through the real REST client against the fake
+    server, which serves comment pages with real Link headers.
+delivers_to: null
+expects_from:
+  - ac_id: TQ-600a-13-vi
+    contract: >-
+      The hold verdict object with `state`, `run`, `notice` and `reason`.
+  - ac_id: TQ-600a-13-iii
+    contract: >-
+      The `<!-- post-merge-suite-state v2 {json} -->` block in the notice's description,
+      carrying `run_id`, `verdict`, `stage`, `failing`, `run_url`, `anchor_sha`,
+      `commits`, `commits_omitted`, `red_since`.
+test_spec:
+  - name: test_tq600a_13_vii_one_comment_is_created_edited_and_marked_lifted
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: integration
+    angle: criterion
+    surface_invoked: "scripts/ci/post_merge_hold.py's evaluation, in-process, through the real REST client against the shared recording fake server"
+    description: >-
+      Four evaluations of one PR: red; red with a changed failing set in the notice
+      description; red; then a green latest run. One create, three edits of the same
+      comment id, no second create; the final text says the hold lifted and links the
+      green run.
+  - name: test_tq600a_13_vii_the_check_finds_its_own_comment_and_only_its_own
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: integration
+    angle: discrimination
+    surface_invoked: "scripts/ci/post_merge_hold.py against the fake server serving paginated PR comments"
+    must_catch:
+      - "the check identifies its comment by author alone and edits another workflow's comment"
+      - "the check misses its earlier comment on a later page and creates a second"
+      - "the comment is created on every evaluation"
+      - "a human comment quoting the marker is edited"
+      - "a passing evaluation with no earlier comment writes a 'lifted' comment"
+    description: >-
+      Another bot comment, a human comment quoting the marker, and the check's own comment
+      on a later page. One edit, to the check's own; a first-ever passing evaluation
+      writes nothing.
+  - name: test_tq600a_13_vii_each_held_state_has_its_own_wording
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: unit
+    angle: criterion
+    surface_invoked: "scripts/ci/post_merge_hold.py's comment renderer, in-process"
+    description: >-
+      Red, did-not-complete (stage empty_selection), stale, disabled, never-run and
+      could-not-read each render a distinct headline; did-not-complete contains no
+      failing-tests list; red with no notice found still names the run, says the notice
+      was not found and that the fix route waits for it; node ids containing markdown and
+      HTML render as code.
+test_rationale: |
+  "Updated, never duplicated" fails in practice on the second page of comments and on a
+  shared automation account. "Lifted" is the new case: the comment must change on the
+  pass path, which also means a pass with no earlier comment must stay silent, or every
+  green PR acquires a pointless comment. The wording descriptor covers the six held
+  states so the distinct-wording rule of TQ-600a-13-v, -ix and -xiv does not stop at the
+  check output. Milliseconds.
+origin_agent: business-analyst
+created: 2026-10-08
+amended_by:
+- reason: 'USER-APPROVED REDESIGN AFTER TWO EXPERT REVIEWS (2026-10-08), decisions
+    A, F and I, plus the comment-lift recommendation both reviews made. SUPERSEDED
+    premise "a pull request that TQ-600a-13-vi holds because an issue labelled `nightly-red`
+    is open" — now held by the run history (A) and also for stale / disabled / never-run
+    / could-not-read (F). Content now comes from the notice DESCRIPTION (I); SUPERSEDED
+    "the failing node ids from the flag''s most recent night". The PENDING USER DECISION
+    "what happens to the comment when the hold lifts" is resolved as edit in place;
+    the demonstration grows from three evaluations to four to cover it. Added: when
+    no notice describes the run the comment still explains the hold. Readiness returned
+    to draft for IT PO re-enrichment. Full prior text: commit e79d35ef4.'
+  by: business-analyst
+  at: 2026-10-08
+- action: approved
+  agent: approve_acs
+  date: '2026-10-08'
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: internal
+notes: |
+  RESOLVED 2026-10-08: WHAT HAPPENS TO THE COMMENT WHEN THE HOLD LIFTS. Edited in place
+  to "hold lifted", with the last held details collapsed. It only happens on an
+  evaluation, which is why TQ-600a-13-xv's re-evaluation after a green run matters: it is
+  what makes the edit actually occur without the author pushing.

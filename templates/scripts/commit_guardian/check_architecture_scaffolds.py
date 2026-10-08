@@ -29,6 +29,7 @@ from pathlib import Path
 
 try:
     import yaml  # type: ignore[import]
+
     _YAML_AVAILABLE = True
 except ImportError:
     _YAML_AVAILABLE = False
@@ -111,7 +112,14 @@ def _parse_frontmatter(content: str) -> dict | None:
     fm_text = "\n".join(lines[1:end])
     if _YAML_AVAILABLE:
         try:
-            return yaml.safe_load(fm_text) or {}
+            # Reverted to the pure-Python loader (loader-audit, TQ-600a-11
+            # fix-pass, 2026-10-07): this site was SAFE either way (parse
+            # failure is fail-closed -- an explicit blocking violation, not a
+            # silent skip), but had no measured speed case either: one small
+            # frontmatter block per staged scaffold file. Reverted for
+            # consistency, to keep the fast accessor's footprint limited to
+            # call sites that actually earn it.
+            return yaml.load(fm_text, Loader=yaml.SafeLoader) or {}
         except yaml.YAMLError:
             return None
     # Minimal fallback: parse simple key: value lines only.
