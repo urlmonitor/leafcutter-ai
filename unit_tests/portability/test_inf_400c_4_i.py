@@ -150,8 +150,6 @@ from _inf400c_harness import (  # noqa: E402
     copy_consumer_install as _consumer_install_copy,
     copy_consumer_install_with_fresh_sink as _consumer_install_copy_with_fresh_sink,
     deployed_root as _deployed_root,
-    golden_consumer_tree as _golden_consumer_tree,
-    run_consumer_build as _run_consumer_build,
 )
 
 # ---------------------------------------------------------------------------
