@@ -60,6 +60,40 @@ RANGE_HEAD_MISSING = "head_unresolvable"
 
 
 @dataclass(frozen=True)
+class LaneSpec:
+    """What differs between the lanes' notices (TQ-600a-13-xii): label, run history, wording, commit sections.
+
+    ``lists_commits`` is False for the timing lane: its notice names commits only as lane entrants (the commit
+    that touched a newly marked test's file), so any sha on it means exactly that.
+    """
+
+    name: str
+    label: str
+    workflow: str
+    suite: str
+    titles: dict
+    lists_commits: bool = True
+
+
+CORRECTNESS = LaneSpec(
+    "correctness",
+    LABEL,
+    "post-merge-suite.yml",
+    "post-merge suite",
+    {"red": "Post-merge suite is red", "did_not_complete": "Post-merge suite did not complete"},
+)
+TIMING = LaneSpec(
+    "timing",
+    "post-merge-timing",
+    "post-merge-timing.yml",
+    "post-merge timing suite",
+    {"red": "Post-merge timing suite is red", "did_not_complete": "Post-merge timing suite did not complete"},
+    lists_commits=False,
+)
+LANES = {spec.name: spec for spec in (CORRECTNESS, TIMING)}
+
+
+@dataclass(frozen=True)
 class CommitRange:
     """The commits merged since the last green run, as far as the checkout could tell."""
 
@@ -89,15 +123,18 @@ def parse_state(text: str | None) -> dict | None:
     return parsed if isinstance(parsed, dict) else None
 
 
-def build_state(verdict: dict, commit_range: CommitRange, red_since: str) -> dict:
-    """Return the state-block fields (delivers_to of TQ-600a-13-iii) for this run."""
+def build_state(verdict: dict, commit_range: CommitRange, red_since: str, lane: LaneSpec = CORRECTNESS) -> dict:
+    """Return the state-block fields (delivers_to of TQ-600a-13-iii) for this run.
+
+    A lane that does not list commits (timing) carries ``head_sha: None``: the run link names the head.
+    """
     return {
         "run_id": verdict["run_id"],
         "verdict": verdict["verdict"],
         "stage": verdict.get("stage"),
         "failing": sorted(verdict.get("failing") or []),
         "run_url": verdict["run_url"],
-        "head_sha": verdict["head_sha"],
+        "head_sha": verdict["head_sha"] if lane.lists_commits else None,
         "anchor_sha": commit_range.anchor_sha,
         "commits": [sha for sha, _ in commit_range.commits],
         "commits_omitted": commit_range.omitted,
@@ -162,20 +199,21 @@ def code(text: str) -> str:
     return f"`{flat}`"
 
 
-def _headline(state: dict) -> str:
+def _headline(state: dict, lane: LaneSpec = CORRECTNESS) -> str:
     """The one-line statement of what happened.
 
     A run that did not complete is worded differently from a failure (TQ-600a-13-v): never "red", never a
     claim that tests failed, always the stage at which it stopped (when one is known) and, for the stages
     whose cause is known, a plain-words cause outside the code span.
     """
+    subject = f"The {lane.suite}"
     if state["verdict"] != "did_not_complete":
-        return "The post-merge suite is red."
+        return f"{subject} is red."
     stage = state.get("stage")
     cause = STAGE_CAUSES.get(stage or "")
     if cause:
-        return f"The post-merge suite did not complete: {cause}. Stage: {code(stage)}."
-    return f"The post-merge suite did not complete{f' at stage {code(stage)}' if stage else ''}."
+        return f"{subject} did not complete: {cause}. Stage: {code(stage)}."
+    return f"{subject} did not complete{f' at stage {code(stage)}' if stage else ''}."
 
 
 def _failing_lines(failing: list[str]) -> list[str]:
@@ -208,28 +246,36 @@ def _commit_lines(commit_range: CommitRange) -> list[str]:
     return [*lines, ""]
 
 
-def render_description(state: dict, commit_range: CommitRange) -> str:
-    """Return the notice description: the CURRENT state, ending in the state block."""
+def render_description(state: dict, commit_range: CommitRange, lane: LaneSpec = CORRECTNESS, entrants: list[str] | None = None) -> str:
+    """Return the notice description: the CURRENT state, ending in the state block.
+
+    ``entrants`` are ready-made bullet lines naming new lane entrants (see ``_notice_entrants``).
+    """
     since = "Not green since" if state["verdict"] == "did_not_complete" else "Red since"
-    lines = [_headline(state), "", f"Run: {state['run_url']}", f"Head commit: {code(state['head_sha'])}", f"{since}: {code(state['red_since'])}", ""]
-    lines += _failing_lines(state["failing"]) + _commit_lines(commit_range)
+    lines = [_headline(state, lane), "", f"Run: {state['run_url']}"]
+    if lane.lists_commits:
+        lines.append(f"Head commit: {code(state['head_sha'])}")
+    lines += [f"{since}: {code(state['red_since'])}", ""]
+    lines += _failing_lines(state["failing"])
+    lines += _commit_lines(commit_range) if lane.lists_commits else []
+    lines += [*entrants, ""] if entrants else []
     lines += ["This notice is for people. It does not decide whether a pull request is held.", "", encode_state(state)]
     return "\n".join(lines) + "\n"
 
 
-def render_history_comment(state: dict) -> str:
+def render_history_comment(state: dict, lane: LaneSpec = CORRECTNESS) -> str:
     """Return the comment that records one run in the streak's history."""
-    lines = [f"{_headline(state)} Run: {state['run_url']}", ""]
+    lines = [f"{_headline(state, lane)} Run: {state['run_url']}", ""]
     lines += _failing_lines(state["failing"])
     lines += [encode_state(state)]
     return "\n".join(lines) + "\n"
 
 
-def render_green_comment(verdict: dict) -> str:
+def render_green_comment(verdict: dict, lane: LaneSpec = CORRECTNESS) -> str:
     """Return the comment that closes a notice when the suite is green again."""
-    return f"The post-merge suite is green again: {verdict['run_url']}. Closing this notice."
+    return f"The {lane.suite} is green again: {verdict['run_url']}. Closing this notice."
 
 
-def render_duplicate_comment(canonical: int) -> str:
+def render_duplicate_comment(canonical: int, lane: LaneSpec = CORRECTNESS) -> str:
     """Return the comment that closes a duplicate notice in favour of the canonical one."""
-    return f"Duplicate of #{canonical}, the canonical {LABEL} notice. Closing in its favour."
+    return f"Duplicate of #{canonical}, the canonical {lane.label} notice. Closing in its favour."

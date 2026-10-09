@@ -16,7 +16,8 @@ ARCHITECTURE: All decision logic lives here; ``post-merge-suite.yml`` is a thin
     subcommand per workflow step: ``run`` (first execution; exits 0 whenever it
     produced a readable report, test failures are data), ``retry`` (re-executes
     exactly the handed-over ids under the SAME ``-m`` selection, in another job),
-    ``verdict`` (reads both reports, writes ``post-merge-verdict.json``),
+    ``verdict`` (reads both reports, writes ``post-merge-verdict.json``; ``--lane timing``
+    labels it for ``post-merge-timing.yml``, which reuses every other subcommand as is),
     ``exit-status`` (the named ``Verdict:`` steps fail through it). The verdict
     comes from per-test reports written by ``_lane_report_plugin``, never from
     pytest exit statuses. Which stage a run stopped at is decided by
@@ -52,6 +53,7 @@ logger = logging.getLogger("post_merge_suite")
 
 SCHEMA_VERSION = 2
 LANE = "correctness"
+LANES = (LANE, "timing")
 PLUGIN_ARGS = ["-p", "scripts.ci._lane_report_plugin"]
 FIRST_REPORT = "first-run-report/first-run-report.json"
 RETRY_REPORT = "retry-report/retry-report.json"
@@ -149,11 +151,14 @@ def build_verdict_file(
     run_result: str = "",
     retry_result: str = "",
     first_state: str = REPORT_ABSENT,
+    lane: str = LANE,
 ) -> dict:
     """Build the ``post-merge-verdict.json`` object from the two reports (None = absent).
 
     ``run_result`` / ``retry_result`` are the dependency results of the verdict job and ``first_state``
     says whether a missing first-run report was absent or unreadable; see ``_post_merge_stages``.
+    ``lane`` (``correctness`` | ``timing``, TQ-600a-13-xii) only labels the file: both lanes classify
+    identically, and an empty lane of either kind is did_not_complete at stage ``empty_selection``.
     Green is only ever the absence of every did-not-complete stage AND of every failure.
     ``collection_errors`` is always present (``[]`` when none): they are never failing tests.
     """
@@ -168,7 +173,7 @@ def build_verdict_file(
     return {
         "collection_errors": errors,
         "schema_version": SCHEMA_VERSION,
-        "lane": LANE,
+        "lane": lane,
         "verdict": verdict["verdict"],
         "stage": stage,
         "collected": verdict["collected"],
@@ -290,6 +295,7 @@ def _cmd_verdict(opts: argparse.Namespace, _command: list[str]) -> int:
         run_result=normalize_job_result(os.environ.get("RUN_RESULT")),  # missing or odd means unknown, never green
         retry_result=normalize_job_result(os.environ.get("RETRY_RESULT")),
         first_state=first_state,
+        lane=opts.lane,
     )
     _write_text(Path(opts.output), json.dumps(verdict_file, indent=2) + "\n")
     _set_output("verdict", verdict_file["verdict"])
@@ -339,6 +345,7 @@ def build_parser() -> argparse.ArgumentParser:
     verdict = sub.add_parser("verdict", help="classify the reports and write the verdict file")
     verdict.add_argument("--artifacts", required=True)
     verdict.add_argument("--output", required=True)
+    verdict.add_argument("--lane", choices=LANES, default=LANE, help="which lane's verdict file to write")
     status = sub.add_parser("exit-status", help="exit non-zero unless the verdict file is green")
     status.add_argument("--verdict-file", required=True)
     return parser
