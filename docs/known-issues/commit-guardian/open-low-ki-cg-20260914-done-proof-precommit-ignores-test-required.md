@@ -5,7 +5,7 @@ type: reference
 category: reference
 status: active
 created: '2026-08-18'
-last_updated: '2026-09-28'
+last_updated: '2026-10-09'
 components:
   - commit_guardian
 related_docs:
@@ -21,10 +21,15 @@ related_docs:
 > original grading is the `**Severity:**` line below, unchanged.
 
 - **Severity:** medium. The gate refuses a correct commit, and nothing a docs-only AC could honestly contain satisfies it. The two easy ways out are to write a synthetic `# covers:` tag or to leave the AC at `todo` after the work is done, and both make the AC store less truthful.
-- **Status:** open
-- **Occurrences:** 2 (hit 2026-09-14 while closing `UXP-700e-4`, a documentation-only AC, and with it its parent `UXP-700e`; 2026-09-28 closing `INF-1100d`, see Occurrence 2)
-- **First seen:** 2026-09-14 · **Last seen:** 2026-09-28
-- **Where:** `templates/scripts/commit_guardian/check_done_proof.py`: `check_staged_done_proofs()` (the pre-commit path, around line 586) and `_unproven_composite_children()` (around line 333). Compare with `check_all_done_acs()` (around line 737) and `check_changed_done_acs()` (around line 807), both of which skip `test_required: false`.
+- **Status:** open. The leaf half is fixed (PRs #861/#878). The composite half is still open; see Occurrences 2 and 3.
+- **Occurrences:** 3 (hit 2026-09-14 while closing `UXP-700e-4`, a documentation-only AC, and with it its parent `UXP-700e`; 2026-09-28 closing `INF-1100d`, see Occurrence 2; 2026-10-09 closing `INF-700a`, see Occurrence 3)
+- **First seen:** 2026-09-14 · **Last seen:** 2026-10-09
+- **Where:** the original filing's line numbers are stale. On `origin/main` `4a5dfc1a5`, the composite half is in:
+  - `scripts/ac_store/_done_proof_composite.py:194-268` `_unproven_composite_children()`. The leaf-child decision is at `:265-266`.
+  - `templates/scripts/commit_guardian/check_done_proof.py:442-455`, the composite branch of `check_staged_done_proofs()`.
+  - `scripts/ac_store/_done_proof_composite.py:302-328` `_verify_composite_eligible()`, which is CI's copy of the same check.
+
+  See Occurrence 3 for details.
 
 **Symptom.** A commit that marks an AC with `test_required: false` as `work_status: done` is refused:
 
@@ -69,3 +74,62 @@ Verified in code on main `8ed47463`:
 - **One asymmetry remains, in the other direction.** The CI functions test the waiver on the AC itself before anything else (`check_done_proof.py:753-755`). So a composite that is itself `test_required: false` with a rationale passes CI without its children being checked. Pre-commit evaluates the composite branch first (`:656-669`) and refuses it. That is the reverse of this entry's original complaint (pre-commit stricter than CI), on composites only.
 
 **Fix direction, narrowed.** In both `_unproven_composite_children` and `_verify_composite_eligible`, treat a `done` leaf child that `is_covers_tag_waived` accepts as proven, and run tests only for the non-exempt leaves. Keep refusing a composite whose children are *all* exempt with no rationale, and keep the child-status check. Then decide once whether a composite's own `test_required: false` waives its child derivation, and make both paths follow that answer. The parity test from the original fix direction should include a composite with one exempt child.
+
+---
+
+**Occurrence 3 — 2026-10-09: `INF-700a`, reproduced with the real hook; 10 composites in the store are now blocked this way.**
+
+- **Severity:** unchanged at medium. The refusal is loud, not silent, so it does not meet `high`. The cost is a growing number of false `todo` composites, which Occurrence 2 predicted. Regrade it if a composite that must be closed for a release is among them.
+- **Status:** open. Not fixed on `origin/main` `4a5dfc1a5`.
+- **Occurrences:** 3. This is the third.
+- **First/Last seen:** 2026-09-14 / 2026-10-09.
+- **Where:** all three locations below were re-checked on `origin/main` `4a5dfc1a5`.
+  - `scripts/ac_store/_done_proof_composite.py:260-266`. A done leaf child is proven only by `child_id_str in all_covered_ids`. If it is absent it goes onto `unproven` (`:265-266`), and `is_covers_tag_waived` is never consulted.
+  - `templates/scripts/commit_guardian/check_done_proof.py:442-455`. The composite branch calls `_unproven_composite_children` and then `continue`s. The waiver call at `:458` is reachable only on the leaf path below it.
+  - `scripts/ac_store/_done_proof_composite.py:315-317` (`_verify_composite_eligible`, CI). It reports any leaf descendant with no linked test as `uncovered_children`, with no waiver check. `check_all_done_acs` (`check_done_proof.py:539`) and `check_changed_done_acs` (`:614`) test the waiver only on the AC itself, never on its children.
+  - The predicate that should be reused is `is_covers_tag_waived`, defined at `scripts/ac_store/_done_proof_phase_helpers.py:136-171` and re-exported from `done_proof.py:206`.
+
+**Symptom.** `INF-700a` (`docs/acceptance-criteria/infrastructure/INF-400-agent-learning/INF-700a.yaml`) cannot be flipped to `done`. All 5 children and every grandchild are `done`. Reproduced in a scratch worktree off `origin/main` `4a5dfc1a5`: `work_status` was flipped to `done`, staged, and the hook was run with `pre-commit run check-done-proof`. The hook reads the index, so the flip had to be staged. The deployed hook and the `templates/` source copy both refuse it verbatim:
+
+```text
+[check-done-proof] INF-700a: composite INF-700a is marked done but its covered_by children are not all done-and-covered — unproven: INF-700a-3, INF-700a-4
+[check-done-proof] exemptions in force: 0
+```
+
+The flip was then discarded and not committed. `INF-700a-3` and `INF-700a-4` are docs-only: `work_status: done`, `test_required: false`, a non-empty `test_rationale`, and `implemented_by` naming the docs. `INF-700a` stays `todo` by its owner's decision until the gate is fixed.
+
+**Cause.** As Occurrence 2 found, the waiver is honoured at the leaf level only. A child that passes `is_covers_tag_waived` still counts as "unproven" in the composite derivation. That holds in both the pre-commit copy (`_unproven_composite_children`) and the CI copy (`_verify_composite_eligible`).
+
+**Other composites blocked the same way.** A read-only scan on `4a5dfc1a5` found 10 composites. The scan mirrored `_unproven_composite_children` over the whole store, once as written and once with the waiver applied to leaf children. Each composite below is not `done`, is refused only because of done, waived leaf descendants, and would pass if the waiver were honoured:
+
+| Composite | `work_status` | Waived children reported unproven |
+|---|---|---|
+| `ACD-2100d` | todo | `ACD-2100d-4` |
+| `ACD-2100e` | todo | `ACD-2100e-1`, `ACD-2100e-2` |
+| `INF-1100d` | todo | `INF-1100d-2`, `INF-1100d-5` (Occurrence 2) |
+| `INF-700a` | todo | `INF-700a-3`, `INF-700a-4` (this occurrence) |
+| `INF-700c` | todo | `INF-700c-3` |
+| `TQ-500f-4` | in_progress | `TQ-500f-4-i`, `TQ-500f-4-ii` |
+| `UXP-542` | todo | `UXP-542-1` |
+| `UXP-700a` | todo | `UXP-700a-5` |
+| `UXP-700c` | todo | `UXP-700c-4`, `UXP-700c-5` |
+| `UXP-700d` | todo | `UXP-700d-5` |
+
+**Fix direction.** This is unchanged from Occurrence 2 and stated here as acceptance conditions.
+
+- **Accept:** in `_unproven_composite_children` and in `_verify_composite_eligible`, count a child as done-and-covered when it is a leaf with `work_status: done` and `is_covers_tag_waived(child)` accepts it. That means `test_required` is exactly `False` and `test_rationale` is a non-blank string. Use the one shared predicate, not a third hand-written copy. In `_verify_composite_eligible`, drop waived leaves from `per_child_tests` before the `uncovered_children` check, and run tests only for the leaves that remain.
+- **Keep refusing** when the waiver is not met:
+  - a child that is not `done`;
+  - a `test_required: false` child with an absent or whitespace-only rationale;
+  - a child with `test_required` absent or `True` and no covers tag;
+  - a composite with no AC-id children.
+- **Tests:** add a pre-commit/CI parity test with one waived child and one non-waived child. Add a negative test where the only difference is a blank rationale.
+- **Prove it on the store:** after the fix, the 10 composites above should each pass `pre-commit run check-done-proof` when flipped, and none should pass with the rationale blanked.
+
+**Related.**
+- `KI-ACS-006` D-1: the same omission, on the status-map side.
+- `KI-ACS-20260914-composite-proof-drops-path-leaves`: another composite-derivation gap in the same function family.
+- `KI-CG-013`: leaf/composite classification disagreement.
+- BO-2500a-1-ii: the shared waiver predicate. BO-2500a-6: composite classification.
+
+**Pattern:** an exemption fixed at the leaf level, with the derivation that aggregates leaves left unfixed. The aggregate's refusal message ("unproven") names the exempt children, so the gap reads as missing work rather than a gate defect.
