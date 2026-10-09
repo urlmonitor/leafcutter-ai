@@ -54,6 +54,17 @@ from unit_tests.build_orchestration._bo_4300a_1_fixtures import (
 )
 
 
+def _split_canary_checks(answer: dict) -> tuple[dict, dict]:
+    """Split an answer's `checks` into (everything else, the canary-proof keys
+    `hooks_*_fired` and `hooks_canary_rejected`)."""
+    rest: dict = {}
+    canary: dict = {}
+    for key, value in (answer.get("checks") or {}).items():
+        is_canary = key == "hooks_canary_rejected" or (key.startswith("hooks_") and key.endswith("_fired"))
+        (canary if is_canary else rest)[key] = value
+    return rest, canary
+
+
 class TestBO4300a1DeployedMaker(unittest.TestCase):
     """Real-subprocess, real-git proof against the DEPLOYED maker. See module
     docstring (and test_bo_4300a_1.py's module docstring) for why setUpClass
@@ -249,17 +260,24 @@ class TestBO4300a1DeployedMaker(unittest.TestCase):
         # covers: BO-4300a-1
         # angle: criterion
         """AC-3 (one landing place clause): all five workspace_path values
-        share the project's ONE landing place as their common parent
-        directory."""
+        share the project's ONE landing place. BO-4300b-1 lays workspaces out
+        as `<landing>/<kind>/<slug>`, so the landing place is the
+        grandparent of each workspace, and is the project's sibling
+        `<project dir name>-worktrees` root."""
         maker_path = self._require_deployed_maker()
         project, hub, advanced_sha = self._new_fixture_project("landing")
         answers = self._ensure_all_routes(maker_path, project)
 
-        parents = {Path(workspace_location(a)).resolve().parent for a in answers}
+        parents = {Path(workspace_location(a)).resolve().parent.parent for a in answers}
         self.assertEqual(
             len(parents),
             1,
             msg=f"the five workspaces do not share one landing place: {parents}",
+        )
+        self.assertEqual(
+            parents.pop(),
+            (project.parent / f"{project.name}-worktrees").resolve(),
+            msg="the one landing place is not the project's sibling landing root",
         )
 
     def test_every_route_receives_answer_of_identical_shape_MANUAL(self):
@@ -288,7 +306,7 @@ class TestBO4300a1DeployedMaker(unittest.TestCase):
         self.assertEqual(next(iter(statuses)), "ok")
 
         identity_derived = {"slug", "branch", "kind", "workspace_path", "workspace_path_posix", "worktree_path", "base_commit"}
-        shared_keys = set(answers[0].keys()) - identity_derived
+        shared_keys = set(answers[0].keys()) - identity_derived - {"checks"}
         for key in shared_keys:
             values = {json.dumps(a.get(key), sort_keys=True) for a in answers}
             self.assertEqual(
@@ -297,6 +315,14 @@ class TestBO4300a1DeployedMaker(unittest.TestCase):
                 msg=f"non-identity-derived key {key!r} differs across routes: "
                 f"{[a.get(key) for a in answers]}",
             )
+        # `checks` is compared with the canary-proof keys set aside: a scratch
+        # workspace is exempt from the hook canaries by BO-4300c-1's design and
+        # reports them 'n/a' (see `_split_canary_checks`).
+        self.assertEqual(
+            len({json.dumps(_split_canary_checks(a)[0], sort_keys=True) for a in answers}),
+            1,
+            msg="the non-canary `checks` differ across routes",
+        )
 
     def test_no_route_lacks_a_property_another_route_has_MANUAL(self):
         # covers: BO-4300a-1
@@ -312,7 +338,21 @@ class TestBO4300a1DeployedMaker(unittest.TestCase):
         for route, answer in zip(FIVE_ROUTES, answers):
             checks = answer.get("checks", {})
             self.assertIsInstance(checks, dict, msg=f"{route['route']}: checks is not a dict: {checks}")
-            true_keys = {k for k, v in checks.items() if v is True}
+            # A scratch route reports the canary-proof keys 'n/a' by BO-4300c-1's
+            # design; every other route must have proved them True.
+            rest, canary = _split_canary_checks(answer)
+            self.assertTrue(canary, msg=f"{route['route']}: no canary-proof keys in {checks}")
+            if route["kind"] == "scratch":
+                self.assertEqual(
+                    set(canary.values()), {"n/a"}, msg=f"{route['route']}: scratch canary keys: {canary}"
+                )
+            else:
+                # Declared stages must be True; a stage the project does not
+                # declare is 'n/a'; nothing may be False.
+                self.assertNotIn(False, canary.values(), msg=f"{route['route']}: {canary}")
+                self.assertIs(canary.get("hooks_pre_commit_fired"), True, msg=f"{route['route']}: {canary}")
+                self.assertIs(canary.get("hooks_canary_rejected"), True, msg=f"{route['route']}: {canary}")
+            true_keys = {k for k, v in rest.items() if v is True}
             true_check_sets.append(true_keys)
 
         for route, true_keys in zip(FIVE_ROUTES, true_check_sets):

@@ -66,7 +66,9 @@ RESOLVER_MODULE_NAME = "workspace_root.py"
 # directory on sys.path"). A single-file override copy of MAKER_NAME alone
 # cannot even start (ModuleNotFoundError at import time, before any of the
 # maker's own error handling runs) -- see _ensure_maker_siblings().
-_MAKER_SIBLING_MODULES: tuple[str, ...] = ("worktree_admin.py", "worktree_git.py", "worktree_answer.py", "worktree_paths.py", RESOLVER_MODULE_NAME)
+# The closure is discovered from the deployed directory (every ``worktree*.py``
+# plus the resolver) so a newly added maker module never strands the copy.
+_MAKER_SIBLING_GLOB = "worktree*.py"
 
 # scripts/build.py's own documented default output_root
 # (config.get("output_root", ".leafcutter"), scripts/build.py:1931): a fresh
@@ -188,13 +190,11 @@ def _ensure_maker_siblings(maker_file: Path) -> None:
     if maker_file.name != MAKER_NAME:
         return
     dest_dir = maker_file.parent
-    missing = [name for name in _MAKER_SIBLING_MODULES if not (dest_dir / name).is_file()]
-    if not missing:
-        return
     source_dir = ensure_deployed_layout() / _DEPLOYED_OUTPUT_ROOT / "scripts"
-    for name in missing:
+    candidates = {p.name for p in source_dir.glob(_MAKER_SIBLING_GLOB)} | {RESOLVER_MODULE_NAME}
+    for name in sorted(candidates - {MAKER_NAME}):
         source_file = source_dir / name
-        if source_file.is_file():
+        if source_file.is_file() and not (dest_dir / name).is_file():
             (dest_dir / name).write_text(source_file.read_text(encoding="utf-8"), encoding="utf-8")
 
 

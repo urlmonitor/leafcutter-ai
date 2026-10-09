@@ -20,6 +20,9 @@ by pytest.
 """
 from __future__ import annotations
 
+import json
+from pathlib import Path
+
 # The sentinel a REJECT-mode hook refuses. Distinct from
 # _bo_4300a_1_fixtures.REJECT_SENTINEL (BO-4300a-1's own fixture module) so
 # a test that accidentally mixes the two fixture families gets a visibly
@@ -34,7 +37,7 @@ _HOOK_BODIES: dict[str, str] = {
         "    ['git', 'diff', '--cached'], capture_output=True, text=True,\n"
         ").stdout\n"
         f"if {REJECT_SENTINEL!r} in diff:\n"
-        f"    print('rejected by stub hook: {REJECT_SENTINEL}')\n"
+        f"    print('PRECOMMIT_CANARY_REJECTED rejected by stub hook: {REJECT_SENTINEL}')\n"
         "    sys.exit(1)\n"
         "sys.exit(0)\n"
     ),
@@ -44,6 +47,32 @@ _HOOK_BODIES: dict[str, str] = {
         "sys.exit(0)\n"
     ),
 }
+
+
+_PRE_COMMIT_CONFIG = """repos:
+  - repo: local
+    hooks:
+      - id: stub-reject
+        name: stub-reject
+        entry: 'true'
+        language: system
+        stages: [pre-commit]
+"""
+
+
+def write_hook_declarations(root: Path, sentinel: str = REJECT_SENTINEL) -> None:
+    """Write, into a fixture project root, what the maker's readiness proof reads.
+
+    A ``.pre-commit-config.yaml`` declaring the pre-commit stage, and the
+    install's ``scripts/commit_guardian/commit_guardian.json`` ``stage_canaries``
+    entry naming a known-bad file (carrying *sentinel*) that the stub rejecting
+    hook refuses. Without both the maker answers HOOKS_INACTIVE.
+    """
+    (root / ".pre-commit-config.yaml").write_text(_PRE_COMMIT_CONFIG, encoding="utf-8")
+    guardian = root / "scripts" / "commit_guardian"
+    guardian.mkdir(parents=True, exist_ok=True)
+    declared = {"stage_canaries": {"pre-commit": {"path": "canary_bad.txt", "content": sentinel + "\n"}}}
+    (guardian / "commit_guardian.json").write_text(json.dumps(declared, indent=2) + "\n", encoding="utf-8")
 
 
 def stub_build_py_source(hook_mode: str = "reject") -> str:

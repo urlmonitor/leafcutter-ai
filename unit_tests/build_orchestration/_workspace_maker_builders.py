@@ -138,12 +138,16 @@ def make_project(
     hub = tmp / "hub.git"
     _run_git(["-c", "init.defaultBranch=main", "init", "--bare", "-q"], hub, mkdir=True)
 
-    seed = tmp / "seed"
+    # The seed lives in its own scratch dir OUTSIDE tmp and is deleted once
+    # pushed: a leftover sibling repo would make every project look ambiguous
+    # to the maker's BO-4300b-1 child/sibling search (AMBIGUOUS_REPO).
+    seed_holder = tempfile.TemporaryDirectory(prefix="bo4300-seed-", ignore_cleanup_errors=True)
+    seed = Path(seed_holder.name) / "seed"
     _run_git(["-c", "init.defaultBranch=main", "init", "-q"], seed, mkdir=True)
     _configure_identity(seed)
     (seed / "README.md").write_text("BO-4300f-4 shared fixture project\n", encoding="utf-8")
     (seed / "BUILD_STAMP.txt").write_text(f"stamp-{tmp.name}\n", encoding="utf-8")
-    (seed / ".pre-commit-config.yaml").write_text("repos: []\n", encoding="utf-8")
+    _bh.write_hook_declarations(seed)
     (seed / ".claude").mkdir(parents=True, exist_ok=True)
     (seed / ".claude" / "skills_config.json").write_text(
         json.dumps({"docs_root": "docs/"}, indent=2) + "\n", encoding="utf-8"
@@ -156,6 +160,7 @@ def make_project(
     _run_git(["commit", "-q", "-m", "initial fixture content"], seed)
     _run_git(["remote", "add", "origin", str(hub)], seed)
     _run_git(["push", "-q", "-u", "origin", "main"], seed)
+    seed_holder.cleanup()
 
     if layout == "consumer":
         outer = tmp / "outer"

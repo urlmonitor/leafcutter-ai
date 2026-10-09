@@ -46,20 +46,20 @@ files_touched:
 - unit_tests/build_orchestration/_workspace_maker_build_helpers.py
 - unit_tests/build_orchestration/_workspace_maker_builders.py
 agents:
-  ac-fulfillment-gate: needed
+  ac-fulfillment-gate: signed_off
   ac-validator: signed_off
   adr-author: signed_off
   architect-review: signed_off
-  commit: needed
+  commit: signed_off
   documentation-expert: not_needed
   documentation-verifier: not_needed
   frontend-coder: not_needed
-  pr-reviewer: needed
+  pr-reviewer: signed_off
   pull-request: not_needed
-  python-coder: needed
+  python-coder: signed_off
   sql-coder: not_needed
-  test-runner: needed
-  test-writer: needed
+  test-runner: signed_off
+  test-writer: signed_off
   user-surface-smoker: not_needed
 ---
 
@@ -294,13 +294,13 @@ see `requires_adr: true` and `agents.adr-author: needed` in this ticket's frontm
 
 - [x] architect-review — 2026-09-30 10:20
 - [x] adr-author — 2026-09-28 13:50
-- [ ] test-writer
-- [ ] python-coder
-- [ ] test-runner
-- [ ] pr-reviewer
+- [x] test-writer — 2026-10-09 13:00
+- [x] python-coder — 2026-10-09 14:00
+- [x] test-runner — 2026-10-09 20:34
+- [x] pr-reviewer — 2026-10-09 20:50
 - [x] ac-validator — 2026-09-28 14:52
-- [ ] ac-fulfillment-gate
-- [ ] commit
+- [x] ac-fulfillment-gate — 2026-10-09 20:55
+- [x] commit — 2026-10-09 21:00
 
 ## Comments
 
@@ -577,3 +577,52 @@ Triage of the commit-phase blocker. (1) Deployed-layout build.py exit 1: root ca
 ### test-writer follow-ups
 - Fix 13i unreadable-occupant test to work on Windows (remove read-only attr / unlink then rewrite .git).
 - Reconcile test_bo_4300a_1_deployed.py with BO-4300b-1 + `<landing>/<kind>/<slug>` landing layout.
+
+### 2026-10-09 13:00 — test-writer (status: ok)
+feedback-id: (submit-failed)
+completion_manifest:
+  cross_layer_seam_answer:
+    result: covered
+    producing_side: "_workspace_maker_build_helpers.write_hook_declarations (pre-commit stage declaration + commit_guardian.json stage_canaries) via make_project and _bo_4300a_1_fixtures.seed_hub"
+    consuming_side: "the deployed maker's ensure readiness proof (worktree_readiness.prove_ready / worktree_canaries.run_canaries), run as a separate process in test_bo_4300a_1_deployed.py"
+  reachability_entry_point_answer:
+    result: resolved
+    entry_point: "python <deployed .leafcutter/scripts/worktree.py> ensure --kind K --slug S --repo-root <project> (CLI via subprocess)"
+Handled python-coder's test-writer follow-ups (classification: test_drift; production correct).
+(1) `test_bo2400f_13i...::test_unreadable_occupant...`: chmod + unlink the read-only worktree `.git` before rewriting it (Windows PermissionError).
+(2) `test_bo_4300a_1_deployed.py` reconciled with BO-4300b-1/c-1: fixture projects now declare the pre-commit stage and a stage canary (new `write_hook_declarations` in `_workspace_maker_build_helpers.py`, used by `make_project` and `seed_hub`) and the stub hook prints PRECOMMIT_CANARY_REJECTED, so `ensure` answers ok instead of HOOKS_INACTIVE. Landing test now expects `<landing>/<kind>/<slug>` with landing = `<project>-worktrees`. Shape/parity tests set the canary-proof keys aside and assert scratch reports them 'n/a' by design while other routes prove them True.
+Verification (AC_ENFORCE_STRICT=1): test_bo_4300a_1_deployed 9 passed; test_bo_4300f_4, f_4_i, 13/13i/13ii/13iii/13iv 42 passed, 1 error: the ADR-051 guard caught another session changing branch experiment/retrieval-needs-single-call (concurrent noise, not a suite leak). Before the changes the same files showed 4 failed (landing path, HOOKS_INACTIVE, identical-shape, PermissionError).
+
+### 2026-10-09 14:00 — python-coder (status: ok)
+feedback-id: (submit-failed)
+Re-verified after test-writer's 2026-10-09 follow-ups: no production/support change needed. Under AC_ENFORCE_STRICT=1, test_bo_4300f_4.py, test_bo_4300f_4_i.py and test_bo_4300a_1_deployed.py give 16 passed, 23 subtests passed (107s). Deployed-layout build.py now exits 0 (NUL byte in ticket 05's file was removed). Next: test-runner.
+
+### 2026-10-09 20:34 — test-runner (status: ok)
+feedback-id: fb_2026-10-09_3f89ae7f
+completion_manifest:
+  test_suite_executed: true
+  all_tests_passing: true
+  failure_report_structured: true
+Ran the ticket's touched tests under AC_ENFORCE_STRICT=1 with plain pytest (the worktree has no pyproject.toml, so poetry was unavailable): test_bo_4300f_4, test_bo_4300f_4_i, test_bo2400f_13*, test_bo_4300a_1_deployed, test_bo_4300a_1. Result: 52 passed, 23 subtests passed, 0 failures, 186s. The earlier 09-30 blocker items (4300a_1 drift, 13i PermissionError, deployed-layout build) no longer reproduce. No files edited besides this ticket.
+
+### 2026-10-09 20:50 — pr-reviewer (status: ok)
+feedback-id: (submit-failed)
+Reviewed the working diff (8 files, +131/-23: fixture reconciliation with BO-4300b-1/c-1, Windows read-only .git fix, BO-4300f-4.yaml covered_by). High-confidence findings: none. Contract trace: fixtures now write the .pre-commit-config.yaml and commit_guardian.json stage_canaries the maker reads; landing layout <project>-worktrees/<kind>/<slug> matches BO-4300b-1. No stale assertions of the old 'rejected by stub hook' string remain in tests. Medium [M-1] _workspace_maker_builders.make_project: seed_holder.cleanup() is not in a finally, so a failing git step leaks the seed temp dir (it is outside tmp; ignore_cleanup_errors and the finalizer mitigate). Suppressed: 0 low nits. Escalation: not escalated, medium count 1 (threshold > 3). Next: ac-fulfillment-gate.
+
+### 2026-10-09 20:55 — ac-fulfillment-gate (status: ok)
+feedback-id: (submit-failed)
+completion_manifest:
+  resolver_run: true
+  work_status_verified: true
+  implemented_by_verified: true
+  covered_by_verified: true
+  schema_validated_after_edit: true
+All 2 L2/L3 ACs verified. Resolver now ok (BO-4300f-4 L2, BO-4300f-4-i L3). BO-4300f-4 work_status was todo; test-runner 2026-10-09 20:34 reported the touched tests green under AC_ENFORCE_STRICT=1 (52 passed, including the six-starting-point seam test), so `mark_ac_done.py --ac BO-4300f-4 --test-root .` was run: output `marked BO-4300f-4 work_status=done`, exit 0. check_ac_schema.py exited 0. 1 auto-fix applied. Commit phase may proceed.
+
+### 2026-10-09 21:00 — commit (status: ok)
+feedback-id: (submit-failed)
+completion_manifest:
+  pre_commit_hooks_pass: true
+  commit_message_valid: true
+  ticket_staged: true
+Auto-authorized commit gate: subject "test(worktree): proof runs the deployed maker via shared fixtures and developer-repo guard (BO-4300f-4)"; staged files: BO-4300f-4.yaml, 6 unit_tests/build_orchestration files, this ticket.

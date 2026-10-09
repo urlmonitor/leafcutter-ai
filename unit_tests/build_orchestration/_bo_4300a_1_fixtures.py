@@ -78,6 +78,7 @@ import sys
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
+from unit_tests.build_orchestration._workspace_maker_build_helpers import write_hook_declarations
 
 REPO_ROOT = Path(__file__).resolve().parent.parent.parent
 
@@ -182,7 +183,7 @@ def main() -> int:
         "import subprocess, sys\\n"
         "diff = subprocess.run(['git', 'diff', '--cached'], capture_output=True, text=True).stdout\\n"
         "if {REJECT_SENTINEL!r} in diff:\\n"
-        "    print('rejected by stub hook: {REJECT_SENTINEL}')\\n"
+        "    print('PRECOMMIT_CANARY_REJECTED stub hook: {REJECT_SENTINEL}')\\n"
         "    sys.exit(1)\\n"
         "sys.exit(0)\\n",
         encoding="utf-8",
@@ -219,7 +220,7 @@ def seed_hub(tmp: Path, hub: Path, stamp: str) -> str:
 
     (seed / "README.md").write_text("BO-4300a-1 fixture project\n", encoding="utf-8")
     (seed / "BUILD_STAMP.txt").write_text(f"{stamp}\n", encoding="utf-8")
-    (seed / ".pre-commit-config.yaml").write_text("repos: []\n", encoding="utf-8")
+    write_hook_declarations(seed, REJECT_SENTINEL)
     (seed / ".claude").mkdir(parents=True, exist_ok=True)
     (seed / ".claude" / "skills_config.json").write_text(
         json.dumps({"docs_root": "docs/"}, indent=2) + "\n", encoding="utf-8"

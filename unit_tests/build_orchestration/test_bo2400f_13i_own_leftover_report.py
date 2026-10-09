@@ -136,6 +136,10 @@ class TestUnreadableOccupantReportsUndetermined(_RealRepoCase):
         # leaving the directory itself present and non-empty (still an
         # occupant, just an unreadable one).
         self.assertTrue(git_file.is_file(), "Precondition: worktree .git must be a file.")
+        # On Windows the worktree's .git file can be read-only; clear that
+        # and remove it first so the rewrite is permitted.
+        git_file.chmod(0o666)
+        git_file.unlink()
         git_file.write_text("gitdir: /nonexistent/corrupted/path\n", encoding="utf-8")
 
         payload = self._refuse_again(slug)
