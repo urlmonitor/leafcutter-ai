@@ -28,7 +28,7 @@ criteria: |
     naming the reason (never collapsed into clean),
   And the verdict carries the file set it was run against so the consuming
     sign-off gate can record auditable evidence of what was checked.
-depends_on: [BO-570]
+depends_on: [BO-570, BP-1300e-1-i, BP-1300e-1-v]
 doc_links:
   - path: templates/agents/python-coder.md
     relationship: describes
@@ -58,7 +58,7 @@ it_requirements:
   - "The runner must not depend on the worktree pre-commit hooks having fired (worktrees historically lack the .pre-commit-config wiring) — it invokes check_lint_gate.py directly as a subprocess, independent of pre-commit."
   - "The runner must follow the project error-handling policy (CLAUDE.md Rules 1-4): wrap the check_lint_gate.py subprocess I/O and the JSON decode in specific excepts (OSError, subprocess.SubprocessError, json.JSONDecodeError), log at WARNING or higher, and classify the failure as tooling-unavailable rather than swallowing it."
   - "The verdict must include the changed-Python file set checked and a human-readable reason on the non-clean states, so the consuming sign-off gate can record auditable evidence."
-  - "BUILD ORDER (amended 2026-10-09). This runner cannot be built before BP-1300e-1-i delivers check_lint_gate.py's files mode and --json payload, and BP-1300e-1-v its version check; implementing a private ruff invocation as a stopgap is forbidden (it is the fourth hand-kept copy BP-1300e-1-i exists to remove). Verify against the deployed runner in the shared reference layout, not the template source."
+  - "BUILD ORDER (amended 2026-10-09). This runner cannot be built before BP-1300e-1-i delivers check_lint_gate.py's files mode and --json payload, and BP-1300e-1-v its version check; implementing a private ruff invocation as a stopgap is forbidden (it is the fourth hand-kept copy BP-1300e-1-i exists to remove). Verify against the deployed runner in the shared reference layout, not the template source. This ordering is now ALSO encoded in depends_on (BP-1300e-1-i, BP-1300e-1-v; user-approved 2026-10-09); this prose stays because it explains why."
 test_spec:
   - name: test_bo_570_3_kernel_only_ble001_is_reported_as_violations
     target_dir: unit_tests/build_orchestration/
@@ -166,7 +166,7 @@ amended_by:
   - reason: "re-parent + rename after Pattern C split of BO-530 -> BO-530 + BO-570, 2026-06-24"
     note: "Was BO-530-5a (split from BO-530-5 by it-po-v3). Moved out of BO-530 (TDD-framed L1) to the new local-verification-gate sibling L1 BO-570. RENAMED BO-530-5a -> BO-570-3 (check_ac_limits attributes children by id-derivation). id, criteria, delivers_to/expects_from preserved verbatim; only id/created_by/depends_on re-pointed to BO-570."
   - reason: "it_requirements amended by it-po, 2026-10-09: runner becomes a thin adapter over BP-1300e-1-i's check_lint_gate.py --mode files --json, reading the one lint declaration (covers CI's kernel-only step) and inheriting BP-1300e-1-v's linter-version check"
-    note: "Fields changed: it_requirements, doc_links, amended_by; test_spec and test_rationale added the same day (the AC had none, and check-ac-schema requires a test contract on an approved code AC once it is touched). criteria, title, req_status, depends_on, readiness, work_status, delivers_to and origin_agent untouched. Route: ACS-400 write-lock protects only criteria/title/req_status/depends_on (check_ac_governance.py _PROTECTED_FIELDS), so it_requirements is amendable in place with an amended_by record (docs/how-to/ac-traceability-store.md 'How do I amend an existing AC?'). Prompted by the user's 2026-10-09 decisions on the BP-1300e set. The generated ticket in implemented_by predates this amendment and must be regenerated or updated before build."
+    note: "Fields changed: it_requirements, doc_links, amended_by; test_spec and test_rationale added the same day (the AC had none, and check-ac-schema requires a test contract on an approved code AC once it is touched). depends_on changed the same day from [BO-570] to [BO-570, BP-1300e-1-i, BP-1300e-1-v] -- reason: this runner cannot be built before the shared runner (check_lint_gate.py --mode files --json, BP-1300e-1-i) and the linter-version check (BP-1300e-1-v) exist; depends_on is an ACS-400 protected field, changed by it-po (an authorized author) with explicit user approval on 2026-10-09. criteria, title, req_status, readiness, work_status, delivers_to and origin_agent untouched. Route: ACS-400 write-lock protects only criteria/title/req_status/depends_on (check_ac_governance.py _PROTECTED_FIELDS), so it_requirements is amendable in place with an amended_by record (docs/how-to/ac-traceability-store.md 'How do I amend an existing AC?'). Prompted by the user's 2026-10-09 decisions on the BP-1300e set. The generated ticket in implemented_by predates this amendment and must be regenerated or updated before build."
 superseded_by: null
 covered_by: []
 implemented_by:
