@@ -9,8 +9,10 @@
 # edits the hold or its module cannot change its own verdict. The job holds write tokens
 # on pull requests from forks, so it must never check out, install, build or execute
 # anything from the pull request, and no `${{ }}` expression carrying pull-request text
-# may appear in a run: line (the only pull-request value used anywhere is the number, as
-# a concurrency key, which is safe there). Nothing here reads the event payload.
+# may appear in a run: line (the only pull-request value used in the workflow itself is
+# the number, as a concurrency key, which is safe there). The module reads exactly two
+# values from the event file, in Python and never through a shell: the pull request
+# number and the head sha (used only when it is 40 lowercase hex characters).
 #
 # SHAPE. Exactly one job, named exactly `Post-merge suite status`, with no `if`, no
 # `needs`, no matrix and no path filter: a skipped job reports success on a required
@@ -18,7 +20,8 @@
 #
 # PERMISSIONS. `issues: write` (TQ-600a-13-viii records an exemption on the notice) and
 # `pull-requests: write` (TQ-600a-13-vii's comment) are fixed by the AC's contract for
-# this job; the verdict step itself only reads. After 2026-11-02 GitHub blocks
+# this job. The verdict is computed from reads only; the one write the step then makes
+# is its single comment on the pull request (created once, edited in place, TQ-600a-13-vii). After 2026-11-02 GitHub blocks
 # `pull_request_target` here unless an Actions event policy allows it (TQ-600a-13-x), so
 # this check stays advisory until then.
 
