@@ -133,7 +133,11 @@ ROUTING_LOG_ENV_VAR = "LEAFCUTTER_SHARED_LAYOUT_ROUTING_LOG"
 # for its own _WORKTREE_ROOT; duplicated rather than imported so this AC's
 # routing logic stays entirely inside this one file, per its own
 # files_touched list).
-_WORKTREE_ROOT = Path(__file__).resolve().parents[2]
+#
+# The same override as the producer's (see its SOURCE_ROOT_ENV_VAR): set only by the post-merge
+# fix proof's child session so the code under test, not main's checkout, is what gets deployed;
+# unset or empty, this is the computation above, unchanged.
+_WORKTREE_ROOT = Path(os.environ.get("LEAFCUTTER_SHARED_LAYOUT_SOURCE_ROOT") or Path(__file__).resolve().parents[2])
 
 # Generous timeout for the real ~60s private-copy deploy subprocess (see
 # TQ-600.yaml's measured deploy cost).
