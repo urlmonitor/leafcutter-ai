@@ -7,7 +7,7 @@ level: L3
 status: active
 req_status: draft
 work_status: todo
-readiness: reviewed
+readiness: approved
 priority: high
 roadmap_phase: phase_1
 criteria: |
@@ -111,16 +111,19 @@ amended_by:
 - action: approved
   agent: approve_acs
   date: '2026-10-08'
-- reason: 'OWNER DECISION 2026-10-09 (BrainCandy): the required context is sourced from
-    the dedicated hold App (ID 5249547), not GitHub Actions (TQ-600a-13-x). Added a
-    break mode (the App credential cannot be obtained or the App is uninstalled, so no
-    check is ever published). SUPERSEDED criterion "the procedure ends by restoring the
-    requirement and re-observing..." -> restoring it with source the hold App, never
-    GitHub Actions or any source. it_requirement restore step amended from integration
-    15368 to the App. readiness approved -> reviewed: must be re-approved before
-    building. depends_on unchanged.'
+- reason: 'OWNER DECISION 2026-10-09 (BrainCandy): the required context is sourced
+    from the dedicated hold App (ID 5249547), not GitHub Actions (TQ-600a-13-x). Added
+    a break mode (the App credential cannot be obtained or the App is uninstalled,
+    so no check is ever published). SUPERSEDED criterion "the procedure ends by restoring
+    the requirement and re-observing..." -> restoring it with source the hold App,
+    never GitHub Actions or any source. it_requirement restore step amended from integration
+    15368 to the App. readiness approved -> reviewed: must be re-approved before building.
+    depends_on unchanged.'
   by: business-analyst
   at: 2026-10-09
+- action: approved
+  agent: approve_acs
+  date: '2026-10-09'
 superseded_by: null
 covered_by: []
 implemented_by: []

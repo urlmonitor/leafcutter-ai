@@ -7,7 +7,7 @@ level: L3
 status: active
 req_status: draft
 work_status: todo
-readiness: reviewed
+readiness: approved
 priority: high
 roadmap_phase: phase_1
 criteria: |
@@ -325,23 +325,26 @@ amended_by:
 - action: approved
   agent: approve_acs
   date: '2026-10-08'
-- reason: 'OWNER DECISION 2026-10-09 (BrainCandy): CLOSE THE CHECK-NAME SPOOF GAP WITH
-    A DEDICATED GITHUB APP (App ID 5249547). SUPERSEDED criterion "the ruleset entry
-    is added with its source set to GitHub Actions, like the other six" -> source set
-    to the hold App''s integration id, never GitHub Actions or any source. Added: the
-    owner decision as a Given; two prerequisites before the ruleset change (the App
-    credential reachable only by the evaluation job on main, observed unreadable from
-    a PR-added workflow; the check run observed posted BY App 5249547 on the named real
-    PRs, and a re-evaluation of an already-judged head observed with the newer App check
-    governing); a post-entry observation that a red-run PR carrying a passing PR-added
-    job named `Post-merge suite status` is unmergeable; enforcement reported only for
-    the App-pinned context, 15368-pinned reported advisory. The name and every-PR
-    clauses now read "the dedicated App reports". it_requirements amended (reader pin,
-    fallback, rollout step 3a, job name); expects_from and two test descriptors amended.
-    readiness approved -> reviewed: must be re-approved before building. depends_on
-    unchanged.'
+- reason: 'OWNER DECISION 2026-10-09 (BrainCandy): CLOSE THE CHECK-NAME SPOOF GAP
+    WITH A DEDICATED GITHUB APP (App ID 5249547). SUPERSEDED criterion "the ruleset
+    entry is added with its source set to GitHub Actions, like the other six" -> source
+    set to the hold App''s integration id, never GitHub Actions or any source. Added:
+    the owner decision as a Given; two prerequisites before the ruleset change (the
+    App credential reachable only by the evaluation job on main, observed unreadable
+    from a PR-added workflow; the check run observed posted BY App 5249547 on the
+    named real PRs, and a re-evaluation of an already-judged head observed with the
+    newer App check governing); a post-entry observation that a red-run PR carrying
+    a passing PR-added job named `Post-merge suite status` is unmergeable; enforcement
+    reported only for the App-pinned context, 15368-pinned reported advisory. The
+    name and every-PR clauses now read "the dedicated App reports". it_requirements
+    amended (reader pin, fallback, rollout step 3a, job name); expects_from and two
+    test descriptors amended. readiness approved -> reviewed: must be re-approved
+    before building. depends_on unchanged.'
   by: business-analyst
   at: 2026-10-09
+- action: approved
+  agent: approve_acs
+  date: '2026-10-09'
 superseded_by: null
 covered_by: []
 implemented_by: []

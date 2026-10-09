@@ -7,7 +7,7 @@ level: L3
 status: active
 req_status: draft
 work_status: todo
-readiness: reviewed
+readiness: approved
 priority: high
 roadmap_phase: phase_1
 criteria: |
@@ -501,26 +501,29 @@ amended_by:
 - action: approved
   agent: approve_acs
   date: '2026-10-08'
-- reason: 'OWNER DECISION 2026-10-09 (BrainCandy): CLOSE THE CHECK-NAME SPOOF GAP WITH
-    A DEDICATED GITHUB APP (App ID 5249547, Checks read and write only, installed on
-    this repository only, secrets HOLD_APP_ID and HOLD_APP_PRIVATE_KEY). This reverses
+- reason: 'OWNER DECISION 2026-10-09 (BrainCandy): CLOSE THE CHECK-NAME SPOOF GAP
+    WITH A DEDICATED GITHUB APP (App ID 5249547, Checks read and write only, installed
+    on this repository only, secrets HOLD_APP_ID and HOLD_APP_PRIVATE_KEY). This reverses
     the "known and accepted" residual risk recorded under user decision H. Criteria
     ADDED, none removed: the verdict is published as an App-created check run named
     `Post-merge suite status` on the payload head commit, created in progress before
     the verdict and completed after it, success only on pass or exempt and failure
-    otherwise, never neutral or skipped; the computing job is renamed `Post-merge hold
-    evaluation`; credential-mint, check-run-write and verdict-crash failures each leave
-    the check non-green and the job failed; a failed refresh of an earlier App verdict
-    is reported, not hidden; the credential is minted per run, never persisted, used only
-    for the hold''s check-run writes, and reachable by no job that runs pull-request content
-    and no PR-added workflow. Title widened. it_requirements: job-shape entry amended
-    (job no longer carries the required name) and an App entry added. delivers_to to
-    -x amended. Three test descriptors added. work_status done -> todo, because the
-    added criteria are not built; the existing covered_by and implemented_by remain
-    valid for the unchanged criteria. readiness approved -> reviewed: must be re-approved
-    before building. depends_on unchanged.'
+    otherwise, never neutral or skipped; the computing job is renamed `Post-merge
+    hold evaluation`; credential-mint, check-run-write and verdict-crash failures
+    each leave the check non-green and the job failed; a failed refresh of an earlier
+    App verdict is reported, not hidden; the credential is minted per run, never persisted,
+    used only for the hold''s check-run writes, and reachable by no job that runs
+    pull-request content and no PR-added workflow. Title widened. it_requirements:
+    job-shape entry amended (job no longer carries the required name) and an App entry
+    added. delivers_to to -x amended. Three test descriptors added. work_status done
+    -> todo, because the added criteria are not built; the existing covered_by and
+    implemented_by remain valid for the unchanged criteria. readiness approved ->
+    reviewed: must be re-approved before building. depends_on unchanged.'
   by: business-analyst
   at: 2026-10-09
+- action: approved
+  agent: approve_acs
+  date: '2026-10-09'
 superseded_by: null
 covered_by:
 - unit_tests/suite_performance/test_tq_600a_13_vi.py

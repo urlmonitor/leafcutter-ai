@@ -7,7 +7,7 @@ level: L3
 status: active
 req_status: draft
 work_status: todo
-readiness: reviewed
+readiness: approved
 priority: high
 roadmap_phase: phase_1
 criteria: |
@@ -246,19 +246,22 @@ amended_by:
 - action: approved
   agent: approve_acs
   date: '2026-10-08'
-- reason: 'OWNER DECISION 2026-10-09 (BrainCandy): the hold''s verdict is published by
-    a dedicated GitHub App (ID 5249547) as a check run (TQ-600a-13-vi), so the allowed
-    write set must name that write. SUPERSEDED allowed-write clause "...re-running a
-    run of the hold workflow itself; and reporting check results" -> "...reporting each
-    job''s own result; and, by the hold''s evaluation job alone using the dedicated
+- reason: 'OWNER DECISION 2026-10-09 (BrainCandy): the hold''s verdict is published
+    by a dedicated GitHub App (ID 5249547) as a check run (TQ-600a-13-vi), so the
+    allowed write set must name that write. SUPERSEDED allowed-write clause "...re-running
+    a run of the hold workflow itself; and reporting check results" -> "...reporting
+    each job''s own result; and, by the hold''s evaluation job alone using the dedicated
     App''s credential, creating and completing a check run named exactly `Post-merge
     suite status` on the evaluated pull request''s head commit". Added: the App''s
     credential makes no other write, and no other family job creates or edits a check
-    run or a commit status. it_requirements: the allowlist entry and the fallback entry
-    amended; discrimination descriptor extended. readiness approved -> reviewed: must be
-    re-approved before building. depends_on unchanged.'
+    run or a commit status. it_requirements: the allowlist entry and the fallback
+    entry amended; discrimination descriptor extended. readiness approved -> reviewed:
+    must be re-approved before building. depends_on unchanged.'
   by: business-analyst
   at: 2026-10-09
+- action: approved
+  agent: approve_acs
+  date: '2026-10-09'
 superseded_by: null
 covered_by: []
 implemented_by: []
