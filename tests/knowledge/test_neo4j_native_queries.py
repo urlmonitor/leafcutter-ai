@@ -26,14 +26,17 @@ class RecordingTransaction:
 
 class NativeQueriesTest(unittest.TestCase):
     def assert_native(self, statement):
-        self.assertNotRegex(statement, r"\b(?:KREntity|KR_LINK|KRGeneration|KRRepository)\b")
+        labels = set(NODE_LABELS.split("|")) | {"Repository", "Snapshot"}
+        names = set(RELATIONSHIPS.values()) | labels
+        patterns = re.findall(r"(?:\(|\[)\w*:([\w|]+)", statement)
+        self.assertTrue(all(set(pattern.split("|")) <= names for pattern in patterns))
 
     def test_rows_preserves_trusted_statement_literals_and_parameters(self):
         # covers: KM-400a-3-i
         # angle: boundary
-        statement = "RETURN ':KREntity ' AS example, $value AS value"
-        parameters = {"value": ":KR_LINK DELETE n"}
-        expected = [{"example": ":KREntity ", "value": parameters["value"]}]
+        statement = "RETURN ':UnrecognizedEntity ' AS example, $value AS value"
+        parameters = {"value": ":UNRECOGNIZED_LINK DELETE n"}
+        expected = [{"example": ":UnrecognizedEntity ", "value": parameters["value"]}]
         tx = RecordingTransaction(expected)
         backend = object.__new__(Neo4jBackend)
         self.assertEqual(backend._rows(tx, statement, parameters), expected)
