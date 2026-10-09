@@ -1,0 +1,194 @@
+id: BO-3800a-2
+title: "A commit made by the commit agent or by a drive's commit step brings in the restructuring specialist on a complexity refusal; a session or person committing directly is told what to do and nothing is brought in"
+component: build-orchestration
+components:
+  - build_orchestration
+  - supervisor_system
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a ticket is being driven and the drive's own commit step attempts delivery,
+  And check-complexity refuses it, stating that plan_batches in scripts/planner.py has
+    complexity 31 and only 30 is allowed,
+  When that refusal is adjudicated,
+  Then the author's change is held as BO-3800a-1 requires, and the restructuring
+    specialist appears in the ordered record of parties engaged, after the refusal and
+    before delivery is attempted again.
+
+  Given the same change and the same refusal, where the commit was made by the commit
+    agent,
+  When that refusal is adjudicated,
+  Then the restructuring specialist is engaged in the same position, after the refusal
+    and before delivery is attempted again, so a commit-agent commit brings the
+    specialist in just as the drive's own commit step does.
+
+  Given the same change refused the same way when an interactive session runs git
+    commit itself, and again when a person runs git commit at a terminal,
+  When each refusal is met,
+  Then no party is engaged and nothing is held on the committer's behalf,
+  And each committer is shown the refusal text GE-132a-3 requires: complexity 31, only
+    30 allowed, and bring in the restructuring specialist with complexity-reduction.
+depends_on:
+  - BO-3800a
+  - BO-3800b-3
+  - BO-3800a-1
+  - GE-132a-3
+doc_links:
+  - path: docs/acceptance-criteria/build-orchestration/BO-3800-refusal-summons-specialist/BO-3800a.yaml
+    relationship: parent
+    status: exists
+  - path: docs/acceptance-criteria/build-orchestration/BO-3800-refusal-summons-specialist/BO-3800a-1.yaml
+    relationship: related
+    status: exists
+    relevance: "Owns the hold and the re-offer. This record says which committers reach them. It restates neither."
+  - path: docs/acceptance-criteria/guardrail-engine/GE-132-checks-say-what-happens-next/GE-132a-3.yaml
+    relationship: related
+    status: exists
+    relevance: "The one refusal text every committer gets. Arm three is the population that only reads it."
+  - path: templates/skills/precommit-autofix/SKILL.md
+    relationship: related
+    status: exists
+    relevance: >-
+      Today's only router, reached only from the commit agent. Its Step 4a.3 dispatches
+      from depth 1, which ADR-019 says is silently dropped (BO-3800b-2's escalated risk).
+  - path: docs/acceptance-criteria/build-orchestration/BO-3000a.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      The shipped handoff shape. A depth-1 commit agent returns a handoff naming its target,
+      and the depth-0 party that dispatched it engages that target.
+  - path: docs/architecture/adrs/ADR-019-build-feature-inline-phase-dispatch.md
+    relationship: describes
+    status: exists
+  - path: CLAUDE.md
+    relationship: describes
+    status: exists
+    relevance: "Arms one and two are read from a real run's dispatch record and compared run against run."
+  - path: docs/architecture/components/build-ticket-workflow-dispatch.md
+    relationship: describes
+    status: exists
+delivers_to: null
+expects_from:
+  - ac_id: BO-3800b-3
+    contract: "The restructuring specialist and the complexity-reduction skill, read from check-complexity's declaration."
+  - ac_id: GE-132a-3
+    contract: "The refusal text shown to committers who are only told."
+assigned_agent: python-coder
+estimated_complexity: L
+package_surface: false
+declares_side_effect: false
+it_requirements:
+  - >-
+    THE COMMIT AGENT DOES NOT SPAWN. It runs at depth 1, where ADR-019 drops Agent calls
+    silently. On a refusal whose declaration names a specialist, it returns {status:
+    "handoff", handoff_target: <declared specialist>, remedy: {hook_id, skills, demand}}, the
+    PHASE_RESULT_SCHEMA handoff shape that BO-3000a routes. It neither calls the Agent tool
+    nor lets precommit-autofix Step 4a.3 attempt the dispatch for that hook.
+  - >-
+    THE PAYLOAD IS BUILT BY A SCRIPT, NOT BY THE AGENT. A deterministic helper turns the
+    hook's structured refusal record (GE-132a-3) and the declaration into the payload. The
+    agent passes its output through and never composes it from prose. This is BO-3100's
+    standing constraint (mechanical enforcement) and BO-3000a's no-inference rule. It is the
+    unit-observable seam: run the helper on real check-complexity output and assert the payload.
+  - >-
+    TWO DEPTH-0 CONSUMERS, ONE CONTRACT. In a drive, the driver consumes the payload
+    (BO-3800b-3). For a commit-agent commit outside a drive, this record settles the
+    mechanism: the /commit surface (templates/workflows/commit.md) dispatches the commit agent
+    from a depth-0 workflow script under templates/workflows-js/. That script consumes the
+    same payload, engages the specialist, then re-offers the commit. A prompt telling the
+    session to "bring in the specialist" does not satisfy arm two.
+  - >-
+    A DIRECT COMMIT GETS NOTHING NEW. When a session or a person runs git commit, nothing is
+    held, no handoff artifact is written and no party is dispatched. The GE-132a-3 refusal
+    text is all they get.
+  - >-
+    The refusal path does not mutate the working tree or the index (BO-3800a-1). The
+    re-offered commit runs the same hook chain.
+  - >-
+    COMPANION PROSE IN THE SAME TICKET. commit.md (the agent) Step 5 and precommit-autofix
+    SKILL.md Steps 4 and 4a describe returning the handoff. That is an llm-expert surface,
+    and the generated ticket's agents map includes llm-expert for it (BO-3000a precedent).
+    Follow the CLAUDE.md error-handling policy. An unreadable declaration in the helper is a
+    named failure, never an empty payload.
+test_required: true
+test_spec:
+  - name: test_bo3800a2_drive_commit_refusal_engages_specialist_between_refusal_and_retry
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    surface_invoked: "unit_tests/prompt_assembly/_driver_harness.py executing build-feature.js (TWIN_DRIVERS)"
+    description: "Arm 1. The commit phase's stub returns the payload the REAL helper produced from real check-complexity output (plan_batches, 31, 30). The dispatch record reads commit, then restructuring-specialist, then commit. The author's change is byte-identical across the hold. RED TODAY."
+  - name: test_bo3800a2_interactive_commit_agent_handoff_is_consumed_by_depth0_dispatcher
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    angle: discrimination
+    surface_invoked: "the new interactive commit workflow script, executed through unit_tests/_workflow_engine_harness.py"
+    description: "Arm 2. Outside any drive, the stubbed commit agent returns the same payload. The dispatcher engages restructuring-specialist after the refusal and before the second commit attempt, in the same position as arm 1. RED TODAY: no such dispatcher exists."
+    must_catch:
+      - "ONE ROUTE WIRED: bring the specialist in only from the drive's commit step"
+  - name: test_bo3800a2_direct_commits_engage_nobody_and_show_declared_next_step
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: behavioral
+    angle: boundary
+    surface_invoked: "real `git commit` in a scratch repo through the generated stanza (shared_reference_layout, @pytest.mark.shared_layout_reader)"
+    description: "Arm 3. The commit is made once with no env marker and once with CLAUDECODE=1. No handoff artifact is written, the index and working tree are unchanged, and the refusal text carries 'complexity 31, only 30 allowed', restructuring-specialist and complexity-reduction. RED TODAY on the text."
+test_rationale: >-
+  A real nested agent spawn cannot be unit-tested. What a test can see is the payload the
+  helper returns and a depth-0 dispatcher consuming it, both executed for real: the driver
+  harness in a drive, the workflow-engine harness outside one. Arm 3 is a real commit with no
+  dispatcher in the loop. Three tests, all red today.
+origin_agent: business-analyst
+created: 2026-10-09
+amended_by:
+  - reason: depends-on-amended-by-product-decision
+    by: it-po
+    at: 2026-10-09
+    note: >-
+      BrainCandy approved this on 2026-10-09 (IT PO ambiguity 7). depends_on gains BO-3800a-1
+      and GE-132a-3. Arm one's "the author's change is held as BO-3800a-1 requires" consumes
+      BO-3800a-1's hold and re-offer. Arm three's committers are shown GE-132a-3's refusal
+      text. Both were already expects_from or cross-links and are now ordering edges.
+      BO-3800a-1 is enriched (python-coder, L) but unbuilt and readiness draft, so this
+      record is now built after it. criteria, title and req_status are untouched.
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: internal
+notes: |
+  SPAWN SCOPE DECIDED BY BRAINCANDY, 2026-10-09: the commit agent and a drive's commit step
+  bring the specialist in automatically; any other agent or person is told what to do and
+  nothing is brought in for them. "If commit agent did it, it would be able to spawn it.
+  And if any other agent or human does it they would also know what to do." The open
+  question an earlier draft carried, whether an interactive session's commit-agent commit
+  counts, is closed: it brings the specialist in.
+
+  DEPTH RISK. BrainCandy's words say the commit agent spawns the specialist. Under ADR-019
+  it cannot: the commit agent runs at depth 1, and an Agent call from there is silently
+  dropped. That is precisely why today's router does nothing (precommit-autofix Step 4a.3).
+  The criteria therefore state the observable outcome, that the specialist is engaged,
+  and do not say who makes the call. The buildable shape is the BO-3000a handoff: the
+  commit agent returns a handoff naming the specialist and the demand, and its depth-0
+  dispatcher (the drive's driver, or the interactive session) engages it. For the
+  interactive session that last step rests on the session acting on the handoff. The IT
+  PO must settle how that is made mechanical rather than a prompt instruction (BO-3100's
+  standing constraint).
+
+  PARENT WORDING: RESOLVED 2026-10-09. BO-3800a's L1 once said "work that is being
+  driven, and only that", which was narrower than this record. On BrainCandy's approval it
+  now covers deliveries by a drive or by the commit agent, the latter in a drive or in an
+  interactive session, with a direct commit staying inform-only (see BO-3800a's
+  2026-10-09 amended_by entry). This record's three arms are now exactly as wide as their
+  parent.
+
+  NAMED MUTATION. ONE ROUTE WIRED: bring the specialist in only from the drive's commit
+  step. MUST GO RED: arm two. MUST STAY GREEN: arms one and three, and every arm of
+  BO-3800a-1.

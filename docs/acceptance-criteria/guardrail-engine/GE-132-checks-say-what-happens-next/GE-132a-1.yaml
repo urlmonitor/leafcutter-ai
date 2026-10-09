@@ -1,0 +1,290 @@
+id: GE-132a-1
+title: "A check registered without a remedy declaration is refused, the excused list only shrinks, and a declaration for a check that is not registered is refused"
+component: guardrail-engine
+components:
+  - commit_guardian
+  - precommit_hooks
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the registered checks that can refuse a commit include check-complexity, which
+    has a remedy declaration, and check-folder-density, which has none and is on the
+    recorded list of checks excused because they had no declaration when this rule
+    arrived,
+  When a change to the registered checks or to the remedy declarations is committed,
+  Then the commit is not refused on account of either check.
+
+  Given a change registers a new check, check-widget-names, that can refuse a commit,
+    and adds no remedy declaration for it,
+  When that change is committed,
+  Then the commit is refused, naming check-widget-names and stating that a check needs
+    a remedy declaration before it can be registered.
+
+  Given the same change also adds check-widget-names to the excused list,
+  When that change is committed,
+  Then the commit is still refused, naming check-widget-names, because the excused
+    list may lose entries and never gain one.
+
+  Given the remedy declarations hold an entry for check-docstrings, and no registered
+    check has that name,
+  When a change to the registered checks or to the remedy declarations is committed,
+  Then the commit is refused, naming check-docstrings as a declaration for a check that
+    is not registered.
+depends_on:
+  - GE-132a
+doc_links:
+  - path: docs/acceptance-criteria/guardrail-engine/GE-132-checks-say-what-happens-next/GE-132a.yaml
+    relationship: parent
+    status: exists
+  - path: docs/acceptance-criteria/guardrail-engine/GE-126-checks-answer-truthfully/GE-126d-1.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      Reuse rather than rebuild. GE-126d-1 declares the registration legs once, as data
+      that the procedure and the parity check both read. The remedy declaration is one
+      more leg on that list. The only difference: omitting this leg refuses, where
+      GE-126d-3's roster omission warns.
+  - path: docs/acceptance-criteria/build-orchestration/BO-210-precommit-safety-net/BO-210a-2.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      Owns stale entries on the gating list. This record covers stale declarations only,
+      so neither restates the other.
+  - path: templates/scripts/precommit-autofix.json
+    relationship: modifies
+    status: exists
+  - path: CLAUDE.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      "Gate / Workflow ACs — Verify Behaviorally, Not by Grep". Each arm is shown by
+      committing a fixture change through the real check, not by reading the
+      configuration.
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: describes
+    status: exists
+delivers_to:
+  - ac_id: BO-3800b-3
+    contract: >-
+      Every check that can refuse a commit either has a remedy declaration or is on an
+      excused list that only shrinks. The run therefore never meets a refusal from a newly
+      added check that has no declared remedy.
+  - ac_id: GE-132a-3
+    contract: >-
+      Added 2026-10-09: the shared declaration loader. load(hook_id) returns {hook_id: str,
+      disposition: "author-clears" | "mechanical-autofix" | "engage-specialist", instruction:
+      str, agent: str | null, skills: [str], source: <path of the file that supplied it>} or
+      a missing result. It reads the local table, then falls back to the package seed per
+      missing declaration. GE-132a-2's validator and BO-3800b-3's run read through the same
+      loader.
+expects_from: null
+assigned_agent: python-coder
+estimated_complexity: M
+package_surface: true
+it_requirements:
+  config_schema_fragment:
+    _declares: >-
+      No new hooks_manifest member and no new top-level key in commit_guardian.json. The
+      rule is hosted by the existing check-hook-parity check (GE-126d-1 names it as the
+      registration-leg parity surface: reuse, do not build a second check). Two edits inside
+      existing structure. (a) Widen the files trigger of the check-hook-parity member. Today
+      it is "scripts/commit_guardian/|templates/scripts/commit_guardian/|templates/commit-guardian/",
+      so a commit that stages only templates/scripts/precommit-autofix.json runs no check at
+      all. That makes arm one's "a change to the remedy declarations" unreachable. (b) Add
+      the excused list as data under the existing hook_parity section, which is the check's
+      own configuration.
+    type: object
+    properties:
+      check_hook_parity_member:
+        type: object
+        required: [id, files]
+        properties:
+          id: {const: check-hook-parity}
+          files:
+            type: string
+            description: "Must match every path it matches today AND templates/scripts/precommit-autofix.json."
+      hook_parity:
+        type: object
+        properties:
+          undeclared_remedy_baseline:
+            type: array
+            items: {type: string}
+            uniqueItems: true
+            description: >-
+              Ids of pre-commit judgment gates that had no remedy declaration when this rule
+              landed. Seeded by the same code path the check uses (49 at origin/main
+              bd4ecb9a; re-measure, never hard-code). It may lose entries and never gain one.
+  reference_file_path: templates/scripts/commit_guardian/commit_guardian.json
+  n_location_rule: >-
+    2. (a) The files key of the check-hook-parity member of hooks_manifest.hooks. (b) The new
+    undeclared_remedy_baseline list under hook_parity. Nothing else in commit_guardian.json
+    changes. Outside it, in the same change: templates/scripts/precommit-autofix.json drops
+    check-docstrings, renames check-ac-limits to check-ticket-ac-limits, and shrinks
+    blocking_hook_ids to five ids. test_precommit_safety_net.py _EXPECTED_BLOCKING_HOOKS and
+    precommit-autofix SKILL.md Step 4 change too. The shared declaration loader is added
+    beside the check, and its module must be deployed: hook dependencies must be in the
+    build deploy manifest (CLAUDE.md).
+  required_skills:
+    - python-coder
+  post_write_commands:
+    - "python3 scripts/build.py"
+    - "python3 -m pytest unit_tests/commit_guardian/test_ge_132a_1.py unit_tests/commit_guardian/test_precommit_safety_net.py unit_tests/commit_guardian/test_hook_registration_inventory.py"
+  constraints:
+    - >-
+      WHICH CHECKS COUNT, pinned here: every hooks_manifest member whose tier is judgment and
+      whose stages include pre-commit. That is 67 at origin/main bd4ecb9a, of 76 registered.
+      Transform-tier hooks never refuse and are out. Manual-stage hooks, such as the canary,
+      are out. Derive the population from the manifest at run time and never list hook ids in code.
+    - >-
+      The declaration is the existing per-hook entry in templates/scripts/precommit-autofix.json
+      rules[], keyed by hook_id. Do not create a second table. Presence is a cross-check
+      between the two id sets, read as data, with no hard-coded hook list and no exemption
+      decided by name.
+    - >-
+      THE STALE RULES MUST GO IN THE SAME CHANGE, or arm four refuses the real tree.
+      check-docstrings has no hooks_manifest member and no docstring gate exists on main, so
+      remove its rule. The check-ac-limits rule is RENAMED to check-ticket-ac-limits
+      (BrainCandy, 2026-10-09). Its text, "per-file AC count limits", is that hook's
+      (hooks/check_ac_limits.py, "Ticket AC Count Limits"), not check-ac-tree-limits'.
+    - >-
+      BLOCKING LIST, SAME COMMIT. BO-210a-2's criteria were amended on 2026-10-09, with
+      BrainCandy's approval, to drop check-docstrings and check-ac-limits. blocking_hook_ids
+      therefore holds five ids: check-complexity, check-exception-handling, check-file-size,
+      check-ac-schema and check-contract-shrinking. check-ticket-ac-limits is NOT added. Three
+      things change in the same commit as the rules: blocking_hook_ids,
+      _EXPECTED_BLOCKING_HOOKS in unit_tests/commit_guardian/test_precommit_safety_net.py, and
+      templates/skills/precommit-autofix/SKILL.md Step 4, which names "the seven gating hooks".
+      The SKILL.md change is llm-expert prose in the same ticket.
+    - >-
+      ONE SHARED DECLARATION LOADER, owned by this record (decided by BrainCandy,
+      2026-10-09). Every reader of the declarations uses the same loader: this check,
+      GE-132a-2's validator, check-complexity's refusal text (GE-132a-3) and the BO-3800 run.
+      It reads the local table at skills_config precommit_autofix_config_path (default
+      .claude/precommit-autofix.json). For any hook the local table does not declare, it
+      falls back to the package seed (templates/scripts/precommit-autofix.json). A local rule
+      counts as "declared" only when it carries a disposition, so a pre-GE-132 scaffold rule
+      without the remedy fields falls back to the seed's declaration. This is why the fallback
+      is needed: build_config_scaffolds writes the scaffold only when absent (force=False), so
+      existing installs never receive the new fields. The loader reports, per hook, which
+      file supplied the declaration. No reader keeps a second parser or a hard-coded path.
+    - >-
+      The excused-list ratchet compares against the list in every parent revision: HEAD, plus
+      each MERGE_HEAD in a merge. The complexity and file-size ratchets already resolve parents
+      this way. An id present in no parent's list is an addition and refuses.
+    - >-
+      FAIL CLOSED. check_hook_parity's manifest comment says "Fail-open on I/O errors". That
+      must not extend to these legs. An unreadable or unparseable routing table, manifest or
+      excused list is reported as could-not-check in the GE-120 outcome vocabulary. It never
+      passes, and it is never reported as "no declaration".
+    - >-
+      Each refusal names the hook id, which of the three reasons applies (no declaration, an
+      addition to the excused list, a declaration for an unregistered check) and the fix.
+    - >-
+      The check judges the merged view the shared loader produces: local table first, package
+      seed per missing declaration. In this repository the committed seed is
+      templates/scripts/precommit-autofix.json, and the check also validates it directly,
+      because it is the file being committed. Every refusal states which file the offending
+      declaration came from.
+    - >-
+      Follow the CLAUDE.md error-handling policy. Tests run real `git commit` in a scratch repo
+      carrying the build-generated stanza from shared_reference_layout
+      (@pytest.mark.shared_layout_reader). Add no new build.py spawn.
+test_required: true
+test_spec:
+  - name: test_ge132a1_declared_and_excused_checks_do_not_refuse
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: behavioral
+    angle: real_artifact
+    surface_invoked: "real `git commit` in a scratch repo carrying the generated check-hook-parity stanza and copies of the REAL tracked manifest, routing table and excused list"
+    description: "Arm 1. A commit touching the routing table passes. check-complexity (declared) and check-folder-density (excused) are absent from the output. The real table holds no check-docstrings or check-ac-limits rule, and the renamed rule is keyed check-ticket-ac-limits. GREEN TODAY ONLY VACUOUSLY, because no check exists yet. After the build it is the regression boundary: a check that refuses everything, or a build that left either stale rule or renamed check-ac-limits to check-ac-tree-limits, fails it."
+  - name: test_ge132a1_new_check_without_declaration_is_refused
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: behavioral
+    angle: failure
+    description: "Arm 2. The fixture manifest gains check-widget-names (judgment, pre-commit) with no rule. The commit fails, HEAD does not move, and the output names check-widget-names and says a remedy declaration is needed. RED TODAY."
+    must_catch:
+      - "THE SILENT DEFAULT: a check with no declaration treated as 'author clears it'"
+  - name: test_ge132a1_excused_list_cannot_gain_an_entry
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: behavioral
+    angle: discrimination
+    description: "Arm 3. Arm 2's fixture also adds check-widget-names to undeclared_remedy_baseline. The commit is still refused and names check-widget-names as an addition to the excused list. RED TODAY."
+    must_catch:
+      - "THE OPEN DOOR: accept additions to the excused list"
+  - name: test_ge132a1_declaration_for_unregistered_check_is_refused
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: behavioral
+    angle: failure
+    description: "Arm 4. The fixture routing table holds a check-docstrings rule and no registered check has that id. The commit is refused, naming check-docstrings as a declaration for a check that is not registered. RED TODAY. On today's real tree this arm fires, which is why the stale rules go in the same change."
+    must_catch:
+      - "THE LEFTOVER: accept a declaration for an unregistered check"
+  - name: test_ge132a1_shared_loader_falls_back_to_seed_for_an_old_install
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: behavioral
+    angle: real_artifact
+    surface_invoked: "the shared declaration loader, executed in a fresh process from the deployed layout (shared_reference_layout, @pytest.mark.shared_layout_reader), then a real `git commit` through the generated check-hook-parity stanza"
+    description: "Owned constraint (BrainCandy, 2026-10-09). The scratch repo's .claude/precommit-autofix.json is the REAL pre-GE-132 table (origin/main bd4ecb9a's template, which has no disposition fields), and the seed carries the new declarations. Four assertions follow. (1) The loader returns the seed's declaration for check-complexity and names the seed as its source. (2) A local rule that does declare a disposition wins over the seed and names the local file. (3) A hook in neither table comes back missing, so GE-132a-1's arm 2 still refuses it. (4) The real commit passes. RED TODAY: no loader exists."
+    must_catch:
+      - "a loader that reads only the local table, so an old install yields no declaration"
+      - "a loader that reads only the seed, so a project's own declaration is ignored"
+test_rationale: >-
+  Each arm is a real commit through the build-generated stanza. A test that reads the
+  manifest or the routing table as text stays green when the check is unreachable, and the
+  widened files trigger is exactly that risk. Four tests cover the four arms, and a fifth
+  covers the shared loader BrainCandy decided on 2026-10-09. That fifth test feeds the loader
+  the real old-shape scaffold, not a typed fixture. Arms 2 to 4 and the loader are red today.
+  Arm 1 is green only vacuously, and becomes the regression boundary once the check exists.
+origin_agent: business-analyst
+created: 2026-10-09
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  THE EXCUSED LIST is the ratchet that lets the rule land without first writing 49
+  declarations. When this lands it holds exactly the checks that can refuse a commit and
+  have no declaration (49 by the 2026-10-09 census; re-measure at build time and never
+  hard-code the number). The third arm is what stops the list becoming the new place to
+  put a check that has no declaration.
+
+  THE STALE ARM WILL FIRE ON TODAY'S TREE. check-docstrings and check-ac-limits are routed
+  but not registered. The change that builds this record must remove or correct those two
+  rules in the same commit. DECIDED BY BRAINCANDY, 2026-10-09: the check-ac-limits rule is
+  renamed to check-ticket-ac-limits. Its text, "per-file AC count limits", is that hook's
+  ("Ticket AC Count Limits", hooks/check_ac_limits.py), not check-ac-tree-limits'.
+  check-docstrings has no registered hook, so its rule is removed. BO-210a-2's criteria
+  listed both stale ids as gating hooks. On BrainCandy's approval of 2026-10-09 they were
+  amended through BO-210a-2's own amended_by entry, so blocking_hook_ids holds five ids.
+  check-ticket-ac-limits is not added to that list, because the stale id never reached it
+  either.
+
+  BUILD NOTE: SAME COMMIT. The rules change, the blocking_hook_ids change,
+  _EXPECTED_BLOCKING_HOOKS in unit_tests/commit_guardian/test_precommit_safety_net.py (five
+  ids) and templates/skills/precommit-autofix/SKILL.md Step 4 (which lists "the seven
+  gating hooks" by name) all land in one commit. The SKILL.md change is llm-expert prose in
+  the same ticket.
+
+  WHICH CHECKS COUNT: those that can refuse a commit (the census counts pre-commit
+  judgment-tier gates). Checks that only rewrite a file and never refuse are out of
+  scope. The tier boundary is the IT PO's to pin down.
+
+  NAMED MUTATIONS.
+  (1) THE SILENT DEFAULT: treat a check with no declaration as "author clears it".
+      MUST GO RED: the second arm. MUST STAY GREEN: arms one and four, and every arm of
+      GE-132a-2.
+  (2) THE OPEN DOOR: accept additions to the excused list.
+      MUST GO RED: the third arm only.
+  (3) THE LEFTOVER: accept a declaration for an unregistered check.
+      MUST GO RED: the fourth arm only.

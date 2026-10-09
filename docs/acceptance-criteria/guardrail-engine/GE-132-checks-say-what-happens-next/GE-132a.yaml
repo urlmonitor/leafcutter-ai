@@ -1,0 +1,109 @@
+id: GE-132a
+title: "Every check that can stop a commit declares what the author does, who helps and with which skill, and a check without that declaration cannot be added"
+component: guardrail-engine
+components:
+  - commit_guardian
+  - precommit_hooks
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Each check says up front what happens when it says no.
+
+  For every check that can stop a commit there is one declaration, kept in one
+  place, that states three things: what the author should do, which specialist is
+  brought in to handle the refusal (or that the author clears it themselves), and
+  which skill that specialist applies. When the check refuses, the author is shown
+  those instructions. A check registered without a declaration is refused, so the
+  undeclared ones can only become fewer. A declaration naming a specialist or skill
+  that does not exist is refused, and so is a declaration left behind for a check
+  that is no longer registered.
+depends_on:
+  - GE-132
+doc_links:
+  - path: docs/acceptance-criteria/guardrail-engine/GE-132-checks-say-what-happens-next/GE-132.yaml
+    relationship: parent
+    status: exists
+  - path: templates/scripts/precommit-autofix.json
+    relationship: modifies
+    status: exists
+    relevance: >-
+      Where the declaration lives: an extension of the existing per-hook `rules` entries,
+      not a new table. See notes.
+  - path: docs/acceptance-criteria/build-orchestration/BO-210-precommit-safety-net/BO-210a-2.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      blocking_hook_ids stays the only authority on which hooks gate. Its stale-entry arm
+      (an approved-but-unreached id fails) already covers that list, so this tree covers
+      stale routing RULES only and does not restate it.
+  - path: docs/acceptance-criteria/guardrail-engine/GE-126-checks-answer-truthfully/GE-126d.yaml
+    relationship: related
+    status: exists
+  - path: docs/acceptance-criteria/guardrail-engine/GE-127-files-stay-workable/GE-127e-3-ii.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      The same rule for one check: a refusal's instructions name only tools that exist.
+      GE-132a-2 applies it to the declared specialist and skill for every check.
+  - path: docs/acceptance-criteria/guardrail-engine/GE-120-green-means-checked/GE-120h-5.yaml
+    relationship: related
+    status: exists
+delivers_to:
+  - ac_id: BO-3800b-3
+    contract: >-
+      For each check that can refuse a commit, one validated declaration naming the
+      author's instructions, the handling specialist (or that the author clears it) and the
+      skills that specialist applies. The run reads it and never infers the specialist.
+expects_from: null
+documentation_triggers: []
+documentation_rationale: >-
+  The declaration is a further registration leg in GE-126d's sense, and GE-126d-5 already
+  owns the reference that lists each leg and what it buys. Adding this leg to that
+  reference is a follow-up there. A separate document would be a second description of
+  the same legs, which is the drift GE-126d exists to remove.
+origin_agent: business-analyst
+created: 2026-10-09
+amended_by: []
+superseded_by: null
+covered_by:
+  - GE-132a-1
+  - GE-132a-2
+  - GE-132a-3
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  WHERE THE DECLARATION LIVES: the existing routing table's per-hook rules, extended with
+  the author's instructions and the specialist's skills. The reasons:
+    - The table already answers "who handles a refusal of hook X" for 18 gates. A
+      second table would give two answers to that question, and they would drift.
+    - The router and the gating list (BO-210a) already read this file. The remedy then
+      sits next to the gating list rather than in a file the router never opens.
+    - The hooks manifest stays the registry of which checks exist. Completeness is a
+      cross-check between the two, the same parity shape GE-126d uses.
+  Rejected alternatives: (a) a remedy field on each hooks-manifest entry. Registration
+  and remedy would sit together, but the agent map already in the routing table would be
+  duplicated. (b) An agent hint printed in each gate's own output. That needs code in
+  every gate (1 of 67 does it today) and gives a second source that can disagree.
+
+  "THE AUTHOR CLEARS IT" IS A VALID DECLARATION. Not every refusal needs a specialist,
+  and GE-126d records that exclusion is legitimate. A declaration may say no specialist
+  is brought in. It must still give the author instructions. What is refused is having no
+  declaration at all.
+
+  THREE CHILDREN. Presence (a-1), validity (a-2) and reaching the author (a-3) fail
+  independently. Each can be complete while another is broken.
+
+  FOLLOW-UPS, NAMED SO THEY ARE NOT SPECIFIED HERE:
+    - Whether a declaration naming a specialist for a gate that is absent from
+      blocking_hook_ids should be refused, since nothing would ever bring that specialist
+      in. The natural end state collapses the roster into "gates whose declaration names a
+      specialist", but that amends BO-210a and needs its own decision.
+    - check-complexity's printed agent hint. Once the declaration exists it is a second
+      source that can disagree with it. Retire the hint, or derive it from the declaration.
+    - Writing declarations for the 49 currently undeclared gates.

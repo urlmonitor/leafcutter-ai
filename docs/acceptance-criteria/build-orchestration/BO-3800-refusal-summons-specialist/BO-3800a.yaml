@@ -12,17 +12,19 @@ readiness: draft
 priority: medium
 roadmap_phase: phase_1
 criteria: |
-  Turned away is not lost — during a drive, the change waits then goes through.
+  Turned away is not lost — a change a drive or the commit agent delivers waits, then goes through.
 
-  When a standard refuses work that is being driven, the change is kept exactly
-  as it was left while the file is put right, and it is delivered afterwards
-  without anyone having to start again, re-do the work by hand, or push it past
-  the standard.
+  When a standard refuses a change delivered by a drive, or by the commit agent
+  whether in a drive or in an interactive session, the change is kept exactly as
+  it was left. The specialist the refusal calls for is brought in to put the file
+  right, and the change is delivered afterwards without anyone having to start
+  again, re-do the work by hand, or push it past the standard.
 
-  This promise covers work that is being driven, and only that. A refusal met by
-  someone running delivery by hand is simply a refusal, as it is today: the
-  refusing standard's own message is the whole of what the author gets, nothing
-  is held on their behalf and no specialist is brought in.
+  This promise covers those deliveries, and only those. A refusal
+  met by an agent or a person who commits directly is simply a refusal, as it is
+  today. The refusing standard's own message, which says what to do and which
+  specialist to bring in, is the whole of what they get. Nothing is held on their
+  behalf and no specialist is brought in for them.
 depends_on:
   - BO-3800
 doc_links:
@@ -71,9 +73,31 @@ amended_by:
       named mutations and their must-go-red / must-stay-green lists are correct under this
       decision and were NOT altered; only its open-question section was replaced with the
       answer. Title judged still TRUE and left as authored.'
+  - reason: scope-widened-by-product-decision
+    by: business-analyst
+    at: 2026-10-09
+    note: 'BrainCandy approved, 2026-10-09, answering the spawn-scope question: "if commit
+      agent did it, it would be able to spawn it. And if any other agent or human does it
+      they would also know what to do." The criteria are widened from "work that is being
+      driven, and only that" to deliveries by a drive or by the commit agent, the latter
+      whether in a drive or in an interactive session. A commit an agent or a person makes
+      directly stays inform-only: the refusal''s own message, which now says what to do
+      and which specialist to bring in (GE-132a-3), is all they get. The criteria state the
+      observable outcome (the specialist is brought in) and do NOT say the commit agent
+      calls the Agent tool. Under ADR-019 a depth-1 commit agent cannot spawn. The
+      buildable shape is a BO-3000a handoff: the commit agent returns the specialist and
+      the demand, and its depth-0 dispatcher (the driver, or the interactive session)
+      engages the specialist. That 2026-09-14 depth reasoning still stands. It decided
+      WHO can do the engaging, never that a commit-agent commit outside a drive is out of
+      scope. Title, depends_on, req_status, readiness, priority and covered_by UNTOUCHED;
+      the title is still true. This record''s notes still describe the 2026-09-14
+      driven-only population. They were deliberately left unedited, because only the
+      criteria and this audit entry were authorised. This entry supersedes those notes
+      where they disagree.'
 superseded_by: null
 covered_by:
   - BO-3800a-1
+  - BO-3800a-2
 implemented_by: []
 change_target: pipeline
 risk_surface: internal

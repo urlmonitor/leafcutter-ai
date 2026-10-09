@@ -1,5 +1,5 @@
 id: BO-3800c
-title: "The specialist arrives knowing which file is at issue and how much has to leave it"
+title: "The specialist arrives knowing which file is at issue and exactly what the standard demands of it"
 component: build-orchestration
 components:
   - build_orchestration
@@ -16,9 +16,11 @@ criteria: |
   No guesswork — the demand travels with the request, exactly as it was stated.
 
   Whatever the standard asked for is carried across intact: which file is at
-  issue and how much has to come out of it. The specialist never has to work out
-  the demand for itself or guess at it, so it cannot answer a different question
-  from the one that was actually asked.
+  issue and what it demands of it, whether that is how much has to come out of an
+  oversized file or which functions are more complex than allowed, each with its
+  complexity and the ceiling it must meet. The restructuring specialist never has
+  to work out the demand for itself or guess at it, so it cannot answer a
+  different question from the one that was actually asked.
 depends_on:
   - BO-3800
   - GE-127f-3
@@ -80,10 +82,23 @@ documentation_triggers:
   - reference-doc
 origin_agent: product-owner-v3
 created: 2026-09-14
-amended_by: []
+amended_by:
+  - reason: scope-widened-by-product-decision
+    by: business-analyst
+    at: 2026-10-09
+    note: 'BrainCandy approved, 2026-10-09, including the title change (was "The
+      specialist arrives knowing which file is at issue and how much has to leave it").
+      Criteria widened so the carried demand covers a complexity refusal ("complexity X
+      but only Y allowed": each function, its complexity and its ceiling) as well as
+      lines that must leave an oversized file. The party is the restructuring specialist
+      in both cases. depends_on, req_status, readiness and priority UNTOUCHED. depends_on
+      still names only GE-127f-3. The complexity source, GE-131a-3, is carried on new child
+      BO-3800c-2 rather than added here, because depends_on was not part of the approved
+      amendment.'
 superseded_by: null
 covered_by:
   - BO-3800c-1
+  - BO-3800c-2
 implemented_by: []
 change_target: pipeline
 risk_surface: contract_boundary

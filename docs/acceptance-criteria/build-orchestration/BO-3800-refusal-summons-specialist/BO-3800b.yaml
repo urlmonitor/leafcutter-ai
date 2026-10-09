@@ -14,10 +14,13 @@ roadmap_phase: phase_1
 criteria: |
   Restructuring goes to a specialist, not to the author racing a standard.
 
-  Whoever is adding the new work is not the one asked to reorganise the file
-  around it. Someone whose craft is restructuring does that part, so the file is
-  genuinely reorganised and the new work gets a home of its own — rather than
-  existing content being shifted next door to make a number fall.
+  When a standard turns work away because code needs restructuring, whether a file
+  has grown too long or a function has become more complex than it is allowed to
+  be, whoever is adding the new work is not the one asked to put it right. The
+  restructuring specialist does that part, applying the skill the refusing standard
+  names for it: complexity reduction for a function that is too complex. The code
+  is then genuinely reorganised and the new work gets a home of its own, rather
+  than existing content being shifted next door to make a number fall.
 depends_on:
   - BO-3800
   - INF-800f
@@ -85,11 +88,23 @@ documentation_triggers:
   - sequence-diagram
 origin_agent: product-owner-v3
 created: 2026-09-14
-amended_by: []
+amended_by:
+  - reason: scope-widened-by-product-decision
+    by: business-analyst
+    at: 2026-10-09
+    note: 'BrainCandy approved, 2026-10-09. Criteria widened from the file-size case
+      alone to every refusal that calls for restructuring, with complexity as the second
+      case: "Spawn restructuring agent (which should have the complexity skill)." The
+      craft is the restructuring specialist in both cases. For a complexity refusal it
+      applies the complexity-reduction skill the refusing check declares (GE-132a). Title,
+      depends_on, req_status, readiness and priority UNTOUCHED; the title remains true.
+      New child BO-3800b-3 carries the complexity case. BO-3800b-1 and BO-3800b-2 are
+      unchanged and remain the file-size instance.'
 superseded_by: null
 covered_by:
   - BO-3800b-1
   - BO-3800b-2
+  - BO-3800b-3
 implemented_by: []
 change_target: pipeline
 risk_surface: contract_boundary
