@@ -368,7 +368,10 @@ ticket 04) is the **blocking layer**. This warn is non-destructive and never hal
    worktree-root lock per `building-epics` §5.2 BEFORE spawning. Hold the
    lock for the agent's lifetime; release it per §5.3 on success AND on
    every failure path. Wrap the spawn in a `trap`-style `finally` so a
-   crash still releases.
+   crash still releases. For `commit`, run the knowledge-routing stage and
+   observe inside that lock exactly as `building-epics` §5.9 orders them.
+   Stage the stage reply's `manifest` paths by name, and return the observe
+   reply as `knowledge_routing`.
 4. Spawn the chosen agent via the `Agent` tool with input
    `{ticket_path: <absolute path>}`. The agent invokes `signoff` as its
    final action.
@@ -593,6 +596,8 @@ The explicit paths to stage are:
    reformats SQL). These are discovered by re-running `git status --short`
    after the first hook pass — any newly-modified file that matches a known
    hook-artefact pattern is staged explicitly.
+4. `commit` only: every path in the `building-epics` §5.9 stage reply's `manifest`
+   (the knowledge-routing writes this commit must carry).
 
 **Do NOT use `git add .` or `git add -A`** — these commands stage every
 modified file in the worktree, including in-flight files from parallel agents
@@ -620,8 +625,10 @@ wait, fall through to §3.4 with `blocker_summary: commit-lock-stuck`.
 When the ticket finishes cleanly:
 
 ```
-{ "ticket_path": "<absolute path>", "status": "done" }
+{ "ticket_path": "<absolute path>", "status": "done", "knowledge_routing": { ...§5.9 observe reply... } }
 ```
+
+`knowledge_routing` is present whenever a `commit` phase ran, on a blocked payload too.
 
 When escalating to the caller (case §3.4 fall-through, or
 `question`-class comment from §2.2):

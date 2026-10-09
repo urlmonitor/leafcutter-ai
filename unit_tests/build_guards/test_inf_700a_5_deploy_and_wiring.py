@@ -8,8 +8,9 @@ GOAL: Prove the INF-700a-5 durability step is REACHABLE in a deployed install,
        and the deployed CLI actually runs from there against a temp sink.
        The source-tree tests cannot see a missing deploy entry; this can.
     2. build-epic.js is EXCLUDED from knowledge_routing_wiring (BrainCandy,
-       2026-10-08, ADR-040 section 3): no commit follows its routing step, so
-       its writes could never be published. The exclusion is checked against
+       2026-10-08, ADR-040 section 3): it makes no commit, so its own routing
+       step could never be published; since INF-700a-1-iv each ticket-supervisor
+       routes around its own commit (SKILL.md section 5.9). The exclusion is checked against
        the real guard over the real config, and the path itself is driven
        through the engine harness to show it no longer dispatches a routing
        step that would write unpublishable files.
@@ -83,8 +84,10 @@ def test_build_epic_is_excluded_with_its_reason_and_the_guard_still_passes():
     config = yaml.safe_load((_REPO_ROOT / "config" / "guardrail_gates.yaml").read_text())
     section = config["knowledge_routing_wiring"]
     assert "build-epic.js" not in section["wired"]
-    excluded = {e["path"]: e["reason"] for e in section["excluded"]}
-    assert "no commit follows the step" in excluded.get("build-epic.js", "").lower(), excluded
+    excluded = {e["path"]: e for e in section["excluded"]}
+    # Since INF-700a-1-iv the epic path routes per ticket in the skill, not here.
+    assert "makes no commit of its own" in excluded["build-epic.js"]["reason"].lower(), excluded
+    assert "SKILL.md §5.9" in excluded["build-epic.js"]["covered_by"], excluded
     result = check_knowledge_routing_wiring(_REPO_ROOT / "templates" / "workflows-js", config)
     assert result["unwired"] == [], result
 
