@@ -8,7 +8,7 @@ status: active
 req_status: active
 readiness: approved
 priority: medium
-work_status: done
+work_status: in_progress
 criteria: 'Make informed decisions with evidence you can revisit.
 
 
@@ -45,6 +45,21 @@ origin_agent: product-owner
 created: '2026-10-01'
 amended_by:
 - '2026-10-01 PO coverage audit: replace obsolete all-work-todo notes with measured-scope and rollout boundaries.'
+- '2026-10-09: business-analyst moved work_status from done to in_progress. KM-400b and
+  KM-400e were both moved to in_progress in the same pass after five new L2 children
+  were authored for the retention and capacity incident, so this L0 could no longer be
+  a proven-done composite. No criteria, covered_by or L1 title changed — this edit
+  exists so the parent is not left stale, since the AC hooks only validate files
+  present in a commit index and would never have been shown this one.'
+- '2026-10-09: product-owner added a sixth L1, KM-400f, on the user''s instruction, and
+  covered_by gains it. KM-400f holds the retention and capacity work that had been
+  forced into KM-400b and KM-400e behind child_limit_override waivers of 7 and 8; four
+  of those five L2s were re-parented into it as KM-400f-1 through KM-400f-4. This L0
+  held 5 L1s against a cap of 7 and now holds 6, so no waiver is needed here. KM-400b
+  returns to work_status done — all five of its remaining children are done. KM-400e
+  stays in_progress (KM-400e-5 in_progress, KM-400e-8 todo) with its override reduced
+  to 6. This L0 stays in_progress, since KM-400e and the new KM-400f are both
+  unfinished. No criteria, no vision and no roadmap change.'
 superseded_by: null
 covered_by:
 - KM-400a
@@ -52,6 +67,7 @@ covered_by:
 - KM-400c
 - KM-400d
 - KM-400e
+- KM-400f
 implemented_by: []
 change_target: code
 risk_surface: contract_boundary

@@ -23,9 +23,10 @@
     {
       "id": "baseline",
       "label": "Pre-merge baseline",
-      "human": "Capture the pre-merge test baseline on main so post-merge failures can be triaged against a known-good starting point.\n\nI/O boundary: test-runner stores test output/baseline in ticket evidence and returns the driver phase status. The generic phase envelope does not type the full test report, test counts or execution receipts.\n\nContract fields and examples (generated)\nConsumes:\n  No checked JSON binding documented in this direction.\nProduces:\n  SOURCE-REVIEWED DOCUMENTATION: Source-reviewed transcription of templates/workflows-js/build-ticket.js phase-result response schema (also used by build-feature.js); no new runtime registration or automatic JavaScript/schema parity.\n  phase-result/status: string (required)\n  phase-result/message: string (optional)\n  Schema: [phase-result](docs/product-truth/schemas/delivery-workflow-phase-result.schema.json)\n\nOutput illustrative phase-result projection; not an execution receipt — phase-result; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"status\": \"ok\",\n  \"message\": \"The assigned phase completed; the ticket retains its evidence.\"\n}",
+      "description": "The test agent captures a test baseline on main before merging, so later failures can be triaged against a known-good starting point.",
       "order": 1,
       "agent": "test-runner",
+      "actor_kind": "llm",
       "implements": [
         "FIN-100a"
       ],
@@ -76,9 +77,10 @@
     {
       "id": "openpr",
       "label": "Open the PR",
-      "human": "Open the pull request if one does not already exist for the branch.\n\nI/O boundary: The pull-request agent operates on GitHub PR title/body and URL, then reports phase status. The GitHub PR object itself is not a Leafcutter JSON contract.\n\nContract fields and examples (generated)\nConsumes:\n  No checked JSON binding documented in this direction.\nProduces:\n  SOURCE-REVIEWED DOCUMENTATION: Source-reviewed transcription of templates/workflows-js/build-ticket.js phase-result response schema (also used by build-feature.js); no new runtime registration or automatic JavaScript/schema parity.\n  phase-result/status: string (required)\n  phase-result/message: string (optional)\n  Schema: [phase-result](docs/product-truth/schemas/delivery-workflow-phase-result.schema.json)\n\nOutput illustrative phase-result projection; not an execution receipt — phase-result; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"status\": \"ok\",\n  \"message\": \"The assigned phase completed; the ticket retains its evidence.\"\n}",
+      "description": "The pull request agent opens a pull request for the branch if one does not already exist.",
       "order": 2,
       "agent": "pull-request",
+      "actor_kind": "llm",
       "implements": [
         "BO-800"
       ],
@@ -129,9 +131,10 @@
     {
       "id": "mergemain",
       "label": "Merge origin/main in",
-      "human": "Merge origin/main into the worktree so the branch is up to date — HALT on conflict instead of advancing.\n\nContract fields and examples (generated)\nNo JSON handoff: This step consumes Git refs and changes the worktree/index through git merge; conflicts are command output and repository state. It does not define a JSON merge result or silently serialize a new workflow DTO.",
+      "description": "The finalize pipeline merges the latest main into the feature worktree and halts on a conflict instead of advancing.",
       "order": 3,
       "agent": "finalize-feature",
+      "actor_kind": "deterministic",
       "implements": [
         "FIN-100b"
       ],
@@ -146,9 +149,10 @@
     {
       "id": "postmerge",
       "label": "Post-merge tests + triage",
-      "human": "Run the post-merge test suite and triage any failures against the baseline — HALT on a real regression.\n\nI/O boundary: The baseline and detailed test receipts are retained text/files; phase status reports pass/failure to the driver. status ok alone does not establish comparative regression evidence.\n\nContract fields and examples (generated)\nConsumes:\n  SOURCE-REVIEWED DOCUMENTATION: Source-reviewed transcription of templates/workflows-js/build-ticket.js phase-result response schema (also used by build-feature.js); no new runtime registration or automatic JavaScript/schema parity.\n  phase-result/status: string (required)\n  phase-result/message: string (optional)\n  Schema: [phase-result](docs/product-truth/schemas/delivery-workflow-phase-result.schema.json)\nProduces:\n  SOURCE-REVIEWED DOCUMENTATION: Source-reviewed transcription of templates/workflows-js/build-ticket.js phase-result response schema (also used by build-feature.js); no new runtime registration or automatic JavaScript/schema parity.\n  phase-result/status: string (required)\n  phase-result/message: string (optional)\n  Schema: [phase-result](docs/product-truth/schemas/delivery-workflow-phase-result.schema.json)\n\nInput illustrative phase-result projection; not an execution receipt — phase-result; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"status\": \"ok\",\n  \"message\": \"The assigned phase completed; the ticket retains its evidence.\"\n}\n\nOutput illustrative phase-result projection; not an execution receipt — phase-result; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"status\": \"ok\",\n  \"message\": \"The assigned phase completed; the ticket retains its evidence.\"\n}",
+      "description": "The test agents run the post-merge suite and triage any failures against the baseline, halting on a real regression.",
       "order": 4,
       "agent": "test-runner / test-failure-triage",
+      "actor_kind": "llm",
       "implements": [
         "FIN-100c",
         "FIN-100d"
@@ -233,9 +237,10 @@
     {
       "id": "closeacs",
       "label": "Close tickets + ACs",
-      "human": "Close the tickets and mark the source acceptance criteria done in the store.\n\nI/O boundary: Ticket Markdown lifecycle moves and parsed AC YAML updates are separate artifacts. This projection is illustrative only.\n\nContract fields and examples (generated)\nConsumes:\n  ac/id: string (required)\n  ac/implemented_by: array (optional; default [])\n  ac/covered_by: array (optional; default [])\n  Schema: [ac](config/ac_store_schema.json)\nProduces:\n  ac/id: string (required)\n  ac/work_status: null|string (optional)\n  Schema: [ac](config/ac_store_schema.json)\n\nInput illustrative ac projection; not an execution receipt — ac; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"id\": \"ACD-300\",\n  \"implemented_by\": [\n    \"app/service.py\"\n  ],\n  \"covered_by\": [\n    \"tests/test_service.py::test_contract\"\n  ]\n}\n\nOutput illustrative ac projection; not an execution receipt — ac; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"id\": \"ACD-300\",\n  \"work_status\": \"done\"\n}",
+      "description": "The finalize pipeline closes the tickets and marks their source acceptance criteria done in the store.",
       "order": 5,
       "agent": "finalize-feature",
+      "actor_kind": "deterministic",
       "implements": [
         "ACD-600a",
         "BO-400b"
@@ -336,9 +341,10 @@
     {
       "id": "mergepr",
       "label": "Merge the PR to main",
-      "human": "Merge the PR to main — confirmation-gated because it is destructive to the protected branch.\n\nContract fields and examples (generated)\nNo JSON handoff: This is a human-gated GitHub merge action on an existing PR and Git branch, with a merge receipt/commit in GitHub/Git. This flow defines no Leafcutter JSON merge DTO and this documentation never grants merge authority.",
+      "description": "After the person confirms, the finalize pipeline merges the pull request into the protected main branch.",
       "order": 6,
       "agent": "finalize-feature",
+      "actor_kind": "deterministic",
       "implements": [
         "FIN-100f"
       ],
@@ -353,9 +359,10 @@
     {
       "id": "archive",
       "label": "Archive + remove worktree",
-      "human": "Archive the epic and remove the feature worktree once the PR is merged.\n\nContract fields and examples (generated)\nNo JSON handoff: This step moves Markdown epic/ticket files and removes the already-merged worktree after its checks. Inputs are verified Git/PR state and filesystem paths; output is archive placement, not a serialized JSON payload.",
+      "description": "Once the pull request is merged, AI agents archive the epic and remove the feature worktree.",
       "order": 7,
       "agent": "finalize-feature-archive-check / worktree-agent",
+      "actor_kind": "llm",
       "implements": [
         "BO-400c-2"
       ],

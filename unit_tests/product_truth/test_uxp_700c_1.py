@@ -83,6 +83,7 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+from typing import Any
 
 import yaml
 
@@ -110,7 +111,7 @@ def _step(step_id: str, implements: list, order: int, impl_status: str | None = 
     step = {
         "id": step_id,
         "label": step_id,
-        "human": f"the actor performs {step_id}",
+        "description": f"the actor performs {step_id}", "actor_kind": "human",
         "order": order,
         "implements": implements,
     }
@@ -294,7 +295,7 @@ def _build_minimal_cli_store(tmp: Path) -> Path:
     }
     _write_flow(pt_root / "flows", flow)
 
-    common_entry_fields = {
+    common_entry_fields: dict[str, Any] = {
         "flow_kind": "user",
         "screen": None,
         "mock_data": None,

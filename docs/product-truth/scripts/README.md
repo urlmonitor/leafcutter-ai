@@ -4,7 +4,7 @@ description: "CLI scripts that write and check the product-truth store -- genera
 type: reference
 status: active
 created: 2026-09-09
-last_updated: 2026-09-09
+last_updated: 2026-10-09
 components:
   - ux_prototyping
 related_docs:
@@ -45,6 +45,15 @@ scripts read the store and either validate it or apply a targeted transform.
   `resolved N pointer(s)` on every run (pass or fail, including a genuine zero)
   so a run that resolved none is distinguishable from one that resolved some and
   found none broken.
+- `product_truth_descriptions.py` — the step description gates: every step and
+  branch `description` is one plain sentence of what happens, at most
+  `DESCRIPTION_MAX_CHARS` (200) characters and free of code tokens, ids, build
+  status and generated contract text; also declares the `actor_kind` vocabulary.
+  The validator reports each violation as `[description] <flow> <step|branch>
+  '<id>': <reason>` and fails the run (kernel decision dec-7b1dcfd47f85cf0a).
+- `product_truth_contract_render.py` — derives each node's compatibility
+  `consumes`/`produces` labels from `io_contracts`; it never writes text into a
+  description.
 - `apply_flow_backlinks.py` — one-off/utility transform that applies backlink
   edits to flow files.
 - `universal_rule_check.py` — CLI wrapper for running a rule check across the

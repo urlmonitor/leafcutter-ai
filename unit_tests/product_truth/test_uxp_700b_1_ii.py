@@ -134,7 +134,7 @@ def _build_fixture(tmp: Path) -> Path:
                 {
                     "id": "step-a",
                     "label": "Step A",
-                    "human": "Do the thing.",
+                    "description": "Do the thing.", "actor_kind": "human",
                     "io_contracts": {"not_applicable": "User-action fixture for mixed artifact counts; no JSON handoff is modeled."},
                     "order": 1,
                     "impl_status": "not_started",
