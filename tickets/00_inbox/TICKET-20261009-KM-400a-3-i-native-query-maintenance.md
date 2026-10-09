@@ -4,7 +4,7 @@ description: User-requested maintenance derived from approved KM-400a-3-i; remov
   remaining legacy query names while preserving admitted query identities and migration
   support.
 created: '2026-10-09'
-status: in_progress
+status: done
 priority: medium
 depends_on: []
 components:
@@ -21,7 +21,7 @@ ac_traceability:
 agents:
   python-coder: signed_off
   code-review: signed_off
-  commit: needed
+  commit: signed_off
 files_touched:
 - changelogs/2026-10-09-0905-neo4j-native-query-names.md
 - docs/INDEX.md
@@ -226,7 +226,7 @@ the generated index timestamp and absent optional implementation-task section.
 - [x] python-coder — 2026-10-09 09:11
 - [x] code-review — 2026-10-09 09:12
 
-- [ ] commit
+- [x] commit — 2026-10-09 09:25
 
 ## Comments
 
@@ -281,3 +281,19 @@ subject "refactor(knowledge): use native Neo4j query names". The scoped paths
 are exactly the 26 entries in this ticket's files_touched list. Existing coder
 and review signatures remain unchanged. Commit execution and final phase sign-off
 are pending; the ticket remains in_progress until the normal hooks and commit finish.
+
+### 2026-10-09 09:25 - commit (status: ok)
+feedback-id: fb_2026-10-09_8ac6fd75
+completion_manifest:
+  pre_commit_hooks_pass: true
+  commit_message_valid: true
+  ticket_staged: true
+Created commit 2c074a094e731d7238e02fd29e47c5bcf8b1e350 with subject
+"refactor(knowledge): use native Neo4j query names". Verified HEAD moved and
+only the approved 26 paths were committed. The initial documentation-length
+refusal was resolved by extracting the native-query reference with reciprocal
+links and preserving the moved content; the single retry passed all applicable
+normal pre-commit and commit-message hooks. No hooks were bypassed and no full
+pytest suite ran. Existing coder/review evidence remains intact. This signs off
+only the completed commit phase; no PR, CI completion, push or merge is claimed.
+The routine commit review identified no additional reusable learning to capture.
