@@ -22,21 +22,29 @@ ARCHITECTURE: ``evaluate(client, repo, *, now=None)`` returns the verdict object
     requests excluded. Only ``post-merge-suite.yml`` is read: the timing lane
     never holds. A failed read is ``could_not_read``, which holds (fail closed).
     Numbers (page size, staleness bound) come from ``post_merge_tunables.json``.
-    CLI: GITHUB_API_URL, GITHUB_TOKEN and GITHUB_REPOSITORY from the
-    environment; the reason is printed; exit 0 only on ``pass``. Nothing from the
-    event payload is read here, and none of it may reach a shell.
+    ``evaluate_pull_request(client, repo, pr_number, *, now=None, head_sha=None)``
+    is ``evaluate`` followed by the pull request's one comment
+    (``_hold_comment.sync_comment``, TQ-600a-13-vii) and returns the verdict
+    unchanged; ``render_comment`` (re-exported) is the pure body renderer. The
+    comment is written after the verdict and never changes it or the exit code.
+    CLI: GITHUB_API_URL, GITHUB_TOKEN, GITHUB_REPOSITORY and GITHUB_EVENT_PATH
+    from the environment; the reason is printed; exit 0 only on ``pass``. ``main``
+    reads exactly two values from the event file, in Python: the pull request
+    number (``pull_request.number``, a positive int, else exit 2 and nothing is
+    judged or written) and ``pull_request.head.sha`` (used only when 40 lowercase
+    hex characters, else the comment says the head commit is unknown). No other
+    event text is read, and none of it may reach a shell.
     TRUST: the workflow runs under ``pull_request_target`` with the default
     branch's copy of this file, sparse-checked-out with no ``ref``, so a pull
     request that edits this module has no effect on its own verdict.
-    PERMISSIONS: this record only reads. ``issues: write`` (record an exemption
-    on the notice, TQ-600a-13-viii) and ``pull-requests: write`` (the comment,
-    TQ-600a-13-vii) are granted in the workflow now because TQ-600a-13-vi's
-    contract fixes the job's permission set at exactly those four; nothing in
-    this module uses them. Extension points: -vii adds the PR number (from
-    GITHUB_EVENT_PATH, in Python only) and the comment around ``evaluate``;
-    -viii evaluates the exemption only when ``state`` is red or did_not_complete
-    (``_held_verdict``); -xiv owns the stale/disabled/never_run wording
-    (``_reason_*`` helpers).
+    PERMISSIONS: ``pull-requests: write`` writes the comment (-vii).
+    ``issues: write`` (record an exemption on the notice, TQ-600a-13-viii) is
+    granted in the workflow because TQ-600a-13-vi's contract fixes the job's
+    permission set; nothing in this module uses it yet. Extension points: -viii
+    evaluates the exemption only when ``state`` is red or did_not_complete
+    (``_held_verdict``) and may return ``state="exempt"``
+    (``_hold_comment.LIFT_STATES``); -xiv owns the stale/disabled/never_run
+    wording (``_reason_*`` helpers, ``_hold_comment.HELD_HEADLINES``).
 """
 
 from __future__ import annotations
@@ -53,6 +61,7 @@ if __package__ in (None, ""):  # run as `python scripts/ci/post_merge_hold.py`: 
     sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 from scripts.ci._github_rest import GitHubClient, GitHubError  # noqa: E402
+from scripts.ci._hold_comment import EventError, read_event, render_comment, sync_comment  # noqa: E402, F401 -- render_comment is this module's public API
 from scripts.ci._notice_render import LABEL, parse_state  # noqa: E402
 from scripts.ci._run_history import (  # noqa: E402
     KIND_NEVER_RUN,
@@ -206,6 +215,21 @@ def evaluate(client: GitHubClient, repo: str, *, now: datetime | None = None) ->
         return _verdict("could_not_read", f"Post-merge suite status could not be read: {exc}", cause=str(exc))
 
 
+def evaluate_pull_request(client: GitHubClient, repo: str, pr_number: int, *, now: datetime | None = None, head_sha: str | None = None) -> dict:
+    """``evaluate``, then keep the pull request's one comment in step with the verdict, and return the verdict unchanged.
+
+    ``head_sha`` is the pull request's validated head commit (None: the comment says it is unknown). A comment
+    that cannot be listed or written is logged and never changes the verdict.
+    """
+    clock = now or datetime.now(timezone.utc)
+    verdict = evaluate(client, repo, now=clock)
+    try:
+        sync_comment(client, repo, pr_number, verdict, clock, head_sha)
+    except GitHubError as exc:  # the comment is for people; any other exception is a defect and raises (a raise exits 1: still held)
+        logger.warning("post-merge hold: the comment on #%s could not be kept in step: %s", pr_number, exc)
+    return verdict
+
+
 # --------------------------------------------------------------------------- CLI
 def main(argv: list[str] | None = None) -> int:
     """CLI entry point: print the reason, exit 0 only when the verdict is ``pass``."""
@@ -220,7 +244,12 @@ def main(argv: list[str] | None = None) -> int:
     except GitHubError as exc:
         print(f"Post-merge suite status could not be read: {exc}")
         return EXIT_BAD_INPUT
-    verdict = evaluate(client, repo)
+    try:
+        pr_number, head_sha = read_event(os.environ.get("GITHUB_EVENT_PATH"))
+    except EventError as exc:  # fail closed: nothing is judged, nothing is commented
+        print(f"Post-merge suite status could not be read: {exc}")
+        return EXIT_BAD_INPUT
+    verdict = evaluate_pull_request(client, repo, pr_number, head_sha=head_sha)
     print(verdict["reason"])
     return EXIT_OK if verdict["state"] == "pass" else EXIT_HELD
 

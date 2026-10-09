@@ -7,8 +7,11 @@ BUSINESS CONTEXT: TQ-600a-13-iii. The notice job holds ``issues: write`` and
     place that can be audited for what the job is able to do. Nothing here
     installs a dependency: the job runs on a bare runner.
 ARCHITECTURE: ``GitHubClient(api_url, token)`` offers ``get`` / ``post`` /
-    ``patch``, all delegating to ``request``. Every failure that crosses the
-    process boundary (HTTP status, connection, undecodable body) is raised as
+    ``patch``, all delegating to ``request``.
+    ``get_with_headers`` also returns the response headers (for a paginated
+    ``Link``); ``same_origin_path`` turns a ``Link`` target into a request only when
+    it stays on the API's origin, so the token never leaves it. Every failure that
+    crosses the process boundary (HTTP status, connection, undecodable body) is raised as
     ``GitHubError`` with the HTTP status (0 when none) so callers decide what a
     failed call means; this module never swallows one. The token is never
     logged or put in an exception message.
@@ -52,22 +55,46 @@ class GitHubClient:
 
     def request(self, method: str, path: str, body: dict | None = None, query: dict | None = None):
         """Send one request and return the decoded JSON body (None for an empty body)."""
+        return self.request_with_headers(method, path, body, query)[0]
+
+    def same_origin_path(self, url: str) -> str | None:
+        """Return ``url`` as a path (with its query) below this client's API root, or None when it is anywhere else.
+
+        A pagination ``Link`` is data from the service; requesting a URL on another origin would send the token
+        there, so only a URL on the same scheme, host, port and path prefix is ever turned into a request.
+        """
+        root, target = urllib.parse.urlsplit(self._root), urllib.parse.urlsplit(url)
+        if (target.scheme.lower(), target.netloc.lower()) != (root.scheme.lower(), root.netloc.lower()):
+            return None
+        if not (target.path == root.path or target.path.startswith(root.path.rstrip("/") + "/")):
+            return None
+        rest = target.path[len(root.path.rstrip("/")) :]
+        return f"{rest}?{target.query}" if target.query else rest
+
+    def request_with_headers(self, method: str, path: str, body: dict | None = None, query: dict | None = None):
+        """Send one request and return ``(decoded JSON body, response headers)``; header names are lower-cased."""
         url = f"{self._root}{path}"
         if query:
             url = f"{url}?{urllib.parse.urlencode(query)}"
         data = json.dumps(body).encode("utf-8") if body is not None else None
         headers = {
             "Accept": "application/vnd.github+json",
-            "Authorization": f"Bearer {self._token}",
             "X-GitHub-Api-Version": API_VERSION,
             "User-Agent": "leafcutter-post-merge-notice",
         }
         if data is not None:
             headers["Content-Type"] = "application/json"
         req = urllib.request.Request(url, data=data, headers=headers, method=method)  # noqa: S310 -- scheme checked in __init__
+        # An "unredirected" header is dropped by urllib when it follows a redirect, so the token cannot reach another origin.
+        req.add_unredirected_header("Authorization", f"Bearer {self._token}")
         try:
             with urllib.request.urlopen(req, timeout=self._timeout) as response:  # noqa: S310
+                if response.geturl() != req.full_url:  # a redirect was followed: whatever answered is not the API
+                    logger.warning("%s %s -> redirected, refusing the answer", method, path)
+                    message = f"{method} {path} was redirected; refusing the answer"
+                    raise GitHubError(message)
                 raw = response.read()
+                headers = {name.lower(): ", ".join(response.headers.get_all(name) or []) for name in set(response.headers.keys())}
         except urllib.error.HTTPError as exc:
             logger.warning("%s %s -> HTTP %s", method, path, exc.code)
             message = f"{method} {path} failed with HTTP {exc.code}"
@@ -76,7 +103,7 @@ class GitHubClient:
             logger.warning("%s %s -> %s", method, path, exc)
             message = f"{method} {path} failed: {exc}"
             raise GitHubError(message) from exc
-        return self._decode(method, path, raw)
+        return self._decode(method, path, raw), headers
 
     @staticmethod
     def _decode(method: str, path: str, raw: bytes):
@@ -85,13 +112,17 @@ class GitHubClient:
             return None
         try:
             return json.loads(raw)
-        except ValueError as exc:
+        except (ValueError, RecursionError) as exc:  # a hostile body nested past the interpreter's limit is not JSON we can read
             message = f"{method} {path} returned a body that is not JSON"
             raise GitHubError(message) from exc
 
     def get(self, path: str, query: dict | None = None):
         """GET ``path`` with an optional query mapping."""
         return self.request("GET", path, query=query)
+
+    def get_with_headers(self, path: str, query: dict | None = None):
+        """GET ``path``; return ``(decoded JSON body, response headers)`` (for a paginated ``Link`` header)."""
+        return self.request_with_headers("GET", path, query=query)
 
     def post(self, path: str, body: dict):
         """POST a JSON ``body`` to ``path``."""
