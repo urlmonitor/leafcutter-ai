@@ -373,3 +373,9 @@ GENERIC_SECRET:templates/scripts/commit_guardian/_file_description.py:*
 # files grow, and per-line entries break silently when lines shift.
 ENTROPY_HIGH:unit_tests/commit_guardian/test_ge_127e_3_i_no_substitute_and_verdict_independence.py:*
 ENTROPY_HIGH:unit_tests/commit_guardian/test_ge_127e_3_i_reachability_and_deployed.py:*
+
+# BO-2400f-5-iii (2026-09-30): ENTROPY_HIGH on a long CamelCase TestCase name that
+# spells out the behaviour under test (the 2026-09-25 refusal replay). Same shape as
+# the test-class-name entries above; not reproduced here because quoting it trips
+# the scanner this entry suppresses.
+ENTROPY_HIGH:unit_tests/workflows/test_bo2400f5iii_declined_step_replay_and_boundary.py:*

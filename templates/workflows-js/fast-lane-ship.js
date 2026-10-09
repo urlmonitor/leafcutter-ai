@@ -646,6 +646,152 @@ function classifyKnowledgeRouting(reply) {
 }
 
 // ---------------------------------------------------------------------------
+// BO-2400f-5-iii: the one shared reply classifier every step's reply passes
+// through, and the terminal declined-step halt it feeds. classifyStepReply()
+// is extracted and executed standalone by
+// test_bo2400f5iii_declined_step_replay_and_boundary.py (the same
+// brace-extraction technique test_bo_2700_defer_epic_pr.py uses for
+// selectDispatchPhases()), so it may reference NOTHING declared outside its
+// own body.
+// ---------------------------------------------------------------------------
+
+/**
+ * classifyStepReply — self-contained (see the note above). Decision order:
+ *  1. empty reply                         -> declined (no readable result).
+ *  2. object with `declined === true` or `status === "declined"`
+ *                                         -> declined; reason is the agent's own
+ *                                            reason/message/detail, trimmed only.
+ *  3. command step (`isCommandStep`, BO-2400a-1-i): a readable integer
+ *     `exit_status` decides (0 = result, else failed; wording is never
+ *     consulted). No readable `exit_status` -> declined (a stated refusal
+ *     verbatim, else a no-readable-result reason quoting any text).
+ *  4. object carrying a SUCCESS signal -> result, whatever its wording.
+ *  5. object with a failure `status` or `outcome === null` -> declined ONLY on
+ *     a STRONG marker in reason/message/detail; otherwise result, so the
+ *     step's own failure branch handles it.
+ *  6. object with no signal at all -> declined on a STRONG or WEAK marker.
+ *  7. plain string -> declined (stated refusal verbatim, else unparseable).
+ *  8. anything else -> result.
+ *
+ * @param {*} reply
+ * @param {{step: string, agent: string, isCommandStep: boolean}} meta
+ * @returns {{kind: ('result'|'declined'|'failed'), reason: (string|null)}}
+ */
+function classifyStepReply(reply, meta) {
+  var isCommandStep = !!(meta && meta.isCommandStep);
+  var noResult = "No readable result was returned for this step";
+  // Wording that states a role mismatch or a refusal of the task itself.
+  var strongMarker = /^\s*(refusing|declining)\s+(this|the)\s+(task|request|step)|\bmisrouted\b|\bnot\s+my\s+role\b|\bwrong\s+role\b|\bwrong\s+agent\s+for\b|outside\s+(of\s+)?(my|its)\s+(role|charter|scope)|\bnot\s+authori[sz]ed\s+to\s+act\s+as\b|\bi\s+am\s+(the\s+)?`?[\w-]+`?\s*,\s*(not|scoped\s+to)\b/i;
+  // Other first-person refusals: decisive only when nothing else signals.
+  var weakMarker = /\b(i|we)\s+(am\s+|must\s+|have\s+to\s+|will\s+)?(declin|refus)|\bi'?m\s+(declin|refus)|\bi\s+(can'?t|cannot|can\s+not)\s+help/i;
+  var successStatuses = ["ok", "success", "passed"];
+  var failureStatuses = ["error", "failed", "blocked", "refused", "blocker", "partial"];
+  var trueFlags = ["gate_passed", "green", "verdict_obtained", "obtained", "coverage_ok", "created", "entry_added"];
+  var anyBoolean = ["producible"];
+  var nonEmptyArrays = ["ac_ids", "tests_written", "files_modified"];
+  var anyArray = ["high_findings"];
+  var nonEmptyStrings = ["pr_url", "worktree_path"];
+  var anyString = ["bundle"];
+
+  function collectTexts(value) {
+    if (typeof value === "string") return value.trim() ? [value.trim()] : [];
+    if (!value || typeof value !== "object") return [];
+    return [value.reason, value.message, value.detail]
+      .filter(function (t) { return typeof t === "string" && t.trim(); })
+      .map(function (t) { return t.trim(); });
+  }
+  function hasSuccessSignal(obj) {
+    return successStatuses.indexOf(obj.status) !== -1 ||
+      trueFlags.some(function (k) { return obj[k] === true; }) ||
+      anyBoolean.some(function (k) { return typeof obj[k] === "boolean"; }) ||
+      nonEmptyArrays.some(function (k) { return Array.isArray(obj[k]) && obj[k].length > 0; }) ||
+      anyArray.some(function (k) { return Array.isArray(obj[k]); }) ||
+      nonEmptyStrings.some(function (k) { return typeof obj[k] === "string" && obj[k].trim() !== ""; }) ||
+      anyString.some(function (k) { return typeof obj[k] === "string"; }) ||
+      (obj.outcome !== undefined && obj.outcome !== null);
+  }
+  function hasFailureStatus(obj) {
+    return failureStatuses.indexOf(obj.status) !== -1 || obj.outcome === null;
+  }
+  function firstMatch(texts, pattern) {
+    return texts.filter(function (t) { return pattern.test(t); })[0] || null;
+  }
+
+  if (reply === null || reply === undefined || (typeof reply === "string" && reply.trim() === "")) {
+    return { kind: "declined", reason: noResult + ": the reply was empty." };
+  }
+  var isObject = typeof reply === "object";
+  var texts = collectTexts(reply);
+  var strongText = firstMatch(texts, strongMarker);
+  var anyMarkerText = strongText || firstMatch(texts, weakMarker);
+  if (isObject && (reply.declined === true || reply.status === "declined")) {
+    return { kind: "declined", reason: texts.length ? texts[0] : noResult + ": the reply declined without stating a reason." };
+  }
+  if (isCommandStep) {
+    if (isObject && Number.isInteger(reply.exit_status)) {
+      return reply.exit_status === 0 ? { kind: "result", reason: null } : { kind: "failed", reason: null };
+    }
+    if (anyMarkerText) return { kind: "declined", reason: anyMarkerText };
+    return {
+      kind: "declined",
+      reason: texts.length
+        ? "No readable command result was returned (no exit_status): " + texts.join(" | ")
+        : "No readable command result was returned for this step: no exit_status was reported.",
+    };
+  }
+  if (isObject) {
+    if (hasSuccessSignal(reply)) return { kind: "result", reason: null };
+    var decisiveText = hasFailureStatus(reply) ? strongText : anyMarkerText;
+    return decisiveText ? { kind: "declined", reason: decisiveText } : { kind: "result", reason: null };
+  }
+  if (typeof reply === "string") {
+    return {
+      kind: "declined",
+      reason: anyMarkerText || noResult + ": the reply was unparseable text, not the expected result shape.",
+    };
+  }
+  return { kind: "result", reason: null };
+}
+
+/**
+ * buildDeclinedStepHalt — the SINGLE construction site for the terminal
+ * declined-step halt payload (BO-2400f-5-iii). `target` is null only while
+ * the worktree-confirming steps are themselves the ones declining.
+ * `failingPhase` matches the short `failing_phase` vocabulary every other
+ * halt in this file already uses; `messagePrefix` carries the ONE
+ * phase-specific noun (e.g. "verdict", "context bundle") a pre-existing
+ * caller keys its own wording check on, kept out of `reason` itself, which
+ * stays the agent's quoted text untouched.
+ */
+function buildDeclinedStepHalt(step, agentType, reason, target, failingPhase, messagePrefix) {
+  const prefix = messagePrefix ? `${messagePrefix} ` : "";
+  return {
+    status: "halt", classification: "halt", halt_kind: "declined_step",
+    step: step, agent: agentType, reason: reason, target: target,
+    failing_phase: failingPhase,
+    message: `${prefix}The ${agentType} agent declined the "${step}" step: ${reason}`,
+  };
+}
+
+/**
+ * releaseOnDecline — for a decline discovered AFTER the claim succeeded,
+ * releases the claimed ACs back to todo (BO-2400f-10) before returning the
+ * same declined-step halt buildDeclinedStepHalt produces, merged with the
+ * release outcome fields every other post-claim halt already carries.
+ */
+async function releaseOnDecline(step, agentType, reason, target, claimedIds, releaseCommand, failingPhase, messagePrefix) {
+  const releaseReply = await agent(
+    `You are the release-phase agent. The "${step}" step declined after claiming.\n\n` +
+    `Release all claimed ACs back to todo by running this single Bash command:\n   ${releaseCommand}\n\n` +
+    `Return {"released":[...]} from stdout. Ignore non-zero exit (best-effort release).`,
+    { agentType: RELEASE_EXECUTOR_AGENT_TYPE, schema: RELEASE_SCHEMA, label: `release-on-${step}-decline` }
+  );
+  const releaseOutcome = buildReleaseOutcomeFields(releaseReply, claimedIds, RELEASE_EXECUTOR_AGENT_TYPE);
+  const halt = buildDeclinedStepHalt(step, agentType, reason, target, failingPhase, messagePrefix);
+  return { ...halt, message: `${halt.message} ${releaseOutcome.note}`, ...releaseOutcome.fields };
+}
+
+// ---------------------------------------------------------------------------
 // Phase 0 — Argument validation
 // ---------------------------------------------------------------------------
 
@@ -699,6 +845,17 @@ const worktreeResult = await agent(
     phase: "Worktree",
   }
 );
+
+// BO-2400f-5-iii: a decline (refusal, misrouting claim, role mismatch, or an
+// empty/unparseable reply) is classified BEFORE the occupancy-refusal read
+// below, so it never falls into that generic fail-closed branch. No workspace
+// is confirmed yet, so target is null.
+const worktreeStepClassification = classifyStepReply(worktreeResult, {
+  step: "fastlane-worktree", agent: "worktree-agent", isCommandStep: false,
+});
+if (worktreeStepClassification.kind === "declined") {
+  return buildDeclinedStepHalt("fastlane-worktree", "worktree-agent", worktreeStepClassification.reason, null, "worktree");
+}
 
 // BO-2400f-13: fail CLOSED, by a plain-falsy read. The run proceeds on an
 // explicit `outcome === "opened"`, OR on the PRE-BO-2400f-13 success shape
@@ -804,6 +961,17 @@ const worktreeVerify = await agent(
   }
 );
 
+// BO-2400f-5-iii: classified before the silent gitReportedPath/gitRaw
+// fallback below, which would otherwise read a decline as an absent answer
+// and fall back to the claimed path unchallenged. No workspace is confirmed
+// yet, so target is null.
+const worktreeVerifyStepClassification = classifyStepReply(worktreeVerify, {
+  step: "fastlane-worktree-verify", agent: "worktree-agent", isCommandStep: false,
+});
+if (worktreeVerifyStepClassification.kind === "declined") {
+  return buildDeclinedStepHalt("fastlane-worktree-verify", "worktree-agent", worktreeVerifyStepClassification.reason, null, "worktree");
+}
+
 // Trust git over the agent, only where it answered — an ABSENT answer (raw
 // empty) is not evidence and falls back to the claim as before; an answer
 // EMPTY OF THIS RUN'S OWN BRANCH (raw non-empty, no record for `branch`)
@@ -850,6 +1018,11 @@ const worktreePath = gitReportedPath || claimedWorktreePath;
 const acStoreRoot = `${worktreePath}/${acStoreRel}`;
 const gateScript = `${worktreePath}/{{config.output_root}}/scripts/build_orchestration/fast_lane.py`;
 
+// BO-2400f-5-iii: every declined-step halt from here on names a confirmed
+// workspace — the worktree steps above are the only ones that halt with a
+// null target.
+const declinedStepTarget = { workspace: worktreePath, branch, ac_id: targetAc };
+
 // ---------------------------------------------------------------------------
 // Phase 2 — Resolve the connected build set (BO-2400f-1/f-2)
 // ---------------------------------------------------------------------------
@@ -889,6 +1062,16 @@ const resolverResult = await agent(
     phase: "Resolve",
   }
 );
+
+// BO-2400f-5-iii: classified before acIds is read, so a decline is never
+// read as an empty connected set (that no-op is reserved for BO-2400f-2's
+// genuinely empty set).
+const resolverStepClassification = classifyStepReply(resolverResult, {
+  step: "resolve-connected", agent: "status-checker", isCommandStep: false,
+});
+if (resolverStepClassification.kind === "declined") {
+  return buildDeclinedStepHalt("resolve-connected", "status-checker", resolverStepClassification.reason, declinedStepTarget, "resolve");
+}
 
 const acIds = (resolverResult && resolverResult.ac_ids) || [];
 
@@ -984,6 +1167,16 @@ const producibilityResult = await agent(
     phase: "Resolve",
   }
 );
+
+// BO-2400f-5-iii: classified before producibilityVerdictReadable, so a
+// decline never proceeds to claim — it is never read as "every member is
+// producible".
+const producibilityStepClassification = classifyStepReply(producibilityResult, {
+  step: "check-producibility", agent: "status-checker", isCommandStep: false,
+});
+if (producibilityStepClassification.kind === "declined") {
+  return buildDeclinedStepHalt("check-producibility", "status-checker", producibilityStepClassification.reason, declinedStepTarget, "producibility");
+}
 
 // Fail closed exactly like the review verdict / red-baseline gate_passed
 // checks elsewhere in this file: the verdict is read as a plain-falsy check
@@ -1137,6 +1330,19 @@ const claimRunnerReply = await agent(
     phase: "Resolve",
   }
 );
+// BO-2400f-5-iii: the claim runs on command-step-runner, so the RAW runner reply
+// is classified as a command step BEFORE interpretClaimRunnerReply reads it.
+// classifyStepReply alone decides declined versus failed versus result;
+// interpretClaimRunnerReply then only reads the claim payload out of a result
+// (and still maps a non-zero exit or unreadable stdout to null, the existing
+// never-attempted halt of BO-2400f-7-iii, which carries no halt_kind). A
+// decline nothing was claimed on, so no release is dispatched.
+const claimStepClassification = classifyStepReply(claimRunnerReply, {
+  step: "claim-connected", agent: CLAIM_EXECUTOR_AGENT_TYPE, isCommandStep: true,
+});
+if (claimStepClassification.kind === "declined") {
+  return buildDeclinedStepHalt("claim-connected", CLAIM_EXECUTOR_AGENT_TYPE, claimStepClassification.reason, declinedStepTarget, "claim", "The claim was never attempted.");
+}
 const claimResult = interpretClaimRunnerReply(claimRunnerReply);
 /**
  * Three different facts have to be told apart here, and each has a different
@@ -1254,6 +1460,21 @@ const bundleResult = await agent(
   }
 );
 
+// BO-2400f-5-iii: a stated decline halts here, before the four-state
+// classification below (which would otherwise read it as CONTEXT_BUNDLE_
+// STATE_NOT_OBTAINED and lose the agent/reason). The claim already
+// succeeded, so this releases like every other post-claim halt (BO-2400f-10).
+const contextBundleStepClassification = classifyStepReply(bundleResult, {
+  step: "fastlane-context-bundle", agent: "python-coder", isCommandStep: false,
+});
+if (contextBundleStepClassification.kind === "declined") {
+  return await releaseOnDecline(
+    "fastlane-context-bundle", "python-coder", contextBundleStepClassification.reason,
+    declinedStepTarget, claimResult.claimed || [], releaseInvocation,
+    "context-bundle", "The context bundle was never obtained."
+  );
+}
+
 // Four-state classification (BO-2400c-1-iii, 2026-08-25 amendment) — see
 // classifyContextBundle()'s own doc comment for the fail-closed reasoning and
 // why reference-rejection runs before the marker/incompleteness check.
@@ -1339,6 +1560,19 @@ const testWriterResult = await agent(
     phase: "Test Writer",
   }
 );
+
+// BO-2400f-5-iii: classified before the generic "did not return ok" branch
+// below, so a decline is named (step/agent/reason) rather than folded into
+// that branch's own generic message. Post-claim, so it releases (BO-2400f-10).
+const testWriterStepClassification = classifyStepReply(testWriterResult, {
+  step: "test-writer-connected", agent: "test-writer", isCommandStep: false,
+});
+if (testWriterStepClassification.kind === "declined") {
+  return await releaseOnDecline(
+    "test-writer-connected", "test-writer", testWriterStepClassification.reason,
+    declinedStepTarget, claimResult.claimed || [], releaseInvocation, "test-writer"
+  );
+}
 
 if (!testWriterResult || testWriterResult.status !== "ok") {
   const releaseReplyTestWriter = await agent(
@@ -1427,6 +1661,17 @@ const coderResult = await agent(
     phase: "Coder",
   }
 );
+
+// BO-2400f-5-iii: classified before the generic "did not return ok" branch.
+const coderStepClassification = classifyStepReply(coderResult, {
+  step: "coder-connected", agent: "python-coder", isCommandStep: false,
+});
+if (coderStepClassification.kind === "declined") {
+  return await releaseOnDecline(
+    "coder-connected", "python-coder", coderStepClassification.reason,
+    declinedStepTarget, claimResult.claimed || [], releaseInvocation, "python-coder"
+  );
+}
 
 if (!coderResult || coderResult.status !== "ok") {
   const releaseReplyCoder = await agent(
@@ -1520,6 +1765,19 @@ const reviewResult = await agent(
     phase: "Review",
   }
 );
+
+// BO-2400f-5-iii: classified before reviewVerdictUsable's own generic
+// not-committed branch, so a decline is named rather than folded into it.
+const reviewStepClassification = classifyStepReply(reviewResult, {
+  step: "fastlane-review", agent: "pr-reviewer", isCommandStep: false,
+});
+if (reviewStepClassification.kind === "declined") {
+  return await releaseOnDecline(
+    "fastlane-review", "pr-reviewer", reviewStepClassification.reason,
+    declinedStepTarget, claimResult.claimed || [], releaseInvocation,
+    "review", "No review verdict was obtained before commit."
+  );
+}
 
 // Fail closed on an unusable verdict — the same plain-falsy read already used
 // for the red-baseline gate_passed key (BO-2400f-11). `verdict_obtained` is
@@ -1657,6 +1915,17 @@ if (changelogRequired) {
     }
   );
 
+  // BO-2400f-5-iii: classified before changelogEntryOk's own generic branch.
+  const changelogStepClassification = classifyStepReply(changelogResult, {
+    step: "fastlane-changelog", agent: "python-coder", isCommandStep: false,
+  });
+  if (changelogStepClassification.kind === "declined") {
+    return await releaseOnDecline(
+      "fastlane-changelog", "python-coder", changelogStepClassification.reason,
+      declinedStepTarget, claimResult.claimed || [], releaseInvocation, "changelog"
+    );
+  }
+
   // Fail closed exactly like the review verdict above. entry_added must be
   // true from the same response for the entry to count as present — a status
   // "ok" with entry_added false/absent is the exact silent-failure mode
@@ -1787,6 +2056,17 @@ const commitResult = await agent(
   }
 );
 
+// BO-2400f-5-iii: classified before the generic "did not succeed" branch.
+const commitStepClassification = classifyStepReply(commitResult, {
+  step: "fastlane-commit", agent: "commit", isCommandStep: false,
+});
+if (commitStepClassification.kind === "declined") {
+  return await releaseOnDecline(
+    "fastlane-commit", "commit", commitStepClassification.reason,
+    declinedStepTarget, claimResult.claimed || [], releaseInvocation, "commit"
+  );
+}
+
 if (!commitResult || commitResult.status !== "ok") {
   // The commit phase can fail AFTER mark_done flipped some/all claimed ACs to
   // done on disk (e.g. a stale-todo mark_done, or a pre-commit hook rejecting
@@ -1880,6 +2160,16 @@ const prResult = await agent(
     phase: "Pull Request",
   }
 );
+
+// BO-2400f-5-iii: the commit already succeeded by this point (like the
+// existing PR-failure branch below, this never releases — there is nothing
+// left to roll back).
+const prStepClassification = classifyStepReply(prResult, {
+  step: "fastlane-pr", agent: "pull-request", isCommandStep: false,
+});
+if (prStepClassification.kind === "declined") {
+  return buildDeclinedStepHalt("fastlane-pr", "pull-request", prStepClassification.reason, declinedStepTarget, "pull-request");
+}
 
 if (!prResult || prResult.status !== "ok") {
   return {
