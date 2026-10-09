@@ -340,6 +340,32 @@ def emission_backlog(
     }
 
 
+def waiting_learnings(*, sink_path: Path | str, state_path: Path | str) -> dict[str, Any]:
+    """Name every sink record not yet confirmed routed: INF-700a-5-ii's
+    findable-by-asking answer, for someone with no completion run in hand.
+
+    Read-only by construction: creates and writes nothing. The count is the
+    harvester's own waiting figure (eligible records absent from the state
+    set), not a second counter. A sink that exists but cannot be read is
+    ``unknown`` (``waiting`` is ``None``), never a fabricated zero.
+    """
+    sink_path = Path(sink_path)
+    if sink_path.exists():
+        try:
+            with sink_path.open("rb"):
+                pass
+        except OSError as exc:
+            logger.warning("Cannot read knowledge sink %s: %s", sink_path, exc)
+            return {"case": "unknown", "waiting": None, "records": [], "note": str(exc)}
+    confirmed = _state.load_state_set(Path(state_path))
+    records = [
+        {"text": text, "destination": destination}
+        for record_hash, text, destination in _state.read_eligible_sink_records(sink_path)
+        if record_hash not in confirmed
+    ]
+    return {"case": "ok", "waiting": len(records), "records": records, "note": WAITING_NOTE}
+
+
 def claim_and_confirm_routed(
     *,
     state_path: Path | str,
