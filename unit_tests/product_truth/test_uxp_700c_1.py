@@ -83,6 +83,7 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+from typing import Any
 
 import yaml
 
@@ -294,7 +295,7 @@ def _build_minimal_cli_store(tmp: Path) -> Path:
     }
     _write_flow(pt_root / "flows", flow)
 
-    common_entry_fields = {
+    common_entry_fields: dict[str, Any] = {
         "flow_kind": "user",
         "screen": None,
         "mock_data": None,

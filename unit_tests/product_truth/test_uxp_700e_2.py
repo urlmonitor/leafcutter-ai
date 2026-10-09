@@ -460,6 +460,7 @@ def _build_minimal_cli_store(tmp: Path) -> Path:
     # Re-introduce the separately hand-typed description the normalization run
     # just derived away — see FIXTURE ORDER above.
     normalized = _read_json(pt_root / "index.json")
+    assert isinstance(normalized, dict)
     for artifact in normalized["artifacts"]:
         if artifact["id"] == flow["id"]:
             artifact["summary"] = _STALE_HAND_TYPED_SUMMARY_A

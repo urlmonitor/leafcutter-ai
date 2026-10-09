@@ -61,6 +61,7 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+from typing import Any
 
 _REPO_ROOT = Path(__file__).resolve().parent.parent.parent
 _PT_SRC = _REPO_ROOT / "docs" / "product-truth"
@@ -298,7 +299,7 @@ def _install_and_check(tmp: Path) -> subprocess.CompletedProcess:
     mismatched_flow = _flow("fixture-product/journey", example_product="fern-and-fig")
     _write_json(pt / "flows" / "fixture-product" / "journey.flow.json", mismatched_flow)
 
-    undeclared_mockup = {
+    undeclared_mockup: dict[str, Any] = {
         "id": "fern-and-fig/screen", "component": "fixture-product", "screen": "screen",
         "title": "t", "summary": "s", "entities": [], "source": "mock", "renders": None,
         "status": "active", "readiness": "draft", "version": 1, "provenance": [],
