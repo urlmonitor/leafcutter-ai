@@ -5,7 +5,7 @@ type: reference
 category: reference
 status: active
 created: 2026-08-18
-last_updated: '2026-09-28'
+last_updated: '2026-10-09'
 components:
   - commit_guardian
 related_docs:
@@ -73,7 +73,7 @@ Severity in the **filename** is a three-level index bucket (`blocker` / `high` /
 
 Fixed issues move to [`commit-guardian/resolved/`](commit-guardian/resolved/) and are no longer listed as open. They are kept, not deleted.
 
-**Open: 76** (2 blocker, 34 high, 40 low) · **Resolved: 17**
+**Open: 77** (2 blocker, 35 high, 40 low) · **Resolved: 17**
 
 ## Open
 
@@ -116,6 +116,7 @@ Fixed issues move to [`commit-guardian/resolved/`](commit-guardian/resolved/) an
 | `high` | KI-CG-20260928-ac-schema-not-deployed-at-consumer-root — the schema is deployed only under .leafcutter/config/, so check-ac-schema degrades to manual field validation in every consumer install | [open-high-ki-cg-20260928-ac-schema-not-deployed-at-consumer-root.md](commit-guardian/open-high-ki-cg-20260928-ac-schema-not-deployed-at-consumer-root.md) |
 | `high` | KI-CG-20260928-first-commit-leaves-the-deployed-config-drifted — the first commit in a worktree strips every em-dash from the deployed `commit_guardian.json`, so EVERY commit after the first is refused by `check-output-drift` for a change no author made (19 refusals across 5+ worktrees) | [open-high-ki-cg-20260928-first-commit-leaves-the-deployed-config-drifted.md](commit-guardian/open-high-ki-cg-20260928-first-commit-leaves-the-deployed-config-drifted.md) |
 | `high` | KI-CG-20261009-required-ci-ruff-has-no-local-pre-commit-counterpart — the required `Lint (ruff)` CI check has never had a matching pre-commit hook, so a lint violation passes every local commit-time gate and fails only in CI; three in-repo texts claim the hook exists | [open-high-ki-cg-20261009-required-ci-ruff-has-no-local-pre-commit-counterpart.md](commit-guardian/open-high-ki-cg-20261009-required-ci-ruff-has-no-local-pre-commit-counterpart.md) |
+| `high` | KI-CG-20261009-file-size-measure-strips-from-slash-star-inside-strings — `check-file-size`'s measure strips block comments with a language-blind regex, so a `/*` inside a string, glob or line comment drops every line to the next `*/`; 16 files on main lose 870 lines, `finalize-feature.js` alone 364, and `test_native_decision.py` reads 332 against a 400 limit when it is 459 | [open-high-ki-cg-20261009-file-size-measure-strips-from-slash-star-inside-strings.md](commit-guardian/open-high-ki-cg-20261009-file-size-measure-strips-from-slash-star-inside-strings.md) |
 | `low` | KI-CG-002 — The diagram-type guard silently swaps its enum source when its declaring file is unreachable | [open-low-ki-cg-002.md](commit-guardian/open-low-ki-cg-002.md) |
 | `low` | KI-CG-011 — The roadmap mirror strips its own `description` frontmatter and backdates `created` to today | [open-low-ki-cg-011.md](commit-guardian/open-low-ki-cg-011.md) |
 | `low` | KI-CG-013 — The schema hook and the done-proof oracle disagree about what a leaf is, so one AC can be required to satisfy both branches | [open-low-ki-cg-013.md](commit-guardian/open-low-ki-cg-013.md) |
