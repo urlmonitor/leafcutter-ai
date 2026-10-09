@@ -1,0 +1,158 @@
+id: BO-3800d-3
+title: "A complexity refusal gets a bounded attempt by the restructuring specialist and then a retried commit; a function still over its ceiling stops the run, which says so, and the check is never weakened to let it through"
+component: build-orchestration
+components:
+  - build_orchestration
+  - supervisor_system
+  - commit_guardian
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given check-complexity refused a delivery, stating that plan_batches in
+    scripts/planner.py has complexity 31 and only 30 is allowed, and the restructuring
+    specialist has been engaged with complexity-reduction,
+  When the specialist leaves plan_batches scoring 29 on an attempt within the bound,
+  Then delivery is attempted again, check-complexity judges it, the change lands, and
+    the specialist is not engaged again for this delivery.
+
+  Given instead the specialist leaves plan_batches scoring 31 or more on every attempt up
+    to the bound,
+  When the bound is reached,
+  Then the run stops without delivering the change,
+  And its account names scripts/planner.py, plan_batches, the complexity plan_batches now
+    has, the 30 allowed, how many times the specialist was engaged, and that nothing was
+    delivered.
+
+  Given either of the two runs above,
+  When the second and later delivery attempts are examined,
+  Then each one was judged by check-complexity at the same strength as the first: the
+    check was not skipped, its limit was not raised, the function's previous committed
+    score was not altered, and neither the file nor the function was exempted.
+depends_on:
+  - BO-3800d
+  - BO-3800b-3
+doc_links:
+  - path: docs/acceptance-criteria/build-orchestration/BO-3800-refusal-summons-specialist/BO-3800d.yaml
+    relationship: parent
+    status: exists
+  - path: docs/acceptance-criteria/build-orchestration/BO-3800-refusal-summons-specialist/BO-3800d-1.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      The bound for the file-size case (settled at one, its own named constant, never
+      MAX_RETRIES). Complexity now uses the same specialist, so sharing that bound is the
+      natural reading. The IT PO confirms.
+  - path: docs/acceptance-criteria/build-orchestration/BO-3800-refusal-summons-specialist/BO-3800d-2.yaml
+    relationship: related
+    status: exists
+    relevance: "Owns telling the endings apart and keeping partial progress. Not restated, but binding."
+  - path: docs/acceptance-criteria/guardrail-engine/GE-131-functions-stay-followable/GE-131a-1.yaml
+    relationship: related
+    status: exists
+    relevance: "Owns the ceiling. \"Previous committed score not altered\" protects that ratchet."
+  - path: docs/acceptance-criteria/guardrail-engine/GE-131-functions-stay-followable/GE-131a-3.yaml
+    relationship: related
+    status: exists
+    relevance: "Its skip-the-check route for a pure move is for a human with an unchanged function. A drive must never take it to clear a refusal."
+  - path: CLAUDE.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/agent_delivery_workflows.md
+    relationship: describes
+    status: exists
+    relevance: "The adjudication ladder's last rung (Exhausted, then Halt and Surface to User), which this stop follows."
+delivers_to: null
+expects_from:
+  - ac_id: BO-3800c-2
+    contract: "The restructuring specialist engaged with the file, functions, complexities and ceilings the refusal stated."
+  - ac_id: BO-3800b-3
+    contract: "One engagement of the specialist per refused delivery, recorded in the run's dispatch record."
+assigned_agent: python-coder
+estimated_complexity: M
+package_surface: false
+declares_side_effect: false
+it_requirements:
+  - >-
+    THE BOUND IS SHARED AND SETTLED: ONE specialist engagement per delivery. It is
+    BO-3800d-1's own named constant, declared in both phase-loop twins, and never
+    MAX_RETRIES. Complexity and file size use the same specialist, so they share the bound.
+    BO-3000a's pair cap (one honoured commit-to-specialist handoff per drive) agrees with it.
+    The stop that pair cap produces must carry this record's account, not only BO-3000a's
+    handoff chain.
+  - >-
+    FULL STRENGTH ON EVERY RETRY. The re-offered commit's dispatch carries no
+    SKIP=check-complexity and no override or bypass instruction. GE-131a-3's pure-move SKIP
+    route is for a human with an unchanged function, and a drive never takes it. Between the
+    first and last attempt, complexity.max_score in commit_guardian.json is byte-identical.
+    The parent revisions the ratchet reads are unchanged: no amend, no rewritten HEAD, no
+    baseline edit. No excluded directory or exemption is added for the file or the function.
+  - >-
+    THE ACCOUNT names scripts/planner.py, plan_batches, the score plan_batches has now, the 30
+    allowed, the engagement count and "nothing delivered". The score is taken from the second
+    refusal's machine-readable record (GE-132a-3), never recomputed. Reuse BO-3800d-2's stop
+    shape and its endings, and its decision on keeping partial progress. Neither is restated
+    or decided here.
+  - >-
+    The same twin-parity, size-ratchet and ADR-001 constraints as BO-3800b-3 apply.
+test_required: true
+test_spec:
+  - name: test_bo3800d3_success_within_bound_lands_without_reengaging_the_specialist
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    surface_invoked: "unit_tests/prompt_assembly/_driver_harness.py executing build-feature.js (TWIN_DRIVERS)"
+    description: "Arm 1. The stub specialist leaves plan_batches at 29, and the stub commit agent runs the REAL check_complexity.py against the fixture repo. The second attempt is judged and lands, and restructuring-specialist appears exactly once in the dispatch record. RED TODAY."
+  - name: test_bo3800d3_still_over_ceiling_at_bound_stops_with_account
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    angle: failure
+    description: "Arm 2. The stub specialist leaves plan_batches at 31. The run stops without delivering. Its account names scripts/planner.py, plan_batches, 31, 30, an engagement count of 1, and that nothing was delivered. RED TODAY."
+  - name: test_bo3800d3_every_retry_is_judged_at_full_strength
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    angle: discrimination
+    description: "Arm 3, over both runs above. The re-offered commit dispatch carries no SKIP or override. commit_guardian.json and the fixture repo's HEAD are byte-identical before and after. The real check was executed on every attempt. RED TODAY: no retry exists."
+    must_catch:
+      - "THE QUIET SKIP: retry with check-complexity skipped"
+      - "THE MOVED GOALPOST: record plan_batches' previous committed score as 31"
+test_rationale: >-
+  The bound and the escape hatches are observed in the run: the dispatch count, the retry's
+  dispatch arguments, and the repo state before and after. Grepping the driver for a counter
+  or a SKIP string proves nothing. Three tests, all red today. Named mutation (3), THE SPENT
+  QUOTA, has no descriptor. At the settled bound of one, together with BO-3000a's pair cap,
+  it is behaviourally identical to the correct build (reported as an ambiguity).
+origin_agent: business-analyst
+created: 2026-10-09
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: internal
+notes: |
+  REVISED 2026-10-09: the party is the restructuring specialist, no longer python-coder.
+  This record is now blocked on INF-800f-1, through BO-3800b-3, as the restructuring
+  instance always was.
+
+  THE THIRD ARM IS WHY THIS IS SEPARATE FROM BO-3800d-1. Complexity has escape hatches that
+  file size does not: skip the hook, raise the limit, or rewrite the baseline the ratchet
+  compares against. Any of them makes arm one pass with the function unchanged.
+
+  WHAT THIS DOES NOT CLAIM. That every function can be brought under its ceiling. The
+  promise is an honest stop.
+
+  NAMED MUTATIONS.
+  (1) THE QUIET SKIP: retry with check-complexity skipped. MUST GO RED: arm three. MUST
+      STAY GREEN: arm two.
+  (2) THE MOVED GOALPOST: record plan_batches' previous committed score as 31. MUST GO
+      RED: arm three. MUST STAY GREEN: arm two.
+  (3) THE SPENT QUOTA: engage the specialist bound times before re-judging. MUST GO RED:
+      arm one's "not engaged again".

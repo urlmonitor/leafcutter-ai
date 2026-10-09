@@ -1,0 +1,241 @@
+id: BO-3800b-3
+title: "A complexity refusal brings in the restructuring specialist, not the coder that wrote the change, and the skill it is told to apply is the one the refusing check declares"
+component: build-orchestration
+components:
+  - build_orchestration
+  - supervisor_system
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a ticket is being driven whose change was written by python-coder,
+  And check-complexity refuses its delivery, and check-complexity's remedy declaration
+    has the engage-specialist disposition and names the restructuring specialist with
+    the complexity-reduction skill,
+  When the run adjudicates that refusal,
+  Then the restructuring specialist appears in the ordered record of parties the run
+    engaged, after the refusal and before delivery is attempted again,
+  And what the specialist is given tells it to apply complexity-reduction,
+  And between the refusal and the second delivery attempt python-coder is not engaged
+    to bring the function under its ceiling.
+
+  Given instead the file-size check refuses delivery with the disposition that hands
+    the demand to the restructuring specialist,
+  When the run adjudicates that refusal,
+  Then the restructuring specialist is engaged as BO-3800b-1 requires, and what it is
+    given does not tell it to apply complexity-reduction, so the skill follows the
+    refusing check's declaration and is not attached to every engagement.
+
+  Given a ticket is being driven and check-doc-links refuses its delivery, and
+    check-doc-links' remedy declaration has the author-clears disposition and names no
+    specialist,
+  And, in a second run, check-doc-frontmatter refuses its delivery, and its remedy
+    declaration has the mechanical-autofix disposition and names general-purpose as its
+    fixer,
+  When the run adjudicates each refusal,
+  Then in neither run is any party engaged beyond those the same refusal engages before
+    this capability exists, as BO-3800e-1 requires, because only the engage-specialist
+    disposition brings in a specialist.
+depends_on:
+  - BO-3800b
+  - GE-132a-2
+  - INF-800f-1
+doc_links:
+  - path: docs/acceptance-criteria/build-orchestration/BO-3800-refusal-summons-specialist/BO-3800b.yaml
+    relationship: parent
+    status: exists
+  - path: docs/acceptance-criteria/infrastructure/INF-800-safe-restructuring/INF-800f-1.yaml
+    relationship: depends_on
+    status: exists
+    relevance: "Makes the restructuring specialist exist as a party a run can bring in, distinct from every coder."
+  - path: docs/acceptance-criteria/guardrail-engine/GE-132-checks-say-what-happens-next/GE-132a.yaml
+    relationship: depends_on
+    status: exists
+    relevance: >-
+      Supplies the declaration. The run reads the specialist and skill from it and never
+      infers them (BO-3000a's no-inference rule).
+  - path: docs/acceptance-criteria/build-orchestration/BO-3800-refusal-summons-specialist/BO-3800b-1.yaml
+    relationship: related
+    status: exists
+    relevance: "The first instance (file size), not restated. This record adds complexity as the second."
+  - path: docs/acceptance-criteria/build-orchestration/BO-3800-refusal-summons-specialist/BO-3800b-2.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      Its "the authoring coder is not engaged" arm is checked by agent type. That arm now
+      holds for complexity too, because the specialist is not a coder. The third And of arm
+      one applies it here without restating the paired construction.
+  - path: templates/skills/complexity-reduction/SKILL.md
+    relationship: related
+    status: exists
+  - path: docs/architecture/adrs/ADR-019-build-feature-inline-phase-dispatch.md
+    relationship: describes
+    status: exists
+  - path: CLAUDE.md
+    relationship: describes
+    status: exists
+    relevance: "The engaged party and its skill are read from what a real run dispatched and handed over, never from a file or a prompt template."
+  - path: docs/acceptance-criteria/build-orchestration/BO-3000a.yaml
+    relationship: depends_on
+    status: exists
+    relevance: "The handoff routing this record's refusal-originated engagement travels through."
+  - path: docs/architecture/components/build-ticket-workflow-dispatch.md
+    relationship: describes
+    status: exists
+delivers_to:
+  - ac_id: BO-3800a-2
+    contract: >-
+      Driver adjudication. A commit-phase result {status: "handoff", handoff_target:
+      "restructuring-specialist", remedy: {hook_id: str, skills: [str], demand: [...]}} is
+      honoured by dispatching the declared specialist through the normal per-phase dispatch,
+      and the commit phase is then re-offered.
+  - ac_id: BO-3800c-2
+    contract: "The specialist's dispatch, whose machine-readable brief field the demand is carried into."
+  - ac_id: BO-3800d-3
+    contract: "One engagement of the specialist per refused delivery, recorded in the run's dispatch record."
+expects_from:
+  - ac_id: GE-132a-2
+    contract: "A validated remedy declaration per check, with its disposition (author-clears | mechanical-autofix | engage-specialist), the agent it names (none for author-clears) and the skills to apply. It is read through GE-132a-1's shared loader."
+  - ac_id: INF-800f-1
+    contract: "A registered restructuring specialist a run can bring in, distinct from every coder."
+assigned_agent: python-coder
+estimated_complexity: L
+package_surface: false
+declares_side_effect: false
+it_requirements:
+  - >-
+    The engagement is adjudicated by the depth-0 driver (templates/workflows-js/build-feature.js
+    and its declared twin build-ticket.js), never inside the commit phase agent. ADR-019 says
+    an Agent call from depth 1 is silently dropped. The same refusal must produce the same
+    dispatch sequence in both twins, proven by driving both through TWIN_DRIVERS.
+  - >-
+    The specialist and its skills are read at adjudication time from the refusing check's
+    validated declaration (GE-132a-2). They are never inferred from hook prose (BO-3000a's
+    no-inference rule) and never keyed by hook id in driver code. Any check whose
+    declaration names a specialist inherits the behaviour.
+  - >-
+    ONLY engage-specialist ENGAGES (decided by BrainCandy, 2026-10-09). Each declaration
+    carries one disposition: author-clears, mechanical-autofix or engage-specialist,
+    validated by GE-132a-2. The run brings in the declared agent only when the refusing
+    hook's disposition is engage-specialist. An author-clears declaration engages nobody.
+    A mechanical-autofix declaration (11 rules name general-purpose) keeps BO-210's
+    autofix route exactly as today (BO-3800e-1). The run never engages the fixer itself. The
+    disposition is the only signal. Choosing the route from the agent's name, the rule's
+    category or the hook id is forbidden. Engaging on every refusal, or on every
+    declaration that names an agent, is named mutation (3).
+  - >-
+    The run reads declarations only through GE-132a-1's shared loader (local table, with a
+    per-hook fallback to the package seed). An old install whose scaffold predates the
+    remedy fields therefore still sees check-complexity as engage-specialist.
+  - >-
+    REUSE BO-3000a. The refusal becomes a handoff to the declared specialist and enters the
+    same per-phase dispatch every phase uses: pointer block, record read-back, dispatched-agent
+    bookkeeping. Add restructuring-specialist to both phaseOrder twins so the driver
+    recognises it. BO-3000a refuses a target that is not a key in the ticket's agents map.
+    A refusal-originated target equal to the declaration's specialist is honoured even when
+    absent from that map. Agent-chosen handoffs keep BO-3000a's refusal unchanged.
+  - >-
+    NO SECOND FIXER. In the same change, check-complexity leaves BO-210c's originator
+    re-dispatch (precommit-autofix Step 4a, BO-210c-1). Otherwise python-coder and the
+    specialist both run. That is BO-3800b-2's belt-and-braces mutation, one check over.
+  - >-
+    The specialist's brief carries the declaration's skills list: [complexity-reduction] for
+    check-complexity, none for the file-size disposition. The brief is a machine-readable
+    part of the dispatch, so the harness reads it from what the run actually sent.
+  - >-
+    An unreadable or invalid declaration at adjudication time is a named stop. It never
+    falls back silently to python-coder or to today's route. Follow the CLAUDE.md
+    error-handling policy.
+  - >-
+    SIZE RATCHET. build-feature.js and build-ticket.js are both over the .js limit, and the
+    GE-127b-1 growth ratchet refuses any growth. Each file ends net-zero or shorter, or the
+    decision logic moves into a Python helper the driver calls (the BO-3000a /
+    heavy_lane_gate precedent). Per ADR-001, edit templates/ only, run build.py, and stage
+    the regenerated mirrors.
+  - >-
+    COMPANION PROSE IN THE SAME TICKET. precommit-autofix SKILL.md Steps 4 and 4a and
+    commit.md Step 5 describe the new route. That is an llm-expert surface, and the
+    generated ticket's agents map includes llm-expert for it (BO-3000a precedent).
+test_required: true
+test_spec:
+  - name: test_bo3800b3_complexity_refusal_engages_specialist_with_complexity_reduction_not_the_author
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    surface_invoked: "unit_tests/prompt_assembly/_driver_harness.py executing build-feature.js and build-ticket.js top-level bodies (TWIN_DRIVERS)"
+    description: "Arm 1. The commit phase returns a check-complexity refusal whose declaration (read through the shared loader) is engage-specialist, naming the specialist. The dispatch record shows restructuring-specialist after the refusal and before the second commit attempt. Its brief carries skills [complexity-reduction]. python-coder does not appear between the refusal and the retry. RED TODAY."
+    must_catch:
+      - "THE AUTHOR AGAIN: route complexity to python-coder as well as or instead of the specialist"
+  - name: test_bo3800b3_file_size_refusal_brief_omits_complexity_reduction
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    angle: discrimination
+    description: "Arm 2. A fixture file-size refusal carries the specialist disposition (GE-127f-3's shape, supplied by the fixture). The specialist is engaged and its brief does not name complexity-reduction. RED TODAY."
+    must_catch:
+      - "THE ALWAYS-ON SKILL: tell the specialist to apply complexity-reduction on every engagement"
+  - name: test_bo3800b3_author_clears_and_mechanical_autofix_refusals_engage_no_extra_party
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    angle: boundary
+    description: "Arm 3, two runs. (a) A check-doc-links refusal with the author-clears disposition. (b) A check-doc-frontmatter refusal with the mechanical-autofix disposition naming general-purpose. In each run the dispatch record equals the record of the same run with this capability switched off. Neither restructuring-specialist nor general-purpose is engaged by the driver. GREEN TODAY, which makes it the regression boundary."
+    must_catch:
+      - "THE OVER-BROAD SUMMONS: engage the specialist on every refusal"
+      - "engage the declared agent of every declaration that names one, including mechanical-autofix fixers"
+test_rationale: >-
+  Who was engaged is a property of a run, so every arm reads the dispatch record and the
+  brief that build-feature.js and build-ticket.js actually produced through the driver
+  harness. A test that finds the specialist's id in a template stays green on a handoff that
+  never fires. Three tests: two red today, and arm 3 green as the regression boundary.
+origin_agent: business-analyst
+created: 2026-10-09
+amended_by:
+  - reason: scope-clarified-by-product-decision
+    by: it-po
+    at: 2026-10-09
+    note: >-
+      BrainCandy approved this on 2026-10-09, settling IT PO ambiguity 4 (specialist versus
+      autofix fixer). Every remedy declaration carries one disposition: author-clears,
+      mechanical-autofix or engage-specialist. Only engage-specialist triggers this run.
+      The criteria are amended in two places and nowhere else. Arm one's Given now states
+      check-complexity's disposition. Arm three gains a second run, a mechanical-autofix
+      refusal (check-doc-frontmatter routed to general-purpose), so the disposition
+      boundary is observable on both non-specialist values and not on author-clears alone.
+      Without it, engaging the declared agent of every non-author-clears declaration would
+      pass every arm, and 11 rules name general-purpose. Arm two, title, depends_on and
+      req_status are untouched, and the title is still true.
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  REVISED 2026-10-09 ON BRAINCANDY'S DECISION: complexity and file size share ONE craft,
+  the restructuring specialist, which applies complexity-reduction for a complexity
+  demand. An earlier draft of this record named python-coder as complexity's handler. That
+  is withdrawn, and with it the earlier note explaining why BO-3800b-2's type-based arm
+  could not apply to complexity. It now applies, because the specialist is not the
+  authoring coder. BO-3800b's L1 text was amended the same day to say so.
+
+  RECONCILIATION THE BUILD MUST DO. check-complexity is in BO-210's population today: it
+  is a structural-category hook, and the originating coder is re-dispatched with its
+  context. Declaring the specialist for it moves it into this tree's population, so
+  BO-210c's re-dispatch must not also fire for it. If it does, both run: BO-3800b-2's
+  belt-and-braces mutation, one check over. Arm one's third And catches exactly that.
+
+  FOR FILE SIZE, no skill is named. The specialist's own restructuring approach governs,
+  as BO-3800b-1 and INF-800 already state.
+
+  NAMED MUTATIONS.
+  (1) THE AUTHOR AGAIN: route complexity to python-coder as today, as well as or instead
+      of the specialist. MUST GO RED: arm one. MUST STAY GREEN: arms two and three.
+  (2) THE ALWAYS-ON SKILL: tell the specialist to apply complexity-reduction on every
+      engagement. MUST GO RED: arm two. MUST STAY GREEN: arms one and three.
+  (3) THE OVER-BROAD SUMMONS: engage the specialist on every refusal. MUST GO RED: arm
+      three and both arms of BO-3800e-1.

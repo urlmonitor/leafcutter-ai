@@ -1,0 +1,76 @@
+id: GE-132
+title: "When a check stops your work, what happens next is already decided"
+component: guardrail-engine
+components:
+  - commit_guardian
+  - precommit_hooks
+level: L0
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Being stopped comes with a next step, never just a red light.
+
+  Most of the checks that can stop a commit say nothing about what happens after
+  they do. Nobody has decided who puts the problem right or how, so whoever is
+  standing there improvises, and the cheapest thing that clears the check is rarely
+  the right thing. After this goal, every check that can stop a commit says ahead
+  of time what the author should do, which specialist helps, and which skill that
+  specialist applies. A check that says none of this cannot be added, and one that
+  points at help that does not exist is caught before anyone relies on it.
+depends_on: []
+doc_links:
+  - path: docs/acceptance-criteria/build-orchestration/BO-3800-refusal-summons-specialist/BO-3800.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      The other half. This tree owns WHAT each check declares should happen on a refusal.
+      BO-3800 owns the run actually doing it: holding the change, bringing in the declared
+      specialist with the refusal's specifics, a bounded attempt and an honest stop.
+  - path: docs/acceptance-criteria/guardrail-engine/GE-126-checks-answer-truthfully/GE-126d.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      Registration completeness. The remedy declaration is one more place a check must be
+      registered; GE-126d's single list of registration legs is where it belongs. Unlike
+      GE-126d-3's roster omission, which is a warning, a missing remedy declaration refuses.
+  - path: docs/known-issues/commit-guardian/open-low-ki-cg-020.md
+    relationship: context
+    status: exists
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: describes
+    status: exists
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst
+created: 2026-10-09
+amended_by: []
+superseded_by: null
+covered_by:
+  - GE-132a
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  AUTHORED BY THE BUSINESS ANALYST AT BRAINCANDY'S DIRECT REQUEST, including this L0
+  and its L1, which are ordinarily the Product Owner's (same arrangement as GE-131).
+  BrainCandy's words: "When complexity is too high, we directly spawn an agent that
+  will handle the complexity" and, generalising, "We need clear instructions what to do
+  if a specific guardrail hits." Kept deliberately small after BrainCandy rejected a
+  13-record plan for the complexity check in favour of a 5-record one.
+
+  MEASURED 2026-10-09 (census over the hooks manifest and the autofix routing table,
+  read-only): 76 registered hooks, 67 of them pre-commit judgment gates. 18 of the 67
+  have a routing rule saying who handles a refusal; 49 have none, including
+  check-folder-density and check-file-size-rule-parity. 1 gate (check-complexity)
+  prints a machine-readable agent hint. 2 routing rules name hooks that are not
+  registered: check-docstrings and check-ac-limits.
+
+  WHAT IS OUT OF SCOPE. Writing declarations for the 49 undeclared gates. The ACs state
+  the rule and its enforcement; filling the declarations in is implementation and
+  follow-up work.
+
+  ONE L1, as with GE-131. The sparse-tree advisory is accepted.
