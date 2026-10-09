@@ -6,7 +6,7 @@ component: testing-quality
 level: L3
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 readiness: approved
 priority: high
 roadmap_phase: phase_1
@@ -212,8 +212,15 @@ amended_by:
   agent: approve_acs
   date: '2026-10-08'
 superseded_by: null
-covered_by: []
-implemented_by: []
+covered_by:
+- unit_tests/suite_performance/test_tq_600a_13_xvi.py
+- unit_tests/suite_performance/test_tq_600a_13_xvi_rewrite.py
+- unit_tests/suite_performance/test_tq_600a_13_xvi_trust.py
+- unit_tests/suite_performance/test_tq_600a_13_xvi_units.py
+- unit_tests/suite_performance/test_tq_600a_13_xvi_baseline.py
+implemented_by:
+- scripts/ci/post_merge_fix_proof.py
+- .github/workflows/post-merge-fix-proof.yml
 change_target: pipeline
 risk_surface: auth
 notes: |
@@ -224,6 +231,12 @@ notes: |
   prove job (see it_requirements). STILL TRUE, NOT A DECISION: if the break in a
   did-not-complete run is in the workflow machinery itself, a proof (which uses main's
   harness) cannot pass; the route is then the owner's break-glass (TQ-600a-13-xvii).
+
+  STATUS: `work_status: done` means BUILT and covered by the unit tests, not live. The live
+  observation below is still PENDING: no proof run has yet been made on the real repository
+  with a prove job whose token attempts a write and is refused, so `permissions: {}` is not
+  yet shown to hold here. The proof stays advisory until it is recorded (and until the
+  Actions event policy of TQ-600a-13-x exists).
 
   LIVE OBSERVATION TO RECORD HERE: date and run id of a proof run whose prove job's token
   was refused a write.
