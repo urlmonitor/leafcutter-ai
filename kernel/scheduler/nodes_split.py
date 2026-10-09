@@ -29,10 +29,16 @@ from kernel.contracts import (
     WorkItemStatus,
     schema_ids,
 )
-from kernel.contracts.split import GoalDecompositionRequestPayload, KeptRouting
+from kernel.contracts.split import (
+    GoalDecompositionPayload,
+    GoalDecompositionRequestPayload,
+    KeptRouting,
+)
 from kernel.providers.base import QuestionSpec
 from kernel.scheduler.context import run_corr
 from kernel.scheduler.merge import create_children, plan_proposals
+from kernel.split.convert import convert_proposal
+from kernel.split.gate import gate_proposal
 from kernel.split.detect import bundle_question, gates_open, is_bundled, kind_allows_split
 from kernel.split.text import derive_subject_kind, normalize_text, split_id
 
@@ -170,7 +176,7 @@ class SplitStep:
         proposal = RequestProposal(
             kind=RequestKind.CAPABILITY, goal=f"Propose the parts of: {subject}"[:300],
             payload_schema=schema_ids.GOAL_DECOMPOSITION_REQUEST,
-            payload=payload.model_dump(mode="json"),
+            payload=payload.model_dump(mode="json", exclude={"schema_version"}),
             requested_output_schema=schema_ids.GOAL_DECOMPOSITION,
             operation=DECOMPOSE_OPERATION, priority=Priority.REQUIRED)
         plan = plan_proposals(self.draft, item, [proposal], self.cfg.limits, self.scope_rev)
@@ -188,6 +194,49 @@ class SplitStep:
                      "subject_chars": len(subject)})
         return True
 
+    def _proposal_of(self, item: WorkItem) -> GoalDecompositionPayload | None:
+        """Return the host's accepted proposal for the item's decompose_goal child, if it arrived."""
+        for child_id in item.child_ids:
+            child = self.draft.items[child_id]
+            if self.draft.request_of(child).operation != DECOMPOSE_OPERATION:
+                continue
+            result = self.draft.results.get(child.result_ref or "")
+            if child.status is WorkItemStatus.COMPLETED and result is not None:
+                return GoalDecompositionPayload.model_validate(result.output_payload)
+        return None
+
+    def open_gate(self, item: WorkItem) -> bool:
+        """Convert an arrived proposal and open the split gate; False leaves the item to routing.
+
+        The record becomes `proposed` and the root parks on the gate, a human question, so the
+        run waits for a person with every part not run. Fewer than two parts leave the item to
+        today's routing (DK-400c-3 owns that ending).
+        """
+        record = self.state.get("splits", {}).get(split_id(item.id))
+        proposal = self._proposal_of(item) if record is not None and record.state is None else None
+        if record is None or proposal is None:
+            return False
+        done = convert_proposal(proposal, record.subject_text, record.subject_kind,
+                                max_parts=self.cfg.split.max_parts,
+                                allowance=self.cfg.split.max_parts_per_run - self._parts_used())
+        if done.kept_count < 2 or len(done.parts) < 2:
+            self.draft.emit("split.not_offered", f"{len(done.parts)} parts",
+                            work_item_id=item.id, split_id=record.id)
+            return False
+        record = record.model_copy(update={
+            "state": "proposed", "parts": done.parts, "dropped": done.dropped,
+            "not_covered": done.not_covered, "one_question_rewording": done.rewording})
+        released = dict(done.released)
+        if not self._park(item, gate_proposal(record, released)):
+            return True  # the root was blocked; the split stays unproposed
+        self.splits[record.id] = record
+        for part_id, ids in done.released:
+            self.draft.emit("split.dependency_released", f"{part_id}: {', '.join(ids)}",
+                            work_item_id=item.id, split_id=record.id)
+        self.draft.emit("split.proposed", f"{len(done.parts)} parts", work_item_id=item.id,
+                        split_id=record.id)
+        return True
+
 
 # ====================================================================
 # DECISION HISTORY
@@ -198,4 +247,5 @@ class SplitStep:
 #   (data_policy redaction). (#TICKET-20261006-DK-400a-1)
 # - 2026-10-06 19:00 [python-coder]: Add the ambiguous split trigger: a bundled root routing cannot decide for is split, not clarified. (#TICKET-20261006-DK-400a-1-i)
 # - 2026-10-09 [python-coder]: Add the bundled_accepted trigger: a bundled root routing accepted is split in the same route pass and the accepted routing is kept on the record. (#TICKET-20261006-DK-400a-2)
+# - 2026-10-09 [python-coder]: The gate is a human child request of the split root (the clarification pattern), opened in the router pass that meets the accepted proposal; conversion is deterministic code and never asks Jev. (#TICKET-20261006-DK-400c-1)
 # ====================================================================

@@ -297,7 +297,7 @@ class _Router(SplitStep, IntentStep):
                 self._dispatch_bound(item, item.binding)
             elif request.kind is RequestKind.HUMAN:
                 self._dispatch_human(item)
-            else:
+            elif not self.open_gate(item):  # a split root with its proposal opens the gate instead
                 report = filter_candidates(request, state["registry"], self.ctx.bindings,
                                            state.get("permissions", []), draft.budgets, self.cfg,
                                            scope=state["task"].scope,

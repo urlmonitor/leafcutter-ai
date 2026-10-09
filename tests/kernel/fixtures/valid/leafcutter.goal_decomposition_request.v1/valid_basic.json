@@ -1,4 +1,5 @@
 {
+  "split_id": "dcp-0123456789abcdef",
   "subject_text": "How should the storage format and the clustering method work?",
   "subject_kind": "goal",
   "max_parts": 5

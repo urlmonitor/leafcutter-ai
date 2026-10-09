@@ -68,7 +68,7 @@
       },
       "admission": {
         "kind": "native_registration",
-        "decision_ref": "TICKET-20261006-DK-400a-1",
+        "decision_ref": "ADR-067",
         "admitted_on": "2026-10-06",
         "admitted_by": "BrainCandy"
       }

@@ -21,6 +21,11 @@ from pydantic import Field, JsonValue, model_validator
 from kernel.contracts.base import KernelModel, fail
 
 
+#: The most parts a proposal may hold; above `split.max_parts` (at most 5) so the cut is visible.
+MAX_PROPOSED_PARTS = 12
+ChildCapability = Literal["decision", "research"]
+
+
 class SubjectKind(StrEnum):
     """What a split's subject is."""
 
@@ -68,6 +73,7 @@ class Decomposition(KernelModel):
     parts: list[dict[str, JsonValue]] = Field(default_factory=list)
     dropped: list[dict[str, JsonValue]] = Field(default_factory=list)
     not_covered: list[dict[str, JsonValue]] = Field(default_factory=list)
+    one_question_rewording: str | None = None
     gate_answer: str | None = None
     gate_by: str | None = None
     gate_at: str | None = None
@@ -91,37 +97,45 @@ class Decomposition(KernelModel):
 
 
 class GoalDecompositionRequestPayload(KernelModel):
-    """leafcutter.goal_decomposition_request.v1: what the host is asked to split."""
+    """leafcutter.goal_decomposition_request.v1: what the host is asked to split (ADR-067 4.1)."""
 
-    subject_text: str = Field(min_length=1)
+    split_id: str = Field(pattern=r"^dcp-[0-9a-f]{16}$")
     subject_kind: SubjectKind
-    max_parts: int = Field(ge=2)
-    min_parts: int = Field(default=2, ge=2)
-    split_id: str | None = None
-    allowed_capabilities: list[str] = Field(default_factory=list)
+    subject_text: str = Field(min_length=1)
+    allowed_capabilities: list[ChildCapability] = Field(
+        default_factory=lambda: ["decision", "research"], min_length=1)
+    min_parts: int = Field(default=2, ge=2, le=2)
+    max_parts: int = Field(ge=2, le=5)
 
 
 class PartProposal(KernelModel):
-    """One proposed part: a title, a verbatim quote of the subject and its dependencies."""
+    """One proposed part: its id, text, the verbatim span it quotes, dependencies and capability."""
 
-    title: str = Field(min_length=1)
-    quote: str = Field(min_length=1)
+    id: str = Field(min_length=1)
+    text: str = Field(min_length=1)
+    covers: str = Field(min_length=1)
     depends_on: list[str] = Field(default_factory=list)
+    child_capability: ChildCapability
 
 
 class GoalDecompositionPayload(KernelModel):
-    """leafcutter.goal_decomposition.v1: the parts the host proposes (a proposal, never a fact)."""
+    """leafcutter.goal_decomposition.v1: the parts the host proposes (a proposal, never a fact).
 
-    parts: list[PartProposal] = Field(min_length=1)
-    schema_kind: Literal["proposal"] = "proposal"
+    Zero parts up to `MAX_PROPOSED_PARTS` are legal: more than `split.max_parts` is cut by the
+    conversion, and fewer than two ends the split there (not at the schema).
+    """
+
+    parts: list[PartProposal] = Field(max_length=MAX_PROPOSED_PARTS)
+    one_question_rewording: str | None = None
 
 
-__all__ = ["Decomposition", "FoundAt", "GoalDecompositionPayload",
+__all__ = ["MAX_PROPOSED_PARTS", "ChildCapability", "Decomposition", "FoundAt", "GoalDecompositionPayload",
            "GoalDecompositionRequestPayload", "KeptRouting", "PartProposal", "SplitTrigger",
            "SubjectKind"]
 
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-09 [python-coder]: Replace the placeholder {title, quote} proposal with the ADR-067 4.2 shape {id, text, covers, depends_on, child_capability} plus one_question_rewording, and add the record field one_question_rewording. (#TICKET-20261006-DK-400c-1)
 # - 2026-10-06 18:00 [python-coder]: New Decomposition split record and the two decomposition payloads. (#TICKET-20261006-DK-400a-1)
 # ====================================================================

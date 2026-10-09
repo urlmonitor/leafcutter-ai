@@ -21,6 +21,9 @@ from kernel.contracts.work import RequestBody
 from kernel.registry.bindings import BindingTable
 from kernel.registry.eligibility import MVP_SIDE_EFFECTS
 
+#: Kernel-started host operations that are never an answer to an unsupported request (ADR-067).
+NEVER_FALLBACK = frozenset({"host.decompose_goal"})
+
 
 def find_fallback(snapshot: RegistrySnapshot, bindings: BindingTable, cfg: KernelConfig,
                   permissions: Collection[str], scope_ids: Collection[str],
@@ -46,6 +49,8 @@ def find_fallback(snapshot: RegistrySnapshot, bindings: BindingTable, cfg: Kerne
         return None, "human questions are never routed to a host fallback"
     granted, scope = set(permissions), set(scope_ids)
     for d in sorted(snapshot.descriptors, key=lambda x: x.id):
+        if d.id in NEVER_FALLBACK:
+            continue
         ops = d.cost_hints.host_operations if d.cost_hints.host_operations is not None else 1
         usable = (d.execution_mode is ExecutionMode.HOST_HANDOFF and d.enabled
                   and d.availability.status != "unavailable"
@@ -66,4 +71,5 @@ def find_fallback(snapshot: RegistrySnapshot, bindings: BindingTable, cfg: Kerne
 # - 2026-10-01 22:00 [python-coder]: Moved out of nodes_gaps.py (unchanged logic) to keep that
 #   module under the file-size limit; the budget arithmetic stays in the node.
 #   (#KernelBootstrapV0/INTENT)
+# - 2026-10-09 [python-coder]: host.decompose_goal is never a no_match fallback. (#TICKET-20261006-DK-400c-1)
 # ====================================================================

@@ -57,7 +57,7 @@ class TestEntries(unittest.TestCase):
             self.assertEqual(d.admission.kind, "native_registration")
             expected = ("TICKET-20261001-KM-500b-3"
                         if d.id in {"host.query_build", "knowledge.activate_query"}
-                        else "TICKET-20261006-DK-400a-1" if d.id == "host.decompose_goal"
+                        else "ADR-067" if d.id == "host.decompose_goal"
                         else "TICKET-20260930-KernelBootstrapV0")
             self.assertEqual(d.admission.decision_ref, expected)
             self.assertEqual(d.version, "1.0.0")

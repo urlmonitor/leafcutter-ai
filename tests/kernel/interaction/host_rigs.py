@@ -58,8 +58,11 @@ RESPONSES: dict[str, dict[str, Any]] = {
         "hierarchy_scope": "not_applicable", "scope_resolution": "sufficient",
         "unresolved": [], "rationale": "Fixture answer.", "engine": "host_llm",
         "status": "decided", "model_id": None},
-    "host.decompose_goal": {"parts": [{"title": "Storage format", "quote": "the storage format"},
-                                      {"title": "Clustering", "quote": "the clustering method"}]},
+    "host.decompose_goal": {"parts": [
+        {"id": "p1", "text": "Decide the storage format", "covers": "the storage format",
+         "depends_on": [], "child_capability": "decision"},
+        {"id": "p2", "text": "Decide the clustering method", "covers": "the clustering method",
+         "depends_on": [], "child_capability": "decision"}], "one_question_rewording": None},
     "host.query_build": {"candidate": {"query_id": "fixture.tests", "status": "proposed"}},
     "host.generate_options": {"options": [option("opt-a"), option("opt-b"), option("opt-c")],
                               "proposed_criteria": [criterion()]},

@@ -14,22 +14,29 @@
   "$id": "leafcutter.goal_decomposition_request.v1",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": false,
-  "description": "leafcutter.goal_decomposition_request.v1: what the host is asked to split.",
+  "description": "leafcutter.goal_decomposition_request.v1: what the host is asked to split (ADR-067 4.1).",
   "properties": {
     "allowed_capabilities": {
       "items": {
+        "enum": [
+          "decision",
+          "research"
+        ],
         "type": "string"
       },
+      "minItems": 1,
       "title": "Allowed Capabilities",
       "type": "array"
     },
     "max_parts": {
+      "maximum": 5,
       "minimum": 2,
       "title": "Max Parts",
       "type": "integer"
     },
     "min_parts": {
       "default": 2,
+      "maximum": 2,
       "minimum": 2,
       "title": "Min Parts",
       "type": "integer"
@@ -41,16 +48,9 @@
       "type": "string"
     },
     "split_id": {
-      "anyOf": [
-        {
-          "type": "string"
-        },
-        {
-          "type": "null"
-        }
-      ],
-      "default": null,
-      "title": "Split Id"
+      "pattern": "^dcp-[0-9a-f]{16}$",
+      "title": "Split Id",
+      "type": "string"
     },
     "subject_kind": {
       "$ref": "#/$defs/SubjectKind"
@@ -62,8 +62,9 @@
     }
   },
   "required": [
-    "subject_text",
+    "split_id",
     "subject_kind",
+    "subject_text",
     "max_parts"
   ],
   "title": "GoalDecompositionRequestPayload",
