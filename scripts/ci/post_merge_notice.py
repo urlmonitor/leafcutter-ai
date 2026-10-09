@@ -14,6 +14,8 @@ ARCHITECTURE: A pure planner (``plan_writes``: verdict, open notices, commit
     (``apply_writes``) that sends each write through the one REST client
     (``_github_rest``). The text lives in ``_notice_render``; which run may
     write at all is decided by ``_run_history.select_verdict_run``, never here.
+    A run with no verdict artifact takes its stage from its own conclusion
+    (``_post_merge_stages.stage_from_conclusion``).
     Reads are exactly two: the workflow's run history and ONE page of open
     labelled issues (``per_page=100``, pull requests excluded, lowest number is
     canonical). CLI: ``apply --api-url --repo --repo-dir --run-id
@@ -43,6 +45,7 @@ if __package__ in (None, ""):  # run as `python scripts/ci/post_merge_notice.py`
 
 from scripts.ci import _notice_render as render  # noqa: E402
 from scripts.ci._github_rest import GitHubClient, GitHubError  # noqa: E402
+from scripts.ci._post_merge_stages import stage_from_conclusion  # noqa: E402
 from scripts.ci._run_history import select_verdict_run, tested_main  # noqa: E402
 from scripts.ci.post_merge_suite import build_verdict_file  # noqa: E402
 
@@ -54,6 +57,7 @@ LANE = "correctness"
 EXIT_OK, EXIT_WRITE_FAILED, EXIT_BAD_INPUT = 0, 1, 2
 REPO_RE = re.compile(r"[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+")
 VERDICT_ARTIFACT = "post-merge-verdict"
+CANCELLED_CONCLUSIONS = frozenset({"cancelled", "timed_out"})
 VERDICTS = frozenset({"green", "red", "did_not_complete"})
 TITLES = {"red": "Post-merge suite is red", "did_not_complete": "Post-merge suite did not complete"}
 
@@ -129,7 +133,9 @@ def last_green_anchor(runs: list[dict], before_run_number: int) -> str | None:
 # --------------------------------------------------------------------------- reads
 def read_runs(client: GitHubClient, repo: str) -> list[dict]:
     """Read one page of the suite's run history on the main branch."""
-    payload = client.get(f"/repos/{repo}/actions/workflows/{SUITE_WORKFLOW}/runs", {"branch": "main", "per_page": render.RUNS_PAGE_SIZE})
+    # No `status` filter, ever: `status=completed` hides the newer waiting run and so the displaced cancellation.
+    query = {"branch": "main", "exclude_pull_requests": "true", "per_page": render.RUNS_PAGE_SIZE}
+    payload = client.get(f"/repos/{repo}/actions/workflows/{SUITE_WORKFLOW}/runs", query)
     return list((payload or {}).get("workflow_runs") or [])
 
 
@@ -147,6 +153,7 @@ def verdict_from_run(run: dict, repo: str) -> dict:
         return {"verdict": "green", "lane": LANE, "stage": None, "failing": [], "run_id": run["id"], "run_url": run["html_url"], "head_sha": run["head_sha"]}
     env = {"GITHUB_SHA": run["head_sha"], "GITHUB_REF": "refs/heads/main", "GITHUB_EVENT_NAME": run["event"], "GITHUB_RUN_ID": str(run["id"]), "GITHUB_REPOSITORY": repo}
     verdict = build_verdict_file(None, None, env)
+    verdict["stage"] = stage_from_conclusion(run.get("conclusion"))  # the run's own conclusion is all there is
     verdict["run_url"] = run["html_url"]
     return verdict
 
@@ -186,6 +193,10 @@ def read_verdict_file(path: Path, run: dict) -> dict:
     if not ok or not isinstance(verdict.get("run_url"), str) or not isinstance(verdict.get("head_sha"), str):
         message = f"verdict file {path} is not the verdict of run {run['id']}"
         raise ValueError(message)
+    if verdict["verdict"] == "green" and run.get("conclusion") in CANCELLED_CONCLUSIONS:
+        # Cancelled after run and retry finished clean: the verdict job (always()) wrote green, the run did not complete.
+        logger.warning("verdict file says green but run %s concluded %s; applying it as did_not_complete", run["id"], run["conclusion"])
+        return {**verdict, "verdict": "did_not_complete", "stage": stage_from_conclusion(run["conclusion"])}
     if (verdict["verdict"] == "green") != (run.get("conclusion") == "success"):
         message = f"verdict file says {verdict['verdict']} but run {run['id']} concluded {run.get('conclusion')}; a re-run left a stale artifact"
         raise ValueError(message)

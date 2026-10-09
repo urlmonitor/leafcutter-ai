@@ -19,7 +19,10 @@ ARCHITECTURE: All decision logic lives here; ``post-merge-suite.yml`` is a thin
     ``verdict`` (reads both reports, writes ``post-merge-verdict.json``),
     ``exit-status`` (the named ``Verdict:`` steps fail through it). The verdict
     comes from per-test reports written by ``_lane_report_plugin``, never from
-    pytest exit statuses. Stdlib-only. TQ-600a-13-xiii adds the pass-on-retry
+    pytest exit statuses. Which stage a run stopped at is decided by
+    ``_post_merge_stages`` from the report AND from the ``needs.run.result`` /
+    ``needs.retry.result`` values the verdict step receives as ``RUN_RESULT`` /
+    ``RETRY_RESULT``. Stdlib-only. TQ-600a-13-xiii adds the pass-on-retry
     history window at the marked extension point in ``build_verdict_file``.
 """
 
@@ -33,22 +36,25 @@ import subprocess
 import sys
 from pathlib import Path
 
+if __package__ in (None, ""):  # run as `python scripts/ci/post_merge_suite.py`: make `scripts.ci` importable
+    sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+
+from scripts.ci._post_merge_stages import (  # noqa: E402
+    FAILED_STATES,
+    REPORT_ABSENT,
+    REPORT_OK,
+    REPORT_UNREADABLE,
+    lane_stage,
+    normalize_job_result,
+)
+
 logger = logging.getLogger("post_merge_suite")
 
 SCHEMA_VERSION = 2
 LANE = "correctness"
 PLUGIN_ARGS = ["-p", "scripts.ci._lane_report_plugin"]
-FAILED_STATES = frozenset({"failed", "error"})
 FIRST_REPORT = "first-run-report/first-run-report.json"
 RETRY_REPORT = "retry-report/retry-report.json"
-STAGE_NO_REPORT = "run_report_missing"
-STAGE_NOTHING_COLLECTED = "nothing_collected"
-STAGE_ABORTED = "pytest_aborted"
-STAGE_TRUNCATED = "truncated"
-STAGE_INCONSISTENT_EXIT = "exit_status_without_failures"
-STAGE_NOTHING_PASSED = "nothing_passed"
-STAGE_MOSTLY_SKIPPED = "mostly_skipped"
-ABORTED_EXIT_STATUSES = frozenset({2, 3, 4})
 
 
 class LaneReportError(RuntimeError):
@@ -97,20 +103,29 @@ def exit_status(verdict: dict) -> int:
 
 
 # --------------------------------------------------------------------------- reports and the verdict file
-def read_report(path: Path) -> dict | None:
-    """Read a lane report file; None when it is absent, unreadable or not a lane report."""
+def load_report(path: Path) -> tuple[dict | None, str]:
+    """Read a lane report file; return (report, state), state one of ok | absent | unreadable.
+
+    ``unreadable`` is a file that exists but is corrupt, truncated or not a lane report: a different
+    ending from a file that was never written.
+    """
     try:
         data = json.loads(path.read_text(encoding="utf-8"))
     except FileNotFoundError:
         logger.warning("lane report %s not found", path)
-        return None
+        return None, REPORT_ABSENT
     except (OSError, ValueError) as exc:
         logger.warning("lane report %s is unreadable: %s", path, exc)
-        return None
+        return None, REPORT_UNREADABLE
     if not isinstance(data, dict) or not isinstance(data.get("results"), dict):
         logger.warning("lane report %s has no results object", path)
-        return None
-    return data
+        return None, REPORT_UNREADABLE
+    return data, REPORT_OK
+
+
+def read_report(path: Path) -> dict | None:
+    """Read a lane report file; None when it is absent, unreadable or not a lane report."""
+    return load_report(path)[0]
 
 
 def _run_context(env: dict) -> dict:
@@ -126,44 +141,32 @@ def _run_context(env: dict) -> dict:
     }
 
 
-def lane_stage(first: dict | None) -> str | None:
-    """Return why the first execution does not count as a finished lane, or None when it does.
+def build_verdict_file(
+    first: dict | None,
+    retry: dict | None,
+    env: dict,
+    *,
+    run_result: str = "",
+    retry_result: str = "",
+    first_state: str = REPORT_ABSENT,
+) -> dict:
+    """Build the ``post-merge-verdict.json`` object from the two reports (None = absent).
 
-    Rules, in order (a verdict is only green or red for a lane that really ran):
-    no report; pytest aborted (exit status 2 interrupted, 3 internal error, 4 usage error);
-    nothing collected; fewer tests reported than were selected (pytest.exit or a crash cut the
-    session short); exit status 1 although no test failed; no test passed (all skipped); more
-    than half of the tests skipped (a missing prerequisite hollowed the lane out).
+    ``run_result`` / ``retry_result`` are the dependency results of the verdict job and ``first_state``
+    says whether a missing first-run report was absent or unreadable; see ``_post_merge_stages``.
+    Green is only ever the absence of every did-not-complete stage AND of every failure.
+    ``collection_errors`` is always present (``[]`` when none): they are never failing tests.
     """
-    if first is None:
-        return STAGE_NO_REPORT
-    results = first.get("results", {})
-    statuses = list(results.values())
-    if first.get("exitstatus") in ABORTED_EXIT_STATUSES:
-        return STAGE_ABORTED
-    if not results:
-        return STAGE_NOTHING_COLLECTED
-    if first.get("ran", len(results)) < first.get("expected", 0):
-        return STAGE_TRUNCATED
-    if first.get("exitstatus") == 1 and not any(s in FAILED_STATES for s in statuses):
-        return STAGE_INCONSISTENT_EXIT
-    if "passed" not in statuses:
-        return STAGE_NOTHING_PASSED
-    if statuses.count("skipped") * 2 > len(statuses):
-        return STAGE_MOSTLY_SKIPPED
-    return None
-
-
-def build_verdict_file(first: dict | None, retry: dict | None, env: dict) -> dict:
-    """Build the ``post-merge-verdict.json`` object from the two reports (None = absent)."""
     results = (first or {}).get("results", {})
-    stage = lane_stage(first)
+    stage = lane_stage(first, retry, run_result=run_result, retry_result=retry_result, first_state=first_state)
     verdict = classify(results, (retry or {}).get("results"))
     if stage:
         verdict["verdict"] = "did_not_complete"
     # TQ-600a-13-xiii extension point: read earlier verdicts, fill the window and the escalation list.
     window = {node_id: 1 for node_id in verdict["passed_on_retry"]}
+    errors = sorted((first or {}).get("collection_errors") or [])
     return {
+        "collection_errors": errors,
         "schema_version": SCHEMA_VERSION,
         "lane": LANE,
         "verdict": verdict["verdict"],
@@ -278,7 +281,16 @@ def _cmd_retry(opts: argparse.Namespace, command: list[str]) -> int:
 def _cmd_verdict(opts: argparse.Namespace, _command: list[str]) -> int:
     """Classify both reports, write the verdict file, publish the verdict as a step output."""
     base = Path(opts.artifacts)
-    verdict_file = build_verdict_file(read_report(base / FIRST_REPORT), read_report(base / RETRY_REPORT), dict(os.environ))
+    first, first_state = load_report(base / FIRST_REPORT)
+    retry, _retry_state = load_report(base / RETRY_REPORT)
+    verdict_file = build_verdict_file(
+        first,
+        retry,
+        dict(os.environ),
+        run_result=normalize_job_result(os.environ.get("RUN_RESULT")),  # missing or odd means unknown, never green
+        retry_result=normalize_job_result(os.environ.get("RETRY_RESULT")),
+        first_state=first_state,
+    )
     _write_text(Path(opts.output), json.dumps(verdict_file, indent=2) + "\n")
     _set_output("verdict", verdict_file["verdict"])
     _append_summary(verdict_file)
