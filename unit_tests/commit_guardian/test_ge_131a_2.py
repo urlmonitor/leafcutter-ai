@@ -154,6 +154,7 @@ def _has_number(text: str, number: int) -> bool:
 def _score_of(source: str, function: str) -> int:
     """Measure a function with the shipped counting rule (never hard-coded)."""
     spec = importlib.util.spec_from_file_location("_ge131a2_cc", GUARDIAN_DIR / "check_complexity.py")
+    assert spec is not None and spec.loader is not None
     module = importlib.util.module_from_spec(spec)
     sys.path.insert(0, str(GUARDIAN_DIR))  # the check imports its sibling helpers
     try:
