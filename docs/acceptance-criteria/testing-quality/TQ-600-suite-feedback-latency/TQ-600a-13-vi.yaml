@@ -1,12 +1,12 @@
 id: TQ-600a-13-vi
 components:
   - testing_quality
-title: "Every pull request is held while the latest settled post-merge run on main is not green, by a check that reads the run history, runs no tests, and cannot be edited by the pull request it judges"
+title: "Every pull request is held while the latest settled post-merge run on main is not green, by a check that reads the run history, runs no tests, cannot be edited by the pull request it judges, and is published by a dedicated App so that no pull request can impersonate it"
 component: testing-quality
 level: L3
 status: active
 req_status: draft
-work_status: done
+work_status: todo
 readiness: approved
 priority: high
 roadmap_phase: phase_1
@@ -50,7 +50,54 @@ criteria: |
     request whose head carries a hold module that always passes and observing the main
     branch's verdict,
   And the pass and fail outcomes are shown by executing the check against the double for
-    each run-history state, never by reading the workflow file for the request it makes.
+    each run-history state, never by reading the workflow file for the request it makes,
+  And the verdict is published as a check run named exactly `Post-merge suite status`,
+    created by the repository's dedicated hold App (App ID 5249547) and not by the
+    Actions job, on the pull request's head commit as named in the triggering event —
+    never on the commit the workflow itself ran from, which under this trigger is the
+    tip of main,
+  And that check run's conclusion is success exactly when the verdict is a pass or an
+    accepted exemption (TQ-600a-13-viii), and failure for every other state, including
+    could-not-read (TQ-600a-13-ix) — never neutral or skipped, both of which the hosting
+    service counts as satisfying a required check — and its summary carries the same
+    output the verdict computes, naming the run, its conclusion and the notice,
+  And the Actions job that computes the verdict is named `Post-merge hold evaluation`,
+    so that no check the job itself produces carries the name `Post-merge suite status`,
+  And the App's check run is created in progress on the head commit before the verdict is
+    computed and completed after it, so that an evaluation that stops part-way leaves a
+    check that is not green rather than no check at all,
+  And when the App's credential cannot be obtained because a secret is missing or empty,
+    the hosting service rejects the App ID or the private key, or the App is no longer
+    installed on the repository, then no check run is published, the evaluation job
+    concludes failure, and its output names which of those occurred without printing any
+    part of either secret — so on a head commit that carries no earlier App verdict the
+    required check is absent and the pull request is not mergeable,
+  And when creating the in-progress check run is refused or fails, the outcome is the same
+    as for a credential that could not be obtained, and the output names the failed write,
+  And when completing the check run is refused or fails, the check run is left in
+    progress, which is not green, and the evaluation job concludes failure naming the
+    failed write,
+  And when the verdict computation raises, or the job is cancelled or killed, after the
+    in-progress check run exists, that check run is left in progress, which is not green,
+  And when any of those failures occurs on a re-evaluation of a head commit that already
+    carries an earlier App verdict, the evaluation job concludes failure and its output
+    states that the verdict published on that commit could not be refreshed and names the
+    commit, rather than reporting success,
+  And the App's credential is obtained afresh in every evaluation, is never written to
+    any file in the checkout or the runner workspace, to the job's environment or output
+    files, or to any log, and is used only for the hold's own check-run writes,
+  And the App's credential is reachable only by the hold's evaluation job running from
+    the default branch: no job that checks out or executes pull-request content (the fix
+    proof of TQ-600a-13-xvi) references it, and no workflow that a pull request adds or
+    edits, under any trigger, can read it — the last shown by the recorded observation of
+    TQ-600a-13-x, because it is a property of where the hosting service stores the secret,
+  And the no-pull-request-code invariant above holds unchanged with the App in place,
+  And the publication and failure clauses are demonstrated by executing the evaluation
+    job against a recording double of the hosting service for each verdict state and each
+    failure above, observing the check-run requests the double receives — name, head
+    commit, creating identity, status and conclusion — and afterwards scanning the
+    scratch workspace, the job's environment and output files and the captured logs for
+    the credential, never by reading the workflow file for the steps it declares.
 depends_on:
   - TQ-600a-13
   - TQ-600a-13-ii
@@ -169,8 +216,36 @@ it_requirements:
     THE JOB SHAPE THAT A REQUIRED CHECK NEEDS — VERIFIED (GitHub expert, docs): a skipped
     job reports success and does not block even when required, and a job whose `needs:`
     failed is skipped; a workflow skipped by path, branch or commit-message filtering
-    leaves the check pending forever. So exactly one job, `name: Post-merge suite status`,
-    no matrix, NO job-level `if:`, NO `needs:`, no `paths:` filter. (Also TQ-600a-13-x.)
+    leaves the check pending forever. So exactly one job, no matrix, NO job-level `if:`,
+    NO `needs:`, no `paths:` filter. (Also TQ-600a-13-x.) AMENDED 2026-10-09 (owner
+    decision, App route): the job is now `name: Post-merge hold evaluation` and is NOT the
+    required context; the required context is the check run the dedicated App creates.
+    SUPERSEDED: "exactly one job, `name: Post-merge suite status`". The no-`if:` /
+    no-`needs:` / no-filter rules stay, because a skipped evaluation job publishes no App
+    check at all — safe (absent is not green) but it breaks the every-pull-request clause
+    of TQ-600a-13-x.
+  - >-
+    THE DEDICATED APP — DECIDED 2026-10-09 BY THE OWNER (BrainCandy). App ID 5249547,
+    repository permission Checks: read and write and nothing else, installed only on this
+    repository; secrets `HOLD_APP_ID` and `HOLD_APP_PRIVATE_KEY`. The App's permission is
+    its own: the job's `permissions:` block still grants GITHUB_TOKEN no `checks` scope.
+    BA FINDING, FOR THE OWNER AND THE IT PO: as created, both are REPOSITORY Actions
+    secrets, and -xvi records (VERIFIED, GitHub expert Q7) that a same-repository
+    `pull_request` run receives repository secrets. A pull request from a branch of this
+    repository could therefore add a `pull_request` workflow that mints an App token and
+    posts its own successful `Post-merge suite status` under App 5249547 — the spoof moves
+    rather than closes. The criteria require the credential to be reachable only by the
+    evaluation job on the default branch; the BA's proposed form is an environment (name
+    for the IT PO; suggested `post-merge-hold`) whose deployment-branch policy admits only
+    `main`, holding both secrets as environment secrets, referenced by the evaluation job
+    alone, with the repository-level copies deleted. UNVERIFIED: that a
+    `pull_request_target` job passes a `main`-only environment branch policy (its ref is
+    the base branch), and whether the environment adds a deployment entry to every pull
+    request's timeline. Both are recorded observations in TQ-600a-13-x.
+    HOW THE TOKEN IS MINTED (an RS256 JWT exchanged for an installation token) is for the
+    IT PO: the module is stdlib-only, which cannot sign RS256, so the choice is between a
+    SHA-pinned token-minting action and the runner's openssl, each executing only
+    default-branch content.
   - >-
     PERMISSIONS: `permissions: {}` at workflow level; on the job exactly `contents: read`
     (the sparse default-branch checkout), `actions: read` (verdict, jobs and proof reads),
@@ -221,9 +296,12 @@ delivers_to:
   - agent: python-coder
     ac_id: TQ-600a-13-x
     contract: >-
-      One job in .github/workflows/post-merge-hold.yml whose `name:` is exactly
-      `Post-merge suite status`, under `pull_request_target`, with no matrix, no job-level
-      `if:`, no `needs:`, and no path filter.
+      One job in .github/workflows/post-merge-hold.yml named exactly `Post-merge hold
+      evaluation`, under `pull_request_target`, with no matrix, no job-level `if:`, no
+      `needs:`, and no path filter; and on every evaluation one check run named exactly
+      `Post-merge suite status`, created by App 5249547 on the pull request's head commit,
+      concluded success only on pass or exempt and failure otherwise. (Amended 2026-10-09:
+      previously the job itself was named `Post-merge suite status`.)
   - agent: python-coder
     ac_id: TQ-600a-13-xv
     contract: >-
@@ -267,7 +345,7 @@ test_spec:
     framework: unittest
     type: integration
     angle: discrimination
-    surface_invoked: "the `Post-merge suite status` job's real `run:` steps executed by the shared workflow-step executor in a subprocess, GITHUB_API_URL pointed at the fake server, with a process and file-open observer installed in the evaluating interpreter"
+    surface_invoked: "the `Post-merge hold evaluation` job's real `run:` steps executed by the shared workflow-step executor in a subprocess, GITHUB_API_URL pointed at the fake server, with a process and file-open observer installed in the evaluating interpreter"
     must_catch:
       - "the check invokes the test runner to confirm the result itself"
       - "the check pages through every run or every issue, so its cost grows with the repository"
@@ -323,6 +401,60 @@ test_spec:
     description: >-
       THE ONE SEAM FOR THIS WORKFLOW FILE. Red latest run: exit non-zero, output names the
       run; green: exit zero.
+  - name: test_tq600a_13_vi_the_verdict_is_published_by_the_app_on_the_head_commit
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: integration
+    angle: criterion
+    surface_invoked: "the shared workflow-step executor running the `Post-merge hold evaluation` job of .github/workflows/post-merge-hold.yml with a synthetic `pull_request_target` payload whose head SHA differs from GITHUB_SHA, against the recording fake server acting as the App token and check-run endpoints, with a throwaway test-only private key"
+    must_catch:
+      - "the check run is created on GITHUB_SHA (main's tip under this trigger) instead of the payload's head SHA"
+      - "the check run is created with GITHUB_TOKEN, so its creating identity is the Actions app rather than the hold App"
+      - "a held, stale, disabled, never-run or could-not-read verdict concludes neutral or skipped"
+      - "the evaluation job itself is still named `Post-merge suite status`"
+      - "the check run is created only after the verdict is computed, so a crash leaves no check"
+    description: >-
+      For each verdict state (pass, exempt, red, did_not_complete, stale, disabled,
+      never_run, could_not_read): exactly one create of `Post-merge suite status` with
+      status in_progress on the payload head SHA, authorised by the minted App token, then
+      exactly one completion with conclusion success for pass and exempt and failure for
+      the other six, summary carrying the verdict output. The executed job's own name is
+      `Post-merge hold evaluation`.
+  - name: test_tq600a_13_vi_every_publication_failure_leaves_the_check_not_green
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: integration
+    angle: failure
+    surface_invoked: "the same executor and fake server, the fake refusing at each stage in turn"
+    must_catch:
+      - "a missing or empty secret is treated as 'nothing to publish' and the job exits zero"
+      - "a rejected JWT (401) or an uninstalled App (404 on the installation lookup) is caught and the job exits zero"
+      - "a refused check-run create (403) or a failed completion (500) is caught and the job exits zero"
+      - "the verdict computation raising after the in-progress create leads to a completion with success or neutral"
+      - "a re-evaluation of a head that already carries an App success reports success when it could not refresh it"
+      - "the failure output prints any part of the private key or the minted token"
+    description: >-
+      Missing secret, empty secret, JWT rejected, App not installed, create refused,
+      completion refused, verdict computation raising after create: in every case the
+      fake records no success conclusion from this evaluation, the job concludes failure,
+      the output names the stage, and no recorded output contains the key or token. With a
+      prior success already recorded on the same head SHA and the mint failing, the output
+      says that commit's published verdict could not be refreshed.
+  - name: test_tq600a_13_vi_the_app_credential_is_never_persisted
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: integration
+    angle: discrimination
+    surface_invoked: "the same executor, after a full pass and a full held evaluation, scanning the scratch workspace, the GITHUB_ENV / GITHUB_OUTPUT / GITHUB_STEP_SUMMARY files and the captured step logs"
+    must_catch:
+      - "the minted token is exported to GITHUB_ENV or GITHUB_OUTPUT for a later step"
+      - "the private key is written to a file in the workspace to sign the JWT and not removed"
+      - "the token is passed to a step that runs content from the pull-request head"
+    description: >-
+      Neither the private key nor the minted token appears in any file under the workspace
+      or in any of the job's environment, output or summary files, or in the logs, after
+      either evaluation. The only requests carrying the token are the hold's own
+      check-run create and completion.
 test_rationale: |
   The verdict descriptor serves every issue state against a fixed red run history because
   decision A is a claim of independence: the issue may do anything and the verdict must
@@ -369,6 +501,29 @@ amended_by:
 - action: approved
   agent: approve_acs
   date: '2026-10-08'
+- reason: 'OWNER DECISION 2026-10-09 (BrainCandy): CLOSE THE CHECK-NAME SPOOF GAP
+    WITH A DEDICATED GITHUB APP (App ID 5249547, Checks read and write only, installed
+    on this repository only, secrets HOLD_APP_ID and HOLD_APP_PRIVATE_KEY). This reverses
+    the "known and accepted" residual risk recorded under user decision H. Criteria
+    ADDED, none removed: the verdict is published as an App-created check run named
+    `Post-merge suite status` on the payload head commit, created in progress before
+    the verdict and completed after it, success only on pass or exempt and failure
+    otherwise, never neutral or skipped; the computing job is renamed `Post-merge
+    hold evaluation`; credential-mint, check-run-write and verdict-crash failures
+    each leave the check non-green and the job failed; a failed refresh of an earlier
+    App verdict is reported, not hidden; the credential is minted per run, never persisted,
+    used only for the hold''s check-run writes, and reachable by no job that runs
+    pull-request content and no PR-added workflow. Title widened. it_requirements:
+    job-shape entry amended (job no longer carries the required name) and an App entry
+    added. delivers_to to -x amended. Three test descriptors added. work_status done
+    -> todo, because the added criteria are not built; the existing covered_by and
+    implemented_by remain valid for the unchanged criteria. readiness approved ->
+    reviewed: must be re-approved before building. depends_on unchanged.'
+  by: business-analyst
+  at: 2026-10-09
+- action: approved
+  agent: approve_acs
+  date: '2026-10-09'
 superseded_by: null
 covered_by:
 - unit_tests/suite_performance/test_tq_600a_13_vi.py
@@ -388,12 +543,28 @@ notes: |
   than the platform's 30-day re-run limit cannot be re-run and is listed rather than
   silently left.
 
-  RESIDUAL RISK, KNOWN AND ACCEPTED — NOT SOLVED: any pull request can add a workflow of
-  its own with a job named `Post-merge suite status` that exits zero. The ruleset pins
-  contexts to the GitHub Actions app (15368), which is any Actions job, so such a spoof
-  produces a second check run of the same name. This applies equally to all six existing
-  required checks (any PR could fake `Test suite (pytest)`). Only a dedicated GitHub App
-  with its own integration id closes it. Recorded by user decision H as accepted.
+  CHECK-NAME SPOOF — CLOSED BY THIS DESIGN ONCE TQ-600a-13-x LANDS (owner decision,
+  2026-10-09, BrainCandy; supersedes the "known and accepted" wording of user decision H,
+  2026-10-08). The gap: any pull request can add a workflow of its own with a job named
+  `Post-merge suite status` that exits zero, and while the ruleset pins the context to
+  the GitHub Actions app (15368) — which is any Actions job — that spoof satisfies it.
+  The owner created the dedicated App (ID 5249547, Checks read and write, this repository
+  only). This record now publishes the verdict as that App's check run and renames the
+  Actions job; TQ-600a-13-x pins the required context to the App's integration id, after
+  which a same-named check from any other source cannot satisfy it. UNTIL -x's ruleset
+  entry is added and its spoof observation recorded, the gap is OPEN (the hold is
+  advisory anyway until then). The gap is closed only if the App's private key is
+  reachable by the evaluation job alone — see the App it_requirement: as repository
+  secrets it is readable by any same-repository `pull_request` workflow, which would let
+  a PR mint the App's own token.
+  STILL OPEN, NOT CLOSED BY THIS RECORD: the six other required checks remain pinned to
+  15368 and are spoofable in the same way (any PR could fake `Test suite (pytest)`).
+  Moving them onto an App is out of this family's scope.
+  RESIDUAL, NAMED: a pass the App has already published on a head commit cannot be
+  withdrawn by an evaluation that cannot obtain the App's credential. A re-evaluation of
+  that same commit (a description edit, or TQ-600a-13-xv after a red run) then fails its
+  job and says the verdict could not be refreshed, but the earlier success stands until a
+  later evaluation can write. Open question for the owner.
 
   risk_surface raised from internal to auth: this record now owns the trust boundary of a
   merge gate.

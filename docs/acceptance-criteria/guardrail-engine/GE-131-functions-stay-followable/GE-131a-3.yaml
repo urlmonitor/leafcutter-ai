@@ -1,0 +1,75 @@
+id: GE-131a-3
+title: "The commit-guardian README and the complexity-reduction skill describe the check as registered and state the rule it applies"
+component: guardrail-engine
+components:
+  - commit_guardian
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the commit-guardian README's row for check-complexity says it blocks any
+    Python file where a function exceeds the limit,
+  When a reader looks the check up after GE-131a-2 lands,
+  Then the row says a new or crossing function is refused above the limit, and a
+    function already over it is refused only when its score rises above its
+    previous committed score.
+
+  Given the complexity-reduction skill says check-complexity is not registered in
+    the default manifest and runs only "where it is registered",
+  When a reader follows the skill,
+  Then it says check-complexity is registered and refuses commits, as it says of
+    check-sql-complexity.
+
+  Given the skill's re-measure step says to confirm the score is at or under the
+    limit,
+  When a reader reaches that step,
+  Then it states what the check accepts: at or under the limit for a new or crossing
+    function, and at or under its previous committed score for one already over.
+depends_on:
+  - GE-131a
+  - GE-131a-2
+doc_links:
+  - path: docs/acceptance-criteria/guardrail-engine/GE-131-functions-stay-followable/GE-131a.yaml
+    relationship: parent
+    status: exists
+  - path: templates/scripts/commit_guardian/README.md
+    relationship: modifies
+    status: exists
+    relevance: "Line 37, the check_complexity.py row of the hook table (arm 1)."
+  - path: templates/skills/complexity-reduction/SKILL.md
+    relationship: modifies
+    status: exists
+    relevance: >-
+      Lines 42-45, the "not registered in the default manifest" statement (arm 2).
+      Lines 76-78, "or check-complexity where it is registered" (arm 2). Line 58, the
+      re-measure step (arm 3). Leave the measure command at line 67 untouched.
+assigned_agent: documentation-expert
+estimated_complexity: XS
+it_requirements:
+  - "REGRESSION: unit_tests/test_complexity_reduction_skill.py must stay green after the SKILL.md edit. It checks the measured examples against the shipped checker and the quoted defaults against commit_guardian.json. Do not change any example score or default value."
+  - "Edit templates/ only (ADR-001)."
+test_required: false
+test_rationale: "Prose edit to two docs with no executable behaviour; the existing skill test is the regression guard."
+delivers_to: null
+expects_from:
+  ac_id: GE-131a-2
+  contract: "The registered behaviour named in GE-131a-2's delivers_to."
+origin_agent: business-analyst
+created: 2026-10-09
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: docs
+risk_surface: internal
+notes: |
+  The reference-doc record GE-131a's documentation_triggers requires. A plain doc
+  edit; no behaviour-comparison test. Edit the templates/ sources only (ADR-001); the
+  deployed copies follow from the build.
+
+  The stale figures in the hook-registration inventory comment are fixed by
+  GE-131a-2, which edits that test file anyway; not repeated here.
