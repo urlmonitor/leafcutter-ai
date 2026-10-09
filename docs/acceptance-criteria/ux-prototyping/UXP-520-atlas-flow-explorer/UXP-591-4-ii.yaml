@@ -33,10 +33,63 @@ doc_links:
   - path: docs/product-truth/mockups/leafcutter/atlas-flows-canonical-url.html
     relationship: describes
     status: exists
+  - path: docs/architecture/components/ux-prototyping.md
+    relationship: describes
+    status: exists
+  - path: leafcutter-web/README.md
+    relationship: describes
+    status: exists
+    relevance: Atlas routes table and how the app reads the repo; gains the /flows/<product>/<flow> addresses.
 assigned_agent: frontend-coder
 estimated_complexity: S
+change_target:
+  - code
+  - ui
+risk_surface: internal
+it_requirements:
+  - The X button and a click on the canvas beside the drawer both close through the replace-entry path
+    to flowHref(flowId) with no query.
+  - On an entry that began as the bare /flows the close lands on the default flow's canonical address,
+    never /flows again (owner ruling 1); the bare /flows URL is never rebuilt after a drawer action.
+  - The replace stores the entry's view state with the drawer closed, so a later drill and Back return
+    the flow with no drawer.
 delivers_to: null
-expects_from: {}
+expects_from:
+  ac_id: UXP-591-4
+  contract: 'One replace-entry path for drawer open, switch and close that rewrites the current history
+    entry with window.history.replaceState: URL flowHref(flowId, stepId | null) and view state {crumbs:
+    string[] (Flow ids, entry flow first), filters: {source: ''real'' | ''mock'', kind: ''user'' | ''data''
+    | ''architecture'', realization: ''all'' | ''built'' | ''spec'' | ''mock''}} kept in history.state
+    under one namespaced key, merged into, never overwriting, the App Router''s own keys (__NA, __PRIVATE_NEXTJS_INTERNALS_TREE);
+    not sessionStorage (owner decision 2026-10-09); history.length never changes.'
+test_spec:
+  - name: closing the Build drawer with X or a canvas click returns the address to /flows/leafcutter/deliver-a-feature
+      at unchanged history length
+    target_dir: leafcutter-web/components/flows/__tests__/
+    framework: vitest
+    type: component
+    angle: criterion
+    must_catch:
+      - the close pushes an entry
+      - the address keeps ?step=build
+  - name: after closing the drawer and drilling into Build, Back returns /flows/leafcutter/deliver-a-feature
+      with no drawer
+    target_dir: leafcutter-web/components/flows/__tests__/
+    framework: vitest
+    type: component
+    angle: seam
+  - name: a drawer opened and closed on the bare /flows ends at /flows/leafcutter/deliver-a-feature, never
+      /flows
+    target_dir: leafcutter-web/components/flows/__tests__/
+    framework: vitest
+    type: component
+    angle: boundary
+    must_catch:
+      - closing restores /flows
+test_rationale: The seam test crosses the close (replace) and the drill (push) and pop paths, which is
+  where a stale ?step= would reappear.
+test_required: true
+declares_side_effect: false
 origin_agent: business-analyst
 created: '2026-10-09'
 amended_by: []

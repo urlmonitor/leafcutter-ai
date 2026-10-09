@@ -32,10 +32,65 @@ doc_links:
   - path: docs/product-truth/mockups/leafcutter/atlas-flows-canonical-url.html
     relationship: describes
     status: exists
+  - path: docs/architecture/components/ux-prototyping.md
+    relationship: describes
+    status: exists
+  - path: leafcutter-web/README.md
+    relationship: describes
+    status: exists
+    relevance: Atlas routes table and how the app reads the repo; gains the /flows/<product>/<flow> addresses.
+  - path: docs/ui-context.md
+    relationship: describes
+    status: exists
+    relevance: Atlas design tokens and component kit for the notice styling.
 assigned_agent: frontend-coder
 estimated_complexity: S
+change_target:
+  - code
+  - ui
+risk_surface: contract_boundary
+it_requirements:
+  - 'An unknown ?step= keeps the 200: the route does not call notFound() for it; only the flow id decides
+    a 404.'
+  - The 'Step not found' notice derives from the current address (a flow is drawn AND ?step= is present
+    AND names no step or branch of it). It is not an independent flag, so it cannot outlive the unknown
+    value (owner ruling 2, UXP-591-2-ii).
+  - Notice copy is the dataset's FlowRoute.step_notice text; the step value is rendered as React text
+    only (attacker-controlled input).
+  - 'The address stays as opened, ?step=lint included: no replace on load.'
 delivers_to: null
-expects_from: {}
+expects_from:
+  ac_id: UXP-591-2
+  contract: 'FlowsView initial prop step: string | null resolved among the flow''s steps and branches;
+    no match yields the ''Step not found'' state.'
+test_spec:
+  - name: catch-all flows route answers leafcutter/python-coder-internal?step=lint without notFound()
+      and with no drawer open
+    target_dir: leafcutter-web/__tests__/
+    framework: vitest
+    type: integration
+    angle: reachability
+    surface_invoked: 'default export of leafcutter-web/app/flows/[...id]/page.tsx with searchParams {step:
+      ''lint''}'
+    must_catch:
+      - an unknown step makes the route call notFound()
+  - name: '''Step not found'' notice quotes ''lint'' in the dataset wording with no ''Flow not found''
+      notice and a one-flow breadcrumb'
+    target_dir: leafcutter-web/components/flows/__tests__/
+    framework: vitest
+    type: component
+    angle: criterion
+  - name: opening a step address with an unknown step leaves window.location and history.length unchanged
+    target_dir: leafcutter-web/components/flows/__tests__/
+    framework: vitest
+    type: component
+    angle: failure
+    must_catch:
+      - the view strips the unknown ?step= on load with replaceState
+test_rationale: The status and the address are the two places this state can regress silently; the notice
+  copy test pins the approved wording.
+test_required: true
+declares_side_effect: false
 origin_agent: business-analyst
 created: '2026-10-09'
 amended_by: []

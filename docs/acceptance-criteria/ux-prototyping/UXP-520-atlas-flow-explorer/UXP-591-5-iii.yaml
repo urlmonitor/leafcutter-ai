@@ -36,10 +36,66 @@ doc_links:
   - path: docs/product-truth/mockups/leafcutter/atlas-flows-canonical-url.html
     relationship: describes
     status: exists
+  - path: docs/architecture/components/ux-prototyping.md
+    relationship: describes
+    status: exists
+  - path: leafcutter-web/README.md
+    relationship: describes
+    status: exists
+    relevance: Atlas routes table and how the app reads the repo; gains the /flows/<product>/<flow> addresses.
 assigned_agent: frontend-coder
 estimated_complexity: S
-delivers_to: null
-expects_from: {}
+change_target:
+  - code
+  - ui
+risk_surface: internal
+it_requirements:
+  - A Source, Kind or Realization change is always a replace, never a push (owner ruling 3), through the
+    UXP-591-4 replace-entry path.
+  - 'The re-picked flow is the first flow the existing selector lists under the new filters (stored flows
+    in Flow.id order, today''s fallback): reuse the selector''s own filtering and ordering, no second
+    ordering.'
+  - 'Whether the flow is kept is decided against the entry flow (crumbs[0]), not the drawn sub-flow. When
+    it is not kept, the new entry state is {crumbs: [repicked], filters: new} and the URL is flowHref(repicked)
+    with no ?step=.'
+delivers_to:
+  agent: frontend-coder
+  contract: 'Re-pick function: given filters {source, kind, realization}, returns the first Flow id the
+    selector lists under them (stored flows in Flow.id order), applied with replaceEntry(flowHref(repickedId),
+    {crumbs: [repickedId], filters}). Reused by UXP-591-5-v.'
+expects_from:
+  ac_id: UXP-591-4
+  contract: 'One replace-entry path for drawer open, switch and close that rewrites the current history
+    entry with window.history.replaceState: URL flowHref(flowId, stepId | null) and view state {crumbs:
+    string[] (Flow ids, entry flow first), filters: {source: ''real'' | ''mock'', kind: ''user'' | ''data''
+    | ''architecture'', realization: ''all'' | ''built'' | ''spec'' | ''mock''}} kept in history.state
+    under one namespaced key, merged into, never overwriting, the App Router''s own keys (__NA, __PRIVATE_NEXTJS_INTERNALS_TREE);
+    not sessionStorage (owner decision 2026-10-09); history.length never changes.'
+test_spec:
+  - name: setting Realization to Spec from how-acs-are-built?step=code draws define-a-feature and replaces
+      the entry with /flows/leafcutter/define-a-feature at two history entries
+    target_dir: leafcutter-web/components/flows/__tests__/
+    framework: vitest
+    type: component
+    angle: criterion
+    must_catch:
+      - the filter change pushes a new entry
+      - the replaced URL keeps ?step=code
+  - name: Back then Forward after the re-pick returns deliver-a-feature and then define-a-feature with
+      Realization Spec
+    target_dir: leafcutter-web/components/flows/__tests__/
+    framework: vitest
+    type: component
+    angle: seam
+  - name: flow-navigation replays nav-filter-replace-1 to -3 and -5 to -7 of atlas-flows.mock.json
+    target_dir: leafcutter-web/components/flows/__tests__/
+    framework: vitest
+    type: unit
+    angle: real_artifact
+test_rationale: The seam test proves the replaced entry stores the new filters, which UXP-591-5-ii depends
+  on; the replay pins the approved filter sessions.
+test_required: true
+declares_side_effect: false
 origin_agent: business-analyst
 created: '2026-10-09'
 amended_by: []

@@ -43,10 +43,66 @@ doc_links:
   - path: docs/product-truth/mockups/leafcutter/atlas-flows-canonical-url.html
     relationship: describes
     status: exists
+  - path: docs/architecture/components/ux-prototyping.md
+    relationship: describes
+    status: exists
+  - path: leafcutter-web/README.md
+    relationship: describes
+    status: exists
+    relevance: Atlas routes table and how the app reads the repo; gains the /flows/<product>/<flow> addresses.
 assigned_agent: frontend-coder
-estimated_complexity: S
+estimated_complexity: M
+change_target:
+  - code
+  - ui
+risk_surface: internal
+it_requirements:
+  - The not-found state's filter controls are live and use the UXP-591-5-iii re-pick function (first flow
+    the selector lists under the new filters).
+  - 'The change is one replace to flowHref(repicked) with no ?step= (the unknown flow''s ?step= is dropped)
+    and entry state {crumbs: [repicked], filters: new}; never a push.'
+  - The 404 view turns into a drawn flow client-side, in the same history entry. If the not-found UI is
+    the Flows view rendered by leafcutter-web/app/flows/[...id]/not-found.tsx, the entry state written
+    by the replace wins over that boundary's server-rendered not-found props whenever the entry is shown
+    again, so Back after a later push draws fern-and-fig/checkout-and-pay, never the notice.
+  - A reload of the replaced entry renders the re-picked flow through the catch-all route with a 200.
 delivers_to: null
-expects_from: {}
+expects_from:
+  - ac_id: UXP-591-1-ii
+    contract: Not-found mode of the Flows view rendered by leafcutter-web/app/flows/[...id]/not-found.tsx
+      with the full flow catalogue in the selector and filters real/user/all.
+  - ac_id: UXP-591-5-iii
+    contract: 'Re-pick function returning the first Flow id the selector lists under the new filters,
+      applied with replaceEntry(flowHref(id), {crumbs: [id], filters}).'
+test_spec:
+  - name: setting Kind to Architecture on the 'Flow not found' state draws product-truth-architecture
+      and replaces the address with /flows/leafcutter/product-truth-architecture at one history entry
+    target_dir: leafcutter-web/components/flows/__tests__/
+    framework: vitest
+    type: component
+    angle: criterion
+    must_catch:
+      - the unknown flow's ?step=resolve is carried to the new address
+      - the filter change pushes an entry
+      - the 'Flow not found' notice stays
+  - name: setting Source to Mock on the 'Flow not found' state picks fern-and-fig/checkout-and-pay as
+      the first listed flow
+    target_dir: leafcutter-web/components/flows/__tests__/
+    framework: vitest
+    type: component
+    angle: boundary
+  - name: after picking Customer buys a plant and pressing Back the entry shows checkout-and-pay and never
+      the 'Flow not found' notice
+    target_dir: leafcutter-web/components/flows/__tests__/
+    framework: vitest
+    type: component
+    angle: seam
+    must_catch:
+      - Back re-renders the not-found boundary's server props instead of the stored entry state
+test_rationale: The risk is the not-found boundary reasserting itself after the replace; the Back test
+  is the one that catches it.
+test_required: true
+declares_side_effect: false
 origin_agent: business-analyst
 created: '2026-10-09'
 amended_by: []

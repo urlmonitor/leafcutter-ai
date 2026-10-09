@@ -35,10 +35,54 @@ doc_links:
   - path: docs/product-truth/mockups/leafcutter/atlas-flows-canonical-url.html
     relationship: describes
     status: exists
+  - path: docs/architecture/components/ux-prototyping.md
+    relationship: describes
+    status: exists
+  - path: leafcutter-web/README.md
+    relationship: describes
+    status: exists
+    relevance: Atlas routes table and how the app reads the repo; gains the /flows/<product>/<flow> addresses.
 assigned_agent: frontend-coder
 estimated_complexity: S
+change_target:
+  - code
+risk_surface: contract_boundary
+it_requirements:
+  - 'Same middleware redirect as UXP-591-2-iii: the Location''s query is the original query with only
+    ''flow'' removed (owner decision 2026-10-09), so a link with no ''step'' and no other parameter redirects
+    with no query at all (no trailing ''?'', no empty ''step=''), while any other parameter such as mock=1
+    is still carried over.'
+  - The landing page is the plain canonical address, so no drawer and no 'Step not found' notice follow
+    from it; no special-case client code for redirected arrivals.
 delivers_to: null
-expects_from: {}
+expects_from:
+  ac_id: UXP-591-2-iii
+  contract: 'Legacy redirect in leafcutter-web/middleware.ts: a request to /flows with query flow=<percent-encoded
+    id>[&step=<id>][&<other>...] answers 308 with a same-origin Location ''/flows/'' + decodedId (the
+    ''/'' literal) whose query is the original query with only the ''flow'' parameter removed (step and
+    every other parameter, e.g. mock=1, kept in order and verbatim).'
+test_spec:
+  - name: middleware answers 308 to /flows/leafcutter/flow-render-pipeline with no query for /flows?flow=leafcutter%2Fflow-render-pipeline
+    target_dir: leafcutter-web/__tests__/
+    framework: vitest
+    type: integration
+    angle: criterion
+    surface_invoked: default export of leafcutter-web/middleware.ts with a NextRequest
+    must_catch:
+      - the Location ends in '?' or '?step='
+      - the Location keeps flow=
+  - name: the step-less 308 location opens the flow with Real, Data, All, a one-flow breadcrumb and no
+      drawer or 'Step not found' notice
+    target_dir: leafcutter-web/__tests__/
+    framework: vitest
+    type: integration
+    angle: reachability
+    surface_invoked: default export of leafcutter-web/middleware.ts, then leafcutter-web/app/flows/[...id]/page.tsx
+      with the Location's path
+test_rationale: One test pins the Location shape, the other proves it lands on the canonical state rather
+  than a step-notice state.
+test_required: true
+declares_side_effect: false
 origin_agent: business-analyst
 created: '2026-10-09'
 amended_by: []

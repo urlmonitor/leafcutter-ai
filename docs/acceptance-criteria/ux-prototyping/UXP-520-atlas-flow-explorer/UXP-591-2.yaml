@@ -41,14 +41,69 @@ doc_links:
   - path: docs/architecture/components/ux-prototyping.md
     relationship: describes
     status: exists
+  - path: leafcutter-web/README.md
+    relationship: describes
+    status: exists
+    relevance: Atlas routes table and how the app reads the repo; gains the /flows/<product>/<flow> addresses.
 assigned_agent: frontend-coder
 estimated_complexity: M
+change_target:
+  - code
+  - ui
+risk_surface: contract_boundary
+it_requirements:
+  - leafcutter-web/app/flows/[...id]/page.tsx reads searchParams.step and passes it as the initial drawer
+    id, so the drawer is open in the server-rendered HTML with no open-after-mount flicker and no hydration
+    mismatch.
+  - Resolve ?step= among the flow's steps AND branches with the node keying the explorer already uses
+    for clicks (step:<id>), through one lookup shared by deep-link and click opening, so a linked drawer
+    renders exactly the click-opened contents (same component, same props).
+  - 'At most one drawer: the view''s drawer state holds a single node id.'
+  - 'The ?step= value stays verbatim: no normalisation, case-folding or rewrite of the address on load.'
+  - Works for example-product flows under docs/product-truth/flows/fern-and-fig/ as well as leafcutter
+    flows; nothing keyed on the product.
 delivers_to:
   agent: frontend-coder
-  contract: "A step address is the flow's canonical address plus ?step=<step or branch id>; the value is looked up among the flow's steps AND branches (ids never collide within one flow) and opens at most one drawer. UXP-591-3 emits these addresses; UXP-591-4 produces them from drawer clicks."
+  contract: 'Step address = flowHref(flowId, stepId) = ''/flows/<flow id>?step=<step or branch id>''.
+    The route passes FlowsView the initial prop step: string | null; the view resolves it among the flow''s
+    steps and branches (ids never collide within one flow) to at most one open drawer, or to the ''Step
+    not found'' state when it names neither. UXP-591-3 emits these addresses; UXP-591-4 writes them on
+    drawer clicks.'
 expects_from:
   ac_id: UXP-591-1
   contract: "The canonical flow address /flows/<flow id> resolves to that flow, selected and drawn, with its own Source/Kind filters and a one-flow breadcrumb."
+test_spec:
+  - name: catch-all flows route opens leafcutter/flow-render-pipeline?step=resolve with only the resolve
+      drawer open at Real, Data, All
+    target_dir: leafcutter-web/__tests__/
+    framework: vitest
+    type: integration
+    angle: reachability
+    surface_invoked: 'default export of leafcutter-web/app/flows/[...id]/page.tsx with params.id [''leafcutter'',
+      ''flow-render-pipeline''] and searchParams {step: ''resolve''}'
+  - name: a step address naming branch declined of fern-and-fig/checkout-and-pay opens that branch's drawer
+      at Mock, User, All
+    target_dir: leafcutter-web/components/flows/__tests__/
+    framework: vitest
+    type: component
+    angle: criterion
+    must_catch:
+      - ?step= is looked up among steps only, so a branch id opens no drawer
+  - name: a deep-linked drawer renders the same contents as clicking the same node
+    target_dir: leafcutter-web/components/flows/__tests__/
+    framework: vitest
+    type: component
+    angle: seam
+  - name: every FlowRoute with an open_drawer in atlas-flows.mock.json opens exactly that drawer and keeps
+      its address_bar
+    target_dir: leafcutter-web/components/flows/__tests__/
+    framework: vitest
+    type: component
+    angle: real_artifact
+test_rationale: Deep link and click must share one lookup, so the seam test compares both paths on the
+  same node; the route test proves ?step= is read where the page is actually entered.
+test_required: true
+declares_side_effect: false
 origin_agent: business-analyst
 created: '2026-10-09'
 amended_by: []

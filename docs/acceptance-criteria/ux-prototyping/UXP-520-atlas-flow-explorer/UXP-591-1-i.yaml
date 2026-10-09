@@ -30,10 +30,63 @@ doc_links:
   - path: docs/product-truth/mockups/leafcutter/atlas-flows-canonical-url.html
     relationship: describes
     status: exists
+  - path: docs/architecture/components/ux-prototyping.md
+    relationship: describes
+    status: exists
+  - path: leafcutter-web/README.md
+    relationship: describes
+    status: exists
+    relevance: Atlas routes table and how the app reads the repo; gains the /flows/<product>/<flow> addresses.
 assigned_agent: frontend-coder
 estimated_complexity: S
+change_target:
+  - code
+  - ui
+risk_surface: contract_boundary
+it_requirements:
+  - 'No redirect for the bare /flows: neither leafcutter-web/middleware.ts nor leafcutter-web/next.config.mjs
+    may redirect or rewrite /flows when the request carries no ''flow'' query parameter; the legacy 308
+    of UXP-591-2-iii keys on that parameter alone.'
+  - The default entry flow id (leafcutter/deliver-a-feature) is defined in exactly one place and shared
+    by the bare-/flows render (leafcutter-web/app/flows/page.tsx) and the drawer replace on bare /flows
+    (UXP-591-4, UXP-591-4-ii); no second literal.
+  - The bare entry goes through the same FlowsView initial-props path as a canonical address (flow = default
+    entry, crumbs = [default entry], filters Real/User/All, step null), so the two entries cannot drift.
+  - 'The client must not rewrite /flows on mount: the address only changes on a drawer action (UXP-591-4)
+    or a navigation (UXP-591-5).'
 delivers_to: null
-expects_from: {}
+expects_from:
+  ac_id: UXP-591-1
+  contract: FlowsView initial props {flowId, crumbs, filters, step} as the canonical route passes them,
+    and flowHref from the edge-safe address module.
+test_spec:
+  - name: middleware passes the bare /flows through without a redirect or rewrite
+    target_dir: leafcutter-web/__tests__/
+    framework: vitest
+    type: integration
+    angle: criterion
+    surface_invoked: default export of leafcutter-web/middleware.ts with a NextRequest for http://localhost/flows
+    must_catch:
+      - the legacy-link 308 fires on /flows without a flow parameter
+  - name: bare /flows route renders Deliver a feature end-to-end with Real, User, All, a one-flow breadcrumb,
+      no drawer and no notice
+    target_dir: leafcutter-web/__tests__/
+    framework: vitest
+    type: integration
+    angle: reachability
+    surface_invoked: default export of leafcutter-web/app/flows/page.tsx
+    description: Neither the 'Flow not found' nor the 'Step not found' notice is rendered.
+  - name: the bare /flows entry keeps window.location at /flows after mount
+    target_dir: leafcutter-web/components/flows/__tests__/
+    framework: vitest
+    type: component
+    angle: failure
+    must_catch:
+      - FlowsView replaces /flows with /flows/leafcutter/deliver-a-feature on mount
+test_rationale: The no-redirect promise can break in two places, the middleware and the client mount,
+  so each gets its own test; the bare route render is the reachability proof for the default entry.
+test_required: true
+declares_side_effect: false
 origin_agent: business-analyst
 created: '2026-10-09'
 amended_by: []

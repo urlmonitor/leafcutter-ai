@@ -40,10 +40,58 @@ doc_links:
   - path: docs/product-truth/mockups/leafcutter/atlas-flows-canonical-url.html
     relationship: describes
     status: exists
+  - path: docs/architecture/components/ux-prototyping.md
+    relationship: describes
+    status: exists
+  - path: leafcutter-web/README.md
+    relationship: describes
+    status: exists
+    relevance: Atlas routes table and how the app reads the repo; gains the /flows/<product>/<flow> addresses.
 assigned_agent: frontend-coder
 estimated_complexity: S
+change_target:
+  - code
+risk_surface: contract_boundary
+it_requirements:
+  - 'The middleware redirect does not check whether the flow exists (Edge runtime, no flow store): an
+    unknown id gets the same 308 as a known one, and the 404 comes from the catch-all route it lands on
+    (UXP-591-1-ii).'
+  - 'With &step= on an unknown flow, the landing 404 ignores the step: no drawer and no ''Step not found''
+    notice.'
+  - 'No fallback path: neither the middleware nor the route sends an unknown legacy id to /flows or draws
+    leafcutter/deliver-a-feature.'
 delivers_to: null
-expects_from: {}
+expects_from:
+  - ac_id: UXP-591-2-iii
+    contract: 'Legacy redirect in leafcutter-web/middleware.ts: a request to /flows with query flow=<percent-encoded
+      id>[&step=<id>][&<other>...] answers 308 with a same-origin Location ''/flows/'' + decodedId (the
+      ''/'' literal) whose query is the original query with only the ''flow'' parameter removed (step
+      and every other parameter, e.g. mock=1, kept in order and verbatim), with no flow-existence check.'
+  - ac_id: UXP-591-1-ii
+    contract: 'Not-found state: HTTP 404 from notFound() in leafcutter-web/app/flows/[...id]/page.tsx
+      rendered by leafcutter-web/app/flows/[...id]/not-found.tsx, quoting the requested id, ignoring ?step=.'
+test_spec:
+  - name: middleware answers the same 308 for the unknown legacy id leafcutter%2Fflow-render-pipline with
+      and without &step=resolve
+    target_dir: leafcutter-web/__tests__/
+    framework: vitest
+    type: integration
+    angle: criterion
+    surface_invoked: default export of leafcutter-web/middleware.ts with a NextRequest
+    must_catch:
+      - the middleware sends unknown ids to /flows
+  - name: both 308 locations for the unknown id reach notFound() in the catch-all route with no drawer
+      or 'Step not found' notice
+    target_dir: leafcutter-web/__tests__/
+    framework: vitest
+    type: integration
+    angle: reachability
+    surface_invoked: default export of leafcutter-web/middleware.ts, then leafcutter-web/app/flows/[...id]/page.tsx
+      with the Location's path and query
+test_rationale: The redirect and the 404 are owned by different layers; chaining them is the only test
+  that proves the unknown legacy link ends on the not-found state.
+test_required: true
+declares_side_effect: false
 origin_agent: business-analyst
 created: '2026-10-09'
 amended_by: []

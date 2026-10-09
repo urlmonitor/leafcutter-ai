@@ -32,10 +32,113 @@ doc_links:
   - path: docs/product-truth/mockups/leafcutter/atlas-flows-canonical-url.html
     relationship: describes
     status: exists
+  - path: docs/architecture/components/ux-prototyping.md
+    relationship: describes
+    status: exists
+  - path: leafcutter-web/README.md
+    relationship: describes
+    status: exists
+    relevance: Atlas routes table and how the app reads the repo; gains the /flows/<product>/<flow> addresses.
 assigned_agent: frontend-coder
-estimated_complexity: S
-delivers_to: null
-expects_from: {}
+estimated_complexity: M
+change_target:
+  - code
+risk_surface: contract_boundary
+it_requirements:
+  - 'The 308 is issued from the existing leafcutter-web/middleware.ts with NextResponse.redirect(url,
+    308) (owner decision 2026-10-09), building the path with flowHref. Not leafcutter-web/next.config.mjs
+    redirects(): a config redirect passes the original query through unchanged (the old ''flow'' parameter
+    would ride along), and a captured value placed in the destination path can be re-encoded as ''%2F''.'
+  - Fire only on the bare /flows path when a 'flow' query parameter is present; /flows without it passes
+    through untouched (UXP-591-1-i).
+  - 'The Location is same-origin and always under /flows/, with the ''/'' in the decoded flow id literal.
+    Its query is the original query with only the ''flow'' parameter removed: step and every other parameter
+    (e.g. UXP-608''s mock=1) are carried over verbatim and in their original order (owner decision 2026-10-09).
+    For any ''flow'' value, including ''.'', ''..'', empty segments, a leading ''//'' or a scheme, the
+    redirect must not leave /flows/ (open-redirect and path-normalisation guard); such values land on
+    the UXP-591-1-ii 404.'
+  - The redirect is a pure function of the query with no flow-existence check (Edge runtime, no flow store;
+    UXP-591-2-v).
+  - '308, not 301/302/307: it is permanent, and the browser replaces the legacy URL in the tab''s history,
+    which meets ''Back does not return to it'' without client code.'
+  - 'leafcutter-web/middleware.ts already holds the UXP-608 mock-mode gate and Next.js allows one middleware
+    file: extend it without changing that gate''s behaviour; leafcutter-web/__tests__/route-gating.test.ts
+    stays green.'
+delivers_to:
+  agent: frontend-coder
+  contract: 'Legacy redirect in leafcutter-web/middleware.ts: a request to /flows with query flow=<percent-encoded
+    id>[&step=<id>][&<other>...] answers 308 with a same-origin Location ''/flows/'' + decodedId (the
+    ''/'' literal) whose query is the original query with only the ''flow'' parameter removed (step and
+    every other parameter, e.g. mock=1, kept in order and verbatim). Reused by UXP-591-2-iv (no step)
+    and UXP-591-2-v (unknown id).'
+expects_from:
+  - ac_id: UXP-591-2
+    contract: Step address /flows/<flow id>?step=<node id> opening that node's drawer, served by leafcutter-web/app/flows/[...id]/page.tsx.
+  - ac_id: UXP-591-1
+    contract: 'Playwright harness in leafcutter-web: @playwright/test devDependency, leafcutter-web/playwright.config.ts
+      (testDir ./e2e, Chromium, webServer running `next start` on a production build), `npm run e2e`,
+      and the CI steps that run it after `npm ci`.'
+test_spec:
+  - name: middleware answers 308 to /flows/leafcutter/flow-render-pipeline?step=resolve for /flows?flow=leafcutter%2Fflow-render-pipeline&step=resolve
+    target_dir: leafcutter-web/__tests__/
+    framework: vitest
+    type: integration
+    angle: criterion
+    surface_invoked: default export of leafcutter-web/middleware.ts with a NextRequest
+    must_catch:
+      - the Location keeps %2F in the flow id
+      - the Location keeps the flow= parameter
+      - the status is 301, 302 or 307 instead of 308
+  - name: legacy flow values with dot segments, a leading double slash or a scheme redirect to a same-origin
+      location under /flows/
+    target_dir: leafcutter-web/__tests__/
+    framework: vitest
+    type: integration
+    angle: failure
+    must_catch:
+      - flow=..%2F..%2Fatlas redirects to /atlas
+      - flow=%2F%2Fevil.example redirects off-origin
+  - name: the 308 location opens leafcutter/flow-render-pipeline with the resolve drawer through the catch-all
+      route
+    target_dir: leafcutter-web/__tests__/
+    framework: vitest
+    type: integration
+    angle: reachability
+    surface_invoked: default export of leafcutter-web/middleware.ts, then leafcutter-web/app/flows/[...id]/page.tsx
+      with the Location's path and query
+  - name: the legacy redirect carries mock=1 and every other non-flow parameter over to the 308 location
+      in order
+    target_dir: leafcutter-web/__tests__/
+    framework: vitest
+    type: integration
+    angle: boundary
+    description: /flows?flow=leafcutter%2Fflow-render-pipeline&step=resolve&mock=1 redirects to /flows/leafcutter/flow-render-pipeline?step=resolve&mock=1
+      (owner decision 2026-10-09).
+    must_catch:
+      - mock=1 is dropped
+      - flow= is carried over
+      - the remaining parameters are reordered or re-encoded
+  - name: under next start the legacy step link answers 308 and Back never returns to the /flows?flow=
+      address
+    target_dir: leafcutter-web/e2e/
+    framework: playwright
+    type: e2e
+    angle: deployed
+    surface_invoked: page.goto of the legacy link from a blank page, then page.goBack(), against `next
+      start` of a production build
+    description: The response chain shows one 308 to /flows/leafcutter/flow-render-pipeline?step=resolve,
+      the resolve drawer is open, and Back leaves the Atlas instead of landing on the legacy address.
+      No `// covers:` tag until the done-proof gate can run Playwright specs (see UXP-591-1).
+    must_catch:
+      - the middleware matcher does not reach /flows in the production build
+      - the redirect is done client-side, so the legacy URL stays in history
+test_rationale: The redirect is security-relevant (it turns a query value into a Location), so the failure
+  test names the open-redirect shapes; the chained middleware-to-route test proves the Location lands
+  on a working step address rather than only being well-formed, and the Playwright spec proves the 308
+  and the history claim on a production build. The dataset's route-legacy-step-link is the criterion example
+  itself, so it needs no separate replay.
+test_required: true
+declares_side_effect: false
 origin_agent: business-analyst
 created: '2026-10-09'
 amended_by: []

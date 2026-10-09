@@ -29,10 +29,82 @@ doc_links:
   - path: docs/product-truth/mockups/leafcutter/atlas-flows-canonical-url.html
     relationship: describes
     status: exists
+  - path: docs/architecture/components/ux-prototyping.md
+    relationship: describes
+    status: exists
+  - path: leafcutter-web/README.md
+    relationship: describes
+    status: exists
+    relevance: Atlas routes table and how the app reads the repo; gains the /flows/<product>/<flow> addresses.
 assigned_agent: frontend-coder
 estimated_complexity: S
+change_target:
+  - code
+  - ui
+risk_surface: internal
+it_requirements:
+  - 'One click on another node while a drawer is open reaches that node: the full-canvas scrim in leafcutter-web/components/flows/flow-drawer.tsx
+    / flow-explorer.tsx lets node clicks through while a click on empty canvas still closes the drawer
+    (UXP-591-4-ii). The mechanism (pointer-events pass-through, hit-testing the click, or no scrim over
+    the canvas) is the coder''s choice.'
+  - 'The switch is one replace to flowHref(flowId, newStepId): a single ''step'' query parameter (set,
+    never appended) and no intermediate close-then-open history write.'
+  - jsdom does no hit-testing, so a component test that clicks the node element directly cannot prove
+    the scrim lets the click through; the pass-through is proven by this AC's Playwright spec with a real
+    click in Chromium against `next start` (owner decision 2026-10-09).
 delivers_to: null
-expects_from: {}
+expects_from:
+  - ac_id: UXP-591-4
+    contract: 'One replace-entry path for drawer open, switch and close that rewrites the current history
+      entry with window.history.replaceState: URL flowHref(flowId, stepId | null) and view state {crumbs:
+      string[] (Flow ids, entry flow first), filters: {source: ''real'' | ''mock'', kind: ''user'' | ''data''
+      | ''architecture'', realization: ''all'' | ''built'' | ''spec'' | ''mock''}} kept in history.state
+      under one namespaced key, merged into, never overwriting, the App Router''s own keys (__NA, __PRIVATE_NEXTJS_INTERNALS_TREE);
+      not sessionStorage (owner decision 2026-10-09); history.length never changes.'
+  - ac_id: UXP-591-1
+    contract: 'Playwright harness in leafcutter-web: @playwright/test devDependency, leafcutter-web/playwright.config.ts
+      (testDir ./e2e, Chromium, webServer running `next start` on a production build), `npm run e2e`,
+      and the CI steps that run it after `npm ci`.'
+test_spec:
+  - name: clicking Build while the Plan drawer is open leaves only the Build drawer open at ?step=build
+      with unchanged history length
+    target_dir: leafcutter-web/components/flows/__tests__/
+    framework: vitest
+    type: component
+    angle: criterion
+    must_catch:
+      - the click closes Plan without opening Build
+      - the switch pushes a history entry
+  - name: the switched address carries exactly one step parameter
+    target_dir: leafcutter-web/components/flows/__tests__/
+    framework: vitest
+    type: component
+    angle: boundary
+    must_catch:
+      - searchParams.append adds a second step value
+  - name: a click on empty canvas beside the open drawer still closes it after the scrim change
+    target_dir: leafcutter-web/components/flows/__tests__/
+    framework: vitest
+    type: component
+    angle: failure
+  - name: under next start one real click on the Build node while the Plan drawer is open passes the scrim
+      and opens Build
+    target_dir: leafcutter-web/e2e/
+    framework: playwright
+    type: e2e
+    angle: deployed
+    surface_invoked: page.click at the Build node's on-screen position (no force option) with the Plan
+      drawer and its scrim rendered, in Chromium against `next start`
+    description: After exactly one click only the Build drawer is open, the address is ?step=build and
+      history.length is unchanged. No `// covers:` tag until the done-proof gate can run Playwright specs
+      (see UXP-591-1).
+    must_catch:
+      - the scrim swallows the click and only closes Plan
+      - a second click is needed to open Build
+test_rationale: Letting node clicks through the scrim must not cost the canvas-close of UXP-591-4-ii,
+  so both sides of the scrim change are tested; the pass-through itself needs a browser.
+test_required: true
+declares_side_effect: false
 origin_agent: business-analyst
 created: '2026-10-09'
 amended_by: []

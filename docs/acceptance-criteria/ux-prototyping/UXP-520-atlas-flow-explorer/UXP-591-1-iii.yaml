@@ -38,10 +38,111 @@ doc_links:
   - path: docs/product-truth/mockups/leafcutter/atlas-flows-canonical-url.html
     relationship: describes
     status: exists
+  - path: docs/architecture/components/ux-prototyping.md
+    relationship: describes
+    status: exists
+  - path: leafcutter-web/README.md
+    relationship: describes
+    status: exists
+    relevance: Atlas routes table and how the app reads the repo; gains the /flows/<product>/<flow> addresses.
+  - path: docs/ui-context.md
+    relationship: describes
+    status: exists
+    relevance: Atlas design tokens and component kit for the notice styling.
 assigned_agent: frontend-coder
-estimated_complexity: S
+estimated_complexity: M
+change_target:
+  - code
+  - ui
+  - config
+risk_surface: contract_boundary
+it_requirements:
+  - 'Build risk carried from the BA: with trailingSlash false (the default) Next.js 14 answers a trailing-slash
+    path with its own 308 to the slash-less path before middleware or routing runs, which would turn /flows/leafcutter/flow-render-pipeline/
+    into the flow. Set skipTrailingSlashRedirect: true in leafcutter-web/next.config.mjs so the request
+    reaches leafcutter-web/middleware.ts unchanged (owner decision 2026-10-09).'
+  - skipTrailingSlashRedirect is app-wide by owner decision 2026-10-09. Every request path other than
+    '/flows/<one or more characters>/' keeps today's behaviour, a 308 to the slash-less path (including
+    /flows/ -> /flows and /atlas/ -> /atlas), re-implemented in leafcutter-web/middleware.ts; its config.matcher
+    therefore reaches every page and API route while still skipping _next/static, _next/image and static
+    files.
+  - 'leafcutter-web/middleware.ts classifies the raw request path as received, before any decoding (the
+    pathname of request.url keeps ''%2F''): a /flows/ path that contains an encoded slash (''%2F'' or
+    ''%2f'') or ends in ''/'' is marked not-found and passed on with its raw id (e.g. a request header
+    the catch-all route checks before calling notFound(), or a rewrite to a path the route always 404s).
+    It is never decoded and matched to an existing flow.'
+  - 'Defence in depth: the catch-all route independently 404s any id that is not exactly two path segments,
+    so a ''%2F'' that some layer decodes into one segment still cannot resolve to leafcutter/flow-render-pipeline.
+    The two checks are independent and each alone is sufficient.'
+  - 'Middleware runs in the Next.js 14 Edge runtime (no node:fs, no flow store): it decides on the shape
+    of the address only, never on whether a flow exists; existence stays in the server route.'
+  - The 404 status, the quoted raw id and the product-and-flow notice wording reuse the UXP-591-1-ii not-found
+    boundary and request-scoped id channel; no second not-found UI.
+  - 'leafcutter-web/middleware.ts already holds the UXP-608 mock-mode gate and Next.js allows one middleware
+    file: extend it without changing that gate''s behaviour; leafcutter-web/__tests__/route-gating.test.ts
+    stays green.'
+  - Per-request middleware work is constant-time string checks with no I/O.
+  - Unit tests cannot observe Next.js's own trailing-slash redirect or path decoding, so the 404 for both
+    addresses is proven by this AC's Playwright spec in leafcutter-web/e2e/, run in CI against `next build`
+    + `next start` (status 404, no Location header, notice shown; owner decision 2026-10-09; harness set
+    up under UXP-591-1).
 delivers_to: null
-expects_from: {}
+expects_from:
+  - ac_id: UXP-591-1-ii
+    contract: 'Not-found boundary leafcutter-web/app/flows/[...id]/not-found.tsx and the request-scoped
+      raw-id channel, rendering {requestedId, noticeVariant, crumbs: [], filters Real/User/All} with HTTP
+      404.'
+  - ac_id: UXP-591-1
+    contract: 'Playwright harness in leafcutter-web: @playwright/test devDependency, leafcutter-web/playwright.config.ts
+      (testDir ./e2e, Chromium, webServer running `next start` on a production build), `npm run e2e`,
+      and the CI steps that run it after `npm ci`.'
+test_spec:
+  - name: middleware marks /flows/leafcutter%2Fflow-render-pipeline and /flows/leafcutter/flow-render-pipeline/
+      not found and passes the raw id through unchanged
+    target_dir: leafcutter-web/__tests__/
+    framework: vitest
+    type: integration
+    angle: failure
+    surface_invoked: default export of leafcutter-web/middleware.ts with a NextRequest built from the
+      raw URL
+    must_catch:
+      - the middleware decodes %2F and lets leafcutter/flow-render-pipeline resolve
+      - the trailing slash is stripped before the check
+      - the lowercase %2f form is not recognised
+  - name: middleware keeps the slash-less 308 for /flows/ and /atlas/ once skipTrailingSlashRedirect is
+      on
+    target_dir: leafcutter-web/__tests__/
+    framework: vitest
+    type: integration
+    angle: boundary
+    must_catch:
+      - /atlas/ is served at the trailing-slash address with a 200 instead of a 308
+  - name: '''Flow not found'' notice quotes ''leafcutter%2Fflow-render-pipeline'' and ''leafcutter/flow-render-pipeline/''
+      verbatim with the product-and-flow wording'
+    target_dir: leafcutter-web/components/flows/__tests__/
+    framework: vitest
+    type: component
+    angle: criterion
+  - name: under next start the encoded-slash and the trailing-slash flow addresses answer 404 with no
+      Location header and show 'Flow not found'
+    target_dir: leafcutter-web/e2e/
+    framework: playwright
+    type: e2e
+    angle: deployed
+    surface_invoked: 'Playwright request fixture (maxRedirects: 0) and page.goto against `next start`
+      of a production build'
+    description: Both addresses answer 404 with no Location header, the page shows the 'Flow not found'
+      notice quoting the raw id, and the address bar keeps %2F or the trailing slash. No `// covers:`
+      tag until the done-proof gate can run Playwright specs (see UXP-591-1).
+    must_catch:
+      - skipTrailingSlashRedirect is not set, so Next.js answers 308 to /flows/leafcutter/flow-render-pipeline
+      - the server decodes %2F before routing and answers 200 with the flow drawn
+test_rationale: 'This AC exists because of framework behaviour that runs before application code, so only
+  a real server proves it is disabled or handled: the Playwright spec runs against a production build.
+  The middleware tests pin the classification and the app-wide trailing-slash regression the flag would
+  otherwise cause.'
+test_required: true
+declares_side_effect: false
 origin_agent: business-analyst
 created: '2026-10-09'
 amended_by: []
