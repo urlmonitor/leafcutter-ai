@@ -121,7 +121,7 @@ amended_by:
     by: business-analyst
     at: 2026-09-07
 superseded_by: null
-covered_by: [INF-400c-4-i, INF-400c-4-ii, INF-400c-4-iii, INF-400c-4-iv, INF-400c-4-v]
+covered_by: [INF-400c-4-i, INF-400c-4-ii, INF-400c-4-iii, INF-400c-4-iv, INF-400c-4-v, INF-400c-4-vi]
 implemented_by: []
 test_spec:
   - name: test_emitting_and_reading_sides_resolve_the_same_absolute_path

@@ -33,6 +33,7 @@ import time
 import unittest
 from pathlib import Path
 
+import pytest
 import yaml
 
 _HERE = Path(__file__).resolve().parent
@@ -58,6 +59,7 @@ from _test_helpers_tq_600a_11 import (  # noqa: E402
 class TestTq600a11ParserSpeed(unittest.TestCase):
     """The PARSER claim -- measures the parser, not any entry point."""
 
+    @pytest.mark.timing_ratio
     def test_tq600a_11_store_sweep_is_at_least_five_times_faster_than_the_pure_python_parser(self):
         # covers: TQ-600a-11
         # angle: real_artifact
@@ -106,6 +108,7 @@ class TestTq600a11ParserSpeed(unittest.TestCase):
 class TestTq600a11AgentCardWalk(unittest.TestCase):
     """The ENTRY-POINT claim, at the one call site where it is true."""
 
+    @pytest.mark.timing_ratio
     def test_tq600a_11_the_agent_card_store_walk_beats_a_fifth_of_its_same_sitting_pure_python_baseline(self):
         # covers: TQ-600a-11
         # angle: real_artifact

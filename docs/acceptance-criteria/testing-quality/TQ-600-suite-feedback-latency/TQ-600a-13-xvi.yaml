@@ -1,0 +1,229 @@
+id: TQ-600a-13-xvi
+components:
+  - testing_quality
+title: "A pull request that declares a fix runs the current red run's failing tests against its own head, and only a pass is evidence"
+component: testing-quality
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given a red or did-not-complete correctness run on main described by notice N, and a pull
+    request whose description declares a fix for N in a form TQ-600a-13-viii accepts,
+  And the reason a declaration alone cannot exempt it: every pull request here comes from
+    the one account all agents use, so a declaration is something any pull request can
+    write about itself, and the commonest defect of a fix is that it does not fix,
+  When the declaration is present on the pull request's current head,
+  Then a proof run executes, against that head, exactly the correctness-lane tests that
+    failed in the current red run — with the same selection, build and strictness as the
+    post-merge run — and records whether every one of them passed, and which red run it
+    proved against,
+  And for a did-not-complete run, which has no failing tests, the proof run executes the
+    whole correctness lane against the head and passes only if that run is green by
+    TQ-600a-13-ii's and -v's rules,
+  And a pull request without a declaration starts no proof run, so the proof's cost falls
+    only on the one or two fix pull requests of a red streak,
+  And the proof run's completion causes that pull request's hold to be evaluated again
+    without a push,
+  And a pull request that changes the proof's own harness — the definition that selects
+    the tests and judges the result — does not obtain a passing proof from its changed
+    harness: the selection and the judgement are those of the main branch,
+  And no code from the pull request runs in any job that holds a write-scoped credential
+    or any secret,
+  And the proof run makes no write to the hosting service other than reporting its own
+    result,
+  And each of these is demonstrated by executing the proof job's selection and judgement
+    against a synthetic project in which the red run's failing tests are made to pass or
+    fail at the head, with a head that also alters the harness, never by reading the
+    workflow file.
+depends_on:
+  - TQ-600a-13
+  - TQ-600a-13-viii
+doc_links:
+  - path: docs/acceptance-criteria/testing-quality/TQ-600-suite-feedback-latency/TQ-600a-13-viii.yaml
+    relationship: describes
+    status: exists
+    relevance: >-
+      The exemption that requires this evidence.
+  - path: docs/acceptance-criteria/testing-quality/TQ-600-suite-feedback-latency/TQ-600a-13-ii.yaml
+    relationship: describes
+    status: exists
+    relevance: >-
+      The selection, build and strictness the proof must match.
+declared_files:
+  - path: scripts/ci/post_merge_fix_proof.py
+    state: to_be_created
+  - path: .github/workflows/post-merge-fix-proof.yml
+    state: to_be_created
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - >-
+    NAMES (proposed): workflow `.github/workflows/post-merge-fix-proof.yml`, job name
+    `Post-merge fix proof` — NOT a required check; the hold reads its result.
+  - >-
+    TRIGGER AND TRUST — DECIDED AT RE-ENRICHMENT (technical question 2):
+    `pull_request_target`, SPLIT INTO TWO JOBS, WITH ZERO CREDENTIALS WHERE PR CODE RUNS.
+    The proof must execute PR code (that is its point) and must not let the PR choose what
+    is run or how it is judged. Under `pull_request_target` the workflow file and any
+    checkout without `ref` come from the default branch (VERIFIED doc), so the PR cannot
+    edit the harness, the job graph or the job's permissions. That is the textbook
+    pwn-request shape — PR code inside a `pull_request_target` run — and it is safe ONLY
+    because the job that runs PR code holds nothing to steal: the GitHub expert's analysis
+    is that the danger is PR content executing "while holding the elevated token or
+    secrets". So:
+    (1) workflow-level `permissions: {}`;
+    (2) job `Prepare fix proof` (`needs:` nothing; permissions `actions: read` and
+    `issues: read` only — the latter to list open `post-merge-red` numbers; runs
+    ONLY default-branch code from a no-`ref` sparse checkout of scripts/ci): reads the
+    PR body from GITHUB_EVENT_PATH and calls TQ-600a-13-viii's `match_declaration`; reads
+    the newest settled correctness run via scripts/ci/_run_history.py; if it is not red /
+    did-not-complete or there is no declaration, outputs `run_proof=false`; otherwise
+    downloads that run's `post-merge-verdict` artifact (a main-branch run's artifact —
+    the PR cannot write it) and outputs the failing ids (or `whole_lane`) and the red run
+    id as job outputs;
+    (3) job `Post-merge fix proof` (`needs: Prepare fix proof`, `if:` run_proof; job
+    `permissions: {}`; NO `secrets.` reference anywhere in the workflow; no cache, no
+    `setup-python` cache, no artifact upload; `timeout-minutes` bounded like -ii's run
+    job): checks out the default branch's harness (no `ref`) at the workspace root and the
+    PR head (`ref:` the head SHA from the event, `path: head`, `persist-credentials:
+    false`) as the code under test, runs the build and the selected ids with -ii's lane
+    selection and strictness, and exits non-zero unless every selected id passed (exit 5
+    / empty selection / collection error are failures, as -v requires). Its conclusion IS
+    the proof result.
+    WHY NOT `pull_request`: same-repository `pull_request` runs get the scopes the PR's
+    OWN copy of the workflow requests, up to write, plus repository secrets (VERIFIED,
+    GitHub expert Q7) — the PR controls its own credential, so "no PR code with a write
+    credential" could only be checked after the fact; and the hold would need per-file
+    identity reads of every harness file (workflow, module, pytest.ini, the selection
+    plugin, post_merge_suite.py), a list that silently reopens the hole the day a harness
+    file is added without updating it. Under `pull_request_target` the platform enforces
+    harness identity and the job's scope.
+    RESIDUAL, STATED: PR test code and any conftest it adds execute inside the pytest
+    process, so a deliberately adversarial PR could forge its own pass. The harness
+    defends against the threat that actually exists here — a careless or goal-seeking
+    agent editing the harness or its config — by running main's pytest.ini via `-c`, main's
+    selection plugin, and `PYTEST_DISABLE_PLUGIN_AUTOLOAD=1`; a forged pass would be a
+    deliberate, reviewable act in the PR's diff. It needs the same Actions event policy
+    as the hold (TQ-600a-13-x) and is advisory until then.
+  - >-
+    WHICH TESTS. The failing ids come from the current red run's `post-merge-verdict`
+    artifact (TQ-600a-13-ii), never from the notice body — the notice is content, not
+    evidence — and never from anything in the PR.
+  - >-
+    HOW THE HOLD READS THE RESULT: specified in TQ-600a-13-viii — the proof run by
+    head SHA filtered to `event=pull_request_target`, the `Post-merge fix proof` job's
+    conclusion (`success`, not skipped), and "current" decided by the proof run starting
+    after the verdict run settled. The hold reads NOTHING the prove job wrote, because
+    that job ran PR code: no artifact, no log, no step summary.
+  - >-
+    RE-TRIGGER. On the proof run's completion, TQ-600a-13-xv's `reevaluate` job (the one
+    `actions: write` job, `workflow_run` of `Post-merge fix proof`, default-branch code)
+    re-runs that head SHA's latest hold run.
+  - >-
+    LIVE OBSERVATION BEFORE RELYING ON IT (recorded in notes): one proof run on the real
+    repository whose prove job attempts a write with its GITHUB_TOKEN (for example a
+    comment) and is refused — evidence that `permissions: {}` holds on this repository.
+  - >-
+    NOT A REQUIRED CHECK. `Post-merge fix proof` is never added to the ruleset (-x).
+  - >-
+    THE TESTS COST UNDER 1.2 s. Selection and judgement in-process; one seam executing the
+    two jobs' steps (checkout emulated by the shared executor) against a synthetic project
+    with real child pytest sessions (about 3) and plugin autoload off.
+delivers_to:
+  - agent: python-coder
+    ac_id: TQ-600a-13-viii
+    contract: >-
+      Runs of `.github/workflows/post-merge-fix-proof.yml` (event `pull_request_target`)
+      on the PR head SHA with jobs named exactly `Prepare fix proof` and `Post-merge fix
+      proof`; the latter's conclusion is `success` only when every selected test passed
+      against the red run that was newest-settled when the run started. Nothing the prove
+      job writes is part of the contract.
+expects_from:
+  - ac_id: TQ-600a-13-viii
+    contract: >-
+      The declaration matcher's result, deciding whether a proof runs.
+  - ac_id: TQ-600a-13-ii
+    contract: >-
+      The verdict artifact carrying the red run's `failing` list, the lane selection and
+      run conditions, scripts/ci/_run_history.py, and the shared workflow-step executor
+      with checkout emulation.
+  - ac_id: TQ-600a-13-xv
+    contract: >-
+      The re-run of the PR's hold on proof completion (not a build prerequisite: without
+      it the author's next description edit re-evaluates).
+test_spec:
+  - name: test_tq600a_13_xvi_the_proof_runs_exactly_the_red_runs_failures
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: integration
+    angle: seam
+    surface_invoked: "the proof job's `run:` steps executed by the shared workflow-step executor against a synthetic project, with a served red-run artifact naming two failing tests"
+    must_catch:
+      - "the proof runs a selection of the PR's choosing"
+      - "the proof drops the lane selection and executes nothing, then reports passed"
+      - "a did-not-complete red runs nothing and passes"
+    description: >-
+      Head fixes both: passed, recorded against the red run id. Head fixes one: failed.
+      Did-not-complete red: the whole synthetic lane runs.
+  - name: test_tq600a_13_xvi_a_pr_cannot_rewrite_its_own_proof
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: integration
+    angle: discrimination
+    surface_invoked: "the proof job of the default-branch workflow executed with a head commit that also replaces the proof module with an always-pass version"
+    must_catch:
+      - "the proof imports its harness from the PR head, so an always-pass harness yields a passing proof"
+      - "the prove step runs pytest with the head's pytest.ini, so a head that edits addopts or the lane selection selects nothing and passes"
+    description: >-
+      With the failing tests still failing at the head, the proof is failed despite the
+      altered harness and an altered pytest.ini at the head.
+  - name: test_tq600a_13_xvi_pr_code_runs_only_in_the_zero_credential_job
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: integration
+    angle: seam
+    surface_invoked: "the shared workflow-step executor running both jobs of .github/workflows/post-merge-fix-proof.yml against a scratch repository whose PR head adds a file the executor watches for being opened, plus a load of the workflow's job permissions"
+    must_catch:
+      - "the prepare job checks out or executes anything from the PR head"
+      - "the prove job is given any permission or a `secrets.` reference"
+      - "the prove job's checkout persists the token into head/.git/config"
+      - "no declaration (or a green verdict run) still runs the prove job"
+    description: >-
+      The watched head file is opened only by the prove job; the prepare job opens no
+      head file; the prove job's permissions are exactly {} and the workflow references no
+      secret; head/.git/config carries no credential; with no declaration the prove job
+      does not run. The permission half is structural by necessity (only the platform
+      enforces a scope) and is backed by the live observation in it_requirements.
+test_rationale: |
+  The proof is what turns the exemption from trust into evidence; the descriptors attack
+  the ways it degrades back into trust — running the wrong tests, letting the PR judge
+  itself, and running PR code where a credential lives. The last one is the security
+  property of the `pull_request_target` decision and is asserted at the seam because a
+  future "just add a token to post a comment" edit is the likeliest way to turn this job
+  into a live pwn request. Under 1.2 s.
+origin_agent: business-analyst
+created: 2026-10-08
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-10-08'
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: auth
+notes: |
+  ADDED 2026-10-08 for user decision G (escape hatch by evidence, not label), as a new
+  record because the proof is a separate workflow with its own trust question.
+
+  RESOLVED AT RE-ENRICHMENT: the trigger is `pull_request_target` with a zero-credential
+  prove job (see it_requirements). STILL TRUE, NOT A DECISION: if the break in a
+  did-not-complete run is in the workflow machinery itself, a proof (which uses main's
+  harness) cannot pass; the route is then the owner's break-glass (TQ-600a-13-xvii).
+
+  LIVE OBSERVATION TO RECORD HERE: date and run id of a proof run whose prove job's token
+  was refused a write.

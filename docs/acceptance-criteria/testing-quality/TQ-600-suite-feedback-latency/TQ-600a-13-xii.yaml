@@ -1,0 +1,246 @@
+id: TQ-600a-13-xii
+components:
+  - testing_quality
+title: "Only correctness tests hold pull requests; timing-ratio tests run in their own lane that reports and never holds"
+component: testing-quality
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given the tests the default run does not collect (TQ-600a-13, TQ-600a-13-i), some of
+    which assert correctness — the shared-layout corruption guards among them — and some
+    of which assert wall-clock ratios between two measurements taken on the same host,
+  And the measured host variance on this repository's shared runners of 3.8x to 10.74x
+    with no code change, under which a ratio assertion will fail on noise, while each
+    false red that holds pull requests freezes roughly ten merges a day,
+  And the rule that a test is placed in the timing lane only by a human-reviewed change
+    that applies an explicit timing marker to it — never by its name, its directory, or an
+    automatic classification,
+  When the excluded population is run after a merge to main or on the heartbeat,
+  Then it runs in two lanes: the correctness lane — every excluded test not carrying the
+    timing marker — whose verdict is the run history the hold reads (TQ-600a-13-ii,
+    TQ-600a-13-vi), and the timing lane — every test carrying the timing marker — which
+    runs as a separate workflow on the same triggers,
+  And a timing-lane test that fails turns the timing workflow's own run red, and is named
+    by node id on the open `post-merge-timing` notice (created if none is open), so the
+    failure is visible and tracked,
+  And no outcome of the timing lane — red, did-not-complete, stale or never run — changes
+    the verdict of `Post-merge suite status` on any pull request,
+  And every test in the suite is collected by exactly one of the default run, the
+    correctness lane or the timing lane — none by two, none by zero — shown by three real
+    collections compared with an unfiltered one,
+  And a test that has newly entered the timing lane since the previous timing run is
+    named on the `post-merge-timing` notice with the commit that added its marker, so a
+    correctness test moved out of the holding lane is seen rather than silent,
+  And a correctness-lane test whose red was not reproduced at the same commit is named on
+    the `post-merge-flaky` notice as a candidate for the timing lane (TQ-600a-13-xiii),
+    which is how a timing test left in the correctness lane by mistake is caught,
+  And each of these is demonstrated by executing both lanes' selection and verdict
+    behaviour against a synthetic population containing correctness tests, marked timing
+    tests and an unmarked timing test, never by reading a configuration file for the
+    marker.
+depends_on:
+  - TQ-600a-13
+  - TQ-600a-13-i
+  - TQ-600a-13-ii
+  - TQ-600a-13-xix
+doc_links:
+  - path: docs/acceptance-criteria/testing-quality/TQ-600-suite-feedback-latency/TQ-600a-13-i.yaml
+    relationship: describes
+    status: exists
+    relevance: >-
+      Requires an invoked cadence whose failure fails the job, and a union assertion over
+      the collections. Both carry over to the timing lane: its own workflow goes red, and
+      the union now spans three sets.
+  - path: docs/acceptance-criteria/testing-quality/TQ-600-suite-feedback-latency/TQ-600a-13-ii.yaml
+    relationship: describes
+    status: exists
+    relevance: >-
+      The correctness-lane run, whose run history is the hold's verdict.
+  - path: pytest.ini
+    relationship: modifies
+    status: exists
+    relevance: >-
+      Where the timing marker is registered, as a direct `markers =` entry beside
+      `manual`, `shared_layout_reader` and `shared_layout_mutator`.
+  - path: docs/testing/README.md
+    relationship: modifies
+    status: exists
+    relevance: >-
+      Must describe the two lanes, the marker, and that applying it is a reviewed change —
+      documentation-expert's surface.
+declared_files:
+  - path: pytest.ini
+    state: existing
+  - path: scripts/ci/post_merge_suite.py
+    state: to_be_created
+  - path: .github/workflows/post-merge-timing.yml
+    state: to_be_created
+  - path: scripts/ci/post_merge_notice.py
+    state: to_be_created
+  - path: .github/workflows/post-merge-followup.yml
+    state: to_be_created
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - >-
+    NAMES (proposed 2026-10-08, the owner may rename before build): marker `timing_ratio`
+    ("asserts a wall-clock ratio; reports, never holds"); workflow
+    `.github/workflows/post-merge-timing.yml`, name `Post-merge timing suite`; notice
+    label `post-merge-timing`.
+  - >-
+    SELECTIONS — A PARTITION, AND IT LANDS ATOMICALLY WITH THE MARKER. Default run:
+    addopts `-m "not manual and not timing_ratio"`. Correctness lane: `-m "manual and not
+    timing_ratio"`. Timing lane: `-m timing_ratio`. These three are disjoint and cover
+    every test by construction, but ONLY if the addopts change lands in the same commit
+    that registers `timing_ratio` (a direct `markers =` entry in pytest.ini, never inside
+    addopts — the measured inert-spelling trap); otherwise a `timing_ratio` test without
+    `manual` sits in both the default run and the timing lane. TQ-600a-13-xix (now a
+    dependency of this record) makes that change; this record inherits it and must not
+    re-spell the selection. A command-line `-m` replaces the
+    addopts `-m` (the mechanism PR #1050's opt-in already relies on). The marker is
+    applied by an explicit `@pytest.mark.timing_ratio` on the test method or class;
+    pytest honours marks on unittest.TestCase methods for `-m` selection, which the
+    union descriptor proves on a unittest-style synthetic test rather than assuming. The
+    three-way union is asserted by real `--collect-only` subprocesses, never derived.
+  - >-
+    A SEPARATE WORKFLOW, NOT A JOB IN THE CORRECTNESS WORKFLOW. If the timing lane were a
+    job of `post-merge-suite.yml`, its failure would make that run's conclusion failure,
+    and decision A reads that conclusion as the hold's verdict. A separate workflow lets
+    the timing lane's own run go red — which TQ-600a-13-i requires of an invoked cadence —
+    while the hold reads only `post-merge-suite.yml`. Same triggers and coalescing as
+    TQ-600a-13-ii, its own concurrency group, the same fresh-machine retry; a timing-lane
+    pass-on-retry is recorded and never escalated (noise is the expected cause here).
+    TQ-600a-13-xix lands first (it is in depends_on), so the workflow file already exists
+    in its minimal form (one job, no retry, no notice); this record extends it to the run / retry / verdict
+    shape of TQ-600a-13-ii, reusing post_merge_suite.py with a `--lane timing` argument
+    rather than a second module, and keeps its name, triggers and concurrency group.
+  - >-
+    THE TIMING NOTICE is written by the follow-up workflow's notice job
+    (TQ-600a-13-iii's machinery, a second label), on the timing workflow's completion:
+    opened on a red timing run, description rewritten each run, closed on a green one.
+    LANE ENTRANTS: the notice job compares the timing verdict file's `collected_ids` with
+    the previous settled timing run's (one artifact read) and, for each new id, names the
+    newest commit in (previous head, current head] that touched that test's file, found
+    by `git log` in the follow-up's full-history default-branch checkout; when none is
+    determinable it says so in words. The timing workflow's runs are never read by the
+    hold: every hold read is pinned to `post-merge-suite.yml` by file name.
+  - >-
+    MISASSIGNMENT DETECTION, BOTH DIRECTIONS. A correctness test wrongly marked timing
+    (the dangerous direction: a corruption guard silently stops holding) is surfaced by
+    naming lane entrants with their commit; the marker change itself arrives by pull
+    request and is reviewed. A timing test wrongly left in the correctness lane surfaces
+    as a red not reproduced at the same commit (TQ-600a-13-x's counter, TQ-600a-13-xiii's
+    notice). OPTIONAL, not required: a timing-lane test observed to read no clock during
+    its execution could be flagged as suspected misassignment; imperfect (logging reads
+    clocks), so recorded as an idea only.
+  - >-
+    TQ-600a-13-i's "FAILS THE BUILD" — OWNER DECISION 2026-10-08: it means BLOCKS MERGES.
+    Applied as follows in this family: a CORRECTNESS-lane failure blocks merges (through
+    the required `Post-merge suite status` hold, TQ-600a-13-vi/-x); a TIMING-lane failure
+    turns its own workflow run red and is named on the `post-merge-timing` notice, and
+    never blocks a merge (decision C, which the owner has not withdrawn). RESOLVED: the
+    BA amended TQ-600a-13-i's criteria on 2026-10-08 to state the timing lane as the one
+    explicit carve-out (own run red, named on `post-merge-timing`, `Post-merge suite
+    status` unchanged), so this record and TQ-600a-13-i now agree. The carve-out is
+    proven by TQ-600a-13-i's test_tq600a_13_i_a_timing_lane_failure_leaves_the_hold_unchanged
+    together with this record's never-holds descriptor.
+  - >-
+    THE TESTS COST UNDER 1.2 s. In-process lane classification with a fake runner; the
+    union descriptor uses four real `--collect-only` subprocesses of a synthetic project
+    with plugin autoload off (about 0.2 s each).
+delivers_to:
+  - agent: python-coder
+    ac_id: TQ-600a-13-ii
+    contract: >-
+      The correctness-lane selection: excluded tests not carrying `timing_ratio`.
+  - agent: documentation-expert
+    contract: >-
+      docs/testing/README.md: the two lanes, what each does on failure, the
+      `timing_ratio` marker, and that applying it is a reviewed change that removes the
+      test from the holding lane.
+expects_from:
+  - ac_id: TQ-600a-13-i
+    contract: >-
+      The named opt-in and the union rule.
+  - ac_id: TQ-600a-13-ii
+    contract: >-
+      post_merge_suite.py's execute / retry / classify entry points and the verdict file
+      shape (`lane: "timing"`, `collected_ids`), reused for the timing lane.
+  - ac_id: TQ-600a-13-iii
+    contract: >-
+      The follow-up workflow's notice job, extended to the `post-merge-timing` label.
+  - ac_id: TQ-600a-13-xix
+    contract: >-
+      The registered `timing_ratio` marker (direct `markers =` entry in pytest.ini), the
+      partitioning addopts `-m "not manual and not timing_ratio"`, and
+      `.github/workflows/post-merge-timing.yml` in minimal one-job form (name `Post-merge
+      timing suite`, push-to-main + 12-hour heartbeat + dispatch triggers, its own
+      concurrency group, exit 5 concluding red). This record extends that file and keeps
+      its name, triggers and concurrency group unchanged.
+test_spec:
+  - name: test_tq600a_13_xii_every_test_is_in_exactly_one_collection
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: integration
+    angle: real_artifact
+    surface_invoked: "four real `python -m pytest --collect-only -q` subprocesses of a synthetic project — default, correctness lane, timing lane, unfiltered"
+    must_catch:
+      - "a test marked both `manual` and `timing_ratio` is collected by both lanes"
+      - "a `timing_ratio` test without `manual` is in the default run and the timing lane"
+      - "a test falls in no collection"
+    description: >-
+      The three filtered sets are pairwise disjoint and their union equals the unfiltered
+      set.
+  - name: test_tq600a_13_xii_a_timing_failure_never_holds
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: integration
+    angle: discrimination
+    surface_invoked: "scripts/ci/post_merge_suite.py lane verdicts in-process, then scripts/ci/post_merge_hold.py against a served history with a red timing run and a green correctness run"
+    must_catch:
+      - "the timing lane is a job of the correctness workflow, so a timing failure makes the hold's run red"
+      - "the hold reads the newest run of any post-merge workflow rather than the correctness workflow's"
+      - "the timing failure is reported nowhere"
+    description: >-
+      A red timing run: the hold passes; the timing notice names the failing test. A red
+      correctness run: the hold fails.
+  - name: test_tq600a_13_xii_a_new_timing_lane_entrant_is_named
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: integration
+    angle: criterion
+    surface_invoked: "scripts/ci/post_merge_notice.py against the fake server, with two successive timing verdicts whose lane membership differs, and a scratch repository commit that added the marker"
+    description: >-
+      The second run's notice names the entrant and the commit that marked it.
+test_rationale: |
+  The lane split exists because a gate that holds on noise gets turned off. The
+  disjoint-union descriptor uses real collections because the marker arithmetic is
+  exactly where a test lands in two lanes or none. The never-holds descriptor crosses
+  into the hold module because the property is about the pair (covers -xii and -vi;
+  written once -vi exists). Under 1.2 s.
+origin_agent: business-analyst
+created: 2026-10-08
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-10-08'
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target:
+  - pipeline
+  - config
+risk_surface: internal
+notes: |
+  ADDED 2026-10-08 for user decision C, as a new record rather than an amendment because
+  it introduces a new marker, a new workflow and a new notice, none of which any existing
+  record owns.
+
+  OPEN: the membership of the timing lane. Which of the 43 excluded tests assert
+  wall-clock ratios is decided per test by the reviewed marker change, not here. Until
+  that change lands, the timing lane is empty and every excluded test holds.

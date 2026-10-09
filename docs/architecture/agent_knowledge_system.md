@@ -295,4 +295,5 @@ not found at <path>.`) without a Python traceback.
 - `scripts/backfill_descriptions.py` — one-time migration script; see `## Description Field Convention` above.
 - `scripts/commit_guardian/check_description_field.py` — pre-commit hook enforcing description: presence on new files (ticket 02b).
 - `docs/reference/workflow-constraints.md` §Removed Legacy Agents — canonical list of seven removed agent IDs that must not appear as dispatch targets in any workflow, skill, or command template (AC ACD-1100a-3).
+- [Knowledge Routing Step](../reference/knowledge-routing-step.md) — where the routing step runs, what its report and `--status` answer mean to a caller.
 - `docs/acceptance-criteria/infrastructure/INF-400-agent-learning/INF-700c-2.yaml` (and its `-i`/`-ii` children) — the eligibility rule, disposition, and waiting-count definition §5 above records.
