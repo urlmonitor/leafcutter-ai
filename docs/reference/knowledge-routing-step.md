@@ -34,7 +34,7 @@ The list is guarded at build time: `check_knowledge_routing_wiring` (`scripts/bu
 |---|---|---|---|
 | `fast-lane-ship.js` | Yes | `stage` after the test, coder, review and changelog phases, immediately before the `fastlane-commit` agent; `observe` (label `knowledge-routing-observe`) immediately after it, on the success and the commit-failure path alike. | — |
 | `quick-fix.js` | Yes | `stage` after the mutation proof, immediately before the `commit` phase (the fix commit, not the changelog commit); its manifest becomes extra numbered entries in the fix commit's stage list. `observe` immediately after the fix commit, on the success and the blocked path alike. | — |
-| `build-epic.js` | Yes, per ticket, by `ticket-supervisor` (excluded in the config: the workflow itself makes no commit) | `ticket-supervisor` runs `stage`, then the ticket's `commit` staging the manifest by name, then one `observe`, all inside the commit lock (`templates/skills/building-epics/SKILL.md` §5.9). The workflow puts each ticket's `knowledge_routing` and the drive totals on its result. A learning an earlier ticket's commit already carries is not written again (`already_on_branch`). | — |
+| `build-epic.js` | Yes, per ticket, by `ticket-supervisor` (excluded in the config: the workflow itself makes no commit) | `ticket-supervisor` runs `stage`, then the ticket's `commit` staging the manifest by name, then one `observe`, all inside the commit lock (`templates/skills/building-epics/SKILL.md` §5.9). The workflow puts each ticket's `knowledge_routing` and the drive totals (including `waiting_tickets`) on its result. A learning an earlier ticket's commit already carries is not written again (`already_on_branch`). | — |
 | `build-ticket.js` | No | — | Its commit and pull-request phases are dispatched inside a dynamic loop driven by the ticket's own phase list, so a correct insertion point needs its own design. |
 | `finalize-feature.js` | No | — | Its publish step sits inside a nine-step, confirmation-gated sequence with its own halt semantics; wiring needs its own design. |
 | `build-feature.js` | No | — | The `/build-feature` entry point runs its own inlined per-phase driver for epics and single tickets. It dispatches each commit itself, generically inside its phase loop, and not through `ticket-supervisor`, so §5.9 does not reach it. It needs the same design as `build-ticket.js`. |
@@ -51,28 +51,30 @@ Each carrying path returns the step's result in its terminal payload under the k
 
 | `case` value | Meaning |
 |---|---|
-| `completed` | The step ran to completion. |
+| `completed` | The step ran to completion and nothing is left waiting: no record reached the sink after the stage read it (`waiting.difference` is `0`). |
+| `completed_with_waiting` | The step ran to completion, but at least one record reached the sink after the stage read it, for example from the commit, pull-request or finalize agents (`waiting.difference` > `0`). Those records are not routed, written or counted as nothing-to-do; the next completed unit of work in this install routes them. Set by `observe` only, never by `stage`. |
 | `could_not_complete` | The step ran and could not finish: the sink could not be read, the state file was corrupt, a destination write failed, or the commit's contents could not be observed. |
-| `did_not_run` | The step was not run or its reply was not usable: no sink declaration and no `--sink`, the command could not be run, the reply was missing or unparseable, or `case` was not one of the two values above. |
+| `did_not_run` | The step was not run or its reply was not usable: no sink declaration and no `--sink`, the command could not be run, the reply was missing or unparseable, or `case` was not one of the three values above. |
 
 Rules enforced by `classifyKnowledgeRouting`:
 
-- Only a reply whose `case` is exactly `completed` or `could_not_complete` is trusted. Anything else is reported as `did_not_run`.
+- Only a reply whose `case` is exactly `completed`, `completed_with_waiting` or `could_not_complete` (the reply schema's enum, less `did_not_run`) is trusted. Anything else is reported as `did_not_run`.
+- `completed_with_waiting` is a trusted, completed result. It keeps its figures and is passed through as its own value, never folded into `completed`. `build-epic.js` keeps it per ticket, with the ticket's `waiting` count, and reports the number of such tickets as `waiting_tickets`; the per-ticket counts are not summed, because a later ticket's stage reads what an earlier ticket left waiting.
 - `did_not_run` is a distinct `case` value. It is never reported as `completed` with zero figures; its `read`, `written` and `unwritten` are `0` and its `detail` is `null`, and the `case` field is what separates it from a completed run that handled nothing.
-- None of the three values changes the unit of work's own outcome or exit status. The workflow files contain no halt, retry or branch on `knowledge_routing`; its uses are merging it into the returned payload and naming the staged paths in the commit prompt.
+- None of the four values changes the unit of work's own outcome or exit status. The workflow files contain no halt, retry or branch on `knowledge_routing`; its uses are merging it into the returned payload and naming the staged paths in the commit prompt.
 
 ### Report fields
 
 | Field | Type | Meaning |
 |---|---|---|
-| `case` | enum | One of the three values above. The only required field. |
+| `case` | enum | One of the four values above. The only required field. |
 | `read` | integer | Text-bearing sink records the stage read. `0` when not a number or when `case` is `did_not_run`. |
 | `written` | integer | Learnings the path's own commit was observed to carry. Same coercion. |
 | `unwritten` | integer | Learnings not carried: left out, not committed, or not routable by the harvester. Same coercion. This is one run's report, not the waiting count; for that see the §5 reference above. |
 | `detail` | string or null | What could not be done. A string only when `case` is `could_not_complete`; `null` otherwise. |
 | `manifest` | list of strings | The paths the commit was observed to carry, relative to the worktree. In the stage's reply, the paths the commit must stage by name. Paths that are not plain relative paths inside the worktree are dropped. |
 | `unwritten_records` | list of objects | One entry per learning that did not reach the commit: `destination`, `text`, `reason` and `eligible` (see below). |
-| `waiting` | object or null | `present` and `read` sink records, their `difference`, the `records` emitted after the stage read the sink, and a `note` saying they wait for the next completed unit of work. |
+| `waiting` | object or null | `present` and `read` sink records, their `difference`, the `records` emitted after the stage read the sink, and a `note` saying they wait for the next completed unit of work. A `difference` above `0` on a completed run is what makes `case` read `completed_with_waiting`. |
 
 The figures are produced by the CLI and relayed verbatim by the dispatched agent; the workflow code validates `case` and coerces the numbers, and does not recompute them. The CLI always exits `0`. A harvester exit `1` or `2` (sink unreadable, state corrupt; see §5) is reported as `could_not_complete`, and so is a destination write failure. An absent sink is the no-work state: `completed` with zero figures. The completion path reports `could_not_complete` and `did_not_run` in `knowledge_routing` and carries on; neither fails the work.
 
@@ -85,7 +87,7 @@ A learning counts as written only once the unit of work's own commit carries it 
 | Subcommand | When | What it does |
 |---|---|---|
 | `stage --working-dir <worktree>` | Before the path's own commit | Claims, in the state file, every record whose text is already on `origin/main` (fetched first). Then runs the harvester with its writes redirected into the worktree and its state write held back (`harvest(persist_state=False)`). Records the run in the worktree's private git dir, where no commit can carry it, and updates the last-run marker. |
-| `observe --working-dir <worktree> --commit-status ok\|failed` | After that commit, on both outcomes | Read-only. Asks git whether `HEAD` holds each staged text, and recounts the sink. Its reply is the terminal `knowledge_routing`. |
+| `observe --working-dir <worktree> --commit-status ok\|failed` | After that commit, on both outcomes | Read-only. Asks git whether `HEAD` holds each staged text, and recounts the sink. Its reply is the terminal `knowledge_routing`. It turns the stage's `completed` into `completed_with_waiting` when the recount finds records the stage did not read. |
 
 Rules:
 
@@ -106,6 +108,17 @@ Rules:
 | `write_failed` | The destination file could not be written. |
 
 `eligible` is `true` while the record is not marked routed, which is always the case for a write that was not published.
+
+### Announcement before worktree removal
+
+`finalize-feature.js` does not stage, but it is the only path that removes a worktree (INF-700a-5-i). In Step 7, once the worktree is known to exist and before the `worktree-agent` removal, it first asks whether the PR is actually `MERGED` (label `step-7-pr-merged-probe`). Step 4's `gh pr merge --auto` can return before the merge happens. It then dispatches `observe --working-dir <worktree> --all-stages` (label `step-7-unpublished-learnings`).
+
+- Merged: `--commit-status ok`. `HEAD` is the merged head, so each `unwritten_records` entry is a write the merged tree does not hold.
+- Not merged, or the state is unknown: `--commit-status not_run`. Every staged write is listed with reason `branch_not_merged`, under the heading "branch not merged — every routed learning here is unpublished".
+- `--all-stages` judges every stage on the branch. Each `stage` folds the previous run record into `branch_entries` / `branch_unwritten_records`. Without the flag, `observe` still judges only the latest stage's commit.
+- Each entry is named with its `destination`, `reason`, `eligible` and `text`. The list goes to the log, to the top of the removal agent's prompt, and to `unpublished_learnings` on the terminal payload.
+- Fail-open: an unusable reply, or no recorded run (`did_not_run`), yields an empty list. The removal still runs. The run's status and step record are the same as with nothing to announce.
+- Nothing is written. Records stay eligible, so a later carrying path stages them again.
 
 ---
 
