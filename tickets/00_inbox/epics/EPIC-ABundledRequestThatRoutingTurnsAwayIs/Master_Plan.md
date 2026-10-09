@@ -30,7 +30,6 @@ This epic assembles 17 ticket(s) from an explicit connected-set id list: DK-400a
 | 05 | [05_TICKET-20261006-DK-400a-3-i.md](./05_TICKET-20261006-DK-400a-3-i.md) | A question that lists alternatives or constraints is one question, not a bundle | DK-400a-3-i | 04_TICKET-20261006-DK-400a-3.md |
 | 06 | [06_TICKET-20261006-DK-400a-3-ii.md](./06_TICKET-20261006-DK-400a-3-ii.md) | A caller-supplied decision request is never checked for bundling, even when its question bundles several | DK-400a-3-ii | 04_TICKET-20261006-DK-400a-3.md |
 | 07 | [07_TICKET-20261006-DK-400a-4.md](./07_TICKET-20261006-DK-400a-4.md) | A single question no capability can meet stays a capability gap and never reaches the split gate | DK-400a-4 | 01_TICKET-20261006-DK-400a-1.md |
-| 08 | [08_TICKET-20261006-DK-400a-1-ii.md](./08_TICKET-20261006-DK-400a-1-ii.md) | A request that is split is not counted as a capability gap, and a real gap still is | DK-400a-1-ii | 01_TICKET-20261006-DK-400a-1.md, 07_TICKET-20261006-DK-400a-4.md |
 | 09 | [09_TICKET-20261006-DK-400c-1.md](./09_TICKET-20261006-DK-400c-1.md) | The host proposes two to five parts, each quoting your words, and no part runs until you answer | DK-400c-1 | 01_TICKET-20261006-DK-400a-1.md |
 | 10 | [10_TICKET-20261006-DK-400c-1-i.md](./10_TICKET-20261006-DK-400c-1-i.md) | A proposal of more than five parts offers five and lists the rest as not covered, never dropping them silently | DK-400c-1-i | 09_TICKET-20261006-DK-400c-1.md |
 | 11 | [11_TICKET-20261006-DK-400c-1-ii.md](./11_TICKET-20261006-DK-400c-1-ii.md) | A proposal with circular or unknown dependencies never reaches the gate | DK-400c-1-ii | 09_TICKET-20261006-DK-400c-1.md |
@@ -41,12 +40,13 @@ This epic assembles 17 ticket(s) from an explicit connected-set id list: DK-400a
 | 16 | [16_TICKET-20261006-DK-400c-3-i.md](./16_TICKET-20261006-DK-400c-3-i.md) | Fewer than two parts left after setting aside unquoted ones also means one question | DK-400c-3-i | 14_TICKET-20261006-DK-400c-3.md, 12_TICKET-20261006-DK-400c-2.md |
 | 17 | [17_TICKET-20261006-DK-400c-4.md](./17_TICKET-20261006-DK-400c-4.md) | Component diagram: where the split sits among the kernel's containers | DK-400c-4 | 09_TICKET-20261006-DK-400c-1.md, 12_TICKET-20261006-DK-400c-2.md |
 
+Ticket 08 (DK-400a-1-ii, "A request that is split is not counted as a capability gap, and a real gap still is") left this epic on 2026-10-09 (decision dec-59d0ba46c140cf0c). Its tests need the split gate's approve and reject outcomes, DK-400d-1 and DK-400d-3, which E2 builds. It is parked (status deferred) at [tickets/00_inbox/TICKET-20261006-DK-400a-1-ii.md](../../TICKET-20261006-DK-400a-1-ii.md), with its E1 red-baseline test attached, and E2 takes DK-400a-1-ii into its AC set.
+
 ## Dependencies
 
 ```
 DK-400a-1 (no dependencies)
 DK-400a-1-i -> DK-400a-1
-DK-400a-1-ii -> DK-400a-1, DK-400a-4
 DK-400a-2 (no dependencies)
 DK-400a-3 (no dependencies)
 DK-400a-3-i -> DK-400a-3
