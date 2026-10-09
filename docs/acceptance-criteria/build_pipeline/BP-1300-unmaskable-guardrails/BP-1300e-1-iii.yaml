@@ -93,9 +93,9 @@ estimated_complexity: M
 package_surface: false
 it_requirements:
   - "ONE LOCATOR FOR THIS FAMILY: templates/scripts/commit_guardian/_ruff_locator.py, stdlib only, returning the argv prefix to run ruff or a typed not-installed result. Rule per GE-108e, in this order: module form [sys.executable, '-m', 'ruff'] first, bare executable (shutil.which('ruff')) as fallback. Module absence is detected by a non-zero exit WITH 'No module named ruff' on stderr -- never by non-zero exit alone, which a real violation also produces. Probe once per run with '<prefix> --version' and keep the version string for the output. check_lint_gate.py, run_ci_local.py (through the CLI) and BO-570-3 (through the CLI) all go through this one locator."
-  - "WHY THIS IS NOT LITERAL REUSE OF GE-108e's CODE, AND HOW PARITY IS HELD INSTEAD. GE-108e's rule is implemented inline in templates/hooks/check_exception_handling_hook.py, a Claude Code PostToolUse hook deployed to .claude/hooks/ whose header and GE-108e's own it_requirements forbid importing any leafcutter module. It therefore cannot import _ruff_locator.py, and _ruff_locator.py must not import from .claude/hooks/. Do NOT relax the edit-time hook's self-containment to force reuse. Hold 'is ruff installed gets one answer' with a behavioural cross-check test that runs BOTH the edit-time hook and the lint gate as subprocesses in three real environments -- module importable with no executable on PATH, executable on PATH with the module unimportable, neither -- and asserts they agree on installed / not installed in each."
+  - "WHY THIS IS NOT LITERAL REUSE OF GE-108e's CODE, AND HOW PARITY IS HELD INSTEAD (substitution accepted by the user 2026-10-09). GE-108e's rule is implemented inline in templates/hooks/check_exception_handling_hook.py, a Claude Code PostToolUse hook deployed to .claude/hooks/ whose header and GE-108e's own it_requirements forbid importing any leafcutter module. It therefore cannot import _ruff_locator.py, and _ruff_locator.py must not import from .claude/hooks/. Do NOT relax the edit-time hook's self-containment to force reuse. Hold 'is ruff installed gets one answer' with a behavioural cross-check test that runs BOTH the edit-time hook and the lint gate as subprocesses in three real environments -- module importable with no executable on PATH, executable on PATH with the module unimportable, neither -- and asserts they agree on installed / not installed in each."
   - "DECIDE NOTHING-TO-INSPECT BEFORE PROBING RUFF. Compute the in-scope staged set first using the declaration and git alone. If it is empty, emit RESULT: nothing_to_inspect, print a visible line of the form 'nothing to inspect: 0 of <N> staged files are in the declared lint scope', and exit 0 -- even when ruff is absent. Membership filtering that needs ruff (its include/exclude) happens only after at least one staged file falls under a declared step's paths; if ruff is then unavailable, that is could_not_check, not nothing_to_inspect."
-  - "EVERY CANNOT-RUN CAUSE BLOCKS, AND THE REASON IS NAMED. Emit RESULT: could_not_check and exit non-zero, with a reason line, for: ruff not installed (state both forms were tried; install instruction: `pip install -r requirements-dev.txt` where that file exists, otherwise `pip install ruff`); ruff present but exits before inspecting (name its stderr); ruff configuration unreadable (ruff exits 2 naming the file, e.g. 'Failed to parse'; name the file and that it could not be read); leafcutter-lint.json unreadable (BP-1300e-1-i); no repository (BP-1300e-1-iv); the check's own failure (cannot list staged files, cannot read a blob, unparseable ruff output, an unexpected exception). Never retry with --isolated, never retry without the configuration, never fall back to ruff's built-in defaults."
+  - "EVERY CANNOT-RUN CAUSE BLOCKS, AND THE REASON IS NAMED. Emit RESULT: could_not_check and exit non-zero, with a reason line, for: ruff not installed (state both forms were tried; install instruction: `pip install -r requirements-dev.txt` where that file exists, otherwise `pip install ruff`); ruff present but exits before inspecting (name its stderr); ruff configuration unreadable (ruff exits 2 naming the file, e.g. 'Failed to parse'; name the file and that it could not be read); leafcutter-lint.json unreadable (BP-1300e-1-i); a governing ruff configuration with unstaged edits (BP-1300e-1-ii) or outside the project (BP-1300e-1-iv); a local ruff version different from the version CI installs, or a declared version source that cannot be read (BP-1300e-1-v); no repository (BP-1300e-1-iv); the check's own failure (cannot list staged files, cannot read a blob, unparseable ruff output, an unexpected exception). Never retry with --isolated, never retry without the configuration, never fall back to ruff's built-in defaults."
   - "WHY INTERNAL DEFECTS ALSO BLOCK HERE, CONTRARY TO THE COMPONENT'S FAIL-OPEN CONVENTION. pre-commit prints 'Passed' beside any hook that exits 0, whatever the hook writes. An exit-0 fail-open on an internal defect is therefore a printed false green, which scenario 5 forbids. The only exit status for which pre-commit prints anything other than Passed is non-zero, so this check's GE-120a-2 disposition is BLOCK for every could_not_check cause. State this decision in the module's docstring DECISION HISTORY so a later 'consistency' refactor does not restore exit 0."
   - "THE OUTERMOST GUARD EXITS NON-ZERO. main() catches the specific exceptions it expects (OSError, subprocess.SubprocessError, ValueError, json.JSONDecodeError, UnicodeDecodeError) and converts them to could_not_check. A last-resort guard for anything else is allowed ONLY at the outermost level, must log the exception type and message at WARNING to stderr, must emit RESULT: could_not_check, and must exit non-zero -- the opposite of the component's usual exit-0 tail. It must not print a Python traceback as the only explanation."
   - "run_hook.py IS UNCHANGED BUT VERIFIED. Confirm the deployed run_hook.py wrapper propagates check_lint_gate.py's non-zero exit unchanged and that its own could_not_start path (check_outcome.emit_not_run) covers the case where the script cannot be launched. No edit to run_hook.py is expected; if one proves necessary it is a separate change."
@@ -161,9 +161,16 @@ delivers_to:
     prefix list[str] plus version str, or a NotInstalled result naming both
     forms tried; and the could_not_check reason vocabulary
     {ruff_not_installed, ruff_failed_to_start, ruff_config_unreadable,
-    declaration_unreadable, ruff_config_partially_staged, no_repository,
-    internal_error} carried in --json 'reason' and in a human-readable reason
-    line.
+    declaration_unreadable, ruff_config_partially_staged,
+    ruff_config_outside_project, linter_version_mismatch,
+    linter_version_source_unreadable, no_repository, internal_error} carried
+    in --json 'reason' and in a human-readable reason line. Owners of the
+    reasons not raised here: ruff_config_partially_staged (BP-1300e-1-ii),
+    ruff_config_outside_project and no_repository (BP-1300e-1-iv),
+    declaration_unreadable (BP-1300e-1-i), linter_version_mismatch and
+    linter_version_source_unreadable (BP-1300e-1-v). Every reason carries the
+    same BLOCK disposition (non-zero exit). BO-570-3 maps every one of them to
+    tooling-unavailable.
 expects_from:
   ac_id: GE-120a-1
   contract: "templates/scripts/commit_guardian/check_outcome.py: OUTCOME_OK, OUTCOME_COULD_NOT_CHECK, OUTCOME_NOTHING_TO_INSPECT and emit_result() printing 'RESULT: <outcome>' on stdout (BP-1300e-1 adds OUTCOME_REFUSED there)."
@@ -202,3 +209,19 @@ notes: |
   The "nothing to inspect" arm stops the opposite over-correction: refusing a
   docs-only commit because the linter is missing would block work the check has
   no subject in.
+
+  USER DECISION 2026-10-09 -- ACCEPTED: GE-108e's ruff-discovery rule cannot be
+  literally reused, because it is implemented inline in the edit-time hook
+  (templates/hooks/check_exception_handling_hook.py), which GE-108e requires to
+  be self-contained. The substitute recorded in it_requirements ("WHY THIS IS
+  NOT LITERAL REUSE OF GE-108e's CODE") -- one locator for this family plus a
+  behavioural cross-check test that runs BOTH hooks as subprocesses in three
+  real environments (module only, executable only, neither) and asserts they
+  agree on installed / not installed -- was accepted by the user on 2026-10-09
+  as satisfying "the same answer as the edit-time hook". Decided, not a caveat.
+  Criteria unchanged.
+
+  SAME DAY: the reason vocabulary in delivers_to was extended with
+  ruff_config_outside_project (BP-1300e-1-iv, user-accepted rule),
+  linter_version_mismatch and linter_version_source_unreadable (BP-1300e-1-v,
+  user decision that a differing linter version refuses).
