@@ -1,35 +1,51 @@
 """
 MODULE: migrate_agent_abilities
-GOAL: One-shot migration that moves each agent's granted abilities from the
-    central registry into the agent's own template frontmatter ``skills`` key,
-    then regenerates the registry's ability fields from those declarations.
+GOAL: One-shot migration that moves each agent's granted abilities from every
+    place they were recorded into the agent's own template frontmatter
+    ``skills`` key, then regenerates the registry's ability fields from those
+    declarations.
 BUSINESS CONTEXT: AR-300c made the template frontmatter the single source of
-    truth for an agent's abilities. Two registry fields (``skills_used``, the
-    older; ``skills_invoked``, the newer) recorded abilities until now and
-    disagree with each other, so the consolidated declaration is the UNION of
-    both — dropping either would silently revoke a grant. Entries flagged
+    truth for an agent's abilities. Grants were recorded in THREE places that
+    disagree: the registry's ``skills_used`` (older) and ``skills_invoked``
+    (newer), and the template's OWN frontmatter ``skills_used`` /
+    ``skills_invoked`` lists. The consolidated declaration is the UNION of all
+    three -- dropping any would silently revoke a grant (``ac-tree-split`` was
+    granted only in the product-owner and business-analyst templates, so a
+    registry-only migration never delivered it). Entries flagged
     ``descriptive_only`` describe behaviour and are not grants, so they are
     left out and listed in the report instead.
 ARCHITECTURE: ``python scripts/migrate_agent_abilities.py --package-root DIR
     [--report PATH]`` reads ``DIR/config/agent_registry.json`` and
-    ``DIR/templates/agents/*.md``. Per templated agent with grants it inserts
-    ONLY the ``skills`` key (beside ``tools:``, text-level, so every other
-    frontmatter line stays byte-identical), then rewrites the registry's
-    ability fields from the declaration while keeping each field's population
-    (an agent recorded in only one field stays in only that field) and keeping
-    ``descriptive_only`` entries in place. Mode comes from the ``skills_invoked``
-    record; an id recorded only in ``skills_used`` has no mode on record and is
-    declared ``always`` (listed under ``review``). Re-running over a migrated
-    tree is byte-stable. Not wired into the build. Build-engine script under
-    ``scripts/``; no deploy-manifest entry needed.
+    ``DIR/templates/agents/*.md``. Per template it (1) REMOVES the
+    template-level ``skills_used`` / ``skills_invoked`` keys (even empty ones),
+    (2) sets the ``skills`` key (beside ``tools:``, text-level, so every other
+    frontmatter line stays byte-identical) when there are grants, then rewrites
+    the registry record's ability fields through the shared
+    ``_agent_ability_sync`` module (the same rule the pre-commit transform hook
+    applies). Mode: an existing ``skills:`` entry keeps its mode and condition
+    (so an already-migrated template is never clobbered); otherwise the mode
+    comes from the ``skills_invoked`` record; an id recorded only in
+    ``skills_used`` has no mode on record and is declared ``always``; an id
+    recorded ONLY in the template's own list is declared ``conditional`` with
+    no condition text (condition text is applied separately). Both are listed
+    under ``review``. Report ``sources`` names ``template.skills_used`` /
+    ``template.skills_invoked`` for grants the template's own lists hold.
+    Re-running over a migrated tree is byte-stable. Not wired into the build.
+    Build-engine script under ``scripts/``; no deploy-manifest entry needed.
 
 DECISION HISTORY
-- 2026-10-08 [python-coder/AR-300c-2]: Created. The registry is the migration's
-  only input, so a hand-edited declaration is replaced by the registry union on
-  re-run — this is a one-shot tool, not a sync. (#AR-300c-2)
+- 2026-10-08 [python-coder/AR-300c-2]: Created. The registry was the
+  migration's only input, so a hand-edited declaration was replaced by the
+  registry union on re-run -- a one-shot tool, not a sync. (#AR-300c-2)
 - 2026-10-08 [python-coder/AR-300c-2]: Report ``counts`` keys are
   ``skills_used`` / ``skills_invoked`` / ``union`` (agent counts per field and
   for their union), as fixed by the tests' support contract. (#AR-300c-2)
+- 2026-10-09 [python-coder/AR-300c-2]: Added the THIRD source (the template's
+  own frontmatter lists) and the removal of those keys, so ``skills:`` is the
+  only grant list in a block. Existing ``skills:`` entries now win over the
+  registry for the same id and are never duplicated. The regeneration rule
+  moved to ``_agent_ability_sync`` (shared with the transform hook). The
+  registry is written only when its parsed content changed. (#AR-300c-2)
 """
 
 from __future__ import annotations
@@ -43,81 +59,71 @@ from typing import Any
 
 import yaml
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "templates" / "scripts" / "commit_guardian"))
+
+from _agent_ability_sync import (  # noqa: E402
+    descriptive_entries,
+    dump_registry,
+    entry_id,
+    field_ids,
+    frontmatter_of,
+    normalize_declared,
+    regenerate_record,
+)
+
 _log = logging.getLogger(__name__)
 
 _DESCRIPTIVE_REASON = "descriptive_only registry entry describes behaviour; it is not a grant"
+_TEMPLATE_KEYS = ("skills_used", "skills_invoked")
 
 
-def _entry_id(item: Any) -> str | None:
-    """Return the skill id of a registry ability item (string or dict)."""
-    sid = item.get("skill_id") if isinstance(item, dict) else item
-    return sid if isinstance(sid, str) else None
-
-
-def _field_ids(agent: dict[str, Any], field: str) -> list[str]:
-    """Return every skill id recorded in ``field`` (descriptive entries included)."""
-    return [sid for sid in map(_entry_id, agent.get(field) or []) if sid]
-
-
-def _descriptive_entries(agent: dict[str, Any]) -> list[tuple[str, dict[str, Any]]]:
-    """Return ``(field, entry)`` for every descriptive_only entry on the record."""
-    return [
-        (field, item)
-        for field in ("skills_used", "skills_invoked")
-        for item in agent.get(field) or []
-        if isinstance(item, dict) and item.get("descriptive_only")
-    ]
-
-
-def consolidate(agent: dict[str, Any]) -> tuple[list[dict[str, str]], list[dict[str, str]], list[dict[str, str]]]:
-    """Union both ability fields into declaration entries.
+def consolidate(
+    agent: dict[str, Any], declared: list[dict[str, str]], template_ids: list[str]
+) -> tuple[list[dict[str, str]], list[dict[str, str]], list[dict[str, str]]]:
+    """Union the three grant sources into declaration entries.
 
     Args:
-        agent: One registry agent record.
+        agent: One registry agent record (``{"id": stem}`` when unregistered).
+        declared: Entries already in the template's ``skills:`` key (they win).
+        template_ids: Ids from the template's own ``skills_used``/``skills_invoked``.
 
     Returns:
-        ``(entries, conflicts, review)``: entries in declaration order
-        (``skills_invoked`` order first, then ids only in ``skills_used``),
-        mode-conflict notes, and notes for ids whose mode was defaulted.
+        ``(entries, conflicts, review)``: entries in order (existing declaration,
+        then ``skills_invoked`` order, then ids only in ``skills_used``, then ids
+        only in the template's own lists), mode-conflict notes, and notes for
+        ids whose mode was defaulted.
     """
-    skip = {item["skill_id"] for _f, item in _descriptive_entries(agent)}
-    entries: dict[str, dict[str, str]] = {}
+    skip = {item["skill_id"] for _f, item in descriptive_entries(agent)}
+    entries: dict[str, dict[str, str]] = {e["skill_id"]: dict(e) for e in declared}
     conflicts: list[dict[str, str]] = []
+    review: list[dict[str, str]] = []
+    recorded: dict[str, str] = {}
     for item in agent.get("skills_invoked") or []:
-        sid = _entry_id(item)
+        sid = entry_id(item)
         if not sid or sid in skip:
             continue
         entry = {"skill_id": sid, "mode": (item.get("mode") if isinstance(item, dict) else None) or "always"}
         if isinstance(item, dict) and item.get("condition"):
             entry["condition"] = item["condition"]
-        if sid in entries and entries[sid]["mode"] != entry["mode"]:
-            conflicts.append({"agent": agent["id"], "skill_id": sid, "note": "conflicting modes in skills_invoked; first kept"})
+        if sid in recorded:
+            if recorded[sid] != entry["mode"]:
+                conflicts.append({"agent": agent["id"], "skill_id": sid,
+                                  "note": "conflicting modes in skills_invoked; first kept"})
             continue
+        recorded[sid] = entry["mode"]
         entries.setdefault(sid, entry)
-    review: list[dict[str, str]] = []
-    for sid in _field_ids(agent, "skills_used"):
+    for sid in field_ids(agent, "skills_used"):
         if sid not in entries and sid not in skip:
             entries[sid] = {"skill_id": sid, "mode": "always"}
             review.append({"agent": agent["id"], "skill_id": sid,
                            "note": "recorded only in skills_used (no mode on record); declared always"})
+    for sid in template_ids:
+        if sid not in entries:
+            entries[sid] = {"skill_id": sid, "mode": "conditional"}
+            review.append({"agent": agent["id"], "skill_id": sid,
+                           "note": "granted only in the template's own list (no mode on record); "
+                                   "declared conditional with no condition text"})
     return list(entries.values()), conflicts, review
-
-
-def regenerate_record(agent: dict[str, Any], entries: list[dict[str, str]]) -> None:
-    """Rewrite the record's ability fields from ``entries`` in place.
-
-    Each field keeps its population: a field that was empty stays empty, and
-    descriptive_only entries are preserved after the grants.
-
-    Args:
-        agent: The registry agent record to update.
-        entries: The agent's declaration entries.
-    """
-    descriptive = [item for _f, item in _descriptive_entries(agent)]
-    if _field_ids(agent, "skills_used"):
-        agent["skills_used"] = [e["skill_id"] for e in entries]
-    if _field_ids(agent, "skills_invoked"):
-        agent["skills_invoked"] = [dict(e) for e in entries] + descriptive
 
 
 def _block_lines(entries: list[dict[str, str]], eol: str) -> list[str]:
@@ -138,12 +144,12 @@ def _key_span(lines: list[str], start: int, stop: int, key: str) -> tuple[int, i
     return None
 
 
-def insert_skills_block(text: str, entries: list[dict[str, str]]) -> str | None:
-    """Return ``text`` with its frontmatter ``skills`` key set to ``entries``.
+def rewrite_frontmatter(text: str, entries: list[dict[str, str]]) -> str | None:
+    """Return ``text`` with template-level grant keys removed and ``skills`` set to ``entries``.
 
-    The key is inserted after ``tools:`` (or before the closing ``---`` when
-    there is no ``tools:``); an existing ``skills`` block is replaced. Every
-    other line is left byte-identical.
+    The ``skills`` key is inserted after ``tools:`` (or before the closing
+    ``---`` when there is no ``tools:``) and an existing block is replaced; with
+    no ``entries`` no key is written. Every other line stays byte-identical.
 
     Returns:
         The new text, or None when ``text`` has no frontmatter block.
@@ -155,14 +161,20 @@ def insert_skills_block(text: str, entries: list[dict[str, str]]) -> str | None:
     close = next((i for i in range(1, len(lines)) if lines[i].rstrip() == "---"), None)
     if close is None:
         return None
-    block = _block_lines(entries, eol)
-    existing = _key_span(lines, 1, close, "skills")
-    if existing:
-        lines[existing[0]:existing[1]] = block
-    else:
-        tools = _key_span(lines, 1, close, "tools")
-        at = tools[1] if tools else close
-        lines[at:at] = block
+    for key in _TEMPLATE_KEYS:
+        span = _key_span(lines, 1, close, key)
+        if span:
+            del lines[span[0]:span[1]]
+            close -= span[1] - span[0]
+    if entries:
+        block = _block_lines(entries, eol)
+        existing = _key_span(lines, 1, close, "skills")
+        if existing:
+            lines[existing[0]:existing[1]] = block
+        else:
+            tools = _key_span(lines, 1, close, "tools")
+            at = tools[1] if tools else close
+            lines[at:at] = block
     return "".join(lines)
 
 
@@ -175,29 +187,76 @@ def _read_text(path: Path) -> str:
         raise
 
 
-def _write_if_changed(path: Path, new_text: str, old_text: str) -> bool:
+def _write_if_changed(path: Path, new_text: str, old_text: str) -> None:
     """Write ``new_text`` (bytes, no newline translation) only when it differs."""
     if new_text == old_text:
-        return False
+        return
     try:
         path.write_bytes(new_text.encode("utf-8"))
     except OSError as exc:
         _log.warning("cannot write %s: %s", path, exc)
         raise
-    return True
 
 
 def _counts(agents: list[dict[str, Any]]) -> tuple[dict[str, int], set[str]]:
     """Return the three report counts and the union population of agent ids."""
-    used = {a["id"] for a in agents if _field_ids(a, "skills_used")}
-    invoked = {a["id"] for a in agents if _field_ids(a, "skills_invoked")}
+    used = {a["id"] for a in agents if field_ids(a, "skills_used")}
+    invoked = {a["id"] for a in agents if field_ids(a, "skills_invoked")}
     union = used | invoked
     return {"skills_used": len(used), "skills_invoked": len(invoked), "union": len(union)}, union
 
 
-def _sources(agent: dict[str, Any]) -> list[str]:
-    """Return which ability fields of ``agent`` hold any entry."""
-    return [f for f in ("skills_used", "skills_invoked") if _field_ids(agent, f)]
+def _template_level(fm: dict[str, Any]) -> dict[str, list[str]]:
+    """Return ``{template field: ids}`` for each template-level grant list that holds any id."""
+    out: dict[str, list[str]] = {}
+    for key in _TEMPLATE_KEYS:
+        ids = [sid for sid in map(entry_id, fm.get(key) or []) if sid]
+        if ids:
+            out[key] = ids
+    return out
+
+
+def _sources(agent: dict[str, Any], template_level: dict[str, list[str]]) -> list[str]:
+    """Return which ability fields hold any entry (registry first, then ``template.<field>``)."""
+    registry = [f for f in _TEMPLATE_KEYS if field_ids(agent, f)]
+    return registry + [f"template.{key}" for key in template_level]
+
+
+def _frontmatter_or_none(path: Path, text: str) -> dict[str, Any] | None:
+    """Return the template's frontmatter mapping, or None (after a WARNING) when unparsable."""
+    try:
+        return frontmatter_of(text)
+    except yaml.YAMLError as exc:
+        _log.warning("cannot parse frontmatter of %s: %s", path, exc)
+        return None
+
+
+def _declare(path: Path, agent: dict[str, Any], union: set[str], report: dict[str, Any]) -> None:
+    """Rewrite one template, regenerate its registry record, and add its report row.
+
+    ``agent`` is the registry record (a throwaway ``{"id": stem}`` for a template
+    no record points at, so its own list is still migrated and its keys removed).
+    """
+    old = _read_text(path)
+    fm = _frontmatter_or_none(path, old)
+    template_level = _template_level(fm or {})
+    ids = [sid for field in _TEMPLATE_KEYS for sid in template_level.get(field, [])]
+    entries, conflicts, review = consolidate(agent, normalize_declared((fm or {}).get("skills")), ids)
+    if fm is None:
+        if entries:
+            report["review"].append({"agent": agent["id"], "skill_id": "",
+                                     "note": "template has no parsable frontmatter block; abilities not declared"})
+    else:
+        new = rewrite_frontmatter(old, entries)
+        if new is not None:
+            _write_if_changed(path, new, old)
+        report["conflicts"] += conflicts
+        report["review"] += review
+        if entries:
+            regenerate_record(agent, entries)
+    if template_level or agent["id"] in union:
+        report["agents"].append({"agent": agent["id"], "sources": _sources(agent, template_level),
+                                 "abilities": [e["skill_id"] for e in entries]})
 
 
 def migrate(package_root: Path) -> dict[str, Any]:
@@ -216,41 +275,32 @@ def migrate(package_root: Path) -> dict[str, Any]:
     agents: list[dict[str, Any]] = data["agents"]
     counts, union = _counts(agents)
     report: dict[str, Any] = {"counts": counts, "agents": [], "excluded": [], "conflicts": [], "review": []}
+    claimed: set[Path] = set()
     for agent in agents:
         report["excluded"] += [
             {"agent": agent["id"], "skill_id": item["skill_id"], "reason": _DESCRIPTIVE_REASON}
-            for _f, item in _descriptive_entries(agent)
+            for _f, item in descriptive_entries(agent)
         ]
-        entries, conflicts, review = consolidate(agent)
-        report["conflicts"] += conflicts
+        template_path = agent.get("template_path")
+        path = package_root / template_path if template_path else None
+        if path is not None and path.is_file():
+            claimed.add(path.resolve())
+            _declare(path, agent, union, report)
+            continue
+        entries = consolidate(agent, [], [])[0]
+        if entries:
+            report["review"].append({"agent": agent["id"], "skill_id": "",
+                                     "note": "no template file; abilities not declared"})
         if agent["id"] in union:
-            report["agents"].append({"agent": agent["id"], "sources": _sources(agent),
+            report["agents"].append({"agent": agent["id"], "sources": _sources(agent, {}),
                                      "abilities": [e["skill_id"] for e in entries]})
-        if entries and _apply_to_template(package_root, agent, entries, report):
-            report["review"] += review
-            regenerate_record(agent, entries)
-    new_text = json.dumps(data, indent=4, ensure_ascii=False) + "\n"
-    _write_if_changed(registry_path, new_text, original_text)
+    agents_dir = package_root / "templates" / "agents"
+    for path in sorted(agents_dir.glob("*.md")) if agents_dir.is_dir() else []:
+        if path.resolve() not in claimed:
+            _declare(path, {"id": path.stem}, union, report)
+    if data != json.loads(original_text):
+        _write_if_changed(registry_path, dump_registry(data), original_text)
     return report
-
-
-def _apply_to_template(package_root: Path, agent: dict[str, Any], entries: list[dict[str, str]],
-                       report: dict[str, Any]) -> bool:
-    """Write the declaration into the agent's template; return True when it was declared."""
-    template_path = agent.get("template_path")
-    path = package_root / template_path if template_path else None
-    if path is None or not path.is_file():
-        report["review"].append({"agent": agent["id"], "skill_id": "",
-                                 "note": "no template file; abilities not declared"})
-        return False
-    old = _read_text(path)
-    new = insert_skills_block(old, entries)
-    if new is None:
-        report["review"].append({"agent": agent["id"], "skill_id": "",
-                                 "note": "template has no frontmatter block; abilities not declared"})
-        return False
-    _write_if_changed(path, new, old)
-    return True
 
 
 def main(argv: list[str] | None = None) -> int:

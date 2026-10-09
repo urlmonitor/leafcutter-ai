@@ -3179,7 +3179,8 @@
             "model": "opus",
             "skills_used": [
                 "signoff",
-                "knowledge-query"
+                "knowledge-query",
+                "ac-tree-split"
             ],
             "description": "Product Owner for v3 ticket-creation pipeline. Operates at L0/L1 flight level: translates user requests into customer value propositions and feature benefit statements. Speaks customer language, never engineering jargon.",
             "category": "planning",
@@ -3191,6 +3192,10 @@
                 {
                     "skill_id": "knowledge-query",
                     "mode": "always"
+                },
+                {
+                    "skill_id": "ac-tree-split",
+                    "mode": "conditional"
                 }
             ],
             "knowledge_channels": [
@@ -3236,7 +3241,8 @@
             "template_path": "templates/agents/business-analyst.md",
             "model": "opus",
             "skills_used": [
-                "knowledge-query"
+                "knowledge-query",
+                "ac-tree-split"
             ],
             "description": "Business Analyst for v3 ticket-creation pipeline. Operates at L2/L3 flight level: decomposes L1 feature ACs into testable Gherkin behaviors and edge-case specifications. Produces AC YAML files.",
             "category": "planning",

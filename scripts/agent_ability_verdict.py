@@ -9,7 +9,9 @@ BUSINESS CONTEXT: AR-300c made the agent's own template frontmatter the single
     copy that silently drifts from its source is how an agent ends up described
     one way and prompted another, so this verdict makes drift loud (the build
     refuses on it, ADR-050) and makes an ability that names no installed skill
-    loud too, instead of delivering a prompt row that points at nothing.
+    loud too, instead of delivering a prompt row that points at nothing. The
+    build REPORTS the former and refuses on the latter (user decision,
+    BrainCandy 2026-10-09; the pre-commit transform hook regenerates the copy).
 ARCHITECTURE: One public entry point, ``verify_abilities``, plus the shared
     ``normalize_entries`` helper (reused by the prompt-table builder so the
     declaration shape is parsed in exactly one place) and ``describe_finding``
@@ -34,6 +36,10 @@ DECISION HISTORY
   skills root AND ``<project_root>/<output_root_name>/skills`` and reports both
   lookups separately so the reader knows which surface to add the skill to.
   (#AR-300c-3-i)
+- 2026-10-09 [python-coder/AR-300c-3]: Added ``REPORT_ONLY_KINDS`` so the gate
+  can split report-only (comparison) findings from refusing ones. Per the user
+  decision of 2026-10-09 a disagreeing registry copy is reported, not refused;
+  an unresolvable declared id still refuses. (#AR-300c-3)
 """
 
 from __future__ import annotations
@@ -42,6 +48,9 @@ from pathlib import Path
 from typing import Any
 
 _DEFAULT_MODE = "always"
+# Comparison findings (the derived registry copy disagrees with the declaration)
+# are REPORTED by the build and never refuse it; every other kind refuses.
+REPORT_ONLY_KINDS = frozenset({"divergent", "declaration-only", "record-only"})
 
 
 class EmptyPopulationError(ValueError):

@@ -32,6 +32,7 @@ from _ar_300c_support import (  # noqa: E402
     migrate_or_fail,
     named_abilities,
     pristine_registry_agents,
+    pristine_template_level,
     registry_agents,
     registry_ids,
     template_stem,
@@ -47,9 +48,10 @@ def _single_field_populations(agents):
 
 def _check_population(layout, population, field, installed, roots):
     bad = []
+    tl = pristine_template_level()  # the template's own lists are a third grant source
     for a in population:
         stem = template_stem(a)
-        expect = set(registry_ids(a, field)) & installed
+        expect = (set(registry_ids(a, field)) | tl.get(stem, set())) & installed
         for root in roots:
             path = root / f"{stem}.md"
             if not path.is_file():

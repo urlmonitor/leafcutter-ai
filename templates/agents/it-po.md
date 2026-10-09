@@ -29,8 +29,6 @@ visibility: internal
 domain: null
 produces: analysis
 config_keys: {}
-skills_used:
-  - knowledge-query  # Loaded during S1 to query agents, skills, and component docs.
 adopter_notes: |
   Internal. Spawned by the ticket-creation pipeline after the BA has produced
   L2/L3 AC files. Never called directly by users. Enriches AC YAML files in-place

@@ -177,8 +177,8 @@ def _run_validation_guards(
     if validate_all(config, package_root, args.validate_only, args.dry_run):
         return 1
 
-    # AR-300c-3: refuse when a declaration and the registry disagree, or a
-    # declared ability resolves to no installed skill (ADR-050).
+    # AR-300c-3: report a registry copy that disagrees with the declarations
+    # (continues); refuse when a declared ability resolves to no installed skill.
     if refuse_on_ability_findings(package_root, config, args.dry_run):
         return 1
 

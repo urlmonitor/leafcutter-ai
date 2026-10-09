@@ -27,6 +27,15 @@ test-writer fixed them here; python-coder builds to them):
 
    ``excluded`` lists every descriptive_only entry left out. Exit code 0 on
    success.
+   THIRD SOURCE: a template's OWN frontmatter ``skills_used`` /
+   ``skills_invoked`` lists (bare ids, trailing comments) are grants too. The
+   union spans registry ``skills_used`` + registry ``skills_invoked`` +
+   template-level lists; the migration REMOVES the template-level
+   ``skills_used`` / ``skills_invoked`` keys (even empty ones) so ``skills:``
+   is the only grant list in the block; the report's per-agent ``sources``
+   names the template field (any entry containing both "template" and the
+   field name, e.g. ``template.skills_used``). No mode/condition is asserted
+   for template-level (bare id) grants.
 3. Verification module ``scripts/agent_ability_verdict.py`` exposing
    ``verify_abilities(declarations, registry_agents, *, packaged_skills_root,
    project_root, output_root_name=".leafcutter") -> dict`` with keys
@@ -188,10 +197,47 @@ def compile_template(template_path: Path, agents: list[dict], registry_path: Pat
     )
 
 
+TEMPLATE_LEVEL_KEYS = ("skills_used", "skills_invoked")
+# FRONTMATTER-ONLY snapshots (7 files, ~16 KB, not a copy of templates/agents)
+# of the templates that carried their own template-level skills_used lists,
+# taken from the working tree at commit 370754072 (316ccfd80 plus merged main;
+# templates unchanged from 618f198f9 apart from the migrated `skills:` key,
+# which copy_package_slice strips). A snapshot is needed -- the real tree
+# loses these lists once the migration is fixed, and `git show <old commit>`
+# is not available in shallow CI clones. Bodies are dropped on purpose.
+PRISTINE_TEMPLATES = Path(__file__).resolve().parent / "fixtures_ar_300c" / "templates_pre_migration"
+
+
+def template_level_ids(fm: dict) -> set[str]:
+    """Ids a template's OWN frontmatter ``skills_used`` / ``skills_invoked``
+    lists name (third grant source; bare ids or ``{skill_id}`` dicts)."""
+    out: set[str] = set()
+    for key in TEMPLATE_LEVEL_KEYS:
+        for e in fm.get(key) or []:
+            out.add(e["skill_id"] if isinstance(e, dict) else e)
+    return out
+
+
+def pristine_template_level() -> dict[str, set[str]]:
+    """stem -> template-level ids, from the verbatim pre-migration templates
+    that carry a template-level grant list (empty lists give empty sets).
+    Derived by parsing, never enumerated by name."""
+    out = {}
+    for tpl in sorted(PRISTINE_TEMPLATES.glob("*.md")):
+        out[tpl.stem] = template_level_ids(template_frontmatter(tpl))
+    return out
+
+
 def strip_grant_key(text: str) -> tuple[str, int]:
-    """Remove the ``skills:`` key and its item lines from a template's
-    frontmatter, at TEXT level, changing nothing else. Returns (text, lines
-    removed)."""
+    """Remove the ``skills:`` key and its item lines (see
+    strip_frontmatter_keys). Returns (text, lines removed)."""
+    return strip_frontmatter_keys(text, (GRANT_KEY,))
+
+
+def strip_frontmatter_keys(text: str, keys: tuple[str, ...]) -> tuple[str, int]:
+    """Remove the given top-level keys and their item/continuation lines from
+    a template's frontmatter, at TEXT level, changing nothing else. Returns
+    (text, lines removed)."""
     lines = text.split("\n")
     if not lines or lines[0] != "---":
         return text, 0
@@ -201,7 +247,7 @@ def strip_grant_key(text: str) -> tuple[str, int]:
         return text, 0
     out, removed, skipping = [lines[0]], 0, False
     for line in lines[1:end]:
-        if line.startswith(f"{GRANT_KEY}:"):
+        if any(line.startswith(f"{k}:") for k in keys):
             skipping, removed = True, removed + 1
             continue
         if skipping and (line.startswith("- ") or line.startswith(" ") or line.startswith("-\t")):
@@ -233,6 +279,11 @@ def copy_package_slice(dst: Path) -> Path:
     shutil.copy2(PRISTINE_REGISTRY, dst / "config" / "agent_registry.json")
     shutil.copytree(REPO_ROOT / "templates" / "agents", dst / "templates" / "agents")
     shutil.copytree(REPO_ROOT / "templates" / "skills", dst / "templates" / "skills")
+    # Overlay the verbatim PRE-migration templates that carry a template-level
+    # grant list, so the pristine input keeps that third source even once the
+    # real tree has had it removed.
+    for pre in PRISTINE_TEMPLATES.glob("*.md"):
+        shutil.copy2(pre, dst / "templates" / "agents" / pre.name)
     stripped = 0
     for tpl in sorted((dst / "templates" / "agents").glob("*.md")):
         text = tpl.read_text(encoding="utf-8")
