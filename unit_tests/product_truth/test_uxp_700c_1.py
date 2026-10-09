@@ -110,7 +110,7 @@ def _step(step_id: str, implements: list, order: int, impl_status: str | None = 
     step = {
         "id": step_id,
         "label": step_id,
-        "human": f"the actor performs {step_id}",
+        "description": f"the actor performs {step_id}", "actor_kind": "human",
         "order": order,
         "implements": implements,
     }

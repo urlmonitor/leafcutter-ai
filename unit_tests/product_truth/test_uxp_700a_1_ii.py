@@ -148,7 +148,7 @@ def _flow_fixture() -> dict:
             {
                 "id": "browse",
                 "label": "Browse widgets",
-                "human": "Look at the widget catalog.",
+                "description": "Look at the widget catalog.", "actor_kind": "human",
                 "order": 1,
                 "impl_status": "not_started",
             }

@@ -169,7 +169,7 @@ def _flow(flow_id: str, summary: str) -> dict:
         "version": 1,
         "entities": [],
         "steps": [
-            {"id": "only-step", "label": "only-step", "human": "the actor does the one thing", "order": 1}
+            {"id": "only-step", "label": "only-step", "description": "the actor does the one thing", "actor_kind": "human", "order": 1}
         ],
         "branches": [],
     }

@@ -28,7 +28,7 @@ def step(step_id: str, implements: list, order: int) -> dict:
     return {
         "id": step_id,
         "label": step_id,
-        "human": f"the actor performs {step_id}",
+        "description": f"the actor performs {step_id}", "actor_kind": "human",
         "io_contracts": {"not_applicable": "This actor action tests freshness metadata and has no serialized handoff."},
         "order": order,
         "implements": implements,

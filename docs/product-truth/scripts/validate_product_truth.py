@@ -59,6 +59,10 @@ Checks performed:
      compared against their CURRENT content; a moved thing reports the journey
      behind (never an error). A BEHIND verdict is made durable on the journey
      as a `behind` mark, written/removed by `_sync_behind_marks` (ADR-043).
+ 13. DESCRIPTIONS (ERROR): every step and branch `description` is one plain
+     sentence of what happens -- within DESCRIPTION_MAX_CHARS and free of code
+     tokens, ids, build status and generated contract text
+     (product_truth_descriptions.check_descriptions, dec-7b1dcfd47f85cf0a).
 
 SCHEMA VALIDATION IS MANDATORY: jsonschema is a hard dependency. When it, or a
 module the validator needs alongside it (e.g. `referencing`), is not importable the
@@ -340,6 +344,7 @@ from product_truth_outcome import (  # noqa: F401  # re-exported for callers
     compute_type_population,
 )
 from product_truth_bounds import check_bounds, tighten_refusal
+from product_truth_descriptions import check_descriptions
 from product_truth_shapes import _check_outcome_kinds, count_branches  # noqa: F401
 from product_truth_label_checks import (  # noqa: F401  # re-exported for callers
     _check_labels,
@@ -593,6 +598,7 @@ def run_checks() -> dict:
     for flow in flows.values():
         _validate_schema(flow, flow_schema, f"flow {flow['id']}", errors)
         _check_flow(flow, ac_ids, errors, warnings)
+    record_check_executed(checks, "descriptions", check_descriptions(flows, errors))
 
     mocks = load_mocks()
     for mock in mocks.values():

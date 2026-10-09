@@ -52,7 +52,7 @@ def _flow(implements: list[str]) -> dict:
         "id": _FLOW_ID, "component": "fixture-product", "name": "cli-journey", "summary": "fixture",
         "kind": "user", "source": "mock", "status": "active", "readiness": "draft", "version": 1,
         "entities": [],
-        "steps": [{"id": "browse", "label": "browse", "human": "the actor browses", "order": 1,
+        "steps": [{"id": "browse", "label": "browse", "description": "the actor browses", "actor_kind": "human", "order": 1,
                    "implements": implements,
                    "io_contracts": {"not_applicable": "The actor browses in a pointer-classification fixture; no JSON is exchanged."}}],
         "branches": [],

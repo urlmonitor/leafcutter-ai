@@ -186,18 +186,18 @@ export interface GraphEdge {
   sourceHandle?: string;      // React Flow source handle id ("yes" | "no" for decision nodes)
   enforcement?: string;       // artifact graph: "enforced" | "derived-validated" | "derived-raw" | "warn" | "none"
   rel?: string;               // artifact graph: relationship type label (PARENT_OF, DEPENDS_ON, …)
-  // The remaining artifact-graph fields are what make the map actionable: the
-  // FIELD is what you actually grep for, and SHAPE is the second trust axis
-  // without which "enforced" over-promises (an enforced+ambiguous edge like
-  // depends_on is a documented trap, not a guarantee).
+  /* The remaining artifact-graph fields are what make the map actionable: the
+     FIELD is what you actually grep for, and SHAPE is the second trust axis
+     without which "enforced" over-promises (an enforced+ambiguous edge like
+     depends_on is a documented trap, not a guarantee). */
   field?: string;             // artifact graph: the frontmatter/body field encoding the edge
   shape?: string;             // artifact graph: "clean" | "ambiguous" | "freetext" | "derived" | "often-empty"
   cardinality?: string;       // artifact graph: e.g. "many-to-one"
   note?: string;              // artifact graph: caveat / gap reference
-  // A THIRD axis, orthogonal to the two trust axes: does the relation exist at
-  // all? "absent" edges are recorded gaps (KM-ADM-002), not weak links — they
-  // must never render as merely-untrusted, or the map claims links it does not
-  // have. Optional so an older graph document still renders as all-present.
+  /* A THIRD axis, orthogonal to the two trust axes: does the relation exist at
+     all? "absent" edges are recorded gaps (KM-ADM-002), not weak links — they
+     must never render as merely-untrusted, or the map claims links it does not
+     have. Optional so an older graph document still renders as all-present. */
   status?: string;            // artifact graph: "present" | "absent"
 }
 
@@ -312,15 +312,17 @@ export interface FlowScenario {
 }
 
 import type { FlowContractDefinition, FlowIoContracts } from "./flow-contracts";
+import type { ActorKind } from "./actor-kind";
 
 /** One step in a product-truth flow. */
 export interface FlowStep {
   id: string;
   label: string;
-  human: string;              // plain-language description
+  description: string;        // one plain sentence of what happens (stored `description`)
   order: number;
   screen: string | null;
   agent: string | null;       // actor that runs this step (agent id or script)
+  actorKind: ActorKind | null; // which mechanism runs it (stored `actor_kind`); null when absent/unknown
   produces: string[];         // data artifacts/fields handed downstream (handoff out)
   consumes: string[];         // data artifacts/fields required from upstream (handoff in)
   ioContracts?: FlowIoContracts; // canonical structured metadata, when usable
