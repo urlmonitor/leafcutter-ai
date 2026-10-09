@@ -4,7 +4,7 @@ description: 'User-requested native-only cleanup under KM-400a-3-i: remove all l
   graph and compiler paths, freshly verify saved native queries, and replace the actual
   local catalogs with an auditable digest mapping.'
 created: '2026-10-09'
-status: in_progress
+status: done
 priority: medium
 depends_on: []
 components:
@@ -21,7 +21,7 @@ ac_traceability:
 agents:
   python-coder: signed_off
   code-review: signed_off
-  commit: needed
+  commit: signed_off
 files_touched:
 - changelogs/2026-10-09-0905-neo4j-native-query-names.md
 - docs/INDEX.md
@@ -289,7 +289,7 @@ the generated index timestamp and absent optional implementation-task section.
 - [x] python-coder — 2026-10-09 09:52
 - [x] code-review — 2026-10-09 09:56
 
-- [ ] commit
+- [x] commit — 2026-10-09 10:21
 
 ## Comments
 
@@ -435,3 +435,23 @@ updated source-AC links, saved-query cutover receipt and the generated docs inde
 The existing files_touched ledger covers the cumulative PR scope. Earlier commit
 comments remain historical evidence; this expanded commit phase is reopened and
 the ticket remains in_progress until the normal hooks and commit finish.
+
+### 2026-10-09 10:21 - commit (status: ok)
+feedback-id: fb_2026-10-09_27342b50
+completion_manifest:
+  pre_commit_hooks_pass: true
+  commit_message_valid: true
+  ticket_staged: true
+Completed the user-expanded cleanup in two dependent commits:
+05cfe162a01442b616d3eef157de429d959d1870 replaces obsolete compatibility coverage;
+1f3b2f444a07dce59a41bdffe0de7a15164360d3 retires legacy Neo4j compatibility and
+records the saved-query cutover. The contract-shrinking hook required the separate
+test commit; the AC governance hook required truthful amendment attribution,
+provided after the actual business-analyst review. All applicable normal hooks
+passed for both commits, including AC governance, schema and Done Proof. No hook
+was bypassed, no full pytest suite was run and no graph data was changed by this
+commit phase. Verified HEAD advanced. The aggregate scope is the approved 29
+paths, with native inspection represented as a rename. Earlier phase comments
+remain historical evidence. This signs off only the completed commit phase;
+updated PR publication, hosted CI and merge are not claimed here. Knowledge
+capture was considered; the two resolved gates already document their remedies.
