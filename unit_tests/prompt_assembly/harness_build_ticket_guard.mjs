@@ -246,6 +246,12 @@ const enumerations = [];
 const planReplies = [];
 const dirtyReads = [];
 const logs = [];
+// INF-700a-1-v: the knowledge-routing CLI calls, and ONE ordered timeline of
+// phase dispatches and routing calls together, so a test can see whether a
+// ticket's stage -> commit -> observe ran without another ticket's in between.
+const routingCalls = [];
+const timeline = [];
+const routingCallCounts = {};
 const unreadableOnce = new Set(); // BO-3000a: one-shot unreadable read-backs
 const attemptCounts = {}; // "<ticket>::<phase>" -> n
 
@@ -1006,10 +1012,29 @@ async function agent(prompt, opts = {}) {
     return { classification, reason: "harness classification" };
   }
 
+  // --- knowledge-routing CLI (INF-700a-1-v) ---------------------------------
+  // Labels "knowledge-routing-step" (stage) and "knowledge-routing-observe".
+  // Answered from scenario.knowledge_routing[label] as the repo-facts
+  // envelope: an object is served as its JSON, a string as raw (unparseable)
+  // output, an array one entry per call (the last repeated). An ABSENT entry
+  // answers a failed command, so a scenario that does not mention routing
+  // sees the step not run and every pre-existing outcome is unchanged.
+  if (label === "knowledge-routing-step" || label === "knowledge-routing-observe") {
+    const index = routingCallCounts[label] || 0;
+    routingCallCounts[label] = index + 1;
+    let spec = (scenario.knowledge_routing || {})[label];
+    if (Array.isArray(spec)) spec = spec[Math.min(index, spec.length - 1)];
+    routingCalls.push({ label, prompt: String(prompt) });
+    timeline.push({ kind: "routing", label, ticket_path: null });
+    if (spec === undefined || spec === null) return { output: "", exit_code: 1 };
+    return { output: typeof spec === "string" ? spec : JSON.stringify(spec), exit_code: 0 };
+  }
+
   // --- everything else is a phase-agent dispatch ----------------------------
   dispatched.push(label);
 
   const ticketPath = recordMode ? ticketFromPrompt(prompt) : null;
+  timeline.push({ kind: "phase", label, ticket_path: ticketPath });
   const key = `${ticketPath}::${label}`;
   attemptCounts[key] = (attemptCounts[key] || 0) + 1;
   const attempt = attemptCounts[key];
@@ -1175,6 +1200,8 @@ console.log(
     enumerations,
     plan_replies: planReplies,
     dirty_reads: dirtyReads,
+    routing_calls: routingCalls,
+    timeline,
     logs,
     records,
     result,

@@ -446,6 +446,10 @@ knowledge_routing_wiring:
   wired:
     - fast-lane-ship.js
     - quick-fix.js
+    # build-feature.js (INF-700a-1-v): stage, the commit staging the manifest by
+    # name, and one observe around EACH ticket's commit dispatch in its phase
+    # loop, serialised across the tickets of a drive (they share one worktree).
+    - build-feature.js
   excluded:
     - path: build-epic.js
       reason: >
@@ -482,18 +486,6 @@ knowledge_routing_wiring:
         design and test coverage rather than a blind insertion, for the same
         ordering-risk reason given for build-ticket.js above. Tracked as a
         disclosed, known gap for a follow-up AC; not silently assumed away.
-      covered_by: null
-    - path: build-feature.js
-      reason: >
-        NOT ROUTED YET, a disclosed gap. It is the /build-feature entry point,
-        and for epics and single tickets it runs its own inlined per-phase
-        driver (a twin of build-ticket.js), dispatching each ticket's commit
-        phase itself. It does not go through build-epic.js or
-        ticket-supervisor, so building-epics section 5.9 does not reach it.
-        Its commit is dispatched generically inside the phase loop, not from
-        a fixed call site, so it needs the same dedicated design as
-        build-ticket.js above. Until then, learnings from /build-feature
-        drives wait in the sink for the next carrying completion.
       covered_by: null
     - path: plan-feature.js
       reason: >
