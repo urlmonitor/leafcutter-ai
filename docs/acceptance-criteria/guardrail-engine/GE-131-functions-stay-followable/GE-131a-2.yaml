@@ -1,0 +1,235 @@
+id: GE-131a-2
+title: "The check is registered on the ordinary commit path, lets existing offenders through, and is shown refusing a grown and a new function through a real commit with a refusal that says what to do"
+component: guardrail-engine
+components:
+  - commit_guardian
+  - precommit_hooks
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the check is registered in the package's default hook list, and a scratch
+    git repository whose committed baseline holds the real tracked
+    scripts/build_helpers.py, whose _compute_output_mappings scores above the limit
+    (65 on 2026-10-09),
+  When an ordinary `git commit` stages that file with one appended comment line and
+    nothing invoked by hand,
+  Then the complexity check runs as part of that commit and the commit completes.
+
+  Given the same registered check and a scratch repository whose committed
+    scripts/planner.py holds plan_batches scoring 30,
+  When an ordinary `git commit` stages plan_batches raised to 31,
+  Then the commit is refused and does not land, and the refusal names
+    scripts/planner.py, plan_batches, its score 31, the ceiling applied 30 (not 15),
+    the reason "grew", and the installed complexity-reduction skill,
+  And it tells the author that a pure move or rename of an unchanged function is
+    committed with SKIP=check-complexity.
+
+  Given the same registered check,
+  When an ordinary `git commit` stages a new function parse_rules scoring 16,
+  Then the commit is refused and does not land, and the refusal names the file,
+    parse_rules, its score 16, the ceiling 15, the reason "new", and the
+    complexity-reduction skill.
+
+  Given this change has landed,
+  When the package's record of advertised-but-unrun checks and its declared non-gate
+    list are read by their existing checks,
+  Then the unrun record is smaller by exactly this one check, and nothing in the
+    package's registration data still describes it as withheld.
+depends_on:
+  - GE-131a
+  - GE-131a-1
+doc_links:
+  - path: docs/acceptance-criteria/guardrail-engine/GE-131-functions-stay-followable/GE-131a.yaml
+    relationship: parent
+    status: exists
+  - path: templates/scripts/commit_guardian/commit_guardian.json
+    relationship: modifies
+    status: exists
+    relevance: >-
+      Add the check-complexity member to hooks_manifest.hooks. Remove the
+      check_complexity.py object (ground starting "BP-100n-4 correction", citing 65
+      functions) from hook_trigger_reachability_exemption_registry. The complexity
+      settings section already exists and is unchanged.
+  - path: unit_tests/commit_guardian/test_hook_registration_inventory.py
+    relationship: modifies
+    status: exists
+    relevance: >-
+      Remove "check_complexity.py" and its stale comment (79 across 50) from
+      UNREGISTERED_BASELINE, and rewrite the block comment that calls it the
+      deliberately withheld example (65 functions).
+  - path: docs/acceptance-criteria/guardrail-engine/GE-120-green-means-checked/GE-120h-3.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      Precedent for registering a run_hook.py-wrapped judgment check and proving it
+      through a real commit in a scratch repo.
+  - path: docs/acceptance-criteria/build_pipeline/BP-1600-counted-from-reality/BP-1600a-2.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      Cross-link only, no depends_on edge. Whichever lands first adds the hook entry;
+      the other finds it present and asserts it rather than adding it twice.
+  - path: CLAUDE.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      "Gate / Workflow ACs — Verify Behaviorally, Not by Grep" binds every arm here.
+assigned_agent: python-coder
+estimated_complexity: M
+package_surface: true
+it_requirements:
+  config_schema_fragment:
+    _declares: >-
+      No new top-level key. This adds ONE member to the existing hooks_manifest.hooks
+      array of commit_guardian.json, which _package_surface_registry.WATCHED_REGISTRIES
+      watches as ("hooks_manifest.hooks", "list_ids"). The existing `complexity`
+      settings section is unchanged. The shape copies the four run_hook.py-wrapped
+      judgment entries GE-120h-3 landed (e.g. check-sql-complexity), plus verbose.
+    type: object
+    required: [id, tier, name, entry, language, stages, pass_filenames, change_set_source, always_run, verbose, script, description]
+    properties:
+      id: {const: check-complexity}
+      tier: {const: judgment}
+      entry:
+        const: "python {{config.output_root}}/scripts/commit_guardian/run_hook.py {{config.output_root}}/scripts/commit_guardian/check_complexity.py"
+      language: {const: system}
+      stages: {const: [pre-commit]}
+      pass_filenames:
+        const: false
+        description: "main() builds its own staged set via get_staged_files() and ignores argv."
+      always_run: {const: true}
+      verbose:
+        const: true
+        description: "pre-commit hides a passing hook's stdout otherwise (KI-CG-026), so the standing-offender note on a passing commit would be invisible."
+      change_set_source:
+        const: handed_by_commit_path
+        description: "check_complexity.py carries neither _SHARED_SOURCE_MARKERS string, so self_derived would be a determination failure."
+      script: {const: check_complexity.py}
+      description:
+        type: string
+        description: "States the rule actually applied (own previous score for an existing offender, max_score for a new or crossing function), not 'blocks any function over the limit'."
+    not:
+      anyOf:
+        - required: [files]
+        - required: [types]
+        - required: [exclude]
+  reference_file_path: templates/scripts/commit_guardian/commit_guardian.json
+  n_location_rule: >-
+    3. (a) Append the check-complexity member to hooks_manifest.hooks. (b) Remove the
+    check_complexity.py member of hook_trigger_reachability_exemption_registry (the
+    "BP-100n-4 correction" object citing 65 functions); nothing else in the file
+    changes. (c) In unit_tests/commit_guardian/test_hook_registration_inventory.py,
+    remove the "check_complexity.py" line of UNREGISTERED_BASELINE with its comment
+    (79 across 50), and rewrite the block comment that calls check_complexity the
+    withheld example (65). The other four baseline entries are out of scope.
+  required_skills:
+    - python-coder
+  post_write_commands:
+    - "python3 scripts/build.py"
+    - "python3 -m pytest unit_tests/commit_guardian/test_hook_registration_inventory.py unit_tests/test_complexity_reduction_skill.py unit_tests/commit_guardian/test_precommit_safety_net.py"
+  constraints:
+    - "Must not land before GE-131a-1. Registered against today's checker, it refuses every commit that touches one of the existing over-limit functions."
+    - "Edit templates/ only (ADR-001). Run build.py from a clean worktree, then check git status for docs/INDEX.md (KI-BP-016). Prove the stanza through the build-generated .pre-commit-config.yaml, never by reading the manifest as text."
+    - "If BP-1600a-2 lands first, find the entry present and assert it; do not add it twice."
+    - "No new build.py spawn in any test. Deployed-layout tests use shared_reference_layout with @pytest.mark.shared_layout_reader."
+test_spec:
+  - name: test_ge131a2_real_offender_file_commits_through_registered_check
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: behavioral
+    angle: real_artifact
+    surface_invoked: "real `git commit` in a scratch repo carrying the generated check-complexity stanza from shared_reference_layout, pointed at its deployed scripts (GE-120h-3's _point_at_deployed pattern)"
+    description: "Arm 1. The baseline holds the real scripts/build_helpers.py. _compute_output_mappings is measured over the limit at test time, never hard-coded. Staging one appended comment line: pre-commit shows 'Check Complexity...Passed' and HEAD advances. @pytest.mark.shared_layout_reader. RED TODAY: no stanza."
+  - name: test_ge131a2_commit_refuses_grown_function_with_actionable_message
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: behavioral
+    angle: failure
+    surface_invoked: "real `git commit` through the generated stanza (shared_reference_layout)"
+    description: "Arm 2. plan_batches 30->31: the commit fails and HEAD does not move. Output names scripts/planner.py, plan_batches, 31, ceiling 30, 'grew', complexity-reduction and SKIP=check-complexity. Running the deployed scripts also proves the ratchet helper is deployed beside the check. RED TODAY."
+    must_catch:
+      - "registered copy of a check that never refuses an existing offender"
+  - name: test_ge131a2_commit_refuses_new_function_over_limit
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: behavioral
+    angle: failure
+    surface_invoked: "real `git commit` through the generated stanza (shared_reference_layout)"
+    description: "Arm 3. New parse_rules=16: the commit fails and HEAD does not move. Output names the file, parse_rules, 16, ceiling 15, 'new' and complexity-reduction. RED TODAY."
+  - name: test_ge131a2_reachability_census_no_longer_declares_check_withheld
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: integration
+    angle: seam
+    surface_invoked: "run_hook.py check_hook_trigger_reachability.py (subprocess) against a scratch copy of templates/scripts/commit_guardian"
+    description: "Arm 4, registration-data half. Output has neither 'DECLARED-NON-GATE: check_complexity.py' nor 'REDUNDANT NON-GATE RECORD: check_complexity.py', and the script is not UNREFERENCED. RED TODAY: the exemption registry declares it."
+  - name: test_no_unregistered_hook_scripts_beyond_baseline
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: unit
+    angle: seam
+    description: "EXISTING test (arm 4, the 'smaller by exactly one' half). It passes once UNREGISTERED_BASELINE has lost exactly check_complexity.py. GREEN TODAY. It is a ratchet: it goes red if the entry is added and the baseline line is left in."
+test_rationale: >-
+  The refusals go through a real `git commit` on the build-generated stanza, because a
+  manifest read as text is green even when the entry is unreachable or filtered to
+  nothing. 30->31 exercises the ratchet and a new 16 exercises the limit. A new 16
+  alone would pass against a registered copy of today's checker. Four new tests,
+  all red today, plus one existing ratchet test.
+delivers_to:
+  agent: documentation-expert
+  contract: >-
+    The registered behaviour GE-131a-3 describes: runs on every commit; an existing
+    over-limit function is refused only when it exceeds its own previous score; a new
+    or crossing function is refused above complexity.max_score.
+expects_from:
+  ac_id: GE-131a-1
+  contract: >-
+    The per-function verdict with score, ceiling and reason. This record registers
+    and renders it and adds no judgement logic.
+origin_agent: business-analyst
+created: 2026-10-09
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  WHY THE TWO REFUSALS ARE NON-NEGOTIABLE. This repository has repeatedly shipped
+  gates that could never refuse. Arms 2 and 3 are the evidence that what was switched
+  on can say no, through the real commit path: a real `git commit` in a scratch repo
+  whose pre-commit config is the build-generated stanza pointed at the deployed
+  scripts. One input per population: 30 to 31 exercises the ratchet, a new 16
+  exercises the door; a new 16 alone would pass against a registered copy of
+  today's checker. Reading the manifest as text proves nothing.
+
+  DAY-ONE ARM IS REAL CONTENT. Arm 1 uses the real tracked build_helpers.py because
+  synthetic fixtures are what hid defects on this component before. Measure the
+  score at test time and assert only that it is over the limit; do not hard-code 65.
+
+  DEPLOYED LAYOUT. The check will import from _file_size_ratchet.py. Running arms 2
+  and 3 against the deployed scripts proves the helper is deployed beside it.
+  Reuse the shared_reference_layout fixture (@pytest.mark.shared_layout_reader); no
+  new build.py spawn.
+
+  REGISTRATION SHAPE (the IT PO may refine): tier judgment, run_hook.py-wrapped,
+  pass_filenames false (the script reads the staged set itself), always_run true,
+  change_set_source handed_by_commit_path, and no files/types/exclude filter, which
+  check_hook_trigger_reachability reports as a self-contradiction alongside
+  always_run.
+
+  PACKAGE SURFACE. Adding a hooks_manifest member is watched by
+  check-package-surface-declaration, so the IT PO must set package_surface: true at
+  enrichment (the schema then requires it_requirements alongside it, which is why
+  this BA pass leaves both out).
+
+  OUT OF SCOPE: the other four scripts in the unregistered baseline.
+
+  TEST BUDGET: 4 new tests (one per arm; arm 4 via the reachability census output),
+  plus the existing inventory ratchet test, which goes red if the entry is added
+  without removing the baseline line.

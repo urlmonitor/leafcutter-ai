@@ -1,0 +1,176 @@
+id: GE-131a-1
+title: "Each staged function is held to the greater of the limit and its own highest previous score, and a file that cannot be judged is never passed as clean"
+component: guardrail-engine
+components:
+  - commit_guardian
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the complexity limit is 15, and a tracked file scripts/planner.py whose
+    committed version holds plan_batches scoring 30 and load_rules scoring 12,
+  When a staged change leaves plan_batches at 30, or lowers it to 22,
+  Then the check allows the change, though plan_batches is still over the limit.
+
+  Given the same committed file,
+  When a staged change raises plan_batches to 31,
+  Then the check refuses it, naming plan_batches, its score 31 and the ceiling 30.
+
+  Given the same committed file,
+  When a staged change adds a new function parse_rules scoring 16, or raises
+    load_rules from 12 to 16,
+  Then the check refuses each against the ceiling 15, and a new function scoring
+    exactly 15 is allowed.
+
+  Given plan_batches is staged at 31 while the working-tree copy has been put back
+    to 30,
+  When the check runs,
+  Then it refuses, because the staged version is what is judged.
+
+  Given a merge in progress where plan_batches scores 30 in HEAD and 40 in the
+    branch being merged,
+  When the staged merge result scores it 40, and separately 41,
+  Then the check allows 40 and refuses 41, naming 40 as the ceiling.
+
+  Given a committed file whose function encode holds a nested visit scoring 20 and
+    whose function decode holds a nested visit scoring 9,
+  When a staged change raises decode's visit to 18,
+  Then the check refuses it, naming decode.visit against the ceiling 15; the ceiling
+    of 20 that belongs to encode.visit is not lent to it.
+
+  Given a staged Python file that cannot be parsed or cannot be read,
+  When the check runs,
+  Then it never reports that file as within the limit: it either refuses the commit
+    naming the file, or states that it could not check the file, naming it.
+depends_on:
+  - GE-131a
+doc_links:
+  - path: docs/acceptance-criteria/guardrail-engine/GE-131-functions-stay-followable/GE-131a.yaml
+    relationship: parent
+    status: exists
+  - path: templates/scripts/commit_guardian/check_complexity.py
+    relationship: modifies
+    status: exists
+  - path: templates/scripts/commit_guardian/_file_size_ratchet.py
+    relationship: related
+    status: exists
+    relevance: >-
+      Reuse, do not rebuild: get_previous_content(path, revision) reads a parent's
+      committed blob, and resolve_parent_revisions() returns HEAD plus MERGE_HEAD
+      during a merge.
+  - path: docs/acceptance-criteria/guardrail-engine/GE-127-files-stay-workable/GE-127b.yaml
+    relationship: related
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "Put the ratchet in a new templates/scripts/commit_guardian/_complexity_ratchet.py, or inline in check_complexity.py if it fits; check_complexity.py is 194 counted lines of the 400 the file-size check allows. build_commit_guardian deploys the whole directory, so a new module needs no manifest entry."
+  - "Reuse get_previous_content() and resolve_parent_revisions() from _file_size_ratchet.py; do not write a second git reader."
+  - "Judge the staged blob (`git show :path`), never the working-tree file."
+  - "Key each function by qualified name plus ordinal among same-named definitions in source order, never by line number."
+  - "A file that cannot be parsed or read is refused or reported with check_outcome's could_not_check, naming the file. It never yields [] or counts as passed. Covers both swallow points: calculate_complexities' SyntaxError branch and process_staged_file's broad except."
+  - "Keep calculate_complexities(source) -> list[tuple[str, int]] and its counting rule unchanged. check_sql_complexity.py, the measure command in templates/skills/complexity-reduction/SKILL.md and unit_tests/test_complexity_reduction_skill.py all consume it. Qualified naming goes in a separate walker that reuses ComplexityVisitor."
+  - "Leave complexity.max_score and complexity.excluded_dirs as the only settings. No stored baseline file."
+test_spec:
+  - name: test_offender_kept_or_reduced_is_allowed
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: "Arm 1. Committed plan_batches=30; staged at 30, and separately at 22: exit 0 both times. RED TODAY: the shipped check refuses any function over 15."
+  - name: test_offender_raised_above_own_score_is_refused_naming_ceiling
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: integration
+    angle: failure
+    description: "Arm 2. Staged 31: non-zero exit; output names plan_batches, 31 and ceiling 30. RED TODAY: no ceiling of 30 is ever printed."
+  - name: test_new_or_crossing_function_is_held_to_limit
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: integration
+    angle: boundary
+    description: "Arm 3. New parse_rules=16 refused, load_rules 12->16 refused, each against 15; a new function at exactly 15 allowed, with plan_batches left at 30 in the same file. RED TODAY only through the allowed-at-15 case, which the shipped check refuses because of plan_batches."
+  - name: test_staged_blob_is_judged_not_working_tree
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: integration
+    angle: discrimination
+    description: "Arm 4. Staged 31, working tree reset to 30: refused, and the output names score 31 and ceiling 30. RED TODAY only because of the score/ceiling assertion. A bare 'refused' assertion passes today for the wrong reason: the shipped check reads the working tree and refuses the 30."
+    must_catch:
+      - "reads the working-tree file instead of the staged blob"
+  - name: test_merge_ceiling_is_highest_parent_score
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: "Arm 5. During a real merge (HEAD 30, MERGE_HEAD 40), a staged 40 is allowed and a staged 41 refused naming ceiling 40. RED TODAY: 40 is refused."
+    must_catch:
+      - "ceiling taken from HEAD only"
+  - name: test_same_named_nested_functions_keep_separate_ceilings
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: integration
+    angle: discrimination
+    description: "Arm 6. encode.visit=20 unchanged, decode.visit 9->18: refused naming decode.visit against 15, and encode.visit not named as a refusal. RED TODAY: bare name 'visit', and encode.visit is refused too."
+    must_catch:
+      - "bare-name identity lends encode.visit's 20 to decode.visit"
+  - name: test_unparseable_or_unreadable_file_is_never_passed_clean
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: integration
+    angle: failure
+    description: "Arm 7. A staged .py with a syntax error, and separately one that is not valid UTF-8: each is either refused or reported could_not_check naming the file; neither gives a clean exit 0 with no mention. RED TODAY: both are swallowed into [] and pass silently."
+test_rationale: >-
+  One test per arm. Each builds a scratch git repo, stages real blobs, and runs
+  templates/scripts/commit_guardian/run_hook.py check_complexity.py as a subprocess.
+  The check reads git state, so a direct-import unit test would never see the
+  staged/working-tree split or MERGE_HEAD. Every allowing arm is paired with a
+  refusing one, so a check that allows everything fails. All 7 are red against
+  today's checker.
+delivers_to:
+  agent: python-coder
+  contract: >-
+    A per-function verdict for the staged set (allowed / refused with score, ceiling
+    and reason new|grew|crossed / could-not-check naming the file) that GE-131a-2
+    registers and renders.
+expects_from: null
+origin_agent: business-analyst
+created: 2026-10-09
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  THE RULE is in GE-131a's notes and is not restated here.
+
+  IMPLEMENTATION PATH. Read the staged content (`git show :path`) and, for each
+  revision from resolve_parent_revisions(), the previous content via
+  get_previous_content(); both already live in _file_size_ratchet.py. A function's
+  ceiling is max(limit, highest score among its matches across those parents).
+
+  IDENTITY: qualified name plus position. The qualified name joins the enclosing
+  classes and functions (Planner.plan, encode.visit). Position is the function's
+  ordinal among definitions sharing that qualified name in the same file, in source
+  order, so a property getter and setter are distinct. Do not use line numbers: an
+  edit above a function would lose its identity. Today the checker keys by bare
+  node.name (check_complexity.py:99), which makes encode.visit and decode.visit in
+  knowledge/native_properties.py indistinguishable; that is the real case the
+  same-name arm stands for.
+
+  FAIL CLOSED. Today calculate_complexities returns [] on a SyntaxError (lines 86-89)
+  and process_staged_file swallows any exception into [] (lines 154-155), so a broken
+  file passes as clean. Either outcome in the last arm is acceptable; a clean pass is
+  not.
+
+  REASON WORDING. "new" = no previous version in any parent; "crossed" = previous
+  score at or under 15, now over; "grew" = previous score over 15, now higher.
+
+  TEST BUDGET: one test per arm, 7 tests, synthetic scratch git repos driving the
+  check script as a subprocess. Every arm that allows has a matching refusing arm, so
+  a check that allows everything fails this record.
