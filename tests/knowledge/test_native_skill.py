@@ -98,10 +98,10 @@ def test_skill_real_registry_retains_all_42_skills_and_legacy_frontmatter():
         "skills"
     ]
     records = _extract(root)
-    assert len(records) == len(entries) == 42
+    assert len(records) == len(entries) == 43
     assert [record.metadata for record in records] == entries
-    assert [record.locator for record in records] == [f"/skills/{i}" for i in range(42)]
-    assert len({record.native_id for record in records}) == 42
+    assert [record.locator for record in records] == [f"/skills/{i}" for i in range(43)]
+    assert len({record.native_id for record in records}) == 43
     for record in records:
         source = root / record.derived["template_source_path"]
         lines = source.read_text(encoding="utf-8-sig").splitlines(keepends=True)
