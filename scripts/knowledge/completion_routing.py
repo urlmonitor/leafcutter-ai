@@ -151,10 +151,14 @@ def stage_completion(
 
     entries: list[dict[str, Any]] = []
     not_staged: list[dict[str, Any]] = []
+    on_branch: list[str] = []
 
     def _redirected_capture(text: str, destination: str) -> None:
         target = _resolve_inside(working_dir, destination)
         rel = target.relative_to(working_dir).as_posix() if target is not None else None
+        if rel is not None and _git.text_on_ref(working_dir, "HEAD", rel, text):
+            on_branch.append(rel)  # an earlier commit on this branch carries it (INF-700a-1-iv)
+            return
         reason = None
         if target is None or rel is None:
             reason = "outside_working_directory"
@@ -165,7 +169,8 @@ def stage_completion(
             not_staged.append({"destination": destination, "text": text, "reason": reason})
             raise _NotStaged(reason)
         try:
-            _harvester._default_capture(text, str(target))
+            if text not in _state.read_text_or_empty(target):  # a refused commit's leftover: carry, don't re-append
+                _harvester._default_capture(text, str(target))
         except OSError:
             not_staged.append({"destination": destination, "text": text, "reason": "write_failed"})
             raise
@@ -176,7 +181,7 @@ def stage_completion(
         })
 
     base = {"read": len(records), "read_hashes": [r[0] for r in records],
-            "already_published": len(published)}
+            "already_published": len(published), "already_on_branch": 0}
     try:
         result = _harvester.harvest(
             sink_path=sink_path,
@@ -196,6 +201,7 @@ def stage_completion(
     return {
         **base,
         "harvest_completed": True,
+        "already_on_branch": len(on_branch),
         "case": "could_not_complete" if real_failures else "completed",
         "written": len(entries),
         "unwritten": result.outstanding,
@@ -248,6 +254,7 @@ def observe_publication(
         "read": run.get("read", 0),
         "written": len(carried),
         "unwritten": run.get("unwritten", 0) + not_carried,
+        "already_on_branch": run.get("already_on_branch", 0),
         "manifest": sorted(set(carried)),
         "unwritten_records": unwritten_records,
         "waiting": {
@@ -487,3 +494,9 @@ def claim_and_confirm_routed(
 #   to stage by name); the library manifest stays absolute. The CLI the
 #   workflows call is completion_routing_cli.py.
 #   (#INF-700a-5, #INF-700a-5-i)
+# - 2026-10-09 [python-coder/INF-700a-1-iv]: An epic drive stages once per
+#   ticket commit, so one branch sees N stages before anything merges, and
+#   origin/main-only dedupe appended every learning N times. stage now skips a
+#   record whose text HEAD already carries (not rewritten, not claimed, counted
+#   as already_on_branch), and re-stages, without appending again, text that a
+#   refused commit left in the worktree. (#INF-700a-1-iv)

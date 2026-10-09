@@ -22,7 +22,7 @@ related_docs:
 > line below.
 
 - **Severity:** medium — no wrong verdict today, but two documented contracts are now false and nothing forces the open decision to be made.
-- **Status:** open — the behaviour is specified by `BP-100k-3-iv`, and its limits are pinned by `BP-100k-3-v` (per key, ground-gated) and `BP-100k-3-vi` (missing/unreadable never excused). The counting question needs an ADR; none exists yet.
+- **Status:** open — the behaviour is specified by `BP-100k-3-iv`, and its limits are pinned by `BP-100k-3-v` (per key, ground-gated) and `BP-100k-3-vi` (missing/unreadable never excused). The counting question is now recorded in [ADR-068](../../architecture/adrs/ADR-068-drift-exempt-gets-its-own-result-column.md) (status **Proposed**, 2026-10-09), which recommends a separate `drift_exempt` field and RESULT column. Defect 2 below stays open until that ADR is accepted and implemented.
 - **Occurrences:** 1 · **First seen:** 2026-10-05 · **Last seen:** 2026-10-08
 - **Where:** `templates/scripts/commit_guardian/check_output_drift.py`, the Pass 2 hash-mismatch branch (`_reconcile_recorded`); the counting contract is `ScanResult` in `templates/scripts/commit_guardian/_drift_exemptions.py`; the charter is `__drift_gate_exemption_registry_doc` in `templates/scripts/commit_guardian/commit_guardian.json`.
 

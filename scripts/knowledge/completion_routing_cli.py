@@ -77,9 +77,9 @@ _harvest_cli = _load_sibling("harvest_cli", "harvest_cli.py")
 logger = logging.getLogger("completion_routing")
 
 RUN_RECORD_NAME = "knowledge_routing_run.json"
-_PUBLIC_STAGE_KEYS = ("case", "read", "written", "unwritten", "manifest", "unwritten_records", "detail")
+_PUBLIC_STAGE_KEYS = ("case", "read", "written", "unwritten", "manifest", "unwritten_records", "detail", "already_on_branch")
 _RUN_RECORD_KEYS = (
-    "case", "read", "unwritten", "entries", "read_hashes", "unwritten_records", "detail",
+    "case", "read", "unwritten", "entries", "read_hashes", "unwritten_records", "detail", "already_on_branch",
 )
 
 

@@ -26,8 +26,8 @@ related_docs:
   *registration* and the *fail-closed behaviour* are **not** on `main` and live only on
   unmerged PR #495. The defect is therefore latent on `main` and becomes live the moment
   that branch lands.
-- **Occurrences:** 1
-- **First seen:** 2026-08-25 · **Last seen:** 2026-08-26 (re-verified against `37655862`)
+- **Occurrences:** 2
+- **First seen:** 2026-08-25 · **Last seen:** 2026-10-09 (still unregistered on `main`; see the 2026-10-09 note below)
 - **Where:** `templates/scripts/commit_guardian/check_adr_collision.py:81-101`
   (`get_committed_adr_numbers`); `templates/scripts/commit_guardian/commit_guardian.json`
 
@@ -80,5 +80,34 @@ when none resolves, matching the `_resolve_first_ref` pattern
 
 **Pattern:** an entry that mis-states which tree its evidence came from. Verification run on a
 branch, recorded as a property of `main`.
+
+**Second occurrence (2026-10-09), found while authoring ADR-068.** Still unregistered:
+`grep -c check-adr-collision templates/scripts/commit_guardian/commit_guardian.json` returns
+**0** on `main`, so number-collision protection remains manual-only. This matters more than
+it did in August, because the procedure that stands in for the gate is itself unreliable from
+the wrong directory:
+
+- `docs/conventions/adr-numbering.md` §3 Step 2 prescribes running this hook as the
+  pre-flight. Invoked with a cwd outside the git work tree — which is where this workspace's
+  agent sessions start, the untracked workspace parent — it prints
+  `BLOCKED -- could not read the decision-number sequence: could not list staged files
+  (git diff exited 129): error: unknown option 'cached'`. Reproduced both ways on 2026-10-09:
+  from the workspace parent it BLOCKS, from the repo root it is silent and clean. The cause is
+  `_fetch_staged_adrs`'s `_run_git("diff", "--cached", ...)` at
+  `templates/scripts/commit_guardian/check_adr_collision.py:139-141`, which never passes the
+  `cwd` argument `_run_git` already accepts, so git inherits the process cwd and falls into
+  `--no-index` mode. A BLOCKED verdict that means "I could not look" is the exact shape
+  `CLAUDE.md`'s "before acting on a guard tool's FAILURE" rule exists for.
+- `docs/conventions/adr-numbering.md` §6 and `write-adr.md` §10 make `scripts/adr_refs.py`'s
+  unclaimed-number audit the required way to pick a number. Its `--root` defaults to **cwd**,
+  so from the workspace parent it walks ~100 sibling worktrees: it produced no output in over
+  five minutes and was reported as hung. It is not hung — with
+  `--root <repo>` it completes in **5.0s**. Same cwd-default family as
+  `KI-KM-20261008-harvest-state-default-is-cwd-relative`.
+
+So all three legs of the documented numbering defence (the gate, its pre-flight, and the
+audit) are currently either absent or silently wrong from the directory sessions actually run
+in. ADR-068 was numbered by four independent manual checks instead — directory listing,
+`git log --all --diff-filter=AR`, the `origin/main` tree, and a repo-wide citation grep.
 
 ---

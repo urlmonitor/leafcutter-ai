@@ -449,16 +449,15 @@ knowledge_routing_wiring:
   excluded:
     - path: build-epic.js
       reason: >
-        No commit follows the step; move the step into the building-epics
-        skill (ADR-040 section 3). The epic drive's commits are made per
-        ticket by the ticket-supervisor agent, before the workflow-level
-        routing step ran, so every write it made could never be published
-        (INF-700a-5) and it marked records routed that no merged tree held.
-        The step was removed from build-epic.js on 2026-10-08; until it is
-        wired into templates/skills/building-epics/SKILL.md section 2.1.1
-        (before each ticket's commit phase), learnings emitted during an
-        epic drive wait in the sink for the next wired completion.
-      covered_by: null
+        Makes no commit of its own, so it dispatches no routing step: each
+        ticket is committed by the ticket-supervisor agent it dispatches, and
+        that agent runs stage, commit-by-name and observe around every
+        ticket's commit (building-epics SKILL.md section 5.9, ADR-040 section
+        3, INF-700a-1-iv). build-epic.js consumes each ticket's
+        knowledge_routing into its own result. This guard enumerates workflow
+        artefacts only, so it cannot see the skill-hosted step; that step's
+        behaviour is covered by unit_tests/workflows/test_inf_700a_1_iv_*.py.
+      covered_by: "templates/skills/building-epics/SKILL.md §5.9 (ticket-supervisor, per ticket commit)"
     - path: build-ticket.js
       reason: >
         Genuine completion path (dispatched directly by a single-ticket
@@ -486,9 +485,16 @@ knowledge_routing_wiring:
       covered_by: null
     - path: build-feature.js
       reason: >
-        User-facing entry point that resolves to build-epic.js or
-        build-ticket.js and completes nothing itself.
-      covered_by: "build-epic.js / build-ticket.js"
+        NOT ROUTED YET, a disclosed gap. It is the /build-feature entry point,
+        and for epics and single tickets it runs its own inlined per-phase
+        driver (a twin of build-ticket.js), dispatching each ticket's commit
+        phase itself. It does not go through build-epic.js or
+        ticket-supervisor, so building-epics section 5.9 does not reach it.
+        Its commit is dispatched generically inside the phase loop, not from
+        a fixed call site, so it needs the same dedicated design as
+        build-ticket.js above. Until then, learnings from /build-feature
+        drives wait in the sink for the next carrying completion.
+      covered_by: null
     - path: plan-feature.js
       reason: >
         Produces AC specifications rather than completing built work. Agents
