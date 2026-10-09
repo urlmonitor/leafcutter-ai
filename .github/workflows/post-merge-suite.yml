@@ -150,6 +150,9 @@ jobs:
     timeout-minutes: 10
     permissions:
       contents: read
+      # Read-only: the verdict counts each test's passed-on-retry runs from the earlier
+      # runs' verdict artifacts (TQ-600a-13-xiii), at most 9 requests, never the issues API.
+      actions: read
     # EVERY step below is status-agnostic (`if: always()`): a step with no `if:` implies
     # `success()` and is skipped once the run is cancelled, which would leave a cancelled
     # run with no verdict artifact. The step conditions below that read `steps.classify`
@@ -180,7 +183,8 @@ jobs:
         env:
           RUN_RESULT: ${{ needs.run.result }}
           RETRY_RESULT: ${{ needs.retry.result }}
-        run: python scripts/ci/post_merge_suite.py verdict --artifacts artifacts --output post-merge-verdict.json
+          GITHUB_TOKEN: ${{ github.token }}
+        run: python scripts/ci/post_merge_suite.py verdict --artifacts artifacts --output post-merge-verdict.json --api-url "$GITHUB_API_URL" --repo "$GITHUB_REPOSITORY" --run-id "$GITHUB_RUN_ID"
 
       - name: Upload the verdict
         if: always()
