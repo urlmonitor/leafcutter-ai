@@ -27,6 +27,11 @@ description: '[DEPRECATED — see ADR-006] User-facing supervisor — the entry 
 model: sonnet
 name: epic-supervisor
 tools: Bash, Read, Edit, Write, Agent, Skill
+spawn_allowlist:
+- ticket-supervisor
+- retrospective-agent
+- worktree-agent
+- changelog-agent
 skills:
 - skill_id: building-epics
   mode: always

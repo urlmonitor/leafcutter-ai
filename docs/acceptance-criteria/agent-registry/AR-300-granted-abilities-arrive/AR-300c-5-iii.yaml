@@ -65,8 +65,9 @@ change_target:
   - prompt
 risk_surface: contract_boundary
 it_requirements:
-  - "Resolution is against DEPLOYABLE DEFINITIONS, resolved in two independent lookups whose failure the report distinguishes: (1) packaged -- a template in templates/agents/<id>.md; (2) project-local -- an agent definition the project itself authored, resolved through the declared output root (skills_config `output_root`, default `.leafcutter`), never the hard-coded `.claude/agents/` shim. A registry row does NOT count as resolution (architect-review-deep has one, template_path null)."
-  - "The project-local lookup must NOT count a compiled prompt the build itself produced from a packaged template, nor a stale compiled file left by an earlier build -- otherwise a leftover <output_root>/agents/architect-review-deep.md from any older build would resolve the target and the defect stays silent."
+  - "Resolution is against DEPLOYABLE DEFINITIONS, resolved in two independent lookups whose failure the report distinguishes: (1) packaged -- a template in templates/agents/<id>.md; (2) project-local -- an agent definition the project itself authored. A registry row does NOT count as resolution (architect-review-deep has one, template_path null)."
+  - "PACKAGED-ONLY FOR NOW (user decision, BrainCandy 2026-10-09): a declared sub-agent RESOLVES only against a packaged template, templates/agents/<id>.md. No project-local agent location is defined yet, so the project-local lookup exists as a distinct, named lookup in the finding (a finding still says which lookups came back empty -- today always both 'packaged' and 'project_local' for an unresolvable sub-agent) but it currently finds nothing and can never make a sub-agent resolve. Designing the project-local location is DEFERRED to a known issue; this criterion must not invent one, must not resolve through the declared output root, and must not use the hard-coded `.claude/agents/` shim as a stand-in."
+  - "Neither lookup -- and in particular the project-local one, now and once its location is designed -- may count a compiled prompt the build itself produced from a packaged template, nor a stale compiled file left by an earlier build under <output_root>/agents/ -- otherwise a leftover <output_root>/agents/architect-review-deep.md from any older build would resolve the target and the defect stays silent."
   - "REFUSE (BrainCandy decision 5 by analogy with AR-300c-3-i): an unresolvable declared sub-agent is a REFUSING finding kind in the existing ability verdict/gate (scripts/agent_ability_verdict.py, scripts/agent_ability_gate.py), emitted in the same pass as AR-300c-3-i's unresolvable-skill resolution -- not a second gate. The finding names the declaring agent, the sub-agent and which lookup(s) came back empty."
   - "A `__ticket_phase_agents__` entry that resolves to zero agents is a refusing finding of the same kind (naming the declaring agent and the macro), never an empty delivered section."
   - "Every declared sub-agent of every agent is resolved; report the number of declared sub-agents resolved (after macro expansion) and the number of agents examined; a zero population fails. A sub-agent that resolves is not reported."
@@ -85,7 +86,7 @@ test_spec:
     framework: unittest
     type: unit
     angle: criterion
-    description: "The finding says which of the two lookups came back empty; a project-local definition under the declared output root resolves."
+    description: "The finding names both lookups separately and says which came back empty (for an unresolvable sub-agent today, both 'packaged' and 'project_local'); a packaged template in templates/agents/<id>.md resolves. Positive project-local resolution is NOT asserted: no project-local agent location is defined yet and its design is deferred to a known issue (BrainCandy decision, 2026-10-09)."
   - name: test_registry_row_and_stale_compiled_prompt_do_not_count_as_resolution
     target_dir: unit_tests/prompt_assembly/
     framework: unittest
@@ -145,6 +146,10 @@ amended_by:
 - action: approved
   agent: approve_acs
   date: '2026-10-09'
+- reason: apply-user-decision
+  agent: it-po
+  date: '2026-10-09'
+  changed: "it_requirements: the first line no longer defines the project-local lookup as 'resolved through the declared output root (skills_config output_root)'; a new PACKAGED-ONLY FOR NOW line records that a declared sub-agent resolves only against templates/agents/<id>.md, that the project-local lookup stays a distinct named lookup in the finding but currently finds nothing, and that designing a project-local agent location is deferred to a known issue. The stale-compiled-prompt line now applies to both lookups and names <output_root>/agents/ explicitly. test_spec: test_report_distinguishes_not_packaged_from_not_project_local no longer requires 'a project-local definition under the declared output root resolves'; it asserts both lookups are named and that a packaged template resolves, and states positive project-local resolution is deferred. Every must_catch (registry row; compiled or stale compiled prompt under <output_root>/agents/) is unchanged. WHY: decided by BrainCandy on 2026-10-09 -- no project-local agent location exists yet, so a test demanding positive project-local resolution would force one to be invented inside this slice. criteria, title, req_status, depends_on, delivers_to, expects_from unchanged; readiness stays approved because the decision comes from the approving user and only narrows a resolution path the criteria do not define."
 superseded_by: null
 covered_by: []
 implemented_by: []
@@ -192,6 +197,15 @@ notes: |
   Agent tool. ADR-035 already counted both. After decision 10 the build still
   refuses on this one, so it needs the same user decision before the real build
   can go green. Not decided here.
+
+  PROJECT-LOCAL LOOKUP -- DEFERRED (BrainCandy, 2026-10-09). Declared sub-agents
+  resolve against PACKAGED templates (templates/agents/<id>.md) only, for now.
+  The project-local lookup is still reported as its own lookup, so a finding
+  says which lookups came back empty, but no project-local agent location is
+  defined yet and it currently finds nothing. Designing that location is
+  deferred to a known issue. What must NOT count as resolution is unchanged: a
+  registry row, a compiled prompt, or a stale compiled file under
+  <output_root>/agents/.
 
   THE EMPTY-MACRO CLAUSE. A ticket-phase macro resolving to zero agents would
   otherwise deliver a section with no names (or no section), and ticket-supervisor

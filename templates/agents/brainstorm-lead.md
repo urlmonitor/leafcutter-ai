@@ -14,6 +14,8 @@ description: |
   exhausted; cap is 1 invocation per ticket per `building-epics` §4.
 model: opus
 tools: Read, Bash, Agent, Skill
+spawn_allowlist:
+- brainstorm-worker
 skills:
 - skill_id: building-epics
   mode: always

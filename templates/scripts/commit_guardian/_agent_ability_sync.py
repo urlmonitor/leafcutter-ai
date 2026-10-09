@@ -15,7 +15,11 @@ ARCHITECTURE: Pure functions, no git and no network. ``declared_entries``
     fields in place, keeping each field's population (an agent recorded in only
     one field stays in only that field; an agent in neither goes to the newer
     ``skills_invoked``) and keeping ``descriptive_only`` entries, which
-    describe behaviour and are not grants; ``dump_registry`` serialises the
+    describe behaviour and are not grants; ``declared_spawn`` and
+    ``regenerate_spawn`` do the same for the sub-agent permission (AR-300c-5-ii:
+    the registry's ``spawn_allowlist`` is the derived copy of the template's
+    ``spawn_allowlist`` declaration, macro kept as written, absent -> ``[]``);
+    ``dump_registry`` serialises the
     registry the one way both tools write it. The commit_guardian directory is
     copied wholesale by the build, so this sibling module reaches the deployed
     hook with no deploy-manifest entry. The migration imports it by path.
@@ -30,6 +34,9 @@ DECISION HISTORY
   declaration into ``skills_invoked`` when the record held neither field, so a
   newly granted agent is never silently left out of the derived copy.
   (#AR-300c-2)
+- 2026-10-09 [python-coder/AR-300c-5]: Added ``declared_spawn`` and
+  ``regenerate_spawn`` so the transform hook regenerates the registry's
+  sub-agent lists from the declarations too. (#AR-300c-5-ii)
 """
 
 from __future__ import annotations
@@ -41,6 +48,7 @@ import yaml
 
 DEFAULT_MODE = "always"
 _ABILITY_FIELDS = ("skills_used", "skills_invoked")
+SPAWN_FIELD = "spawn_allowlist"
 
 
 def entry_id(item: Any) -> str | None:
@@ -103,6 +111,25 @@ def declared_entries(text: str) -> list[dict[str, str]] | None:
     """Return a template's declared grants, or None when it has no frontmatter."""
     fm = frontmatter_of(text)
     return None if fm is None else normalize_declared(fm.get("skills"))
+
+
+def declared_spawn(fm: dict[str, Any] | None) -> list[str]:
+    """Return the ids in a template's ``spawn_allowlist`` declaration, each once, in order.
+
+    The ticket-phase macro is an ordinary entry and is kept as written. An absent
+    key, an empty list or no frontmatter all yield ``[]`` (no permission).
+    """
+    raw = (fm or {}).get(SPAWN_FIELD)
+    return list(dict.fromkeys(item for item in raw if isinstance(item, str))) if isinstance(raw, list) else []
+
+
+def regenerate_spawn(agent: dict[str, Any], declared: list[str]) -> None:
+    """Rewrite the record's derived ``spawn_allowlist`` from the declaration, in place.
+
+    Touches no other field -- ``spawned_by`` and ``is_ticket_phase`` are authored
+    in the registry, not derived.
+    """
+    agent[SPAWN_FIELD] = list(declared)
 
 
 def regenerate_record(agent: dict[str, Any], entries: list[dict[str, str]]) -> None:

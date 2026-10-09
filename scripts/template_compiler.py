@@ -39,10 +39,10 @@ from typing import Any
 # Python's own clear message naming the missing dependency rather than mask it.
 import yaml
 
-from agent_inplace_abilities import report_inplace_abilities
+from agent_declared_sections import append_declared_sections
+from agent_inplace_abilities import report_inplace_accounts
 from agent_preparation_delivery import inject_prepared_placeholder
 from agent_retired_markers import strip_retired_markers
-from agent_skills_declaration import append_declared_skills
 from injection_builders import (  # noqa: E402
     _load_registry,  # noqa: F401  # re-exported; consumed by build_phases / build_helpers
     build_agent_priority_table,
@@ -358,7 +358,7 @@ def compile_agent_template(
     (4) inject config placeholders;
     (5) inject registry placeholders (Types 1–4) via ``_apply_registry_injection``;
     (6) conditionally append sign-off block when ``signoff: true`` is set;
-    (7) append the frontmatter ``skills`` table (AR-300c-1).
+    (7) append the frontmatter ``skills`` table and ``spawn_allowlist`` sub-agent section.
 
     Args:
         template_path: Absolute path to a ``.md`` agent template file with
@@ -382,7 +382,7 @@ def compile_agent_template(
     header = _build_output_header(fm)
     body = strip_metadata_sections(body)
     body = strip_retired_markers(body, template_path.name)  # AR-300d-4: never substituted
-    report_inplace_abilities(template_path.name, fm, body, skills_root)  # AR-300a-4-i
+    report_inplace_accounts(template_path, fm, body, skills_root, agents)  # AR-300a-4-i / AR-300a-5-i
     body = inject_config(body, config)
 
     if agents is not None:
@@ -414,7 +414,7 @@ def compile_agent_template(
     if fm.get("signoff") is True:
         body = body.rstrip("\n") + build_signoff_block()
 
-    body = append_declared_skills(body, fm, skills_root, agent=template_path.stem)  # AR-300c-1 / AR-300b-2
+    body = append_declared_sections(body, fm, skills_root, agents, template_path.stem)  # AR-300c-1, AR-300a-5
     return header + body
 
 

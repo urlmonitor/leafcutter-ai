@@ -55,7 +55,7 @@ defined by `output_fm_keys` in `template_compiler._build_output_header()`:
 | Value | Model | Typical use case |
 |---|---|---|
 | `sonnet` | claude-sonnet-* (current) | Default for most phase agents. Balanced speed and capability. |
-| `opus` | claude-opus-* (current) | Reserved for deep reasoning tasks: `adr-author`, `architecture-diagram-author`, `architect-review-deep`, `brainstorm-worker`. |
+| `opus` | claude-opus-* (current) | Reserved for deep reasoning tasks: `adr-author`, `architecture-diagram-author`, `brainstorm-worker`. |
 | `haiku` | claude-haiku-* (current) | Fast, cheap sub-agents invoked in high-volume fan-out: `onboard-config-section`, `brainstorm-worker` (in Haiku-tier mode). |
 
 ### `tools` Valid Values

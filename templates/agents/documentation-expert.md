@@ -24,6 +24,14 @@ description: 'Diataxis-routing documentation orchestrator. Classifies a "write o
 model: sonnet
 name: documentation-expert
 tools: Bash, Read, Edit, Write, Agent, Skill
+spawn_allowlist:
+- research-agent
+- adr-author
+- architecture-diagram-author
+- explanation-author
+- how-to-author
+- reference-author
+- glossary-triage
 skills:
 - skill_id: route-knowledge
   mode: conditional

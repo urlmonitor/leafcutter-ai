@@ -21,6 +21,8 @@ memory: true
 model: sonnet
 name: pr-reviewer
 tools: Bash, Read, Edit, Agent, Skill
+spawn_allowlist:
+- research-agent
 skills:
 - skill_id: signoff
   mode: conditional

@@ -6,7 +6,7 @@ description: 'Structural impact gatekeeper for proposed changes. Receives a refi
 
   impact as small or large using a documented rubric, and either writes an
 
-  inline architectural note (Sonnet only) or escalates to an Opus sub-agent.
+  inline architectural note, with a fuller structural analysis for large changes.
 
   (internal — invoked by parent agents only)
 
@@ -14,6 +14,8 @@ description: 'Structural impact gatekeeper for proposed changes. Receives a refi
 model: sonnet
 name: architect-review
 tools: Bash, Read, Edit, Write, Agent, Skill
+spawn_allowlist:
+- research-agent
 skills:
 - skill_id: signoff
   mode: conditional
@@ -57,10 +59,6 @@ behavioral_patterns:
   name: Delegation to adr-author
   related_agent: adr-author
   trigger: task requiring adr-author capabilities
-- behavior: Delegates to architect-review-deep via Agent tool
-  name: Delegation to architect-review-deep
-  related_agent: architect-review-deep
-  trigger: task requiring architect-review-deep capabilities
 - behavior: new constraint, new cross-component contract) that is not already covered
     by an
   name: Conditional Behavior
@@ -167,28 +165,30 @@ will dispatch `adr-author` before any coder agent).
 
 ### Small case
 
-Write an architectural note inline (Sonnet only — do NOT spawn
-`architect-review-deep`). The note must:
+Write an architectural note inline. The note must:
 
 - Confirm which rubric criteria were evaluated and why the ticket is small.
 - Point out any design concerns (naming, layering, contract risks) in one
   paragraph.
 - List any acceptance-criteria adjustments as a bullet list (empty if none).
 
-Set `escalation: "none"`.
+Set `escalation: "none"` and leave `escalation_reason` empty.
 
 ### Large case
 
-Spawn `architect-review-deep` via the `Agent` tool with:
+Handle it yourself; there is no deeper reviewer to hand it to. Write a fuller
+structural analysis as the `architectural_note`, working from the full ticket
+text and the research-agent findings block. It must:
 
-- The full ticket text.
-- The research-agent findings block.
-- A one-paragraph framing of **why** this exceeds the small-case bar (name the
-  specific rubric trigger: always-large trigger that fired, or which threshold
-  was crossed).
+- Name **why** the change exceeds the small-case bar (the always-large trigger
+  that fired, or which threshold was crossed).
+- Walk each affected component boundary and contract the change crosses, and
+  state the structural risk at each.
+- Say what must be true for the change to land safely (ordering, migration or
+  rollback concerns, ADR impact) and list acceptance-criteria adjustments.
 
-Capture its output as `architectural_note`. Set `escalation: "opus"` and
-`escalation_reason` to the one-line rubric trigger description.
+Set `escalation: "none"` (the field is kept so the payload shape is unchanged)
+and set `escalation_reason` to the one-line rubric trigger description.
 
 ## Step 4 — Output Payload
 
@@ -197,10 +197,10 @@ branch produced:
 
 ```json
 {
-  "architectural_note": "<one-paragraph note or the Opus plan>",
+  "architectural_note": "<one-paragraph note, or the fuller analysis for a large change>",
   "acceptance_adjustments": ["<adjustment>", "..."],
-  "escalation": "none" | "opus",
-  "escalation_reason": "<empty string when none, or one-line trigger when opus>",
+  "escalation": "none",
+  "escalation_reason": "<empty string for a small change, or the one-line rubric trigger for a large one>",
   "suggested_adr": "<ADR topic string or null>",
   "suggested_diagrams": [
     {
@@ -248,8 +248,8 @@ When signing off on a ticket, include a `completion_manifest:` block in your
 - `impact_classified` — confirm you applied the small/large rubric and recorded the
   classification with the specific triggering criterion.
 - `architectural_note_written` — confirm an `architectural_note` was produced and
-  included in the Step 4 output payload (inline for small, from `architect-review-deep`
-  for large).
+  included in the Step 4 output payload (the short note for small, the fuller
+  structural analysis for large).
 
 A bare `false` for any item is malformed per `signoff` §2b Bare-False Rule; expand it
 to a nested object with `result`, `reason`, and `remediation`.
@@ -257,12 +257,13 @@ to a nested object with `result`, `reason`, and `remediation`.
 ## Step 5 — Escalation Log
 
 Whichever branch fires, append `## Escalation` to your output naming the chosen
-branch and the one-line reason. Never skip this section. Example:
+branch (`small` or `large`) and the one-line reason. Never skip this section.
+Example:
 
 ```
 ## Escalation
 
-Branch: none
+Branch: small
 Reason: 3 files in one component (live_trader/); no always-large trigger fired.
 ```
 
@@ -271,9 +272,9 @@ or:
 ```
 ## Escalation
 
-Branch: opus
-Reason: has_alembic_migration=true — always-large trigger; escalated to
-architect-review-deep with migration context.
+Branch: large
+Reason: has_alembic_migration=true — always-large trigger; analysed in place
+with migration context.
 ```
 
 ## Diagram Type Reference
@@ -313,13 +314,8 @@ Do not invent new doc type values — add them to `doc_types.json` first.
 - Do not write or modify files other than the structured output payload.
 - The rubric thresholds are fixed for this session. Do not adjust them based on
   the ticket content.
-- Spawn sub-agents only for the agents in your spawn allowlist:
-
-## Your Available Sub-Agents
-
-| Agent | Role | Tier |
-|---|---|---|
-| research-agent | analysis | utility |
+- Spawn sub-agents only for the agents in your spawn allowlist (the generated
+  sub-agent section at the end of this prompt).
 
 ## Machine-Parsed Dispatch Output Contract
 

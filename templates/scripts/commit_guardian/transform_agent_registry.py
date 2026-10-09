@@ -1,9 +1,10 @@
 """
 MODULE: leafcutter/scripts/commit_guardian/transform_agent_registry.py
-GOAL: Pre-stage transformer that regenerates the ability fields
-      (``skills_used`` / ``skills_invoked``) of config/agent_registry.json from
-      each agent template's frontmatter ``skills`` declaration, and re-stages
-      the registry when it changed.
+GOAL: Pre-stage transformer that regenerates the derived fields
+      (``skills_used`` / ``skills_invoked`` from the frontmatter ``skills``
+      declaration, ``spawn_allowlist`` from the frontmatter ``spawn_allowlist``
+      declaration) of config/agent_registry.json from each agent template, and
+      re-stages the registry when it changed.
 BUSINESS CONTEXT: AR-300c made the template frontmatter the one source of truth
       for an agent's abilities; the registry's ability fields are a DERIVED
       copy. The build compiles prompts from the declarations and only REPORTS a
@@ -15,9 +16,11 @@ ARCHITECTURE: Modelled on transform_doc_index.py. ``main(argv)`` resolves the
       package root (``--package-root DIR`` when given, otherwise the git
       toplevel), reads the registry and every agent's template, regenerates the
       ability fields through the sibling ``_agent_ability_sync`` module (shared
-      with the one-shot migration, so both write the identical record), and
-      writes the registry only when its parsed content changed. It changes no
-      other field and no other agent's record. With ``--package-root`` it does
+      with the one-shot migration, so both write the identical record) and each
+      templated agent's ``spawn_allowlist`` from its declaration (macro kept as
+      written; an absent declaration gives ``[]``), and writes the registry only
+      when its parsed content changed. It changes no other field (``spawned_by``
+      and ``is_ticket_phase`` stay hand-authored) and no template-less record. With ``--package-root`` it does
       no git staging (used by tests and tooling); without it, it ``git add``s
       the registry after a write. Exits 0 always (fail-open contract -- never
       blocks a commit). ``_agent_ability_sync.py`` sits in this directory,
@@ -31,6 +34,9 @@ DECISION HISTORY
   transform-doc-index in commit_guardian.json (same tier, language, stages,
   pass_filenames and change_set_source). The registry copy is regenerated here
   instead of by the build, which only reports a disagreement. (#AR-300c-3)
+- 2026-10-09 [python-coder/AR-300c-5]: Also regenerates ``spawn_allowlist`` from
+  each template's declaration (user decision: the registry copy of the sub-agent
+  permission is derived exactly like the abilities). (#AR-300c-5-ii)
 ====================================================================
 """
 
@@ -47,7 +53,14 @@ import yaml
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-from _agent_ability_sync import declared_entries, dump_registry, regenerate_record  # noqa: E402
+from _agent_ability_sync import (  # noqa: E402
+    declared_spawn,
+    dump_registry,
+    frontmatter_of,
+    normalize_declared,
+    regenerate_record,
+    regenerate_spawn,
+)
 
 _TAG = "[transform-agent-registry]"
 _REGISTRY_REL = Path("config") / "agent_registry.json"
@@ -85,25 +98,27 @@ def _restage(registry_path: Path) -> None:
         _warn(f"git add exited with code {result.returncode}")
 
 
-def _declaration_for(root: Path, agent: dict[str, Any]) -> list[dict[str, str]] | None:
-    """Return the agent's declared grants from its template, or None to leave the record alone."""
+def _declaration_for(root: Path, agent: dict[str, Any]) -> tuple[list[dict[str, str]], list[str]] | None:
+    """Return the agent's declared ``(grants, sub-agents)`` from its template, or None to leave the record alone."""
     template_path = agent.get("template_path")
     path = root / template_path if template_path else None
     if path is None or not path.is_file():
         return None
     try:
-        return declared_entries(path.read_text(encoding="utf-8"))
+        fm = frontmatter_of(path.read_text(encoding="utf-8"))
     except (OSError, UnicodeDecodeError, yaml.YAMLError) as exc:
         _warn(f"cannot read declaration from {path}: {exc}")
         return None
+    return None if fm is None else (normalize_declared(fm.get("skills")), declared_spawn(fm))
 
 
 def regenerate(root: Path, data: dict[str, Any]) -> None:
-    """Regenerate every templated agent's ability fields in ``data`` in place."""
+    """Regenerate every templated agent's derived fields (abilities, sub-agents) in ``data`` in place."""
     for agent in data.get("agents") or []:
-        entries = _declaration_for(root, agent)
-        if entries is not None:
-            regenerate_record(agent, entries)
+        declaration = _declaration_for(root, agent)
+        if declaration is not None:
+            regenerate_record(agent, declaration[0])
+            regenerate_spawn(agent, declaration[1])
 
 
 def _write_registry(registry_path: Path, data: dict[str, Any]) -> bool:

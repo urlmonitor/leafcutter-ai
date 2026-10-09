@@ -42,6 +42,13 @@ DECISION HISTORY
   reports and continues on a disagreeing registry copy, per the user decision
   above; ``_run_validation_guards`` keeps its name and signature.
   (#AR-300c-3)
+- 2026-10-09 [python-coder/AR-300c-5]: The same guard now also runs
+  ``verify_spawn_allowlists`` over each template's frontmatter
+  ``spawn_allowlist``: a disagreeing registry copy is reported, a declared
+  sub-agent with no packaged definition (or an empty ticket-phase macro)
+  refuses. A package where nothing is permitted anywhere has nothing to compare
+  and is skipped (the verdict function itself still raises on it), so
+  skills-only packages keep building. (#AR-300c-5-ii, #AR-300c-5-iii)
 """
 
 from __future__ import annotations
@@ -56,6 +63,7 @@ from agent_ability_verdict import (
     describe_finding,
     missing_condition_findings,
     verify_abilities,
+    verify_spawn_allowlists,
 )
 from build_colors import error as _error
 from build_colors import warn as _warn
@@ -108,6 +116,41 @@ def _read_declarations(agents_dir: Path, registry_agents: list[dict[str, Any]]) 
     return declarations
 
 
+def _read_spawn_declarations(agents_dir: Path, registry_agents: list[dict[str, Any]]) -> dict[str, list[Any]]:
+    """Return agent id -> frontmatter ``spawn_allowlist`` for every template that declares any sub-agent."""
+    declarations: dict[str, list[Any]] = {}
+    for template in sorted(agents_dir.glob("*.md")):
+        if template.name.startswith("_"):
+            continue
+        try:
+            fm, _body = parse_frontmatter(template.read_text(encoding="utf-8"))
+        except OSError as exc:
+            _log.warning("cannot read agent template %s: %s", template, exc)
+            raise
+        if fm.get("spawn_allowlist"):
+            declarations[_agent_id_for(template, registry_agents)] = fm["spawn_allowlist"]
+    return declarations
+
+
+def _spawn_findings(
+    package_root: Path, registry_agents: list[dict[str, Any]], config: dict[str, Any] | None
+) -> list[dict[str, Any]]:
+    """Return the sub-agent findings (comparison and resolution); none when nothing is permitted anywhere.
+
+    A package in which no agent declares a sub-agent and no registry copy lists
+    one has nothing to compare, so it is skipped rather than refused (the verdict
+    function itself raises on that empty population).
+    """
+    agents_dir = package_root / "templates" / "agents"
+    declarations = _read_spawn_declarations(agents_dir, registry_agents)
+    if not declarations and not any(a.get("spawn_allowlist") for a in registry_agents):
+        return []
+    project_root = package_root.parent
+    return verify_spawn_allowlists(
+        declarations, registry_agents, packaged_agents_root=agents_dir, project_root=project_root,
+        output_root_name=_output_root_name(config, project_root))["findings"]
+
+
 def _verdict_findings(package_root: Path, config: dict[str, Any] | None) -> tuple[list[dict[str, Any]], list[str]]:
     """Return ``(findings, cannot_verify)`` for the package at ``package_root``.
 
@@ -133,7 +176,8 @@ def _verdict_findings(package_root: Path, config: dict[str, Any] | None) -> tupl
         )
     except ValueError as exc:
         return [], [f"[abilities] cannot verify agent abilities: {exc}"]
-    return verdict["findings"] + missing_condition_findings(declarations), []
+    return (verdict["findings"] + missing_condition_findings(declarations)
+            + _spawn_findings(package_root, registry_agents, config)), []
 
 
 def split_ability_findings(package_root: Path, config: dict[str, Any] | None = None) -> tuple[list[str], list[str]]:

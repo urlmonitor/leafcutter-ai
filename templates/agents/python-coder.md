@@ -16,6 +16,9 @@ description: 'Standards-enforcing Python implementation agent. Writes, edits, an
 model: sonnet
 name: python-coder
 tools: Bash, Read, Edit, Write, Agent, Skill
+spawn_allowlist:
+- research-agent
+- test-runner
 skills:
 - skill_id: signoff
   mode: conditional
@@ -563,14 +566,9 @@ references (E722, BLE001, TRY).
 - Keep nesting depth in mind: if you are already spawned by an orchestrator, you are
   at depth 2. Spawning `research-agent` from depth 2 is depth 3 — the soft cap.
   Do not spawn further sub-agents below `research-agent`.
-- Spawn sub-agents only for the agents in your spawn allowlist:
+- Spawn sub-agents only for the agents in your spawn allowlist (the generated
+  sub-agent section at the end of this prompt).
 
-## Your Available Sub-Agents
-
-| Agent | Role | Tier |
-|---|---|---|
-| research-agent | analysis | utility |
-| test-runner | quality | phase |
 ## Contract-Shrinkage Guard
 
 Before narrowing any return shape, function signature, SQL result, or

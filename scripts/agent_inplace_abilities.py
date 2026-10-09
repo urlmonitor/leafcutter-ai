@@ -17,7 +17,11 @@ ARCHITECTURE: ``classify_inplace`` (pure) compares one body with its declaration
     it examined and how many stated their own grant; ``ok`` is False only for an
     empty population. ``report_inplace_abilities`` is the compile-time hook: it
     logs a WARNING naming the template file, called from
-    ``template_compiler.compile_agent_template``. Severity disposition: BOTH
+    ``template_compiler.compile_agent_template``. ``report_inplace_accounts``
+    is the same hook widened over the account kind (AR-300a-5-i): it also
+    reports a hand-written sub-agent table or list (``classify_inplace_spawn``,
+    the ``sub-agents`` kind of the one ``find_accounts`` recogniser) against the
+    declared ``spawn_allowlist``, macro resolved. Severity disposition: BOTH
     kinds are REPORTED and neither refuses, so a mid-migration tree still builds.
     With no path the package's own ``templates/agents`` is resolved from this
     module's location, never the current directory. This detector reads SOURCE
@@ -26,6 +30,11 @@ ARCHITECTURE: ``classify_inplace`` (pure) compares one body with its declaration
 
 DECISION HISTORY
 - 2026-10-09 [python-coder/AR-300a-4-i]: Created. (#AR-300a-4-i)
+- 2026-10-09 [python-coder/AR-300a-5-i]: Generalised over the account kind
+  (``report_inplace_accounts``) instead of a parallel spawn detector, so a
+  hand-written sub-agent table or list is reported by file name as
+  ``duplicate`` / ``contradiction`` exactly like a hand-written abilities
+  section. (#AR-300a-5-i)
 """
 
 from __future__ import annotations
@@ -36,6 +45,7 @@ from typing import Any
 
 from agent_ability_accounts import find_accounts
 from agent_ability_verdict import normalize_entries
+from agent_spawn_declaration import declared_spawn, resolve_spawn_ids
 
 _log = logging.getLogger(__name__)
 _PACKAGE_ROOT = Path(__file__).resolve().parent.parent
@@ -78,6 +88,56 @@ def report_inplace_abilities(template_name: str, fm: dict[str, Any], body: str, 
             "remove the hand-written section; delivery appends the declared one",
             template_name, finding["kind"], finding["inplace_abilities"], finding["declared_abilities"],
         )
+
+
+def classify_inplace_spawn(body: str, declared: set[str], known_ids: set[str]) -> dict[str, Any] | None:
+    """Return the in-place finding for a body that states its own sub-agents, or None.
+
+    The same account recogniser as for abilities (``find_accounts``), applied to
+    the ``sub-agents`` kind, so a hand-written table OR list is caught.
+
+    Args:
+        body: The template body (frontmatter removed).
+        declared: The declaration after macro resolution.
+        known_ids: Agent ids (registry ids and sibling template stems).
+
+    Returns:
+        ``{kind, inplace_sub_agents, declared_sub_agents}`` or None.
+    """
+    inplace = {i for account in find_accounts(body, known_ids, "sub-agents") for i in account["ids"]}
+    if not inplace:
+        return None
+    return {
+        "kind": "duplicate" if inplace == declared else "contradiction",
+        "inplace_sub_agents": sorted(inplace),
+        "declared_sub_agents": sorted(declared),
+    }
+
+
+def report_inplace_spawn(
+    template_path: Path, fm: dict[str, Any], body: str, agents: list[dict[str, Any]] | None
+) -> None:
+    """Log a WARNING naming the template file when its body states its own sub-agents."""
+    rows = agents or []
+    phase = [a["id"] for a in rows if a.get("is_ticket_phase")]
+    known = {a["id"] for a in rows} | {p.stem for p in template_path.parent.glob("*.md")}
+    declared = set(resolve_spawn_ids(declared_spawn(fm), phase))
+    finding = classify_inplace_spawn(body, declared, known)
+    if finding:
+        _log.warning(
+            "%s states its own sub-agents in its body (%s): in place %s vs declared %s -- "
+            "remove the hand-written section; delivery appends the declared one",
+            template_path.name, finding["kind"], finding["inplace_sub_agents"], finding["declared_sub_agents"],
+        )
+
+
+def report_inplace_accounts(
+    template_path: Path, fm: dict[str, Any], body: str, skills_root: Path | None,
+    agents: list[dict[str, Any]] | None = None,
+) -> None:
+    """Report a hand-written abilities account AND a hand-written sub-agent account in one body."""
+    report_inplace_abilities(template_path.name, fm, body, skills_root)
+    report_inplace_spawn(template_path, fm, body, agents)
 
 
 def detect_inplace_abilities(

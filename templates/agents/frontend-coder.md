@@ -740,12 +740,6 @@ missing.
   and plain HTML/CSS equally. Do not assume a specific framework unless the
   ticket specifies one.
 
-## Your Available Sub-Agents
-
-| Agent | Role | Tier |
-|---|---|---|
-| research-agent | Cross-file lookups, blast-radius analysis, symbol search | utility |
-
 ## Context Capsule (gated — only when warn-tier signal trips)
 
 During pre-completion checks (lint, webapp-testing, file-size), warn-tier signals

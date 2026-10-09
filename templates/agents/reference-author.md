@@ -8,6 +8,8 @@ description: |
 model: sonnet
 name: reference-author
 tools: Bash, Read, Edit, Write, Agent, Skill
+spawn_allowlist:
+- research-agent
 skills:
 - skill_id: signoff
   mode: conditional

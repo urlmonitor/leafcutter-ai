@@ -37,6 +37,7 @@ invokes this agent for its inner-loop test cycle.**
 
 - `ticket-supervisor`
 - `test-writer`
+- `python-coder`
 - `finalize-feature.js`
 ---
 
@@ -63,11 +64,13 @@ flowchart TD
 
     ticket_supervisor["ticket-supervisor\n(supervisor tier)"]:::supervisor
     test_writer["test-writer\n(phase tier)"]:::phase
+    python_coder["python-coder\n(phase tier)"]:::phase
     finalize_feature.js["finalize-feature.js\n(phase tier)"]:::phase
     test_runner["test-runner\n(phase tier, priority 9)"]:::target
 
     ticket_supervisor -->|dispatches| test_runner
     test_writer -->|dispatches| test_runner
+    python_coder -->|dispatches| test_runner
     finalize_feature.js -->|dispatches| test_runner
 ```
 ---
@@ -101,13 +104,14 @@ flowchart TD
 | `Bash` |
 | `Read` |
 | `Edit` |
+| `Skill` |
 ---
 
 ## Skills Used
 
 | Skill | Mode | Condition |
 |-------|------|-----------|
-| `signoff` | always | — |
+| `signoff` | conditional | When invoked with a ticket_path, load signoff to record your phase sign-off on the ticket. |
 ---
 
 ## Configuration

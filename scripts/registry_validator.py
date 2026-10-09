@@ -17,8 +17,8 @@ ARCHITECTURE: Public function validate_agent_registry(package_root) delegates
     (AC INF-600g-3). Entries with descriptive_only: true are excluded from the
     cross-reference check — they document inline capabilities and have no
     corresponding skill directory or template body reference by design (M-1).
-    The skill-tool grant check (validate_skill_tool_grants, AR-200b-2) lives in
-    skill_tool_grant_validator.py and is wired into validate_agent_registry().
+    The tool-grant checks (validate_tool_grants: Skill, AR-200b-2; Agent, AR-200b-3) live
+    in skill_tool_grant_validator.py and are wired into validate_agent_registry().
     step_kinds validation (check_step_kinds), the requires_verification flag
     check (validate_verification_flags), and spawn_allowlist/spawned_by
     bidirectional consistency (check_spawn_bidirectionality, AC INF-600k-1's
@@ -39,7 +39,7 @@ from pathlib import Path
 from typing import Any
 
 from registry_verification_flags import validate_verification_flags
-from skill_tool_grant_validator import validate_skill_tool_grants
+from skill_tool_grant_validator import validate_tool_grants
 from spawn_bidirectionality_validator import check_spawn_bidirectionality, warn_redundant_phase_agents
 from step_kinds_validator import check_step_kinds, get_agent_step_kinds  # noqa: F401 (shared reader re-export for BO-2400f-5-ii)
 
@@ -111,7 +111,6 @@ def validate_agent_registry(package_root: Path) -> list[str]:
     errors.extend(load_errors)
     if load_errors:
         return errors  # Can't proceed without a parseable registry
-
     portable_agents = [a for a in agents if a.get("portable", True)]
     domain_agents = [a for a in agents if not a.get("portable", True)]
     registry_ids = {a["id"] for a in agents}
@@ -122,14 +121,13 @@ def validate_agent_registry(package_root: Path) -> list[str]:
 
     spawn_map = {a["id"]: a.get("spawn_allowlist", []) for a in agents}
     spawned_by_map = {a["id"]: a.get("spawned_by", []) for a in agents}
-
     errors.extend(check_spawn_bidirectionality(spawn_map, spawned_by_map, registry_ids, package_root))
     errors.extend(_check_self_loops(spawn_map))
     errors.extend(_check_skills_used(portable_agents, package_root))
     errors.extend(check_step_kinds(agents, package_root))
     errors.extend(validate_verification_flags(template_dir))
     errors.extend(validate_produces_field(agents, template_dir))
-    errors.extend(validate_skill_tool_grants(template_dir))
+    errors.extend(validate_tool_grants(template_dir))  # Skill and Agent pairs (AR-200b-2, AR-200b-3)
     warn_redundant_phase_agents(agents)
 
     # Cross-reference skills_invoked against template body references (AC INF-600g-3).

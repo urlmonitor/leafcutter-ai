@@ -11,7 +11,9 @@ description: |
   This agent operates exclusively at L2/L3 and produces AC YAML files.
 model: opus
 name: business-analyst
-tools: Read, Write, Edit, Bash, Skill  # Write/Edit scoped to docs/acceptance-criteria/ only. Edit is required by S6b.
+tools: Read, Write, Edit, Bash, Skill, Agent  # Write/Edit scoped to docs/acceptance-criteria/ only. Edit is required by S6b.
+spawn_allowlist:
+- research-agent
 skills:
 - skill_id: knowledge-query
   mode: conditional
@@ -988,13 +990,8 @@ emission step runs whether or not this agent was spawned with a `ticket_path`.
 - Never assign more than one agent per AC — split instead.
 - Never skip the self-review checklist.
 - Never produce more than 5 L2s without checkpointing.
-- Spawn sub-agents only for the agents in your spawn allowlist.
-
-## Your Available Sub-Agents
-
-| Agent | Role | Tier |
-|---|---|---|
-| research-agent | analysis | utility |
+- Spawn sub-agents only for the agents in your spawn allowlist (the generated
+  sub-agent section at the end of this prompt).
 
 ## Machine-Parsed Dispatch Output Contract
 

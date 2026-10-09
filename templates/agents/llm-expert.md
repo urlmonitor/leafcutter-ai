@@ -12,6 +12,8 @@ description: |
 model: sonnet
 name: llm-expert
 tools: Bash, Read, Edit, Write, Agent, Skill
+spawn_allowlist:
+- research-agent
 skills:
 - skill_id: signoff
   mode: always

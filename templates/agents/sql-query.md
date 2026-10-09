@@ -9,6 +9,8 @@ description: |
   reporting; does NOT create SQL schema objects (use sql-coder for that).
 model: sonnet
 tools: Bash, Read, Edit, Write, Agent, Skill
+spawn_allowlist:
+- research-agent
 skills:
 - skill_id: sql-query-past-queries
   mode: always

@@ -356,8 +356,7 @@
             "portable": true,
             "domain": null,
             "spawn_allowlist": [
-                "research-agent",
-                "architect-review-deep"
+                "research-agent"
             ],
             "spawned_by": [
                 "ticket-supervisor"
@@ -437,7 +436,8 @@
             "portable": true,
             "domain": null,
             "spawn_allowlist": [
-                "research-agent"
+                "research-agent",
+                "test-runner"
             ],
             "spawned_by": [
                 "ticket-supervisor",
@@ -658,6 +658,7 @@
             "spawned_by": [
                 "ticket-supervisor",
                 "test-writer",
+                "python-coder",
                 "finalize-feature.js"
             ],
             "is_ticket_phase": true,
@@ -1276,9 +1277,7 @@
             "role": "commit",
             "portable": true,
             "domain": null,
-            "spawn_allowlist": [
-                "conflict-resolver-deep"
-            ],
+            "spawn_allowlist": [],
             "spawned_by": [
                 "pull-request"
             ],
@@ -2282,27 +2281,6 @@
             ]
         },
         {
-            "id": "architect-review-deep",
-            "name": "Architect Review Deep",
-            "tier": "utility",
-            "role": "review",
-            "portable": true,
-            "domain": null,
-            "spawn_allowlist": [],
-            "spawned_by": [
-                "architect-review"
-            ],
-            "is_ticket_phase": false,
-            "selection_criteria": null,
-            "template_path": null,
-            "model": "opus",
-            "skills_used": [],
-            "produces": "review_verdict",
-            "components": [
-                "review_system"
-            ]
-        },
-        {
             "id": "architecture-diagram-author",
             "name": "Architecture Diagram Author",
             "tier": "phase",
@@ -2365,27 +2343,6 @@
             "produces": "documentation",
             "components": [
                 "documentation_system"
-            ]
-        },
-        {
-            "id": "conflict-resolver-deep",
-            "name": "Conflict Resolver Deep",
-            "tier": "utility",
-            "role": "commit",
-            "portable": true,
-            "domain": null,
-            "spawn_allowlist": [],
-            "spawned_by": [
-                "conflict-resolver"
-            ],
-            "is_ticket_phase": false,
-            "selection_criteria": null,
-            "template_path": null,
-            "model": "opus",
-            "skills_used": [],
-            "produces": "orchestration",
-            "components": [
-                "git_vcs_operations"
             ]
         },
         {

@@ -27,7 +27,14 @@ ARCHITECTURE: One public entry point, ``verify_abilities``, plus the shared
     not grants, so they are ignored on the record side. The declaration always
     wins: resolution reads the declaration, never the registry fields. This
     module is a build-engine module under ``scripts/`` (on ``sys.path`` for the
-    build) and needs no deploy-manifest entry.
+    build) and needs no deploy-manifest entry. ``verify_spawn_allowlists`` is the
+    sub-agent counterpart (AR-300c-5-ii / -iii): the same comparison kinds over each
+    agent's ``spawn_allowlist`` (``field: "spawn_allowlist"``, severity ``report``)
+    plus the refusing ``unresolvable-sub-agent`` kind, which is a declared sub-agent
+    (or an empty ticket-phase macro) with no deployable definition. A sub-agent
+    resolves only to a packaged ``templates/agents/<id>.md``; a registry row or a
+    compiled prompt in the output root never counts, and the project-local lookup
+    (``_project_local_agent_exists``) finds nothing until a location is designed.
 
 DECISION HISTORY
 - 2026-10-08 [python-coder/AR-300c-3]: Created. Comparison keys on skill id
@@ -45,12 +52,18 @@ DECISION HISTORY
 - 2026-10-09 [python-coder/AR-300a-2]: Added the refusing ``missing-condition``
   kind: a ``conditional`` grant with no condition text never says WHEN it
   applies, so the build refuses (not in ``REPORT_ONLY_KINDS``). (#AR-300a-2)
+- 2026-10-09 [python-coder/AR-300c-5]: Added ``verify_spawn_allowlists`` and the
+  ``unresolvable-sub-agent`` kind. The comparison kinds are shared with the
+  skills verdict so ``REPORT_ONLY_KINDS`` already splits report from refuse.
+  (#AR-300c-5-ii, #AR-300c-5-iii)
 """
 
 from __future__ import annotations
 
 from pathlib import Path
 from typing import Any
+
+from agent_spawn_declaration import MACRO, resolve_spawn_ids
 
 _DEFAULT_MODE = "always"
 # Comparison findings (the derived registry copy disagrees with the declaration)
@@ -244,8 +257,126 @@ def missing_condition_findings(declarations: dict[str, list[Any]]) -> list[dict[
     ]
 
 
+def _project_local_agent_exists(project_root: Path, output_root_name: str, sub_agent: str) -> bool:
+    """Return whether the project defines its own agent ``sub_agent``.
+
+    No project-local agent definition location is defined yet, so this finds
+    nothing for every id; a declared sub-agent can currently resolve only to a
+    packaged ``templates/agents/<id>.md``. It deliberately never counts a
+    registry row, nor a compiled prompt under ``<output_root>/agents/`` (a
+    build artefact left by an earlier run, not a definition). The location is
+    deferred to known issue KI-AR-005; when it is designed, only this function
+    changes.
+    """
+    del project_root, output_root_name, sub_agent
+    return False
+
+
+def _compare_spawn(agent: str, declared: list[str], record: dict[str, Any] | None) -> dict[str, Any] | None:
+    """Return the report-only comparison finding for one agent's sub-agent lists, or None when they agree."""
+    recorded = list((record or {}).get("spawn_allowlist") or [])
+    if set(declared) == set(recorded):
+        return None
+    if declared and record is None:
+        kind = "declaration-only"
+    elif recorded and not declared:
+        kind = "record-only"
+    else:
+        kind = "divergent"
+    return {"agent": agent, "field": "spawn_allowlist", "declared": declared, "recorded": recorded,
+            "kind": kind, "severity": "report"}
+
+
+def _resolve_sub_agents(
+    agent: str, declared: list[str], phase_ids: list[str], packaged_agents_root: Path,
+    project_root: Path, output_root_name: str,
+) -> tuple[int, list[dict[str, Any]]]:
+    """Return ``(resolved count, refusing findings)`` for one agent's declared sub-agents."""
+    findings: list[dict[str, Any]] = []
+    if MACRO in declared and not phase_ids:
+        findings.append({"agent": agent, "sub_agent": MACRO, "kind": "unresolvable-sub-agent",
+                         "lookups_failed": [], "looked_in": [], "severity": "refuse"})
+    resolved = 0
+    for sid in resolve_spawn_ids(declared, phase_ids):
+        packaged = packaged_agents_root / f"{sid}.md"
+        local = _project_local_agent_exists(project_root, output_root_name, sid)
+        if packaged.is_file() or local:
+            resolved += 1
+            continue
+        findings.append({"agent": agent, "sub_agent": sid, "kind": "unresolvable-sub-agent",
+                         "lookups_failed": ["packaged", "project_local"], "severity": "refuse",
+                         "looked_in": [{"surface": "packaged", "path": str(packaged), "found": False},
+                                       {"surface": "project_local", "path": None, "found": False}]})
+    return resolved, findings
+
+
+def verify_spawn_allowlists(
+    declarations: dict[str, list[Any]],
+    registry_agents: list[dict[str, Any]],
+    *,
+    packaged_agents_root: Path,
+    project_root: Path,
+    output_root_name: str = ".leafcutter",
+    ticket_phase_ids: list[str] | None = None,
+) -> dict[str, Any]:
+    """Compare declared sub-agent permissions to the registry copy and resolve every declared sub-agent.
+
+    Args:
+        declarations: Agent id -> declared ``spawn_allowlist`` (macro literal; the source of truth).
+        registry_agents: The registry's agent records (the derived copy).
+        packaged_agents_root: The package's ``templates/agents`` directory.
+        project_root: The consuming project root.
+        output_root_name: The declared output root under ``project_root``.
+        ticket_phase_ids: Agents the macro stands for; None derives them from
+            the registry's ``is_ticket_phase`` flags.
+
+    Returns:
+        ``{examined_count, agents_examined, sub_agents_resolved, ok, findings}``.
+        ``examined_count`` covers every agent with a declaration OR a non-empty
+        registry copy; ``agents_examined`` the declaring agents resolved.
+
+    Raises:
+        EmptyPopulationError: When no agent declares or records a sub-agent -- a
+            verdict over nothing must not read as clean.
+    """
+    declared = {agent: [s for s in raw if isinstance(s, str)] for agent, raw in declarations.items() if raw}
+    records = {a["id"]: a for a in registry_agents}
+    agent_ids = sorted(set(declared) | {i for i, r in records.items() if r.get("spawn_allowlist")})
+    if not agent_ids:
+        raise EmptyPopulationError("agents")
+    phase = list(ticket_phase_ids) if ticket_phase_ids is not None else [
+        a["id"] for a in registry_agents if a.get("is_ticket_phase")]
+    findings: list[dict[str, Any]] = []
+    resolved = 0
+    for agent in agent_ids:
+        finding = _compare_spawn(agent, declared.get(agent, []), records.get(agent))
+        if finding:
+            findings.append(finding)
+        count, refusing = _resolve_sub_agents(
+            agent, declared.get(agent, []), phase, packaged_agents_root, project_root, output_root_name)
+        resolved += count
+        findings += refusing
+    return {"examined_count": len(agent_ids), "agents_examined": len(declared),
+            "sub_agents_resolved": resolved, "ok": not findings, "findings": findings}
+
+
+def _describe_spawn_finding(finding: dict[str, Any]) -> str:
+    """Render a ``spawn_allowlist`` comparison or ``unresolvable-sub-agent`` finding as one line."""
+    if finding["kind"] != "unresolvable-sub-agent":
+        return (f"agent '{finding['agent']}' {finding['kind']}: declaration (frontmatter) "
+                f"sub-agents {finding['declared']} vs registry record sub-agents {finding['recorded']}")
+    if finding["sub_agent"] == MACRO:
+        return (f"agent '{finding['agent']}' declares the ticket-phase entry '{MACRO}' but no agent "
+                f"is marked is_ticket_phase, so it resolves to no sub-agent")
+    return (f"agent '{finding['agent']}' declares sub-agent '{finding['sub_agent']}' which resolves to no "
+            f"agent definition (looked in packaged: {finding['looked_in'][0]['path']}; "
+            f"project_local: no project-local agent location is defined)")
+
+
 def describe_finding(finding: dict[str, Any]) -> str:
     """Render one finding as a single human-readable line for the build output."""
+    if finding.get("field") == "spawn_allowlist" or finding["kind"] == "unresolvable-sub-agent":
+        return _describe_spawn_finding(finding)
     if finding["kind"] == "missing-condition":
         return (f"agent '{finding['agent']}' grants ability '{finding['ability']}' as conditional "
                 f"but declares no condition saying when it applies")

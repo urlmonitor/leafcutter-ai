@@ -50,9 +50,11 @@ from _ar_300c_support import (  # noqa: E402
     migrate_or_fail,
     output_root_name,
     registry_agents,
+    strip_frontmatter_keys,
     template_frontmatter,
     template_stem,
 )
+from _ar_300e_support import MACRO, yaml_block  # noqa: E402
 
 HOOK_DIR = REPO_ROOT / "templates" / "scripts" / "commit_guardian"
 HOOK_SCRIPT = HOOK_DIR / "transform_agent_registry.py"
@@ -98,11 +100,32 @@ def _add_item(text: str, skill_id: str) -> str:
     return "\n".join(out)
 
 
+SPAWN = "spawn_allowlist"
+
+
+def _sync_registry_spawn(pkg: Path) -> None:
+    """Slice 5 (AR-300c-5-ii widened the hook to regenerate ``spawn_allowlist`` too): make
+    the registry's sub-agent lists agree with the templates' declarations BEFORE the state
+    these ability tests snapshot, so the skills-only assertions below keep proving exactly
+    what they proved (nothing but the ability fields of the EDITED agents changes) instead of
+    also absorbing the spawn regeneration, which the spawn tests at the end of this file own.
+    Declared list (absent -> []) copied into every templated record, written the one way both
+    writers write the registry."""
+    path = pkg / "config" / "agent_registry.json"
+    data = json.loads(path.read_text(encoding="utf-8"))
+    for agent in data["agents"]:
+        stem = template_stem(agent)
+        if stem and (pkg / "templates" / "agents" / f"{stem}.md").is_file():
+            agent[SPAWN] = list(template_frontmatter(pkg / "templates" / "agents" / f"{stem}.md").get(SPAWN) or [])
+    path.write_text(json.dumps(data, indent=4, ensure_ascii=False) + "\n", encoding="utf-8")
+
+
 def _prepared(tmp_path: Path):
     """Pristine copy -> real migration -> then CHANGE two agents' declarations
     in frontmatter only. Returns (pkg, edited agent ids, registry bytes S1)."""
     pkg = copy_package_slice(tmp_path / "pkg")
     migrate_or_fail(pkg)
+    _sync_registry_spawn(pkg)
     s1 = (pkg / "config" / "agent_registry.json").read_bytes()
     installed = installed_skill_ids(pkg)
     by_stem = {template_stem(a): a for a in registry_agents(pkg) if template_stem(a)}
@@ -269,3 +292,154 @@ def test_deployed_transform_hook_regenerates_the_copy_from_the_deployed_layout(s
     assert _compare_findings(pkg), "no divergence to repair"
     _hook_or_fail(deployed, pkg)
     assert _compare_findings(pkg) == []
+
+
+# --------------------------------------------------------------------------
+# AR-300c-5-ii (slice 5): the same hook also regenerates ``spawn_allowlist``
+# --------------------------------------------------------------------------
+
+def _plant(pkg: Path, plan: dict) -> None:
+    """Strip every ``spawn_allowlist`` key from the copied templates (text level), then
+    insert the planned declarations (``{stem: list}``, real serializer) before the closing
+    ``---``. Nothing else in any template changes."""
+    for tpl in sorted((pkg / "templates" / "agents").glob("*.md")):
+        text, _n = strip_frontmatter_keys(tpl.read_text(encoding="utf-8"), (SPAWN,))
+        lines = text.split("\n")
+        if tpl.stem in plan and lines[0] == "---":
+            close = lines.index("---", 1)
+            lines[close:close] = yaml_block(SPAWN, plan[tpl.stem]).split("\n")
+        tpl.write_text("\n".join(lines), encoding="utf-8")
+
+
+def _records(pkg: Path) -> dict:
+    return {a["id"]: a for a in registry_agents(pkg)}
+
+
+def _prepared_spawn(tmp_path: Path):
+    """Pristine copy -> real skills migration -> every spawn declaration replaced by a PLANNED
+    one: a revocation (one fewer than the record), an addition (record empty), the macro
+    verbatim, an explicit empty, and agents that keep a registry permission but declare
+    nothing. Returns (pkg, roles, registry bytes S1)."""
+    pkg = copy_package_slice(tmp_path / "pkg")
+    migrate_or_fail(pkg)
+    recs = [a for a in registry_agents(pkg) if template_stem(a) and a["id"] != "ticket-supervisor"]
+    holders = sorted((a for a in recs if a.get(SPAWN)), key=lambda a: a["id"])
+    empties = sorted((a["id"] for a in recs if not a.get(SPAWN)))
+    revoked = next(a for a in holders if len(a[SPAWN]) >= 2)
+    undeclared = next(a for a in holders if a["id"] != revoked["id"])
+    roles = {"revoked": revoked["id"], "dropped": revoked[SPAWN][-1], "added": empties[0],
+             "explicit_empty": empties[1], "undeclared": undeclared["id"], "macro": "ticket-supervisor"}
+    plan = {revoked["id"]: revoked[SPAWN][:-1], empties[0]: ["research-agent"], empties[1]: [],
+            "ticket-supervisor": [MACRO, "brainstorm-lead"]}
+    _plant(pkg, {template_stem(_records(pkg)[k]): v for k, v in plan.items()})
+    return pkg, roles, (pkg / "config" / "agent_registry.json").read_bytes()
+
+
+def _without_blocks(text: str, names: tuple[str, ...]) -> str:
+    """The registry text with every block of the named fields removed (array or ``[]``)."""
+    out, depth = [], 0
+    for line in text.split("\n"):
+        if depth:
+            depth += line.count("[") - line.count("]")
+            continue
+        if any(line.strip().startswith(f'"{n}":') for n in names):
+            depth = line.count("[") - line.count("]")
+            continue
+        out.append(line)
+    return "\n".join(out)
+
+
+def _declared(pkg: Path, agent: dict) -> list:
+    return list(template_frontmatter(pkg / "templates" / "agents" / f"{template_stem(agent)}.md").get(SPAWN) or [])
+
+
+def test_transform_regenerates_spawn_allowlist_and_changes_no_other_byte(tmp_path):
+    # covers: AR-300c-5-ii
+    # angle: real_artifact
+    """AR-300c-5-ii (UPDATE of the AR-300c-3 pinning test): after declarations change in
+    frontmatter only, the hook regenerates every templated agent's registry ``spawn_allowlist``
+    from its declaration -- a revoked sub-agent leaves, an added one arrives, the ticket-phase
+    macro is carried VERBATIM, an explicit empty stays empty and an ABSENT declaration yields
+    [] -- and every byte outside skills_used / skills_invoked / spawn_allowlist is unchanged
+    (``spawned_by``, ``is_ticket_phase`` and the template-less records included), and a second
+    run is byte-stable. Control: before the hook the records DID disagree."""
+    pkg, roles, s1 = _prepared_spawn(tmp_path)
+    before = _records(pkg)
+    assert sorted(before[roles["revoked"]][SPAWN]) != sorted(_declared(pkg, before[roles["revoked"]])), "control"
+    reg = pkg / "config" / "agent_registry.json"
+    _hook_or_fail(HOOK_SCRIPT, pkg)
+    s2 = reg.read_bytes()
+    after = _records(pkg)
+    examined = 0
+    for agent_id, record in after.items():
+        if not template_stem(record):
+            assert record == before[agent_id], f"{agent_id}: a template-less record changed"
+            continue
+        examined += 1
+        assert sorted(record[SPAWN]) == sorted(_declared(pkg, record)), f"{agent_id}: {record[SPAWN]}"
+        assert len(record[SPAWN]) == len(set(record[SPAWN]))
+    assert examined > 50
+    assert roles["dropped"] not in after[roles["revoked"]][SPAWN]
+    assert after[roles["added"]][SPAWN] == ["research-agent"] and after[roles["explicit_empty"]][SPAWN] == []
+    assert after[roles["undeclared"]][SPAWN] == [] and before[roles["undeclared"]][SPAWN], "absent declaration -> []"
+    assert sorted(after["ticket-supervisor"][SPAWN]) == sorted([MACRO, "brainstorm-lead"])
+    blocks = ("skills_used", "skills_invoked", SPAWN)
+    assert _without_blocks(s2.decode("utf-8"), blocks) == _without_blocks(s1.decode("utf-8"), blocks)
+    for agent_id, record in after.items():
+        keep = lambda r: {k: v for k, v in r.items() if k not in blocks}  # noqa: E731
+        assert keep(record) == keep(before[agent_id]), f"{agent_id}: a field outside the derived ones changed"
+    _hook_or_fail(HOOK_SCRIPT, pkg)
+    assert reg.read_bytes() == s2, "a second run changed the registry"
+
+
+def test_spawn_revocation_is_regenerated_for_that_agent_only(tmp_path):
+    # covers: AR-300c-5-ii
+    # angle: discrimination
+    """AR-300c-5-ii / AR-300d-5: with every registry copy consistent with its declaration
+    (the hook is a no-op: control), revoking ONE sub-agent from ONE agent's frontmatter and
+    running the hook removes it from THAT agent's registry record and nowhere else -- another
+    agent holding the same sub-agent keeps it, and the registry diff is exactly that one list.
+    Wrong version caught: removing the sub-agent from a shared structure."""
+    pkg = copy_package_slice(tmp_path / "pkg")
+    migrate_or_fail(pkg)
+    templated = [a for a in registry_agents(pkg) if template_stem(a)]
+    _plant(pkg, {template_stem(a): list(a.get(SPAWN) or []) for a in templated if a.get(SPAWN)})
+    reg = pkg / "config" / "agent_registry.json"
+    _hook_or_fail(HOOK_SCRIPT, pkg)
+    s0 = reg.read_bytes()
+    _hook_or_fail(HOOK_SCRIPT, pkg)
+    assert reg.read_bytes() == s0, "control: the hook is not stable over consistent declarations"
+    holders = [a["id"] for a in registry_agents(pkg) if "research-agent" in (a.get(SPAWN) or []) and template_stem(a)]
+    assert len(holders) >= 2, f"need two holders of research-agent, found {holders}"
+    victim, bystander = holders[0], holders[1]
+    victim_tpl = pkg / "templates" / "agents" / f"{template_stem(_records(pkg)[victim])}.md"
+    kept = [s for s in _declared(pkg, _records(pkg)[victim]) if s != "research-agent"]
+    _plant(pkg, {template_stem(a): list(a.get(SPAWN) or []) for a in templated if a.get(SPAWN) and a["id"] != victim}
+           | {template_stem(_records(pkg)[victim]): kept})
+    assert "research-agent" not in _declared(pkg, _records(pkg)[victim]), victim_tpl
+    _hook_or_fail(HOOK_SCRIPT, pkg)
+    after = _records(pkg)
+    assert "research-agent" not in after[victim][SPAWN] and sorted(after[victim][SPAWN]) == sorted(kept)
+    assert "research-agent" in after[bystander][SPAWN]
+    before = {a["id"]: a for a in json.loads(s0)["agents"]}
+    changed = sorted(i for i in after if after[i] != before[i])
+    assert changed == [victim], f"the revocation moved other records: {changed}"
+
+
+@pytest.mark.shared_layout_reader
+def test_deployed_transform_hook_regenerates_spawn_allowlist_from_the_deployed_layout(shared_reference_layout, tmp_path):
+    # covers: AR-300c-5-ii
+    # angle: deployed
+    """AR-300c-5-ii: the DEPLOYED hook (a build output, run from <output_root>/scripts/
+    commit_guardian/) regenerates the spawn lists exactly as the source-tree run does -- the
+    spawn-side helper it imports must be deployed with it, or it is a silent no-op /
+    ModuleNotFoundError in every consumer."""
+    layout = shared_reference_layout
+    deployed = layout / output_root_name(layout) / "scripts" / "commit_guardian" / "transform_agent_registry.py"
+    assert deployed.is_file(), f"hook not deployed: {deployed}"
+    pkg, roles, _s1 = _prepared_spawn(tmp_path)
+    assert sorted(_records(pkg)[roles["undeclared"]][SPAWN]) != [], "control: nothing to regenerate"
+    _hook_or_fail(deployed, pkg)
+    after = _records(pkg)
+    assert after[roles["undeclared"]][SPAWN] == [] and after[roles["added"]][SPAWN] == ["research-agent"]
+    assert roles["dropped"] not in after[roles["revoked"]][SPAWN]

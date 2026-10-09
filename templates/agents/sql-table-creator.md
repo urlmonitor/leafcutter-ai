@@ -8,6 +8,8 @@ description: |
   (internal — invoked by sql-coder only)
 model: sonnet
 tools: Bash, Read, Edit, Write, Agent, Skill
+spawn_allowlist:
+- research-agent
 skills:
 - skill_id: signoff
   mode: conditional
