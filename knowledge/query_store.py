@@ -1,6 +1,7 @@
 """Atomic local catalog persistence with retained immutable versions.
 
 DECISION HISTORY
+- 2026-10-09 09:11 [python-coder]: Emit native queries while preserving versioned catalog admission identities. (#KM-400a-3-i/TICKET-20261009-KM-400a-3-i-native-query-maintenance)
 - 2026-10-01 15:46 [python-coder]: A configured catalog root owns writes; serving only reads. (#KM-500/TICKET-20261001-KM-500b-3)
 
 MODULE: knowledge.query_store
@@ -16,7 +17,8 @@ import os
 from pathlib import Path
 from uuid import uuid4
 from .errors import invalid, CatalogIOError
-from .query_compile import compile_query, digest_data
+from .query_compile import COMPILER_VERSION, compile_query, digest_data
+from .query_legacy import compile_legacy_query
 from .query_models import QueryDescriptor
 from .contracts import Model
 
@@ -75,7 +77,17 @@ def validate_entry(key: str, entry: dict) -> None:
     if not isinstance(entry["verification"], dict):
         invalid("catalog verification integrity failed")
     descriptor = QueryDescriptor.model_validate(entry["descriptor"])
-    compiled = compile_query(descriptor)
+    recorded = entry["compiled"]
+    if not isinstance(recorded, dict):
+        invalid("catalog compiler integrity failed")
+    compiler = recorded.get("compiler_version")
+    if compiler == "1":
+        # Only reproduce the historical receipt; execution always uses native Cypher.
+        compiled = compile_legacy_query(descriptor)
+    elif compiler == COMPILER_VERSION:
+        compiled = compile_query(descriptor)
+    else:
+        invalid("catalog compiler version unsupported; retain the original catalog")
     if key != compiled["digest"] or entry["compiled"] != compiled:
         invalid("catalog descriptor/query integrity failed")
     if entry.get("verification_digest") != digest_data(entry["verification"]):

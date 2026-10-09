@@ -1,6 +1,7 @@
 """Discover registered query contracts and construct digest-pinned requests.
 
 DECISION HISTORY
+- 2026-10-09 09:11 [python-coder]: Emit native queries while preserving versioned catalog admission identities. (#KM-400a-3-i/TICKET-20261009-KM-400a-3-i-native-query-maintenance)
 - 2026-10-01 15:46 [python-coder]: Catalog context authorizes only admitted operations. (#KM-500/TICKET-20261001-KM-500b-3)
 
 MODULE: knowledge.query_catalog
@@ -54,6 +55,7 @@ class QueryCatalog:
             version is not None and descriptor.version != version
         ):
             invalid("query identity/version conflicts with pinned digest")
+        descriptor._admitted_compiler_version = entry["compiled"]["compiler_version"]
         return descriptor
 
     def descriptors(self) -> list[dict]:
@@ -92,10 +94,12 @@ class QueryCatalog:
         """
         data = dict(payload)
         if data.get("operation", "get_entities") not in OPERATIONS:
-            descriptor = self.get(
-                data["operation"], data.get("operation_version"), data.get("operation_digest")
+            pinned = data.get("operation_digest") or read_catalog(self.root)["active"].get(
+                data["operation"]
             )
-            data.update(operation_version=descriptor.version, operation_digest=descriptor.digest)
+            descriptor = self.get(data["operation"], data.get("operation_version"), pinned)
+            # Admission identity belongs to the recorded compiler, even after an upgrade.
+            data.update(operation_version=descriptor.version, operation_digest=pinned)
         return KnowledgeRetrievalRequest.model_validate(data, context={"query_catalog": self})
 
 

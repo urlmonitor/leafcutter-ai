@@ -3,6 +3,7 @@
 import asyncio
 import hashlib
 import json
+from pathlib import Path
 import uuid
 
 import pytest
@@ -197,48 +198,44 @@ def test_retained_catalog_digest_and_result_survive_migration(tmp_path):
     # angle: seam
     async def scenario():
         from knowledge.adapters.neo4j_domain_migration import inspect, migrate
-        from knowledge.query_admission import QueryAdmission
         from knowledge.query_catalog import QueryCatalog
         from knowledge.query_store import read_catalog
         from knowledge.service import KnowledgeService
-        from tests.knowledge.test_query_admission import candidate
 
         db, repo = local_backend(), "migration-" + uuid.uuid4().hex
         try:
             snap = legacy_seed(db, repo)
-            catalog = QueryCatalog(tmp_path)
-            proposed = candidate()
-            proposed["cases"][0].update(
-                arguments={"component_ids": ["finalize"]}, expected_ids=["test.py"]
+            # Frozen pre-cleanup catalog, independent of the current compiler.
+            fixture = Path(__file__).parents[1] / "knowledge/fixtures/query_catalog_v1.json"
+            saved = fixture.read_bytes()
+            (tmp_path / "catalog.json").write_bytes(saved)
+            entries = read_catalog(tmp_path)
+            old_digest = "73eaed483f06432b27857bf4a3544c34033fa0fd2f8a92b3639c2d3be55722cb"
+            assert entries["active"]["get_component_tests"] != old_digest
+            compiled = entries["entries"][old_digest]["compiled"]
+            # Only this migration fixture executes original v1 Cypher on legacy storage.
+            before = await db._run(
+                compiled["cypher"],
+                {
+                    **compiled["constants"],
+                    "scope_key": scope_key(repo, "one"),
+                    "arg_component_ids": ["finalize"],
+                    "probe_fanout": 11,
+                    "result_limit": 200,
+                },
             )
-            admission = QueryAdmission(catalog, db, repo)
-            old = await admission.verify_and_activate(
-                proposed, repository_id=repo, source_sha=snap.source_sha
-            )
-            proposed["descriptor"]["version"] = "2"
-            active = await admission.verify_and_activate(
-                proposed,
-                repository_id=repo,
-                source_sha=snap.source_sha,
-                expected_active_digest=old["digest"],
-            )
-            assert old["digest"] != active["digest"]
+            assert not before[0]["expansion_truncated"]
+            original_entities = [json.loads(payload) for payload in before[0]["payloads"]]
+            assert [item["canonical_id"] for item in original_entities] == ["test.py"]
             request = {
                 "repository_id": repo,
                 "request_id": "retained-migration-check",
                 "operation": "get_component_tests",
-                "operation_digest": old["digest"],
+                "operation_digest": old_digest,
                 "mode": "graph",
                 "arguments": {"component_ids": ["finalize"]},
                 "revision": snap.source_sha,
             }
-            before = await KnowledgeService(db, query_catalog=catalog).retrieve(
-                catalog.request(request)
-            )
-            assert before.status == "ok" and not before.truncated
-            assert [item.entity.canonical_id for item in before.evidence] == ["test.py"]
-            saved = (tmp_path / "catalog.json").read_bytes()
-            entries = read_catalog(tmp_path)
             await migrate(db, await inspect(db, repo))
             assert (tmp_path / "catalog.json").read_bytes() == saved
             assert read_catalog(tmp_path) == entries
@@ -247,13 +244,11 @@ def test_retained_catalog_digest_and_result_survive_migration(tmp_path):
                 reopened.request(request)
             )
             assert after.status == "ok" and not after.truncated
-            assert [item.entity.model_dump() for item in after.evidence] == [
-                item.entity.model_dump() for item in before.evidence
-            ]
-            assert (
-                before.stats["operation_digest"] == after.stats["operation_digest"] == old["digest"]
-            )
-            assert before.source_sha == after.source_sha == snap.source_sha
+            assert [
+                item.entity.model_dump(mode="json") for item in after.evidence
+            ] == original_entities
+            assert after.stats["operation_digest"] == old_digest
+            assert after.source_sha == snap.source_sha
         finally:
             await db.close()
 
@@ -290,8 +285,7 @@ def test_legacy_rollback_does_not_create_duplicate_repository():
         db, repo = local_backend(), "migration-" + uuid.uuid4().hex
         try:
             legacy_seed(db, repo)
-            with pytest.raises(ValueError, match="migrate"):
-                await db.rollback(repo, "one", "one")
+            assert not await db.rollback(repo, "one", "one")
             rows = await db._run(
                 "MATCH (r {repository_id:$repo}) WHERE r.active IS NOT NULL "
                 "RETURN count(r) AS count",

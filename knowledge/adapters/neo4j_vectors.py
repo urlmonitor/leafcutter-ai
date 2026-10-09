@@ -19,6 +19,7 @@ if TYPE_CHECKING:
 import math
 import re
 
+from knowledge.adapters.domain_schema import NODE_LABELS
 from knowledge.adapters.neo4j_backend import scope_key, entity_from_row
 from knowledge.adapters.neo4j_queries import bounded_limit
 from knowledge.errors import NotReady, KnowledgeError
@@ -83,7 +84,9 @@ async def put_embeddings(
         validate_vector(vector, dimensions)
     key = scope_key(repository_id, generation_id)
     found = await db._run(
-        'MATCH (n:KREntity {generation_key:$key}) WHERE n.kind IN ["Decision","Lesson"] RETURN n.canonical_id AS id,n.content_hash AS hash',
+        "MATCH (n:"
+        + NODE_LABELS
+        + ' {generation_key:$key}) WHERE n.kind IN ["Decision","Lesson"] RETURN n.canonical_id AS id,n.content_hash AS hash',
         {"key": key},
     )
     if {row["id"]: row["hash"] for row in found} != content_hashes:
@@ -96,7 +99,7 @@ async def put_embeddings(
     names = await build_indexes(db, key, rows, model, dimensions)
     ready = bool(embeddings)
     await db._run(
-        "MATCH (g:KRGeneration {key:$key}) SET g.semantic_ready=$ready,g.vector_indexes=$names",
+        "MATCH (g:Snapshot {key:$key}) SET g.semantic_ready=$ready,g.vector_indexes=$names",
         {"key": key, "ready": ready, "names": names},
         True,
     )

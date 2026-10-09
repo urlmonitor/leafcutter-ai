@@ -19,6 +19,7 @@ if TYPE_CHECKING:
 import hashlib
 import json
 
+from knowledge.adapters.domain_schema import NODE_LABELS
 from knowledge.adapters.neo4j_backend import scope_key
 
 
@@ -63,7 +64,7 @@ async def reserve(
         """
         rows = db._rows(
             tx,
-            'MATCH (g:KRGeneration {key:$key,status:"ready"}) SET g.vector_lock=coalesce(g.vector_lock,0)+1 RETURN g.vector_digest AS digest,g.semantic_ready AS ready',
+            'MATCH (g:Snapshot {key:$key,status:"ready"}) SET g.vector_lock=coalesce(g.vector_lock,0)+1 RETURN g.vector_digest AS digest,g.semantic_ready AS ready',
             {"key": key},
         )
         if not rows:
@@ -74,7 +75,7 @@ async def reserve(
             return False
         db._rows(
             tx,
-            "MATCH (g:KRGeneration {key:$key}) SET g.vector_digest=$digest,g.embedding_model=$model,g.embedding_dimensions=$dimensions,g.semantic_ready=false",
+            "MATCH (g:Snapshot {key:$key}) SET g.vector_digest=$digest,g.embedding_model=$model,g.embedding_dimensions=$dimensions,g.semantic_ready=false",
             {"key": key, "digest": digest, "model": model, "dimensions": dimensions},
         )
         return True
@@ -103,7 +104,9 @@ async def build_indexes(
         names.append(name)
         for start in range(0, len(rows), 250):
             await db._run(
-                'UNWIND $rows AS row MATCH (n:KREntity {generation_key:$key,canonical_id:row.id}) WHERE $kind="" OR n.kind=$kind SET n:'
+                "UNWIND $rows AS row MATCH (n:"
+                + NODE_LABELS
+                + ' {generation_key:$key,canonical_id:row.id}) WHERE $kind="" OR n.kind=$kind SET n:'
                 + name
                 + ", n.embedding=row.vector, n.embedding_model=$model",
                 {"key": key, "rows": rows[start : start + 250], "model": model, "kind": kind},

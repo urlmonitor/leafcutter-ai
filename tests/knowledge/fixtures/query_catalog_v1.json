@@ -1,0 +1,199 @@
+{
+  "entries": {
+    "73eaed483f06432b27857bf4a3544c34033fa0fd2f8a92b3639c2d3be55722cb": {
+      "descriptor": {
+        "operation": "get_component_tests",
+        "version": "1",
+        "description": "Tests covering acceptance criteria for the selected components",
+        "questions": [
+          "Which tests verify this component's requirements?"
+        ],
+        "result_meaning": "Canonical entities reached by the declared scoped relationship path",
+        "parameters": {
+          "component_ids": {
+            "type": "string_list",
+            "required": true
+          }
+        },
+        "recipe": {
+          "seed_parameter": "component_ids",
+          "seed_kind": "Component",
+          "filters": {},
+          "steps": [
+            {
+              "edge_type": "component_membership",
+              "direction": "incoming",
+              "kind": "AcceptanceCriterion",
+              "filters": {}
+            },
+            {
+              "edge_type": "covered_by",
+              "direction": "outgoing",
+              "kind": "Test",
+              "filters": {}
+            }
+          ]
+        }
+      },
+      "compiled": {
+        "cypher": "UNWIND $arg_component_ids AS seed_id MATCH (n0:KREntity {generation_key:$scope_key,canonical_id:seed_id}) WHERE n0.kind=$seed_kind WITH DISTINCT n0 ORDER BY n0.canonical_id LIMIT $seed_limit WITH collect(n0) AS seeds UNWIND CASE WHEN size(seeds)=0 THEN [null] ELSE seeds END AS n0 CALL { WITH n0 MATCH (n0)<-[r0:KR_LINK]-(n1:KREntity {generation_key:$scope_key}) WHERE r0.generation_key=$scope_key AND r0.edge_type=$step_0_edge AND n1.kind=$step_0_kind WITH DISTINCT n1 ORDER BY n1.canonical_id LIMIT $probe_fanout RETURN collect(n1) AS hits0 } WITH *, size(hits0)>$fanout AS clipped0 UNWIND CASE WHEN size(hits0)=0 THEN [null] ELSE hits0[..$fanout] END AS n1 CALL { WITH n1 MATCH (n1)-[r1:KR_LINK]->(n2:KREntity {generation_key:$scope_key}) WHERE r1.generation_key=$scope_key AND r1.edge_type=$step_1_edge AND n2.kind=$step_1_kind WITH DISTINCT n2 ORDER BY n2.canonical_id LIMIT $probe_fanout RETURN collect(n2) AS hits1 } WITH *, size(hits1)>$fanout AS clipped1 UNWIND CASE WHEN size(hits1)=0 THEN [null] ELSE hits1[..$fanout] END AS n2 WITH n2, max(CASE WHEN clipped0 OR clipped1 THEN 1 ELSE 0 END) AS clipped ORDER BY n2.canonical_id WITH collect(n2) AS found, max(clipped) AS clipped RETURN [n IN found[..$result_limit] | n.payload] AS payloads, (clipped=1 OR size(found)>$result_limit) AS expansion_truncated",
+        "constants": {
+          "seed_kind": "Component",
+          "seed_limit": 20,
+          "fanout": 10,
+          "step_0_edge": "component_membership",
+          "step_0_kind": "AcceptanceCriterion",
+          "step_1_edge": "covered_by",
+          "step_1_kind": "Test"
+        },
+        "compiler_version": "1",
+        "digest": "73eaed483f06432b27857bf4a3544c34033fa0fd2f8a92b3639c2d3be55722cb"
+      },
+      "verification": {
+        "status": "verified",
+        "digest": "73eaed483f06432b27857bf4a3544c34033fa0fd2f8a92b3639c2d3be55722cb",
+        "repository_id": "repo",
+        "source_sha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "generation_id": "g1",
+        "supported_kinds": [
+          "Component",
+          "AcceptanceCriterion",
+          "Test"
+        ],
+        "supported_fields": {},
+        "supported_relationships": [],
+        "candidate_digest": "93066c72df29ae858f40ae847b921b4e4632ea22785313831dc3454095a817c5",
+        "reviewer": "declared-fixture-author",
+        "expected_judgments_owner": "candidate author; attribution is not independent approval",
+        "verified_at": 1791536465.6808202,
+        "checks": {
+          "declared_cases_passed": 2,
+          "cases": [
+            {
+              "name": "known component",
+              "expected_ids": [
+                "test"
+              ],
+              "actual_ids": [
+                "test"
+              ],
+              "expansion_truncated": true
+            },
+            {
+              "name": "absent component",
+              "expected_ids": [],
+              "actual_ids": [],
+              "expansion_truncated": true
+            }
+          ],
+          "invalid_input_rejected": true,
+          "bound_injection_empty": true,
+          "foreign_scope_rejected": true,
+          "semantic_usefulness_proven": false,
+          "verification_method": "fresh compiled-query execution and fixed boundary checks",
+          "compiler_version": "1"
+        }
+      },
+      "verification_digest": "3c98b88481ff2379d491267e42c475b9256f47fa564f41656fecb75822aac65f"
+    },
+    "a67c2a98dc80f3dbf275bcedf33ce2d5feb5f7bc22603d8504ec2fe9dd2c03ea": {
+      "descriptor": {
+        "operation": "get_component_tests",
+        "version": "2",
+        "description": "Tests covering acceptance criteria for the selected components",
+        "questions": [
+          "Which tests verify this component's requirements?"
+        ],
+        "result_meaning": "Canonical entities reached by the declared scoped relationship path",
+        "parameters": {
+          "component_ids": {
+            "type": "string_list",
+            "required": true
+          }
+        },
+        "recipe": {
+          "seed_parameter": "component_ids",
+          "seed_kind": "Component",
+          "filters": {},
+          "steps": [
+            {
+              "edge_type": "component_membership",
+              "direction": "incoming",
+              "kind": "AcceptanceCriterion",
+              "filters": {}
+            },
+            {
+              "edge_type": "covered_by",
+              "direction": "outgoing",
+              "kind": "Test",
+              "filters": {}
+            }
+          ]
+        }
+      },
+      "compiled": {
+        "cypher": "UNWIND $arg_component_ids AS seed_id MATCH (n0:KREntity {generation_key:$scope_key,canonical_id:seed_id}) WHERE n0.kind=$seed_kind WITH DISTINCT n0 ORDER BY n0.canonical_id LIMIT $seed_limit WITH collect(n0) AS seeds UNWIND CASE WHEN size(seeds)=0 THEN [null] ELSE seeds END AS n0 CALL { WITH n0 MATCH (n0)<-[r0:KR_LINK]-(n1:KREntity {generation_key:$scope_key}) WHERE r0.generation_key=$scope_key AND r0.edge_type=$step_0_edge AND n1.kind=$step_0_kind WITH DISTINCT n1 ORDER BY n1.canonical_id LIMIT $probe_fanout RETURN collect(n1) AS hits0 } WITH *, size(hits0)>$fanout AS clipped0 UNWIND CASE WHEN size(hits0)=0 THEN [null] ELSE hits0[..$fanout] END AS n1 CALL { WITH n1 MATCH (n1)-[r1:KR_LINK]->(n2:KREntity {generation_key:$scope_key}) WHERE r1.generation_key=$scope_key AND r1.edge_type=$step_1_edge AND n2.kind=$step_1_kind WITH DISTINCT n2 ORDER BY n2.canonical_id LIMIT $probe_fanout RETURN collect(n2) AS hits1 } WITH *, size(hits1)>$fanout AS clipped1 UNWIND CASE WHEN size(hits1)=0 THEN [null] ELSE hits1[..$fanout] END AS n2 WITH n2, max(CASE WHEN clipped0 OR clipped1 THEN 1 ELSE 0 END) AS clipped ORDER BY n2.canonical_id WITH collect(n2) AS found, max(clipped) AS clipped RETURN [n IN found[..$result_limit] | n.payload] AS payloads, (clipped=1 OR size(found)>$result_limit) AS expansion_truncated",
+        "constants": {
+          "seed_kind": "Component",
+          "seed_limit": 20,
+          "fanout": 10,
+          "step_0_edge": "component_membership",
+          "step_0_kind": "AcceptanceCriterion",
+          "step_1_edge": "covered_by",
+          "step_1_kind": "Test"
+        },
+        "compiler_version": "1",
+        "digest": "a67c2a98dc80f3dbf275bcedf33ce2d5feb5f7bc22603d8504ec2fe9dd2c03ea"
+      },
+      "verification": {
+        "status": "verified",
+        "digest": "a67c2a98dc80f3dbf275bcedf33ce2d5feb5f7bc22603d8504ec2fe9dd2c03ea",
+        "repository_id": "repo",
+        "source_sha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "generation_id": "g1",
+        "supported_kinds": [
+          "Component",
+          "AcceptanceCriterion",
+          "Test"
+        ],
+        "supported_fields": {},
+        "supported_relationships": [],
+        "candidate_digest": "8375053eda020942623078363a080eea296bf926ff73a15d8ea0255bbc7b34fb",
+        "reviewer": "declared-fixture-author",
+        "expected_judgments_owner": "candidate author; attribution is not independent approval",
+        "verified_at": 1791536465.6814322,
+        "checks": {
+          "declared_cases_passed": 2,
+          "cases": [
+            {
+              "name": "known component",
+              "expected_ids": [
+                "test"
+              ],
+              "actual_ids": [
+                "test"
+              ],
+              "expansion_truncated": true
+            },
+            {
+              "name": "absent component",
+              "expected_ids": [],
+              "actual_ids": [],
+              "expansion_truncated": true
+            }
+          ],
+          "invalid_input_rejected": true,
+          "bound_injection_empty": true,
+          "foreign_scope_rejected": true,
+          "semantic_usefulness_proven": false,
+          "verification_method": "fresh compiled-query execution and fixed boundary checks",
+          "compiler_version": "1"
+        }
+      },
+      "verification_digest": "a6242bc9120ea773af241379c3b15deeb8d701ffd47a29610fb30597c2774d5f"
+    }
+  },
+  "active": {
+    "get_component_tests": "a67c2a98dc80f3dbf275bcedf33ce2d5feb5f7bc22603d8504ec2fe9dd2c03ea"
+  }
+}

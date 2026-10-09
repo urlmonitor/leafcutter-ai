@@ -23,6 +23,12 @@ from knowledge.projection.validation import validate_snapshot
 
 LOGGER = logging.getLogger(__name__)
 
+# Only the explicit migration/refresh inspection boundary reads both storage versions.
+INSPECTION_MANIFEST_QUERY = (
+    "MATCH (g:Snapshot|KRGeneration {repository_id:$repo}) "
+    "RETURN properties(g) AS props ORDER BY g.key"
+)
+
 
 class InspectionReader(Protocol):
     """Read interface shared by migration and published-generation inspection."""
@@ -46,13 +52,13 @@ async def inspect(db: InspectionReader, repository_id: str) -> dict:
         ValueError: Unknown, corrupt, duplicate or cross-generation graph data is found.
     """
     repos = await db._run(
-        "MATCH (r:KRRepository {repository_id:$repo}) RETURN properties(r) AS props",
+        "MATCH (r:Repository|KRRepository {repository_id:$repo}) RETURN properties(r) AS props",
         {"repo": repository_id},
     )
     if len(repos) != 1:
         raise ValueError("expected exactly one owned repository")
     manifests = await db._run(
-        "MATCH (g:KRGeneration {repository_id:$repo}) RETURN properties(g) AS props ORDER BY g.key",
+        INSPECTION_MANIFEST_QUERY,
         {"repo": repository_id},
     )
     groups = []
