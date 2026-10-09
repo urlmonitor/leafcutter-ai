@@ -1,6 +1,6 @@
 ---
 title: 'Readiness: ready only when every ingredient and every declared protection holds'
-status: todo
+status: done
 components:
 - worktree_manager
 - commit_guardian
@@ -50,6 +50,43 @@ files_touched:
 - unit_tests/build_orchestration/test_bo_4300c_1_ii.py
 - unit_tests/build_orchestration/test_bo_4300c_1_iii.py
 - unit_tests/build_orchestration/test_bo_4300b_4.py
+- .security-allowlist
+- docs/acceptance-criteria/build-orchestration/BO-4300-one-way-workspaces/BO-4300b-4.yaml
+- docs/acceptance-criteria/build-orchestration/BO-4300-one-way-workspaces/BO-4300c-1-i.yaml
+- docs/acceptance-criteria/build-orchestration/BO-4300-one-way-workspaces/BO-4300c-1-ii.yaml
+- docs/acceptance-criteria/build-orchestration/BO-4300-one-way-workspaces/BO-4300c-1-iii.yaml
+- docs/acceptance-criteria/build-orchestration/BO-4300-one-way-workspaces/BO-4300c-1.yaml
+- unit_tests/build_orchestration/test_bo_4300c_1_canary_git_failure.py
+- unit_tests/build_orchestration/test_bo_4300c_1_canary_order.py
+- unit_tests/build_orchestration/test_bo_4300c_1_real_install.py
+out_of_scope:
+- scripts/build_phases_script_deploy.py
+- templates/scripts/workspace_root.py
+- templates/scripts/worktree_admin.py
+- templates/scripts/worktree_answer.py
+- templates/scripts/worktree_layout.py
+- templates/scripts/worktree_paths.py
+- unit_tests/build_orchestration/_bo2400f13_fixtures.py
+- unit_tests/build_orchestration/_bo_4300a_1_fixtures.py
+- unit_tests/build_orchestration/_developer_repo_guard.py
+- unit_tests/build_orchestration/_workspace_maker_build_helpers.py
+- unit_tests/build_orchestration/_workspace_maker_builders.py
+- unit_tests/build_orchestration/_workspace_maker_fixtures.py
+- unit_tests/build_orchestration/conftest.py
+- unit_tests/build_orchestration/test_bo_4300a_1.py
+- unit_tests/build_orchestration/test_bo_4300a_1_deployed.py
+- unit_tests/build_orchestration/test_bo_4300b_1.py
+- unit_tests/build_orchestration/test_bo_4300b_1_i.py
+- unit_tests/build_orchestration/test_bo_4300b_2.py
+- unit_tests/build_orchestration/test_bo_4300b_2_i.py
+- unit_tests/build_orchestration/test_bo_4300b_2_ii.py
+- unit_tests/build_orchestration/test_bo_4300b_3.py
+- unit_tests/build_orchestration/test_bo_4300b_3_i.py
+- unit_tests/build_orchestration/test_bo_4300b_5.py
+- unit_tests/build_orchestration/test_bo_4300b_5_i.py
+- unit_tests/build_orchestration/test_bo_4300c_2.py
+- unit_tests/build_orchestration/test_bo_4300f_4.py
+- unit_tests/build_orchestration/test_bo_4300f_4_i.py
 agents:
   ac-fulfillment-gate: signed_off
   ac-validator: signed_off
