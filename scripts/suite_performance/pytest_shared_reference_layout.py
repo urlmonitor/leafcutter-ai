@@ -94,6 +94,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+from collections.abc import Iterator
 from pathlib import Path
 
 import pytest
@@ -248,6 +249,41 @@ def _produce_private_copy() -> Path:
             failure.
     """
     staging_parent = Path(tempfile.mkdtemp(prefix="leafcutter-unshared-layout-"))
+    try:
+        return _build_private_copy(staging_parent)
+    except BaseException:
+        # Every failure path removes the partially built staging parent.
+        _remove_staging_parent(staging_parent)
+        raise
+
+
+def _remove_staging_parent(staging_parent: Path) -> None:
+    """Remove a private copy's staging parent; never raise on failure.
+
+    Args:
+        staging_parent: The ``leafcutter-unshared-layout-*`` temp directory.
+    """
+    try:
+        shutil.rmtree(staging_parent)
+    except OSError as exc:
+        _log.warning(
+            "could not remove private layout staging dir %s: %s", staging_parent, exc
+        )
+
+
+def _build_private_copy(staging_parent: Path) -> Path:
+    """Copy the repo into *staging_parent* and deploy it; return the layout.
+
+    Args:
+        staging_parent: Pre-created temp directory owned by the caller.
+
+    Returns:
+        The deployed private package root (``staging_parent / "layout"``).
+
+    Raises:
+        SharedReferenceLayoutError: on any copy, deploy, or completeness
+            failure.
+    """
     staging = staging_parent / "layout"
     try:
         shutil.copytree(
@@ -304,7 +340,9 @@ def _produce_private_copy() -> Path:
 
 
 @pytest.fixture
-def shared_reference_layout(request: pytest.FixtureRequest) -> Path:
+def shared_reference_layout(
+    request: pytest.FixtureRequest,
+) -> Iterator[Path]:
     """Return the path to a deployed package root, routed by declaration.
 
     Function-scoped (re-evaluated per requesting test) so each test's OWN
@@ -344,19 +382,24 @@ def shared_reference_layout(request: pytest.FixtureRequest) -> Path:
     if route == "reader":
         root = get_or_produce_shared_layout()
         _append_jsonl({"event": "routed_shared_reader", "nodeid": nodeid})
-        return root
+        yield root  # shared layout: never removed by this fixture
+        return
 
     if route == "mutator":
         _declared_mutator_count += 1
         _append_jsonl({"event": "routed_unshared_mutator", "nodeid": nodeid})
-        return _produce_private_copy()
+    else:
+        # Undeclared: safe default (fail-safe, not fail-fast) -- the test
+        # still runs and passes; it is merely routed unshared and named.
+        _undeclared_count += 1
+        _undeclared_nodeids.append(nodeid)
+        _append_jsonl({"event": "routed_unshared_undeclared", "nodeid": nodeid})
 
-    # Undeclared: safe default (fail-safe, not fail-fast) -- the test still
-    # runs and still passes; it is merely routed unshared and named, loudly.
-    _undeclared_count += 1
-    _undeclared_nodeids.append(nodeid)
-    _append_jsonl({"event": "routed_unshared_undeclared", "nodeid": nodeid})
-    return _produce_private_copy()
+    private = _produce_private_copy()
+    try:
+        yield private
+    finally:
+        _remove_staging_parent(private.parent)
 
 
 def pytest_terminal_summary(terminalreporter: pytest.TerminalReporter) -> None:
