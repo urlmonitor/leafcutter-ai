@@ -1,0 +1,47 @@
+id: BO-4400b
+title: "A cleared workspace leaves nothing behind anywhere on the machine"
+component: build-orchestration
+components:
+  - build_orchestration
+  - worktree_manager
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+change_target: code
+risk_surface: safety
+criteria: |
+  Gone means gone -- including everything a workspace left outside its own folder.
+
+  When a workspace is cleared, everything it brought into being elsewhere on the
+  machine goes with it -- its line of work, its registration, its installed tools
+  and its stored look-ups -- so space actually comes back instead of hiding elsewhere.
+depends_on: [BO-4400]
+doc_links: []
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-10-09
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+documentation_triggers:
+  - reference-doc
+notes: |
+  Gap G2. Known side artifacts that today outlive the workspace folder (BA to turn into
+  a declared, tested inventory -- one list, so a new artifact cannot be forgotten):
+  - ac_store_index_cache.json under the git-dir
+    (templates/scripts/commit_guardian/_ac_store_index_disk.py)
+  - Poetry virtualenvs in ~/.cache/pypoetry/virtualenvs
+  - Turbopack .next/dev/cache
+  - the workspace's branch (local) and its registration
+  Must still respect BO-4300e: nothing is removed while the workspace holds unsent work,
+  and a branch whose commits never reached the shared project is never deleted.
+  reference-doc: the inventory of what a workspace creates outside itself, and how each
+  is reclaimed.

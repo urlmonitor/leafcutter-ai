@@ -1,0 +1,56 @@
+id: BO-4400f
+title: "Temporary files have one home and an expiry date; the records you keep stay"
+component: build-orchestration
+components:
+  - build_orchestration
+  - testing_quality
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+change_target:
+  - code
+  - config
+risk_surface: safety
+criteria: |
+  Scratch work goes in one place and goes away; logs and evidence are kept.
+
+  Automation and tests put their throwaway files in one designated place, each with
+  a known owner and age limit, and every run deletes its own scratch when it ends --
+  while logs and other records you rely on are kept and never treated as scratch.
+depends_on: [BO-4400]
+doc_links: []
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-10-09
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+documentation_triggers:
+  - reference-doc
+  - how-to
+notes: |
+  Gap G7 (the user's "and same for the tmp files"). Concrete evidence: test-logs/
+  wire-700a5-tmp reached 3.4 GB; qf-*-tmp directories left behind; pre-commit stash patch
+  files (~/.cache/pre-commit/patch*) never expire.
+  Requirements to decompose:
+  - one designated scratch location with an age and ownership rule (the BO-4400d sweep
+    uses that rule);
+  - pytest --basetemp never points at a durable path; pytest tmp_path_retention_policy
+    = failed;
+  - each route deletes its own scratch when it ends -- same trigger as BO-4400a;
+  - durable logs stay durable (user memory: write logs to a DURABLE path, not /tmp) --
+    the rule separates "log" from "scratch", it does not delete logs;
+  - pre-commit stash patch files expire.
+  NEIGHBOUR: TQ-600b-2 (each test gets a scratch location unique to it) is about
+  uniqueness for parallel workers; this L1 is about home and lifetime. Cite, do not
+  duplicate. Graph components include testing_quality because the test-runner settings
+  live there; namespace stays build-orchestration because the trigger is the route's end.
+  reference-doc: where scratch lives, its age rule, and what counts as durable.

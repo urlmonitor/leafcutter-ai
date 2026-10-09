@@ -1,0 +1,44 @@
+id: BO-4400c
+title: "A workspace's tools live inside it and disappear with it"
+component: build-orchestration
+components:
+  - build_orchestration
+  - worktree_manager
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+change_target: code
+risk_surface: safety
+criteria: |
+  Set-up follows your project's own choices and keeps everything in the workspace.
+
+  A new workspace is equipped using the tooling your project already declares, with
+  everything it installs kept inside the workspace itself, so nothing is stranded
+  in shared locations when the workspace is cleared.
+depends_on: [BO-4400]
+doc_links: []
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-10-09
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+documentation_triggers:
+  - reference-doc
+notes: |
+  Gap G3. Prevention side of BO-4400b: if the environment lives in the workspace, it dies
+  with it. Detection order the user named: uv.lock present -> uv sync with an in-workspace
+  .venv; poetry only when poetry.lock is present, and then with an in-project virtualenv.
+  A project declaring neither is handled by BA (likely: plain in-workspace venv, never a
+  shared location). Must sit within BO-4300's one maker and BO-4100b (workspace owns its
+  supporting material) -- cite, do not re-derive. Package-repo note (memory): this repo
+  uses requirements-dev.txt and Poetry bootstrap fails here; the BA must cover that case.
+  reference-doc: which declaration selects which set-up, and where the environment lives.
