@@ -227,6 +227,9 @@ def observe_publication(
     none of them. Publication is OBSERVED (INF-700a-5-i): an entry counts as
     written only when *commit_status* is ``ok`` AND HEAD's copy of its
     destination contains its text -- never on the commit agent's word alone.
+    A completed run whose waiting difference is non-zero is reported as
+    ``completed_with_waiting`` (INF-700a-5-ii, BrainCandy 2026-10-09):
+    ``completed`` means completed with nothing left waiting.
     """
     working_dir = Path(working_dir).resolve()
     confirmed = _state.load_state_set(Path(state_path))
@@ -249,8 +252,11 @@ def observe_publication(
         })
     backlog = emission_backlog(sink_path=sink_path, read_hashes=run.get("read_hashes", []))
     not_carried = len(run.get("entries", [])) - len(carried)
+    case = run.get("case", "did_not_run")
+    if case == "completed" and backlog["difference"] > 0:
+        case = "completed_with_waiting"  # INF-700a-5-ii: an unread record is never reported as `completed`
     return {
-        "case": run.get("case", "did_not_run"),
+        "case": case,
         "read": run.get("read", 0),
         "written": len(carried),
         "unwritten": run.get("unwritten", 0) + not_carried,
@@ -507,3 +513,8 @@ def claim_and_confirm_routed(
 #   pure accumulate_branch_run / branch_run: the record keeps the latest
 #   stage's keys (per-commit observe unchanged) plus branch_entries /
 #   branch_unwritten_records across every stage. (#INF-700a-5-i)
+# - 2026-10-09 [python-coder/INF-700a-5-ii case]: observe reported `completed`
+#   while a record emitted after the stage waited, the count only in the
+#   separate `waiting` field. Per BrainCandy ("Option A"), a completed run with
+#   a waiting difference > 0 now reports case `completed_with_waiting`;
+#   `waiting` is kept. The stage's own case is unchanged. (#INF-700a-5-ii)

@@ -165,10 +165,14 @@ const TICKET_RESULT_SCHEMA = {
  * observation as `knowledge_routing`. The drive consumes it here. Only a
  * recognised `case` is trusted (anything else is "did_not_run" with zero
  * figures), and nothing here can change the drive's own outcome (fail-open).
+ * "completed_with_waiting" (INF-700a-5-ii) is a completed, trusted run whose
+ * commit left a late-emitted record waiting for the next run: kept as its own
+ * case, with the waiting count, and totalled apart as `waiting_tickets`.
  * Pure; never throws.
  */
+var TRUSTED_ROUTING_CASES = ["completed", "completed_with_waiting", "could_not_complete"];
 function classifyTicketRouting(ticketPath, reply) {
-  var ran = Boolean(reply) && (reply.case === "completed" || reply.case === "could_not_complete");
+  var ran = Boolean(reply) && TRUSTED_ROUTING_CASES.includes(reply.case);
   var asInt = function (v) { return ran && typeof v === "number" && Number.isFinite(v) ? v : 0; };
   return {
     ticket_path: ticketPath,
@@ -177,6 +181,7 @@ function classifyTicketRouting(ticketPath, reply) {
     written: asInt(reply && reply.written),
     unwritten: asInt(reply && reply.unwritten),
     already_on_branch: asInt(reply && reply.already_on_branch),
+    waiting: asInt(reply && reply.waiting && reply.waiting.difference),
     detail: ran && typeof reply.detail === "string" ? reply.detail : null,
   };
 }
@@ -184,7 +189,8 @@ function classifyTicketRouting(ticketPath, reply) {
 function summariseRouting(ticketResults) {
   var tickets = ticketResults.map((r) => r.knowledge_routing);
   var sum = (key) => tickets.reduce((total, t) => total + t[key], 0);
-  return { tickets: tickets, written: sum("written"), unwritten: sum("unwritten"), already_on_branch: sum("already_on_branch") };
+  return { tickets: tickets, written: sum("written"), unwritten: sum("unwritten"), already_on_branch: sum("already_on_branch"),
+    waiting_tickets: tickets.filter((t) => t.case === "completed_with_waiting").length };
 }
 
 const WORKTREE_SCHEMA = {
