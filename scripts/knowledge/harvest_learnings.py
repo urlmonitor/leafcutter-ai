@@ -504,6 +504,7 @@ def harvest(
     capture_fn: Callable[[str, str], None] = _default_capture,
     dry_run: bool = False,
     verbose: bool = False,
+    persist_state: bool = True,
 ) -> HarvestResult:
     """Process unhandled ``knowledge_captured`` events from *sink_path*.
 
@@ -522,6 +523,13 @@ def harvest(
         and state is not updated.
     verbose:
         When ``True``, log each event at DEBUG level.
+    persist_state:
+        When ``False``, records are written through *capture_fn* as usual
+        but their hashes are NOT saved to *state_path* -- the deferred-state
+        mode ``completion_routing.py`` drives (INF-700a-5): a write inside an
+        isolated working directory is not routed until a later run sees its
+        text on the base branch, so marking it here would be a claim no
+        merged tree may ever honour.
 
     Returns
     -------
@@ -810,26 +818,14 @@ def harvest(
             # the dry-run case counts toward `outstanding` here.
             result.outstanding += 1
 
-    # 3. Persist updated state
-    #
-    # Only when there is something new to record. With new_hashes empty the
-    # write is a no-op (seen | {} == seen), so attempting it can only
-    # manufacture a failure that costs nothing: nothing was routed, so
-    # nothing can be re-routed. Reporting that as a failed run would raise
-    # the exit code to 4 and mask the exit-3 backlog signal on precisely the
-    # run that most needs it -- an all-unroutable sink, which is today's
-    # real corpus.
-    if not dry_run and new_hashes:
+    # 3. Persist state: only with something new to record (an empty write could
+    # only fake an exit-4 that masks exit-3 on an all-unroutable sink) and not
+    # when deferred (persist_state=False, INF-700a-5). A persist failure means
+    # the next run re-appends these learnings, so the run is NOT clean.
+    if not dry_run and new_hashes and persist_state:
         try:
             _save_state(state_path, seen | new_hashes)
         except OSError:
-            # _save_state already warned with the specific errno. Do not abort
-            # -- the learnings were written and that work is real -- but the
-            # run is NOT clean: without the state file every hash in
-            # new_hashes is forgotten, so the next run re-routes all of them
-            # and appends each learning to its destination a second time.
-            # Recording this is what stops the caller reading a duplicating
-            # run as a successful one.
             result.state_persist_failed = True
             logger.warning(
                 "Harvest state was not persisted; the %d learnings routed by "
@@ -1046,3 +1042,4 @@ if __name__ == "__main__":
 #   writes a variant-spelled `entry_kind` directly into the sink (bypassing
 #   the emission CLI, as a legacy record would be) and asserts the real
 #   harvester CLI routes it. (#TICKETLESS reason=fast-lane-pr-review-fix-INF-400c-5-i-H2)
+# - 2026-10-08 [python-coder]: harvest(persist_state=False) defers the state write for completion_routing.py. (#INF-700a-5)

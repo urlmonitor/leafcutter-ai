@@ -4,7 +4,7 @@ description: "Confirm from a finished piece of work's result and from the destin
 type: how-to
 status: active
 created: 2026-10-08
-last_updated: 2026-10-08
+last_updated: 2026-10-09
 components:
   - knowledge_system
   - infrastructure
@@ -57,10 +57,10 @@ the ones that do not, each with a reason. A build-time guard fails the build if
 a workflow is in neither list. Read that section, not this page, for the
 current set: this page does not carry a copy.
 
-For illustration only, as of this writing: `build-epic.js`, `fast-lane-ship.js`
-and `quick-fix.js` are wired, and `build-ticket.js` and `finalize-feature.js`
-are completion paths that are excluded, so work finished through those carries
-no routing step.
+For illustration only, as of this writing: `fast-lane-ship.js` and
+`quick-fix.js` are wired, and `build-epic.js`, `build-ticket.js` and
+`finalize-feature.js` are completion paths that are excluded, so work finished
+through those carries no routing step.
 
 Routing is by hand for:
 
@@ -77,33 +77,41 @@ Find the `knowledge_routing` object in the terminal result of the wired path
 you used:
 
 ```json
-{"knowledge_routing": {"case": "completed", "read": 1, "written": 1, "unwritten": 0, "detail": null}}
+{"knowledge_routing": {"case": "completed", "read": 1, "written": 1, "unwritten": 0, "detail": null,
+ "manifest": ["memory/project_x.md"], "unwritten_records": [], "waiting": {"difference": 0}}}
 ```
 
-- `case: "completed"` - the step ran. Go to Step 6 to prove it worked.
+- `case: "completed"` - the step ran. `written` counts only learnings the
+  path's own commit was observed to carry; `manifest` names those files. Go
+  to Step 6 to prove it worked.
+- `unwritten_records` not empty - each entry names a learning that did not
+  reach the commit, its `reason`, and `eligible: true` (the next completed
+  unit of work stages it again). Nothing to do unless the cause persists.
+- `waiting.difference` above 0 - records emitted after the step read the sink;
+  the next completed unit of work routes them.
 - `case: "could_not_complete"` - the step ran and failed; `detail` says what. Go to Step 3.
 - `case: "did_not_run"` - no usable reply; nothing is known. Go to Step 3.
 - No `knowledge_routing` key at all - the path does not carry the step. Go to Step 3.
 
-These figures are the step's own report, not proof. `written: 1` does not
-tell you the text is on the page.
+These figures are the step's own report, not proof, and the commit they
+describe still has to merge. Step 6 checks the merged tree.
 
 ### Step 2 - Establish whether the routing step has ever completed in this tree
 
-Run `--status` with the same `--state` file the routing step uses. The marker
-it reads sits beside that state file, so a different `--state` answers a
-different question. It prints one JSON line and always exits 0.
+Run `--status`. The marker it reads sits beside the state file, which sits
+beside the resolved sink, so every run against the same sink shares one answer.
+It prints one JSON line and always exits 0.
 
 Package checkout:
 
 ```bash
-python3 scripts/knowledge/harvest_learnings.py --status --state debugging/logs/harvest_state.json
+python3 scripts/knowledge/harvest_learnings.py --status
 ```
 
 Consumer install:
 
 ```bash
-python3 .leafcutter/scripts/knowledge/harvest_learnings.py --status --state debugging/logs/harvest_state.json
+python3 .leafcutter/scripts/knowledge/harvest_learnings.py --status
 ```
 
 Real output (package layout, scratch paths, a tree where nothing had run):
@@ -147,19 +155,18 @@ path for `<SINK>` below.
 
 ### Step 4 - Run a dry run first
 
-A dry run decides routing and writes nothing. Use a throwaway `--state` so it
-does not disturb the real one.
+A dry run decides routing and writes nothing, the state file included.
 
 Package checkout:
 
 ```bash
-python3 scripts/knowledge/harvest_learnings.py --dry-run --sink <SINK> --state /tmp/harvest_state_dry.json
+python3 scripts/knowledge/harvest_learnings.py --dry-run --sink <SINK>
 ```
 
 Consumer install:
 
 ```bash
-python3 .leafcutter/scripts/knowledge/harvest_learnings.py --dry-run --sink <SINK> --state /tmp/harvest_state_dry.json
+python3 .leafcutter/scripts/knowledge/harvest_learnings.py --dry-run --sink <SINK>
 ```
 
 Real output (one text-bearing record in a scratch sink):
@@ -173,19 +180,20 @@ written. Nothing was written; the destination file does not exist yet.
 
 ### Step 5 - Run the routing step by hand
 
-Use the same `--state` the automatic step uses (`debugging/logs/harvest_state.json`
-from the tree root), or a record already written may be written a second time.
+Leave `--state` off: it defaults to `harvest_state.json` beside the sink, the
+same file the automatic step uses, so a record already written is not written
+a second time.
 
 Package checkout:
 
 ```bash
-python3 scripts/knowledge/harvest_learnings.py --sink <SINK> --state debugging/logs/harvest_state.json
+python3 scripts/knowledge/harvest_learnings.py --sink <SINK>
 ```
 
 Consumer install:
 
 ```bash
-python3 .leafcutter/scripts/knowledge/harvest_learnings.py --sink <SINK> --state debugging/logs/harvest_state.json
+python3 .leafcutter/scripts/knowledge/harvest_learnings.py --sink <SINK>
 ```
 
 Real output and exit status (scratch sink and state):
@@ -230,8 +238,9 @@ Real result (scratch destination, after Step 5):
 ```
 
 If the destination is relative, open it from the tree root where the routing
-step ran. If the work ran in a worktree that has since been removed, look in
-the merged tree, and check the file was committed with the work:
+step ran. A wired path writes into its own worktree and its commit carries the
+file, so once that worktree is removed, look in the merged tree and check the
+file was committed with the work:
 
 ```bash
 git log --oneline -n 3 -- <destination>
@@ -260,12 +269,13 @@ see Troubleshooting 3.
 2. **`--print-sink` exits 1 naming `config/knowledge_sink.json`.** You are in a
    package checkout with no build-time declaration. This is the refusal working
    as designed: pass the sink path you know to `--sink` instead.
-3. **The text is in the destination twice.** The routing step ran under a
-   different `--state` than the automatic one. Remove the duplicate line by hand
-   and use `debugging/logs/harvest_state.json` from the tree root from now on.
+3. **The text is in the destination twice.** Either a run passed an explicit
+   `--state` other than the default beside the sink, or two units of work staged
+   the same record before either merged. The second is the designed failure: a
+   duplicate rather than a lost learning. Remove the duplicate line by hand.
 4. **`--status` says `never-run` after a wired path finished.** Either the path
-   was not wired (check the `excluded` list), or it ran in a different tree or
-   `--state` than the one you queried. Query the tree it ran in.
+   was not wired (check the `excluded` list), or it ran against a different
+   sink than the one you queried. Query with that sink's `--sink`.
 
 ## See Also
 
