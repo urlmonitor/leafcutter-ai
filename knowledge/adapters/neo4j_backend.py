@@ -93,9 +93,7 @@ class Neo4jBackend:
         Returns:
             Transaction result records materialized as plain dictionaries.
         """
-        from knowledge.adapters.domain_schema import storage_statement
-
-        return [record.data() for record in tx.run(storage_statement(statement), parameters)]
+        return [record.data() for record in tx.run(statement, parameters)]
 
     async def _transaction(
         self, callback: Callable[[ManagedTransaction], TransactionResult], write: bool = False
@@ -165,7 +163,7 @@ class Neo4jBackend:
             Metadata for the active published generation, or None when none exists.
         """
         rows = await self._run(
-            'MATCH (r:KRRepository {repository_id:$repo}) MATCH (g:KRGeneration {key:r.active}) WHERE g.status="ready" RETURN g',
+            'MATCH (r:Repository {repository_id:$repo}) MATCH (g:Snapshot {key:r.active}) WHERE g.status="ready" RETURN g',
             {"repo": repository_id},
         )
         return self._manifest(rows[0]["g"]) if rows else None
@@ -183,7 +181,7 @@ class Neo4jBackend:
             Published generation metadata in the requested scope, or None if unavailable.
         """
         rows = await self._run(
-            'MATCH (g:KRGeneration {key:$key, status:"ready"}) RETURN g',
+            'MATCH (g:Snapshot {key:$key, status:"ready"}) RETURN g',
             {"key": scope_key(repository_id, generation_id)},
         )
         return self._manifest(rows[0]["g"]) if rows else None
@@ -199,7 +197,7 @@ class Neo4jBackend:
             Published generation metadata for that exact SHA, or None if unavailable.
         """
         rows = await self._run(
-            'MATCH (g:KRGeneration {repository_id:$repo,source_sha:$sha,status:"ready"}) RETURN g ORDER BY g.ready_at DESC LIMIT 1',
+            'MATCH (g:Snapshot {repository_id:$repo,source_sha:$sha,status:"ready"}) RETURN g ORDER BY g.ready_at DESC LIMIT 1',
             {"repo": repository_id, "sha": source_sha},
         )
         return self._manifest(rows[0]["g"]) if rows else None

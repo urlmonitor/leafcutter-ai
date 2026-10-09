@@ -1,12 +1,10 @@
 """MODULE: domain_schema
 GOAL: Present canonical project concepts as native graph labels and properties.
 BUSINESS CONTEXT: KM-400a-3-i makes Aura exploration readable without changing evidence.
-ARCHITECTURE: Allowlisted storage names; canonical payloads and query digests stay stable.
+ARCHITECTURE: Allowlisted storage names; canonical payloads stay stable; execution uses native names directly.
 """
 
 from __future__ import annotations
-
-import re
 
 from knowledge.contracts import Entity, ProjectionSnapshot
 from knowledge.native_types.registry import LABELS
@@ -27,28 +25,6 @@ RELATIONSHIPS = {
 }
 NODE_LABELS = "|".join(LABELS.values())
 EDGE_TYPES = "|".join(RELATIONSHIPS.values())
-
-
-def storage_statement(statement: str) -> str:
-    """Adapt compiler-owned legacy read patterns without changing catalog digests.
-
-    Args:
-        statement: Trusted adapter/compiler Cypher, never caller-supplied text.
-
-    Returns:
-        Equivalent patterns spanning native and retained legacy storage during migration.
-    """
-    names = {
-        "KREntity": NODE_LABELS + "|KREntity",
-        "KR_LINK": EDGE_TYPES + "|KR_LINK",
-        "KRGeneration": "Snapshot|KRGeneration",
-        "KRRepository": "Repository|KRRepository",
-    }
-    return re.sub(
-        r":(KREntity|KR_LINK|KRGeneration|KRRepository)(?=[ {)\]])",
-        lambda match: ":" + names[match[1]],
-        statement,
-    )
 
 
 def display_properties(entity: Entity, components: list[str]) -> dict:

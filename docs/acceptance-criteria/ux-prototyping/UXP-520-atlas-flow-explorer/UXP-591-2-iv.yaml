@@ -1,0 +1,102 @@
+id: UXP-591-2-iv
+title: "An old /flows?flow=... link without &step= redirects permanently to the flow's canonical address"
+component: ux-prototyping
+components:
+  - ux_prototyping
+  - frontend_coding
+level: L3
+status: active
+req_status: active
+work_status: todo
+readiness: approved
+priority: medium
+criteria: |
+  Given an old link in the /flows?flow= form that names a flow but no step,
+    /flows?flow=leafcutter%2Fflow-render-pipeline,
+  When a person follows it,
+  Then the Atlas answers with a permanent redirect (308) whose location is
+    /flows/leafcutter/flow-render-pipeline, with the '/' in the flow id literal and no ?step=,
+  And the page then opens leafcutter/flow-render-pipeline with no drawer open and no
+    'Step not found' notice, with Source Real, Kind Data and Realization All and a breadcrumb
+    showing only "How a flow renders in the Atlas", exactly as the canonical address does when
+    opened directly,
+  And the tab's history holds /flows/leafcutter/flow-render-pipeline and not the old
+    /flows?flow= address, so Back does not return to it.
+depends_on:
+  - UXP-591-2
+  - UXP-591-2-iii
+doc_links:
+  - path: docs/product-truth/flows/leafcutter/explore-flows-in-atlas.flow.json
+    relationship: implemented-by-step
+    status: exists
+  - path: docs/product-truth/mock-data/leafcutter/atlas-flows.mock.json
+    relationship: specifies
+    status: exists
+  - path: docs/product-truth/mockups/leafcutter/atlas-flows-canonical-url.html
+    relationship: describes
+    status: exists
+  - path: docs/architecture/components/ux-prototyping.md
+    relationship: describes
+    status: exists
+  - path: leafcutter-web/README.md
+    relationship: describes
+    status: exists
+    relevance: Atlas routes table and how the app reads the repo; gains the /flows/<product>/<flow> addresses.
+assigned_agent: frontend-coder
+estimated_complexity: S
+change_target:
+  - code
+risk_surface: contract_boundary
+it_requirements:
+  - 'Same middleware redirect as UXP-591-2-iii: the Location''s query is the original query with only
+    ''flow'' removed (owner decision 2026-10-09), so a link with no ''step'' and no other parameter redirects
+    with no query at all (no trailing ''?'', no empty ''step=''), while any other parameter such as mock=1
+    is still carried over.'
+  - The landing page is the plain canonical address, so no drawer and no 'Step not found' notice follow
+    from it; no special-case client code for redirected arrivals.
+delivers_to: null
+expects_from:
+  ac_id: UXP-591-2-iii
+  contract: 'Legacy redirect in leafcutter-web/middleware.ts: a request to /flows with query flow=<percent-encoded
+    id>[&step=<id>][&<other>...] answers 308 with a same-origin Location ''/flows/'' + decodedId (the
+    ''/'' literal) whose query is the original query with only the ''flow'' parameter removed (step and
+    every other parameter, e.g. mock=1, kept in order and verbatim).'
+test_spec:
+  - name: middleware answers 308 to /flows/leafcutter/flow-render-pipeline with no query for /flows?flow=leafcutter%2Fflow-render-pipeline
+    target_dir: leafcutter-web/__tests__/
+    framework: vitest
+    type: integration
+    angle: criterion
+    surface_invoked: default export of leafcutter-web/middleware.ts with a NextRequest
+    must_catch:
+      - the Location ends in '?' or '?step='
+      - the Location keeps flow=
+  - name: the step-less 308 location opens the flow with Real, Data, All, a one-flow breadcrumb and no
+      drawer or 'Step not found' notice
+    target_dir: leafcutter-web/__tests__/
+    framework: vitest
+    type: integration
+    angle: reachability
+    surface_invoked: default export of leafcutter-web/middleware.ts, then leafcutter-web/app/flows/[...id]/page.tsx
+      with the Location's path
+test_rationale: One test pins the Location shape, the other proves it lands on the canonical state rather
+  than a step-notice state.
+test_required: true
+declares_side_effect: false
+origin_agent: business-analyst
+created: '2026-10-09'
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-10-09'
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Owner ruling at the AC gate (2026-10-09), decision (2)(a): an old /flows?flow=<id> link
+  without &step= answers 308 to /flows/<id> and opens that flow with no drawer. The flow
+  leafcutter/explore-flows-in-atlas v5 does not yet model this behaviour (its 'legacyRedirect'
+  branch records it as not modelled by the dataset), so no flow node maps to this AC and it
+  carries no flow back-link. Placed under UXP-591-2, next to the legacy step-link redirect
+  UXP-591-2-iii, at the owner's direction, although the address it lands on carries no ?step=.
+  The landing state is the dataset's FlowRoute route-shared-data-pipeline.
