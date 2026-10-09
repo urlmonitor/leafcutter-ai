@@ -7,7 +7,7 @@ level: L3
 status: active
 req_status: draft
 work_status: todo
-readiness: approved
+readiness: reviewed
 priority: high
 roadmap_phase: phase_1
 criteria: |
@@ -26,7 +26,12 @@ criteria: |
     description of, commenting on, closing (including as a duplicate) and reopening
     issues labelled `post-merge-red`, `post-merge-timing` or `post-merge-flaky`; creating
     and editing the hold check's own marked pull request comment; re-running a run of the
-    hold workflow itself; and reporting check results,
+    hold workflow itself; reporting each job's own result; and, by the hold's evaluation
+    job alone using the dedicated hold App's credential (TQ-600a-13-vi), creating and
+    completing a check run named exactly `Post-merge suite status` on the head commit of
+    the pull request being evaluated,
+  And the dedicated hold App's credential makes no other write, and no other job of the
+    family creates or edits a check run or a commit status,
   And the fix proof makes no write to the hosting service at all,
   And this is demonstrated by running each path against a recording double of the hosting
     service and a real scratch repository with a local bare origin, and observing that
@@ -71,8 +76,15 @@ it_requirements:
     `post-merge-hold.yml` workflow (verified by reading the run before re-running it).
     Refused by construction: git refs, contents, pull-request create/update/merge/review,
     labels on other issues or pull requests, label creation, workflow dispatch, enable,
-    disable or cancel, re-runs of any other workflow, check-run creation, statuses,
-    releases. Reads are unrestricted.
+    disable or cancel, re-runs of any other workflow, check-run creation other than the
+    one below, statuses, releases. Reads are unrestricted. AMENDED 2026-10-09 (owner
+    decision, dedicated hold App): ALSO ALLOWED, and only when the request carries the
+    App's installation token: `POST /check-runs` with `name` exactly `Post-merge suite
+    status` and `head_sha` equal to the evaluated pull request's head SHA from the event
+    payload, and `PATCH /check-runs/{id}` for a check run this evaluation created. The
+    App token is refused for every other endpoint, and the GITHUB_TOKEN is refused for
+    check-run writes. SUPERSEDED: "check-run creation" in the refused list without
+    exception.
   - >-
     NEW WRITES, AND WHY EACH IS SAFE. (1) Editing a notice's description (decision I) is
     the notice's own state, under the `issues: write` the notice job already held —
@@ -106,9 +118,12 @@ it_requirements:
     A SYNTHETIC SCRATCH REPOSITORY STANDS IN FOR A REAL CLONE — a measured cost
     substitution (a depth-1 clone took 5.16 s at enrichment), flagged.
   - >-
-    IF TQ-600a-13-x's FALLBACK IS ADOPTED, this list must be amended to add check-run
-    creation for `Post-merge suite status` on a PR head. It is deliberately not
-    pre-authorised.
+    CHECK-RUN CREATION FOR `Post-merge suite status` ON A PR HEAD IS NOW AUTHORISED
+    (owner decision 2026-10-09; SUPERSEDED "IF TQ-600a-13-x's FALLBACK IS ADOPTED, this
+    list must be amended ... deliberately not pre-authorised"). It is authorised for the
+    dedicated App's credential only, on both the primary route and -x's fallback. The
+    job-scope rule is unchanged: no job's GITHUB_TOKEN holds `checks` or `statuses`,
+    because the App's permission is its own and needs none.
   - >-
     TUNABLES ARE NOT A WRITE SURFACE. scripts/ci/post_merge_tunables.json (TQ-600a-13-x)
     changes only by a reviewed pull request; no family job writes it.
@@ -159,10 +174,16 @@ test_spec:
       - "a comment on an unlabelled issue is allowed because comments as a class are allowed"
       - "re-running a run of ci.yml or the suite workflow is allowed because re-runs as a class are allowed"
       - "a workflow dispatch or disable is allowed because the job holds `actions: write`"
+      - "a check run is allowed because check runs as a class are allowed for the App"
+      - "the App token is accepted for an issue, comment or re-run write"
     description: >-
       Ask the client to create a PR, update a ref, put contents, merge a PR, comment on an
       unlabelled issue, create a label, re-run a ci.yml run, dispatch a workflow, disable
-      a workflow, and post a check run. Each refused; the fake records none of them.
+      a workflow, post a check run with the GITHUB_TOKEN, post a check run with the App
+      token under any other name or on any SHA other than the evaluated head, post a
+      commit status, and use the App token for an issue comment. Each refused; the fake
+      records none of them. The App token's create of `Post-merge suite status` on the
+      evaluated head and its completion are accepted.
   - name: test_tq600a_13_xi_workflow_scopes_are_minimal
     target_dir: unit_tests/suite_performance/
     framework: unittest
@@ -225,6 +246,19 @@ amended_by:
 - action: approved
   agent: approve_acs
   date: '2026-10-08'
+- reason: 'OWNER DECISION 2026-10-09 (BrainCandy): the hold''s verdict is published by
+    a dedicated GitHub App (ID 5249547) as a check run (TQ-600a-13-vi), so the allowed
+    write set must name that write. SUPERSEDED allowed-write clause "...re-running a
+    run of the hold workflow itself; and reporting check results" -> "...reporting each
+    job''s own result; and, by the hold''s evaluation job alone using the dedicated
+    App''s credential, creating and completing a check run named exactly `Post-merge
+    suite status` on the evaluated pull request''s head commit". Added: the App''s
+    credential makes no other write, and no other family job creates or edits a check
+    run or a commit status. it_requirements: the allowlist entry and the fallback entry
+    amended; discrimination descriptor extended. readiness approved -> reviewed: must be
+    re-approved before building. depends_on unchanged.'
+  by: business-analyst
+  at: 2026-10-09
 superseded_by: null
 covered_by: []
 implemented_by: []
