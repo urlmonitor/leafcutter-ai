@@ -40,6 +40,18 @@ MAX_COMMITS = 50
 MAX_FAILING_SHOWN = 100
 GIT_TIMEOUT_SECONDS = 30
 
+# Plain-words cause per stage, shown outside code spans so a reader can tell "the tests never ran" from
+# "the tests failed". A stage absent here is still named, in a code span, by the headline.
+STAGE_CAUSES = {
+    "setup": "a setup step failed before the tests ran",
+    "collection": "test collection failed, so part of the lane never ran",
+    "empty_selection": "the lane selected no tests at all",
+    "retry_failed": "the retry job failed, so the first-run failures were not confirmed",
+    "cancelled_or_timed_out": "the run was cancelled or timed out",
+    "startup_failure": "the run could not start",
+    "result_unreadable": "the run's test result could not be read",
+}
+
 RANGE_LISTED = "listed"
 RANGE_NO_GREEN = "no_green_run"
 RANGE_PAGE_FULL = "green_run_beyond_page"
@@ -151,11 +163,19 @@ def code(text: str) -> str:
 
 
 def _headline(state: dict) -> str:
-    """The one-line statement of what happened. Did-not-complete wording is TQ-600a-13-v's to refine."""
-    if state["verdict"] == "did_not_complete":
-        stage = f" at stage {code(state['stage'])}" if state.get("stage") else ""
-        return f"The post-merge suite did not complete{stage}."
-    return "The post-merge suite is red."
+    """The one-line statement of what happened.
+
+    A run that did not complete is worded differently from a failure (TQ-600a-13-v): never "red", never a
+    claim that tests failed, always the stage at which it stopped (when one is known) and, for the stages
+    whose cause is known, a plain-words cause outside the code span.
+    """
+    if state["verdict"] != "did_not_complete":
+        return "The post-merge suite is red."
+    stage = state.get("stage")
+    cause = STAGE_CAUSES.get(stage or "")
+    if cause:
+        return f"The post-merge suite did not complete: {cause}. Stage: {code(stage)}."
+    return f"The post-merge suite did not complete{f' at stage {code(stage)}' if stage else ''}."
 
 
 def _failing_lines(failing: list[str]) -> list[str]:
@@ -190,7 +210,8 @@ def _commit_lines(commit_range: CommitRange) -> list[str]:
 
 def render_description(state: dict, commit_range: CommitRange) -> str:
     """Return the notice description: the CURRENT state, ending in the state block."""
-    lines = [_headline(state), "", f"Run: {state['run_url']}", f"Head commit: {code(state['head_sha'])}", f"Red since: {code(state['red_since'])}", ""]
+    since = "Not green since" if state["verdict"] == "did_not_complete" else "Red since"
+    lines = [_headline(state), "", f"Run: {state['run_url']}", f"Head commit: {code(state['head_sha'])}", f"{since}: {code(state['red_since'])}", ""]
     lines += _failing_lines(state["failing"]) + _commit_lines(commit_range)
     lines += ["This notice is for people. It does not decide whether a pull request is held.", "", encode_state(state)]
     return "\n".join(lines) + "\n"

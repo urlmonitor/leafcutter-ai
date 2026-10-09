@@ -157,7 +157,9 @@ class WorkflowRun:
         self._base_env = env
 
     # ---- job-level
-    def execute_job(self, name, needs=None):
+    def execute_job(self, name, needs=None, cancelled=False):
+        """Execute one job. ``cancelled=True`` models a run cancelled by a person: the hosting service
+        skips every job and step whose ``if:`` implies ``success()``, and still runs ``always()`` ones."""
         found = find_job(self.doc, name)
         if found is None:
             _fail(f"no job with id or name {name!r} in the workflow")
@@ -175,7 +177,8 @@ class WorkflowRun:
         runner = f"runner-{job_id}"
         env = dict(self._base_env)
         env["RUNNER_NAME"] = runner
-        ctx = _Context(env=env, needs={n: passed[n] for n in declared}, status=status)
+        status = "cancelled" if cancelled else status
+        ctx = _Context(env=env, needs={n: passed[n] for n in declared}, status=status, cancelled=cancelled)
         result = JobResult(job=job_id, conclusion="skipped", runner=runner)
         if not condition_holds(job.get("if"), ctx):
             return result
@@ -183,7 +186,7 @@ class WorkflowRun:
         workspace = Path(tempfile.mkdtemp(prefix=f"{job_id}-", dir=self.scratch))
         result.workspace = workspace
         env["GITHUB_WORKSPACE"] = str(workspace)
-        ctx.status = "success"
+        ctx.status = "cancelled" if cancelled else "success"
         job_env = {k: _expand(v, ctx) for k, v in {**(self.doc.get("env") or {}), **(job.get("env") or {})}.items()}
         env.update(job_env)
         ctx.env = env
