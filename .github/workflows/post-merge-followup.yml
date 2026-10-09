@@ -1,0 +1,77 @@
+# Post-merge follow-up -- the human-facing notice (TQ-600a-13-iii).
+#
+# Runs when a post-merge workflow completes, from the DEFAULT branch's copy of this
+# file (that is how workflow_run works), and applies the run's verdict to the single
+# open `post-merge-red` issue. The notice is for people and is never the gate: the
+# per-PR hold reads the run history (TQ-600a-13-vi), and this job's failure cannot
+# touch the suite run's conclusion, which IS the verdict.
+#
+# The trigger lists all three post-merge workflows. This record builds the notice for
+# the correctness suite only; the job's `if` makes that explicit. A timing-suite run
+# (TQ-600a-13-xii, its own `post-merge-timing` notice) and a fix-proof run
+# (TQ-600a-13-xvi) complete this workflow without writing a `post-merge-red` notice;
+# their own jobs are added to this file by those records.
+#
+# Idempotent: re-running the job on the same triggering run writes nothing further,
+# which is the recovery path when the job failed. All logic lives in
+# scripts/ci/post_merge_notice.py; no run: step carries a dollar-brace expression
+# (context arrives through env:).
+
+name: Post-merge follow-up
+
+"on":
+  workflow_run:
+    workflows: ["Post-merge suite", "Post-merge timing suite", "Post-merge fix proof"]
+    types: [completed]
+
+permissions: {}
+
+jobs:
+  notice:
+    if: github.event.workflow_run.name == 'Post-merge suite'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      issues: write
+      actions: read
+      contents: read
+    # One notice job at a time: two applies must never interleave. A pending job
+    # displaced by a newer one loses nothing, the newer run applies a newer verdict
+    # and the description is the current state, not a log.
+    concurrency:
+      group: post-merge-followup-notice
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # Full history of the default branch: the suspect-commit list is a graph walk.
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      # A missing artifact must not fail the job here: the apply step treats an absent
+      # verdict file as did_not_complete, taken from the triggering run's own record.
+      # `steps.download.outcome` is `failure` for a failed download even though continue-on-error
+      # keeps the job going; the apply step uses it to tell "no artifact" from "download failed".
+      - name: Download the verdict
+        id: download
+        continue-on-error: true
+        uses: actions/download-artifact@v4
+        with:
+          name: post-merge-verdict
+          path: verdict
+          run-id: ${{ github.event.workflow_run.id }}
+          github-token: ${{ github.token }}
+
+      - name: Apply the verdict to the notice
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          RUN_ID: ${{ github.event.workflow_run.id }}
+          REPO: ${{ github.repository }}
+          API_URL: ${{ github.api_url }}
+          DOWNLOAD_OUTCOME: ${{ steps.download.outcome }}
+        run: python scripts/ci/post_merge_notice.py apply --api-url "$API_URL" --repo "$REPO" --repo-dir . --run-id "$RUN_ID" --verdict-file verdict/post-merge-verdict.json --download-outcome "$DOWNLOAD_OUTCOME"
