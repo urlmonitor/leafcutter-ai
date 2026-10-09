@@ -49,9 +49,8 @@ class TestFlowIoGate(unittest.TestCase):
         flow = json.loads(self.flow_path.read_text(encoding="utf-8"))
         canonical = flow["steps"][0]["io_contracts"]
         definitions = flow["contract_definitions"]
-        narrative = flow["steps"][0]["human"].split("\n\nContract fields and examples (generated)\n")[0]
+        description = flow["steps"][0]["description"]
         flow["steps"][0]["consumes"] = ["Stale generated field"]
-        flow["steps"][0]["human"] = narrative + "\n\nContract fields and examples (generated)\nStale example"
         write_json(self.flow_path, flow)
         self.assertNotEqual(self.cli().returncode, 0)
         command = [sys.executable, str(self.pt / "scripts/generate_product_truth.py"), "--quiet"]
@@ -59,8 +58,10 @@ class TestFlowIoGate(unittest.TestCase):
         repaired = json.loads(self.flow_path.read_text(encoding="utf-8"))
         self.assertEqual(repaired["contract_definitions"], definitions)
         self.assertEqual(repaired["steps"][0]["io_contracts"], canonical)
-        self.assertTrue(repaired["steps"][0]["human"].startswith(narrative + "\n\n"))
-        self.assertNotIn("Stale example", repaired["steps"][0]["human"])
+        self.assertNotIn("Stale generated field", repaired["steps"][0]["consumes"])
+        # The authored description is never a generator target: no contract section is appended.
+        self.assertEqual(repaired["steps"][0]["description"], description)
+        self.assertNotIn("Contract fields and examples", json.dumps(repaired))
         assert_success(self.cli())
         first = all_bytes(self.root)
         assert_success(run(command, self.root))
@@ -83,16 +84,23 @@ class TestFlowIoGate(unittest.TestCase):
     def test_cli_checks_visible_example_text_without_repairing_it(self):
         # covers: UXP-700e-2-ii
         # angle: discrimination
-        assert_success(self.cli())
+        validator = [sys.executable, str(self.pt / "scripts/validate_product_truth.py"), "--quiet"]
+        assert_success(run(validator, self.root))
         flow = json.loads(self.flow_path.read_text(encoding="utf-8"))
-        human = flow["steps"][0]["human"]
-        self.assertIn("Which tests apply?", human)
-        flow["steps"][0]["human"] = human.replace("Which tests apply?", "Different question")
+        old_style = (flow["steps"][0]["description"]
+                     + "\n\nContract fields and examples (generated)\nConsumes:\n  request/question: string (required)")
+        flow["steps"][0]["description"] = old_style
         write_json(self.flow_path, flow)
         before = all_bytes(self.root)
-        failed = self.cli()
+        failed = run(validator, self.root)
         self.assertNotEqual(failed.returncode, 0, failed.stdout + failed.stderr)
+        self.assertIn("[description] fixture/query step", failed.stdout + failed.stderr)
+        self.assertIn("generated contract text", failed.stdout + failed.stderr)
         self.assertEqual(all_bytes(self.root), before)
+        command = [sys.executable, str(self.pt / "scripts/generate_product_truth.py"), "--quiet"]
+        assert_success(run(command, self.root))
+        unrepaired = json.loads(self.flow_path.read_text(encoding="utf-8"))
+        self.assertEqual(unrepaired["steps"][0]["description"], old_style)
 
     def test_ci_uses_same_validator_and_propagates_schema_only_failure(self):
         # covers: UXP-700c-3
@@ -173,9 +181,10 @@ class TestFlowIoGate(unittest.TestCase):
         standard = run([sys.executable, str(self.pt / "scripts/validate_product_truth.py"), "--quiet"], self.root)
         assert_success(standard)
         self.assertIn("1 missing binding(s) in 1 node(s)", standard.stderr)
-        rendered = json.loads(self.flow_path.read_text(encoding="utf-8"))["steps"][0]["human"]
-        self.assertIn("PROPOSED", rendered)
-        self.assertIn("traversal_frontier", rendered)
+        step = json.loads(self.flow_path.read_text(encoding="utf-8"))["steps"][0]
+        # The gap lives in io_contracts (Atlas renders it there), never as text in the description.
+        self.assertEqual(step["io_contracts"]["missing_bindings"][0]["name"], "traversal_frontier")
+        self.assertNotIn("traversal_frontier", step["description"])
 
     def test_real_precommit_skips_out_of_scope_changes(self):
         # covers: UXP-700c-3-iii

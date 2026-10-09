@@ -81,7 +81,7 @@ def _flow(summary: str) -> dict:
         "readiness": "draft",
         "version": 1,
         "entities": [],
-        "steps": [{"id": "only-step", "label": "only-step", "human": "the actor does the one thing", "order": 1}],
+        "steps": [{"id": "only-step", "label": "only-step", "description": "the actor does the one thing", "actor_kind": "human", "order": 1}],
         "branches": [],
     }
 

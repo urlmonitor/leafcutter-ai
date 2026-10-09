@@ -5,7 +5,7 @@
     "docs/roadmap.json": {"phases": [{"id": "phase-1"}]},
     "docs/product-truth/flows/eval/meaning.flow.json": {
       "id": "eval/meaning", "version": 1, "component": "decision_kernel", "name": "Meaning flow", "summary": "Interpret references", "kind": "user_journey", "source": "eval", "status": "active", "readiness": "draft", "entities": ["Entity"],
-      "steps": [{"id": "start", "label": "Recognize reference", "human": "FLOW_BODY_SENTINEL", "order": 1}], "branches": []
+      "steps": [{"id": "start", "label": "Recognize reference", "description": "FLOW_BODY_SENTINEL", "actor_kind": "human", "order": 1}], "branches": []
     }
   },
   "yaml": {

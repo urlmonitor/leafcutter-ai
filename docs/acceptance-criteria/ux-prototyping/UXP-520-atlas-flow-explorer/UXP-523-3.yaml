@@ -1,5 +1,5 @@
 id: UXP-523-3
-title: Structured details appear once while the author's explanation remains visible
+title: Each step shows its one-sentence description, actor kind and structured contract detail once
 component: ux-prototyping
 components:
 - ux_prototyping
@@ -9,16 +9,19 @@ req_status: active
 work_status: done
 readiness: reviewed
 priority: medium
-criteria: 'Given a node has usable structured contract metadata and also contains generated compatibility
-  labels and a generated contract section in its narrative,
+criteria: 'Given a flow step or branch has a one-sentence description, an actor kind and usable structured
+  contract metadata,
 
   When a person opens that node in Atlas,
 
-  Then the author''s narrative before the generated marker appears once,
+  Then the description appears once as the step text,
 
-  And the contract fields and examples appear once in the structured detail display,
+  And the actor kind appears as a plain-language badge beside the named agent,
 
-  And the generated narrative section and compatibility badges do not repeat those same fields and examples,
+  And the contract fields and examples appear once in the structured detail display, rendered from the
+  structured metadata,
+
+  And no generated contract text or compatibility badge repeats those fields and examples,
 
   And authored text is not removed merely because it contains words also used by a contract.'
 depends_on:
@@ -36,19 +39,24 @@ created: '2026-10-05'
 amended_by:
 - reason: '2026-10-05 business-analyst: recorded source/test traceability and locally verified completion
     after IT PO review; retained reviewed readiness and existing parent statuses. Hosted CI and merge had not yet run at that local verification.'
+- reason: '2026-10-09 business-analyst: kernel decision dec-7b1dcfd47f85cf0a (chosen by the user) renamed the flow step field human to description, holding one plain sentence of what happens, and added actor_kind (deterministic | jev | llm | human); contract detail is no longer generated into the step text. Criteria now require the description once, an actor-kind badge beside the agent and contract detail rendered only from structured metadata. work_status unchanged: the amended behaviour is implemented and its tests pass locally (TICKET-20261009-ProductTruthDescriptionActorKind).'
 superseded_by: null
 covered_by:
 - leafcutter-web/components/flows/__tests__/flow-drawer.contracts.test.tsx
 - leafcutter-web/components/flows/__tests__/flow-explorer.contracts.test.tsx
+- leafcutter-web/lib/data/__tests__/actor-kind.test.ts
 implemented_by:
 - leafcutter-web/lib/data/flows.ts
 - leafcutter-web/lib/data/types.ts
 - leafcutter-web/lib/data/flow-contracts.ts
 - leafcutter-web/components/flows/flow-contracts.tsx
 - leafcutter-web/components/flows/flow-drawer.tsx
+- leafcutter-web/components/flows/flow-step-view.ts
+- leafcutter-web/components/flows/step-runner.tsx
+- leafcutter-web/lib/data/actor-kind.ts
 notes: 'The test writer verified 20 Atlas contract tests across three suites and the full TypeScript check.
-  The drawer and real loader-to-selection path assert one structured representation while retaining the
-  author''s narrative.
+  The drawer and real loader-to-selection path assert one structured representation while showing the
+  step description once and its actor-kind badge (re-verified 2026-10-09 after the description amendment).
 
 
   The user accepted the displayed feature and authorized completing its AC/test coverage and merging after
@@ -62,20 +70,22 @@ change_target:
 - ui
 risk_surface: contract_boundary
 it_requirements:
-- Suppress only canonical generated compatibility content when the structured display guard accepts the
-  node. Never remove authored prose by matching contract words or apparent JSON fragments.
+- Suppress only the canonical generated compatibility labels when the structured display guard accepts the
+  node. Never remove authored text by matching contract words or apparent JSON fragments.
+- Show an actor-kind badge only for the four stored values; any other value shows no badge rather than a
+  coerced one.
 - Preserve the authored data and generated compatibility copies on disk; this AC changes the read surface,
   not source ownership.
 expects_from:
   ac_id: UXP-700e-2-ii
-  contract: The canonical generator derives node consumes/produces string arrays and the human suffix
-    starting with Contract fields and examples (generated) from io_contracts, preserving authored prose
-    before that marker; Atlas may omit those derived copies only when it can display the structured metadata.
+  contract: The canonical generator derives node consumes/produces string arrays from io_contracts and
+    writes no contract text into a step or branch description; Atlas may omit those derived labels only
+    when it can display the structured metadata.
 delivers_to: null
 test_spec:
 - name: shows one contract heading, readable field table, and each raw example once
   target_dir: leafcutter-web/components/flows/__tests__/
-  description: Authored narrative and structured field/example content appear once while generated copies
+  description: The description and structured field/example content appear once while generated copies
     are absent.
   framework: vitest
   type: component
@@ -88,8 +98,15 @@ test_spec:
   angle: boundary
 - name: renders actual %s contracts after selecting a graph node
   target_dir: leafcutter-web/components/flows/__tests__/
-  description: Select actual stored nodes carrying the generated suffix and verify one structured display
-    through the real production seam.
+  description: Select actual stored nodes and verify the description once, the actor-kind badge and one
+    structured display through the real production seam.
+- name: shows the actor kind as a plain badge beside the named agent
+  target_dir: leafcutter-web/components/flows/__tests__/
+  description: The stored actor kind renders as a plain-language badge beside the agent; an unknown or absent
+    kind renders none.
+  framework: vitest
+  type: component
+  angle: criterion
   framework: vitest
   type: component
   angle: reachability

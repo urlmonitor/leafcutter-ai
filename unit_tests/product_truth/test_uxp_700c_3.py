@@ -168,7 +168,7 @@ def _journey(n: int, implements: list[str]) -> dict:
         "id": f"fixture-product/journey-{n}", "component": "fixture-product", "name": f"journey-{n}",
         "summary": "fixture journey for UXP-700c-3", "kind": "user", "source": "mock", "status": "active",
         "readiness": "draft", "version": 1, "entities": [],
-        "steps": [{"id": "act", "label": "act", "human": "the actor acts", "io_contracts": {"not_applicable": "Pointer-resolution fixture models an actor action with no serialized handoff."}, "order": 1, "implements": implements}],
+        "steps": [{"id": "act", "label": "act", "description": "the actor acts", "actor_kind": "human", "io_contracts": {"not_applicable": "Pointer-resolution fixture models an actor action with no serialized handoff."}, "order": 1, "implements": implements}],
         "branches": [],
     }
 
