@@ -1,0 +1,111 @@
+id: INF-700a-1-v
+components:
+  - infrastructure
+  - knowledge_system
+  - build_orchestration
+title: "A /build-feature drive routes learnings around each ticket's commit, one ticket at a time"
+component: infrastructure
+level: L3
+status: active
+req_status: active
+work_status: done
+priority: high
+readiness: reviewed
+created_by: "docs/acceptance-criteria/infrastructure/INF-400-agent-learning/INF-700a-1.yaml"
+criteria: |
+  Given a /build-feature drive, of an epic or of a single ticket, in which the
+    drive itself dispatches each ticket's commit phase (no ticket-supervisor),
+  When a ticket reaches its commit phase,
+  Then before the commit agent is spawned the drive runs the routing step's
+    stage in the drive's worktree,
+  And the commit agent is told to stage every path the stage reported, by
+    name, and never by a sweep; a path that is not a plain relative path
+    inside the worktree, or that is the sink's own log, is not named,
+  And after the commit agent returns, on success and on failure alike, the
+    drive runs exactly one observe, and that observation is the ticket's
+    knowledge_routing,
+  And the drive's result carries each ticket's knowledge_routing and the
+    total written, unwritten and already_on_branch across the drive, for an
+    epic and for a single ticket alike,
+  And while one ticket's stage, commit and observe are in progress, no other
+    ticket of the same drive starts its own stage or commit, because sibling
+    tickets share one worktree and one run record,
+  And no routing problem (a stage or observe that cannot run, or an
+    unrecognised reply) changes the ticket's or the drive's own outcome: the
+    figures read did_not_run, and a stage whose commit cannot be observed
+    counts nothing as written.
+depends_on: [INF-700a-1, INF-700a-1-iv]
+doc_links:
+  - path: docs/architecture/adrs/ADR-040-knowledge-write-publication-rides-completion-commit.md
+    relationship: constrains
+    status: exists
+  - path: docs/reference/knowledge-routing-step.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+declares_side_effect: false
+it_requirements:
+  - "WHERE IT RUNS: templates/workflows-js/build-feature.js, inside driveTicketPhases' phase loop, at the generic phase dispatch when the phase is commit. build-feature.js moves from excluded to wired in knowledge_routing_wiring."
+  - "SERIALISATION: build-feature.js starts every ticket of a batch chunk concurrently, so the stage, commit and observe of one ticket run inside a drive-level lane (a promise chain) that admits one ticket at a time. Phases other than commit are not serialised by it. This is the in-workflow counterpart of the commit-phase lock ticket-supervisor holds (INF-700a-1-iv)."
+  - "SHARED CODE: the E2 engine injects no module loader (ADR-030), so the classifier and the lane live in build-feature.js itself, as fast-lane-ship.js, quick-fix.js and build-epic.js each carry their own copy. The CLI call reuses the file's existing repoFactsCall envelope reader."
+  - "Fail-open per ADR-034."
+delivers_to:
+  agent: python-coder
+  contract: "Per-ticket routing figures and drive totals on the /build-feature result"
+expects_from:
+  ac_id: INF-700a-1
+  contract: "The routing step dispatched before the path's own commit, with its result consumed by the driver"
+origin_agent: BrainCandy
+created: 2026-10-09
+amended_by: []
+superseded_by: null
+covered_by:
+- unit_tests/workflows/test_inf_700a_1_v_build_feature_routing.py
+implemented_by:
+- templates/workflows-js/build-feature.js
+- config/guardrail_gates.yaml
+test_spec:
+  - name: test_stage_runs_before_each_tickets_commit_and_one_observe_after_it
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: criterion
+    description: "Drive an epic of two tickets through build-feature.js under the driver harness; the timeline of routing calls and commit dispatches is stage, commit, observe once per ticket."
+  - name: test_the_stage_manifest_is_named_in_the_commit_prompt_and_nowhere_else
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: reachability
+    description: "The stage's manifest paths appear in that ticket's commit prompt and in no other phase's prompt; paths outside the worktree and the sink's log are dropped."
+  - name: test_the_epic_result_carries_each_tickets_routing_and_the_totals
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: criterion
+    description: "Differing observe replies per ticket reach the epic result per ticket and summed."
+  - name: test_bad_or_missing_replies_count_as_did_not_run_and_change_no_outcome
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: failure
+    description: "Unparseable, unrecognised and missing replies give did_not_run with zero figures and the same status, tickets_completed and epic_complete as a run with good replies."
+  - name: test_three_concurrent_tickets_run_stage_commit_observe_one_at_a_time
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: discrimination
+    description: "With three tickets proven to run concurrently, no ticket's stage or commit starts while another ticket's cycle is open."
+test_rationale: |
+  The wiring sits inside a dynamic phase loop that only a real run reaches, and
+  the interleaving defect only exists when tickets run concurrently, so every
+  test executes build-feature.js through the driver harness, whose parallel()
+  really runs the tickets of a batch together.
+notes: |
+  Found 2026-10-09: INF-700a-1-iv's notes recorded that the real /build-feature
+  route is build-feature.js, which dispatches commit itself and so was not
+  reached by building-epics section 5.9. This AC closes that gap.
+change_target:
+  - pipeline
+  - code
+risk_surface: contract_boundary
