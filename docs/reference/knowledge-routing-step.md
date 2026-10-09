@@ -107,6 +107,14 @@ Rules:
 
 `eligible` is `true` while the record is not marked routed, which is always the case for a write that was not published.
 
+### Announcement before worktree removal
+
+`finalize-feature.js` does not stage, but it is the only path that removes a worktree (INF-700a-5-i). In Step 7, once the worktree is known to exist and before the `worktree-agent` removal, it dispatches `observe --working-dir <worktree> --commit-status ok` (label `step-7-unpublished-learnings`). `HEAD` there is the head Step 4 merged, so each `unwritten_records` entry is a write the merged tree does not hold.
+
+- Each entry is named with its `destination`, `reason`, `eligible` and `text`. The list goes to the log, to the top of the removal agent's prompt, and to `unpublished_learnings` on the terminal payload.
+- Fail-open: an unusable reply, or no recorded run (`did_not_run`), yields an empty list. The removal still runs. The run's status and step record are the same as with nothing to announce.
+- Nothing is written. Records stay eligible, so a later carrying path stages them again.
+
 ---
 
 ## Routing-run recency answer

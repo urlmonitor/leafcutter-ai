@@ -197,6 +197,33 @@ function isRefusalStatus(status) {
   return REFUSAL_STATUSES.has(s) || s.startsWith("out_of_scope");
 }
 
+// INF-700a-5-i, called by Step 7 just before the removal — the last moment a learning written in
+// the worktree can still be carried. The read-only `observe` names each routed write HEAD (the head
+// Step 4 merged) does not carry. Fail-open: an unusable answer is a shorter announcement, never a halt.
+let unpublishedLearnings = [];
+async function announceUnpublishedLearnings() {
+  try {
+    const reply = readAgentJson(await agent(
+      "Report, read-only, which routed learnings written in this worktree did NOT reach the merged tree. " +
+      "Run this single Bash command and return the ONE line of JSON it prints, verbatim:\n" +
+      `   python3 {{config.output_root}}/scripts/knowledge/completion_routing_cli.py observe --working-dir ${WORKTREE_ROOT} --commit-status ok\n` +
+      'If it cannot be run, return { "case": "did_not_run", "detail": "<why>" }. Never block, retry, or fail.',
+      { agentType: "status-checker", label: "step-7-unpublished-learnings", phase: "Step 7" }
+    ), "step-7-unpublished-learnings", "status-checker", {}, "announcing nothing; removal proceeds");
+    unpublishedLearnings = (Array.isArray(reply.unwritten_records) ? reply.unwritten_records : [])
+      .filter((r) => r && typeof r === "object" && r.destination);
+    if (!reply.case || reply.case === "did_not_run") log(`[finalize-feature] step 7 unpublished-learning check did not run: ${reply.detail || "no usable reply"}`);
+  } catch (err) {
+    log(`[finalize-feature] step 7 unpublished-learning check unavailable (${err}) — removal proceeds`);
+  }
+  if (unpublishedLearnings.length === 0) return "";
+  const note = `${unpublishedLearnings.length} learning(s) written in this worktree are NOT in the merged tree:\n` +
+    unpublishedLearnings.map((r) => `  - ${r.destination} [${r.reason}; ${r.eligible === false
+      ? "NOT eligible: will not be written again" : "still eligible: a later completed unit of work writes it"}]: ${r.text}`).join("\n");
+  log(`[finalize-feature] step 7: ${note}`);
+  return `Before removing, tell the user verbatim (this does not block the removal):\n${note}\n\n`;
+}
+
 // AC BO-1000a-2-i: step 3.5 is the intermediate closure step — it is
 // included in STEP_COUNT so its position is monotonic (3 < 3.5 < 4) and N
 // is unchanged for all other steps. Pre-flight aborts occur BEFORE the
@@ -286,6 +313,20 @@ function parseAgentJson(raw, ctx) {
     " returned a reply with no parseable JSON — " +
     "all reply-reading sites must route through parseAgentJson"
   );
+}
+
+/**
+ * Read an agent reply through parseAgentJson; a malformed reply is logged as
+ * "<stage> parse malformed — <note>" and answered with `fallback` (AC-4: a
+ * malformed reply degrades to the stage's conservative default, never a throw).
+ */
+function readAgentJson(raw, stage, agentName, fallback, note) {
+  try {
+    return parseAgentJson(raw, { stage, agent: agentName }) || fallback;
+  } catch (_parseErr) {
+    log(`[finalize-feature] ${stage} parse malformed — ${note}`);
+    return fallback;
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -537,15 +578,8 @@ const preflightResult = await agent(
   { agentType: "status-checker", label: "pre-flight", phase: "Pre-flight" }
 )
 
-let preflightInfo;
-{
-  try {
-    preflightInfo = parseAgentJson(preflightResult, { stage: "pre-flight", agent: "status-checker" }) || { found: true, branch: "unknown", worktree_root: "unknown" };
-  } catch (_parseErr) {
-    log("[finalize-feature] pre-flight parse malformed — using safe defaults (branch: unknown)");
-    preflightInfo = { found: true, branch: "unknown", worktree_root: "unknown" };
-  }
-}
+const preflightInfo = readAgentJson(preflightResult, "pre-flight", "status-checker",
+  { found: true, branch: "unknown", worktree_root: "unknown" }, "using safe defaults (branch: unknown)");
 
 // When the worktree resolution step found no matching worktree, fail with a
 // clear, actionable message rather than a silent misdetection.
@@ -679,15 +713,7 @@ const ghConfigResult = await agent(
   { agentType: "status-checker", label: "gh-config", phase: "Pre-flight 2" }
 )
 
-let ghConfig;
-{
-  try {
-    ghConfig = parseAgentJson(ghConfigResult, { stage: "gh-config", agent: "status-checker" }) || { gh_target_account: null, gh_repo: null };
-  } catch (_parseErr) {
-    log("[finalize-feature] gh config parse malformed — proceeding with no account constraint");
-    ghConfig = { gh_target_account: null, gh_repo: null };
-  }
-}
+const ghConfig = readAgentJson(ghConfigResult, "gh-config", "status-checker", { gh_target_account: null, gh_repo: null }, "proceeding with no account constraint");
 
 const GH_TARGET_ACCOUNT = (ghConfig.gh_target_account || "").trim() || null;
 const GH_REPO = (ghConfig.gh_repo || "").trim() || null;
@@ -703,15 +729,7 @@ if (GH_TARGET_ACCOUNT) {
     { agentType: "status-checker", label: "gh-auth-status", phase: "Pre-flight 2" }
   )
 
-  let ghStatus;
-  {
-    try {
-      ghStatus = parseAgentJson(ghStatusResult, { stage: "gh-auth-status", agent: "status-checker" }) || { active_account: null };
-    } catch (_parseErr) {
-      log("[finalize-feature] gh auth status parse malformed — assuming active_account is null");
-      ghStatus = { active_account: null };
-    }
-  }
+  const ghStatus = readAgentJson(ghStatusResult, "gh-auth-status", "status-checker", { active_account: null }, "assuming active_account is null");
 
   const activeAccount = (ghStatus.active_account || "").trim() || null;
 
@@ -725,15 +743,7 @@ if (GH_TARGET_ACCOUNT) {
       { agentType: "status-checker", label: "gh-auth-switch", phase: "Pre-flight 2" }
     )
 
-    let ghSwitch;
-    {
-      try {
-        ghSwitch = parseAgentJson(ghSwitchResult, { stage: "gh-auth-switch", agent: "status-checker" }) || { switch_exit_code: 1, verified_account: null };
-      } catch (_parseErr) {
-        log("[finalize-feature] gh switch parse malformed — assuming switch failed");
-        ghSwitch = { switch_exit_code: 1, verified_account: null };
-      }
-    }
+    const ghSwitch = readAgentJson(ghSwitchResult, "gh-auth-switch", "status-checker", { switch_exit_code: 1, verified_account: null }, "assuming switch failed");
 
     const verifiedAccount = (ghSwitch.verified_account || "").trim() || null;
     const switchFailed =
@@ -833,17 +843,10 @@ const baselineResult = await agent(
   { agentType: "general-purpose", label: "step-0-baseline", phase: "Step 0" }
 )
 
-let baselineInfo;
-{
-  try {
-    baselineInfo = parseAgentJson(baselineResult, { stage: "step-0-baseline", agent: "status-checker" }) || { status: "parse_failed", baseline_sha: null, baseline_failures: null, baseline_run_at: null };
-  } catch (_parseErr) {
-    // AC-4: Malformed reply is not the same as "baseline failed" —
-    // degrade gracefully (same as run_failed path) without spuriously halting.
-    log("[finalize-feature] step 0 baseline parse malformed — treating as run_failed (triage will use conservative classification)");
-    baselineInfo = { status: "parse_failed", baseline_sha: null, baseline_failures: null, baseline_run_at: null };
-  }
-}
+// AC-4: a malformed reply is not "baseline failed" — it degrades like run_failed, never halts.
+const baselineInfo = readAgentJson(baselineResult, "step-0-baseline", "status-checker",
+  { status: "parse_failed", baseline_sha: null, baseline_failures: null, baseline_run_at: null },
+  "treating as run_failed (triage will use conservative classification)");
 
 const baselineStatus = (baselineInfo.status || "unknown").toLowerCase();
 
@@ -918,17 +921,8 @@ const prProbeResult = await agent(
   { agentType: "status-checker", label: "step-1-pr-probe", phase: "Step 1" }
 )
 
-let prProbe;
-{
-  try {
-    prProbe = parseAgentJson(prProbeResult, { stage: "step-1-pr-probe", agent: "status-checker" }) || { found: false };
-  } catch (_parseErr) {
-    // AC-4: Malformed PR probe defaults to "not found" — safer to open a duplicate
-    // PR (which will be rejected by GH) than to silently skip creating one.
-    log("[finalize-feature] step 1 PR probe parse malformed — assuming no PR exists");
-    prProbe = { found: false };
-  }
-}
+// AC-4: a malformed probe means "not found" — a duplicate PR is rejected by GH; a skipped one is silent.
+const prProbe = readAgentJson(prProbeResult, "step-1-pr-probe", "status-checker", { found: false }, "assuming no PR exists");
 
 if (prProbe.found) {
   prNumber = prProbe.number;
@@ -954,15 +948,7 @@ if (prProbe.found) {
     { agentType: "pull-request", label: "step-1-open-pr", phase: "Step 1" }
   )
 
-  let openPr;
-  {
-    try {
-      openPr = parseAgentJson(openPrResult, { stage: "step-1-open-pr", agent: "pull-request" }) || {};
-    } catch (_parseErr) {
-      log("[finalize-feature] step 1 PR open parse malformed — pr_number and url will be null");
-      openPr = {};
-    }
-  }
+  const openPr = readAgentJson(openPrResult, "step-1-open-pr", "pull-request", {}, "pr_number and url will be null");
 
   prNumber = openPr.number || openPr.pr_number || null;
   prUrl = openPr.url || openPr.pr_url || null;
@@ -1020,19 +1006,10 @@ const mergeMainResult = await agent(
   { agentType: "general-purpose", label: "step-2-merge-main", phase: "Step 2" }
 )
 
-let mergeMainInfo;
-{
-  try {
-    mergeMainInfo = parseAgentJson(mergeMainResult, { stage: "step-2-merge-main", agent: "status-checker" }) || { status: "already_up_to_date", merge_strategy: "already_up_to_date" };
-  } catch (_parseErr) {
-    // AC-4: A malformed reply is not the same as "conflict detected".
-    // Default to "already_up_to_date" (non-halting, safe) and log a warning.
-    // If the merge actually had a problem, it will become apparent at the
-    // test-runner phase (step 3) rather than spuriously halting here.
-    log("[finalize-feature] step 2 merge-main parse malformed — treating as already_up_to_date (non-halting safe default)");
-    mergeMainInfo = { status: "already_up_to_date", merge_strategy: "already_up_to_date" };
-  }
-}
+// AC-4: a malformed reply is not "conflict detected" — a real merge problem surfaces at step 3 instead.
+const mergeMainInfo = readAgentJson(mergeMainResult, "step-2-merge-main", "status-checker",
+  { status: "already_up_to_date", merge_strategy: "already_up_to_date" },
+  "treating as already_up_to_date (non-halting safe default)");
 
 const mergeStatus = (mergeMainInfo.status || "already_up_to_date").toLowerCase();
 
@@ -1340,15 +1317,8 @@ if (testPassed) {
       { agentType: "status-checker", label: "step-3-targeted-rerun", phase: "Step 3" }
     )
 
-    let recoveryInfo;
-    {
-      try {
-        recoveryInfo = parseAgentJson(recoveryResult, { stage: "step-3-targeted-rerun", agent: "status-checker" }) || { status: "parse_failed", recovered_failures: null };
-      } catch (_parseErr) {
-        log("[finalize-feature] step 3 targeted-rerun parse malformed — targeted rerun unavailable, using conservative fallback.");
-        recoveryInfo = { status: "parse_failed", recovered_failures: null };
-      }
-    }
+    const recoveryInfo = readAgentJson(recoveryResult, "step-3-targeted-rerun", "status-checker",
+      { status: "parse_failed", recovered_failures: null }, "targeted rerun unavailable, using conservative fallback.");
 
     const recoveryStatus = (recoveryInfo.status || "").toLowerCase();
     if (recoveryStatus === "ok" && Array.isArray(recoveryInfo.recovered_failures)) {
@@ -1495,15 +1465,8 @@ const closureProbeResult = await agent(
   { agentType: "status-checker", label: "step-3.5-closure-probe", phase: "Step 3.5" }
 )
 
-let closureAlreadyCommitted = false;
-{
-  try {
-    closureAlreadyCommitted = (parseAgentJson(closureProbeResult, { stage: "step-3.5-closure-probe", agent: "status-checker" }) || {}).already_committed === true;
-  } catch (_parseErr) {
-    log("[finalize-feature] step 3.5 closure probe parse malformed — assuming not already committed (will re-attempt closure)");
-    closureAlreadyCommitted = false;
-  }
-}
+const closureAlreadyCommitted = readAgentJson(closureProbeResult, "step-3.5-closure-probe", "status-checker",
+  {}, "assuming not already committed (will re-attempt closure)").already_committed === true;
 
 if (closureAlreadyCommitted) {
   log("Step 3.5 of 9: [skipped] Closure commit already present on this branch — skipping pre-merge closure");
@@ -1521,14 +1484,8 @@ if (closureAlreadyCommitted) {
       "Return ONLY a JSON object: { \"state\": \"OPEN\"|\"MERGED\"|\"CLOSED\" }",
       { agentType: "status-checker", label: "step-3.5-pr-state", phase: "Step 3.5" }
     )
-    {
-      try {
-        prAlreadyMergedAtClosure = ((parseAgentJson(prClosureStateResult, { stage: "step-3.5-pr-state", agent: "status-checker" }) || {}).state || "").toUpperCase() === "MERGED";
-      } catch (_parseErr) {
-        log("[finalize-feature] step 3.5 PR state parse malformed — assuming PR is OPEN");
-        prAlreadyMergedAtClosure = false;
-      }
-    }
+    prAlreadyMergedAtClosure = String(readAgentJson(prClosureStateResult, "step-3.5-pr-state", "status-checker",
+      {}, "assuming PR is OPEN").state || "").toUpperCase() === "MERGED";
   }
 
   if (prAlreadyMergedAtClosure) {
@@ -1660,15 +1617,9 @@ if (closureAlreadyCommitted) {
       { agentType: "status-checker", label: "step-3.5-closure", phase: "Step 3.5" }
     )
 
-    let closureInfo;
-    {
-      try {
-        closureInfo = parseAgentJson(closureResult, { stage: "step-3.5-closure", agent: "status-checker" }) || { tickets_closed: [], acs_closed: 0, acs_skipped: 0, commit_made: false, scope_violation: false, out_of_scope_paths: [] };
-      } catch (_parseErr) {
-        log("[finalize-feature] step 3.5 closure parse malformed — assuming zero tickets/ACs closed");
-        closureInfo = { tickets_closed: [], acs_closed: 0, acs_skipped: 0, commit_made: false, scope_violation: false, out_of_scope_paths: [] };
-      }
-    }
+    const closureInfo = readAgentJson(closureResult, "step-3.5-closure", "status-checker",
+      { tickets_closed: [], acs_closed: 0, acs_skipped: 0, commit_made: false, scope_violation: false, out_of_scope_paths: [] },
+      "assuming zero tickets/ACs closed");
 
     // Surface any scope violation clearly so the operator can investigate.
     // A scope violation means the agent staged paths outside the epic's own folder
@@ -2005,15 +1956,7 @@ const prStateResult = await agent(
   { agentType: "status-checker", label: "step-4-pr-state", phase: "Step 4" }
 )
 
-let prState;
-{
-  try {
-    prState = parseAgentJson(prStateResult, { stage: "step-4-pr-state", agent: "status-checker" }) || { state: "OPEN" };
-  } catch (_parseErr) {
-    log("[finalize-feature] step 4 PR state parse malformed — assuming PR is OPEN");
-    prState = { state: "OPEN" };
-  }
-}
+const prState = readAgentJson(prStateResult, "step-4-pr-state", "status-checker", { state: "OPEN" }, "assuming PR is OPEN");
 
 if ((prState.state || "").toUpperCase() === "MERGED") {
   // PR already merged — skip the merge gate and proceed.
@@ -2126,17 +2069,9 @@ const syncResult = await agent(
   { agentType: "status-checker", label: "step-5-sync-main", phase: "Step 5" }
 )
 
-let headSha = null;
-let headMessage = null;
-{
-  try {
-    const syncInfo = parseAgentJson(syncResult, { stage: "step-5-sync-main", agent: "status-checker" }) || {};
-    headSha = (typeof syncInfo.head_sha === "string" ? syncInfo.head_sha.trim() : null) || null;
-    headMessage = (typeof syncInfo.head_message === "string" ? syncInfo.head_message.trim() : null) || null;
-  } catch (_parseErr) {
-    log("[finalize-feature] step 5 sync-main parse malformed — HEAD SHA and message will be unknown");
-  }
-}
+const syncInfo = readAgentJson(syncResult, "step-5-sync-main", "status-checker", {}, "HEAD SHA and message will be unknown");
+const headSha = (typeof syncInfo.head_sha === "string" ? syncInfo.head_sha.trim() : null) || null;
+const headMessage = (typeof syncInfo.head_message === "string" ? syncInfo.head_message.trim() : null) || null;
 
 completedSteps.push(5);
 
@@ -2209,15 +2144,9 @@ const closeResult = await agent(
   { agentType: "status-checker", label: "step-6-scope-detect", phase: "Step 6" }
 )
 
-let closeInfo;
-{
-  try {
-    closeInfo = parseAgentJson(closeResult, { stage: "step-6-scope-detect", agent: "status-checker" }) || { tickets_in_scope: [], tickets_done: [], tickets_not_done: [], skipped: false };
-  } catch (_parseErr) {
-    log("[finalize-feature] step 6 scope-detect parse malformed — no tickets reported in summary");
-    closeInfo = { tickets_in_scope: [], tickets_done: [], tickets_not_done: [], skipped: false };
-  }
-}
+const closeInfo = readAgentJson(closeResult, "step-6-scope-detect", "status-checker",
+  { tickets_in_scope: [], tickets_done: [], tickets_not_done: [], skipped: false },
+  "no tickets reported in summary");
 
 // Step 6b is informational only — no ticket files were moved or written.
 if (closeInfo.tickets_done && Array.isArray(closeInfo.tickets_done)) {
@@ -2249,17 +2178,8 @@ const worktreeProbeResult = await agent(
   { agentType: "status-checker", label: "step-7-worktree-probe", phase: "Step 7" }
 )
 
-let worktreeProbe;
-{
-  try {
-    worktreeProbe = parseAgentJson(worktreeProbeResult, { stage: "step-7-worktree-probe", agent: "status-checker" }) || { exists: true };
-  } catch (_parseErr) {
-    // AC-4: Malformed probe — conservative default is exists=true (safer to
-    // attempt removal than to skip and leave the worktree dangling).
-    log("[finalize-feature] step 7 worktree probe parse malformed — assuming exists=true (conservative)");
-    worktreeProbe = { exists: true };
-  }
-}
+// AC-4: a malformed probe means exists=true — safer to attempt removal than leave it dangling.
+const worktreeProbe = readAgentJson(worktreeProbeResult, "step-7-worktree-probe", "status-checker", { exists: true }, "assuming exists=true (conservative)");
 
 if (!worktreeProbe.exists) {
   worktreeRemoved = false;
@@ -2267,23 +2187,15 @@ if (!worktreeProbe.exists) {
   outcome(`Step 7 of ${STEP_COUNT}`, 'skipped: worktree already absent — skipping step 7');
   skippedSteps.push({ step: 7, reason: "Worktree already absent — skipping step 7" });
 } else {
-  // Dispatch worktree-agent (it owns its own confirmation gate).
+  // Dispatch worktree-agent (it owns its own confirmation gate), carrying the INF-700a-5-i announcement.
   const worktreeResult = await agent(
+    (await announceUnpublishedLearnings()) +
     `Remove the worktree at ${WORKTREE_ROOT}. ` +
     "If conflict_pids are reported, surface them verbatim and stop. " +
     "Return a JSON object: { \"removed\": true|false, \"conflict_pids\": [] }",
     { agentType: "worktree-agent", label: "step-7-remove-worktree", phase: "Step 7" }
   )
-
-  let wResult;
-  {
-    try {
-      wResult = parseAgentJson(worktreeResult, { stage: "step-7-remove-worktree", agent: "worktree-agent" }) || { removed: false, conflict_pids: [] };
-    } catch (_parseErr) {
-      log("[finalize-feature] step 7 worktree-agent parse malformed — assuming removed=false, conflict_pids=[]");
-      wResult = { removed: false, conflict_pids: [] };
-    }
-  }
+  const wResult = readAgentJson(worktreeResult, "step-7-remove-worktree", "worktree-agent", { removed: false, conflict_pids: [] }, "assuming removed=false, conflict_pids=[]");
 
   if (wResult.conflict_pids && wResult.conflict_pids.length > 0) {
     // Surface conflict PIDs verbatim and stop — user must resolve manually.
@@ -2347,6 +2259,7 @@ return {
   // no tracking ticket was created (auto-ticketing is disabled — create-ticket is a
   // workflow, not an agent). Operators should run /create-ticket manually for each.
   untracked_failures: untrackedFailures,
+  unpublished_learnings: unpublishedLearnings, // INF-700a-5-i: announced before the removal
   worktree_removed: worktreeRemoved,
   completed_steps: completedSteps,
   skipped_steps: skippedSteps,
