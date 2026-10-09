@@ -44,6 +44,7 @@ covered_by:
   - AR-300a-2
   - AR-300a-3
   - AR-300a-4
+  - AR-300a-5
 implemented_by: []
 documentation_triggers: []
 documentation_rationale: "No new user-facing surface -- specialists begin receiving a declaration they were always granted; nothing changes in how anyone invokes anything."

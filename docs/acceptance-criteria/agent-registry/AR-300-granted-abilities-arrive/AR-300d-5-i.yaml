@@ -1,0 +1,122 @@
+id: AR-300d-5-i
+title: "A newly added ticket-phase agent is permitted to every agent holding the ticket-phase entry, with no edit to those agents"
+component: agent-registry
+components:
+  - agent_registry
+  - template_compiler
+  - supervisor_system
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given ticket-supervisor, whose declaration permits "every ticket-phase agent"
+    as a single entry,
+    And a newly added agent marked as a ticket-phase agent, with no edit made to
+      ticket-supervisor's definition,
+  When the build compiles agent prompts,
+  Then ticket-supervisor's compiled prompt names the new agent among its
+    permitted sub-agents,
+    And ticket-supervisor's own definition is byte-identical before and after,
+    And an agent that stops being marked as a ticket-phase agent stops being
+      named through that entry on the next build,
+    And an agent that is not marked as a ticket-phase agent is never named
+      through that entry,
+  So the entry stays a standing rule that follows the set of ticket-phase
+    agents, rather than a list that goes stale the first time the set changes.
+depends_on:
+  - AR-300d-5
+doc_links:
+  - path: templates/agents/ticket-supervisor.md
+    relationship: describes
+    status: exists
+    relevance: "The agent holding the ticket-phase macro today."
+  - path: config/agent_registry.json
+    relationship: describes
+    status: exists
+    relevance: "Holds the ticket-phase flag (is_ticket_phase) the macro resolves against, and ticket-supervisor's macro entry."
+  - path: docs/reference/agent-template-frontmatter.md
+    relationship: describes
+    status: exists
+    relevance: "Documents the __ticket_phase_agents__ macro as expanding to every agent whose is_ticket_phase is true."
+assigned_agent: python-coder
+estimated_complexity: S
+change_target: code
+risk_surface: internal
+it_requirements:
+  - "The macro is resolved on every compile from the CURRENT set of agents whose `is_ticket_phase` is true in config/agent_registry.json (where the flag is authoritatively authored today; this criterion does not move it). It is never cached across builds and never pre-expanded into the declaration."
+  - "This is consistent with AR-300c-5's negative clause: that clause makes the registry `spawn_allowlist` field inert for delivery; `is_ticket_phase` is a different, still-authored registry field and is a legitimate input to macro resolution. Do not 'fix' the macro by moving resolution onto the derived spawn_allowlist copy."
+  - "Membership is decided by the flag alone: an agent not marked ticket-phase is never named through the macro, whatever its tier or role. Revocation is per agent: un-marking removes the agent from every macro holder's section on the next compile and from nowhere else."
+  - "Tests mutate a COPY of the registry and templates and compile in-process; ticket-supervisor's template bytes are captured before and compared after."
+test_spec:
+  - name: test_new_ticket_phase_agent_appears_in_ticket_supervisor_section
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "Adding a new agent marked is_ticket_phase true makes ticket-supervisor's compiled prompt name it among its permitted sub-agents."
+  - name: test_ticket_supervisor_definition_is_byte_identical_before_and_after
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: integration
+    angle: discrimination
+    description: "templates/agents/ticket-supervisor.md is byte-identical before and after the new agent is added and compiled."
+    must_catch:
+      - "the migration or build expands the macro into names written back into ticket-supervisor's declaration"
+  - name: test_unmarked_agent_stops_being_named_through_the_macro
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: integration
+    angle: boundary
+    description: "An agent whose is_ticket_phase flips to false is absent from ticket-supervisor's section on the next compile."
+  - name: test_agent_not_marked_ticket_phase_is_never_named_through_the_macro
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: integration
+    angle: failure
+    description: "No agent with is_ticket_phase false appears in ticket-supervisor's section unless explicitly declared."
+test_rationale: >-
+  The byte-identical clause separates the macro-as-rule design from the expanded-list
+  design, so it carries must_catch; a test that edits ticket-supervisor during setup
+  passes on the broken design. Un-marking and never-marked cover revocation and
+  over-inclusion through the same entry.
+delivers_to: null
+expects_from:
+  ac_id: AR-300c-5
+  contract: "Macro resolution of `__ticket_phase_agents__` against the current registry is_ticket_phase flags, performed at compile time inside spawn_allowlist_resolved."
+origin_agent: BrainCandy
+created: 2026-10-09
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-10-09'
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  THIS IS THE CRITERION THAT DECIDES THE MACRO QUESTION. If the
+  `__ticket_phase_agents__` macro were expanded into names during migration,
+  ticket-supervisor's declaration would be right on migration day and wrong the
+  day a ticket-phase agent is added, with no failure anywhere -- the new phase
+  agent simply never appears in the supervisor's permission. Keeping the macro as
+  one entry and resolving it on every build (AR-300c-5) is what makes this
+  criterion satisfiable. The byte-identical clause is the assertion that
+  separates the two designs; a test that edits ticket-supervisor as part of its
+  setup passes on the broken one.
+
+  "MARKED AS A TICKET-PHASE AGENT" -- WHERE. Today the flag is authored in the
+  registry (`is_ticket_phase`), not in frontmatter. This criterion is satisfied by
+  marking the agent wherever that flag is authoritatively declared; it does not
+  move the flag. If AR-300c's direction is later extended to make the whole
+  registry derived, the flag must move into the agent's own header or the macro
+  resolves against a derived copy -- an open item for the user, not decided here.
+  Note the tension with AR-300d-5's "no central record entry" clause: that clause
+  is about the sub-agent section of the NEW agent's own prompt; being a ticket-
+  phase agent is a separate registration decision.
+
+  REVOCATION THROUGH THE MACRO is per agent in the same sense as AR-300d-3: an
+  agent un-marked as ticket-phase disappears from every macro holder's prompt and
+  from nowhere else.

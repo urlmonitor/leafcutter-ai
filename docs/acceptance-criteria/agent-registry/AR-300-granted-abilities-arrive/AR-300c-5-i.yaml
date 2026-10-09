@@ -1,0 +1,202 @@
+id: AR-300c-5-i
+title: "Moving sub-agent permissions into each agent's declaration carries the union of every rival record, and says what came from where"
+component: agent-registry
+components:
+  - agent_registry
+  - supervisor_system
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given the three places that record which sub-agents an agent may dispatch
+    today -- the central registry, a header entry already present in four agent
+    definitions, and a hand-written sub-agent table in the body of five,
+    And two of those disagree -- python-coder's table names test-runner, which
+      its registry record does not, and architect-review's registry record
+      names architect-review-deep, which its table omits,
+  When the permissions are consolidated into each agent's own declaration,
+  Then every agent that any of the three gives a permission has a declaration
+    afterwards,
+    And each agent's declared sub-agents are the union of what the three
+      recorded for it, so no permission is dropped -- python-coder ends permitted
+      test-runner, and architect-review ends permitted architect-review-deep,
+    And no agent is declared a sub-agent that none of the three recorded for
+      it, so no permission is invented,
+    And the "every ticket-phase agent" entry is carried across as that one
+      entry, not replaced by the names it stood for on the day of the move,
+    And the consolidation reports every agent by name with the source or
+      sources each permitted sub-agent came from, names separately each agent
+      whose sources disagreed, and states how many agents each source held,
+    And no new empty declaration is written for an agent that none of the
+      three gives a permission, while an explicit empty declaration already
+      present is left as it is,
+  So no permission is silently lost or granted in the move, and the user sees
+    the consequence of every disagreement before it takes effect.
+depends_on:
+  - AR-300c-5
+doc_links:
+  - path: config/agent_registry.json
+    relationship: describes
+    status: exists
+    relevance: "First source: the registry spawn_allowlist field, including the ticket-phase macro."
+  - path: templates/agents/python-coder.md
+    relationship: modifies
+    status: exists
+    relevance: "Its hand-written sub-agent table names test-runner; the registry does not. Under the union it gains test-runner."
+  - path: templates/agents/architect-review.md
+    relationship: modifies
+    status: exists
+    relevance: "Its registry record names architect-review-deep; its hand-written table omits it. Under the union it keeps architect-review-deep -- a sub-agent with no deployable definition (see AR-300c-5-iii)."
+  - path: docs/acceptance-criteria/agent-registry/AR-300-granted-abilities-arrive/AR-300c-2.yaml
+    relationship: related
+    status: exists
+    relevance: "The abilities precedent: union of the rival records, per-agent provenance, no invented grant, the migration reports rather than asks to be trusted."
+  - path: docs/reference/agent-template-frontmatter.md
+    relationship: describes
+    status: exists
+    relevance: "Documents the `spawn_allowlist` frontmatter key the consolidation writes into."
+assigned_agent: python-coder
+estimated_complexity: L
+change_target:
+  - code
+  - config
+risk_surface: contract_boundary
+it_requirements:
+  - "This is a one-shot BACKFILL under the repository's backfill discipline: a second run is byte-stable (verify by running twice and diffing); infer-then-VALIDATE before any write; insert ONLY the `spawn_allowlist` frontmatter key (the key AR-300c-5 fixes) into each template, never rewrite a whole file or reformat unrelated keys; an agent whose permission cannot be derived unambiguously goes to a review report, never a guessed value. Place the script where one-shot migrations live, not in the build's hot path."
+  - "THREE SOURCES, read independently and unioned per agent: (1) the registry `spawn_allowlist` field, (2) any existing frontmatter `spawn_allowlist` key, (3) the hand-written sub-agent table in the template BODY. The body-table parse must be validated against the five real on-disk tables (business-analyst, frontend-coder, test-writer, python-coder, architect-review), not hand-typed fixtures. llm-expert's checklist prose is NOT a table and is not a source."
+  - "The macro `__ticket_phase_agents__` is carried across as that one list item, never expanded into the names it resolves to on migration day."
+  - "Report every agent by name with the source(s) of each permitted sub-agent, a separate list of agents whose sources disagreed, and per-source holder counts. A total alone cannot be checked."
+  - "An agent no source permits gains no key; an existing explicit `spawn_allowlist: []` (ac-triage, onboard-config-section) is left byte-identical. Empty and absent are equivalent downstream (AR-300a-5)."
+  - "DECIDED, NOT OPEN (BrainCandy, 2026-10-09, decision 11): python-coder KEEPS test-runner. The union grants it; the registry's omission was drift, and test-runner is python-coder's documented inner-loop runner. The disagreement is still listed in the report (that is the criterion), but no review-report entry or user prompt is raised for it."
+  - "SEQUENCING with decision 10: the consolidation produces the union exactly as the criteria state -- architect-review is declared architect-review-deep and the report lists the disagreement. The removal of architect-review-deep is a SEPARATE, later remediation step owned by AR-300c-5-iii's it_requirements; it must not be folded into the migration (a migration that silently drops a permission is the defect this criterion forbids). Order on the real tree: this consolidation -> AR-300c-5-iii remediation -> AR-300a-5-i body-table deletion."
+  - "After the migration the registry `spawn_allowlist` becomes derived; do not hand-edit it here. It is regenerated from the declarations by the transform-agent-registry hook at commit time (AR-300c-5-ii), which is how python-coder's registry entry gains test-runner."
+test_spec:
+  - name: test_every_agent_permitted_by_any_source_has_a_declaration_afterwards
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: integration
+    angle: real_artifact
+    description: "Run against a pre-migration snapshot of the real registry and templates, every agent any of the three sources permits ends with a `spawn_allowlist` declaration."
+  - name: test_declared_sub_agents_are_the_union_of_the_three_sources
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: integration
+    angle: real_artifact
+    description: "On the pre-migration snapshot, python-coder is declared test-runner (table-only) and architect-review is declared architect-review-deep (registry-only); no permission from any source is dropped."
+  - name: test_no_sub_agent_is_declared_that_no_source_recorded
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: "No declared sub-agent appears that none of the three sources recorded for that agent."
+  - name: test_ticket_phase_macro_is_carried_as_one_entry
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: unit
+    angle: discrimination
+    description: "ticket-supervisor's migrated declaration holds the literal `__ticket_phase_agents__` item, not the expanded names."
+    must_catch:
+      - "migration expands the macro into the ticket-phase agent names of migration day"
+  - name: test_report_names_each_agent_with_provenance_disagreements_and_source_counts
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: "The report names every agent with each sub-agent's source(s), lists python-coder and architect-review among the disagreeing agents, and states how many agents each source held."
+  - name: test_no_new_empty_declaration_and_existing_empty_left_untouched
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: unit
+    angle: boundary
+    description: "An agent permitted by no source gains no key; ac-triage's existing `spawn_allowlist: []` is byte-identical afterwards."
+  - name: test_spawn_migration_is_byte_stable_and_insert_only
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: integration
+    angle: real_artifact
+    description: "A second run is byte-identical, and the only change to any template is the inserted `spawn_allowlist` key -- `tools:`, other frontmatter and the body survive byte-identical."
+test_rationale: >-
+  The two measured disagreements are the criterion's teeth, so they are asserted on a
+  pre-migration snapshot of the real data rather than fixtures: after the real tree is
+  migrated and remediated, architect-review no longer holds architect-review-deep and
+  a test against the live tree could not see the union. The macro descriptor carries
+  must_catch because expansion is the natural, wrong migration. Byte-stability and
+  insert-only exist because a whole-file rewrite of 60 templates is the backfill hazard.
+delivers_to:
+  agent: python-coder
+  contract: >-
+    Migrated `spawn_allowlist` frontmatter keys in templates/agents/*.md (union of
+    registry field, existing frontmatter key and body table; macro verbatim), plus
+    a provenance report {agents: [{agent, sub_agents: [{id, sources:
+    ["registry"|"frontmatter"|"body_table"]}]}], disagreeing_agents: [str],
+    source_holder_counts: {registry: int, frontmatter: int, body_table: int}}.
+    Consumed by AR-300c-5-iii (remediation runs after it) and AR-300a-5-i (table
+    deletion runs after it).
+expects_from:
+  ac_id: AR-300c-5
+  contract: "The `spawn_allowlist` frontmatter key name and list shape (macro as a literal item) that this consolidation writes."
+origin_agent: BrainCandy
+created: 2026-10-09
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-10-09'
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  CONSEQUENCES THE USER MUST SEE BEFORE APPROVING. With the data measured on
+  2026-10-09, the union rule:
+    - GRANTS python-coder permission to dispatch test-runner. Today that
+      permission exists only in python-coder's hand-written table; the registry
+      does not list it, and nothing delivers either source. After this lands,
+      python-coder's compiled prompt will name test-runner as a sub-agent it may
+      call. If the user does not want python-coder dispatching test-runner, the
+      right move is to say so now and remove it from the table before the
+      migration, not to let the migration drop it silently.
+    - KEEPS architect-review-deep on architect-review. That sub-agent has a
+      registry entry (template_path null) and no templates/agents/ definition, so
+      under AR-300c-5-iii the build will REFUSE on architect-review until the
+      user resolves it. The union is still correct: dropping it silently would
+      hide that architect-review's body instructs it to "Spawn
+      architect-review-deep via the Agent tool".
+
+  WHY UNION RATHER THAN 'REGISTRY WINS'. Mirrors AR-300c-2 deliberately. A
+  hand-written table entry is a permission an author typed on purpose; picking
+  one side quietly discards the other side's decisions, and the user cannot
+  check what was lost. The union plus a named disagreement list puts every such
+  call in front of the user.
+
+  THREE SOURCES, NOT TWO. The orchestrator's probe compared the registry against
+  the body tables. The BA found a third: four templates already carry a
+  frontmatter `spawn_allowlist:` key (frontend-coder, onboard non-empty;
+  ac-triage, onboard-config-section empty). The two non-empty ones agree with
+  the registry today, so the union is unchanged by them -- but the consolidation
+  must still read them, or a future disagreement there is dropped.
+
+  THE FIVE TABLES (measured): business-analyst, frontend-coder, test-writer
+  MATCH the registry; python-coder adds test-runner; architect-review omits
+  architect-review-deep. llm-expert only mentions the heading in its review
+  checklist prose and has no table -- it is not a source (see AR-300a-5-i).
+  The user decision text says "six" tables; the measurement says five tables
+  plus one prose mention.
+
+  EXISTING EMPTY DECLARATIONS ARE LEFT ALONE. AR-300c-2 says an ungranted agent
+  ends with no declaration rather than an empty one. Here two templates already
+  hold `spawn_allowlist: []`; the migration does not rewrite unrelated
+  frontmatter, so it neither removes those nor adds new ones. Empty and absent
+  are treated identically downstream (AR-300a-5).
+
+  ORDER MATTERS. This consolidation must run before the hand-written tables are
+  removed (AR-300a-5-i); deleting the tables first loses test-runner.
+
+  USER DECISIONS SINCE AUTHORING (IT PO, 2026-10-09). Both consequences above
+  have been decided by BrainCandy. Decision 11: python-coder keeps test-runner;
+  the union's grant stands. Decision 10: architect-review-deep is removed, but
+  by a separate remediation step after this consolidation (written into
+  AR-300c-5-iii's it_requirements), not by this migration -- the migration still
+  carries the union and reports the disagreement, as the criteria require.

@@ -1,0 +1,139 @@
+id: AR-300d-5
+title: "A sub-agent permission granted or revoked in an agent's declaration takes effect on the next build, with no second edit and no marker"
+component: agent-registry
+components:
+  - agent_registry
+  - template_compiler
+  - build_pipeline
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given an existing agent that already receives its permitted sub-agents,
+    And, as one change, a sub-agent added to that agent's declaration and to
+      nothing else,
+    And, as a later change, a sub-agent removed from that agent's declaration
+      and from nothing else,
+  When the build compiles agent prompts after each change,
+  Then after the addition that agent's compiled prompt names the added
+    sub-agent alongside the ones it already named,
+    And after the removal that agent's compiled prompt no longer names the
+      removed sub-agent anywhere, including when the build writes over a
+      compiled prompt left by an earlier build,
+    And no other agent's compiled prompt changes as a result of either change,
+      including other agents permitted the same sub-agent,
+    And a newly added agent definition that declares permitted sub-agents, and
+      carries nothing else added for the purpose, receives them on its first
+      build with no central record entry, no list of agents to include and no
+      marker placed in its body,
+  So permitting a sub-agent is a single decision that takes effect on its own,
+    in both directions, for agents that exist now and agents added later.
+depends_on:
+  - AR-300d
+doc_links:
+  - path: docs/reference/agent-template-frontmatter.md
+    relationship: describes
+    status: exists
+    relevance: "The `spawn_allowlist` declaration whose edits this criterion requires to take effect alone."
+  - path: docs/architecture/adrs/ADR-002-dual-platform-compilation.md
+    relationship: describes
+    status: exists
+    relevance: "Add and revoke must take effect in every platform root the build compiles."
+  - path: docs/acceptance-criteria/agent-registry/AR-300-granted-abilities-arrive/AR-300d-1.yaml
+    relationship: related
+    status: exists
+    relevance: "The abilities precedent for the new-agent case: nothing else edited is the assertion, not the setup."
+  - path: docs/acceptance-criteria/agent-registry/AR-300-granted-abilities-arrive/AR-300d-3.yaml
+    relationship: related
+    status: exists
+    relevance: "The abilities precedent for revocation: derived afresh each build, per agent, over a stale compiled tree."
+assigned_agent: python-coder
+estimated_complexity: M
+change_target: code
+risk_surface: contract_boundary
+it_requirements:
+  - "The section is derived afresh from each agent's own `spawn_allowlist` declaration on every compile; nothing is patched into a previously compiled prompt. Revocation is proved over an output tree left by an earlier build: the stale compiled prompt is overwritten and the removed sub-agent appears nowhere in it."
+  - "Placement is declaration-driven (the same append path as the skills section, scripts/agent_skills_declaration.py append_declared_skills is the precedent). The marker-gated `{{my_spawn_allowlist}}` placement in scripts/template_compiler.py must not be the route; if any of it remains, it must not be what delivers the section. No marker is required in any body."
+  - "The NEW-AGENT clause: a new template with only a `spawn_allowlist` declaration receives its section on first compile with no registry entry, no include list and no body marker. The section's optional Role/Tier columns (AR-300a-5) must therefore tolerate a missing registry row -- a missing row must not drop the sub-agent or fail the compile."
+  - "Blast radius: the computation is keyed per agent; no shared structure (e.g. a union of all agents' allowlists, or a single table computed once) may feed any agent's section."
+  - "Tests compile in-process (build_agents into a temp output root) or mutate a COPY of the package; they must not mutate the shared reference layout and must not spawn their own build.py."
+test_spec:
+  - name: test_sub_agent_added_to_declaration_appears_on_next_compile
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "Adding one sub-agent to an existing agent's declaration only makes its compiled prompt (both roots) name it beside the ones already named."
+  - name: test_sub_agent_removed_from_declaration_vanishes_over_a_stale_compiled_tree
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: integration
+    angle: discrimination
+    description: "Removing one sub-agent from the declaration only, then compiling over the previous output, leaves no mention of it anywhere in that agent's compiled prompt."
+    must_catch:
+      - "the compiler patches or appends into the existing compiled prompt instead of regenerating it"
+  - name: test_no_other_agents_compiled_prompt_changes_on_add_or_revoke
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: integration
+    angle: discrimination
+    description: "Every other compiled prompt, including another agent permitted the same sub-agent, is byte-identical across the add and the revoke."
+    must_catch:
+      - "the section is computed from a shared structure rather than per agent"
+  - name: test_new_agent_with_only_a_declaration_receives_its_section_on_first_compile
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: integration
+    angle: seam
+    description: "A new template with a `spawn_allowlist` declaration, no registry entry and no body marker gets the section on its first compile."
+test_rationale: >-
+  Additive clauses are satisfied by an accumulating design; only revocation over a
+  stale tree distinguishes a derived section, hence its must_catch. The blast-radius
+  descriptor checks the agents nobody looked at, where a shared-structure design
+  shows. The new-agent descriptor is the one the 'marker per template' cheap fix
+  fails.
+delivers_to: null
+expects_from:
+  ac_id: AR-300a-5
+  contract: "The declaration-driven, per-agent sub-agent section whose add, revoke and first-compile behaviour this criterion constrains."
+origin_agent: BrainCandy
+created: 2026-10-09
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-10-09'
+superseded_by: null
+covered_by:
+  - AR-300d-5-i
+implemented_by: []
+notes: |
+  WHY ONE L2 COVERS ADD, REVOKE AND NEW-AGENT. AR-300d was at 4 of 5 L2s; the
+  abilities side spends three L2s (d-1 new agent, d-2 added, d-3 revoked) plus
+  d-4 (no marker). This takes the last slot and states all three cases for
+  sub-agents in one record. The ticket-phase macro case -- the one that justifies
+  keeping the macro as a macro -- is its own L3, AR-300d-5-i.
+
+  THE CHEAP FIX THIS FAILS. Placing a sub-agent marker into each of the 25
+  permitted definitions would deliver correctly on the day it ships and fail the
+  new-agent clause the first time someone adds the 26th -- the same trap
+  AR-300d's notes describe for abilities. The placement that exists today for
+  this section is precisely a body marker that no template carries.
+
+  REVOCATION IS WHERE 'DERIVED' IS PROVED. Every additive clause is satisfied by
+  an accumulating design; only removal -- over a compiled tree left by an earlier
+  build -- distinguishes a section derived afresh from one patched. An agent
+  still told it may dispatch a sub-agent that was deliberately taken away is a
+  worse outcome than the original defect.
+
+  THE BLAST-RADIUS CLAUSE. A delivery keyed off a shared structure rather than
+  the per-agent declaration passes the first two clauses while handing the
+  permission to everyone (or revoking it from everyone). Visible only in the
+  agents nobody looked at.
+
+  THE "NO CENTRAL RECORD ENTRY" CLAUSE mirrors AR-300d-1 for delivery. It does
+  not claim an agent needs no registry entry for any purpose -- only that the
+  sub-agent section does not depend on one.

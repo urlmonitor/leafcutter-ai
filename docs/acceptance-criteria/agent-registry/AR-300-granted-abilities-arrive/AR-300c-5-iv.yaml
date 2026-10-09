@@ -1,0 +1,118 @@
+id: AR-300c-5-iv
+title: "The authoring reference names one place to permit a sub-agent, and no surface still tells an author to hand-write a sub-agent table"
+component: agent-registry
+components:
+  - agent_registry
+  - documentation_system
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given an author with no prior knowledge of this change, consulting the
+    project reference for how an agent is defined,
+  When they look for how to permit an agent to dispatch another agent,
+  Then the reference names the agent's own declaration, beside the tools
+    declaration, as the one place it is done, and describes the "every
+    ticket-phase agent" entry and what it resolves to,
+    And it states that the central registry's record of permitted sub-agents is
+      derived and must not be authored by hand, naming what happens if it is,
+    And it states that an agent permitted any sub-agent must also be permitted
+      the tool by which an agent is dispatched,
+    And no surface in the project still instructs an author to write a
+      sub-agent table into an agent's body, or to make the list arrive by
+      placing a marker in the body -- including the prompt-review checklist
+      that today requires such a table,
+    And the reference states that nothing beyond the declaration is needed for
+      a permission to reach the agent,
+  So the hand-written tables do not return the first time someone follows the
+    instructions.
+depends_on:
+  - AR-300c-5
+doc_links:
+  - path: docs/reference/agent-template-frontmatter.md
+    relationship: modifies
+    status: exists
+    relevance: "Describes the frontmatter spawn_allowlist key as resolving into a body placeholder 'when present in the body' -- the marker-gated route this goal retires -- and calls the registry the single source of truth for registration."
+  - path: docs/how-to/creating-an-agent-template.md
+    relationship: modifies
+    status: exists
+    relevance: "The authoring steps a reader follows; must agree with the reference."
+  - path: templates/agents/llm-expert.md
+    relationship: modifies
+    status: exists
+    relevance: "Its prompt-review checklist (item 4) requires any prompt that invokes the Agent tool to include a '## Your Available Sub-Agents' or '## Spawn Allowlist' section -- an instruction that re-creates the hand-written duplicate AR-300a-5-i removes."
+  - path: docs/how-to/deprecating-or-removing-artifacts.md
+    relationship: describes
+    status: exists
+    relevance: "Mentions the spawn allowlist; in scope of the sweep."
+  - path: docs/reference/workflow-constraints.md
+    relationship: describes
+    status: exists
+    relevance: "Mentions the spawn allowlist; in scope of the sweep."
+  - path: docs/acceptance-criteria/agent-registry/AR-300-granted-abilities-arrive/AR-300c-4.yaml
+    relationship: related
+    status: exists
+    relevance: "The abilities counterpart over the same two documents; implement in the same pass."
+assigned_agent: documentation-expert
+estimated_complexity: M
+change_target:
+  - docs
+  - prompt
+risk_surface: internal
+it_requirements:
+  - "Name the declaration exactly as AR-300c-5 lands it: the frontmatter key `spawn_allowlist` (a list of agent ids) in the same block as `tools:`, and the literal entry `__ticket_phase_agents__`, which stays one entry and resolves on every build to the agents whose registry `is_ticket_phase` is true (that flag is still authored in config/agent_registry.json)."
+  - "Rewrite, do not append to, the stale statements in docs/reference/agent-template-frontmatter.md: the `spawn_allowlist` row and the '`spawn_allowlist` and Registry Injection' section describe resolution into a `{{my_spawn_allowlist}}` body placeholder, an empty list meaning 'managed via the registry only', and 'Keep both in sync'. All three become false. Also correct the 'Relationship Between Frontmatter and Registry' section so spawn_allowlist is shown as declaration -> derived copy."
+  - "State the derived-copy consequence concretely: a hand edit to the registry spawn_allowlist is reported by the build, the declaration wins in the compiled prompt, and the transform-agent-registry pre-commit hook regenerates the registry field from the declarations (AR-300c-5-ii)."
+  - "State the Agent-tool rule and its enforcement: an agent declaring any sub-agent (the macro included) must list `Agent` in `tools:`, and the build refuses otherwise (AR-200b-3). Also state that a declared sub-agent with no packaged or project-local definition refuses the build (AR-300c-5-iii)."
+  - "The SWEEP is the deliverable: search docs/, templates/skills/ and templates/agents/ prose for any instruction to write a sub-agent table into an agent body or to place a marker for the list, and report the finding list even when empty. llm-expert's prompt-review checklist item 4 must be REWRITTEN to point at the declaration and to check that a prompt using the Agent tool has a `spawn_allowlist` declaration (and vice versa), not deleted. This is a prompt-body edit to templates/agents/llm-expert.md, not a registry edit, so it does not depend on the open llm-expert/registry scope question."
+  - "State that nothing beyond the declaration is needed for a permission to reach the agent (no registry edit, no marker, no table)."
+  - "Agree between docs/reference/agent-template-frontmatter.md and docs/how-to/creating-an-agent-template.md; implement in the same pass as AR-300c-4. Follow the documentation frontmatter rules and the doc-length ratchet (an already-oversized doc may not grow). Do not restate compiler internals."
+test_required: false
+test_rationale: >-
+  Documentation and prompt-prose change with no executable behaviour. The sweep's
+  finding list (reported even when empty) is the verification artefact; the
+  behaviour the docs describe is tested by AR-300c-5, AR-300c-5-ii, AR-300c-5-iii and
+  AR-200b-3.
+delivers_to: null
+expects_from:
+  ac_id: AR-300c-5
+  contract: "The landed `spawn_allowlist` declaration key, macro spelling and resolution rule that this reference documents."
+origin_agent: BrainCandy
+created: 2026-10-09
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-10-09'
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  AUTHORED BECAUSE AR-300c DECLARES A reference-doc DOCUMENTATION TRIGGER, the
+  same reason AR-300c-4 exists. It sits as an L3 under AR-300c-5 only because
+  AR-300c had no L2 slot left; it is the sub-agent counterpart of AR-300c-4 and
+  should be implemented in the same pass over the same two documents.
+
+  THE SWEEP IS THE DELIVERABLE. The sharpest surviving instruction found while
+  authoring: llm-expert's review checklist item 4 tells authors that a prompt
+  using the Agent tool "must include a `## Your Available Sub-Agents` or
+  `## Spawn Allowlist` section ... a table with each sub-agent's id, role, and
+  tier". Left as is, the next prompt review re-introduces exactly the
+  hand-written table AR-300a-5-i deletes. It must be rewritten to point at the
+  declaration (and, if anything, to check that the declaration and the Agent tool
+  agree -- AR-200b-3's rule), not deleted silently. The same sweep must cover
+  docs/, templates/skills/ and templates/agents/ prose, and report its finding
+  list even when empty.
+
+  THE REFERENCE IS ALSO STALE ON MECHANISM. docs/reference/agent-template-frontmatter.md
+  says the frontmatter key is resolved "into the {{my_spawn_allowlist}} table
+  placeholder when present in the body" and that an empty list may mean "the
+  allowlist is managed via the registry only". Both statements become false.
+
+  OVERLAP WITH THE OPEN LLM-EXPERT QUESTION. Decision file item "Open, not
+  decided" notes a scope tension around llm-expert and registry edits. Rewriting
+  checklist item 4 is a prompt-body edit, not a registry edit, so it does not
+  depend on that question -- noted so the IT PO does not block on it.

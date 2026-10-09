@@ -1,0 +1,132 @@
+id: AR-300b-1-iii
+title: "Once the sub-agent section is delivered, a compiled prompt missing it fails the build through the same gate as a missing abilities section"
+component: agent-registry
+components:
+  - template_compiler
+  - build_pipeline
+  - agent_registry
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given a tree on which sub-agent permissions are delivered,
+    And an agent whose declaration permits at least one sub-agent, whose
+      compiled prompt in one platform lacks the section naming them, while its
+      declaration and the central record are both correct,
+  When the build finishes,
+  Then the build reports failure, naming that agent, the sub-agent preparation
+    and the platform,
+    And that failure comes from the same check that reports a missing abilities
+      section, with no check written for the sub-agent section alone,
+    And a build in which every permitted agent's compiled prompt carries its
+      sub-agent section reports no failure for that preparation, while still
+      counting it among the preparations examined,
+    And an agent permitted no sub-agents is not reported for lacking the
+      section,
+  So the second dead preparation measured when this goal was framed is guarded
+    from the moment it is repaired, not merely counted as broken until then.
+depends_on:
+  - AR-300b-1
+doc_links:
+  - path: docs/acceptance-criteria/agent-registry/AR-300-granted-abilities-arrive/AR-300b-1.yaml
+    relationship: related
+    status: exists
+    relevance: "Names the spawn-allowlist section as the second of two undelivered per-agent preparations; this criterion pins what the gate does once that preparation is delivered."
+  - path: docs/acceptance-criteria/agent-registry/AR-300-granted-abilities-arrive/AR-300b-2.yaml
+    relationship: related
+    status: exists
+    relevance: "Requires the covered preparation set to be derived from what the build registers; the sub-agent section must register through that path, not be named in the gate."
+  - path: docs/architecture/adrs/ADR-037-whole-collection-uniqueness-pass.md
+    relationship: describes
+    status: exists
+    relevance: "The verdict contract (inspected count, population source, findings) the delivery gate's single verdict object follows."
+  - path: docs/acceptance-criteria/agent-registry/AR-300-granted-abilities-arrive/AR-300a-5.yaml
+    relationship: related
+    status: exists
+    relevance: "Delivers and registers the sub-agent section this gate verifies arrives."
+assigned_agent: python-coder
+estimated_complexity: S
+change_target: code
+risk_surface: contract_boundary
+it_requirements:
+  - "THE SUB-AGENT SECTION IS A REGISTERED PREPARATION, NOT A NAMED ONE. It reaches the gate only through the slice-3 contract in scripts/agent_preparation_delivery.py (pinned by unit_tests/prompt_assembly/_ar_300b_support.py's docstring): the compiler computes it via compute_preparation('spawn_allowlist', agent, builder) and records it via register_preparation(preparation_name='spawn_allowlist', agent=<compiled prompt file stem>, content=<section text>, destination_offered=True); verify_preparations_delivered(compiled_roots, expected_prompt_count=..., preparations=None) then judges it like every other preparation, and refuse_on_undelivered_preparations turns any finding into a non-zero build exit. The gate module must contain no spawn-specific branch, constant or name -- that is the 'same check' clause."
+  - "An agent permitted no sub-agents registers NO spawn_allowlist preparation (docstring A: an ungranted preparation is not registered), so it can never be reported for lacking the section. Do not express this as a filter inside the gate."
+  - "A computed-but-unregistered spawn section is reported with cause `unregistered` by the computation ledger -- compute through compute_preparation, never call the builder directly, or the forgot-to-register guard cannot see it."
+  - "Findings are per (agent, preparation, platform_root) across <output_root>/agents/ and <output_root>/gemini/agents/, resolved from the declared output root, never .claude/agents. A clean run lists 'spawn_allowlist' in preparation_kinds and counts it in inspected_preparation_kinds."
+  - "Tests that strip a section COPY the shared reference layout's compiled roots into a temp dir and mutate the copy (the gate is runnable against a supplied compiled tree); they never mutate the shared layout and never spawn their own build.py."
+  - "Consequence for AR-300b-1-i (clean path on the real population): it cannot pass until the sub-agent section is delivered (AR-300a-5) AND no unresolvable declared sub-agent remains (AR-300c-5-iii) -- architect-review-deep is removed by decision 10, but conflict-resolver-deep is a measured second unresolvable target still awaiting a user decision."
+test_spec:
+  - name: test_missing_sub_agent_section_in_one_root_fails_naming_agent_preparation_root
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: integration
+    angle: deployed
+    description: "With one permitted agent's sub-agent section stripped from its gemini-root compiled prompt only (declaration and registry correct), the verdict has a finding naming that agent, preparation 'spawn_allowlist' and that platform root, and the build seam returns 1."
+  - name: test_sub_agent_and_abilities_findings_come_from_the_same_verdict
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: integration
+    angle: discrimination
+    description: "Stripping both an abilities section and a sub-agent section yields both findings in ONE verify_preparations_delivered verdict; renaming the spawn preparation in the registration alone changes the reported name with no gate edit."
+    must_catch:
+      - "a spawn-specific check written beside the generic gate"
+      - "the gate iterates a hard-coded list of preparation names"
+  - name: test_clean_run_counts_spawn_allowlist_among_preparation_kinds
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: integration
+    angle: real_artifact
+    description: "On a compiled tree where every permitted agent carries its section, the verdict has no spawn_allowlist finding and lists 'spawn_allowlist' in preparation_kinds."
+  - name: test_agent_permitted_no_sub_agents_is_not_reported
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: unit
+    angle: failure
+    description: "An agent with no or empty spawn_allowlist has no registered spawn preparation and produces no finding, though its compiled prompt has no section."
+test_rationale: >-
+  The 'same check' clause is the one a careless implementation fails while passing
+  every other clause, so the two-findings-one-verdict descriptor carries must_catch
+  for a parallel check and for a name list. Stripping in one root only proves the
+  per-root granularity. The negative descriptor keeps the gate quiet on the
+  majority of agents, which permit no one.
+delivers_to: null
+expects_from:
+  ac_id: AR-300a-5
+  contract: "One register_preparation(preparation_name='spawn_allowlist', agent, content, destination_offered=True) per permitted agent per compile, computed through compute_preparation."
+origin_agent: BrainCandy
+created: 2026-10-09
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-10-09'
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  WHY AN L3 AND NOT AN EDIT TO AR-300b-1. AR-300b-1 (approved) already names the
+  spawn-allowlist section as one of the two preparations its gate must report,
+  and its criteria remain true: on the tree it was authored against, both were
+  undelivered. What changes with user decision 9 is that the spawn preparation
+  stops being "dead and reported" and becomes "delivered and guarded". That
+  after-repair behaviour is new, so it is stated here rather than by rewriting
+  an approved criterion. AR-300b-1's notes carry a dated pointer to this record
+  (amended_by entry, criteria unchanged).
+
+  THE SAME-CHECK CLAUSE IS AR-300b-2's PROMISE APPLIED. A sub-agent-specific
+  check would pass every clause above and re-create the per-block guarantee
+  AR-300b exists to replace. The sub-agent section must arrive in the gate's
+  coverage by registering as a per-agent preparation, not by being named.
+
+  CONSEQUENCE FOR AR-300b-1-i. Its descriptor "gate does not fire on the real
+  repository population" cannot pass until the sub-agent section is delivered
+  (AR-300a-5) and architect-review-deep is resolved (AR-300c-5-iii) -- the
+  first because the gate would report 25 undelivered sections, the second
+  because the build refuses before it gets that far.
+
+  THE NEGATIVE CLAUSE (permitted none, not reported) keeps the gate usable:
+  most agents permit no sub-agents, and a gate that reports them is the noisy
+  rule this component has already lost once.

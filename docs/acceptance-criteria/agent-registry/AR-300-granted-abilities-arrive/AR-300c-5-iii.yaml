@@ -1,0 +1,198 @@
+id: AR-300c-5-iii
+title: "A declared sub-agent with no deployable definition stops the build, naming the agent, the sub-agent and where it was looked for"
+component: agent-registry
+components:
+  - agent_registry
+  - build_pipeline
+  - supervisor_system
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given an agent whose declaration permits a sub-agent for which no agent
+    definition is available to the project -- neither one shipped with the
+    package nor one added by the project itself -- as is true today of
+    architect-review, which is permitted architect-review-deep,
+  When the build runs,
+  Then the build reports failure and does not report success, naming the
+    declaring agent and the unresolvable sub-agent,
+    And the report says where the sub-agent was looked for, distinguishing
+      "not shipped with the package" from "not found among the project's own
+      agents", so the reader knows which of the two to add,
+    And a central registry entry for the sub-agent with no definition behind it
+      does not count as the sub-agent existing,
+    And an "every ticket-phase agent" entry that resolves to no agents at all is
+      reported the same way, rather than delivering an empty list,
+    And every declared sub-agent of every agent is resolved, with the count
+      reported, and a sub-agent that does resolve is not reported,
+  So an agent is never told it may call on a specialist that will never answer.
+depends_on:
+  - AR-300c-5
+doc_links:
+  - path: templates/agents/architect-review.md
+    relationship: describes
+    status: exists
+    relevance: "Its body instructs it to spawn architect-review-deep via the Agent tool, and its registry record permits it -- but no templates/agents/architect-review-deep.md exists."
+  - path: config/agent_registry.json
+    relationship: describes
+    status: exists
+    relevance: "Holds an architect-review-deep entry with template_path null -- a registered agent that is never deployed, which is why a registry row must not count as resolution."
+  - path: docs/acceptance-criteria/agent-registry/AR-300-granted-abilities-arrive/AR-300c-3-i.yaml
+    relationship: related
+    status: exists
+    relevance: "The abilities precedent: an unresolvable declared id is reported with the packaged-versus-project-local distinction, and the build refuses."
+  - path: docs/known-issues/agent-registry/open-low-ki-ar-004.md
+    relationship: modifies
+    status: exists
+    relevance: "Records the dead architect-review-deep escalation and the user's removal decision; holds the follow-up for a real Opus escalation. Update its 'What was done now' once the remediation lands; it stays open for the follow-up."
+  - path: docs/architecture/adrs/ADR-035-fast-lane-closed-producer-roster.md
+    relationship: describes
+    status: exists
+    relevance: "Measured that two registry entries have no template at all -- architect-review-deep AND conflict-resolver-deep. The second is the open item in this record's it_requirements."
+  - path: docs/agents/coding/architect-review.md
+    relationship: modifies
+    status: exists
+    relevance: "Describes the architect-review -> architect-review-deep escalation as working; must stop doing so when the escalation is removed."
+assigned_agent: python-coder
+estimated_complexity: M
+change_target:
+  - code
+  - config
+  - prompt
+risk_surface: contract_boundary
+it_requirements:
+  - "Resolution is against DEPLOYABLE DEFINITIONS, resolved in two independent lookups whose failure the report distinguishes: (1) packaged -- a template in templates/agents/<id>.md; (2) project-local -- an agent definition the project itself authored, resolved through the declared output root (skills_config `output_root`, default `.leafcutter`), never the hard-coded `.claude/agents/` shim. A registry row does NOT count as resolution (architect-review-deep has one, template_path null)."
+  - "The project-local lookup must NOT count a compiled prompt the build itself produced from a packaged template, nor a stale compiled file left by an earlier build -- otherwise a leftover <output_root>/agents/architect-review-deep.md from any older build would resolve the target and the defect stays silent."
+  - "REFUSE (BrainCandy decision 5 by analogy with AR-300c-3-i): an unresolvable declared sub-agent is a REFUSING finding kind in the existing ability verdict/gate (scripts/agent_ability_verdict.py, scripts/agent_ability_gate.py), emitted in the same pass as AR-300c-3-i's unresolvable-skill resolution -- not a second gate. The finding names the declaring agent, the sub-agent and which lookup(s) came back empty."
+  - "A `__ticket_phase_agents__` entry that resolves to zero agents is a refusing finding of the same kind (naming the declaring agent and the macro), never an empty delivered section."
+  - "Every declared sub-agent of every agent is resolved; report the number of declared sub-agents resolved (after macro expansion) and the number of agents examined; a zero population fails. A sub-agent that resolves is not reported."
+  - "REMEDIATION STEP (BrainCandy decision 10, 2026-10-09) -- mandatory in this slice so the refusal does not block the real build. Runs AFTER the AR-300c-5-i consolidation (which carries architect-review-deep across by union) and BEFORE this gate is enforced on the real build. architect-review-deep is REMOVED, not built: (a) delete `architect-review-deep` from architect-review's frontmatter `spawn_allowlist` (if that leaves the list empty, remove the key rather than leave `[]`); (b) in templates/agents/architect-review.md delete the 'Spawn `architect-review-deep` via the `Agent` tool' step and the behavioural-pattern entry 'Delegation to architect-review-deep' (related_agent: architect-review-deep), and reconcile the body's other references to the deep reviewer (the large-case note, the Step 4 payload 'from architect-review-deep' wording, the migration-context escalation line) so the large-impact branch is performed by architect-review itself and no text names architect-review-deep -- no new escalation is designed here; (c) RETIRE the registry entry by deleting the architect-review-deep object from config/agent_registry.json and the `architect-review-deep.md` entry from config/package_boundary.json, and update the config/agent_registry.schema.json descriptions that say 'the two template-less inline sub-agents (architect-review-deep, conflict-resolver-deep)' to name only the remaining one; (d) reconcile docs/agents/coding/architect-review.md, docs/agents/README.md, docs/agents/conventions.md and the generated docs/agents/cards/architect-review.card.md (regenerate cards with their generator, never hand-edit generated output) so none describes the escalation as present; (e) leave ADR-035 untouched (a dated decision record) and update KI-AR-004's 'What was done now' -- it stays open for the separately filed Opus-escalation follow-up. Do NOT author that follow-up."
+  - "REMEDIATION STEP (BrainCandy decision 13, 2026-10-09) -- the IT PO's probe found a second unresolvable target: conflict-resolver permits conflict-resolver-deep (registry entry, template_path null, no templates/agents/conflict-resolver-deep.md; conflict-resolver's body instructs 'Spawn `conflict-resolver-deep` (Opus) via the Agent tool'). The user chose the same treatment as decision 10: REMOVED, not built. Apply steps (a)-(d) above with conflict-resolver / conflict-resolver-deep substituted: delete it from conflict-resolver's frontmatter `spawn_allowlist`; delete the 'Spawn `conflict-resolver-deep` (Opus)' step, the step that applies its returned resolution, and the behavioural-pattern entry 'Delegation to conflict-resolver-deep', and reconcile the remaining references (the description's 'structural (escalated to Opus via conflict-resolver-deep)', the spawn-allowlist note) so conflict-resolver resolves structural conflicts itself and no text names conflict-resolver-deep; retire its registry object and any config/package_boundary.json entry; update the config/agent_registry.schema.json 'two template-less inline sub-agents' description so it names none; reconcile its docs and regenerate its card. Widen KI-AR-004 to cover both missing Opus escalations."
+  - "POST-REMEDIATION ACCEPTANCE: after both remediations, a real build reports ZERO refusing sub-agent findings, and neither architect-review-deep nor conflict-resolver-deep appears in templates/, config/ or the compiled prompts. This criterion must not be weakened to reach that (no allowlist of names, no registry-row resolution): the real build goes green only because both undeployable targets are genuinely gone."
+test_spec:
+  - name: test_unresolvable_sub_agent_refuses_naming_agent_and_sub_agent
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "A declared sub-agent with no packaged template and no project-local definition makes the build report failure, naming the declaring agent and the sub-agent."
+  - name: test_report_distinguishes_not_packaged_from_not_project_local
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: "The finding says which of the two lookups came back empty; a project-local definition under the declared output root resolves."
+  - name: test_registry_row_and_stale_compiled_prompt_do_not_count_as_resolution
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: unit
+    angle: discrimination
+    description: "A sub-agent with a registry entry (template_path null) and a leftover compiled prompt from an earlier build is still unresolvable."
+    must_catch:
+      - "resolution consults config/agent_registry.json"
+      - "resolution accepts a compiled prompt in <output_root>/agents/ as a definition"
+  - name: test_empty_ticket_phase_macro_refuses_instead_of_delivering_empty
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: unit
+    angle: boundary
+    description: "With no agent marked ticket-phase, a declaration holding `__ticket_phase_agents__` produces a refusing finding, and no empty sub-agent section is compiled."
+  - name: test_every_declared_sub_agent_resolved_with_count_and_resolvable_not_reported
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: unit
+    angle: failure
+    description: "The resolved count is stated, a zero population fails, and sub-agents that resolve produce no finding."
+  - name: test_real_tree_has_no_architect_review_deep_after_remediation
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: integration
+    angle: real_artifact
+    description: "On the real tree, architect-review-deep is absent from architect-review's declaration and body, the registry, package_boundary.json and every compiled prompt, and no refusing finding names it."
+test_rationale: >-
+  The discriminating risk is a resolver that counts the wrong thing as existence -- a
+  registry row or a compiled leftover -- which would pass architect-review-deep, the
+  live case, and keep the defect silent; hence the must_catch descriptor. The
+  real-tree descriptor pins the decision-10 remediation so it cannot regress. It
+  deliberately does NOT assert 'zero refusing findings on the real tree', because
+  conflict-resolver-deep is a measured second unresolvable target awaiting a user
+  decision; that assertion belongs to AR-300b-1-i once it is decided.
+delivers_to:
+  agent: python-coder
+  contract: >-
+    Refusing findings in the existing ability verdict -- {agent: str, sub_agent:
+    str ("__ticket_phase_agents__" for an empty macro), kind:
+    "unresolvable-sub-agent", lookups_failed: ["packaged", "project_local"],
+    severity: "refuse"} -- plus {sub_agents_resolved: int, agents_examined: int}.
+expects_from:
+  ac_id: AR-300c-5
+  contract: "Per-agent spawn_allowlist_declared and spawn_allowlist_resolved lists from the single frontmatter parse; resolution runs over the resolved list and over the macro entry itself."
+origin_agent: BrainCandy
+created: 2026-10-09
+amended_by:
+- reason: apply-user-decision
+  agent: orchestrator
+  date: '2026-10-09'
+  changed: 'it_requirements: the IT PO''s open ''MEASURED BLOCKER'' for conflict-resolver-deep
+    is resolved by BrainCandy decision 13 (remove it, same treatment as architect-review-deep).
+    Replaced by a remediation step for it and a POST-REMEDIATION ACCEPTANCE requiring
+    zero refusing sub-agent findings on the real build. criteria unchanged; applied
+    before approval.'
+- action: approved
+  agent: approve_acs
+  date: '2026-10-09'
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  REPORT OR REFUSE -- DECIDED: REFUSE. By analogy with AR-300c-3-i, which refuses
+  on an unresolvable declared skill id (user decision 5, BrainCandy 2026-10-09:
+  "an UNRESOLVABLE declared skill id still refuses"). The two are the same act --
+  a grant naming something that does not exist -- and treating them differently
+  would make a missing sub-agent a lesser defect than a missing skill, when the
+  runtime consequence is worse: the agent is told it may delegate, attempts the
+  dispatch, and fails mid-task.
+
+  CONSEQUENCE FLAGGED FOR THE USER -- THE REAL BUILD WILL REFUSE. On today's tree
+  architect-review is permitted architect-review-deep (registry; carried forward
+  by the union in AR-300c-5-i) and no definition exists for it. Once this
+  criterion is implemented, the build refuses on architect-review until the
+  user decides. This is deliberate -- it is a live defect the build has never
+  reported -- but it means the pull request cannot go green without a decision.
+
+  OPEN ITEM FOR THE USER -- NOT RESOLVED BY THE BA. Options:
+    (a) Create the missing architect-review-deep agent definition, so the
+        permission and architect-review's "spawn architect-review-deep" step
+        become real.
+    (b) Remove architect-review-deep from architect-review's permission AND from
+        architect-review's body (the delegation step and its behavioural-pattern
+        entry), and drop or retire its registry entry -- so the agent is no longer
+        instructed to call a specialist that does not exist.
+  Removing only the permission while leaving the body instruction would turn a
+  caught contradiction into an uncaught one (AR-200b's "grant the capability, do
+  not delete the instruction" posture, inverted: here there is nothing to grant).
+
+  WHY A REGISTRY ROW DOES NOT COUNT. architect-review-deep has a registry entry.
+  A resolution against the registry would pass it and the defect stays silent --
+  exactly the "recorded, prepared, goes nowhere" shape AR-300 exists to end.
+  Resolution is against definitions the build can actually deploy.
+
+  OPEN ITEM DECIDED (BrainCandy, 2026-10-09, decision 10): option (b). The
+  removal is written as an explicit remediation step in this record's
+  it_requirements (IT PO). A follow-up for a real Opus escalation is filed
+  separately (KI-AR-004).
+
+  SECOND INSTANCE FOUND (IT PO probe, 2026-10-09). conflict-resolver permits
+  conflict-resolver-deep, which has the same shape: a registry entry with
+  template_path null, no template, and a body instruction to spawn it via the
+  Agent tool. ADR-035 already counted both. After decision 10 the build still
+  refuses on this one, so it needs the same user decision before the real build
+  can go green. Not decided here.
+
+  THE EMPTY-MACRO CLAUSE. A ticket-phase macro resolving to zero agents would
+  otherwise deliver a section with no names (or no section), and ticket-supervisor
+  would silently lose every phase agent. Reported, not delivered empty.

@@ -1,0 +1,160 @@
+id: AR-300a-5
+title: "Every agent permitted to dispatch sub-agents has them named in its compiled prompt, and an agent permitted none gets no such section"
+component: agent-registry
+components:
+  - agent_registry
+  - template_compiler
+  - injection_builder
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given the set of agents whose own declaration permits at least one sub-agent
+    -- 25 on the tree this criterion was authored against once the "every
+    ticket-phase agent" entry is resolved, among them ticket-supervisor, whose
+    permission is mostly that one entry,
+  When the working instructions each agent actually receives after the build
+    has compiled them are read, in every platform the build compiles for,
+  Then each of those compiled instructions carries one section naming that
+    agent's permitted sub-agents, with the "every ticket-phase agent" entry
+    shown as the agents it resolved to on that build and each sub-agent named
+    once,
+    And every sub-agent the declaration permits appears in that section, so the
+      section is the whole permission and not a sample of it,
+    And an agent whose declaration is absent, or present and empty, carries no
+      such section -- in particular no heading followed by an empty list,
+    And the evidence is taken from the compiled instructions alone, never from
+      the central record or the source definition, and the comparison
+      enumerates every agent the build compiled and states how many it examined
+      and how many held a permission,
+  So an agent knows which specialists it may call on before it begins, instead
+    of receiving nothing, as every agent does today.
+depends_on:
+  - AR-300a
+doc_links:
+  - path: docs/architecture/adrs/ADR-002-dual-platform-compilation.md
+    relationship: describes
+    status: exists
+    relevance: "Every agent is compiled into each platform root; the evidence for this criterion is read from all of them."
+  - path: docs/architecture/adrs/ADR-004-consolidated-output-root.md
+    relationship: describes
+    status: exists
+    relevance: "Compiled prompts live under the declared output root; the evidence path is resolved from it, not from the .claude shim."
+  - path: docs/architecture/agent_knowledge_plane.md
+    relationship: describes
+    status: exists
+    relevance: "The pre-execution channels an agent receives; the sub-agent section joins them."
+  - path: templates/agents/ticket-supervisor.md
+    relationship: describes
+    status: exists
+    relevance: "The agent whose permission is mostly the ticket-phase macro -- the case where showing the macro unexpanded would tell the agent nothing."
+  - path: docs/acceptance-criteria/agent-registry/AR-300-granted-abilities-arrive/AR-300a-1.yaml
+    relationship: related
+    status: exists
+    relevance: "The abilities precedent: delivery measured at the compiled prompt in every platform root, population derived and counted."
+assigned_agent: python-coder
+estimated_complexity: M
+change_target: code
+risk_surface: contract_boundary
+it_requirements:
+  - "The section is computed from the frontmatter `spawn_allowlist` declaration (AR-300c-5's parse) with `__ticket_phase_agents__` resolved and each sub-agent named once. It is placed by the declaration-driven append that delivers the skills section (scripts/agent_skills_declaration.py append_declared_skills is the precedent) -- NOT by the `{{my_spawn_allowlist}}` body placeholder, which no template carries and which AR-300d-5 forbids."
+  - "The existing build_per_agent_spawn_table (scripts/injection_builders.py) renders Agent | Role | Tier but reads the REGISTRY spawn_allowlist; see AR-300c-5 for the reuse-or-replace rule. scripts/injection_builders.py may not grow; new logic goes in a new module, and scripts/template_compiler.py takes only wiring."
+  - "COLUMNS (decided by IT PO): the section must name every permitted sub-agent; Role and Tier columns MAY be carried, read from the registry `role`/`tier` fields (these are not part of the permission and remain authored there), but a sub-agent with no registry row (e.g. a project-local agent) is still named, with the extra columns blank -- presentational columns must never gate naming. Nothing in the section is hand-typed."
+  - "The section has ONE stable, generated heading/structure, defined once and shared by the producer and by AR-300a-5-i's single-account detector, so the detector anchors on emitted structure rather than on a heading string prose can also contain."
+  - "Absent and empty declarations both produce NO section (no heading followed by an empty list), and register no preparation (so AR-300b-1-iii does not report them)."
+  - "The compiled section MUST be computed and registered through the slice-3 delivery contract -- compute_preparation('spawn_allowlist', agent, builder) and register_preparation('spawn_allowlist', agent, content, destination_offered=True) in scripts/agent_preparation_delivery.py -- so the AR-300b gate covers it by construction (see AR-300b-1-iii). preparation_name is the literal 'spawn_allowlist'."
+  - "Evidence is the compiled prompt in every platform root under the declared output root (<output_root>/agents/ and <output_root>/gemini/agents/). Read-only tests use the session-scoped shared_reference_layout fixture with @pytest.mark.shared_layout_reader; no test spawns its own build.py."
+test_spec:
+  - name: test_every_permitted_agent_compiled_prompt_carries_one_sub_agent_section
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: integration
+    angle: deployed
+    description: "For every agent whose declaration permits a sub-agent (population derived from declarations), each compiled prompt in both platform roots carries exactly one sub-agent section."
+  - name: test_section_names_every_declared_sub_agent_once_with_macro_resolved
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: integration
+    angle: real_artifact
+    description: "Each section names every declared sub-agent exactly once; ticket-supervisor's names every agent whose is_ticket_phase is true and never the literal macro token."
+  - name: test_absent_or_empty_declaration_yields_no_section
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: integration
+    angle: boundary
+    description: "An agent with no declaration and an agent with `spawn_allowlist: []` (ac-triage) carry no sub-agent section and no bare heading."
+  - name: test_delivery_evidence_counts_examined_and_permitted_and_fails_on_zero
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: integration
+    angle: boundary
+    description: "The comparison states how many compiled prompts it examined and how many held a permission, enumerates both roots, and fails rather than passing on an empty population."
+  - name: test_delivery_is_read_from_compiled_prompt_not_registry
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: integration
+    angle: discrimination
+    description: "With the section stripped from one compiled prompt while the declaration and registry are correct, the delivery assertion fails for that agent."
+    must_catch:
+      - "the assertion checks the registry or the template instead of the compiled prompt"
+test_rationale: >-
+  Every agent receives nothing today while the registry and builder look correct, so
+  only compiled-prompt evidence discriminates; the stripped-section descriptor carries
+  must_catch for that reason. The macro descriptor exists because printing the macro
+  token satisfies 'names the declaration' and tells ticket-supervisor nothing. The
+  population descriptor guards the universal against an empty or single-root run.
+delivers_to:
+  agent: python-coder
+  contract: >-
+    One generated sub-agent section per permitted agent in every compiled prompt,
+    and one registered preparation per (agent) via
+    register_preparation(preparation_name="spawn_allowlist", agent=<prompt stem>,
+    content=<section text>, destination_offered=True) -- consumed by AR-300b-1-iii
+    (gate), AR-300a-5-i (single account) and AR-300d-5 (add/revoke).
+expects_from:
+  ac_id: AR-300c-5
+  contract: "Per-agent spawn_allowlist_resolved (macro expanded, deduped) from the single frontmatter parse; None/empty means no section."
+origin_agent: BrainCandy
+created: 2026-10-09
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-10-09'
+superseded_by: null
+covered_by:
+  - AR-300a-5-i
+implemented_by: []
+notes: |
+  WHY THIS SITS UNDER AR-300a. AR-300a promises that "the abilities on a
+  specialist's record are the abilities in its briefing". AR-300's altitude note
+  explicitly expects the promise to survive swapping the thing granted, and names
+  the second dead delivery as "not a skills table at all". A permission to
+  dispatch a sub-agent is that second thing. AR-300a was at 4 of 5 L2s; this
+  takes the last slot. It folds the presence (AR-300a-1) and absence (AR-300a-3)
+  halves into one record because there is no room for two; the single-account
+  half (AR-300a-4) is its L3.
+
+  MEASURED (orchestrator probe, 2026-10-09, production code): the builder exists
+  and is re-exported but nothing calls it, so 0 agents receive a spawn section;
+  25 agents hold a non-empty permission after macro expansion. 25 is a
+  measurement for falsifying the criterion against the pre-fix tree, not a
+  constant -- the population must be derived from the declarations.
+
+  THE MACRO IS SHOWN RESOLVED. The declaration keeps "every ticket-phase agent"
+  as one entry (AR-300c-5), but the agent reading its prompt needs names. A
+  section that printed the macro token would satisfy "the section names the
+  declaration" and tell ticket-supervisor nothing. Each sub-agent named once:
+  an explicit entry that the macro also covers must not appear twice.
+
+  EVIDENCE IS THE COMPILED PROMPT, in every platform root (today the claude and
+  gemini roots). A check against the registry or the source passes today for 25
+  agents that receive nothing -- the same trap AR-300a-1 names.
+
+  ROLE AND TIER COLUMNS. The existing builder renders Agent | Role | Tier. This
+  criterion requires only that the sub-agents are named; whether role and tier
+  are carried is the IT PO's call. Any columns shown must come from the derived
+  registry copy or the definitions, never typed by hand.

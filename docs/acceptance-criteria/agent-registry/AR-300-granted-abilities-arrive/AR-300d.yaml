@@ -45,6 +45,7 @@ covered_by:
   - AR-300d-2
   - AR-300d-3
   - AR-300d-4
+  - AR-300d-5
 implemented_by: []
 documentation_triggers: []
 documentation_rationale: "The authoring-facing statement of this guarantee lands in the same authoring reference AR-300c already triggers; this criterion introduces no separate surface of its own."

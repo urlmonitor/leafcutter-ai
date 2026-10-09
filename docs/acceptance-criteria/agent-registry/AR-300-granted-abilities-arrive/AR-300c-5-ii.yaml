@@ -1,0 +1,169 @@
+id: AR-300c-5-ii
+title: "A central sub-agent record that disagrees with the agent's own declaration is reported, the declaration wins, and the record is regenerated at commit time"
+component: agent-registry
+components:
+  - agent_registry
+  - build_pipeline
+  - commit_guardian
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given an agent whose own declaration permits one set of sub-agents and whose
+    central registry record, after consolidation, names a different set --
+    because someone edited the central record by hand,
+  When the build runs,
+  Then the build reports the disagreement, naming the agent, the sub-agents its
+    declaration permits and the sub-agents the central record names, and the
+    build still completes,
+    And the compiled prompt continues to name the declaration's sub-agents, so
+      the hand edit changes nothing the agent sees,
+    And the comparison covers every agent holding a declaration or a central
+      entry, with the count examined reported, so an agent present on one side
+      only is a disagreement rather than a gap in the comparison,
+    And an agent whose central record agrees with its declaration is not
+      reported, with the "every ticket-phase agent" entry compared as that
+      entry on both sides rather than against the names it resolves to,
+  And given an agent definition or the registry is committed,
+  When the commit is made,
+  Then the central record of permitted sub-agents is regenerated from the
+    declarations, and the build itself never writes to the package source,
+  So the registry's copy can be read as trustworthy, and there is no second
+    place a permission can be changed without anyone noticing.
+depends_on:
+  - AR-300c-5
+doc_links:
+  - path: config/agent_registry.json
+    relationship: modifies
+    status: exists
+    relevance: "The copy that becomes derived for sub-agent permissions."
+  - path: templates/scripts/commit_guardian/commit_guardian.json
+    relationship: describes
+    status: exists
+    relevance: "Registers the transform-agent-registry pre-commit hook (AR-300c-3) that regenerates the registry's derived fields; this criterion widens what it regenerates."
+  - path: docs/acceptance-criteria/agent-registry/AR-300-granted-abilities-arrive/AR-300c-3.yaml
+    relationship: related
+    status: exists
+    relevance: "The abilities precedent. Its transform-scope constraint was amended 2026-10-09 by the IT PO to name spawn_allowlist among the derived fields, resolving the tension the notes below flag."
+  - path: docs/architecture/adrs/ADR-037-whole-collection-uniqueness-pass.md
+    relationship: describes
+    status: exists
+    relevance: "The verdict contract (inspected count, population source, findings) the comparison's report follows."
+assigned_agent: python-coder
+estimated_complexity: M
+change_target:
+  - code
+  - config
+risk_surface: contract_boundary
+it_requirements:
+  - "ONE COMPARATOR, NOT TWO: the declaration-versus-derived-copy comparison AR-300c-3 built for skills_used/skills_invoked must be generalised over the derived field so `spawn_allowlist` is compared by the same pass and reported in the same verdict shape ({examined_count, findings: [{agent, field, declared, recorded, kind: divergent | declaration-only | record-only}]}). A second, spawn-only comparator is the drift this criterion exists to end."
+  - "REPORT, DO NOT REFUSE (BrainCandy decision 5, 2026-10-09): a disagreeing registry copy is a report-only finding kind in the existing ability verdict/gate (scripts/agent_ability_verdict.py, scripts/agent_ability_gate.py); the build prints it, compiles from the declaration, and exits on its other merits. Refusing would break AR-300d-5's no-second-edit promise."
+  - "The comparison population is the UNION of agents with a frontmatter `spawn_allowlist` declaration and agents with a non-empty registry `spawn_allowlist`, with the examined count reported; a zero population fails rather than reading clean. Empty and absent are equal on both sides (no finding for an agent holding nothing on either side)."
+  - "The macro is compared as the literal entry `__ticket_phase_agents__` on both sides, never against its expansion -- otherwise ticket-supervisor is reported on every build."
+  - "The comparison is a set comparison of ids, not a serialised-string compare: list order and formatting are not disagreements."
+  - "TRANSFORM HOOK SCOPE: the existing transform-agent-registry pre-commit hook (templates/scripts/commit_guardian/transform_agent_registry.py, registered in commit_guardian.json by AR-300c-3) regenerates the registry `spawn_allowlist` field from each template's frontmatter `spawn_allowlist` declaration (absent declaration -> []), alongside skills_used/skills_invoked. It changes NO other byte -- in particular not `spawned_by`, `is_ticket_phase`, or registry entries that have no template -- and a second run is byte-stable. The hook registration (files regex, stages) is unchanged; no new hook is added. This is the scope AR-300c-3's amended constraint now states."
+  - "DEPLOYED-LAYOUT REACHABILITY: the hook runs from <output_root>/scripts/commit_guardian/. Any spawn-side helper it imports must live in templates/scripts/commit_guardian/ (beside _agent_ability_sync.py) or be added to the build deploy map in the same change; prove with a deployed-layout run, not only the source tree."
+  - "The build NEVER writes the package source tree (config/agent_registry.json or templates/); only the commit-time hook regenerates the copy."
+test_spec:
+  - name: test_hand_edited_registry_spawn_allowlist_is_reported_and_build_completes
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "An agent whose registry spawn_allowlist differs from its declaration is reported naming the agent, the declared and the recorded sub-agents, and the build still completes with exit 0 on that account."
+  - name: test_compiled_prompt_names_the_declaration_after_a_registry_hand_edit
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: integration
+    angle: deployed
+    description: "After the registry hand edit, the compiled sub-agent section in both platform roots still names the declaration's sub-agents."
+  - name: test_one_sided_agent_is_a_disagreement_and_count_examined_is_reported
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: unit
+    angle: boundary
+    description: "A declaration with no registry entry, and a registry entry with no declaration, are both findings; the examined count is stated and a zero population fails."
+  - name: test_agreeing_agent_and_macro_entry_are_not_reported
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: unit
+    angle: discrimination
+    description: "An agent whose registry copy matches its declaration, including ticket-supervisor holding the macro on both sides, produces no finding."
+    must_catch:
+      - "the macro is expanded on one side before comparing"
+      - "list order is treated as a disagreement"
+  - name: test_transform_regenerates_spawn_allowlist_and_changes_no_other_byte
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: integration
+    angle: real_artifact
+    description: "UPDATE the existing pinning test unit_tests/prompt_assembly/test_ar_300c_3_ii_registry_transform.py (it currently asserts only skills_used/skills_invoked may change): the transform regenerates spawn_allowlist from the declarations, every byte outside skills_used/skills_invoked/spawn_allowlist is unchanged (spawned_by and is_ticket_phase included), and a second run is byte-stable."
+  - name: test_build_never_writes_the_registry_source
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: integration
+    angle: deployed
+    description: "A build over a tree with a disagreeing registry copy leaves config/agent_registry.json byte-identical; regeneration happens only through the commit-time hook."
+test_rationale: >-
+  The hook-scope widening is the change most likely to regress silently, which is why
+  the existing AR-300c-3-ii pinning test is named and updated rather than a second
+  test written beside it: two tests with different 'other bytes' definitions would
+  contradict each other. The macro and ordering must_catch lines target the two
+  ways a set comparison becomes a noisy rule, which this component has already lost
+  once.
+delivers_to:
+  agent: python-coder
+  contract: >-
+    The derived-copy verdict extended by field -- {examined_count: int, findings:
+    [{agent: str, field: "skills_used" | "skills_invoked" | "spawn_allowlist",
+    declared: list[str], recorded: list[str], kind: "divergent" |
+    "declaration-only" | "record-only", severity: "report"}]} -- plus a regenerated
+    config/agent_registry.json spawn_allowlist field written only by the
+    transform-agent-registry hook.
+expects_from:
+  ac_id: AR-300c-5-i
+  contract: "Consolidated frontmatter `spawn_allowlist` declarations (macro verbatim) on every permitted agent, against which the registry copy is compared and from which it is regenerated."
+origin_agent: BrainCandy
+created: 2026-10-09
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-10-09'
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  USER DECISIONS CARRIED DOWN (BrainCandy, 2026-10-09, items 5 and 9). The
+  build REPORTS a disagreeing registry copy and does not refuse; the derived
+  copy is regenerated by the transform-agent-registry pre-commit hook; the
+  build never writes the package source tree. Refusing here would break
+  AR-300d-5's "takes effect on the next build with no second edit".
+
+  CONTRADICTION FLAGGED, NOT SILENTLY OVERRIDDEN. AR-300c-3 (approved) carries
+  an it_requirements constraint, "TRANSFORM SCOPE ... the transform-agent-registry
+  hook regenerates ONLY the skills_used / skills_invoked fields ... Every other
+  byte of the registry ... is left unchanged", and says it is pinned by
+  test_ar_300c_3_ii_registry_transform.py. This criterion requires the same
+  hook to also regenerate the spawn_allowlist field. One of the two must
+  change: the IT PO should amend AR-300c-3's transform-scope constraint (with an
+  amended_by entry) to name spawn_allowlist as well, and the pinning test's
+  "every other byte unchanged" assertion moves with it. Left for the IT PO; not
+  edited here because AR-300c-3 is an approved L2 from a prior run.
+  RESOLVED (IT PO, 2026-10-09): AR-300c-3's transform-scope constraint now names
+  the derived declaration fields skills_used, skills_invoked and spawn_allowlist,
+  still with no other byte changed (amended_by entry on AR-300c-3, criteria
+  unchanged). The pinning test update is a descriptor in this record's test_spec.
+
+  THE MACRO IS COMPARED AS AN ENTRY. Both sides hold the ticket-phase macro as a
+  single entry. Comparing one side's macro against the other side's expanded
+  names would report a disagreement on every build for ticket-supervisor -- the
+  noisy-rule failure AR-200b-1 records in this component.
+
+  ADJACENT FIELD, OUT OF SCOPE, RAISED. The registry also carries `spawned_by`,
+  which is the inverse of spawn_allowlist. If it stays authored while
+  spawn_allowlist becomes derived, the two can disagree. Not specified here;
+  raised as an open item.
