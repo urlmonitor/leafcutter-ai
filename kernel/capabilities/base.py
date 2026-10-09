@@ -83,8 +83,11 @@ class ExecutionContext:
     cancel_probe: Callable[[], bool]
     descriptor: CapabilityDescriptor | None = None
     constraints: tuple[str, ...] = ()
-    #: Approved-decision memory: read precedent, stage a record (never written to the repository).
     memory: ColonyMemory = field(default_factory=NullColonyMemory)
+    (
+        "Approved-decision memory: read precedent, stage a record (never written to the "
+        "repository)."
+    )
     context_enrichment: EnrichedContext | None = None
     entity_context: EntityContext | None = None
     clarifications: tuple[str, ...] = ()

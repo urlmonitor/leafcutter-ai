@@ -1,0 +1,60 @@
+id: BO-4400a
+title: "Every run clears its own workspace as soon as its work is up for review"
+component: build-orchestration
+components:
+  - build_orchestration
+  - worktree_manager
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+change_target: code
+risk_surface: safety
+criteria: |
+  Work handed over for review means the workspace is gone -- no wrap-up step needed.
+
+  Whichever route did the work, its workspace is cleared through the one shared door
+  the moment the work has safely reached the team, at the latest right after it is
+  put up for review; a run that stopped or failed keeps its work and is listed so it
+  can be reclaimed once nothing unsent remains, and the older ways of clearing are gone.
+depends_on: [BO-4400]
+doc_links: []
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-10-09
+amended_by: []
+superseded_by: null
+covered_by: [BO-4400a-1, BO-4400a-2, BO-4400a-3, BO-4400a-4, BO-4400a-5]
+implemented_by: []
+documentation_triggers:
+  - how-to
+  - sequence-diagram
+notes: |
+  Gaps G1 + G6 of the 2026-10-09 coverage check.
+
+  G1 -- every route, no exceptions: fast-lane ship (BOTH the success path AND the
+  empty-set no-op path), quick-fix, AC-authoring, build-feature single-ticket and epic,
+  build-backlog. Each calls the central clear (BO-4300e) at its end state, at the latest
+  right after the pull request is opened (opened = pushed = holds nothing unsent per
+  BO-4100c). Halted/failed runs keep their work (ACD-2100c-5 guard) and appear in the
+  listing (BO-4100e) as reclaimable once the verdict reads holds-nothing.
+
+  G6 -- retire the older removal routes in favour of the central clear: close-worktree's
+  remove-without-force path, worktree-agent removal, and finalize Step 7's interactive
+  confirmation gate. NEIGHBOUR: BO-4300f-1 already moves every route to the one MAKER and
+  names close-worktree.md / worktree-agent.md as llm-expert work; the BA must cite it and
+  cover only the removal side it does not.
+
+  Behavioural proof required (repo CLAUDE.md: gate/workflow ACs are verified by running
+  them, never by grep): each route is driven to its end state and the workspace is shown
+  absent afterwards.
+
+  Q8 DECIDED 2026-10-09 (BrainCandy): no confirmation token for clearing a holds-nothing
+  workspace; the BO-4100c verdict is the safety check. Unsent work is discarded only with
+  up-front permission (BO-4300e-3). See BO-4400 notes.

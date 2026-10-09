@@ -1,0 +1,312 @@
+id: GE-127g-2
+title: "Every document set aside is reported as set aside and on which stated ground, and the two populations are counted separately"
+component: guardrail-engine
+components:
+  - commit_guardian
+  - doc_compliance
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given a commit staging 5 documents of which 2 are inside a declared set-aside
+    location and 3 are hand-authored documents the standard judges, all 5 within
+    their permitted length,
+  When the author performs an ordinary commit,
+  Then the commit completes, and its outcome states that 3 documents were judged
+    and 2 were set aside,
+  And it names each of the 2 set-aside documents together with the stated reason
+    its declared location carries,
+  And neither of the 2 appears among the documents reported as within their
+    permitted length — a document that was never measured is reported as
+    set aside and never as compliant.
+
+  And given the same commit with one further hand-authored document staged,
+  When the author performs an ordinary commit,
+  Then the judged figure it states is 4 and the set-aside figure it states is 2.
+
+  And given instead the same commit with one further document inside a declared
+    set-aside location staged,
+  When the author performs an ordinary commit,
+  Then the judged figure it states is 3 and the set-aside figure it states is 3,
+    and the newly staged document is among those it names — so each figure moves
+    with its own population and neither is a fixed number.
+
+  And given a commit in which every staged document is inside a declared
+    set-aside location,
+  When the author performs an ordinary commit,
+  Then the commit completes, and its outcome states that 0 documents were judged
+    — it does not report that no document exceeded its permitted length, because
+    none was measured.
+depends_on:
+  - GE-127g
+doc_links:
+  - path: docs/acceptance-criteria/guardrail-engine/GE-127-files-stay-workable/GE-127g.yaml
+    relationship: parent
+    status: exists
+  - path: docs/acceptance-criteria/guardrail-engine/GE-127-files-stay-workable/GE-127c-1.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      THE PRECEDENT AND THE BOUNDARY. That record requires the code-side gate to state
+      which KINDS of file it measured, so a kind never measured is not read as having
+      passed. This record states which individual DOCUMENTS were set aside and on which
+      declared ground, and separates the two counts. The precedent settles that reporting
+      is this goal's convention; it does not discharge this record, and this record does
+      not restate its clause.
+  - path: docs/acceptance-criteria/guardrail-engine/GE-127-files-stay-workable/GE-127a-1-i.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      THE NEAREST SHAPE IN THE TREE AND A DISTINCTION WORTH KEEPING. That record covers a
+      file whose length CANNOT BE ESTABLISHED: it must be refused and named, never
+      reported as within its permitted length. This record covers a document that was
+      DELIBERATELY NOT MEASURED: it must be reported as set aside, and the commit still
+      completes. The two must not be collapsed — one is a failure to look, the other is a
+      decision not to.
+  - path: docs/acceptance-criteria/guardrail-engine/GE-127-files-stay-workable/GE-127e.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      FENCED OFF. GE-127e owns what a REFUSAL says and how useful it is. Every arm here
+      is about what a run reports regardless of its verdict, and three of the four arms
+      are commits that COMPLETE. No clause here concerns wording, ordering or
+      helpfulness, and none may be discharged by improving a refusal message.
+  - path: templates/scripts/commit_guardian/_doc_length_ratchet.py
+    relationship: modifies
+    status: exists
+  - path: templates/scripts/commit_guardian/check_doc_length.py
+    relationship: modifies
+    status: exists
+    relevance: >-
+      Where the run's outcome is produced. This is the SOURCE; the copies under
+      scripts/commit_guardian/ and .leafcutter/scripts/commit_guardian/ are build outputs.
+  - path: templates/scripts/commit_guardian/commit_guardian.json
+    relationship: related
+    status: exists
+    relevance: >-
+      Holds the stated reason each declared location carries. The reason reported must be
+      the one the declaration carries, not a second copy written into the gate, or the two
+      statements drift — the failure GE-118c records for the declared document types.
+  - path: CLAUDE.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      The paragraph ending "a check that examined nothing must not look like a check that
+      found nothing", and its three recorded instances, is the ground for the fourth arm.
+      "Verify Behaviorally, Not by Grep" is binding: every figure asserted here is read out
+      of a real commit's own output, and a test that asserts a format string exists
+      satisfies nothing.
+delivers_to: null
+expects_from:
+  - ac_id: GE-127g-1
+    contract: >-
+      The declared set of set-aside locations, each with its stated reason, and the
+      membership test over it. This record reports that membership and its ground; it does
+      not define either, and it must read the reason from the declaration rather than
+      carry its own copy.
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "THE REPORTING MUST NOT GROW check_doc_length.py PAST ITS OWN LIMIT. It measures 359
+    lines against the 400-line .py limit (measured 2026-10-09 with check_file_size's own
+    measurement rule) — 41 lines of headroom. The set-aside report, the two counts and
+    the per-document ground are more than 41 lines, and the gate that would refuse the
+    commit is the same family of gate this record is editing. Put the reporting in a
+    helper module under templates/scripts/commit_guardian/, which build_commit_guardian()
+    in scripts/build_phases_lifecycle.py deploys WHOLESALE by rglobbing the directory, so
+    no deploy-map line is needed. A module placed anywhere else needs an explicit
+    deploy-map entry in the SAME change or the deployed hook raises ModuleNotFoundError at
+    hook runtime while source-tree unit tests stay green."
+  - "Both figures must be counted from the populations as the run partitions them, never
+    derived one from the other and never derived from a total. A judged count computed as
+    (staged documents minus set-aside) is derivation, and it is the shape that makes the
+    second and third arms pass while the counting is wrong."
+  - "The judged figure must be stated whenever the run completes, including when it is
+    zero. The present code prints its PASSED line only under `if checked_count > 0`
+    (check_doc_length.py line 436) — that is precisely the implementation the fourth arm
+    forbids, so this is a change to an existing condition and not only an addition."
+  - "The clean-run line must not assert that nothing exceeded its permitted length when
+    nothing was measured. The present text, 'compared N doc files against their length
+    limits', is already count-bearing and must stay count-bearing; what must become
+    impossible is a completing run that reports compliance over a population of zero."
+  - "A set-aside document must appear in exactly one of the two reported populations.
+    It may not also be counted among the documents found within their permitted length."
+  - "The ground reported for each set-aside document must be READ from the declaration
+    entry that matched it, not carried as a second copy in the gate's own code. Two
+    statements of one reason drift, which is the failure GE-118c records for the declared
+    document types."
+  - "Must handle errors gracefully per the project error handling policy."
+test_spec:
+  - name: test_judged_and_set_aside_counts_reported_separately_with_grounds
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: integration
+    angle: criterion
+    surface_invoked: templates/scripts/commit_guardian/check_doc_length.py
+    description: >-
+      Arm 1. Stage 5 documents in a real repo — 2 inside a declared set-aside location, 3
+      hand-authored, all within their limits — and invoke the gate against that index.
+      Assert the commit completes; that the output states 3 judged and 2 set aside; that
+      each of the 2 is named together with the ground its declared entry carries, compared
+      against the ground string the fixture put in the declaration rather than a literal;
+      and that neither appears among the documents reported as within their permitted
+      length. No build.py spawn and no layout fixture, so no marker.
+    must_catch:
+      - "set aside the declared documents without reporting them"
+      - "count set-aside documents among those found within their permitted length"
+      - "carry a second copy of each ground in the gate's own code"
+  - name: test_judged_figure_moves_when_only_the_judged_population_moves
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: integration
+    angle: discrimination
+    description: >-
+      Arm 2. The same commit plus one further hand-authored document; assert the judged
+      figure is 4 and the set-aside figure is still 2. No marker.
+    must_catch:
+      - "report the two figures as the numbers observed at implementation time"
+      - "report one combined figure for documents handled"
+  - name: test_set_aside_figure_moves_when_only_the_set_aside_population_moves
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: integration
+    angle: discrimination
+    description: >-
+      Arm 3, the opposite direction. The same commit plus one further document inside a
+      declared location; assert the judged figure is 3, the set-aside figure is 3, and the
+      newly staged document is among those named. Arms 2 and 3 together are the only shape
+      no pair of literals and no single total satisfies — which is why both exist. No
+      marker.
+    must_catch:
+      - "report the two figures as the numbers observed at implementation time"
+      - "derive one figure from the other, or from a total"
+  - name: test_all_set_aside_commit_states_zero_judged_and_claims_no_compliance
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: integration
+    angle: failure
+    description: >-
+      Arm 4, the house failure this record exists for. Stage a commit in which every
+      staged document lies inside a declared location. Assert it completes; that the
+      output states 0 judged; and — separately — that it does NOT state that no document
+      exceeded its permitted length. The second assertion is the one that catches the
+      present `if checked_count > 0` guard, under which a zero-population run prints
+      nothing at all and is read as a clean pass. No marker.
+    must_catch:
+      - "print the count only when it is non-zero, so a zero-population run reports nothing"
+      - "report that nothing exceeded its permitted length over a population of zero"
+  - name: test_deployed_gate_reports_both_populations_and_the_declared_grounds
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: integration
+    angle: deployed
+    surface_invoked: scripts/commit_guardian/check_doc_length.py
+    description: >-
+      The deploy-manifest arm, and the one that matters most on this record because the
+      reporting is required to live in a NEW helper module. Runs the gate from the real
+      DEPLOYED layout over a mixed staged set and asserts both figures and at least one
+      declared ground appear — not a ModuleNotFoundError. Requests the session-scoped
+      shared_reference_layout fixture and declares @pytest.mark.shared_layout_reader; it
+      only reads the layout, so it must not spawn its own build.py (one build costs 59.8s).
+    must_catch:
+      - "add the reporting helper module outside templates/scripts/commit_guardian/ without a deploy-map entry, so the deployed hook crashes while source-tree tests stay green"
+test_rationale: >-
+  Every figure asserted here is read out of a real run's own output over a real staged
+  index; a test that asserts a format string exists in the source satisfies nothing, and
+  CLAUDE.md's behavioural rule outranks any test_spec that blessed that form. The second
+  and third entries are the load-bearing pair and must both exist: a stated figure alone
+  is satisfiable by two literals, one varying arm alone is satisfiable by deriving one
+  figure from the other, and only holding each population fixed in turn while moving the
+  other forces a real count. The first entry compares the reported ground against the
+  string the FIXTURE wrote into the declaration rather than against an expected literal,
+  which is what makes it a test of the read-from-declaration requirement rather than of
+  a hardcoded copy. The fourth entry's two assertions are deliberately separate because
+  '0 judged' and 'nothing exceeded its limit' are the same sentence to a reader and
+  opposite facts — and because the present code's `if checked_count > 0` guard means the
+  current behaviour on a zero population is SILENCE, which a test asserting only the
+  absence of a compliance claim would pass. The fifth entry is enrichment's own and is
+  the only one that can fail on an undeployed helper module, which this record's own
+  first it_requirement makes likely by forcing the reporting out of check_doc_length.py.
+  Markers: only the fifth requests shared_reference_layout and therefore carries
+  @pytest.mark.shared_layout_reader; the other four neither request the fixture nor build
+  anything and so sit outside the marker-routing mechanism entirely.
+declares_side_effect: false
+origin_agent: BrainCandy
+created: 2026-10-09
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-10-09'
+superseded_by: null
+covered_by:
+  - GE-127g-2-i
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  WHY THE MOVING FIGURES ARE THE LOAD-BEARING CLAUSES AND A STATED FIGURE ALONE IS NOT.
+  A run that prints "3 judged, 2 set aside" is satisfiable by two literals. The second and
+  third arms hold one population fixed and move the other, in opposite directions, so the
+  only implementation that satisfies both is one that counts each population as it goes.
+  This construction is reused from BP-1600a-2 and from GE-120f-3 rather than reinvented,
+  and the reason it is needed twice is that a single varying arm is satisfiable by deriving
+  one figure from the other.
+
+  WHY THE TWO COUNTS MUST BE SEPARATE AND NOT ONE TOTAL. If set-aside documents are folded
+  into a single "documents checked" figure, the figure grows when the exclusion widens,
+  which is the opposite of the signal it should give. The specific risk this record exists
+  for is an exclusion pattern that matches more than intended; under a single total, that
+  widening makes the gate look like it is doing MORE work while it is doing less. GE-127g-3
+  is the record that catches an over-wide pattern by its verdict; this record is what makes
+  the widening visible in the output before anything is caught.
+
+  WHY THE FOURTH ARM IS STATED SEPARATELY. "0 judged" and "no document exceeded its
+  permitted length" are the same sentence to a reader and opposite facts. This repository
+  has shipped that confusion three times — the store validator exiting zero having checked
+  zero files, a merge audit comparing against a stale reference, and a guard tool reporting
+  FAILED with nothing inspected — and twice the documented defence was itself the no-op. The
+  arm is not a restatement of the first arm's count clause: the first arm has a judged
+  population to count, the fourth has none, and an implementation that reports the count only
+  when it is non-zero satisfies the first and fails the fourth.
+
+  THE REASON REPORTED MUST COME FROM THE DECLARATION. If the gate carries its own copy of
+  each reason, the declaration and the output drift, which is precisely the failure GE-118c
+  records: a configuration file asserting in its own comment that it is the single source of
+  truth while nothing read it. Stated here rather than in the criteria as a clause, because
+  the criteria require the reported reason to be the declared one and the mechanism is the IT
+  PO's.
+
+  NAMED MUTATIONS — EXECUTE THEM, DO NOT MERELY DESCRIBE THEM.
+
+  (1) THE SILENT SKIP. MUTATION: set aside the declared documents without reporting them.
+      MUST GO RED: all four arms.
+      MUST STAY GREEN: every arm of GE-127g-1, GE-127g-1-i and GE-127g-3, none of which
+      inspects the output. That is the evidence this record's subject is held nowhere else
+      in the subtree.
+
+  (2) THE LITERAL. MUTATION: report the two figures as the numbers observed at
+      implementation time.
+      MUST GO RED: the second, third and fourth arms.
+      MUST STAY GREEN: the first arm, which two literals satisfy exactly. This is why the
+      first arm is never sufficient on its own.
+
+  (3) THE SINGLE TOTAL. MUTATION: report one combined figure for documents handled.
+      MUST GO RED: the second and third arms, which require the two figures to move
+      independently, and the fourth.
+      MUST STAY GREEN: the first arm if the total happens to be stated. Recorded because a
+      single total is the most natural shape to reach for and the one that inverts the
+      signal.
+
+  (4) THE COMPLIANT MISREPORT. MUTATION: count set-aside documents among those found within
+      their permitted length.
+      MUST GO RED: the first arm's final clause and the fourth arm.
+      MUST STAY GREEN: the second and third arms, whose figures a misreport of this shape
+      can still state correctly.
+
+  NOT AUTHORED HERE, BY DESIGN: estimated_complexity, it_requirements, test_spec,
+  test_rationale and declares_side_effect. Those are the IT PO's, as is where in the run's
+  output the two figures appear.

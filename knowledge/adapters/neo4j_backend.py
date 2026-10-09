@@ -6,6 +6,7 @@ ARCHITECTURE: Adapter delegates projection and vector lifecycle to small helpers
 DECISION HISTORY
 ========================================
 - 2026-10-01 12:00 [python-coder]: Use metadata-only manifests and explicit database selection. (#TICKET-KM-400b-1)
+- 2026-10-09 12:00 [python-coder]: Surface driver error class, code and bounded message in BackendUnavailable. (#KM-400e)
 """
 
 from __future__ import annotations
@@ -30,6 +31,25 @@ from knowledge.errors import BackendUnavailable
 def scope_key(repository_id: str, generation_id: str) -> str:
     """Return a collision-resistant projector-only compound key."""
     return hashlib.sha256(json.dumps([repository_id, generation_id]).encode()).hexdigest()
+
+
+_MAX_CAUSE_CHARS = 300
+
+
+def describe_failure(error: BaseException) -> str:
+    """Summarize a driver fault as class, optional Neo4j code and bounded server text.
+
+    Args:
+        error: Infrastructure exception raised by the driver or transport.
+
+    Returns:
+        A secret-free single-line diagnostic; never includes the URI or credentials.
+    """
+    code = getattr(error, "code", None)
+    detail = getattr(error, "message", None) or str(error)
+    label = f"{type(error).__name__} [{code}]" if code else type(error).__name__
+    text = " ".join(str(detail).split())[:_MAX_CAUSE_CHARS]
+    return f"backend unavailable: {label}: {text}"
 
 
 def entity_from_row(row: dict) -> Entity:
@@ -122,7 +142,7 @@ class Neo4jBackend:
         try:
             return await asyncio.to_thread(execute)
         except (OSError, TimeoutError, DriverError, Neo4jError) as error:
-            raise BackendUnavailable() from error
+            raise BackendUnavailable(describe_failure(error)) from error
 
     async def setup(self) -> None:
         """Apply idempotent, versioned Community-compatible projection constraints."""

@@ -5,6 +5,7 @@
   "description": "leafcutter.options_request.v1.",
   "properties": {
     "clarifications": {
+      "description": "Human answers to earlier questions, verbatim, that narrow which options to generate.",
       "items": {
         "type": "string"
       },
@@ -12,6 +13,7 @@
       "type": "array"
     },
     "constraint_ids": {
+      "description": "Ids of evidence items stating constraints every generated option must respect.",
       "items": {
         "type": "string"
       },
@@ -19,6 +21,7 @@
       "type": "array"
     },
     "evidence_ids": {
+      "description": "Evidence the generated options may rest on.",
       "items": {
         "type": "string"
       },
@@ -26,6 +29,7 @@
       "type": "array"
     },
     "existing_option_ids": {
+      "description": "Ids of options the caller already has, so generators do not duplicate them.",
       "items": {
         "type": "string"
       },
@@ -33,6 +37,7 @@
       "type": "array"
     },
     "findings": {
+      "description": "Accepted synthesis findings as `[id] claim`, so the host does not re-derive them.",
       "items": {
         "type": "string"
       },
@@ -41,28 +46,33 @@
     },
     "max_options": {
       "default": 5,
+      "description": "Most new options to propose.",
       "minimum": 0,
       "title": "Max Options",
       "type": "integer"
     },
     "problem": {
+      "description": "The decision problem to generate options for, verbatim from the caller.",
       "minLength": 1,
       "title": "Problem",
       "type": "string"
     },
     "propose_criteria": {
       "default": false,
+      "description": "Whether to also propose criteria for human approval.",
       "title": "Propose Criteria",
       "type": "boolean"
     },
     "require_grounding": {
       "default": false,
+      "description": "Every proposed option must cite, in `source_refs`, evidence ids from `evidence_ids`.",
       "title": "Require Grounding",
       "type": "boolean"
     },
     "schema_version": {
       "const": "1.0",
       "default": "1.0",
+      "description": "Version of this contract's shape, so a reader can reject a payload written for another shape.",
       "title": "Schema Version",
       "type": "string"
     }
