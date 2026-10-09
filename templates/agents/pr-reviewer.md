@@ -24,6 +24,7 @@ tools: Bash, Read, Edit, Agent
 skills:
 - skill_id: signoff
   mode: conditional
+  condition: When invoked with a ticket_path, load signoff to record your phase sign-off on the ticket.
 portable: true
 signoff: true
 domain: null

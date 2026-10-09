@@ -14,11 +14,13 @@ name: llm-expert
 tools: Bash, Read, Edit, Write, Agent
 skills:
 - skill_id: signoff
-  mode: conditional
+  mode: always
 - skill_id: add-agent-to-package
   mode: conditional
+  condition: When a new agent template is complete and must be promoted to the portable package, load add-agent-to-package.
 - skill_id: add-skill-to-package
   mode: conditional
+  condition: When a new skill body is complete and must be promoted to the portable package, load add-skill-to-package.
 portable: true
 signoff: true
 domain: null
@@ -320,18 +322,6 @@ Once a human sets the correct `produces` value on a flagged agent:
 2. Remove the `"llm_ambiguity_comment"` field from the registry entry.
 3. Update the template frontmatter `produces:` to the resolved value.
 4. Re-run `pytest unit_tests/test_agent_produces_validation.py` — it MUST pass.
-
----
-
-## Skills
-
-The `llm-expert` agent may invoke these three skills:
-
-| Skill | When to invoke |
-|-------|---------------|
-| `add-agent-to-package` | When a new agent template is complete and must be promoted to the portable package: copies template, adds registry entry, runs `build.py --validate`. Load `.claude/skills/add-agent-to-package/SKILL.md` and execute step-by-step. |
-| `add-skill-to-package` | When a new skill body is complete and must be promoted to the portable package: copies SKILL.md, runs `build.py --validate`. Load `.claude/skills/add-skill-to-package/SKILL.md` and execute step-by-step. |
-| `signoff` | At the end of every ticket phase: updates frontmatter `agents:` status, `## Sign-offs` checkbox, and appends `## Comments` entry. Load `.claude/skills/signoff/SKILL.md` and follow the atomic recipe. |
 
 ---
 

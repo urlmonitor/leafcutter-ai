@@ -18,7 +18,8 @@ name: python-coder
 tools: Bash, Read, Edit, Write, Agent
 skills:
 - skill_id: signoff
-  mode: always
+  mode: conditional
+  condition: When invoked with a ticket_path, load signoff to record your phase sign-off on the ticket.
 - skill_id: doc-enforcer
   mode: always
 portable: true
@@ -398,12 +399,6 @@ distinguishing assertion. Each AC's test must exercise *that AC's* distinguishin
 — if an AC is about registration or framework wiring, a `main()`-return test does not cover
 it. (Note: you delegate test *authoring* to test-writer per Test Delegation below — this
 rule is what you check when you read the red_baseline and when you run the suite.)
-
-## Your Available Skills
-
-| Skill | Description |
-|---|---|
-| signoff | Use when a phase agent finishes work on a ticket OR when a supervisor needs to validate ticket state. Provides the canonical status enum (not_needed | needed | signed_off | failed), the atomic sign-off recipe that updates frontmatter and the Sign-offs checklist together, the comment-append recipe with parser-strict heading schema, the failed-path protocol for blockers, and the validator rules enforced by the parity guard. Pulled in by every phase agent (python-coder, sql-coder, pr-reviewer, commit, etc.) and by both supervisors (epic-supervisor, ticket-supervisor). |
 
 ## Pre-Completion Checks (required before declaring done)
 

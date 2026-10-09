@@ -21,7 +21,8 @@ name: it-po
 tools: Read, Write, Edit, Bash, Skill  # No source code access — uses architecture docs and registries only. Edit is required by the covered_by update protocol.
 skills:
 - skill_id: knowledge-query
-  mode: always
+  mode: conditional
+  condition: Use when you need to search a keyword across agents, skills, docs and ADRs for component context.
 portable: true
 requires_verification: true
 signoff: false

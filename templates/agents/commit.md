@@ -22,6 +22,7 @@ tools: Bash, Read, Edit, Write, Agent
 skills:
 - skill_id: signoff
   mode: conditional
+  condition: When invoked with a ticket_path, load signoff to record your phase sign-off on the ticket.
 - skill_id: precommit-autofix
   mode: always
 portable: true

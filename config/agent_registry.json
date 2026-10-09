@@ -106,7 +106,7 @@
             "skills_invoked": [
                 {
                     "skill_id": "building-epics",
-                    "mode": "conditional"
+                    "mode": "always"
                 },
                 {
                     "skill_id": "signoff",
@@ -170,7 +170,7 @@
                 },
                 {
                     "skill_id": "signoff",
-                    "mode": "conditional"
+                    "mode": "always"
                 }
             ],
             "knowledge_channels": [
@@ -222,7 +222,7 @@
             "skills_invoked": [
                 {
                     "skill_id": "building-epics",
-                    "mode": "conditional"
+                    "mode": "always"
                 }
             ],
             "knowledge_channels": [
@@ -410,7 +410,8 @@
             "skills_invoked": [
                 {
                     "skill_id": "signoff",
-                    "mode": "conditional"
+                    "mode": "conditional",
+                    "condition": "When invoked with a ticket_path, load signoff to record your phase sign-off on the ticket."
                 }
             ],
             "knowledge_channels": [
@@ -483,7 +484,8 @@
             "skills_invoked": [
                 {
                     "skill_id": "signoff",
-                    "mode": "always"
+                    "mode": "conditional",
+                    "condition": "When invoked with a ticket_path, load signoff to record your phase sign-off on the ticket."
                 },
                 {
                     "skill_id": "doc-enforcer",
@@ -619,7 +621,8 @@
             "skills_invoked": [
                 {
                     "skill_id": "signoff",
-                    "mode": "conditional"
+                    "mode": "conditional",
+                    "condition": "When invoked with a ticket_path, load signoff to record your phase sign-off on the ticket."
                 }
             ],
             "knowledge_channels": [
@@ -697,7 +700,8 @@
             "skills_invoked": [
                 {
                     "skill_id": "signoff",
-                    "mode": "always"
+                    "mode": "conditional",
+                    "condition": "When invoked with a ticket_path, load signoff to record your phase sign-off on the ticket."
                 }
             ],
             "knowledge_channels": [
@@ -786,11 +790,13 @@
             "skills_invoked": [
                 {
                     "skill_id": "route-knowledge",
-                    "mode": "conditional"
+                    "mode": "conditional",
+                    "condition": "When asked to remember, capture or save knowledge rather than author a doc, load route-knowledge to pick its target surface."
                 },
                 {
                     "skill_id": "signoff",
-                    "mode": "conditional"
+                    "mode": "conditional",
+                    "condition": "When invoked with a ticket_path, load signoff to record your phase sign-off on the ticket."
                 },
                 {
                     "skill_id": "direct-write",
@@ -883,7 +889,8 @@
             "skills_invoked": [
                 {
                     "skill_id": "signoff",
-                    "mode": "conditional"
+                    "mode": "conditional",
+                    "condition": "When invoked with a ticket_path, load signoff to record your phase sign-off on the ticket."
                 }
             ],
             "knowledge_channels": [
@@ -957,7 +964,8 @@
             "skills_invoked": [
                 {
                     "skill_id": "signoff",
-                    "mode": "conditional"
+                    "mode": "conditional",
+                    "condition": "When invoked with a ticket_path, load signoff to record your phase sign-off on the ticket."
                 }
             ],
             "knowledge_channels": [
@@ -1163,7 +1171,8 @@
             "skills_invoked": [
                 {
                     "skill_id": "signoff",
-                    "mode": "conditional"
+                    "mode": "conditional",
+                    "condition": "When invoked with a ticket_path, load signoff to record your phase sign-off on the ticket."
                 },
                 {
                     "skill_id": "precommit-autofix",
@@ -1234,7 +1243,8 @@
             "skills_invoked": [
                 {
                     "skill_id": "signoff",
-                    "mode": "conditional"
+                    "mode": "conditional",
+                    "condition": "When invoked with a ticket_path, load signoff to record your phase sign-off on the ticket."
                 }
             ],
             "knowledge_channels": [
@@ -1349,7 +1359,8 @@
             "skills_invoked": [
                 {
                     "skill_id": "signoff",
-                    "mode": "conditional"
+                    "mode": "conditional",
+                    "condition": "When invoked with a ticket_path, load signoff to record your phase sign-off on the ticket."
                 }
             ],
             "knowledge_channels": [
@@ -1398,7 +1409,8 @@
             "skills_invoked": [
                 {
                     "skill_id": "feature",
-                    "mode": "conditional"
+                    "mode": "conditional",
+                    "condition": "When a create request names an epic ticket path (an EPIC-*/ path segment), load feature and run its Epic Workflow with the ticket path as $ARGUMENTS."
                 },
                 {
                     "skill_id": "signoff",
@@ -1615,7 +1627,8 @@
             "skills_invoked": [
                 {
                     "skill_id": "signoff",
-                    "mode": "conditional"
+                    "mode": "conditional",
+                    "condition": "When invoked with a ticket_path, load signoff to record your phase sign-off on the ticket."
                 }
             ],
             "knowledge_channels": [
@@ -1700,11 +1713,13 @@
             "skills_invoked": [
                 {
                     "skill_id": "webapp-testing",
-                    "mode": "conditional"
+                    "mode": "conditional",
+                    "condition": "After UI changes, if webapp-testing is installed and ANTIGRAVITY is unset, load it to screenshot and check console errors."
                 },
                 {
                     "skill_id": "signoff",
-                    "mode": "conditional"
+                    "mode": "conditional",
+                    "condition": "When invoked with a ticket_path, load signoff to record your phase sign-off on the ticket."
                 }
             ],
             "knowledge_channels": [
@@ -1764,7 +1779,8 @@
             "skills_invoked": [
                 {
                     "skill_id": "signoff",
-                    "mode": "always"
+                    "mode": "conditional",
+                    "condition": "When invoked with a ticket_path, load signoff to record your phase sign-off on the ticket."
                 }
             ],
             "knowledge_channels": [
@@ -1840,7 +1856,8 @@
                 },
                 {
                     "skill_id": "signoff",
-                    "mode": "conditional"
+                    "mode": "conditional",
+                    "condition": "When invoked with a ticket_path, load signoff to record your phase sign-off on the ticket."
                 }
             ],
             "knowledge_channels": [
@@ -1895,7 +1912,8 @@
             "skills_invoked": [
                 {
                     "skill_id": "signoff",
-                    "mode": "always"
+                    "mode": "conditional",
+                    "condition": "When invoked with a ticket_path, load signoff to record your phase sign-off on the ticket."
                 }
             ],
             "knowledge_channels": [
@@ -1947,7 +1965,8 @@
             "skills_invoked": [
                 {
                     "skill_id": "signoff",
-                    "mode": "always"
+                    "mode": "conditional",
+                    "condition": "When invoked with a ticket_path, load signoff to record your phase sign-off on the ticket."
                 }
             ],
             "knowledge_channels": [
@@ -1999,7 +2018,8 @@
             "skills_invoked": [
                 {
                     "skill_id": "signoff",
-                    "mode": "always"
+                    "mode": "conditional",
+                    "condition": "When invoked with a ticket_path, load signoff to record your phase sign-off on the ticket."
                 }
             ],
             "knowledge_channels": [
@@ -2051,7 +2071,8 @@
             "skills_invoked": [
                 {
                     "skill_id": "signoff",
-                    "mode": "always"
+                    "mode": "conditional",
+                    "condition": "When invoked with a ticket_path, load signoff to record your phase sign-off on the ticket."
                 }
             ],
             "knowledge_channels": [
@@ -2103,7 +2124,8 @@
             "skills_invoked": [
                 {
                     "skill_id": "signoff",
-                    "mode": "always"
+                    "mode": "conditional",
+                    "condition": "When invoked with a ticket_path, load signoff to record your phase sign-off on the ticket."
                 }
             ],
             "knowledge_channels": [
@@ -2158,19 +2180,23 @@
             "skills_invoked": [
                 {
                     "skill_id": "package-audit",
-                    "mode": "conditional"
+                    "mode": "conditional",
+                    "condition": "When asked to audit package boundary drift, load package-audit to run package_audit.py and report gaps."
                 },
                 {
                     "skill_id": "create-hook",
-                    "mode": "always"
+                    "mode": "conditional",
+                    "condition": "When asked to add a new pre-commit hook, load create-hook to scaffold, register and document it."
                 },
                 {
                     "skill_id": "add-agent-to-package",
-                    "mode": "always"
+                    "mode": "conditional",
+                    "condition": "When asked to promote a project-local agent into the package, load add-agent-to-package."
                 },
                 {
                     "skill_id": "add-skill-to-package",
-                    "mode": "always"
+                    "mode": "conditional",
+                    "condition": "When asked to promote a project-local skill into the package, load add-skill-to-package."
                 }
             ],
             "knowledge_channels": [
@@ -2233,7 +2259,8 @@
             "skills_invoked": [
                 {
                     "skill_id": "signoff",
-                    "mode": "always"
+                    "mode": "conditional",
+                    "condition": "When invoked with a ticket_path, load signoff to record your phase sign-off on the ticket."
                 },
                 {
                     "skill_id": "doc-enforcer",
@@ -2327,7 +2354,7 @@
             "skills_invoked": [
                 {
                     "skill_id": "write-c4-diagram",
-                    "mode": "conditional"
+                    "mode": "always"
                 }
             ],
             "knowledge_channels": [
@@ -2411,7 +2438,8 @@
             "skills_invoked": [
                 {
                     "skill_id": "signoff",
-                    "mode": "always"
+                    "mode": "conditional",
+                    "condition": "When invoked with a ticket_path, load signoff to record your phase sign-off on the ticket."
                 }
             ],
             "knowledge_channels": [
@@ -2474,7 +2502,8 @@
             "skills_invoked": [
                 {
                     "skill_id": "signoff",
-                    "mode": "conditional"
+                    "mode": "conditional",
+                    "condition": "When invoked with a ticket_path, load signoff to record your phase sign-off on the ticket."
                 }
             ],
             "knowledge_channels": [
@@ -2541,7 +2570,8 @@
             "skills_invoked": [
                 {
                     "skill_id": "signoff",
-                    "mode": "conditional"
+                    "mode": "conditional",
+                    "condition": "When invoked with a ticket_path, load signoff to record your phase sign-off on the ticket."
                 }
             ],
             "knowledge_channels": [
@@ -2846,16 +2876,9 @@
             "selection_criteria": null,
             "template_path": "templates/agents/onboard.md",
             "model": "sonnet",
-            "skills_used": [
-                "webapp-testing"
-            ],
+            "skills_used": [],
             "category": "supervisor",
-            "skills_invoked": [
-                {
-                    "skill_id": "webapp-testing",
-                    "mode": "conditional"
-                }
-            ],
+            "skills_invoked": [],
             "knowledge_channels": [
                 {
                     "channel": 1,
@@ -2984,7 +3007,8 @@
             "skills_invoked": [
                 {
                     "skill_id": "signoff",
-                    "mode": "always"
+                    "mode": "conditional",
+                    "condition": "When invoked with a ticket_path, load signoff to record your phase sign-off on the ticket."
                 }
             ],
             "knowledge_channels": [
@@ -3049,7 +3073,8 @@
             "skills_invoked": [
                 {
                     "skill_id": "signoff",
-                    "mode": "always"
+                    "mode": "conditional",
+                    "condition": "When invoked with a ticket_path, load signoff to record your phase sign-off on the ticket."
                 }
             ],
             "knowledge_channels": [
@@ -3122,15 +3147,17 @@
             "skills_invoked": [
                 {
                     "skill_id": "signoff",
-                    "mode": "conditional"
+                    "mode": "always"
                 },
                 {
                     "skill_id": "add-agent-to-package",
-                    "mode": "conditional"
+                    "mode": "conditional",
+                    "condition": "When a new agent template is complete and must be promoted to the portable package, load add-agent-to-package."
                 },
                 {
                     "skill_id": "add-skill-to-package",
-                    "mode": "conditional"
+                    "mode": "conditional",
+                    "condition": "When a new skill body is complete and must be promoted to the portable package, load add-skill-to-package."
                 }
             ],
             "knowledge_channels": [
@@ -3191,11 +3218,13 @@
                 },
                 {
                     "skill_id": "knowledge-query",
-                    "mode": "always"
+                    "mode": "conditional",
+                    "condition": "Use when you need to search a keyword across agents, skills, docs and ADRs for component context."
                 },
                 {
                     "skill_id": "ac-tree-split",
-                    "mode": "conditional"
+                    "mode": "conditional",
+                    "condition": "When an L0 or L1 exceeds its child limit, load ac-tree-split for split patterns A and C."
                 }
             ],
             "knowledge_channels": [

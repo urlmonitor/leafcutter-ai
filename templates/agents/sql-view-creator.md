@@ -9,7 +9,8 @@ model: sonnet
 tools: Bash, Read, Edit, Write, Agent
 skills:
 - skill_id: signoff
-  mode: always
+  mode: conditional
+  condition: When invoked with a ticket_path, load signoff to record your phase sign-off on the ticket.
 requires_verification: true
 pre_flight_reads:
 - required: true

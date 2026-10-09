@@ -29,7 +29,7 @@ name: epic-supervisor
 tools: Bash, Read, Edit, Write, Agent
 skills:
 - skill_id: building-epics
-  mode: conditional
+  mode: always
 - skill_id: signoff
   mode: always
 portable: true

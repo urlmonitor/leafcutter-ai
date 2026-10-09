@@ -14,9 +14,11 @@ name: business-analyst
 tools: Read, Write, Edit, Bash, Skill  # Write/Edit scoped to docs/acceptance-criteria/ only. Edit is required by S6b.
 skills:
 - skill_id: knowledge-query
-  mode: always
+  mode: conditional
+  condition: Use when you need to search a keyword across agents, skills, docs and ADRs for component context.
 - skill_id: ac-tree-split
   mode: conditional
+  condition: When a split L1 is overcrowded, load ac-tree-split to redistribute its L2s (Pattern C).
 portable: true
 requires_verification: true
 signoff: false

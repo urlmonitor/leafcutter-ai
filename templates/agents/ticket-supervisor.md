@@ -18,7 +18,7 @@ skills:
 - skill_id: building-epics
   mode: always
 - skill_id: signoff
-  mode: conditional
+  mode: always
 portable: true
 signoff: true
 domain: null

@@ -19,8 +19,10 @@ tools: Bash, Read, Edit, Write, Agent
 skills:
 - skill_id: webapp-testing
   mode: conditional
+  condition: After UI changes, if webapp-testing is installed and ANTIGRAVITY is unset, load it to screenshot and check console errors.
 - skill_id: signoff
   mode: conditional
+  condition: When invoked with a ticket_path, load signoff to record your phase sign-off on the ticket.
 portable: true
 signoff: true
 requires_verification: true

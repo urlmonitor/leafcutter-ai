@@ -2,7 +2,8 @@
 MODULE: agent_ability_gate
 GOAL: Wire the agent-ability verdict into the build: REPORT a registry copy
     that disagrees with an agent's own declaration and carry on, but REFUSE when
-    a declared ability resolves to no installed skill.
+    a declared ability resolves to no installed skill or a conditional grant
+    carries no condition.
 BUSINESS CONTEXT: AR-300c-3 / AR-300c-3-i. The registry's ability fields are a
     derived copy of each template's frontmatter ``skills`` declaration, which
     the build compiles prompts from. A verdict nobody acts on is the
@@ -50,7 +51,12 @@ import logging
 from pathlib import Path
 from typing import Any
 
-from agent_ability_verdict import REPORT_ONLY_KINDS, describe_finding, verify_abilities
+from agent_ability_verdict import (
+    REPORT_ONLY_KINDS,
+    describe_finding,
+    missing_condition_findings,
+    verify_abilities,
+)
 from build_colors import error as _error
 from build_colors import warn as _warn
 from template_compiler import parse_frontmatter
@@ -127,7 +133,7 @@ def _verdict_findings(package_root: Path, config: dict[str, Any] | None) -> tupl
         )
     except ValueError as exc:
         return [], [f"[abilities] cannot verify agent abilities: {exc}"]
-    return verdict["findings"], []
+    return verdict["findings"] + missing_condition_findings(declarations), []
 
 
 def split_ability_findings(package_root: Path, config: dict[str, Any] | None = None) -> tuple[list[str], list[str]]:

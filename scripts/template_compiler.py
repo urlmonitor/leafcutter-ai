@@ -39,6 +39,8 @@ from typing import Any
 # Python's own clear message naming the missing dependency rather than mask it.
 import yaml
 
+from agent_inplace_abilities import report_inplace_abilities
+from agent_retired_markers import strip_retired_markers
 from agent_skills_declaration import append_declared_skills
 from injection_builders import (  # noqa: E402
     _load_registry,  # noqa: F401  # re-exported; consumed by build_phases / build_helpers
@@ -274,8 +276,7 @@ def _apply_registry_injection(
 ) -> str:
     """Apply all registry placeholder types to a template body.
 
-    Resolves ``{{my_spawn_allowlist}}``, ``{{my_skills_used}}``,
-    ``{{registry_phase_agents_table}}`` (when inject_registry is True),
+    Resolves ``{{registry_phase_agents_table}}`` (when inject_registry is True),
     ``{{doc_type_reference_table}}``, ``{{project_paths_table}}``,
     ``{{agent_priority_table}}``, and ``{{doc_types_dispatch_table}}``.
 
@@ -300,24 +301,6 @@ def _apply_registry_injection(
     #   so that the Type 5 placeholder reflects config-overridden paths rather
     #   than paths.json static defaults. (#TICKET-20260603-ConfigDrivenBuildPaths)
     """
-    if "{{my_spawn_allowlist}}" in body:
-        try:
-            table = build_per_agent_spawn_table(agent_id, agents)
-        except ValueError as exc:
-            raise ValueError(
-                f"Registry injection failed for '{template_name}': {exc}"
-            ) from exc
-        body = body.replace("{{my_spawn_allowlist}}", table)
-
-    if "{{my_skills_used}}" in body:
-        try:
-            skills_table = build_per_agent_skills_table(agent_id, agents, skills_root)
-        except ValueError as exc:
-            raise ValueError(
-                f"Registry injection failed for '{template_name}': {exc}"
-            ) from exc
-        body = body.replace("{{my_skills_used}}", skills_table)
-
     if inject_registry and "{{registry_phase_agents_table}}" in body:
         phase_table = build_registry_block(registry_path) if registry_path else ""
         body = body.replace("{{registry_phase_agents_table}}", phase_table)
@@ -405,6 +388,8 @@ def compile_agent_template(
 
     header = _build_output_header(fm)
     body = strip_metadata_sections(body)
+    body = strip_retired_markers(body, template_path.name)  # AR-300d-4: never substituted
+    report_inplace_abilities(template_path.name, fm, body, skills_root)  # AR-300a-4-i
     body = inject_config(body, config)
 
     if agents is not None:

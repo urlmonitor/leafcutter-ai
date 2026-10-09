@@ -15,9 +15,11 @@ skills:
 - skill_id: signoff
   mode: always
 - skill_id: knowledge-query
-  mode: always
+  mode: conditional
+  condition: Use when you need to search a keyword across agents, skills, docs and ADRs for component context.
 - skill_id: ac-tree-split
   mode: conditional
+  condition: When an L0 or L1 exceeds its child limit, load ac-tree-split for split patterns A and C.
 portable: true
 requires_verification: true
 signoff: false

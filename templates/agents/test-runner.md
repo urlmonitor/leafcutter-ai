@@ -18,7 +18,8 @@ name: test-runner
 tools: Bash, Read, Edit
 skills:
 - skill_id: signoff
-  mode: always
+  mode: conditional
+  condition: When invoked with a ticket_path, load signoff to record your phase sign-off on the ticket.
 portable: true
 signoff: true
 domain: null

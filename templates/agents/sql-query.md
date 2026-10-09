@@ -14,6 +14,7 @@ skills:
   mode: always
 - skill_id: signoff
   mode: conditional
+  condition: When invoked with a ticket_path, load signoff to record your phase sign-off on the ticket.
 requires_verification: true
 default_artifact_checklist:
   - query_authored

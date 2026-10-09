@@ -19,9 +19,11 @@ ARCHITECTURE: One public entry point, ``verify_abilities``, plus the shared
     caller supplies, apart from ``Path.is_file`` probes of skill locations —
     the caller (``agent_ability_gate``, the migration CLI, tests) owns reading
     templates and the registry. Finding kinds: ``divergent``,
-    ``declaration-only``, ``record-only`` (comparison) and ``unresolved``
+    ``declaration-only``, ``record-only`` (comparison), ``unresolved``
     (resolution; carries ``looked_in`` for the packaged and project-local
-    surfaces). ``descriptive_only`` registry entries describe behaviour and are
+    surfaces) and, from ``missing_condition_findings`` (appended by the gate, not
+    part of ``verify_abilities``' verdict), ``missing-condition`` (a conditional
+    grant with no condition). ``descriptive_only`` registry entries describe behaviour and are
     not grants, so they are ignored on the record side. The declaration always
     wins: resolution reads the declaration, never the registry fields. This
     module is a build-engine module under ``scripts/`` (on ``sys.path`` for the
@@ -40,6 +42,9 @@ DECISION HISTORY
   can split report-only (comparison) findings from refusing ones. Per the user
   decision of 2026-10-09 a disagreeing registry copy is reported, not refused;
   an unresolvable declared id still refuses. (#AR-300c-3)
+- 2026-10-09 [python-coder/AR-300a-2]: Added the refusing ``missing-condition``
+  kind: a ``conditional`` grant with no condition text never says WHEN it
+  applies, so the build refuses (not in ``REPORT_ONLY_KINDS``). (#AR-300a-2)
 """
 
 from __future__ import annotations
@@ -219,8 +224,31 @@ def verify_abilities(
     }
 
 
+def missing_condition_findings(declarations: dict[str, list[Any]]) -> list[dict[str, Any]]:
+    """Return a refusing ``missing-condition`` finding per conditional grant that carries no condition.
+
+    Kept apart from ``verify_abilities`` (whose verdict covers comparison and
+    resolution only); the build gate appends these to that verdict's findings.
+
+    Args:
+        declarations: Agent id -> declared ``skills`` entries.
+
+    Returns:
+        One ``{agent, kind, ability}`` dict per offending grant, in agent order.
+    """
+    return [
+        {"agent": agent, "kind": "missing-condition", "ability": entry["skill_id"]}
+        for agent, raw in sorted(declarations.items())
+        for entry in normalize_entries(raw)
+        if entry["mode"] == "conditional" and not entry.get("condition", "").strip()
+    ]
+
+
 def describe_finding(finding: dict[str, Any]) -> str:
     """Render one finding as a single human-readable line for the build output."""
+    if finding["kind"] == "missing-condition":
+        return (f"agent '{finding['agent']}' grants ability '{finding['ability']}' as conditional "
+                f"but declares no condition saying when it applies")
     if finding["kind"] == "unresolved":
         where = "; ".join(f"{p['surface']}: {p['path']}" for p in finding["looked_in"])
         return (f"agent '{finding['agent']}' declares ability '{finding['ability']}' "

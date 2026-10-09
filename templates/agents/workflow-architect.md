@@ -13,12 +13,16 @@ tools: Bash, Read, Edit, Write, Agent
 skills:
 - skill_id: package-audit
   mode: conditional
+  condition: When asked to audit package boundary drift, load package-audit to run package_audit.py and report gaps.
 - skill_id: create-hook
-  mode: always
+  mode: conditional
+  condition: When asked to add a new pre-commit hook, load create-hook to scaffold, register and document it.
 - skill_id: add-agent-to-package
-  mode: always
+  mode: conditional
+  condition: When asked to promote a project-local agent into the package, load add-agent-to-package.
 - skill_id: add-skill-to-package
-  mode: always
+  mode: conditional
+  condition: When asked to promote a project-local skill into the package, load add-skill-to-package.
 portable: true
 signoff: false
 domain: null

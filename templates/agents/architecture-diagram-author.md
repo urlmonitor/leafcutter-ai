@@ -11,7 +11,7 @@ model: opus
 tools: Bash, Read, Edit, Write, Skill
 skills:
 - skill_id: write-c4-diagram
-  mode: conditional
+  mode: always
 portable: true
 signoff: true
 domain: null

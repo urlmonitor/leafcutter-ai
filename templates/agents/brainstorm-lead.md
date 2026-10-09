@@ -16,7 +16,7 @@ model: opus
 tools: Read, Bash, Agent
 skills:
 - skill_id: building-epics
-  mode: conditional
+  mode: always
 portable: true
 signoff: false
 domain: null

@@ -27,8 +27,10 @@ tools: Bash, Read, Edit, Write, Agent
 skills:
 - skill_id: route-knowledge
   mode: conditional
+  condition: When asked to remember, capture or save knowledge rather than author a doc, load route-knowledge to pick its target surface.
 - skill_id: signoff
   mode: conditional
+  condition: When invoked with a ticket_path, load signoff to record your phase sign-off on the ticket.
 portable: true
 signoff: true
 domain: null
