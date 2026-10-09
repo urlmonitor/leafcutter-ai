@@ -24,6 +24,8 @@ def field_value(item: KnowledgeEvidence, name: str) -> object:
     Returns:
         The actual value, or None when unavailable.
     """
+    if name == "content":
+        return _content_value(item)
     if name == "criteria":
         return (
             item.content
@@ -58,8 +60,15 @@ def field_value(item: KnowledgeEvidence, name: str) -> object:
     return value
 
 
+def _content_value(item: KnowledgeEvidence) -> str | None:
+    """Accept only a nonempty source-level excerpt with its exact canonical locator."""
+    return (item.content if item.disclosure_level == 3 and item.content and item.content.strip()
+            and item.field_locators.get("content") == item.entity.source.locator else None)
+
+
 def availability(
-    node: Entity, visible: Entity, fields: list[str], level: int, limitations: list[str]
+    node: Entity, visible: Entity, fields: list[str], level: int, limitations: list[str],
+    *, content: str | None = None
 ) -> dict[str, str]:
     """Classify availability at the actual projection-to-disclosure boundary.
 
@@ -69,11 +78,33 @@ def availability(
         fields: Caller-required canonical field names.
         level: Actual requested disclosure level.
         limitations: Actual source excerpt limitations.
+        content: Actual authorized source text, absent when no source was read.
 
     Returns:
         Availability per requested field, with unknown used when attribution is absent.
     """
-    return {name: _availability(node, visible, name, level, limitations) for name in fields}
+    return {name: _content_availability(level, content, limitations) if name == "content"
+            else _availability(node, visible, name, level, limitations) for name in fields}
+
+
+def _content_availability(level: int, content: str | None, limitations: list[str]) -> str:
+    """Classify only the actual authorized source read, never backend content properties.
+
+    Args:
+        level: Actual disclosure level authorized for this response.
+        content: Source text read within that disclosure, or None when unavailable.
+        limitations: Recorded source-read failures and truncation constraints.
+
+    Returns:
+        Attributable source-content availability for the requested field.
+    """
+    if level != 3:
+        return "disclosure_omitted"
+    if any("truncated" in limitation for limitation in limitations):
+        return "truncated"
+    if content is None or limitations:
+        return "unknown"
+    return "present" if content.strip() else "canonical_absent"
 
 
 def _availability(

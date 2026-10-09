@@ -9,6 +9,7 @@ from dataclasses import replace
 
 from integrations.graph_offers import canonical_target_ids, selection_context, _identity
 from integrations.query_answer_planning import FIELDS
+from integrations.retrieval_relationships import ROLES, validate_relation
 from kernel.capabilities.base import ExecutionContext
 from kernel.capabilities.research.state import Plan
 from kernel.contracts.retrieval_needs import RetrievalNeedsOutput, RetrievalNeedsRequest, prepare_request
@@ -25,7 +26,9 @@ RELATIONSHIPS = {"parent_direct": "Immediate parent only", "children_direct": "I
     "all_descendants": "Entire declared hierarchy below the target, not only direct children",
     "declared_dependents": "Records directly declaring a dependency on the target",
     "covered_by": "Tests declared to cover an acceptance criterion",
-    "implemented_by": "Declared implementation references", "related_docs": "Declared document references"}
+    "implemented_by": "Declared implementation references", "related_docs": "Declared document references",
+    "governing_adrs": "ADRs directly declaring membership in the target component",
+    "component_context": "The target component and its directly linked neighbors, bounded by requested result kind"}
 
 
 def _graph_sources(ctx: ExecutionContext, plan: Plan) -> list:
@@ -39,7 +42,7 @@ def _graph_sources(ctx: ExecutionContext, plan: Plan) -> list:
 
 SUPPORTED_PAIRS = {"ac": ("AcceptanceCriterion", "ac_yaml"), "adr": ("ADR", "adr"),
     "ticket": ("Ticket", "ticket"), "component": ("Component", "component"),
-    "flow": ("Flow", "flow"), "decision": ("Decision", "decision")}
+    "flow": ("Flow", "flow"), "decision": ("Decision", "decision"), "test": ("Test", "code")}
 
 
 def validate_dimensions(output: RetrievalNeedsOutput) -> str:
@@ -93,7 +96,7 @@ class RepositoryNeedsInterpreter:
                 "revision": revision or "latest", "source_ids": [s.id for s in sources],
                 "read_roots": list(ctx.scope.read_roots)}, catalog={
                 "entity_types": ENTITY_TYPES, "target_ids": {}, "required_fields": {
-                    **FIELDS, "test_spec": "Declared test cases and expected assertions; supplements acceptance criteria"},
+                    **FIELDS, "content": "Bounded source text at the canonical locator; not a full-document promise", "test_spec": "Declared test cases and expected assertions; supplements acceptance criteria"},
                 "document_types": DOCUMENT_TYPES, "relationships": RELATIONSHIPS}))
 
     def apply(self, plan: Plan, output: RetrievalNeedsOutput) -> Plan:
@@ -113,10 +116,11 @@ class RepositoryNeedsInterpreter:
             raise ValueError("Retrieval needs changed the original research question")
         validate_dimensions(output)
         relationships = output.selections["relationships"]
-        if set(relationships) - {"all_descendants", "declared_dependents"}:
+        if set(relationships) - {"all_descendants", "declared_dependents", *ROLES}:
             raise ValueError("unsupported_relationship: no integrated operation establishes the requested relationship")
         if len(relationships) > 1:
             raise ValueError("unsupported_relationship: this bounded path cannot combine multiple relationship obligations")
+        bounded_relation = validate_relation(output)
         population = "ac_descendants" if "all_descendants" in relationships else (
             "declared_dependents" if "declared_dependents" in relationships else "returned_entities")
         targets = output.selections["target_ids"]
@@ -125,6 +129,8 @@ class RepositoryNeedsInterpreter:
             raise ValueError("unsupported_population: no offered operation establishes the requested exhaustive population")
         scope = AnswerScope(entity_ids=list(canonical_target_ids(output))
             if not relationships and output.completeness in {"single_entity", "selected_entities"} else [])
+        if bounded_relation:
+            scope = AnswerScope(root_id=targets[0])
         if population != "returned_entities":
             inclusion = {"exclude_root": "root_excluded", "exclude_parents": "terminal_leaves",
                          "include_root": "include_root"}.get(output.hierarchy_scope)

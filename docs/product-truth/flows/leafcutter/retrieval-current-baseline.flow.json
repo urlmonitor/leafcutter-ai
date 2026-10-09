@@ -10,7 +10,7 @@
   "realization": "built",
   "status": "active",
   "readiness": "draft",
-  "version": 4,
+  "version": 5,
   "tags": [
     "retrieval",
     "research",
@@ -974,6 +974,15 @@
                 ],
                 "required": false,
                 "default": []
+              },
+              {
+                "path": "/scope/root_id",
+                "types": [
+                  "null",
+                  "string"
+                ],
+                "required": false,
+                "default": null
               }
             ]
           },
@@ -1094,6 +1103,78 @@
                 "require_complete": true
               }
             }
+          },
+          {
+            "contract": "retrieval_needs_output",
+            "mode": "full",
+            "origin": "illustrative",
+            "label": "Bounded test examples: one AC anchor, Test/code results; not an execution receipt",
+            "value": {
+              "original_question": "Show examples of tests covering DK-300d-3.",
+              "source_scope": {
+                "repository_id": "leafcutter",
+                "revision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+                "source_ids": [
+                  "knowledge.graph"
+                ],
+                "read_roots": [
+                  "docs/acceptance-criteria",
+                  "tests"
+                ]
+              },
+              "selections": {
+                "entity_types": [
+                  "test"
+                ],
+                "target_ids": [
+                  "DK-300d-3"
+                ],
+                "required_fields": [
+                  "content"
+                ],
+                "document_types": [
+                  "code"
+                ],
+                "relationships": [
+                  "covered_by"
+                ]
+              },
+              "uncertain": {
+                "entity_types": [],
+                "target_ids": [],
+                "required_fields": [],
+                "document_types": [],
+                "relationships": []
+              },
+              "detail_mode": "fields",
+              "completeness": "examples",
+              "hierarchy_scope": "not_applicable",
+              "hierarchy_levels": [],
+              "scope_resolution": "sufficient",
+              "unresolved": [],
+              "rationale": "The AC is the original anchor; returned examples are test sources.",
+              "engine": "host_llm",
+              "status": "decided",
+              "model_id": null
+            }
+          },
+          {
+            "contract": "answer_requirements",
+            "mode": "full",
+            "origin": "illustrative",
+            "label": "Relationship anchor is separate from returned identities; exhaustive coverage is not promised",
+            "value": {
+              "original_question": "Show examples of tests covering DK-300d-3.",
+              "required_fields": [
+                "content"
+              ],
+              "scope": {
+                "population": "returned_entities",
+                "root_id": "DK-300d-3",
+                "entity_ids": []
+              },
+              "require_complete": false
+            }
           }
         ]
       },
@@ -1123,6 +1204,7 @@
         "answer_requirements/scope: object (optional)",
         "answer_requirements/require_complete: boolean (optional; default true)",
         "answer_requirements/scope/entity_ids: array (optional; default [])",
+        "answer_requirements/scope/root_id: null|string (optional; default null)",
         "retrieval/retrieval_needs: null|object (optional; default null; applies retrieval_needs_output schema)",
         "retrieval/answer_requirements: null|object (optional; default null; applies answer_requirements schema)"
       ],
@@ -1785,6 +1867,7 @@
         "knowledge_result/evidence/*/field_contents: object (optional; default {})",
         "knowledge_result/evidence/*/field_locators: object (optional; default {})",
         "knowledge_result/evidence/*/field_availability: object (optional; default {})",
+        "knowledge_result/evidence/*/content: null|string (optional; default null)",
         "bundle/evidence/*/excerpt: null|string (optional; default null)",
         "bundle/evidence/*/source/section_locator: null|string (optional; default null)",
         "bundle/evidence/*/source/source_version: null|object (optional; default null)"
@@ -1955,6 +2038,15 @@
                 ],
                 "required": false,
                 "default": {}
+              },
+              {
+                "path": "/evidence/*/content",
+                "types": [
+                  "null",
+                  "string"
+                ],
+                "required": false,
+                "default": null
               }
             ]
           },
@@ -2150,6 +2242,39 @@
                     "Illustrative content; not a real source receipt."
                   ],
                   "truncated": false
+                }
+              ]
+            }
+          },
+          {
+            "contract": "knowledge_result",
+            "mode": "projection",
+            "origin": "illustrative",
+            "label": "Bounded canonical content, not a complete document or observed receipt",
+            "value": {
+              "status": "ok",
+              "evidence": [
+                {
+                  "entity": {
+                    "canonical_id": "Test:tests/example.py",
+                    "kind": "Test",
+                    "title": "Illustrative test",
+                    "source": {
+                      "repository_id": "leafcutter",
+                      "source_sha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+                      "path": "tests/example.py",
+                      "locator": ""
+                    }
+                  },
+                  "disclosure_level": 3,
+                  "content": "assert actual == expected\n",
+                  "field_availability": {
+                    "content": "present"
+                  },
+                  "field_locators": {
+                    "content": ""
+                  },
+                  "limitations": []
                 }
               ]
             }
@@ -5525,9 +5650,9 @@
       "for": "fit"
     },
     {
-      "given": "Scoped need and offered contracts",
-      "when": "Choose a registered query",
-      "then": "Selected operation or alternative",
+      "given": "An accepted examples-only interpretation names one permitted anchor and a supported test-coverage or component-linked relationship.",
+      "when": "Jev selects a registered retrieval operation.",
+      "then": "Only the matching finite recipe is selectable; original anchor, result kind and trusted component scope remain distinct, while multiple anchors or exhaustive relation populations are unresolved.",
       "for": "select"
     },
     {
@@ -5539,7 +5664,7 @@
     {
       "given": "Registered operation, pinned source and remaining budget",
       "when": "Retrieve bounded, attributable evidence",
-      "then": "Evidence, execution status and bounded completeness",
+      "then": "Bounded source excerpts retain exact locators and revisions; present, unavailable, empty, withheld and truncated content remain distinct, and no excerpt proves a full document.",
       "for": "retrieve"
     },
     {
@@ -5672,7 +5797,7 @@
       "for": "accept-needs",
       "given": "A host response for the pending question and trusted scope",
       "when": "The kernel validates and resumes the original research",
-      "then": "Valid needs and answer requirements reach the child; changed identity or unresolved requirements cannot silently become a complete answer."
+      "then": "Valid needs and answer requirements reach the child; changed identity or unresolved requirements cannot silently become a complete answer. Full literal ADR stems remain intact; bounded relationships require one anchor, one supported result pair and examples completeness."
     },
     {
       "for": "assess",
@@ -5759,6 +5884,12 @@
       "by": "flow-author",
       "date": "2026-10-09",
       "note": "Semantically merged the upstream plain-sentence descriptions and explicit actor mechanisms while retaining the committed typed contracts, source-bound examples, original target obligations, host interpretation steps and separate historical evidence limits."
+    },
+    {
+      "action": "extended",
+      "by": "flow-author",
+      "date": "2026-10-09",
+      "note": "Aligned reviewed relationship compatibility and bounded content disclosure with DK-300d-4 and KM-500e-1-i. covered_by uses AC to Test/code; governing_adrs uses Component to ADR through component_membership; component_context remains partial for actual mixed-kind results. One anchor and examples only; exhaustive relations and full documents remain unsupported. Controlled ports prove lifecycle, not real mixed-context fulfillment or Aura publication."
     }
   ],
   "impl_summary": {

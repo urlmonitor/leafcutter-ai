@@ -10,6 +10,7 @@ from knowledge.query_catalog import QueryCatalog
 from knowledge.answer_models import AnswerRequirements
 from knowledge.errors import KnowledgeError
 from integrations.graph_catalog import catalog_offers
+from integrations.retrieval_relationships import relation_role
 
 from integrations.graph_offers import GraphOffer, graph_offers, repository_sources, selection_context
 from integrations.retrieval_decision import RetrievalChoice
@@ -180,6 +181,39 @@ async def _select_targets(ctx: ExecutionContext, invocation: CapabilityInvocatio
     return targets
 
 
+def _operation_options(ctx: ExecutionContext, payload: RetrievalRequestPayload, capabilities: dict,
+                       catalog: QueryCatalog | None, allow_catalog: bool
+                       ) -> tuple[dict[str, GraphOffer], dict[str, str]]:
+    """Build finite compatible operation offers while retaining explicit refusal outcomes.
+
+    Args:
+        ctx: Trusted scoped execution context.
+        payload: Original typed retrieval obligations.
+        capabilities: Backend mechanism availability.
+        catalog: Optional admitted saved-query catalog.
+        allow_catalog: Whether governed construction may be offered.
+
+    Returns:
+        Bound eligible operations and the finite Jev choice descriptions.
+    """
+    offers = graph_offers(ctx, payload, capabilities)
+    if catalog is not None:
+        offers.update(catalog_offers(ctx, payload, catalog, capabilities))
+    role = relation_role(payload.retrieval_needs)
+    if role is not None:
+        offers = {name: offer for name, offer in offers.items() if name == role[2]}
+    options = {name: offer.description for name, offer in offers.items()}
+    if role is None and catalog is not None and allow_catalog and _creation_supported(ctx, payload):
+        options["query_catalog"] = ("No offered bound operation can answer the original requested facts. "
+            "Check the supported data and use governed query preparation/admission; this is not permission to write.")
+    options.update(unsupported="No offered graph operation answers this question.",
+                   unsupported_population="The question requires ALL members of a filtered population; "
+                   "no offered operation establishes that complete population. Samples cannot fulfill it.")
+    if role is None and repository_sources(ctx, payload):
+        options["repository_fallback"] = "Search the permitted repository files for this question."
+    return offers, options
+
+
 async def assess_graph_operation(ctx: ExecutionContext, invocation: CapabilityInvocation,
                                  payload: RetrievalRequestPayload, capabilities: dict, *,
                                  catalog: QueryCatalog | None = None, allow_catalog: bool = False
@@ -198,18 +232,7 @@ async def assess_graph_operation(ctx: ExecutionContext, invocation: CapabilityIn
     requirements = (AnswerRequirements.model_validate(payload.answer_requirements)
                     if payload.answer_requirements is not None else None)
     scoped = selection_context(ctx)
-    offers = graph_offers(scoped, payload, capabilities)
-    if catalog is not None:
-        offers.update(catalog_offers(scoped, payload, catalog, capabilities))
-    options = {name: offer.description for name, offer in offers.items()}
-    if catalog is not None and allow_catalog and _creation_supported(ctx, payload):
-        options["query_catalog"] = ("No offered bound operation can answer the original requested facts. "
-            "Check the supported data and use governed query preparation/admission; this is not permission to write.")
-    options.update(unsupported="No offered graph operation answers this question.",
-                   unsupported_population="The question requires ALL members of a filtered population; "
-                   "no offered operation establishes that complete population. Samples cannot fulfill it.")
-    if repository_sources(ctx, payload):
-        options["repository_fallback"] = "Search the permitted repository files for this question."
+    offers, options = _operation_options(scoped, payload, capabilities, catalog, allow_catalog)
     state: dict[str, JsonValue] = {**_selection_state(ctx, payload), "operation_targets":
         {name: list(offer.targets) for name, offer in offers.items()}}
     usage: list[Usage] = []

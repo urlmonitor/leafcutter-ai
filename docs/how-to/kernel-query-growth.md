@@ -108,10 +108,39 @@ outside this integration.
 
 The executable needs handoff currently accepts `detail_mode: fields` and one
 supported entity/document pair: ac/ac_yaml, adr/adr, ticket/ticket,
-component/component, flow/flow or decision/decision. Multiple pairs,
+component/component, flow/flow, decision/decision or test/code. Multiple pairs,
 `bounded_context`, `full_document` and unsupported document kinds are unresolved
 before query execution. Returned entity kinds must match. The standalone
 interpreter can describe broader needs; that does not make them executable here.
+
+## Bounded relationship examples and source content
+
+The question can request one existing relationship recipe using one original
+anchor and `completeness: examples`. The anchor identifies where to start; the
+selected entity/document pair describes the returned records.
+
+| `selections.relationships` | Original anchor | Returned pair and registered operation |
+|---|---|---|
+| `["covered_by"]` | One acceptance criterion | `test/code` through `get_related_tests`. |
+| `["governing_adrs"]` | One authorized component | `adr/adr` through `get_relevant_adrs`, using declared `component_membership`. |
+| `["component_context"]` | One authorized component | One supported pair through `get_component_context`; actual mixed-kind results remain partial. |
+
+These recipes preserve the original anchor in `answer_requirements.scope.root_id`;
+related results do not have to share its identity. Multiple anchors, multiple
+relationships, and exhaustive relation sets or counts remain unsupported. A
+component outside an explicit trusted component scope is refused. An unrelated
+exact lookup cannot satisfy the requested relationship.
+
+`content` requests a bounded canonical-source excerpt at disclosure level 3,
+with its exact locator and revision. It does not request or prove a whole document.
+See [content availability](../reference/knowledge-retrieval-evidence.md#bounded-content)
+for unavailable, empty, withheld and truncated results. Full ADR filename stems
+remain intact as literal candidates; a shortened ADR prefix is not invented.
+
+The real component-context operation can return its Component seed alongside
+neighbors. The one-result-kind guard retains that mismatch as partial. Controlled
+ADR-only port tests prove host/selection transport and lifecycle, not a fulfilled
+answer from the real mixed-kind operation or current Aura publication.
 
 ## Resume the issued interaction
 

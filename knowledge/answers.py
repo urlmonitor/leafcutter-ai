@@ -81,7 +81,7 @@ def _hard_failure(
         Whether missing evidence prevents fulfillment regardless of best-effort mode.
     """
     return (
-        (result.truncated and "criteria" in need.required_fields)
+        (result.truncated and bool({"criteria", "content"}.intersection(need.required_fields)))
         or result.status not in {"ok", "partial"}
         or any(
             value in limitations

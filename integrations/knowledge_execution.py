@@ -397,7 +397,7 @@ def _disclosure_target(payload: RetrievalRequestPayload, request: KnowledgeRetri
         return request.disclosure_level
     needs = payload.retrieval_needs
     if needs is not None and needs.detail_mode == "fields":
-        return 3 if {"criteria", "test_spec"}.intersection(needs.selections["required_fields"]) else 0
+        return 3 if {"criteria", "test_spec", "content"}.intersection(needs.selections["required_fields"]) else 0
     return {"locator": 0, "summary": 2, "excerpt": 3}[payload.detail]
 
 

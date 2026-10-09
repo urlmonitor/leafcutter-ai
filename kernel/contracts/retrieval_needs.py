@@ -13,7 +13,9 @@ from pydantic import ConfigDict, Field, JsonValue, field_validator, model_valida
 from kernel.contracts.base import KernelModel, fail
 
 DIMENSIONS = ("entity_types", "target_ids", "required_fields", "document_types", "relationships")
-LITERAL_ID = re.compile(r"\b[A-Z][A-Z0-9]*(?:-[A-Z]+)*-\d+[a-z]?(?:-\d+)?(?:-[ivx]+)?\b")
+LITERAL_ID = re.compile(
+    r"(?<![\w-])(?:ADR-\d+(?:-[A-Za-z0-9]+)*|[A-Z][A-Z0-9]*(?:-[A-Z]+)*-\d+[a-z]?(?:-\d+)?(?:-[ivx]+)?)(?![\w-])"
+)
 
 
 def _dimensions(value: dict) -> dict:

@@ -241,7 +241,7 @@ async def evidence(
     from .answer_fields import availability
 
     fields = request.answer_requirements.required_fields if request.answer_requirements else []
-    available = availability(node, visible, fields, level, limitations)
+    available = availability(node, visible, fields, level, limitations, content=content)
     from .requested_fields import read_fields
     values, field_contents, field_availability, field_limits = await read_fields(
         node, request, source_resolver,
@@ -279,6 +279,8 @@ def _field_locators(node: Entity, fields: list[str]) -> dict[str, str]:
         for name in fields
         if name not in {"canonical_id", "kind", "title", "source_sha", "source_locator"}
     }
+    if "content" in locators:
+        locators["content"] = node.source.locator
     if "structural_parent" in locators:
         locators["structural_parent"] = node.properties.get("structural_parent_locator", "/id")
     if "has_children" in locators:

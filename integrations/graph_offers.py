@@ -18,6 +18,7 @@ from kernel.contracts.payloads import RetrievalRequestPayload
 from kernel.contracts.retrieval_needs import RetrievalNeedsOutput
 from knowledge.contracts import OPERATIONS
 from knowledge.errors import invalid
+from integrations.retrieval_relationships import relation_role
 
 
 @dataclass(frozen=True)
@@ -128,7 +129,9 @@ def canonical_target_ids(needs: RetrievalNeedsOutput, native_kind: str | None = 
     """
     kinds = {"ac": "AcceptanceCriterion", "adr": "ADR", "ticket": "Ticket",
              "component": "Component", "flow": "Flow", "decision": "Decision"}
-    selected = {kinds[label] for label in needs.selections["entity_types"] if label in kinds}
+    role = relation_role(needs)
+    selected = ({role[0]} if role is not None else
+                {kinds[label] for label in needs.selections["entity_types"] if label in kinds})
     if native_kind is not None and selected != {native_kind}:
         return ()
     prefix = next(iter(selected)) if len(selected) == 1 else None
@@ -161,6 +164,8 @@ def _targets(ctx: ExecutionContext, payload: RetrievalRequestPayload) -> tuple:
         if c.native_kind == "Decision" and (i := _identity(c))), *interpreted_targets(payload, "Decision")]))
     components = (_components(ctx, cards) if payload.retrieval_needs is None else
                   interpreted_targets(payload, "Component"))
+    if ctx.scope.component_ids:
+        components = tuple(target for target in components if target in ctx.scope.component_ids)
     return all_ids, ac_ids, decisions, components
 
 

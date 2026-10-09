@@ -69,6 +69,23 @@ state are not automatically projected by these mappings. Test/SourceFile nodes
 represent declared references, not a complete repository file inventory. Unknown
 mapping metadata in an older manifest remains unknown.
 
+## Bounded content
+
+A required `content` field is satisfied only by a nonempty excerpt actually read
+at disclosure level 3, with `field_locators.content` equal to the entity's canonical
+`source.locator`. A graph property named `content`, a summary, or a lower-level
+projection cannot satisfy it. The excerpt retains the pinned revision and consumes
+the existing source/content budgets; it never proves a full document was returned.
+
+| Actual disclosure | `field_availability.content` | Answer consequence |
+|---|---|---|
+| Nonempty canonical-source excerpt with matching locator | `present` | May satisfy this field within the requested bounded answer. |
+| Authorized read returns empty or whitespace-only text | `canonical_absent` | This requested excerpt is empty; the field remains unmet. |
+| Source read is unavailable or fails | `unknown` | No claim that the canonical source is empty. |
+| Requested disclosure is below level 3 | `disclosure_omitted` | Withheld source text remains unmet. |
+| The source-disclosure allowance cuts the excerpt | `truncated` | Useful text remains partial and cannot prove fulfillment. |
+| A later public evidence-character allowance cuts previously disclosed text | May remain `present`; result `truncated` is true | The recomputed answer remains partial despite the earlier field availability. |
+
 ## See Also
 
 - [Knowledge Retrieval Answers](knowledge-retrieval-answers.md) defines request, status, counting and answer-assessment contracts.
