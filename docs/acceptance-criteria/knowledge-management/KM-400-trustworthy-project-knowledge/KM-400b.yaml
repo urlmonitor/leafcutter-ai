@@ -38,7 +38,25 @@ delivers_to: null
 expects_from: null
 origin_agent: product-owner
 created: '2026-10-01'
-amended_by: []
+amended_by:
+  - '2026-10-09: business-analyst added KM-400b-6 and KM-400b-7 after a measured
+    retention incident. This L1 and its five existing children only ever required
+    preservation, so unbounded generation accumulation was the specified behaviour;
+    the two new children add a declared retention bound and automatic reclamation at
+    publication. work_status moved from done to in_progress because two children were
+    todo, and a temporary child_limit_override of 7 was taken. Both of those are
+    superseded by the following entry — the override has been removed and the two
+    children no longer live here.'
+  - '2026-10-09: product-owner carried out the structural rebalance the previous entry
+    asked for, on the user''s instruction. The retention work moved to a dedicated L1,
+    KM-400f, under KM-400 — which held 5 L1s against a cap of 7 and so had the headroom.
+    KM-400b-6 and KM-400b-7 were re-parented as KM-400f-1 and KM-400f-2; they had to be
+    renamed because parentage in this store is derived from the id string, which was
+    safe because both ids were one day old, uncommitted and referenced nowhere outside
+    their own files and their parents. child_limit_override is removed, not waived: this
+    L1 is back to its five original children. work_status returns to done because
+    KM-400b-1 through KM-400b-5 are all done and no unfinished child remains — not to
+    tidy the diff.'
 superseded_by: null
 covered_by:
   - KM-400b-1

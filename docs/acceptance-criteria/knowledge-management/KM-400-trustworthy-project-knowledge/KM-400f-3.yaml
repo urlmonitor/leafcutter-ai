@@ -1,0 +1,187 @@
+id: KM-400f-3
+title: "Capacity headroom is measured and an unsafe publication is refused before it starts"
+component: knowledge-management
+components: [knowledge_management]
+level: L2
+status: active
+req_status: active
+readiness: approved
+priority: high
+work_status: todo
+parent: KM-400f
+criteria: |
+  Given the backend reports a capacity ceiling of 200,000 nodes and 400,000 relationships
+  And the declared safe-headroom threshold is 90 percent of that ceiling and the declared warning threshold is 75 percent
+  And measured current usage is 189,950 nodes and 304,498 relationships
+  And the prepared snapshot contains 9,850 nodes and 26,100 relationships
+  When publication is requested
+  Then publication is refused before any part of the snapshot is sent to the backend
+  And the refusal names the measured usage, the reported ceiling, the snapshot size and the shortfall, separately for nodes and for relationships
+  And the active generation, every retained generation and the active pointer are unchanged
+  And the refusal states that the usage figures were measured from the backend rather than estimated
+
+  Given the same ceiling and thresholds, measured usage of 150,000 nodes and 300,000 relationships, and the same prepared snapshot
+  When publication is requested
+  Then publication proceeds
+  And a warning is reported naming the measured usage, the reported ceiling, the snapshot size and the remaining headroom, separately for nodes and for relationships
+
+  Given the same ceiling and thresholds, measured usage of 20,000 nodes and 50,000 relationships, and the same prepared snapshot
+  When publication is requested
+  Then publication proceeds without a headroom warning
+
+  Given the backend does not report a capacity ceiling
+  When publication is requested
+  Then the headroom result is reported as unknown, naming the measured usage and stating that the ceiling could not be determined
+  And the result is never reported as fitting within the ceiling
+  And an unknown ceiling is not counted as a satisfied headroom check
+
+  Given the backend has latched read-only because it is full
+  When publication is requested
+  Then the refusal names the read-only condition and the measured usage as the reason
+  And it is not reported as an absence of knowledge or as an empty result
+depends_on: [KM-400f, KM-400f-2]
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: context
+    status: exists
+  - path: docs/architecture/adrs/ADR-062-standalone-knowledge-retrieval.md
+    relationship: context
+    status: exists
+    relevance: Publication is an operation on a rebuildable projection and may refuse; refusing is not data loss.
+  - path: docs/acceptance-criteria/knowledge-management/KM-400-trustworthy-project-knowledge/KM-400e-4.yaml
+    relationship: context
+    status: exists
+    relevance: Inherit the distinction between an outage and an empty result; a full or read-only backend is reported as a capacity condition, never as no knowledge.
+  - path: docs/acceptance-criteria/knowledge-management/KM-400-trustworthy-project-knowledge/KM-400f-2.yaml
+    relationship: context
+    status: exists
+    relevance: Reclamation at publication keeps usage bounded; this AC measures what is left and refuses when the bound was not enough.
+  - path: docs/acceptance-criteria/ac-store/ACS-1100-honest-coverage-answers/ACS-1100.yaml
+    relationship: context
+    status: exists
+    relevance: An undeterminable ceiling is reported as unknown with its method stated; it is never resolved to a figure that reads as fitting.
+  - path: docs/how-to/run-knowledge-retrieval.md
+    relationship: describes
+    status: exists
+    relevance: The thresholds, the refusal and the warning must be documented as operator-visible behaviour.
+assigned_agent: python-coder
+estimated_complexity: L
+delivers_to:
+  agent: python-coder
+  contract: KM-400f-4 consumes the measured usage, the reported ceiling and the headroom
+    verdict produced by this AC and presents them on the operator surface.
+expects_from:
+  ac_id: KM-400f-2
+  contract: The reclamation performed within a successful publication, so that measured
+    usage reflects a bounded store rather than unbounded accumulation.
+origin_agent: business-analyst
+created: '2026-10-09'
+amended_by:
+  - "2026-10-09: product-owner re-parented this AC from KM-400e to the new KM-400f,
+    where retention and capacity now live. It was authored as KM-400e-6 and is renamed
+    to KM-400f-3 because parentage in this store is derived from the id string. The
+    rename is safe only because the id was one day old and referenced nowhere outside
+    this file and its parents — no test covers tag, no ticket, no implemented_by entry.
+    Criteria, test_spec, test_rationale and must_catch are unchanged; only the id,
+    parent, depends_on, the references in doc_links and the delivers_to/expects_from
+    contracts, the covers tags and the approval fields were touched. The doc_link to
+    KM-400e-4 is retained deliberately: the outage-versus-empty-result distinction is
+    still inherited from KM-400e even though this AC no longer sits under it. readiness
+    moved to approved and priority to high at the user's approval gate."
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  Authored 2026-10-09. This is the criterion that would have prevented the measured
+  incident. 32 unreclaimed generations reached 189,950 nodes and 304,498 relationships,
+  crossed the hosted free-tier ceiling, and the instance latched read-only. Every write
+  then failed, including the cleanup that would have recovered the space — reclaiming
+  space needs the writes a full instance blocks — so the instance had to be destroyed and
+  recreated. Nothing measured headroom before writing, so nothing could refuse.
+
+  The figures in the first scenario are the measured incident figures, kept deliberately:
+  189,950 of a 200,000-node ceiling is 94.98 percent, so the snapshot does not fit and the
+  refusal is the correct outcome.
+
+  Refusing BEFORE any write is the whole point. A refusal issued after a partial write has
+  already consumed the headroom it was checking and can itself be the write that fills the
+  instance. The unknown-ceiling clause exists because a backend that cannot report its
+  ceiling must not be silently treated as having room; reporting unknown keeps the operator
+  able to act, while reporting a fit is the failure dressed as a pass.
+it_requirements: null
+test_required: true
+test_spec:
+  - name: test_insufficient_headroom_refuses_before_any_write
+    target_dir: tests/knowledge/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: With the measured incident figures, request publication through the real
+      entry point against a backend double that records every call; assert no write call
+      was made, the refusal names usage, ceiling, snapshot size and shortfall for both
+      nodes and relationships, and the active pointer is unchanged.
+    covers: [KM-400f-3]
+    must_catch:
+      - "check headroom after the snapshot has begun writing"
+      - "refuse with a generic message that names none of the four figures"
+      - "compare only node counts and ignore the relationship ceiling"
+    requires_db: false
+  - name: test_warning_threshold_proceeds_and_names_the_same_figures
+    target_dir: tests/knowledge/
+    framework: pytest
+    type: integration
+    angle: boundary
+    description: Drive usage just above the warning threshold and just below it; assert
+      the first proceeds with a warning naming usage, ceiling, snapshot size and remaining
+      headroom, and the second proceeds silently.
+    covers: [KM-400f-3]
+    must_catch:
+      - "treat the warning threshold as a refusal threshold"
+      - "warn on every publication regardless of usage"
+    requires_db: false
+  - name: test_undeterminable_ceiling_is_unknown_never_a_fit
+    target_dir: tests/knowledge/
+    framework: pytest
+    type: integration
+    angle: failure
+    description: With a backend that does not report a ceiling, assert the headroom result
+      is unknown, names the measured usage, and is not counted as a satisfied check.
+    covers: [KM-400f-3]
+    must_catch:
+      - "treat an unreported ceiling as unlimited capacity"
+      - "default the ceiling to a built-in figure and report a fit"
+    requires_db: false
+  - name: test_read_only_backend_is_a_capacity_condition_not_an_empty_result
+    target_dir: tests/knowledge/
+    framework: pytest
+    type: integration
+    angle: failure
+    description: Simulate the latched read-only condition and assert the refusal names it
+      and the measured usage, and is distinguishable from a successful run that found
+      nothing.
+    covers: [KM-400f-3]
+    must_catch:
+      - "surface the read-only rejection as an empty or successful result"
+    requires_db: false
+  - name: test_live_headroom_is_measured_from_a_loaded_backend
+    target_dir: tests/knowledge_live/
+    framework: pytest
+    type: integration
+    angle: real_artifact
+    description: Against a real database loaded with enough published generations to cross
+      a deliberately lowered declared ceiling, assert the measured figures match the
+      backend's own counts and that publication is refused without mutating the graph.
+    covers: [KM-400f-3]
+    requires_db: true
+test_rationale: >-
+  A headroom gate is untestable against a fixture that never approaches the ceiling, so
+  the criterion test uses the measured incident figures and the live test lowers the
+  declared ceiling and loads the backend until it actually binds — explicitly unlike the
+  existing 2-node live snapshot in this family, under which no limit is ever reached and a
+  gate that never fires would pass. "Refused before any write" is asserted by recording
+  calls on a backend double, because a test that only checks the return value cannot
+  distinguish a pre-write refusal from a post-write one, and that distinction is the whole
+  criterion. must_catch names the wrong versions because this is a gate AC and a gate that
+  is defined but never consulted is the documented failure mode in this repository.
