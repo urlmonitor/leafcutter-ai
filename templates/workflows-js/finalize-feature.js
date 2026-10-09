@@ -204,14 +204,14 @@ async function announceUnpublishedLearnings() {
   let merged = false;
   try {
     const probe = await agent(`Run: gh pr view ${prNumber} --json state --jq '.state'\nReturn ONLY a JSON object: { "state": "OPEN"|"MERGED"|"CLOSED" }`, { agentType: "status-checker", label: "step-7-pr-merged-probe", phase: "Step 7" });
-    merged = String(readAgentJson(probe, "step-7-pr-merged-probe", "status-checker", {}, "treating the branch as not merged").state || "").toUpperCase() === "MERGED";
-    const reply = readAgentJson(await agent(
+    merged = String(parsedOr(() => parseAgentJson(probe, { stage: "step-7-pr-merged-probe", agent: "status-checker" }), {}, "treating the branch as not merged").state || "").toUpperCase() === "MERGED";
+    const observed = await agent(
       "Report, read-only, which routed learnings written in this worktree did NOT reach the merged tree. " +
       "Run this single Bash command and return the ONE line of JSON it prints, verbatim:\n" +
       `   python3 {{config.output_root}}/scripts/knowledge/completion_routing_cli.py observe --working-dir ${WORKTREE_ROOT} --commit-status ${merged ? "ok" : "not_run"} --all-stages\n` +
       'If it cannot be run, return { "case": "did_not_run", "detail": "<why>" }. Never block, retry, or fail.',
-      { agentType: "status-checker", label: "step-7-unpublished-learnings", phase: "Step 7" }
-    ), "step-7-unpublished-learnings", "status-checker", {}, "announcing nothing; removal proceeds");
+      { agentType: "status-checker", label: "step-7-unpublished-learnings", phase: "Step 7" });
+    const reply = parsedOr(() => parseAgentJson(observed, { stage: "step-7-unpublished-learnings", agent: "status-checker" }), {}, "announcing nothing; removal proceeds");
     unpublishedLearnings = (Array.isArray(reply.unwritten_records) ? reply.unwritten_records : [])
       .filter((r) => r && typeof r === "object" && r.destination)
       .map((r) => (merged || r.reason !== "stopped_before_publication" ? r : { ...r, reason: "branch_not_merged" }));
@@ -320,15 +320,16 @@ function parseAgentJson(raw, ctx) {
 }
 
 /**
- * Read an agent reply through parseAgentJson; a malformed reply is logged as
- * "<stage> parse malformed — <note>" and answered with `fallback` (AC-4: a
- * malformed reply degrades to the stage's conservative default, never a throw).
+ * Run `parse` — a parseAgentJson(...) call written AT the dispatch site, so every
+ * reply-reading site stays visible as one (BP-300e-6 derivation). A malformed reply
+ * is logged with parseAgentJson's own "[stage] agent ..." message plus `note`, and
+ * answered with `fallback` (AC-4: degrade to the stage's conservative default).
  */
-function readAgentJson(raw, stage, agentName, fallback, note) {
+function parsedOr(parse, fallback, note) {
   try {
-    return parseAgentJson(raw, { stage, agent: agentName }) || fallback;
-  } catch (_parseErr) {
-    log(`[finalize-feature] ${stage} parse malformed — ${note}`);
+    return parse() || fallback;
+  } catch (err) {
+    log(`[finalize-feature] parse malformed — ${note}: ${err && err.message}`);
     return fallback;
   }
 }
@@ -582,7 +583,7 @@ const preflightResult = await agent(
   { agentType: "status-checker", label: "pre-flight", phase: "Pre-flight" }
 )
 
-const preflightInfo = readAgentJson(preflightResult, "pre-flight", "status-checker",
+const preflightInfo = parsedOr(() => parseAgentJson(preflightResult, { stage: "pre-flight", agent: "status-checker" }),
   { found: true, branch: "unknown", worktree_root: "unknown" }, "using safe defaults (branch: unknown)");
 
 // When the worktree resolution step found no matching worktree, fail with a
@@ -698,9 +699,9 @@ async function cleanupBaselineWorktree() {
   baselineWorktreePath = null;
 }
 
-/** Branch, PR and step-progress fields every halt return carries (each still states its own step_outcomes / step_summary). */
+/** Branch, PR and step-progress fields every halt return carries (each still states its own step_summary). */
 function haltRefs() {
-  return { branch: BRANCH, pr_number: prNumber, pr_url: prUrl, completed_steps: completedSteps, skipped_steps: skippedSteps };
+  return { branch: BRANCH, pr_number: prNumber, pr_url: prUrl, completed_steps: completedSteps, skipped_steps: skippedSteps, step_outcomes: stepOutcomes };
 }
 
 // -------------------------------------------------------------------------
@@ -722,7 +723,7 @@ const ghConfigResult = await agent(
   { agentType: "status-checker", label: "gh-config", phase: "Pre-flight 2" }
 )
 
-const ghConfig = readAgentJson(ghConfigResult, "gh-config", "status-checker", { gh_target_account: null, gh_repo: null }, "proceeding with no account constraint");
+const ghConfig = parsedOr(() => parseAgentJson(ghConfigResult, { stage: "gh-config", agent: "status-checker" }), { gh_target_account: null, gh_repo: null }, "proceeding with no account constraint");
 
 const GH_TARGET_ACCOUNT = (ghConfig.gh_target_account || "").trim() || null;
 const GH_REPO = (ghConfig.gh_repo || "").trim() || null;
@@ -738,7 +739,7 @@ if (GH_TARGET_ACCOUNT) {
     { agentType: "status-checker", label: "gh-auth-status", phase: "Pre-flight 2" }
   )
 
-  const ghStatus = readAgentJson(ghStatusResult, "gh-auth-status", "status-checker", { active_account: null }, "assuming active_account is null");
+  const ghStatus = parsedOr(() => parseAgentJson(ghStatusResult, { stage: "gh-auth-status", agent: "status-checker" }), { active_account: null }, "assuming active_account is null");
 
   const activeAccount = (ghStatus.active_account || "").trim() || null;
 
@@ -752,7 +753,7 @@ if (GH_TARGET_ACCOUNT) {
       { agentType: "status-checker", label: "gh-auth-switch", phase: "Pre-flight 2" }
     )
 
-    const ghSwitch = readAgentJson(ghSwitchResult, "gh-auth-switch", "status-checker", { switch_exit_code: 1, verified_account: null }, "assuming switch failed");
+    const ghSwitch = parsedOr(() => parseAgentJson(ghSwitchResult, { stage: "gh-auth-switch", agent: "status-checker" }), { switch_exit_code: 1, verified_account: null }, "assuming switch failed");
 
     const verifiedAccount = (ghSwitch.verified_account || "").trim() || null;
     const switchFailed =
@@ -853,9 +854,8 @@ const baselineResult = await agent(
 )
 
 // AC-4: a malformed reply is not "baseline failed" — it degrades like run_failed, never halts.
-const baselineInfo = readAgentJson(baselineResult, "step-0-baseline", "status-checker",
-  { status: "parse_failed", baseline_sha: null, baseline_failures: null, baseline_run_at: null },
-  "treating as run_failed (triage will use conservative classification)");
+const baselineInfo = parsedOr(() => parseAgentJson(baselineResult, { stage: "step-0-baseline", agent: "status-checker" }),
+  { status: "parse_failed", baseline_sha: null, baseline_failures: null, baseline_run_at: null }, "treating as run_failed (triage will use conservative classification)");
 
 const baselineStatus = (baselineInfo.status || "unknown").toLowerCase();
 
@@ -931,7 +931,7 @@ const prProbeResult = await agent(
 )
 
 // AC-4: a malformed probe means "not found" — a duplicate PR is rejected by GH; a skipped one is silent.
-const prProbe = readAgentJson(prProbeResult, "step-1-pr-probe", "status-checker", { found: false }, "assuming no PR exists");
+const prProbe = parsedOr(() => parseAgentJson(prProbeResult, { stage: "step-1-pr-probe", agent: "status-checker" }), { found: false }, "assuming no PR exists");
 
 if (prProbe.found) {
   prNumber = prProbe.number;
@@ -957,7 +957,7 @@ if (prProbe.found) {
     { agentType: "pull-request", label: "step-1-open-pr", phase: "Step 1" }
   )
 
-  const openPr = readAgentJson(openPrResult, "step-1-open-pr", "pull-request", {}, "pr_number and url will be null");
+  const openPr = parsedOr(() => parseAgentJson(openPrResult, { stage: "step-1-open-pr", agent: "pull-request" }), {}, "pr_number and url will be null");
 
   prNumber = openPr.number || openPr.pr_number || null;
   prUrl = openPr.url || openPr.pr_url || null;
@@ -1016,9 +1016,8 @@ const mergeMainResult = await agent(
 )
 
 // AC-4: a malformed reply is not "conflict detected" — a real merge problem surfaces at step 3 instead.
-const mergeMainInfo = readAgentJson(mergeMainResult, "step-2-merge-main", "status-checker",
-  { status: "already_up_to_date", merge_strategy: "already_up_to_date" },
-  "treating as already_up_to_date (non-halting safe default)");
+const mergeMainInfo = parsedOr(() => parseAgentJson(mergeMainResult, { stage: "step-2-merge-main", agent: "status-checker" }),
+  { status: "already_up_to_date", merge_strategy: "already_up_to_date" }, "treating as already_up_to_date (non-halting safe default)");
 
 const mergeStatus = (mergeMainInfo.status || "already_up_to_date").toLowerCase();
 
@@ -1031,7 +1030,6 @@ if (mergeStatus === "conflict") {
     message:
       "Feature branch has conflicts with main. Resolve conflicts and re-run.",
     ...haltRefs(),
-    step_outcomes: stepOutcomes,
     step_summary: stepOutcomes.map(e => `${e.step}: ${e.outcome}`).join('\n'),
   };
 }
@@ -1056,7 +1054,6 @@ if (isRefusalStatus(mergeStatus) || !["merged", "already_up_to_date"].includes(m
       "Refusing to treat this as a successful merge. Re-dispatch step 2 to an agent whose " +
       "contract covers git merge operations, or perform the merge by hand and re-run.",
     ...haltRefs(),
-    step_outcomes: stepOutcomes,
     step_summary: stepOutcomes.map(e => `${e.step}: ${e.outcome}`).join('\n'),
   };
 }
@@ -1113,7 +1110,7 @@ testResult = await agent(
 
 // AC-4: a malformed test reply is ambiguous — treated as failed (conservative), logged as a parse
 // failure rather than an agent-reported one; triage then classifies (with its own safe default).
-testResult = readAgentJson(testResult, "step-3-test-run", "test-runner",
+testResult = parsedOr(() => parseAgentJson(testResult, { stage: "step-3-test-run", agent: "test-runner" }),
   { passed: false, output: "(parse malformed)", failing_tests: [] }, "treating as failed (conservative; triage will classify)");
 let testPassed = testResult.passed === true;
 let postMergeFailures = Array.isArray(testResult.failing_tests) ? testResult.failing_tests : [];
@@ -1161,7 +1158,7 @@ if (!testPassed && postMergeFailures.length > 0) {
     { agentType: "test-runner", label: "step-3-deploy-parity", phase: "Step 3" }
   )
 
-  const parsedDp = readAgentJson(deployParityResult, "step-3-deploy-parity", "test-runner", {},
+  const parsedDp = parsedOr(() => parseAgentJson(deployParityResult, { stage: "step-3-deploy-parity", agent: "test-runner" }), {},
     "proceeding with the original post-merge failures (conservative).");
   const buildStateOnly = Array.isArray(parsedDp.build_state_only_failures) ? parsedDp.build_state_only_failures : [];
   // still_failing: the agent's post-redeploy remaining set; null when not reported (older/ambiguous replies).
@@ -1217,7 +1214,7 @@ if (testPassed) {
     { agentType: "status-checker", label: "step-3-changed-files", phase: "Step 3" }
   )
 
-  const parsedCf = readAgentJson(changedFilesResult, "step-3-changed-files", "status-checker", {}, "triage will use empty changed_files list");
+  const parsedCf = parsedOr(() => parseAgentJson(changedFilesResult, { stage: "step-3-changed-files", agent: "status-checker" }), {}, "triage will use empty changed_files list");
   const changedFiles = Array.isArray(parsedCf.changed_files) ? parsedCf.changed_files : [];
 
   // -----------------------------------------------------------------------
@@ -1286,7 +1283,7 @@ if (testPassed) {
       { agentType: "status-checker", label: "step-3-targeted-rerun", phase: "Step 3" }
     )
 
-    const recoveryInfo = readAgentJson(recoveryResult, "step-3-targeted-rerun", "status-checker",
+    const recoveryInfo = parsedOr(() => parseAgentJson(recoveryResult, { stage: "step-3-targeted-rerun", agent: "status-checker" }),
       { status: "parse_failed", recovered_failures: null }, "targeted rerun unavailable, using conservative fallback.");
 
     const recoveryStatus = (recoveryInfo.status || "").toLowerCase();
@@ -1348,7 +1345,7 @@ if (testPassed) {
 
   // AC-4: an empty or malformed triage reply is ambiguous — conservative blocks_finalization=true, logged
   // as a parse failure so "tests have regressions" stays distinguishable from "triage reply was garbled".
-  triageReport = readAgentJson(triageRaw, "step-3-triage", "test-failure-triage", {
+  triageReport = parsedOr(() => parseAgentJson(triageRaw, { stage: "step-3-triage", agent: "test-failure-triage" }), {
     blocks_finalization: true, regressions: postMergeFailures, pre_existing: [],
     summary: "Triage reply was empty or malformed (could not parse JSON) — treating all failures as regressions conservatively. If you believe this is a parse error rather than a real regression, re-run /finalize-feature.",
   }, "treating as blocks_finalization=true (conservative; see note in summary)");
@@ -1377,7 +1374,6 @@ if (testPassed) {
         (testResult && testResult.output) ||
         JSON.stringify(testResult),
       ...haltRefs(),
-      step_outcomes: stepOutcomes,
       step_summary: stepOutcomes.map(e => `${e.step}: ${e.outcome}`).join('\n'),
     };
   }
@@ -1413,7 +1409,7 @@ const closureProbeResult = await agent(
   { agentType: "status-checker", label: "step-3.5-closure-probe", phase: "Step 3.5" }
 )
 
-const closureAlreadyCommitted = readAgentJson(closureProbeResult, "step-3.5-closure-probe", "status-checker",
+const closureAlreadyCommitted = parsedOr(() => parseAgentJson(closureProbeResult, { stage: "step-3.5-closure-probe", agent: "status-checker" }),
   {}, "assuming not already committed (will re-attempt closure)").already_committed === true;
 
 if (closureAlreadyCommitted) {
@@ -1432,7 +1428,7 @@ if (closureAlreadyCommitted) {
       "Return ONLY a JSON object: { \"state\": \"OPEN\"|\"MERGED\"|\"CLOSED\" }",
       { agentType: "status-checker", label: "step-3.5-pr-state", phase: "Step 3.5" }
     )
-    prAlreadyMergedAtClosure = String(readAgentJson(prClosureStateResult, "step-3.5-pr-state", "status-checker",
+    prAlreadyMergedAtClosure = String(parsedOr(() => parseAgentJson(prClosureStateResult, { stage: "step-3.5-pr-state", agent: "status-checker" }),
       {}, "assuming PR is OPEN").state || "").toUpperCase() === "MERGED";
   }
 
@@ -1565,7 +1561,7 @@ if (closureAlreadyCommitted) {
       { agentType: "status-checker", label: "step-3.5-closure", phase: "Step 3.5" }
     )
 
-    const closureInfo = readAgentJson(closureResult, "step-3.5-closure", "status-checker",
+    const closureInfo = parsedOr(() => parseAgentJson(closureResult, { stage: "step-3.5-closure", agent: "status-checker" }),
       { tickets_closed: [], acs_closed: 0, acs_skipped: 0, commit_made: false, scope_violation: false, out_of_scope_paths: [] },
       "assuming zero tickets/ACs closed");
 
@@ -1687,7 +1683,6 @@ let syncCheckInfo;
         `Push the branch manually (git push origin ${BRANCH}) and re-run /finalize-feature. ` +
         "The PR has NOT been merged — no work is lost.",
       ...haltRefs(),
-      step_outcomes: stepOutcomes,
       step_summary: stepOutcomes.map(e => `${e.step}: ${e.outcome}`).join('\n'),
       action_required: "verify_and_push",
     };
@@ -1711,7 +1706,6 @@ if (!KNOWN_SYNC_STATUSES.has(syncStatus)) {
       `Push the branch manually (git push origin ${BRANCH}) and re-run /finalize-feature. ` +
       "The PR has NOT been merged — no work is lost.",
     ...haltRefs(),
-    step_outcomes: stepOutcomes,
     step_summary: stepOutcomes.map(e => `${e.step}: ${e.outcome}`).join('\n'),
     action_required: "verify_and_push",
   };
@@ -1730,7 +1724,6 @@ if (syncStatus === "fetch_failed") {
       "Verify network / remote access and re-run /finalize-feature. " +
       "The PR has NOT been merged — no work is lost.",
     ...haltRefs(),
-    step_outcomes: stepOutcomes,
     step_summary: stepOutcomes.map(e => `${e.step}: ${e.outcome}`).join('\n'),
     action_required: "retry_after_fetch",
   };
@@ -1747,7 +1740,6 @@ if (syncStatus === "push_failed") {
       `Push the branch manually (git push origin ${BRANCH}) and re-run /finalize-feature. ` +
       "The PR has NOT been merged — no work is lost.",
     ...haltRefs(),
-    step_outcomes: stepOutcomes,
     step_summary: stepOutcomes.map(e => `${e.step}: ${e.outcome}`).join('\n'),
     action_required: "push_local_commits",
   };
@@ -1770,7 +1762,6 @@ if (syncStatus === "diverged") {
       "Do NOT use plain 'git push' — that would be rejected or would silently drop origin commits. " +
       "The PR has NOT been merged — no work is lost.",
     ...haltRefs(),
-    step_outcomes: stepOutcomes,
     step_summary: stepOutcomes.map(e => `${e.step}: ${e.outcome}`).join('\n'),
     action_required: "resolve_divergence",
   };
@@ -1793,7 +1784,6 @@ if (syncStatus === "pushed") {
         `then push manually (git push origin ${BRANCH}) and re-run /finalize-feature. ` +
         "The PR has NOT been merged — no work is lost.",
       ...haltRefs(),
-      step_outcomes: stepOutcomes,
       step_summary: stepOutcomes.map(e => `${e.step}: ${e.outcome}`).join('\n'),
       action_required: "verify_and_push",
     };
@@ -1815,7 +1805,6 @@ if (syncStatus === "pushed") {
         `Push the branch manually (git push origin ${BRANCH}) and re-run /finalize-feature. ` +
         "The PR has NOT been merged — no work is lost.",
       ...haltRefs(),
-      step_outcomes: stepOutcomes,
       step_summary: stepOutcomes.map(e => `${e.step}: ${e.outcome}`).join('\n'),
       action_required: "verify_and_push",
     };
@@ -1860,7 +1849,6 @@ if (triageReport !== null && triageReport.blocks_finalization) {
       "Defensive guard triggered: blocks_finalization is true at step 4. " +
       "The PR has NOT been merged. Fix regressions and re-run /finalize-feature.",
     ...haltRefs(),
-    step_outcomes: stepOutcomes,
     step_summary: stepOutcomes.map(e => `${e.step}: ${e.outcome}`).join('\n'),
   };
 }
@@ -1872,7 +1860,7 @@ const prStateResult = await agent(
   { agentType: "status-checker", label: "step-4-pr-state", phase: "Step 4" }
 )
 
-const prState = readAgentJson(prStateResult, "step-4-pr-state", "status-checker", { state: "OPEN" }, "assuming PR is OPEN");
+const prState = parsedOr(() => parseAgentJson(prStateResult, { stage: "step-4-pr-state", agent: "status-checker" }), { state: "OPEN" }, "assuming PR is OPEN");
 
 if ((prState.state || "").toUpperCase() === "MERGED") {
   // PR already merged — skip the merge gate and proceed.
@@ -1898,14 +1886,8 @@ if ((prState.state || "").toUpperCase() === "MERGED") {
         `Return status:"blocked" with message "User declined merge." if the user says no/cancel/n.`,
         { agentType: "status-checker", label: "step-4-merge-gate", phase: "Step 4" }
       );
-      // FIX 3: parse raw before reading .status — raw may be an unparsed string.
-      let parsed;
-      try {
-        parsed = (typeof raw === "string")
-          ? parseAgentJson(raw, { stage: "step-4-merge-gate", agent: "status-checker" })
-          : raw;
-      } catch (_parseErr) { parsed = null; }
-      const s = parsed && parsed.status;
+      // FIX 3: parse raw before reading .status — raw may be an unparsed string (an object passes through).
+      const s = parsedOr(() => parseAgentJson(raw, { stage: "step-4-merge-gate", agent: "status-checker" }), {}, "no gate decision").status;
       if (s === "ok") return { action: "ok" };
       if (s === "blocked") return { action: "blocked" };
       return null;
@@ -1920,15 +1902,9 @@ if ((prState.state || "").toUpperCase() === "MERGED") {
     await cleanupBaselineWorktree();
     return _fzGateResult;
   }
-  // Normalise to the shape downstream code expects: { status: "ok" | "blocked" }
+  // Only an explicit approval merges; blocked, cancel or anything else halts.
   const _fzAction = _fzGateResult && _fzGateResult.action;
-  const mergeConfirmResult = (_fzAction === "ok" || _fzAction === "approve")
-    ? { status: "ok" }
-    : (_fzAction === "blocked" || _fzAction === "cancel")
-      ? { status: "blocked" }
-      : null;
-
-  if (!mergeConfirmResult || mergeConfirmResult.status !== "ok") {
+  if (_fzAction !== "ok" && _fzAction !== "approve") {
     await cleanupBaselineWorktree();
     return {
       status: "halted",
@@ -1936,7 +1912,6 @@ if ((prState.state || "").toUpperCase() === "MERGED") {
       reason: "user_declined_merge",
       message: "Finalization halted at merge step. No changes made to main.",
       ...haltRefs(),
-      step_outcomes: stepOutcomes,
       step_summary: stepOutcomes.map(e => `${e.step}: ${e.outcome}`).join('\n'),
     };
   }
@@ -1981,7 +1956,7 @@ const syncResult = await agent(
   { agentType: "status-checker", label: "step-5-sync-main", phase: "Step 5" }
 )
 
-const syncInfo = readAgentJson(syncResult, "step-5-sync-main", "status-checker", {}, "HEAD SHA and message will be unknown");
+const syncInfo = parsedOr(() => parseAgentJson(syncResult, { stage: "step-5-sync-main", agent: "status-checker" }), {}, "HEAD SHA and message will be unknown");
 const headSha = (typeof syncInfo.head_sha === "string" ? syncInfo.head_sha.trim() : null) || null;
 const headMessage = (typeof syncInfo.head_message === "string" ? syncInfo.head_message.trim() : null) || null;
 
@@ -1999,42 +1974,18 @@ narrate("Step 6 of 9", 'Reporting untracked pre-existing and flaky failures, the
 
 // Sub-step 6a: report pre-existing / flaky failures that require manual tracking.
 if (triageReport !== null) {
-  const triageEntries = Array.isArray(triageReport.triage_report)
-    ? triageReport.triage_report
-    : [];
-
-  const preExistingEntries = triageEntries.filter(
-    (entry) =>
-      entry.category === "pre_existing" || entry.category === "flaky"
-  );
-
-  if (preExistingEntries.length === 0) {
-    log(
-      "[finalize-feature] step 6a: no pre_existing or flaky entries in triage report — no tracking tickets needed"
-    );
-  } else {
-    // Collect untracked failures so the final summary is accurate.
-    for (const entry of preExistingEntries) {
-      const testId = entry.test_id || "<unknown test>";
-      const category = entry.category || "pre_existing";
-      untrackedFailures.push({ testId, category });
-    }
-
-    // Emit one structured report listing all untracked failures.
-    const failureLines = untrackedFailures
-      .map(
-        ({ testId, category }) =>
-          `  - [${category}] ${testId} (failing on main at SHA ${baselineSha || "unknown"})`
-      )
-      .join("\n");
-
-    log(
-      `[finalize-feature] step 6a: ${untrackedFailures.length} pre-existing/flaky failure(s) detected.\n` +
+  const triageEntries = Array.isArray(triageReport.triage_report) ? triageReport.triage_report : [];
+  // Collect untracked failures so the final summary is accurate.
+  for (const entry of triageEntries.filter((e) => e.category === "pre_existing" || e.category === "flaky")) {
+    untrackedFailures.push({ testId: entry.test_id || "<unknown test>", category: entry.category || "pre_existing" });
+  }
+  // Emit one structured report listing all untracked failures.
+  log(untrackedFailures.length === 0
+    ? "[finalize-feature] step 6a: no pre_existing or flaky entries in triage report — no tracking tickets needed"
+    : `[finalize-feature] step 6a: ${untrackedFailures.length} pre-existing/flaky failure(s) detected.\n` +
       `Auto-ticketing is disabled (create-ticket is a workflow, not an agent).\n` +
       `No tracking tickets were created. To track these failures, run /create-ticket for each:\n` +
-      failureLines
-    );
-  }
+      untrackedFailures.map(({ testId, category }) => `  - [${category}] ${testId} (failing on main at SHA ${baselineSha || "unknown"})`).join("\n"));
 }
 
 // Sub-step 6b: scope-detection only (no git writes on main)
@@ -2056,14 +2007,11 @@ const closeResult = await agent(
   { agentType: "status-checker", label: "step-6-scope-detect", phase: "Step 6" }
 )
 
-const closeInfo = readAgentJson(closeResult, "step-6-scope-detect", "status-checker",
-  { tickets_in_scope: [], tickets_done: [], tickets_not_done: [], skipped: false },
-  "no tickets reported in summary");
+const closeInfo = parsedOr(() => parseAgentJson(closeResult, { stage: "step-6-scope-detect", agent: "status-checker" }),
+  { tickets_in_scope: [], tickets_done: [], tickets_not_done: [], skipped: false }, "no tickets reported in summary");
 
 // Step 6b is informational only — no ticket files were moved or written.
-if (closeInfo.tickets_done && Array.isArray(closeInfo.tickets_done)) {
-  ticketsClosed.push(...closeInfo.tickets_done);
-}
+if (Array.isArray(closeInfo.tickets_done)) ticketsClosed.push(...closeInfo.tickets_done);
 
 if (closeInfo.skipped) {
   outcome(`Step 6 of ${STEP_COUNT}`, 'skipped: scope detection — no in-scope tickets found');
@@ -2091,10 +2039,9 @@ const worktreeProbeResult = await agent(
 )
 
 // AC-4: a malformed probe means exists=true — safer to attempt removal than leave it dangling.
-const worktreeProbe = readAgentJson(worktreeProbeResult, "step-7-worktree-probe", "status-checker", { exists: true }, "assuming exists=true (conservative)");
+const worktreeProbe = parsedOr(() => parseAgentJson(worktreeProbeResult, { stage: "step-7-worktree-probe", agent: "status-checker" }), { exists: true }, "assuming exists=true (conservative)");
 
 if (!worktreeProbe.exists) {
-  worktreeRemoved = false;
   log("Step 7 of 9: [skipped] Worktree already absent — skipping removal");
   outcome(`Step 7 of ${STEP_COUNT}`, 'skipped: worktree already absent — skipping step 7');
   skippedSteps.push({ step: 7, reason: "Worktree already absent — skipping step 7" });
@@ -2107,7 +2054,7 @@ if (!worktreeProbe.exists) {
     "Return a JSON object: { \"removed\": true|false, \"conflict_pids\": [] }",
     { agentType: "worktree-agent", label: "step-7-remove-worktree", phase: "Step 7" }
   )
-  const wResult = readAgentJson(worktreeResult, "step-7-remove-worktree", "worktree-agent", { removed: false, conflict_pids: [] }, "assuming removed=false, conflict_pids=[]");
+  const wResult = parsedOr(() => parseAgentJson(worktreeResult, { stage: "step-7-remove-worktree", agent: "worktree-agent" }), { removed: false, conflict_pids: [] }, "assuming removed=false, conflict_pids=[]");
 
   if (wResult.conflict_pids && wResult.conflict_pids.length > 0) {
     // Surface conflict PIDs verbatim and stop — user must resolve manually.
@@ -2121,7 +2068,6 @@ if (!worktreeProbe.exists) {
         "Resolve the conflict PIDs below, then re-run /finalize-feature.",
       conflict_pids: wResult.conflict_pids,
       ...haltRefs(),
-      step_outcomes: stepOutcomes,
       step_summary: stepOutcomes.map(e => `${e.step}: ${e.outcome}`).join('\n'),
       tickets_closed: ticketsClosed,
     };
