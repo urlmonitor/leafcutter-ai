@@ -54,7 +54,7 @@ agents:
   ac-fulfillment-gate: signed_off
   ac-validator: signed_off
   architect-review: signed_off
-  commit: needed
+  commit: signed_off
   documentation-expert: not_needed
   documentation-verifier: not_needed
   frontend-coder: not_needed
@@ -701,7 +701,7 @@ Note: fixtures with >5 keys / >3 param rows go to tests/fixtures via load_fixtur
 - [x] pr-reviewer — 2026-10-09 23:40
 - [x] ac-validator — 2026-10-09 23:55
 - [x] ac-fulfillment-gate — 2026-10-09 18:49
-- [ ] commit
+- [x] commit — 2026-10-09 19:58
 
 ### test-writer (round: pr-reviewer H-1/H-2/M-1 fixes)
 - [ ] precommit_canary: pre-commit and post-merge scans must NOT reject a diff touching commit_guardian.json (commit the declaration file; merge a change carrying it) yet still reject a real known-bad file.
@@ -1061,3 +1061,11 @@ Autofix for check-exception-handling IO-001: the git call now lives in `_git_nam
 ### 2026-10-09 12:30 — python-coder (status: ok)
 feedback-id: fb_2026-10-09_aa52bb8a
 Commit-time file-size refactor, no behaviour change. scripts/build_helpers.py back to 1331 lines (ratchet): the LEAFCUTTER_SHIM_STRATEGY reader moved to new scripts/build_shim_env.py (`effective_shim_strategy`), build tool only so no deploy entry. templates/scripts/worktree_readiness.py (424 -> 220 lines): canary-proving group moved to new templates/scripts/worktree_canaries.py (283 lines), imported by name; worktree_canaries.py is a NAMED_STANDALONE_SCRIPTS entry (the manifest helper imports that tuple). Tests that called the moved private canary functions now use `wc`. Ticket-05 tests pass under AC_ENFORCE_STRICT=1; check_build_drift drifted=0.
+
+### 2026-10-09 19:58 — commit (status: ok)
+feedback-id: fb_2026-10-09_ec0b5e79
+completion_manifest:
+  pre_commit_hooks_pass: true
+  commit_message_valid: true
+  ticket_staged: true
+Committed ticket 05's staged set (29 files) as 03a1e4cd4 with normal hooks (no --no-verify, no SKIP); the message cites BO-4300c-1-ii and the commit-msg package-surface hook passed. The .security-allowlist entry was staged by the coordinator on the user's stated choice. Auto-authorized commit gate: staged files per git diff --cached --name-only at commit time. This sign-off is the follow-up ticket-only commit.
