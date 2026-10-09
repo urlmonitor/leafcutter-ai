@@ -52,8 +52,6 @@ export const meta = {
   ],
 };
 
-// JSON Schemas
-
 // BO-2400f-13: worktree_path is no longer required — a refusal payload
 // (outcome: "refused") legitimately carries no worktree_path at all. The
 // Phase 1 guard below branches on `outcome === "opened"` and treats any
@@ -176,27 +174,6 @@ const CONTEXT_BUNDLE_SCHEMA = {
 // future consumer cannot drift from the CLI's own default.
 const CACHE_BREAKPOINT_MARKER = "<!-- CACHE_BREAKPOINT -->";
 
-/*
- * BO-2400c-1-iii (2026-08-25 amendment) — the four-state classification of
- * the context-bundle-assembling dispatch's reply. Location 2 of 3 (the other
- * two are the dispatch prompt above the "Context Bundle" phase and the halt
- * payload that consumes this classification's `.message`).
- *
- * KI-BO-019: run wf_bd4984e8-438 assembled a real, well-formed 141,933-byte
- * bundle and returned `obtained: true` with a truncated preview plus a path
- * because the full text was too large to inline. The pre-amendment gate
- * folded "obtained falsy", "bundle empty", and "marker absent" into a single
- * boolean, so that reply took the same branch as a genuinely-absent bundle
- * and halted saying "the context bundle was not obtained" — wrong, and
- * actively misleading given the assembly had, in fact, succeeded.
- *
- * Reference-rejection MUST be evaluated BEFORE the marker/incompleteness
- * check (it-po enrichment note): a locator that happens to contain the
- * marker substring, or that merely MENTIONS the marker while describing
- * itself, must still be refused as a reference — never reclassified as
- * incomplete content because a naive marker-first check found the substring.
- */
-
 const CONTEXT_BUNDLE_STATE_NOT_OBTAINED = "not_obtained";
 const CONTEXT_BUNDLE_STATE_REFERENCE = "reference";
 const CONTEXT_BUNDLE_STATE_INCOMPLETE = "incomplete";
@@ -294,7 +271,32 @@ function findTruncatedPreviewLocation(text) {
  * `bundle` string; either one is sufficient, and this check runs BEFORE the
  * marker/incompleteness check so a locator that also contains (or merely
  * mentions) the marker substring is still refused as a reference rather than
- * being reclassified as incomplete content.
+ * being reclassified as incomplete content (it-po enrichment note).
+ *
+ * BO-2400c-1-iii (2026-08-25 amendment): this four-state classification is
+ * location 2 of 3 — the other two are the dispatch prompt above the "Context
+ * Bundle" phase and the halt payload that consumes its `.message`. KI-BO-019:
+ * run wf_bd4984e8-438 assembled a real, well-formed 141,933-byte bundle and
+ * returned `obtained: true` with a truncated preview plus a path because the
+ * full text was too large to inline. The pre-amendment gate folded "obtained
+ * falsy", "bundle empty", and "marker absent" into a single boolean, so that
+ * reply took the same branch as a genuinely-absent bundle and halted saying
+ * "the context bundle was not obtained" — wrong, and actively misleading given
+ * the assembly had, in fact, succeeded.
+ *
+ * The incompleteness check on real content is deliberately only a TRANSPORT
+ * check. Whether a layer was EMPTY is an assembly-time fact, now refused at
+ * assembly time by injection_builders.py, the only place the layer boundaries
+ * still exist. It used to also test /\n{4,}/, on the theory that an empty
+ * layer collapses two "\n\n" joins into a run of 4+ newlines "that never
+ * occurs when every layer is non-empty". That premise is false: a layer whose
+ * own content ends in a blank line produces the same run. It cost a real run —
+ * the architecture layer (a markdown document ending in an HTML comment and a
+ * trailing blank line) yielded five consecutive newlines, and a complete
+ * 16,442-byte bundle with its marker present exactly once was refused as
+ * incomplete. The signal is genuinely ambiguous in this direction, so no
+ * textual rule here can be sound; the check belongs upstream and now lives
+ * there.
  *
  * Pure function: no agent(), no I/O — safe to extract and execute directly.
  *
@@ -342,24 +344,6 @@ function classifyContextBundle(bundleResult, marker) {
     };
   }
 
-  /*
-   * Real content, not a locator — but still incomplete when it did not
-   * survive the crossing intact. What remains here is deliberately only a
-   * TRANSPORT check. Whether a layer was EMPTY is an assembly-time fact, and
-   * it is now refused at assembly time by injection_builders.py, which is the
-   * only place the layer boundaries still exist.
-   *
-   * This used to also test /\n{4,}/, on the theory that an empty layer
-   * collapses two "\n\n" joins into a run of 4+ newlines "that never occurs
-   * when every layer is non-empty". That premise is false: a layer whose own
-   * content ends in a blank line produces the same run. It cost a real run —
-   * the architecture layer (a markdown document ending in an HTML comment and
-   * a trailing blank line) yielded five consecutive newlines, and a complete
-   * 16,442-byte bundle with its marker present exactly once was refused as
-   * incomplete. The signal is genuinely ambiguous in this direction, so no
-   * textual rule here can be sound; the check belongs upstream and now lives
-   * there.
-   */
   var markerIndex = bundleText.indexOf(marker);
 
   // Truncation after the marker. This is NOT the empty-layer rule wearing a
@@ -584,10 +568,6 @@ function buildReleaseOutcomeFields(releaseReply, claimedIds, executorAgentType) 
   };
 }
 
-// BO-2400f-4-vi-adjacent: the routing dispatch's expected reply shape
-// (INF-700a-1). `case` is the only required field — `read`/`written`/
-// `unwritten`/`detail` are read defensively by classifyKnowledgeRouting()
-// below, never trusted as present just because the schema names them.
 const KNOWLEDGE_ROUTING_SCHEMA = {
   type: "object",
   required: ["case"],
@@ -780,22 +760,9 @@ const baseMatchesOriginMain =
     ? worktreeResult.base_matches_origin_main
     : null;
 
-/*
- * Remove the LLM from the trust path for worktree_path, exactly as the comment
- * below already does for ac_store_path. The worktree phase agent has been
- * observed to echo a fabricated path instead of create-fastlane-worktree's real
- * JSON: 2026-08-11 on BO-2400f (<worktree>/tickets/00_inbox), and again
- * 2026-09-07 on UXP-700d, where it returned <repo_root>/worktrees/<slug> while
- * git had actually placed the worktree at <workspace>/worktrees/<slug>.
- *
- * The location is NOT a fixed convention that could simply be recomputed here.
- * setup_ticket_worktree.py's _resolve_installed_layout() deliberately differs by
- * layout: in the dev layout worktrees_base is the workspace PARENT of the repo,
- * while in a consumer/installed layout it is the consumer project root. Deriving
- * a path here would therefore be correct in one layout and wrong in the other.
- * git is the only authority that knows where the worktree really is in both, so
- * ask git and require the answer to be quoted from its raw output.
- */
+// Remove the LLM from the trust path for worktree_path, as for ac_store_path below: the worktree agent has echoed
+// fabricated paths (BO-2400f 2026-08-11, UXP-700d 2026-09-07), and the location differs by layout (dev vs consumer,
+// setup_ticket_worktree.py _resolve_installed_layout), so git is the only authority — its raw output is quoted.
 const worktreeVerify = await agent(
   `Report where git says the fast-lane worktree actually is. Do NOT compute, ` +
   `infer, guess or normalise a path — only quote what git prints.
@@ -1266,9 +1233,6 @@ const bundleResult = await agent(
   }
 );
 
-// Four-state classification (BO-2400c-1-iii, 2026-08-25 amendment) — see
-// classifyContextBundle()'s own doc comment for the fail-closed reasoning and
-// why reference-rejection runs before the marker/incompleteness check.
 const contextBundleClassification = classifyContextBundle(
   bundleResult, CACHE_BREAKPOINT_MARKER
 );
