@@ -12,15 +12,28 @@ readiness: reviewed
 priority: medium
 roadmap_phase: phase_1
 criteria: |
-  Given a report is filed from a context where the enduring project location cannot
-    be determined — the drive is not running under version control at all, or the
-    version-control tooling is unavailable to the caller,
-  When the durable report location is resolved,
-  Then the sink does not silently fall back to the temporary workspace directory,
-  And the report is either written to a location the caller can confirm is not the
-    disposable workspace, or the write is refused with a failure reason naming the
-    unresolved location,
-  And in the refusal case the agent's verdict is still delivered.
+  Given the durable report location cannot be determined because the install's
+    build-time declaration of its durable log location is unusable in one of these
+    ways: it is absent, it cannot be read, it cannot be parsed, it lacks the report
+    sink or log root entry, it records a location that is not absolute, or it is
+    stale (the enduring project root it records no longer exists),
+  When a report is filed and the durable report location is resolved,
+  Then no file and no directory is created anywhere: not in the temporary workspace
+    directory, not at a location derived from where the caller is running, and not
+    at or above the declared log location,
+  And the write is refused with a failure reason that names the expected declaration
+    and which of those conditions failed,
+  And no record identifier is returned to the caller,
+  And the agent's verdict is still delivered.
+
+  Given the install's build-time declaration is usable, recording an absolute
+    durable log location beneath an enduring project root that exists,
+  And the project is not under version control at all, or the version-control
+    tooling is unavailable to the caller,
+  When a report is filed,
+  Then the report is written to the declared location, and the sink location the
+    writer reports lets the caller confirm it is not the disposable workspace,
+  So that version control plays no part in deciding where reports are kept.
 
   Given a project that uses no temporary workspaces at all, so the drive runs
     directly in the ordinary project checkout,
@@ -126,6 +139,9 @@ created: 2026-08-13
 amended_by:
   - reason: "IT PO enrichment, 2026-10-09. CRITERIA AND NOTES UNCHANGED, as both are BA-owned. The criteria were written against rule (c)'s git-common-dir anchor, which INF-500d-4's IT PO entry supersedes with the build-time declared absolute log root, the anchor INF-400c-4 adopted after rejecting git-common-dir on 2026-09-07 (ambiguous in a nested consumer install; relative from a main checkout and absolute from a worktree). Under that mechanism 'the enduring location cannot be determined' maps to the declaration being absent, unreadable, keyless, non-absolute or stale, and the writer must refuse loudly rather than fall back to __file__, the current directory or the worktree root. The first scenario's version-control examples become success cases. The BA is asked (see the IT PO report) to reword that Given so it names the declaration rather than version control."
     by: it-po
+    at: 2026-10-09
+  - reason: "Criteria reworded, 2026-10-09 (BA rewording requested by the IT PO entry above). WHAT CHANGED: the first scenario's Given previously defined 'the enduring project location cannot be determined' as 'the drive is not running under version control at all, or the version-control tooling is unavailable to the caller'. It now defines it as the install's build-time declaration being absent, unreadable, unparseable, missing the report sink or log root entry, holding a non-absolute location, or stale. Its Then was tightened from 'either written to a location the caller can confirm is not the disposable workspace, or refused' to a refusal only: nothing created anywhere, a failure reason naming the declaration and the failed condition, no record identifier returned, and the verdict still delivered. A new middle scenario states the former version-control examples as SUCCESS cases: with a usable declaration, a project outside version control or a caller without the tooling still writes to the declared location. The plain-checkout scenario is unchanged. WHY: the version-control wording belonged to the superseded git-common-dir design (rule (c) in INF-500d-4's notes), rejected on 2026-09-07 in favour of the absolute log root fixed at build time in the deployed declaration (INF-500d-4 amended_by and it_requirements; this AC's it_requirements line 1). Under that mechanism a checkout outside version control is a success case, so the old Given described a refusal the adopted design must never produce. No test_spec descriptor asserted a retracted case: test_project_without_version_control_writes_to_the_declared_root already treats it as success and now has a criterion to cite, and the refusal tests already exercise the declaration cases."
+    by: BrainCandy
     at: 2026-10-09
 superseded_by: null
 covered_by: []
