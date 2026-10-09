@@ -8,8 +8,8 @@ level: L2
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
-priority: medium
+readiness: approved
+priority: high
 roadmap_phase: phase_1
 change_target: prompt
 risk_surface: safety
@@ -44,6 +44,70 @@ delivers_to: null
 expects_from:
   ac_id: BO-4300e-2
   contract: "The one clearing request and its removed / refused answer."
+package_surface: false
+it_requirements:
+  - >-
+    SURFACES: templates/workflows/close-worktree.md (the close-a-workspace command) and
+    templates/agents/worktree-agent.md (the workspace agent's removal section); also
+    templates/workflows/worktree.md if it carries a removal recipe. Edited in templates/ only;
+    deployed copies come from the build.
+  - >-
+    Each surface publishes exactly ONE removal recipe: the single command `python <absolute path
+    printed by worktree.py where> remove --path <absolute workspace path>`, run unchanged, with the
+    maker's answer quoted verbatim to the person. The remove-without-force path, forced removal,
+    `git worktree remove`, `rm -rf` / `Remove-Item` / direct folder deletion and any interactive
+    confirmation step are deleted, not left as an alternative.
+  - >-
+    Discard authorisation is passed only when the person's own request already contains it (up
+    front, BO-4300e-3); the surfaces never ask for it and never infer it from a later reply. On a
+    refusal the surface quotes the door's unsent commits and files and stops.
+  - >-
+    SCOPE: removal side only. BO-4300f-1 / BO-4300a-1-ib / BO-4300f-2-ia move these same surfaces
+    onto the maker for CREATION; this AC must not rewrite their creation sections, and when both
+    land in one drive the later edit is rebased onto the earlier, never overwriting it.
+  - >-
+    The agent template's tools frontmatter is not changed by this AC (if Edit or Write were ever
+    added, requires_verification: true becomes mandatory per CLAUDE.md).
+  - >-
+    PROOF (behavioural, CLAUDE.md 'Gate / Workflow ACs -- Verify Behaviorally'): the test reads the
+    DEPLOYED command and agent text from the shared reference layout, extracts the one designated
+    removal command, and executes it with stdin closed against real temporary repositories holding
+    done-1 and open-1. Only the last criterion (no other removal recipe) is checked on text, and it
+    is in addition to, never instead of, the executed proof.
+test_required: true
+test_spec:
+  - name: test_published_close_command_removes_done_workspace
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: deployed
+    description: "The removal command extracted from each deployed surface removes done-1 and returns the door's removed answer."
+  - name: test_published_close_command_refuses_open_workspace_unchanged
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "Against open-1 the extracted command returns the refusal naming the unpushed commit, and open-1 is byte-identical before and after."
+  - name: test_published_close_command_never_waits_for_input
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: failure
+    description: "With stdin closed and a timeout, the extracted command answers for both workspaces."
+  - name: test_deployed_surfaces_carry_no_other_removal_recipe
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: unit
+    angle: discrimination
+    description: >-
+      The deployed command and agent texts contain exactly one removal command and no forced
+      removal, git worktree remove, direct folder deletion or confirmation step.
+    must_catch:
+      - "old remove-without-force path left beside the new door command"
+test_rationale: >-
+  A prompt cannot be run by the unit layer, but the command it tells an agent to run can. Executing
+  the command the deployed text publishes against real repositories proves the door is what the
+  person reaches; the single text check guards only the retirement of the old recipes.
 origin_agent: business-analyst
 created: 2026-10-09
 amended_by: []

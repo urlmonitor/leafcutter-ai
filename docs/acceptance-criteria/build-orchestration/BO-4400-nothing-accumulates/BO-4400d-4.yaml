@@ -8,8 +8,8 @@ level: L2
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
-priority: medium
+readiness: approved
+priority: high
 roadmap_phase: phase_1
 change_target: docs
 risk_surface: internal
@@ -35,6 +35,17 @@ delivers_to: null
 expects_from:
   ac_id: BO-4400d-2
   contract: "Final sweep report shape and commands."
+package_surface: false
+it_requirements:
+  - >-
+    New how-to under docs/how-to/ (name chosen by documentation-expert) with the repo's doc
+    frontmatter, registered through the doc-index flow. Commands, report fields, the durable log
+    path and the worktree_cleanup.sweep_interval_hours key are copied from the built behaviour
+    (BO-4400d-2 / BO-4400d-3), and the key is also listed in docs/reference/skills-config-fields.md.
+  - >-
+    The relation to the operator's machine-local ~/bin/wsl-reclaim timer is stated (the packaged
+    sweep covers workspaces and scratch; the machine-local tool is not changed).
+test_required: false
 origin_agent: business-analyst
 created: 2026-10-09
 amended_by: []

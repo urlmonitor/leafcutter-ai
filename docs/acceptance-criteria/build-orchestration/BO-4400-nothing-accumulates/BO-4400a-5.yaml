@@ -8,8 +8,8 @@ level: L2
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
-priority: medium
+readiness: approved
+priority: high
 roadmap_phase: phase_1
 change_target: docs
 risk_surface: internal
@@ -38,6 +38,17 @@ delivers_to: null
 expects_from:
   ac_id: BO-4400a-1
   contract: "Final route-end behaviour to diagram."
+package_surface: false
+it_requirements:
+  - >-
+    Mermaid sequence diagram under docs/architecture/diagrams/ following the c3-NNN naming of its
+    neighbours; the id is allocated with scripts/next_diagram_seq.py immediately before publishing,
+    never taken from this record or a ticket (CLAUDE.md 'Sequential Resource Paths Go Stale').
+  - >-
+    Participants named as the built components: route workflow, shell-permitted agent, the one
+    maker (remove verb), verdict (BO-4100c-1), hub. Linked from
+    docs/architecture/components/worktree-manager.md and docs/architecture/agent_delivery_workflows.md.
+test_required: false
 origin_agent: business-analyst
 created: 2026-10-09
 amended_by: []

@@ -8,8 +8,8 @@ level: L2
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
-priority: medium
+readiness: approved
+priority: high
 roadmap_phase: phase_1
 change_target: pipeline
 risk_surface: safety
@@ -47,6 +47,64 @@ delivers_to: null
 expects_from:
   ac_id: BO-4100c-1
   contract: "Holds-work / holds-nothing verdict per listed workspace."
+package_surface: false
+it_requirements:
+  - >-
+    A halted or failed run still issues the route-end clearing request (BO-4400a-1's shared step);
+    whether the workspace is cleared follows the door's verdict, never the run's success flag. The
+    door's UNSENT_WORK refusal is relayed into the final result as kept work:
+    {workspace_path: absolute, commits: [sha] from unsent.commits, files: [repo-relative path] from
+    unsent.files}, reported as work kept, not as a clearing error.
+  - >-
+    No discard authorisation is ever passed on a halt path (BO-4300e-3; ACD-2100c-5 -- work is
+    thrown away only by the person's choice).
+  - >-
+    Halting leaves nothing that makes the workspace un-clearable later: any run lock or in-use
+    marker the route holds is released on every exit path, and the maker's workspace marker is left
+    in its ready state, so the ordinary remove verb (and the BO-4400d sweep) clears it once the
+    verdict flips.
+  - >-
+    The holds-work / holds-nothing figure in the listing comes from the maker's list verb /
+    BO-4100e listing and BO-4100c-1 verdict; this AC adds no second verdict implementation.
+  - >-
+    PROOF: the single-ticket route is driven under unit_tests/_workflow_engine_harness.py on the
+    deployed workflow with a scripted halt after two real commits and one uncommitted change; the
+    follow-up push is done by the test with real git; the reclaim is a real remove request to the
+    deployed maker. Byte-identity is checked by hashing every file and comparing commit ids before
+    and after. Isolation and no-build.py rules as BO-4400a-1.
+test_required: true
+test_spec:
+  - name: test_halted_run_keeps_commits_and_changed_file_byte_identical
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "After the halt the workspace exists with both commits and the uncommitted file unchanged."
+    must_catch:
+      - "route clears unconditionally at the end"
+      - "route deletes the folder itself instead of asking the door"
+  - name: test_halted_result_names_location_commits_and_file_as_kept
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: seam
+    description: "The final result names the workspace path, both commit ids and the changed file path as kept work."
+  - name: test_listing_shows_holds_work_then_holds_nothing_after_hand_push
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: real_artifact
+    description: "The listing shows holds-work after the halt and holds-nothing after the work is committed and pushed by hand."
+  - name: test_kept_workspace_is_reclaimed_by_the_door_without_authorisation
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: failure
+    description: "A remove request with no discard authorisation removes the workspace once nothing is unsent; no lock or marker blocks it."
+test_rationale: >-
+  The promise has two halves that only a real halt can show together: work survives byte-for-byte,
+  and nothing about having halted blocks the ordinary door later. A mock of git or of the maker
+  cannot show either.
 origin_agent: business-analyst
 created: 2026-10-09
 amended_by: []

@@ -8,8 +8,8 @@ level: L3
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
-priority: medium
+readiness: approved
+priority: high
 roadmap_phase: phase_1
 change_target: code
 risk_surface: safety
@@ -33,6 +33,45 @@ delivers_to: null
 expects_from:
   ac_id: BO-4400c-2
   contract: "Poetry set-up path."
+package_surface: false
+it_requirements:
+  - >-
+    The in-project override is applied only through the Poetry process's own environment variables
+    (which outrank the user config); the user's Poetry config file and the main copy are never
+    written.
+  - >-
+    PROOF: temporary POETRY_CONFIG_DIR holding a config with virtualenvs.in-project = false; the
+    test hashes that config file and lists the main copy's files before and after; real Poetry as
+    BO-4400c-2.
+test_required: true
+test_spec:
+  - name: test_user_wide_out_of_project_setting_is_overridden_for_workspace
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "Despite virtualenvs.in-project = false, the environment is in .venv at the workspace root and the shared folder is unchanged."
+    must_catch:
+      - "trusting Poetry's defaults"
+  - name: test_user_wide_poetry_setting_unchanged
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: discrimination
+    description: "The user Poetry config file is byte-identical before and after."
+    must_catch:
+      - "fixing it by changing the user's global Poetry config"
+  - name: test_main_copy_gains_no_poetry_setting_file
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: discrimination
+    description: "The main copy contains no new or changed poetry.toml after the request."
+    must_catch:
+      - "committing a project-level poetry.toml into the main copy"
+test_rationale: >-
+  Each of the three plausible fixes leaves the workspace looking correct; only the user config hash
+  and the main copy listing tell them apart.
 origin_agent: business-analyst
 created: 2026-10-09
 amended_by: []

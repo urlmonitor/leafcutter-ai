@@ -8,8 +8,8 @@ level: L3
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
-priority: medium
+readiness: approved
+priority: high
 roadmap_phase: phase_1
 change_target: pipeline
 risk_surface: safety
@@ -33,6 +33,35 @@ delivers_to: null
 expects_from:
   ac_id: BO-4400f-3
   contract: "End-of-route scratch removal."
+package_surface: false
+it_requirements:
+  - >-
+    Run logs and test-result logs are written to declared durable folders (debugging/logs/,
+    test-logs/) and never inside the scratch root; neither route-end removal nor the sweep ever
+    selects a path under a declared durable folder, whatever its name or age.
+  - >-
+    PROOF: the single-ticket route under unit_tests/_workflow_engine_harness.py writes both logs
+    through its normal steps; then the deployed sweep runs as a separate process with
+    scratch_max_age_hours set to 0; hashes of both logs taken at route end and after the sweep.
+test_required: true
+test_spec:
+  - name: test_logs_survive_route_end_and_zero_age_sweep
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: discrimination
+    description: "Both logs exist at their durable location, byte-identical to their state at route end."
+    must_catch:
+      - "clean-up deletes temporary-looking subfolders of the durable log folder"
+  - name: test_logs_never_written_inside_scratch_location
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: boundary
+    description: "No file under the scratch root was ever a log of this run (checked by snapshot during the run)."
+test_rationale: >-
+  An age limit of zero makes any misclassified log disappear, so one aggressive real sweep is the
+  sharpest test that logs and scratch are truly separated.
 origin_agent: business-analyst
 created: 2026-10-09
 amended_by: []

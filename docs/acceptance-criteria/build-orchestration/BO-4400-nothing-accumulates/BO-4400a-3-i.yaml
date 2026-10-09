@@ -8,8 +8,8 @@ level: L3
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
-priority: medium
+readiness: approved
+priority: high
 roadmap_phase: phase_1
 change_target: pipeline
 risk_surface: safety
@@ -39,6 +39,54 @@ delivers_to: null
 expects_from:
   ac_id: BO-4300e-2
   contract: "The one clearing request and its answer."
+package_surface: false
+it_requirements:
+  - >-
+    SURFACE: templates/workflows-js/finalize-feature.js, the workspace-teardown step (Step 7). Its
+    interactive confirmation gate is removed; the step issues one maker remove request through an
+    E2 shell-agent dispatch (ADR-030) and records the door's answer in finalize's result.
+  - >-
+    A workspace that is already absent is the ordinary case: the step reports nothing-to-clear
+    (from the maker's locate / remove answer for an absent path) and finalize continues to
+    completion; absence is never an error and never a halt.
+  - >-
+    Finalize passes no discard authorisation. A merged feature's workspace reads holds-nothing via
+    squash-merge detection (BO-4100c-1-i); if the door refuses anyway, finalize reports the work as
+    kept and completes, it does not force.
+  - >-
+    No regression of finalize's existing guards: the post-merge test HALT and deploy-parity checks
+    keep their behaviour and their existing tests stay green (CLAUDE.md post-merge diff audit
+    lesson: finalize-feature.js has lost hardened guards to merges before).
+  - >-
+    PROOF: deployed finalize-feature workflow under unit_tests/_workflow_engine_harness.py with no
+    gate replies scripted (an unanswered gate fails the test by timeout), maker executed for real
+    against a temporary project, hub and merged branch. Isolation and no-build.py rules as
+    BO-4400a-1.
+test_required: true
+test_spec:
+  - name: test_finalize_clear_step_completes_with_no_person_available
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: failure
+    description: "With no gate replies scripted, the teardown step completes and no gate dispatch is recorded."
+    must_catch:
+      - "interactive confirmation gate left in Step 7"
+  - name: test_finalize_clears_merged_workspace_through_the_door
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "No folder remains at the workspace location and finalize's result contains the door's removed answer."
+  - name: test_finalize_reports_nothing_to_clear_when_workspace_already_gone
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: boundary
+    description: "With the workspace already removed by its route, the step reports nothing to clear and finalize completes."
+test_rationale: >-
+  Finalize's teardown deadlocked on a yes it could not give. Only an unattended run of the deployed
+  workflow, with no replies scripted, shows the gate is gone rather than merely bypassed in source.
 origin_agent: business-analyst
 created: 2026-10-09
 amended_by: []

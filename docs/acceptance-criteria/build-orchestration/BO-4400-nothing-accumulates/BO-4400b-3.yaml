@@ -8,8 +8,8 @@ level: L2
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
-priority: medium
+readiness: approved
+priority: high
 roadmap_phase: phase_1
 change_target: docs
 risk_surface: internal
@@ -36,6 +36,16 @@ delivers_to: null
 expects_from:
   ac_id: BO-4400b-1
   contract: "The declared inventory of outside item kinds."
+package_surface: false
+it_requirements:
+  - >-
+    New reference page under docs/reference/ (name chosen by documentation-expert) with the repo's
+    doc frontmatter, registered through the doc-index flow and linked from
+    docs/architecture/components/worktree-manager.md.
+  - >-
+    Rows are taken from the built inventory delivered by BO-4400b-1, one per declared kind, so the
+    row count equals the inventory's kind count at the time of writing.
+test_required: false
 origin_agent: business-analyst
 created: 2026-10-09
 amended_by: []

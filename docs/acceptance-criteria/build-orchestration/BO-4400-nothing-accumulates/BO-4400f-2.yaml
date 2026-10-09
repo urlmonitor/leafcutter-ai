@@ -8,8 +8,8 @@ level: L2
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
-priority: medium
+readiness: approved
+priority: high
 roadmap_phase: phase_1
 change_target:
   - config
@@ -44,6 +44,67 @@ delivers_to: null
 expects_from:
   ac_id: BO-4400f-1
   contract: "The one designated scratch location."
+package_surface: false
+it_requirements:
+  - >-
+    SETTINGS: pytest.ini gains tmp_path_retention_policy = failed as a direct ini key (not inside
+    addopts -- CLAUDE.md records that addopts spellings can enforce nothing), and a new plugin is
+    registered in addopts with -p, following the scripts.suite_performance precedent (this repo has
+    no root conftest.py). The plugin is package-internal (scripts/suite_performance/, no template
+    copy).
+  - >-
+    BASETEMP: when no --basetemp is given, the plugin sets a per-run UNIQUE folder inside the
+    scratch root (new_item() from BO-4400f-1). Never the shared scratch root itself -- pytest empties
+    a given basetemp at start, which would destroy other runs' scratch.
+  - >-
+    REFUSAL: at configure time, a --basetemp (from argv, PYTEST_ADDOPTS or ini) that resolves inside
+    a declared durable folder or anywhere inside the project tree stops the run before collection
+    with a usage error naming the folder as durable; xdist workers inherit the same check.
+  - >-
+    The failing test's retained scratch path is printed in its failure report (a report section
+    added by the plugin), so the location is discoverable without searching.
+  - >-
+    unittest-style tests run under pytest get the same basetemp; tests that call tempfile directly
+    are covered by TMPDIR being pointed into the run's item by the plugin.
+  - >-
+    PROOF: a real pytest subprocess on a synthetic three-test suite (two pass, one fails, each
+    writes 10 MB) using the repo's pytest.ini and plugin, with HOME / XDG_CACHE_HOME redirected;
+    disk inspected afterwards. Asserting that the ini string exists is explicitly insufficient
+    (TQ-600a-5). No build.py spawn.
+test_required: true
+test_spec:
+  - name: test_passing_tests_leave_no_scratch_anywhere
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "After the run, no scratch of the two passing tests remains in the scratch root, the temp folder or the project."
+  - name: test_failing_test_scratch_retained_in_scratch_location_and_printed
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: seam
+    description: "The failing test's 10 MB file is retained under the scratch root and its path appears in the run's failure output."
+  - name: test_no_scratch_written_inside_project_or_durable_folders
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: discrimination
+    description: "The project tree and durable folders have no new entry after the run."
+    must_catch:
+      - "basetemp left at a durable project path such as test-logs/"
+  - name: test_durable_basetemp_stops_run_before_any_test
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: failure
+    description: "A run with --basetemp inside a durable folder exits before collection with a message naming the folder as durable; no test ran."
+    must_catch:
+      - "setting present in pytest.ini but not enforced"
+test_rationale: >-
+  A pytest setting in a file was shown in this repo to enforce nothing for as long as it existed.
+  Only a real pytest run, inspected on disk afterwards, proves retention and the durable-folder
+  refusal actually happen.
 origin_agent: business-analyst
 created: 2026-10-09
 amended_by: []

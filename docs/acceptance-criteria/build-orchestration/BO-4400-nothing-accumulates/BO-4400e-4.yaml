@@ -8,8 +8,8 @@ level: L2
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
-priority: medium
+readiness: approved
+priority: high
 roadmap_phase: phase_1
 change_target: code
 risk_surface: internal
@@ -40,11 +40,76 @@ doc_links:
 assigned_agent: python-coder
 estimated_complexity: M
 delivers_to:
-  agent: python-coder
-  contract: "Total occupied space across all listed workspaces (consumed by the refusal and warning answers of BO-4400e-1 / BO-4400e-2)."
+  - agent: python-coder
+    contract: >-
+      Space report, read-only, as one JSON object: {workspaces: [{location: absolute path, verdict:
+      "holds_work" | "holds_nothing" | "no_verdict", registered: bool, folder_bytes: int,
+      outside_bytes: int, bytes: int}] sorted by bytes descending, count: int, total_bytes: int,
+      reclaimable_bytes: int (sum over holds_nothing)}; plus a function returning total_bytes for
+      the ensure-time warn / refuse answers of BO-4400e-1 / BO-4400e-2.
+  - agent: documentation-expert
+    contract: "The report command, its columns and the reclaimable figure, for the how-to BO-4400e-5."
 expects_from:
   ac_id: BO-4400b-1
   contract: "Outside-item inventory keyed by workspace."
+package_surface: false
+it_requirements:
+  - >-
+    SURFACE: a read-only report verb of the one maker (or an option of its list verb), reusing the
+    maker's list / BO-4100e discovery (registered and unregistered), the BO-4100c-1 verdict, and
+    BO-4400b-1's inventory for outside items; no second listing or verdict implementation.
+  - >-
+    Sizes use the single shared size measure delivered by BO-4400b-1, so the report agrees with what
+    clearing and the sweep would free.
+  - >-
+    Strictly read-only: no fetch that writes refs, no marker update, no cache write; the report
+    completes within 60 s for 150 workspaces on the reference host, or states which entries it could
+    not size rather than stalling.
+  - >-
+    PROOF: deployed maker as a separate process over real temporary workspaces with real files of
+    the stated sizes (scaled down -- the criteria's MB / GB figures may be scaled by a constant
+    factor, preserving the ratios and exact sums), a real outside environment folder in a temporary
+    HOME, and a full path-and-hash snapshot around the report.
+test_required: true
+test_spec:
+  - name: test_report_lists_all_workspaces_largest_first_with_verdict_and_owned_size
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "All four workspaces are listed largest first with location and verdict; the small workspace includes its outside environment."
+    must_catch:
+      - "outside items not counted per workspace"
+      - "unregistered leftover omitted"
+  - name: test_report_total_equals_sum_of_listed_sizes
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: real_artifact
+    description: "The stated total equals the sum of the listed sizes and matches the test's own measurement."
+  - name: test_report_states_reclaimable_space_of_holds_nothing_workspaces
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: seam
+    description: "reclaimable_bytes equals the sum over holds-nothing workspaces."
+  - name: test_report_changes_nothing_on_disk
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: failure
+    description: "Paths and hashes of the fixture tree are identical before and after the report."
+  - name: test_adding_a_workspace_moves_total_and_count
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: discrimination
+    description: "A fifth workspace of known size raises the total by exactly that size and the count by one."
+    must_catch:
+      - "total from a cached or fixed figure"
+test_rationale: >-
+  The report is only worth reading if it agrees with what clearing would really free; real folders
+  of known size and a varying population are what show that.
 origin_agent: business-analyst
 created: 2026-10-09
 amended_by: []

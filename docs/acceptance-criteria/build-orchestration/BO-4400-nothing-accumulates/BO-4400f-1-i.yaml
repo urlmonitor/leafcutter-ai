@@ -8,8 +8,8 @@ level: L3
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
-priority: medium
+readiness: approved
+priority: high
 roadmap_phase: phase_1
 change_target: code
 risk_surface: safety
@@ -31,6 +31,33 @@ delivers_to: null
 expects_from:
   ac_id: BO-4400f-1
   contract: "Scratch age and ownership rule."
+package_surface: false
+it_requirements:
+  - >-
+    classify() checks owner liveness before age; an active owner short-circuits to not expired
+    regardless of age. The sweep consumes classify() and has no age-only path of its own.
+  - >-
+    PROOF: a real long-lived child process is the active owner; the item's label and mtimes are set
+    to 29 hours old; the deployed sweep runs as a separate process; then the child is terminated
+    and classify() is applied again.
+test_required: true
+test_spec:
+  - name: test_old_scratch_of_active_run_is_not_expired_or_swept
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: discrimination
+    description: "A 29-hour-old item owned by a still-running run is classified not expired and is byte-identical after the sweep."
+    must_catch:
+      - "age-only expiry deletes an active drive's scratch"
+  - name: test_scratch_expires_once_owner_ends
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: boundary
+    description: "After the owning process ends, the next classification finds the item expired."
+test_rationale: >-
+  Long epic drives outlive any age limit; only a real live owner process shows liveness outranks age.
 origin_agent: business-analyst
 created: 2026-10-09
 amended_by: []

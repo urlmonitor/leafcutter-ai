@@ -8,8 +8,8 @@ level: L3
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
-priority: medium
+readiness: approved
+priority: high
 roadmap_phase: phase_1
 change_target: code
 risk_surface: safety
@@ -35,6 +35,45 @@ delivers_to: null
 expects_from:
   ac_id: BO-4400b-1
   contract: "Outside-artifact removal keyed to the cleared workspace."
+package_surface: false
+it_requirements:
+  - >-
+    Every inventory matcher selects items by the cleared workspace's exact identity (derived
+    environment name, exact path, exact branch); no prefix, glob or project-name match anywhere in
+    the remove path.
+  - >-
+    Removal never touches the main copy's own items or another workspace's items, and never changes
+    another workspace's verdict inputs (its branch, index, refs or marker).
+  - >-
+    PROOF: deployed maker as a separate process; ws-a, ws-b and the main copy each get real items
+    (a Poetry-named environment folder per path, an index cache file, a cache folder) in a
+    temporary HOME; byte-identity checked by hashing every file of every surviving item before and
+    after.
+test_required: true
+test_spec:
+  - name: test_clearing_ws_a_leaves_ws_b_and_main_items_byte_identical
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: discrimination
+    description: "After clearing ws-a, every item of ws-b and of the main copy exists with identical content."
+    must_catch:
+      - "removing by glob on the project name or the ws- prefix"
+  - name: test_ws_b_verdict_unchanged_after_ws_a_cleared
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: boundary
+    description: "ws-b's verdict from the listing is the same before and after."
+  - name: test_remove_answer_lists_no_item_of_ws_b_or_main
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: seam
+    description: "No entry in the answer's removed_items points into ws-b's or the main copy's items."
+test_rationale: >-
+  Look-alike names are the trap (Poetry suffixes a hash to the same project name), so only real
+  look-alike items side by side show the matcher is exact.
 origin_agent: business-analyst
 created: 2026-10-09
 amended_by: []

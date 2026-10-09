@@ -8,8 +8,8 @@ level: L3
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
-priority: medium
+readiness: approved
+priority: high
 roadmap_phase: phase_1
 change_target: code
 risk_surface: safety
@@ -34,6 +34,44 @@ delivers_to: null
 expects_from:
   ac_id: BO-4400c-1
   contract: "Declaration-driven set-up selection."
+package_surface: false
+it_requirements:
+  - >-
+    Tool presence is decided BEFORE anything is created; a missing declared tool yields the
+    refusal delivered by BO-4400c-1 naming {tool, declaration}, with no workspace location, and no
+    fallback to a lower row of the precedence table.
+  - >-
+    If tool absence is only discovered after the clone exists, the maker rolls back folder, branch
+    and registration before answering (BO-4100a-3-i).
+  - >-
+    PROOF: deployed maker as a separate process with PATH restricted to a temporary bin folder
+    holding recording shims for poetry and python (any invocation of the poetry shim fails the
+    test) and no uv; temporary HOME.
+test_required: true
+test_spec:
+  - name: test_missing_uv_is_refused_naming_tool_and_declaration
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "The answer is a refusal naming uv and the uv lock file, carrying no workspace location."
+  - name: test_missing_uv_never_falls_back_to_poetry_or_pip
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: discrimination
+    description: "The poetry shim records no invocation and no environment exists inside or outside any workspace."
+    must_catch:
+      - "try uv, else poetry, else pip"
+  - name: test_refused_request_leaves_no_folder_branch_or_registration
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: failure
+    description: "After the refusal no folder, branch or registration for the requested workspace exists."
+test_rationale: >-
+  The wrong version (quiet fallback) succeeds, so only an observed refusal plus a recording poetry
+  shim distinguishes the clear no from a substitute.
 origin_agent: business-analyst
 created: 2026-10-09
 amended_by: []

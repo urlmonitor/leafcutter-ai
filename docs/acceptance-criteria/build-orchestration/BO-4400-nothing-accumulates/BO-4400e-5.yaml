@@ -8,8 +8,8 @@ level: L2
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
-priority: medium
+readiness: approved
+priority: high
 roadmap_phase: phase_1
 change_target: docs
 risk_surface: internal
@@ -36,6 +36,16 @@ delivers_to: null
 expects_from:
   ac_id: BO-4400e-4
   contract: "Final space report shape and settings."
+package_surface: false
+it_requirements:
+  - >-
+    New how-to under docs/how-to/ (name chosen by documentation-expert) with the repo's doc
+    frontmatter, registered through the doc-index flow. Command, columns, the workspace_disk keys
+    and their defaults are copied from the built behaviour; the keys are also listed in
+    docs/reference/skills-config-fields.md.
+  - >-
+    The WSL section links the sweep how-to (BO-4400d-4) for the refusal remedy.
+test_required: false
 origin_agent: business-analyst
 created: 2026-10-09
 amended_by: []

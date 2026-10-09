@@ -8,8 +8,8 @@ level: L2
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
-priority: medium
+readiness: approved
+priority: high
 roadmap_phase: phase_1
 change_target: docs
 risk_surface: internal
@@ -36,6 +36,16 @@ delivers_to: null
 expects_from:
   ac_id: BO-4400c-1
   contract: "Final set-up selection rules."
+package_surface: false
+it_requirements:
+  - >-
+    New reference page under docs/reference/ (name chosen by documentation-expert) with the repo's
+    doc frontmatter, registered through the doc-index flow and linked from
+    docs/architecture/components/worktree-manager.md.
+  - >-
+    The table is taken from the built precedence table delivered by BO-4400c-1, including the
+    plain-file order and the no-declaration outcome.
+test_required: false
 origin_agent: business-analyst
 created: 2026-10-09
 amended_by: []

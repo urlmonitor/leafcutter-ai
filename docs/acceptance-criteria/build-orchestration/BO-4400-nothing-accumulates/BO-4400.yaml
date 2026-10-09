@@ -8,8 +8,8 @@ level: L0
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
-priority: medium
+readiness: approved
+priority: high
 roadmap_phase: phase_1
 risk_surface: safety
 criteria: |
@@ -82,3 +82,11 @@ notes: |
   verdict is "holds nothing unsent" (BO-4100c) needs NO caller-supplied confirmation
   token -- the verdict is the safety check. Up-front permission (BO-4300e-3) is required
   only to discard unsent work. BO-4400a's automatic end-of-run clear relies on this.
+
+  FINAL GATE 2026-10-09 (BrainCandy): approved, priority high. Decisions: disk guard
+  defaults refuse below 10 GB free / warn below 25 GB, the lower of the Linux volume and the
+  Windows host drive deciding under WSL (BO-4400e); when free space cannot be measured the
+  workspace is still made and the unreadable drive is named (BO-4400e-1-i); scratch root
+  defaults to <user cache>/leafcutter/scratch/ (BO-4400f-1); environment precedence uv.lock >
+  poetry.lock > requirements-dev.txt > requirements.txt > none, a pyproject.toml without a lock
+  file counting as none, uv winning when both lock files exist (BO-4400c-3, c-3-i).

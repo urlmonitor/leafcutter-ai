@@ -8,8 +8,8 @@ level: L2
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
-priority: medium
+readiness: approved
+priority: high
 roadmap_phase: phase_1
 change_target: code
 risk_surface: safety
@@ -36,6 +36,52 @@ delivers_to: null
 expects_from:
   ac_id: BO-4400e-1
   contract: "Free-space check and configured thresholds."
+package_surface: false
+it_requirements:
+  - >-
+    Between the refuse and warn thresholds the ready answer carries a space_low warning {free_bytes,
+    warn_level_bytes, workspaces_bytes}; above the warn level no space warning is present.
+  - >-
+    Every route relays the maker's warnings into its own final result unchanged (the shared
+    workspace-answer handling of BO-4300c-3, not per-route copies).
+  - >-
+    Config validation runs before any measurement: refuse_free_gb > warn_free_gb yields a refusal
+    (code provisional, e.g. CONFIG_INVALID) naming both settings and their values, and nothing is
+    made.
+  - >-
+    PROOF: deployed maker as a separate process with the free-space seam; one workflow run under
+    unit_tests/_workflow_engine_harness.py shows the route relaying the warning.
+test_required: true
+test_spec:
+  - name: test_free_space_below_warn_level_yields_ready_with_warning
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "With 12 GB free, the answer is ready with a warning stating 12 GB, the 20 GB level and occupied space."
+  - name: test_route_result_shows_the_space_warning
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: reachability
+    description: "The calling route's final result contains the maker's space warning."
+  - name: test_free_space_above_warn_level_has_no_warning
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: boundary
+    description: "With 25 GB free, the answer is ready with no space warning."
+  - name: test_inverted_thresholds_refuse_every_request_naming_both_settings
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: discrimination
+    description: "With the refusal limit above the warning level, every request is refused naming both settings and no workspace is made."
+    must_catch:
+      - "inverted configuration silently disables the warning band"
+test_rationale: >-
+  The warning band is only proven by crossing both of its edges and by the inverted configuration
+  that would silently erase it.
 origin_agent: business-analyst
 created: 2026-10-09
 amended_by: []

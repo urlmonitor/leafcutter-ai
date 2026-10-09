@@ -8,8 +8,8 @@ level: L2
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
-priority: medium
+readiness: approved
+priority: high
 roadmap_phase: phase_1
 change_target: docs
 risk_surface: internal
@@ -39,6 +39,15 @@ delivers_to: null
 expects_from:
   ac_id: BO-4400f-1
   contract: "Final scratch rule and location."
+package_surface: false
+it_requirements:
+  - >-
+    New reference page under docs/reference/ (name chosen by documentation-expert) with the repo's
+    doc frontmatter, registered through the doc-index flow. Location, label fields, rule, config
+    keys (scratch_root, scratch_max_age_hours, durable paths) and the third-party list are copied
+    from the built module (BO-4400f-1) and pytest settings (BO-4400f-2); keys are also listed in
+    docs/reference/skills-config-fields.md.
+test_required: false
 origin_agent: business-analyst
 created: 2026-10-09
 amended_by: []

@@ -8,8 +8,8 @@ level: L2
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
-priority: medium
+readiness: approved
+priority: high
 roadmap_phase: phase_1
 change_target: pipeline
 risk_surface: safety
@@ -57,12 +57,147 @@ doc_links:
     relationship: describes
     status: exists
     relevance: Where each route's end state sits in the delivery flow.
+  - path: docs/architecture/adrs/ADR-030-dual-engine-workflow-support.md
+    relationship: constrains
+    status: exists
+    relevance: E2 workflow bodies have no filesystem or process access; the clear is one shell-agent dispatch.
+  - path: docs/reference/workflow-constraints.md
+    relationship: describes
+    status: exists
+  - path: docs/testing/test-angles.md
+    relationship: describes
+    status: exists
+    relevance: Angle taxonomy used by this record's test_spec.
 assigned_agent: python-coder
 estimated_complexity: L
-delivers_to: null
+delivers_to:
+  - agent: python-coder
+    contract: >-
+      Route-end clearing step, ONE shared step reused by every exit path of every route (success,
+      nothing-to-deliver, halt, failure). Each route's final result carries a `workspace_clearing`
+      object: {answer: <the one maker's remove answer, verbatim -- one JSON object per the BO-4300c-2
+      result contract; ok carries removed_path (absolute), UNSENT_WORK carries unsent.commits [sha]
+      and unsent.files [repo-relative path]>, delivered: bool (false on the nothing-to-deliver path),
+      requested_after_step: <label of the last step before the clear, e.g. the pull-request step>}.
+      Field names provisional until built; once built they are the contract BO-4400a-1-i, -1-ii,
+      -2, -2-i and BO-4400f-3 read.
+  - agent: documentation-expert
+    contract: "The six-route table (route, end state, moment of clearing incl. nothing-to-deliver) the how-to BO-4400a-4 reproduces."
+  - agent: architecture-diagram-author
+    contract: "Ordered steps push -> pull request -> clearing request -> verdict -> return, and the removed / refused branches, for BO-4400a-5."
 expects_from:
   ac_id: BO-4300e-2
   contract: "One clearing request that answers without prompting: removed, or refused naming the unsent work."
+package_surface: false
+it_requirements:
+  - >-
+    ROUTE SURFACES: single-ticket build (templates/workflows-js/build-ticket.js and the single-ticket
+    path of build-feature.js), epic build (build-epic.js and the epic path of build-feature.js),
+    quick fix (quick-fix.js), requirements authoring (plan-feature.js), fast lane (fast-lane-ship.js),
+    backlog build (templates/workflows/build-backlog.md). Each route issues the clearing request at
+    its END STATE -- after the pull-request step reports the request open and before the route
+    returns -- never from a per-ticket or per-phase pull-request event (BO-4400a-1-ii).
+  - >-
+    COMPANION WORK (not this agent's surface, split recommended but NOT applied): the backlog build
+    has no .js workflow; its route end lives in templates/workflows/build-backlog.md, command prose
+    owned by llm-expert. BO-4400a is at its five-child cap, so the split is reported to the
+    orchestrator instead of being made. This AC's proof still drives the backlog route by executing
+    the command its prose publishes.
+  - >-
+    ONE DOOR: the clear is the one maker's `remove` verb (templates/scripts/worktree.py per
+    BO-4300a-1; name provisional, not yet on disk). No route deletes a folder, runs `git worktree
+    remove`, `rm -rf`, `shutil.rmtree` or any forced removal by its own means, and no route relies on
+    finalize-feature to clear.
+  - >-
+    E2 CONSTRAINT (ADR-030): workflow bodies have no filesystem or process access. The clearing is
+    exactly one agent() dispatch, carrying a result schema, to an agent whose registry entry has
+    permits_shell: true, instructing it to run one exact absolute `<path printed by worktree.py
+    where> remove --path <workspace>` command unchanged and return stdout verbatim. Never
+    status-checker, never free-form clean-up steps. Workflow edits are made in
+    templates/workflows-js/ and reach .claude/workflows/ only through the build.
+  - >-
+    NO DISCARD AUTHORISATION ON ANY ROUTE PATH: a route never passes the maker's up-front discard
+    authorisation (BO-4300e-3). Per the 2026-10-09 Q8 decision the holds-nothing verdict is the only
+    safety check; a refusal is relayed as work kept, never retried with force.
+  - >-
+    VERDICT PREREQUISITE: the door's classification is BO-4300e-2's -- commits reachable from
+    neither origin/<branch> nor origin/main after a fetch, plus uncommitted and untracked changes --
+    so a pushed, unmerged branch reads holds-nothing. BO-4100c-1's narrower wording must be amended
+    to match before this AC is buildable (see notes); the implementer must not re-derive the verdict
+    inside a route.
+  - >-
+    The route waits for the door's answer with a bounded timeout (configurable, default 120 s); a
+    timeout is reported in the final result as clearing-not-confirmed naming the workspace path,
+    never as removed.
+  - >-
+    Must handle errors per the project error handling policy (CLAUDE.md Rules 1-4): a failed or
+    unparseable door answer is surfaced in the final result, never swallowed and never reported as
+    success.
+  - >-
+    PROOF: every route runs under unit_tests/_workflow_engine_harness.py on the DEPLOYED workflow
+    copy with label-scripted agent replies; the shell-agent stand-in executes the verbatim maker
+    command for real against real temporary git repositories with a real bare hub. Pull-request
+    creation is a recording stand-in (scripted pull-request agent or a fake `gh` on PATH) that
+    records the head branch and the hub's commit list at the moment of creation; no network.
+    Assertions are on the recorded dispatch order, the route's final result and the disk afterwards
+    -- never on workflow source text (CLAUDE.md 'Gate / Workflow ACs -- Verify Behaviorally, Not by
+    Grep').
+  - >-
+    ISOLATION: all projects, hubs, workspaces and HOME / XDG_CACHE_HOME / TMPDIR live under the
+    test's temp directory and git runs with isolated global and system config; the developer's own
+    repository, branches, registered worktrees and caches are unchanged afterwards (BO-4300f-4-i,
+    KI-TQ-012). Tests do not spawn the package's scripts/build.py; deployed copies come from the
+    shared reference layout (CLAUDE.md 'Tests must not spawn their own build.py').
+test_required: true
+test_spec:
+  - name: test_every_route_leaves_no_workspace_folder_after_its_pull_request
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: >-
+      For each of the six routes driven to an open pull request, no folder remains at the workspace
+      location and the maker's list verb no longer reports it.
+    must_catch:
+      - "a route that never calls the door (folder remains)"
+  - name: test_route_result_carries_the_doors_removed_answer
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: seam
+    description: "Each route's final result contains the maker's remove answer for that workspace with status ok and removed_path."
+    must_catch:
+      - "a route that removes the folder by its own means (result lacks the door's answer)"
+  - name: test_clearing_is_ordered_after_pull_request_and_before_return
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: reachability
+    description: >-
+      Recorded dispatch order is push, pull-request stand-in, clearing request, return; the
+      recorded pull request lists every commit the route made.
+    must_catch:
+      - "clearing placed before the push (door refuses, folder remains, or the PR is missing commits)"
+  - name: test_clearing_never_asks_for_confirmation
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: failure
+    description: "With stdin closed and no gate replies scripted, every route completes its clear; no gate or question dispatch is recorded."
+  - name: test_pushed_unmerged_line_reads_as_sent
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: discrimination
+    description: "A workspace whose commits are on origin/<branch> but not on origin/main is removed, not refused."
+    must_catch:
+      - "verdict computed against origin/main only (open PR reads as unsent work)"
+test_rationale: >-
+  The claim is that six different routes reach one door at one moment. Only a real run of each
+  deployed workflow, with the maker executed for real against real repositories, can show the folder
+  is gone, the answer came from the door, and the order was push then PR then clear. A grep of the
+  workflow sources would pass on a clearing step that is defined and never reached -- the
+  fast-lane-build.js failure.
 origin_agent: business-analyst
 created: 2026-10-09
 amended_by: []

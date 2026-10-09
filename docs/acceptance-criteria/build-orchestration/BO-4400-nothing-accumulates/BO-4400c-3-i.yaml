@@ -8,8 +8,8 @@ level: L3
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
-priority: medium
+readiness: approved
+priority: high
 roadmap_phase: phase_1
 change_target: code
 risk_surface: internal
@@ -32,6 +32,33 @@ delivers_to: null
 expects_from:
   ac_id: BO-4400c-1
   contract: "Declaration-driven set-up selection."
+package_surface: false
+it_requirements:
+  - >-
+    Precedence comes from the single table in BO-4400c-1 (uv above Poetry); the ready answer lists
+    every lower-row declaration found in environment.ignored_declarations.
+  - >-
+    PROOF: deployed maker as a separate process; real uv; a recording poetry shim on PATH that
+    fails the test if invoked; local find-links source.
+test_required: true
+test_spec:
+  - name: test_both_lock_files_set_up_with_uv
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "With uv.lock and poetry.lock present, .venv is created by uv and the poetry shim records no invocation."
+    must_catch:
+      - "Poetry checked before uv"
+  - name: test_ready_answer_notes_unused_poetry_lock
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: seam
+    description: "The answer names uv lock file as the declaration and lists Poetry lock file in ignored_declarations."
+test_rationale: >-
+  The precedence is invisible in the result unless the losing tool is observed not running and the
+  answer says what was ignored.
 origin_agent: business-analyst
 created: 2026-10-09
 amended_by: []

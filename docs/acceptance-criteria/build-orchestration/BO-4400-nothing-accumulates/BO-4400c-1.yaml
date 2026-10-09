@@ -8,8 +8,8 @@ level: L2
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
-priority: medium
+readiness: approved
+priority: high
 roadmap_phase: phase_1
 change_target: code
 risk_surface: safety
@@ -43,11 +43,93 @@ doc_links:
 assigned_agent: python-coder
 estimated_complexity: M
 delivers_to:
-  agent: python-coder
-  contract: "Ready answer carries the choosing declaration and the environment location (consumed by BO-4400b-2 and BO-4400e-4)."
+  - agent: python-coder
+    contract: >-
+      The maker's ok (ready) answer gains an `environment` object: {declaration: "uv lock file" |
+      "Poetry lock file" | "requirements-dev.txt" | "requirements.txt" | null, tool: "uv" | "poetry"
+      | "venv" | null, location: absolute path of <workspace>/.venv | null, ignored_declarations:
+      [str], note: str | null}. A missing declared tool is a refusal per the BO-4300c-2 result
+      contract (code provisional, e.g. SETUP_TOOL_MISSING) carrying {tool, declaration} and no
+      workspace_path. Consumed by BO-4400c-1-i/-2/-2-i/-3/-3-i, BO-4400b-2 and BO-4400e-4.
+  - agent: documentation-expert
+    contract: "The declaration-to-set-up precedence table and the missing-tool outcome, reproduced by the reference page BO-4400c-4."
 expects_from:
   ac_id: BO-4300c-1
   contract: "The maker's ready / refusal decision, which set-up now feeds."
+package_surface: false
+it_requirements:
+  - >-
+    SURFACE: the environment set-up step of the one maker's ensure verb (templates/scripts/worktree.py
+    per BO-4300a-1; not yet on disk), run after the install build and before the clean-tree check
+    and canaries. Selection is ONE precedence table, read top-down: uv.lock -> uv; poetry.lock ->
+    Poetry; requirements-dev.txt -> plain venv + pip; requirements.txt -> plain venv + pip; nothing
+    -> no environment. A pyproject.toml without a lock file is not a declaration (assumption,
+    flagged for the user).
+  - >-
+    uv runs as a synchronise from the lock file with the environment pinned to <workspace>/.venv
+    via the per-process environment (UV_PROJECT_ENVIRONMENT), never a user-level setting; the
+    synchronise is frozen to the lock (no re-resolution).
+  - >-
+    The environment folder must never make the workspace read as holding work: .venv is excluded
+    through the workspace's own .git/info/exclude (written by the maker, not committed), so the
+    clean-tree check (BO-4300c-1) and the BO-4100c-1 verdict ignore it. Without this, every
+    equipped workspace reads holds-work and is never cleared.
+  - >-
+    A failed set-up is a clear no per BO-4300c (never a quiet substitute), and a refused ensure
+    leaves no folder, branch or registration (BO-4100a-3-i).
+  - >-
+    The set-up adds no more than 120 s to ensure for the package repository's own declaration on
+    the reference host, and never reads stdin or prompts.
+  - >-
+    Must handle errors per the project error handling policy (CLAUDE.md Rules 1-4): tool
+    invocations are subprocess calls with a specific exception type, a timeout, and the tool's
+    stderr carried into the refusal.
+  - >-
+    PROOF runs the DEPLOYED maker as a separate process against a real temporary project. The
+    pinned package is a tiny wheel built by the fixture and served from a local find-links folder
+    (no network). Real uv is required; CI must install it (if absent the test FAILS with a named
+    reason rather than skipping, so the AC cannot go green unexercised). Temporary HOME /
+    XDG_CACHE_HOME so per-environment folders outside the workspace are observable.
+test_required: true
+test_spec:
+  - name: test_uv_lock_yields_in_workspace_venv_synced_by_uv
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "With uv.lock present, the ready workspace contains .venv created by uv from the lock."
+  - name: test_pinned_package_imports_at_locked_version
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: real_artifact
+    description: "The workspace's .venv Python imports the pinned package and reports exactly the locked version."
+  - name: test_no_per_environment_folder_created_outside_workspace
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: discrimination
+    description: "The Poetry virtualenvs folder and other per-environment folders in the temporary home are unchanged."
+    must_catch:
+      - "environment created in a shared per-user location"
+  - name: test_ready_answer_names_declaration_and_location
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: seam
+    description: "The ready answer's environment object names uv lock file and the absolute .venv path inside the workspace."
+  - name: test_equipped_workspace_still_reads_holds_nothing_and_clears_completely
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: reachability
+    description: "The equipped workspace reads holds-nothing, and after a remove request no environment created for it exists anywhere."
+    must_catch:
+      - ".venv not excluded, so the workspace reads holds-work and is refused"
+test_rationale: >-
+  "The environment lives inside the workspace" is only true if a real synchronise puts it there and
+  a real clear takes it away. A recording stub of uv would pass while the real tool wrote to its
+  default location.
 origin_agent: business-analyst
 created: 2026-10-09
 amended_by: []

@@ -8,8 +8,8 @@ level: L2
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
-priority: medium
+readiness: approved
+priority: high
 roadmap_phase: phase_1
 change_target: docs
 risk_surface: internal
@@ -36,6 +36,15 @@ delivers_to: null
 expects_from:
   ac_id: BO-4400f-1
   contract: "Final scratch rule and location."
+package_surface: false
+it_requirements:
+  - >-
+    New how-to under docs/how-to/ (name chosen by documentation-expert) with the repo's doc
+    frontmatter, registered through the doc-index flow. Code examples use the built scratch
+    module's real entry points (BO-4400f-1) and the test-runner plugin's real behaviour
+    (BO-4400f-2); link the reference page (BO-4400f-4) and
+    docs/how-to/write-a-test-that-catches-the-wrong-version.md.
+test_required: false
 origin_agent: business-analyst
 created: 2026-10-09
 amended_by: []

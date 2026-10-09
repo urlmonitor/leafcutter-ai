@@ -8,8 +8,8 @@ level: L3
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
-priority: medium
+readiness: approved
+priority: high
 roadmap_phase: phase_1
 change_target: code
 risk_surface: safety
@@ -35,6 +35,45 @@ delivers_to: null
 expects_from:
   ac_id: BO-4400f-1
   contract: "Scratch age rule, applied to a location the project does not own."
+package_surface: false
+it_requirements:
+  - >-
+    Third-party leftovers are a declared list (data, beside the durable-path list): for pre-commit,
+    location = PRE_COMMIT_HOME or <user cache dir>/pre-commit, match = top-level regular FILES named
+    patch<digits>[-<digits>] only. Directories (repo* hook environments), db.db and every other
+    entry are never candidates.
+  - >-
+    These items have no run owner, so the unknown-owner branch of classify() applies (age by mtime
+    alone); removals are counted under the sweep's scratch kind.
+  - >-
+    PROOF: temporary PRE_COMMIT_HOME with four real patch files (mtimes 3 days and 1 hour) and two
+    real hook-environment folders with content; deployed sweep as a separate process; hashes of
+    every environment file before and after.
+test_required: true
+test_spec:
+  - name: test_old_pre_commit_stash_files_removed_and_counted
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "The two 3-day-old patch files are removed and counted in the sweep report."
+  - name: test_recent_pre_commit_stash_files_kept
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: boundary
+    description: "The two 1-hour-old patch files exist afterwards."
+  - name: test_pre_commit_hook_environments_untouched
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: discrimination
+    description: "Every hook environment in the cache folder is byte-identical after the sweep."
+    must_catch:
+      - "clearing the whole pre-commit cache"
+test_rationale: >-
+  The danger is over-matching in a folder the project does not own; real environments next to real
+  patch files are what show the matcher touches only the patches.
 origin_agent: business-analyst
 created: 2026-10-09
 amended_by: []

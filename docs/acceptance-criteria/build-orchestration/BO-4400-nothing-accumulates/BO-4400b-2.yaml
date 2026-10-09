@@ -8,8 +8,8 @@ level: L2
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
-priority: medium
+readiness: approved
+priority: high
 roadmap_phase: phase_1
 change_target: code
 risk_surface: safety
@@ -42,6 +42,44 @@ delivers_to: null
 expects_from:
   ac_id: BO-4400b-1
   contract: "Outside-artifact removal driven by one declared inventory."
+package_surface: false
+it_requirements:
+  - >-
+    The deliverable is a reusable footprint recorder (snapshot of top-level entries plus the
+    branch and registration lists, and a diff naming added entries by path) and the end-to-end
+    lifetime test that uses it; the recorder lives with the test helpers under unit_tests/, not in
+    the shipped package.
+  - >-
+    Measured places are redirected into the test's temp directory: HOME, XDG_CACHE_HOME, TMPDIR /
+    TEMP / TMP and the workspace landing folder; the developer's real cache and temp folder are
+    never read or written.
+  - >-
+    The single-ticket route runs under unit_tests/_workflow_engine_harness.py on the deployed
+    workflow with the maker executed for real; the undeclared-artifact variant injects one scripted
+    step that writes one file into the temporary cache folder.
+  - >-
+    Download caches that already existed before the record are allowed to grow inside; any NEW
+    top-level entry counts as a difference (per the record's notes).
+test_required: true
+test_spec:
+  - name: test_full_workspace_lifetime_leaves_no_new_entry
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: real_artifact
+    description: "Before and after records of the five places are identical after make, set up, build, PR and route-end clear."
+  - name: test_undeclared_cache_write_is_the_only_difference_and_is_named
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: discrimination
+    description: "With one injected undeclared cache write, the comparison differs by exactly that file and names it by path."
+    must_catch:
+      - "a comparison hard-wired to report nothing new"
+test_rationale: >-
+  A declared list proves only what it declares. Before/after measurement of the real places, plus
+  one deliberately undeclared write, is what shows the inventory is complete and the comparison
+  can see.
 origin_agent: business-analyst
 created: 2026-10-09
 amended_by: []

@@ -8,8 +8,8 @@ level: L2
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
-priority: medium
+readiness: approved
+priority: high
 roadmap_phase: phase_1
 change_target: docs
 risk_surface: internal
@@ -43,6 +43,21 @@ delivers_to: null
 expects_from:
   ac_id: BO-4400a-1
   contract: "Final route-end behaviour to describe."
+package_surface: false
+it_requirements:
+  - >-
+    New how-to under docs/how-to/ (file name chosen by documentation-expert, e.g.
+    workspace-clearing.md) with the repo's doc frontmatter; registered through the doc-index flow,
+    never by hand-editing docs/INDEX.md.
+  - >-
+    The route table is taken from the built behaviour delivered by BO-4400a-1 (six routes, their
+    end states incl. nothing-to-deliver); cross-link docs/how-to/finalize-feature.md and
+    docs/how-to/fast-lane-build.md, and update them where they still describe finalize as the
+    cleanup point.
+  - >-
+    Commands are shown as the one maker's remove verb exactly as the built maker accepts it; no
+    forced removal or folder deletion appears anywhere on the page.
+test_required: false
 origin_agent: business-analyst
 created: 2026-10-09
 amended_by: []

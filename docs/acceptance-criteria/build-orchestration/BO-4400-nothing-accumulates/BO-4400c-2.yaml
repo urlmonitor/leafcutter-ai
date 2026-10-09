@@ -8,8 +8,8 @@ level: L2
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
-priority: medium
+readiness: approved
+priority: high
 roadmap_phase: phase_1
 change_target: code
 risk_surface: safety
@@ -34,6 +34,46 @@ delivers_to: null
 expects_from:
   ac_id: BO-4400c-1
   contract: "Declaration-driven set-up selection and ready-answer fields."
+package_surface: false
+it_requirements:
+  - >-
+    Poetry runs only when poetry.lock is present (row 2 of BO-4400c-1's precedence table) and is
+    pinned in-project for this one process via the environment (POETRY_VIRTUALENVS_IN_PROJECT=true,
+    plus POETRY_VIRTUALENVS_CREATE=true), so the environment lands in <workspace>/.venv. No user
+    config, no project poetry.toml written into the main copy.
+  - >-
+    Install is from the lock without re-locking; .venv is excluded via the workspace's
+    .git/info/exclude as in BO-4400c-1.
+  - >-
+    PROOF: deployed maker as a separate process, real Poetry with a local find-links / file source
+    (no network); CI must install Poetry, and absence FAILS with a named reason rather than
+    skipping. Temporary HOME / XDG_CACHE_HOME / POETRY config dir so the shared virtualenvs folder
+    is observable.
+test_required: true
+test_spec:
+  - name: test_poetry_lock_yields_in_workspace_venv
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "With poetry.lock and no uv.lock, the ready workspace has .venv at its root installed by Poetry."
+  - name: test_poetry_shared_virtualenvs_folder_unchanged
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: discrimination
+    description: "The Poetry virtualenvs folder in the temporary home has the same entries before and after."
+    must_catch:
+      - "trusting Poetry's default environment location"
+  - name: test_ready_answer_names_poetry_lock_and_location
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: seam
+    description: "The ready answer's environment object names Poetry lock file and the .venv path inside the workspace."
+test_rationale: >-
+  Poetry's default puts environments in the shared folder that is today's measured pile-up, so only
+  a real Poetry run observed against a temporary home proves the override works.
 origin_agent: business-analyst
 created: 2026-10-09
 amended_by: []

@@ -8,8 +8,8 @@ level: L3
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
-priority: medium
+readiness: approved
+priority: high
 roadmap_phase: phase_1
 change_target: pipeline
 risk_surface: safety
@@ -37,6 +37,42 @@ delivers_to: null
 expects_from:
   ac_id: BO-4400a-2
   contract: "Halt-path handling that keeps work and names it."
+package_surface: false
+it_requirements:
+  - >-
+    quick-fix.js issues the route-end clearing request after a post-pull-request step fails, using
+    BO-4400a-1's shared step; the final result reports status failed, names the failing step, and
+    carries the door's answer (removed, or UNSENT_WORK relayed as kept work).
+  - >-
+    The run's failure status is never overwritten by a successful clear, and a refused clear never
+    turns the run's failure into a second, different error.
+  - >-
+    PROOF: deployed quick-fix workflow under unit_tests/_workflow_engine_harness.py; the failing
+    post-PR step is a scripted reply (one variant with no file change, one that makes a real commit
+    in the workspace and then fails); maker executed for real. Isolation and no-build.py rules as
+    BO-4400a-1.
+test_required: true
+test_spec:
+  - name: test_post_pr_failure_with_nothing_unsent_clears_and_reports_failure
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: discrimination
+    description: "No folder remains; the result is failed, names the failing step and contains the door's removed answer."
+    must_catch:
+      - "only clear on success (workspace left behind holding nothing)"
+  - name: test_post_pr_failure_with_new_unpushed_commit_keeps_workspace
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: discrimination
+    description: "The workspace still exists and the result names the one new commit as kept."
+    must_catch:
+      - "clear on any post-PR failure without consulting the verdict"
+test_rationale: >-
+  The rule is that clearing follows the verdict, not the success flag. Two scripted failures that
+  differ only in whether a commit was left unsent are the minimal pair that separates the two
+  plausible wrong versions.
 origin_agent: business-analyst
 created: 2026-10-09
 amended_by: []

@@ -8,8 +8,8 @@ level: L3
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
-priority: medium
+readiness: approved
+priority: high
 roadmap_phase: phase_1
 change_target: code
 risk_surface: safety
@@ -31,6 +31,39 @@ delivers_to: null
 expects_from:
   ac_id: BO-4400e-1
   contract: "Free-space check."
+package_surface: false
+it_requirements:
+  - >-
+    A measurement failure (OSError from the disk-usage probe, an unreachable drive, a host-drive
+    locator that times out) is caught with a specific exception type and logged at WARNING; the
+    ensure proceeds and the ready answer carries a warning of kind space_unmeasured naming the drive
+    -- distinct from the low-space warning kind (space_low). Never treated as enough space without
+    saying so.
+  - >-
+    Any external probe used to measure a drive is bounded by a timeout (default 5 s) so an
+    unreachable mount cannot stall ensure.
+  - >-
+    PROOF: deployed maker as a separate process with the measurement seam set to fail for one
+    drive; assertions on the ready answer's warnings list.
+test_required: true
+test_spec:
+  - name: test_unmeasurable_drive_yields_ready_answer_with_named_warning
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: failure
+    description: "The answer is ready and carries a warning naming the drive and stating the check was not completed for it."
+    must_catch:
+      - "measurement failure treated as enough space with no warning"
+  - name: test_unmeasured_warning_kind_differs_from_low_space_warning
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: seam
+    description: "The warning's kind is space_unmeasured, not space_low."
+test_rationale: >-
+  The silent wrong version (treat unmeasurable as fine) produces the same ready answer, so the proof
+  must assert the warning and its kind.
 origin_agent: business-analyst
 created: 2026-10-09
 amended_by: []

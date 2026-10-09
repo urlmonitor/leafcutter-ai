@@ -8,8 +8,8 @@ level: L2
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
-priority: medium
+readiness: approved
+priority: high
 roadmap_phase: phase_1
 change_target: code
 risk_surface: safety
@@ -35,12 +35,92 @@ doc_links:
   - path: docs/how-to/creating-a-claude-code-hook.md
     relationship: describes
     status: exists
+  - path: docs/reference/claude-code-hooks.md
+    relationship: describes
+    status: exists
+  - path: docs/reference/skills-config-fields.md
+    relationship: describes
+    status: exists
+    relevance: The worktree_cleanup config section where the interval key belongs.
 assigned_agent: python-coder
 estimated_complexity: M
 delivers_to: null
 expects_from:
   ac_id: BO-4400d-2
   contract: "Sweep entry point and its report."
+package_surface: false
+it_requirements:
+  - >-
+    SURFACE: a new Claude Code SessionStart hook script under templates/hooks/, registered in the
+    SessionStart section of templates/settings.json (none exists today), both reaching the install
+    only through the build; the hook script gets a named deploy entry if the hooks phase does not
+    already pick it up, verified by running the DEPLOYED hook.
+  - >-
+    NON-BLOCKING: the hook only decides and spawns. It starts the real sweep as a detached
+    background process and returns within 2 s; it never waits for the sweep.
+  - >-
+    RATE LIMIT + MUTUAL EXCLUSION: the last-sweep time and a sweep lock live in one durable state
+    file; the lock is taken atomically (exclusive create) so two simultaneous session starts yield
+    exactly one sweep; a stale lock from a dead sweep is recognised by process liveness and
+    reclaimed. The interval is read from config -- worktree_cleanup.sweep_interval_hours in
+    config/skills_config.default.json (default 24) with its schema entry in
+    config/skills_config.schema.json -- never hard-coded.
+  - >-
+    DURABLE LOG: the full report is appended to a durable log under debugging/logs/ (e.g.
+    workspace_sweep.jsonl), never under the scratch location or the system temp folder.
+  - >-
+    SUMMARY TIMING (see caveat): the sweep finishes after the session is ready, so the one-line
+    summary is surfaced once at the next opportunity from the durable log (e.g. a
+    UserPromptSubmit hook or the next SessionStart), and the not-due branch prints when the next
+    sweep is due.
+  - >-
+    A hook failure never blocks the session: the hook exits 0 on its own internal error, logging
+    the error to stderr and the durable log (fail-open on internal error only; the sweep's own
+    safety rules are unchanged).
+  - >-
+    PROOF: run the DEPLOYED hook script as a separate process with a SessionStart payload on stdin,
+    in a temporary installed project; assert its return time, the spawned sweep's effect on a real
+    holds-nothing workspace, the durable log line, the second-start not-due output, and exactly one
+    sweep for two concurrent starts (two processes released by a barrier). No build.py spawn.
+test_required: true
+test_spec:
+  - name: test_session_start_launches_a_real_sweep_when_due
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: reachability
+    description: "With no sweep in the last 24 hours, the deployed hook starts a sweep and the holds-nothing workspace is gone once it finishes."
+  - name: test_session_start_returns_before_sweep_finishes
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: failure
+    description: "The hook process exits within 2 s while the sweep is still running."
+    must_catch:
+      - "hook runs the sweep in the foreground"
+  - name: test_sweep_report_written_to_durable_log_and_summary_surfaced
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: seam
+    description: "The durable log holds the report and the one-line summary (items cleared, bytes freed) is emitted to the session."
+  - name: test_second_start_within_interval_runs_no_sweep_and_states_next_due
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: boundary
+    description: "A start 10 minutes later spawns no sweep and prints when the next sweep is due."
+  - name: test_two_simultaneous_starts_run_exactly_one_sweep
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: discrimination
+    description: "Two hook processes released together produce exactly one sweep run."
+    must_catch:
+      - "check-then-write interval file without an atomic lock"
+test_rationale: >-
+  A session hook is only proven by running the deployed hook the way Claude Code runs it; timing,
+  concurrency and the background hand-off cannot be observed from source.
 origin_agent: business-analyst
 created: 2026-10-09
 amended_by: []

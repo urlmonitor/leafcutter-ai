@@ -8,8 +8,8 @@ level: L3
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
-priority: medium
+readiness: approved
+priority: high
 roadmap_phase: phase_1
 change_target: code
 risk_surface: safety
@@ -36,6 +36,48 @@ delivers_to: null
 expects_from:
   ac_id: BO-4400b-1
   contract: "Per-item removal list."
+package_surface: false
+it_requirements:
+  - >-
+    A failed item removal is caught with a specific exception type, logged at WARNING, and reported
+    in not_removed {kind, location, reason, bytes}; the answer status is PARTIAL (distinct from ok
+    in both the JSON status and the exit code) and bytes_freed_total excludes the remaining bytes.
+  - >-
+    The folder, branch and registration are still removed when an outside item fails; removal of
+    each item is independent and the remove verb never stops at the first failure.
+  - >-
+    The leftover item stays discoverable without its workspace: the inventory's orphan finder
+    (delivered by BO-4400b-1) reports it, and a later remove or the BO-4400d sweep removes it once
+    it becomes removable.
+  - >-
+    TEST FIXTURE NOTE: on POSIX a read-only file inside a writable directory is still deletable, so
+    the fixture makes the item's containing directory non-writable (and restores it in teardown);
+    the test is skipped with an explicit reason when running as root, never silently passed.
+test_required: true
+test_spec:
+  - name: test_unremovable_environment_yields_partial_answer_naming_it
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: failure
+    description: "Folder, branch and registration are gone; the answer is PARTIAL and names the environment's location and the reason."
+    must_catch:
+      - "removal error swallowed and the answer reports success"
+  - name: test_unremoved_bytes_excluded_from_total_freed
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: boundary
+    description: "bytes_freed_total equals what was actually removed and excludes the remaining environment's bytes."
+  - name: test_orphaned_environment_removed_by_later_request
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: reachability
+    description: "After the directory is made writable again, a later clearing request or sweep removes the orphaned environment."
+test_rationale: >-
+  A swallowed removal error is invisible to every success-path test. Only a real unremovable item
+  shows the answer stays honest and the leftover stays reachable.
 origin_agent: business-analyst
 created: 2026-10-09
 amended_by: []

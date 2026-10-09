@@ -8,8 +8,8 @@ level: L2
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
-priority: medium
+readiness: approved
+priority: high
 roadmap_phase: phase_1
 change_target: docs
 risk_surface: internal
@@ -36,6 +36,16 @@ delivers_to: null
 expects_from:
   ac_id: BO-4400d-1
   contract: "Final sweep structure."
+package_surface: false
+it_requirements:
+  - >-
+    C4 component diagram under docs/architecture/diagrams/; the id is allocated with
+    scripts/next_diagram_seq.py immediately before publishing (CLAUDE.md 'Sequential Resource Paths
+    Go Stale'). Linked from docs/architecture/components/worktree-manager.md.
+  - >-
+    Component and connector names match the built sweep (BO-4400d-1) and its config key; the only
+    edge to workspace deletion goes through the one maker's remove verb.
+test_required: false
 origin_agent: business-analyst
 created: 2026-10-09
 amended_by: []

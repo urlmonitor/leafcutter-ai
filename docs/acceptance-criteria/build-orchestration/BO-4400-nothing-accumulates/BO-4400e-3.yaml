@@ -8,8 +8,8 @@ level: L2
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
-priority: medium
+readiness: approved
+priority: high
 roadmap_phase: phase_1
 change_target: code
 risk_surface: safety
@@ -36,6 +36,47 @@ delivers_to: null
 expects_from:
   ac_id: BO-4400e-1
   contract: "Free-space check entry point."
+package_surface: false
+it_requirements:
+  - >-
+    WSL detection from the kernel release / WSL environment markers; on WSL the check also measures
+    the Windows drive that holds the distro's virtual disk and the LOWER free figure decides; the
+    answer names both volumes and their free space.
+  - >-
+    Locating the host drive is a bounded probe (Windows interop query of the distro's base path,
+    then the free space of that drive through its /mnt/<letter> mount), timeout default 5 s; a
+    failure falls under BO-4400e-1-i (warn, name the drive, proceed).
+  - >-
+    The WSL detector and host-drive locator are reachable through the same documented test seam as
+    BO-4400e-1 so the behaviour is testable on non-WSL CI; the real probe is additionally exercised
+    once on a WSL host as a behavioural spot-check before the AC is marked done.
+  - >-
+    On a non-WSL machine no interop call is attempted and no Windows drive appears in the answer.
+test_required: true
+test_spec:
+  - name: test_wsl_low_host_drive_refuses_naming_host_drive_and_linux_volume
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "Linux 200 GB free and host drive 2 GB free yields a refusal naming the Windows drive's 2 GB and stating the Linux 200 GB."
+    must_catch:
+      - "only the Linux volume measured under WSL"
+  - name: test_wsl_ample_host_drive_yields_ready_without_warning
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: boundary
+    description: "With the host drive at 50 GB free, the answer is ready with no space warning."
+  - name: test_non_wsl_machine_measures_only_landing_volume
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: discrimination
+    description: "Off WSL only the landing volume is measured and no Windows drive is named."
+test_rationale: >-
+  The Linux figure alone is the blind spot; only a case where it disagrees with the host drive shows
+  the lower figure decides.
 origin_agent: business-analyst
 created: 2026-10-09
 amended_by: []

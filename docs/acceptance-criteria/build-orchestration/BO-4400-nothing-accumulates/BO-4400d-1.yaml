@@ -8,8 +8,8 @@ level: L2
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
-priority: medium
+readiness: approved
+priority: high
 roadmap_phase: phase_1
 change_target: code
 risk_surface: safety
@@ -56,11 +56,87 @@ doc_links:
 assigned_agent: python-coder
 estimated_complexity: L
 delivers_to:
-  agent: python-coder
-  contract: "Sweep result: per-item outcome (removed / kept with reason) with kind, location and bytes; consumed by BO-4400d-2's report."
+  - agent: python-coder
+    contract: >-
+      Sweep entry point and selection result: one JSON object {status: "ok" | "partial", mode:
+      "preview" | "real", removed: [{kind: "workspace" | "scratch" | "outside", location: absolute
+      path, bytes: int}], kept: [{kind, location, reason: "holds_unsent_work" | "no_verdict" |
+      "in_use" | "not_expired"}], failed: [{kind, location, reason: str, bytes: int}]}. Consumed by
+      the report (BO-4400d-2), the session-start trigger (BO-4400d-3) and BO-4400f-1-i/-1-ii/-3-i.
+  - agent: architecture-diagram-author
+    contract: "The sweep's component boundary and the capabilities it calls (listing, verdict, in-use check, the one door, outside-item inventory, scratch rule) for BO-4400d-5."
 expects_from:
   ac_id: BO-4400f-1
   contract: "The scratch age and ownership rule deciding which scratch items are expired."
+package_surface: false
+it_requirements:
+  - >-
+    SURFACE: a new sweep, delivered either as a verb of the one maker or as a sibling stdlib-only
+    script under templates/scripts/ deployed beside it by a named deploy-manifest entry
+    (scripts/build_phases_script_deploy.py and scripts/build_deploy_manifest_helpers.py). It is
+    distinct from scripts/worktree/sweep_processes.py (orphan processes) and must not be merged
+    into it.
+  - >-
+    The sweep DECIDES NOTHING ITSELF: the workspace set comes from the maker's list / BO-4100e
+    discovery (incl. unregistered leftovers), the verdict from BO-4100c-1 (no verdict -> kept,
+    BO-4100c-3), in-use from the BO-1800d signal, expiry from the BO-4400f-1 rule, orphaned
+    outside items from BO-4400b-1's inventory. Every workspace removal is a request to the one
+    door (remove verb); the sweep never deletes a workspace folder directly.
+  - >-
+    Never prompts, never reads stdin, never passes discard authorisation.
+  - >-
+    The sweep's remove requests go through the door's own verdict check at the moment of removal;
+    the in-use check is repeated immediately before each removal (BO-4400d-1-i).
+  - >-
+    PREREQUISITE: BO-4300c-1-iii (a build restores the tracked files it changes). Without it every
+    finished workspace reads holds-work and the sweep reclaims nothing; the sweep must not work
+    around this by loosening the verdict.
+  - >-
+    Must handle errors per the project error handling policy (CLAUDE.md Rules 1-4); one item's
+    failure never aborts the sweep (BO-4400d-2-i).
+  - >-
+    PROOF runs the DEPLOYED sweep as a separate process against real temporary repositories with a
+    real bare hub, seven real workspaces in the listed states, a real scratch location with five
+    labelled items (ages set via the label's created time and file mtimes), a real orphaned
+    environment folder in a temporary HOME, and a real running process holding active-1's in-use
+    signal. Byte-identity by hashing every file before and after. No mock of git, no import of the
+    sweep module, no build.py spawn.
+test_required: true
+test_spec:
+  - name: test_sweep_removes_finished_leftovers_expired_scratch_and_orphan
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "idle-1, idle-2, leftover-1, the three expired scratch items and the orphaned environment are gone after the sweep."
+  - name: test_sweep_keeps_unsent_dirty_noverdict_active_and_unexpired_byte_identical
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: discrimination
+    description: "unsent-1, dirty-1, noverdict-1, active-1 and the two unexpired scratch items are byte-identical after the sweep."
+    must_catch:
+      - "sweep selects by age or registration alone, ignoring the verdict"
+      - "no-verdict treated as holds-nothing"
+      - "in-use check skipped"
+  - name: test_sweep_removes_workspaces_only_through_the_door
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: seam
+    description: "Every removed workspace appears with the door's removed answer in the sweep result."
+    must_catch:
+      - "sweep deletes workspace folders directly"
+  - name: test_sweep_asks_nobody_anything
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: failure
+    description: "With stdin closed and a timeout, the sweep completes."
+test_rationale: >-
+  The sweep's whole promise is its selection, and every one of the twelve items is a distinct case.
+  Only real repositories in real states, swept by the deployed script, show that each case lands on
+  the right side.
 origin_agent: business-analyst
 created: 2026-10-09
 amended_by: []
