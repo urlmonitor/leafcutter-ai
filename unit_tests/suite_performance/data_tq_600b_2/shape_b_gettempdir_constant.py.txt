@@ -1,0 +1,9 @@
+"""Offender shape 2: gettempdir() joined with a constant name."""
+import os
+import tempfile
+
+
+def test_writes_under_gettempdir_with_constant_name():
+    path = os.path.join(tempfile.gettempdir(), "leaf_fixed_shape_b.txt")
+    with open(path, "w") as handle:
+        handle.write("scratch")
