@@ -1,0 +1,60 @@
+# Post-merge hold -- the required check `Post-merge suite status` (TQ-600a-13-vi).
+#
+# A pull request to main is held while the latest settled run of post-merge-suite.yml on
+# main is not green. The verdict comes from the run history, read fresh on every
+# evaluation; the post-merge-red issue is a notice for people and never the gate.
+#
+# TRUST MODEL. `pull_request_target` runs THIS FILE FROM THE DEFAULT BRANCH, and the
+# checkout below has no `ref`, so it fetches the default branch too: a pull request that
+# edits the hold or its module cannot change its own verdict. The job holds write tokens
+# on pull requests from forks, so it must never check out, install, build or execute
+# anything from the pull request, and no `${{ }}` expression carrying pull-request text
+# may appear in a run: line (the only pull-request value used anywhere is the number, as
+# a concurrency key, which is safe there). Nothing here reads the event payload.
+#
+# SHAPE. Exactly one job, named exactly `Post-merge suite status`, with no `if`, no
+# `needs`, no matrix and no path filter: a skipped job reports success on a required
+# check, and a filtered workflow leaves the check pending forever.
+#
+# PERMISSIONS. `issues: write` (TQ-600a-13-viii records an exemption on the notice) and
+# `pull-requests: write` (TQ-600a-13-vii's comment) are fixed by the AC's contract for
+# this job; the verdict step itself only reads. After 2026-11-02 GitHub blocks
+# `pull_request_target` here unless an Actions event policy allows it (TQ-600a-13-x), so
+# this check stays advisory until then.
+
+name: Post-merge hold
+
+"on":
+  pull_request_target:
+    types: [opened, reopened, synchronize, edited]
+    branches: [main]
+
+permissions: {}
+
+jobs:
+  hold:
+    name: Post-merge suite status
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      actions: read
+      issues: write
+      pull-requests: write
+    concurrency:
+      group: post-merge-hold-${{ github.event.pull_request.number }}
+      cancel-in-progress: true
+    steps:
+      # The DEFAULT branch's scripts/ci only (it carries the tunables file too).
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: scripts/ci
+          persist-credentials: false
+          fetch-depth: 1
+
+      - name: Evaluate the post-merge suite status
+        env:
+          GITHUB_API_URL: ${{ github.api_url }}
+          GITHUB_TOKEN: ${{ github.token }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: python3 scripts/ci/post_merge_hold.py

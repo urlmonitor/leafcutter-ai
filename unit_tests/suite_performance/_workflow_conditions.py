@@ -24,6 +24,9 @@ _GITHUB_KEYS = {
     "event_name": "GITHUB_EVENT_NAME",
     "run_id": "GITHUB_RUN_ID",
     "repository": "GITHUB_REPOSITORY",
+    "api_url": "GITHUB_API_URL",  # TQ-600a-13-vi: the hold job reads these three from env, never from event text
+    "token": "GITHUB_TOKEN",
+    "event_path": "GITHUB_EVENT_PATH",
 }
 
 
