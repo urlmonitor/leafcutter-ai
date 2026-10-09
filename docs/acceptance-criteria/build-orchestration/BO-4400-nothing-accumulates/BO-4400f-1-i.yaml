@@ -1,0 +1,42 @@
+id: BO-4400f-1-i
+title: "Scratch owned by a run that is still going is never expired, however old it is"
+component: build-orchestration
+components:
+  - build_orchestration
+  - testing_quality
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+change_target: code
+risk_surface: safety
+criteria: |
+  Given the scratch age limit is 24 hours, and a run that started 30 hours ago and is
+    still active owns a scratch item created 29 hours ago,
+  When the scratch age and ownership rule is applied, and when the sweep runs,
+  Then the item is not expired and is byte-identical afterwards,
+  And when that run then ends, the next application of the rule finds the item
+    expired.
+depends_on: [BO-4400f-1, BO-4400d-1]
+doc_links:
+  - path: docs/acceptance-criteria/build-orchestration/BO-1800-isolated-parallel-delivery/BO-1800d.yaml
+    relationship: constrains
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: BO-4400f-1
+  contract: "Scratch age and ownership rule."
+origin_agent: business-analyst
+created: 2026-10-09
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Long epic drives run longer than any reasonable age limit. Named wrong version: age-only
+  expiry -- an active drive's scratch is deleted mid-run. Turns only this record red.

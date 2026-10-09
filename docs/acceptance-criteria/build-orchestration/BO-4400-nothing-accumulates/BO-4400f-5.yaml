@@ -1,0 +1,46 @@
+id: BO-4400f-5
+title: "How-to: writing scratch from an agent, script or test so it is cleaned up automatically"
+component: build-orchestration
+components:
+  - build_orchestration
+  - testing_quality
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+change_target: docs
+risk_surface: internal
+criteria: |
+  Given scratch handling (BO-4400f-1, BO-4400f-2, BO-4400f-3) is in place,
+  When an author of a new agent, script or test reads the how-to guide for scratch,
+  Then the guide shows, for a script and for a test, how to obtain a scratch location
+    inside the one designated scratch location that carries its owner label,
+  And the guide shows how to write a log so that it is durable and is not mistaken for
+    scratch,
+  And the guide states what happens to the scratch when the run ends, halts, or
+    a test fails,
+  And the guide states that writing scratch to the system temporary folder, the project
+    root or a durable log folder is not permitted, and names the check that stops a
+    test run whose scratch base points at a durable folder.
+depends_on: [BO-4400f, BO-4400f-1, BO-4400f-2, BO-4400f-3]
+doc_links:
+  - path: docs/how-to/write-a-test-that-catches-the-wrong-version.md
+    relationship: related
+    status: exists
+assigned_agent: documentation-expert
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: BO-4400f-1
+  contract: "Final scratch rule and location."
+origin_agent: business-analyst
+created: 2026-10-09
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Satisfies BO-4400f documentation_triggers: how-to.

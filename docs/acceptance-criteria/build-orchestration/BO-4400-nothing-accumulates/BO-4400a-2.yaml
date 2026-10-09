@@ -1,0 +1,63 @@
+id: BO-4400a-2
+title: "A run that stops or fails keeps its workspace, names it, and leaves it reclaimable once nothing is unsent"
+component: build-orchestration
+components:
+  - build_orchestration
+  - worktree_manager
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+change_target: pipeline
+risk_surface: safety
+declares_side_effect: true
+criteria: |
+  Given the build of a single ticket halts after making two commits in its workspace
+    and leaving one changed file uncommitted, before anything is pushed,
+  When the run returns its final result,
+  Then the workspace still exists with both commits and the changed file
+    byte-identical to their state at the halt,
+  And the run's final result names the workspace's location, the two commits by
+    identifier and the changed file by path, as work that was kept,
+  And the live set lists the workspace with the holds-work verdict,
+  And when the two commits and the changed file are afterwards committed and pushed to
+    the workspace's own line on the shared project by hand, the next listing shows the
+    workspace with the holds-nothing verdict,
+  And a clearing request made through the one shared clearing door then removes it,
+    without any authorisation to lose work being given.
+depends_on: [BO-4400a, BO-4400a-1, BO-4100c-1, BO-4100e]
+doc_links:
+  - path: docs/acceptance-criteria/ac-driven-dev/ACD-2100-entry-point-unblocked/ACD-2100c-5.yaml
+    relationship: constrains
+    status: exists
+    relevance: Work is thrown away only when the person chooses to; a halted run keeps it.
+  - path: docs/acceptance-criteria/build-orchestration/BO-4100-sound-workspace-by-construction/BO-4100e.yaml
+    relationship: related
+    status: exists
+    relevance: The complete listing in which a kept workspace must appear.
+  - path: docs/acceptance-criteria/build-orchestration/BO-4300-one-way-workspaces/BO-4300e-2.yaml
+    relationship: constrains
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to: null
+expects_from:
+  ac_id: BO-4100c-1
+  contract: "Holds-work / holds-nothing verdict per listed workspace."
+origin_agent: business-analyst
+created: 2026-10-09
+amended_by: []
+superseded_by: null
+covered_by: [BO-4400a-2-i]
+implemented_by: []
+notes: |
+  Gap G1, halted/failed half. "Reclaimable" means the ordinary door clears it once the
+  verdict flips -- no special recovery path. The recurring sweep (BO-4400d-1) is what
+  reclaims it unattended; this record only requires that nothing about having halted makes
+  it un-clearable later (no lingering lock, no special marker that the door refuses).
+  Named wrong version: the route clears unconditionally at the end -- the halted run's
+  commits are lost (door refusal prevents that only if the route uses the door; a route
+  that deletes the folder itself goes red here).

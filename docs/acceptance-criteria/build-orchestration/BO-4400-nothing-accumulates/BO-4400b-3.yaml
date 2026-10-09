@@ -1,0 +1,47 @@
+id: BO-4400b-3
+title: "Reference: everything a workspace creates outside its folder, and how each is reclaimed"
+component: build-orchestration
+components:
+  - build_orchestration
+  - worktree_manager
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+change_target: docs
+risk_surface: internal
+criteria: |
+  Given outside-item clearing (BO-4400b-1, BO-4400b-1-i, BO-4400b-1-ii) is in place,
+  When a person reads the reference page for a workspace's footprint,
+  Then the page contains one table row for every item kind the clearing removes, and
+    each row gives the item's kind, where it lives, what creates it, how it is matched
+    to its own workspace, and how it is reclaimed,
+  And the number of rows equals the number of item kinds in the declared inventory the
+    clearing uses,
+  And the page states what happens when an item cannot be removed, and that a later
+    clearing or sweep picks it up,
+  And the page states that the shared project's copy of a line of work is never
+    deleted by clearing.
+depends_on: [BO-4400b, BO-4400b-1, BO-4400b-1-ii]
+doc_links:
+  - path: docs/architecture/components/worktree-manager.md
+    relationship: describes
+    status: exists
+assigned_agent: documentation-expert
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: BO-4400b-1
+  contract: "The declared inventory of outside item kinds."
+origin_agent: business-analyst
+created: 2026-10-09
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Satisfies BO-4400b documentation_triggers: reference-doc. The row-count clause ties the page
+  to the inventory so the page goes stale visibly when a kind is added.

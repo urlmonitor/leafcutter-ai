@@ -1,0 +1,46 @@
+id: BO-4400c-4
+title: "Reference: which project declaration selects which workspace set-up, and where the environment lives"
+component: build-orchestration
+components:
+  - build_orchestration
+  - worktree_manager
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+change_target: docs
+risk_surface: internal
+criteria: |
+  Given declaration-driven set-up (BO-4400c-1, BO-4400c-2, BO-4400c-3, BO-4400c-3-i) is
+    in place,
+  When a person reads the reference page for workspace environment set-up,
+  Then the page contains a table with one row per declaration the maker recognises,
+    giving the declaration file, the tool used, the environment's location inside the
+    workspace, and the precedence order when more than one is present,
+  And the page states the outcome when a declared tool is missing on the machine: a
+    refusal naming the tool, with no fallback,
+  And the page states that a user-wide setting placing environments elsewhere is
+    overridden for the workspace only and is never changed,
+  And the page states that no environment is ever placed in a shared location.
+depends_on: [BO-4400c, BO-4400c-1, BO-4400c-2, BO-4400c-3]
+doc_links:
+  - path: docs/architecture/components/worktree-manager.md
+    relationship: describes
+    status: exists
+assigned_agent: documentation-expert
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: BO-4400c-1
+  contract: "Final set-up selection rules."
+origin_agent: business-analyst
+created: 2026-10-09
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Satisfies BO-4400c documentation_triggers: reference-doc.

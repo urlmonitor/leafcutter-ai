@@ -1,0 +1,47 @@
+id: BO-4400e-2
+title: "Below the warning level the workspace is still made, and the answer warns how close the disk is"
+component: build-orchestration
+components:
+  - build_orchestration
+  - worktree_manager
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+change_target: code
+risk_surface: safety
+criteria: |
+  Given the refusal limit is set to 5 GB and the warning level to 20 GB,
+  When a workspace is requested with 12 GB free on the volume where workspaces are
+    created,
+  Then the answer is ready and carries a warning stating the free space (12 GB), the
+    warning level (20 GB) and the space existing workspaces occupy,
+  And the route that asked shows that warning in its own result,
+  And when a workspace is requested with 25 GB free, the answer is ready with no
+    space warning,
+  And when the configured refusal limit is set higher than the warning level, every
+    workspace request is answered with a refusal that names the two settings as
+    contradictory, and no workspace is made.
+depends_on: [BO-4400e, BO-4400e-1]
+doc_links:
+  - path: docs/acceptance-criteria/build-orchestration/BO-4400-nothing-accumulates/BO-4400e.yaml
+    relationship: constrains
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: BO-4400e-1
+  contract: "Free-space check and configured thresholds."
+origin_agent: business-analyst
+created: 2026-10-09
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Gap G5 (warn half). The contradictory-settings clause stops an inverted configuration from
+  silently disabling the warning band.

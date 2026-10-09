@@ -1,0 +1,55 @@
+id: BO-4400d-3
+title: "The sweep starts on its own at session start, at most once per interval, and never holds the session up"
+component: build-orchestration
+components:
+  - build_orchestration
+  - worktree_manager
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+change_target: code
+risk_surface: safety
+declares_side_effect: true
+criteria: |
+  Given an installed project with the sweep interval set to 24 hours and no sweep
+    recorded in the last 24 hours, and one workspace holding nothing unsent,
+  When a working session starts in that project,
+  Then a real sweep is started without anyone asking for it, and the workspace is gone
+    once it finishes,
+  And the session is ready for input before the sweep finishes,
+  And the sweep's report is written to a durable log location and its one-line summary
+    (items cleared, bytes freed) is shown in the session,
+  And when a second session starts 10 minutes later, no second sweep is started and
+    the session states when the next sweep is due,
+  And when two sessions start at the same moment, exactly one sweep runs.
+depends_on: [BO-4400d, BO-4400d-2]
+doc_links:
+  - path: docs/acceptance-criteria/build-orchestration/BO-4400-nothing-accumulates/BO-4400d.yaml
+    relationship: constrains
+    status: exists
+    relevance: Trigger is session start or a schedule; the BA chose session start with a minimum interval.
+  - path: docs/how-to/creating-a-claude-code-hook.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to: null
+expects_from:
+  ac_id: BO-4400d-2
+  contract: "Sweep entry point and its report."
+origin_agent: business-analyst
+created: 2026-10-09
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Trigger choice (BO-4400d notes leave it to BA/IT PO): session start, rate-limited by a
+  configurable interval, because a schedule needs a machine-level timer the package cannot
+  install portably (Windows / WSL / macOS differ), while a session start exists in every
+  install. The interval stops a burst of sessions (parallel agents, restarts) from sweeping
+  repeatedly. Logged as an assumption.

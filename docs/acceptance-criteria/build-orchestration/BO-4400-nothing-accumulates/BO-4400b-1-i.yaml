@@ -1,0 +1,48 @@
+id: BO-4400b-1-i
+title: "Clearing one workspace never removes what belongs to another workspace or to the main copy"
+component: build-orchestration
+components:
+  - build_orchestration
+  - worktree_manager
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+change_target: code
+risk_surface: safety
+criteria: |
+  Given two workspaces "ws-a" and "ws-b" and the project's main copy, each with its own
+    stored look-up of the requirements store, its own Python environment in the user's
+    shared Poetry environments folder and its own web development server cache, where
+    "ws-a" and "ws-b" have names sharing the prefix "ws-",
+  When "ws-a" is cleared through the one shared clearing door,
+  Then every one of "ws-b"'s and the main copy's items exists afterwards and is
+    byte-identical to its state before,
+  And "ws-b" still carries the verdict it carried before,
+  And the door's answer lists no item belonging to "ws-b" or to the main copy.
+depends_on: [BO-4400b-1]
+doc_links:
+  - path: docs/acceptance-criteria/build-orchestration/BO-1800-isolated-parallel-delivery/BO-1800d.yaml
+    relationship: constrains
+    status: exists
+    relevance: Housekeeping never disturbs work in flight.
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: BO-4400b-1
+  contract: "Outside-artifact removal keyed to the cleared workspace."
+origin_agent: business-analyst
+created: 2026-10-09
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Shared caches are keyed by name or path hash; a prefix or glob match is the plausible wrong
+  version (Poetry names environments "<project>-<hash>-py3.x", so several workspaces of the
+  same project look alike). Named wrong version: removing by glob on the project name --
+  ws-b's environment disappears and this record goes red while BO-4400b-1 stays green.

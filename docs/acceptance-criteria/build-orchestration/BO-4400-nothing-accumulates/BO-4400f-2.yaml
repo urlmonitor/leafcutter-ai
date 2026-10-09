@@ -1,0 +1,60 @@
+id: BO-4400f-2
+title: "The test runner never keeps scratch in a durable folder, and keeps it only for failed tests"
+component: build-orchestration
+components:
+  - build_orchestration
+  - testing_quality
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+change_target:
+  - config
+  - code
+risk_surface: safety
+criteria: |
+  Given the project's test-runner settings as shipped,
+  When a suite of three tests runs in which two pass and one fails, each writing a
+    10 MB scratch file,
+  Then after the run no scratch from the two passing tests remains anywhere,
+  And the failing test's scratch is retained inside the one designated scratch location
+    and its location is printed in the run's failure output,
+  And no scratch was written inside the project's durable log folders or anywhere else
+    inside the project,
+  And given a run started with its scratch base pointed at a folder inside the
+    project's durable log folders,
+  When the run starts,
+  Then it stops before running any test with a message naming the folder as a durable
+    location that may not hold scratch.
+depends_on: [BO-4400f, BO-4400f-1, TQ-600b-2]
+doc_links:
+  - path: docs/acceptance-criteria/testing-quality/TQ-600-suite-feedback-latency/TQ-600b-2.yaml
+    relationship: related
+    status: exists
+  - path: docs/acceptance-criteria/build-orchestration/BO-4400-nothing-accumulates/BO-4400f.yaml
+    relationship: constrains
+    status: exists
+    relevance: Notes name the pytest settings -- retention policy "failed" and no durable --basetemp.
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to: null
+expects_from:
+  ac_id: BO-4400f-1
+  contract: "The one designated scratch location."
+origin_agent: business-analyst
+created: 2026-10-09
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Gap G7 test-runner half: pytest tmp_path_retention_policy = failed, and --basetemp never at
+  a durable path (test-logs/wire-700a5-tmp reached 3.4 GB). The settings themselves are
+  config; the refusal of a durable scratch base is code -- both owned by one implementer
+  because the proof is one suite run.
+  Proof must run a real test session in a subprocess and inspect disk afterwards; asserting
+  that a setting string appears in the settings file is explicitly insufficient (repo
+  CLAUDE.md: a pytest setting present in the file was shown to enforce nothing, TQ-600a-5).

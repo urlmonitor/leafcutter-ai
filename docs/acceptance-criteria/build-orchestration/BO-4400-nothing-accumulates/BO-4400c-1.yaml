@@ -1,0 +1,60 @@
+id: BO-4400c-1
+title: "A project that declares uv gets a uv environment inside the workspace"
+component: build-orchestration
+components:
+  - build_orchestration
+  - worktree_manager
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+change_target: code
+risk_surface: safety
+criteria: |
+  Given a test project whose root contains a uv lock file pinning one package, and a
+    machine with uv available,
+  When a workspace is requested from the one workspace maker and it answers ready,
+  Then the workspace contains a Python environment in a folder named ".venv" at its
+    root, created by synchronising with uv from the lock file,
+  And the pinned package can be imported using that environment's Python at exactly
+    the version the lock file pins,
+  And the user's shared Poetry environments folder and every other per-environment
+    folder outside the workspace contain the same entries as before the request,
+  And the maker's ready answer names "uv lock file" as the declaration that chose the
+    set-up and gives the environment's location inside the workspace,
+  And after the workspace is cleared through the one shared clearing door no Python
+    environment created for it exists anywhere on the machine.
+depends_on: [BO-4400c, BO-4300c-1]
+doc_links:
+  - path: docs/acceptance-criteria/build-orchestration/BO-4300-one-way-workspaces/BO-4300c-1.yaml
+    relationship: constrains
+    status: exists
+    relevance: The ready verdict this set-up becomes part of; a failed set-up is a clear no, never a quiet substitute.
+  - path: docs/acceptance-criteria/build-orchestration/BO-4100-sound-workspace-by-construction/BO-4100b.yaml
+    relationship: related
+    status: exists
+    relevance: The workspace owns its supporting material.
+  - path: docs/architecture/components/worktree-manager.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to:
+  agent: python-coder
+  contract: "Ready answer carries the choosing declaration and the environment location (consumed by BO-4400b-2 and BO-4400e-4)."
+expects_from:
+  ac_id: BO-4300c-1
+  contract: "The maker's ready / refusal decision, which set-up now feeds."
+origin_agent: business-analyst
+created: 2026-10-09
+amended_by: []
+superseded_by: null
+covered_by: [BO-4400c-1-i]
+implemented_by: []
+notes: |
+  Gap G3. Prevention side of BO-4400b: an environment inside the workspace dies with the
+  folder. A package manager's shared DOWNLOAD cache (reused across projects by design) is not
+  a per-environment folder and is out of scope; only per-environment folders are checked.

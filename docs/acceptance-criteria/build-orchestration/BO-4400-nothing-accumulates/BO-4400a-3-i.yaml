@@ -1,0 +1,51 @@
+id: BO-4400a-3-i
+title: "Finalizing a feature clears its workspace through the one door without a confirmation stop"
+component: build-orchestration
+components:
+  - build_orchestration
+  - worktree_manager
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+change_target: pipeline
+risk_surface: safety
+criteria: |
+  Given a feature whose pull request has been merged and whose workspace still exists
+    because it was created before end-of-route clearing was in place, holding nothing
+    that has not reached the shared project,
+  When finalizing the feature reaches its workspace-clearing step, run unattended with
+    no person available to answer,
+  Then the step completes without waiting for any input,
+  And no folder remains at the workspace's location,
+  And finalize's result contains the one shared clearing door's answer for it,
+  And given instead the workspace has already been cleared by its route, the step
+    reports that there was nothing to clear and finalizing still completes.
+depends_on: [BO-4400a-3]
+doc_links:
+  - path: docs/how-to/finalize-feature.md
+    relationship: describes
+    status: exists
+  - path: docs/acceptance-criteria/build-orchestration/BO-4300-one-way-workspaces/BO-4300e-2.yaml
+    relationship: constrains
+    status: exists
+    relevance: Notes record finalize's teardown deadlock on the interactive yes it cannot give.
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: BO-4300e-2
+  contract: "The one clearing request and its answer."
+origin_agent: business-analyst
+created: 2026-10-09
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Gap G6 (part 2): finalize Step 7's confirmation gate. Once BO-4400a-1 holds, finalize's
+  clearing step is normally a no-op -- the second scenario makes that the ordinary,
+  non-failing case rather than an error.

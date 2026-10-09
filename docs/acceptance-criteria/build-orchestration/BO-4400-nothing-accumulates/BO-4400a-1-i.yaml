@@ -1,0 +1,58 @@
+id: BO-4400a-1-i
+title: "A run that ends with nothing to deliver still clears the workspace it was given"
+component: build-orchestration
+components:
+  - build_orchestration
+  - worktree_manager
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+change_target: pipeline
+risk_surface: safety
+criteria: |
+  Given three runs, each in a workspace obtained from the one workspace maker, that end
+    without opening a pull request because there is nothing to deliver:
+    - the fast lane pointed at a requirement whose whole build set is already built, so
+      its build set resolves to zero items,
+    - the build of an epic whose every ticket is already marked done,
+    - requirements authoring where the person stops at the first gate before anything
+      is drafted,
+  When each run returns its final result,
+  Then for each run no folder remains at the location its workspace occupied,
+  And the clearing was performed by the one shared clearing door, whose answer appears
+    in the run's final result,
+  And each run's final result states that there was nothing to deliver, so a
+    no-op is distinguishable from a delivery,
+  And no branch was pushed and no pull request was opened by any of the three runs.
+depends_on: [BO-4400a-1]
+doc_links:
+  - path: docs/acceptance-criteria/build-orchestration/BO-4300-one-way-workspaces/BO-4300e-2.yaml
+    relationship: constrains
+    status: exists
+  - path: docs/how-to/fast-lane-build.md
+    relationship: describes
+    status: exists
+    relevance: The fast lane's empty-set path, which today returns early.
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to: null
+expects_from:
+  ac_id: BO-4400a-1
+  contract: "The route-end clearing call, reused on the early-return path."
+origin_agent: business-analyst
+created: 2026-10-09
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Gap G1, empty-set no-op path named explicitly by the user for the fast lane. An early
+  return is the classic place a cleanup call is skipped: the success path is wired, the
+  no-op path returns before reaching it. Named wrong version: clearing only on the
+  pull-request path -- this record goes red while BO-4400a-1 stays green.
+  Requirements authoring stopped by the person: ACD-2100c-5 already says a person choosing
+  to stop discards drafted work, so the workspace holds nothing and is cleared.

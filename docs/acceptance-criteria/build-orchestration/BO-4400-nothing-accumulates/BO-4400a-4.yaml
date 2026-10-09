@@ -1,0 +1,55 @@
+id: BO-4400a-4
+title: "How-to: when each route clears its workspace, and reclaiming a workspace a stopped run kept"
+component: build-orchestration
+components:
+  - build_orchestration
+  - worktree_manager
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+change_target: docs
+risk_surface: internal
+criteria: |
+  Given end-of-route clearing (BO-4400a-1, BO-4400a-1-i, BO-4400a-2) and the retired
+    removal paths (BO-4400a-3, BO-4400a-3-i) are in place,
+  When a person reads the how-to guide for workspace clearing,
+  Then the guide contains a table with one row for each of the six routes named in
+    BO-4400a-1 stating the moment its workspace is cleared, including the
+    nothing-to-deliver case,
+  And the guide states that finalizing a feature is not the cleanup point and that a
+    route never waits for it,
+  And the guide walks through a stopped run: reading the kept workspace's location and
+    unsent work from the run's result, sending that work, and clearing the workspace
+    through the one door,
+  And the guide names the one clearing door as the only way to remove a workspace and
+    states that clearing a workspace holding nothing unsent asks no question,
+  And the guide contains no instruction to remove a workspace by forced removal or by
+    deleting its folder.
+depends_on: [BO-4400a, BO-4400a-1, BO-4400a-2, BO-4400a-3]
+doc_links:
+  - path: docs/how-to/finalize-feature.md
+    relationship: related
+    status: exists
+  - path: docs/architecture/components/worktree-manager.md
+    relationship: describes
+    status: exists
+assigned_agent: documentation-expert
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: BO-4400a-1
+  contract: "Final route-end behaviour to describe."
+origin_agent: business-analyst
+created: 2026-10-09
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Satisfies BO-4400a documentation_triggers: how-to. Per the BO-4100 framing decision this
+  guide describes behaviour that holds by construction; it is not the instrument that makes
+  cleanup happen.

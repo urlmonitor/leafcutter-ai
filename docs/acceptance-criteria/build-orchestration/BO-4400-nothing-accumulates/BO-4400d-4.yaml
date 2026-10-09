@@ -1,0 +1,45 @@
+id: BO-4400d-4
+title: "How-to: previewing, running and reading the routine sweep, and changing its interval"
+component: build-orchestration
+components:
+  - build_orchestration
+  - worktree_manager
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+change_target: docs
+risk_surface: internal
+declares_side_effect: true
+criteria: |
+  Given the routine sweep (BO-4400d-1, BO-4400d-2, BO-4400d-3) is in place,
+  When a person reads the how-to guide for the routine sweep,
+  Then the guide shows the command to run a preview and the command to run a real
+    sweep, each with an example report naming the count per kind and the bytes freed,
+  And the guide lists the four reasons an item is kept (holds unsent work, no verdict,
+    in use, scratch not yet expired) and what the person can do about each,
+  And the guide states where the sweep's durable report log is written,
+  And the guide shows the setting that controls the interval between automatic sweeps
+    and its default of 24 hours.
+depends_on: [BO-4400d, BO-4400d-1, BO-4400d-2, BO-4400d-3]
+doc_links:
+  - path: docs/architecture/components/worktree-manager.md
+    relationship: describes
+    status: exists
+assigned_agent: documentation-expert
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: BO-4400d-2
+  contract: "Final sweep report shape and commands."
+origin_agent: business-analyst
+created: 2026-10-09
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Satisfies BO-4400d documentation_triggers: how-to.

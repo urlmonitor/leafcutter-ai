@@ -1,0 +1,46 @@
+id: BO-4400c-1-i
+title: "A declared tool that is missing on the machine is a clear no, never a fallback to another tool or a shared place"
+component: build-orchestration
+components:
+  - build_orchestration
+  - worktree_manager
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+change_target: code
+risk_surface: safety
+criteria: |
+  Given a test project whose root contains a uv lock file, on a machine where uv is not
+    available and Poetry and plain Python are,
+  When a workspace is requested from the one workspace maker,
+  Then the answer is a refusal that names uv as the missing tool and the uv lock file
+    as the declaration that requires it,
+  And the refusal carries no workspace location,
+  And no Python environment was created inside or outside a workspace by the request,
+  And no folder, branch or registration for the requested workspace remains afterwards.
+depends_on: [BO-4400c-1]
+doc_links:
+  - path: docs/acceptance-criteria/build-orchestration/BO-4300-one-way-workspaces/BO-4300c.yaml
+    relationship: constrains
+    status: exists
+    relevance: A fully ready workspace or a clear no, never a quiet substitute.
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: BO-4400c-1
+  contract: "Declaration-driven set-up selection."
+origin_agent: business-analyst
+created: 2026-10-09
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Named wrong version: "try uv, else poetry, else pip" -- the quiet substitute BO-4300c
+  forbids; it also reintroduces a Poetry environment in the shared folder. The last clause
+  reuses BO-4100a-3-i's "a refused creation leaves nothing behind".

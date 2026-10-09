@@ -1,0 +1,49 @@
+id: BO-4400e-3
+title: "Under WSL the Windows drive holding the Linux disk is checked too, and the lower free space decides"
+component: build-orchestration
+components:
+  - build_orchestration
+  - worktree_manager
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+change_target: code
+risk_surface: safety
+criteria: |
+  Given the refusal limit is set to 5 GB, and the project runs under WSL where the
+    Linux volume reports 200 GB free while the Windows drive holding the Linux virtual
+    disk has 2 GB free,
+  When a workspace is requested from the one workspace maker,
+  Then the answer is a refusal that names the Windows drive and its 2 GB free as the
+    reason, and also states the Linux volume's 200 GB free,
+  And given the same machine with the Windows drive at 50 GB free, the answer is ready
+    with no space warning,
+  And given a machine that is not running under WSL, only the volume where workspaces
+    are created is measured and no Windows drive is named in the answer.
+depends_on: [BO-4400e, BO-4400e-1]
+doc_links:
+  - path: docs/acceptance-criteria/build-orchestration/BO-4400-nothing-accumulates/BO-4400e.yaml
+    relationship: constrains
+    status: exists
+    relevance: Notes record that the WSL virtual disk grows on the host and cannot be capped after creation.
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to: null
+expects_from:
+  ac_id: BO-4400e-1
+  contract: "Free-space check entry point."
+origin_agent: business-analyst
+created: 2026-10-09
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  The Linux volume of a WSL distro reports the virtual disk's own free space, which can be
+  far larger than what the host drive can actually supply -- the exact blind spot that lets a
+  host run out silently. Locating the host drive for the virtual disk is the IT PO's call; a
+  failure to locate it falls under BO-4400e-1-i (warn, name the drive, proceed).

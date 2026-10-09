@@ -1,0 +1,59 @@
+id: BO-4400b-2
+title: "A full workspace lifetime leaves the machine as it found it, measured rather than listed"
+component: build-orchestration
+components:
+  - build_orchestration
+  - worktree_manager
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+change_target: code
+risk_surface: safety
+criteria: |
+  Given a record is taken of every entry present in these places on a test machine:
+    the folder where workspaces are created, the shared project's version control data,
+    the shared project's branch list and registration list, the user's cache folder,
+    and the system temporary folder,
+  And a workspace is then made through the one workspace maker, set up, used for the
+    build of a single ticket that pushes its work and opens its pull request, and
+    cleared at the end of that route,
+  When the same places are recorded again,
+  Then the second record contains no entry that was absent from the first,
+  And when an extra step is added to the build that writes one new file into the
+    user's cache folder on the workspace's behalf without declaring it, the second
+    record differs from the first by exactly that one file, and the comparison names it
+    by path.
+depends_on: [BO-4400b, BO-4400b-1, BO-4400a-1]
+doc_links:
+  - path: docs/acceptance-criteria/build-orchestration/BO-4400-nothing-accumulates/BO-4400b.yaml
+    relationship: constrains
+    status: exists
+  - path: docs/testing/test-angles.md
+    relationship: describes
+    status: exists
+    relevance: The varying-population clause is the discrimination angle for this record.
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to: null
+expects_from:
+  ac_id: BO-4400b-1
+  contract: "Outside-artifact removal driven by one declared inventory."
+origin_agent: business-analyst
+created: 2026-10-09
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  BO-4400b's notes ask for "one list, so a new artifact cannot be forgotten". A declared list
+  proves only what it declares; this record proves completeness by before/after measurement,
+  and the second clause (an undeclared extra artifact) is the varying-population check that
+  stops a hard-coded "nothing new" answer from passing (BA memory: BP-1600a-2 house style).
+  Shared download caches that are reused across workspaces by design (a package manager's
+  download cache) are outside this record when they existed before the workspace was made;
+  any NEW top-level entry still counts. All of this runs against a temporary HOME so the
+  developer's real cache is never touched.

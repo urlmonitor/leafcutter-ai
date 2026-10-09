@@ -1,0 +1,46 @@
+id: BO-4400d-1-i
+title: "A workspace that gains work between the sweep's listing and its removal is not removed"
+component: build-orchestration
+components:
+  - build_orchestration
+  - worktree_manager
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+change_target: code
+risk_surface: safety
+criteria: |
+  Given the sweep has listed workspace "idle-1" as holding nothing unsent,
+  And before the sweep reaches "idle-1", one new uncommitted file is written into it
+    and a run starts in it,
+  When the sweep reaches "idle-1",
+  Then "idle-1" is not removed and the new file is byte-identical to what was written,
+  And the sweep's result reports "idle-1" as kept, with the reason that it was found
+    holding work or in use when its turn came,
+  And the sweep continues with the remaining items.
+depends_on: [BO-4400d-1]
+doc_links:
+  - path: docs/acceptance-criteria/build-orchestration/BO-1800-isolated-parallel-delivery/BO-1800d.yaml
+    relationship: constrains
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: BO-4400d-1
+  contract: "Sweep selection."
+origin_agent: business-analyst
+created: 2026-10-09
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Named wrong version: decide once from a listing, then remove from that list -- the
+  window between list and remove destroys fresh work. The verdict and the in-use check must be
+  taken at the moment of removal (the door's own check already does the verdict half if the
+  sweep asks the door rather than deleting directly).

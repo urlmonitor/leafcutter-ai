@@ -1,0 +1,44 @@
+id: BO-4400c-3-i
+title: "A project carrying both a uv and a Poetry lock file is set up with uv, and says so"
+component: build-orchestration
+components:
+  - build_orchestration
+  - worktree_manager
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+change_target: code
+risk_surface: internal
+criteria: |
+  Given a test project whose root contains both a uv lock file and a Poetry lock file,
+    on a machine with both uv and Poetry available,
+  When a workspace is requested from the one workspace maker and it answers ready,
+  Then the workspace's environment in ".venv" was created by synchronising with uv,
+  And Poetry was not run,
+  And the ready answer names "uv lock file" as the choosing declaration and notes that
+    a Poetry lock file was also present and not used.
+depends_on: [BO-4400c-3]
+doc_links:
+  - path: docs/acceptance-criteria/build-orchestration/BO-4400-nothing-accumulates/BO-4400c.yaml
+    relationship: constrains
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: BO-4400c-1
+  contract: "Declaration-driven set-up selection."
+origin_agent: business-analyst
+created: 2026-10-09
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Precedence follows the user's ordering in the request ("uv.lock -> uv sync; poetry only with
+  poetry.lock"). Logged as an assumption: uv wins rather than refusing as ambiguous. If the
+  user prefers a refusal, only this record changes.

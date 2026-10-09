@@ -1,0 +1,45 @@
+id: BO-4400f-3-i
+title: "Logs a run writes survive its scratch deletion and every sweep"
+component: build-orchestration
+components:
+  - build_orchestration
+  - testing_quality
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+change_target: pipeline
+risk_surface: safety
+criteria: |
+  Given the build of a single ticket writes a run log and a test-results log while it
+    works, alongside its scratch items,
+  When the route reaches its end state and deletes its own scratch, and the sweep then
+    runs with the scratch age limit set to 0 hours,
+  Then both logs exist afterwards at the durable location they were written to and are
+    byte-identical to their state when the route ended,
+  And neither log was ever written inside the one designated scratch location.
+depends_on: [BO-4400f-3, BO-4400d-1]
+doc_links:
+  - path: docs/acceptance-criteria/build-orchestration/BO-4400-nothing-accumulates/BO-4400f.yaml
+    relationship: constrains
+    status: exists
+    relevance: Logs stay durable, scratch does not; the rule separates them and never deletes logs.
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: BO-4400f-3
+  contract: "End-of-route scratch removal."
+origin_agent: business-analyst
+created: 2026-10-09
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  The age limit of 0 makes the sweep maximally aggressive, so any log misclassified as
+  scratch is removed and this record goes red. Named wrong version: "clean up" implemented
+  by deleting the durable log folder's temporary-looking subfolders.

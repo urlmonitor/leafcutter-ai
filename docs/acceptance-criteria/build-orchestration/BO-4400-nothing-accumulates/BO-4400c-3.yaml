@@ -1,0 +1,50 @@
+id: BO-4400c-3
+title: "A project declaring neither uv nor Poetry gets a plain in-workspace environment, or none at all"
+component: build-orchestration
+components:
+  - build_orchestration
+  - worktree_manager
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+change_target: code
+risk_surface: safety
+criteria: |
+  Given test project "req-only", whose root has no uv lock file and no Poetry lock file
+    but has a "requirements-dev.txt" listing one package,
+  And test project "no-python", whose root declares no Python dependencies at all,
+  When a workspace is requested from the one workspace maker for each project,
+  Then for "req-only" the answer is ready, the workspace contains a plain Python
+    environment in ".venv" at its root with the listed package installed, the answer
+    names "requirements-dev.txt" as the choosing declaration, and Poetry was not run,
+  And for "no-python" the answer is ready, no Python environment is created anywhere,
+    and the answer states that no Python environment was declared,
+  And for both, the user's shared Poetry environments folder contains the same entries
+    as before.
+depends_on: [BO-4400c, BO-4400c-1]
+doc_links:
+  - path: docs/acceptance-criteria/build-orchestration/BO-4300-one-way-workspaces/BO-4300c-1.yaml
+    relationship: constrains
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: BO-4400c-1
+  contract: "Declaration-driven set-up selection."
+origin_agent: business-analyst
+created: 2026-10-09
+amended_by: []
+superseded_by: null
+covered_by: [BO-4400c-3-i]
+implemented_by: []
+notes: |
+  BO-4400c's notes require the package-repo case: this repository itself has neither lock file
+  and uses requirements-dev.txt, and a Poetry bootstrap fails here. "req-only" is that case.
+  Order of the plain-file fallback (requirements-dev.txt before requirements.txt, both, or a
+  pyproject without a lock) is left to the IT PO; the customer promise is only "in the
+  workspace, never shared, never Poetry without a Poetry lock file".

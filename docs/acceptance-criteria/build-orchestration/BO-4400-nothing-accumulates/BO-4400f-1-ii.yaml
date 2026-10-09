@@ -1,0 +1,49 @@
+id: BO-4400f-1-ii
+title: "Leftover change-stash files from the commit checks expire like any other scratch"
+component: build-orchestration
+components:
+  - build_orchestration
+  - testing_quality
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+change_target: code
+risk_surface: safety
+criteria: |
+  Given the scratch age limit is 24 hours, and the commit-check tool's own cache folder
+    holds four saved change-stash files it left behind: two written 3 days ago and two
+    written 1 hour ago,
+  And the same cache folder holds the commit-check tool's installed check environments,
+  When the sweep runs,
+  Then the two 3-day-old change-stash files are removed and counted in the report,
+  And the two 1-hour-old change-stash files exist afterwards,
+  And every installed check environment in that folder exists afterwards and is
+    byte-identical to its state before.
+depends_on: [BO-4400f-1, BO-4400d-1]
+doc_links:
+  - path: docs/how-to/managing-pre-commit-hooks.md
+    relationship: describes
+    status: exists
+    relevance: The commit-check tool whose stash patch files (patch* in its user cache) never expire today.
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: BO-4400f-1
+  contract: "Scratch age rule, applied to a location the project does not own."
+origin_agent: business-analyst
+created: 2026-10-09
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Gap G7: "pre-commit stash patch files (~/.cache/pre-commit/patch*) expire". These live
+  outside the scratch location because the third-party tool writes them; they have no run
+  owner, so the unknown-owner branch of the rule applies (age alone). The last clause guards
+  the plausible wrong version "clear the pre-commit cache" which would force every hook
+  environment to reinstall.

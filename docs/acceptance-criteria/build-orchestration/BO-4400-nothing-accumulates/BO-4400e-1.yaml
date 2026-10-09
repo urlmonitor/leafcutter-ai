@@ -1,0 +1,56 @@
+id: BO-4400e-1
+title: "A new workspace is refused with a plain reason when free space is below the firm limit"
+component: build-orchestration
+components:
+  - build_orchestration
+  - worktree_manager
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+change_target: code
+risk_surface: safety
+criteria: |
+  Given the refusal limit is set to 5 GB and the warning level to 20 GB, and the volume
+    where workspaces are created has 3 GB free, and existing workspaces together occupy
+    41 GB,
+  When a workspace is requested from the one workspace maker,
+  Then the answer is a refusal that states the free space (3 GB), the refusal limit
+    (5 GB), the volume it measured, and the space existing workspaces occupy (41 GB),
+  And the refusal carries no workspace location,
+  And no folder, branch or registration for the requested workspace exists afterwards,
+  And the route that asked halts with the refusal rather than continuing without a
+    workspace.
+depends_on: [BO-4400e, BO-4400e-4, BO-4300c-1, BO-4100e]
+doc_links:
+  - path: docs/acceptance-criteria/build-orchestration/BO-4300-one-way-workspaces/BO-4300c.yaml
+    relationship: constrains
+    status: exists
+    relevance: A clear no that callers halt on; never a quiet substitute.
+  - path: docs/acceptance-criteria/build-orchestration/BO-4100-sound-workspace-by-construction/BO-4100e.yaml
+    relationship: related
+    status: exists
+    relevance: The complete listing the occupied-space figure is summed over.
+  - path: docs/architecture/components/worktree-manager.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to: null
+expects_from:
+  ac_id: BO-4400e-4
+  contract: "Total space occupied by all listed workspaces."
+origin_agent: business-analyst
+created: 2026-10-09
+amended_by: []
+superseded_by: null
+covered_by: [BO-4400e-1-i]
+implemented_by: []
+notes: |
+  Gap G5 (refuse half). The check runs BEFORE anything is created, so the refusal leaves
+  nothing behind (BO-4100a-3-i). Thresholds are configurable; the 5 GB / 20 GB here are test
+  values, not defaults -- defaults are the IT PO's call. Reporting the 41 GB alongside the
+  refusal tells the person the sweep is the likely remedy.

@@ -1,0 +1,53 @@
+id: BO-4400f-3
+title: "Every route deletes its own scratch when it ends, at the same moment it clears its workspace"
+component: build-orchestration
+components:
+  - build_orchestration
+  - testing_quality
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+change_target: pipeline
+risk_surface: safety
+criteria: |
+  Given the six routes named in BO-4400a-1 are each run on a test project, each
+    creating scratch items in the one designated scratch location,
+  And a second, unrelated run is active and owns its own scratch items there,
+  When each route reaches its end state -- its pull request opened, or nothing to
+    deliver -- and returns,
+  Then none of the scratch items owned by that route remain,
+  And every scratch item owned by the unrelated run exists afterwards and is
+    byte-identical to its state before,
+  And the route's final result states the count and bytes of scratch it removed,
+  And for a route that halts instead, its scratch is kept and the final result names
+    its location, so it remains until the scratch age and ownership rule expires it.
+depends_on: [BO-4400f, BO-4400f-1, BO-4400a-1, BO-4400a-1-i, BO-4400a-2]
+doc_links:
+  - path: docs/acceptance-criteria/build-orchestration/BO-4400-nothing-accumulates/BO-4400a-1.yaml
+    relationship: constrains
+    status: exists
+    relevance: Same trigger -- the route's end state.
+  - path: docs/architecture/agent_delivery_workflows.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to: null
+expects_from:
+  ac_id: BO-4400f-1
+  contract: "Scratch items labelled with their owning run."
+origin_agent: business-analyst
+created: 2026-10-09
+amended_by: []
+superseded_by: null
+covered_by: [BO-4400f-3-i]
+implemented_by: []
+notes: |
+  Gap G7: "each route deletes its own scratch when it ends (same trigger as G1)". A halted
+  run's scratch may hold the evidence of why it halted, so it is kept and left to expiry
+  rather than deleted at once. Named wrong version: removing the whole scratch location at
+  route end -- the unrelated run's items vanish.

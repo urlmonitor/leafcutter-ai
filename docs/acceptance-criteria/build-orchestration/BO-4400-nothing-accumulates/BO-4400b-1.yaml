@@ -1,0 +1,68 @@
+id: BO-4400b-1
+title: "Clearing a workspace also removes everything it created outside its own folder"
+component: build-orchestration
+components:
+  - build_orchestration
+  - worktree_manager
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+change_target: code
+risk_surface: safety
+criteria: |
+  Given a workspace "ws-a" holding nothing that has not reached the shared project,
+    which during its life brought each of these into being outside its own folder:
+    - its own local line of work (branch) in the shared project,
+    - its registration entry in the shared project,
+    - a stored look-up of the requirements store kept in the shared project's version
+      control data on its behalf,
+    - a Python environment for it in the user's shared Poetry environments folder,
+    - a web development server cache for it outside its folder,
+  When "ws-a" is cleared through the one shared clearing door,
+  Then none of the five items exists afterwards,
+  And the door's answer lists each of the five items it removed, by kind and location,
+    with the space each one occupied in bytes,
+  And the answer's total space freed equals the sum of the folder's size and the five
+    items' sizes as measured immediately before the clearing.
+depends_on: [BO-4400b, BO-4300e-2, BO-4100c-4]
+doc_links:
+  - path: docs/acceptance-criteria/build-orchestration/BO-4100-sound-workspace-by-construction/BO-4100c-4.yaml
+    relationship: related
+    status: exists
+    relevance: Already requires folder and registration gone; this record extends "gone" to everything outside the folder.
+  - path: docs/acceptance-criteria/build-orchestration/BO-4300-one-way-workspaces/BO-4300e-2.yaml
+    relationship: constrains
+    status: exists
+  - path: docs/architecture/components/worktree-manager.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: L
+delivers_to:
+  agent: python-coder
+  contract: "Per-item removal list with kind, location and bytes; consumed by the sweep report (BO-4400d-2) and the space report (BO-4400e-4)."
+expects_from:
+  ac_id: BO-4300e-2
+  contract: "The one clearing request; this record widens what its removed answer covers."
+origin_agent: business-analyst
+created: 2026-10-09
+amended_by: []
+superseded_by: null
+covered_by: [BO-4400b-1-i, BO-4400b-1-ii]
+implemented_by: []
+notes: |
+  Gap G2. Known outside artifacts named in the 2026-10-09 coverage check: the requirements
+  store index cache under the version-control data directory, Poetry virtualenvs in the
+  user's cache, the Turbopack dev cache, the branch and the registration. The five in the
+  Given are those, stated as behaviour. They must come from ONE declared inventory (see
+  BO-4400b-2, which proves the inventory is complete by measurement rather than by
+  listing). BO-4400c is the prevention side: once environments live inside the workspace
+  the Poetry item stops arising, but clearing must still remove one created before that.
+
+  Branch deletion is local only and follows the verdict: holds-nothing already means every
+  commit is on the shared project (pushed line, main, or squash-merged per BO-4100c-1-i).
+  The shared project's copy of the line is never deleted by this record.

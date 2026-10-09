@@ -29,7 +29,7 @@ origin_agent: BrainCandy
 created: 2026-10-09
 amended_by: []
 superseded_by: null
-covered_by: []
+covered_by: [BO-4400d-1, BO-4400d-2, BO-4400d-3, BO-4400d-4, BO-4400d-5]
 implemented_by: []
 documentation_triggers:
   - how-to

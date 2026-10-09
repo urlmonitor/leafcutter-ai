@@ -1,0 +1,90 @@
+id: BO-4400a-1
+title: "Every route that opens a pull request clears its workspace right after opening it"
+component: build-orchestration
+components:
+  - build_orchestration
+  - worktree_manager
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+change_target: pipeline
+risk_surface: safety
+declares_side_effect: true
+criteria: |
+  Given each of these routes is run against a real test project with a real shared
+    project, each in a workspace obtained from the one workspace maker, and each
+    driven to the point where its commits are pushed to its own line of work on the
+    shared project and its pull request is open:
+    - the build of a single ticket,
+    - the build of an epic of three tickets,
+    - the quick fix,
+    - requirements authoring,
+    - the fast lane with a build set of one requirement,
+    - the backlog build with two tickets,
+  When each route returns its final result,
+  Then for every route no folder remains at the location its workspace occupied and
+    its workspace is absent from the live set,
+  And the clearing was performed by the one shared clearing door: the route's final
+    result contains the door's own answer for that workspace, reporting it removed,
+  And the clearing happened after the pull request was opened and before the route
+    returned: the pull request exists and lists every commit the route made,
+  And no person was asked to confirm the clearing,
+  And commits that are pushed to the workspace's own line on the shared project count
+    as sent for this decision, so an open, unmerged pull request never makes the
+    workspace read as holding unsent work.
+depends_on: [BO-4400a, BO-4300e-2, BO-4300f-1, BO-4100c-1]
+doc_links:
+  - path: docs/acceptance-criteria/build-orchestration/BO-4300-one-way-workspaces/BO-4300e-2.yaml
+    relationship: constrains
+    status: exists
+    relevance: The one clearing door this record calls; its refusal of unsent work is reused, not restated.
+  - path: docs/acceptance-criteria/build-orchestration/BO-4300-one-way-workspaces/BO-4300f-1.yaml
+    relationship: related
+    status: exists
+    relevance: Same list of routes, already moved onto the one maker; this record adds the clearing end.
+  - path: docs/acceptance-criteria/build-orchestration/BO-4100-sound-workspace-by-construction/BO-4100c-1.yaml
+    relationship: constrains
+    status: exists
+    relevance: The holds-work / holds-nothing verdict; see the notes on the pushed-line wording.
+  - path: docs/architecture/components/worktree-manager.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/agent_delivery_workflows.md
+    relationship: describes
+    status: exists
+    relevance: Where each route's end state sits in the delivery flow.
+assigned_agent: python-coder
+estimated_complexity: L
+delivers_to: null
+expects_from:
+  ac_id: BO-4300e-2
+  contract: "One clearing request that answers without prompting: removed, or refused naming the unsent work."
+origin_agent: business-analyst
+created: 2026-10-09
+amended_by: []
+superseded_by: null
+covered_by: [BO-4400a-1-i, BO-4400a-1-ii]
+implemented_by: []
+notes: |
+  Gap G1 (success path). finalize-feature is NOT the cleanup point (BO-4400 key framing
+  decision); finalize may still clear, but no route in the list may rely on it.
+
+  VERDICT WORDING CONFLICT (flagged, not resolved here): BO-4100c-1's criteria say a
+  workspace holds work when "its branch carries a commit not reachable from the shared main
+  line". Read literally, every workspace with an open, unmerged pull request holds work and
+  this record can never be satisfied. BO-4300e-2's it_requirements already use the wider
+  "reachable from neither its own pushed line nor the shared main line" definition. The last
+  And-clause above states the definition this record relies on; BO-4100c-1 needs an amendment
+  (owner: PO / BA of BO-4100) to match before this is buildable.
+
+  Proof must drive each route to its end state and inspect the disk afterwards (repo
+  CLAUDE.md: gate/workflow ACs are verified by running them, never by grep).
+
+  Named wrong versions this must catch: (1) a route that never calls the door (folder
+  remains); (2) a route that removes the folder by its own means (result lacks the door's
+  answer); (3) clearing placed before the push (door refuses, folder remains, or the PR is
+  missing commits).

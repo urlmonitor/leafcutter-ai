@@ -1,0 +1,45 @@
+id: BO-4400d-2-i
+title: "A sweep that cannot remove one item finishes the rest and reports the partial result"
+component: build-orchestration
+components:
+  - build_orchestration
+  - worktree_manager
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+change_target: code
+risk_surface: safety
+criteria: |
+  Given three expired scratch items, the second of which contains one file that is
+    read-only to the current user,
+  When the sweep runs for real,
+  Then the first and third items are removed,
+  And the report states two items removed and one failed, names the failed item's
+    location and the reason, and does not count the failed item's bytes as freed,
+  And the sweep's outcome is distinguishable from a fully successful sweep in its
+    final status.
+depends_on: [BO-4400d-2]
+doc_links:
+  - path: docs/acceptance-criteria/build-orchestration/BO-4400-nothing-accumulates/BO-4400b-1-ii.yaml
+    relationship: related
+    status: exists
+    relevance: The same partial-result rule for a single clearing.
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: BO-4400d-2
+  contract: "Sweep report."
+origin_agent: business-analyst
+created: 2026-10-09
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Named wrong versions: stop at the first failure (third item survives); swallow the failure
+  and report three removed (bytes overstated). Each is caught by a separate clause.

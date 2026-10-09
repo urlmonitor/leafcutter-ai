@@ -1,0 +1,46 @@
+id: BO-4400c-2-i
+title: "A user-wide Poetry setting that puts environments elsewhere is overridden for the workspace only"
+component: build-orchestration
+components:
+  - build_orchestration
+  - worktree_manager
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+change_target: code
+risk_surface: safety
+criteria: |
+  Given a test project with a Poetry lock file, and a user-wide Poetry setting stating
+    that environments are NOT kept inside projects,
+  When a workspace is requested from the one workspace maker and it answers ready,
+  Then the workspace's environment is in ".venv" at the workspace root,
+  And the user's shared Poetry environments folder contains the same entries as before,
+  And the user-wide Poetry setting reads the same value after the request as before it,
+  And the project's main copy contains no new or changed Poetry setting file.
+depends_on: [BO-4400c-2]
+doc_links:
+  - path: docs/acceptance-criteria/build-orchestration/BO-4300-one-way-workspaces/BO-4300c-1-iii.yaml
+    relationship: related
+    status: exists
+    relevance: Setting up a workspace never leaves stray changes in the project's own files.
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: BO-4400c-2
+  contract: "Poetry set-up path."
+origin_agent: business-analyst
+created: 2026-10-09
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Two plausible wrong versions, each caught by one clause: trusting Poetry's defaults (the
+  environment lands in the shared folder -- clause 2), and fixing it by changing the user's
+  global Poetry config (clause 3) or committing a project-level poetry.toml into the main copy
+  (clause 4).

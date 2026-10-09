@@ -1,0 +1,63 @@
+id: BO-4400a-3
+title: "The hand-run ways of clearing a workspace go through the one door and never ask for a yes"
+component: build-orchestration
+components:
+  - build_orchestration
+  - worktree_manager
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+change_target: prompt
+risk_surface: safety
+criteria: |
+  Given two workspaces on a real test project: "done-1", holding nothing that has not
+    reached the shared project, and "open-1", holding one unpushed commit,
+  When a person asks to close each workspace using the close-a-workspace command, and
+    again using the workspace agent's removal, with no authorisation to lose work given,
+  Then for "done-1" the workspace is removed and the reply quotes the one shared
+    clearing door's answer reporting it removed,
+  And for "open-1" the reply quotes the door's refusal naming the unpushed commit by
+    identifier, and "open-1" is byte-identical before and after,
+  And neither the command nor the agent asks the person to confirm before clearing,
+  And neither the command's nor the agent's instructions contain any other way of
+    removing a workspace, including a forced removal or a direct folder deletion.
+depends_on: [BO-4400a, BO-4300e-2, BO-4300e-3, BO-4300f-1]
+doc_links:
+  - path: docs/acceptance-criteria/build-orchestration/BO-4300-one-way-workspaces/BO-4300f-1.yaml
+    relationship: related
+    status: exists
+    relevance: Already moves these two surfaces onto the one MAKER; this record covers only their removal side.
+  - path: docs/acceptance-criteria/build-orchestration/BO-4300-one-way-workspaces/BO-4300e-3.yaml
+    relationship: constrains
+    status: exists
+    relevance: The only way unsent work may be discarded -- authorisation given up front in the request.
+  - path: docs/architecture/components/worktree-manager.md
+    relationship: describes
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: M
+delivers_to: null
+expects_from:
+  ac_id: BO-4300e-2
+  contract: "The one clearing request and its removed / refused answer."
+origin_agent: business-analyst
+created: 2026-10-09
+amended_by: []
+superseded_by: null
+covered_by: [BO-4400a-3-i]
+implemented_by: []
+notes: |
+  Gap G6 (part 1): retire close-worktree's remove-without-force path and worktree-agent's
+  removal. finalize Step 7's confirmation gate is a workflow script, not a prompt, and is
+  split into BO-4400a-3-i for a different implementer.
+
+  Q8 DECIDED 2026-10-09 (BrainCandy, see BO-4400 notes): no confirmation token for a
+  holds-nothing workspace -- the verdict is the safety check. That is why "never asks for a
+  yes" holds for done-1 and why open-1 is refused rather than confirmed.
+
+  The last And-clause is the only text-shaped clause; it guards the retirement, while the
+  first three are proven by running the command/agent against real repositories.

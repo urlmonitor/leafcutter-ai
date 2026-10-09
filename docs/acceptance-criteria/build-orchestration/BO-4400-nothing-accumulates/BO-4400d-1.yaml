@@ -1,0 +1,79 @@
+id: BO-4400d-1
+title: "The sweep reclaims exactly the finished leftovers and expired scratch, and nothing else"
+component: build-orchestration
+components:
+  - build_orchestration
+  - worktree_manager
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+change_target: code
+risk_surface: safety
+criteria: |
+  Given a test machine holding seven workspaces:
+    - "idle-1" and "idle-2", each holding nothing unsent, with no run active in them,
+    - "leftover-1", an unregistered remnant found by discovery, holding nothing unsent,
+    - "unsent-1", whose branch carries one commit not on the shared project,
+    - "dirty-1", holding one uncommitted change to a version-controlled file,
+    - "noverdict-1", whose version control data cannot be read,
+    - "active-1", holding nothing unsent, with a run currently active in it,
+  And the designated scratch location holds five items: three past their expiry under
+    the scratch age and ownership rule, and two within it,
+  And one outside item (a Python environment) whose workspace was cleared earlier but
+    which could not be removed at the time,
+  When the sweep runs,
+  Then "idle-1", "idle-2" and "leftover-1" are removed through the one shared clearing
+    door, the three expired scratch items are removed, and the orphaned outside item
+    is removed,
+  And "unsent-1", "dirty-1", "noverdict-1" and "active-1" and the two unexpired scratch
+    items exist afterwards and are byte-identical to their state before the sweep,
+  And no person is asked to confirm anything during the sweep.
+depends_on: [BO-4400d, BO-4300c-1-iii, BO-4100c-1, BO-4100c-3, BO-4100e-1, BO-1800d, BO-4400b-1, BO-4400f-1]
+doc_links:
+  - path: docs/acceptance-criteria/build-orchestration/BO-4300-one-way-workspaces/BO-4300c-1-iii.yaml
+    relationship: constrains
+    status: exists
+    relevance: Without it a finished workspace falsely reads holds-work (61 rebuilt tracked files) and the sweep reclaims nothing.
+  - path: docs/acceptance-criteria/build-orchestration/BO-4100-sound-workspace-by-construction/BO-4100c-3.yaml
+    relationship: constrains
+    status: exists
+    relevance: No verdict means never disposed of.
+  - path: docs/acceptance-criteria/build-orchestration/BO-4100-sound-workspace-by-construction/BO-4100e-1.yaml
+    relationship: related
+    status: exists
+    relevance: Unregistered leftovers can still be cleared.
+  - path: docs/acceptance-criteria/build-orchestration/BO-1800-isolated-parallel-delivery/BO-1800d.yaml
+    relationship: constrains
+    status: exists
+    relevance: Housekeeping never disturbs work in flight.
+  - path: docs/architecture/components/worktree-manager.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: L
+delivers_to:
+  agent: python-coder
+  contract: "Sweep result: per-item outcome (removed / kept with reason) with kind, location and bytes; consumed by BO-4400d-2's report."
+expects_from:
+  ac_id: BO-4400f-1
+  contract: "The scratch age and ownership rule deciding which scratch items are expired."
+origin_agent: business-analyst
+created: 2026-10-09
+amended_by: []
+superseded_by: null
+covered_by: [BO-4400d-1-i]
+implemented_by: []
+notes: |
+  Gap G4. Backstop for anything end-of-route clearing (BO-4400a) misses: crashed sessions,
+  pile-up from before BO-4400a existed, workspaces kept by halted runs whose work was later
+  sent by hand. The sweep does not decide anything itself -- verdicts come from BO-4100c,
+  "active" from BO-1800d, expiry from BO-4400f-1, clearing from BO-4300e. Its own promise is
+  the selection: each of the seven workspaces and five scratch items is a distinct case and
+  the wrong selection on any one turns a clause red.
+  Prior art outside the package: the operator's machine-local hourly reclaim timer
+  (~/bin/wsl-reclaim). The packaged sweep replaces its workspace/scratch half for every
+  install; the machine-local tool is not modified by this record.

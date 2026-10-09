@@ -1,0 +1,57 @@
+id: BO-4400e-4
+title: "At any time you can see how much space each workspace and all of them together take"
+component: build-orchestration
+components:
+  - build_orchestration
+  - worktree_manager
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+change_target: code
+risk_surface: internal
+criteria: |
+  Given three registered workspaces whose folders measure 1.2 GB, 300 MB and 4.0 GB,
+    one unregistered leftover measuring 800 MB, and a Python environment of 500 MB
+    belonging to the 300 MB workspace kept outside its folder,
+  When the space report is requested,
+  Then the report lists all four workspaces, largest first, each with its location,
+    its verdict (holds work / holds nothing / no verdict), and its size including the
+    items it owns outside its folder, so the 300 MB workspace is reported as 800 MB,
+  And the report states a total of 6.8 GB, equal to the sum of the listed sizes,
+  And the report states how much of the total belongs to workspaces holding nothing
+    unsent, as the space a sweep would free,
+  And requesting the report changes nothing on disk,
+  And when a fifth workspace of 100 MB is added, the total in the next report is
+    100 MB greater and the workspace count is one greater.
+depends_on: [BO-4400e, BO-4100e, BO-4100c-1, BO-4400b-1]
+doc_links:
+  - path: docs/acceptance-criteria/build-orchestration/BO-4100-sound-workspace-by-construction/BO-4100e.yaml
+    relationship: constrains
+    status: exists
+    relevance: The complete listing, including unregistered leftovers, the report sums over.
+  - path: docs/acceptance-criteria/build-orchestration/BO-4400-nothing-accumulates/BO-4400b-1.yaml
+    relationship: related
+    status: exists
+    relevance: The inventory of items a workspace owns outside its folder.
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to:
+  agent: python-coder
+  contract: "Total occupied space across all listed workspaces (consumed by the refusal and warning answers of BO-4400e-1 / BO-4400e-2)."
+expects_from:
+  ac_id: BO-4400b-1
+  contract: "Outside-item inventory keyed by workspace."
+origin_agent: business-analyst
+created: 2026-10-09
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Gap G5 (report half): "report total space used by workspaces". Counting outside items per
+  workspace is what makes the report agree with what clearing would actually free (the Poetry
+  pile-up lives outside the folders). Last clause is the varying-population check.

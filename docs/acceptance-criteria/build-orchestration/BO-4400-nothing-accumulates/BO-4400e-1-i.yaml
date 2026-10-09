@@ -1,0 +1,44 @@
+id: BO-4400e-1-i
+title: "When free space cannot be measured, the workspace is made and the person is told which drive could not be read"
+component: build-orchestration
+components:
+  - build_orchestration
+  - worktree_manager
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+change_target: code
+risk_surface: safety
+criteria: |
+  Given the refusal limit is set to 5 GB, and the free space of one drive the check
+    must measure cannot be read because that drive is not reachable,
+  When a workspace is requested from the one workspace maker,
+  Then the answer is ready and carries a warning naming the drive that could not be
+    measured and stating that the free-space check was not completed for it,
+  And the warning is distinguishable in the answer from a low-space warning.
+depends_on: [BO-4400e-1]
+doc_links:
+  - path: docs/acceptance-criteria/build-orchestration/BO-4400-nothing-accumulates/BO-4400e.yaml
+    relationship: constrains
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: BO-4400e-1
+  contract: "Free-space check."
+origin_agent: business-analyst
+created: 2026-10-09
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  DECISION TAKEN AS DEFAULT, flagged to the user: a measurement failure warns and proceeds
+  rather than refusing, so a broken drive mount cannot stop all work. The opposite choice
+  (refuse when unmeasurable) is defensible under BO-4300c's "clear no" framing; if the user
+  prefers it, only this record changes. Never silently treated as "enough space".

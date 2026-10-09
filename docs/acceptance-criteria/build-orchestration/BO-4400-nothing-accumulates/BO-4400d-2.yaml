@@ -1,0 +1,56 @@
+id: BO-4400d-2
+title: "Every sweep, previewed or real, reports how many items it cleared and how many bytes it freed"
+component: build-orchestration
+components:
+  - build_orchestration
+  - worktree_manager
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+change_target: code
+risk_surface: safety
+criteria: |
+  Given the seven workspaces, five scratch items and one orphaned outside item of
+    BO-4400d-1, with the size of each item measured beforehand,
+  When the sweep is run as a preview,
+  Then nothing on disk changes,
+  And the preview lists each item it would remove by kind and location with its size
+    in bytes, lists each item it would keep with the reason, and states a count and a
+    total in bytes for the items it would remove,
+  And when the sweep is then run for real with nothing changed in between, it removes
+    exactly the items the preview listed,
+  And the real sweep's report states the count of items removed per kind (workspaces,
+    scratch items, outside items) and the total bytes freed, which equals the sum of
+    the removed items' sizes measured beforehand,
+  And when one more expired scratch item of 4096 bytes is added and the preview is run
+    again, its count is one greater and its total is 4096 bytes greater.
+depends_on: [BO-4400d, BO-4400d-1, BO-4400b-1]
+doc_links:
+  - path: docs/acceptance-criteria/build-orchestration/BO-4400-nothing-accumulates/BO-4400d.yaml
+    relationship: constrains
+    status: exists
+  - path: docs/testing/test-angles.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to: null
+expects_from:
+  ac_id: BO-4400d-1
+  contract: "Per-item sweep outcome with kind, location and bytes."
+origin_agent: business-analyst
+created: 2026-10-09
+amended_by: []
+superseded_by: null
+covered_by: [BO-4400d-2-i]
+implemented_by: []
+notes: |
+  Gap G4: "with dry-run, count and bytes-freed report". The last clause is the
+  varying-population check -- a report built from a fixed or estimated figure cannot move by
+  exactly one item and exactly 4096 bytes. Bytes are the apparent size of files measured
+  before removal; block-size rounding is the IT PO's call but must be the same measure in the
+  preview and the real run.
