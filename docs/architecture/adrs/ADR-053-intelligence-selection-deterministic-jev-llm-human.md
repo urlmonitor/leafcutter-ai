@@ -279,7 +279,7 @@ The flow is specified in [design part 4][design4].
   PRE-CHECK / POST-CHECK lifecycle whose checks declare the executors fixed in §7.
 - [ADR-054: Process representation and maturity model][adr054]. The companion "process" ADR:
   workflow, policy or checklist, or LLM-guided work, and maturity levels 0–4.
-- [ADR-067: Kernel splits bundled requests into approved parts][adr067]. Applies this ADR's escalation order to the bundled-request check: deterministic gates first, one Jev judgement against a configured threshold, the host proposes the parts and a person approves (first built in DK-400a-1).
+- [ADR-067: Kernel splits bundled requests into approved parts][adr067]. Applies this ADR's escalation order to the bundled-request check: deterministic gates first, one Jev judgement against a configured threshold, the host proposes the parts and a person approves (first built in DK-400a-1). Its bundled_accepted trigger (DK-400a-2) applies the same order to a request routing would accept: the route pass that selected the capability offers the split first, without a second routing Jev call and before the host proposes any options.
 - [Decision Kernel component][kernel], [kernel design part 4][design4], and the kernel spec
   [part 3][spec3] (contracts, §7.6 and §7.7) and [part 4][spec4] (Jev and capabilities, §8–§10).
 

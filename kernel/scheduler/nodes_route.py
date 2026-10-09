@@ -268,6 +268,8 @@ class _Router(SplitStep, IntentStep):
         outcome = result.outcome
         if outcome is RoutingOutcome.SELECTED:
             descriptor = self.state["registry"].get(str(result.selected))
+            if self.accepted_split(entry, descriptor, ref):
+                return
             self._bind_descriptor(item, descriptor or fail("selected capability not in the registry"), ref)
         elif outcome is RoutingOutcome.NO_MATCH:
             self.no_match(entry, result, ref)
@@ -411,4 +413,5 @@ def _packet(state: KernelState, invocation_id: str, shares: dict[str, int]) -> d
 # - 2026-10-03 15:10 [python-coder]: Preserve verbatim goals and separate meaning, caller and clarification channels. (#DK-300/entity-context)
 # - 2026-10-06 18:00 [python-coder]: Start a split instead of ending a bundled jev_none root as a gap. (#TICKET-20261006-DK-400a-1)
 # - 2026-10-06 19:00 [python-coder]: Try the ambiguous split before the clarification question for an insufficient_context result. (#TICKET-20261006-DK-400a-1-i)
+# - 2026-10-09 [python-coder]: Offer a split for a bundled root routing accepted, before binding the capability. (#TICKET-20261006-DK-400a-2)
 # ====================================================================

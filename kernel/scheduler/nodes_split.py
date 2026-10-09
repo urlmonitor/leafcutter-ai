@@ -29,7 +29,7 @@ from kernel.contracts import (
     WorkItemStatus,
     schema_ids,
 )
-from kernel.contracts.split import GoalDecompositionRequestPayload
+from kernel.contracts.split import GoalDecompositionRequestPayload, KeptRouting
 from kernel.providers.base import QuestionSpec
 from kernel.scheduler.context import run_corr
 from kernel.scheduler.merge import create_children, plan_proposals
@@ -135,8 +135,25 @@ class SplitStep:
         self.draft.put_item(item, status=WorkItemStatus.DISPATCHED, routing_ref=routing_ref)
         self.plan["gap"].append(item.id)
 
+    def accepted_split(self, entry: RouteEntry, descriptor: Any, routing_ref: str) -> bool:
+        """Start a split (trigger bundled_accepted) for a bundled root routing has just accepted.
+
+        The accepted routing (capability id, version, assessment id) is kept on the split record,
+        so a rejected split can go ahead as that one decision without routing again. False leaves
+        the item to be bound to the capability as today.
+        """
+        item = self.draft.items[entry.item_id]
+        if descriptor is None or descriptor.id not in GOAL_CHILD_CAPABILITIES:
+            return False
+        if not self._root_bundled(item):
+            return False
+        kept = KeptRouting(capability_id=descriptor.id, capability_version=descriptor.version,
+                           routing_assessment_id=routing_ref)
+        return self.start_split(entry, routing_ref, SplitTrigger.BUNDLED_ACCEPTED, kept)
+
     def start_split(self, entry: RouteEntry, routing_ref: str,
-                    trigger: SplitTrigger = SplitTrigger.JEV_NONE) -> bool:
+                    trigger: SplitTrigger = SplitTrigger.JEV_NONE,
+                    kept_routing: KeptRouting | None = None) -> bool:
         """Start the split of a turned-away root; False leaves the item for today's gap path."""
         item = self.draft.items[entry.item_id]
         task = self._task()
@@ -145,7 +162,8 @@ class SplitStep:
         record = Decomposition(
             id=split_id(item.id), run_id=self.state["run_id"], work_item_id=item.id,
             subject_kind=kind, subject_text=subject, found_at=FoundAt.ROUTING,
-            work_item_depth=item.depth, trigger=trigger)
+            work_item_depth=item.depth, trigger=trigger,
+            kept_routing=kept_routing)
         payload = GoalDecompositionRequestPayload(
             subject_text=subject, subject_kind=kind, max_parts=self.cfg.split.max_parts,
             split_id=record.id, allowed_capabilities=list(GOAL_CHILD_CAPABILITIES))
@@ -179,4 +197,5 @@ class SplitStep:
 #   budget and tracing machinery is reused. Telemetry carries the subject length, never its text
 #   (data_policy redaction). (#TICKET-20261006-DK-400a-1)
 # - 2026-10-06 19:00 [python-coder]: Add the ambiguous split trigger: a bundled root routing cannot decide for is split, not clarified. (#TICKET-20261006-DK-400a-1-i)
+# - 2026-10-09 [python-coder]: Add the bundled_accepted trigger: a bundled root routing accepted is split in the same route pass and the accepted routing is kept on the record. (#TICKET-20261006-DK-400a-2)
 # ====================================================================
