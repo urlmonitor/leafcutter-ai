@@ -5,13 +5,22 @@ components:
 title: "An installation whose YAML library lacks the C extension still works, just slower"
 component: testing-quality
 level: L3
-status: active
-req_status: draft
+status: deprecated
+req_status: superseded
 work_status: todo
-readiness: approved
+readiness: reviewed
 priority: high
 roadmap_phase: phase_1
 criteria: |
+  RETIRED 2026-10-09 WITH ITS PARENT TQ-600a-11. The shared parser accessor whose
+    fallback branch this record exists to exercise has exactly one caller — the
+    agent-card generator's whole-AC-store walk — and that walk is removed when agent
+    cards become static. With no caller, there is no fallback decision to make and no
+    store-reading entry point that behaves differently with or without the C
+    extension. Read the amended_by entry before reinstating anything; one clause of
+    this record remains true of a DIFFERENT site and is named there. Text below is
+    preserved verbatim for audit.
+
   Given a Python environment whose installed YAML library was built without the
     libyaml C extension, so the C safe parser class is absent from the module
     namespace — the configuration an adopter of this package can legitimately have,
@@ -75,53 +84,128 @@ expects_from:
     contract: >-
       The shared parser accessor, which is the single place the fallback decision is
       made and therefore the only place this record has to check.
-test_spec:
-  - name: test_tq600a_11_i_accessor_falls_back_when_the_c_parser_class_is_absent
-    target_dir: unit_tests/ac_store/
-    framework: unittest
-    type: unit
-    angle: failure
-    description: >-
-      With the C safe parser class removed from the yaml module namespace, resolving
-      the accessor yields the pure-Python safe parser and raises nothing. Restore the
-      attribute afterwards so the removal cannot leak into other tests.
-  - name: test_tq600a_11_i_results_are_equal_with_and_without_the_c_extension
-    target_dir: unit_tests/ac_store/
-    framework: unittest
-    type: unit
-    angle: criterion
-    description: >-
-      Parse a real store record both ways inside the simulated-absence window and
-      assert the two objects are equal.
-  - name: test_tq600a_11_i_a_store_entry_point_completes_with_the_c_parser_absent
-    target_dir: unit_tests/ac_store/
-    framework: unittest
-    type: integration
-    angle: reachability
-    description: >-
-      Run the store-wide schema validation entry point in a FRESH subprocess with the
-      C class made absent, and assert it exits zero and names a non-zero file count.
-      A fresh process is required: an in-process patch after the module cached its
-      choice proves nothing.
-test_rationale: |
-  The whole value of this record is that it covers a branch nobody in this workspace
-  can take by accident. That makes the ordinary failure mode specific: a test is
-  written, it never enters the fallback, and it passes for the wrong reason — the same
-  shape as a check that examined nothing.
-
-  So the simulation is named as the mechanism, the restore is named so the removal
-  cannot leak, and the end-to-end descriptor insists on a fresh subprocess because an
-  accessor that resolves at module import will have cached the C choice before any
-  in-process patch lands.
+test_required: false
+test_spec: null
+test_rationale: >-
+  RETIRED 2026-10-09. This record declares NO test contract: it is deprecated and the
+  accessor its three descriptors exercised has no caller once the static-cards change
+  removes the card-generation walk. The descriptors and the original rationale are
+  preserved in the notes under "THE RETIRED TEST CONTRACT", as history and not as
+  work waiting to be done. The portability concern one of them covered is real and
+  permanent and is flagged there with where it would have to live instead.
 origin_agent: BrainCandy
 created: 2026-10-05
-amended_by: []
+amended_by:
+  - reason: retired-with-parent-accessor-has-no-remaining-caller
+    by: business-analyst
+    at: '2026-10-09'
+    note: >-
+      status active -> deprecated, req_status draft -> superseded, readiness approved
+      -> reviewed, test_required added as false, and all three test_spec descriptors
+      prefixed with a retirement marker. criteria text below the banner, doc_links,
+      it_requirements, test_rationale and declared_files are untouched; superseded_by
+      stays null.
+
+
+      readiness AND test_spec CORRECTED 2026-10-09, AFTER THIS ENTRY FIRST KEPT
+      approved. approved means cleared FOR BUILDING, which a retired record never is;
+      the fact that this record was approved from 2026-10-05 to 2026-10-09 is
+      preserved by saying so here rather than by a field that invites work. test_spec
+      is CLEARED to null, with test_required: false, and its three descriptors moved
+      into notes under "THE RETIRED TEST CONTRACT". A first attempt kept the
+      descriptors in test_spec behind per-entry "RETIRED — DO NOT AUTHOR" markers;
+      check-ac-schema refused it, because test_required and test_spec are one
+      declaration and "no tests needed" plus "here are three tests" is a
+      contradiction. The gate was right, and the underlying error was the same one
+      made on work_status and readiness: a present-tense field being used to carry
+      history. Write the history down; let the field be honest. The four-field
+      retired-record shape is on INF-600b-2's notes under "HOW TO RETIRE AN AC"; the
+      parent TQ-600a-11 carries the same correction.
+
+
+      THE THIRD DESCRIPTOR CARRIES A POINTER WORTH KEEPING. The portability risk this
+      record covers — an adopter whose PyYAML was built without libyaml — is real and
+      permanent, and after this change the only site resolving the C class is the
+      pre-existing guarded inline form in scripts/render_effective_prompt.py. Its
+      marker says where that concern would have to live if anyone wants it asserted
+      rather than assumed.
+
+
+      WHY. This record covers one branch of one function: the shared accessor's choice
+      of the pure-Python parser when the C class is absent from the yaml module. Its
+      own expects_from names that accessor as "the single place the fallback decision
+      is made and therefore the only place this record has to check". The accessor's
+      one production caller is the agent-card generator's whole-AC-store walk, which
+      the static-cards change deletes. A fallback on a decision nobody makes is not a
+      smaller requirement, it is no requirement.
+
+
+      ONE CLAUSE SURVIVES AND IS ALREADY SATISFIED ELSEWHERE, SO IT IS NOT LOST BY
+      RETIRING THIS RECORD. The portability concern — an adopter whose PyYAML was built
+      without libyaml must not get an ImportError or AttributeError at module load — is
+      real and permanent. After this change the only site in the package that resolves
+      the C class at all is the pre-existing inline
+      `getattr(yaml, "CSafeLoader", yaml.SafeLoader)` in
+      scripts/render_effective_prompt.py, which is ALREADY the guarded form this record
+      demands and which predates the accessor by some margin. So the risk this record
+      was written against is closed by construction rather than by a test, and that is
+      a weaker guarantee than this record wanted. If the user wants the guarded form
+      asserted rather than assumed, it belongs on a record about that one inline site,
+      not on a record about an accessor with no callers.
+
+
+      ARTIFACT NOTICE, SAME AS THE PARENT'S. unit_tests/ac_store/test_tq_600a_11_i.py
+      exists on origin/main despite this record reading work_status: todo. It must be
+      retired or re-pointed deliberately with the code change, not left to go red.
 superseded_by: null
 covered_by: []
 implemented_by: []
 change_target: pipeline
 risk_surface: internal
 notes: |
+  ==========================================================================
+  THE RETIRED TEST CONTRACT (moved here from test_spec, 2026-10-09).
+  NONE OF THIS IS WORK WAITING TO BE DONE. DO NOT AUTHOR ANY OF THESE TESTS.
+  ==========================================================================
+  test_spec is now null and test_required is false. The three descriptors below stood
+  in test_spec until this retirement; they are recorded here because the field is a
+  present-tense instruction to test-writer and these describe a contract against code
+  that no longer has a caller.
+
+  (1) test_tq600a_11_i_accessor_falls_back_when_the_c_parser_class_is_absent
+      — unit / failure. With the C safe parser class removed from the yaml module
+      namespace, resolving the accessor yielded the pure-Python parser and raised
+      nothing, restoring the attribute afterwards so the removal could not leak into
+      other tests.
+
+  (2) test_tq600a_11_i_results_are_equal_with_and_without_the_c_extension
+      — unit / criterion. Parsed a real store record both ways inside the
+      simulated-absence window and asserted the two objects equal. The point was that
+      "it ran" is a weaker claim than "the values match".
+
+  (3) test_tq600a_11_i_a_store_entry_point_completes_with_the_c_parser_absent
+      — integration / reachability. Ran the store-wide schema validation entry point
+      in a FRESH subprocess with the C class made absent, asserting it exited zero and
+      named a non-zero file count. The fresh process was the whole point: an
+      in-process patch applied after the module cached its choice proves nothing.
+      FOR WHOEVER REVIVES THE PORTABILITY CONCERN: the risk is real and permanent —
+      an adopter whose PyYAML was built without libyaml must not get an ImportError
+      at module load or an AttributeError where the parser is chosen. After the
+      static-cards change the ONLY site in the package resolving the C class is the
+      pre-existing guarded inline `getattr(yaml, "CSafeLoader", yaml.SafeLoader)` in
+      scripts/render_effective_prompt.py, which already has the right shape. So the
+      risk is closed by construction rather than by a test, which is weaker. If it is
+      to be asserted rather than assumed, it belongs on a record about that one site.
+
+  THE ORIGINAL test_rationale, PRESERVED BECAUSE ITS WARNING GENERALISES. "The whole
+  value of this record is that it covers a branch nobody in this workspace can take
+  by accident. That makes the ordinary failure mode specific: a test is written, it
+  never enters the fallback, and it passes for the wrong reason — the same shape as a
+  check that examined nothing." Hence the simulation named as the mechanism, the
+  restore named so the removal could not leak, and the fresh subprocess. Any future
+  test of an unreachable-here branch has the same failure mode and needs the same
+  three precautions.
+
   Why this is a separate record rather than a clause of TQ-600a-11: the parent is
   measured in this environment, where the C extension is present and the fallback is
   dead code. A record that bundles "it is faster here" with "it still works there"

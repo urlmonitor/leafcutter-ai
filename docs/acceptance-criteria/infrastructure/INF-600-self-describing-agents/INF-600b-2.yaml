@@ -4,12 +4,27 @@ components:
 title: "Generated card surfaces per-agent AC assignments so agents can work AC-by-AC"
 component: infrastructure
 level: L2
-status: active
-req_status: active
-work_status: done
-readiness: approved
+status: deprecated
+req_status: superseded
+work_status: todo
+readiness: reviewed
 priority: high
 criteria: |
+  RETIRED 2026-10-09. THE CARRIER WAS THE WRONG MECHANISM; THE NEED IS MET AT READ
+    TIME. Do not reinstate this, and do not read the text below as a live requirement.
+    The purpose stated in the second-to-last clause — each agent identifying exactly
+    which criteria it is responsible for without inspecting another agent's — is
+    better served by querying the acceptance-criteria store, which is the source of
+    truth and can be grouped by assigned_agent by any consumer at the moment of
+    reading. Caching that query into generated markdown is what produced a working
+    tree that was dirty after every build and could not honestly be committed. THIS IS
+    A RETIREMENT OF THE CARRIER, NOT OF THE REQUIREMENT: the requirement was not wrong
+    and is not abandoned. Its sibling INF-600b-3 now specifies the opposite property
+    of the card — that adding a criterion to the store moves no card — and the two are
+    the before and after of one decision rather than a contradiction. Read the final
+    amended_by entry and the notes before concluding anything from the text below,
+    which is preserved verbatim for audit.
+
   Given a ticket that references multiple L2/L3 ACs via its
     ac_traceability frontmatter field
     (e.g. ac_traceability: [INF-600g-1, INF-600g-2, INF-600g-3])
@@ -43,6 +58,42 @@ doc_links:
   - path: docs/reference/ac-schema.md
     relationship: describes
     status: exists
+    relevance: >-
+      THE PUBLISHED DESCRIPTION OF THE RETIRED BEHAVIOUR, AND THE ONLY SURFACE IN THE
+      PROJECT THAT NAMES THE SECTION BY ITS HEADING. Its section "python-coder — AC
+      Assignments section in generated card (INF-600b-2)" cites this record by id and
+      documents the whole-store scan, the rendered `## AC Assignments` heading, the
+      four-step data flow and the error-handling contract. All of it describes
+      behaviour retired on 2026-10-09. It is the AC schema SSOT, so leaving it is how
+      the retired behaviour gets reconstructed by the next reader. Being updated under
+      INF-600b-3, which carries it as a modify target.
+  - path: docs/acceptance-criteria/infrastructure/INF-600-self-describing-agents/INF-600b-3.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      THE RECORD THAT REPLACES THIS ONE'S CARRIER, AND THE OTHER HALF OF ONE DECISION.
+      INF-600b-3 requires the card to be assembled from the agent's own declared facts
+      and nothing else, so that adding a criterion to the store moves no card. Read
+      from this end it looks like the opposite of this record, and it is — that is the
+      point: the two are the before and after of a single design change, not two
+      criteria in conflict. NOTE WHAT IT IS NOT. It is deliberately NOT named in this
+      record's `superseded_by` field and this record's status is `deprecated` rather
+      than `superseded_by`, because INF-600b-3 does not deliver this record's VALUE.
+      It specifies what the card no longer contains; it says nothing about an agent
+      finding the criteria it owns. That need is met by querying the store, which is a
+      mechanism rather than a criterion, so there is no successor record to point at
+      and claiming one would be false. INF-600b-3 carries the reciprocal doc_link.
+  - path: scripts/ac_store/_gtfa_body.py
+    relationship: describes
+    status: exists
+    relevance: >-
+      THE EVIDENCE THAT THE TICKET-BODY HALF OF THIS RECORD'S DISJUNCTION WAS NEVER
+      BUILT, cited so the finding rests on a named artifact rather than on an absence
+      of contrary evidence. The ticket generator builds from ONE acceptance criterion
+      and renders a single line — `Assigned agent: {assigned_agent}` — inside the
+      Context paragraph. There is no grouped section and no per-agent heading, and a
+      single-criterion ticket has no grouping to perform in the first place. See the
+      final amended_by entry for why that matters.
 assigned_agent: python-coder
 estimated_complexity: L
 delivers_to:
@@ -51,10 +102,366 @@ delivers_to:
 expects_from: null
 origin_agent: BrainCandy
 created: 2026-06-05
-amended_by: []
+amended_by:
+- reason: carrier-narrowed-card-no-longer-renders-the-grouping
+  by: business-analyst
+  at: '2026-10-09'
+  note: >-
+    criteria UNTOUCHED. readiness (approved), req_status, work_status (done),
+    priority, assigned_agent and implemented_by are all untouched. This amendment
+    records a CARRIER CHANGE and a risk, and changes nothing this record requires.
+
+
+    THIS RECORD IS THE ONE THAT MANDATES THE REMOVED BEHAVIOUR, AND A SEARCH FOR THE
+    HEADING DOES NOT FIND IT. The change that makes agent cards static was surveyed on
+    the assumption that "no record anywhere names the `## AC Assignments` section by
+    that heading, so nothing mandates the section's existence directly". That is true
+    of the heading and false of the behaviour: this record's own Then clause requires
+    that "it includes a per-agent AC assignment section that groups ACs by their
+    assigned_agent", and its worked example is exactly the rendered form the card
+    carries. The survey searched for the heading string; this record states the
+    requirement in different words. Recorded here so the next reader does not repeat
+    the search and reach the same wrong conclusion.
+
+
+    WHY THIS RECORD SURVIVES THE CHANGE: THE DISJUNCTION. The When clause is "When the
+    ticket body OR agent card is generated". The card is being removed as a carrier;
+    the ticket body is not, and neither is the store itself, which the change's whole
+    rationale names as the source of truth that any consumer can group by
+    assigned_agent at read time. So the obligation moves rather than disappearing, and
+    this record is NOT retired. INF-600b-3, its sibling under INF-600b, owns the card
+    side of that boundary and carries a reciprocal doc_link.
+
+
+    THE RISK, STATED RATHER THAN SMOOTHED OVER, AND IT IS FOR THIS RECORD'S OWNER.
+    This record is work_status done with covered_by [] — no covering test — and its
+    only evidence is a ticket path. Nothing in the store establishes that the
+    TICKET-BODY disjunct is actually produced today. If the card was in practice the
+    only carrier, then the moment the card stops rendering the grouping this record
+    becomes phantom-done: a done record whose Then clause no longer holds anywhere,
+    with no test to notice. That is not a question this amendment can settle from the
+    AC store, and it is deliberately not settled by quietly reading the disjunction in
+    the convenient direction. VERIFY THE TICKET-BODY CARRIER BEFORE THE REMOVAL LANDS;
+    if it does not exist, this record needs re-pointing or retiring, not a reading.
+
+
+    ONE MORE STALE SURFACE, NAMED SO IT IS NOT MISSED: docs/reference/ac-schema.md
+    carries a section headed "python-coder — AC Assignments section in generated card
+    (INF-600b-2)" that cites this record by id and documents the whole-store scan, the
+    rendered heading and the four-step data flow. It is the only surface in the project
+    that names the section by its heading, and it is a modify target of INF-600b-3.
+- reason: retired-carrier-was-the-wrong-mechanism-and-the-other-half-was-never-built
+  by: business-analyst
+  at: '2026-10-09'
+  note: >-
+    status active -> deprecated, req_status active -> superseded, work_status done ->
+    todo, readiness approved -> reviewed. criteria text below the retirement banner is
+    UNTOUCHED; doc_links gain three entries and lose none; assigned_agent,
+    delivers_to, implemented_by, change_target and risk_surface are untouched.
+    superseded_by stays null — see below, that is a decision and not an omission. THIS
+    ENTRY SUPERSEDES THE ONE IMMEDIATELY ABOVE IT, which concluded
+    "this record is NOT retired". That entry is left exactly as written, per this
+    store's convention that amendment history is a dated record of what was believed
+    at the time and not a live instruction — but do not act on it.
+
+
+    THE FACT THAT ENTRY COULD NOT ESTABLISH HAS NOW BEEN ESTABLISHED, AND IT WENT THE
+    OTHER WAY. The earlier entry rested this record's survival on the disjunction in
+    its own When clause — "When the ticket body OR agent card is generated" — and
+    flagged that the ticket-body carrier was unverified, refusing to read the
+    disjunction in the convenient direction. The check has since been made against
+    scripts/ac_store/_gtfa_body.py: the ticket generator builds from ONE acceptance
+    criterion and renders a single line, `Assigned agent: {assigned_agent}`, inside
+    the Context paragraph. No grouped section, no per-agent headings, and nothing to
+    group — a single-criterion ticket has no grouping to perform. THE AGENT CARD WAS
+    THE ONLY CARRIER. Removing it leaves the disjunction with no true disjunct, so
+    this record cannot survive the static-card change and is retired rather than
+    narrowed.
+
+
+    A PHANTOM-DONE INSTANCE IN ITS OWN RIGHT, AND THIS IS THE MORE IMPORTANT HALF.
+    Record it as a finding, not as a footnote to the retirement: the ticket-body half
+    of this record's disjunction was NEVER IMPLEMENTED, and this record has read
+    work_status: done since 2026-06-29 with covered_by [] and no covering test. So it
+    claimed done while only half-satisfied, and nothing in the store or the suite
+    could notice, because a disjunction is satisfied by either side and nobody had
+    checked which side was live. That is the phantom-done class this project's
+    guardrails exist to catch, occurring on a record about making work legible to the
+    agent that owns it. It was found only because an unrelated change removed the
+    carrier and someone declined to assume the other one existed. The lesson
+    generalises past this record: AN "A OR B" ACCEPTANCE CRITERION MARKED DONE IS
+    EVIDENCE THAT ONE OF A AND B WORKS, AND NOT EVIDENCE OF WHICH. Any such record
+    can lose its live disjunct silently.
+
+
+    work_status done -> todo, BECAUSE done IS A CLAIM ABOUT THE TREE AND NOT ABOUT THE
+    PAST. config/ac_store_schema.json defines the enum as not_started / todo /
+    in_progress / done and defines done as "implemented and verified". Once the card
+    carrier is deleted this record is neither: the implementation is gone, the
+    ticket-body carrier never existed, covered_by is empty, and no test could honestly
+    carry a `# covers: INF-600b-2` tag — writing one would mean authoring a test for
+    behaviour deliberately removed. There is no "retired" value in the enum, so done
+    and todo are the only candidates and the schema's own wording rules out the first.
+    THE FACT THAT THE WORK WAS GENUINELY BUILT AND RAN FOR FOUR MONTHS IS NOT LOST BY
+    THIS: it is carried by this entry and by the notes block, in more detail than a
+    status field could hold, and `status: deprecated` already stops anyone picking the
+    record up as available work. A field that would be false is the wrong place to
+    store a fact that is true. THIS REVERSES AN EARLIER CALL ON THIS SAME PASS, which
+    kept done on the ground that it was an audit fact and that todo would assert the
+    work never happened. The first half was right and the conclusion did not follow —
+    work_status describes the current state, the history lives in the amendment, and
+    the two were being conflated. Store precedent agrees and is unanimous: every
+    pre-existing deprecated record carrying a work_status carries todo — ACD-800,
+    ACD-800a, ACD-800a-1, ACD-800b and ACD-800c, checked 2026-10-09 — so
+    deprecated + done would have been unique to this record.
+
+
+    readiness approved -> reviewed, BECAUSE approved MEANS CLEARED FOR BUILDING AND
+    THIS RECORD IS EXPLICITLY NOT TO BE BUILT. The work_status flip above moved this
+    record into the scope of check-ac-schema's approved-code-AC rule, which refused
+    the commit: "approved code AC must declare a test contract — add a non-empty
+    test_spec". The rule is right and it is correctly scoped. It exempts work_status
+    done (already built, so no forward test contract is owed) and enforces for
+    anything approved and not yet done — which, taken literally, is exactly what this
+    record had become: cleared for work, with no work recorded and no contract saying
+    what the work would have to prove. NEITHER ESCAPE THE MESSAGE OFFERS IS HONEST
+    HERE, and both were considered and refused. Authoring a test_spec would mean
+    specifying tests for behaviour being deleted in this same change. Reclassifying to
+    change_target: docs with a non-coder assigned_agent would misdescribe what the
+    record was — it specified the output of a Python generator and its assigned_agent
+    was python-coder, and changing those to clear a gate is the gate-shaped lie this
+    store exists to prevent. The honest answer is the third one: the record is not
+    approved for building, because it is not to be built. `reviewed` says it was
+    reviewed and is not cleared for work, which is precisely its state.
+
+
+    PRECEDENT, MEASURED ACROSS EVERY PRE-EXISTING DEPRECATED RECORD IN THE STORE ON
+    2026-10-09, AND IT IS UNANIMOUS ON BOTH FIELDS. Thirteen records carried
+    status: deprecated before this one: ACD-800, ACD-800a, ACD-800a-1, ACD-800a-2,
+    ACD-800b, ACD-800b-1, ACD-800c, ACD-800c-1, ACD-800c-2, ACD-800d, ACD-800d-1,
+    FIN-100e-1 and FIN-100e-2. readiness is `reviewed` on 13 of 13. work_status is
+    `todo` on 11 of 11 that carry the field at all (FIN-100e-1 and -2 omit it). THE
+    DECISIVE PART IS NOT THE COUNT BUT WHAT THOSE RECORDS ARE: ten of the eleven
+    ACD-800 records carry change_target: code and nine carry assigned_agent:
+    python-coder, so they are code ACs that the approved-code-AC rule would bite — and
+    it does not bite them, because `reviewed` keeps them outside it. That is direct
+    empirical confirmation of what the rule keys on, from eleven records rather than
+    from reading the rule.
+
+
+    WHAT THE DEMOTION MUST NOT ERASE, AND THE LESSON IS THE ONE FROM THE FIELD ABOVE.
+    This record stood at readiness: approved from its creation on 2026-06-05 until
+    2026-10-09, and its amended_by held no approval event, so demoting the field with
+    no note would have deleted the only trace that it was ever approved. It is
+    recorded here instead. This is the same mistake the work_status passage above
+    describes being made and reversed: a status field describes the present, the
+    history belongs in the amendment, and the fix for "demoting loses a fact" is to
+    write the fact down, never to leave the field wrong. Noted once here rather than
+    learned a third time.
+
+
+    THE RETIRED-RECORD SHAPE IS THREE FIELDS THAT MUST AGREE, AND EACH WRONG ONE IS
+    CAUGHT BY A DIFFERENT GATE. See the notes block for the generalised form; it is
+    the part of this retirement most likely to be useful to someone who is not
+    interested in agent cards.
+
+
+    THE GATE THAT CAUGHT THE work_status FIELD HAD BEEN ABLE TO CATCH IT FOR FOUR
+    MONTHS AND DID NOT,
+    AND THAT IS A FINDING IN ITS OWN RIGHT. check-done-proof refused the commit with
+    "INF-600b-2: no '# covers: INF-600b-2' or '// covers: INF-600b-2' tag found
+    anywhere under ., exemptions in force: 0". That refusal was available from
+    2026-06-29, the day this record was marked done with covered_by [] — the condition
+    it tests was true the entire time. It never fired because the AC hooks validate
+    only the files in a given commit's INDEX, and this record was never staged again
+    in that window. The gate was not passing; it was never handed the file. This is a
+    live instance of the trap CLAUDE.md already documents under "AC-store commits —
+    stage the parent alongside the child" for check_ac_parent_covered_by and
+    check_done_proof, and it is worth citing there as one: the existing write-up frames
+    the risk as a STALE PARENT, and this instance shows the same mechanism hiding a
+    false done on a LEAF that nobody had reason to touch. It also compounds the
+    disjunction finding below — two independent reasons this record's done went
+    unchallenged, one about what the gate can see and one about what a disjunction can
+    hide.
+
+
+    WHY status IS deprecated AND superseded_by IS null, WHEN THE DECISION WAS
+    DESCRIBED AS A SUPERSESSION. The schema permits superseded_by only with status
+    superseded_by, and that field names a REPLACEMENT CRITERION. There is no
+    replacement criterion. INF-600b-3 specifies what the card no longer contains; it
+    says nothing about an agent finding the criteria it owns, so it does not deliver
+    this record's value and naming it as the successor would be a false pointer that
+    a later reader would follow and find nothing. What supersedes this record is a
+    MECHANISM, not a criterion: the acceptance-criteria store is the source of truth
+    and any consumer can group it by assigned_agent at read time. `deprecated` —
+    "criterion is retired; retained for audit" — is the honest shape for a record
+    whose need is met by something that is not another record.
+
+
+    WHAT IS BEING RETIRED IS THE CARRIER, NOT THE REQUIREMENT, AND THE DISTINCTION IS
+    LOAD-BEARING. The purpose in this record's own penultimate clause — an agent
+    identifying exactly which criteria it owns without reading another agent's — was
+    and remains correct. What was wrong was caching that query into a generated
+    document: the cache had to be rebuilt whenever any unrelated criterion anywhere in
+    the store changed, which left the working tree dirty after every build with a diff
+    nobody authored and nobody could honestly commit, and drove three cards past the
+    document-length limit with a refusal no author could act on. The query itself is
+    cheap and always current. Nothing of value is lost by deleting the cache; what is
+    lost is a stale copy.
+
+
+    THE HISTORY, SO THE RETIREMENT DOES NOT ERASE IT. The card carrier EXISTED and
+    WORKED. From the ticket that implemented this record (2026-06-29) until 2026-10-09
+    every generated agent card ended with a `## AC Assignments` section listing, under
+    a heading per agent, each active criterion whose assigned_agent matched. At removal
+    it stood at 3,787 of 11,526 total card lines (33%), present in 17 of 64 cards, and
+    it was the ONLY part of any card that changed between regenerations. It was
+    removed deliberately on 2026-10-09 as a design decision, not lost, not broken and
+    not quietly dropped.
+
+
+    delivers_to IS NOW VOID AND IS LEFT STANDING. It promises python-coder "a per-agent
+    AC grouping section in the ticket body or card that scopes each agent's work to its
+    assigned ACs only". Neither carrier will exist. The field is kept rather than
+    nulled so the contract that was offered remains readable, and is named here as void
+    so it is not mistaken for a live obligation.
+
+
+    NOTHING ELSE IN THE STORE DEPENDS ON THIS RECORD. Checked by grep across
+    docs/acceptance-criteria/ on 2026-10-09: no record names INF-600b-2 in depends_on,
+    expects_from or delivers_to. The only references are its parent INF-600b's
+    covered_by, which it KEEPS, and INF-600b-3's doc_links. One reference outside the
+    store, docs/reference/ac-schema.md:740, describes the retired behaviour and is
+    being handled under INF-600b-3 by a documentation author; it is not touched here.
 superseded_by: null
 covered_by: []
 implemented_by:
 - tickets/00_inbox/TICKET-20260629-INF-600b-2.md
 change_target: code
 risk_surface: contract_boundary
+notes: |
+  RETIRED 2026-10-09. The full grounds are in the final amended_by entry; this is the
+  short form for a reader who arrives here first.
+
+  WHAT THIS RECORD REQUIRED. That a per-agent grouping of acceptance criteria, keyed
+  on assigned_agent, appear in the generated ticket body or the generated agent card,
+  so an agent could see exactly which criteria it owned.
+
+  WHAT HAPPENED TO IT. Two things, and the second is the one worth remembering.
+
+    - The CARD carrier was built, ran from 2026-06-29 to 2026-10-09, and was removed
+      deliberately on the latter date. At removal it was 3,787 of 11,526 total card
+      lines (33%), across 17 of 64 cards, and was the only part of any card that
+      changed between regenerations — which is precisely why it was removed. A query
+      cached into a generated document has to be rebuilt whenever anything it reads
+      changes, so every build left a dirty tree nobody had authored.
+    - The TICKET-BODY carrier was NEVER BUILT. scripts/ac_store/_gtfa_body.py renders
+      one line, `Assigned agent: {assigned_agent}`, from the single criterion the
+      ticket is generated from. There is no grouping because there is nothing to
+      group.
+
+  SO THIS RECORD WAS HALF-SATISFIED FOR ITS ENTIRE LIFE WHILE READING work_status:
+  done, WITH covered_by [] AND NO COVERING TEST. (It reads `todo` from 2026-10-09; the
+  `done` is what it carried from 2026-06-29 until the retirement.) That is a
+  phantom-done instance and it is named as one rather than buried in the retirement.
+  The general form is worth carrying away: an acceptance criterion whose When clause
+  offers "A or B" and whose work_status is done tells you that one of A and B works.
+  It does not tell you which, and nothing will notice when the live one disappears.
+
+  TWO INDEPENDENT REASONS NOTHING NOTICED, WHICH IS WHY IT LASTED FOUR MONTHS. The
+  disjunction above is one. The other is that check-done-proof — the gate that would
+  have refused a `done` record with no `# covers:` tag — was never given the chance:
+  the AC hooks read a commit's INDEX, not the store, and this record was not staged
+  again between being marked done and being retired. The condition the gate tests was
+  true throughout; the gate simply never saw the file. Its silence was not a pass. That
+  is the index-only trap CLAUDE.md records under "AC-store commits — stage the parent
+  alongside the child", and this is a live instance of it on a LEAF rather than on the
+  stale parent the existing write-up describes.
+
+  THE NEED IS NOT ABANDONED. An agent identifying the criteria it owns is a good
+  requirement. It is met by querying the acceptance-criteria store — the source of
+  truth, groupable by assigned_agent at read time, never stale — rather than by a copy
+  baked into markdown. That is a mechanism, not a criterion, which is why this record
+  is `deprecated` with `superseded_by: null` rather than pointed at a successor.
+
+  ==========================================================================
+  HOW TO RETIRE AN AC: THE SHAPE IS THREE FIELDS AND NOTHING NAMES IT.
+  ==========================================================================
+  The most reusable thing this retirement produced, written here because a future
+  retirement will arrive at a deprecated record looking for the pattern and there is
+  nowhere else to find it.
+
+  THE SHAPE:
+
+      status:        deprecated        (retired; retained for audit)
+      work_status:   todo              (NOT done — see below)
+      readiness:     reviewed          (NOT approved — see below)
+      test_spec:     cleared to null   (content moved to notes — see below)
+      test_required: false
+      superseded_by: null              unless a real successor CRITERION exists
+
+  Measured against every pre-existing deprecated record in the store on 2026-10-09 —
+  ACD-800, ACD-800a, ACD-800a-1, ACD-800a-2, ACD-800b, ACD-800b-1, ACD-800c,
+  ACD-800c-1, ACD-800c-2, ACD-800d, ACD-800d-1, FIN-100e-1, FIN-100e-2. readiness is
+  `reviewed` on 13 of 13; work_status is `todo` on 11 of 11 that carry the field.
+
+  WHY EACH, ON THE MERITS AND NOT ONLY ON PRECEDENT:
+    - work_status is NOT `done` because the schema defines done as "implemented and
+      verified", which is a claim about the tree as it now stands. A retired record's
+      implementation is generally gone, so `done` is false — and there is no
+      "retired" value in the enum, leaving todo as the only honest option.
+    - readiness is NOT `approved` because approved means cleared FOR BUILDING, and a
+      retired record is the one thing nobody should build.
+    - test_spec is CLEARED and test_required set false, because the two are ONE
+      declaration and the gate enforces their agreement: a populated test_spec beside
+      test_required: false says "no tests are needed" and "here are the tests" in the
+      same record. A retired record declares no tests and keeps the historical
+      contract in prose. Move the descriptors into notes FIRST — they are usually the
+      only surviving account of what the work was meant to prove — then null the
+      field. Note that `test_spec: []` is NOT permitted by the schema; use null.
+    - No demotion erases history. Every fact — that it was built, that it was
+      approved, what its tests were going to assert — belongs in notes or amended_by,
+      which can hold the dates and the reasoning that a one-word enum cannot.
+
+  THE SAME ERROR IN THREE FIELDS, WHICH IS WHY THIS BLOCK IS WORTH ITS LENGTH. Each
+  of the three demotions above was initially resisted on the same reasoning: the
+  field held a TRUE FACT ABOUT THE PAST (the work was done; the record was approved;
+  these were the tests) and demoting it looked like denying that fact. That reasoning
+  is wrong the same way all three times. These are PRESENT-TENSE fields — what the
+  tree contains, what is cleared for work, what test-writer should author next — and
+  a present-tense field is not a place to store history. The fix is always: write the
+  fact down in prose, then make the field honest. If you find yourself arguing to
+  leave a field wrong in order to preserve something true, you are in this trap.
+
+  AND THE PART THAT MAKES THIS WORTH WRITING DOWN AT ALL: GETTING ONE FIELD WRONG IS
+  CAUGHT BY A DIFFERENT GATE EACH TIME, AND NO GATE NAMES THE SHAPE.
+    - work_status: done on a retired record -> refused by check-done-proof, which
+      asks for a `# covers:` tag that cannot honestly exist.
+    - readiness: approved on a retired record -> refused by check-ac-schema's
+      approved-code-AC rule, which asks for a test_spec that cannot honestly exist.
+      (That rule exempts work_status: done, so it only surfaces AFTER the work_status
+      field is corrected — the two failures arrive in sequence, never together.)
+    - test_required: false beside a populated test_spec -> refused by check-ac-schema
+      again, on a different rule: "test_spec lists N test(s) but test_required is
+      false — remove test_required: false or clear test_spec". This one surfaces only
+      after you reach for test_required at all, which you only do once the readiness
+      fix has made you look at the test contract.
+    - Each refusal offers remedies that are locally reasonable and globally wrong:
+      write a covering test, author a test contract, reclassify the record as
+      non-code, or drop test_required and leave the contract live. Every one of them
+      is a way of making a retired record look alive. The actual fix is never in the
+      direction the message points — it is the adjacent field.
+
+  So a retirement done one field at a time trips one gate, gets fixed, trips the
+  next, and each message argues for a different repair than the one needed. THIS WAS
+  MEASURED, NOT PREDICTED: retiring INF-600b-2 took three refusals in sequence, and
+  retiring TQ-600a-11 and its three children — done afterwards, by someone who had
+  just written an earlier version of this block — still took two more, because the
+  block was incomplete. Set all four fields together.
+
+  THE SIBLING TO READ NEXT. INF-600b-3 requires the card to be assembled from the
+  agent's own declared facts and nothing else, so that adding a criterion to the store
+  moves no card. It reads as the opposite of this record because it is: the two are the
+  before and after of one decision, not a contradiction. If you are here because
+  INF-600b-3 confused you, this record is the half that explains why the property it
+  asserts had to be written down at all.

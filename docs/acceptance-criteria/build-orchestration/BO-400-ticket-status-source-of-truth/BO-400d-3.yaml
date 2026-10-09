@@ -154,6 +154,20 @@ notes: |
        so it cannot be hand-edited — it corrects itself only when BP-200b-4's
        `title` is amended and the cards are regenerated. That is a second reason
        the amendment has to be made by BP-200's owner.
+       AMENDED 2026-10-09 — THIS ITEM IS ABOUT TO STOP EXISTING, AND THE LIST
+       BECOMES TWO RATHER THAN THREE. That line is an entry in the card's
+       trailing per-agent AC-assignment section, which is removed when agent
+       cards become static (INF-600b-3). After that change no card names any AC
+       id or title, so this stale restatement of the three-place count is
+       deleted outright rather than corrected by regeneration. NOTHING THIS
+       RECORD REQUIRES CHANGES: the guard still becomes four-place, and items 1
+       and 2 — `templates/skills/signoff/SKILL.md:43`, which is inside this
+       record's own implementation surface and is NOT optional, and
+       `docs/agents/llm-expert/PROJECT_CONTEXT.md:214`, owned by BP-200 — are
+       both unaffected and both still have to be updated. What changes is only
+       that the third place self-resolves. Recorded rather than struck, because
+       an implementer who finds two stale places where the record names three
+       should be able to see why without re-deriving it.
 
   IMPLEMENTATION-SURFACE POINTER (for the IT PO, deliberately kept out of
   criteria): the guard is

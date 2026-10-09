@@ -126,16 +126,3 @@ flowchart TD
 |---------|---------|----------|---------------|
 | Conditional Behavior | invoked by `ticket-supervisor` | first check `git diff --name-only HEAD` | `None` |
 | Conditional Behavior | the user does not specify an action | default to `auto` | `None` |
----
-
-## AC Assignments
-
-### test-runner
-
-- BO-2100e-1: An opted-in ticket driven through ticket-supervisor demonstrably spawns live-surface-tester
-- BP-006a-2: test_no_orphaned_directories passes with no unregistered skill directories
-- BP-006a-3: Edge case: new skill directory added without registry entry is detected
-- BP-006c-2: test_build_workflow_phase validates .claude/workflows/ path
-- BP-1200a-1-i: Suite is green across repeated runs with both fixed and varied test-ordering seeds
-- TQ-100b-1-iii: The AC store is read once per session and the enforced set is stable across repeated runs
-- TQ-100e-1-iii: Switching enforcement modes changes behavior with no edits to any test
