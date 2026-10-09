@@ -149,6 +149,10 @@ def build_knowledge_scripts(target_root: Path, config: dict[str, Any],
     #   documented repeat defect of a new scripts/knowledge/*.py module being
     #   silently absent from a deployed install when this list (and its
     #   _manifest_knowledge_scripts() twin below) are not updated in lockstep.
+    # - 2026-10-08 [python-coder/INF-700a-5]: Added completion_routing.py and
+    #   its three siblings (_state, _git, _cli), the durability step the wired
+    #   completion workflows now call; they were in no deploy list, so nothing
+    #   in an install could reach them. Mirrored in _manifest_knowledge_scripts().
     """
     import build_phases as _bp
 
@@ -162,6 +166,10 @@ def build_knowledge_scripts(target_root: Path, config: dict[str, Any],
         "capture_write.py",
         "harvest_cli.py",
         "harvest_status.py",
+        "completion_routing.py",
+        "completion_routing_state.py",
+        "completion_routing_git.py",
+        "completion_routing_cli.py",
     ]
     output_dir = target_root / "scripts" / "knowledge"
     written = 0
@@ -595,6 +603,10 @@ def _manifest_knowledge_scripts(package_root: Path) -> set[str]:
         "capture_write.py",
         "harvest_cli.py",
         "harvest_status.py",
+        "completion_routing.py",
+        "completion_routing_state.py",
+        "completion_routing_git.py",
+        "completion_routing_cli.py",
     ):
         if (knowledge_src / fname).is_file():
             result.add(f"scripts/knowledge/{fname}")

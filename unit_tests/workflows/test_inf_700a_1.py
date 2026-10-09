@@ -229,6 +229,9 @@ class TestReportedResultCarriesRoutingFigures(unittest.TestCase):
             "unwritten": 1,
             "case": "completed",
         }
+        # Since INF-700a-5 the terminal figures come from the post-commit
+        # observation of what the commit carried; it reports the same run.
+        label_responses["knowledge-routing-observe"] = label_responses["knowledge-routing-step"]
         result = run_workflow_under_e2(
             _WORKFLOW_PATH,
             timeout=_TIMEOUT,
@@ -281,6 +284,7 @@ class TestRoutingResultIsConsumedNotFireAndForget(unittest.TestCase):
     def _run_with_routing(self, routing_response: dict[str, Any]) -> HarnessResult:
         label_responses = _full_success_responses(self.worktree_root, self.ac_ids)
         label_responses["knowledge-routing-step"] = routing_response
+        label_responses["knowledge-routing-observe"] = routing_response  # INF-700a-5
         return run_workflow_under_e2(
             _WORKFLOW_PATH,
             timeout=_TIMEOUT,

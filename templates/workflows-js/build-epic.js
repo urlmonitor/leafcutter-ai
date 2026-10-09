@@ -167,60 +167,6 @@ const WORKTREE_SCHEMA = {
   required: ["git_type", "branch"],
 };
 
-// The routing dispatch's expected reply shape (INF-700a-1-i). `case` is the
-// only required field — `read`/`written`/`unwritten`/`detail` are read
-// defensively by classifyKnowledgeRouting() below, never trusted as present
-// just because the schema names them.
-const KNOWLEDGE_ROUTING_SCHEMA = {
-  type: "object",
-  required: ["case"],
-  properties: {
-    case: { type: "string", enum: ["completed", "could_not_complete", "did_not_run"] },
-    read: { type: "integer" },
-    written: { type: "integer" },
-    unwritten: { type: "integer" },
-    detail: { type: ["string", "null"] },
-  },
-};
-
-/**
- * classifyKnowledgeRouting — the SINGLE construction site for the
- * `knowledge_routing` figures consumed into this path's terminal payload
- * (same contract as fast-lane-ship.js's and quick-fix.js's own copies of
- * this function — INF-700a-1 / INF-700a-1-i / INF-700a-1-ii). Fails CLOSED:
- * only a reply carrying a RECOGNISED `case` value ("completed" or
- * "could_not_complete") is trusted as having actually run. Anything else —
- * a missing case, an unparseable reply, or the harness's own unlabelled
- * default stub — is reported as the third, distinct "did_not_run" case,
- * never rendered as "completed" with zero figures.
- *
- * A knowledge step never fails, retries, or blocks the unit of work's own
- * outcome (ADR-034's fail-open branch) — this function only classifies the
- * reply; it never throws.
- *
- * Pure function: no agent(), no I/O — safe to extract and execute directly.
- *
- * @param {*} reply - The raw reply from the "knowledge-routing-step" dispatch.
- * @returns {{case: string, read: number, written: number, unwritten: number, detail: (string|null)}}
- */
-function classifyKnowledgeRouting(reply) {
-  const recognisedCase =
-    reply && (reply.case === "completed" || reply.case === "could_not_complete")
-      ? reply.case
-      : "did_not_run";
-  const asInt = (value) => (typeof value === "number" && Number.isFinite(value) ? value : 0);
-  return {
-    case: recognisedCase,
-    read: recognisedCase === "did_not_run" ? 0 : asInt(reply.read),
-    written: recognisedCase === "did_not_run" ? 0 : asInt(reply.written),
-    unwritten: recognisedCase === "did_not_run" ? 0 : asInt(reply.unwritten),
-    detail:
-      recognisedCase === "could_not_complete" && typeof reply.detail === "string"
-        ? reply.detail
-        : null,
-  };
-}
-
 // ---------------------------------------------------------------------------
 // Prose-tolerant reply reader (BP-300e)
 // ---------------------------------------------------------------------------
@@ -539,44 +485,16 @@ const manualTests = [
   `Run /finalize-feature in a clean shell and confirm it completes without errors.`,
 ];
 
-// ---------------------------------------------------------------------------
-// Knowledge Routing — dispatched once every batch has completed and BEFORE
-// this run's own terminal payload is built and returned, so the epic drive
-// (itself one of the five named completion paths, INF-700a-1-i) leaves no
-// unrouted learning behind it. Fail-open (INF-700a-1-ii): whatever this
-// dispatch reports, the run's own outcome and exit status are unaffected.
-// ---------------------------------------------------------------------------
-
-phase("Knowledge Routing");
-
-const knowledgeRoutingReply = await agent(
-  `You are the knowledge-routing phase agent for an epic build. Route any ` +
-  `knowledge records the phases that just ran emitted to the surface each one ` +
-  `names — nobody runs this by hand.\n\n` +
-  `Run this single Bash command from the repository root and read its JSON ` +
-  `summary and exit code:\n` +
-  `   python3 {{config.output_root}}/scripts/knowledge/harvest_learnings.py\n\n` +
-  `Classify the outcome as exactly one of three cases:\n` +
-  `  - "completed": the harvester ran to completion (exit 0 or 3 — some ` +
-  `records left unroutable is still a completed run).\n` +
-  `  - "could_not_complete": the declared sink could not be read, or a ` +
-  `destination file could not be written (exit 1, 2, or 4).\n` +
-  `  - "did_not_run": the command itself could not be run at all.\n\n` +
-  `Return JSON: { "case": "completed"|"could_not_complete"|"did_not_run", ` +
-  `"read": <records read>, "written": <records written to a surface>, ` +
-  `"unwritten": <records left unwritten>, "detail": "<what could not be done, ` +
-  `or null>" }.\n\n` +
-  `This step must never block, retry, or fail the build — always return a ` +
-  `best-effort classification, even on an unreadable sink or a failed write.`,
-  {
-    agentType: "python-coder",
-    schema: KNOWLEDGE_ROUTING_SCHEMA,
-    label: "knowledge-routing-step",
-    phase: "Knowledge Routing",
-  }
-);
-
-const knowledgeRouting = classifyKnowledgeRouting(knowledgeRoutingReply);
+/*
+ * No knowledge-routing step here (INF-700a-5, 2026-10-08): this path makes no
+ * commit after the point where one could run -- each ticket is committed by
+ * its ticket-supervisor inside the batch loop above -- so a routing write made
+ * here could never be published. build-epic.js is EXCLUDED in
+ * config/guardrail_gates.yaml knowledge_routing_wiring; per ADR-040 section 3
+ * the step belongs in templates/skills/building-epics/SKILL.md section 2.1.1,
+ * before each ticket's commit phase. Until then, learnings emitted during an
+ * epic drive wait in the install's sink for the next wired completion.
+ */
 
 // BO-3900 — a name derived from a path must split on BOTH separators, so
 // the result is identical whichever separator the path was written with. A
@@ -612,6 +530,5 @@ return {
   batches_run: completedBatches.length,
   tickets_completed: totalTickets,
   completed_batches: completedBatches,
-  knowledge_routing: knowledgeRouting,
   message: completionMessage,
 };

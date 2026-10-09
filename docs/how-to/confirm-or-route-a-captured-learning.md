@@ -57,10 +57,10 @@ the ones that do not, each with a reason. A build-time guard fails the build if
 a workflow is in neither list. Read that section, not this page, for the
 current set: this page does not carry a copy.
 
-For illustration only, as of this writing: `build-epic.js`, `fast-lane-ship.js`
-and `quick-fix.js` are wired, and `build-ticket.js` and `finalize-feature.js`
-are completion paths that are excluded, so work finished through those carries
-no routing step.
+For illustration only, as of this writing: `fast-lane-ship.js` and
+`quick-fix.js` are wired, and `build-epic.js`, `build-ticket.js` and
+`finalize-feature.js` are completion paths that are excluded, so work finished
+through those carries no routing step.
 
 Routing is by hand for:
 
