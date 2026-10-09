@@ -1,0 +1,123 @@
+id: INF-500d-4-ii
+components:
+  - infrastructure
+  - feedback_collector
+readiness: approved
+priority: medium
+title: "Every successful feedback submission names the absolute file it was appended to, so a split sink is visible at the call site"
+component: infrastructure
+level: L3
+status: active
+req_status: draft
+work_status: done
+roadmap_phase: phase_1
+criteria: |
+  Given an agent or hook submits a report through submit_feedback.py, with or
+    without a --jsonl override, and whether that override is absolute or
+    relative to the caller's working directory,
+  When the record is appended successfully,
+  Then the script writes exactly one line to stderr of the form
+    "[submit_feedback] sink: <path>", where <path> is the resolved absolute
+    path of the file the record was appended to,
+  And that file contains the appended record carrying the printed feedback id,
+  And stdout is unchanged: exactly one line, the feedback id
+    (fb_YYYY-MM-DD_xxxxxxxx), with nothing else on it,
+  And the sidecar id-recovery line ("sidecar:<path>/feedback_id_<epoch>.txt")
+    is still written to stderr unchanged, still the only stderr match for the
+    recovery pattern 'sidecar:[^ ]*feedback_id_[0-9]*.txt', and still names a
+    file holding the printed id,
+  And the bug symptom ("records land in 18 different feedback.jsonl files and
+    nothing at the call site says which one a submission went to, so the
+    fragmentation stayed invisible for four months") must not occur.
+depends_on:
+  - INF-500d-4
+doc_links:
+  - path: templates/scripts/feedback/submit_feedback.py
+    relationship: modifies
+    status: exists
+    relevance: "Canonical source. scripts/feedback/ is a git-ignored build output of this file."
+  - path: docs/known-issues/feedback-collector/open-low-ki-fc-001.md
+    relationship: describes
+    status: exists
+    relevance: "KI-FC-001. Its fix direction ends: echo the resolved sink path to stderr on every run, so a split is visible at the call site. This record is that step and only that step."
+  - path: docs/known-issues/feedback-collector/open-low-ki-fc-002.md
+    relationship: related
+    status: exists
+    relevance: "The sidecar id-recovery fallback greps stderr. The new line must never match its pattern."
+  - path: templates/skills/signoff/SKILL.md
+    relationship: related
+    status: exists
+    relevance: "Canonical caller: reads the id from stdout, then greps 'sidecar:[^ ]*feedback_id_[0-9]*.txt' in the redirected stderr file."
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "Report on stderr, never stdout. Callers capture the id from stdout verbatim (FB_ID=$(...) in epic-supervisor and live-surface-tester; 'read the id from stdout' in signoff §2a and ticket-supervisor), so a second stdout line would corrupt every captured id."
+  - "The line must not contain the token 'sidecar:' and must not look like a feedback id (no fb_ prefix), so neither the stdout id read nor the stderr sidecar grep can pick it up."
+  - "Report the path the record was actually appended to, resolved to an absolute path (symlinks followed), not the raw --jsonl string."
+  - "Do NOT change where the sink resolves. Choosing one declared sink per install is separate planned work (KI-FC-001 amendment, INF-500d-4); this record only makes the current resolution visible."
+  - "templates/scripts/feedback/submit_feedback.py is over the 400-line check-file-size limit: the change must leave it within the ratchet (no growth beyond what the ratchet permits). Never SKIP check-file-size."
+test_spec:
+  - name: test_relative_jsonl_override_reports_resolved_absolute_sink
+    target_dir: unit_tests/feedback/
+    framework: pytest
+    type: behavioral
+    angle: criterion
+    surface_invoked: "templates/scripts/feedback/submit_feedback.py run as a subprocess"
+    description: "Runs the real script with cwd set to a temp dir and the exact relative --jsonl the ticket-supervisor template passes (debugging/logs/feedback.jsonl); asserts stderr carries exactly one '[submit_feedback] sink: <path>' line, that <path> is absolute and equals the resolved cwd-relative file, and that the file holds the record with the printed id."
+    must_catch:
+      - "the original defect: no sink line at all"
+      - "echoing the raw relative --jsonl string instead of the resolved absolute path"
+  - name: test_default_sink_is_reported
+    target_dir: unit_tests/feedback/
+    framework: pytest
+    type: behavioral
+    angle: boundary
+    description: "Copies the script into a temp deployed layout (<proj>/.claude/, <proj>/.leafcutter/scripts/feedback/, <proj>/.leafcutter/config/) and runs it with no --jsonl; asserts the sink line names <proj>/debugging/logs/feedback.jsonl and that the record is there. Never touches a real workspace sink."
+    must_catch:
+      - "reporting only when --jsonl is given, which leaves the __file__-resolved default (the path that actually diverges) invisible"
+  - name: test_stdout_is_exactly_the_feedback_id
+    target_dir: unit_tests/feedback/
+    framework: pytest
+    type: behavioral
+    angle: discrimination
+    description: "Pins the existing contract: stdout is exactly one line matching ^fb_\\d{4}-\\d{2}-\\d{2}_[0-9a-f]{8}$ and does not contain the sink path."
+    must_catch:
+      - "printing the sink line on stdout, which breaks FB_ID=$(...) capture in every caller"
+  - name: test_sidecar_recovery_pattern_still_finds_only_the_sidecar
+    target_dir: unit_tests/feedback/
+    framework: pytest
+    type: behavioral
+    angle: discrimination
+    description: "Applies the signoff skill's grep pattern 'sidecar:[^ ]*feedback_id_[0-9]*.txt' line by line to stderr; asserts exactly one match, that it names a file containing the printed id, and that the sink line itself contains no match."
+    must_catch:
+      - "a sink line format that the sidecar grep (or live-surface-tester's head -1) could pick up instead of the sidecar path"
+test_rationale: "The behaviour is a line on a process stream, so every test runs the real script entry point as a subprocess and reads its actual stdout/stderr; an in-process call to a helper would stay green with the print wired to the wrong stream or skipped. The relative-override case reproduces the exact --jsonl form the ticket-supervisor template prescribes, which is one of the two anchors KI-FC-001 shows diverging; the default case covers the other anchor, run from a copied layout so no test writes into a real sink. The two discrimination tests pin the contracts existing callers parse - stdout is only the id, and the sidecar grep still finds only the sidecar - so the fix cannot be made by breaking them."
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-10-08
+amended_by: []
+superseded_by: null
+covered_by:
+  - unit_tests/feedback/test_submit_feedback_sink_report.py
+implemented_by:
+  - templates/scripts/feedback/submit_feedback.py
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  Authored by /quick-fix. Root cause: the sink is resolved from __file__ (or a
+  CWD-relative --jsonl override) and the resolved path is never reported, so a
+  split is only discoverable by a workspace-wide find. Measured 2026-09-30: 787
+  records across 18 feedback.jsonl files, 1 in the sink people check.
+
+  Placement: INF-500d is at its cap of 5 L2 children. This is a constraint on
+  INF-500d-4's existing behaviour (where a report lands): it pins that the
+  landing place is stated at write time. It does not choose the durable
+  location INF-500d-4 and INF-500d-4-i specify, and it must not be read as
+  satisfying them - a reported path can still be the disposable one.
+
+  Channel choice: stderr already carries the sidecar line, so every caller that
+  shows or redirects stderr already tolerates a non-id line there. Callers that
+  redirect stderr to a file (signoff §2a, ticket-supervisor) will find the sink
+  line in that file rather than in the tool result; surfacing it in their
+  output is a template change and out of scope here.

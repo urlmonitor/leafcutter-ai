@@ -153,9 +153,39 @@ const TICKET_RESULT_SCHEMA = {
     },
     message: { type: "string" },
     ticket_path: { type: "string" },
+    knowledge_routing: { type: ["object", "null"] },
   },
   required: ["status"],
 };
+
+/**
+ * Knowledge routing (ADR-040 §3, INF-700a-1-iv). This workflow makes no commit,
+ * so it runs no routing step: each ticket-supervisor runs stage -> commit-by-name
+ * -> observe around its own commit (building-epics SKILL.md §5.9) and returns the
+ * observation as `knowledge_routing`. The drive consumes it here. Only a
+ * recognised `case` is trusted (anything else is "did_not_run" with zero
+ * figures), and nothing here can change the drive's own outcome (fail-open).
+ * Pure; never throws.
+ */
+function classifyTicketRouting(ticketPath, reply) {
+  var ran = Boolean(reply) && (reply.case === "completed" || reply.case === "could_not_complete");
+  var asInt = function (v) { return ran && typeof v === "number" && Number.isFinite(v) ? v : 0; };
+  return {
+    ticket_path: ticketPath,
+    case: ran ? reply.case : "did_not_run",
+    read: asInt(reply && reply.read),
+    written: asInt(reply && reply.written),
+    unwritten: asInt(reply && reply.unwritten),
+    already_on_branch: asInt(reply && reply.already_on_branch),
+    detail: ran && typeof reply.detail === "string" ? reply.detail : null,
+  };
+}
+
+function summariseRouting(ticketResults) {
+  var tickets = ticketResults.map((r) => r.knowledge_routing);
+  var sum = (key) => tickets.reduce((total, t) => total + t[key], 0);
+  return { tickets: tickets, written: sum("written"), unwritten: sum("unwritten"), already_on_branch: sum("already_on_branch") };
+}
 
 const WORKTREE_SCHEMA = {
   type: "object",
@@ -166,60 +196,6 @@ const WORKTREE_SCHEMA = {
   },
   required: ["git_type", "branch"],
 };
-
-// The routing dispatch's expected reply shape (INF-700a-1-i). `case` is the
-// only required field — `read`/`written`/`unwritten`/`detail` are read
-// defensively by classifyKnowledgeRouting() below, never trusted as present
-// just because the schema names them.
-const KNOWLEDGE_ROUTING_SCHEMA = {
-  type: "object",
-  required: ["case"],
-  properties: {
-    case: { type: "string", enum: ["completed", "could_not_complete", "did_not_run"] },
-    read: { type: "integer" },
-    written: { type: "integer" },
-    unwritten: { type: "integer" },
-    detail: { type: ["string", "null"] },
-  },
-};
-
-/**
- * classifyKnowledgeRouting — the SINGLE construction site for the
- * `knowledge_routing` figures consumed into this path's terminal payload
- * (same contract as fast-lane-ship.js's and quick-fix.js's own copies of
- * this function — INF-700a-1 / INF-700a-1-i / INF-700a-1-ii). Fails CLOSED:
- * only a reply carrying a RECOGNISED `case` value ("completed" or
- * "could_not_complete") is trusted as having actually run. Anything else —
- * a missing case, an unparseable reply, or the harness's own unlabelled
- * default stub — is reported as the third, distinct "did_not_run" case,
- * never rendered as "completed" with zero figures.
- *
- * A knowledge step never fails, retries, or blocks the unit of work's own
- * outcome (ADR-034's fail-open branch) — this function only classifies the
- * reply; it never throws.
- *
- * Pure function: no agent(), no I/O — safe to extract and execute directly.
- *
- * @param {*} reply - The raw reply from the "knowledge-routing-step" dispatch.
- * @returns {{case: string, read: number, written: number, unwritten: number, detail: (string|null)}}
- */
-function classifyKnowledgeRouting(reply) {
-  const recognisedCase =
-    reply && (reply.case === "completed" || reply.case === "could_not_complete")
-      ? reply.case
-      : "did_not_run";
-  const asInt = (value) => (typeof value === "number" && Number.isFinite(value) ? value : 0);
-  return {
-    case: recognisedCase,
-    read: recognisedCase === "did_not_run" ? 0 : asInt(reply.read),
-    written: recognisedCase === "did_not_run" ? 0 : asInt(reply.written),
-    unwritten: recognisedCase === "did_not_run" ? 0 : asInt(reply.unwritten),
-    detail:
-      recognisedCase === "could_not_complete" && typeof reply.detail === "string"
-        ? reply.detail
-        : null,
-  };
-}
 
 // ---------------------------------------------------------------------------
 // Prose-tolerant reply reader (BP-300e)
@@ -410,6 +386,7 @@ if (batches.length === 0) {
 phase('Batch Dispatch')
 
 const completedBatches = [];
+const routedTickets = [];
 
 // Chunk size: keep parallel fan-out well below the ~16 concurrent cap.
 const BATCH_SIZE = 12;
@@ -438,7 +415,8 @@ for (const batch of batches) {
     const chunkResults = await parallel(
       chunk.map((ticket) => async () => {
         const result = await agent(
-          `Drive ticket to completion: ${ticket.path}. Worktree: ${worktreePath}. Execute all needed phase agents in order. worktree_path: ${worktreePath}`,
+          `Drive ticket to completion: ${ticket.path}. Worktree: ${worktreePath}. Execute all needed phase agents in order. worktree_path: ${worktreePath}. ` +
+          `Around the commit phase run knowledge routing per building-epics §5.9 and return its observe reply as knowledge_routing.`,
           { agentType: "ticket-supervisor", schema: TICKET_RESULT_SCHEMA, label: `ticket:${ticket.path}`, phase: 'Batch Dispatch' }
         );
         return {
@@ -451,6 +429,7 @@ for (const batch of batches) {
           // epic reported tickets_completed with no work done.
           status: result && result.status ? result.status : "undetermined",
           result,
+          knowledge_routing: classifyTicketRouting(ticket.path, result && result.knowledge_routing),
         };
       })
     );
@@ -469,10 +448,12 @@ for (const batch of batches) {
           ticket_path: chunk[idx] && chunk[idx].path,
           status: "undetermined",
           result: null,
+          knowledge_routing: classifyTicketRouting(chunk[idx] && chunk[idx].path, null),
         });
       }
     }
   }
+  routedTickets.push(...batchResults);
 
   // -----------------------------------------------------------------------
   // Batch-level failure detection
@@ -504,6 +485,7 @@ for (const batch of batches) {
       halted_at_batch: batchNumber,
       halted_tickets: haltSummary,
       completed_batches: completedBatches,
+      knowledge_routing: summariseRouting(routedTickets),
       suggested_action:
         "Review the ## Comments section of each halted ticket for the " +
         "blocker details. Resolve the blocker(s) and re-run /build-feature " +
@@ -539,45 +521,6 @@ const manualTests = [
   `Run /finalize-feature in a clean shell and confirm it completes without errors.`,
 ];
 
-// ---------------------------------------------------------------------------
-// Knowledge Routing — dispatched once every batch has completed and BEFORE
-// this run's own terminal payload is built and returned, so the epic drive
-// (itself one of the five named completion paths, INF-700a-1-i) leaves no
-// unrouted learning behind it. Fail-open (INF-700a-1-ii): whatever this
-// dispatch reports, the run's own outcome and exit status are unaffected.
-// ---------------------------------------------------------------------------
-
-phase("Knowledge Routing");
-
-const knowledgeRoutingReply = await agent(
-  `You are the knowledge-routing phase agent for an epic build. Route any ` +
-  `knowledge records the phases that just ran emitted to the surface each one ` +
-  `names — nobody runs this by hand.\n\n` +
-  `Run this single Bash command from the repository root and read its JSON ` +
-  `summary and exit code:\n` +
-  `   python3 {{config.output_root}}/scripts/knowledge/harvest_learnings.py\n\n` +
-  `Classify the outcome as exactly one of three cases:\n` +
-  `  - "completed": the harvester ran to completion (exit 0 or 3 — some ` +
-  `records left unroutable is still a completed run).\n` +
-  `  - "could_not_complete": the declared sink could not be read, or a ` +
-  `destination file could not be written (exit 1, 2, or 4).\n` +
-  `  - "did_not_run": the command itself could not be run at all.\n\n` +
-  `Return JSON: { "case": "completed"|"could_not_complete"|"did_not_run", ` +
-  `"read": <records read>, "written": <records written to a surface>, ` +
-  `"unwritten": <records left unwritten>, "detail": "<what could not be done, ` +
-  `or null>" }.\n\n` +
-  `This step must never block, retry, or fail the build — always return a ` +
-  `best-effort classification, even on an unreadable sink or a failed write.`,
-  {
-    agentType: "python-coder",
-    schema: KNOWLEDGE_ROUTING_SCHEMA,
-    label: "knowledge-routing-step",
-    phase: "Knowledge Routing",
-  }
-);
-
-const knowledgeRouting = classifyKnowledgeRouting(knowledgeRoutingReply);
-
 // BO-3900 — a name derived from a path must split on BOTH separators, so
 // the result is identical whichever separator the path was written with. A
 // forward-slash-only split leaves a backslash-spelled epicPath un-split,
@@ -612,6 +555,6 @@ return {
   batches_run: completedBatches.length,
   tickets_completed: totalTickets,
   completed_batches: completedBatches,
-  knowledge_routing: knowledgeRouting,
+  knowledge_routing: summariseRouting(routedTickets),
   message: completionMessage,
 };

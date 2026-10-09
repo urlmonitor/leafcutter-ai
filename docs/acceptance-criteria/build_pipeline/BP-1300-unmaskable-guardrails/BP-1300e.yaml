@@ -1,0 +1,103 @@
+id: BP-1300e
+components:
+  - precommit_hooks
+  - commit_guardian
+  - build_pipeline
+title: "The lint check CI requires runs when you commit -- and the two verdicts can't disagree"
+component: build-pipeline
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Learn at commit time, not after push, that CI's required lint check would reject you.
+
+  A change that CI's required lint check would refuse is refused when you commit
+  it, judged by the same rules over the same files, so the commit-time verdict and
+  CI's verdict always agree. If the check cannot run on your machine, the commit is
+  stopped and you are told why; it is never reported as passed. This holds in this
+  repository, in any working copy of it, and in an adopter's project, where the
+  check follows the adopter's own lint rules and the scope they declared.
+depends_on: [BP-1300]
+doc_links:
+  - docs/known-issues/commit-guardian/open-high-ki-cg-20261009-required-ci-ruff-has-no-local-pre-commit-counterpart.md
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-10-09
+amended_by: []
+superseded_by: null
+covered_by:
+  - BP-1300e-1
+  - BP-1300e-2
+  - BP-1300e-3
+  - BP-1300e-4
+implemented_by: []
+documentation_triggers:
+  - how-to
+  - reference-doc
+notes: |
+  WHY THIS EXISTS. BP-1300 promises that a check which passes locally but fails
+  in CI (or the reverse) is worse than no check at all. The repository's blocking
+  CI lint check has no commit-time counterpart, so a contributor can commit and
+  push a change every local check accepts and learn only from a red required
+  check that it was never going to land. Observed on 2026-10-08 (PR #1058, two
+  E741 sites). Three texts in the package tell contributors a commit-time lint
+  check already exists; they are false. Evidence: the KI in doc_links.
+
+  DECISIONS ALREADY TAKEN BY THE USER (2026-10-09) -- do not contradict:
+  1. A missing linter, or one that cannot start, refuses the commit. It never
+     passes silently.
+  2. For adopters, parity means the adopter's own lint configuration plus a scope
+     declared in package configuration; this repository's own CI reads the same
+     declared scope, so the commit-time scope and CI's scope cannot drift apart.
+
+  WHY BP-1300 AND NOT BO-570. BO-570 ("Render and lint defects are caught locally
+  at sign-off") specifies a sign-off gate inside the automated build. Even when
+  built it does not cover a contributor's hand commit, which is the gap here. The
+  BA should cite BO-570 when decomposing and avoid restating its sign-off
+  behaviour; the two are complementary.
+
+  SUFFIX NOTE. BP-1300d was skipped deliberately: BP-1500c names it as the
+  re-home candidate for its own concern, so taking it would collide with that
+  citation.
+
+  Correcting the three false texts named in the KI is in scope for this L1's
+  decomposition -- a contributor must not be told a check exists that does not.
+
+  ---- IT PO ENRICHMENT, 2026-10-09 -- size and sequencing ----
+  SIZE. Six code leaves (BP-1300e-1 L; -1-i, -1-ii, -1-iii, -1-iv, -2 M) and three
+  doc leaves (S). Roughly 600-900 lines of implementation plus a shared
+  real-commit test fixture and ~40 behavioural tests. Too large for one PR to be
+  reviewed well; too entangled to split finer than two without shipping a
+  half-correct gate.
+
+  PR 1 -- THE GATE (BP-1300e-1, -1-i, -1-ii, -1-iii, -1-iv together). Build order
+  inside the PR: -1-iii first (_ruff_locator.py, OUTCOME_REFUSED in
+  check_outcome.py, the could-not-check paths), then -1-i (leafcutter-lint.json,
+  _lint_scope.py, full mode, the ci.yml and run_ci_local.py switch), then -1-ii
+  (staged mode on index blobs), then -1 (hooks_manifest registration,
+  package_surface), then -1-iv's worktree/adopter tests against the shared
+  layout. Do NOT register the hook (-1) ahead of -1-ii and -1-iii: a registered
+  hook that reads the working copy, or exits 0 when ruff is missing, is a new
+  false green, which is worse than no hook (BP-1300's L0).
+  Optional earlier slice if PR 1 proves too big: land -1-iii's locator plus -1-i's
+  full mode and the ci.yml / run_ci_local.py switch on their own. CI's verdict
+  must be unchanged by that slice (same findings on main), which is easy to show,
+  and run_ci_local.py's drift (missing kernel and step 2) is fixed early. The
+  commit-path arms of -1-i then land with PR 1 proper.
+
+  PR 2 -- THE TEXTS (BP-1300e-2, -2-i, -3, -4). -2 first (message, manifest
+  section, check-lint-rule-claims), then -2-i, whose commit is judged by -2's
+  gate, then the how-to and reference, which copy real output from the landed
+  hook.
+
+  DECISIONS TAKEN IN ENRICHMENT, recorded once here (detail in each leaf):
+  the single declaration is a tracked project-root file leafcutter-lint.json;
+  one runner check_lint_gate.py with staged/full/files modes serves the hook, CI
+  (template source, no build), run_ci_local.py and BO-570-3; every could-not-check
+  cause BLOCKS because pre-commit prints Passed for any exit 0; the drift arm of
+  BP-1300e-2 is a dedicated narrow check rather than an extension of GE-120h-1.

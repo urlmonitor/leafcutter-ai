@@ -25,6 +25,8 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
+import pytest
+
 _THIS_DIR = Path(__file__).resolve().parent
 if str(_THIS_DIR) not in sys.path:
     sys.path.insert(0, str(_THIS_DIR))
@@ -38,8 +40,41 @@ from _bp1500g1_harness import (  # noqa: E402
 )
 
 
+@pytest.fixture(scope="module")
+def _shared_clean_generated_tree_build(tmp_path_factory):
+    """Produce the ONE real `--clean` build the two read-only tests below
+    share (TQ-600a-9): both plant the identical adopter capability INSIDE
+    the generated tree via `plant_capability_inside_generated_tree` and
+    run the identical `--clean` build -- one asserting survival plus the
+    absence of a removal report, the other asserting the retained item is
+    REPORTED (not merely spared) -- so one real build safely serves both
+    instead of each repeating its own `fresh_scratch_adopter` + plant +
+    `run_build` sequence."""
+    root = tmp_path_factory.mktemp("bp1500g1i_clean_generated_tree")
+    target_root = fresh_scratch_adopter(root)
+    planted = plant_capability_inside_generated_tree(target_root)
+    result = run_build(target_root, "--clean")
+    return target_root, planted, result
+
+
+@pytest.fixture(scope="module")
+def _shared_clean_discoverable_symlink_build(tmp_path_factory):
+    """Produce the ONE real `--clean` build the two read-only tests below
+    share (TQ-600a-9): both plant the identical adopter capability through
+    the discoverable `.claude/skills` symlink via
+    `plant_capability_through_discoverable_symlink` and run the identical
+    `--clean` build -- one asserting byte survival, the other asserting
+    the capability is still discoverable by name -- so one real build
+    safely serves both instead of each paying its own build."""
+    root = tmp_path_factory.mktemp("bp1500g1i_clean_discoverable_symlink")
+    target_root = fresh_scratch_adopter(root)
+    planted = plant_capability_through_discoverable_symlink(target_root)
+    result = run_build(target_root, "--clean")
+    return target_root, planted, result
+
+
 def test_bp_1500g_1_i_clean_mode_does_not_delete_an_adopter_capability_placed_inside_the_generated_tree(
-    tmp_path: Path,
+    _shared_clean_generated_tree_build,
 ) -> None:
     # covers: BP-1500g-1-i
     # angle: real_artifact
@@ -48,11 +83,11 @@ def test_bp_1500g_1_i_clean_mode_does_not_delete_an_adopter_capability_placed_in
     generated tree (`.leafcutter/skills/<name>/`), run a real `--clean`
     build subprocess, and assert it survives byte-identical and is not
     reported as a removed stale artifact. Confirmed destructive on
-    2026-08-25 on a scratch adopter."""
-    target_root = fresh_scratch_adopter(tmp_path)
-    planted = plant_capability_inside_generated_tree(target_root)
+    2026-08-25 on a scratch adopter.
 
-    result = run_build(target_root, "--clean")
+    Reads the ONE shared --clean generated-tree build (TQ-600a-9) -- see
+    `_shared_clean_generated_tree_build`'s own docstring."""
+    _target_root, planted, result = _shared_clean_generated_tree_build
 
     assert planted["skill_md"].is_file(), (
         f"Adopter capability at {planted['skill_md']} did not survive a "
@@ -66,7 +101,7 @@ def test_bp_1500g_1_i_clean_mode_does_not_delete_an_adopter_capability_placed_in
 
 
 def test_bp_1500g_1_i_clean_mode_does_not_delete_an_adopter_capability_placed_at_the_discoverable_location(
-    tmp_path: Path,
+    _shared_clean_discoverable_symlink_build,
 ) -> None:
     # covers: BP-1500g-1-i
     # angle: real_artifact
@@ -76,11 +111,11 @@ def test_bp_1500g_1_i_clean_mode_does_not_delete_an_adopter_capability_placed_at
     directly into `.leafcutter/`; a real `--clean` subprocess; survives
     byte-identical. Together with the entry above this is the third Then
     clause: neither placement forfeits the work. Two tests, one clause, and
-    passing only one is the status quo."""
-    target_root = fresh_scratch_adopter(tmp_path)
-    planted = plant_capability_through_discoverable_symlink(target_root)
+    passing only one is the status quo.
 
-    result = run_build(target_root, "--clean")
+    Reads the ONE shared --clean discoverable-symlink build (TQ-600a-9) --
+    see `_shared_clean_discoverable_symlink_build`'s own docstring."""
+    _target_root, planted, result = _shared_clean_discoverable_symlink_build
 
     assert planted["skill_md"].is_file(), (
         f"Adopter capability at {planted['skill_md']} did not survive a "
@@ -90,17 +125,17 @@ def test_bp_1500g_1_i_clean_mode_does_not_delete_an_adopter_capability_placed_at
 
 
 def test_bp_1500g_1_i_the_surviving_capability_is_still_discovered_by_name_after_a_clean_run(
-    tmp_path: Path,
+    _shared_clean_discoverable_symlink_build,
 ) -> None:
     # covers: BP-1500g-1-i
     # angle: reachability
     """THE SECOND Then CLAUSE. After the `--clean` run the adopter's
     capability resolves BY ITS OWN NAME through the consuming tool's
-    discovery path -- survives USABLE, not merely on disk."""
-    target_root = fresh_scratch_adopter(tmp_path)
-    planted = plant_capability_through_discoverable_symlink(target_root)
+    discovery path -- survives USABLE, not merely on disk.
 
-    result = run_build(target_root, "--clean")
+    Reads the ONE shared --clean discoverable-symlink build (TQ-600a-9) --
+    see `_shared_clean_discoverable_symlink_build`'s own docstring."""
+    target_root, planted, result = _shared_clean_discoverable_symlink_build
 
     assert is_discoverable(target_root, planted["name"]), (
         f".claude/skills/{planted['name']}/SKILL.md does not resolve after "
@@ -164,7 +199,7 @@ def test_bp_1500g_1_i_two_consecutive_clean_runs_leave_the_adopter_content_byte_
 
 
 def test_bp_1500g_1_i_clean_reports_a_kept_unattributable_item_instead_of_staying_silent(
-    tmp_path: Path,
+    _shared_clean_generated_tree_build,
 ) -> None:
     # covers: BP-1500g-1-i
     # angle: criterion
@@ -193,11 +228,11 @@ def test_bp_1500g_1_i_clean_reports_a_kept_unattributable_item_instead_of_stayin
     subprocess against a project whose ledger is empty (a fresh scratch
     adopter's first `--clean` run) survives the item but the run's combined
     stdout/stderr never mentions its name anywhere -- the Clean mode section
-    prints only `No stale artifacts found`."""
-    target_root = fresh_scratch_adopter(tmp_path)
-    planted = plant_capability_inside_generated_tree(target_root)
+    prints only `No stale artifacts found`.
 
-    result = run_build(target_root, "--clean")
+    Reads the ONE shared --clean generated-tree build (TQ-600a-9) -- see
+    `_shared_clean_generated_tree_build`'s own docstring."""
+    _target_root, planted, result = _shared_clean_generated_tree_build
 
     combined = result.stdout + result.stderr
     assert planted["name"] in combined, (

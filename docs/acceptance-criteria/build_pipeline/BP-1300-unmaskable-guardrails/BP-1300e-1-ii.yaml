@@ -1,0 +1,191 @@
+id: BP-1300e-1-ii
+components:
+  - precommit_hooks
+  - commit_guardian
+title: "Each staged file is judged whole, as it will be committed, so a touched file with older violations is refused just as CI would refuse it"
+component: build-pipeline
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Scenario: Only files the commit changes are inspected
+    Given an in-scope file under scripts/ that is NOT staged and carries a rule
+      E741 violation,
+    And a staged change to a different, clean in-scope file,
+    When the commit is attempted,
+    Then the commit completes,
+    And the check reports that it inspected exactly the one staged file.
+
+  Scenario: A touched file is judged whole, including violations it already had
+    Given an in-scope file under unit_tests/ that already carries a rule F841
+      violation at line 40 before this change,
+    And a staged change that edits only line 90 of that file and adds no
+      violation,
+    When the commit is attempted,
+    Then the commit is refused,
+    And the refusal names line 40 and rule F841,
+    And the refusal states that the finding predates this change but is in a file
+      this commit modifies, and that CI's required check rejects the file
+      whichever change introduced it.
+
+  Scenario: The staged content is judged, not the working copy
+    Given an in-scope file whose staged version carries rule E741,
+    And whose unstaged working-copy edits remove that violation,
+    When the commit is attempted,
+    Then the commit is refused, because the content being committed carries the
+      violation,
+    And given the reverse — a staged version that is clean while the unstaged
+      edits add a violation —
+    When the commit is attempted,
+    Then the commit completes.
+
+  Scenario: A deleted file is not inspected
+    Given a staged change that only deletes an in-scope Python file,
+    When the commit is attempted,
+    Then the deletion is not treated as a file to lint and does not cause a
+      refusal or an error.
+depends_on:
+  - BP-1300e-1
+doc_links:
+  - path: docs/acceptance-criteria/build_pipeline/BP-1300-unmaskable-guardrails/BP-1300e-1.yaml
+    relationship: parent
+    status: exists
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-038-commit-guardian-shared-change-set-derivation.md
+    relationship: describes
+    status: exists
+    relevance: "How commit-guardian checks obtain the change set. This check reads the index itself (handed_by_commit_path); it does not use the merge-scoped authored-change derivation, which would be a self_derived claim the script cannot back."
+  - path: docs/reference/commit-time-lint-gate.md
+    relationship: describes
+    status: planned
+assigned_agent: python-coder
+estimated_complexity: M
+package_surface: false
+it_requirements:
+  - "THE STAGED SET. Enumerate with `git diff --cached --name-only --diff-filter=ACMR -z` (added, copied, modified, renamed; deletions excluded; a rename is judged at its new path), NUL-separated so paths with spaces or newlines survive. Gitlinks (mode 160000) are not files and are skipped. Only entries that a declared step's paths cover AND ruff's own include/exclude admits (decided by ruff with --force-exclude, not by a hook-side extension list) are inspected."
+  - "THE CONTENT IS THE INDEX BLOB, NEVER THE WORKING-TREE FILE. Read each blob through git plumbing (`git show :<path>`, or `git cat-file --batch` for many) and feed it to ruff on stdin with `--stdin-filename <repo-relative path>`, with ruff's cwd set to the subject root, so ruff resolves configuration, per-file-ignores and --force-exclude against the real path while judging the staged bytes. Do NOT check out the index into a temporary directory: ruff's hierarchical config discovery and relative exclude patterns would then resolve against the temporary tree instead of the project."
+  - "HONOUR THE TEMPORARY INDEX. `git commit -- <paths>`, `git commit -a` and `git commit --only` run hooks against a TEMPORARY index named by the GIT_INDEX_FILE environment variable. All git calls must inherit the hook's environment unchanged and go through git commands: never read .git/index directly, never strip GIT_* variables from child processes. Otherwise the hook judges content that is not the content being committed -- and `git commit -- <paths>` is the documented way commits are made into a dirty shared tree in this workspace."
+  - "WHOLE FILE. Every finding in a staged blob counts toward the verdict, whichever lines the change touched. Never filter findings by diff hunks: CI judges whole files."
+  - "THE 'PREDATES THIS CHANGE' LABEL IS DERIVED FROM HEAD, NOT FROM HUNKS. Lint `HEAD:<path>` (same step arguments, same --stdin-filename) when the path exists in HEAD. A finding is labelled as predating the change when the same rule code fires in the HEAD version on a line whose whitespace-stripped text is identical (multiset match, so two identical lines are not both credited by one HEAD occurrence). A new file has no predating findings. Hunk-based labelling is wrong in a direction that matters: removing the only use of a variable at line 90 creates a NEW F841 at untouched line 40, which hunk logic would mislabel as pre-existing. The label NEVER changes the verdict. The refusal text for a labelled finding must state that it predates this change, that it is in a file this commit modifies, and that CI's required check rejects the file whichever change introduced it."
+  - "ONLY STAGED FILES ARE INSPECTED, AND THE OUTPUT SAYS WHICH. Untracked and unstaged files are never passed to ruff in staged mode. The output names the count and the repo-relative paths actually inspected, so the 'exactly the one staged file' arm is observable."
+  - "A PARTIALLY STAGED RUFF CONFIGURATION CANNOT GIVE CI'S VERDICT. Ruff reads its configuration from disk, not from the index. If any ruff configuration file that governs an inspected file (ruff.toml, .ruff.toml, or pyproject.toml carrying [tool.ruff], at the subject root or in an ancestor directory of the inspected file within the subject root) has working-tree content different from its index content, report could_not_check naming that file and telling the author to stage or stash its unstaged edits; do not lint under the working-copy configuration and call it CI's verdict. leafcutter-lint.json needs no such rule: _lint_scope reads it from the index (BP-1300e-1-i)."
+  - "PERFORMANCE BUDGET. Under 3 seconds wall clock for 20 staged in-scope files on the CI runner, including the HEAD-comparison pass. At most two ruff invocations per inspected file per declared step (index blob, HEAD blob); batching across files is allowed only if the findings set equals per-file application, proven by the same fixture tests."
+  - "CROSS-FILE RULE ASSUMPTION. The per-file unit equals CI's verdict only while no selected rule depends on another file. No such rule is selected today. Detecting one automatically is out of scope; the assumption is recorded for BP-1300e-4's reference doc and must not be silently dropped from it."
+  - "ERROR-HANDLING POLICY (CLAUDE.md Rules 1-4): a failing `git diff --cached` or `git show` is could_not_check (BP-1300e-1-iii scenario 5), never an empty staged set; catch OSError / subprocess.SubprocessError specifically and log at WARNING."
+test_spec:
+  - name: test_bp_1300e_1_ii_unstaged_violating_file_is_not_inspected_and_count_is_one
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: integration
+    angle: criterion
+    must_catch:
+      - "lints the whole declared scope on every commit"
+    description: "scripts/a.py carries E741 unstaged; clean scripts/b.py is staged; commit completes and the output names exactly scripts/b.py as inspected."
+  - name: test_bp_1300e_1_ii_preexisting_f841_in_touched_file_is_refused_with_predates_wording
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: integration
+    angle: discrimination
+    must_catch:
+      - "filters findings to changed lines or diff hunks"
+      - "omits the predates-this-change explanation"
+    description: "unit_tests/c.py is committed with F841 at line 40; a later staged edit changes only line 90 cleanly; the commit is refused naming line 40, F841, and the predates/whole-file/CI sentence."
+  - name: test_bp_1300e_1_ii_newly_unused_variable_at_untouched_line_is_not_labelled_preexisting
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: unit
+    angle: boundary
+    description: "Removing the only use of a variable creates F841 at an untouched line; the refusal reports it WITHOUT the predates label, because HEAD had no such finding."
+  - name: test_bp_1300e_1_ii_staged_violation_is_refused_although_working_copy_is_clean
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: integration
+    angle: discrimination
+    must_catch:
+      - "reads the working-tree file instead of the index blob"
+    description: "Stage a file with E741, then fix it in the working copy without staging; commit is refused."
+  - name: test_bp_1300e_1_ii_clean_staged_version_commits_although_working_copy_is_dirty
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: "Stage a clean file, then add E741 in the working copy without staging; commit completes."
+  - name: test_bp_1300e_1_ii_commit_with_pathspec_is_judged_on_the_temporary_index
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: integration
+    angle: boundary
+    must_catch:
+      - "reads .git/index directly or scrubs GIT_INDEX_FILE from the child environment"
+    description: "`git commit -m x -- scripts/d.py` where scripts/d.py's working copy carries E741 but the default index holds a clean version: refused (the pathspec commit judges the working-copy content it is committing)."
+  - name: test_bp_1300e_1_ii_deletion_only_commit_is_not_linted_and_does_not_error
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: "A commit that only `git rm`s an in-scope .py completes; output reports nothing to inspect and no error."
+  - name: test_bp_1300e_1_ii_partially_staged_ruff_config_is_could_not_check
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: integration
+    angle: failure
+    description: "ruff.toml has unstaged edits relative to its index version and a staged in-scope .py exists; commit is refused as could_not_check naming ruff.toml."
+test_rationale: >-
+  Each arm separates the staged content from the working copy in exactly one
+  direction, because an implementation that reads the working tree passes any
+  test where the two are equal. The pathspec arm exists because GIT_INDEX_FILE is
+  invisible in every test that commits with a plain `git commit`, yet it is how
+  commits are made into a dirty shared tree here. The newly-unused-variable arm
+  pins the HEAD-comparison semantics of the predates label; a hunk-based label
+  passes the BA's F841 scenario and mislabels this one. Commit-path tests reuse
+  _bp_1300e_lint_gate_fixture.py and declare @pytest.mark.shared_layout_reader
+  with @pytest.mark.usefixtures("shared_reference_layout"); the boundary unit
+  test may call the labelling function directly.
+delivers_to:
+  agent: python-coder
+  contract: >-
+    To BP-1300e-1: the inspected-file list (repo-relative POSIX paths, staged
+    ACMR minus gitlinks, filtered by declared paths and ruff's own
+    include/exclude) and, per finding, predates_change: bool derived from the
+    HEAD comparison -- the fields check_lint_gate.py's --json findings carry.
+expects_from:
+  ac_id: BP-1300e-1-i
+  contract: "_lint_scope.load(subject_root, source='index') and the shared ruff-argv builder (always --force-exclude)."
+origin_agent: BrainCandy
+created: 2026-10-09
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  THE TENSION AND THE DECISION. CI lints the whole tree. A commit-time check over
+  the whole tree on every commit is slow, and it would make the commit pay for
+  files it never touched. Checking only changed LINES would let a touched file
+  with older violations commit and then fail CI, which is a silent whole-tree
+  slip. Decision: the unit is the whole staged FILE. A file the commit touches is
+  judged exactly as CI will judge it, and files it does not touch are left to CI.
+
+  WHY THIS EQUALS CI'S VERDICT, AND THE ASSUMPTION IT RESTS ON. CI's lint check is
+  required and blocking, so main carries no violation inside the declared scope.
+  Every violation in an in-scope file therefore entered through some change that
+  touched that file. Under the selected rules (E, F, E722 repo-wide; E722, BLE001,
+  TRY on kernel) every finding is a property of one file's content, so a change to
+  file A cannot create a finding in an untouched file B. Per-file scope then gives
+  CI's verdict for every file this commit changes.
+  RECORDED ASSUMPTION / RISK: if a rule is ever selected whose finding depends on
+  another file (a cross-module rule), an untouched file can start failing CI
+  because of a staged change elsewhere. Per-file scope is then insufficient, and
+  this record must be revisited: fall back to a whole-scope run when such a rule
+  is selected. Raised in notes rather than criteria because no such rule is
+  selected today.
+
+  The "predates this change" wording in the refusal is required, not cosmetic.
+  Without it the author of a one-line edit reads the refusal as a false accusation.

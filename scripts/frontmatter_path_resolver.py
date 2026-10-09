@@ -50,6 +50,11 @@ ACCEPTED_SHAPES: tuple[str, ...] = (
     "single-key mapping ({field_name: path_string})",
 )
 
+# Refusal reasons (GE-118d-1 / GE-118d-2). The arity rule lives here, where
+# the accepted shape is declared, not in the guard (GE-118d-2).
+GENERIC_REASON = "not an accepted shape"
+ARITY_REASON = "an entry in the labelled form carries exactly one label and one path"
+
 
 @dataclass(frozen=True)
 class PathEntryRefusal:
@@ -69,6 +74,7 @@ class PathEntryRefusal:
     field: str
     entry: Any
     accepted_shapes: tuple[str, ...]
+    reason: str = GENERIC_REASON
 
 
 def resolve_frontmatter_path_entry(entry: Any, field: str) -> str | PathEntryRefusal:
@@ -98,13 +104,18 @@ def resolve_frontmatter_path_entry(entry: Any, field: str) -> str | PathEntryRef
             open-blocker-ki-cg-008.md's sketch fix, which this AC exists to
             NOT repeat).
     """
-    if isinstance(entry, str):
+    if isinstance(entry, str) and entry:
         return entry
+    reason = GENERIC_REASON
     if isinstance(entry, dict) and len(entry) == 1:
         (value,) = entry.values()
-        if isinstance(value, str):
+        if isinstance(value, str) and value:
             return value
-    return PathEntryRefusal(field=field, entry=entry, accepted_shapes=ACCEPTED_SHAPES)
+    elif isinstance(entry, dict) and len(entry) > 1:
+        reason = ARITY_REASON
+    return PathEntryRefusal(
+        field=field, entry=entry, accepted_shapes=ACCEPTED_SHAPES, reason=reason
+    )
 
 
 """

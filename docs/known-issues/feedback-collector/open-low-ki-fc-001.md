@@ -87,3 +87,62 @@ the call site instead of at retrospective time.
 in and diverging in the one it runs in.
 
 ---
+
+## 2026-09-30 — measured at scale: 18 sinks, 787 records, and the canonical one holds 1
+
+This entry was filed on one drive splitting across two sinks, severity `medium`, occurrences
+`1`. Five weeks later the same mechanism has produced a corpus that is almost entirely
+unreadable, and it is now actively misleading people about whether feedback works at all.
+
+**The census**, taken 2026-09-30 across the whole workspace
+(`find /home/henzeh/projects/leafcutter -name feedback.jsonl`):
+
+| sink | records |
+|---|---:|
+| `debugging/logs/feedback.jsonl` (workspace root — **the one people check**) | **1** |
+| `.leafcutter/debugging/logs/feedback.jsonl` (install tree) | 131 |
+| 14 per-worktree `<worktree>/debugging/logs/feedback.jsonl` | 377 |
+| remaining sinks (nested `.leafcutter` copies inside worktrees) | 278 |
+| **total, 18 files** | **787** |
+
+Parsed cleanly: 787 of 787, zero unparseable lines. Timestamps run **2026-06-05 to
+2026-09-30** — unbroken, including the same day as this census. By category: 643 `complete`,
+77 `blocker`, 26 `quality-concern`, 21 `tooling-issue`, 10 `knowledge-gap`, 9
+`convention-ambiguity`, 1 `subagent-quality`. By severity: 649 `low`, 105 `high`, 33
+`medium`.
+
+**Why this matters more than "the corpus is fragmented".** The report that prompted this
+census was *"agents are still not writing feedback"*. That conclusion is wrong, and it is
+the reasonable conclusion to draw: the canonical workspace-root sink holds **one** record,
+so anyone who opens it — or runs a reader pointed at it — sees an empty inbox. The capture
+side has been working continuously for four months. **105 `high`-severity records have never
+been read by anybody.**
+
+This is the same false-quiet shape `INF-700a-2` closed on the knowledge side: a zero that
+means "nothing here" and a zero that means "you are looking in the wrong place" are
+indistinguishable to the reader, and the system offers nothing to tell them apart.
+
+**Severity is understated.** `medium` / occurrences `1` described a two-way split in one
+drive. What is measured now is an 18-way split in which the consultable sink contains 0.13%
+of the corpus, and the practical effect is a stakeholder concluding a working subsystem is
+dead. The grading above is left unchanged per this register's convention, but a reader
+triaging by severity should weigh this amendment, not the header.
+
+**What the fix direction above does not yet cover.** The `git rev-parse --show-toplevel`
+anchor is still right, but on its own it makes every worktree write to its *own* root — 14
+correct-but-separate sinks instead of 14 wrong ones. Two further pieces are needed:
+
+- **One declared sink per install**, the way the knowledge plane already does it:
+  `config/knowledge_sink.json` is written at build time and read by every producer, so all
+  producers agree without each re-deriving a path. `INF-400c-4-v` established that pattern
+  and it is working; feedback has no equivalent.
+- **A reader that reports where it looked and how many sinks it found**, so a low count is
+  attributable. `harvest_learnings.py --status` (INF-700a-2) now does exactly this for
+  knowledge — it names the resolved sink and whether it exists. A feedback reader that
+  printed `read 1 record from <path>` would have made this four-month gap visible on day one.
+
+**Not done here.** No sink was moved, merged, or deleted — 787 records are intact where they
+lie, and consolidating them is a data-migration decision, not a filing decision. The
+aggregate above is reproducible from the `find` command at the top of this section.
+
+---

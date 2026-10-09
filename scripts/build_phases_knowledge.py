@@ -144,6 +144,15 @@ def build_knowledge_scripts(target_root: Path, config: dict[str, Any],
     #   ``Path(__file__)``-rooted reference to the JSON file -- see build.py's
     #   own DECISION HISTORY for that half of the fix).
     #   (#TICKETLESS reason=fast-lane-pr-review-fix-INF-400c-5-H1)
+    # - 2026-09-23 [python-coder/INF-700a-2]: Added harvest_status.py (the
+    #   --status / last-run-marker sibling module) to deploy_scripts, per the
+    #   documented repeat defect of a new scripts/knowledge/*.py module being
+    #   silently absent from a deployed install when this list (and its
+    #   _manifest_knowledge_scripts() twin below) are not updated in lockstep.
+    # - 2026-10-08 [python-coder/INF-700a-5]: Added completion_routing.py and
+    #   its three siblings (_state, _git, _cli), the durability step the wired
+    #   completion workflows now call; they were in no deploy list, so nothing
+    #   in an install could reach them. Mirrored in _manifest_knowledge_scripts().
     """
     import build_phases as _bp
 
@@ -156,6 +165,11 @@ def build_knowledge_scripts(target_root: Path, config: dict[str, Any],
         "sink_resolution.py",
         "capture_write.py",
         "harvest_cli.py",
+        "harvest_status.py",
+        "completion_routing.py",
+        "completion_routing_state.py",
+        "completion_routing_git.py",
+        "completion_routing_cli.py",
     ]
     output_dir = target_root / "scripts" / "knowledge"
     written = 0
@@ -496,8 +510,14 @@ def check_knowledge_routing_wiring_guard(output_root: Path) -> int:
         return 0
 
     try:
-        guardrail_config = yaml.safe_load(
-            guardrail_config_path.read_text(encoding="utf-8")
+        # Reverted to the pure-Python loader (loader-audit, TQ-600a-11
+        # fix-pass, 2026-10-07): a parse failure here returns 1, aborting
+        # the build -- a guardrail decision point (criterion 4). Single
+        # config file read once per build -- no speed case for the fast
+        # loader here.
+        guardrail_config = yaml.load(
+            guardrail_config_path.read_text(encoding="utf-8"),
+            Loader=yaml.SafeLoader,
         ) or {}
     except (OSError, yaml.YAMLError) as exc:
         print(
@@ -582,6 +602,11 @@ def _manifest_knowledge_scripts(package_root: Path) -> set[str]:
         "sink_resolution.py",
         "capture_write.py",
         "harvest_cli.py",
+        "harvest_status.py",
+        "completion_routing.py",
+        "completion_routing_state.py",
+        "completion_routing_git.py",
+        "completion_routing_cli.py",
     ):
         if (knowledge_src / fname).is_file():
             result.add(f"scripts/knowledge/{fname}")
@@ -604,6 +629,7 @@ WORKFLOW_TOOL_SCRIPTS: tuple[str, ...] = (
     "knowledge_file_nodes.py",
     "knowledge_surface_check.py",
     "knowledge_rendering.py",
+    "knowledge_edges.py",
     "set_ticket_status.py",
     "ticket_prioritizer.py",
     "port_registry.py",

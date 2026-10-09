@@ -73,7 +73,7 @@ Severity in the **filename** is a three-level index bucket (`blocker` / `high` /
 
 Fixed issues move to [`commit-guardian/resolved/`](commit-guardian/resolved/) and are no longer listed as open. They are kept, not deleted.
 
-**Open: 70** (2 blocker, 30 high, 38 low) · **Resolved: 17**
+**Open: 76** (2 blocker, 34 high, 40 low) · **Resolved: 17**
 
 ## Open
 
@@ -115,6 +115,7 @@ Fixed issues move to [`commit-guardian/resolved/`](commit-guardian/resolved/) an
 | `high` | KI-CG-20260927-file-size-hook-read-another-worktrees-index — check-file-size once measured the staged files of a different worktree, while every other hook in the same run saw the right ones | [open-high-ki-cg-20260927-file-size-hook-read-another-worktrees-index.md](commit-guardian/open-high-ki-cg-20260927-file-size-hook-read-another-worktrees-index.md) |
 | `high` | KI-CG-20260928-ac-schema-not-deployed-at-consumer-root — the schema is deployed only under .leafcutter/config/, so check-ac-schema degrades to manual field validation in every consumer install | [open-high-ki-cg-20260928-ac-schema-not-deployed-at-consumer-root.md](commit-guardian/open-high-ki-cg-20260928-ac-schema-not-deployed-at-consumer-root.md) |
 | `high` | KI-CG-20260928-first-commit-leaves-the-deployed-config-drifted — the first commit in a worktree strips every em-dash from the deployed `commit_guardian.json`, so EVERY commit after the first is refused by `check-output-drift` for a change no author made (19 refusals across 5+ worktrees) | [open-high-ki-cg-20260928-first-commit-leaves-the-deployed-config-drifted.md](commit-guardian/open-high-ki-cg-20260928-first-commit-leaves-the-deployed-config-drifted.md) |
+| `high` | KI-CG-20261009-required-ci-ruff-has-no-local-pre-commit-counterpart — the required `Lint (ruff)` CI check has never had a matching pre-commit hook, so a lint violation passes every local commit-time gate and fails only in CI; three in-repo texts claim the hook exists | [open-high-ki-cg-20261009-required-ci-ruff-has-no-local-pre-commit-counterpart.md](commit-guardian/open-high-ki-cg-20261009-required-ci-ruff-has-no-local-pre-commit-counterpart.md) |
 | `low` | KI-CG-002 — The diagram-type guard silently swaps its enum source when its declaring file is unreachable | [open-low-ki-cg-002.md](commit-guardian/open-low-ki-cg-002.md) |
 | `low` | KI-CG-011 — The roadmap mirror strips its own `description` frontmatter and backdates `created` to today | [open-low-ki-cg-011.md](commit-guardian/open-low-ki-cg-011.md) |
 | `low` | KI-CG-013 — The schema hook and the done-proof oracle disagree about what a leaf is, so one AC can be required to satisfy both branches | [open-low-ki-cg-013.md](commit-guardian/open-low-ki-cg-013.md) |
@@ -153,6 +154,8 @@ Fixed issues move to [`commit-guardian/resolved/`](commit-guardian/resolved/) an
 | `low` | KI-CG-20260923-no-gate-validates-doc-to-doc-markdown-links — no hook resolves a markdown link between two docs; `check-doc-links` covers code-to-doc only, by design, so a doc split that leaves two dead links and an orphaned anchor passes every gate | [open-low-ki-cg-20260923-no-gate-validates-doc-to-doc-markdown-links.md](commit-guardian/open-low-ki-cg-20260923-no-gate-validates-doc-to-doc-markdown-links.md) |
 | `low` | KI-CG-20260927-subprocess-text-decode-uses-locale-codec-repo-wide — 212 subprocess calls under scripts/ and templates/scripts/ decode child output with text=True and no encoding, so on Windows UTF-8 git content is read as cp1252: mostly silent mojibake, sometimes a crash | [open-low-ki-cg-20260927-subprocess-text-decode-uses-locale-codec-repo-wide.md](commit-guardian/open-low-ki-cg-20260927-subprocess-text-decode-uses-locale-codec-repo-wide.md) |
 | `low` | KI-CG-20260925-frontmatter-guard-truncates-at-in-value-dashes — ticket_frontmatter_guard (and check-doc-frontmatter) end the frontmatter at the first triple dash anywhere, including inside a value | [open-low-ki-cg-20260925-frontmatter-guard-truncates-at-in-value-dashes.md](commit-guardian/open-low-ki-cg-20260925-frontmatter-guard-truncates-at-in-value-dashes.md) |
+| `low` | KI-CG-20261008-drift-exempt-recorded-key-widens-registry-and-double-counts — `check-output-drift` now lets a registry entry excuse content drift on a RECORDED output, contradicting the registry's own charter, and counts that output in both `verified` and `uncomparable`; the counting fix needs an ADR | [open-low-ki-cg-20261008-drift-exempt-recorded-key-widens-registry-and-double-counts.md](commit-guardian/open-low-ki-cg-20261008-drift-exempt-recorded-key-widens-registry-and-double-counts.md) |
+| `low` | KI-CG-20261008-build-drift-doc-claims-staged-file-trigger — `docs/build-drift-hook.md` says both drift gates fire on a staged file, but both are `always_run` and never read the staged list | [open-low-ki-cg-20261008-build-drift-doc-claims-staged-file-trigger.md](commit-guardian/open-low-ki-cg-20261008-build-drift-doc-claims-staged-file-trigger.md) |
 
 ## Resolved
 

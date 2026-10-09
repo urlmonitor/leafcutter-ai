@@ -36,6 +36,18 @@ Usage:
 Exit codes:
     0: success (feedback_id printed to stdout)
     1: validation failure (error details on stderr)
+
+Output streams on success (callers parse these -- keep them stable):
+    stdout: exactly one line, the feedback_id (fb_YYYY-MM-DD_xxxxxxxx).
+    stderr: "sidecar:<tmpdir>/feedback_id_<epoch>.txt" -- the id-recovery
+        fallback the signoff skill greps for (KI-FC-002); then
+        "[submit_feedback] sink: <absolute path>" -- the resolved file the
+        record was appended to (AC INF-500d-4-ii, KI-FC-001). The sink line
+        is on stderr, never stdout, because callers capture stdout verbatim
+        as the id; its prefix is not "sidecar:", so the recovery grep does
+        not pick it up. It reports where the sink resolved; it does not change
+        how the sink resolves (one declared sink per install is separate
+        planned work). 2026-10-08 [quick-fix/INF-500d-4-ii].
 """
 
 from __future__ import annotations
@@ -370,11 +382,7 @@ def _build_parser() -> argparse.ArgumentParser:
         default=None,
         help="Number of staged files at commit time (hook mode).",
     )
-    parser.add_argument(
-        "--jsonl",
-        default=None,
-        help=f"Override JSONL output path. Default: {_JSONL_DEFAULT}",
-    )
+    parser.add_argument("--jsonl", default=None, help=f"Override JSONL output path. Default: {_JSONL_DEFAULT}")
     parser.add_argument(
         "--config",
         default=None,
@@ -554,6 +562,7 @@ def main(argv: list[str] | None = None) -> int:
     except OSError as exc:
         print(f"[submit_feedback] WARNING: sidecar write failed: {exc}", file=sys.stderr)
 
+    print(f"[submit_feedback] sink: {jsonl_path.resolve()}", file=sys.stderr)
     return 0
 
 

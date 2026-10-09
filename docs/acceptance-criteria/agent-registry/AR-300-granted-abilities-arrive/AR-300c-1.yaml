@@ -1,0 +1,143 @@
+id: AR-300c-1
+title: "An agent's abilities are declared in its own definition beside its permitted tools, and delivery reads only that"
+component: agent-registry
+components:
+  - agent_registry
+  - skill_registry
+  - template_compiler
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given an agent definition that declares which abilities the agent is granted,
+    in the same header block that declares which tools it is permitted to use,
+  When the build compiles that agent's prompt,
+  Then the abilities named in the compiled prompt are exactly the abilities that
+    header declares -- none added from elsewhere, none omitted,
+    And changing only that header changes the compiled prompt accordingly on the
+      next build, with no other definition or record edited,
+    And changing only the central registry's ability entries, while the header is
+      left alone, does not change the compiled prompt,
+    And both halves of the declaration -- the abilities granted and the tools
+      permitted -- can be read from the same block, so the two can be compared
+      against each other without consulting a second file,
+  So there is one place to change an agent's abilities, and no second place that
+    can disagree with it.
+depends_on:
+  - AR-300c
+doc_links:
+  - path: docs/reference/agent-template-frontmatter.md
+    relationship: modifies
+    status: exists
+    relevance: "The reference for the header block this criterion makes authoritative -- the same block that already declares the permitted tools."
+  - path: config/agent_registry.json
+    relationship: modifies
+    status: exists
+    relevance: "Holds the grant twice today, in two fields with different populations. After this criterion its ability entries are derived rather than authored."
+  - path: scripts/template_compiler.py
+    relationship: modifies
+    status: exists
+    relevance: "Reads the source definition and the central record today; this criterion settles which of the two it is allowed to believe."
+  - path: docs/acceptance-criteria/infrastructure/INF-600-self-describing-agents/INF-600a-1.yaml
+    relationship: related
+    status: exists
+    relevance: "SUPERSEDED BY THIS CRITERION. INF-600a-1 made a central registry field the source of truth and kept the other as a compatibility alias -- the origin of today's split population and the opposite of the direction this criterion states. It was never implemented (work_status todo), so it is superseded rather than amended."
+assigned_agent: python-coder
+estimated_complexity: L
+change_target:
+  - code
+  - schema
+risk_surface: contract_boundary
+it_requirements:
+  - "The declaration lands in the agent template's own YAML frontmatter as a sibling of the existing `tools:` key (verified present as a bare comma-separated string, e.g. `tools: Bash, Read, Edit, Write, Agent`). Both halves must therefore be readable from one parse of one block -- that adjacency is the criterion, not a layout preference."
+  - "Carry the mode/condition structure the existing records already hold (`mode: always | conditional` plus a `condition` string, INF-600a-1's shape) into the frontmatter entry. AR-300a-2 requires that distinction to survive into the compiled prompt, so flattening it to a bare list of names here breaks a sibling AC."
+  - "The compiler reads the frontmatter declaration and ONLY the frontmatter declaration for abilities. The registry read path must be removed from the abilities code path, not merely deprioritised or used as a fallback -- a fallback satisfies 'the header is authoritative' and 'the header is also read' identically, and only the negative clause distinguishes them."
+  - "Register the new frontmatter key in every place agent-template frontmatter is validated, and identify which of those is load-bearing. A key that validates only in a doc or a schema fragment that is never the gate is a no-op; the authoritative enforcement point must be named in the implementation."
+  - "Because `tools:` is an unstructured comma-separated string today, adding a structured sibling key means the frontmatter parse must tolerate both shapes without reformatting the rest of the block. The edit must not rewrite unrelated frontmatter keys -- a whole-block rewrite across 60 templates is a diff nobody can review."
+  - "File-size ratchet: scripts/template_compiler.py is 496 lines and already over the 400-content-line limit; the declaration reader lands in a new module and the compiler edit must be net-neutral or shorter (removing the registry read path helps here)."
+  - "templates/agents/*.md is the tracked source; compiled prompts are gitignored build outputs. Edit source only."
+  - "This AC supersedes INF-600a-1 (already recorded there). Confirm no surviving consumer still reads the registry ability fields as authoritative before removing the read path -- the card generator was INF-600a-1's named consumer; if it still reads them it must be re-pointed at the derived copy AR-300c-3 validates, not left reading an inert field."
+test_spec:
+  - name: test_compiled_prompt_abilities_equal_the_frontmatter_declaration
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: integration
+    angle: deployed
+    description: "The abilities named in an agent's compiled prompt are exactly those its template frontmatter declares -- none added from elsewhere, none omitted."
+  - name: test_editing_only_the_frontmatter_changes_the_compiled_prompt
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: integration
+    angle: seam
+    description: "Changing only the frontmatter declaration and rebuilding changes that agent's compiled prompt accordingly, with no other file edited."
+  - name: test_editing_only_the_registry_does_not_change_the_compiled_prompt
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: integration
+    angle: real_artifact
+    description: "Changing only config/agent_registry.json's ability entries, leaving the frontmatter alone, leaves the compiled prompt unchanged. This is the clause that distinguishes an authoritative header from a header that is merely also read."
+  - name: test_grant_and_tools_are_readable_from_one_frontmatter_block
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: "Both the declared abilities and the permitted tools parse out of the same frontmatter block, enabling AR-200b-2's comparison without a second file."
+  - name: test_mode_and_condition_survive_into_the_frontmatter_representation
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: "A conditional grant retains its mode and condition in the frontmatter declaration, so AR-300a-2's delivery requirement remains satisfiable."
+test_rationale: >-
+  The negative descriptor -- edit the registry alone and assert the compiled prompt
+  does NOT change -- is the one a reasonable implementer omits, because it looks
+  like a test of nothing happening. It is the only descriptor that distinguishes a
+  fallback read from a sole read, and a fallback read reinstates the two-records
+  defect this AC exists to end. Both positive descriptors are deployed or seam angle
+  because the claim is about what the build emits, not what the reader function
+  returns.
+delivers_to:
+  agent: python-coder
+  contract: >-
+    An ability declaration in each agent template's own YAML frontmatter, sibling
+    of `tools:` -- a list whose entries carry the ability id, `mode`
+    (always | conditional) and, when conditional, a `condition` string. This is
+    the sole authoritative source of an agent's abilities and the only input the
+    delivery path (AR-300a-1), the migration destination (AR-300c-2), the
+    derived-copy comparison (AR-300c-3), the resolution check (AR-300c-3-i) and
+    the grant-versus-tools comparison (AR-200b-2) are permitted to read.
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-09-30
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-10-01'
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  THIS CARRIES A DECISION THE USER HAS ALREADY TAKEN. The abilities move into the
+  agent's own definition, beside the declaration of what it is permitted to use.
+  The central record's ability fields become derived and validated. The placement
+  question is not re-opened here.
+
+  THE NEGATIVE CLAUSE IS THE TEST OF 'ONE PLACE'. 'The header is authoritative'
+  and 'the header is also read' are satisfied by the same implementation. Only
+  the clause that edits the central record alone and expects NO change to the
+  compiled prompt distinguishes them -- and that clause is the one a reasonable
+  implementer would omit, because it looks like a test of nothing happening.
+
+  SUPERSESSION, NOT AMENDMENT. INF-600a-1 is an L2 at readiness reviewed and
+  work_status todo. Amending it would leave a reviewed record pointing at a
+  registry field as the source of truth while this one points at the header;
+  two active approved statements about where truth lives is the same defect one
+  level up. The frontmatter grant replaces the registry-field question entirely,
+  so the record is superseded. Its own child INF-600a-1-i asserts something
+  narrower -- that an unresolvable ability id is rejected -- which is not a claim
+  about where truth lives; that obligation is carried forward here by
+  AR-300c-3-i and INF-600a-1-i is left active for the IT PO to relocate.

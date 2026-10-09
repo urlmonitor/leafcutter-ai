@@ -1,0 +1,68 @@
+# Post-merge timing suite (TQ-600a-13-xix).
+#
+# Runs ONLY the tests marked `timing_ratio` -- the wall-clock ratio assertions
+# that are excluded from the default (required) pytest run because a ratio
+# measured on a shared runner fails on host noise. The job's exit status is the
+# run's conclusion: a failing ratio test turns THIS run red, and a lane that
+# collects nothing (pytest exit 5) is also made red rather than green. It never
+# holds a merge and writes no notice; TQ-600a-13-xii extends this file.
+#
+# The build step is needed even though the timing_ratio tests themselves use no
+# deployed layout: pytest imports EVERY test module to evaluate `-m`, and some
+# modules import build outputs (scripts/commit_guardian/... symlinks). Without
+# the build, the first live run on main went red on 4 collection errors while
+# both ratio tests passed. Keep the name, triggers and concurrency group
+# unchanged when extending.
+
+name: Post-merge timing suite
+
+"on":
+  push:
+    branches: [main]
+  schedule:
+    # Every 12 hours, deliberately off the hour and off the correctness suite's minute.
+    - cron: "41 2,14 * * *"
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: post-merge-timing
+  cancel-in-progress: false
+
+jobs:
+  timing:
+    name: Timing lane (timing_ratio)
+    runs-on: ubuntu-latest
+    # 45, not 20: the lane also carries TQ-600a-9's before/after ratio test, which
+    # times two scoped pytest runs (one in a detached worktree at the merge-base).
+    timeout-minutes: 45
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install dev dependencies
+        run: pip install -r requirements-dev.txt
+
+      - name: Build — deploy .leafcutter so every test module imports
+        run: python scripts/build.py --target-dir .
+
+      - name: Run the timing lane
+        env:
+          AC_ENFORCE_STRICT: "1"
+        run: |
+          rc=0
+          python -m pytest tests/ unit_tests/ -m timing_ratio -p no:cacheprovider || rc=$?
+          if [ "$rc" -eq 5 ]; then
+            echo "timing lane collected no tests (pytest exit 5): an empty lane is red" >&2
+          fi
+          exit "$rc"

@@ -120,7 +120,11 @@ def _load_registry(index_path: Path) -> tuple[set[str], dict[str, str], dict[str
         (registry_ids, prefix_to_id, id_to_patterns). All empty on error.
     """
     try:
-        data = yaml.safe_load(index_path.read_text(encoding="utf-8"))
+        # Reverted to the pure-Python loader (loader-audit, TQ-600a-11
+        # fix-pass, 2026-10-07): one-off manual backfill tool, run rarely
+        # rather than routinely -- no "often enough" speed case even though
+        # per-run it may touch many ticket files.
+        data = yaml.load(index_path.read_text(encoding="utf-8"), Loader=yaml.SafeLoader)
     except (OSError, yaml.YAMLError) as exc:
         print(f"ERROR: cannot read registry {index_path}: {exc}", file=sys.stderr)
         return set(), {}, {}
@@ -406,7 +410,10 @@ def _backfill_file(
 
     fm_text = content[3:fm_end].strip()
     try:
-        fm = yaml.safe_load(fm_text)
+        # Reverted to the pure-Python loader (loader-audit, TQ-600a-11
+        # fix-pass, 2026-10-07): same one-off-tool reasoning as the registry
+        # load above.
+        fm = yaml.load(fm_text, Loader=yaml.SafeLoader)
     except yaml.YAMLError as exc:
         print(f"WARNING: cannot parse frontmatter in {path}: {exc}", file=sys.stderr)
         return "error"

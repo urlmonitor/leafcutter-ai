@@ -46,6 +46,7 @@ below by hand.
 | [artifact-knowledge-graph-data-map.md](artifact-knowledge-graph-data-map.md) | Node and edge type map for the cross-artifact knowledge graph (ACs, tickets, tests, flows, mockups, changelog entries, components), with a per-edge enforcement and shape trust rating. |
 | [artifact-knowledge-graph.graph.json](artifact-knowledge-graph.graph.json) | Machine-readable JSON mirror of the data map above; drives the Atlas Flows view. It carries no Markdown frontmatter, so `docs/INDEX.md` does not list it â€” this index does. |
 
+| [knowledge-routing-step.md](knowledge-routing-step.md) | Where the knowledge-routing step runs, which completion paths carry it, the three-case outcome and report figures, what each harvester exit means to the caller, and the `--status` recency answer versus the waiting count and capture-health figures. |
 | [knowledge-retrieval-answers.md](knowledge-retrieval-answers.md) | Neutral research request fields, separate answer and execution states, population counts, proof/trace limits and reviewed evaluation contracts. |
 
 ## Documentation & Architecture Conventions

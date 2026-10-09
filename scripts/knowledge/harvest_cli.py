@@ -1,8 +1,9 @@
 """
 MODULE: harvest_cli
 GOAL: Define the ``harvest_learnings`` command-line argument surface --
-    ``--sink``, ``--state``, ``--print-sink``, ``--dry-run``, ``--verbose``
-    -- as a concern separate from parsing them into a run.
+    ``--sink``, ``--state``, ``--print-sink``, ``--status``, ``--marker``,
+    ``--dry-run``, ``--verbose`` -- as a concern separate from parsing them
+    into a run.
 BUSINESS CONTEXT: The CLI surface is stable and independently documented
     (see ``harvest_learnings.py``'s own module docstring, which mirrors each
     of these flags' help text for `--help`-free reference). Isolating the
@@ -26,12 +27,39 @@ ARCHITECTURE: Helper module for the Knowledge System component
 #   real subprocess invocations of the deployed script), so the rename and
 #   the move are both invisible to every existing test. (#INF-400c-5,
 #   GE-127b-1)
+# - 2026-09-23 [python-coder/INF-700a-2]: Added ``--status`` and ``--marker``
+#   for the run-recency signal INF-700a-2 requires now that
+#   ``HarvestResult.outstanding`` reads zero for both a healthy loop and a
+#   loop that has never run. The ``--status`` help text is this flag's
+#   discharge of the AC's "names no figure that is also produced by the
+#   capture-health report ... and says which of the two a reader should
+#   consult" clause -- the capture-health report is not covered by any
+#   automated test asserting on help text, per this AC's own test_rationale
+#   (a string match on help text is brittle), so it is satisfied here
+#   directly rather than via a sibling test.
+# - 2026-10-08 [python-coder/INF-400c-4-vi]: ``--state`` no longer defaults to a
+#   cwd-relative path literal. ``parse_args`` leaves ``--state``/``--marker``
+#   as ``None`` and ``apply_state_defaults`` anchors them beside the resolved
+#   sink once the caller has resolved it. (KI-KM-20261008)
 """
 
 from __future__ import annotations
 
 import argparse
 from pathlib import Path
+
+# Neither default is spelled as a repo-relative path literal. --state defaults
+# to a bare file name beside the RESOLVED sink, and --marker to a bare file
+# name beside --state, so with the build-time sink declaration (AC
+# INF-400c-4-v) both land in the install's declared directory whatever the
+# process's working directory is. A run that omits both flags no longer drops
+# files into the checkout it was started in, and build.py's closure guard (AC
+# BP-900g-8), which treats a directory-qualified literal in a deployed script
+# as a data dependency once that file exists under the package root, has no
+# literal to match. (Only an un-built source-tree run, whose sink fallback is
+# itself cwd-relative, anchors to cwd -- beside that sink.)
+_STATE_NAME = "harvest_state.json"
+_MARKER_NAME = "harvest_last_run.json"
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
@@ -61,9 +89,12 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument(
         "--state",
         type=Path,
-        default=Path("debugging/logs/harvest_state.json"),
+        default=None,
         metavar="PATH",
-        help="Path to the processed-event state file (default: debugging/logs/harvest_state.json).",
+        help=(
+            f"Path to the processed-event state file (default: {_STATE_NAME} "
+            "in the directory of the resolved sink)."
+        ),
     )
     parser.add_argument(
         "--print-sink",
@@ -71,6 +102,30 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         help=(
             "Print the resolved absolute sink path and exit 0. Side-effect "
             "free: reads the declaration only (AC INF-400c-4-v)."
+        ),
+    )
+    parser.add_argument(
+        "--status",
+        action="store_true",
+        help=(
+            "Print JSON {last_run, sink, sink_exists} for the routing step "
+            "in THIS tree and exit 0 -- always, even if it has never run. "
+            "Side-effect free: never creates the marker or any sink "
+            "directory. For agent-run / capture-attempt counts, see the "
+            "capture-health report instead; this flag only answers whether "
+            "the routing step has completed here, and over which sink."
+        ),
+    )
+    parser.add_argument(
+        "--marker",
+        type=Path,
+        default=None,
+        metavar="PATH",
+        help=(
+            f"Path to the last-completed-run marker (default: {_MARKER_NAME} "
+            "beside the --state file, itself beside the resolved sink by "
+            "default). An ordinary run writes this on completion; --status "
+            "reads it."
         ),
     )
     parser.add_argument(
@@ -84,3 +139,17 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         help="Log each event as it is processed.",
     )
     return parser.parse_args(argv)
+
+
+def apply_state_defaults(args: argparse.Namespace, sink_path: Path) -> None:
+    """Fill an omitted ``--state`` / ``--marker`` from the resolved sink.
+
+    ``--state`` defaults to ``harvest_state.json`` beside *sink_path* and
+    ``--marker`` to ``harvest_last_run.json`` beside ``--state``. An explicit
+    flag always wins, and an explicit ``--state`` still carries the default
+    marker with it. Pure: no I/O -- nothing is created here.
+    """
+    if args.state is None:
+        args.state = sink_path.parent / _STATE_NAME
+    if args.marker is None:
+        args.marker = args.state.parent / _MARKER_NAME

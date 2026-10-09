@@ -8,7 +8,7 @@ component: infrastructure
 level: L2
 status: active
 req_status: active
-work_status: todo
+work_status: done
 priority: medium
 readiness: reviewed
 created_by: "docs/acceptance-criteria/infrastructure/INF-400-agent-learning/INF-700a.yaml"
@@ -89,7 +89,9 @@ created: 2026-09-07
 amended_by: []
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- docs/reference/knowledge-routing-step.md
+- docs/architecture/agent_knowledge_system.md
 notes: |
   The last clause of the criteria is the one the whole L1 turns on. ADR-034
   recorded that until the harvester has a caller, capture is not automatic and

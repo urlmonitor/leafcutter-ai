@@ -27,6 +27,7 @@ Usage
 -----
     python scripts/knowledge/harvest_learnings.py [--sink PATH] [--dry-run] [--verbose]
     python scripts/knowledge/harvest_learnings.py --print-sink
+    python scripts/knowledge/harvest_learnings.py --status
 
 Options
 -------
@@ -40,7 +41,9 @@ Options
 
 --state PATH
     Path to the JSON state file tracking processed event hashes.
-    Default: debugging/logs/harvest_state.json (relative to CWD).
+    Default (INF-400c-4-vi): harvest_state.json in the directory of the
+    resolved sink -- never relative to the working directory, so a run that
+    omits this flag writes beside the declared sink and nowhere else.
 
 --print-sink
     Print the resolved absolute sink path (and nothing else) to stdout and
@@ -57,6 +60,25 @@ Options
     fallback here would hand each of them a different answer depending on
     where the invoking agent happens to be standing, which is exactly the
     corpus split those surfaces exist to prevent.
+
+--status
+    Print ONE line of JSON -- {"last_run": ..., "sink": ..., "sink_exists":
+    ...} -- to stdout and exit 0, ALWAYS (never an error, including
+    never-run). Side-effect free: reads the marker only, never creates it,
+    its parent directory, or the sink's parent directory (AC INF-700a-2).
+    ``last_run`` is the literal sentinel "never-run" when the marker has
+    never been written in this tree, else an ISO-8601 UTC timestamp for the
+    last COMPLETED (non-status, non-print-sink) run. ``sink_exists`` is a
+    fresh stat taken at answer time, never inferred from a past run. This
+    answers whether the routing step has run HERE and over WHICH sink; for
+    agent-run / capture-attempt counts, see the capture-health report
+    instead (INF-700b-3) -- the two never share a figure.
+
+--marker PATH
+    Path to the last-completed-run marker (default: harvest_last_run.json in
+    the --state file's directory). An ordinary run writes/updates
+    this on reaching a completed harvest() call, regardless of --dry-run and
+    regardless of the resulting exit code; --status reads it.
 
 --dry-run
     Read events and decide routing but do not write to any knowledge surface.
@@ -124,7 +146,8 @@ def _load_required_sibling_module(module_name: str, filename: str) -> Any:
 
     Unlike ``_load_entry_kind_vocabulary_module``, the modules loaded here
     (``harvest_result``, ``sink_resolution``, ``capture_write``,
-    ``harvest_cli``) are load-bearing plumbing with no degraded fallback --
+    ``harvest_cli``, ``harvest_status``) are load-bearing plumbing with no
+    degraded fallback --
     a load failure is re-raised rather than swallowed, since there is
     nothing sensible for the harvester to do without them.
 
@@ -164,6 +187,8 @@ _sink_resolution = _load_required_sibling_module("sink_resolution", "sink_resolu
 _capture_write = _load_required_sibling_module("capture_write", "capture_write.py")
 
 _harvest_cli = _load_required_sibling_module("harvest_cli", "harvest_cli.py")
+
+_harvest_status = _load_required_sibling_module("harvest_status", "harvest_status.py")
 
 
 # ---------------------------------------------------------------------------
@@ -285,28 +310,13 @@ def _save_state(state_path: Path, hashes: set[str]) -> None:
 # Build-time sink declaration resolution (AC INF-400c-4-v)
 # ---------------------------------------------------------------------------
 #
-# The build deploys this file to <output_root>/scripts/knowledge/
-# harvest_learnings.py (see build_knowledge_scripts in
-# build_phases_knowledge.py), so the deployed output root is always exactly
-# two directories above this file's own location. Pure path arithmetic -- no
-# I/O -- so this never raises, even when the file is being run from an
-# un-built source tree.
-#
-# The declaration-read, default/staleness/legacy resolution, and
-# --print-sink handling this cluster used to hold here now live in the
-# sibling ``sink_resolution`` module (loaded above via
-# ``_load_required_sibling_module`` as ``_sink_resolution``) -- a cohesive
-# "where things live" concern distinct from draining the sink once resolved.
-# See that module's own docstring for the extraction rationale.
-
-
-def _deployed_output_root() -> Path:
-    """Return the output root this deployed copy of the script lives under.
-
-    Pure function: no I/O, no shared-state mutation.
-    """
-    return Path(__file__).resolve().parents[2]
-
+# The declaration-read, default/staleness/legacy resolution, --print-sink
+# handling, and (as of INF-700a-2) the deployed-output-root computation this
+# cluster used to hold here now all live in the sibling ``sink_resolution``
+# module (loaded above via ``_load_required_sibling_module`` as
+# ``_sink_resolution``) -- a cohesive "where things live" concern distinct
+# from draining the sink once resolved. See that module's own docstring for
+# the extraction rationale.
 
 # ---------------------------------------------------------------------------
 # Default capture function (production wiring via capture-learning protocol)
@@ -494,6 +504,7 @@ def harvest(
     capture_fn: Callable[[str, str], None] = _default_capture,
     dry_run: bool = False,
     verbose: bool = False,
+    persist_state: bool = True,
 ) -> HarvestResult:
     """Process unhandled ``knowledge_captured`` events from *sink_path*.
 
@@ -512,6 +523,13 @@ def harvest(
         and state is not updated.
     verbose:
         When ``True``, log each event at DEBUG level.
+    persist_state:
+        When ``False``, records are written through *capture_fn* as usual
+        but their hashes are NOT saved to *state_path* -- the deferred-state
+        mode ``completion_routing.py`` drives (INF-700a-5): a write inside an
+        isolated working directory is not routed until a later run sees its
+        text on the base branch, so marking it here would be a claim no
+        merged tree may ever honour.
 
     Returns
     -------
@@ -800,26 +818,14 @@ def harvest(
             # the dry-run case counts toward `outstanding` here.
             result.outstanding += 1
 
-    # 3. Persist updated state
-    #
-    # Only when there is something new to record. With new_hashes empty the
-    # write is a no-op (seen | {} == seen), so attempting it can only
-    # manufacture a failure that costs nothing: nothing was routed, so
-    # nothing can be re-routed. Reporting that as a failed run would raise
-    # the exit code to 4 and mask the exit-3 backlog signal on precisely the
-    # run that most needs it -- an all-unroutable sink, which is today's
-    # real corpus.
-    if not dry_run and new_hashes:
+    # 3. Persist state: only with something new to record (an empty write could
+    # only fake an exit-4 that masks exit-3 on an all-unroutable sink) and not
+    # when deferred (persist_state=False, INF-700a-5). A persist failure means
+    # the next run re-appends these learnings, so the run is NOT clean.
+    if not dry_run and new_hashes and persist_state:
         try:
             _save_state(state_path, seen | new_hashes)
         except OSError:
-            # _save_state already warned with the specific errno. Do not abort
-            # -- the learnings were written and that work is real -- but the
-            # run is NOT clean: without the state file every hash in
-            # new_hashes is forgotten, so the next run re-routes all of them
-            # and appends each learning to its destination a second time.
-            # Recording this is what stops the caller reading a duplicating
-            # run as a successful one.
             result.state_persist_failed = True
             logger.warning(
                 "Harvest state was not persisted; the %d learnings routed by "
@@ -855,15 +861,19 @@ def main(argv: list[str] | None = None) -> int:
         this function returns.
     """
     args = _harvest_cli.parse_args(argv)
+    output_root = _sink_resolution.deployed_output_root()
 
-    output_root = _deployed_output_root()
-
-    # AC INF-400c-4-v: obtainable without emitting or harvesting -- reads
-    # the declaration only and returns before anything else (logging setup,
-    # the sink-existence check, the legacy-divergence check) can touch the
-    # filesystem beyond that one read.
+    # AC INF-400c-4-v: obtainable without emitting or harvesting -- reads the
+    # declaration only and returns before anything else can touch the filesystem.
     if args.print_sink:
         return _sink_resolution.handle_print_sink(output_root)
+
+    status_sink = _sink_resolution.resolve_sink_for_status(args, output_root)
+    _harvest_cli.apply_state_defaults(args, status_sink)
+    # AC INF-700a-2: also reads only, exits 0 always, never touches the
+    # marker/sink parent directories -- see harvest_status.handle_status.
+    if args.status:
+        return _harvest_status.handle_status(status_sink, args.marker)
 
     log_level = logging.DEBUG if args.verbose else logging.INFO
     logging.basicConfig(level=log_level, format="%(levelname)s %(name)s: %(message)s")
@@ -875,17 +885,15 @@ def main(argv: list[str] | None = None) -> int:
     _sink_resolution.warn_if_diverging_from_legacy(sink_path, output_root)
 
     result = harvest(
-        sink_path=sink_path,
-        state_path=args.state,
-        dry_run=args.dry_run,
-        verbose=args.verbose,
+        sink_path=sink_path, state_path=args.state, dry_run=args.dry_run, verbose=args.verbose
     )
+    # AC INF-700a-2: a completed harvest() call (SystemExit(1)/(2) not hit)
+    # always updates the marker, whatever --dry-run or the 0/3/4 exit code.
+    _harvest_status.write_last_run_marker(args.marker, sink_path)
 
     print(result.summary())
 
-    if result.write_failures or result.state_persist_failed:
-        return 4
-    return 3 if result.skipped_unknown else 0
+    return result.exit_code()
 
 
 if __name__ == "__main__":
@@ -1034,3 +1042,4 @@ if __name__ == "__main__":
 #   writes a variant-spelled `entry_kind` directly into the sink (bypassing
 #   the emission CLI, as a legacy record would be) and asserts the real
 #   harvester CLI routes it. (#TICKETLESS reason=fast-lane-pr-review-fix-INF-400c-5-i-H2)
+# - 2026-10-08 [python-coder]: harvest(persist_state=False) defers the state write for completion_routing.py. (#INF-700a-5)
