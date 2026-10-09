@@ -702,6 +702,8 @@ ENTROPY_HIGH:reports/feedback-snapshots/feedback-corpus-2026-09-30.jsonl:*
 # TQ-600a-13-vi App fake: a fixed placeholder token string that a local test server
 # hands its jobs. Not a credential. Duplicated to the workspace-root copy.
 GENERIC_SECRET:unit_tests/suite_performance/_app_fake.py:*
+# TQ-600a-13-xii previous-run tests: the same kind of fixed placeholder token default.
+GENERIC_SECRET:unit_tests/suite_performance/test_tq_600a_13_xii_previous_run.py:*
 
 # Refreshed feedback corpus snapshot, 2026-10-09 (713 records, KI-FC-001). Same false
 # positive as the 2026-09-30 entry above: fb_YYYY-MM-DD_xxxxxxxx ids in dense one-line

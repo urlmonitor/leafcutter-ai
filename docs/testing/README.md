@@ -155,10 +155,21 @@ alone returns nothing, because the default `-m` selection still applies):
 python -m pytest unit_tests/ -m manual
 ```
 
-Tests marked `timing_ratio` (wall-clock ratio assertions that are flaky on shared runners)
-are likewise excluded from the default run; they run in `Post-merge timing suite` after
-every merge to main and on a 12-hour heartbeat, which goes red on failure and never holds
-a merge. Opt in locally with `python -m pytest -m timing_ratio <path>`.
+### Post-merge lanes
+
+Tests excluded from the default run are not dropped; two post-merge workflows run them
+after every merge to main and on a 12-hour heartbeat. Both retry failing tests once on a
+fresh runner before reporting a verdict.
+
+| Lane | Workflow | Selects | On failure |
+|------|----------|---------|------------|
+| Correctness | `Post-merge suite` | `_MANUAL` tests (`-m "manual and not timing_ratio"`) | Opens or updates the `post-merge-red` issue. The `Post-merge suite status` check holds pull requests while the lane is red, did not complete, or is stale (over 30 hours). It is not a required check yet. |
+| Timing | `Post-merge timing suite` | `timing_ratio` tests (wall-clock ratio assertions) | Opens or updates the separate `post-merge-timing` issue, which names tests that newly entered the lane and the commit that touched them. It never holds a pull request. |
+
+Adding `@pytest.mark.timing_ratio` to a test moves it out of the default run and out of
+the holding correctness lane into the timing lane. That is a reviewed change: name the
+test in the PR. Opt in locally with `python -m pytest -m timing_ratio <path>` (or
+`-m manual` for the correctness lane).
 
 ---
 
