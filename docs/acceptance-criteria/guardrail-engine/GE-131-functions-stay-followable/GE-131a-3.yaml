@@ -65,6 +65,8 @@ superseded_by: null
 covered_by: []
 implemented_by:
 - tickets/00_inbox/TICKET-20261009-GE-131a-3.md
+- templates/scripts/commit_guardian/README.md
+- templates/skills/complexity-reduction/SKILL.md
 change_target: docs
 risk_surface: internal
 notes: |
