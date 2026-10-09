@@ -17,7 +17,7 @@ from kernel.contracts.work import RequestBody, WorkItem
 from kernel.providers.base import JevError, JevResult, QuestionSpec
 
 BUNDLE_TEMPLATE_ID = "kernel.split.bundled"
-BUNDLE_REV = "1"
+BUNDLE_REV = "2"
 #: Answer kinds that are never split (ideas, change and out_of_domain roots).
 UNSPLITTABLE_KINDS = frozenset({"ideas", "change", "out_of_domain"})
 _SCHEMA_KIND = {schema_ids.DECISION_REPORT: "decision", schema_ids.EVIDENCE_BUNDLE: "evidence",
@@ -33,8 +33,11 @@ def bundle_question(work_item_id: str, state_path: str) -> QuestionSpec:
     """Return the literal, versioned bundle question; `state_path` names the subject in the state."""
     instructions = (f"Does `{state_path}` hold several separate questions that would each be "
                     "answered on their own, rather than one question? Answer with the "
-                    "probability that it holds several separate questions. A single question "
-                    "with several details or constraints is one question.")
+                    "probability that it holds several separate questions. Alternatives joined by "
+                    "'or' are the options of one question. Constraints joined by 'and' "
+                    "qualify that question. A single question with several alternatives, "
+                    "details or constraints is one question; only separate questions that "
+                    "each need their own answer are bundled.")
     return QuestionSpec(id=bundle_question_id(work_item_id), kind="noul",
                         template_id=BUNDLE_TEMPLATE_ID, template_version=BUNDLE_REV,
                         instructions=instructions)
@@ -81,5 +84,6 @@ def is_bundled(probability: float | None, threshold: float) -> bool:
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-09 16:00 [python-coder]: Bundle question states or/and boundary cases; rev 2. (#TICKET-20261006-DK-400a-3-i)
 # - 2026-10-06 18:00 [python-coder]: New deterministic split gates and bundle detection. (#TICKET-20261006-DK-400a-1)
 # ====================================================================
