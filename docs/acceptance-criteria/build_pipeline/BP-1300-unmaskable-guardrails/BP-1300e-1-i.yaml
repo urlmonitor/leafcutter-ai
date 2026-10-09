@@ -1,0 +1,221 @@
+id: BP-1300e-1-i
+components:
+  - precommit_hooks
+  - commit_guardian
+  - build_pipeline
+title: "The commit-time lint check and CI read one definition of what is linted and by which rules, so changing it in one place changes both"
+component: build-pipeline
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Scenario: A file CI excludes is not refused at commit time
+    Given the repository lint configuration excludes the templates/ tree,
+    And a staged change to a Python file under templates/ introduces rule E741,
+    When the commit is attempted,
+    Then the commit is not refused on account of that file,
+    Because CI never lints it, and a commit-time refusal CI would not share is
+      the reverse half of the disagreement this L1 forbids.
+
+  Scenario: A file outside every declared tree is not refused
+    Given a staged change to a Python file at the repository root, outside
+      scripts/, tests/, unit_tests/ and kernel/, that introduces rule E741,
+    When the commit is attempted,
+    Then the commit is not refused on account of that file.
+
+  Scenario: Widening the declared scope widens both verdicts at once
+    Given the single declared lint scope is changed to add one further tree,
+      and nothing else is changed,
+    When a staged violation inside that tree is committed,
+    Then the commit-time check refuses it,
+    And CI's required lint check, run on the same content, also fails on it,
+    And no second copy of the tree list needed editing for either result.
+
+  Scenario: Changing the kernel-only rule set changes both verdicts at once
+    Given the single declared second-step rule set is changed to drop TRY,
+    When a staged TRY-only violation under kernel/ is committed,
+    Then neither the commit-time check nor CI's second step refuses it.
+
+  Scenario: Every local lint runner reads the same definition
+    Given any other local runner that claims to mirror CI's lint check — the
+      sign-off gate's lint runner (BO-570-3) and the manual "run CI locally"
+      helper included,
+    When the declared scope or rule set changes,
+    Then each of them applies the changed scope and rule set without its own
+      edit,
+    And no runner holds a private tree list or rule list that can diverge.
+depends_on:
+  - BP-1300e-1
+doc_links:
+  - path: docs/acceptance-criteria/build_pipeline/BP-1300-unmaskable-guardrails/BP-1300e-1.yaml
+    relationship: parent
+    status: exists
+  - path: docs/acceptance-criteria/build-orchestration/BO-500-computed-quality-gates/BO-570-3.yaml
+    relationship: related
+    status: exists
+    relevance: "Approved, unbuilt repo-ruff runner for the sign-off gate. It also claims to 'match what CI enforces'. Whichever lands second must read the same declared scope, not keep its own."
+  - path: scripts/run_ci_local.py
+    relationship: related
+    status: exists
+    relevance: "Existing manual mirror of CI. Its tree list (scripts tests unit_tests) has already drifted from CI's (missing kernel). This is the drift this record exists to make impossible."
+  - path: docs/acceptance-criteria/ac-store/ACS-200-automated-verification/ACS-200i.yaml
+    relationship: related
+    status: exists
+    relevance: "Precedent: the same one-definition parity guarantee, for AC-schema rules, local versus merge."
+  - path: .github/workflows/ci.yml
+    relationship: modifies
+    status: exists
+    relevance: "Job lint, name 'Lint (ruff)', lines ~182-188: the two hand-kept `ruff check` steps are replaced by one invocation of the shared runner in full mode. Header comment lines 7-10 also list the trees and must stop doing so."
+  - path: ruff.toml
+    relationship: modifies
+    status: exists
+    relevance: "Header comment only: its 'Scope:' paragraph restates the four trees and the kernel step. Point it at leafcutter-lint.json. The extend-exclude list and [lint] tables are NOT scope and stay as they are."
+  - path: leafcutter-lint.json
+    relationship: modifies
+    status: planned
+    relevance: "THE one declaration, created by this AC at the repository root."
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-001-self-hosting-boundary.md
+    relationship: describes
+    status: exists
+  - path: docs/known-issues/commit-guardian/open-high-ki-cg-20261009-required-ci-ruff-has-no-local-pre-commit-counterpart.md
+    relationship: context
+    status: exists
+    relevance: "Its fix direction offers 'CI invokes the same hook' or 'both read the tree list from one place'. This record takes both: one declaration, one runner."
+  - path: docs/reference/commit-time-lint-gate.md
+    relationship: describes
+    status: planned
+    relevance: "Reference doc produced by BP-1300e-4."
+assigned_agent: python-coder
+estimated_complexity: M
+package_surface: false
+it_requirements:
+  - "WHERE THE ONE DECLARATION LIVES. A new project-owned, TRACKED file `leafcutter-lint.json` at the git toplevel of the project being committed. build.py must never create, template, overwrite or merge it; an absent file means the default below. REJECTED ALTERNATIVES, so nobody re-litigates them: (a) ruff.toml / pyproject [tool.ruff] -- ruff rejects unknown keys, so the second-step override cannot be expressed there, and the adopter's ruff config is the adopter's own file by user decision, not package configuration; (b) templates/scripts/commit_guardian/commit_guardian.json -- package-managed and rewritten into every adopter install by build.py, so an adopter's scope would be clobbered on their next build, and every new top-level key there is a package surface; (c) .claude/skills_config.json -- verified 2026-10-09 it is NOT tracked in this repository (in the self-host workspace it lives in the untracked parent), so this repository's CI, which sees only a checkout, could not read it."
+  - "SHAPE, EXACTLY. JSON object {\"version\": 1, \"steps\": [{\"name\": str, \"paths\": [str, ...], \"select\": [str, ...]}, ...]} where 'select' is OPTIONAL. 'paths' are repo-relative POSIX directories or files, '.' meaning the whole project; no globs, no absolute paths, no '..'. 'select' absent = the project's ruff configuration's own selection; 'select' present = ruff --select (replaces selection; config exclude/ignore/per-file-ignores still apply). This repository's file: steps [{name: repository-rules, paths: [scripts, tests, unit_tests, kernel]}, {name: kernel-error-handling, paths: [kernel], select: [E722, BLE001, TRY]}] -- reproducing today's CI byte-for-byte in effect. DEFAULT when the file is absent: {version: 1, steps: [{name: repository-rules, paths: ['.']}]}, declared ONCE as a constant in _lint_scope.py (user decision 2026-10-09: whole project minus the configuration's own excludes)."
+  - "A DECLARATION THAT CANNOT BE READ REFUSES; IT IS NEVER DEFAULTED. Invalid JSON, an unknown key (e.g. a typo 'path'), version other than 1, empty steps, empty paths, a non-string entry, an absolute or '..' path: the runner reports could_not_check naming leafcutter-lint.json and the offending key, and the commit is refused (same rule as an unreadable ruff config in BP-1300e-1-iii). Silently falling back to the default on a malformed file would replace the project's scope with the whole tree -- a different verdict, presented as CI's. Validation is hand-written and stdlib-only: hooks run in adopter environments where jsonschema is not guaranteed."
+  - "ONE READER: templates/scripts/commit_guardian/_lint_scope.py, stdlib only (json, subprocess for `git show`), no {{config.*}} tokens (build.py's inject_config rewrites contiguous config literals in deployed .py files), no leafcutter imports beyond sibling modules in its own directory. API: load(subject_root, source) where source='index' reads `git show :leafcutter-lint.json` (absent from the index = default) and source='worktree' reads the file on disk. The commit hook uses 'index' so a staged scope change is judged exactly as it will be committed; CI and run_ci_local.py use 'worktree' (identical to the committed file in a CI checkout)."
+  - "ONE RUNNER, THREE MODES, ONE ARGV BUILDER. check_lint_gate.py exposes `--mode staged` (default; the commit hook), `--mode full` (whole declared scope over the working tree; CI and run_ci_local.py) and `--mode files --files <paths...>` (working-tree content of named files; BO-570-3's sign-off runner), plus `--json` emitting {outcome, reason, ruff_version, files_inspected: [str], findings: [{path, line, col, code, message, step, predates_change}]}. All three modes build ruff's argv through the same function and pass --force-exclude in every mode -- so a declared path that the ruff configuration also excludes is skipped identically at commit time and in CI. Running full mode must report the same findings set that applying each declared step with `ruff check --force-exclude <step paths> [--select ...]` reports; prove that in a test against the fixture."
+  - "THE EXCLUSION TRAP IS THE FIRST ARM'S SUBJECT. Ruff given explicit file paths ignores exclude/extend-exclude unless --force-exclude is passed. The staged mode hands ruff individual files (via --stdin-filename, BP-1300e-1-ii), so without --force-exclude it would refuse exactly the templates/ files CI never lints. The first scenario's test must stage a violating file under an EXCLUDED tree, not merely one outside the declared paths -- only that input exercises the trap."
+  - "CI CONSUMES THE SAME RUNNER. In .github/workflows/ci.yml job `lint`, replace the steps 'Ruff check' and 'Ruff check kernel error-handling rules' with ONE step running `python templates/scripts/commit_guardian/check_lint_gate.py --mode full`. Keep the job id `lint` and name `Lint (ruff)` byte-identical: that name is a required status check in main's ruleset (require-ci-lint), and renaming it blocks every merge. Keep `pip install -r requirements-dev.txt` (ruff pinned there). Run the TEMPLATE source directly, without build.py: the lint job stays fast and independent of build health. This is safe only because check_lint_gate.py and its imports carry no {{config.*}} tokens and resolve the project from git, not from output_root; a test must show the template-source and deployed copies produce identical findings on the fixture. Update ci.yml's header comment (lines 7-10) to name leafcutter-lint.json instead of listing trees."
+  - "run_ci_local.py STOPS KEEPING A COPY. Verified 2026-10-09: scripts/run_ci_local.py line 64 runs [\"ruff\", \"check\", \"scripts\", \"tests\", \"unit_tests\"] -- missing kernel, missing the second step entirely, and calling the bare executable rather than the module form. Replace that gate's argv with exactly the command CI runs. If the script cannot be pointed at a fixture root for testing, add that parameter; do not test it only against this repository's live tree."
+  - "BO-570-3 (approved, unbuilt) MUST NOT HOLD ITS OWN ARGV. Whichever of BO-570-3 and this record lands second makes BO-570-3's repo-ruff runner a thin adapter that invokes the DEPLOYED check_lint_gate.py with `--mode files --files <ticket's changed .py files> --json` and maps outcome ok->clean, refused->violations, could_not_check->tooling-unavailable, files_inspected->files, findings/reason->reason. This record does not edit BO-570-3; its it_requirements need an amendment (raised as a caveat)."
+  - "NO SECOND COPY SURVIVES. After this lands, the four tree names and the E722,BLE001,TRY set appear, in a lint-scope sense, in leafcutter-lint.json only: not in ci.yml's lint job, not in run_ci_local.py, not in check_lint_gate.py, not in ruff.toml's header comment (rewrite its 'Scope:' paragraph to point at the declaration; its extend-exclude and [lint] tables are ruff configuration, not scope, and are not touched). CLAUDE.md's Pre-Drive Checklist command is BP-1300e-3's."
+  - "ERROR-HANDLING POLICY (CLAUDE.md Rules 1-4): reading the declaration (git show / open) is wrapped in a specific except (OSError, subprocess.SubprocessError, json.JSONDecodeError, UnicodeDecodeError) and converted to could_not_check with WARNING logging; the pure validation function has no try/except."
+test_spec:
+  - name: test_bp_1300e_1_i_violation_in_excluded_templates_tree_is_not_refused
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: integration
+    angle: discrimination
+    must_catch:
+      - "passes staged file paths to ruff without --force-exclude"
+      - "filters by declared paths only and ignores the ruff configuration's exclude list"
+    description: "Fixture declares '.' (or a tree containing templates/) and ruff.toml excludes templates/; a staged templates/z.py with E741 commits. Asserts the commit exists, not merely exit 0."
+  - name: test_bp_1300e_1_i_root_file_outside_declared_trees_is_not_refused
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: "Using this repository's real leafcutter-lint.json, a staged repo-root z.py carrying E741 commits."
+  - name: test_bp_1300e_1_i_widening_the_declaration_widens_commit_time_and_ci_verdicts_together
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: integration
+    angle: criterion
+    must_catch:
+      - "the hook or the CI step holds its own tree list"
+    description: "Add tools/ to the fixture's declaration and nothing else; a staged violation in tools/ is refused at commit; then the `run:` command of the lint job, read from the real .github/workflows/ci.yml with a YAML parser and EXECUTED in the fixture, exits non-zero naming the same finding."
+  - name: test_bp_1300e_1_i_dropping_try_from_the_second_step_relaxes_both_verdicts
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: "Declaration's kernel step select becomes [E722, BLE001]; a staged TRY-only violation under kernel/ commits, and the executed ci.yml lint command exits 0 on the same content."
+  - name: test_bp_1300e_1_i_run_ci_local_and_files_mode_follow_the_declaration_without_their_own_edit
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: integration
+    angle: reachability
+    surface_invoked: "scripts/run_ci_local.py lint gate; check_lint_gate.py --mode files --json"
+    description: "After the same declaration change, run_ci_local.py's lint gate and `--mode files --json` (BO-570-3's contract) both apply the changed scope; neither file is edited between runs."
+  - name: test_bp_1300e_1_i_malformed_declaration_refuses_naming_the_file_and_key
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: integration
+    angle: failure
+    must_catch:
+      - "falls back to the default scope when the declaration is unreadable"
+    description: "leafcutter-lint.json with an unknown key 'path' is staged; the commit is refused with could_not_check naming leafcutter-lint.json and 'path'; a violation outside the intended scope is NOT what refuses it."
+  - name: test_bp_1300e_1_i_template_source_and_deployed_runner_report_identical_findings
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: integration
+    angle: deployed
+    description: "check_lint_gate.py --mode full --json run from templates/scripts/commit_guardian/ and from the shared layout's deployed copy over the same fixture produce equal outcome and findings."
+test_rationale: >-
+  The anti-list arms (widen, drop TRY, every runner) are the only ones no
+  implementation with its own written-in list can pass, so each one changes the
+  fixture's declaration and nothing else, then executes every runner. The CI arm
+  executes the command read from the real ci.yml rather than asserting what the
+  file contains: a grep that ci.yml mentions check_lint_gate.py passes on a step
+  that never runs or runs a different mode. The excluded-tree arm must use an
+  excluded tree because a file merely outside the declared paths never reaches
+  ruff and cannot exercise --force-exclude. All commit-path tests reuse
+  _bp_1300e_lint_gate_fixture.py (see BP-1300e-1) and declare
+  @pytest.mark.shared_layout_reader with
+  @pytest.mark.usefixtures("shared_reference_layout"); none spawns build.py.
+delivers_to:
+  - agent: python-coder
+    contract: >-
+      To BP-1300e-1, -1-ii, -1-iv and (on landing) BO-570-3: _lint_scope.load()
+      as described in BP-1300e-1's expects_from, and check_lint_gate.py's CLI --
+      modes staged|full|files, --json payload {outcome: 'ok'|'refused'|
+      'nothing_to_inspect'|'could_not_check', reason: str|null, ruff_version:
+      str|null, files_inspected: [str], findings: [{path: str, line: int, col:
+      int, code: str, message: str, step: str, predates_change: bool}]}. Exit 0
+      for ok and nothing_to_inspect, non-zero for refused and could_not_check;
+      consumers distinguish the two non-zero outcomes by 'outcome', never by
+      exit code.
+  - agent: reference-author
+    contract: >-
+      To BP-1300e-4: leafcutter-lint.json's location (git toplevel), fields
+      (version, steps[].name, steps[].paths, steps[].select), default when
+      absent, malformed-file behaviour, and the runner list: check-lint-gate
+      (staged), ci.yml job lint (full, template source), scripts/run_ci_local.py
+      (full), BO-570-3 adapter (files).
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-10-09
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target:
+  - code
+  - pipeline
+  - config
+risk_surface: contract_boundary
+notes: |
+  THIS IS THE CLAUSE MOST LIKELY TO ROT, SO IT IS ITS OWN RECORD. Today there are
+  three hand-kept copies of "what CI lints": the CI workflow, the manual
+  run_ci_local.py mirror (already drifted), and BO-570-3's planned runner. A
+  commit-time hook with its own copy would be the fourth. Parity has to come from
+  one definition that every runner reads, CI included. Two copies plus a test
+  comparing them is weaker, because the test is one more place to update.
+  User decision 2026-10-09: the scope is declared in ONE place in package
+  configuration, and this repository's CI reads that same declaration.
+
+  THE EXCLUSION TRAP, FOR THE IT PO. The linter, given explicit file paths, ignores
+  the configuration's exclude list unless told to force-exclude. A hook that passes
+  staged filenames straight through would therefore refuse exactly the templates/
+  files CI skips. The first scenario is the arm that catches this. An
+  implementation that only ever runs on in-scope files never exercises it.
+
+  The "widening" and "kernel rule set" arms are the anti-list arms: no
+  implementation holding its own written-in tree or rule list can pass them.
