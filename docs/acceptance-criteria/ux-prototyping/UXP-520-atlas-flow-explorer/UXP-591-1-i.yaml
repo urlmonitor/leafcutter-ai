@@ -8,7 +8,7 @@ level: L3
 status: active
 req_status: active
 work_status: todo
-readiness: draft
+readiness: approved
 priority: medium
 criteria: |
   Given flows can be opened by their canonical addresses,
@@ -89,7 +89,10 @@ test_required: true
 declares_side_effect: false
 origin_agent: business-analyst
 created: '2026-10-09'
-amended_by: []
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-10-09'
 superseded_by: null
 covered_by: []
 implemented_by: []
