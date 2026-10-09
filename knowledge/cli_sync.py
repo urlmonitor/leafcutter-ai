@@ -21,6 +21,16 @@ import asyncio
 from pathlib import Path
 import subprocess
 
+# Neo4jBackend defaults query_timeout to 3.0s, which suits a serving read but not
+# a publication: a generation writes ~9.8k nodes and ~26.1k relationships across
+# ~165 batched transactions, and activation re-stamps every one of them. Against a
+# real Aura instance the 3.0s default returns
+# Neo.ClientError.Transaction.TransactionTimedOutClientConfiguration. Every other
+# writer entrypoint already raises it to 30 (native_refresh, domain_migrate, the
+# live checks); writer_backend was the one that did not, and it is the only Aura
+# writer that has never completed a publication. 30 is the adapter's own ceiling.
+WRITER_QUERY_TIMEOUT_SECONDS = 30
+
 
 def add_parser(subparsers: argparse._SubParsersAction) -> None:
     """Register standalone ingestion and lifecycle commands.
@@ -72,6 +82,7 @@ def writer_backend(root: str | Path | None = None) -> Neo4jBackend:
         username,
         password,
         database=select_value(sources, "LEAFCUTTER_NEO4J_DATABASE", "NEO4J_DATABASE") or "neo4j",
+        query_timeout=WRITER_QUERY_TIMEOUT_SECONDS,
     )
 
 
