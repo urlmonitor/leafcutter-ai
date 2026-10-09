@@ -169,30 +169,32 @@ def _install_mutation() -> None:
         out[GRANT_KEY] = entries
         return out
 
-    def patched(body, fm, skills_root):
+    def patched(body, fm, skills_root, **kwargs):
+        # **kwargs forwards whatever the real compiler passes (e.g. ``agent=<stem>``)
+        # so registration still happens wherever a mutation delegates to the original.
         entries = normalize_entries(fm.get(GRANT_KEY))
         if MUTATION == "noop_append":
             return body
         if MUTATION == "empty_list_heading":
             if GRANT_KEY in fm and not fm[GRANT_KEY]:
                 return body.rstrip("\n") + "\n\n## Your Available Skills\n\n| Skill | Mode | Description |\n|---|---|---|\n"
-            return original(body, fm, skills_root)
+            return original(body, fm, skills_root, **kwargs)
         if MUTATION == "heading_for_all":
             if entries:
-                return original(body, fm, skills_root)
+                return original(body, fm, skills_root, **kwargs)
             return body.rstrip("\n") + "\n\n## Your Available Skills\n\n| Skill | Mode | Description |\n|---|---|---|\n"
         if MUTATION == "drop_last_ability":
-            return original(body, {**fm, GRANT_KEY: [e for e in entries[:-1]]}, skills_root)
+            return original(body, {**fm, GRANT_KEY: [e for e in entries[:-1]]}, skills_root, **kwargs)
         if MUTATION == "registry_gated":
-            return original(body, fm, skills_root) if fm.get("name") in registry_names else body
+            return original(body, fm, skills_root, **kwargs) if fm.get("name") in registry_names else body
         if MUTATION == "shared_leak":
             seen.update(e["skill_id"] for e in entries)
-            return original(body, with_skills(fm, sorted(seen), entries), skills_root)
+            return original(body, with_skills(fm, sorted(seen), entries), skills_root, **kwargs)
         if MUTATION == "accumulate":
             mem = memory.setdefault(str(fm.get("name")), set())
             mem.update(e["skill_id"] for e in entries)
-            return original(body, with_skills(fm, sorted(mem), entries), skills_root)
-        return original(body, fm, skills_root)
+            return original(body, with_skills(fm, sorted(mem), entries), skills_root, **kwargs)
+        return original(body, fm, skills_root, **kwargs)
 
     tc.append_declared_skills = patched
 

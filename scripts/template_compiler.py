@@ -40,6 +40,7 @@ from typing import Any
 import yaml
 
 from agent_inplace_abilities import report_inplace_abilities
+from agent_preparation_delivery import inject_prepared_placeholder
 from agent_retired_markers import strip_retired_markers
 from agent_skills_declaration import append_declared_skills
 from injection_builders import (  # noqa: E402
@@ -301,29 +302,21 @@ def _apply_registry_injection(
     #   so that the Type 5 placeholder reflects config-overridden paths rather
     #   than paths.json static defaults. (#TICKET-20260603-ConfigDrivenBuildPaths)
     """
-    if inject_registry and "{{registry_phase_agents_table}}" in body:
-        phase_table = build_registry_block(registry_path) if registry_path else ""
-        body = body.replace("{{registry_phase_agents_table}}", phase_table)
-
-    if "{{doc_type_reference_table}}" in body:
-        doc_table = build_doc_type_reference_table()
-        body = body.replace("{{doc_type_reference_table}}", doc_table)
-
-    # Type 5: {{project_paths_table}} — injected from paths.json with config overlay
-    if "{{project_paths_table}}" in body:
-        paths_table = build_project_paths_table(config=config)
-        body = body.replace("{{project_paths_table}}", paths_table)
-
-    # Type 6: {{agent_priority_table}} — canonical phase ordering from registry
-    if "{{agent_priority_table}}" in body:
-        priority_table = build_agent_priority_table()
-        body = body.replace("{{agent_priority_table}}", priority_table)
-
-    # Type 7: {{doc_types_dispatch_table}} — unified dispatch table from doc_types.json
-    if "{{doc_types_dispatch_table}}" in body:
-        dispatch_table = build_doc_types_dispatch_table()
-        body = body.replace("{{doc_types_dispatch_table}}", dispatch_table)
-
+    # AR-300b-2: each guarded injection is computed through the preparation
+    # ledger and registered for the compiled prompt (file stem), so the
+    # delivery gate derives its covered set from what the compiler computed.
+    agent = Path(template_name).stem
+    injections = (
+        ("registry_phase_agents_table", inject_registry,
+         lambda: build_registry_block(registry_path) if registry_path else ""),
+        ("doc_type_reference_table", True, lambda: build_doc_type_reference_table()),
+        ("project_paths_table", True, lambda: build_project_paths_table(config=config)),
+        ("agent_priority_table", True, lambda: build_agent_priority_table()),
+        ("doc_types_dispatch_table", True, lambda: build_doc_types_dispatch_table()),
+    )
+    for token, enabled, builder in injections:
+        if enabled:
+            body = inject_prepared_placeholder(body, token, agent, builder)
     return body
 
 
@@ -421,7 +414,7 @@ def compile_agent_template(
     if fm.get("signoff") is True:
         body = body.rstrip("\n") + build_signoff_block()
 
-    body = append_declared_skills(body, fm, skills_root)  # AR-300c-1
+    body = append_declared_skills(body, fm, skills_root, agent=template_path.stem)  # AR-300c-1 / AR-300b-2
     return header + body
 
 

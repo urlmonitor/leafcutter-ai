@@ -24,6 +24,10 @@ DECISION HISTORY
   growth; the compiler gains a one-line call. Conditional grants show their
   ``condition`` text only when the declaration carries one — writing the
   conditions themselves belongs to AR-300a. (#AR-300c-1)
+- 2026-10-09 [python-coder/AR-300b-2]: ``append_declared_skills`` takes an optional
+  ``agent`` and, when given, computes the table through
+  ``agent_preparation_delivery.compute_preparation`` and registers it, so the
+  delivery gate covers this preparation. (#AR-300b-2)
 """
 
 from __future__ import annotations
@@ -32,7 +36,11 @@ from pathlib import Path
 from typing import Any
 
 from agent_ability_verdict import normalize_entries
+from agent_preparation_delivery import compute_preparation, register_preparation
 from injection_builders import _parse_frontmatter_description
+
+# The registry name of this preparation (AR-300b-2; the gate derives the set, it does not list it).
+PREPARATION_NAME = "declared_skills"
 
 
 def _skill_description(skill_id: str, skills_root: Path | None) -> str:
@@ -68,19 +76,30 @@ def build_declared_skills_table(entries: list[dict[str, str]], skills_root: Path
     return "\n".join(lines)
 
 
-def append_declared_skills(body: str, fm: dict[str, Any], skills_root: Path | None) -> str:
+def append_declared_skills(
+    body: str, fm: dict[str, Any], skills_root: Path | None, agent: str | None = None
+) -> str:
     """Append the declared-skills table to a compiled body when ``fm`` declares any.
 
     Args:
         body: The compiled prompt body so far.
         fm: The template's parsed frontmatter (only ``skills`` is read).
         skills_root: Optional ``templates/skills`` directory for descriptions.
+        agent: Compiled-prompt file stem. When given and an ability is declared,
+            the table is computed through the preparation ledger and registered
+            for that agent (AR-300b-2); an agent granted nothing registers nothing.
 
     Returns:
         ``body`` unchanged when no ability is declared, otherwise ``body`` with
         the table appended after a blank line and a trailing newline.
     """
-    table = build_declared_skills_table(normalize_entries(fm.get("skills")), skills_root)
-    if not table:
+    entries = normalize_entries(fm.get("skills"))
+    if not entries:
         return body
+    if agent is None:
+        table = build_declared_skills_table(entries, skills_root)
+    else:
+        table = compute_preparation(
+            PREPARATION_NAME, agent, lambda: build_declared_skills_table(entries, skills_root))
+        register_preparation(PREPARATION_NAME, agent, table, True)
     return body.rstrip("\n") + "\n\n" + table + "\n"

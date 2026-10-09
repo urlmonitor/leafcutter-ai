@@ -107,6 +107,7 @@ def test_unconditional_and_conditional_grants_are_distinguishable_in_the_section
     rows are not all alike, and the conditional ones are distinct from each other."""
     text, _ = _compiled(tmp_path)
     rows = {k: v[0] for k, v in ability_rows(text, set(SKILLS)).items()}
+    assert set(rows) == set(SKILLS), f"rows present for {sorted(rows)}, expected all of {sorted(SKILLS)}"
     always_row, beta_row, gamma_row = rows["zz-alpha"], rows["zz-beta"], rows["zz-gamma"]
     # strip the purpose cell: the purpose text must not decide the verdict
     def mode_view(row: str, sid: str) -> str:
@@ -126,6 +127,7 @@ def test_condition_text_appears_in_the_same_section_as_its_ability(tmp_path):
     version caught: a footnote / second table / swapped rows."""
     text, _ = _compiled(tmp_path)
     rows = {k: v[0] for k, v in ability_rows(text, set(SKILLS)).items()}
+    assert set(rows) == set(SKILLS), f"rows present for {sorted(rows)}, expected all of {sorted(SKILLS)}"
     assert COND_BETA in rows["zz-beta"] and COND_GAMMA not in rows["zz-beta"]
     assert COND_GAMMA in rows["zz-gamma"] and COND_BETA not in rows["zz-gamma"]
     assert COND_BETA not in rows["zz-alpha"] and COND_GAMMA not in rows["zz-alpha"]
