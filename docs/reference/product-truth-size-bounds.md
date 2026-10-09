@@ -1,10 +1,10 @@
 ---
 title: "Reference: Product-Truth Size Bounds and Shape Rollout"
-description: "Every declared size bound on the product-truth record, with its value, field and shape version; the order a new bound or reshaped field is rolled out in; which fields are authored and which are derived; and the measurement behind the bounds."
+description: "Every declared size bound on the product-truth record, with its value, field and shape version; the step description gates (length and code-token lint); the order a new bound or reshaped field is rolled out in; which fields are authored and which are derived; and the measurement behind the bounds."
 type: reference
 status: active
 created: 2026-09-14
-last_updated: 2026-09-14
+last_updated: 2026-10-09
 components:
   - ux_prototyping
 related_docs:
@@ -12,6 +12,7 @@ related_docs:
   - docs/product-truth/README.md
   - docs/product-truth/scripts/product_truth_bounds.py
   - docs/product-truth/scripts/product_truth_shapes.py
+  - docs/product-truth/scripts/product_truth_descriptions.py
   - docs/acceptance-criteria/ux-prototyping/UXP-700-truthful-project-record/UXP-700e.yaml
 ---
 
@@ -56,6 +57,40 @@ Every run states each bound on the validator's last stdout line, under
 
 A bound that measured nothing (`measured: 0`) is therefore distinguishable from
 one that nothing exceeded (`measured: 14, exceeded: 0`).
+
+---
+
+## Step description gates
+
+Every step `description`, and every branch `description` that is present, is
+held to two gates by `product_truth_descriptions.check_descriptions` on every
+run. Unlike the bounds above they **block from the day they landed**
+(2026-10-09, kernel decision `dec-7b1dcfd47f85cf0a`): the same change renamed
+`human` to `description` and rewrote all 304 descriptions in 27 journeys to one
+sentence (66 to 181 characters, median 149), so no artifact predates them.
+
+| Gate | Rule | Finding |
+|---|---|---|
+| Length | At most `DESCRIPTION_MAX_CHARS` = **200** characters; empty is refused | `FAIL: [description] <flow> step '<id>': too long: N characters, over the 200-character bound` |
+| One sentence | No line break; no sentence end (`.` `!` `?`) followed by a capital or digit | `more than one sentence` / `more than one line` |
+| Code-token lint | Rejects: backticks; file extensions (`.py` `.ts` `.tsx` `.json` `.md` `.yaml` …); paths; snake_case, camelCase and dotted identifiers; a word glued to `(`; `{ } [ ] < > = \| \` `->` `::`; command-line flags (`--x`, `-m`); ticket, AC and ADR ids (`ABC-123…`, `EPIC-…`, `#12`); record ids (`dec-…`, `run-…`); build-status words (`implemented`, `not built`, `not wired`, `stub`, `TODO`, `FIXME`, `TBD`, `WIP`); the generated `Contract fields and examples` text | `<reason>: '<offending text>'` |
+
+Allow-rules that keep plain English passing (pinned by the negative control in
+`unit_tests/product_truth/test_product_truth_descriptions.py`):
+- A slash between two plain words is prose (`and/or`, `input/output`). A slash
+  token is a path only when it starts with `/`, `./` or `~/`, has two or more
+  slashes, starts with a repository folder, or holds a dot, underscore, or a
+  hyphen in all-lowercase text.
+- Dotted abbreviations made of single letters (`e.g.`, `i.e.`, `a.m.`) are prose.
+- `step(s)` is the one word-glued parenthesis prose writes.
+- PascalCase words are not flagged: entity names (`MockData`) and product
+  names (`GitHub`) are plain in this record.
+- No capital first letter or final full stop is required.
+
+The lint only sees code-shaped text. Build status phrased in prose, design
+notes and rationale are still forbidden by the never-list in the
+[schema reference](../how-to/product-truth-schema-reference.md#what-goes-where-in-a-step)
+and are caught in review.
 
 ---
 
@@ -112,7 +147,7 @@ is discarded.
 
 | Where | Authored (edit this) | Derived (never hand-edit) |
 |---|---|---|
-| Journey (`*.flow.json`) | `summary`, `name`, `steps`, `branches`, `implements`, `expands_to`, `screen`, `entities`, `tags`, `component`, `shape_version`, `outcome_kind` | each step and branch's `impl_status` and `impl_asof`; the journey's `impl_summary` |
+| Journey (`*.flow.json`) | `summary`, `name`, `steps`, `branches`, each step and branch's `description`, `agent`, `actor_kind` and `io_contracts`, `implements`, `expands_to`, `screen`, `entities`, `tags`, `component`, `shape_version`, `outcome_kind` | each step and branch's `impl_status`, `impl_asof` and compatibility `consumes`/`produces` labels; the journey's `impl_summary` |
 | Index (`index.json`) | every other field of each artifact entry (`id`, `type`, `title`, `kind`, `source`, `component`, `path`, `status`, `readiness`, `version`, `entities`, `mock_data_ref`, `tags`); `entity_registry` | each flow artifact's `summary` (the journey's own `summary`, cut at a word boundary and ending in `…`, UXP-700e-2); each artifact's `impl_summary`; `by_component`, `by_entity`, `by_flow`, `by_ac` |
 | Acceptance criterion (`*.yaml`) | everything else | `product_truth` (the journeys and steps that implement it) |
 

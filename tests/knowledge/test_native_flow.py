@@ -23,7 +23,7 @@ def _flow(native_id="leafcutter/example"):
         "readiness": "approved",
         "version": 1,
         "entities": ["Ticket"],
-        "steps": [{"id": "start", "label": "Start", "human": "A person starts", "order": 7}],
+        "steps": [{"id": "start", "label": "Start", "description": "A person starts", "actor_kind": "human", "order": 7}],
     }
 
 
@@ -97,7 +97,7 @@ def test_flow_all_nested_fields_preserved_and_manifest_separate(tmp_path):
         {
             "id": "next",
             "label": "Next",
-            "human": "Continues",
+            "description": "Continues", "actor_kind": "human",
             "order": 2,
             "expands_to": ["leafcutter/child"],
         }
@@ -108,7 +108,7 @@ def test_flow_all_nested_fields_preserved_and_manifest_separate(tmp_path):
             "from": "start",
             "condition": "cancel",
             "label": "Stop",
-            "human": "Cancel",
+            "description": "Cancel", "actor_kind": "human",
             "screen": "screen",
             "agent": "agent",
             "produces": [],
@@ -296,7 +296,8 @@ def test_flow_invalid_source_fails(tmp_path, contents):
         ("version", True),
         ("entities", [1]),
         ("steps", []),
-        ("steps", [{"id": "start", "label": "Start", "human": "Start", "order": True}]),
+        ("steps", [{"id": "start", "label": "Start", "description": "Start", "actor_kind": "human", "order": True}]),
+        ("steps", [{"id": "start", "label": "Start", "actor_kind": "human", "order": 1}]),
         ("branches", None),
         ("branches", [{"id": "branch"}]),
     ],
@@ -327,3 +328,14 @@ def test_flow_no_manifest_and_normalized_registration_spelling(tmp_path):
     (record,) = _extract(tmp_path)
     assert record.metadata == raw and record.derived["registered"] is True
     assert record.derived["manifest_entry"]["path"] == entry["path"]
+
+
+def test_flow_pinned_source_in_the_older_step_text_shape_still_reads(tmp_path):
+    # covers: KM-400a-3-i
+    # test type: unit
+    # angle: boundary
+    raw = _flow()
+    raw["steps"] = [{"id": "start", "label": "Start", "human": "A person starts", "order": 7}]
+    _source(tmp_path, raw)
+    (record,) = _extract(tmp_path)
+    assert record.metadata == raw

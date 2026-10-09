@@ -128,7 +128,7 @@ def _step(step_id: str, order: int) -> dict:
     return {
         "id": step_id,
         "label": step_id,
-        "human": f"the actor performs {step_id}",
+        "description": f"the actor performs {step_id}", "actor_kind": "human",
         "io_contracts": {"not_applicable": "This actor action tests size-bound transitions and has no JSON handoff."},
         "order": order,
         "impl_status": "not_started",

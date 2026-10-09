@@ -31,7 +31,7 @@
     "new_step": {
       "id": "gift-wrap",
       "label": "Gift wrap",
-      "human": "Before paying, the customer can optionally choose gift wrapping, which is added to the order.",
+      "description": "Before paying, the customer can optionally choose gift wrapping, which is added to the order.", "actor_kind": "human",
       "order": 4,
       "screen": "gift-wrap",
       "reads": ["Order"],
