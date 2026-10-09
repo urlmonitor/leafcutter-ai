@@ -7,8 +7,12 @@
 # collects nothing (pytest exit 5) is also made red rather than green. It never
 # holds a merge and writes no notice; TQ-600a-13-xii extends this file.
 #
-# No build step: the timing_ratio tests need no deployed layout. Keep the
-# name, triggers and concurrency group unchanged when extending.
+# The build step is needed even though the timing_ratio tests themselves use no
+# deployed layout: pytest imports EVERY test module to evaluate `-m`, and some
+# modules import build outputs (scripts/commit_guardian/... symlinks). Without
+# the build, the first live run on main went red on 4 collection errors while
+# both ratio tests passed. Keep the name, triggers and concurrency group
+# unchanged when extending.
 
 name: Post-merge timing suite
 
@@ -46,6 +50,9 @@ jobs:
 
       - name: Install dev dependencies
         run: pip install -r requirements-dev.txt
+
+      - name: Build — deploy .leafcutter so every test module imports
+        run: python scripts/build.py --target-dir .
 
       - name: Run the timing lane
         env:

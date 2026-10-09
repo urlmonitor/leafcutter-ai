@@ -32,7 +32,7 @@ Every script present in `scripts/commit_guardian/` that acts as a hook has a row
 | `check_debug_scripts.py` | `check-debug-scripts` | Blocking | Enforces metadata tags (`DEBUG SCRIPT`, `CATEGORY`, `DESCRIPTION`) on scripts under `debugging/scripts/`. | `debug_scripts.required_tags`, `debug_scripts.valid_categories` | — |
 | `check_documentation.py` | `check-documentation` | Blocking | Every modified `.py` or `.sql` file must have a `README.md` in its parent directory. New `.sql` files need `Object Name:`, `Goal:`, `Business Context:` in the header; new `.py` files need `MODULE:`, `GOAL:`, `BUSINESS CONTEXT:` in the module docstring. | `documentation.sql_required_fields`, `documentation.python_required_fields` | [docs/how-to/database/create-procedure.md](../../docs/how-to/database/create-procedure.md) |
 | `check_infra_docs.py` | `check-infra-docs` | Blocking | Enforces inline comments on high-impact infra settings in `docker-compose*.yml`, `docker/Dockerfile.*`, `init-db.sh`, `.env.example`. | `infra_docs.infra_file_patterns`, `infra_docs.high_impact_keywords` | — |
-| `check_doc_frontmatter.py` | `check-doc-frontmatter` | Blocking | Validates YAML frontmatter on staged `docs/*.md` files: required fields, `type`, `status`, `flight_level`, `diagram_type` enums, `components` registry membership, path existence of `related_docs` / `related_code`. Stale `last_updated` is warn-only. | `doc_frontmatter.required_fields`, `doc_frontmatter.allowed_types`, `doc_frontmatter.allowed_statuses` | [docs/FRONTMATTER.md](../../docs/FRONTMATTER.md) |
+| `check_doc_frontmatter.py` | `check-doc-frontmatter` | Blocking | Validates YAML frontmatter on staged `docs/*.md` files: required fields, `type`, `status`, `flight_level`, `diagram_type` enums, `components` registry membership, the entries of `related_docs`, `related_code` and `architecture_diagrams` — one rule for all three: each entry must be a `bare string` (use this in a new document) or a `single-key mapping ({field_name: path_string})` (accepted on equal terms), any other shape is refused with a message naming the entry, and every accepted entry's path must exist (see [Path entry shapes](#path-entry-shapes-check_doc_frontmatterpy) below). Stale `last_updated` is warn-only. | `doc_frontmatter.required_fields`, `doc_frontmatter.allowed_types`, `doc_frontmatter.allowed_statuses` | [docs/architecture/FRONTMATTER.md](../../docs/architecture/FRONTMATTER.md) |
 | `check_doc_links.py` | `check-doc-links` | Advisory (always exits 0) | Validates `DOC_LINKS:` declarations in `.py` and `.sql` files point to existing docs, and checks bidirectional `related_code` back-links in doc frontmatter. Never blocks. | `doc_links.severity`, `doc_links.check_bidirectional` | — |
 | `check_complexity.py` | `check-complexity` | Blocking | Blocks Python files where any function/method exceeds the cyclomatic complexity limit. | `complexity.max_score` (default: 15) | — |
 | `check_sql_complexity.py` | `check-sql-complexity` | Blocking | Blocks SQL files where keyword-counted structural complexity exceeds the limit. | `sql_complexity.max_score` (default: 65) | — |
@@ -49,6 +49,37 @@ Every script present in `scripts/commit_guardian/` that acts as a hook has a row
 | `check_sql_test_results.py` | `check-sql-test-results` | Blocking | Reads `.sql_test_results.json` written by the background worker. Exits 0 (skips) when no result file exists; exits 0 and deletes the file when the previous run passed; exits 1 and prints captured output when the previous run failed. | _(no config key — reads `.sql_test_results.json`)_ | — |
 | `trigger_sql_tests.py` | `trigger-sql-tests` | Post-commit, always exits 0 | Spawns `run_sql_tests_worker.py` as a detached background process after each commit. Writes the worker PID to `.sql_test.pid`. Never blocks the committing terminal. | _(no config key)_ | — |
 | `check_eval_staleness.py` | `check-eval-staleness` | Blocking (fail-open on infra error) | Fast, deterministic local staleness gate for per-agent evals (TQ-200b-4). When a staged file falls in an agent-eval's trigger closure (path-filtered to `scripts/evals/`, `docs/product-truth/`, `templates/agents/`), delegates to `scripts/evals/eval_selector.py --check --changed-files <staged>` and BLOCKS the commit when any affected agent's eval result is missing or stale — naming the offenders and pointing at `python scripts/evals/run_agent_eval.py --agent <agent>`. Invokes no model. Bypassable with `--no-verify`; the required CI eval check is the non-bypassable backstop. | _(no config key — reads triggers from `scripts/evals/agent_eval_config.json` via the selector)_ | — |
+
+### Path entry shapes (`check_doc_frontmatter.py`)
+
+`related_docs`, `related_code` and `architecture_diagrams` are lists, and the same rule governs all three. Every entry is a `bare string` or a `single-key mapping ({field_name: path_string})`. Write the bare path string in a new document; the single-label mapping is accepted on equal terms in documents that already use it. Any other entry — a mapping with more than one key, an integer, a nested list, an empty string — is refused with a message naming the entry; the guard never accepts it and never skips over it. The path of every accepted entry must exist.
+
+Accepted:
+
+```yaml accepted
+related_docs:
+  - docs/how-to/deploy.md
+  - architecture: docs/architecture/c2-001-containers.md
+related_code:
+  - scripts/deploy.py
+architecture_diagrams:
+  - docs/architecture/c3-002-deploy-pipeline.md
+```
+
+Refused:
+
+```yaml refused
+related_docs:
+  - 7
+```
+
+The guard prints:
+
+```text
+Unsupported entry in 'related_docs': 7 (not an accepted shape); accepted shapes are bare string, single-key mapping ({field_name: path_string})
+```
+
+The full field reference is [docs/architecture/FRONTMATTER.md](../../docs/architecture/FRONTMATTER.md).
 
 ---
 
