@@ -56,6 +56,11 @@ ARCHITECTURE: Helper module for the Knowledge System component
 #   ``output_root``) and ``resolve_sink_for_status`` (the ``--status`` flag's
 #   never-refuses sink resolution, reusing ``resolve_default_sink`` rather
 #   than a second resolver).
+# - 2026-10-09 [python-coder/INF-500d-4-iii]: Added ``read_declared_value``
+#   (``read_sink_declaration`` now delegates to it), ``handle_print_location``
+#   and a ``main`` so the deployed copy answers ``--print-location
+#   {root|feedback|telemetry|knowledge}`` side-effect-free, refusing like
+#   ``--print-sink`` (ADR-069).
 """
 
 from __future__ import annotations
@@ -76,13 +81,12 @@ _LEGACY_SINK_RELATIVE_PARTS: tuple[str, ...] = (
 )
 
 
-def read_sink_declaration(output_root: Path) -> str | None:
-    """Read the build-time knowledge-sink declaration, if one exists.
+def read_declared_value(output_root: Path, key: str) -> str | None:
+    """Read one string value from the build-time declaration, if it is there.
 
-    Returns the declared absolute path string, or ``None`` when no
-    declaration file is present (e.g. an un-built source-tree run) or it
-    cannot be parsed -- callers fall back to the historical default in
-    either case, per AC INF-400c-4-v ("nothing is written into nowhere").
+    Returns ``None`` when no declaration file is present (e.g. an un-built
+    source-tree run), it cannot be parsed, or *key* is absent or not a
+    non-empty string. Side-effect free.
     """
     declaration_path = output_root / "config" / "knowledge_sink.json"
     if not declaration_path.is_file():
@@ -94,8 +98,63 @@ def read_sink_declaration(output_root: Path) -> str | None:
             "Could not read sink declaration %s: %s", declaration_path, exc
         )
         return None
-    value = data.get("knowledge_emission_sink")
+    value = data.get(key) if isinstance(data, dict) else None
     return value if isinstance(value, str) and value else None
+
+
+def read_sink_declaration(output_root: Path) -> str | None:
+    """Read the build-time knowledge-sink declaration, if one exists.
+
+    Returns the declared absolute path string, or ``None`` when no
+    declaration file is present (e.g. an un-built source-tree run) or it
+    cannot be parsed -- callers fall back to the historical default in
+    either case, per AC INF-400c-4-v ("nothing is written into nowhere").
+    """
+    return read_declared_value(output_root, "knowledge_emission_sink")
+
+
+_LOCATION_KEYS: dict[str, str] = {
+    "root": "operational_log_root",
+    "feedback": "feedback_sink",
+    "telemetry": "operational_telemetry_stream",
+    "knowledge": "knowledge_emission_sink",
+}
+
+
+def handle_print_location(output_root: Path, name: str) -> int:
+    """Print the declared absolute location *name*, or refuse (AC INF-500d-4-iii).
+
+    *name* is ``root``, ``feedback``, ``telemetry`` or ``knowledge``. Reads the
+    declaration only -- creates no file, directory or record -- and gives the
+    same answer from every working directory. Refuses exactly as
+    ``handle_print_sink`` does: when the declaration is absent, the key is
+    missing, or the value is not absolute, nothing goes to stdout and stderr
+    names the expected declaration path.
+    """
+    declared = read_declared_value(output_root, _LOCATION_KEYS[name])
+    if declared is None or not Path(declared).is_absolute():
+        print(
+            f"ERROR: no absolute '{_LOCATION_KEYS[name]}' in the build-time declaration "
+            f"{output_root / 'config' / 'knowledge_sink.json'}. Refusing to answer "
+            f"--print-location {name} from the current working directory. Rebuild "
+            "(python scripts/build.py --target-dir <project-root> [--log-root <abs-dir>]) "
+            "to declare it.",
+            file=sys.stderr,
+        )
+        return 1
+    print(declared)
+    return 0
+
+
+def main(argv: list[str] | None = None) -> int:
+    """CLI entry point of the deployed copy: ``--print-location {root|feedback|telemetry|knowledge}``."""
+    parser = argparse.ArgumentParser(
+        prog="sink_resolution",
+        description="Print a declared operational log location without creating anything.",
+    )
+    parser.add_argument("--print-location", required=True, choices=sorted(_LOCATION_KEYS))
+    args = parser.parse_args(argv)
+    return handle_print_location(deployed_output_root(), args.print_location)
 
 
 def deployed_output_root() -> Path:
@@ -283,3 +342,7 @@ def warn_if_diverging_from_legacy(resolved_sink: Path, output_root: Path) -> Non
     )
     print(message)
     logger.warning(message)
+
+
+if __name__ == "__main__":
+    sys.exit(main())

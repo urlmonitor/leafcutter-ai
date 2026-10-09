@@ -266,6 +266,15 @@ def build_knowledge_sink_declaration(target_root: Path, config: dict[str, Any],
     (``emit_event.py``) share one anchor instead of each computing its own
     directory and silently drifting apart.
 
+    AC INF-500d-4-iii (ADR-069): the SAME declaration also records
+    ``operational_log_root`` (the directory every log sits directly under) and
+    ``feedback_sink`` (``<root>/feedback.jsonl``). The root is an INPUT -- the
+    ``--log-root`` value the worktree bootstrap inherits from the main install's
+    recorded declaration, parked in ``config`` by ``build_log_root`` -- and
+    defaults to ``<project_root>/debugging/logs``, so an ordinary build's two
+    historical values are unchanged. ``--no-log-root`` omits the two new keys.
+    The values come from ``build_log_root.declaration_values``.
+
     A NOTE is always printed alongside the write: a build has no reliable way
     to tell whether the directory it was pointed at is an already-installed
     project's own root or a separate, isolated working directory of a
@@ -313,32 +322,22 @@ def build_knowledge_sink_declaration(target_root: Path, config: dict[str, Any],
     #   function here; re-applied to the post-extraction text rather than
     #   replayed as a remembered diff.
     #   (#TICKETLESS reason=ac-scoped-fastlane-build-INF-400c-4-iii)
+    # - 2026-10-09 [python-coder/INF-500d-4-iii]: Declaration values now come
+    #   from build_log_root.declaration_values, adding operational_log_root and
+    #   feedback_sink and honouring an inherited --log-root; the NOTE also
+    #   names the operational log root. (#INF-500d-4-iii, ADR-069)
     """
     import build_phases as _bp
+    from build_log_root import declaration_values
 
-    project_root = target_root.parent
-    sink_path = project_root / "debugging" / "logs" / "knowledge_emissions.jsonl"
-    # AC INF-400c-4-iii: the operational/telemetry stream is declared in this
-    # SAME artefact, one absolute path fixed at build time, so emit_event.py
-    # (the operational-stream producer) and this knowledge-sink declaration
-    # share one anchor instead of drifting as two independently-computed
-    # values. Distinct filename, same directory as the historical default.
-    operational_stream_path = project_root / "debugging" / "logs" / "agent_telemetry.jsonl"
-    content = (
-        json.dumps(
-            {
-                "knowledge_emission_sink": str(sink_path),
-                "operational_telemetry_stream": str(operational_stream_path),
-            },
-            indent=2,
-        )
-        + "\n"
-    )
+    values = declaration_values(target_root.parent, config)
+    content = json.dumps(values, indent=2) + "\n"
     output_path = target_root / "config" / "knowledge_sink.json"
 
     if _bp._write(output_path, content, dry_run, force):
-        print(f"  config/knowledge_sink.json -> {sink_path}")
-        print(f"  config/knowledge_sink.json -> {operational_stream_path} (operational stream)")
+        print(f"  config/knowledge_sink.json -> {values['knowledge_emission_sink']}")
+        print(f"  config/knowledge_sink.json -> {values['operational_telemetry_stream']} (operational stream)")
+        print(f"  config/knowledge_sink.json -> operational log root: {values.get('operational_log_root', '(none declared)')}")
         print(
             "  NOTE: this build declares the knowledge-emission SINK for "
             "THIS working directory. A separate, isolated working directory "
