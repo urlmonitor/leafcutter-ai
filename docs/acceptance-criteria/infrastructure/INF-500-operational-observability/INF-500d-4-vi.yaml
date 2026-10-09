@@ -1,0 +1,116 @@
+id: INF-500d-4-vi
+components:
+  - infrastructure
+  - feedback_collector
+  - agent_telemetry
+title: "Agent instructions no longer send reports to the workspace that is about to be deleted"
+component: infrastructure
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a drive is running inside a temporary per-drive workspace that will be
+    deleted when the drive finishes,
+  And an agent in that drive files a report, records a telemetry event, or reads the
+    accumulated reports by following the instructions it was shipped with,
+  When the temporary workspace is subsequently removed,
+  Then what the agent wrote is still readable afterwards from the durable location
+    that outlives the workspace,
+  And a reader following its shipped instructions finds every one of those logs in
+    that one place, not split across a disposable root and an enduring one.
+depends_on:
+  - INF-500d-4-iv
+  - INF-500d-4-v
+doc_links:
+  - path: docs/architecture/feedback-lifecycle.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/components/agent-telemetry.md
+    relationship: describes
+    status: exists
+  - path: docs/known-issues/feedback-collector/open-low-ki-fc-001.md
+    relationship: describes
+    status: exists
+    relevance: "Half of the split it records comes from ticket-supervisor.md prescribing a CWD-relative --jsonl debugging/logs/feedback.jsonl, which resolves inside the worktree."
+assigned_agent: llm-expert
+estimated_complexity: L
+declared_files:
+  - path: templates/agents/ticket-supervisor.md
+    state: existing
+  - path: templates/agents/epic-supervisor.md
+    state: existing
+  - path: templates/skills/building-epics/SKILL.md
+    state: existing
+  - path: templates/skills/agent-telemetry/SKILL.md
+    state: existing
+  - path: templates/agents/retrospective-agent.md
+    state: existing
+  - path: templates/skills/signoff/SKILL.md
+    state: existing
+  - path: templates/agents/user-surface-smoker.md
+    state: existing
+  - path: templates/agents/feedback-analyst.md
+    state: existing
+  - path: templates/skills/feedback-review/SKILL.md
+    state: existing
+  - path: templates/skills/feedback-analysis/SKILL.md
+    state: existing
+  - path: templates/workflows/feedback-report.md
+    state: existing
+  - path: unit_tests/feedback/test_inf_500d_4_vi_no_workspace_relative_log_paths.py
+    state: to_be_created
+it_requirements:
+  - "NO SHIPPED SURFACE CARRIES A LOG DESTINATION OF ITS OWN. Every --jsonl, --log or --feedback argument naming debugging/logs/<file> as a workspace-relative path, and every 'append to debugging/logs/...' instruction, must be removed: writers and readers now default to the declared location (INF-500d-4-iv, -v). Where an instruction genuinely needs to state or show the location, it must obtain it from INF-500d-4-iii's location query and must not restate a path. This is INF-400c-4-i's rule for the knowledge surfaces, applied to feedback and telemetry."
+  - "The signoff skill's id-capture contract is unchanged: the feedback id is read from stdout, and the sidecar recovery grep 'sidecar:[^ ]*feedback_id_[0-9]*.txt' still applies. INF-500d-4-ii's sink line stays on stderr. Callers that redirect stderr to a file keep doing so."
+  - "Telemetry calls in building-epics and the supervisors keep their trailing '|| true'. Telemetry stays best-effort (BP-400a-1-i)."
+  - "Reader-facing instructions (feedback-report workflow, feedback-analyst, feedback-review, feedback-analysis, retrospective-agent) must tell the agent to rely on the reader's stated sink and record count (INF-500d-4-v), not to open a hard-coded path."
+  - "DO NOT LAND BEFORE INF-500d-4-iv AND INF-500d-4-v. Removing the overrides first sends writes to the old __file__-derived default, which is a third location."
+  - "Apply the Prompt-Quality Checklist. Bash snippets stay single-command per the shell convention."
+  - "Deployed/template parity (ADR-001): edit the templates and verify the deployed copies through the build round-trip."
+test_spec:
+  - name: test_no_deployed_surface_names_a_workspace_relative_log_destination
+    target_dir: unit_tests/feedback/
+    framework: pytest
+    type: behavioral
+    angle: deployed
+    surface_invoked: "the deployed agents, skills, workflows and commands in the shared reference layout"
+    description: "Using the shared_reference_layout fixture (reader), scan every deployed agent, skill, workflow and command file. Fail on any --jsonl/--log/--feedback argument, or append instruction, whose value is a relative debugging/logs/<file> path, naming each offending file and line. Also report how many surfaces were inspected and fail if that count is zero."
+    must_catch:
+      - "ticket-supervisor.md's current --jsonl debugging/logs/feedback.jsonl"
+      - "a scan that inspects zero files and reports clean"
+  - name: test_signoff_id_capture_contract_survives_the_prompt_change
+    target_dir: unit_tests/feedback/
+    framework: pytest
+    type: behavioral
+    angle: discrimination
+    description: "Execute the deployed signoff skill's submit invocation exactly as written (no --jsonl) against a temp layout with a declaration. Assert the id is read from stdout, the sidecar grep finds exactly one match, and the record is in the declared feedback_sink."
+test_rationale: "These are prompt surfaces an LLM follows, so the strongest executable proof is to scan what actually ships, which is the deployed copies and not the templates, and to execute the one invocation whose output a caller parses. The scan reports its inspected-surface count and fails on zero, because a scanner that finds nothing to inspect reports perfect agreement. That failure mode is the one INF-400c-4 built its parity check to reject."
+delivers_to: null
+expects_from:
+  - ac_id: INF-500d-4-iv
+    contract: "submit_feedback.py and emit_event.py defaults that resolve to the declared absolute sinks, so an invocation without --jsonl or --log is durable."
+  - ac_id: INF-500d-4-v
+    contract: "Readers whose default is the declared sink and which print the absolute sink read and the record count on stderr."
+origin_agent: BrainCandy
+created: 2026-10-09
+amended_by:
+  - reason: "BrainCandy approved readiness on 2026-10-09 (relayed via the orchestrating session). readiness: reviewed -> approved; criteria and work_status unchanged."
+    by: BrainCandy
+    at: 2026-10-09
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: prompt
+risk_surface: contract_boundary
+notes: |
+  Split out of INF-500d-4 by the IT PO, 2026-10-09, because the prompt surfaces
+  are a separate agent boundary (llm-expert owns templates/agents and skills). The
+  criteria restate INF-500d-4's first and fourth scenarios for the case where the
+  agent follows its shipped instructions, which is how most reports are actually
+  filed. Without this record the code fix could be fully correct and still be
+  bypassed by an explicit workspace-relative override that the instructions tell
+  the agent to pass.
