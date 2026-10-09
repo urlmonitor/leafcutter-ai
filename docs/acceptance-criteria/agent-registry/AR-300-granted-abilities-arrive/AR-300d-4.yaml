@@ -1,0 +1,121 @@
+id: AR-300d-4
+title: "No agent's delivery depends on an opt-in marker an author has to remember"
+component: agent-registry
+components:
+  - agent_registry
+  - template_compiler
+  - build_pipeline
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given every agent definition in the tree, none of which carries an opt-in
+    marker placed there to receive its abilities,
+  When the build compiles agent prompts,
+  Then every agent with a non-empty grant has its abilities named in its
+    compiled prompt, so delivery depended on the declaration and on nothing an
+    author had to add,
+    And the number of agents examined and the number found to hold a grant are
+      both stated, so a run in which the population came back empty is not read
+      as a run in which delivery succeeded,
+    And an agent that receives nothing while holding a grant is named
+      individually rather than folded into a total,
+  So repairing today's 60 by adding a marker to each of them is not a way to
+    satisfy this tree.
+depends_on:
+  - AR-300d
+doc_links:
+  - path: scripts/template_compiler.py
+    relationship: modifies
+    status: exists
+    relevance: "The marker-gated delivery that reached 0 of 60 lives here, next to the declaration-driven one that reached 23 of 23. This criterion is what forbids the first shape."
+  - path: templates/skills/signoff/SKILL.md
+    relationship: describes
+    status: exists
+    relevance: "The delivery that works, driven by what the definition declares about itself rather than by a token placed in its body."
+  - path: docs/acceptance-criteria/agent-registry/AR-300-granted-abilities-arrive/AR-300a-1.yaml
+    relationship: related
+    status: exists
+    relevance: "The delivery outcome. This criterion constrains HOW that outcome is reached, which AR-300a-1 deliberately does not -- a hand-added marker in all 60 definitions satisfies AR-300a-1 and fails this."
+assigned_agent: python-coder
+estimated_complexity: M
+change_target: code
+risk_surface: internal
+it_requirements:
+  - "The premise is stated as 'no definition carries a marker' and observed at the compiled prompts, deliberately. Asserting 'no delivery path is marker-gated' by inspecting the delivery step is a statement about source, and a source inspection is exactly what has been passing -- ADR-050 records the same conclusion for the reachability guard: the capability set comes from the BUILT surface, never from source text."
+  - "Both counts are mandatory on every run: the number of agents examined and the number found to hold a grant. This AC's first clause is a universal over a population it derives, and a universal over an empty set is true. The repository has shipped a check that matched zero files, printed a success line and exited clean for eight days (KI-ACS-001), and phase_1's own exit criterion is satisfied today while two per-agent deliveries reach nobody -- because it counts leftover markers rather than delivered content. Counting the population is not decoration here; without it this criterion IS the roadmap criterion again."
+  - "An agent that receives nothing while holding a grant is named individually, never folded into a total."
+  - "The examined population is derived from the agent templates the build compiled, and the granted population from their declarations. Neither may be a literal list, and neither may be the count 60 or 31."
+  - "Repairing today's templates by adding a marker to each of them must not be able to satisfy this AC. Concretely: if the delivery path still contains a branch that consults a body token, this AC is not met even when every prompt is correct -- so the removal of that branch is part of the deliverable, not an implementation detail. AR-300d-4-i governs what happens to a leftover token."
+  - "Examine every platform root the build wrote, resolved through the declared output root. A population derived from one root under-counts by half."
+test_spec:
+  - name: test_every_granted_agent_receives_its_abilities_with_no_marker_present_anywhere
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: integration
+    angle: deployed
+    description: "With no agent definition carrying an opt-in marker, every agent holding a non-empty grant has its abilities named in its compiled prompt."
+  - name: test_both_population_counts_are_stated_and_zero_fails
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: unit
+    angle: boundary
+    description: "The run states agents examined and agents found to hold a grant; either coming back zero fails rather than reading as delivery succeeded."
+  - name: test_an_agent_receiving_nothing_while_holding_a_grant_is_named_individually
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: "A single granted agent whose prompt lacks the section is named in the finding, not folded into a count."
+  - name: test_no_delivery_branch_consults_a_body_token
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: integration
+    angle: real_artifact
+    description: "Adding a body token to a template changes nothing about whether or where the section is delivered, proving the marker-gated branch is gone rather than merely unused."
+  - name: test_population_is_derived_and_covers_every_platform_root
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: integration
+    angle: deployed
+    description: "The examined set is derived from the templates the build compiled and includes every platform root; no literal count appears in the assertion."
+test_rationale: >-
+  This is the criterion most exposed to vacuity, so the counting descriptors are
+  load-bearing rather than hygiene. The marker-branch descriptor is what separates
+  this AC from AR-300a-1: a hand-added marker in all 60 definitions satisfies
+  AR-300a-1 completely and fails this one, and the only way to prove the branch is
+  gone rather than dormant is to add a token and observe that it changes nothing.
+delivers_to: null
+expects_from:
+  ac_id: AR-300d-1
+  contract: "The declaration-driven delivery whose marker-independence this criterion asserts over the whole population"
+origin_agent: BrainCandy
+created: 2026-09-30
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-10-01'
+superseded_by: null
+covered_by:
+  - AR-300d-4-i
+implemented_by: []
+notes: |
+  A RULE THAT RESOLVES TO NOTHING PASSES FOREVER -- STATED HERE BECAUSE THIS IS
+  THE CRITERION MOST EXPOSED TO IT. Its first clause is a universal over a
+  population it derives, and a universal over an empty set is true. The
+  repository has already shipped a check that matched zero files, printed a
+  success line and exited clean for eight days (KI-ACS-001), and the roadmap's
+  own phase_1 exit criterion is satisfied today while two per-agent deliveries
+  reach nobody, because it counts leftover markers rather than delivered
+  content. Counting the population is not decoration here; without it this
+  criterion is the roadmap criterion again.
+
+  WHY THE NEGATIVE PREMISE IS IN THE GIVEN. Asserting 'no delivery path is
+  marker-gated' by inspecting the delivery step is a statement about source, and
+  a source inspection is what has been passing. Stating the premise as 'no
+  definition carries a marker' and observing the compiled prompts turns it into
+  something the tree can be measured against.

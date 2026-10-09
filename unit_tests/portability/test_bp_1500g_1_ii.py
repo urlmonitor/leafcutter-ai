@@ -22,6 +22,8 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
+import pytest
+
 _THIS_DIR = Path(__file__).resolve().parent
 if str(_THIS_DIR) not in sys.path:
     sys.path.insert(0, str(_THIS_DIR))
@@ -33,6 +35,23 @@ from _bp1500g1_harness import (  # noqa: E402
     plant_regular_file_where_container_expected,
     run_build,
 )
+
+
+@pytest.fixture(scope="module")
+def _shared_blocked_container_build(tmp_path_factory):
+    """Produce the ONE real build the two read-only blocked-container tests
+    below share (TQ-600a-9): both plant the identical regular file at the
+    `.claude/skills` container path via
+    `plant_regular_file_where_container_expected` and run the identical
+    no-flag build -- one asserting the compound exit-code/no-success-marker
+    outcome, the other asserting the specific blocked path is named in the
+    output -- so one real build safely serves both instead of each paying
+    its own `fresh_scratch_adopter` + plant + `run_build` sequence."""
+    root = tmp_path_factory.mktemp("bp1500g1ii_blocked_container")
+    target_root = fresh_scratch_adopter(root)
+    planted = plant_regular_file_where_container_expected(target_root)
+    result = run_build(target_root)
+    return target_root, planted, result
 
 
 def test_bp_1500g_1_ii_a_run_that_cannot_proceed_without_taking_adopter_content_leaves_it_present_and_unchanged(
@@ -62,7 +81,7 @@ def test_bp_1500g_1_ii_a_run_that_cannot_proceed_without_taking_adopter_content_
 
 
 def test_bp_1500g_1_ii_that_run_does_not_exit_zero_and_the_blocked_step_carries_no_success_marker(
-    tmp_path: Path,
+    _shared_blocked_container_build,
 ) -> None:
     # covers: BP-1500g-1-ii
     # angle: criterion
@@ -76,11 +95,11 @@ def test_bp_1500g_1_ii_that_run_does_not_exit_zero_and_the_blocked_step_carries_
     `plant_regular_file_where_container_expected` rather than
     `plant_capability_at_discoverable_location` -- see the DECISION HISTORY
     block at the bottom of this file for why the original fixture stopped
-    satisfying this AC's Given clause."""
-    target_root = fresh_scratch_adopter(tmp_path)
-    planted = plant_regular_file_where_container_expected(target_root)
+    satisfying this AC's Given clause.
 
-    result = run_build(target_root)
+    Reads the ONE shared blocked-container build (TQ-600a-9) -- see
+    `_shared_blocked_container_build`'s own docstring."""
+    _target_root, planted, result = _shared_blocked_container_build
 
     assert_ac_bp_1500g_1_ii_satisfied(
         content_survived=planted["skill_md"].is_file(),
@@ -95,7 +114,7 @@ def test_bp_1500g_1_ii_that_run_does_not_exit_zero_and_the_blocked_step_carries_
 
 
 def test_bp_1500g_1_ii_the_run_names_the_specific_content_and_the_specific_step_that_could_not_proceed(
-    tmp_path: Path,
+    _shared_blocked_container_build,
 ) -> None:
     # covers: BP-1500g-1-ii
     # angle: criterion
@@ -110,14 +129,11 @@ def test_bp_1500g_1_ii_the_run_names_the_specific_content_and_the_specific_step_
     block at the bottom of this file for why the original fixture stopped
     satisfying this AC's Given clause. The blocked path IS the specific
     adopter content here (a regular file occupies the whole container), so
-    ".claude/skills" remains the correct literal to assert on."""
-    target_root = fresh_scratch_adopter(tmp_path)
-    # Planted for its side effect only. The assertion below names
-    # ".claude/skills" literally rather than deriving it from the return
-    # value, so the binding would be dead (ruff F841).
-    plant_regular_file_where_container_expected(target_root)
+    ".claude/skills" remains the correct literal to assert on.
 
-    result = run_build(target_root)
+    Reads the ONE shared blocked-container build (TQ-600a-9) -- see
+    `_shared_blocked_container_build`'s own docstring."""
+    _target_root, _planted, result = _shared_blocked_container_build
     combined = result.stdout + result.stderr
 
     assert ".claude/skills" in combined, (

@@ -1,0 +1,237 @@
+id: AR-300
+title: "A specialist arrives with every ability you granted it"
+component: agent-registry
+components:
+  - agent_registry
+  - template_compiler
+  - skills_system
+level: L0
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Grant an ability, and the specialist really has it -- or you hear why not.
+
+  You decide what each specialist is allowed to draw on. That decision is only
+  worth something if the specialist is actually told about it when it starts
+  work. Today a grant can be recorded, prepared, and then quietly go nowhere:
+  the specialist works without an ability you believe it has, the system reports
+  success, and nothing anywhere says otherwise. The specialist is not broken and
+  does not complain -- it simply solves the problem the long way round, and you
+  pay for capability you are not receiving.
+
+  After this goal, an ability you grant is an ability that arrives. It is
+  recorded in one place rather than two that can disagree, it reaches every
+  specialist it was granted to, it keeps arriving for specialists and abilities
+  added later, and a grant that fails to arrive is a reported failure rather
+  than a silent one.
+depends_on: []
+doc_links:
+  - path: docs/architecture/agent_knowledge_plane.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      THE HOME TERRITORY. The canonical account of every channel through which a
+      specialist receives what it knows before it starts work. This goal is
+      entirely an injection-side promise: it is about what reaches the
+      specialist, never about what happens to its output afterwards.
+  - path: config/agent_registry.json
+    relationship: describes
+    status: exists
+    relevance: >-
+      Where a specialist's granted abilities are recorded today -- and recorded
+      twice, in two fields that hold different populations.
+  - path: scripts/template_compiler.py
+    relationship: modifies
+    status: exists
+    relevance: >-
+      The step that prepares each specialist's per-specialist blocks and is
+      supposed to place them into that specialist's working instructions. It
+      also contains the working precedent this goal generalises -- a block
+      appended on the strength of a flag the template itself declares, with no
+      per-template opt-in marker required.
+  - path: templates/agents/workflow-architect.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      The sharpest instance. Its recorded abilities are the four that constitute
+      its entire documented purpose, and it receives none of them.
+  - path: templates/skills/signoff/SKILL.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      The block that DOES arrive, for 23 of 23 specialists that declare it,
+      by the flag-driven mechanism named above. Prior art to copy, not to
+      re-derive.
+  - path: docs/how-to/creating-an-agent-template.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      The authoring-facing surface a reader consults to learn where a
+      specialist's abilities are declared. It must end up agreeing with wherever
+      this goal settles that declaration.
+  - path: docs/acceptance-criteria/agent-registry/AR-200-capability-matches-obligation/AR-200.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      FENCED, AND THE NEAREST NEIGHBOUR IN THIS COMPONENT. AR-200 owns whether a
+      specialist obliged to do something is EQUIPPED to do it -- an obligation
+      declared in one place matched against a capability declared in another,
+      both already inside the specialist's own definition. This goal owns
+      whether a grant that already exists DELIVERS -- whether the specialist is
+      ever told, and whether the grant is recorded in one place or two. The two
+      come apart cleanly in both directions: a specialist can hold every tool it
+      needs and still never be told which abilities it may use, and a specialist
+      can be told perfectly while lacking the means to act. Neither record may
+      be closed as a duplicate of the other.
+  - path: docs/acceptance-criteria/agent-registry/AR-200-capability-matches-obligation/AR-200b.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      THE DELIBERATE HANDOFF. The observed defect set includes 25 specialists
+      that are recorded as having abilities they have no means to invoke. That
+      is AR-200b's promise in its second instance, not a new one, and it was
+      routed there rather than authored here. See notes.
+  - path: docs/acceptance-criteria/build_pipeline/BP-1500-honest-builds/BP-1500.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      FENCED. BP-1500 owns whether the build's account of the FILES it wrote,
+      removed and left behind is complete and true. Every guarantee in that tree
+      passes on this defect: the file was written, nothing was orphaned, nothing
+      is stale, two runs agree. What went missing is CONTENT that never entered
+      a file the build wrote correctly. A criterion here that is satisfied by
+      auditing which files a build touched is in BP-1500's tree.
+  - path: docs/acceptance-criteria/infrastructure/INF-1200-standards-reach-the-author/INF-1200.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      FENCED, SAME PLANE, DIFFERENT SUBJECT. INF-1200 owns whether the STANDARDS
+      a piece of work must MEET reach whoever is about to produce it. This goal
+      owns whether the ABILITIES a specialist may USE reach that specialist.
+      Both are injection-side and the mechanics may well be shared; the promises
+      are independent -- a specialist can know every standard while knowing none
+      of its abilities, and the reverse. Reuse INF-1200's delivery machinery if
+      it lands first; do not merge the records.
+  - path: docs/acceptance-criteria/infrastructure/INF-600-self-describing-agents/INF-600.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      FENCED. INF-600 owns whether an OUTSIDE READER can understand a specialist
+      without reading its source -- self-description for the benefit of people
+      and catalogues. This goal owns whether the SPECIALIST ITSELF is told. A
+      perfectly accurate published catalogue of a specialist's abilities
+      satisfies INF-600 and does nothing for this goal. Note also that INF-600
+      is at its child cap with a standing waiver and cannot host this.
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-09-30
+amended_by: []
+superseded_by: null
+covered_by:
+  - AR-300a
+  - AR-300b
+  - AR-300c
+  - AR-300d
+implemented_by: []
+notes: |
+  User-authored intent: BrainCandy. Framed by product-owner, 2026-09-30.
+  L0 and L1 only -- no Gherkin, no technical requirements, no test contracts.
+
+  THE MEASURED SHAPE OF THE GAP. Treat these as established facts; they were
+  measured across the 60 compiled specialist prompts, not inferred.
+
+    - ZERO of 60 specialists receive a working abilities table. The table is
+      computed per specialist and then discarded, because placement is gated on
+      a marker token that appears in none of the 60 source templates. No warning
+      is emitted. The build reports success and exits clean.
+    - The identical silent failure hits a SECOND per-specialist block by the
+      same mechanism. Both per-specialist deliveries are dead. Nothing anywhere
+      checks that a computed block reached its destination -- which is why
+      AR-300b is a guarantee about the delivery mechanism rather than about
+      either block.
+    - 31 specialists have recorded abilities. None of the 31 received them. The
+      only specialist whose instructions mention its abilities has that section
+      written by hand rather than delivered.
+    - The record of abilities is SPLIT ACROSS TWO FIELDS holding different
+      populations -- 32 specialists in one, 40 in the other, 12 present only in
+      the second. Repairing delivery alone would leave those 12 receiving
+      nothing, which is why AR-300c is not a tidy-up.
+    - Observed consequence over roughly 90,000 recorded specialist actions:
+      abilities were invoked 33 times, all by the 6 specialists that happen to
+      hold the means. Specialists instead fell back to raw text search about
+      32,600 times, including for questions a shipped ability already answers.
+
+  THE WORKING PRECEDENT, IN THE SAME STEP. A different block is appended with no
+  marker token at all, on the strength of a flag the template declares in its
+  own header. That mechanism delivers 23 of 23. The design that works is already
+  in the building; the broken delivery simply did not use it. AR-300d exists so
+  the fix generalises that precedent rather than reinstating a marker token in
+  60 templates -- an outcome that would be correct on the day it ships and rot
+  the first time someone adds the 61st specialist.
+
+  THE PRODUCT DECISION ALREADY TAKEN BY THE USER -- carry it down, do not
+  re-litigate. A specialist's abilities move INTO the specialist's own
+  definition, directly beside the declaration of what it is permitted to use, so
+  that what a specialist is allowed to do and what it is told it can do sit
+  together and can be checked against each other. The central record's ability
+  fields become derived and validated rather than authoritative. AR-300c carries
+  this decision.
+
+  A STANDING RECORD CONTRADICTS THAT DECISION -- FLAGGED, NOT SILENTLY
+  OVERRIDDEN. INF-600a-1 (level L2, readiness reviewed, work_status todo) is the
+  record that CREATED the two rival fields: it makes the newer central field
+  authoritative and keeps the older one as a compatibility alias. That is the
+  opposite of the direction now chosen, and it explains the split population
+  measured above -- a half-completed migration. It is an L2 and therefore not
+  this agent's to amend. The Business Analyst or IT PO must reconcile it --
+  amend or supersede it explicitly when AR-300c is decomposed. Leaving both
+  records active leaves two approved statements about where the truth lives,
+  which is the same defect one level up.
+
+  WHAT WAS DELIBERATELY NOT AUTHORED HERE. 25 specialists are recorded as having
+  abilities they have no means to invoke. That is a behavioural instance of
+  AR-200b ("a specialist told to use a particular tool is given that tool") and
+  belongs as a new leaf under it, not as a fifth L1 here. One caveat for whoever
+  writes it: AR-200b's existing leaf derives its obligation from the template's
+  PROSE naming a state-mutating tool, and this instance derives it from a
+  DECLARED ability list naming a non-mutating one. The leaf must state its own
+  derivation rather than inherit that one, or it will be written against a rule
+  that does not reach it.
+
+  WHY A NEW L0 AND NOT AN AMENDMENT. Four hosts were examined and each is fenced
+  in doc_links above rather than quietly left adjacent. AR-200's stated promise
+  is equipment for an obligation, and its two L1s are both obligation-matching;
+  widening it to cover silent non-delivery of capability declarations changes
+  what an approved record promises after the fact. BP-1500 is about the build's
+  account of the files it wrote and passes cleanly on this defect. INF-1200 is
+  the same plane with a different subject. INF-600 is the reader's view, and is
+  additionally at its child cap under a standing waiver.
+
+  THE ALTITUDE TEST THIS GOAL HAD TO PASS. An earlier framing was "specialists
+  get their skills table". It was lifted, because the outcome survives swapping
+  the thing granted: the second dead delivery measured above is not a skills
+  table at all, and it fails identically. The title therefore names no
+  particular ability, no particular specialist and no particular mechanism. A
+  criterion in this tree that reads as being about one named block is at the
+  wrong altitude.
+
+  ROADMAP OBSERVATION, FLAGGED NOT ACTED ON. phase_1's exit criterion
+  "build.py --validate-only returns 0 with no template injection errors" is
+  satisfied today while two per-specialist injections deliver nothing to anyone
+  -- because it measures leftover markers rather than delivered content. The
+  criterion as worded may measure the wrong thing. Raised for the user; the
+  roadmap was NOT edited, since that requires explicit confirmation.
+
+  PRIORITY AND READINESS ARE AUTHORING DEFAULTS, NOT JUDGEMENTS. Every record in
+  this tree is draft/medium. The user sets both at the approval gate.
+
+  IDENTIFIER. AR-300 was confirmed free on 2026-09-30 by a full-text recursive
+  search for the literal AR-300 across docs/ and tickets/ in this worktree --
+  zero hits. The highest L0 hundred otherwise in use in this component is
+  AR-200. Per standing rule, re-verify at merge time; id allocation in this
+  store is known-broken (KI-ACD-008).

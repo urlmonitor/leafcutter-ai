@@ -16,13 +16,13 @@ related_docs:
 # KI-CG-20260929-hook-run-strips-em-dashes-from-deployed-config — a commit's own hook run rewrites the deployed commit_guardian.json without its em-dashes, so the next commit fails check-output-drift
 
 > One known issue, filed on sight during the GE-127f-2 build (ticket 07 of
-> EPIC-FilesStayWorkable). Index: [commit-guardian.md](../commit-guardian.md).
-> Sibling of [KI-CG-20260929-output-drift-scans-gitignored-cache](open-high-ki-cg-20260929-output-drift-scans-gitignored-cache.md),
+> EPIC-FilesStayWorkable). Index: [commit-guardian.md](../../commit-guardian.md).
+> Sibling of [KI-CG-20260929-output-drift-scans-gitignored-cache](../open-high-ki-cg-20260929-output-drift-scans-gitignored-cache.md),
 > found in the same session but a distinct defect: that one is a file that should
 > not be in the census, this one is a real, unexplained rewrite of a file that should.
 
 - **Severity:** high — it blocks the next commit. Now that the cause is known the remedy is a one-line change, but until it lands the manual repair must be repeated before every commit.
-- **Status:** open — no AC. **CAUSE IDENTIFIED 2026-10-07** and proven in isolation; see "The cause" below, which supersedes the former "What is not yet known" section.
+- **Status:** RESOLVED 2026-10-07 by `GE-120g-4`. Cause identified and proven in isolation earlier the same day (see "The cause" below, which supersedes the former "What is not yet known" section), then fixed: `main()` now snapshots the parsed document with `copy.deepcopy` before `_build_records` mutates it and writes only when the two differ, and `_write_manifest` passes `ensure_ascii=False`. Both halves were needed — see the corrected fix direction below for why the obvious one alone would only have moved the symptom. Covered by `unit_tests/commit_guardian/test_ge_120g_4.py`, mutation-proven.
 - **Occurrences:** measured once with exact counts, `0374b637` → `b18112ef`; the same symptom is recorded in operator memory from earlier sessions. Reproduced continuously on 2026-10-07 across two worktrees — **every** commit of a four-commit sequence re-broke it, requiring the repair before each. · **First seen:** 2026-09-29 · **Last seen:** 2026-10-07
 - **Where:** the rewrite is performed by `check_negative_control_liveness.py` (`_write_manifest`, the `json.dumps` call); the damaged file is the deployed `.leafcutter/scripts/commit_guardian/commit_guardian.json`; the symptom is reported by `check_output_drift.py` on the NEXT commit.
 
@@ -116,20 +116,31 @@ grep -o "u2014" .leafcutter/scripts/commit_guardian/commit_guardian.json | wc -l
 
 No other hook ran. 0 → 110 escapes from that one invocation.
 
-**Fix direction.** Two independent changes, either of which stops the damage and both of
-which are worth making:
+**Fix direction — CORRECTED 2026-10-07.** This section first said "two independent
+changes, **either** of which stops the damage". That was wrong, and the error matters
+because option 1 is the obvious one and on its own it does not work:
 
 1. `ensure_ascii=False` in `_write_manifest`'s `json.dumps` call, so a write preserves
-   the characters it read.
-2. Write only when the document actually changed. The unconditional write is what makes
-   this fire on every commit rather than only when a `currently` block is updated, and a
-   judging check rewriting its own input on every run is the deeper defect — note that
-   `run_hook.py`'s leave-it-as-you-found-it contract (GE-120g-1) reverts a judging
-   check's working-copy changes, but `.leafcutter/` is not tracked, so nothing reverts
-   this one.
+   the characters it read. **Necessary but NOT sufficient.** Measured 2026-10-07:
+   `json.dumps(data, indent=2, ensure_ascii=False) + "\n"` does **not** reproduce the
+   deployed file — it differs by ~40 bytes, because the file carries hand-authored
+   indentation (a block indented 2 where `json.dumps` emits 4). Fix only this and the
+   check keeps rewriting the file on every run and keeps tripping `check-output-drift`,
+   now on indentation instead of em-dashes. The symptom would move, not stop.
+2. **Write only when the document actually changed. This is the load-bearing half.** The
+   unconditional write is what makes this fire on every commit rather than only when a
+   `currently` block is updated, and a judging check rewriting its own input on every run
+   is the deeper defect — note that `run_hook.py`'s leave-it-as-you-found-it contract
+   (GE-120g-1) reverts a judging check's working-copy changes, but `.leafcutter/` is not
+   tracked, so nothing reverts this one.
 
-Any test should assert on the em-dash count across a run, not merely on the drift
-verdict, for the reason given below.
+A corollary that cost a round to discover: the change-detection guard must compare the
+parsed **data**, not the rendered text. Because the rendering never equals the file (see
+1), a `rendered != current_text` guard is always true and skips nothing. Snapshot the
+parsed document before `_build_records` mutates it in place and compare documents.
+
+Any test should assert on a byte digest across a run, not on the em-dash count and not
+on the drift verdict — an em-dash assertion alone passes a fix that still reformats.
 
 **Why em-dashes specifically are a good tracer.** They are the only high-frequency
 non-ASCII characters in the file (90 of them, all inside `_comment` prose), so their

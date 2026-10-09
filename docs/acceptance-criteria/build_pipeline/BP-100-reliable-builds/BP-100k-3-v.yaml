@@ -1,0 +1,151 @@
+id: BP-100k-3-v
+components:
+  - build_pipeline
+title: "Excusing a recorded output's drift stays per-key and ground-gated: an exemption never covers a sibling output, and an entry without a ground excuses nothing"
+component: build-pipeline
+level: L3
+status: active
+req_status: draft
+readiness: reviewed
+priority: high
+roadmap_phase: phase_1
+work_status: done
+criteria: |
+  Given a build manifest recording two deployed outputs whose content has
+    drifted in the same way since the build, identical in kind and differing
+    only in whether the exemption registry names them,
+  And given the registry holds one entry, with a non-blank ground, naming the
+    first output only,
+  When check-output-drift runs over that workspace,
+  Then the second output is reported as drifted and never as a drift
+    exemption,
+  And the run blocks the commit, even though its sibling is excused,
+  And given instead the registry names the first output with a ground that is
+    whitespace only, and names the second output with a non-blank ground,
+  When check-output-drift runs over the same workspace,
+  Then the gate reports the first entry as a rejected exemption entry, naming
+    the output it tried to excuse,
+  And the first output is still reported as drifted, with the run summary
+    stating drifted=1,
+  And the run blocks the commit,
+  And every verdict is taken from running the deployed gate as a separate
+    process and reading its emitted lines and exit status, so a registry that
+    the gate ignored cannot pass for a registry the gate honoured.
+depends_on:
+  - BP-100k-3
+doc_links:
+  - path: "docs/acceptance-criteria/build_pipeline/BP-100-reliable-builds/BP-100k-3.yaml"
+    relationship: parent
+    status: exists
+    relevance: "Its it_requirements already say an entry without a stated ground must be rejected 'so the registry cannot become a silent suppression list'. This record carries that rule over to the new recorded-output path, which consults the registry at a point the parent never anticipated."
+  - path: "docs/acceptance-criteria/build_pipeline/BP-100-reliable-builds/BP-100k-3-iv.yaml"
+    relationship: related
+    status: exists
+    relevance: "The behaviour this constraint bounds."
+  - path: "docs/acceptance-criteria/build_pipeline/BP-100-reliable-builds/BP-100k-3-vi.yaml"
+    relationship: related
+    status: exists
+    relevance: "Sibling constraint on the other axis of narrowness: an exemption covers content drift only, never absence or unreadability. That axis has no covering test yet."
+  - path: "templates/scripts/commit_guardian/commit_guardian.json"
+    relationship: describes
+    status: exists
+    relevance: "__drift_gate_exemption_registry_doc: the registry 'is not a way to silence a finding the gate got right'. PR #1013 widened what an entry can excuse. This record is what keeps that widening from turning into a blanket drift switch."
+  - path: "templates/scripts/commit_guardian/check_output_drift.py"
+    relationship: implements
+    status: exists
+  - path: "unit_tests/commit_guardian/test_drift_exempt_recorded_key.py"
+    relationship: tested-by
+    status: exists
+  - path: "docs/2b_direction_b_output_drift_detection.md"
+    relationship: describes
+    status: exists
+    relevance: "Reader-facing verdict table for check-output-drift. It documents the grounded-exemption contract for unrecorded artifacts only. Neither the recorded-key excusal nor the per-key / ground-gated limit this record pins is described there yet."
+assigned_agent: test-writer
+estimated_complexity: S
+declares_side_effect: false
+package_surface: false
+it_requirements:
+  - "No production change is owed. The behaviour shipped in PR #1013 and is on origin/main. Any later change to check_output_drift.py or _drift_exemptions.py must keep the two covering tests named in test_spec green, unmodified in what they assert."
+  - "The hash-mismatch path may consult only the VALIDATED exemption map (the output of the registry validation step). It must never consult the raw registry entries. A raw entry whose ground is whitespace-only is a non-empty, truthy string, so reading the raw form would turn a rejected entry into a working suppression."
+  - "Exemption matching is exact, per recorded key. No glob, prefix, directory or wildcard matching, no 'ignore all drift' flag, and no inheritance of one key's entry by a sibling. Introducing any of these is a widening that must retire this record openly. It must not be done by amending a clause of BP-100k-3-iv."
+  - "A ground that consists only of whitespace must be treated exactly as an absent ground."
+  - "A rejected entry must be named in the gate's output together with the path it tried to excuse. It must suppress nothing. It must not abort the run, and it must not invalidate the other, well-formed entries in the same registry."
+  - "Verify behaviorally only (repo rule 'Gate / Workflow ACs: Verify Behaviorally, Not by Grep'). Every verdict comes from executing check_output_drift.py as a separate process from a deployed-shaped layout and reading its emitted lines, RESULT line and exit status. Grepping the gate source is forbidden, and so is calling the validator or scan function directly in place of the gate."
+  - "Before work_status may move to done, each covering test must carry a '# covers: BP-100k-3-v' tag, because check_done_proof requires it. Adding the tags is a test-file edit and must wait until the in-flight refactor of unit_tests/commit_guardian/ has landed. If that refactor renames or moves a covering test, covered_by and test_spec must be updated in the same change."
+  - "Must follow the repo error-handling policy. No new I/O is introduced by this record."
+test_spec:
+  - name: test_exemption_is_scoped_to_its_own_key
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: discrimination
+    surface_invoked: "check_output_drift.py copied from templates/scripts/commit_guardian/ into a synthesized .leafcutter/scripts/commit_guardian/ layout, run as a subprocess with HOOK_TEST_CONFIG pointing at a fixture registry"
+    description: "EXISTS, passes on origin/main. With a grounded entry for the first drifted key only, the gate exits 1 and emits no 'DIRECT-DRIFT: EXEMPT <second key>' line. The positive 'second output is still drifted' count (drifted=1) is asserted on the identical fixture and registry by BP-100k-3-iv's test_declared_key_is_reported_as_direct_drift_exempt."
+    must_catch:
+      - "The exemption degrades into a blanket drift switch: any grounded entry in the registry suppresses drift on every recorded key."
+      - "Exemption matching is by directory or prefix, so a sibling under the same directory inherits the first key's entry."
+  - name: test_groundless_entry_cannot_suppress_drift
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: discrimination
+    surface_invoked: "same deployed-shaped subprocess run as above"
+    description: "EXISTS, passes on origin/main. With a whitespace-only ground on the first key and a non-blank ground on the second, the output contains 'REJECTED EXEMPTION ENTRY: <first key>', the gate exits 1, and the RESULT line reads drifted=1. The second key is validly exempted, so that one drifted artifact can only be the first key."
+    must_catch:
+      - "The hash-mismatch path reads the raw registry instead of the validated map, so a whitespace-only ground (a truthy string) excuses drift."
+      - "Ground validation treats a whitespace-only string as non-blank."
+test_rationale: |
+  RETROFIT CONTRACT: BOTH TESTS ALREADY EXIST in
+  unit_tests/commit_guardian/test_drift_exempt_recorded_key.py and pass on the
+  current code. They are listed so the contract reads as satisfied, not so
+  they are written again. Each is a discrimination test. It goes red under a
+  named, plausible wrong version (see must_catch), not merely when the code is
+  absent. The whitespace-only ground is chosen deliberately because it is the
+  one input that separates "validated map" from "raw registry": it fails
+  validation, yet it is truthy in the raw entry.
+
+  HONEST RESIDUAL GAP: the per-key test asserts "the sibling is never
+  reported exempt" and "the run blocks". It does not assert drifted=1 itself,
+  because that count is asserted on the identical fixture by -iv's
+  declared-key test. Together the two tests cover every Then clause of this
+  record. Alone, the per-key test does not.
+delivers_to: null
+expects_from:
+  ac_id: BP-100k-3
+  contract: "validate_exemption_registry(entries: list) -> dict[str, str]. It drops any entry whose ground is missing, blank or whitespace-only, and names each dropped entry on stderr as 'REJECTED EXEMPTION ENTRY: <path> reason=<detail>'. The returned map, keyed by exact repo-relative path, is the only form of the registry the gate may consult after validation."
+origin_agent: BrainCandy
+created: 2026-10-08
+created_by_ticket: null
+amended_by:
+  - reason: "it-po-technical-enrichment"
+    by: it-po
+    at: 2026-10-08
+    entry: "Added package_surface: false (no config key is registered), it_requirements (8 policy constraints: validated-map-only, exact per-key matching, whitespace-as-absent, a named rejection that does not abort, behavioral verification, covers tags, error policy), test_spec (2 descriptors describing the EXISTING tests, each with must_catch naming the wrong version it fails), test_rationale (with the one residual gap, which -iv's test covers), a doc_link to docs/2b_direction_b_output_drift_detection.md, and a sharper expects_from contract. readiness draft -> reviewed. criteria, assigned_agent (python-coder, kept), estimated_complexity (S, kept), covered_by, work_status, req_status and notes are unchanged."
+superseded_by: null
+covered_by:
+  - unit_tests/commit_guardian/test_drift_exempt_recorded_key.py::TestRecordedKeyDriftExemption::test_exemption_is_scoped_to_its_own_key
+  - unit_tests/commit_guardian/test_drift_exempt_recorded_key.py::TestRecordedKeyDriftExemption::test_groundless_entry_cannot_suppress_drift
+implemented_by:
+  - templates/scripts/commit_guardian/check_output_drift.py
+change_target: pipeline
+risk_surface: contract_boundary
+notes: |
+  WHY THIS IS ITS OWN RECORD AND NOT A CLAUSE OF -iv. -iv describes a
+  convenience. This record describes the limit on it. If they lived in one
+  record, a later change could widen the convenience by amending one criterion
+  and nobody would see a constraint being deleted. As a separate record, any
+  widening (glob or prefix entries, a global "ignore drift" flag, reading the
+  raw registry instead of the validated map) has to retire a named constraint
+  openly. This is the explicit "the suppression must stay per-key and
+  ground-gated" pin the retrofit was asked to judge. The registry charter
+  makes it necessary.
+
+  The groundless-entry clause guards a specific bypass: if Pass 2 read the
+  raw registry instead of the validated map, a bare {"path": ...} would
+  excuse drift with no questions asked. The covering test separates the two
+  readings because a whitespace-only ground fails validation but is a
+  non-empty, truthy string in the raw entry.
+
+  Done on 2026-10-08, as a retrofit like -iv: both covering tests now carry
+  "# covers: BP-100k-3-v" tags and done_proof.verify_done_eligible returned
+  eligible: true for this id.

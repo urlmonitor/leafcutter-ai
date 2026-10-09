@@ -1,0 +1,117 @@
+id: AR-300d-1
+title: "An agent added with a grant receives it on its first build, with nothing else prepared"
+component: agent-registry
+components:
+  - agent_registry
+  - template_compiler
+  - build_pipeline
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given a newly added agent definition that declares a grant of abilities and
+    contains nothing else added for the purpose of receiving them,
+  When the build compiles agent prompts for the first time since it was added,
+  Then that agent's compiled prompt names its granted abilities,
+    And no other file was edited between adding the definition and running the
+      build -- no central record entry, no list of agents to include, no marker
+      placed in the new definition,
+    And the same holds for a second newly added agent added in the same way, so
+      the result is not an artefact of one definition happening to resemble an
+      existing one,
+  So the next agent added is correct without anyone remembering a step.
+depends_on:
+  - AR-300d
+doc_links:
+  - path: templates/skills/signoff/SKILL.md
+    relationship: describes
+    status: exists
+    relevance: "The precedent to generalise: a per-agent block that arrives for 23 of 23 agents that declare they need it, with no per-agent marker to forget."
+  - path: scripts/template_compiler.py
+    relationship: modifies
+    status: exists
+    relevance: "Holds both designs side by side -- the marker-gated delivery that reached 0 of 60, and the declaration-driven delivery that reached 23 of 23."
+  - path: docs/how-to/creating-an-agent-template.md
+    relationship: describes
+    status: exists
+    relevance: "The steps an author actually follows when adding an agent; if it lists a step this criterion says is unnecessary, one of the two is wrong."
+assigned_agent: python-coder
+estimated_complexity: M
+change_target: code
+risk_surface: internal
+it_requirements:
+  - "Generalise the working precedent in the same file: scripts/template_compiler.py ~line 420 does `body = body.rstrip('\\n') + build_signoff_block()` -- an append with NO placeholder, gated on a `signoff: true` flag the template declares in its own frontmatter. That mechanism delivers 23 of 23 (verified: 23 templates carry `signoff: true`). The marker-gated form at ~line 296 delivers 0 of 60. Copy the working shape; do not re-derive it and do not invent a third."
+  - "'NOTHING ELSE EDITED' IS THE ASSERTION, NOT THE SETUP. The subject of this AC is the SET OF FILES that had to change, and the compiled prompt is only how the result is observed. A test that adds the agent plus its central registry entry plus a marker and then checks the prompt passes on the broken design. The test must assert the file set, by diffing the tracked tree before and after, and fail if anything beyond the one new template changed."
+  - "The build must discover agent templates by scanning the template directory, not by consulting an inclusion list. If a list exists anywhere in the path from template to compiled prompt, adding an agent requires editing it and this AC fails."
+  - "No central registry entry may be required for delivery. The registry becomes derived (AR-300c-1); if the compiler still needs a registry row to emit the section, the declaration is not the single source."
+  - "The second newly added agent is part of the behaviour, not a duplicate case: it exists to rule out the result being an artefact of one definition resembling an existing one. Give the two different shapes (different tools line, different grant size, one conditional grant)."
+  - "File-size ratchet: scripts/template_compiler.py is 496 lines and already over the 400-content-line limit. Replacing the marker-gated branch with a declaration-driven append should make it shorter, not longer -- that is the expected direction of the diff."
+test_spec:
+  - name: test_newly_added_agent_receives_its_grant_on_the_first_build
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: integration
+    angle: deployed
+    description: "A template added with a grant and nothing else compiles to a prompt naming its granted abilities on the first build."
+  - name: test_no_file_other_than_the_new_template_had_to_change
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: integration
+    angle: seam
+    description: "Diff the tracked tree before and after adding the agent: the only change is the one new template. No registry entry, no inclusion list, no marker placed in the definition."
+  - name: test_a_second_differently_shaped_new_agent_behaves_identically
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: integration
+    angle: boundary
+    description: "A second new agent with a different tools line, a different grant size and a conditional grant also arrives correct, so the result is not an artefact of resembling an existing definition."
+  - name: test_delivery_is_gated_on_the_declaration_not_on_a_body_token
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: integration
+    angle: real_artifact
+    description: "The new template carries no placeholder token anywhere in its body and still receives its section, mirroring the signoff flag precedent."
+test_rationale: >-
+  The temptation is to read this criterion as being about the new agent's prompt,
+  and a test written that way passes on the broken design -- today's mechanism
+  produces a correct prompt for any agent whose author remembered every step. The
+  discriminating assertion is the before/after file-set diff, which is why the
+  second descriptor is the load-bearing one and why it is a seam-angle test over
+  the tracked tree rather than a read of the output.
+delivers_to:
+  agent: python-coder
+  contract: >-
+    Declaration-driven per-agent delivery: the compiled prompt's abilities
+    section is appended on the strength of the template's own frontmatter grant,
+    with no placeholder token required and no inclusion list or registry row
+    consulted -- generalising the `signoff: true` -> build_signoff_block()
+    append. Consumed by AR-300d-2 (additive), AR-300d-3 (subtractive) and
+    AR-300d-4 (marker independence).
+expects_from:
+  ac_id: AR-300c-1
+  contract: "The per-agent frontmatter declaration that gates this delivery"
+origin_agent: BrainCandy
+created: 2026-09-30
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-10-01'
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  THIS IS THE CRITERION THE CHEAP FIX FAILS. A repair that hand-edits every
+  existing definition so the section arrives satisfies AR-300a completely and
+  fails this completely -- and that repair is today's design, made correct once
+  by hand. The whole defect exists because delivery was made conditional on each
+  definition carrying a marker that nothing required and nobody added.
+
+  'NOTHING ELSE EDITED' IS THE ASSERTION, NOT THE SETUP. The temptation is to
+  read this criterion as being about the new agent's prompt. It is about the set
+  of files that had to change to get there; the prompt is only how the result is
+  observed. A test that adds the agent AND its central entry AND a marker, then
+  checks the prompt, passes on the broken design.

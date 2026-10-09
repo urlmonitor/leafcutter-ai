@@ -159,7 +159,12 @@ no shortcut for the driver-dispatched path:
    allowed-transition rules, so it is not a narrower, safer substitute either
    way (ADR-047).
 2. The script stages the file automatically via `git add`. Do NOT use `git mv` to
-   move the file — the ticket remains at its original path (BO-400c-4).
+   move the file — the ticket remains at its original path (BO-400c-4). The one
+   exception is a build driver's completion write (`writeTicketCompletion` in
+   `build-feature.js` and `build-ticket.js`): the command it prescribes includes
+   `--no-stage`, so the file is then NOT staged and `done` stays an unstaged edit in
+   the worktree. Run the prescribed command exactly as given. The interactive and
+   manual close path keeps the default, which stages.
 3. Report the updated status and confirm the ticket file path is unchanged.
 
 **Refuse to mark done** when investigation finds open work. Do not edit the

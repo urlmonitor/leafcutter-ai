@@ -119,8 +119,26 @@ def parse_frontmatter(text: str) -> tuple[dict[str, Any], str]:
     fm_text = text[3:end].strip()
     body = text[end + 4:].lstrip("\n")
 
+    # Deliberately yaml.SafeLoader, NOT the shared fast accessor
+    # (loader-audit, TQ-600a-11 fix-pass, 2026-10-07): this is the entry
+    # point for compile_agent_template/compile_skill_template, i.e. it runs
+    # in the live build/deploy path for every agent and skill template, over
+    # hand-edited `templates/agents/*.md` / `templates/skills/*/SKILL.md`
+    # frontmatter. The `except: fm = {}` degrade-to-empty shape immediately
+    # below is the EXACT shape of a prior production incident (KI-BP-019,
+    # see the module-level comment above the `import yaml` line): a masked
+    # import failure once made every template's frontmatter parse as `{}`,
+    # silently stripping name/description/model/tools from every deployed
+    # agent while the build still printed "Total files written: N" and
+    # exited 0. Routing this parse through a more permissive loader
+    # (CSafeLoader accepts at least one input class, a tab adjacent to a
+    # colon/comma, that yaml.SafeLoader correctly rejects) would make a
+    # hand-typo'd template silently parse into a partial/wrong dict instead
+    # of either parsing cleanly or correctly falling into this same `{}`
+    # degrade path where the loss is at least total and uniform rather than
+    # field-by-field unpredictable.
     try:
-        fm = yaml.safe_load(fm_text) or {}
+        fm = yaml.load(fm_text, Loader=yaml.SafeLoader) or {}
     except yaml.YAMLError:
         fm = {}
 

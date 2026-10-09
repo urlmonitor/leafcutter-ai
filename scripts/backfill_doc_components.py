@@ -224,7 +224,10 @@ def _extract_frontmatter(content: str) -> dict | None:
         return None
     raw_yaml = content[3:end_idx].strip()
     try:
-        parsed = yaml.safe_load(raw_yaml)
+        # Reverted to the pure-Python loader (loader-audit, TQ-600a-11
+        # fix-pass, 2026-10-07): one-off manual backfill tool, not CI-wired
+        # -- no speed case for the fast loader here.
+        parsed = yaml.load(raw_yaml, Loader=yaml.SafeLoader)
     except yaml.YAMLError:
         return None
     return parsed if isinstance(parsed, dict) else None

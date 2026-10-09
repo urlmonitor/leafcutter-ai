@@ -47,8 +47,10 @@ def _apply_backfill(matches: list[MatchRecord]) -> int:
 
         # Re-read the AC YAML fresh to avoid stale state
         try:
+            # Reverted (loader-audit, TQ-600a-11 fix-pass, 2026-10-07): no
+            # measured benefit (criterion 1); advisory backfill apply step.
             with open(ac_path, encoding="utf-8") as fh:
-                ac_data = yaml.safe_load(fh)
+                ac_data = yaml.load(fh, Loader=yaml.SafeLoader)
         except (OSError, yaml.YAMLError) as exc:
             _log.warning("Cannot re-read AC %s for apply: %s", ac_path, exc)
             continue

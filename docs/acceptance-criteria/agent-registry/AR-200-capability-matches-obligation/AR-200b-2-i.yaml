@@ -1,0 +1,107 @@
+id: AR-200b-2-i
+title: "An absent tools declaration is a shortfall, and an empty grant is not"
+component: agent-registry
+components:
+  - agent_registry
+  - skills_system
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given an agent that declares a non-empty ability grant and declares no tools at
+    all,
+    And a second agent that declares no ability grant while being permitted the
+      tool by which an ability is invoked,
+    And a third agent that declares an ability grant containing no entries,
+  When the comparison of grants against permitted tools runs,
+  Then the first agent is reported, because an absent tools declaration is not
+    read as permitting everything,
+    And the second agent is not reported, because holding the means without a
+      grant is not a shortfall,
+    And the third agent is not reported, and is counted as holding no grant
+      rather than as holding an unknown one,
+  So the comparison is neither satisfied by a missing declaration nor noisy on
+    agents that have nothing to invoke.
+depends_on:
+  - AR-200b-2
+doc_links:
+  - path: config/agent_registry.json
+    relationship: describes
+    status: exists
+    relevance: "Contains all three shapes today -- agents with grants, agents without, and agents whose recorded grant is present but empty."
+  - path: docs/reference/agent-template-frontmatter.md
+    relationship: describes
+    status: exists
+    relevance: "Defines how an absent field differs from an empty one in an agent's header, which is the distinction this criterion turns on."
+assigned_agent: python-coder
+estimated_complexity: S
+change_target: code
+risk_surface: internal
+it_requirements:
+  - "ABSENT IS NOT PERMISSIVE. An absent tools declaration must be read as permitting nothing, never as 'no constraint recorded, skip this agent'. The skipped agent would be the least equipped in the tree, and an absent header is the shape a newly added definition takes before its author fills it in -- so the exempted case would be the newest agent, every time."
+  - "Absent grant and empty grant are both 'holds no grant' and neither is reported. They must also be COUNTED as holding no grant rather than as unknown, so the granted_count AR-200b-2 reports stays truthful."
+  - "Note the asymmetry and do not collapse it into one helper: for the TOOLS side, absent means permits-nothing (a finding); for the GRANT side, absent means holds-nothing (not a finding). A single shared 'treat missing as empty' normaliser gets one of the two wrong."
+  - "The two negative clauses are what keep the rule usable. Roughly half the tree holds no grant, so a comparison that reports them is reporting most of what it examines, and AR-200b-1 records in this component the measured cost of a rule that fires across the registry: it gets switched off, which is strictly worse than no rule."
+test_spec:
+  - name: test_grant_with_absent_tools_declaration_is_reported
+    target_dir: unit_tests/agents/
+    framework: unittest
+    type: unit
+    angle: boundary
+    description: "An agent declaring a non-empty grant and no tools at all is reported; the missing declaration is not read as permitting everything."
+  - name: test_tool_without_a_grant_is_not_reported
+    target_dir: unit_tests/agents/
+    framework: unittest
+    type: unit
+    angle: failure
+    description: "An agent permitted the invoking tool but declaring no grant produces no finding -- holding the means without a grant is not a shortfall."
+  - name: test_empty_grant_is_not_reported_and_counts_as_holding_no_grant
+    target_dir: unit_tests/agents/
+    framework: unittest
+    type: unit
+    angle: boundary
+    description: "A grant present but containing no entries produces no finding and is counted as holding no grant, not as holding an unknown one."
+  - name: test_absent_means_permits_nothing_on_tools_but_holds_nothing_on_grants
+    target_dir: unit_tests/agents/
+    framework: unittest
+    type: unit
+    angle: boundary
+    description: "The two absences are handled asymmetrically: an absent tools line is a finding when a grant exists, an absent grant never is."
+test_rationale: >-
+  The first clause prevents the quiet failure -- a comparison that skips the agent
+  with no tools declaration silently exempts the least-equipped and newest
+  definitions. The two negative clauses are equally load-bearing in the other
+  direction: roughly half the tree holds no grant, so a rule that reports them
+  reports most of what it examines, and this component has already lost a detector
+  that way. The asymmetry descriptor exists because the natural refactor -- one
+  missing-means-empty normaliser for both sides -- silently breaks the first clause.
+delivers_to: null
+expects_from:
+  ac_id: AR-200b-2
+  contract: "The grant-against-permitted-tools comparison whose boundary cases this criterion fixes"
+origin_agent: BrainCandy
+created: 2026-09-30
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-10-01'
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  ABSENT IS NOT PERMISSIVE. The failure this first clause prevents is the quiet
+  one: a comparison that reads a missing tools declaration as "no constraint
+  recorded" and skips the agent. That agent is the least equipped in the tree and
+  the one the comparison would silently exempt. It is also the shape a newly
+  added definition takes before its author fills the header in -- so the exempted
+  case is the newest agent, every time.
+
+  THE TWO NEGATIVE CLAUSES ARE WHAT KEEP THE RULE USABLE. AR-200b-1 records the
+  cost of the opposite error one leaf over: a detector that fired across the
+  registry is worse than no detector, because a noisy rule gets switched off.
+  Roughly half the tree holds no grant, so a comparison that reports them is
+  reporting most of what it examines.

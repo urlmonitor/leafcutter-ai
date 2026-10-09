@@ -149,7 +149,13 @@ def load_exemptions(registry_path: Path) -> list[dict]:
             f"cannot read reachability exemption registry {registry_path}: {exc}"
         ) from exc
     try:
-        data = yaml.safe_load(raw)
+        # Reverted to the pure-Python loader (loader-audit, TQ-600a-11
+        # fix-pass, 2026-10-07): this function is already fail-closed (a
+        # parse failure raises ReachabilityRegistryError, never silently
+        # treated as zero exemptions), and it reads a single config file --
+        # no measured speed case for the fast loader. Reverted for
+        # consistency.
+        data = yaml.load(raw, Loader=yaml.SafeLoader)
     except yaml.YAMLError as exc:
         raise ReachabilityRegistryError(  # noqa: TRY003
             f"cannot parse reachability exemption registry {registry_path}: {exc}"

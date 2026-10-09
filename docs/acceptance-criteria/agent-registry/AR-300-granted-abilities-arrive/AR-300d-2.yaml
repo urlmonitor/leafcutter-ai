@@ -1,0 +1,95 @@
+id: AR-300d-2
+title: "An ability granted to an existing agent reaches it on the next build, with no second edit"
+component: agent-registry
+components:
+  - agent_registry
+  - template_compiler
+  - skills_system
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given an existing agent that already receives its granted abilities,
+    And one further ability added to that agent's declaration and to nothing
+      else,
+  When the build compiles agent prompts again,
+  Then that agent's compiled prompt names the further ability alongside the ones
+    it already named,
+    And no other agent's compiled prompt changes as a result,
+    And an ability newly added to the project and granted in the same edit
+      arrives the same way, so a grant is not limited to abilities that already
+      existed when the agent was defined,
+  So granting an ability is a single decision that takes effect on its own.
+depends_on:
+  - AR-300d
+doc_links:
+  - path: scripts/template_compiler.py
+    relationship: modifies
+    status: exists
+    relevance: "The step that must read the declaration on every build rather than at some earlier moment, if a same-day grant is to arrive the same day."
+  - path: docs/acceptance-criteria/infrastructure/INF-1200-standards-reach-the-author/INF-1200d.yaml
+    relationship: related
+    status: exists
+    relevance: "The same guarantee for a different subject -- a standard added later reaches its audience the day it is added. Independent promise, likely shared machinery; reuse it if it lands first rather than restating it."
+assigned_agent: python-coder
+estimated_complexity: S
+change_target: code
+risk_surface: internal
+it_requirements:
+  - "The declaration is read on EVERY build, not cached, snapshotted or resolved at any earlier moment. A same-day grant that requires a cache invalidation step is a second edit by another name."
+  - "The no-other-agent-changes clause is a BLAST-RADIUS assertion, not tidiness: a delivery keyed off a shared structure rather than the per-agent declaration passes the first two clauses while quietly handing the new ability to everyone. That failure is invisible in the agent under test and visible only in the agents nobody looked at, so the assertion must be over the whole compiled tree, not over the changed agent."
+  - "An ability newly ADDED to the project and granted in the same edit must arrive on that same build. This exercises the resolution path (AR-300c-3-i) as well as the delivery path; a design in which the set of grantable abilities is fixed at some earlier moment fails here while passing every other clause in this AC."
+  - "Compare compiled prompts before and after by content, across every platform root, so a change in the gemini root that does not appear in the claude root is caught."
+test_spec:
+  - name: test_ability_added_to_one_declaration_appears_in_that_agents_next_compiled_prompt
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: integration
+    angle: deployed
+    description: "One further ability added to a declaration and to nothing else is named in that agent's compiled prompt alongside the ones it already named."
+  - name: test_no_other_agents_compiled_prompt_changed
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: integration
+    angle: seam
+    description: "Every other compiled prompt in every platform root is byte-identical before and after the grant; the ability was not handed to everyone via a shared structure."
+  - name: test_ability_newly_added_to_the_project_and_granted_in_the_same_edit_arrives
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: integration
+    angle: boundary
+    description: "A brand-new ability, created and granted in one edit, reaches the agent on the same build -- the grantable set is not fixed at an earlier moment."
+test_rationale: >-
+  The blast-radius descriptor is the one that catches the cheap implementation,
+  and it is necessarily an assertion about the agents nobody changed -- a test
+  scoped to the agent under test cannot see a shared structure leaking the ability
+  to 59 others. The new-ability descriptor closes the other half by exercising
+  resolution as well as delivery in a single edit.
+delivers_to: null
+expects_from:
+  ac_id: AR-300d-1
+  contract: "The declaration-driven delivery whose incremental case this criterion pins"
+origin_agent: BrainCandy
+created: 2026-09-30
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-10-01'
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  THE NO-OTHER-AGENT-CHANGES CLAUSE IS A BLAST-RADIUS ASSERTION, NOT TIDINESS.
+  A delivery keyed off a shared list rather than the per-agent declaration
+  passes the first two clauses while quietly handing the new ability to
+  everyone. That failure is invisible in the agent under test and visible only
+  in the agents nobody looked at.
+
+  THE NEW-ABILITY CLAUSE CLOSES THE OTHER HALF. An ability added to the project
+  in the same edit exercises the resolution path as well as the delivery path;
+  granting only pre-existing abilities would leave a design in which the set of
+  grantable abilities is itself fixed at some earlier moment.

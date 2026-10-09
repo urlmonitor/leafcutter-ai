@@ -99,7 +99,10 @@ def _read_ac_implemented_by(ac_path: Path) -> tuple[str, list[str]]:
         logger.warning("Cannot read AC YAML %s: %s", ac_path, exc)
         raise
     try:
-        data = yaml.safe_load(content)
+        # Reverted (loader-audit, TQ-600a-11 fix-pass, 2026-10-07): already
+        # fail-closed (raises); single AC file read. No measured benefit
+        # (criterion 1).
+        data = yaml.load(content, Loader=yaml.SafeLoader)
     except yaml.YAMLError as exc:
         logger.warning("Cannot parse AC YAML %s: %s", ac_path, exc)
         raise

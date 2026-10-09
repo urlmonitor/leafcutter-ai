@@ -161,6 +161,7 @@ class TestRecordedKeyDriftExemption(_DriftExemptFixture):
     """The DIRECT-DRIFT: EXEMPT branch, and the limits on what it suppresses."""
 
     def test_drifted_and_unexempt_still_blocks(self) -> None:
+        # covers: BP-100k-3-iv
         """Control: with an EMPTY registry both drifted outputs are violations.
 
         Proves the fixture is a genuine drift case, so a later exit 0 is
@@ -182,19 +183,30 @@ class TestRecordedKeyDriftExemption(_DriftExemptFixture):
         )
 
     def test_declared_key_is_reported_as_direct_drift_exempt(self) -> None:
+        # covers: BP-100k-3-iv
         """A grounded entry on a RECORDED, drifted key moves it out of violations."""
         code, combined = self._run_with_registry(
             [{"path": self.declared_key, "ground": _GROUND}]
         )
+        # Key and ground must share ONE line (previously two separate substring
+        # checks over the whole output).
         self.assertIn(
-            f"DIRECT-DRIFT: EXEMPT {self.declared_key}",
-            combined,
-            msg=f"The exempted artifact must be individually named. Output:\n{combined}",
+            f"DIRECT-DRIFT: EXEMPT {self.declared_key} ground={_GROUND}",
+            combined.splitlines(),
+            msg=(
+                "The exempted artifact must be named with its verbatim ground "
+                f"on its own line. Output:\n{combined}"
+            ),
         )
-        self.assertIn(
-            f"ground={_GROUND}",
+        # Distinguishability: the recorded-and-drifted key must not ALSO be
+        # labelled with the unrecorded-artifact prefix.
+        self.assertNotIn(
+            f"UNCOMPARABLE: EXEMPT {self.declared_key}",
             combined,
-            msg=f"The declared ground must be echoed verbatim. Output:\n{combined}",
+            msg=(
+                "A recorded, drifted key must carry DIRECT-DRIFT: EXEMPT only, "
+                f"never also UNCOMPARABLE: EXEMPT. Output:\n{combined}"
+            ),
         )
         match = self._result_fields(combined)
         self.assertEqual(
@@ -215,6 +227,7 @@ class TestRecordedKeyDriftExemption(_DriftExemptFixture):
         )
 
     def test_exemption_is_scoped_to_its_own_key(self) -> None:
+        # covers: BP-100k-3-v
         """Exempting one drifted key must leave a sibling key's drift blocking.
 
         This is the test that fails if the branch ever degrades into a blanket
@@ -239,6 +252,7 @@ class TestRecordedKeyDriftExemption(_DriftExemptFixture):
         )
 
     def test_both_keys_declared_yields_a_clean_exit(self) -> None:
+        # covers: BP-100k-3-iv
         """With every drifted key grounded, the gate exits 0 and reports no drift."""
         code, combined = self._run_with_registry(
             [
@@ -269,6 +283,7 @@ class TestRecordedKeyDriftExemption(_DriftExemptFixture):
         )
 
     def test_groundless_entry_cannot_suppress_drift(self) -> None:
+        # covers: BP-100k-3-v
         """A registry entry with a blank ground is rejected, so drift still blocks.
 
         Pins that Pass 2 consults the VALIDATED map, not the raw registry —

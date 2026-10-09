@@ -1,0 +1,139 @@
+id: TQ-600a-13-xviii
+components:
+  - testing_quality
+title: "An agent whose pull request is held by Post-merge suite status treats it as an external hold, not as its own failure to fix"
+component: testing-quality
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given that most pull requests here are opened and driven by agents following the
+    package's runbooks, which react to failing checks by debugging their own change,
+    retrying, or halting with a regression report,
+  And that a failing `Post-merge suite status` means the correctness lane on main is not
+    green or has no fresh verdict — a condition the pull request did not cause unless it
+    is the fix,
+  When an agent following any of the package's runbooks that react to pull-request checks
+    finds `Post-merge suite status` failing on its pull request,
+  Then it reports the hold as external, quoting the check's held state and linking the
+    run and the notice,
+  And it does not edit its own change to make that check pass, does not push an empty or
+    no-op commit, and does not re-run the check in a loop,
+  And it never edits the post-merge workflows, their modules, the ruleset, or the notice
+    issues,
+  And it adds a fix declaration to its pull request only when its change touches a test
+    named in the notice's failing set or the code those tests exercise, and never as a way
+    to pass the check,
+  And it treats every other failing check on the same pull request exactly as before,
+  And each runbook's behaviour is demonstrated by presenting it a recorded pull-request
+    state in which this check is the only failing one, and a second in which it fails
+    beside a real test failure, and observing the decision it reaches.
+depends_on:
+  - TQ-600a-13
+  - TQ-600a-13-vi
+doc_links:
+  - path: docs/acceptance-criteria/testing-quality/TQ-600-suite-feedback-latency/TQ-600a-13-vi.yaml
+    relationship: describes
+    status: exists
+    relevance: >-
+      The check and its held states.
+  - path: docs/acceptance-criteria/testing-quality/TQ-600-suite-feedback-latency/TQ-600a-13-viii.yaml
+    relationship: describes
+    status: exists
+    relevance: >-
+      When a fix declaration is legitimate.
+declared_files:
+  - path: templates/agents/pull-request.md
+    state: existing
+  - path: templates/agents/ticket-supervisor.md
+    state: existing
+  - path: templates/skills/building-epics/SKILL.md
+    state: existing
+  - path: templates/skills/build-single-ticket/SKILL.md
+    state: existing
+  - path: templates/skills/quick-fix/SKILL.md
+    state: existing
+assigned_agent: llm-expert
+estimated_complexity: M
+it_requirements:
+  - >-
+    AGENT CONFIRMED: llm-expert — the surfaces are agent templates and skill bodies (.md
+    prompts), which S2.8 places with llm-expert.
+  - >-
+    WHICH RUNBOOKS — A STARTING INVENTORY, TO BE COMPLETED BY THE IMPLEMENTER. A search of
+    templates/**/*.md for check-handling language (gh pr checks, failing / required
+    checks) at re-enrichment found: templates/agents/pull-request.md (by name),
+    templates/agents/ticket-supervisor.md, templates/skills/building-epics/SKILL.md,
+    templates/skills/build-single-ticket/SKILL.md, templates/skills/quick-fix/SKILL.md;
+    also templates/agents/epic-supervisor.md (deprecated per ADR-006 — leave unless still
+    dispatched) and templates/agents/commit.md (pre-commit hooks, probably not PR checks
+    — confirm). declared_files lists the five likely edits; the implementer confirms each,
+    adds any missed (the `ship` skill, test-failure-triage), and records the final list in
+    this record's notes before editing. The deployed copies under .claude/ are build
+    outputs: edit templates/ only.
+  - >-
+    TWO KINDS OF SURFACE, ONE AGENT HERE. Prompt-driven runbooks (agent templates,
+    skill bodies) are llm-expert's and are this record. Deterministic workflow code that
+    classifies check failures (finalize-feature and fast-lane are workflow scripts, not
+    prompts) is a code surface: a separate sibling record is needed, with its agent
+    chosen by file type — FOLLOW-UP, not authored here, and named in the summary so it is
+    not lost.
+  - >-
+    ONE SHARED PARAGRAPH, NOT FIVE PARAPHRASES. The rule (external hold; report it with
+    the held state, run link and notice link; no own-diff edits, empty commits or re-run
+    loops; never touch the post-merge workflows, scripts/ci/, the tunables file, the
+    ruleset or the notices; declare a fix only when the change touches a test in the
+    notice's failing set or the code it exercises; the owner-only break-glass of
+    TQ-600a-13-xvii; every other failing check handled as before) is written once — in
+    the building-epics skill as the canonical home — and the other runbooks point to it,
+    so the five cannot drift. The check is recognised by its exact name `Post-merge suite
+    status`.
+  - >-
+    WHY THE DEMONSTRATION IS A SCENARIO, NOT A SEARCH. A runbook that contains the right
+    sentence and still debugs its own diff is the failure mode; the evidence is the
+    decision reached on a recorded state, not the presence of text.
+  - >-
+    MEMORY CONTEXT: this repository has recorded finalize workflows false-halting on red
+    checks, and agents taking `SKIP=` on gates; both are the behaviour this record
+    prevents for this check.
+delivers_to: null
+expects_from:
+  - ac_id: TQ-600a-13-vi
+    contract: >-
+      The exact check name `Post-merge suite status` and its output wording.
+test_required: false
+test_rationale: |
+  NO DEFAULT-RUN UNIT TEST, BY DESIGN. The criteria's demonstration — present each runbook
+  a recorded pull-request state and observe the decision — is an evaluation of a model's
+  behaviour: it needs model calls, is nondeterministic, and costs far more than this
+  family's 15 s default-run budget allows. A unit test that searched the runbooks for the
+  rule's sentence would be the grep-only form CLAUDE.md forbids. So the done-proof is a
+  RECORDED SCENARIO EVALUATION, run by the implementer after editing: for each runbook in
+  the final inventory, two recorded states as `gh pr checks --json name,state,link`
+  output — (A) `Post-merge suite status` the only failing check; (B) it fails beside a
+  real `Test suite (pytest)` failure — given to an agent dispatched under that runbook,
+  with the decision recorded in this record's notes (expected: A reports an external hold
+  and stops; B treats the pytest failure as its own and the hold as external). Fixtures
+  live beside the notes, not in the default suite. If the owner wants a repeatable
+  harness, that is a separate evaluation-tooling record.
+origin_agent: business-analyst
+created: 2026-10-08
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-10-08'
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target:
+  - prompt
+risk_surface: internal
+notes: |
+  ADDED 2026-10-08 for user decision J (agent-facing guidance). declared_files now holds
+  the starting inventory found at re-enrichment; the implementer confirms it and records
+  the final list here. SCENARIO EVALUATION RESULTS TO RECORD HERE (per runbook, states A
+  and B, decision reached).

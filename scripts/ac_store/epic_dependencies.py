@@ -67,8 +67,15 @@ def _load_records(ac_store_root: Path) -> dict[str, dict]:
     records: dict[str, dict] = {}
     for yaml_path in sorted(ac_store_root.rglob("*.yaml")):
         try:
+            # Reverted to the pure-Python loader (loader-audit, TQ-600a-11
+            # fix-pass, 2026-10-07): this builds the depends_on graph that
+            # topological_sort() orders epic ticket generation by -- a
+            # silently-skipped malformed AC removes a real edge from that
+            # graph rather than raising, which could produce a wrong build
+            # order undetected. No measured benefit was established either
+            # (criterion 1) -- see /home/henzeh/tq600a1-backup/narrow_report.md.
             with open(yaml_path, encoding="utf-8") as fh:
-                data = yaml.safe_load(fh)
+                data = yaml.load(fh, Loader=yaml.SafeLoader)
         except (yaml.YAMLError, OSError):
             continue
         if isinstance(data, dict) and data.get("id"):

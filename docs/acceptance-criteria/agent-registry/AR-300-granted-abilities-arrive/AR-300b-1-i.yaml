@@ -1,0 +1,91 @@
+id: AR-300b-1-i
+title: "A build in which every preparation reached its agent reports no delivery failure"
+component: agent-registry
+components:
+  - template_compiler
+  - build_pipeline
+  - agent_registry
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given a build in which every per-agent preparation is present in the compiled
+    prompt of every agent it was prepared for,
+  When the build finishes,
+  Then it reports no delivery failure and completes normally,
+    And it still states how many per-agent preparations it checked and across
+      how many compiled prompts, so a clean result is distinguishable from a
+      check that did not run,
+  So the guarantee in AR-300b-1 is one the tree can actually satisfy, rather
+    than one that blocks every build once it is switched on.
+depends_on:
+  - AR-300b-1
+doc_links:
+  - path: scripts/template_compiler.py
+    relationship: describes
+    status: exists
+    relevance: "The step whose clean path this criterion pins, so the new failure cannot fire on a correct build."
+assigned_agent: python-coder
+estimated_complexity: S
+change_target: code
+risk_surface: internal
+it_requirements:
+  - "The clean path emits the SAME verdict object as the failure path, with an empty findings list and the counts populated -- not a bare success line and not silence. A distinct clean-path output is how the two reporting shapes drift."
+  - "The counts stated on a clean run are the two that make it distinguishable from a check that did not run: the number of per-agent preparation kinds examined, and the number of compiled prompts they were compared across. A reader must not have to compare two runs to tell them apart."
+  - "Running this gate over the repaired tree must not block the build. Verify against the real repository population after the AR-300a and AR-300d work lands -- a gate that fires on every build gets switched off, which is the same outcome as no gate."
+  - "Do not special-case the clean path to skip work. The counts must come from the same traversal that would have found a failure, or a clean run proves nothing about the traversal."
+test_spec:
+  - name: test_fully_delivered_build_reports_no_delivery_failure
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: integration
+    angle: deployed
+    description: "A build in which every per-agent preparation is present in every prompt it was prepared for completes normally with an empty findings list."
+  - name: test_clean_run_still_states_both_counts
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: "The clean verdict carries the number of preparation kinds checked and the number of compiled prompts checked; neither is omitted on the success path."
+  - name: test_clean_run_is_distinguishable_from_a_run_that_examined_nothing
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: unit
+    angle: boundary
+    description: "The clean verdict and the nothing-to-examine verdict differ in a single run's output, without comparing to a second run."
+  - name: test_gate_does_not_fire_on_the_real_repository_population
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: integration
+    angle: real_artifact
+    description: "Run against a build of the actual templates/agents/ tree, the gate produces no findings -- proving the guarantee is one this repository can satisfy."
+test_rationale: >-
+  This is the negative control for AR-300b-1, and the reason the counts are
+  restated on the clean path: without them, "no delivery failure" and "the delivery
+  check did not run" produce the same output, which is exactly the ambiguity
+  AR-300b exists to remove. The real-population descriptor is included because a
+  gate verified only against synthetic fixtures is how a blocking gate reaches main
+  and is then switched off.
+delivers_to: null
+expects_from:
+  ac_id: AR-300b-1
+  contract: "The delivery failure whose negative case this criterion fixes"
+origin_agent: BrainCandy
+created: 2026-09-30
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-10-01'
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  A GATE THAT ALWAYS FIRES GETS TURNED OFF, WHICH IS THE SAME OUTCOME AS NO
+  GATE. This is the negative control for AR-300b-1 and the reason the counts are
+  restated on the clean path: without them, 'no delivery failure' and 'the
+  delivery check did not run' produce the same output, which is precisely the
+  ambiguity AR-300b exists to remove.
