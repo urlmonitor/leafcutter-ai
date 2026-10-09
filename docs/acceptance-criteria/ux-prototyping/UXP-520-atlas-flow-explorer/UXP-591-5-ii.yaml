@@ -1,0 +1,166 @@
+id: UXP-591-5-ii
+title: "Back and Forward return each flow entry as it was left"
+component: ux-prototyping
+components:
+  - ux_prototyping
+  - frontend_coding
+level: L3
+status: active
+req_status: active
+work_status: todo
+readiness: approved
+priority: medium
+criteria: |
+  Given the person opened /flows, drilled into 'Build' (/flows/leafcutter/how-acs-are-built) and
+    then into 'Coders make it green (prio 6-8)' (/flows/leafcutter/python-coder-internal),
+  When they press Back twice and then Forward once,
+  Then the view shows "How a ticket is built (the phase chain)" with the breadcrumb
+    "Deliver a feature end-to-end > How a ticket is built (the phase chain)", then the default
+    flow at /flows with the breadcrumb "Deliver a feature end-to-end", then
+    "How a ticket is built (the phase chain)" again with that same two-flow breadcrumb,
+  And each time the address bar names the flow on screen,
+  And an entry returns with the drawer its ?step= value names, as last set there by opening,
+    switching or closing a drawer,
+  And an entry returns with the Source, Kind and Realization filters it had when the person
+    left it,
+  And Back onto an entry whose flow id is unknown, /flows/leafcutter/flow-render-pipline, shows
+    the 'Flow not found' notice again with no flow drawn,
+  And Back never steps through drawer openings, drawer closings or filter changes, since none
+    of them added an entry.
+depends_on:
+  - UXP-591-5
+  - UXP-591-4
+  - UXP-591-1-ii
+doc_links:
+  - path: docs/product-truth/flows/leafcutter/explore-flows-in-atlas.flow.json
+    relationship: implemented-by-step
+    status: exists
+  - path: docs/product-truth/mock-data/leafcutter/atlas-flows.mock.json
+    relationship: specifies
+    status: exists
+  - path: docs/product-truth/mockups/leafcutter/atlas-flows-canonical-url.html
+    relationship: describes
+    status: exists
+  - path: docs/architecture/components/ux-prototyping.md
+    relationship: describes
+    status: exists
+  - path: leafcutter-web/README.md
+    relationship: describes
+    status: exists
+    relevance: Atlas routes table and how the app reads the repo; gains the /flows/<product>/<flow> addresses.
+assigned_agent: frontend-coder
+estimated_complexity: M
+change_target:
+  - code
+  - ui
+risk_surface: internal
+it_requirements:
+  - 'One popstate listener in leafcutter-web/components/flows/flows-view.tsx restores the view: the entry''s
+    URL is the authority for the flow and the drawer (?step=), the entry''s {crumbs, filters} in history.state
+    (owner decision 2026-10-09) for crumbs and filters; an entry with no stored state falls back as UXP-591-5''s
+    contract states.'
+  - 'Restoring an entry writes no history: no replace or push in reaction to a pop, including when the
+    restored filters differ from the current ones.'
+  - Back onto an entry whose flow id is unknown restores the not-found state (notice, empty breadcrumb,
+    no flow) with no fallback flow.
+  - The listener is registered once and removed on unmount; a pop to an entry outside the Flows view is
+    left to the App Router.
+  - jsdom does not run the App Router's history integration, so the real-browser behaviour (history length
+    under the App Router, Back/Forward without a page reload) is proven by this AC's Playwright spec in
+    leafcutter-web/e2e/, run in CI against `next build` + `next start` (owner decision 2026-10-09; harness
+    set up under UXP-591-1).
+delivers_to: null
+expects_from:
+  - ac_id: UXP-591-5
+    contract: 'Pushed entries carrying {crumbs: string[] (Flow ids, entry flow first), filters: {source:
+      ''real'' | ''mock'', kind: ''user'' | ''data'' | ''architecture'', realization: ''all'' | ''built''
+      | ''spec'' | ''mock''}}, plus the no-stored-state fallback rule.'
+  - ac_id: UXP-591-4
+    contract: Drawer replaces that keep each entry's URL (?step=) and stored state current.
+  - ac_id: UXP-591-1-ii
+    contract: 'The not-found mode {requestedId, noticeVariant, crumbs: [], filters real/user/all} restorable
+      for an entry whose id is unknown.'
+  - ac_id: UXP-591-1
+    contract: 'Playwright harness in leafcutter-web: @playwright/test devDependency, leafcutter-web/playwright.config.ts
+      (testDir ./e2e, Chromium, webServer running `next start` on a production build), `npm run e2e`,
+      and the CI steps that run it after `npm ci`.'
+test_spec:
+  - name: Back twice and Forward once after two drills shows how-acs-are-built, then the default flow
+      at /flows, then how-acs-are-built with the two-flow breadcrumb
+    target_dir: leafcutter-web/components/flows/__tests__/
+    framework: vitest
+    type: component
+    angle: criterion
+  - name: each entry returns with the drawer its ?step= names and the Source, Kind and Realization filters
+      it was left with
+    target_dir: leafcutter-web/components/flows/__tests__/
+    framework: vitest
+    type: component
+    angle: seam
+    must_catch:
+      - Back keeps the current filters, so the restored entry flow is missing from the selector
+  - name: Back onto /flows/leafcutter/flow-render-pipline shows 'Flow not found' again with no flow drawn
+    target_dir: leafcutter-web/components/flows/__tests__/
+    framework: vitest
+    type: component
+    angle: failure
+    must_catch:
+      - Back onto the unknown id draws the default flow
+  - name: 'a pop writes no history: history.length and the stored entry state are unchanged after Back
+      and Forward'
+    target_dir: leafcutter-web/components/flows/__tests__/
+    framework: vitest
+    type: component
+    angle: boundary
+    must_catch:
+      - restoring filters on popstate calls replaceState
+      - the restore pushes the entry again
+  - name: under next start Back and Forward between flow entries never reload the page
+    target_dir: leafcutter-web/e2e/
+    framework: playwright
+    type: e2e
+    angle: deployed
+    surface_invoked: page.goBack() and page.goForward() after two drills from /flows, in Chromium against
+      `next start` of a production build
+    description: A window marker set after the first load survives two Backs and a Forward, no load event
+      fires, and each restored entry shows the flow, breadcrumb and filters the criteria name. No `//
+      covers:` tag until the done-proof gate can run Playwright specs (see UXP-591-1).
+    must_catch:
+      - the App Router reloads on popstate because the entry state overwrote __NA or __PRIVATE_NEXTJS_INTERNALS_TREE
+      - pushState was called with state the App Router does not recognise
+test_rationale: Restore bugs show up as extra history writes or as a stale filter set, so both are asserted
+  directly on window.history in jsdom; the not-found case is tested because it is the one entry with no
+  flow to fall back on.
+test_required: true
+declares_side_effect: false
+origin_agent: business-analyst
+created: '2026-10-09'
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-10-09'
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Derived from flow leafcutter/explore-flows-in-atlas v5, step 'backForward' (FlowNavigation
+  sessions drill-and-return, drawer-in-history, select-from-open-drawer,
+  recover-from-unknown, clear-step-notice, filter-replace). Authored as an L3 under the
+  history L2 because UXP-591 is at its five-L2 cap; it is a flow step, not a branch.
+  Owner-confirmed rule (AC gate, 2026-10-09, decision (1)): Back and Forward restore each
+  history entry's own Source, Kind and Realization filters. The clause was drafted from the
+  leafcutter/atlas-flows dataset's assumption and is no longer an assumption. Without it, Back
+  to an entry whose flow the current filters exclude would leave that flow unlisted in the
+  selector. The flow (v5) and the dataset (v3) still record the rule as unruled until they are
+  next revised.
+product_truth:
+  - flow: leafcutter/explore-flows-in-atlas
+    node: backForward
+    node_kind: step
+    flow_kind: user
+    screen: atlas-flows-canonical-url
+    mock_data: null
+    entities:
+      - FlowNavigation
+    source: real
+    asof: '2026-10-09'

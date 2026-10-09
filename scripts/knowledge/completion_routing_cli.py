@@ -25,6 +25,12 @@ BUSINESS CONTEXT: A workflow cannot import Python; it dispatches an agent
           carried by the commit), what was not and why, whether each
           unwritten record is still eligible, and the records emitted after
           the stage, named as waiting.
+      waiting [--sink S] [--state F]
+          Read-only, needs no working directory and no completion run.
+          Prints {case, waiting, records, note}: how many sink records are
+          not yet confirmed routed, and which. Creates and writes nothing.
+          ``waiting`` is null (case ``unknown``/``did_not_run``), never 0,
+          when it cannot be computed.
 
     Paths: ``--sink`` defaults to the build-time declaration beside this
     deployed script (config/knowledge_sink.json); with no declaration and no
@@ -71,9 +77,9 @@ _harvest_cli = _load_sibling("harvest_cli", "harvest_cli.py")
 logger = logging.getLogger("completion_routing")
 
 RUN_RECORD_NAME = "knowledge_routing_run.json"
-_PUBLIC_STAGE_KEYS = ("case", "read", "written", "unwritten", "manifest", "unwritten_records", "detail")
+_PUBLIC_STAGE_KEYS = ("case", "read", "written", "unwritten", "manifest", "unwritten_records", "detail", "already_on_branch")
 _RUN_RECORD_KEYS = (
-    "case", "read", "unwritten", "entries", "read_hashes", "unwritten_records", "detail",
+    "case", "read", "unwritten", "entries", "read_hashes", "unwritten_records", "detail", "already_on_branch",
 )
 
 
@@ -100,6 +106,10 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
             cmd.add_argument(
                 "--commit-status", choices=("ok", "failed", "not_run"), required=True
             )
+    waiting = sub.add_parser("waiting")
+    waiting.add_argument("--sink", type=Path, default=None)
+    waiting.add_argument("--state", type=Path, default=None)
+    waiting.add_argument("--marker", type=Path, default=None)
     return parser.parse_args(argv)
 
 
@@ -169,7 +179,14 @@ def main(argv: list[str] | None = None) -> int:
     logging.basicConfig(level=logging.WARNING, format="%(levelname)s %(name)s: %(message)s")
     args = parse_args(argv)
     paths = _resolve_sink_and_state(args)
-    if paths is None:
+    if paths is None and args.command == "waiting":
+        reply = {
+            "case": "did_not_run", "waiting": None, "records": [],
+            "note": "no build-time knowledge-sink declaration and no --sink given",
+        }
+    elif args.command == "waiting":
+        reply = _routing.waiting_learnings(sink_path=paths[0], state_path=paths[1])
+    elif paths is None:
         reply = _did_not_run(
             "no build-time knowledge-sink declaration beside this script and no "
             "--sink given; refusing to guess a path relative to the current directory"

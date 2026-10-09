@@ -153,9 +153,39 @@ const TICKET_RESULT_SCHEMA = {
     },
     message: { type: "string" },
     ticket_path: { type: "string" },
+    knowledge_routing: { type: ["object", "null"] },
   },
   required: ["status"],
 };
+
+/**
+ * Knowledge routing (ADR-040 §3, INF-700a-1-iv). This workflow makes no commit,
+ * so it runs no routing step: each ticket-supervisor runs stage -> commit-by-name
+ * -> observe around its own commit (building-epics SKILL.md §5.9) and returns the
+ * observation as `knowledge_routing`. The drive consumes it here. Only a
+ * recognised `case` is trusted (anything else is "did_not_run" with zero
+ * figures), and nothing here can change the drive's own outcome (fail-open).
+ * Pure; never throws.
+ */
+function classifyTicketRouting(ticketPath, reply) {
+  var ran = Boolean(reply) && (reply.case === "completed" || reply.case === "could_not_complete");
+  var asInt = function (v) { return ran && typeof v === "number" && Number.isFinite(v) ? v : 0; };
+  return {
+    ticket_path: ticketPath,
+    case: ran ? reply.case : "did_not_run",
+    read: asInt(reply && reply.read),
+    written: asInt(reply && reply.written),
+    unwritten: asInt(reply && reply.unwritten),
+    already_on_branch: asInt(reply && reply.already_on_branch),
+    detail: ran && typeof reply.detail === "string" ? reply.detail : null,
+  };
+}
+
+function summariseRouting(ticketResults) {
+  var tickets = ticketResults.map((r) => r.knowledge_routing);
+  var sum = (key) => tickets.reduce((total, t) => total + t[key], 0);
+  return { tickets: tickets, written: sum("written"), unwritten: sum("unwritten"), already_on_branch: sum("already_on_branch") };
+}
 
 const WORKTREE_SCHEMA = {
   type: "object",
@@ -356,6 +386,7 @@ if (batches.length === 0) {
 phase('Batch Dispatch')
 
 const completedBatches = [];
+const routedTickets = [];
 
 // Chunk size: keep parallel fan-out well below the ~16 concurrent cap.
 const BATCH_SIZE = 12;
@@ -384,7 +415,8 @@ for (const batch of batches) {
     const chunkResults = await parallel(
       chunk.map((ticket) => async () => {
         const result = await agent(
-          `Drive ticket to completion: ${ticket.path}. Worktree: ${worktreePath}. Execute all needed phase agents in order. worktree_path: ${worktreePath}`,
+          `Drive ticket to completion: ${ticket.path}. Worktree: ${worktreePath}. Execute all needed phase agents in order. worktree_path: ${worktreePath}. ` +
+          `Around the commit phase run knowledge routing per building-epics §5.9 and return its observe reply as knowledge_routing.`,
           { agentType: "ticket-supervisor", schema: TICKET_RESULT_SCHEMA, label: `ticket:${ticket.path}`, phase: 'Batch Dispatch' }
         );
         return {
@@ -397,6 +429,7 @@ for (const batch of batches) {
           // epic reported tickets_completed with no work done.
           status: result && result.status ? result.status : "undetermined",
           result,
+          knowledge_routing: classifyTicketRouting(ticket.path, result && result.knowledge_routing),
         };
       })
     );
@@ -415,10 +448,12 @@ for (const batch of batches) {
           ticket_path: chunk[idx] && chunk[idx].path,
           status: "undetermined",
           result: null,
+          knowledge_routing: classifyTicketRouting(chunk[idx] && chunk[idx].path, null),
         });
       }
     }
   }
+  routedTickets.push(...batchResults);
 
   // -----------------------------------------------------------------------
   // Batch-level failure detection
@@ -450,6 +485,7 @@ for (const batch of batches) {
       halted_at_batch: batchNumber,
       halted_tickets: haltSummary,
       completed_batches: completedBatches,
+      knowledge_routing: summariseRouting(routedTickets),
       suggested_action:
         "Review the ## Comments section of each halted ticket for the " +
         "blocker details. Resolve the blocker(s) and re-run /build-feature " +
@@ -485,17 +521,6 @@ const manualTests = [
   `Run /finalize-feature in a clean shell and confirm it completes without errors.`,
 ];
 
-/*
- * No knowledge-routing step here (INF-700a-5, 2026-10-08): this path makes no
- * commit after the point where one could run -- each ticket is committed by
- * its ticket-supervisor inside the batch loop above -- so a routing write made
- * here could never be published. build-epic.js is EXCLUDED in
- * config/guardrail_gates.yaml knowledge_routing_wiring; per ADR-040 section 3
- * the step belongs in templates/skills/building-epics/SKILL.md section 2.1.1,
- * before each ticket's commit phase. Until then, learnings emitted during an
- * epic drive wait in the install's sink for the next wired completion.
- */
-
 // BO-3900 — a name derived from a path must split on BOTH separators, so
 // the result is identical whichever separator the path was written with. A
 // forward-slash-only split leaves a backslash-spelled epicPath un-split,
@@ -530,5 +555,6 @@ return {
   batches_run: completedBatches.length,
   tickets_completed: totalTickets,
   completed_batches: completedBatches,
+  knowledge_routing: summariseRouting(routedTickets),
   message: completionMessage,
 };

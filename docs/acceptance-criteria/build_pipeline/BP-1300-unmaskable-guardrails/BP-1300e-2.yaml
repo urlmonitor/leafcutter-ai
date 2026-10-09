@@ -1,0 +1,267 @@
+id: BP-1300e-2
+components:
+  - precommit_hooks
+  - commit_guardian
+title: "Nothing the package shows a contributor claims a commit-time lint check that differs from the one that actually runs"
+component: build-pipeline
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Scenario: The edit-time hook's missing-linter message points at a check that exists
+    Given the edit-time exception hook is run on a Python file while the linter
+      is not installed,
+    When it emits its not-installed message,
+    Then any commit-time lint check the message names is one that runs on an
+      ordinary commit, with the rule set the message attributes to it,
+    And the message no longer states that violations "will still be caught at
+      commit time" by a check that does not cover them.
+
+  Scenario: The hook configuration describes the lint rules where they really live
+    Given the exception-handling section of the commit-guardian configuration,
+    When its explanatory text is read,
+    Then it names the lint configuration file the repository actually has, and
+      not a file that does not exist,
+    And it attributes to that file only the rules that file actually selects,
+    And no key in that section lists lint rules unless something reads that key
+      to decide what is checked.
+
+  Scenario: A claim that drifts from what runs is caught
+    Given one of the texts above is edited to claim a commit-time lint rule that
+      neither the declared rule set nor the commit-time check applies,
+    When that edit is committed,
+    Then the commit is refused, naming the text and the rule it claims that is not
+      applied.
+
+  Scenario: The edit-time hook's behaviour is unchanged
+    Given the edit-time exception hook is run on a file with a bare `except:` and
+      separately on a clean file, with the linter installed,
+    When it runs,
+    Then it refuses the first and allows the second exactly as before,
+    Because this record changes what the package SAYS, not what the edit-time
+      hook detects (GE-108d and GE-108e own that hook's behaviour).
+depends_on:
+  - BP-1300e
+  - BP-1300e-1
+doc_links:
+  - path: docs/acceptance-criteria/build_pipeline/BP-1300-unmaskable-guardrails/BP-1300e.yaml
+    relationship: parent
+    status: exists
+  - path: templates/hooks/check_exception_handling_hook.py
+    relationship: modifies
+    status: exists
+    relevance: "Line ~263-265: the not-installed message says violations 'will still be caught at commit time by the pre-commit ruff hook'. False claim 1 of 3."
+  - path: templates/scripts/commit_guardian/commit_guardian.json
+    relationship: modifies
+    status: exists
+    relevance: "exception_handling._comment (~line 1481) says rules are enforced 'via pyproject.toml'. The repository has no pyproject.toml (only ruff.toml). The sibling ruff_rules key is read by nothing. False claim 2 of 3."
+  - path: docs/acceptance-criteria/guardrail-engine/GE-108-exception-hook-hardening/GE-108e.yaml
+    relationship: related
+    status: exists
+  - path: docs/acceptance-criteria/guardrail-engine/GE-120-green-means-checked/GE-120h.yaml
+    relationship: related
+    status: exists
+    relevance: "Same class: an advertised protection that nothing runs. GE-120h owns registered-check advertising surfaces; this record owns the lint-gate claims, which no GE-120h surface covers."
+  - path: docs/acceptance-criteria/guardrail-engine/GE-120-green-means-checked/GE-120h-1.yaml
+    relationship: related
+    status: exists
+    relevance: "Considered as the home for the drift arm and NOT extended -- see it_requirements 'WHY NOT GE-120h-1'."
+  - path: unit_tests/commit_guardian/test_exception_hook.py
+    relationship: related
+    status: exists
+    relevance: "Existing GE-108d/e behavioural tests of the edit-time hook. They are the regression fence for scenario 4; any assertion pinning the false sentence is updated, nothing else."
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-014-exception-guard-enforcement-scope.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+package_surface: true
+it_requirements:
+  config_schema_fragment:
+    _declares: >-
+      TWO package surfaces in templates/scripts/commit_guardian/commit_guardian.json,
+      both watched by _package_surface_registry.WATCHED_REGISTRIES: (1) a NEW
+      top-level key lint_rule_claims, whose schema is the fragment below, and
+      (2) a NEW hooks_manifest.hooks member, id check-lint-rule-claims, shaped
+      exactly like BP-1300e-1's check-lint-gate entry (tier judgment, language
+      system, stages [pre-commit], pass_filenames false, change_set_source
+      handed_by_commit_path, always_run true, verbose true, no files/types
+      filter, a falsifiable negative_control) with entry
+      'python {{config.output_root}}/scripts/commit_guardian/run_hook.py
+      {{config.output_root}}/scripts/commit_guardian/check_lint_rule_claims.py'.
+      The section names WHERE claims live; it never lists rule codes, so it is
+      not itself a claim that can drift.
+    type: object
+    required:
+      - texts
+    additionalProperties: false
+    properties:
+      _comment:
+        type: string
+      texts:
+        type: array
+        minItems: 1
+        items:
+          type: object
+          required:
+            - path
+            - region
+          additionalProperties: false
+          properties:
+            path:
+              type: string
+              description: "Repo-relative POSIX path of a text that claims commit-time lint rules."
+            region:
+              type: object
+              required:
+                - kind
+              properties:
+                kind:
+                  enum:
+                    - python_function_return
+                    - json_pointer
+                    - markdown_section
+                name:
+                  type: string
+                  description: "python_function_return: the function whose returned string literal is the claim (read by AST, never imported)."
+                pointer:
+                  type: string
+                  description: "json_pointer: RFC 6901 pointer to the claiming string."
+                heading:
+                  type: string
+                  description: "markdown_section: heading text; the region runs to the next heading of the same or higher level."
+    examples:
+      - texts:
+          - path: templates/hooks/check_exception_handling_hook.py
+            region:
+              kind: python_function_return
+              name: _build_ruff_not_found_message
+          - path: templates/scripts/commit_guardian/commit_guardian.json
+            region:
+              kind: json_pointer
+              pointer: /exception_handling/_comment
+          - path: CLAUDE.md
+            region:
+              kind: markdown_section
+              heading: Error Handling Policy
+  reference_file_path: templates/scripts/commit_guardian/commit_guardian.json
+  n_location_rule: >-
+    4 -- (a) one top-level key lint_rule_claims added; (b) one hooks_manifest.hooks
+    member check-lint-rule-claims appended after check-lint-gate; (c)
+    exception_handling._comment rewritten; (d) exception_handling.ruff_rules
+    removed. Nothing else in the file changes.
+  required_skills:
+    - python-coder
+  post_write_commands:
+    - "python scripts/build.py --target-dir <a fresh temporary directory>  (never the workspace parent: KI-BP-016)"
+    - "python -m pytest unit_tests/commit_guardian/test_bp_1300e_2.py unit_tests/commit_guardian/test_exception_hook.py -q"
+    - "python -m pytest unit_tests/commit_guardian/test_hook_registration_inventory.py -q"
+  constraints:
+    - "TEXT 1, THE EDIT-TIME HOOK MESSAGE. In templates/hooks/check_exception_handling_hook.py _build_ruff_not_found_message(), replace the final sentence ('They will still be caught at commit time by the pre-commit ruff hook.') with a statement that the commit-time check check-lint-gate applies the rules declared in leafcutter-lint.json under the project's own ruff configuration. Do NOT enumerate rule codes in it: a message that names no codes cannot drift from the declaration, and the hook must stay self-contained (it may not read the declaration via a leafcutter import). Change nothing else: RUFF_SELECT, exit codes, skip conditions, the locator, and every other line of the message stay byte-identical (GE-108d/GE-108e own them)."
+    - "TEXT 2, THE MANIFEST SECTION. Rewrite exception_handling._comment to say that ruff rules are applied at commit time by check-lint-gate using the project's own ruff configuration (in this repository, ruff.toml) over the scope in leafcutter-lint.json, and that this section configures only the custom AST check. It must not mention pyproject.toml as this repository's configuration and must attribute no rule codes to ruff.toml. Remove the ruff_rules key: verified 2026-10-09 by the KI's `git grep -l ruff_rules` over scripts templates unit_tests tests that nothing reads it; RE-VERIFY across the whole tree, including config schemas and tests, immediately before deleting, and if anything does read it, stop and raise it rather than deleting."
+    - "TEXT 3 IS GIT HISTORY. Commit 4b9894b40's message cannot be corrected and is not an open item."
+    - "THE DRIFT ARM IS A DEDICATED, NARROW CHECK: templates/scripts/commit_guardian/check_lint_rule_claims.py. It runs when the staged set contains any configured claim text, leafcutter-lint.json, or a ruff configuration file; otherwise RESULT: nothing_to_inspect, exit 0. For each configured text present at its path it extracts the region STATICALLY (AST for python_function_return, json for json_pointer, heading-delimited slice for markdown_section; never import or execute a text) from the STAGED blob, finds ruff rule codes and linter prefixes in it, and refuses (RESULT: refused, non-zero) every claimed code that no declared step applies, naming the text path and the code. A configured text absent from the project (e.g. an adopter whose CLAUDE.md has no such section) is reported by name as not present and is not a refusal."
+    - "WHAT COUNTS AS 'APPLIED' COMES FROM RUFF, NOT FROM A LIST. The applied set is the union over leafcutter-lint.json's steps of the rules ruff reports enabled for that step (ruff's own resolution of the project configuration, plus the step's --select when present, e.g. via `ruff check --show-settings` on a path in the step). The set of recognised rule-code prefixes comes from ruff itself (e.g. `ruff linter --output-format json`), so a bare family name such as TRY is recognised without a hand-written prefix table. A claimed bare prefix is applied if any enabled rule carries it. No rule code, prefix, or allowed-claims list may be written into check_lint_rule_claims.py. Tree attribution ('BLE001 only in kernel/') is not mechanically checked -- the criterion asks only that a claimed rule be applied somewhere; tree wording is BP-1300e-2-i's documentation duty."
+    - "RUFF AND DISCOVERY ARE SHARED. Use _ruff_locator.py (BP-1300e-1-iii) and _lint_scope.py (BP-1300e-1-i); if ruff is unavailable while a claim text is staged, the outcome is could_not_check and the commit is refused, for the same banner reason as BP-1300e-1-iii."
+    - "WHY NOT GE-120h-1. GE-120h-1 (approved, work_status todo, complexity L) reconciles CHECK NAMES advertised on four discovered surfaces against hooks_manifest.hooks, and delivers a per-check runs/does-not-run result to GE-120h-2 and GE-120h-4. This arm reconciles RULE CODES in three named texts against the lint declaration as ruff resolves it. Different unit, different executing reference, disjoint population: the two cannot disagree about the same fact, which is the failure the 'no second reconciler' rule exists to prevent. Folding rule codes into GE-120h-1 would change its delivered contract for three consumers and make this feature wait on an unbuilt L-sized record. If GE-120h-1 later wants lint claims, it can consume this check's result rather than re-deriving it."
+    - "PACKAGE SURFACE. The commit adding lint_rule_claims and check-lint-rule-claims must cite BP-1300e-2 (package_surface: true), or check-package-surface-declaration refuses it."
+    - "ERROR-HANDLING POLICY (CLAUDE.md Rules 1-4), unchanged; the region extractors are pure and carry no try/except; git and ruff calls use specific excepts and map to could_not_check."
+test_spec:
+  - name: test_bp_1300e_2_edit_time_message_names_only_a_running_commit_time_check
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: "Run the deployed edit-time hook with ruff absent; stderr names check-lint-gate, contains no 'pre-commit ruff hook' sentence and no rule codes; check-lint-gate is an entry of the deployed generated pre-commit config (its reachability is proven by BP-1300e-1's tests)."
+  - name: test_bp_1300e_2_exception_handling_section_names_the_real_config_and_carries_no_unread_rule_list
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: unit
+    angle: real_artifact
+    description: "Load the deployed commit_guardian.json: exception_handling._comment names no file absent from the repository (no pyproject.toml here), attributes no rule codes, and the section has no ruff_rules key."
+  - name: test_bp_1300e_2_claiming_an_unapplied_rule_is_refused_naming_text_and_rule
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: integration
+    angle: discrimination
+    must_catch:
+      - "holds a written-in list of allowed or known rule codes"
+      - "inspects only one of the configured texts"
+    description: "Real commit in the fixture: edit the CLAUDE.md Error Handling Policy section to claim PLR0913 is enforced at commit time; refused naming CLAUDE.md and PLR0913. Repeated for the JSON comment text, so the refusal is not specific to one text kind."
+  - name: test_bp_1300e_2_claiming_an_applied_rule_commits
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: "Control: the same section edited to claim E722 commits."
+  - name: test_bp_1300e_2_declaration_change_that_strands_a_claim_is_refused
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: integration
+    angle: boundary
+    description: "CLAUDE.md claims TRY; a staged leafcutter-lint.json removes TRY from the only step selecting it; the commit is refused naming CLAUDE.md and TRY."
+  - name: test_bp_1300e_2_edit_time_hook_behaviour_is_unchanged
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: "With ruff installed, the deployed edit-time hook still exits 2 with E722 on a bare except and exits 0 with empty streams on a clean file (the existing test_exception_hook.py arms stay green unmodified apart from the replaced sentence)."
+test_rationale: >-
+  The drift arm is a gate, so it is tested by real commits that edit a claim,
+  never by reading the texts: a test asserting today's texts are correct passes
+  forever and catches nothing on the day the next false claim is written. The
+  unapplied-rule input is repeated across two text kinds and paired with an
+  applied-rule control and a declaration-side change, because the cheap
+  implementations are a written-in allow-list (passes the control, fails the
+  declaration arm) and a one-text reader (passes one kind only). The manifest
+  content assertion is a unit read of the deployed artifact, which is acceptable
+  because it is content, not a gate. Commit-path tests reuse
+  _bp_1300e_lint_gate_fixture.py and declare @pytest.mark.shared_layout_reader
+  with @pytest.mark.usefixtures("shared_reference_layout").
+delivers_to:
+  agent: documentation-expert
+  contract: >-
+    To BP-1300e-2-i: check-lint-rule-claims runs on every commit that stages
+    CLAUDE.md, so the rewritten Error Handling Policy section must name only
+    rule codes that some leafcutter-lint.json step applies; the commit carrying
+    the doc edit is refused otherwise, naming the code.
+expects_from:
+  ac_id: BP-1300e-1
+  contract: "The registered check-lint-gate entry (the id the corrected texts name), leafcutter-lint.json as the declared rule set, _lint_scope.py and _ruff_locator.py for reuse."
+origin_agent: BrainCandy
+created: 2026-10-09
+amended_by: []
+superseded_by: null
+covered_by:
+  - BP-1300e-2-i
+implemented_by: []
+change_target:
+  - code
+  - config
+  - docs
+risk_surface: internal
+notes: |
+  THE THREE FALSE TEXTS (from the KI). (1) the edit-time hook's not-installed
+  message, (2) the manifest comment plus its unread ruff_rules key, (3) the fix
+  commit 4b9894b40's message. (3) is git history and cannot be corrected. It is
+  recorded here only so nobody counts it as an open item. The repository's CLAUDE.md
+  Error Handling Policy sentence is a fourth claim, and it is handled in the
+  documentation child BP-1300e-2-i.
+
+  WHY "MAKE TRUE" DOES NOT SUFFICE AND THE TEXTS MUST CHANGE ANYWAY. Even after
+  BP-1300e-1 lands, the claims stay partly false: repo-wide the rule set is E, F
+  and E722, and BLE001 and TRY apply to kernel/ only, while the texts attribute
+  E722, BLE001 and TRY to everything. So the hook makes "a commit-time lint check
+  exists" true, and the texts still have to be corrected to say what it checks.
+
+  The third scenario ("drift is caught") is what makes this durable rather than a
+  one-time edit. Whether it is a dedicated check or an extension of GE-120h-1's
+  reconciliation is the IT PO's call. Extending is preferred over a second
+  reconciler.

@@ -34,14 +34,14 @@ The list is guarded at build time: `check_knowledge_routing_wiring` (`scripts/bu
 |---|---|---|---|
 | `fast-lane-ship.js` | Yes | `stage` after the test, coder, review and changelog phases, immediately before the `fastlane-commit` agent; `observe` (label `knowledge-routing-observe`) immediately after it, on the success and the commit-failure path alike. | — |
 | `quick-fix.js` | Yes | `stage` after the mutation proof, immediately before the `commit` phase (the fix commit, not the changelog commit); its manifest becomes extra numbered entries in the fix commit's stage list. `observe` immediately after the fix commit, on the success and the blocked path alike. | — |
-| `build-epic.js` | No | — | No commit follows the step; move the step into the building-epics skill (ADR-040 §3). It was removed from the workflow on 2026-10-08. |
+| `build-epic.js` | Yes, per ticket, by `ticket-supervisor` (excluded in the config: the workflow itself makes no commit) | `ticket-supervisor` runs `stage`, then the ticket's `commit` staging the manifest by name, then one `observe`, all inside the commit lock (`templates/skills/building-epics/SKILL.md` §5.9). The workflow puts each ticket's `knowledge_routing` and the drive totals on its result. A learning an earlier ticket's commit already carries is not written again (`already_on_branch`). | — |
 | `build-ticket.js` | No | — | Its commit and pull-request phases are dispatched inside a dynamic loop driven by the ticket's own phase list, so a correct insertion point needs its own design. |
 | `finalize-feature.js` | No | — | Its publish step sits inside a nine-step, confirmation-gated sequence with its own halt semantics; wiring needs its own design. |
-| `build-feature.js` | No | — | Resolves to `build-epic.js` or `build-ticket.js` and completes nothing itself. |
+| `build-feature.js` | No | — | The `/build-feature` entry point runs its own inlined per-phase driver for epics and single tickets. It dispatches each commit itself, generically inside its phase loop, and not through `ticket-supervisor`, so §5.9 does not reach it. It needs the same design as `build-ticket.js`. |
 | `plan-feature.js` | No | — | Produces AC specifications, not built work; the work is completed later by whichever path builds the AC. |
 | `create-ticket.js` | No | — | Produces a ticket specification, not built work; completed later by whichever path builds the ticket. |
 
-Effect on the reader: work completed through the two carrying paths is routed automatically as part of that run. Work completed through any other route (`build-epic.js`, `build-ticket.js`, `finalize-feature.js`, or a commit made outside a workflow) is not routed by that completion; its emitted records wait until the next carrying path runs or the harvester is run by hand (see [Manual run](#manual-run)).
+Effect on the reader: work is routed automatically as part of the run when it is completed through `fast-lane-ship.js` or `quick-fix.js`, or through a `ticket-supervisor` drive (`build-epic.js`, or a direct `ticket-supervisor` dispatch) whose ticket has a `commit` phase. Other work is not routed by that completion: `/build-feature` drives (`build-feature.js`), `build-ticket.js`, `finalize-feature.js`, and commits made outside a workflow. Its emitted records wait until the next carrying path runs or the harvester is run by hand (see [Manual run](#manual-run)). The build-time guard enumerates workflow files only. It cannot see the skill-hosted step, so that step's coverage is the `covered_by` on `build-epic.js`'s exclusion plus its tests.
 
 ---
 
@@ -147,10 +147,38 @@ $ harvest_learnings.py --status --sink <tmp>/none/sink.jsonl --state <tmp>/state
 | Question | Answer to read | Counts |
 |---|---|---|
 | Has the routing step completed in this tree, and over which sink? | `--status` (this page) | One timestamp and a path. No records, no agent runs. |
-| How many records are waiting to be written? | The waiting count, defined in §5 of [Agent Knowledge System](../architecture/agent_knowledge_system.md); reported as `outstanding` in the harvester's summary line | Records. Zero for a healthy loop and for a loop that has never run. |
+| How many records are waiting to be written? | The waiting count, defined in §5 of [Agent Knowledge System](../architecture/agent_knowledge_system.md); reported as `outstanding` in the harvester's summary line, and by the read-only [`waiting` query](#waiting-records-query) without a run | Records. Zero for a healthy loop and for a loop that has never run. |
 | How are capture attempts going? | The capture-health report's reached / recorded / failed figures, described in the same §5 | Agent invocations reaching the sign-off capture step. |
 
 The three answers use different denominators and never share a figure. A zero waiting count does not show that the step has run; `last_run` does.
+
+### Waiting records query
+
+A record emitted after a run's routing step read the sink stays in the sink and waits for the next completed unit of work. Where nothing further completes, ask for it directly:
+
+```bash
+python3 scripts/knowledge/completion_routing_cli.py waiting
+```
+
+It takes `--sink` (default: the build-time declaration) and `--state` (default: beside the sink), needs no working directory, and prints one JSON line.
+
+| Field | Type | Meaning |
+|---|---|---|
+| `case` | string | `ok`; `unknown` when the sink exists but cannot be read; `did_not_run` when there is no sink declaration and no `--sink`. |
+| `waiting` | integer or null | Sink records with text whose hash is not in the state file. `null` for `unknown` and `did_not_run`, never `0`. |
+| `records` | array | `{text, destination}` for each waiting record. |
+| `note` | string | That they wait for the next completed unit of work in this install. |
+
+Properties:
+
+- Exits `0` always. Creates and writes nothing: not the sink, the state file, the marker or the lock file. This differs from `harvest_learnings.py --dry-run`, which counts every record it would route.
+- The figure is the harvester's waiting count, not a second counter, and does not restate `--status`'s `last_run`.
+- A record counts as waiting until a later `stage` confirms it, so one already carried by a merged commit still counts until the run after that. The count then returns to zero.
+
+```text
+$ completion_routing_cli.py waiting --sink <tmp>/sink.jsonl --state <tmp>/harvest_state.json
+{"case": "ok", "waiting": 1, "records": [{"text": "...", "destination": "memory/x.md"}], "note": "still in the install's sink, waiting for the next completed unit of work in this install to route it"}
+```
 
 ---
 

@@ -5,7 +5,7 @@ type: reference
 category: reference
 status: active
 created: '2026-08-18'
-last_updated: '2026-08-18'
+last_updated: '2026-10-09'
 components:
   - build_orchestration
 related_docs:
@@ -22,9 +22,12 @@ related_docs:
 
 - **Severity:** high
 - **Status:** open — NARROWED: one root cause found and fixed (`AR-200a-1`, PR #557); the
-  observable-side-effect half remains open
-- **Occurrences:** 2
-- **First seen:** 2026-08-18 · **Last seen:** 2026-08-25
+  observable-side-effect half remains open. 2026-10-09: the drive no longer reports the
+  no-sign-off shape as completed (the record read-back flags it as outstanding), but the
+  `pull-request` phase still opens no PR under `/build-feature`. No ticket; ACs BO-3100e-1 and
+  BO-3100b-2 describe the expected behaviour. See Occurrences 3 and 4 below.
+- **Occurrences:** 4 (2 by 2026-08-25; 2 on 2026-10-02, see below)
+- **First seen:** 2026-08-18 · **Last seen:** 2026-10-02
 - **Where:** `templates/workflows-js/build-feature.js` — the per-phase result handling
   that populates `completed_phases`
 
@@ -99,3 +102,36 @@ Reporting `status: ok` while a required terminal phase silently did not happen i
 phantom-done pattern applied to the build loop itself.
 
 ---
+
+**Occurrences 3 and 4 — 2026-10-02, the drive now flags the phase as outstanding, and still no PR
+exists.** Two `/build-feature` single-ticket drives: `TICKET-20261002-KernelRunnablePublishCommand`
+and `TICKET-20261002-KernelChoiceWithCondition`. Session observation for the workflow results; the
+ticket records are verified.
+
+- **What the drive returned.** Each returned `outstanding_phases` naming `pull-request`, with the
+  reason "the 'pull-request' gate reported success while leaving no sign-off entry in the ticket's
+  record". That text is `adjudicatePhaseAgainstRecord()` in `templates/workflows-js/build-feature.js`
+  (:879-899 on origin/main `c79d41e34`; the twin is `build-ticket.js:675`). It is the BO-2900f-1
+  read-back named in "What remains open" above.
+- **What exists.** No branch was pushed and no PR was opened. Both tickets still read
+  `commit: signed_off` and `pull-request: needed` in their frontmatter, and neither `## Comments`
+  section has a `pull-request` entry (verified 2026-10-09 in `tickets/00_inbox/`).
+- **What changed since Occurrence 2.** The accounting half: the no-sign-off shape is no longer
+  credited to `completed_phases`, and the drive does not report it as done. What did not change:
+  the phase itself still does not do its job under `/build-feature`. The agent's Confirmation
+  Contract still forbids `git push` and `gh pr create` "until the user says yes"
+  (`templates/agents/pull-request.md:116-122`), and a workflow dispatch has no user turn. Whether
+  the 2026-10-02 replies were that halt was not recorded. The reply said success; the record and
+  git say nothing happened.
+- **Expected behaviour.** BO-3100e-1 (L2, readiness draft, todo): a positive, well-formed verdict
+  from a step whose own result (the change published and a review open) does not exist is not
+  counted as done. BO-3100b-2 (L2, readiness approved, todo): a step judged to have produced
+  nothing is re-run and cannot be recorded as completed. Today the drive stops at "outstanding"
+  and does neither the re-run nor the observable check. No ticket exists for either AC.
+- **Workaround in use.** Push the branch and open the PR by hand after the drive returns, or with
+  `/pull-request` in an interactive session.
+
+The fix direction above is unchanged. Give the `pull-request` phase a pre-authorisation it can act
+on inside a drive, or route its halt to a distinct status. Then check the observable result
+(`git ls-remote --heads origin <branch>` and `gh pr list --head <branch>`) before crediting the
+phase.

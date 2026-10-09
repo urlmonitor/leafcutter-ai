@@ -4,7 +4,7 @@ description: 'Configure the kernel query catalog and resume human and coding-age
 type: how-to
 status: active
 created: '2026-10-01'
-last_updated: '2026-10-01'
+last_updated: '2026-10-09'
 components:
 - knowledge_management
 - decision_kernel
@@ -14,6 +14,10 @@ components:
 The kernel can ask what you mean, select an existing graph query, or hand a missing query to a coding agent. The agent returns a bounded recipe and expected-result tests. Trusted code compiles parameterized Neo4j Cypher, independently executes verification, and admits the query only when the task has `write_query_catalog`. The original research then continues. Ordinary read-only tasks cannot activate queries.
 
 The persistent query catalog is separate from the kernel capability registry. A research run keeps its kernel registry snapshot and immutable graph source revision; a verified query digest may be added explicitly through its activation child. The catalog rechecks persisted integrity on reopening. No graph schema/data writes or embedding-provider calls are needed for this flow.
+
+The catalog accepts the current native compiler format only. Obsolete catalogs
+need a separately verified replacement; their old request pins are not runtime
+aliases. See the [saved-query contract and completed application cutover](../reference/neo4j-native-queries.md#saved-native-queries).
 
 ## Configure and start
 
