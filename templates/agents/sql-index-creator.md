@@ -7,7 +7,7 @@ description: |
   reload command to sql-coder for deployment.
   (internal — invoked by parent agents only)
 model: sonnet
-tools: Bash, Read, Edit, Write, Agent
+tools: Bash, Read, Edit, Write, Agent, Skill
 skills:
 - skill_id: signoff
   mode: conditional

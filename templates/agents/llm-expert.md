@@ -11,7 +11,7 @@ description: |
   "create a slash-command prompt".
 model: sonnet
 name: llm-expert
-tools: Bash, Read, Edit, Write, Agent
+tools: Bash, Read, Edit, Write, Agent, Skill
 skills:
 - skill_id: signoff
   mode: always

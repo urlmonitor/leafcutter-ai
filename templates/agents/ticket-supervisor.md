@@ -13,7 +13,7 @@ description: 'Depth-0 ticket orchestrator — dispatched directly by `/build-fea
   '
 model: sonnet
 name: ticket-supervisor
-tools: Bash, Read, Edit, Write, Agent
+tools: Bash, Read, Edit, Write, Agent, Skill
 skills:
 - skill_id: building-epics
   mode: always

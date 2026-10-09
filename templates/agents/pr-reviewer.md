@@ -20,7 +20,7 @@ description: 'Pre-PR self-review against the working diff. Classifies every find
 memory: true
 model: sonnet
 name: pr-reviewer
-tools: Bash, Read, Edit, Agent
+tools: Bash, Read, Edit, Agent, Skill
 skills:
 - skill_id: signoff
   mode: conditional

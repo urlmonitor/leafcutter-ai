@@ -17,6 +17,8 @@ ARCHITECTURE: Public function validate_agent_registry(package_root) delegates
     (AC INF-600g-3). Entries with descriptive_only: true are excluded from the
     cross-reference check — they document inline capabilities and have no
     corresponding skill directory or template body reference by design (M-1).
+    The skill-tool grant check (validate_skill_tool_grants, AR-200b-2) lives in
+    skill_tool_grant_validator.py and is wired into validate_agent_registry().
     step_kinds validation (check_step_kinds), the requires_verification flag
     check (validate_verification_flags), and spawn_allowlist/spawned_by
     bidirectional consistency (check_spawn_bidirectionality, AC INF-600k-1's
@@ -37,10 +39,9 @@ from pathlib import Path
 from typing import Any
 
 from registry_verification_flags import validate_verification_flags
-from spawn_bidirectionality_validator import check_spawn_bidirectionality
+from skill_tool_grant_validator import validate_skill_tool_grants
+from spawn_bidirectionality_validator import check_spawn_bidirectionality, warn_redundant_phase_agents
 from step_kinds_validator import check_step_kinds, get_agent_step_kinds  # noqa: F401 (shared reader re-export for BO-2400f-5-ii)
-
-_SPECIAL_TOKEN = "__ticket_phase_agents__"
 
 # ---------------------------------------------------------------------------
 # Skill reference detection patterns (AC INF-600g-3)
@@ -128,7 +129,8 @@ def validate_agent_registry(package_root: Path) -> list[str]:
     errors.extend(check_step_kinds(agents, package_root))
     errors.extend(validate_verification_flags(template_dir))
     errors.extend(validate_produces_field(agents, template_dir))
-    _warn_redundant_phase_agents(agents)
+    errors.extend(validate_skill_tool_grants(template_dir))
+    warn_redundant_phase_agents(agents)
 
     # Cross-reference skills_invoked against template body references (AC INF-600g-3).
     # Warnings are advisory — not returned as errors — because the extraction patterns
@@ -304,36 +306,6 @@ def _check_agent_categories(
                 f"Valid categories: {sorted(valid_categories)}."
             )
     return errors
-
-
-def _warn_redundant_phase_agents(agents: list[dict[str, Any]]) -> None:
-    """Warn when spawn_allowlist contains __ticket_phase_agents__ alongside
-    individually-listed agents that already have is_ticket_phase: true.
-
-    The warning is printed to stdout rather than returned as an error because
-    the registry is still structurally valid — the redundancy is informational.
-    Callers should not treat this as a build-blocking condition.
-
-    Args:
-        agents: List of agent dicts from the registry.
-    """
-    phase_agent_ids: set[str] = {
-        a["id"] for a in agents if a.get("is_ticket_phase") is True
-    }
-    for agent in agents:
-        allowlist: list[str] = agent.get("spawn_allowlist") or []
-        if _SPECIAL_TOKEN not in allowlist:
-            continue
-        agent_id = agent["id"]
-        for child_id in allowlist:
-            if child_id == _SPECIAL_TOKEN:
-                continue
-            if child_id in phase_agent_ids:
-                print(
-                    f"[WARNING] {agent_id}.spawn_allowlist: {child_id} is redundantly listed "
-                    f"because it is already included in {_SPECIAL_TOKEN} "
-                    f"(is_ticket_phase: true)"
-                )
 
 
 def _check_self_loops(spawn_map: dict[str, list[str]]) -> list[str]:

@@ -11,7 +11,7 @@ description: 'Final AC coverage gate. Validates all acceptance criteria are actu
   '
 model: sonnet
 name: ac-validator
-tools: Bash, Read, Edit
+tools: Bash, Read, Edit, Skill
 skills:
 - skill_id: signoff
   mode: conditional

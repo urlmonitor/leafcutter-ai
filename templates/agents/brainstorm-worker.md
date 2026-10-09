@@ -12,11 +12,9 @@ description: |
   the parent lead parses on these keys. Does NOT spawn sub-agents; this
   is a single-shot read-only analyst.
 model: sonnet
-tools: Read, Bash
+tools: Read, Bash, Skill
 skills:
 - skill_id: building-epics
-  mode: always
-- skill_id: signoff
   mode: always
 portable: true
 signoff: false

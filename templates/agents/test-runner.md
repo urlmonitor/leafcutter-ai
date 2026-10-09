@@ -15,7 +15,7 @@ description: 'Picks the right test suite based on what has changed, runs it, and
   '
 model: sonnet
 name: test-runner
-tools: Bash, Read, Edit
+tools: Bash, Read, Edit, Skill
 skills:
 - skill_id: signoff
   mode: conditional

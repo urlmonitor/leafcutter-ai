@@ -7,7 +7,7 @@ description: |
   and writes no auxiliary output inside the project tree.
   (internal — invoked by sql-coder or ticket-supervisor)
 model: sonnet
-tools: Bash, Read, Edit, Write, Agent
+tools: Bash, Read, Edit, Write, Agent, Skill
 skills:
 - skill_id: signoff
   mode: conditional

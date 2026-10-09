@@ -1,16 +1,22 @@
 """AR-300c-2-i -- an agent recorded in only ONE of the two registry ability
 fields arrives with exactly that field's abilities in its COMPILED prompt.
 
-Evidence is the compiled prompt (shared layout, every platform root), never
-the migrated declaration. The single-field populations are DERIVED by
-differencing the registry fields at run time -- no enumerated agent names.
+Evidence is the compiled prompt, never the migrated declaration. The tree
+compiled is the MIGRATED PRISTINE COPY (real migration CLI over
+``copy_package_slice()``, every migrated template compiled in-process with the
+real ``compile_agent_template``): this pins the property "the migration carries
+each single-field agent's grants into its compiled prompt". It deliberately does
+NOT read the real tree, because a later legitimate revocation there (AR-300d-3,
+e.g. a stale ``signoff`` grant removed from an agent with ``signoff: false``)
+must not break a migration test. The single-field populations are DERIVED by
+differencing the PRISTINE registry fields at run time -- no enumerated names.
 
-RED BASELINE: no compiled prompt carries an abilities section today (and the
-migration tool does not exist), so population checks / named-set equality
-fail with AssertionError (or "migration CLI failed" for the planted cases).
-Expected sets are intersected with INSTALLED skill ids (the registry holds
-e.g. ``run-tests``, which no templates/skills dir provides -- AR-300c-3-i's
-territory), so the comparison stays about delivery.
+RED BASELINE: before the migration existed these failed with "migration CLI
+failed". Expected sets are intersected with INSTALLED skill ids (the registry
+holds e.g. ``run-tests``, which no templates/skills dir provides), so the
+comparison stays about delivery. The platform-root duplication (claude/gemini)
+is a build step, covered by the AR-300a delivery tests; here one compiled
+prompt per agent is the unit.
 """
 
 from __future__ import annotations
@@ -18,15 +24,12 @@ from __future__ import annotations
 import os
 import sys
 
-import pytest
-
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from _ar_300c_support import (  # noqa: E402
     REPO_ROOT,
     add_registry_agent,
     compile_template,
-    compiled_agent_roots,
     copy_package_slice,
     installed_skill_ids,
     migrate_or_fail,
@@ -39,6 +42,23 @@ from _ar_300c_support import (  # noqa: E402
     write_template,
 )
 
+_CACHE: dict = {}
+
+
+def _compiled_migrated(tmp_path_factory) -> dict[str, str]:
+    """stem -> compiled prompt, from the real migration over a pristine copy."""
+    if "texts" not in _CACHE:
+        pkg = copy_package_slice(tmp_path_factory.mktemp("ar300c2i") / "pkg")
+        migrate_or_fail(pkg)
+        agents = registry_agents(pkg)
+        reg_path = pkg / "config" / "agent_registry.json"
+        _CACHE["texts"] = {
+            tpl.stem: compile_template(tpl, agents, reg_path)
+            for tpl in sorted((pkg / "templates" / "agents").glob("*.md"))
+            if not tpl.name.startswith("_")
+        }
+    return _CACHE["texts"]
+
 
 def _single_field_populations(agents):
     newer_only = [a for a in agents if registry_ids(a, "skills_invoked") and not registry_ids(a, "skills_used")]
@@ -46,37 +66,33 @@ def _single_field_populations(agents):
     return newer_only, older_only
 
 
-def _check_population(layout, population, field, installed, roots):
+def _check_population(texts, population, field, installed):
     bad = []
     tl = pristine_template_level()  # the template's own lists are a third grant source
     for a in population:
         stem = template_stem(a)
         expect = (set(registry_ids(a, field)) | tl.get(stem, set())) & installed
-        for root in roots:
-            path = root / f"{stem}.md"
-            if not path.is_file():
-                bad.append((a["id"], root.name, "no compiled prompt"))
-                continue
-            got = named_abilities(path.read_text(encoding="utf-8"), installed)
-            if got != expect:
-                bad.append((a["id"], root.name, sorted(got ^ expect)))
+        if stem not in texts:
+            bad.append((a["id"], "no compiled prompt"))
+            continue
+        got = named_abilities(texts[stem], installed)
+        if got != expect:
+            bad.append((a["id"], sorted(got ^ expect)))
     return bad
 
 
-@pytest.mark.shared_layout_reader
-def test_each_newer_field_only_agent_receives_exactly_that_fields_abilities(shared_reference_layout):
+def test_each_newer_field_only_agent_receives_exactly_that_fields_abilities(tmp_path_factory):
     # covers: AR-300c-2-i
     # angle: deployed
     """AR-300c-2-i: every newer-field-only agent (derived), checked
-    individually in every platform root, names exactly that field's abilities."""
-    layout = shared_reference_layout  # deployed target; registry source is REPO_ROOT
+    individually, names exactly that field's abilities in its compiled prompt
+    (migrated pristine copy compiled with the real compiler)."""
+    texts = _compiled_migrated(tmp_path_factory)
     installed = installed_skill_ids(REPO_ROOT)
-    roots = compiled_agent_roots(layout)
-    assert len(roots) >= 2
     newer_only, _ = _single_field_populations(pristine_registry_agents())
     templated = [a for a in newer_only if template_stem(a)]
     assert templated, "derived newer-only population is empty"
-    bad = _check_population(layout, templated, "skills_invoked", installed, roots)
+    bad = _check_population(texts, templated, "skills_invoked", installed)
     assert not bad, f"{len(templated)} newer-only agents examined; failures: {bad[:6]}"
 
 
@@ -100,20 +116,17 @@ def test_the_single_field_population_is_derived_not_enumerated(tmp_path):
     assert named_abilities(out, installed_skill_ids(REPO_ROOT)) == {"route-knowledge", "ticket-wiring"}
 
 
-@pytest.mark.shared_layout_reader
-def test_older_field_only_agent_is_treated_identically(shared_reference_layout, tmp_path):
+def test_older_field_only_agent_is_treated_identically(tmp_path_factory, tmp_path):
     # covers: AR-300c-2-i
     # angle: boundary
     """AR-300c-2-i: older-field-only agents get exactly that field's abilities;
     when the real registry has none the case is CONSTRUCTED, never skipped."""
-    layout = shared_reference_layout  # deployed target; registry source is REPO_ROOT
+    texts = _compiled_migrated(tmp_path_factory)
     installed = installed_skill_ids(REPO_ROOT)
-    roots = compiled_agent_roots(layout)
-    assert len(roots) >= 2
     _, older_only = _single_field_populations(pristine_registry_agents())
     templated = [a for a in older_only if template_stem(a)]
     if templated:
-        bad = _check_population(layout, templated, "skills_used", installed, roots)
+        bad = _check_population(texts, templated, "skills_used", installed)
         assert not bad, f"{len(templated)} older-only agents examined; failures: {bad[:6]}"
 
     # constructed symmetric case (always run: guards the empty-set vacuity)
@@ -129,26 +142,20 @@ def test_older_field_only_agent_is_treated_identically(shared_reference_layout, 
     assert named_abilities(out, installed_skill_ids(REPO_ROOT)) == {"route-knowledge", "ticket-wiring"}
 
 
-@pytest.mark.shared_layout_reader
-def test_derived_population_size_is_reported_and_zero_fails(shared_reference_layout):
+def test_derived_population_size_is_reported_and_zero_fails(tmp_path_factory):
     # covers: AR-300c-2-i
     # angle: boundary
     """AR-300c-2-i: state the derived single-field population size; zero fails;
     delivered count must equal population size (short also fails)."""
-    layout = shared_reference_layout  # deployed target; registry source is REPO_ROOT
+    texts = _compiled_migrated(tmp_path_factory)
     installed = installed_skill_ids(REPO_ROOT)
-    roots = compiled_agent_roots(layout)
     newer_only, older_only = _single_field_populations(pristine_registry_agents())
     population = [a for a in newer_only + older_only if template_stem(a)]
     n = len(population)
     print(f"single-field population examined: {n}")
     assert n > 0, "derived single-field population is 0 -- vacuous"
-    delivered = 0
-    for a in population:
-        if all(
-            (root / f"{template_stem(a)}.md").is_file()
-            and named_abilities((root / f"{template_stem(a)}.md").read_text(encoding="utf-8"), installed)
-            for root in roots
-        ):
-            delivered += 1
-    assert roots and delivered == n, f"delivered {delivered} of {n} single-field agents"
+    delivered = sum(
+        1 for a in population
+        if template_stem(a) in texts and named_abilities(texts[template_stem(a)], installed)
+    )
+    assert delivered == n, f"delivered {delivered} of {n} single-field agents"

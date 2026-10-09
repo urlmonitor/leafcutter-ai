@@ -15,7 +15,7 @@ description: 'AC fulfillment gate. Runs at priority 11.7 (after ac-validator at 
   '
 model: sonnet
 name: ac-fulfillment-gate
-tools: Bash, Read, Edit
+tools: Bash, Read, Edit, Skill
 skills:
 - skill_id: signoff
   mode: conditional

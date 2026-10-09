@@ -7,7 +7,7 @@ description: |
   conventions before writing any file.
   (internal — invoked by sql-coder only)
 model: sonnet
-tools: Bash, Read, Edit, Write, Agent
+tools: Bash, Read, Edit, Write, Agent, Skill
 skills:
 - skill_id: signoff
   mode: conditional

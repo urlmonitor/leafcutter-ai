@@ -8,7 +8,7 @@ description: |
   (internal — invoked by ticket-supervisor only)
 model: sonnet
 name: change-scope-reviewer
-tools: Bash, Read, Edit
+tools: Bash, Read, Edit, Skill
 skills:
 - skill_id: signoff
   mode: conditional

@@ -9,7 +9,7 @@ description: |
   package-audit (surface package gap analysis). Use when adding new tooling 
   to the leafcutter package or auditing package boundary drift.
 model: sonnet
-tools: Bash, Read, Edit, Write, Agent
+tools: Bash, Read, Edit, Write, Agent, Skill
 skills:
 - skill_id: package-audit
   mode: conditional

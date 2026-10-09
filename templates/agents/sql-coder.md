@@ -9,7 +9,7 @@ description: |
   Use when: user types /sql-coder; asks to write a SQL procedure/function/view/
   index/table; asks to refactor SQL or apply a SQL change to the local DB.
 model: sonnet
-tools: Bash, Read, Edit, Write, Agent
+tools: Bash, Read, Edit, Write, Agent, Skill
 skills:
 - skill_id: signoff
   mode: conditional

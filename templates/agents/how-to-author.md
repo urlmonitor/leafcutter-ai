@@ -7,7 +7,7 @@ description: |
   (internal — invoked by documentation-expert only)
 model: sonnet
 name: how-to-author
-tools: Bash, Read, Edit, Write, Agent
+tools: Bash, Read, Edit, Write, Agent, Skill
 skills:
 - skill_id: signoff
   mode: conditional

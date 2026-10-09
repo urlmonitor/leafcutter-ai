@@ -13,7 +13,7 @@ description: 'Conditional phase agent that invokes a user-facing surface end-to-
 memory: true
 model: sonnet
 name: user-surface-smoker
-tools: Bash, Read, Edit, Agent
+tools: Bash, Read, Edit, Agent, Skill
 skills:
 - skill_id: signoff
   mode: always

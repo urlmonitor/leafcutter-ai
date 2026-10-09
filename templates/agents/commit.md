@@ -18,7 +18,7 @@ description: 'Confirmation-gated commit agent. Shows the planned commit message 
 memory: true
 model: sonnet
 name: commit
-tools: Bash, Read, Edit, Write, Agent
+tools: Bash, Read, Edit, Write, Agent, Skill
 skills:
 - skill_id: signoff
   mode: conditional

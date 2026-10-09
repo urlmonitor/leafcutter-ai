@@ -7,7 +7,7 @@ description: |
   project-specific paths and deploy commands.
   (internal — invoked by parent agents only)
 model: sonnet
-tools: Bash, Read, Edit, Write, Agent
+tools: Bash, Read, Edit, Write, Agent, Skill
 skills:
 - skill_id: signoff
   mode: conditional

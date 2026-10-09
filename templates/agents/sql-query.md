@@ -8,7 +8,7 @@ description: |
   Use when: user needs to write or refine a query for analysis, debugging, or
   reporting; does NOT create SQL schema objects (use sql-coder for that).
 model: sonnet
-tools: Bash, Read, Edit, Write, Agent
+tools: Bash, Read, Edit, Write, Agent, Skill
 skills:
 - skill_id: sql-query-past-queries
   mode: always

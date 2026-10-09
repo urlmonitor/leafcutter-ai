@@ -1,7 +1,7 @@
 ---
 name: feedback-analyst
 model: sonnet
-tools: Bash, Read
+tools: Bash, Read, Skill
 skills:
 - skill_id: feedback-analysis
   mode: always
