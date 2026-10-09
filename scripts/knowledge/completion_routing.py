@@ -500,3 +500,10 @@ def claim_and_confirm_routed(
 #   record whose text HEAD already carries (not rewritten, not claimed, counted
 #   as already_on_branch), and re-stages, without appending again, text that a
 #   refused commit left in the worktree. (#INF-700a-1-iv)
+# - 2026-10-09 [python-coder/INF-700a-5-i teardown]: Each stage overwrote the
+#   run record, so finalize's teardown observe saw only the last ticket's
+#   stage. A stage that could not complete erased the earlier stages, and an
+#   unmerged branch lost the writes earlier commits had carried. Added the
+#   pure accumulate_branch_run / branch_run: the record keeps the latest
+#   stage's keys (per-commit observe unchanged) plus branch_entries /
+#   branch_unwritten_records across every stage. (#INF-700a-5-i)

@@ -24,7 +24,9 @@ BUSINESS CONTEXT: A workflow cannot import Python; it dispatches an agent
           Prints the routing step's final report: what was written (=
           carried by the commit), what was not and why, whether each
           unwritten record is still eligible, and the records emitted after
-          the stage, named as waiting.
+          the stage, named as waiting. Judges the latest stage only;
+          ``--all-stages`` judges every stage recorded on the branch (the
+          teardown announcement, INF-700a-5-i).
       waiting [--sink S] [--state F]
           Read-only, needs no working directory and no completion run.
           Prints {case, waiting, records, note}: how many sink records are
@@ -224,3 +226,8 @@ if __name__ == "__main__":
 #   carry it. --state/--marker defaults come from harvest_cli.apply_state_defaults
 #   (#1064: beside the sink, one per install), never a cwd-relative path and
 #   never a second definition of the rule. (#INF-700a-5, #INF-700a-5-i)
+# - 2026-10-09 [python-coder/INF-700a-5-i teardown]: stage folds the previous
+#   run record into the new one (completion_routing.accumulate_branch_run), and
+#   observe gains --all-stages, which finalize-feature's Step 7 uses to judge
+#   every stage on the branch. Without the flag observe judges only the latest
+#   stage's commit, as before. (#INF-700a-5-i)
