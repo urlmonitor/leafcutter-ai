@@ -41,7 +41,9 @@ Options
 
 --state PATH
     Path to the JSON state file tracking processed event hashes.
-    Default: debugging/logs/harvest_state.json (relative to CWD).
+    Default (INF-400c-4-vi): harvest_state.json in the directory of the
+    resolved sink -- never relative to the working directory, so a run that
+    omits this flag writes beside the declared sink and nowhere else.
 
 --print-sink
     Print the resolved absolute sink path (and nothing else) to stdout and
@@ -859,20 +861,18 @@ def main(argv: list[str] | None = None) -> int:
         this function returns.
     """
     args = _harvest_cli.parse_args(argv)
-
     output_root = _sink_resolution.deployed_output_root()
 
-    # AC INF-400c-4-v: obtainable without emitting or harvesting -- reads
-    # the declaration only and returns before anything else (logging setup,
-    # the sink-existence check, the legacy-divergence check) can touch the
-    # filesystem beyond that one read.
+    # AC INF-400c-4-v: obtainable without emitting or harvesting -- reads the
+    # declaration only and returns before anything else can touch the filesystem.
     if args.print_sink:
         return _sink_resolution.handle_print_sink(output_root)
 
+    status_sink = _sink_resolution.resolve_sink_for_status(args, output_root)
+    _harvest_cli.apply_state_defaults(args, status_sink)
     # AC INF-700a-2: also reads only, exits 0 always, never touches the
     # marker/sink parent directories -- see harvest_status.handle_status.
     if args.status:
-        status_sink = _sink_resolution.resolve_sink_for_status(args, output_root)
         return _harvest_status.handle_status(status_sink, args.marker)
 
     log_level = logging.DEBUG if args.verbose else logging.INFO
@@ -885,15 +885,10 @@ def main(argv: list[str] | None = None) -> int:
     _sink_resolution.warn_if_diverging_from_legacy(sink_path, output_root)
 
     result = harvest(
-        sink_path=sink_path,
-        state_path=args.state,
-        dry_run=args.dry_run,
-        verbose=args.verbose,
+        sink_path=sink_path, state_path=args.state, dry_run=args.dry_run, verbose=args.verbose
     )
-    # AC INF-700a-2: a completed harvest() call -- i.e. this line was
-    # reached, so main() did not hit SystemExit(1)/(2) first -- always
-    # updates the marker, regardless of --dry-run and regardless of the
-    # 0/3/4 exit code this function returns below.
+    # AC INF-700a-2: a completed harvest() call (SystemExit(1)/(2) not hit)
+    # always updates the marker, whatever --dry-run or the 0/3/4 exit code.
     _harvest_status.write_last_run_marker(args.marker, sink_path)
 
     print(result.summary())

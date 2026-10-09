@@ -1,0 +1,89 @@
+id: INF-700a-1-iii
+components:
+  - infrastructure
+  - knowledge_system
+  - build_orchestration
+title: "/quick-fix's own commit carries the files its routing step wrote, staged by name"
+component: infrastructure
+level: L3
+status: active
+req_status: active
+work_status: done
+priority: high
+readiness: reviewed
+created_by: "docs/acceptance-criteria/infrastructure/INF-400-agent-learning/INF-700a-1.yaml"
+criteria: |
+  Given /quick-fix has run its Knowledge Routing step inside its worktree,
+    before its fix commit, and that step wrote learning text into one or more
+    destination files inside that worktree,
+  When the fix commit's agent is told which files to stage,
+  Then each file the routing step wrote is named in that stage list, by path,
+    after the acceptance criterion, its parent, the test and the fix,
+  And nothing is staged by a sweep (no "git add -A" or "git add ."): only the
+    named files, so unrelated build-output drift in the worktree stays out,
+  And a path the routing step reports that is outside the worktree (absolute,
+    or climbing out with ".."), that is the harvester's own bookkeeping under
+    debugging/logs/, or that is already one of the four named files, is not
+    added a second time,
+  And a routing step that could not complete still has whatever it did write
+    staged, because a written destination left uncommitted is lost when the
+    worktree is removed,
+  And when the routing step wrote nothing, did not run, or returned a reply
+    whose case is not recognised, the stage list and the whole commit
+    instruction are exactly what they were before this criterion existed.
+depends_on: [INF-700a-1]
+doc_links:
+  - path: docs/architecture/adrs/ADR-034-knowledge-write-ownership.md
+    relationship: constrains
+    status: exists
+  - path: docs/architecture/agent_delivery_workflows.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+declares_side_effect: false
+it_requirements:
+  - "THE HARVESTER DOES NOT NAME WHAT IT WROTE. scripts/knowledge/harvest_learnings.py prints HarvestResult.summary() as one prose line and logs per-event destinations only at DEBUG under --verbose, for every unprocessed event rather than only the ones it wrote. So the routing agent observes the writes instead: it snapshots git status --porcelain --untracked-files=all immediately before and after the harvester command and reports the paths whose entry is new as written_paths. A destination that was already dirty before the harvester ran is not detected this way; the machine-readable manifest INF-700a-5's it_requirements call for is the complete answer and stays with that AC."
+  - "Confined to templates/workflows-js/quick-fix.js. The other completion paths and the commit prompts generally are INF-700a-5's wiring."
+  - "Fail-open: the routing reply is classified by the existing classifyKnowledgeRouting(); only a recognised case contributes paths, and any malformed entry is dropped rather than failing the run."
+delivers_to:
+  agent: python-coder
+  contract: "A fix commit on the quick-fix path that publishes the routing step's in-worktree writes"
+expects_from:
+  ac_id: INF-700a-1
+  contract: "The routing step dispatched before the path's own commit, which this AC makes that commit consume"
+origin_agent: BrainCandy
+created: 2026-10-08
+amended_by: []
+superseded_by: null
+covered_by:
+- unit_tests/workflows/test_inf_700a_1_iii.py
+implemented_by:
+- templates/workflows-js/quick-fix.js
+test_spec:
+  - name: test_paths_the_routing_step_wrote_are_staged_by_name
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: criterion
+    description: "Drive quick-fix.js under the engine harness with a routing reply naming two written paths; assert both appear as items 5 and 6 in the commit dispatch's stage list and no sweep command appears."
+  - name: test_commit_prompt_is_identical_whenever_no_routed_write_exists
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: discrimination
+    description: "Assert the commit prompt is byte-identical across the harness default routing stub, an empty list, an absent field, did_not_run and an unrecognised case, and that its stage list ends at item 4."
+test_rationale: |
+  The defect was a result nobody consumed, so every test drives the whole
+  workflow and asserts on the prompt the commit dispatch actually received.
+  A grep for the new field in quick-fix.js would pass on the same dead shape.
+notes: |
+  Found 2026-10-08: quick-fix.js routed learnings before its commit (per
+  INF-700a-1's ordering) but the commit prompt said "Stage and commit exactly
+  these files" (four) and "Do not stage any other files", so every routed
+  learning was left uncommitted and lost when the worktree was removed.
+  fast-lane-ship.js only carries them because its commit prompt runs git add -A.
+change_target:
+  - pipeline
+  - code
+risk_surface: contract_boundary

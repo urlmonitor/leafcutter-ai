@@ -11,7 +11,8 @@ ARCHITECTURE: Standalone CLI script. Reads the YAML frontmatter block (between
     the first and second --- delimiters), performs targeted line-replacement to
     update the status: field, and writes the file back. Uses targeted replacement
     (not yaml.dump round-trip) to preserve field order and exact formatting.
-    After a successful write, stages the file via git add for the next commit.
+    After a successful write, stages the file via git add for the next commit
+    (unless --no-stage is given, which skips only that staging step).
     Validates transitions against an explicit allow-list. Checks agents: map parity
     before permitting done transitions (unless --force is set).
     Also exposes scan_epic_archive_readiness() as a library function, and a
@@ -28,7 +29,7 @@ Exit Codes:
         --scan-epic pointed at a directory that does not exist)
 
 Usage:
-    python scripts/set_ticket_status.py --ticket <path> --status <todo|in_progress|done> [--force]
+    python scripts/set_ticket_status.py --ticket <path> --status <todo|in_progress|done> [--force] [--no-stage]
     python scripts/set_ticket_status.py --scan-epic <epic_dir>
 """
 
@@ -365,6 +366,7 @@ def set_ticket_status(
     ticket_path: Path,
     new_status: str,
     force: bool = False,
+    stage: bool = True,
 ) -> int:
     """Perform the status transition for a single ticket file.
 
@@ -372,6 +374,7 @@ def set_ticket_status(
         ticket_path: Absolute or relative path to the ticket markdown file.
         new_status: Target status value (one of VALID_STATUSES).
         force: When True, bypasses parity check and allows force-allowed transitions.
+        stage: When False, skip the git add step (the write itself is unchanged).
 
     Returns:
         Exit code: 0 on success (including no-op), 1 on validation failure,
@@ -443,7 +446,8 @@ def set_ticket_status(
         return 2
 
     # --- Stage ---
-    _stage_file(ticket_path)
+    if stage:
+        _stage_file(ticket_path)
 
     # --- Report ---
     force_note = " (forced, parity check skipped)" if force and new_status == "done" else ""
@@ -491,6 +495,12 @@ def _build_arg_parser() -> argparse.ArgumentParser:
         ),
     )
     parser.add_argument(
+        "--no-stage",
+        action="store_true",
+        default=False,
+        help="Write the status but skip the git add step; all checks are unchanged.",
+    )
+    parser.add_argument(
         "--scan-epic",
         metavar="EPIC_DIR",
         default=None,
@@ -523,7 +533,9 @@ def main() -> int:
         print(f"Error: ticket file not found: {ticket_path}", file=sys.stderr)
         return 2
 
-    return set_ticket_status(ticket_path, args.status, force=args.force)
+    return set_ticket_status(
+        ticket_path, args.status, force=args.force, stage=not args.no_stage
+    )
 
 
 if __name__ == "__main__":
@@ -554,5 +566,9 @@ DECISION HISTORY
   status: deferred counts as ready, and a legacy done/ ticket with no status:
   field is treated as done. Return type tightened to the ArchiveReadiness
   TypedDict (review finding L-3).
+- 2026-10-08 [python-coder/TICKET-20261008-CompletionWriteLeavesDoneUnstaged]: Added
+  --no-stage (skips only the git add step) so the driver's completion write records
+  status: done without staging it; the epic loop's staged-leftovers stop and the next
+  ticket's commit sweep then never see a done ticket. Default behaviour is unchanged.
 ====================================================================
 """
