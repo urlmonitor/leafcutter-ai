@@ -1,0 +1,176 @@
+id: INF-500d-4-iii
+components:
+  - infrastructure
+  - feedback_collector
+  - build_pipeline
+title: "Every per-drive workspace is built pointing at the same enduring log location as the project it belongs to"
+component: infrastructure
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the same drive also reads its own configuration and also runs commit-time
+    guards,
+  When the durable report location is determined,
+  Then the configuration still resolves to the workspace the drive is actually
+    running under, and the commit-time guards still resolve to the tree they are
+    judging,
+  And the durable report location is determined independently of both, resolving to
+    the enduring project location rather than to the workspace root.
+
+  Given the operational log directory also holds the agent-telemetry log and the
+    knowledge-emission log, which are written by the same drives with the same
+    workspace-relative lifetime and are destroyed the same way,
+  When the durable location is adopted for the report sink,
+  Then the same durable location is adopted for every log in that directory, so the
+    directory is not split across a disposable root and an enduring one.
+depends_on:
+  - INF-500d-4
+doc_links:
+  - path: docs/architecture/components/worktree-manager.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/components/knowledge-system.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/components/feedback-collector.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-004-consolidated-output-root.md
+    relationship: constrains
+    status: exists
+  - path: docs/architecture/adrs/ADR-001-self-hosting-boundary.md
+    relationship: constrains
+    status: exists
+  - path: docs/acceptance-criteria/infrastructure/INF-400-agent-learning/INF-400c-4-v.yaml
+    relationship: related
+    status: exists
+    relevance: "Records that a build run inside a worktree declares that worktree's own root. This record closes that gap for the worktrees the package itself creates."
+assigned_agent: python-coder
+estimated_complexity: L
+declared_files:
+  - path: scripts/build_phases_knowledge.py
+    state: existing
+  - path: scripts/build.py
+    state: existing
+  - path: templates/scripts/setup_ticket_worktree.py
+    state: existing
+  - path: scripts/setup_ticket_worktree.py
+    state: existing
+  - path: scripts/knowledge/sink_resolution.py
+    state: existing
+  - path: scripts/ci/check_sink_parity.py
+    state: existing
+  - path: unit_tests/portability/test_inf_500d_4_iii.py
+    state: to_be_created
+it_requirements:
+  - "EXTEND THE ONE DECLARATION. build_knowledge_sink_declaration (scripts/build_phases_knowledge.py) must additionally write operational_log_root (absolute directory) and feedback_sink (<operational_log_root>/feedback.jsonl) into <output_root>/config/knowledge_sink.json. knowledge_emission_sink and operational_telemetry_stream stay, and every file-valued key must sit directly under operational_log_root. For an ordinary build the two existing values must stay byte-identical to today's (<target_root.parent>/debugging/logs/...), so existing installs and INF-400c-4-iii's identical-results invariant are unaffected. No second declaration artefact."
+  - "THE ROOT IS AN INPUT TO THE BUILD, NEVER SOMETHING IT DISCOVERS. Default: <target_root.parent>/debugging/logs, as today. In addition the build must accept an explicit inherited log root (for example a --log-root argument) and record it verbatim. The value must be absolute; a relative value is refused with an error naming it. The build must not invoke git, walk upward, or look for marker files to choose the root (INF-400c-4-v: decide from what was recorded, never from what is around)."
+  - "PROVISIONING: THE WORKTREE BOOTSTRAP PASSES THE ROOT THE MAIN INSTALL ALREADY RECORDED. templates/scripts/setup_ticket_worktree.py runs build.py --target-dir <worktree> in every new worktree. It must pass, as the inherited log root, the value read from the main install's existing declaration at <main_repo>/.leafcutter/config/knowledge_sink.json — operational_log_root, or for a pre-feature declaration the parent directory of knowledge_emission_sink. It must NOT compute the root from main_repo's path. In the development workspace main_repo is leafcutter-ai/ while the main install's declared root is /home/henzeh/projects/leafcutter/debugging/logs, so computing it would create a fourth location. Mirror the change into scripts/setup_ticket_worktree.py, which is a tracked build output of the template, and never resync the whole file."
+  - "WHEN THE MAIN INSTALL'S DECLARATION CANNOT BE READ, SAY SO. If the bootstrap cannot read an enduring root from the main install (declaration absent, unreadable, keyless or relative), it must print a stderr WARNING naming the path it tried and stating that logs written in this worktree will not survive its removal. It must not leave behind a declaration that silently names the worktree's own root as operational_log_root. Whether that means omitting the root, so writers refuse per INF-500d-4-i, or refusing the bootstrap is the implementer's choice; the outcome must be loud either way."
+  - "NO REGRESSION FOR SYMLINKED WORKTREES. A worktree whose .leafcutter is a symlink to the main install already reads the main install's declaration and must keep doing so."
+  - "A bare manual build pointed at a worktree with no inherited root keeps INF-400c-4-v's existing behaviour: it declares that directory and prints the NOTE. That NOTE must now also name the operational log root it declared."
+  - "SIDE-EFFECT-FREE LOCATION QUERY. Ship one CLI query, through sink_resolution.py or an entry point backed by it, that prints the absolute declared path for a named stream (feedback, telemetry, knowledge) or for the root. It must create no file, directory or record, and must refuse with a non-zero exit and a stderr message naming the expected declaration when the declaration is absent or the key is missing — the same refusal semantics as INF-400c-4-i's --print-sink. It is the one surface the BO-100d pre-drive probe, the prompt surfaces (INF-500d-4-vi) and plan-feature.js (INF-500d-4-iv) use to obtain a location, so none of them restates a path."
+  - "PARITY CHECK EXTENDED, EXISTING BRANCHES UNTOUCHED. scripts/ci/check_sink_parity.py must also fail when operational_log_root or feedback_sink is missing or not absolute, when any file-valued key does not sit directly under operational_log_root, or when feedback_sink equals another stream. It must name the offending key and value. Branches 1-3 (INF-400c-4) keep their current behaviour."
+  - "RULES (a) AND (b) ARE NOT TOUCHED. Configuration still resolves to the workspace's own .leafcutter/ (INF-100c-1-i) and the guard root to the worktree toplevel (GE-113c-1-iv). The declaration FILE is read from the workspace's own deployed config, which is rule (a); only the VALUE it holds names the enduring root, which is rule (c). That is how the first scenario's 'determined independently of both' holds."
+  - "The declaration holds a machine-specific absolute path, so it stays untracked (generated under the gitignored output root) and must be carried by the deploy manifest for any deployed reader."
+  - "File-size ratchet: build_phases_knowledge.py (749 lines), build.py (2223) and setup_ticket_worktree.py (2379) are over the 400-line limit. Extract rather than grow, and never SKIP check-file-size."
+  - "Must handle errors gracefully per the project error handling policy: the declaration read in the bootstrap and the build-input validation must use typed except and report at WARNING or above."
+test_spec:
+  - name: test_declaration_names_one_absolute_root_for_every_log
+    target_dir: unit_tests/portability/
+    framework: pytest
+    type: unit
+    angle: criterion
+    description: "Call build_knowledge_sink_declaration for a temp target. Assert operational_log_root and feedback_sink are present, every value is absolute, and all three file-valued keys have operational_log_root as their parent."
+  - name: test_plain_build_keeps_existing_stream_values_byte_identical
+    target_dir: unit_tests/portability/
+    framework: pytest
+    type: unit
+    angle: discrimination
+    description: "For a build with no inherited root, knowledge_emission_sink and operational_telemetry_stream equal <target_root.parent>/debugging/logs/<file> exactly, as before this change."
+    must_catch:
+      - "moving existing installs' knowledge or telemetry streams as a side effect of adding the root key"
+  - name: test_inherited_root_is_recorded_verbatim_and_a_relative_one_is_refused
+    target_dir: unit_tests/portability/
+    framework: pytest
+    type: behavioral
+    angle: failure
+    surface_invoked: "scripts/build.py run as a subprocess"
+    description: "Running the build with an absolute inherited log root records it verbatim for every key. Running it with a relative one exits non-zero, names the value, and writes no declaration."
+  - name: test_bootstrapped_worktree_inherits_the_main_installs_recorded_root
+    target_dir: unit_tests/portability/
+    framework: pytest
+    type: behavioral
+    angle: real_artifact
+    surface_invoked: "setup_ticket_worktree.py's bootstrap against a temp git project whose main install was built first"
+    description: "Build a temp project so its declaration records root R, create a worktree through the real bootstrap, then read the worktree's deployed config/knowledge_sink.json and assert operational_log_root == R and that no value lies under the worktree."
+    must_catch:
+      - "the current behaviour: the bootstrap's build declares the worktree's own root"
+      - "deriving the root from main_repo's path instead of reading the recorded declaration"
+  - name: test_bootstrap_without_a_readable_main_declaration_says_so_loudly
+    target_dir: unit_tests/portability/
+    framework: pytest
+    type: behavioral
+    angle: failure
+    description: "With the main install's declaration absent, the bootstrap prints a stderr WARNING naming the path it tried, and the worktree's declaration does not name the worktree's own root as operational_log_root."
+  - name: test_config_and_guard_roots_still_resolve_to_the_worktree
+    target_dir: unit_tests/portability/
+    framework: pytest
+    type: integration
+    angle: seam
+    description: "In a bootstrapped worktree assert configuration resolution returns the worktree's own .leafcutter/config, the guard root returns the worktree toplevel, and the declared log root returns R. All three are checked in one test."
+    must_catch:
+      - "a single unified resolver applied to all three rules"
+  - name: test_location_query_reports_each_stream_and_creates_nothing
+    target_dir: unit_tests/portability/
+    framework: pytest
+    type: behavioral
+    angle: reachability
+    surface_invoked: "the location query's production CLI entry point"
+    description: "In a built temp project where nothing has been written, query the root and each stream from two different current directories. Assert identical absolute answers, and that no file, directory or record was created."
+  - name: test_location_query_refuses_when_the_declaration_is_absent
+    target_dir: unit_tests/portability/
+    framework: pytest
+    type: behavioral
+    angle: failure
+    description: "With no declaration, the query exits non-zero, prints nothing on stdout, and names the expected declaration path on stderr."
+  - name: test_sink_parity_check_rejects_a_split_or_relative_log_root
+    target_dir: unit_tests/portability/
+    framework: pytest
+    type: behavioral
+    angle: failure
+    surface_invoked: "scripts/ci/check_sink_parity.py run as a subprocess"
+    description: "Separate fixtures each fail, naming the offending key: feedback_sink outside operational_log_root, a relative operational_log_root, and feedback_sink equal to operational_telemetry_stream. A correct declaration still passes."
+test_rationale: "The provisioning tests drive the real bootstrap against a real temp repository, because the defect is an interaction: the build is correct for the target it is given, and the bootstrap gives it the wrong target. A unit test of either side alone stays green on the current code. The seam test asserts all three resolution rules in one worktree, because the regression this AC exists to prevent is a 'cleanup' that unifies them, and only a test that checks them together goes red on that. The bootstrap tests build twice into a temp project, so they declare @pytest.mark.shared_layout_mutator; the declaration-content unit tests do not build at all."
+delivers_to:
+  - agent: python-coder
+    contract: "<output_root>/config/knowledge_sink.json = { operational_log_root: <abs dir>, feedback_sink: <root>/feedback.jsonl, knowledge_emission_sink: <root>/knowledge_emissions.jsonl, operational_telemetry_stream: <root>/agent_telemetry.jsonl }, with every value an absolute string and in a per-drive worktree equal to the main install's recorded values. Consumed by INF-500d-4-i, INF-500d-4-iv and INF-500d-4-v."
+  - agent: python-coder
+    contract: "A side-effect-free location query CLI: given a stream name (feedback | telemetry | knowledge) or 'root', exit 0 with exactly one absolute path on stdout, or exit non-zero with nothing on stdout and a stderr line naming the expected declaration path. Intended consumer outside this tree: the BO-100d-1a shared pre-drive probe helper, pending its owner's criteria change."
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-10-09
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target:
+  - code
+  - infrastructure
+risk_surface: contract_boundary
+notes: |
+  Split out of INF-500d-4 by the IT PO, 2026-10-09. The criteria are INF-500d-4's
+  third scenario and the first two clauses of its fourth, copied verbatim. This
+  record owns the part of those scenarios that is decided before any process
+  starts: what the build writes, and what the worktree bootstrap tells the build.
+
+  Why this is its own record: under the build-time anchor, durability depends on
+  how a working directory is provisioned (INF-400c-4-v notes, 'WHAT IT COST'). The
+  package's own worktree bootstrap runs the build inside every new worktree, so
+  until this lands every drive declares a disposable root. That applies to the
+  knowledge sink too, which INF-400c-4 records as done.

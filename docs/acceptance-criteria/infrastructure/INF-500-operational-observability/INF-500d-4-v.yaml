@@ -1,0 +1,142 @@
+id: INF-500d-4-v
+components:
+  - infrastructure
+  - feedback_collector
+  - agent_telemetry
+title: "Whoever reads the reports afterwards finds every drive's reports in one place"
+component: infrastructure
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given reports are filed from two different temporary workspaces belonging to two
+    different drives of the same project,
+  When both workspaces have been removed,
+  Then both sets of reports are readable from the one durable location, without the
+    later drive having overwritten or displaced the earlier drive's records.
+
+  Given the operational log directory also holds the agent-telemetry log and the
+    knowledge-emission log, which are written by the same drives with the same
+    workspace-relative lifetime and are destroyed the same way,
+  When the durable location is adopted for the report sink,
+  Then a reader looking for any of those logs after the workspace is gone finds them
+    all in one place.
+depends_on:
+  - INF-500d-4-iii
+doc_links:
+  - path: docs/architecture/feedback-lifecycle.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/components/feedback-collector.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/components/agent-telemetry.md
+    relationship: describes
+    status: exists
+  - path: docs/known-issues/feedback-collector/open-low-ki-fc-001.md
+    relationship: describes
+    status: exists
+    relevance: "Its 2026-09-30 amendment asks for a reader that reports where it looked and how many records it found, so a low count can be traced to its cause and is not mistaken for silence."
+  - path: reports/feedback-snapshots/README.md
+    relationship: related
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: L
+declared_files:
+  - path: templates/scripts/feedback/aggregate.py
+    state: existing
+  - path: templates/scripts/feedback/list_tags.py
+    state: existing
+  - path: templates/scripts/feedback/link_feedback.py
+    state: existing
+  - path: templates/scripts/feedback/resolve_feedback.py
+    state: existing
+  - path: templates/skills/feedback-analysis/scripts/trend_report.py
+    state: existing
+  - path: scripts/agent-health/generate_health_report.py
+    state: existing
+  - path: unit_tests/feedback/test_inf_500d_4_v_durable_readers.py
+    state: to_be_created
+it_requirements:
+  - "EVERY READER'S DEFAULT IS THE DECLARED VALUE. Without an explicit path argument, aggregate.py, list_tags.py, link_feedback.py, resolve_feedback.py and trend_report.py read feedback_sink, and generate_health_report.py reads feedback_sink and operational_telemetry_stream, all from the workspace's own deployed config/knowledge_sink.json. This replaces the Path(__file__).resolve().parents[3] defaults, the _find_project_root walk, trend_report.py's upward search for debugging/logs/feedback.jsonl, and generate_health_report.py's CWD-relative defaults. One reader of the declaration, or several that read the same keys from the same artefact; never an independently computed root."
+  - "link_feedback.py and resolve_feedback.py REWRITE records in the sink. They must rewrite the declared sink, and must not lose an append that a concurrent drive makes during the rewrite: hold the same exclusive lock submit_feedback.py takes for the whole read-modify-write."
+  - "EVERY READER STATES WHERE IT LOOKED. Each reader prints one stderr line naming the absolute sink it read and how many records it found (KI-FC-001's 'read N records from <path>'), so a low count can be traced to its cause. Existing stdout formats stay unchanged for their current consumers."
+  - "RELOCATION IS STATED, NOT MIGRATED (INF-400c-4-v's clause, applied to feedback). Where a populated feedback.jsonl exists at a known pre-declaration location that differs from the declared feedback_sink, a reader names both paths once. The candidate set is derived from the declaration and the output root, never hard-coded: <output_root>/debugging/logs/feedback.jsonl is the install-tree sink KI-FC-001 measured at 131 records on 2026-09-30. Readers never merge, copy, move or delete either file. reports/feedback-snapshots/ is the accepted one-off rescue of history."
+  - "NO FALSE-QUIET ZERO. With no usable declaration and no explicit path, a reader must refuse with a non-zero exit and a stderr line naming the expected declaration. It must not read a CWD-relative file and report 0 records, which is how a working subsystem came to be judged dead (KI-FC-001, 2026-09-30)."
+  - "Read-only readers (aggregate, list_tags, trend_report, generate_health_report) must create no file or directory as a side effect of resolving the path."
+  - "Explicit --jsonl / --feedback / --telemetry arguments are honoured as given."
+  - "Deployed/template parity (ADR-001): edit the sources and verify the deployed copies through the build round-trip. Any new shared module must be in the deploy manifest of every deployed reader."
+  - "Must handle errors gracefully per the project error handling policy."
+test_spec:
+  - name: test_reports_from_two_removed_worktrees_are_all_found_by_the_reader
+    target_dir: unit_tests/feedback/
+    framework: pytest
+    type: behavioral
+    angle: real_artifact
+    surface_invoked: "aggregate.py run as a subprocess from the project root after both worktrees are deleted"
+    description: "Two temp worktrees whose declarations name root R each file reports and are then deleted. Running aggregate.py with no --jsonl from the project root reports every id from both, and its stderr line names R/feedback.jsonl and the full count."
+  - name: test_each_reader_defaults_to_the_declared_feedback_sink
+    target_dir: unit_tests/feedback/
+    framework: pytest
+    type: behavioral
+    angle: criterion
+    description: "Parametrised over aggregate.py, list_tags.py and trend_report.py, each run from inside a temp worktree whose declaration names R. Each reads R's records, not a worktree-local or install-tree file seeded with different records."
+    must_catch:
+      - "a Path(__file__).parents[3] default"
+      - "trend_report's upward search finding a closer, wrong feedback.jsonl"
+  - name: test_mutating_readers_rewrite_the_record_in_the_declared_sink
+    target_dir: unit_tests/feedback/
+    framework: pytest
+    type: behavioral
+    angle: criterion
+    description: "link_feedback.py and resolve_feedback.py change the target record inside R/feedback.jsonl and create no file under the worktree they ran from."
+  - name: test_rewrite_does_not_lose_a_concurrent_append
+    target_dir: unit_tests/feedback/
+    framework: pytest
+    type: behavioral
+    angle: boundary
+    description: "While resolve_feedback.py rewrites R/feedback.jsonl, a concurrent submit_feedback.py appends records. Afterwards every appended id is present and the resolved record carries its change."
+  - name: test_health_report_joins_the_declared_feedback_and_telemetry_logs
+    target_dir: unit_tests/feedback/
+    framework: pytest
+    type: behavioral
+    angle: criterion
+    description: "generate_health_report.py with no path arguments, run from a temp worktree, reads both declared streams under R and reports data from both."
+  - name: test_reader_names_a_populated_legacy_sink_once
+    target_dir: unit_tests/feedback/
+    framework: pytest
+    type: behavioral
+    angle: boundary
+    description: "With records in <output_root>/debugging/logs/feedback.jsonl and a different declared feedback_sink, a reader prints exactly one notice naming both paths. Both files are byte-identical before and after the run."
+  - name: test_reader_without_a_declaration_refuses_instead_of_reporting_zero
+    target_dir: unit_tests/feedback/
+    framework: pytest
+    type: behavioral
+    angle: discrimination
+    description: "With no declaration and no --jsonl, aggregate.py exits non-zero and names the missing declaration on stderr rather than printing an empty result."
+    must_catch:
+      - "reading a CWD-relative feedback.jsonl that does not exist and reporting zero records"
+test_rationale: "The failure this record prevents is a reader looking in a different place from the writers and reporting a quiet, wrong count. So each test seeds DIFFERENT records in the wrong candidate locations (worktree-local, install-tree) and asserts the reader returns the declared sink's records and names that path. A test with one file on disk cannot tell a correct default from a lucky one. The rewrite-under-concurrency test exists because two of these 'readers' rewrite the shared file, and a shared file makes concurrent writers the ordinary case."
+delivers_to: null
+expects_from:
+  ac_id: INF-500d-4-iii
+  contract: "<output_root>/config/knowledge_sink.json with feedback_sink and operational_telemetry_stream as absolute paths under operational_log_root, equal across the main checkout and every per-drive worktree of an install."
+origin_agent: BrainCandy
+created: 2026-10-09
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target:
+  - code
+  - infrastructure
+risk_surface: contract_boundary
+notes: |
+  Split out of INF-500d-4 by the IT PO, 2026-10-09. The criteria are INF-500d-4's
+  second scenario and the last clause of its fourth, copied verbatim. This record
+  owns the READ side; if the writers moved and the readers did not, the corpus
+  would split again in the other direction.

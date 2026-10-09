@@ -8,7 +8,7 @@ level: L2
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
+readiness: reviewed
 priority: medium
 roadmap_phase: phase_1
 criteria: |
@@ -65,17 +65,113 @@ doc_links:
     relationship: related
     status: exists
     relevance: "CONTRADICTION RISK for the fourth scenario. Approved (work_status: todo) and it pins the telemetry sink by the relative path string debugging/logs/agent_telemetry.jsonl in its criteria and again in its it_requirements, as do its siblings BO-100d-1b and BO-100d-2a. Relocating the directory changes what that relative path resolves to. Reconcile with their owner before implementing; do NOT silently re-point their probe."
-assigned_agent: null
-estimated_complexity: null
+  - path: docs/acceptance-criteria/infrastructure/INF-400-agent-learning/INF-400c-4.yaml
+    relationship: related
+    status: exists
+    relevance: "Source of the mechanism adopted here: one ABSOLUTE path fixed at build time in config/knowledge_sink.json, nothing discovered at run time. Its amended_by and notes record why the git-common-dir anchor (this AC's rule (c)) was rejected on 2026-09-07."
+  - path: docs/acceptance-criteria/infrastructure/INF-400-agent-learning/INF-400c-4-v.yaml
+    relationship: related
+    status: exists
+    relevance: "States the cost this AC must pay down: under the build-time anchor durability is CONTINGENT on how a working directory is provisioned, and a build run inside a worktree declares that worktree's own root. Also the relocation clause (name both locations once, migrate nothing) this AC reuses for feedback."
+  - path: docs/architecture/feedback-lifecycle.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/components/feedback-collector.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/components/agent-telemetry.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/components/knowledge-system.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/components/worktree-manager.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-011-learning-emission-sink.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-004-consolidated-output-root.md
+    relationship: constrains
+    status: exists
+  - path: docs/architecture/adrs/ADR-001-self-hosting-boundary.md
+    relationship: constrains
+    status: exists
+  - path: docs/known-issues/feedback-collector/open-low-ki-fc-001.md
+    relationship: describes
+    status: exists
+    relevance: "The defect census (787 records across 18 sinks on 2026-09-30, 1 in the sink people check)."
+  - path: reports/feedback-snapshots/README.md
+    relationship: related
+    status: exists
+    relevance: "The accepted one-off rescue of the pre-fix feedback corpus. This feature migrates nothing; see it_requirements."
+assigned_agent: python-coder
+estimated_complexity: L
+it_requirements:
+  - "LOAD-BEARING CONSTRAINT, lifted from the notes as they instruct, with rule (c) restated for the adopted mechanism. THREE resolution rules coexist DELIBERATELY and are not duplication. (a) CONFIG resolves to the worktree's OWN .leafcutter/ directory, per INF-100c-1-i (approved) — unchanged. (b) COMMIT GUARDS resolve to the worktree root via git rev-parse --show-toplevel, per GE-113c-1-iv (approved), scoped to the commit_guardian guard set — unchanged. (c) THE DURABLE LOG ROOT is the absolute directory recorded in the build-time declaration (next bullet) — NOT the worktree toplevel and NOT anything computed at run time. Rule (b) returns the exact directory that gets deleted, so adopting the shared guard resolver for the sink preserves the defect. Any change that collapses (a), (b) and (c) into one resolver is a regression dressed as a cleanup and must be rejected in review. Testable invariant: a record written from inside a worktree is still readable after that worktree has been removed."
+  - "RULE (c) AS WORDED IN THE NOTES IS SUPERSEDED — the durable location is NOT derived from git rev-parse --git-common-dir. The same anchor was tried for the knowledge-emission sink and rejected on 2026-09-07 (INF-400c-4 amended_by, INF-700a decision entry) for two accepted reasons: 'the repository' is ambiguous in a consumer install, where the package is a clone nested inside the consumer's repository, so the answer depends on where the asking process stands; and git reports the common directory RELATIVE from a main checkout and ABSOLUTE from a worktree, reproducing the relative-path defect in exactly the layout a developer tests in. The adopted mechanism is the one the knowledge plane already ships: an ABSOLUTE path fixed when the package is built into a project, written by build_knowledge_sink_declaration (scripts/build_phases_knowledge.py) into <output_root>/config/knowledge_sink.json and read through scripts/knowledge/sink_resolution.py or an equivalent reader of the same keys. No writer or reader may invoke git, walk upward from __file__ or the current directory, or fall back to a workspace-relative name to find the log root. The BA-owned notes text is deliberately left unedited; this bullet and the amended_by entry are the record of the change."
+  - "ONE DECLARATION, EXTENDED, NOT A SECOND ONE. All of debugging/logs resolves from one declared root: config/knowledge_sink.json gains an operational_log_root key (absolute directory) and a feedback_sink key (absolute file directly under that root). The existing knowledge_emission_sink and operational_telemetry_stream keys stay, and every file-valued key must sit directly under operational_log_root. Do not add config/feedback_sink.json or any other second artefact. The filename's 'knowledge' prefix is accepted as a misnomer; renaming it is a separate decision because check_sink_parity.py, sink_resolution.py, emit_event.py and their tests read it by name."
+  - "DURABILITY IS CONTINGENT ON HOW A DRIVE'S WORKSPACE IS PROVISIONED, AND TODAY EVERY DRIVE GETS THE WRONG ANSWER. templates/scripts/setup_ticket_worktree.py runs build.py --target-dir <worktree> in every new per-drive worktree, so the declaration deployed there names the worktree's own root, the disposable one. Measured 2026-10-09: eight directories under /home/henzeh/projects/leafcutter/worktrees/ hold their own non-empty debugging/logs/knowledge_emissions.jsonl and their deployed knowledge_sink.json names themselves. So adopting the declaration for feedback WITHOUT changing provisioning fixes nothing for drives — and the knowledge sink, which INF-400c-4 records as done, has the same defect in drives. The per-drive workspace's declaration must carry the enduring root inherited from what the main install already recorded (INF-500d-4-iii)."
+  - "THE OPERATIONAL-STREAM ANCHOR IS UNREACHABLE IN THE REAL LAYOUT. templates/skills/agent-telemetry/scripts/emit_event.py searches the caller's ancestors for <dir>/config/knowledge_sink.json, but the declaration is deployed at <project>/.leafcutter/config/knowledge_sink.json, so the search never matches. Verified 2026-10-09 against the deployed copy: from the workspace root and from a worktree it resolves to the bare relative debugging/logs/agent_telemetry.jsonl. INF-400c-4-iii is recorded work_status done; the fix belongs to INF-500d-4-iv, and the phantom-done needs reporting to INF-400c-4-iii's owner."
+  - "SCOPE OF 'EVERY LOG IN THAT DIRECTORY' (fourth scenario), taken from what the package actually writes there: feedback.jsonl (submit_feedback.py, and emit_hook_finding.py through it); agent_telemetry.jsonl (emit_event.py, and the product-truth telemetry append in templates/workflows-js/plan-feature.js); knowledge_emissions.jsonl (already declared); harvest_state.json (follows the knowledge sink's directory by INF-400c-4-vi, so it comes along with no change); inline_work_guard.jsonl (templates/hooks/inline_work_guard.py). Excluded: ac_cross_reference_audit_*.json, which the source-tree scripts/ac_store/_xref_report.py writes into the package clone — it is not written by drives."
+  - "MIGRATION: THIS FEATURE MIGRATES NOTHING. No writer, reader, build phase or bootstrap may move, merge, copy, empty or delete any existing sink. reports/feedback-snapshots/feedback-corpus-2026-09-30.jsonl (787 records, 18 sinks) is the accepted one-off rescue of the history up to that date; records written into per-worktree sinks after it are rescued only by refreshing that snapshot before the feature lands, which is an operator action outside this feature. What the feature does owe is INF-400c-4-v's relocation clause applied to feedback: where a populated sink exists at a known pre-declaration location that differs from the declared one, the readers state it once and name both paths (INF-500d-4-v). The retained per-worktree knowledge sinks are likewise left in place, consistent with INF-400c-4's 'not migrated' decision."
+  - "BO-100d RECONCILIATION. BO-100d, -1, -1-i, -1-ii, -1a, -1b, -2, -2-i, -2a and -2b (all readiness approved, work_status todo) pin the telemetry sink by the relative string debugging/logs/agent_telemetry.jsonl, and their probe appends from the worktree. After this feature that string, resolved in a worktree, names a file no writer uses, so a probe built as written would pass while the durable location is unwritable — the gate would test nothing. To stay meaningful the probe must append to the DECLARED absolute operational_telemetry_stream, obtained through the side-effect-free location query INF-500d-4-iii delivers; a missing or unreadable declaration must make the probe fail (blocked, remediation: rebuild); and the operator message must name the absolute path. This needs a criteria change on those records by their owner. This AC does not edit them and no implementer may silently re-point their probe."
+  - "SEQUENCING. INF-500d-4-iii first (declaration and provisioning), then INF-500d-4-i, INF-500d-4-iv and INF-500d-4-v (writers and readers, disjoint file sets, can run in parallel), then INF-500d-4-vi (prompt surfaces stop passing workspace-relative overrides; doing this earlier sends writes to the not-yet-durable default), then the documentation records INF-500d-4-vii and INF-500d-4-viii. Rules (a) and (b) must be re-proven green after each step."
+  - "Concurrency: the declared sinks are shared by every drive of an install, so simultaneous appends are the ordinary case. Two processes appending at once must lose, truncate or interleave no record. This is the second scenario's 'without the later drive having overwritten or displaced the earlier drive's records'."
+  - "Deploy manifest: any new module that a deployed writer, reader or hook imports must be added to the build's deploy manifest, and verified by running the DEPLOYED copy, not the source tree (CLAUDE.md, 'New Hook / Gate Dependencies Must Be in the Build Deploy-Manifest')."
+  - "File-size ratchet: submit_feedback.py (637 lines), scripts/build_phases_knowledge.py (749), scripts/build.py (2223) and setup_ticket_worktree.py (2379) are all over the 400-line check-file-size limit. Changes must not grow them beyond what the ratchet permits. Extract to a new module where needed and never SKIP check-file-size."
+  - "Must handle errors gracefully per the project error handling policy (CLAUDE.md Rules 1-4)."
+test_spec:
+  - name: test_report_filed_in_a_bootstrapped_worktree_is_readable_after_the_worktree_is_removed
+    target_dir: unit_tests/portability/
+    framework: pytest
+    type: e2e
+    angle: real_artifact
+    surface_invoked: "scripts/build.py into a temp project, then setup_ticket_worktree.py to create a per-drive worktree, then the worktree's DEPLOYED submit_feedback.py as a subprocess"
+    description: "End to end, first scenario. Build into a temp git project, create a worktree with the real bootstrap, file a report from inside it and capture the id from stdout, remove the worktree with git worktree remove, then read the project's declared feedback_sink and assert the record with that id is there. Read only after removal."
+    must_catch:
+      - "the current defect: the bootstrap's build declares the worktree's own root, so the record leaves with the worktree"
+      - "a writer that ignores the declaration and resolves from __file__ or the current directory"
+  - name: test_reports_from_two_removed_worktrees_are_both_in_the_one_durable_sink
+    target_dir: unit_tests/portability/
+    framework: pytest
+    type: e2e
+    angle: boundary
+    description: "Second scenario. Two bootstrapped worktrees of the same temp project file reports, both are removed, and every id from both is found in the one declared feedback_sink with the earlier drive's lines intact."
+  - name: test_config_guard_and_log_roots_hold_simultaneously_in_one_worktree
+    target_dir: unit_tests/portability/
+    framework: pytest
+    type: integration
+    angle: seam
+    description: "Third scenario. In one bootstrapped worktree assert all three rules at once: configuration resolves to the worktree's own .leafcutter/config (INF-100c-1-i), the guard root resolves to the worktree toplevel (GE-113c-1-iv), and the declared log root is outside the worktree and equal to the main install's."
+    must_catch:
+      - "a unified resolver that moves configuration or guards to the main install along with the logs"
+      - "a unified resolver that leaves the logs on the worktree toplevel along with the guards"
+  - name: test_every_operational_log_lands_under_the_one_declared_root
+    target_dir: unit_tests/portability/
+    framework: pytest
+    type: e2e
+    angle: criterion
+    description: "Fourth scenario. From inside a bootstrapped worktree, file a report, emit a telemetry event with no --log, and append a knowledge record at the path the worktree's deployed harvest_learnings.py --print-sink returns (the shipped emit instruction); remove the worktree; assert feedback.jsonl, agent_telemetry.jsonl and knowledge_emissions.jsonl all sit under the one declared operational_log_root and none was ever created under the worktree."
+test_rationale: "These are the composite's acceptance tests and run the real build, the real bootstrap and the deployed writers end to end, because the defect lives in the gap between them: every component can be correct in isolation while the bootstrap's build declares the disposable root. Each test reads the durable location only after the worktree has been removed, since reading it first passes on the exact defect. They are worktree-building tests that mutate a temp project, so they declare @pytest.mark.shared_layout_mutator rather than reusing the shared reference layout. The per-surface proofs live in the children's test_spec."
 delivers_to: null
 expects_from: null
 origin_agent: BrainCandy
 created: 2026-08-13
-amended_by: []
+amended_by:
+  - reason: "IT PO enrichment, 2026-10-09. CRITERIA AND NOTES UNCHANGED, as both are BA-owned. RULE (c) IN THE NOTES IS SUPERSEDED FOR IMPLEMENTATION: the durable location is the absolute log root fixed at build time in config/knowledge_sink.json (the knowledge plane's existing declaration, extended), not the main clone found through git rev-parse --git-common-dir. Why: INF-400c-4 and INF-700a rejected git-common-dir on 2026-09-07 for two accepted reasons — 'the repository' is ambiguous in a nested consumer install, and the common directory is reported relative from a main checkout and absolute from a worktree, which reproduces the relative-path defect in the layout developers test in. Rules (a) config and (b) guards are untouched. The criteria never name git, so none of the four scenarios needs a wording change for the new mechanism. The fourth scenario is satisfiable only if the per-drive worktree bootstrap stops declaring the worktree's own root, which is now INF-500d-4-iii. Split into L3s INF-500d-4-iii through INF-500d-4-viii across agent boundaries (build and provisioning, writers, readers, prompt surfaces, reference docs, diagram); see it_requirements for sequencing, migration (none — reports/feedback-snapshots/ is the rescue) and the BO-100d reconciliation that needs their owner."
+    by: it-po
+    at: 2026-10-09
 superseded_by: null
 covered_by:
   - INF-500d-4-i
   - INF-500d-4-ii
+  - INF-500d-4-iii
+  - INF-500d-4-iv
+  - INF-500d-4-v
+  - INF-500d-4-vi
+  - INF-500d-4-vii
+  - INF-500d-4-viii
 implemented_by: []
 change_target:
   - code
