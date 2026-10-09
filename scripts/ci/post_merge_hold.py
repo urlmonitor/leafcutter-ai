@@ -28,12 +28,14 @@ ARCHITECTURE: ``evaluate(client, repo, *, now=None)`` returns the verdict object
     unchanged; ``render_comment`` (re-exported) is the pure body renderer. The
     comment is written after the verdict and never changes it or the exit code.
     CLI: GITHUB_API_URL, GITHUB_TOKEN, GITHUB_REPOSITORY and GITHUB_EVENT_PATH
-    from the environment; the reason is printed; exit 0 only on ``pass``. ``main``
-    reads exactly two values from the event file, in Python: the pull request
+    from the environment; the reason is printed; exit 0 only on ``pass`` or ``exempt``. ``main``
+    reads exactly three values from the event file, in Python: the pull request
     number (``pull_request.number``, a positive int, else exit 2 and nothing is
-    judged or written) and ``pull_request.head.sha`` (used only when 40 lowercase
-    hex characters, else the comment says the head commit is unknown). No other
-    event text is read, and none of it may reach a shell.
+    judged or written), ``pull_request.head.sha`` (used only when 40 lowercase
+    hex characters, else the comment says the head commit is unknown) and
+    ``pull_request.body`` (the description, read only to look for a declaration
+    of a fix, TQ-600a-13-viii; never echoed, never in a URL or a shell; null is
+    no declaration). No other event text is read, and none of it may reach a shell.
     APP PUBLICATION (TQ-600a-13-vi): ``main(["--publish"])`` hands the same evaluation to
     ``_hold_publish.publish``, which creates the check run `Post-merge suite status` as the
     hold App (in progress, before the verdict) and completes it after; ``main()`` with no
@@ -43,13 +45,16 @@ ARCHITECTURE: ``evaluate(client, repo, *, now=None)`` returns the verdict object
     branch's copy of this file, sparse-checked-out with no ``ref``, so a pull
     request that edits this module has no effect on its own verdict.
     PERMISSIONS: ``pull-requests: write`` writes the comment (-vii).
-    ``issues: write`` (record an exemption on the notice, TQ-600a-13-viii) is
-    granted in the workflow because TQ-600a-13-vi's contract fixes the job's
-    permission set; nothing in this module uses it yet. Extension points: -viii
-    evaluates the exemption only when ``state`` is red or did_not_complete
-    (``_held_verdict``) and may return ``state="exempt"``
-    (``_hold_comment.LIFT_STATES``); -xiv owns the stale/disabled/never_run
-    wording (``_reason_*`` helpers, ``_hold_comment.HELD_HEADLINES``).
+    ``issues: write`` records an exemption on the notice (TQ-600a-13-viii).
+    EXEMPTION (TQ-600a-13-viii, all logic in ``_hold_exempt``): ``main`` reads
+    ``pull_request.body`` from the event in Python (never printed, never to a
+    shell); only when ``state`` is red or did_not_complete after the reads succeed
+    (``_held_verdict``) does ``_hold_exempt.apply_claim`` turn the verdict into
+    ``state="exempt"`` (a declared fix of an open notice AND a passing proof on the
+    head); ``match_declaration`` (re-exported) is the pure matcher the proof
+    workflow shares. The verdict's run summary also carries ``updated_at``.
+    -xiv owns the stale/disabled/never_run wording (``_reason_*`` helpers,
+    ``_hold_comment.HELD_HEADLINES``).
 """
 
 from __future__ import annotations
@@ -60,6 +65,7 @@ import os
 import re
 import sys
 from datetime import datetime, timedelta, timezone
+from functools import partial
 from pathlib import Path
 
 if __package__ in (None, ""):  # run as `python scripts/ci/post_merge_hold.py`: make `scripts.ci` importable
@@ -67,7 +73,8 @@ if __package__ in (None, ""):  # run as `python scripts/ci/post_merge_hold.py`: 
 
 from scripts.ci._github_rest import GitHubClient, GitHubError  # noqa: E402
 from scripts.ci._hold_comment import EventError, read_event, render_comment, sync_comment  # noqa: E402, F401 -- render_comment is this module's public API
-from scripts.ci._hold_publish import conclusion_for, publish  # noqa: E402, F401 -- conclusion_for is this module's public API
+from scripts.ci._hold_exempt import Claim, apply_claim, match_declaration, read_body  # noqa: E402, F401 -- match_declaration is this module's public API (the proof workflow calls the same function)
+from scripts.ci._hold_publish import GREEN_STATES, conclusion_for, publish  # noqa: E402, F401 -- conclusion_for is this module's public API
 from scripts.ci._notice_render import LABEL, parse_state  # noqa: E402
 from scripts.ci._run_history import (  # noqa: E402
     KIND_NEVER_RUN,
@@ -120,12 +127,17 @@ def read_jobs(client: GitHubClient, repo: str, run_id: int) -> list[dict]:
     return [job for job in jobs or [] if isinstance(job, dict)]
 
 
-def read_notice(client: GitHubClient, repo: str, run_id: int) -> dict | None:
-    """Read (4), held path: the ``post-merge-red`` issue whose state block describes ``run_id`` (content only)."""
+def read_notice_issues(client: GitHubClient, repo: str) -> list[dict]:
+    """Read (4), held path: one page of ``post-merge-red`` issues (pull requests included: the API lists them)."""
     query = {"labels": LABEL, "state": "all", "sort": "updated", "direction": "desc", "per_page": NOTICE_PAGE_SIZE}
     items = client.get(f"/repos/{repo}/issues", query)
-    for item in items if isinstance(items, list) else []:
-        if not isinstance(item, dict) or item.get("pull_request"):
+    return [item for item in items if isinstance(item, dict)] if isinstance(items, list) else []
+
+
+def find_notice(items: list[dict], run_id: int) -> dict | None:
+    """The issue (no pull request) among ``items`` whose state block describes ``run_id`` (content only)."""
+    for item in items:
+        if item.get("pull_request"):
             continue
         block = parse_state(item.get("body"))
         if block is not None and block.get("run_id") == run_id:
@@ -133,12 +145,17 @@ def read_notice(client: GitHubClient, repo: str, run_id: int) -> dict | None:
     return None
 
 
+def read_notice(client: GitHubClient, repo: str, run_id: int) -> dict | None:
+    """Read (4), held path: the ``post-merge-red`` issue whose state block describes ``run_id`` (content only)."""
+    return find_notice(read_notice_issues(client, repo), run_id)
+
+
 # --------------------------------------------------------------------------- verdict
 def _verdict(state: str, reason: str, *, run: dict | None = None, workflow_state: str | None = None, notice: dict | None = None, cause: str | None = None) -> dict:
     """Assemble the verdict object (delivers_to of TQ-600a-13-vi)."""
     summary = None
     if run is not None:
-        summary = {key: run.get(key) for key in ("id", "html_url", "conclusion", "run_started_at", "head_sha")}
+        summary = {key: run.get(key) for key in ("id", "html_url", "conclusion", "run_started_at", "updated_at", "head_sha")}
     return {"state": state, "run": summary, "workflow_state": workflow_state, "notice": notice, "reason": reason, "cause": cause}
 
 
@@ -163,20 +180,27 @@ def _reason_held(kind: str, run: dict, notice: dict | None) -> str:
     return line
 
 
-def _held_verdict(client: GitHubClient, repo: str, run: dict, workflow_state: str) -> dict:
-    """The held path: classify the run from its jobs, then link the notice that describes it (reads 3 and 4)."""
+def _held_verdict(client: GitHubClient, repo: str, run: dict, workflow_state: str, claim: Claim | None = None) -> dict:
+    """The held path: classify the run from its jobs, then link the notice that describes it (reads 3 and 4).
+
+    After both reads succeed, a ``claim`` (the pull request's description, head and number) may turn the verdict into
+    ``exempt`` (TQ-600a-13-viii, ``_hold_exempt.apply_claim``); a failed notice read is passed on so the output states it.
+    """
     try:
         kind = classify_run(run, read_jobs(client, repo, run["id"]))
     except GitHubError as exc:  # still held, and the output still names the run
         logger.warning("post-merge hold: could not read the jobs of run %s, holding: %s", run.get("id"), exc)
         reason = f"Post-merge suite status could not be read: run {run.get('html_url')} concluded {run.get('conclusion')} but its jobs could not be read ({exc})."
         return _verdict("could_not_read", reason, run=run, workflow_state=workflow_state, cause=str(exc))
+    issues, issues_error = None, None
     try:
-        notice = read_notice(client, repo, run["id"])
+        issues = read_notice_issues(client, repo)
     except GitHubError as exc:  # the notice is for people: failing to read it never changes the verdict
         logger.warning("could not read the %s notice; holding without a link: %s", LABEL, exc)
-        notice = None
-    return _verdict(kind, _reason_held(kind, run, notice), run=run, workflow_state=workflow_state, notice=notice, cause=str(run.get("conclusion")))
+        issues_error = str(exc)
+    notice = find_notice(issues, run["id"]) if issues is not None else None
+    verdict = _verdict(kind, _reason_held(kind, run, notice), run=run, workflow_state=workflow_state, notice=notice, cause=str(run.get("conclusion")))
+    return verdict if claim is None else apply_claim(client, repo, verdict, issues, issues_error, claim)
 
 
 def _settled_verdict(run: dict, workflow_state: str, now: datetime, staleness_hours: float) -> dict:
@@ -191,7 +215,7 @@ def _settled_verdict(run: dict, workflow_state: str, now: datetime, staleness_ho
     return _verdict("pass", f"Post-merge suite is green: run {run.get('html_url')} concluded success.", run=run, workflow_state=workflow_state)
 
 
-def _evaluate(client: GitHubClient, repo: str, now: datetime) -> dict:
+def _evaluate(client: GitHubClient, repo: str, now: datetime, claim: Claim | None = None) -> dict:
     """Read and decide; raises GitHubError/OSError/ValueError when a read fails (``evaluate`` turns that into a hold)."""
     tunables = load_tunables()
     workflow_state = read_workflow_state(client, repo)
@@ -205,31 +229,32 @@ def _evaluate(client: GitHubClient, repo: str, now: datetime) -> dict:
         return _verdict("stale", reason, workflow_state=workflow_state, cause=selection.kind)
     run = selection.run
     if selection.kind != KIND_SETTLED or run.get("conclusion") != "success":
-        return _held_verdict(client, repo, run, workflow_state)
+        return _held_verdict(client, repo, run, workflow_state, claim)
     return _settled_verdict(run, workflow_state, now, float(tunables["staleness_hours"]))
 
 
-def evaluate(client: GitHubClient, repo: str, *, now: datetime | None = None) -> dict:
+def evaluate(client: GitHubClient, repo: str, *, now: datetime | None = None, claim: Claim | None = None) -> dict:
     """Return the hold verdict for a pull request to main from a fresh read of the run history.
 
     ``now`` is an aware UTC clock (default: the real one). A failed read gives ``could_not_read``.
+    ``claim`` (the pull request's description, head and number) is evaluated for an exemption only on the held path.
     """
     clock = now or datetime.now(timezone.utc)
     try:
-        return _evaluate(client, repo, clock)
+        return _evaluate(client, repo, clock, claim)
     except (GitHubError, OSError, ValueError, TypeError, KeyError) as exc:
         logger.warning("post-merge hold: a read failed, holding: %s", exc)
         return _verdict("could_not_read", f"Post-merge suite status could not be read: {exc}", cause=str(exc))
 
 
-def evaluate_pull_request(client: GitHubClient, repo: str, pr_number: int, *, now: datetime | None = None, head_sha: str | None = None) -> dict:
+def evaluate_pull_request(client: GitHubClient, repo: str, pr_number: int, *, now: datetime | None = None, head_sha: str | None = None, body: str | None = None) -> dict:
     """``evaluate``, then keep the pull request's one comment in step with the verdict, and return the verdict unchanged.
 
-    ``head_sha`` is the pull request's validated head commit (None: the comment says it is unknown). A comment
-    that cannot be listed or written is logged and never changes the verdict.
+    ``head_sha`` is the pull request's validated head commit (None: the comment says it is unknown). ``body`` is its
+    description (None: no declaration). A comment that cannot be listed or written is logged and never changes the verdict.
     """
     clock = now or datetime.now(timezone.utc)
-    verdict = evaluate(client, repo, now=clock)
+    verdict = evaluate(client, repo, now=clock, claim=None if body is None else Claim(body, head_sha, pr_number))
     try:
         sync_comment(client, repo, pr_number, verdict, clock, head_sha)
     except GitHubError as exc:  # the comment is for people; any other exception is a defect and raises (a raise exits 1: still held)
@@ -267,12 +292,12 @@ def main(argv: list[str] | None = None) -> int:
     except EventError as exc:  # fail closed: nothing is judged, nothing is commented
         print(f"Post-merge suite status could not be read: {exc}")
         return EXIT_BAD_INPUT
+    evaluate_with_body = partial(evaluate_pull_request, body=read_body(os.environ.get("GITHUB_EVENT_PATH")))  # the description: read here, never printed
     if PUBLISH_FLAG in (argv or []):
-        return publish(client, api_url, repo, pr_number, head_sha, evaluate_pull_request, jwt=_read_jwt())
-    verdict = evaluate_pull_request(client, repo, pr_number, head_sha=head_sha)
+        return publish(client, api_url, repo, pr_number, head_sha, evaluate_with_body, jwt=_read_jwt())
+    verdict = evaluate_with_body(client, repo, pr_number, head_sha=head_sha)
     print(verdict["reason"])
-    # TODO(TQ-600a-13-viii): exit-code parity -- this exits 0 only for `pass`; the publish path also exits 0 for `exempt`.
-    return EXIT_OK if verdict["state"] == "pass" else EXIT_HELD
+    return EXIT_OK if verdict["state"] in GREEN_STATES else EXIT_HELD  # the publish path's rule: pass and exempt are green
 
 
 if __name__ == "__main__":
