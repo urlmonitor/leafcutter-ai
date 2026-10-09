@@ -48,7 +48,8 @@ def gate_text(record: Decomposition, released: dict[str, list[str]]) -> str:
         lines.append("")
     if record.dropped:
         lines.append("Set aside:")
-        lines += [f"   {p['text']} ({p['reason']})" for p in record.dropped]
+        lines += [f"   {p['text']}\n      Your words, as quoted: \"{p['covers']}\"\n"
+                  f"      ({p['reason']})" for p in record.dropped]
         lines.append("")
     lines.append("Approve this split, or reject it.")
     return "\n".join(lines)

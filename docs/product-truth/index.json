@@ -866,8 +866,8 @@
       "mock_data_ref": "leafcutter/decisions",
       "impl_summary": {
         "done": 5,
-        "in_progress": 4,
-        "not_started": 32,
+        "in_progress": 5,
+        "not_started": 31,
         "total": 41,
         "asof": "2026-10-09"
       },
@@ -1690,8 +1690,8 @@
       "impl_status": "in_progress",
       "impl_summary": {
         "done": 5,
-        "in_progress": 4,
-        "not_started": 32,
+        "in_progress": 5,
+        "not_started": 31,
         "total": 41,
         "asof": "2026-10-09"
       },

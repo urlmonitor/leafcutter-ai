@@ -4703,7 +4703,7 @@
       "from": "split-propose",
       "condition": "a proposed part's quote is not found in the subject",
       "label": "Drop a part with no quote",
-      "human": "That proposal is dropped before it reaches you. The gate shows it read-only with its reason; it cannot be approved or run, though you can add its question with an edit.\n\nDesign only (DK-400c-2, DK-400c-2-i). The quote check and the set-aside are deterministic conversion code over the host proposal; neither the proposal nor the set-aside entries are registered yet.\n\nContract fields and examples (generated)\nConsumes:\n  No checked JSON binding documented in this direction.\nProduces:\n  No checked JSON binding documented in this direction.\n\nPROPOSED - missing JSON binding (consumes): Host split proposal (leafcutter.goal_decomposition.v1)\nThe host.decompose_goal answer payload is specified in ADR-067 (Accepted) §4.2 as leafcutter.goal_decomposition.v1 (parts with id, text, covers, depends_on and child_capability, plus one_question_rewording), built in DK-400c-1: it has a capability registry entry, a SCHEMA_CATALOG entry and a kernel/schemas file. Its converted form is the parts, dropped and not_covered fields of the Decomposition entity.\nDesign source: [docs/product-truth/mock-data/leafcutter/decisions.mock.json](docs/product-truth/mock-data/leafcutter/decisions.mock.json)\n\nPROPOSED - missing JSON binding (produces): Set-aside proposals (Decomposition.dropped)\nEach set-aside entry {text, covers, reason} is a field of the Decomposition entity only; the gate shows it read-only. The split record is specified in ADR-067 (Accepted) §4.3 as leafcutter.decomposition.v1, which is also the split root's output (§9), but it is not built yet (DK-400a-1, DK-400c-1, DK-400d-1, DK-400e-1): no kernel model, SCHEMA_CATALOG entry or kernel/schemas file exists, so its fields are documented only by the Decomposition entity of mock dataset leafcutter/decisions v7.\nDesign source: [docs/product-truth/mock-data/leafcutter/decisions.mock.json](docs/product-truth/mock-data/leafcutter/decisions.mock.json)",
+      "human": "That proposal is dropped before it reaches you. The gate shows it read-only with its text, the quote you did not say and the reason \"quote not found in the goal\"; it cannot be approved, ticked or run, though you can add its question with an edit.\n\nThe quote check (DK-400c-2-i: whitespace collapsed, case-sensitive exact substring) and the set-aside are deterministic conversion code over the host proposal (DK-400c-1); the gate shows each set-aside entry with text, quote and reason (DK-400c-2). Set-aside entries count for nothing in the part count.\n\nContract fields and examples (generated)\nConsumes:\n  No checked JSON binding documented in this direction.\nProduces:\n  No checked JSON binding documented in this direction.\n\nPROPOSED - missing JSON binding (consumes): Host split proposal (leafcutter.goal_decomposition.v1)\nThe host.decompose_goal answer payload is specified in ADR-067 (Accepted) §4.2 as leafcutter.goal_decomposition.v1 (parts with id, text, covers, depends_on and child_capability, plus one_question_rewording), built in DK-400c-1: it has a capability registry entry, a SCHEMA_CATALOG entry and a kernel/schemas file. Its converted form is the parts, dropped and not_covered fields of the Decomposition entity.\nDesign source: [docs/product-truth/mock-data/leafcutter/decisions.mock.json](docs/product-truth/mock-data/leafcutter/decisions.mock.json)\n\nPROPOSED - missing JSON binding (produces): Set-aside proposals (Decomposition.dropped)\nEach set-aside entry {text, covers, reason} is a field of the Decomposition entity only; the gate shows it read-only. The split record is specified in ADR-067 (Accepted) §4.3 as leafcutter.decomposition.v1, which is also the split root's output (§9), but it is not built yet (DK-400a-1, DK-400c-1, DK-400d-1, DK-400e-1): no kernel model, SCHEMA_CATALOG entry or kernel/schemas file exists, so its fields are documented only by the Decomposition entity of mock dataset leafcutter/decisions v7.\nDesign source: [docs/product-truth/mock-data/leafcutter/decisions.mock.json](docs/product-truth/mock-data/leafcutter/decisions.mock.json)",
       "screen": "decision-split-approve",
       "agent": "kernel",
       "consumes": [],
@@ -4716,7 +4716,7 @@
       ],
       "outcome_kind": "failure",
       "impl_asof": "2026-10-03",
-      "impl_status": "not_started",
+      "impl_status": "in_progress",
       "implements": [
         "DK-400b-2-i",
         "DK-400c-2",
@@ -6900,7 +6900,7 @@
       "for": "split-dropped",
       "given": "a proposed part whose quoted span is not in the subject text",
       "when": "the proposal is turned into the split",
-      "then": "that part is left out of the parts and shown at the gate read-only with its reason, and it cannot be approved or run"
+      "then": "that part is left out of the parts and shown at the gate read-only with its text, its quote and the reason \"quote not found in the goal\", and it cannot be approved, ticked or run, while the other parts are offered for approval"
     },
     {
       "for": "split-too-few-parts",
@@ -7075,8 +7075,8 @@
   ],
   "impl_summary": {
     "done": 5,
-    "in_progress": 4,
-    "not_started": 32,
+    "in_progress": 5,
+    "not_started": 31,
     "total": 41,
     "asof": "2026-10-09"
   },
