@@ -14,7 +14,8 @@ ASSUMED PRODUCTION CONTRACT (written by test-writer; python-coder builds it)
 .github/workflows/post-merge-hold.yml
   on: pull_request_target, types exactly [opened, reopened, synchronize, edited], branches [main], no paths filter;
       no other trigger (in particular no `pull_request`)
-  permissions: {} at workflow level; the ONE job `Post-merge suite status` (name exact) has permissions exactly
+  permissions: {} at workflow level; the ONE job `Post-merge hold evaluation` (name exact; the name `Post-merge suite status`
+      belongs to the hold App's check run, TQ-600a-13-vi) has permissions exactly
       contents: read, actions: read, issues: write, pull-requests: write; no job-level `if:`, no `needs:`, no
       `strategy`; concurrency.group contains `post-merge-hold-` (the PR number follows) and cancel-in-progress: true
   steps: actions/checkout with NO `ref`, `sparse-checkout: scripts/ci`, `persist-credentials: false`, `fetch-depth: 1`;
@@ -32,6 +33,7 @@ from pathlib import Path
 
 import yaml
 
+from ._app_harness import AppTestCase
 from ._ending_harness import CHECK, Cases
 from ._hold_harness import JOB_NAME, RED_JOBS, WORKFLOW, HoldTestCase, fresh_base, make_run, run_hold_job
 from ._workflow_jobs import find_job, load_workflow
@@ -45,7 +47,7 @@ def _now():
     return datetime.now(timezone.utc)
 
 
-class TestTq600a13viWorkflowExecution(HoldTestCase):
+class TestTq600a13viWorkflowExecution(AppTestCase):  # the job mints the hold App's token, so the service must serve the App plane
     def _run(self, **kwargs):
         with fresh_base() as raw:
             return run_hold_job(self.svc, Path(raw), **kwargs)
@@ -53,7 +55,7 @@ class TestTq600a13viWorkflowExecution(HoldTestCase):
     def test_tq600a_13_vi_the_hold_workflow_invokes_the_module(self):
         # covers: TQ-600a-13-vi
         # angle: seam
-        """The job named `Post-merge suite status`, run verbatim with an `opened` event: a red latest run fails the job and the
+        """The job named `Post-merge hold evaluation`, run verbatim with an `opened` event: a red latest run fails the job and the
         output names the run by link; green passes; a failed run-history read fails the job (fail closed); a green run
         31 h old fails it. The job is never `skipped`, which a required check would count as success.
 

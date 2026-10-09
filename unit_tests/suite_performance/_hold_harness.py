@@ -31,7 +31,7 @@ from ._workflow_jobs import REPO_ROOT, JobResult, WorkflowRun
 
 HOLD_MODULE = "scripts.ci.post_merge_hold"
 WORKFLOW = REPO_ROOT / ".github" / "workflows" / "post-merge-hold.yml"
-JOB_NAME = "Post-merge suite status"
+JOB_NAME = "Post-merge hold evaluation"  # was `Post-merge suite status`, which is now the App's check run (TQ-600a-13-vi)
 TUNABLES = REPO_ROOT / "scripts" / "ci" / "post_merge_tunables.json"
 FIXTURE_DIR = REPO_ROOT / "tests" / "fixtures" / "tq_600a_13_vi"
 NOW = datetime(2026, 10, 9, 12, 0, 0, tzinfo=timezone.utc)
@@ -226,10 +226,14 @@ def scratch_default_branch(base):
 
 
 def run_hold_job(svc, base, *, workflow=WORKFLOW, head_files=None, pr_number=42):
-    """Execute the `Post-merge suite status` job of ``workflow`` verbatim against ``svc`` with an ``opened`` event.
+    """Execute the `Post-merge hold evaluation` job of ``workflow`` verbatim against ``svc`` with an ``opened`` event.
 
+    ``svc`` must be an ``AppService`` (the job mints the hold App's token); the two App secrets are supplied the way
+    ``_app_harness.run_app_job`` supplies them (``secrets.X`` rewritten to an ``env`` lookup).
     ``head_files`` maps path -> text for a synthetic PR head commit (a scratch tree the job must never read).
     """
+    from ._app_harness import SECRET_PREFIX, app_secrets, secrets_as_env  # noqa: PLC0415 -- _app_fake imports this module
+
     base = Path(base)
     default = scratch_default_branch(base)
     head = None
@@ -253,7 +257,8 @@ def run_hold_job(svc, base, *, workflow=WORKFLOW, head_files=None, pr_number=42)
         "HOLD_OBSERVER_LOG": str(log),
         "HOME": str(state_dir),
     }
-    run = HoldRun(workflow, default, head, base / "scratch", env, svc.url)
+    env.update({f"{SECRET_PREFIX}{name}": value for name, value in app_secrets().items()})
+    run = HoldRun(secrets_as_env(workflow, base / "workflow-under-test.yml"), default, head, base / "scratch", env, svc.url)
     result = run.execute_job(JOB_NAME)
     events = [e for part in sorted(base.glob(f"{log.name}.*")) for e in json.loads(part.read_text(encoding="utf-8"))]
     return JobOutcome(result, run, events, head, state_dir)

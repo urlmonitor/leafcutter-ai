@@ -699,3 +699,6 @@ GENERIC_SECRET:tests/kernel/entity_context/test_permissions.py:*
 # Glob, not per-line: this is a 787-line data file and a later snapshot will be longer,
 # so a pinned line number would silently stop matching.
 ENTROPY_HIGH:reports/feedback-snapshots/feedback-corpus-2026-09-30.jsonl:*
+# TQ-600a-13-vi App fake: a fixed placeholder token string that a local test server
+# hands its jobs. Not a credential. Duplicated to the workspace-root copy.
+GENERIC_SECRET:unit_tests/suite_performance/_app_fake.py:*
