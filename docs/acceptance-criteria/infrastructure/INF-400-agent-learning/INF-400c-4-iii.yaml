@@ -7,7 +7,7 @@ component: infrastructure
 level: L3
 status: active
 req_status: active
-work_status: done
+work_status: todo
 priority: high
 readiness: reviewed
 created_by: "docs/acceptance-criteria/infrastructure/INF-400-agent-learning/INF-400c-4.yaml"
@@ -102,6 +102,9 @@ amended_by:
   - reason: "BA revision, 2026-09-07, same day. Wording only, no change of substance: the one-of-each-per-install clause added in the entry above was written against a repository-anchored rule, and the anchor has since been re-settled as a build-time absolute path in the deployed configuration. The clause now says both streams are declared that way, and reads 'install' and 'project root' where it previously read 'repository' and 'main checkout'. The obligation is identical and so is the test descriptor's assertion: exactly two stream files, not two per working directory. The reason the clause exists is also unchanged and is restated in it — the three named consumers aggregate the operational stream over time, and a stream reclaimed with each working directory cannot be aggregated by any of them."
     by: business-analyst
     at: 2026-09-07
+  - reason: "REOPENED, work_status done -> todo, criteria unchanged (BrainCandy decision 2026-10-09, on evidence found by the INF-500d-4 IT PO and re-verified on origin/main ed83d9f77). VIOLATED CLAUSE: 'both streams are declared the same way INF-400c-4 requires -- an absolute path fixed when the package was built into the project, not a name each process finishes resolving -- so an install holds ONE of each ... an operational record emitted from inside an isolated working directory is written to the same file as one emitted from the project root, and that file still holds it after that working directory has been removed'. EVIDENCE (1) emit_event's declaration lookup is unreachable: templates/skills/agent-telemetry/scripts/emit_event.py:165 tests <dir>/config/knowledge_sink.json for each cwd ancestor (byte-identical deployed copy at .leafcutter/skills/agent-telemetry/scripts/emit_event.py), but the declaration lives at <project>/.leafcutter/config/knowledge_sink.json, so it never matches. Calling the deployed _find_declaration/_resolve_default_log_path (read-only, nothing appended) with cwd /home/henzeh/projects/leafcutter, /home/henzeh/projects/leafcutter/leafcutter-ai, worktrees/ge120f-drive and worktrees/reopen-knowledge-sink returns None and the bare relative debugging/logs/agent_telemetry.jsonl every time (emit_event.py:188-190, default at :91), i.e. a name each process finishes against its own cwd. (2) Even a reachable lookup would land per-worktree: templates/scripts/setup_ticket_worktree.py:1582 (mirrored at scripts/setup_ticket_worktree.py:1483) runs build.py --target-dir <worktree>, and scripts/build_phases_knowledge.py:326 writes operational_telemetry_stream under that target, e.g. worktrees/ge120f-drive declares /home/henzeh/projects/leafcutter/worktrees/ge120f-drive/debugging/logs/agent_telemetry.jsonl. Will be fixed by the INF-500d-4 feedback-sink feature (INF-500d-4-iii and INF-500d-4-iv); return to done when that lands."
+    by: BrainCandy
+    at: 2026-10-09
 superseded_by: null
 covered_by: []
 implemented_by: []

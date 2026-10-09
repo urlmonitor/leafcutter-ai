@@ -1,0 +1,181 @@
+id: KM-400e-8
+title: "An unset required backend setting fails loudly instead of being guessed"
+component: knowledge-management
+components: [knowledge_management]
+level: L2
+status: active
+req_status: active
+readiness: approved
+priority: high
+work_status: todo
+parent: KM-400e
+criteria: |
+  Given the knowledge backend requires a database name and a username
+  And the target is a hosted instance whose database and username are both named after its instance identifier
+  And neither setting is declared in the environment, in the job configuration or in the backend configuration
+  When the synchronization job starts
+  Then it fails before attempting a connection
+  And the failure names each unset required setting individually
+  And no value is substituted for an unset required setting
+
+  Given only the database name is unset
+  When the synchronization job starts
+  Then the failure names the database name as the unset setting and does not name the username
+  And it does not proceed using a conventional or instance-independent database name
+
+  Given a database name is declared but does not exist on the target instance
+  When the synchronization job connects
+  Then the backend's rejection is reported together with the database name that was requested and the configuration source it was read from
+  And the failure is not reported as an absence of knowledge or as an empty result
+
+  Given every required backend setting is declared
+  When the synchronization job starts
+  Then it connects using exactly the declared values, with no substitution for any of them
+  And no credential value appears in any reported output
+
+  Given the operational instructions describe configuring this backend
+  When an operator follows them for a hosted instance
+  Then the instructions state that the database name and username are instance-specific and must be declared
+  And they do not present a conventional name as a working default
+depends_on: [KM-400e, KM-400e-5]
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: context
+    status: exists
+  - path: docs/how-to/run-knowledge-retrieval.md
+    relationship: describes
+    status: exists
+    relevance: Target of the final clause; the documented rule that hosted instances default to a conventional username is wrong for every such instance and must be corrected.
+  - path: docs/acceptance-criteria/knowledge-management/KM-400-trustworthy-project-knowledge/KM-400e-5.yaml
+    relationship: context
+    status: exists
+    relevance: Owns the synchronization job and its configuration-resolution order; this AC constrains what happens at the end of that order when a required setting is still unset.
+  - path: docs/acceptance-criteria/knowledge-management/KM-400-trustworthy-project-knowledge/KM-400e-4.yaml
+    relationship: context
+    status: exists
+    relevance: Inherit the distinction between an outage or missing prerequisite and an empty result; a rejected database name is a configuration failure, never no knowledge.
+  - path: docs/acceptance-criteria/ac-store/ACS-1100-honest-coverage-answers/ACS-1100.yaml
+    relationship: context
+    status: exists
+    relevance: An unset setting is unknown and is reported as such; it is never resolved to a guessed value.
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to:
+  agent: python-coder
+  contract: KM-400e-5's synchronization job consumes this resolution contract; a required
+    setting that is unset ends the job with a named failure instead of a substituted value.
+expects_from:
+  ac_id: KM-400e-5
+  contract: The existing configuration-resolution order for database selection and
+    credentials, which this AC terminates with an explicit failure rather than a fallback.
+origin_agent: business-analyst
+created: '2026-10-09'
+amended_by:
+  - "2026-10-09: product-owner reviewed this AC during the KM-400f split and
+    deliberately left it here. Its four sibling ACs from the same authoring pass moved
+    to KM-400f, which is about staying inside declared storage limits; this AC is about
+    honest configuration — an unset required backend setting failing loudly instead of
+    being guessed — which is KM-400e's own subject, continuing honestly when the
+    capability cannot be used. It also comes from a different incident (60 consecutive
+    synchronization failures) and depends on KM-400e-5's synchronization job. Nothing in
+    the record changed except readiness to approved and priority to high at the user's
+    approval gate. Keeping it here leaves KM-400e with six children, so its
+    child_limit_override is reduced from 8 to 6 rather than removed; that remaining
+    waiver is the deliberate price of not stretching KM-400f's wording to cover a fifth
+    child it does not honestly describe."
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: [code, config, docs]
+risk_surface: contract_boundary
+notes: |
+  Authored 2026-10-09. Two guessed defaults are wrong for every hosted instance of this
+  backend, which names its database and its user after the instance identifier: the
+  synchronization workflow substitutes a conventional database name when its variable is
+  unset, and the operational instructions state that hosted hosts default to a
+  conventional username. Together these produced the database-not-found half of a run of
+  60 consecutive synchronization failures — the job has never succeeded.
+
+  A guessed default is worse than an absent one here. The substitution turns a precise,
+  immediately actionable error (this required setting is unset) into a connection attempt
+  that fails later, further from the cause, and whose message names a database the
+  operator never configured. The clause requiring the configuration source to be reported
+  alongside a rejected name exists so the operator can tell a wrong declared value from a
+  substituted one.
+it_requirements: null
+test_required: true
+test_spec:
+  - name: test_unset_required_settings_fail_before_connecting_and_name_themselves
+    target_dir: tests/knowledge/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: Start the synchronization job with the database name and username unset,
+      against a backend double that records connection attempts; assert no connection was
+      attempted and the failure names each unset setting individually.
+    covers: [KM-400e-8]
+    must_catch:
+      - "substitute a conventional database name when the setting is unset"
+      - "substitute a conventional username when the setting is unset"
+      - "fail with a generic message that names neither setting"
+      - "attempt the connection first and report only the backend's rejection"
+    requires_db: false
+  - name: test_only_the_unset_setting_is_named
+    target_dir: tests/knowledge/
+    framework: pytest
+    type: integration
+    angle: boundary
+    description: Leave exactly one required setting unset and assert the failure names
+      that one and not the setting that was declared.
+    covers: [KM-400e-8]
+    must_catch:
+      - "report every required setting as unset whenever any one of them is"
+    requires_db: false
+  - name: test_rejected_database_name_reports_the_name_and_its_source
+    target_dir: tests/knowledge/
+    framework: pytest
+    type: integration
+    angle: failure
+    description: Declare a database name the backend rejects and assert the reported
+      failure carries the requested name and the configuration source it came from, and is
+      distinguishable from a successful run that found nothing.
+    covers: [KM-400e-8]
+    must_catch:
+      - "surface the rejection as an empty or successful result"
+      - "report the rejection without naming the database that was requested"
+    requires_db: false
+  - name: test_declared_settings_are_used_verbatim_without_credentials_in_output
+    target_dir: tests/knowledge/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: Declare instance-specific values that differ from every conventional
+      name, assert the connection used exactly those values, and assert no credential
+      value appears anywhere in the reported output.
+    covers: [KM-400e-8]
+    must_catch:
+      - "override a declared instance-specific value with a conventional one"
+      - "include a credential value in the reported output"
+    requires_db: false
+  - name: test_synchronization_job_runs_end_to_end_with_unset_and_declared_settings
+    target_dir: tests/knowledge/
+    framework: pytest
+    type: integration
+    angle: deployed
+    description: Execute the synchronization job as the merge event invokes it, once with
+      a required setting unset and once fully declared, and assert the observed outcome of
+      each run.
+    covers: [KM-400e-8]
+    must_catch:
+      - "fix the resolution in the library while the job keeps its own substitution"
+    requires_db: false
+test_rationale: >-
+  The existing coverage for the synchronization job string-parses the job definition for
+  expected text, which is exactly the shape that cannot tell a substitution that is
+  configured from one that is reached, and it is why a wrong default survived 60
+  consecutive failures. Every entry here therefore runs the job: the pre-connection
+  assertion is made by recording calls on a backend double, because a test that reads only
+  the returned error cannot distinguish failing before connecting from failing after. The
+  final entry executes the job through the same path the merge event uses, because fixing
+  the resolution inside the library while the job keeps its own substitution would leave
+  every library-level test green and the real failure untouched.
