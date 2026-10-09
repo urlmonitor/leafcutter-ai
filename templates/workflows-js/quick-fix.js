@@ -34,7 +34,7 @@ export const meta = {
     { title: 'Red Phase', detail: 'test-writer creates failing test, verified red under AC_ENFORCE_STRICT=1' },
     { title: 'Fix', detail: 'python-coder applies targeted fix to single file' },
     { title: 'Green Phase', detail: 'Verified green under AC_ENFORCE_STRICT=1, then mutation-proved' },
-    { title: 'Knowledge Routing', detail: 'route emitted learnings to their surfaces before commit (INF-700a-1-i, fail-open)' },
+    { title: 'Knowledge Routing', detail: 'stage learnings into the worktree for the fix commit; observe what it carried (INF-700a-5, fail-open)' },
     { title: 'Commit', detail: 'commit agent stages AC, parent back-link, test and fix' },
     { title: 'Changelog', detail: 'changelog-agent authors the entry a required CI check demands' },
     { title: 'Close', detail: 'Push, then open a PR behind a confirmation gate' },
@@ -151,22 +151,13 @@ function blockedOnFailure(result, phase, agentLabel, extra = {}) {
   return null
 }
 
-// The routing dispatch's expected reply shape (INF-700a-1-i). `case` is the
-// only required field — `read`/`written`/`unwritten`/`detail` are read
-// defensively by classifyKnowledgeRouting() below, never trusted as present
-// just because the schema names them.
-const KNOWLEDGE_ROUTING_SCHEMA = {
-  type: 'object',
-  properties: {
-    case: { type: 'string', enum: ['completed', 'could_not_complete', 'did_not_run'] },
-    read: { type: 'integer' },
-    written: { type: 'integer' },
-    unwritten: { type: 'integer' },
-    detail: { type: ['string', 'null'] },
-    written_paths: { type: 'array', items: { type: 'string' } },
-  },
-  required: ['case'],
-}
+// Reply shape of both routing dispatches (stage and observe); only `case` is required, the rest is read defensively.
+const KNOWLEDGE_ROUTING_SCHEMA = { type: 'object', required: ['case'], properties: {
+  case: { type: 'string', enum: ['completed', 'could_not_complete', 'did_not_run'] },
+  read: { type: 'integer' }, written: { type: 'integer' }, unwritten: { type: 'integer' },
+  detail: { type: ['string', 'null'] }, manifest: { type: 'array', items: { type: 'string' } },
+  unwritten_records: { type: 'array' }, waiting: { type: ['object', 'null'] },
+} }
 
 /**
  * classifyKnowledgeRouting — the SINGLE construction site for the
@@ -189,40 +180,42 @@ const KNOWLEDGE_ROUTING_SCHEMA = {
  * @returns {{case: string, read: number, written: number, unwritten: number, detail: (string|null)}}
  */
 function classifyKnowledgeRouting(reply) {
-  const recognisedCase =
-    reply && (reply.case === 'completed' || reply.case === 'could_not_complete')
-      ? reply.case
-      : 'did_not_run'
-  const asInt = (value) => (typeof value === 'number' && Number.isFinite(value) ? value : 0)
+  const recognisedCase = reply && (reply.case === 'completed' || reply.case === 'could_not_complete') ? reply.case : 'did_not_run'
+  const ran = recognisedCase !== 'did_not_run'
+  const asInt = (value) => (ran && typeof value === 'number' && Number.isFinite(value) ? value : 0)
+  const asList = (value) => (ran && Array.isArray(value) ? value : [])
   return {
-    case: recognisedCase,
-    read: recognisedCase === 'did_not_run' ? 0 : asInt(reply.read),
-    written: recognisedCase === 'did_not_run' ? 0 : asInt(reply.written),
-    unwritten: recognisedCase === 'did_not_run' ? 0 : asInt(reply.unwritten),
-    detail:
-      recognisedCase === 'could_not_complete' && typeof reply.detail === 'string'
-        ? reply.detail
-        : null,
+    case: recognisedCase, read: asInt(reply && reply.read), written: asInt(reply && reply.written),
+    unwritten: asInt(reply && reply.unwritten),
+    detail: recognisedCase === 'could_not_complete' && typeof reply.detail === 'string' ? reply.detail : null,
+    manifest: asList(reply && reply.manifest), unwritten_records: asList(reply && reply.unwritten_records),
+    waiting: ran && reply.waiting && typeof reply.waiting === 'object' ? reply.waiting : null,
   }
 }
 
-/* INF-700a-1-iii: the files the routing step reports it wrote inside the worktree, as
-   extra numbered entries (5., 6., ...) for the fix commit's stage list, so they are
-   staged BY NAME and not lost with the worktree. Fail-open: '' when the step did not
-   run or wrote nothing, which leaves the commit prompt exactly as it was. Paths outside
-   the worktree, the harvester's own bookkeeping, and already-staged paths are dropped. */
-function routedStageEntries(reply, root, alreadyStaged) {
-  if (classifyKnowledgeRouting(reply).case === 'did_not_run' || !Array.isArray(reply.written_paths)) return ''
+/** settleKnowledgeRouting — the FINAL report (INF-700a-5 / -5-i): the post-commit observation of what the
+ * fix commit carried. If it cannot be obtained while the stage ran, nothing staged counts as written. */
+function settleKnowledgeRouting(staged, observedReply) {
+  const observed = classifyKnowledgeRouting(observedReply)
+  if (observed.case !== 'did_not_run' || staged.case === 'did_not_run') return observed
+  return { ...staged, case: 'could_not_complete', written: 0, manifest: [], unwritten: staged.written + staged.unwritten,
+    detail: "the commit's contents could not be observed, so no staged write is counted as written" }
+}
+
+/* INF-700a-1-iii: the paths the routing stage's manifest names (INF-700a-5), as extra
+   numbered entries (5., 6., ...) for the fix commit's stage list, so they are staged BY
+   NAME and not lost with the worktree. Fail-open: '' when the stage did not run or wrote
+   nothing, which leaves the commit prompt exactly as it was. Paths outside the worktree,
+   the harvester's own bookkeeping, and already-staged paths are dropped. */
+function routedStageEntries(routing, root, alreadyStaged) {
   const inTree = (p) => typeof p === 'string' && p !== '' && !/[\n"]/.test(p) && (p.startsWith(`${root}/`) || !/^([a-zA-Z]:|[\\/])/.test(p))
   const staged = new Set(alreadyStaged.map((p) => normalizeArtifactPath(p, root)))
-  return [...new Set(reply.written_paths.filter(inTree).map((p) => normalizeArtifactPath(p, root)))]
+  return [...new Set(routing.manifest.filter(inTree).map((p) => normalizeArtifactPath(p, root)))]
     .filter((p) => p && !p.split('/').includes('..') && !p.startsWith('debugging/logs/') && !staged.has(p))
     .map((p, i) => `\n  ${i + 5}. ${p}  — learning written by the Knowledge Routing step`).join('')
 }
 
-// ---------------------------------------------------------------------------
 // Phase 0 — Guards and self-isolation
-// ---------------------------------------------------------------------------
 
 phase('Guards')
 
@@ -367,9 +360,7 @@ if (guardBlock) return guardBlock
 
 log(`Guards passed. Target file clean.`)
 
-// ---------------------------------------------------------------------------
 // Phase 1 — AC creation (hierarchical store)
-// ---------------------------------------------------------------------------
 
 phase('AC Creation')
 
@@ -458,9 +449,7 @@ if (acBlock) return acBlock
 const { ac_id, ac_path, parent_ac_path, component_id, ac_title } = acResult
 log(`AC created: ${ac_id} at ${ac_path} (parent back-linked: ${parent_ac_path})`)
 
-// ---------------------------------------------------------------------------
 // Phase 2 — Red phase (test-writer, then strict verification)
-// ---------------------------------------------------------------------------
 
 phase('Red Phase')
 
@@ -640,9 +629,7 @@ if (divergenceCheck && divergence_decision === 'continue') {
     })
 }
 
-// ---------------------------------------------------------------------------
 // Phase 3 — Fix
-// ---------------------------------------------------------------------------
 
 phase('Fix')
 
@@ -732,9 +719,7 @@ if (allGenuineExtraFiles.length > 0) {
 
 log(`Fix applied to ${target_file}`)
 
-// ---------------------------------------------------------------------------
 // Phase 4 — Green phase, then mutation proof
-// ---------------------------------------------------------------------------
 
 phase('Green Phase')
 
@@ -880,47 +865,20 @@ if (mutationResult.red_without_fix !== true || mutationResult.green_with_fix_res
 
 log(`Mutation proof passed: reverting the fix returns the test to red; restoring it returns green.`)
 
-// ---------------------------------------------------------------------------
-// Knowledge Routing — dispatched once the phases that perform the work have
-// returned, and BEFORE the phase that publishes this unit of work's own
-// output ("commit"), so its writes can ride the commit this path already
-// makes (INF-700a-1's ordering clause, applied here per INF-700a-1-i's
-// per-path coverage requirement). Fail-open: there is deliberately no halt
-// branch below — whatever this dispatch reports, the run's own outcome and
-// exit status proceed unaffected.
-// ---------------------------------------------------------------------------
-
+// Knowledge Routing (INF-700a-1 ordering, INF-700a-5 durability), BEFORE the fix commit: `stage` writes
+// learnings INTO THE WORKTREE and marks nothing routed; the commit stages its manifest by name and the
+// post-commit `observe` decides the report. Fail-open: no halt branch on either step.
 phase('Knowledge Routing')
+const knowledgeRoutingCli = `python3 {{config.output_root}}/scripts/knowledge/completion_routing_cli.py`
+const runKnowledgeCli = (label, args, task) => agent(
+  `${task} Run this single Bash command and return the ONE line of JSON it prints, verbatim:\n` +
+  `   ${knowledgeRoutingCli} ${args}\n\nIf the command cannot be run, return { "case": "did_not_run", ` +
+  `"detail": "<why>" }. This step must never block, retry, or fail the build.`,
+  { label, phase: 'Knowledge Routing', schema: KNOWLEDGE_ROUTING_SCHEMA, agentType: 'python-coder' })
+const knowledgeStaged = classifyKnowledgeRouting(await runKnowledgeCli('knowledge-routing-step',
+  `stage --working-dir ${worktreeRoot}`, 'Stage the knowledge records the phases that just ran emitted into this worktree, so the fix commit carries them.'))
 
-const knowledgeRoutingReply = await agent(
-  `Route any knowledge records the phases that just ran emitted to the ` +
-  `surface each one names — nobody runs this by hand.\n\n` +
-  `Run this single Bash command from the repository root and read its JSON ` +
-  `summary and exit code:\n` +
-  `   python3 {{config.output_root}}/scripts/knowledge/harvest_learnings.py\n\n` +
-  `Immediately before AND after it, run: git -C "${worktreeRoot}" status --porcelain --untracked-files=all\n` +
-  `Return every repo-relative path in the AFTER output that is absent from BEFORE as "written_paths" ([] if none).\n\n` +
-  `Classify the outcome as exactly one of three cases:\n` +
-  `  - "completed": the harvester ran to completion (exit 0 or 3 — some ` +
-  `records left unroutable is still a completed run).\n` +
-  `  - "could_not_complete": the declared sink could not be read, or a ` +
-  `destination file could not be written (exit 1, 2, or 4).\n` +
-  `  - "did_not_run": the command itself could not be run at all.\n\n` +
-  `Return JSON: { "case": "completed"|"could_not_complete"|"did_not_run", ` +
-  `"read": <records read>, "written": <records written to a surface>, ` +
-  `"unwritten": <records left unwritten>, "detail": "<what could not be ` +
-  `done, or null>" }.\n\n` +
-  `This step must never block, retry, or fail the build — always return a ` +
-  `best-effort classification, even on an unreadable sink or a failed write.`,
-  { label: 'knowledge-routing-step', phase: 'Knowledge Routing', schema: KNOWLEDGE_ROUTING_SCHEMA, agentType: 'python-coder' }
-)
-
-const knowledgeRouting = classifyKnowledgeRouting(knowledgeRoutingReply)
-
-// ---------------------------------------------------------------------------
 // Phase 5 — Commit
-// ---------------------------------------------------------------------------
-
 phase('Commit')
 
 const commitResult = await agent(
@@ -931,7 +889,7 @@ const commitResult = await agent(
                           the AC guardian hooks read the git index, not the store, so an
                           unstaged parent is never checked and the back-link silently rots)
   3. ${testFile}        — new test covering the bug
-  4. ${target_file}     — bug fix${routedStageEntries(knowledgeRoutingReply, worktreeRoot, [ac_path, parent_ac_path, testFile, target_file])}
+  4. ${target_file}     — bug fix${routedStageEntries(knowledgeStaged, worktreeRoot, [ac_path, parent_ac_path, testFile, target_file])}
 
 Before staging, flip work_status on ${ac_path} from todo to done and add ${testFile} to its
 covered_by list — the test is green and mutation-proved, so the record should say so.
@@ -950,14 +908,16 @@ files — an isolated worktree may carry unrelated build-output drift, which sta
   { label: 'commit', phase: 'Commit', schema: COMMIT_SCHEMA, agentType: 'commit' }
 )
 
-const commitBlock = blockedOnFailure(commitResult, 'Commit', 'commit agent')
+// One observation per path, success AND failure: publication is observed, never inferred (INF-700a-5-i).
+const commitFailed = !commitResult || commitResult.status === 'blocked'
+const knowledgeRouting = settleKnowledgeRouting(knowledgeStaged, await runKnowledgeCli('knowledge-routing-observe',
+  `observe --working-dir ${worktreeRoot} --commit-status ${commitFailed ? 'failed' : 'ok'}`, 'Report, read-only, what the fix commit actually carried.'))
+const commitBlock = blockedOnFailure(commitResult, 'Commit', 'commit agent', { knowledge_routing: knowledgeRouting })
 if (commitBlock) return commitBlock
 
 log(`Committed: ${commitResult.commit_sha || '(sha pending)'}`)
 
-// ---------------------------------------------------------------------------
 // Phase 6 — Changelog
-// ---------------------------------------------------------------------------
 
 phase('Changelog')
 
@@ -1011,9 +971,7 @@ if (changelogCommitBlock) return changelogCommitBlock
 
 log(`Changelog entry committed: ${changelogResult.entry_path}`)
 
-// ---------------------------------------------------------------------------
 // Phase 7 — Close: push, then open a PR behind a confirmation gate
-// ---------------------------------------------------------------------------
 
 phase('Close')
 
@@ -1064,9 +1022,7 @@ const pushBlock = blockedOnFailure(pushResult, 'Close', 'Close-phase agent',
   { halt_reason: 'push_failed', ac_id, commit_sha: commitResult.commit_sha })
 if (pushBlock) return pushBlock
 
-// ---------------------------------------------------------------------------
 // Done
-// ---------------------------------------------------------------------------
 
 // pr_opened=false covers two different endings: a PR already existed (pr_url is
 // populated, nothing left to do) and no PR exists at all (pr_url is empty — the
