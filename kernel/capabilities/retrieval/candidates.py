@@ -37,19 +37,21 @@ class Candidate:
     terms: tuple[str, ...]
     truncated: bool = False
     modified_at: datetime | None = None
-    #: True when the caller named this place (an explicit locator); never dropped by ranking.
     explicit: bool = False
-    #: Lexical ordering score (BM25-style, see scoring.py); 0 until the pool scores it.
+    """True when the caller named this place (an explicit locator); never dropped by ranking."""
     score: float = 0.0
-    #: Length in characters of the whole section the excerpt was cut from (0 when unknown).
+    """Lexical ordering score (BM25-style, see scoring.py); 0 until the pool scores it."""
     length: int = 0
-    #: Occurrences of each query term in the section (heading hits weighted, path matches added).
+    """Length in characters of the whole section the excerpt was cut from (0 when unknown)."""
     term_counts: tuple[tuple[str, int], ...] = ()
-    #: The query terms that are distinctive words of the file's path (`run_store.py` for "store":
-    #: a file NAMED after the topic).
+    """Occurrences of each query term in the section (heading hits weighted, path matches added)."""
     path_hits: tuple[str, ...] = ()
-    #: True when the document reviews or analyses a kernel run of the asking goal.
+    (
+        "The query terms that are distinctive words of the file's path (`run_store.py` for "
+        "\"store\": a file NAMED after the topic)."
+    )
     reviews_goal: bool = False
+    """True when the document reviews or analyses a kernel run of the asking goal."""
 
 
 @dataclass
@@ -62,8 +64,8 @@ class SearchReport:
     skipped: dict[str, int] = field(default_factory=dict)
     unavailable_reason: str | None = None
     notes: list[str] = field(default_factory=list)
-    #: What the scan saw of the source (sections, lengths, term frequencies) for scoring.
     stats: CorpusStats = field(default_factory=CorpusStats)
+    """What the scan saw of the source (sections, lengths, term frequencies) for scoring."""
 
     def skip(self, reason: str) -> None:
         """Count one skipped file or node under a reason."""

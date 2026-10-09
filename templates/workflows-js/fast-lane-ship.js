@@ -572,7 +572,7 @@ const KNOWLEDGE_ROUTING_SCHEMA = {
   type: "object",
   required: ["case"],
   properties: {
-    case: { type: "string", enum: ["completed", "could_not_complete", "did_not_run"] },
+    case: { type: "string", enum: ["completed", "completed_with_waiting", "could_not_complete", "did_not_run"] },
     read: { type: "integer" },
     written: { type: "integer" },
     unwritten: { type: "integer" },
@@ -588,8 +588,11 @@ const KNOWLEDGE_ROUTING_SCHEMA = {
  * `knowledge_routing` figures consumed into a completion path's terminal
  * payload (INF-700a-1 / INF-700a-1-ii). Fails CLOSED, the same pattern used
  * throughout this file for the review verdict and red-baseline gate_passed
- * checks: only a reply carrying a RECOGNISED `case` value ("completed" or
- * "could_not_complete") is trusted as having actually run. Anything else —
+ * checks: only a reply carrying a RECOGNISED `case` value ("completed",
+ * "completed_with_waiting" or "could_not_complete": the schema's enum) is
+ * trusted as having actually run. "completed_with_waiting" (INF-700a-5-ii)
+ * is a completed run that left a late-emitted record waiting; it is passed
+ * through as its own value, never folded into "completed". Anything else —
  * a missing case, an unparseable reply, or the harness's own unlabelled
  * default stub — is reported as the third, distinct "did_not_run" case
  * (INF-700a-1-ii), never rendered as "completed" with zero figures, which is
@@ -606,10 +609,7 @@ const KNOWLEDGE_ROUTING_SCHEMA = {
  * @returns {{case: string, read: number, written: number, unwritten: number, detail: (string|null)}}
  */
 function classifyKnowledgeRouting(reply) {
-  var recognisedCase =
-    reply && (reply.case === "completed" || reply.case === "could_not_complete")
-      ? reply.case
-      : "did_not_run";
+  var recognisedCase = reply && KNOWLEDGE_ROUTING_SCHEMA.properties.case.enum.includes(reply.case) ? reply.case : "did_not_run";
   var ran = recognisedCase !== "did_not_run";
   var asInt = function (value) {
     return ran && typeof value === "number" && Number.isFinite(value) ? value : 0;

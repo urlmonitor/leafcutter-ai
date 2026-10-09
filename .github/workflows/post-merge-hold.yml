@@ -14,9 +14,13 @@
 # values from the event file, in Python and never through a shell: the pull request
 # number and the head sha (used only when it is 40 lowercase hex characters).
 #
-# SHAPE. Exactly one job, named exactly `Post-merge suite status`, with no `if`, no
-# `needs`, no matrix and no path filter: a skipped job reports success on a required
-# check, and a filtered workflow leaves the check pending forever.
+# SHAPE. Exactly one job, named `Post-merge hold evaluation` (NOT the required name: the
+# required check `Post-merge suite status` is a check run the dedicated hold App
+# publishes on the pull request's head, TQ-600a-13-vi), with no `if`, no `needs`, no
+# matrix and no path filter: a skipped job publishes no check at all, and a filtered
+# workflow leaves the check pending forever. The job runs in environment
+# `post-merge-hold`, which holds the App's two secrets (HOLD_APP_ID,
+# HOLD_APP_PRIVATE_KEY); they are named only in the step after the checkout.
 #
 # PERMISSIONS. `issues: write` (TQ-600a-13-viii records an exemption on the notice) and
 # `pull-requests: write` (TQ-600a-13-vii's comment) are fixed by the AC's contract for
@@ -36,9 +40,10 @@ permissions: {}
 
 jobs:
   hold:
-    name: Post-merge suite status
+    name: Post-merge hold evaluation
     runs-on: ubuntu-latest
     timeout-minutes: 5
+    environment: post-merge-hold
     permissions:
       contents: read
       actions: read
@@ -60,4 +65,27 @@ jobs:
           GITHUB_API_URL: ${{ github.api_url }}
           GITHUB_TOKEN: ${{ github.token }}
           GITHUB_REPOSITORY: ${{ github.repository }}
-        run: python3 scripts/ci/post_merge_hold.py
+          HOLD_APP_ID: ${{ secrets.HOLD_APP_ID }}
+          HOLD_APP_PRIVATE_KEY: ${{ secrets.HOLD_APP_PRIVATE_KEY }}
+        run: |
+          # Sign the App's RS256 JWT (iss = App ID, 9 minutes) with openssl. The key is moved at once into an
+          # UNEXPORTED shell variable and unset from the environment, so no child process (openssl, tr, date,
+          # python) ever has it; openssl reads it through a process substitution built by the printf builtin
+          # (a pipe: no file, no argument). The JWT goes to Python on stdin (printf is a builtin too, so it is
+          # in no argument list) and is never in an environment variable, a file or a log.
+          b64() { openssl base64 -A | tr '+/' '-_' | tr -d '='; }
+          key=$HOLD_APP_PRIVATE_KEY
+          unset HOLD_APP_PRIVATE_KEY
+          jwt=""
+          key_set=0
+          if [ -n "$key" ]; then key_set=1; fi
+          case "$HOLD_APP_ID" in ''|*[!0-9]*) id_ok=0 ;; *) id_ok=1 ;; esac
+          if [ "$key_set" = 1 ] && [ "$id_ok" = 1 ]; then
+            now=$(date +%s)
+            header=$(printf '{"alg":"RS256","typ":"JWT"}' | b64)
+            payload=$(printf '{"iat":%s,"exp":%s,"iss":"%s"}' "$((now-60))" "$((now+540))" "$HOLD_APP_ID" | b64)
+            sig=$(printf '%s.%s' "$header" "$payload" | openssl dgst -sha256 -sign <(printf '%s' "$key") -binary 2>/dev/null | b64)
+            if [ -n "$header" ] && [ -n "$payload" ] && [ -n "$sig" ]; then jwt="$header.$payload.$sig"; fi
+          fi
+          unset key
+          printf '%s\n' "$jwt" | HOLD_APP_KEY_SET="$key_set" python3 scripts/ci/post_merge_hold.py --publish

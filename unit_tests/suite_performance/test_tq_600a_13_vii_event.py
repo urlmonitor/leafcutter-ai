@@ -147,7 +147,7 @@ class TestTq600a13viiJob(CommentTestCase):
     def test_tq600a_13_vii_the_hold_job_writes_and_lifts_the_comment_through_its_real_steps(self):
         # covers: TQ-600a-13-vii
         # angle: reachability
-        """The job named `Post-merge suite status`, executed verbatim with an `opened` event for pull request 42: a red history
+        """The job named `Post-merge hold evaluation`, executed verbatim with an `opened` event for pull request 42: a red history
         fails the job and creates the one comment on pull request 42; the same job on a green history passes and edits
         that comment to say the hold lifted. No comment is written to any other pull request.
 

@@ -45,9 +45,11 @@ class RequestBody(KernelModel):
     priority: Priority = Priority.REQUIRED
     context_refs: list[str] = Field(default_factory=list)
     depends_on: list[str] = Field(default_factory=list)
-    #: Registry operation the request needs (for example `bounded_research`); the scheduler
-    #: passes it to the eligibility filter so fixed-routing candidates do not tie.
     operation: str | None = None
+    (
+        "Registry operation the request needs (for example `bounded_research`); the scheduler "
+        "passes it to the eligibility filter so fixed-routing candidates do not tie."
+    )
 
     @model_validator(mode="after")
     def _validate_schemas_and_payload(self) -> RequestBody:

@@ -10,7 +10,7 @@ docs/acceptance-criteria/testing-quality/TQ-600-suite-feedback-latency/TQ-600a-1
 ======================================================================
 ASSUMED PRODUCTION CONTRACT (written by test-writer; python-coder builds it)
 
-.github/workflows/post-merge-hold.yml -- the job named exactly `Post-merge suite status`; its ``run:`` steps are executed
+.github/workflows/post-merge-hold.yml -- the job named exactly `Post-merge hold evaluation`; its ``run:`` steps are executed
 verbatim by the shared executor, so the step must work with only what the job environment gives it: GITHUB_API_URL,
 GITHUB_TOKEN, GITHUB_REPOSITORY and GITHUB_EVENT_PATH (the workflow may pass them through env: as
 ``${{ github.api_url }}`` / ``${{ github.token }}`` / ``${{ github.repository }}`` / ``${{ github.event_path }}``; the executor
@@ -27,8 +27,9 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from pathlib import Path
 
+from ._app_harness import AppTestCase
 from ._ending_harness import CHECK, Cases
-from ._hold_harness import RED_JOBS, HoldTestCase, fresh_base, make_run, run_hold_job
+from ._hold_harness import RED_JOBS, fresh_base, make_run, run_hold_job
 from ._notice_fakes import old_description
 
 PASS_READS = ["runs", "workflow"]
@@ -48,7 +49,7 @@ def _under_tests(events):
     return [e["path"] for e in events if e["kind"] == "open" and {"tests", "unit_tests"} & set(Path(e["path"]).parts)]
 
 
-class TestTq600a13viCost(HoldTestCase):
+class TestTq600a13viCost(AppTestCase):  # the job mints the hold App's token, so the service must serve the App plane
     def _execute(self):
         """Run the real job once; return (outcome, the reads it made, what it left in its HOME)."""
         self.svc.requests.clear()

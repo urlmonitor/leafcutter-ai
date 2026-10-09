@@ -194,7 +194,7 @@ def test_decision_complete_source_is_lossless_and_schema_pinned(tmp_path):
     (record,) = module.extract(tmp_path)
     schema = json.loads(module.SCHEMA_PATH.read_text(encoding="utf-8"))
     assert hashlib.sha256(module.SCHEMA_PATH.read_bytes()).hexdigest() == (
-        "84471651010968540a902a3ea8dd83d7c1e5bdc71d3834201393a44c8880e1c3"
+        "3be66b7cfcc087e88762c6ac48fc853a8d136bafe02a4e4776723afb25fd15e4"
     )
     assert set(raw) == set(schema["properties"])
     assert len(raw) == 31

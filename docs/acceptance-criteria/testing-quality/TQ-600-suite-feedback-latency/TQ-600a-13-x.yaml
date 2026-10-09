@@ -24,21 +24,37 @@ criteria: |
   And the defect this record exists to prevent in two directions: "the check exists and
     fails" being read as "merges are held", and a required check that cannot report — or
     that holds on noise — freezing every merge,
+  And the owner's decision of 2026-10-09 that the required context is sourced from the
+    repository's dedicated hold App (App ID 5249547), not from GitHub Actions, because any
+    Actions job — including one a pull request adds — can report under any name, and the
+    ruleset's source pin is the only thing that tells the two apart,
   When the hold is moved from advisory to required, or described as protecting the main
     branch, or kept required,
   Then it is added to the ruleset only after each of these has been observed on the real
     repository and recorded with its date and evidence, in this order: the correctness
     workflow has at least one completed run on main; the labels the family uses exist; an
     Actions event policy explicitly allowing `pull_request_target` exists, read back from
-    the repository; the hold has reported under exactly `Post-merge suite status` on a
-    pull request opened after the hold workflow reached main, on pull requests touching
-    only documentation, only tests, and only a workflow file, and on opened, synchronize
-    and edited events; a re-evaluation by TQ-600a-13-xv has been observed; the owner's
-    break-glass procedure of TQ-600a-13-xvii is documented; and an advisory period of at least 7 days has produced at least 20 hold evaluations whose verdict
-    matched the run history, including at least one hold and one lift,
-  And the ruleset entry is added with its source set to GitHub Actions, like the other six,
+    the repository; the App's credential is stored where only the hold's evaluation job
+    on the default branch can read it, and a workflow added by a pull request from a
+    branch of this repository has been observed unable to read it; the check run
+    `Post-merge suite status` has been observed posted by App 5249547 — the creating app
+    read back from the check run itself — on a pull request opened after the hold
+    workflow reached main, on pull requests touching only documentation, only tests, and
+    only a workflow file, and on opened, synchronize and edited events; a re-evaluation by
+    TQ-600a-13-xv has been observed, including one of a head commit that already carried
+    an App verdict, where the pull request's merge status follows the newer App check
+    run; the owner's break-glass procedure of TQ-600a-13-xvii is documented; and an
+    advisory period of at least 7 days has produced at least 20 hold evaluations whose
+    verdict matched the run history, including at least one hold and one lift,
+  And the ruleset entry for `Post-merge suite status` is added with its source set to the
+    dedicated hold App's integration id (App 5249547), never to GitHub Actions (15368) or
+    to any source, unlike the other six,
   And after the entry is added, with the run red, a pull request carrying no exemption is
     observed reported unmergeable by the hosting service, and the observation is recorded,
+  And after the entry is added, with the run red, a pull request that adds its own
+    workflow with a job named `Post-merge suite status` that exits zero is observed
+    reported unmergeable by the hosting service, its passing same-named check
+    notwithstanding, and the observation is recorded,
   And until that last observation is recorded, and at any time the entry is absent, every
     description of the hold — in this family's closure, in documentation, in a change note
     — states that the hold is advisory,
@@ -47,11 +63,15 @@ criteria: |
     verdicts in any later 14 days, are not reproduced at the same commit — that is, a red
     run on main is followed by a green run with the same head commit — and that count is
     reported where the owner reads the notice,
-  And the hold check reports its status under the single name `Post-merge suite status` on
-    every pull request that targets the main branch, whatever files it changes,
-  And the name and every-pull-request clauses are demonstrated by observing a status under
-    exactly that name on the real pull requests named above, never by reading the
-    workflow's triggers.
+  And the dedicated App reports the hold under the single name `Post-merge suite status`
+    on every pull request that targets the main branch, whatever files it changes,
+  And the enforcement state is reported as enforced only when the ruleset lists
+    `Post-merge suite status` pinned to the dedicated App; the same context pinned to
+    GitHub Actions or to any source is reported as advisory, naming the spoofable source
+    as the reason,
+  And the name, source and every-pull-request clauses are demonstrated by observing a
+    check run under exactly that name, created by App 5249547, on the real pull requests
+    named above, never by reading the workflow's triggers.
 depends_on:
   - TQ-600a-13
   - TQ-600a-13-vi
@@ -100,8 +120,13 @@ it_requirements:
   - >-
     THE ENFORCEMENT-STATE READER IS PURE AND EXACT. "enforced" only when a
     required_status_checks rule lists a context exactly equal to `Post-merge suite status`
-    pinned to integration 15368; anything else, including an unreadable response,
-    "advisory" with a reason.
+    pinned to the dedicated hold App's integration id (5249547 — for a GitHub App the
+    ruleset's integration id is its App ID; confirm by the read-back observation);
+    anything else, including an unreadable response, "advisory" with a reason. AMENDED
+    2026-10-09: SUPERSEDED "pinned to integration 15368"; the context pinned to 15368 is
+    now advisory with reason "spoofable source (GitHub Actions)". Where the reader gets
+    the expected id (the tunables file, or the `HOLD_APP_ID` value) is for the IT PO; it
+    must not be a literal in code, per the tunables rule below.
   - >-
     THE EVENT POLICY IS A HARD PREREQUISITE — VERIFIED (GitHub expert, docs, 2026-10-08):
     "For public repositories that do not already have an applicable Actions event policy,
@@ -111,29 +136,41 @@ it_requirements:
     blocked run looks like is UNVERIFIED, and whether an event policy can be created on a
     personal-account repository is UNVERIFIED. If the policy cannot be created, or a run
     is not observed after it exists, the FALLBACK is a `workflow_run`-triggered job on the
-    default branch that computes the verdict and posts a check run named `Post-merge
-    suite status` on the PR head via `POST /check-runs` (`checks: write`); adopting it
-    requires amending TQ-600a-13-xi's allowed writes, which this record does not
-    pre-authorise. Do not add the check to the ruleset on either route until a run of
-    that route has been observed reporting.
+    default branch that computes the verdict and has the dedicated App post the check
+    run `Post-merge suite status` on the PR head. AMENDED 2026-10-09: the App-created
+    check run is now the PRIMARY route's publication too (TQ-600a-13-vi), and
+    TQ-600a-13-xi's allowed writes are amended for it, so the fallback changes only the
+    trigger, not the publisher or the write set. Do not add the check to the ruleset on
+    either route until a run of that route has been observed reporting through the App.
   - >-
     ROLLOUT ORDER (user decisions H and J; VERIFIED that a `pull_request_target` check
     does not run on the PR that introduces it). TQ-600a-13-xix (with its minimal timing
     workflow) may land before step (1) and is independent of everything below. (1) merge the
     correctness workflow; dispatch it once on main; (2) owner pre-creates labels
     `post-merge-red`, `post-merge-timing`, `post-merge-flaky`; (3) owner creates the event
-    policy; read it back; (4) merge the hold and follow-up workflows; (5) observe the hold
-    on later PRs and a re-evaluation; (6) advisory period, with the break-glass procedure
-    documented (TQ-600a-13-xvii); (7) add to the ruleset; (8)
-    observe a held PR reported unmergeable; (9) rehearse the break-glass within the first
-    day (TQ-600a-13-xvii). Steps (3) to (8) before 2026-11-02 if
-    possible; after that date (3) blocks everything after it.
+    policy; read it back; (3a) [added 2026-10-09] owner moves `HOLD_APP_ID` and
+    `HOLD_APP_PRIVATE_KEY` from repository secrets to secrets of an environment that only
+    `main` may deploy to (see TQ-600a-13-vi), deletes the repository-level copies, and
+    observes a throwaway same-repository PR whose added `pull_request` workflow tries to
+    read them get nothing; (4) merge the hold and follow-up workflows; (5) observe the
+    App's check run (creating app 5249547, read back from the check run) on later PRs and
+    a re-evaluation, including one of an already-judged head commit; (6) advisory period,
+    with the break-glass procedure documented (TQ-600a-13-xvii); (7) add to the ruleset
+    with source = the hold App; (8) observe a held PR reported unmergeable, and a red-run
+    PR carrying a passing PR-added job named `Post-merge suite status` reported
+    unmergeable; (9) rehearse the break-glass within the first day (TQ-600a-13-xvii).
+    Steps (3) to (8) before 2026-11-02 if possible; after that date (3) blocks everything
+    after it.
   - >-
     THE REPORTED NAME CANNOT DRIFT OR BE SKIPPED — VERIFIED (GitHub expert): a skipped job
     reports success even when required; a job whose `needs:` failed is skipped; path,
     branch or commit-message filtering leaves the check pending; a matrix suffixes the
-    name. So: `name: Post-merge suite status`, no matrix, no job-level `if:`, no `needs:`,
-    no path filter, and no branch filter that could exclude a PR to main.
+    name. So: `name: Post-merge hold evaluation` (AMENDED 2026-10-09; SUPERSEDED `name:
+    Post-merge suite status` — that name now belongs only to the App's check run), no
+    matrix, no job-level `if:`, no `needs:`, no path filter, and no branch filter that
+    could exclude a PR to main. A skipped or never-started evaluation job now publishes
+    no App check at all, which blocks rather than passes once required — safe, but it
+    still breaks the every-pull-request clause, so the rules stay.
   - >-
     DEMOTION AND ADVISORY NUMBERS — ACCEPTED BY THE OWNER AS TUNABLE DEFAULTS (2026-10-08):
     demote when more than one in three red verdicts in the first 14 days, or three in any
@@ -192,25 +229,30 @@ delivers_to:
 expects_from:
   - ac_id: TQ-600a-13-vi
     contract: >-
-      One job in .github/workflows/post-merge-hold.yml named exactly `Post-merge suite
-      status`, under `pull_request_target`, no matrix, no job-level `if:`, no `needs:`,
-      no path filter.
+      One job in .github/workflows/post-merge-hold.yml named exactly `Post-merge hold
+      evaluation`, under `pull_request_target`, no matrix, no job-level `if:`, no
+      `needs:`, no path filter, which on every evaluation has App 5249547 create one check
+      run named exactly `Post-merge suite status` on the PR head commit. (Amended
+      2026-10-09.)
 test_spec:
   - name: test_tq600a_13_x_the_status_is_reported_under_one_name
     target_dir: unit_tests/suite_performance/
     framework: unittest
     type: integration
     angle: seam
-    surface_invoked: "the shared workflow-step executor locating the job in .github/workflows/post-merge-hold.yml by the exact name `Post-merge suite status` and executing it with one synthetic event against the recording fake server"
+    surface_invoked: "the shared workflow-step executor locating the job in .github/workflows/post-merge-hold.yml by the exact name `Post-merge hold evaluation` and executing it with one synthetic event against the recording fake server acting as the App token and check-run endpoints"
     must_catch:
-      - "the job is renamed or reported under a different case"
+      - "the App's check run is created under a different name or case"
+      - "the evaluation job still carries the name `Post-merge suite status`, so the Actions-sourced check shares the required name"
       - "the job gains a matrix"
-      - "the job gains a job-level `if:` or a `needs:`, so a skip reports as passing"
+      - "the job gains a job-level `if:` or a `needs:`, so the evaluation can be skipped"
     description: >-
-      The executor finds exactly one job with that exact name and executes it to a
-      verdict; it refuses a matrix; the test fails if the executor reports a job-level
-      condition or a dependency for this job. Covers the NAME half only; the
-      every-pull-request half is a recorded live observation.
+      The executor finds exactly one job named `Post-merge hold evaluation`, no job named
+      `Post-merge suite status`, and executes it to a verdict; the fake records exactly one
+      check-run create named `Post-merge suite status` authorised by the App token; it
+      refuses a matrix; the test fails if the executor reports a job-level condition or a
+      dependency for this job. Covers the NAME half only; the every-pull-request and
+      creating-app halves are recorded live observations.
   - name: test_tq600a_13_x_enforcement_is_claimed_only_from_an_observed_ruleset
     target_dir: unit_tests/suite_performance/
     framework: unittest
@@ -220,12 +262,14 @@ test_spec:
     must_catch:
       - "the family is closed as protecting main with the ruleset never read"
       - "a near-miss context ('post-merge suite status', a trailing space, a suffix) is accepted"
-      - "the context is accepted with source 'any' rather than integration 15368"
+      - "the context is accepted with source 'any' rather than the hold App's integration id"
+      - "the context pinned to GitHub Actions (15368) is accepted as enforced — the spoofable source this amendment exists to retire"
       - "an empty, malformed or unreadable response is reported as enforced"
     description: >-
-      The six-context response: advisory. With `Post-merge suite status` pinned to 15368
-      added: enforced. Each near-miss, an unpinned entry, an empty list and a malformed
-      body: advisory with a reason.
+      The six-context response: advisory. With `Post-merge suite status` pinned to the
+      hold App (5249547) added: enforced. The same context pinned to 15368: advisory,
+      reason names the spoofable source. Each near-miss, an unpinned entry, an empty list
+      and a malformed body: advisory with a reason.
   - name: test_tq600a_13_x_not_reproduced_reds_are_counted_from_run_history
     target_dir: unit_tests/suite_performance/
     framework: unittest
@@ -281,20 +325,48 @@ amended_by:
 - action: approved
   agent: approve_acs
   date: '2026-10-08'
+- reason: 'OWNER DECISION 2026-10-09 (BrainCandy): CLOSE THE CHECK-NAME SPOOF GAP
+    WITH A DEDICATED GITHUB APP (App ID 5249547). SUPERSEDED criterion "the ruleset
+    entry is added with its source set to GitHub Actions, like the other six" -> source
+    set to the hold App''s integration id, never GitHub Actions or any source. Added:
+    the owner decision as a Given; two prerequisites before the ruleset change (the
+    App credential reachable only by the evaluation job on main, observed unreadable
+    from a PR-added workflow; the check run observed posted BY App 5249547 on the
+    named real PRs, and a re-evaluation of an already-judged head observed with the
+    newer App check governing); a post-entry observation that a red-run PR carrying
+    a passing PR-added job named `Post-merge suite status` is unmergeable; enforcement
+    reported only for the App-pinned context, 15368-pinned reported advisory. The
+    name and every-PR clauses now read "the dedicated App reports". it_requirements
+    amended (reader pin, fallback, rollout step 3a, job name); expects_from and two
+    test descriptors amended. readiness approved -> reviewed: must be re-approved
+    before building. depends_on unchanged.'
+  by: business-analyst
+  at: 2026-10-09
+- action: approved
+  agent: approve_acs
+  date: '2026-10-09'
 superseded_by: null
 covered_by: []
 implemented_by: []
 change_target:
   - pipeline
   - infrastructure
-risk_surface: internal
+risk_surface: auth
 notes: |
   RESOLVED: the ruleset is readable without admin rights (VERIFIED twice, 2026-10-08).
 
   OBSERVATIONS TO RECORD HERE, each with date and evidence (none recorded yet): first
-  completed correctness run on main; labels present; event policy read back; hold
-  reported on a docs-only, a tests-only and a workflow-only PR; opened / synchronize /
-  edited evaluations seen; a re-evaluation seen; advisory-period tally; ruleset entry
-  added; held PR reported unmergeable.
+  completed correctness run on main; labels present; event policy read back; App
+  secrets moved to a main-only environment and observed unreadable from a PR-added
+  workflow; App check run (creating app 5249547) reported on a docs-only, a tests-only
+  and a workflow-only PR; opened / synchronize / edited evaluations seen; a re-evaluation
+  seen, including one of an already-judged head commit; advisory-period tally; ruleset
+  entry added with source = the hold App, read back; held PR reported unmergeable;
+  red-run PR with a passing PR-added `Post-merge suite status` job reported unmergeable.
+
+  CLOSES the check-name spoof gap recorded as accepted under user decision H (see
+  TQ-600a-13-vi notes) once the ruleset entry above is added and both unmergeable
+  observations are recorded. risk_surface raised internal -> auth on 2026-10-09: this
+  record now owns which identity may satisfy a merge gate.
 
   DEADLINE: 2026-11-02, when the default `pull_request_target` block is enforced.
