@@ -8,7 +8,7 @@ level: L3
 status: active
 req_status: draft
 work_status: todo
-readiness: reviewed
+readiness: approved
 priority: medium
 roadmap_phase: phase_1
 criteria: |
@@ -141,6 +141,9 @@ amended_by:
     by: it-po
     at: 2026-10-09
   - reason: "Criteria reworded, 2026-10-09 (BA rewording requested by the IT PO entry above). WHAT CHANGED: the first scenario's Given previously defined 'the enduring project location cannot be determined' as 'the drive is not running under version control at all, or the version-control tooling is unavailable to the caller'. It now defines it as the install's build-time declaration being absent, unreadable, unparseable, missing the report sink or log root entry, holding a non-absolute location, or stale. Its Then was tightened from 'either written to a location the caller can confirm is not the disposable workspace, or refused' to a refusal only: nothing created anywhere, a failure reason naming the declaration and the failed condition, no record identifier returned, and the verdict still delivered. A new middle scenario states the former version-control examples as SUCCESS cases: with a usable declaration, a project outside version control or a caller without the tooling still writes to the declared location. The plain-checkout scenario is unchanged. WHY: the version-control wording belonged to the superseded git-common-dir design (rule (c) in INF-500d-4's notes), rejected on 2026-09-07 in favour of the absolute log root fixed at build time in the deployed declaration (INF-500d-4 amended_by and it_requirements; this AC's it_requirements line 1). Under that mechanism a checkout outside version control is a success case, so the old Given described a refusal the adopted design must never produce. No test_spec descriptor asserted a retracted case: test_project_without_version_control_writes_to_the_declared_root already treats it as success and now has a criterion to cite, and the refusal tests already exercise the declaration cases."
+    by: BrainCandy
+    at: 2026-10-09
+  - reason: "BrainCandy approved readiness on 2026-10-09 (relayed via the orchestrating session). readiness: reviewed -> approved, given after the criteria rewording above; work_status unchanged."
     by: BrainCandy
     at: 2026-10-09
 superseded_by: null

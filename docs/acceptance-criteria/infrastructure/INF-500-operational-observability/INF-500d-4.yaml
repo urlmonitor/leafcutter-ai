@@ -8,7 +8,7 @@ level: L2
 status: active
 req_status: draft
 work_status: todo
-readiness: reviewed
+readiness: approved
 priority: medium
 roadmap_phase: phase_1
 criteria: |
@@ -161,6 +161,9 @@ created: 2026-08-13
 amended_by:
   - reason: "IT PO enrichment, 2026-10-09. CRITERIA AND NOTES UNCHANGED, as both are BA-owned. RULE (c) IN THE NOTES IS SUPERSEDED FOR IMPLEMENTATION: the durable location is the absolute log root fixed at build time in config/knowledge_sink.json (the knowledge plane's existing declaration, extended), not the main clone found through git rev-parse --git-common-dir. Why: INF-400c-4 and INF-700a rejected git-common-dir on 2026-09-07 for two accepted reasons — 'the repository' is ambiguous in a nested consumer install, and the common directory is reported relative from a main checkout and absolute from a worktree, which reproduces the relative-path defect in the layout developers test in. Rules (a) config and (b) guards are untouched. The criteria never name git, so none of the four scenarios needs a wording change for the new mechanism. The fourth scenario is satisfiable only if the per-drive worktree bootstrap stops declaring the worktree's own root, which is now INF-500d-4-iii. Split into L3s INF-500d-4-iii through INF-500d-4-viii across agent boundaries (build and provisioning, writers, readers, prompt surfaces, reference docs, diagram); see it_requirements for sequencing, migration (none — reports/feedback-snapshots/ is the rescue) and the BO-100d reconciliation that needs their owner."
     by: it-po
+    at: 2026-10-09
+  - reason: "BrainCandy approved readiness on 2026-10-09 (relayed via the orchestrating session). readiness: reviewed -> approved on this record and on the children this change set touched or created (INF-500d-4-i, -iii, -iv, -v, -vi, -vii, -viii); INF-500d-4-ii was already approved and done and is not touched. Criteria and work_status unchanged."
+    by: BrainCandy
     at: 2026-10-09
 superseded_by: null
 covered_by:
