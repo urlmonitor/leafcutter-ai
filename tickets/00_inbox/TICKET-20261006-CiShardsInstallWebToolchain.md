@@ -125,10 +125,12 @@ Applied:
 ## Out of Scope
 - Making `run_vitest_and_parse` launch on Windows (resolve `vitest.cmd`, or run `node vitest.mjs`).
   This is a production gap for the done-proof oracle on Windows hosts (it fails closed there), and
-  it needs its own ticket.
+  it needs its own ticket. (2026-10-08: filed as
+  `TICKET-20261008-DoneProofLaunchesVitestOnWindows.md`.)
 - `.github/workflows/test-durations.yml` has the same missing toolchain. There, the vitest-backed
   tests fail fast, so their recorded durations will be near zero, which affects only shard balance.
-  It should mirror `test-shard` in a follow-up.
+  It should mirror `test-shard` in a follow-up. (2026-10-08: filed as part (a) of
+  `TICKET-20261008-BuildPipelineHygiene.md`.)
 - Raising the Node major. Node 20 is kept to match `done-proof`. Moving both jobs (and
   `atlas-contracts`, which uses 22) to one supported LTS is a separate change.
 
