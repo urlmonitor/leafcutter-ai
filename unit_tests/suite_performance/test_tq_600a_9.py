@@ -71,6 +71,8 @@ import time
 import unittest
 from pathlib import Path
 
+import pytest
+
 from ._test_helpers import _WORKTREE_ROOT
 from ._test_helpers_tq_600a_9 import (
     COLLISION_GROUP_FILE,
@@ -270,6 +272,7 @@ class TestTQ600a9BuildSubprocessReduction(unittest.TestCase):
     # ------------------------------------------------------------------
     # Test 5 -- criterion (ratio, before/after in one sitting; scoped)
     # ------------------------------------------------------------------
+    @pytest.mark.timing_ratio
     def test_tq600a_9_the_named_files_cost_at_most_two_thirds_of_their_baseline_MANUAL(self):
         # covers: TQ-600a-9
         # angle: criterion
