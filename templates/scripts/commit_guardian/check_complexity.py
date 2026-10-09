@@ -252,6 +252,7 @@ def main() -> int:
 
         print("💡 Tip: Try breaking these large functions into smaller, private helper functions.")
         print("   Use the `complexity-reduction` skill to safely refactor and extract components.")
+        print("   A pure move or rename of an unchanged function: commit with SKIP=check-complexity.")
 
         # Machine-readable autofix hint — parsed by the precommit-autofix skill
         # to route directly to the correct coder. Looked up from agent_registry.json
