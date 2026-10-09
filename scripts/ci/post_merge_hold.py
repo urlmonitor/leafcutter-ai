@@ -34,6 +34,11 @@ ARCHITECTURE: ``evaluate(client, repo, *, now=None)`` returns the verdict object
     judged or written) and ``pull_request.head.sha`` (used only when 40 lowercase
     hex characters, else the comment says the head commit is unknown). No other
     event text is read, and none of it may reach a shell.
+    APP PUBLICATION (TQ-600a-13-vi): ``main(["--publish"])`` hands the same evaluation to
+    ``_hold_publish.publish``, which creates the check run `Post-merge suite status` as the
+    hold App (in progress, before the verdict) and completes it after; ``main()`` with no
+    argv is unchanged and publishes nothing. ``conclusion_for(verdict)`` (re-exported) is
+    ``success`` only for ``pass`` or ``exempt``.
     TRUST: the workflow runs under ``pull_request_target`` with the default
     branch's copy of this file, sparse-checked-out with no ``ref``, so a pull
     request that edits this module has no effect on its own verdict.
@@ -62,6 +67,7 @@ if __package__ in (None, ""):  # run as `python scripts/ci/post_merge_hold.py`: 
 
 from scripts.ci._github_rest import GitHubClient, GitHubError  # noqa: E402
 from scripts.ci._hold_comment import EventError, read_event, render_comment, sync_comment  # noqa: E402, F401 -- render_comment is this module's public API
+from scripts.ci._hold_publish import conclusion_for, publish  # noqa: E402, F401 -- conclusion_for is this module's public API
 from scripts.ci._notice_render import LABEL, parse_state  # noqa: E402
 from scripts.ci._run_history import (  # noqa: E402
     KIND_NEVER_RUN,
@@ -78,6 +84,7 @@ TUNABLES_FILE = Path(__file__).with_name("post_merge_tunables.json")
 NOTICE_PAGE_SIZE = 30
 ACTIVE = "active"
 EXIT_OK, EXIT_HELD, EXIT_BAD_INPUT = 0, 1, 2
+PUBLISH_FLAG = "--publish"
 REPO_RE = re.compile(r"[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+")
 
 
@@ -231,10 +238,21 @@ def evaluate_pull_request(client: GitHubClient, repo: str, pr_number: int, *, no
 
 
 # --------------------------------------------------------------------------- CLI
+def _read_jwt() -> str:
+    """The App's signed JWT, read once from the first line of stdin (the step pipes it; it is never in the environment)."""
+    try:
+        return sys.stdin.readline().strip()
+    except (OSError, ValueError) as exc:
+        logger.warning("post-merge hold: could not read the App token from stdin: %s", exc)
+        return ""
+
+
 def main(argv: list[str] | None = None) -> int:
-    """CLI entry point: print the reason, exit 0 only when the verdict is ``pass``."""
+    """CLI entry point: print the reason, exit 0 only when the verdict is ``pass``.
+
+    ``argv`` is only ever checked for ``--publish`` (App publication); a call with no argv never publishes.
+    """
     logging.basicConfig(level=logging.INFO, format="%(name)s: %(message)s", stream=sys.stderr)
-    del argv  # everything arrives through the environment, none of it from the pull request
     api_url, token, repo = (os.environ.get(name, "") for name in ("GITHUB_API_URL", "GITHUB_TOKEN", "GITHUB_REPOSITORY"))
     if not (api_url and token and REPO_RE.fullmatch(repo)):
         print("Post-merge suite status could not be read: GITHUB_API_URL, GITHUB_TOKEN or GITHUB_REPOSITORY is missing or malformed.")
@@ -249,10 +267,13 @@ def main(argv: list[str] | None = None) -> int:
     except EventError as exc:  # fail closed: nothing is judged, nothing is commented
         print(f"Post-merge suite status could not be read: {exc}")
         return EXIT_BAD_INPUT
+    if PUBLISH_FLAG in (argv or []):
+        return publish(client, api_url, repo, pr_number, head_sha, evaluate_pull_request, jwt=_read_jwt())
     verdict = evaluate_pull_request(client, repo, pr_number, head_sha=head_sha)
     print(verdict["reason"])
+    # TODO(TQ-600a-13-viii): exit-code parity -- this exits 0 only for `pass`; the publish path also exits 0 for `exempt`.
     return EXIT_OK if verdict["state"] == "pass" else EXIT_HELD
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    sys.exit(main(sys.argv[1:]))

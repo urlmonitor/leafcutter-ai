@@ -153,7 +153,7 @@ function blockedOnFailure(result, phase, agentLabel, extra = {}) {
 
 // Reply shape of both routing dispatches (stage and observe); only `case` is required, the rest is read defensively.
 const KNOWLEDGE_ROUTING_SCHEMA = { type: 'object', required: ['case'], properties: {
-  case: { type: 'string', enum: ['completed', 'could_not_complete', 'did_not_run'] },
+  case: { type: 'string', enum: ['completed', 'completed_with_waiting', 'could_not_complete', 'did_not_run'] },
   read: { type: 'integer' }, written: { type: 'integer' }, unwritten: { type: 'integer' },
   detail: { type: ['string', 'null'] }, manifest: { type: 'array', items: { type: 'string' } },
   unwritten_records: { type: 'array' }, waiting: { type: ['object', 'null'] },
@@ -164,8 +164,11 @@ const KNOWLEDGE_ROUTING_SCHEMA = { type: 'object', required: ['case'], propertie
  * `knowledge_routing` figures consumed into this path's terminal payload
  * (INF-700a-1 / INF-700a-1-i / INF-700a-1-ii — same contract as
  * fast-lane-ship.js's own copy of this function). Fails CLOSED: only a
- * reply carrying a RECOGNISED `case` value ("completed" or
- * "could_not_complete") is trusted as having actually run. Anything else —
+ * reply carrying a RECOGNISED `case` value ("completed",
+ * "completed_with_waiting" or "could_not_complete": the schema's enum) is
+ * trusted as having actually run. "completed_with_waiting" (INF-700a-5-ii) is
+ * a completed run that left a late-emitted record waiting; it is passed
+ * through as its own value, never folded into "completed". Anything else —
  * a missing case, an unparseable reply, or the harness's own unlabelled
  * default stub — is reported as the third, distinct "did_not_run" case,
  * never rendered as "completed" with zero figures.
@@ -180,7 +183,7 @@ const KNOWLEDGE_ROUTING_SCHEMA = { type: 'object', required: ['case'], propertie
  * @returns {{case: string, read: number, written: number, unwritten: number, detail: (string|null)}}
  */
 function classifyKnowledgeRouting(reply) {
-  const recognisedCase = reply && (reply.case === 'completed' || reply.case === 'could_not_complete') ? reply.case : 'did_not_run'
+  const recognisedCase = reply && KNOWLEDGE_ROUTING_SCHEMA.properties.case.enum.includes(reply.case) ? reply.case : 'did_not_run'
   const ran = recognisedCase !== 'did_not_run'
   const asInt = (value) => (ran && typeof value === 'number' && Number.isFinite(value) ? value : 0)
   const asList = (value) => (ran && Array.isArray(value) ? value : [])
@@ -1052,11 +1055,7 @@ return {
     (prNotOpened
       ? `\n\n  *** ACTION REQUIRED ***\n  No pull request was opened. Opening it is now YOUR responsibility.\n  Compare: ${outstandingAction.compare_url || '(derive from branch above)'}\n  Command: ${outstandingAction.command}`
       : ''),
-  ac_id,
-  ac_path,
-  parent_ac_path,
-  test_file: testFile,
-  target_file,
+  ac_id, ac_path, parent_ac_path, test_file: testFile, target_file,
   changelog_path: changelogResult.entry_path,
   commit_sha: commitResult.commit_sha,
   worktree_root: worktreeRoot,

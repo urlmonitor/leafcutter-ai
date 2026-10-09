@@ -81,14 +81,19 @@ you used:
  "manifest": ["memory/project_x.md"], "unwritten_records": [], "waiting": {"difference": 0}}}
 ```
 
-- `case: "completed"` - the step ran. `written` counts only learnings the
-  path's own commit was observed to carry; `manifest` names those files. Go
-  to Step 6 to prove it worked.
+- `case: "completed"` - the step ran and nothing is left waiting. `written`
+  counts only learnings the path's own commit was observed to carry;
+  `manifest` names those files. Go to Step 6 to prove it worked.
+- `case: "completed_with_waiting"` - the step ran, but records were emitted
+  after it read the sink (`waiting.difference` above 0, named in
+  `waiting.records`). The figures for what it did read are as for
+  `completed`. The waiting records are not routed yet; the next completed unit
+  of work routes them. If nothing else will complete here, list them with the
+  [`waiting` query](../reference/knowledge-routing-step.md#waiting-records-query)
+  or route them by hand (Steps 3 to 5).
 - `unwritten_records` not empty - each entry names a learning that did not
   reach the commit, its `reason`, and `eligible: true` (the next completed
   unit of work stages it again). Nothing to do unless the cause persists.
-- `waiting.difference` above 0 - records emitted after the step read the sink;
-  the next completed unit of work routes them.
 - `case: "could_not_complete"` - the step ran and failed; `detail` says what. Go to Step 3.
 - `case: "did_not_run"` - no usable reply; nothing is known. Go to Step 3.
 - No `knowledge_routing` key at all - the path does not carry the step. Go to Step 3.
