@@ -699,3 +699,9 @@ GENERIC_SECRET:tests/kernel/entity_context/test_permissions.py:*
 # Glob, not per-line: this is a 787-line data file and a later snapshot will be longer,
 # so a pinned line number would silently stop matching.
 ENTROPY_HIGH:reports/feedback-snapshots/feedback-corpus-2026-09-30.jsonl:*
+# AR-300 slice 2 test support: RETIRED_SKILLS_TOKEN / RETIRED_SPAWN_TOKEN hold the retired
+# {{my_skills_used}} / {{my_spawn_allowlist}} placeholder strings the tests assert are gone;
+# "TOKEN" in the name trips GENERIC_SECRET. Not credentials. Glob per CLAUDE.md test-file rule.
+GENERIC_SECRET:unit_tests/prompt_assembly/_ar_300ad_support.py:*
+# AR-300 slice 2: the test's docstring names the in-run mutation environment variable and its value.
+ENTROPY_HIGH:unit_tests/prompt_assembly/test_ar_300d_3_i_last_ability.py:*
