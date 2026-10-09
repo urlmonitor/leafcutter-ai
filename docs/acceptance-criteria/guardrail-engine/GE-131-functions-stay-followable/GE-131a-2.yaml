@@ -196,7 +196,8 @@ created: 2026-10-09
 amended_by: []
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/TICKET-20261009-GE-131a-2.md
 change_target: code
 risk_surface: contract_boundary
 notes: |
