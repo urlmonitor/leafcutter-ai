@@ -54,7 +54,8 @@ amended_by:
     at: 2026-10-09
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-OneDurableLogRootForEveryWorkspace/07_TICKET-20261009-INF-500d-4-viii.md
 change_target: docs
 risk_surface: internal
 notes: |
