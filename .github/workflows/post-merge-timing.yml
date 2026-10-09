@@ -34,7 +34,9 @@ jobs:
   timing:
     name: Timing lane (timing_ratio)
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    # 45, not 20: the lane also carries TQ-600a-9's before/after ratio test, which
+    # times two scoped pytest runs (one in a detached worktree at the merge-base).
+    timeout-minutes: 45
     permissions:
       contents: read
     steps:

@@ -155,10 +155,38 @@ $ harvest_learnings.py --status --sink <tmp>/none/sink.jsonl --state <tmp>/state
 | Question | Answer to read | Counts |
 |---|---|---|
 | Has the routing step completed in this tree, and over which sink? | `--status` (this page) | One timestamp and a path. No records, no agent runs. |
-| How many records are waiting to be written? | The waiting count, defined in §5 of [Agent Knowledge System](../architecture/agent_knowledge_system.md); reported as `outstanding` in the harvester's summary line | Records. Zero for a healthy loop and for a loop that has never run. |
+| How many records are waiting to be written? | The waiting count, defined in §5 of [Agent Knowledge System](../architecture/agent_knowledge_system.md); reported as `outstanding` in the harvester's summary line, and by the read-only [`waiting` query](#waiting-records-query) without a run | Records. Zero for a healthy loop and for a loop that has never run. |
 | How are capture attempts going? | The capture-health report's reached / recorded / failed figures, described in the same §5 | Agent invocations reaching the sign-off capture step. |
 
 The three answers use different denominators and never share a figure. A zero waiting count does not show that the step has run; `last_run` does.
+
+### Waiting records query
+
+A record emitted after a run's routing step read the sink stays in the sink and waits for the next completed unit of work. Where nothing further completes, ask for it directly:
+
+```bash
+python3 scripts/knowledge/completion_routing_cli.py waiting
+```
+
+It takes `--sink` (default: the build-time declaration) and `--state` (default: beside the sink), needs no working directory, and prints one JSON line.
+
+| Field | Type | Meaning |
+|---|---|---|
+| `case` | string | `ok`; `unknown` when the sink exists but cannot be read; `did_not_run` when there is no sink declaration and no `--sink`. |
+| `waiting` | integer or null | Sink records with text whose hash is not in the state file. `null` for `unknown` and `did_not_run`, never `0`. |
+| `records` | array | `{text, destination}` for each waiting record. |
+| `note` | string | That they wait for the next completed unit of work in this install. |
+
+Properties:
+
+- Exits `0` always. Creates and writes nothing: not the sink, the state file, the marker or the lock file. This differs from `harvest_learnings.py --dry-run`, which counts every record it would route.
+- The figure is the harvester's waiting count, not a second counter, and does not restate `--status`'s `last_run`.
+- A record counts as waiting until a later `stage` confirms it, so one already carried by a merged commit still counts until the run after that. The count then returns to zero.
+
+```text
+$ completion_routing_cli.py waiting --sink <tmp>/sink.jsonl --state <tmp>/harvest_state.json
+{"case": "ok", "waiting": 1, "records": [{"text": "...", "destination": "memory/x.md"}], "note": "still in the install's sink, waiting for the next completed unit of work in this install to route it"}
+```
 
 ---
 
