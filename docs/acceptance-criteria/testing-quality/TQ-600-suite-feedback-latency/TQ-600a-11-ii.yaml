@@ -5,13 +5,24 @@ components:
 title: "The two parsers are proved to agree on the real store, record by record"
 component: testing-quality
 level: L3
-status: active
-req_status: draft
+status: deprecated
+req_status: superseded
 work_status: todo
-readiness: approved
+readiness: reviewed
 priority: high
 roadmap_phase: phase_1
 criteria: |
+  RETIRED 2026-10-09 WITH ITS PARENT TQ-600a-11. This record is, in its own words,
+    "THE ACCEPTANCE CRITERION FOR TQ-600a-11" — the evidence that licenses substituting
+    the C-backed parser for the pure-Python one. No substitution is being made: the one
+    call site the parent admitted is the agent-card generator's whole-AC-store walk, and
+    that walk goes when agent cards become static. A record-by-record agreement proof
+    between two parsers, only one of which is used anywhere, licenses nothing. Note the
+    standing correction in the parent's notes before reusing any of this: the "four
+    classes of input on which the two parsers are known to differ" below is NOT
+    exhaustive — a tab inside a flow sequence is a fifth and is the one that caused the
+    defects. Text below is preserved verbatim for audit.
+
   Given the acceptance-criteria store exactly as it stands on disk — every record of
     it, 4,635 of them at the time of measurement — and the fact so far established
     about the C-backed parser being only that it parses all of them without raising,
@@ -113,59 +124,16 @@ expects_from:
       ordering: this record is the evidence that licenses TQ-600a-11's substitution,
       so it must be green before the substitution is called done, even though it
       imports the accessor the substitution introduces.
-test_spec:
-  - name: test_tq600a_11_ii_every_store_record_parses_identically_under_both_parsers
-    target_dir: unit_tests/ac_store/
-    framework: unittest
-    type: integration
-    angle: real_artifact
-    description: >-
-      Enumerate the real store, parse each record both ways, compare objects and
-      types. Zero disagreements. The failure message names the record path and the
-      field at which the two results differ.
-  - name: test_tq600a_11_ii_the_comparison_reports_the_number_of_records_it_examined
-    target_dir: unit_tests/ac_store/
-    framework: unittest
-    type: integration
-    angle: criterion
-    description: >-
-      The reported examined-count is non-zero and equals the number of record files
-      the enumeration found. NAMED MUTATION: make the enumeration return an empty
-      list; this test must go RED while the agreement assertion alone would stay
-      green.
-  - name: test_tq600a_11_ii_the_four_known_divergence_classes_are_present_in_the_compared_set
-    target_dir: unit_tests/ac_store/
-    framework: unittest
-    type: integration
-    angle: boundary
-    description: >-
-      For each of duplicate key, timestamp scalar, ambiguous numeric form and merge
-      key, the compared set contains at least one instance, and the report names
-      where it came from — a store record id, or the test's own supplementary input.
-  - name: test_tq600a_11_ii_a_record_only_one_parser_rejects_counts_as_a_disagreement
-    target_dir: unit_tests/ac_store/
-    framework: unittest
-    type: unit
-    angle: failure
-    description: >-
-      Feed an input that one parser raises on and the other accepts. The comparison
-      records a disagreement. NAMED MUTATION: wrap each parse in a try/except that
-      skips on error; this test must go RED, because that wrapping is the obvious
-      implementation and it converts every divergence into a silent skip.
-test_rationale: |
-  The analyst measured that the C-backed parser reads all 4,635 records without
-  raising. That is a different claim from the objects being equal, and the gap
-  between the two is exactly where this change can ship broken: a parse that
-  succeeds while resolving a value differently is invisible until some downstream
-  gate compares the wrong thing.
-
-  Three of the four descriptors exist to stop a comparison that cannot fail. The
-  examined-count descriptor names its injection because an empty enumeration is the
-  single most likely way this guard becomes a no-op, and the repository has already
-  lived through exactly that with this validator for eight days. The
-  one-parser-rejects descriptor names its injection because try/except-and-skip is
-  the natural thing a coder writes when a parse raises mid-sweep, and it silently
-  converts the strongest signal available into no signal at all.
+test_required: false
+test_spec: null
+test_rationale: >-
+  RETIRED 2026-10-09. This record declares NO test contract: it is deprecated and the
+  record-by-record parser comparison its four descriptors specified licensed a
+  substitution that is no longer being made. The descriptors and the original
+  rationale are preserved in the notes under "THE RETIRED TEST CONTRACT", as history
+  and not as work waiting to be done. Two of the four carry named mutations that are
+  reusable, and one carries a STANDING CORRECTION — the four divergence classes are
+  not exhaustive — which is flagged prominently there.
 
   The four classes are named rather than left to the implementer because a
   hand-written fixture contains none of them; they are the only inputs on which the
@@ -173,13 +141,150 @@ test_rationale: |
   is a comparison over the easy cases.
 origin_agent: BrainCandy
 created: 2026-10-05
-amended_by: []
+amended_by:
+  - reason: retired-with-parent-no-substitution-left-to-license
+    by: business-analyst
+    at: '2026-10-09'
+    note: >-
+      status active -> deprecated, req_status draft -> superseded, readiness approved
+      -> reviewed, test_required added as false, and all four test_spec descriptors
+      prefixed with a retirement marker. criteria below the banner, doc_links,
+      it_requirements, test_rationale, declared_files, delivers_to and expects_from
+      are untouched; superseded_by stays null.
+
+
+      readiness AND test_spec CORRECTED 2026-10-09, AFTER THIS ENTRY FIRST KEPT
+      approved. approved means cleared FOR BUILDING and a retired record is never
+      that; the fact that this record was approved from 2026-10-05 to 2026-10-09 is
+      preserved by recording it here instead. test_spec is CLEARED to null, with
+      test_required: false, and its four descriptors moved into notes under "THE
+      RETIRED TEST CONTRACT". A first attempt kept them in test_spec behind per-entry
+      "RETIRED — DO NOT AUTHOR" markers; check-ac-schema refused it, because
+      test_required and test_spec are one declaration and cannot say "no tests
+      needed" and "here are four tests" at once. The gate was right, and the
+      underlying error was the same one made on work_status and readiness: a
+      present-tense field used to carry history. The four-field retired-record shape
+      is on INF-600b-2's notes under "HOW TO RETIRE AN AC".
+
+
+      TWO REASONS NEUTRALISING RATHER THAN DELETING MATTERS HERE SPECIFICALLY. First,
+      this record's descriptors carry the most reusable constructions in the family —
+      the examined-count defence and the one-parser-rejects mutation — and both are
+      worth reading when someone next builds an equivalence check. Second, the
+      third descriptor's "four classes of input" is NOT exhaustive and never was; its
+      marker now carries that standing correction inline, so the list cannot be
+      lifted into a new record as though it were complete. Leaving this block live
+      would also have re-imposed ~27s of two whole-store sweeps on every full run for
+      a substitution nobody is making.
+
+
+      WHY. This record's whole purpose is stated in its own notes: "THE PARENT
+      SUBSTITUTES A PARSER IN 76 PLACES including a required pull-request gate and the
+      pre-commit path of every commit. The evidence currently in hand is 'it did not
+      raise'." That substitution was already narrowed to one call site on 2026-10-08,
+      and that one call site is removed when agent cards become static. An equivalence
+      proof is evidence FOR a change; with the change withdrawn there is nothing for it
+      to be evidence of, and running a 27-second two-parser sweep on every full test
+      run to license a substitution nobody is making is a standing cost for no
+      guarantee.
+
+
+      WHAT WAS GENUINELY LEARNED HERE AND SHOULD NOT BE RE-DISCOVERED. Two things
+      outlive this record and both are already written down elsewhere, which is why
+      retiring it loses nothing: (a) the two parsers differ in ERROR behaviour and not
+      only in speed, and `"key: [\t]\n"` returning `{'key': []}` under the C parser
+      where the pure-Python one raises is the concrete instance — recorded in the
+      parent's 2026-10-08 amendment; (b) the four classes named in this record's own
+      criteria are a FLOOR, not an exhaustive set, which the parent's notes state
+      explicitly against this record by name. Neither depends on this record staying
+      active.
+
+
+      ARTIFACT NOTICE. unit_tests/ac_store/test_tq_600a_11_ii.py exists on origin/main
+      despite work_status: todo here. Retire or re-point it deliberately with the code
+      change. Note also that its delivers_to contract to TQ-600a-11-iii — the injection
+      seam that lets one extra input be fed into the compared set — is what makes
+      TQ-600a-11-iii buildable at all, so the two must be dispositioned together.
 superseded_by: null
 covered_by: []
 implemented_by: []
 change_target: pipeline
 risk_surface: internal
 notes: |
+  ==========================================================================
+  STANDING CORRECTION — READ THIS BEFORE REUSING ANYTHING FROM THIS RECORD.
+  THE FOUR DIVERGENCE CLASSES ARE NOT EXHAUSTIVE. THERE IS A FIFTH.
+  ==========================================================================
+  This record's criteria name four classes of input on which the pure-Python and
+  C-backed YAML parsers are known to differ: a duplicate mapping key, a timestamp
+  scalar, the ambiguous numeric forms, and a merge key. That list READS AS COMPLETE
+  AND IS NOT. The fifth class is A TAB CHARACTER INSIDE A FLOW SEQUENCE —
+  `"key: [\t]\n"` returns `{'key': []}` under the C parser where the pure-Python one
+  raises ScannerError — and it is THE ONE THAT ACTUALLY CAUSED THE DEFECTS: a
+  fail-open `except yaml.YAMLError` meaning "skip this malformed file" silently
+  became "accept it as valid", which is the phantom-done class this repository's
+  guardrails exist to prevent. It was found AFTER the four-class list was written,
+  during the 2026-10-07 revert of 83 of 85 migrated call sites.
+
+  SO: TREAT ANY SUCH LIST AS A FLOOR, NEVER AS A CLOSED SET. If a future record
+  needs the known-divergence classes, it must take five and know that five is also
+  only what has been observed so far. Lifting the four-class list out of this record
+  as though it were complete would reproduce the exact gap that caused the defects,
+  and this record is now deprecated, so nothing else will stop that happening. This
+  warning is repeated on the parent TQ-600a-11 and is stated here because this is
+  the record that holds the list.
+
+  ==========================================================================
+  THE RETIRED TEST CONTRACT (moved here from test_spec, 2026-10-09).
+  NONE OF THIS IS WORK WAITING TO BE DONE. DO NOT AUTHOR ANY OF THESE TESTS.
+  ==========================================================================
+  test_spec is now null and test_required is false. The four descriptors below stood
+  in test_spec until this retirement; they are recorded here because that field is a
+  present-tense instruction to test-writer and these describe a contract against a
+  comparison nobody is building. Two of the four carry named mutations that are
+  worth reusing in any equivalence check.
+
+  (1) test_tq600a_11_ii_every_store_record_parses_identically_under_both_parsers
+      — integration / real_artifact. Enumerated the real store, parsed each record
+      both ways, compared objects AND types, zero disagreements, with the failure
+      message naming the record path and the differing field. Cost ~27s of two
+      whole-store sweeps on every full run, which is part of why retiring it rather
+      than leaving it is the right outcome.
+
+  (2) test_tq600a_11_ii_the_comparison_reports_the_number_of_records_it_examined
+      — integration / criterion. The reported examined-count non-zero and equal to
+      the number of record files the enumeration found.
+      NAMED MUTATION, AND THIS ONE IS GENERALLY REUSABLE: make the enumeration
+      return an empty list; this test must go RED while the agreement assertion
+      alone stays green. An empty enumeration is the single most likely way any
+      store-wide guard becomes a no-op, and this repository has already lived
+      through exactly that — the AC validator exited 0 having checked zero files for
+      eight days. Any new whole-store check should carry this descriptor's shape.
+
+  (3) test_tq600a_11_ii_the_four_known_divergence_classes_are_present_in_the_compared_set
+      — integration / boundary. For each of duplicate key, timestamp scalar,
+      ambiguous numeric form and merge key, the compared set contained at least one
+      instance and the report named where it came from — a store record id, or the
+      test's own supplementary input. SEE THE STANDING CORRECTION ABOVE: the list
+      this descriptor enumerates is a floor, not a closed set.
+
+  (4) test_tq600a_11_ii_a_record_only_one_parser_rejects_counts_as_a_disagreement
+      — unit / failure. Fed an input that one parser raises on and the other
+      accepts; the comparison recorded a disagreement rather than a skip.
+      NAMED MUTATION, ALSO REUSABLE: wrap each parse in a try/except that skips on
+      error; this test must go RED. That wrapping is the obvious thing a coder
+      writes when a parse raises mid-sweep, and it silently converts the strongest
+      signal available into no signal at all.
+
+  THE ORIGINAL test_rationale, PRESERVED FOR ITS CENTRAL DISTINCTION. "The analyst
+  measured that the C-backed parser reads all 4,635 records without raising. That is
+  a different claim from the objects being equal, and the gap between the two is
+  exactly where this change can ship broken: a parse that succeeds while resolving a
+  value differently is invisible until some downstream gate compares the wrong
+  thing." Three of the four descriptors existed to stop a comparison that cannot
+  fail — which is the same discipline the sibling TQ-600a-11-iii was written to
+  enforce one level up.
+
   THIS IS THE ACCEPTANCE CRITERION FOR TQ-600a-11, NOT A NICE-TO-HAVE. The parent
   substitutes a parser in 76 places including a required pull-request gate and the
   pre-commit path of every commit. The evidence currently in hand is "it did not

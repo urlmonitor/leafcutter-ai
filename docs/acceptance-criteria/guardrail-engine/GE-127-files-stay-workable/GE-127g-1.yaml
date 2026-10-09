@@ -221,6 +221,54 @@ declares_side_effect: false
 origin_agent: BrainCandy
 created: 2026-10-09
 amended_by:
+- reason: cards-population-no-longer-holds-an-over-limit-document-figures-noted-not-changed
+  by: business-analyst
+  at: '2026-10-09'
+  note: 'ADDITIVE ONLY. criteria are UNTOUCHED and readiness stays approved. One notes
+    block and this entry are added; no other field changed. The deliberate choice not
+    to touch criteria is explained below and is not an oversight.
+
+
+    WHAT CHANGED UNDER THIS RECORD. Agent cards became static on the day this record
+    was approved: the trailing per-agent AC-assignment section — 3,787 of 11,526 card
+    lines, present in 17 of 64 cards — is removed. python-coder.card.md falls from
+    2,809 lines to 162, and the number of cards above the 300-line limit falls from 3
+    to ZERO. This record''s criteria state "that directory holds 65 generated
+    documents, of which 3 stand above the 300-line limit — the longest at 2,809 lines
+    — and the next 3 stand at 276, 235 and 207". None of that describes the tree any
+    more.
+
+
+    WHY criteria ARE NOT EDITED. This record''s own notes already say it: "THE FIGURES
+    IN THE CRITERIA ARE ILLUSTRATIVE OF A SHAPE RATHER THAN FIXED FACTS", and "a test
+    that pins 65 or 2,809 as a constant will go red the next time an agent or an
+    assignment is added, which is the opposite of this record''s point". The figures
+    were never load-bearing; they describe the shape the fixture must construct. Every
+    test_spec entry already builds its own throwaway repository — arm 1 wants "several
+    documents under the limit and at least one far above it", arm 2 adds a 420-line
+    66th document, arm 3 compares against "the set the fixture constructed, never
+    against a pinned count". So the record stays buildable with no change, and editing
+    approved criteria to chase numbers the record itself disclaims would be a worse
+    outcome than a note.
+
+
+    THE ONE THING THAT GENUINELY CHANGES, AND IT IS WORTH KNOWING. The third arm — the
+    negative control, which empties the declaration and requires the three over-limit
+    documents to be named — can no longer be exercised against the REAL cards
+    directory, because there are no over-limit documents in it. Against a fixture it is
+    unaffected. But the record loses its live worked example: until now, anyone could
+    see the mechanism working by looking at the actual tree. That is a real loss of
+    legibility and it is recorded rather than smoothed over.
+
+
+    THE CARDS ENTRY STAYS IN THE DECLARED SET. The argument is on GE-127g under "DOES
+    THE CARDS ENTRY COME OUT?" and the ground most relevant to THIS record is the
+    second one: docs/agents/cards/ is the only DIRECTORY-shaped entry of the three, so
+    it is the only location under which this record''s second arm — "THE SECOND ARM IS
+    THE WHOLE RECORD", a newly generated document joining with no edit to the
+    declaration — has any population at all. Removing it would leave this record
+    quantifying over two individual filenames, which is the basename list it exists to
+    replace.'
 - action: approved
   agent: approve_acs
   date: '2026-10-09'
@@ -291,6 +339,41 @@ notes: |
       MUST STAY GREEN: the first and second arms. This is the BP-900g-7 shape — a registry
       naming something nothing consumes — and the third arm is the only clause that
       catches it.
+
+  ==========================================================================
+  THE MEASURED FIGURES IN criteria NO LONGER DESCRIBE THE TREE (2026-10-09).
+  ==========================================================================
+  Agent cards became static the day this record was approved. The trailing per-agent
+  AC-assignment section is removed from every card: 3,787 of 11,526 card lines, 33%,
+  across 17 of the 64 documents. python-coder.card.md goes 2,809 -> 162. The count of
+  cards above the 300-line limit goes 3 -> 0.
+
+  So the criteria's "3 stand above the 300-line limit — the longest at 2,809" and the
+  measured block above are both now historical. They were never fixed facts — this
+  record says so twice — but a reader checking them against the tree will find they do
+  not match, and should find this paragraph first rather than concluding the record is
+  wrong.
+
+  NOTHING IN THIS RECORD NEEDS TO CHANGE, and the reason is the construction it was
+  given: every test_spec entry builds its own throwaway repository rather than reading
+  the real directory. Arm 1's fixture wants "at least one far above" the limit; arm 2
+  adds a 420-line document; arm 3 asserts against "the set the fixture constructed,
+  never against a pinned count". Had any of those been written against the real tree,
+  this change would have broken all three — which is the clearest retrospective
+  vindication of the no-pinned-figures rule this record and GE-127g-5 both insist on.
+
+  WHAT IS GENUINELY LOST: the live worked example. The third arm's negative control
+  cannot be demonstrated against the real cards directory any more, because emptying
+  the declaration now names nothing. The mechanism will still be proved, but only in
+  fixtures. A mechanism with no live instance is one nobody notices decaying, and that
+  is a cost of the cards entry staying rather than an argument against it.
+
+  THE ENTRY STAYS. See GE-127g's notes block "DOES THE CARDS ENTRY COME OUT?". The
+  ground that bears most directly on this record: docs/agents/cards/ is the only
+  DIRECTORY-shaped entry of the three declared locations, so it is the only one under
+  which this record's second arm — the one its own notes call "THE WHOLE RECORD" — has
+  a population. With it gone, the declared set is two filenames and the no-edit
+  property has nothing to be true of.
 
   NOT AUTHORED HERE, BY DESIGN: estimated_complexity, it_requirements, test_spec,
   test_rationale and declares_side_effect. Those are the IT PO's, as is the concrete set

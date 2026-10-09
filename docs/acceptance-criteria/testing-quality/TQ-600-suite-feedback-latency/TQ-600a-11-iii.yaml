@@ -5,13 +5,22 @@ components:
 title: "The agreement check is shown to disagree when the two parsers really differ"
 component: testing-quality
 level: L3
-status: active
-req_status: draft
+status: deprecated
+req_status: superseded
 work_status: todo
-readiness: approved
+readiness: reviewed
 priority: high
 roadmap_phase: phase_1
 criteria: |
+  RETIRED 2026-10-09 WITH ITS PARENT CHAIN. This record proves that TQ-600a-11-ii's
+    agreement check has a needle — it is a guard on a guard, and it has no independent
+    subject. TQ-600a-11-ii is retired because the substitution it licensed is not being
+    made, so there is no comparison left to demonstrate the fallibility of. This record
+    is the only one of the four whose retirement follows purely by construction: its
+    expects_from names the comparison itself as the thing it needs, and without that
+    comparison it is explicitly "unbuildable" in its own words. Text below is preserved
+    verbatim for audit.
+
   Given the record-by-record comparison of TQ-600a-11-ii, which over the real store
     finds no disagreement — a result that on its own is indistinguishable from a
     comparison that compares nothing,
@@ -85,55 +94,121 @@ expects_from:
       into its compared set. If the comparison only ever enumerates the real store,
       it cannot be fed a divergent input and this record is unbuildable — so the
       injection seam is part of what TQ-600a-11-ii must deliver.
-test_spec:
-  - name: test_tq600a_11_iii_a_genuinely_divergent_input_makes_the_comparison_fail
-    target_dir: unit_tests/ac_store/
-    framework: unittest
-    type: integration
-    angle: failure
-    description: >-
-      With the divergent input in the compared set, the comparison exits non-zero,
-      names the input, names the differing path, and prints both values.
-  - name: test_tq600a_11_iii_the_same_comparison_without_that_input_is_clean
-    target_dir: unit_tests/ac_store/
-    framework: unittest
-    type: integration
-    angle: criterion
-    description: >-
-      The paired control. Same comparison, same store, input removed, clean result
-      and exit zero. Together with the descriptor above this shows the red is
-      attributable to the input.
-  - name: test_tq600a_11_iii_the_chosen_input_is_observed_to_diverge_under_the_installed_library
-    target_dir: unit_tests/ac_store/
-    framework: unittest
-    type: unit
-    angle: boundary
-    description: >-
-      Parse the chosen input directly with both parsers and assert the two objects
-      are UNEQUAL. This is the guard on the guard: if a library upgrade makes the two
-      agree on this input, this descriptor goes red and names the problem, instead of
-      the can-fail test quietly becoming a can-not-fail test.
-test_rationale: |
-  An equivalence check over 4,635 records that reports no disagreement is the most
-  reassuring possible output and the least informative one, because it is what both
-  a working check and a check over an empty set produce. This repository has three
-  documented instances of exactly that confusion, all recorded in its own CLAUDE.md.
-
-  The third descriptor is the one that is easy to leave out and is the reason this
-  record is worth its own file. A can-fail demonstration built on an input that the
-  installed library resolves identically under both parsers is green forever and
-  proves nothing — and it would be green on the day it was written, so nobody would
-  look again. Asserting the inputs' divergence directly means a library upgrade that
-  removes the divergence reports itself.
+test_required: false
+test_spec: null
+test_rationale: >-
+  RETIRED 2026-10-09. This record declares NO test contract: it is deprecated, and
+  the comparison its three descriptors exercised belongs to TQ-600a-11-ii, which is
+  also retired, so there is nothing for them to run against. The descriptors and the
+  original rationale are preserved in the notes under "THE RETIRED TEST CONTRACT",
+  as history and not as work waiting to be done. The guard-on-the-guard construction
+  the third descriptor describes is general rather than specific to this parser and
+  is flagged there as reusable.
 origin_agent: BrainCandy
 created: 2026-10-05
-amended_by: []
+amended_by:
+  - reason: retired-with-parent-chain-guards-a-comparison-that-is-retired
+    by: business-analyst
+    at: '2026-10-09'
+    note: >-
+      status active -> deprecated, req_status draft -> superseded, readiness approved
+      -> reviewed, test_required added as false, and all three test_spec descriptors
+      prefixed with a retirement marker. criteria below the banner and every other
+      field are untouched; superseded_by stays null.
+
+
+      readiness AND test_spec CORRECTED 2026-10-09, AFTER THIS ENTRY FIRST KEPT
+      approved. approved means cleared FOR BUILDING and this record is explicitly
+      unbuildable by its own stated condition, which makes it the clearest case of
+      the four. The fact that it was approved from 2026-10-05 to 2026-10-09 is
+      recorded here rather than left in a field that invites work. test_spec is
+      CLEARED to null, with test_required: false, and its three descriptors moved
+      into notes under "THE RETIRED TEST CONTRACT". A first attempt kept them in
+      test_spec behind per-entry "RETIRED — DO NOT AUTHOR" markers; check-ac-schema
+      refused it, because test_required and test_spec are one declaration and cannot
+      say "no tests needed" and "here are three tests" at once. The gate was right,
+      and the underlying error was the same one made on work_status and readiness: a
+      present-tense field used to carry history. The four-field retired-record shape
+      is on INF-600b-2's notes under "HOW TO RETIRE AN AC".
+
+
+      THE GUARD-ON-THE-GUARD CONSTRUCTION IS THE PART WORTH PRESERVING, which is why
+      the block is kept at all. The third descriptor — assert directly that the
+      chosen input really does diverge, so a library upgrade that removes the
+      divergence reports itself instead of quietly turning a can-fail test into a
+      can-not-fail one — is a general technique, not a fact about this parser. Its
+      marker says so, so it reads as an example rather than as pending work.
+
+
+      WHY, AND THIS ONE NEEDS NO JUDGEMENT. This record's expects_from states the
+      dependency outright: it needs "the record-by-record comparison, including a way
+      to inject one additional input into its compared set", and "if the comparison
+      only ever enumerates the real store, it cannot be fed a divergent input and this
+      record is unbuildable". TQ-600a-11-ii is retired, so the comparison is not built,
+      so this record is unbuildable by its own stated condition. No separate grounds
+      are needed and none are invented.
+
+
+      THE PRINCIPLE THIS RECORD CARRIES IS NOT RETIRED WITH IT, because it does not
+      belong to this record in the first place. "A check that examined nothing must not
+      look like a check that found nothing" is in CLAUDE.md with three recorded
+      instances, and this record's own doc_links point at TQ-500 as the sibling goal
+      that "governs proof strength generally". This record applied that general rule to
+      one specific guard; retiring it removes the application, not the rule.
+
+
+      ARTIFACT NOTICE. unit_tests/ac_store/test_tq_600a_11_iii.py exists on origin/main
+      despite work_status: todo here. Retire or re-point it deliberately with the code
+      change, together with test_tq_600a_11_ii.py whose injection seam it consumes.
 superseded_by: null
 covered_by: []
 implemented_by: []
 change_target: pipeline
 risk_surface: internal
 notes: |
+  ==========================================================================
+  THE RETIRED TEST CONTRACT (moved here from test_spec, 2026-10-09).
+  NONE OF THIS IS WORK WAITING TO BE DONE. DO NOT AUTHOR ANY OF THESE TESTS.
+  ==========================================================================
+  test_spec is now null and test_required is false. The three descriptors below stood
+  in test_spec until this retirement; they are recorded here because that field is a
+  present-tense instruction to test-writer and these describe a contract against a
+  comparison that is itself retired.
+
+  (1) test_tq600a_11_iii_a_genuinely_divergent_input_makes_the_comparison_fail
+      — integration / failure. With the divergent input in the compared set, the
+      comparison exited non-zero, named the input, named the differing path, and
+      printed both values. Asserting on the MESSAGE and not only the exit status was
+      deliberate: "exits non-zero" alone is satisfied by a crash.
+
+  (2) test_tq600a_11_iii_the_same_comparison_without_that_input_is_clean
+      — integration / criterion. The paired control: same comparison, same store,
+      input removed, clean result and exit zero. The PAIR is the point — a single
+      red run is also what a broken harness looks like, so only running it both ways
+      shows the red is attributable to the input.
+
+  (3) test_tq600a_11_iii_the_chosen_input_is_observed_to_diverge_under_the_installed_library
+      — unit / boundary. THE REUSABLE ONE, AND THE REASON THIS RECORD EXISTED AT ALL.
+      Parse the chosen input directly with both parsers and assert the two objects
+      are UNEQUAL. This is the guard on the guard: if a library upgrade makes the two
+      agree on that input, this descriptor goes red and names the problem, instead of
+      the can-fail demonstration quietly becoming a can-not-fail test that is green
+      forever. THE CONSTRUCTION IS GENERAL AND NOT ABOUT YAML: any test whose job is
+      to prove that some check CAN fail is built on an input assumed to trigger the
+      failure, and that assumption decays silently. Assert the assumption directly,
+      in the same suite, or the demonstration rots into a tautology without anyone
+      being told.
+
+  THE ORIGINAL test_rationale, PRESERVED BECAUSE ITS OPENING IS THE WHOLE IDEA. "An
+  equivalence check over 4,635 records that reports no disagreement is the most
+  reassuring possible output and the least informative one, because it is what both
+  a working check and a check over an empty set produce. This repository has three
+  documented instances of exactly that confusion, all recorded in its own CLAUDE.md."
+  And on the third descriptor specifically: a can-fail demonstration built on an
+  input the installed library resolves identically under both parsers "is green
+  forever and proves nothing — and it would be green on the day it was written, so
+  nobody would look again."
+
   Scope boundary worth stating because it is tempting to widen: this record does NOT
   require the two parsers to be made to agree on the divergent input. It requires the
   comparison to NOTICE. Whether a given divergence matters to this store is a

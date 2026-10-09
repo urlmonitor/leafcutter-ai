@@ -115,10 +115,3 @@ flowchart TD
 |---------|---------|----------|---------------|
 | Conditional Behavior | a screen belongs to an existing flow | extend the existing journey rather than create a new flow | `None` |
 | Conditional Behavior | a store file is missing | absent, unreadable, or oversized | `None` |
----
-
-## AC Assignments
-
-### flow-author
-
-- UXP-542: A flow agent assembles the draft flow, wiring each step to its screen and entities

@@ -114,10 +114,3 @@ flowchart TD
 |---------|---------|----------|---------------|
 | Conditional Behavior | a store file is missing | absent, unreadable, or oversized | `None` |
 | Conditional Behavior | a canonical dataset already exists for the entities | extend in place rather than create a duplicate | `None` |
----
-
-## AC Assignments
-
-### mock-data-author
-
-- UXP-540: A mock-data agent drafts or extends the one canonical dataset for the classified entities
