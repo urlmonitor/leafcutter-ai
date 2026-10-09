@@ -133,7 +133,8 @@ amended_by:
     at: 2026-10-09
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-OneDurableLogRootForEveryWorkspace/04_TICKET-20261009-INF-500d-4-v.md
 change_target:
   - code
   - infrastructure

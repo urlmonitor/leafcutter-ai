@@ -1,0 +1,132 @@
+# Post-merge fix proof (TQ-600a-13-xvi).
+#
+# A pull request that declares a fix for an open post-merge-red notice (TQ-600a-13-viii)
+# runs, against its own head, exactly the correctness-lane tests that failed in the current
+# red run (the whole lane for a did-not-complete run). The conclusion of the job `Post-merge
+# fix proof` IS the result; the hold reads that conclusion and nothing the job wrote. This is
+# NOT a required check.
+#
+# TRUST MODEL. `pull_request_target` runs THIS FILE FROM THE DEFAULT BRANCH, and every
+# checkout without `ref` is the default branch, so a pull request cannot edit the selection,
+# the judgement (scripts/ci/post_merge_fix_proof.py), the pytest.ini it runs under, the job
+# graph or any job's permissions. The pull request's code DOES run in the second job, and that
+# is safe only because that job holds nothing to steal: workflow-level `permissions: {}`, the
+# job's own `permissions: {}`, no `secrets.` reference anywhere, no cache, no artifact upload,
+# and its checkouts do not persist the token. The first job holds only `actions: read` and
+# `issues: read` and runs default-branch code only: it never checks out, installs or executes
+# anything from the pull request. The pull request description is read in Python from the
+# event file (never echoed, never in a run: line); no `${{ }}` expression appears in any run:
+# line. RESIDUAL (stated in the AC): test code and a conftest the pull request adds execute
+# inside the pytest process and could forge their own pass; that would be a deliberate,
+# reviewable act in the diff. Needs the same Actions event policy as the hold (TQ-600a-13-x).
+
+name: Post-merge fix proof
+
+"on":
+  pull_request_target:
+    types: [opened, reopened, synchronize, edited]
+    branches: [main]
+
+permissions: {}
+
+concurrency:
+  group: post-merge-fix-proof-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  prepare:
+    name: Prepare fix proof
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      actions: read
+      issues: read
+      contents: read  # the sparse checkout of the default branch's scripts/ci; this job runs no pull-request code
+    outputs:
+      run_proof: ${{ steps.verify.outputs.run_proof }}
+      red_run_id: ${{ steps.verify.outputs.red_run_id }}
+      whole_lane: ${{ steps.verify.outputs.whole_lane }}
+      failing_ids: ${{ steps.verify.outputs.failing_ids }}
+      collected_ids: ${{ steps.verify.outputs.collected_ids }}
+    steps:
+      # The DEFAULT branch's scripts/ci only.
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: scripts/ci
+          persist-credentials: false
+          fetch-depth: 1
+
+      - name: Decide whether a proof is wanted
+        id: decide
+        env:
+          GITHUB_API_URL: ${{ github.api_url }}
+          GITHUB_TOKEN: ${{ github.token }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: python3 scripts/ci/post_merge_fix_proof.py prepare
+
+      # The red run's verdict is an artifact of a main-branch run: the pull request cannot write it.
+      - name: Download the red run's verdict
+        if: steps.decide.outputs.candidate == 'true'
+        uses: actions/download-artifact@v4
+        with:
+          name: post-merge-verdict
+          path: verdict
+          run-id: ${{ steps.decide.outputs.red_run_id }}
+          github-token: ${{ github.token }}
+
+      - name: Take the failing tests from the verdict
+        id: verify
+        env:
+          CANDIDATE: ${{ steps.decide.outputs.candidate }}
+          RED_RUN_ID: ${{ steps.decide.outputs.red_run_id }}
+          WHOLE_LANE: ${{ steps.decide.outputs.whole_lane }}
+        run: python3 scripts/ci/post_merge_fix_proof.py verify --verdict verdict/post-merge-verdict.json
+
+  prove:
+    name: Post-merge fix proof
+    needs: prepare
+    if: needs.prepare.outputs.run_proof == 'true'
+    runs-on: ubuntu-latest
+    # About the post-merge run job's bound (50 minutes): a whole-lane proof costs what that job costs.
+    timeout-minutes: 50
+    permissions: {}
+    env:
+      PYTEST_DISABLE_PLUGIN_AUTOLOAD: "1"
+      AC_ENFORCE_STRICT: "1"
+    steps:
+      # The default branch's harness at the workspace root (no ref) ...
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          fetch-depth: 1
+
+      # ... and the pull request's head, as the code under test, beside it.
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          path: head
+          persist-credentials: false
+          # Full history: several tests read repository history via `git -C`.
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install dev dependencies
+        working-directory: head
+        run: pip install -r requirements-dev.txt
+
+      - name: Build
+        working-directory: head
+        run: python scripts/build.py --target-dir .
+
+      # Main's script, main's pytest.ini (-c), main's selection and judgement; the head is only the code under test.
+      - name: Prove the fix against the head
+        env:
+          RED_RUN_ID: ${{ needs.prepare.outputs.red_run_id }}
+          WHOLE_LANE: ${{ needs.prepare.outputs.whole_lane }}
+          FAILING_IDS: ${{ needs.prepare.outputs.failing_ids }}
+          COLLECTED_IDS: ${{ needs.prepare.outputs.collected_ids }}
+        run: python scripts/ci/post_merge_fix_proof.py prove --head head --ini pytest.ini
