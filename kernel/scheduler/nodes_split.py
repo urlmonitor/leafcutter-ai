@@ -24,6 +24,7 @@ from kernel.contracts import (
     Priority,
     RequestKind,
     RequestProposal,
+    RoutingOutcome,
     SplitTrigger,
     WorkItem,
     WorkItemStatus,
@@ -35,8 +36,10 @@ from kernel.contracts.split import (
     KeptRouting,
 )
 from kernel.providers.base import QuestionSpec
+from kernel.registry.eligibility import filter_candidates
 from kernel.scheduler.context import run_corr
 from kernel.scheduler.merge import create_children, plan_proposals
+from kernel.scheduler.routing import RouteEntry, RouteResult
 from kernel.split.convert import convert_proposal
 from kernel.split.gate import gate_proposal
 from kernel.split.detect import bundle_question, gates_open, is_bundled, kind_allows_split
@@ -46,13 +49,14 @@ if TYPE_CHECKING:  # the route node imports this module, so these are for the ty
     from kernel.config import KernelConfig
     from kernel.scheduler.context import KernelRuntime
     from kernel.scheduler.merge import Draft
-    from kernel.scheduler.routing import RouteEntry, RouteResult
     from kernel.scheduler.state import KernelState
 
 DECOMPOSE_OPERATION = "decompose_goal"
 #: Child capabilities a goal's parts may be routed to (ADR-067 section 3).
 GOAL_CHILD_CAPABILITIES = ["decision", "research"]
 JEV_NONE = "jev_none"
+#: Record state of a split that ended with fewer than two parts; it never reaches the envelope.
+CLOSED_STATE = "closed"
 
 
 class SplitStep:
@@ -70,6 +74,10 @@ class SplitStep:
     if TYPE_CHECKING:
         def _wait_on(self, item: WorkItem, children: list[str],
                      linked: list[str] | None = None) -> None: ...
+        def _bind_descriptor(self, item: WorkItem, descriptor: Any,
+                             routing_ref: str | None) -> None: ...
+        def _unclear(self, entry: RouteEntry, result: RouteResult) -> None: ...
+        def answers_of(self, item: WorkItem) -> list[Any]: ...
 
     def _task(self) -> Any:
         """Return the task as it stands in this pass (the intent step may have updated it)."""
@@ -210,7 +218,7 @@ class SplitStep:
 
         The record becomes `proposed` and the root parks on the gate, a human question, so the
         run waits for a person with every part not run. Fewer than two parts leave the item to
-        today's routing (DK-400c-3 owns that ending).
+        today's routing, handled by `close_split`.
         """
         record = self.state.get("splits", {}).get(split_id(item.id))
         proposal = self._proposal_of(item) if record is not None and record.state is None else None
@@ -222,7 +230,9 @@ class SplitStep:
         if done.kept_count < 2 or len(done.parts) < 2:
             self.draft.emit("split.not_offered", f"{len(done.parts)} parts",
                             work_item_id=item.id, split_id=record.id)
-            return False
+            self.ctx.tracer.event("split.not_offered", run_corr(self.state, work_item_id=item.id),
+                                  payload={"split_id": record.id, "parts": len(done.parts)})
+            return self.close_split(item, record)
         record = record.model_copy(update={
             "state": "proposed", "parts": done.parts, "dropped": done.dropped,
             "not_covered": done.not_covered, "one_question_rewording": done.rewording})
@@ -237,6 +247,48 @@ class SplitStep:
                         split_id=record.id)
         return True
 
+    def close_split(self, item: WorkItem, record: Decomposition) -> bool:
+        """Close a split that holds fewer than two parts; the item goes on as one question.
+
+        The record is kept only as a closed marker (never shown), a run event names why, and the
+        item's `split_checked` flag stays set, so it is never offered a split again. It then goes
+        on by its trigger: jev_none records today's gap, ambiguous asks today's clarification
+        question, and bundled_accepted or mid-run work resumes from the routing kept on the record.
+        """
+        self.splits[record.id] = record.model_copy(update={"state": CLOSED_STATE})
+        item = self.draft.put_item(item, continuation=None, status=WorkItemStatus.READY)
+        self.draft.emit("split.closed", "fewer than two parts", work_item_id=item.id,
+                        split_id=record.id)
+        if record.kept_routing is not None:
+            return self._resume_whole(item, record.kept_routing)
+        if record.trigger is SplitTrigger.AMBIGUOUS:
+            return self._clarify_whole(item)
+        self.draft.put_item(item, status=WorkItemStatus.DISPATCHED)
+        self.plan["gap"].append(item.id)
+        return True
+
+    def _resume_whole(self, item: WorkItem, kept: KeptRouting) -> bool:
+        """Go ahead as one decision or research step from the routing kept on the split."""
+        descriptor = self.state["registry"].get(kept.capability_id)
+        if descriptor is None:
+            self.draft.put_item(item, status=WorkItemStatus.BLOCKED, limitations=[
+                *item.limitations, "binding_missing: kept routing unavailable"])
+            self.draft.progress = True
+            return True
+        self._bind_descriptor(item, descriptor, kept.routing_assessment_id)
+        return True
+
+    def _clarify_whole(self, item: WorkItem) -> bool:
+        """Fall back to today's clarification question for an ambiguous request."""
+        request = self.draft.request_of(item)
+        report = filter_candidates(request, self.state["registry"], self.ctx.bindings,
+                                   self.state.get("permissions", []), self.draft.budgets, self.cfg,
+                                   scope=self.state["task"].scope, operation=request.operation)
+        entry = RouteEntry(item.id, request, report, [a.text for a in self.answers_of(item)])
+        self._unclear(entry, RouteResult(outcome=RoutingOutcome.INSUFFICIENT_CONTEXT,
+                                         reason_codes=["jev_needs_context"]))
+        return True
+
 
 # ====================================================================
 # DECISION HISTORY
@@ -248,4 +300,5 @@ class SplitStep:
 # - 2026-10-06 19:00 [python-coder]: Add the ambiguous split trigger: a bundled root routing cannot decide for is split, not clarified. (#TICKET-20261006-DK-400a-1-i)
 # - 2026-10-09 [python-coder]: Add the bundled_accepted trigger: a bundled root routing accepted is split in the same route pass and the accepted routing is kept on the record. (#TICKET-20261006-DK-400a-2)
 # - 2026-10-09 [python-coder]: The gate is a human child request of the split root (the clarification pattern), opened in the router pass that meets the accepted proposal; conversion is deterministic code and never asks Jev. (#TICKET-20261006-DK-400c-1)
+# - 2026-10-09 [python-coder]: A proposal with fewer than two parts closes the split (a closed marker the envelope hides) and the request goes on as one question by its trigger; the item's split_checked flag keeps it from being offered a split again. (#TICKET-20261006-DK-400c-3)
 # ====================================================================

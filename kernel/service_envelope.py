@@ -137,7 +137,8 @@ def build_envelope(record: RunRecord, values: Mapping[str, Any], *,
         pending_interaction=pending_packet(values) if waiting else None,
         limitations=limitations,
         gaps=reconcile_gaps(list(values.get("gaps", {}).values()), stored_gaps or []),
-        splits=sorted(values.get("splits", {}).values(), key=lambda s: s.id),
+        splits=sorted((s for s in values.get("splits", {}).values() if s.state != "closed"),
+                      key=lambda s: s.id),
         usage_summary=_usage(values), errors=errors,
         trace_refs=refs)
 
