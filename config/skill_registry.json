@@ -513,6 +513,19 @@
       "components": [
         "skills_system"
       ]
+    },
+    {
+      "id": "complexity-reduction",
+      "name": "Complexity Reduction",
+      "portable": true,
+      "domain": null,
+      "template_path": "leafcutter/templates/skills/complexity-reduction/",
+      "dependencies": [],
+      "description": "Measured techniques for bringing a Python function or a SQL file back under the commit-guardian complexity limits (check_complexity.py per function, check_sql_complexity.py per file) without changing behaviour or losing logging. States what each checker counts, how to measure, and which refactorings lower the score, each example labelled with the score the real checker gives it. Named by the check-complexity and check-folder-density refusals and run by python-coder.",
+      "components": [
+        "skills_system",
+        "commit_guardian"
+      ]
     }
   ]
 }
