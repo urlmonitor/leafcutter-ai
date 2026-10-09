@@ -617,6 +617,7 @@ WORKFLOW_TOOL_SCRIPTS: tuple[str, ...] = (
     "knowledge_file_nodes.py",
     "knowledge_surface_check.py",
     "knowledge_rendering.py",
+    "knowledge_edges.py",
     "set_ticket_status.py",
     "ticket_prioritizer.py",
     "port_registry.py",
