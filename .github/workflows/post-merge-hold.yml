@@ -10,9 +10,10 @@
 # on pull requests from forks, so it must never check out, install, build or execute
 # anything from the pull request, and no `${{ }}` expression carrying pull-request text
 # may appear in a run: line (the only pull-request value used in the workflow itself is
-# the number, as a concurrency key, which is safe there). The module reads exactly two
+# the number, as a concurrency key, which is safe there). The module reads exactly three
 # values from the event file, in Python and never through a shell: the pull request
-# number and the head sha (used only when it is 40 lowercase hex characters).
+# number, the head sha (used only when it is 40 lowercase hex characters) and the
+# description (looked at only for a declaration of a fix, TQ-600a-13-viii; never echoed).
 #
 # SHAPE. Exactly one job, named `Post-merge hold evaluation` (NOT the required name: the
 # required check `Post-merge suite status` is a check run the dedicated hold App

@@ -197,5 +197,4 @@ def publish(
         if prior:
             print(f"The verdict already published on {head_sha} could not be refreshed.")
         return EXIT_HELD
-    # TODO(TQ-600a-13-viii): exit-code parity -- this exits 0 for `exempt` (success conclusion); main()'s default path exits 0 only for `pass`.
     return EXIT_OK if conclusion == "success" else EXIT_HELD
