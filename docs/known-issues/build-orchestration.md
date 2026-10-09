@@ -5,7 +5,7 @@ type: reference
 category: reference
 status: active
 created: 2026-08-18
-last_updated: '2026-10-09'
+last_updated: '2026-09-28'
 components:
   - build_orchestration
 related_docs:
@@ -68,7 +68,7 @@ Severity in the **filename** is a three-level index bucket (`blocker` / `high` /
 
 Fixed issues move to [`build-orchestration/resolved/`](build-orchestration/resolved/) and are no longer listed as open. They are kept, not deleted.
 
-**Open: 56** (4 blocker, 32 high, 20 low) · **Resolved: 26** (recounted from the directory 2026-10-09)
+**Open: 57** (4 blocker, 33 high, 20 low) · **Resolved: 25**
 
 ## Open
 
@@ -131,7 +131,7 @@ Fixed issues move to [`build-orchestration/resolved/`](build-orchestration/resol
 | `low` | KI-BO-20260907-0803 — `blocked` and `deferred` are valid ticket statuses that no transition can reach, so the only way to park a ticket is to bypass the tool | [open-low-ki-bo-20260907-0803.md](build-orchestration/open-low-ki-bo-20260907-0803.md) |
 | `low` | KI-BO-20260927-quick-fix-gitignored-target — /quick-fix takes a gitignored deployed copy as target_file, so a coder that correctly edits the tracked template trips the scope-expansion halt | [open-low-ki-bo-20260927-quick-fix-gitignored-target.md](build-orchestration/open-low-ki-bo-20260927-quick-fix-gitignored-target.md) |
 | `low` | KI-BO-20260927-quick-fix-cannot-target-an-existing-leaf-ac — /quick-fix always authors a new AC, so it cannot build an approved leaf that /plan-feature wrote for it, and a file with no L1 mapping can only go through a full /plan-feature round | [open-low-ki-bo-20260927-quick-fix-cannot-target-an-existing-leaf-ac.md](build-orchestration/open-low-ki-bo-20260927-quick-fix-cannot-target-an-existing-leaf-ac.md) |
-| `low` | KI-BO-20261009-setup-reply-truncated-on-new-worktree — on a first /plan-feature run the setup agent relays the bootstrap's whole stderr, cuts its reply before the JSON line, and the run halts saying the setup named no workspace | [open-low-ki-bo-20261009-setup-reply-truncated-on-new-worktree.md](build-orchestration/open-low-ki-bo-20261009-setup-reply-truncated-on-new-worktree.md) |
+| `low` | KI-BO-20261009-fast-lane-changelog-publishes-absolute-local-paths — the fast lane writes the coder's `files_modified` into its changelog entry exactly as reported, so 12 of the 15 fast-lane entries on main publish a contributor's home directory and worktree name | [open-low-ki-bo-20261009-fast-lane-changelog-publishes-absolute-local-paths.md](build-orchestration/open-low-ki-bo-20261009-fast-lane-changelog-publishes-absolute-local-paths.md) |
 
 ## Resolved
 
