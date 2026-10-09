@@ -17,6 +17,7 @@ from typing import Any
 from kernel.contracts import Decomposition, Priority, RequestKind, RequestProposal, schema_ids
 from kernel.contracts.interaction import Choice
 from kernel.contracts.payloads import HumanQuestionRequestPayload
+from kernel.split.convert import CAP_REASON
 
 APPROVE = "approve"
 REJECT = "reject"
@@ -34,6 +35,24 @@ def _part_lines(part: dict[str, Any], released: list[str]) -> list[str]:
     return lines
 
 
+def _not_covered_lines(entries: list[dict[str, Any]]) -> list[str]:
+    """Return the read-only section for parts beyond the cut: text, quote, reason and notice."""
+    reason = str(entries[0]["reason"])
+    lines = [f"Not covered by this split ({reason}). These are shown read-only; they cannot be "
+             "ticked, edited or run:"]
+    for entry in entries:
+        lines += [f"   {entry['id']}. {entry['text']}", f'      Your words: "{entry["covers"]}"']
+    ids = ", ".join(e["id"] for e in entries)
+    if reason == CAP_REASON:
+        lines.append(f"Your request holds more than five parts, so {ids} will not be answered "
+                     "by this split. You can ask for them again as a request of their own.")
+    else:
+        lines.append(f"{ids} will not be answered by this split. You can ask for them again as a "
+                     "request of their own.")
+    lines.append("")
+    return lines
+
+
 def gate_text(record: Decomposition, released: dict[str, list[str]]) -> str:
     """Return the question: the parts in proposed order, then what is shown read-only."""
     n = len(record.parts)
@@ -42,10 +61,7 @@ def gate_text(record: Decomposition, released: dict[str, list[str]]) -> str:
     for part in record.parts:
         lines += [*_part_lines(part, released.get(part["id"], [])), ""]
     if record.not_covered:
-        lines.append("Not covered (" + str(record.not_covered[0]["reason"]) + "; ask again as a "
-                     "request of its own):")
-        lines += [f"   {p['id']}. {p['text']}" for p in record.not_covered]
-        lines.append("")
+        lines += _not_covered_lines(record.not_covered)
     if record.dropped:
         lines.append("Set aside:")
         lines += [f"   {p['text']}\n      Your words, as quoted: \"{p['covers']}\"\n"
