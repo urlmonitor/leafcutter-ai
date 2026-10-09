@@ -1255,12 +1255,12 @@
       "id": "leafcutter/atlas-flows",
       "type": "mock_data",
       "title": "Atlas flows view and canonical flow URLs",
-      "summary": "The canonical Flow dataset for the Atlas /flows view: real flows with their canonical /flows/<flow id> URLs, how each address resolves (default entry, selected, 404 not-found), step links /flows/<flow id>?step=<step id> that open a step's or branch's drawer (and a 'Step not found' notice for an unknown step), the redirect of legacy /flows?flow=<id>&step=<step> links, the AC drawer's 'Appears in flows' step links, and browser sessions covering select, drill, breadcrumb, back and forward.",
+      "summary": "The canonical Flow dataset for the Atlas /flows view: real flows with their canonical /flows/<flow id> URLs, how each address resolves (default entry, selected, 404 not-found), step links /flows/<flow id>?step=<step id> that open a step's or branch's drawer (and a 'Step not found' notice for an unknown step), the redirect of legacy /flows?flow=<id>&step=<step> links, the AC drawer's 'Appears in flows' step links, and browser sessions covering select, drill, breadcrumb, back and forward. v2: opening a step's drawer writes ?step=<id> into the address bar and closing it removes it with history replace (no new Back-button entries), so Back and Forward move between flows; selecting or drilling from an open drawer pushes the new flow's URL with no ?step=, and Back restores the drawer that was last replaced into an entry.",
       "component": "ux-prototyping",
       "path": "mock-data/leafcutter/atlas-flows.mock.json",
       "status": "active",
       "readiness": "draft",
-      "version": 1,
+      "version": 2,
       "entities": [
         "Flow",
         "FlowRoute",
@@ -1276,7 +1276,39 @@
         "legacy-redirect",
         "browser-history",
         "not-found",
-        "ac-appearances"
+        "ac-appearances",
+        "drawer-history"
+      ]
+    },
+    {
+      "id": "leafcutter/atlas-flows-canonical-url",
+      "type": "mockup",
+      "title": "Atlas Flows: canonical flow URLs",
+      "summary": "Atlas /flows with canonical URLs: /flows/<flow id> and /flows/<flow id>?step=<id>. Shows shared, default and mock links, step and branch deep links with drawers, 'Step not found', a legacy link redirected (308), 404 'Flow not found' states, AC-drawer links, and history sessions. Drawer open/close writes ?step= with history replace (no Back entries); drill and select push. Open build detail: the drawer scrim blocks a direct drawer switch. From leafcutter/atlas-flows v2.",
+      "screen": "atlas-flows-canonical-url",
+      "source": "mock",
+      "component": "ux-prototyping",
+      "path": "mockups/leafcutter/atlas-flows-canonical-url.mockup.json",
+      "status": "active",
+      "readiness": "draft",
+      "version": 1,
+      "entities": [
+        "Flow",
+        "FlowRoute",
+        "FlowAppearance",
+        "FlowNavigation"
+      ],
+      "mock_data_ref": "leafcutter/atlas-flows",
+      "tags": [
+        "atlas",
+        "flows",
+        "canonical-url",
+        "deep-link",
+        "step-link",
+        "legacy-redirect",
+        "browser-history",
+        "not-found",
+        "drawer-history"
       ]
     }
   ],
@@ -1359,7 +1391,8 @@
         "fern-and-fig/orders-list",
         "fern-and-fig/plant-detail",
         "fern-and-fig/plant-listing",
-        "fern-and-fig/shipment-tracking"
+        "fern-and-fig/shipment-tracking",
+        "leafcutter/atlas-flows-canonical-url"
       ]
     }
   },
