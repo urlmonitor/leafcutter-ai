@@ -1,0 +1,1120 @@
+{
+  "scored_at": "2026-10-09T21:45:49.880664+00:00",
+  "accepted": 16,
+  "finite_contract_passes": 16,
+  "semantic_review": "Evaluator must inspect IP11 and H04 execution-gap explanations before final semantic signoff.",
+  "cases": [
+    {
+      "id": "IP01",
+      "accepted": true,
+      "question": "For KM-500c-2, what must tests demonstrate?",
+      "actual_output": {
+        "schema_version": "1.0",
+        "original_question": "For KM-500c-2, what must tests demonstrate?",
+        "source_scope": {
+          "read_roots": [
+            "docs"
+          ],
+          "repository_id": "leafcutter",
+          "revision": "2a8ebc87ce937a0a2fec65ab26220f79a72e4859",
+          "source_ids": [
+            "knowledge.graph"
+          ]
+        },
+        "selections": {
+          "entity_types": [
+            "ac"
+          ],
+          "target_ids": [
+            "KM-500c-2"
+          ],
+          "required_fields": [
+            "criteria",
+            "test_spec"
+          ],
+          "document_types": [
+            "ac_yaml"
+          ],
+          "relationships": []
+        },
+        "uncertain": {
+          "entity_types": [],
+          "target_ids": [],
+          "required_fields": [],
+          "document_types": [],
+          "relationships": []
+        },
+        "detail_mode": "fields",
+        "completeness": "single_entity",
+        "hierarchy_scope": "not_applicable",
+        "hierarchy_levels": [],
+        "scope_resolution": "sufficient",
+        "unresolved": [],
+        "rationale": "What tests must demonstrate requires both the acceptance behavior and the authored verification scenarios, assertions and failure checks for the named criterion.",
+        "engine": "host_llm",
+        "status": "decided",
+        "model_id": null
+      },
+      "finite_contract_pass": true,
+      "checks": {
+        "original_question": true,
+        "trusted_source_scope": true,
+        "literal_anchor": true,
+        "no_hierarchy_expansion": true,
+        "decided": true,
+        "sufficient": true,
+        "detail_mode": true,
+        "result_kind": true,
+        "document_kind": true,
+        "relationship": true,
+        "completeness": true,
+        "minimal_fields": true
+      },
+      "manual_explanation_review_required": false,
+      "manual_review_rubric": null,
+      "execution_fulfillment": "not_executed",
+      "runtime_support_claim": false
+    },
+    {
+      "id": "IP02",
+      "accepted": true,
+      "question": "For KM-500c-1, what must tests demonstrate?",
+      "actual_output": {
+        "schema_version": "1.0",
+        "original_question": "For KM-500c-1, what must tests demonstrate?",
+        "source_scope": {
+          "read_roots": [
+            "docs"
+          ],
+          "repository_id": "leafcutter",
+          "revision": "2a8ebc87ce937a0a2fec65ab26220f79a72e4859",
+          "source_ids": [
+            "knowledge.graph"
+          ]
+        },
+        "selections": {
+          "entity_types": [
+            "ac"
+          ],
+          "target_ids": [
+            "KM-500c-1"
+          ],
+          "required_fields": [
+            "criteria",
+            "test_spec"
+          ],
+          "document_types": [
+            "ac_yaml"
+          ],
+          "relationships": []
+        },
+        "uncertain": {
+          "entity_types": [],
+          "target_ids": [],
+          "required_fields": [],
+          "document_types": [],
+          "relationships": []
+        },
+        "detail_mode": "fields",
+        "completeness": "single_entity",
+        "hierarchy_scope": "not_applicable",
+        "hierarchy_levels": [],
+        "scope_resolution": "sufficient",
+        "unresolved": [],
+        "rationale": "The requested test obligations comprise the criterion's acceptance clauses and its authored verification specification. Availability must be established by retrieval.",
+        "engine": "host_llm",
+        "status": "decided",
+        "model_id": null
+      },
+      "finite_contract_pass": true,
+      "checks": {
+        "original_question": true,
+        "trusted_source_scope": true,
+        "literal_anchor": true,
+        "no_hierarchy_expansion": true,
+        "decided": true,
+        "sufficient": true,
+        "detail_mode": true,
+        "result_kind": true,
+        "document_kind": true,
+        "relationship": true,
+        "completeness": true,
+        "minimal_fields": true
+      },
+      "manual_explanation_review_required": false,
+      "manual_review_rubric": null,
+      "execution_fulfillment": "not_executed",
+      "runtime_support_claim": false
+    },
+    {
+      "id": "IP03",
+      "accepted": true,
+      "question": "I am writing verification for KM-500a-2. Which required behaviors and prescribed checks must the tests prove?",
+      "actual_output": {
+        "schema_version": "1.0",
+        "original_question": "I am writing verification for KM-500a-2. Which required behaviors and prescribed checks must the tests prove?",
+        "source_scope": {
+          "read_roots": [
+            "docs"
+          ],
+          "repository_id": "leafcutter",
+          "revision": "2a8ebc87ce937a0a2fec65ab26220f79a72e4859",
+          "source_ids": [
+            "knowledge.graph"
+          ]
+        },
+        "selections": {
+          "entity_types": [
+            "ac"
+          ],
+          "target_ids": [
+            "KM-500a-2"
+          ],
+          "required_fields": [
+            "criteria",
+            "test_spec"
+          ],
+          "document_types": [
+            "ac_yaml"
+          ],
+          "relationships": []
+        },
+        "uncertain": {
+          "entity_types": [],
+          "target_ids": [],
+          "required_fields": [],
+          "document_types": [],
+          "relationships": []
+        },
+        "detail_mode": "fields",
+        "completeness": "single_entity",
+        "hierarchy_scope": "not_applicable",
+        "hierarchy_levels": [],
+        "scope_resolution": "sufficient",
+        "unresolved": [],
+        "rationale": "Required behaviors correspond to acceptance clauses; prescribed checks correspond to the authored verification specification. Both are indispensable to this question about one criterion.",
+        "engine": "host_llm",
+        "status": "decided",
+        "model_id": null
+      },
+      "finite_contract_pass": true,
+      "checks": {
+        "original_question": true,
+        "trusted_source_scope": true,
+        "literal_anchor": true,
+        "no_hierarchy_expansion": true,
+        "decided": true,
+        "sufficient": true,
+        "detail_mode": true,
+        "result_kind": true,
+        "document_kind": true,
+        "relationship": true,
+        "completeness": true,
+        "minimal_fields": true
+      },
+      "manual_explanation_review_required": false,
+      "manual_review_rubric": null,
+      "execution_fulfillment": "not_executed",
+      "runtime_support_claim": false
+    },
+    {
+      "id": "IP04",
+      "accepted": true,
+      "question": "What behavior does KM-500c-2 require?",
+      "actual_output": {
+        "schema_version": "1.0",
+        "original_question": "What behavior does KM-500c-2 require?",
+        "source_scope": {
+          "read_roots": [
+            "docs"
+          ],
+          "repository_id": "leafcutter",
+          "revision": "2a8ebc87ce937a0a2fec65ab26220f79a72e4859",
+          "source_ids": [
+            "knowledge.graph"
+          ]
+        },
+        "selections": {
+          "entity_types": [
+            "ac"
+          ],
+          "target_ids": [
+            "KM-500c-2"
+          ],
+          "required_fields": [
+            "criteria"
+          ],
+          "document_types": [
+            "ac_yaml"
+          ],
+          "relationships": []
+        },
+        "uncertain": {
+          "entity_types": [],
+          "target_ids": [],
+          "required_fields": [],
+          "document_types": [],
+          "relationships": []
+        },
+        "detail_mode": "fields",
+        "completeness": "single_entity",
+        "hierarchy_scope": "not_applicable",
+        "hierarchy_levels": [],
+        "scope_resolution": "sufficient",
+        "unresolved": [],
+        "rationale": "The question asks for required behavior, which is expressed by the named criterion's acceptance clauses.",
+        "engine": "host_llm",
+        "status": "decided",
+        "model_id": null
+      },
+      "finite_contract_pass": true,
+      "checks": {
+        "original_question": true,
+        "trusted_source_scope": true,
+        "literal_anchor": true,
+        "no_hierarchy_expansion": true,
+        "decided": true,
+        "sufficient": true,
+        "detail_mode": true,
+        "result_kind": true,
+        "document_kind": true,
+        "relationship": true,
+        "completeness": true,
+        "minimal_fields": true
+      },
+      "manual_explanation_review_required": false,
+      "manual_review_rubric": null,
+      "execution_fulfillment": "not_executed",
+      "runtime_support_claim": false
+    },
+    {
+      "id": "IP05",
+      "accepted": true,
+      "question": "Show only the acceptance obligations of KM-500c-2; omit its test plan.",
+      "actual_output": {
+        "schema_version": "1.0",
+        "original_question": "Show only the acceptance obligations of KM-500c-2; omit its test plan.",
+        "source_scope": {
+          "read_roots": [
+            "docs"
+          ],
+          "repository_id": "leafcutter",
+          "revision": "2a8ebc87ce937a0a2fec65ab26220f79a72e4859",
+          "source_ids": [
+            "knowledge.graph"
+          ]
+        },
+        "selections": {
+          "entity_types": [
+            "ac"
+          ],
+          "target_ids": [
+            "KM-500c-2"
+          ],
+          "required_fields": [
+            "criteria"
+          ],
+          "document_types": [
+            "ac_yaml"
+          ],
+          "relationships": []
+        },
+        "uncertain": {
+          "entity_types": [],
+          "target_ids": [],
+          "required_fields": [],
+          "document_types": [],
+          "relationships": []
+        },
+        "detail_mode": "fields",
+        "completeness": "single_entity",
+        "hierarchy_scope": "not_applicable",
+        "hierarchy_levels": [],
+        "scope_resolution": "sufficient",
+        "unresolved": [],
+        "rationale": "Only acceptance obligations are requested, and the test plan is explicitly omitted.",
+        "engine": "host_llm",
+        "status": "decided",
+        "model_id": null
+      },
+      "finite_contract_pass": true,
+      "checks": {
+        "original_question": true,
+        "trusted_source_scope": true,
+        "literal_anchor": true,
+        "no_hierarchy_expansion": true,
+        "decided": true,
+        "sufficient": true,
+        "detail_mode": true,
+        "result_kind": true,
+        "document_kind": true,
+        "relationship": true,
+        "completeness": true,
+        "minimal_fields": true
+      },
+      "manual_explanation_review_required": false,
+      "manual_review_rubric": null,
+      "execution_fulfillment": "not_executed",
+      "runtime_support_claim": false
+    },
+    {
+      "id": "IP06",
+      "accepted": true,
+      "question": "Show only the authored test specification for KM-500c-2.",
+      "actual_output": {
+        "schema_version": "1.0",
+        "original_question": "Show only the authored test specification for KM-500c-2.",
+        "source_scope": {
+          "read_roots": [
+            "docs"
+          ],
+          "repository_id": "leafcutter",
+          "revision": "2a8ebc87ce937a0a2fec65ab26220f79a72e4859",
+          "source_ids": [
+            "knowledge.graph"
+          ]
+        },
+        "selections": {
+          "entity_types": [
+            "ac"
+          ],
+          "target_ids": [
+            "KM-500c-2"
+          ],
+          "required_fields": [
+            "test_spec"
+          ],
+          "document_types": [
+            "ac_yaml"
+          ],
+          "relationships": []
+        },
+        "uncertain": {
+          "entity_types": [],
+          "target_ids": [],
+          "required_fields": [],
+          "document_types": [],
+          "relationships": []
+        },
+        "detail_mode": "fields",
+        "completeness": "single_entity",
+        "hierarchy_scope": "not_applicable",
+        "hierarchy_levels": [],
+        "scope_resolution": "sufficient",
+        "unresolved": [],
+        "rationale": "The request is limited to the authored test specification for one named criterion.",
+        "engine": "host_llm",
+        "status": "decided",
+        "model_id": null
+      },
+      "finite_contract_pass": true,
+      "checks": {
+        "original_question": true,
+        "trusted_source_scope": true,
+        "literal_anchor": true,
+        "no_hierarchy_expansion": true,
+        "decided": true,
+        "sufficient": true,
+        "detail_mode": true,
+        "result_kind": true,
+        "document_kind": true,
+        "relationship": true,
+        "completeness": true,
+        "minimal_fields": true
+      },
+      "manual_explanation_review_required": false,
+      "manual_review_rubric": null,
+      "execution_fulfillment": "not_executed",
+      "runtime_support_claim": false
+    },
+    {
+      "id": "IP07",
+      "accepted": true,
+      "question": "List only the declared test references on KM-500c-2; do not inspect their implementations or infer outcomes.",
+      "actual_output": {
+        "schema_version": "1.0",
+        "original_question": "List only the declared test references on KM-500c-2; do not inspect their implementations or infer outcomes.",
+        "source_scope": {
+          "read_roots": [
+            "docs"
+          ],
+          "repository_id": "leafcutter",
+          "revision": "2a8ebc87ce937a0a2fec65ab26220f79a72e4859",
+          "source_ids": [
+            "knowledge.graph"
+          ]
+        },
+        "selections": {
+          "entity_types": [
+            "ac"
+          ],
+          "target_ids": [
+            "KM-500c-2"
+          ],
+          "required_fields": [
+            "covered_by"
+          ],
+          "document_types": [
+            "ac_yaml"
+          ],
+          "relationships": []
+        },
+        "uncertain": {
+          "entity_types": [],
+          "target_ids": [],
+          "required_fields": [],
+          "document_types": [],
+          "relationships": []
+        },
+        "detail_mode": "fields",
+        "completeness": "single_entity",
+        "hierarchy_scope": "not_applicable",
+        "hierarchy_levels": [],
+        "scope_resolution": "sufficient",
+        "unresolved": [],
+        "rationale": "The requested facts are the declared test-reference values stored on the criterion. The question does not request facts from linked test records.",
+        "engine": "host_llm",
+        "status": "decided",
+        "model_id": null
+      },
+      "finite_contract_pass": true,
+      "checks": {
+        "original_question": true,
+        "trusted_source_scope": true,
+        "literal_anchor": true,
+        "no_hierarchy_expansion": true,
+        "decided": true,
+        "sufficient": true,
+        "detail_mode": true,
+        "complete_declared_reference_plan": true
+      },
+      "manual_explanation_review_required": false,
+      "manual_review_rubric": null,
+      "execution_fulfillment": "not_executed",
+      "runtime_support_claim": false
+    },
+    {
+      "id": "IP08",
+      "accepted": true,
+      "question": "Show the source of one test declared to cover KM-500c-2.",
+      "actual_output": {
+        "schema_version": "1.0",
+        "original_question": "Show the source of one test declared to cover KM-500c-2.",
+        "source_scope": {
+          "read_roots": [
+            "docs"
+          ],
+          "repository_id": "leafcutter",
+          "revision": "2a8ebc87ce937a0a2fec65ab26220f79a72e4859",
+          "source_ids": [
+            "knowledge.graph"
+          ]
+        },
+        "selections": {
+          "entity_types": [
+            "test"
+          ],
+          "target_ids": [
+            "KM-500c-2"
+          ],
+          "required_fields": [
+            "content"
+          ],
+          "document_types": [
+            "code"
+          ],
+          "relationships": [
+            "covered_by"
+          ]
+        },
+        "uncertain": {
+          "entity_types": [],
+          "target_ids": [],
+          "required_fields": [],
+          "document_types": [],
+          "relationships": []
+        },
+        "detail_mode": "fields",
+        "completeness": "examples",
+        "hierarchy_scope": "not_applicable",
+        "hierarchy_levels": [],
+        "scope_resolution": "sufficient",
+        "unresolved": [],
+        "rationale": "The answer needs source content from one covering test record, using the named criterion as the coverage anchor. One qualifying example suffices; declared reference values alone do not supply test source.",
+        "engine": "host_llm",
+        "status": "decided",
+        "model_id": null
+      },
+      "finite_contract_pass": true,
+      "checks": {
+        "original_question": true,
+        "trusted_source_scope": true,
+        "literal_anchor": true,
+        "no_hierarchy_expansion": true,
+        "decided": true,
+        "sufficient": true,
+        "detail_mode": true,
+        "one_linked_test_source": true
+      },
+      "manual_explanation_review_required": false,
+      "manual_review_rubric": null,
+      "execution_fulfillment": "not_executed",
+      "runtime_support_claim": false
+    },
+    {
+      "id": "IP09",
+      "accepted": true,
+      "question": "What are the implementation work status and lifecycle status of KM-500c-2?",
+      "actual_output": {
+        "schema_version": "1.0",
+        "original_question": "What are the implementation work status and lifecycle status of KM-500c-2?",
+        "source_scope": {
+          "read_roots": [
+            "docs"
+          ],
+          "repository_id": "leafcutter",
+          "revision": "2a8ebc87ce937a0a2fec65ab26220f79a72e4859",
+          "source_ids": [
+            "knowledge.graph"
+          ]
+        },
+        "selections": {
+          "entity_types": [
+            "ac"
+          ],
+          "target_ids": [
+            "KM-500c-2"
+          ],
+          "required_fields": [
+            "work_status",
+            "status"
+          ],
+          "document_types": [
+            "ac_yaml"
+          ],
+          "relationships": []
+        },
+        "uncertain": {
+          "entity_types": [],
+          "target_ids": [],
+          "required_fields": [],
+          "document_types": [],
+          "relationships": []
+        },
+        "detail_mode": "fields",
+        "completeness": "single_entity",
+        "hierarchy_scope": "not_applicable",
+        "hierarchy_levels": [],
+        "scope_resolution": "sufficient",
+        "unresolved": [],
+        "rationale": "Implementation work status and lifecycle status are two distinct requested fields on the named criterion.",
+        "engine": "host_llm",
+        "status": "decided",
+        "model_id": null
+      },
+      "finite_contract_pass": true,
+      "checks": {
+        "original_question": true,
+        "trusted_source_scope": true,
+        "literal_anchor": true,
+        "no_hierarchy_expansion": true,
+        "decided": true,
+        "sufficient": true,
+        "detail_mode": true,
+        "result_kind": true,
+        "document_kind": true,
+        "relationship": true,
+        "completeness": true,
+        "minimal_fields": true
+      },
+      "manual_explanation_review_required": false,
+      "manual_review_rubric": null,
+      "execution_fulfillment": "not_executed",
+      "runtime_support_claim": false
+    },
+    {
+      "id": "IP10",
+      "accepted": true,
+      "question": "Return the complete canonical YAML document for KM-500c-2, including all authored fields.",
+      "actual_output": {
+        "schema_version": "1.0",
+        "original_question": "Return the complete canonical YAML document for KM-500c-2, including all authored fields.",
+        "source_scope": {
+          "read_roots": [
+            "docs"
+          ],
+          "repository_id": "leafcutter",
+          "revision": "2a8ebc87ce937a0a2fec65ab26220f79a72e4859",
+          "source_ids": [
+            "knowledge.graph"
+          ]
+        },
+        "selections": {
+          "entity_types": [
+            "ac"
+          ],
+          "target_ids": [
+            "KM-500c-2"
+          ],
+          "required_fields": [
+            "content"
+          ],
+          "document_types": [
+            "ac_yaml"
+          ],
+          "relationships": []
+        },
+        "uncertain": {
+          "entity_types": [],
+          "target_ids": [],
+          "required_fields": [],
+          "document_types": [],
+          "relationships": []
+        },
+        "detail_mode": "full_document",
+        "completeness": "single_entity",
+        "hierarchy_scope": "not_applicable",
+        "hierarchy_levels": [],
+        "scope_resolution": "sufficient",
+        "unresolved": [],
+        "rationale": "The request explicitly requires the entire canonical YAML item, including all authored fields. Full-document detail is necessary; a bounded source excerpt alone would be insufficient.",
+        "engine": "host_llm",
+        "status": "decided",
+        "model_id": null
+      },
+      "finite_contract_pass": true,
+      "checks": {
+        "original_question": true,
+        "trusted_source_scope": true,
+        "literal_anchor": true,
+        "no_hierarchy_expansion": true,
+        "decided": true,
+        "sufficient": true,
+        "detail_mode": true,
+        "single_canonical_document": true,
+        "full_document": true
+      },
+      "manual_explanation_review_required": false,
+      "manual_review_rubric": null,
+      "execution_fulfillment": "not_executed",
+      "runtime_support_claim": false
+    },
+    {
+      "id": "IP11",
+      "accepted": true,
+      "question": "Did KM-500c-2's tests pass on the latest CI run? Cite the run and tested commit.",
+      "actual_output": {
+        "schema_version": "1.0",
+        "original_question": "Did KM-500c-2's tests pass on the latest CI run? Cite the run and tested commit.",
+        "source_scope": {
+          "read_roots": [
+            "docs"
+          ],
+          "repository_id": "leafcutter",
+          "revision": "2a8ebc87ce937a0a2fec65ab26220f79a72e4859",
+          "source_ids": [
+            "knowledge.graph"
+          ]
+        },
+        "selections": {
+          "entity_types": [],
+          "target_ids": [
+            "KM-500c-2"
+          ],
+          "required_fields": [],
+          "document_types": [],
+          "relationships": []
+        },
+        "uncertain": {
+          "entity_types": [],
+          "target_ids": [],
+          "required_fields": [],
+          "document_types": [],
+          "relationships": []
+        },
+        "detail_mode": "fields",
+        "completeness": "single_entity",
+        "hierarchy_scope": "not_applicable",
+        "hierarchy_levels": [],
+        "scope_resolution": "unknown",
+        "unresolved": [
+          "needs_outside_catalog",
+          "The catalog does not represent latest CI test-execution outcomes, the corresponding run reference, or the tested commit. Source revision, lifecycle status, implementation progress and test specifications cannot substitute for these facts.",
+          "entity_types",
+          "document_types",
+          "required_fields",
+          "scope_resolution"
+        ],
+        "rationale": "The literal criterion is the anchor, but the requested answer concerns execution evidence absent from the offered catalog. Coverage references could be a discovery lead, but they are not requested execution facts.",
+        "engine": "host_llm",
+        "status": "needs_resolution",
+        "model_id": null
+      },
+      "finite_contract_pass": true,
+      "checks": {
+        "original_question": true,
+        "trusted_source_scope": true,
+        "literal_anchor": true,
+        "no_hierarchy_expansion": true,
+        "explicit_unavailable_meaning": true,
+        "no_needless_user_choice": true,
+        "offered_candidates_only": true,
+        "no_proxy_execution_result": true,
+        "explanation_present": true
+      },
+      "manual_explanation_review_required": true,
+      "manual_review_rubric": "Explanation must actually identify the unavailable execution outcome/run/tested-commit evidence; a generic unsupported statement is insufficient.",
+      "execution_fulfillment": "not_executed",
+      "runtime_support_claim": false
+    },
+    {
+      "id": "IP12",
+      "accepted": true,
+      "question": "What is the implementation work status of KM-500c-2?",
+      "actual_output": {
+        "schema_version": "1.0",
+        "original_question": "What is the implementation work status of KM-500c-2?",
+        "source_scope": {
+          "read_roots": [
+            "docs"
+          ],
+          "repository_id": "leafcutter",
+          "revision": "2a8ebc87ce937a0a2fec65ab26220f79a72e4859",
+          "source_ids": [
+            "knowledge.graph"
+          ]
+        },
+        "selections": {
+          "entity_types": [
+            "ac"
+          ],
+          "target_ids": [
+            "KM-500c-2"
+          ],
+          "required_fields": [
+            "work_status"
+          ],
+          "document_types": [
+            "ac_yaml"
+          ],
+          "relationships": []
+        },
+        "uncertain": {
+          "entity_types": [],
+          "target_ids": [],
+          "required_fields": [],
+          "document_types": [],
+          "relationships": []
+        },
+        "detail_mode": "fields",
+        "completeness": "single_entity",
+        "hierarchy_scope": "not_applicable",
+        "hierarchy_levels": [],
+        "scope_resolution": "sufficient",
+        "unresolved": [],
+        "rationale": "The original question asks only for implementation work status. Earlier discussion of writing tests does not enlarge that request.",
+        "engine": "host_llm",
+        "status": "decided",
+        "model_id": null
+      },
+      "finite_contract_pass": true,
+      "checks": {
+        "original_question": true,
+        "trusted_source_scope": true,
+        "literal_anchor": true,
+        "no_hierarchy_expansion": true,
+        "decided": true,
+        "sufficient": true,
+        "detail_mode": true,
+        "result_kind": true,
+        "document_kind": true,
+        "relationship": true,
+        "completeness": true,
+        "minimal_fields": true
+      },
+      "manual_explanation_review_required": false,
+      "manual_review_rubric": null,
+      "execution_fulfillment": "not_executed",
+      "runtime_support_claim": false
+    },
+    {
+      "id": "H01",
+      "accepted": true,
+      "question": "What is the value of the declared test-reference field in KM-500c-1's canonical AC definition? Return that authored value only.",
+      "actual_output": {
+        "schema_version": "1.0",
+        "original_question": "What is the value of the declared test-reference field in KM-500c-1's canonical AC definition? Return that authored value only.",
+        "source_scope": {
+          "read_roots": [
+            "docs"
+          ],
+          "repository_id": "leafcutter",
+          "revision": "2a8ebc87ce937a0a2fec65ab26220f79a72e4859",
+          "source_ids": [
+            "knowledge.graph"
+          ]
+        },
+        "selections": {
+          "entity_types": [
+            "ac"
+          ],
+          "target_ids": [
+            "KM-500c-1"
+          ],
+          "required_fields": [
+            "covered_by"
+          ],
+          "document_types": [
+            "ac_yaml"
+          ],
+          "relationships": []
+        },
+        "uncertain": {
+          "entity_types": [],
+          "target_ids": [],
+          "required_fields": [],
+          "document_types": [],
+          "relationships": []
+        },
+        "detail_mode": "fields",
+        "completeness": "single_entity",
+        "hierarchy_scope": "not_applicable",
+        "hierarchy_levels": [],
+        "scope_resolution": "sufficient",
+        "unresolved": [],
+        "rationale": "The authored test-reference field value on the named canonical AC definition is the sole requested fact. Resolving related test records is not required.",
+        "engine": "host_llm",
+        "status": "decided",
+        "model_id": null
+      },
+      "finite_contract_pass": true,
+      "checks": {
+        "original_question": true,
+        "trusted_source_scope": true,
+        "literal_anchor": true,
+        "no_hierarchy_expansion": true,
+        "decided": true,
+        "sufficient": true,
+        "detail_mode": true,
+        "result_kind": true,
+        "document_kind": true,
+        "relationship": true,
+        "completeness": true,
+        "minimal_fields": true
+      },
+      "manual_explanation_review_required": false,
+      "manual_review_rubric": null,
+      "execution_fulfillment": "not_executed",
+      "runtime_support_claim": false
+    },
+    {
+      "id": "H02",
+      "accepted": true,
+      "question": "Show a source excerpt from one test linked to KM-500a-2 as a covering test.",
+      "actual_output": {
+        "schema_version": "1.0",
+        "original_question": "Show a source excerpt from one test linked to KM-500a-2 as a covering test.",
+        "source_scope": {
+          "read_roots": [
+            "docs"
+          ],
+          "repository_id": "leafcutter",
+          "revision": "2a8ebc87ce937a0a2fec65ab26220f79a72e4859",
+          "source_ids": [
+            "knowledge.graph"
+          ]
+        },
+        "selections": {
+          "entity_types": [
+            "test"
+          ],
+          "target_ids": [
+            "KM-500a-2"
+          ],
+          "required_fields": [
+            "content"
+          ],
+          "document_types": [
+            "code"
+          ],
+          "relationships": [
+            "covered_by"
+          ]
+        },
+        "uncertain": {
+          "entity_types": [],
+          "target_ids": [],
+          "required_fields": [],
+          "document_types": [],
+          "relationships": []
+        },
+        "detail_mode": "fields",
+        "completeness": "examples",
+        "hierarchy_scope": "not_applicable",
+        "hierarchy_levels": [],
+        "scope_resolution": "sufficient",
+        "unresolved": [],
+        "rationale": "A source excerpt requires content from a linked covering test record. The named criterion anchors the coverage relationship, and one example is sufficient.",
+        "engine": "host_llm",
+        "status": "decided",
+        "model_id": null
+      },
+      "finite_contract_pass": true,
+      "checks": {
+        "original_question": true,
+        "trusted_source_scope": true,
+        "literal_anchor": true,
+        "no_hierarchy_expansion": true,
+        "decided": true,
+        "sufficient": true,
+        "detail_mode": true,
+        "one_linked_test_source": true
+      },
+      "manual_explanation_review_required": false,
+      "manual_review_rubric": null,
+      "execution_fulfillment": "not_executed",
+      "runtime_support_claim": false
+    },
+    {
+      "id": "H03",
+      "accepted": true,
+      "question": "Return the complete set of source locators for test records linked as covering KM-500c-1.",
+      "actual_output": {
+        "schema_version": "1.0",
+        "original_question": "Return the complete set of source locators for test records linked as covering KM-500c-1.",
+        "source_scope": {
+          "read_roots": [
+            "docs"
+          ],
+          "repository_id": "leafcutter",
+          "revision": "2a8ebc87ce937a0a2fec65ab26220f79a72e4859",
+          "source_ids": [
+            "knowledge.graph"
+          ]
+        },
+        "selections": {
+          "entity_types": [
+            "test"
+          ],
+          "target_ids": [
+            "KM-500c-1"
+          ],
+          "required_fields": [
+            "source_locator"
+          ],
+          "document_types": [
+            "code"
+          ],
+          "relationships": [
+            "covered_by"
+          ]
+        },
+        "uncertain": {
+          "entity_types": [],
+          "target_ids": [],
+          "required_fields": [],
+          "document_types": [],
+          "relationships": []
+        },
+        "detail_mode": "fields",
+        "completeness": "exhaustive_set",
+        "hierarchy_scope": "not_applicable",
+        "hierarchy_levels": [],
+        "scope_resolution": "sufficient",
+        "unresolved": [],
+        "rationale": "The requested population is every test record linked as covering the named criterion, and the requested fact for each is its source locator. Full coverage of this linked set is required.",
+        "engine": "host_llm",
+        "status": "decided",
+        "model_id": null
+      },
+      "finite_contract_pass": true,
+      "checks": {
+        "original_question": true,
+        "trusted_source_scope": true,
+        "literal_anchor": true,
+        "no_hierarchy_expansion": true,
+        "decided": true,
+        "sufficient": true,
+        "detail_mode": true,
+        "complete_linked_locators": true
+      },
+      "manual_explanation_review_required": false,
+      "manual_review_rubric": null,
+      "execution_fulfillment": "not_executed",
+      "runtime_support_claim": false
+    },
+    {
+      "id": "H04",
+      "accepted": true,
+      "question": "For KM-500a-2, give the latest CI execution verdict with its run reference and tested commit.",
+      "actual_output": {
+        "schema_version": "1.0",
+        "original_question": "For KM-500a-2, give the latest CI execution verdict with its run reference and tested commit.",
+        "source_scope": {
+          "read_roots": [
+            "docs"
+          ],
+          "repository_id": "leafcutter",
+          "revision": "2a8ebc87ce937a0a2fec65ab26220f79a72e4859",
+          "source_ids": [
+            "knowledge.graph"
+          ]
+        },
+        "selections": {
+          "entity_types": [],
+          "target_ids": [
+            "KM-500a-2"
+          ],
+          "required_fields": [],
+          "document_types": [],
+          "relationships": []
+        },
+        "uncertain": {
+          "entity_types": [],
+          "target_ids": [],
+          "required_fields": [],
+          "document_types": [],
+          "relationships": []
+        },
+        "detail_mode": "fields",
+        "completeness": "single_entity",
+        "hierarchy_scope": "not_applicable",
+        "hierarchy_levels": [],
+        "scope_resolution": "unknown",
+        "unresolved": [
+          "needs_outside_catalog",
+          "Latest CI execution verdict, run reference and tested commit have no offered execution-evidence representation. Canonical source revision and implementation or lifecycle status do not express the tested commit or execution outcome.",
+          "entity_types",
+          "document_types",
+          "required_fields",
+          "scope_resolution"
+        ],
+        "rationale": "The request concerns execution evidence for the literal criterion. The catalog cannot express that answer; test source or declared coverage could only provide optional discovery leads.",
+        "engine": "host_llm",
+        "status": "needs_resolution",
+        "model_id": null
+      },
+      "finite_contract_pass": true,
+      "checks": {
+        "original_question": true,
+        "trusted_source_scope": true,
+        "literal_anchor": true,
+        "no_hierarchy_expansion": true,
+        "no_investigative_relationship": true,
+        "detail_mode": true,
+        "explicit_unavailable_meaning": true,
+        "no_needless_user_choice": true,
+        "offered_candidates_only": true,
+        "no_proxy_execution_result": true,
+        "explanation_present": true
+      },
+      "manual_explanation_review_required": true,
+      "manual_review_rubric": "Explanation must actually identify the unavailable execution outcome/run/tested-commit evidence; a generic unsupported statement is insufficient.",
+      "execution_fulfillment": "not_executed",
+      "runtime_support_claim": false
+    }
+  ],
+  "jev_calls": 0,
+  "graph_calls": 0,
+  "execution_claim": false
+}

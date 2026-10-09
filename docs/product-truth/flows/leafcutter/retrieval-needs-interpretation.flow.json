@@ -10,7 +10,7 @@
   "realization": "built",
   "status": "active",
   "readiness": "draft",
-  "version": 7,
+  "version": 8,
   "shape_version": 2,
   "tags": [
     "retrieval",
@@ -1080,7 +1080,7 @@
           }
         ]
       },
-      "description": "The host model reads the request and, using only the offered labels, interprets in one pass which entity types, targets, fields, documents and relationships the question needs.",
+      "description": "The host model uses the offered meanings to distinguish acceptance behavior, authored verification checks and narrower requests in one interpretation without retrieving evidence.",
       "actor_kind": "llm"
     },
     {
@@ -3168,6 +3168,18 @@
       "given": "The first invalid payload was rejected and the one allowed correction was requested",
       "when": "A second payload fails schema or request-bound checks",
       "then": "The work item fails and the wait is removed without an accepted submission or completed interpretation result."
+    },
+    {
+      "for": "interpret",
+      "given": "The current shared host contract offers acceptance clauses, authored test specifications, references and status meanings.",
+      "when": "The host interprets verification obligations or an explicitly narrower question.",
+      "then": "Verification obligations request both complementary fields; narrower requests retain their meaning, and schema acceptance alone does not prove semantic correctness."
+    },
+    {
+      "for": "interpret",
+      "given": "The question requests either declaration values on one record, facts about linked records, or execution evidence absent from the offered meanings.",
+      "when": "The host identifies indispensable answer facts and any possible discovery leads.",
+      "then": "Declaration values alone do not add a traversal; requested related records retain their relationship, result kind and completeness, while optional investigative leads stay in rationale and unavailable execution evidence remains unresolved."
     }
   ],
   "provenance": [
@@ -3242,6 +3254,18 @@
       "by": "flow-author",
       "date": "2026-10-09",
       "note": "Semantically merged the upstream plain-sentence descriptions and explicit actor mechanisms while retaining the committed typed contracts, source-bound examples, original target obligations, host interpretation steps and separate historical evidence limits."
+    },
+    {
+      "action": "extended",
+      "by": "business-analyst / IT PO / flow-author (retrieval_acceptance_next)",
+      "date": "2026-10-09",
+      "note": "Documented the current shared host precision contract separately from the saved experiment. Acceptance clauses and authored test specifications are complementary for verification obligations; explicit narrower asks, declared references, whole documents and execution proof retain their own meanings. Historical N03 examples, Oct3 optional-spec oracle and all recorded trial outcomes are unchanged. The current Aura baseline omitted test_spec in 3/3 positive interpretations, so repair-quality proof remains pending rather than inferred from host/schema acceptance."
+    },
+    {
+      "action": "extended",
+      "by": "IT PO / business-analyst / flow-author (retrieval_acceptance_next)",
+      "date": "2026-10-09",
+      "note": "Clarified indispensable answer facts versus optional discovery hints and reference values versus linked-record populations, retaining existing topology and statuses. Frozen stage1 scored 10/12 interpretations: complementary criteria+test_spec positives passed, but IP07 retained a redundant relationship and IP11 added an investigative covered_by field despite honestly refusing unavailable execution proof. Historical IP01-IP12 expectations and outcomes are unchanged. Revision2 and four independent holdouts remain pending; new H04 disallows investigative content while historical IP11 retains its original allowance. Evidence: reports/retrieval-needs-precision-2026-10-09/stage1/review.html. Illustrative examples are not execution or model-quality receipts."
     }
   ],
   "impl_summary": {

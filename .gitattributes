@@ -22,3 +22,23 @@ reports/retrieval-scenarios-2026-10-02-post-sync-84006ac3/**/*.json -text
 reports/retrieval-scenarios-2026-10-02-post-sync-84006ac3/replay-recorded.py.txt -text
 
 reports/retrieval-public-2026-10-09/**/*.json -text
+
+# Preserve immutable closed retrieval artifacts and recorded source versions byte-for-byte.
+reports/retrieval-aura-2026-10-09/runs/published-2a8ebc87/** -text
+reports/retrieval-aura-2026-10-09/recorded-source/** -text
+reports/retrieval-aura-2026-10-09/publication-receipt.json -text
+reports/retrieval-needs-precision-2026-10-09/stage1/** -text
+reports/retrieval-needs-precision-2026-10-09/recorded-source/** -text
+reports/retrieval-needs-precision-2026-10-09/*.json -text
+# Evaluator helper bytes are fingerprinted; normal code quality checks still apply.
+reports/retrieval-aura-2026-10-09/*.py -text
+reports/retrieval-needs-precision-2026-10-09/*.py -text
+
+# Preserve closed precision stage1b evidence, recorded source and evaluated helper bytes.
+reports/retrieval-needs-precision-v2-2026-10-09/*.py -text
+reports/retrieval-needs-precision-v2-2026-10-09/*.json -text
+reports/retrieval-needs-precision-v2-2026-10-09/stage1b/** -text
+reports/retrieval-needs-precision-v2-2026-10-09/recorded-source/** -text
+
+# Preserve the zero-attempt prepared Aura run and its explicit approval-block receipt.
+reports/retrieval-aura-2026-10-09/runs/precision-v2-2a8ebc87/** -text

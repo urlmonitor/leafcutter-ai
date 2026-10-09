@@ -1,0 +1,43 @@
+{
+  "schema_version": "1.0",
+  "original_question": "Did KM-500c-2's tests pass on the latest CI run? Cite the run and tested commit.",
+  "source_scope": {
+    "read_roots": [
+      "docs"
+    ],
+    "repository_id": "leafcutter",
+    "revision": "2a8ebc87ce937a0a2fec65ab26220f79a72e4859",
+    "source_ids": [
+      "knowledge.graph"
+    ]
+  },
+  "selections": {
+    "entity_types": [],
+    "target_ids": [
+      "KM-500c-2"
+    ],
+    "required_fields": [],
+    "document_types": [],
+    "relationships": []
+  },
+  "uncertain": {
+    "entity_types": [],
+    "target_ids": [],
+    "required_fields": [],
+    "document_types": [],
+    "relationships": []
+  },
+  "detail_mode": "fields",
+  "completeness": "single_entity",
+  "hierarchy_scope": "not_applicable",
+  "hierarchy_levels": [],
+  "scope_resolution": "unknown",
+  "unresolved": [
+    "needs_outside_catalog",
+    "The catalog does not represent latest CI test-execution outcomes, the corresponding run reference, or the tested commit. Source revision, lifecycle status, implementation progress and test specifications cannot substitute for these facts."
+  ],
+  "rationale": "The literal criterion is the anchor, but the requested answer concerns execution evidence absent from the offered catalog. Coverage references could be a discovery lead, but they are not requested execution facts.",
+  "engine": "host_llm",
+  "status": "needs_resolution",
+  "model_id": null
+}

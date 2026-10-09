@@ -1,0 +1,19 @@
+{
+  "recorded_at": "2026-10-09T22:06:12.245432+00:00",
+  "scope": "current_report_helpers_only",
+  "not_a_historical_or_stage2_runtime_fingerprint": true,
+  "previous_helper_record": "maintained-helpers.json",
+  "historical_source_map": "source-preservation.json",
+  "changes": [
+    "Added exception-class-only logging before the unchanged first-generation precision failure receipt; same single attempt, continuation and finally cleanup."
+  ],
+  "files_sha256": {
+    "reports/retrieval-aura-2026-10-09/controller.py": "b2ea5887e507ffb8f21224ce7fc37fa22a07dbdca10b113cd88599cfb337d827",
+    "reports/retrieval-aura-2026-10-09/proof_support.py": "ca02bae45d8cbc251b2b2ed00ce7bda37d56b82e4321bfdfa36dd83fe3c175b4",
+    "reports/retrieval-aura-2026-10-09/score_support.py": "5d5a4072160d707d77f0fe82e0343a518a52fbcaad1e9a71cad72f2077f9feea",
+    "reports/retrieval-needs-precision-2026-10-09/controller.py": "6591468ac0d05da16ea95b551a5b0adeff4ea9451b51e5935b1a44619b2674e3",
+    "reports/retrieval-needs-precision-2026-10-09/eval_support.py": "ed4cb297045cfc8062bcd0f1ec01a4f9688dd4c3e611822bf4f68d2869667726",
+    "reports/retrieval-needs-precision-2026-10-09/score.py": "43b264468886161f5941a82d9afdda452f4a89d918a1bf0fcb3a5bb6292bb32b"
+  },
+  "aggregate_sha256": "e44da1d551b7885b95ea12ebd46cad1312f4d6cf52f929f0a562f3293dc04bce"
+}

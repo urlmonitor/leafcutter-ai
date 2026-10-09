@@ -1,0 +1,65 @@
+{
+  "schema_version": "1.0",
+  "run_id": "run-1c77269a9dc1403b",
+  "interaction_id": "int-a600dcfb7e544be8",
+  "sha256": "53ff2f97ffa025fd617b155c5365a0831816c73567a54d7009117395c1097639",
+  "submission": {
+    "schema_version": "1.0",
+    "run_id": "run-1c77269a9dc1403b",
+    "interaction_id": "int-a600dcfb7e544be8",
+    "expected_state_revision": 1,
+    "actor": {
+      "schema_version": "1.0",
+      "id": "host:blind-precision",
+      "kind": "host"
+    },
+    "relayed_by": null,
+    "response_schema_id": "leafcutter.retrieval_needs_output.v1",
+    "response": {
+      "schema_version": "1.0",
+      "original_question": "For KM-500a-2, give the latest CI execution verdict with its run reference and tested commit.",
+      "source_scope": {
+        "read_roots": [
+          "docs"
+        ],
+        "repository_id": "leafcutter",
+        "revision": "2a8ebc87ce937a0a2fec65ab26220f79a72e4859",
+        "source_ids": [
+          "knowledge.graph"
+        ]
+      },
+      "selections": {
+        "entity_types": [],
+        "target_ids": [
+          "KM-500a-2"
+        ],
+        "required_fields": [],
+        "document_types": [],
+        "relationships": []
+      },
+      "uncertain": {
+        "entity_types": [],
+        "target_ids": [],
+        "required_fields": [],
+        "document_types": [],
+        "relationships": []
+      },
+      "detail_mode": "fields",
+      "completeness": "single_entity",
+      "hierarchy_scope": "not_applicable",
+      "hierarchy_levels": [],
+      "scope_resolution": "unknown",
+      "unresolved": [
+        "needs_outside_catalog",
+        "Latest CI execution verdict, run reference and tested commit have no offered execution-evidence representation. Canonical source revision and implementation or lifecycle status do not express the tested commit or execution outcome."
+      ],
+      "rationale": "The request concerns execution evidence for the literal criterion. The catalog cannot express that answer; test source or declared coverage could only provide optional discovery leads.",
+      "engine": "host_llm",
+      "status": "needs_resolution",
+      "model_id": null
+    },
+    "new_evidence": [],
+    "usage": []
+  },
+  "accepted_at": "2026-10-09T21:45:41.316407Z"
+}

@@ -1,0 +1,17 @@
+{
+  "checked_at": "2026-10-09T21:41:25.526840+00:00",
+  "scope": [
+    "reports/retrieval-aura-2026-10-09",
+    "reports/retrieval-needs-precision-2026-10-09",
+    ".gitattributes",
+    ".gitignore",
+    ".security-allowlist"
+  ],
+  "replay_sqlite_and_python_cache_excluded": true,
+  "files_scanned": 485,
+  "findings": 0,
+  "exact_false_positive_entries": 142,
+  "helper_aggregate_sha256_unchanged": "786cde13dc0050f6795235584a0e26e29d2fbc0605c76355ea26346effb1d9fb",
+  "old_closure_and_freeze_hashes_unchanged": true,
+  "stage": "direct read-only scanner; actual commit hooks remain required"
+}

@@ -61,3 +61,49 @@ debugging/logs/
 
 # Live surface testing runtime state (logs, port registry)
 .live_surface_testing/
+
+# Closed retrieval replay databases remain local; hashes and exclusions are published.
+/reports/retrieval-aura-2026-10-09/runs/published-2a8ebc87/A01/runtime/checkpoints.sqlite
+/reports/retrieval-aura-2026-10-09/runs/published-2a8ebc87/A02/runtime/checkpoints.sqlite
+/reports/retrieval-aura-2026-10-09/runs/published-2a8ebc87/A03/runtime/checkpoints.sqlite
+/reports/retrieval-aura-2026-10-09/runs/published-2a8ebc87/A04/runtime/checkpoints.sqlite
+/reports/retrieval-needs-precision-2026-10-09/stage1/IP01/runtime/checkpoints.sqlite
+/reports/retrieval-needs-precision-2026-10-09/stage1/IP02/runtime/checkpoints.sqlite
+/reports/retrieval-needs-precision-2026-10-09/stage1/IP03/runtime/checkpoints.sqlite
+/reports/retrieval-needs-precision-2026-10-09/stage1/IP04/runtime/checkpoints.sqlite
+/reports/retrieval-needs-precision-2026-10-09/stage1/IP05/runtime/checkpoints.sqlite
+/reports/retrieval-needs-precision-2026-10-09/stage1/IP06/runtime/checkpoints.sqlite
+/reports/retrieval-needs-precision-2026-10-09/stage1/IP07/runtime/checkpoints.sqlite
+/reports/retrieval-needs-precision-2026-10-09/stage1/IP08/runtime/checkpoints.sqlite
+/reports/retrieval-needs-precision-2026-10-09/stage1/IP09/runtime/checkpoints.sqlite
+/reports/retrieval-needs-precision-2026-10-09/stage1/IP10/runtime/checkpoints.sqlite
+/reports/retrieval-needs-precision-2026-10-09/stage1/IP11/runtime/checkpoints.sqlite
+/reports/retrieval-needs-precision-2026-10-09/stage1/IP12/runtime/checkpoints.sqlite
+
+# Closed precision stage1b replay databases remain local.
+/reports/retrieval-needs-precision-v2-2026-10-09/stage1b/H01/runtime/checkpoints.sqlite
+/reports/retrieval-needs-precision-v2-2026-10-09/stage1b/H02/runtime/checkpoints.sqlite
+/reports/retrieval-needs-precision-v2-2026-10-09/stage1b/H03/runtime/checkpoints.sqlite
+/reports/retrieval-needs-precision-v2-2026-10-09/stage1b/H04/runtime/checkpoints.sqlite
+/reports/retrieval-needs-precision-v2-2026-10-09/stage1b/IP01/runtime/checkpoints.sqlite
+/reports/retrieval-needs-precision-v2-2026-10-09/stage1b/IP02/runtime/checkpoints.sqlite
+/reports/retrieval-needs-precision-v2-2026-10-09/stage1b/IP03/runtime/checkpoints.sqlite
+/reports/retrieval-needs-precision-v2-2026-10-09/stage1b/IP04/runtime/checkpoints.sqlite
+/reports/retrieval-needs-precision-v2-2026-10-09/stage1b/IP05/runtime/checkpoints.sqlite
+/reports/retrieval-needs-precision-v2-2026-10-09/stage1b/IP06/runtime/checkpoints.sqlite
+/reports/retrieval-needs-precision-v2-2026-10-09/stage1b/IP07/runtime/checkpoints.sqlite
+/reports/retrieval-needs-precision-v2-2026-10-09/stage1b/IP08/runtime/checkpoints.sqlite
+/reports/retrieval-needs-precision-v2-2026-10-09/stage1b/IP09/runtime/checkpoints.sqlite
+/reports/retrieval-needs-precision-v2-2026-10-09/stage1b/IP10/runtime/checkpoints.sqlite
+/reports/retrieval-needs-precision-v2-2026-10-09/stage1b/IP11/runtime/checkpoints.sqlite
+/reports/retrieval-needs-precision-v2-2026-10-09/stage1b/IP12/runtime/checkpoints.sqlite
+
+# Exact local-only SQLite sidecars for the closed Aura baseline.
+reports/retrieval-aura-2026-10-09/runs/published-2a8ebc87/A01/runtime/checkpoints.sqlite-shm
+reports/retrieval-aura-2026-10-09/runs/published-2a8ebc87/A01/runtime/checkpoints.sqlite-wal
+reports/retrieval-aura-2026-10-09/runs/published-2a8ebc87/A02/runtime/checkpoints.sqlite-shm
+reports/retrieval-aura-2026-10-09/runs/published-2a8ebc87/A02/runtime/checkpoints.sqlite-wal
+reports/retrieval-aura-2026-10-09/runs/published-2a8ebc87/A03/runtime/checkpoints.sqlite-shm
+reports/retrieval-aura-2026-10-09/runs/published-2a8ebc87/A03/runtime/checkpoints.sqlite-wal
+reports/retrieval-aura-2026-10-09/runs/published-2a8ebc87/A04/runtime/checkpoints.sqlite-shm
+reports/retrieval-aura-2026-10-09/runs/published-2a8ebc87/A04/runtime/checkpoints.sqlite-wal

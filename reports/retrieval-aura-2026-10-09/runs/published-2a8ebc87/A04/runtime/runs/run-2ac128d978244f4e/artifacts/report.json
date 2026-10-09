@@ -1,0 +1,125 @@
+{
+  "outcome": {
+    "diagnostics": [],
+    "errors": [],
+    "limitations": [
+      "requested revision is not published",
+      "knowledge status: stale",
+      "retrieval choice: Jev selected a supported registered operation and authorized target",
+      "execution is stale",
+      "requested source revision is not established",
+      "requested identities are missing from returned evidence",
+      "no evidence for the requested facts",
+      "Original answer requirements remain unresolved",
+      "need need.question: conditional assessment remains unresolved",
+      "required need need.question is unavailable"
+    ],
+    "open_questions": [],
+    "output": {
+      "payload": {
+        "assessments": {
+          "need.question": {
+            "completeness": {
+              "complete": false,
+              "exact_total": null,
+              "known_count": 0,
+              "limitations": [
+                "execution is stale",
+                "requested source revision is not established",
+                "requested identities are missing from returned evidence",
+                "no evidence for the requested facts"
+              ]
+            },
+            "kind": "retrieval_answer",
+            "known_work_status_counts": {},
+            "limitations": [
+              "execution is stale",
+              "requested source revision is not established",
+              "requested identities are missing from returned evidence",
+              "no evidence for the requested facts"
+            ],
+            "missing_fields": [],
+            "original_question": "For KM-500c-2, what must tests demonstrate?",
+            "required_fields": [
+              "criteria"
+            ],
+            "scope": {
+              "entity_ids": [
+                "KM-500c-2"
+              ],
+              "inclusion": null,
+              "levels": null,
+              "population": "returned_entities",
+              "root_id": null
+            },
+            "status": "unresolved",
+            "work_status_counts": null
+          }
+        },
+        "attempted_sources": [
+          "knowledge.graph"
+        ],
+        "contradictions": [],
+        "coverage": {
+          "need.question": "unavailable"
+        },
+        "evidence": [],
+        "evidence_ids": [],
+        "finding_ids": [],
+        "findings": [],
+        "limitations": [
+          "requested revision is not published",
+          "knowledge status: stale",
+          "retrieval choice: Jev selected a supported registered operation and authorized target",
+          "execution is stale",
+          "requested source revision is not established",
+          "requested identities are missing from returned evidence",
+          "no evidence for the requested facts",
+          "Original answer requirements remain unresolved",
+          "need need.question: conditional assessment remains unresolved",
+          "required need need.question is unavailable"
+        ],
+        "need_evidence": {},
+        "need_limitations": {},
+        "request_id": null,
+        "schema_version": "1.0",
+        "truncated": false,
+        "unavailable_sources": [
+          {
+            "reason": "stale",
+            "schema_version": "1.0",
+            "source_id": "knowledge.retrieval"
+          }
+        ],
+        "unknowns": []
+      },
+      "schema_id": "leafcutter.evidence_bundle.v1",
+      "schema_version": "1.0"
+    },
+    "report_ref": null,
+    "schema_version": "1.0",
+    "status": "partial"
+  },
+  "run_id": "run-2ac128d978244f4e",
+  "status": "partial",
+  "work_items": [
+    {
+      "binding": "research",
+      "depth": 0,
+      "id": "work-838e55da59394e5a",
+      "status": "partial"
+    },
+    {
+      "binding": "host.retrieval_needs",
+      "depth": 1,
+      "id": "work-50ef166ccacc49b4",
+      "status": "completed"
+    },
+    {
+      "binding": "retrieve.repository",
+      "depth": 1,
+      "id": "work-278050644c5245c7",
+      "status": "partial"
+    }
+  ]
+}

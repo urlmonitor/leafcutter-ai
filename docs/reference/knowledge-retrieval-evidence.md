@@ -69,6 +69,30 @@ state are not automatically projected by these mappings. Test/SourceFile nodes
 represent declared references, not a complete repository file inventory. Unknown
 mapping metadata in an older manifest remains unknown.
 
+## Acceptance clauses and verification specifications
+
+The host catalog separates `criteria` (required acceptance behavior) from
+`test_spec` (authored scenarios, assertions, test angles and wrong implementations
+to catch). A verification-obligation question needs both; the specification does
+not replace the clauses. This is an interpretation instruction, not a deterministic
+addition to every accepted request or a claim that the semantic repair has passed.
+
+| Requested meaning | Evidence to request |
+|---|---|
+| What tests must demonstrate | `criteria` and authored `test_spec`, each with its own source locator |
+| Only acceptance obligations | `criteria` |
+| Only the authored test specification | `test_spec` |
+| Declared test references | The AC's `covered_by` or an equivalent attributable reference set; no execution claim |
+| Implementation and lifecycle status | `work_status` and `status`; `req_status` is governance, not lifecycle |
+| Whole canonical document | Preserve `full_document`; a bounded `content` excerpt is insufficient |
+| Whether tests passed | Actual execution evidence identifying the run and tested revision; declarations and status do not establish it |
+
+Field availability is checked after retrieval. Missing or withheld specifications
+remain explicit; the interpreter cannot infer their absence from a catalog label.
+Interpretation quality and faithful retrieval of the chosen fields are separate
+measurements. The frozen Oct3 experiment allowed an optional specification; its
+historic gold and receipts remain unchanged by the current precision contract.
+
 ## Bounded content
 
 A required `content` field is satisfied only by a nonempty excerpt actually read

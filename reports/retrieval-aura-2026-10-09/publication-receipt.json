@@ -1,0 +1,71 @@
+{
+  "schema_version": "1.0",
+  "recorded_at": "2026-10-09T20:57:33Z",
+  "kind": "canonical_neo4j_publication_receipt",
+  "repository": "urlmonitor/leafcutter-ai",
+  "repository_id": "leafcutter",
+  "database": "84379aa6",
+  "workflow": {
+    "run_id": 37989481802,
+    "job_id": 114019689136,
+    "url": "https://github.com/urlmonitor/leafcutter-ai/actions/runs/37989481802",
+    "event": "push",
+    "created_at": "2026-10-09T20:48:56Z",
+    "completed_observed_updated_at": "2026-10-09T20:55:33Z",
+    "status": "completed",
+    "conclusion": "success",
+    "writer_configuration_and_canonical_ancestry_step": "success",
+    "combined_validate_publish_status_step": "success"
+  },
+  "requested_source_sha": "2a8ebc87ce937a0a2fec65ab26220f79a72e4859",
+  "actual_writer_checkout": {
+    "sha": "2a8ebc87ce937a0a2fec65ab26220f79a72e4859",
+    "evidence_source": "completed Actions checkout step log, independently from event head_sha",
+    "command_timestamp": "2026-10-09T20:49:05.0905310Z",
+    "command": "/usr/bin/git log -1 --format=%H",
+    "output_timestamp": "2026-10-09T20:49:05.0931886Z",
+    "output": "2a8ebc87ce937a0a2fec65ab26220f79a72e4859"
+  },
+  "generation": {
+    "generation_id": "72a3b693c251e51789966795c5ecd58acc83170b815ee90582a5000741a27887",
+    "mapper_version": "7",
+    "node_count": 10174,
+    "edge_count": 26987,
+    "semantic_ready": false
+  },
+  "cli_receipts": {
+    "validate": {
+      "status": "ok",
+      "published": false
+    },
+    "sync": {
+      "status": "ok",
+      "published": true
+    },
+    "status": {
+      "status": "ok",
+      "requested_sha": "2a8ebc87ce937a0a2fec65ab26220f79a72e4859",
+      "published_sha": "2a8ebc87ce937a0a2fec65ab26220f79a72e4859",
+      "lagging": false
+    },
+    "binding": "Validate and sync receipts both report the exact source and generation/counts above."
+  },
+  "independent_serving_checks": {
+    "mechanism": "Configured Neo4jBackend using serving credential resolution; read-only active/exact-revision methods and bounded active-manifest MATCH.",
+    "active_status": "ready",
+    "active_source_sha": "2a8ebc87ce937a0a2fec65ab26220f79a72e4859",
+    "active_generation_id": "72a3b693c251e51789966795c5ecd58acc83170b815ee90582a5000741a27887",
+    "node_count": 10174,
+    "edge_count": 26987,
+    "semantic_ready": false,
+    "ready_at_unix": 1791579327.244489,
+    "public_active_reader_matches": true,
+    "public_exact_revision_reader_matches": true
+  },
+  "limits": [
+    "Graph publication and source freshness are verified; public natural-question answer quality is a separate evaluation.",
+    "semantic_ready is false; vector/semantic readiness is not claimed.",
+    "No manual workflow dispatch, retry, graph mutation or model call was performed by this monitoring agent.",
+    "The normal auto-sync used existing CI writer secrets; no credentials or full workflow logs are included."
+  ]
+}

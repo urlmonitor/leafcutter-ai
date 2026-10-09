@@ -1,0 +1,44 @@
+{
+  "created_at": "2026-10-09T21:49:26.009642+00:00",
+  "lookup_contract": "Match both original_path AND the consuming historical record SHA256. Never resolve by path alone; an unmatched version is unavailable.",
+  "closure": {
+    "path": "reports/retrieval-needs-precision-v2-2026-10-09/stage1b/closure-integrity.json",
+    "sha256": "b9f3e50c4f7116d569a23aba748352d30f45e8e260371617734135e1f8da61dc"
+  },
+  "freeze": {
+    "path": "reports/retrieval-needs-precision-v2-2026-10-09/stage1b/freeze.json",
+    "sha256": "b6863e79eb6929df1de7f883d013e8cd52101da7712effd68beffae961079585"
+  },
+  "files": [
+    {
+      "original_path": "reports/retrieval-needs-precision-v2-2026-10-09/controller.py",
+      "archive_path": "reports/retrieval-needs-precision-v2-2026-10-09/recorded-source/controller.py.txt",
+      "sha256": "37637ca0b09bdd03e7887020e755329ecd74eae6a6405e660e56a0afe29e29cf",
+      "bytes": 7864
+    },
+    {
+      "original_path": "reports/retrieval-needs-precision-v2-2026-10-09/eval_support.py",
+      "archive_path": "reports/retrieval-needs-precision-v2-2026-10-09/recorded-source/eval_support.py.txt",
+      "sha256": "e16a38c4b33e8fa24bce214187183b3bee07ab9b5afdf3d1f4f2d0e8c5c317f4",
+      "bytes": 5283
+    },
+    {
+      "original_path": "reports/retrieval-needs-precision-v2-2026-10-09/score.py",
+      "archive_path": "reports/retrieval-needs-precision-v2-2026-10-09/recorded-source/score.py.txt",
+      "sha256": "1a07a950bc77ea2dce69abbf7781903956e7b0b4a42df7aab018a728741bc890",
+      "bytes": 8878
+    },
+    {
+      "original_path": "integrations/research_needs.py",
+      "archive_path": "reports/retrieval-needs-precision-v2-2026-10-09/recorded-source/research_needs.py.txt",
+      "sha256": "bc5b0724149aef9f476a417f543a7e3077647deaecaefbe11913295a1f0cfcb9",
+      "bytes": 10224
+    },
+    {
+      "original_path": "kernel/capabilities/host/retrieval_needs.py",
+      "archive_path": "reports/retrieval-needs-precision-v2-2026-10-09/recorded-source/retrieval_needs.py.txt",
+      "sha256": "52a5d46cf900b213cda95540e480a1a33f4ecb3549b581e5f8e79f864ee39692",
+      "bytes": 12770
+    }
+  ]
+}

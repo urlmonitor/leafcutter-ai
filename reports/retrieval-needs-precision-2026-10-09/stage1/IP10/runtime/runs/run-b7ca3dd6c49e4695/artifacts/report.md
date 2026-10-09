@@ -1,0 +1,66 @@
+# Run report run-b7ca3dd6c49e4695
+
+- Status: completed
+- Task: Return the complete canonical YAML document for KM-500c-2, including all authored fields.
+
+## Output
+
+Schema: `leafcutter.retrieval_needs_output.v1`
+
+```json
+{
+  "completeness": "single_entity",
+  "detail_mode": "full_document",
+  "engine": "host_llm",
+  "hierarchy_levels": [],
+  "hierarchy_scope": "not_applicable",
+  "model_id": null,
+  "original_question": "Return the complete canonical YAML document for KM-500c-2, including all authored fields.",
+  "rationale": "The complete canonical YAML document, including all authored fields, is requested. Full-document mode preserves that requirement; a bounded content excerpt alone would not satisfy it.",
+  "schema_version": "1.0",
+  "scope_resolution": "sufficient",
+  "selections": {
+    "document_types": [
+      "ac_yaml"
+    ],
+    "entity_types": [
+      "ac"
+    ],
+    "relationships": [],
+    "required_fields": [
+      "content"
+    ],
+    "target_ids": [
+      "KM-500c-2"
+    ]
+  },
+  "source_scope": {
+    "read_roots": [
+      "docs"
+    ],
+    "repository_id": "leafcutter",
+    "revision": "2a8ebc87ce937a0a2fec65ab26220f79a72e4859",
+    "source_ids": [
+      "knowledge.graph"
+    ]
+  },
+  "status": "decided",
+  "uncertain": {
+    "document_types": [],
+    "entity_types": [],
+    "relationships": [],
+    "required_fields": [],
+    "target_ids": []
+  },
+  "unresolved": []
+}
+```
+
+## Limitations
+
+- host-reported; not verified by the kernel
+- Interpretation only; no retrieval executed and no answer correctness or classifier approval established.
+
+## Work items
+
+- work-eb76271ae7aa4b16: completed (depth 0)
