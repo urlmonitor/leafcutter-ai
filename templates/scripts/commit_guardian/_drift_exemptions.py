@@ -188,9 +188,68 @@ def validate_exemption_registry(entries: list) -> dict[str, str]:
     return valid
 
 
+BUILD_REMEDY = "run build.py to register it"
+NOT_BUILT_REMEDY = (
+    "this file is not something the build produces, so running build.py will not "
+    "clear it; declare it exempt by adding an entry with a stated ground to "
+    "drift_gate_exemption_registry in commit_guardian.json, or remove (delete) the file"
+)
+
+
+def package_root_from_manifest(manifest_path: Path, repo_root: Path) -> Path | None:
+    """Resolve the package root recorded in the manifest's ``package_root`` field.
+
+    Args:
+        manifest_path: Path to ``.build_manifest.json``.
+        repo_root: Root every manifest key is relative to.
+
+    Returns:
+        ``repo_root / package_root`` (or ``repo_root`` for an empty value), or
+        None when the manifest cannot be read or the field is not a string.
+    """
+    try:
+        data = json.loads(manifest_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        logger.warning("cannot read package_root from %s: %s", manifest_path, exc)
+        return None
+    value = data.get("package_root", "") if isinstance(data, dict) else None
+    if not isinstance(value, str):
+        return None
+    return (repo_root / value) if value else repo_root
+
+
+def gap_remedy(key: str, package_root: Path | None) -> str:
+    """Return the remedy text for an unrecorded, undeclared artifact (BP-100k-3-ii).
+
+    A file is build-producible when a template counterpart exists under
+    ``<package_root>/templates`` at the key's path minus its leading output
+    directory (``.claude/agents/x.md`` -> ``templates/agents/x.md``). Only then
+    is running the build a remedy that can clear the report. Any other file is
+    reported as not build-produced, naming the exemption registry and removal.
+    When the package root is unknown the build remedy is kept (nothing can be
+    claimed about the file).
+
+    Args:
+        key: Forward-slash output key relative to the repo root.
+        package_root: Package root holding ``templates/``, or None if unknown.
+
+    Returns:
+        The text placed after ``action=`` on the GAP line.
+    """
+    if package_root is None:
+        return BUILD_REMEDY
+    parts = key.split("/", 1)
+    if len(parts) == 2 and (package_root / "templates" / parts[1]).is_file():
+        return BUILD_REMEDY
+    return NOT_BUILT_REMEDY
+
+
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-09 [python-coder/BP-100k-3-ii]: Added gap_remedy() and
+#   package_root_from_manifest() so the GAP remedy depends on whether the file
+#   has a build template counterpart.
 # - 2026-08-26 [python-coder/EPIC-BuildPipelinePhantomRemediation, adversarial
 #   review round 2, B-2]: Added ``unreadable`` (default 0, appended last so no
 #   existing keyword construction breaks). check_output_drift.py's
