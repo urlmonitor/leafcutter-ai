@@ -1,0 +1,1893 @@
+{
+  "requests": {
+    "req-15a42a358dc64654": {
+      "schema_version": "1.0",
+      "kind": "evidence",
+      "goal": null,
+      "question": "For KM-500c-2, what must tests demonstrate?",
+      "payload_schema": "leafcutter.retrieval_request.v1",
+      "payload": {
+        "schema_version": "1.0",
+        "retrieval_needs": {
+          "schema_version": "1.0",
+          "original_question": "For KM-500c-2, what must tests demonstrate?",
+          "source_scope": {
+            "read_roots": [
+              "docs"
+            ],
+            "repository_id": "public-needs-acceptance",
+            "revision": "fb7c073bbc93ac4751685c5b45d1b4efeb108ac2",
+            "source_ids": [
+              "knowledge.graph"
+            ]
+          },
+          "selections": {
+            "entity_types": [
+              "ac"
+            ],
+            "target_ids": [
+              "KM-500c-2"
+            ],
+            "required_fields": [
+              "criteria",
+              "test_spec"
+            ],
+            "document_types": [
+              "ac_yaml"
+            ],
+            "relationships": []
+          },
+          "uncertain": {
+            "entity_types": [],
+            "target_ids": [],
+            "required_fields": [],
+            "document_types": [],
+            "relationships": []
+          },
+          "detail_mode": "fields",
+          "completeness": "single_entity",
+          "hierarchy_scope": "not_applicable",
+          "hierarchy_levels": [],
+          "scope_resolution": "sufficient",
+          "unresolved": [],
+          "rationale": "The named acceptance criterion's exact clauses and declared expected assertions establish what its tests must demonstrate. Test links, a test-required flag, and progress statuses do not provide those obligations.",
+          "engine": "host_llm",
+          "status": "decided",
+          "model_id": null
+        },
+        "knowledge": null,
+        "answer_requirements": {
+          "original_question": "For KM-500c-2, what must tests demonstrate?",
+          "required_fields": [
+            "criteria",
+            "test_spec"
+          ],
+          "scope": {
+            "population": "returned_entities",
+            "root_id": null,
+            "levels": null,
+            "inclusion": null
+          },
+          "require_complete": true
+        },
+        "assessment": null,
+        "need": {
+          "schema_version": "1.0",
+          "id": "need.question",
+          "category": "task_context",
+          "question": "For KM-500c-2, what must tests demonstrate?",
+          "priority": "required",
+          "acceptable_source_kinds": [],
+          "resolution": [],
+          "status": "open"
+        },
+        "source_ids": [
+          "knowledge.graph"
+        ],
+        "detail": "excerpt",
+        "limits": {
+          "schema_version": "1.0",
+          "top_k": null,
+          "max_chars": null
+        },
+        "explicit_locators": [],
+        "query_hints": [
+          "For KM-500c-2, what must tests demonstrate?"
+        ],
+        "max_rerank_batches": 11,
+        "jev_reserve": 0
+      },
+      "requested_output_schema": "leafcutter.evidence_bundle.v1",
+      "evidence_needs": [
+        {
+          "schema_version": "1.0",
+          "id": "need.question",
+          "category": "task_context",
+          "question": "For KM-500c-2, what must tests demonstrate?",
+          "priority": "required",
+          "acceptable_source_kinds": [],
+          "resolution": [],
+          "status": "open"
+        }
+      ],
+      "priority": "required",
+      "context_refs": [],
+      "depends_on": [],
+      "operation": "retrieve",
+      "id": "req-15a42a358dc64654",
+      "created_at": "2026-10-09T15:50:56.462828Z",
+      "updated_at": "2026-10-09T15:50:56.462828Z",
+      "created_seq": 2,
+      "origin_work_item_id": "work-bb687051daaf4f29",
+      "dedup_key": "c96adb7f70e85927022153c6fe188949ecca34a4de816691de504a6feb2722ee"
+    },
+    "req-58978e520f9b49d8": {
+      "schema_version": "1.0",
+      "kind": "capability",
+      "goal": null,
+      "question": "For KM-500c-2, what must tests demonstrate?",
+      "payload_schema": "leafcutter.retrieval_needs_request.v1",
+      "payload": {
+        "schema_version": "1.0",
+        "original_question": "For KM-500c-2, what must tests demonstrate?",
+        "context": [],
+        "known_ids": [],
+        "source_scope": {
+          "repository_id": "public-needs-acceptance",
+          "revision": "fb7c073bbc93ac4751685c5b45d1b4efeb108ac2",
+          "source_ids": [
+            "knowledge.graph"
+          ],
+          "read_roots": [
+            "docs"
+          ]
+        },
+        "catalog": {
+          "entity_types": {
+            "ac": "Acceptance criterion or requirement",
+            "adr": "Architecture decision record",
+            "ticket": "Work ticket",
+            "component": "Registered component",
+            "flow": "Product Truth flow",
+            "decision": "Recorded decision",
+            "test": "Test source",
+            "document": "Repository document"
+          },
+          "target_ids": {
+            "KM-500c-2": "Literal identifier in the original question; assess its requested role."
+          },
+          "required_fields": {
+            "canonical_id": "The stable identities of the requested entities, such as which tests or ACs.",
+            "kind": "The canonical entity type of each returned item.",
+            "title": "The source-backed human-readable name of each returned item.",
+            "source_sha": "The immutable source revision supporting each entity.",
+            "source_locator": "The exact source location supporting each entity.",
+            "priority": "Declared source priority, not an inferred business ranking or dependency count.",
+            "level": "The canonical requirement hierarchy level.",
+            "test_required": "The explicit source test requirement, not evidence of execution.",
+            "work_status": "Implementation progress, such as done or todo; distinct from lifecycle status.",
+            "status": "Canonical lifecycle status, such as active; not delivery completion.",
+            "criteria": "Exact source acceptance clauses.",
+            "req_status": "Requirement governance state.",
+            "readiness": "Planning approval readiness, not implementation proof.",
+            "covered_by": "Declared test references, not evidence of a test run.",
+            "implemented_by": "Declared implementation references, not a complete call graph.",
+            "depends_on": "Declared requirement dependencies, not inferred code impact.",
+            "test_spec": "Declared test cases and expected assertions; supplements acceptance criteria"
+          },
+          "document_types": {
+            "ac_yaml": "Canonical acceptance criterion definition including acceptance clauses",
+            "adr": "Architecture decision document",
+            "ticket": "Ticket document",
+            "flow": "Product Truth JSON",
+            "decision": "Recorded decision YAML",
+            "code": "Implementation or test source",
+            "documentation": "Repository documentation",
+            "component": "Component definition"
+          },
+          "relationships": {
+            "parent_direct": "Immediate parent only",
+            "children_direct": "Immediate children only",
+            "all_descendants": "Entire declared hierarchy below the target, not only direct children",
+            "declared_dependents": "Records directly declaring a dependency on the target",
+            "covered_by": "Tests declared to cover an acceptance criterion",
+            "implemented_by": "Declared implementation references",
+            "related_docs": "Declared document references"
+          }
+        }
+      },
+      "requested_output_schema": "leafcutter.retrieval_needs_output.v1",
+      "evidence_needs": [],
+      "priority": "required",
+      "context_refs": [],
+      "depends_on": [],
+      "operation": "interpret_retrieval_needs",
+      "id": "req-58978e520f9b49d8",
+      "created_at": "2026-10-09T15:47:59.438001Z",
+      "updated_at": "2026-10-09T15:47:59.438001Z",
+      "created_seq": 1,
+      "origin_work_item_id": "work-bb687051daaf4f29",
+      "dedup_key": "5861a2ffe38ff54041b251ed77f7b40f755b049daf84edec39b1847ff03c91bf"
+    },
+    "req-6c072c1420194c00": {
+      "schema_version": "1.0",
+      "kind": "capability",
+      "goal": "For KM-500c-2, what must tests demonstrate?",
+      "question": null,
+      "payload_schema": "leafcutter.research_request.v1",
+      "payload": {
+        "question": "For KM-500c-2, what must tests demonstrate?",
+        "evidence_needs_only": true,
+        "evidence_needs": [
+          {
+            "id": "need.question",
+            "category": "task_context",
+            "priority": "required",
+            "question": "For KM-500c-2, what must tests demonstrate?"
+          }
+        ]
+      },
+      "requested_output_schema": "leafcutter.evidence_bundle.v1",
+      "evidence_needs": [],
+      "priority": "required",
+      "context_refs": [],
+      "depends_on": [],
+      "operation": null,
+      "id": "req-6c072c1420194c00",
+      "created_at": "2026-10-09T15:47:59.392937Z",
+      "updated_at": "2026-10-09T15:47:59.392937Z",
+      "created_seq": 0,
+      "origin_work_item_id": null,
+      "dedup_key": "bb4c956e272eaab8969e7a4f86d302c467ef31323c2545a8238e481f4a4c8814"
+    },
+    "req-b38c3bbd6c86466f": {
+      "schema_version": "1.0",
+      "kind": "synthesis",
+      "goal": null,
+      "question": "For KM-500c-2, what must tests demonstrate?",
+      "payload_schema": "leafcutter.synthesis_request.v1",
+      "payload": {
+        "schema_version": "1.0",
+        "operation": "synthesize_evidence",
+        "question": "For KM-500c-2, what must tests demonstrate?",
+        "evidence_ids": [
+          "ev-b680fc14fad3954a"
+        ],
+        "output_requirements": [
+          "answer only from the listed evidence",
+          "report disagreements without choosing between them"
+        ],
+        "limits": {
+          "schema_version": "1.0",
+          "max_findings": null,
+          "max_chars": null
+        }
+      },
+      "requested_output_schema": "leafcutter.findings.v1",
+      "evidence_needs": [],
+      "priority": "required",
+      "context_refs": [],
+      "depends_on": [],
+      "operation": null,
+      "id": "req-b38c3bbd6c86466f",
+      "created_at": "2026-10-09T15:50:59.674484Z",
+      "updated_at": "2026-10-09T15:50:59.674484Z",
+      "created_seq": 3,
+      "origin_work_item_id": "work-bb687051daaf4f29",
+      "dedup_key": "44c28f08ca24e57e22baacb12ce94018f8ea371c1aaa0fb2c4ad6427602bbc4c"
+    }
+  },
+  "results": {
+    "inv-374815e5c3d94060": {
+      "schema_version": "1.0",
+      "invocation_id": "inv-374815e5c3d94060",
+      "work_item_id": "work-e1a0f3003a1a4e37",
+      "status": "completed",
+      "output_schema_id": "leafcutter.retrieval_needs_output.v1",
+      "output_payload": {
+        "schema_version": "1.0",
+        "original_question": "For KM-500c-2, what must tests demonstrate?",
+        "source_scope": {
+          "read_roots": [
+            "docs"
+          ],
+          "repository_id": "public-needs-acceptance",
+          "revision": "fb7c073bbc93ac4751685c5b45d1b4efeb108ac2",
+          "source_ids": [
+            "knowledge.graph"
+          ]
+        },
+        "selections": {
+          "entity_types": [
+            "ac"
+          ],
+          "target_ids": [
+            "KM-500c-2"
+          ],
+          "required_fields": [
+            "criteria",
+            "test_spec"
+          ],
+          "document_types": [
+            "ac_yaml"
+          ],
+          "relationships": []
+        },
+        "uncertain": {
+          "entity_types": [],
+          "target_ids": [],
+          "required_fields": [],
+          "document_types": [],
+          "relationships": []
+        },
+        "detail_mode": "fields",
+        "completeness": "single_entity",
+        "hierarchy_scope": "not_applicable",
+        "hierarchy_levels": [],
+        "scope_resolution": "sufficient",
+        "unresolved": [],
+        "rationale": "The named acceptance criterion's exact clauses and declared expected assertions establish what its tests must demonstrate. Test links, a test-required flag, and progress statuses do not provide those obligations.",
+        "engine": "host_llm",
+        "status": "decided",
+        "model_id": null
+      },
+      "evidence": [],
+      "findings": [],
+      "decisions": [],
+      "requests": [],
+      "continuation_state": null,
+      "usage": [
+        {
+          "schema_version": "1.0",
+          "provider": "host",
+          "model_id": null,
+          "input_tokens": null,
+          "output_tokens": null,
+          "duration_ms": 176903,
+          "cost_usd": null,
+          "cost_provenance": "unavailable",
+          "calls": 1
+        }
+      ],
+      "error": null,
+      "limitations": [
+        "host-reported; not verified by the kernel",
+        "Interpretation only; no retrieval executed and no answer correctness or classifier approval established."
+      ],
+      "diagnostics": {
+        "host_elapsed_ms": 176903,
+        "host_usage": "unavailable",
+        "host_template": "host.retrieval_needs.task@1.0.0",
+        "prompt_fingerprint": "15a7abb7a9d78005"
+      }
+    },
+    "inv-677131e5c05949db": {
+      "schema_version": "1.0",
+      "invocation_id": "inv-677131e5c05949db",
+      "work_item_id": "work-060564ec3a6b4718",
+      "status": "partial",
+      "output_schema_id": "leafcutter.evidence_bundle.v1",
+      "output_payload": {
+        "schema_version": "1.0",
+        "request_id": "inv-677131e5c05949db",
+        "evidence_ids": [
+          "ev-b680fc14fad3954a"
+        ],
+        "finding_ids": [],
+        "coverage": {
+          "need.question": "partial"
+        },
+        "assessments": {
+          "need.question": {
+            "kind": "retrieval_answer",
+            "status": "partial",
+            "original_question": "For KM-500c-2, what must tests demonstrate?",
+            "required_fields": [
+              "criteria",
+              "test_spec"
+            ],
+            "scope": {
+              "population": "returned_entities",
+              "root_id": null,
+              "levels": null,
+              "inclusion": null
+            },
+            "missing_fields": [
+              {
+                "canonical_id": "KM-500c-2",
+                "field": "test_spec",
+                "reason": "unknown"
+              }
+            ],
+            "completeness": {
+              "complete": true,
+              "known_count": 1,
+              "exact_total": 1,
+              "limitations": []
+            },
+            "work_status_counts": null,
+            "known_work_status_counts": {},
+            "limitations": []
+          }
+        },
+        "attempted_sources": [
+          "knowledge.graph"
+        ],
+        "unavailable_sources": [],
+        "contradictions": [],
+        "limitations": [
+          "knowledge status: ok",
+          "retrieval choice: Jev selected a supported registered operation and authorized target",
+          "Original answer requirements remain partial",
+          "Retrieved evidence requires the existing research sufficiency assessment."
+        ],
+        "truncated": false,
+        "evidence": [
+          {
+            "schema_version": "1.0",
+            "id": "ev-b680fc14fad3954a",
+            "created_at": "2026-10-09T15:50:59.361881Z",
+            "updated_at": "2026-10-09T15:50:59.361881Z",
+            "created_seq": 0,
+            "category": "task_context",
+            "semantic_type": "documentation_fact",
+            "excerpt": "Given the original research has obtained results from an existing or newly verified query\nWhen its existing evidence evaluation decides whether the question can be answered\nThen the answer or evidence bundle cites the actual source revision and retrieved items and states which required needs remain unsatisfied\nAnd a successful build, successful query execution and successful answer assessment remain separate recorded outcomes\nAnd zero matches, contradictory evidence and insufficient evidence remain distinguishable with their limitations intact\nAnd any bounded synthesis or follow-up uses the existing research policy rather than silently treating query availability as answer quality.\n",
+            "artifact_ref": null,
+            "source": {
+              "schema_version": "1.0",
+              "id": "knowledge.retrieval",
+              "kind": "knowledge_node",
+              "locator": "knowledge://public-needs-acceptance@fb7c073bbc93ac4751685c5b45d1b4efeb108ac2/KM-500c-2?path=docs/acceptance-criteria/knowledge-management/KM-500-research-capability-growth/KM-500c-2.yaml&locator=%2Fcriteria",
+              "title": "Judge the original question against the evidence actually retrieved",
+              "source_version": {
+                "schema_version": "1.0",
+                "commit": "fb7c073bbc93ac4751685c5b45d1b4efeb108ac2",
+                "dirty": false
+              },
+              "retrieved_at": "2026-10-09T15:50:59.361881Z",
+              "observed_modified_at": null,
+              "section_locator": "/criteria"
+            },
+            "content_hash": "9cfea912e97757a50beaab42e39ccfd82dd6f2bbf0d6e9425daf3e1d9e2617d3",
+            "provenance": {
+              "schema_version": "1.0",
+              "producer": "knowledge.retrieval",
+              "invocation_id": "inv-677131e5c05949db",
+              "strategy": "knowledge:ac8ea80b-c6e2-4088-a1b3-f4c65fe59807",
+              "query": null,
+              "terms": [],
+              "rank": null,
+              "relevance": null,
+              "actor": null,
+              "relayed_by": null
+            },
+            "access": "internal",
+            "verification": "unverified",
+            "limitations": [],
+            "truncated": false
+          }
+        ],
+        "findings": [],
+        "unknowns": [],
+        "need_evidence": {},
+        "need_limitations": {}
+      },
+      "evidence": [
+        {
+          "schema_version": "1.0",
+          "id": "ev-b680fc14fad3954a",
+          "created_at": "2026-10-09T15:50:59.361881Z",
+          "updated_at": "2026-10-09T15:50:59.361881Z",
+          "created_seq": 0,
+          "category": "task_context",
+          "semantic_type": "documentation_fact",
+          "excerpt": "Given the original research has obtained results from an existing or newly verified query\nWhen its existing evidence evaluation decides whether the question can be answered\nThen the answer or evidence bundle cites the actual source revision and retrieved items and states which required needs remain unsatisfied\nAnd a successful build, successful query execution and successful answer assessment remain separate recorded outcomes\nAnd zero matches, contradictory evidence and insufficient evidence remain distinguishable with their limitations intact\nAnd any bounded synthesis or follow-up uses the existing research policy rather than silently treating query availability as answer quality.\n",
+          "artifact_ref": null,
+          "source": {
+            "schema_version": "1.0",
+            "id": "knowledge.retrieval",
+            "kind": "knowledge_node",
+            "locator": "knowledge://public-needs-acceptance@fb7c073bbc93ac4751685c5b45d1b4efeb108ac2/KM-500c-2?path=docs/acceptance-criteria/knowledge-management/KM-500-research-capability-growth/KM-500c-2.yaml&locator=%2Fcriteria",
+            "title": "Judge the original question against the evidence actually retrieved",
+            "source_version": {
+              "schema_version": "1.0",
+              "commit": "fb7c073bbc93ac4751685c5b45d1b4efeb108ac2",
+              "dirty": false
+            },
+            "retrieved_at": "2026-10-09T15:50:59.361881Z",
+            "observed_modified_at": null,
+            "section_locator": "/criteria"
+          },
+          "content_hash": "9cfea912e97757a50beaab42e39ccfd82dd6f2bbf0d6e9425daf3e1d9e2617d3",
+          "provenance": {
+            "schema_version": "1.0",
+            "producer": "knowledge.retrieval",
+            "invocation_id": "inv-677131e5c05949db",
+            "strategy": "knowledge:ac8ea80b-c6e2-4088-a1b3-f4c65fe59807",
+            "query": null,
+            "terms": [],
+            "rank": null,
+            "relevance": null,
+            "actor": null,
+            "relayed_by": null
+          },
+          "access": "internal",
+          "verification": "unverified",
+          "limitations": [],
+          "truncated": false
+        }
+      ],
+      "findings": [],
+      "decisions": [],
+      "requests": [],
+      "continuation_state": null,
+      "usage": [
+        {
+          "schema_version": "1.0",
+          "provider": "jev",
+          "model_id": "jev-1.13.0",
+          "input_tokens": 1641,
+          "output_tokens": 62,
+          "duration_ms": 325,
+          "cost_usd": 6.8922e-05,
+          "cost_provenance": "estimated",
+          "calls": 1
+        }
+      ],
+      "error": null,
+      "limitations": [
+        "knowledge status: ok",
+        "retrieval choice: Jev selected a supported registered operation and authorized target",
+        "Original answer requirements remain partial",
+        "Retrieved evidence requires the existing research sufficiency assessment."
+      ],
+      "diagnostics": {
+        "knowledge_status": "ok",
+        "knowledge_retrieval_id": "ac8ea80b-c6e2-4088-a1b3-f4c65fe59807",
+        "knowledge_requested_mode": "exact",
+        "knowledge_executed_mode": "exact",
+        "knowledge_operation": "get_entities",
+        "knowledge_reason": "Jev selected a supported registered operation and authorized target",
+        "knowledge_allowed_fallback": "none",
+        "knowledge_disclosure_level": 3,
+        "knowledge_budget": "{\"max_results\":6,\"max_candidates\":49,\"max_neighbors_per_seed\":10,\"max_hops\":2,\"max_rounds\":3,\"max_content_bytes\":29328,\"max_estimated_tokens\":3140,\"deadline_ms\":7696}",
+        "knowledge_generation": "bounded-actual-ac-subset-fb7c073bbc93ac4751685c5b45d1b4efeb108ac2",
+        "knowledge_source_sha": "fb7c073bbc93ac4751685c5b45d1b4efeb108ac2",
+        "knowledge_answer": "{\"status\":\"partial\",\"original_question\":\"For KM-500c-2, what must tests demonstrate?\",\"required_fields\":[\"criteria\",\"test_spec\"],\"scope\":{\"population\":\"returned_entities\",\"root_id\":null,\"levels\":null,\"inclusion\":null},\"missing_fields\":[{\"canonical_id\":\"KM-500c-2\",\"field\":\"test_spec\",\"reason\":\"unknown\"}],\"completeness\":{\"complete\":true,\"known_count\":1,\"exact_total\":1,\"limitations\":[]},\"work_status_counts\":null,\"known_work_status_counts\":{},\"limitations\":[]}",
+        "knowledge_diagnosis": "{\"request_id\": \"inv-677131e5c05949db\", \"retrieval_id\": \"ac8ea80b-c6e2-4088-a1b3-f4c65fe59807\", \"execution_status\": \"ok\", \"answer_status\": \"partial\", \"expected\": {\"repository_id\": \"public-needs-acceptance\", \"source_sha\": \"fb7c073bbc93ac4751685c5b45d1b4efeb108ac2\", \"operation\": \"get_entities\", \"request_id\": \"inv-677131e5c05949db\"}, \"observed\": {\"repository_id\": \"public-needs-acceptance\", \"source_sha\": \"fb7c073bbc93ac4751685c5b45d1b4efeb108ac2\", \"operation\": \"get_entities\", \"request_id\": \"inv-677131e5c05949db\", \"generation_id\": \"bounded-actual-ac-subset-fb7c073bbc93ac4751685c5b45d1b4efeb108ac2\"}, \"contract\": \"knowledge retrieval scope binding / original answer requirements\", \"cause\": {\"status\": \"unknown\", \"reason\": \"The response alone does not establish an underlying failure cause.\"}, \"trace\": {\"state\": \"disabled\", \"trace_id\": null, \"trace_url\": null}, \"missing_fields\": [{\"canonical_id\": \"KM-500c-2\", \"field\": \"test_spec\", \"reason\": \"unknown\"}], \"next_step\": {\"action\": \"inspect_matching_attempt\", \"reason\": \"Inspect the cited request and response scope or missing-field facts before a bounded rerun of the same authorized question.\"}}",
+        "knowledge_rounds": 2,
+        "knowledge_retrieval_refs": "a35e7a33-3de5-4456-8fea-198d4d094c07,ac8ea80b-c6e2-4088-a1b3-f4c65fe59807",
+        "knowledge_selection": "selected",
+        "knowledge_selected_operation": "get_entities",
+        "knowledge_selected_arguments": "{\"entity_ids\":[\"KM-500c-2\"]}",
+        "kernel.elapsed_s": 2.8743762000231072,
+        "kernel.jev_reserved": 1
+      }
+    },
+    "inv-6d7a71fd29774b92": {
+      "schema_version": "1.0",
+      "invocation_id": "inv-6d7a71fd29774b92",
+      "work_item_id": "work-bb687051daaf4f29",
+      "status": "waiting",
+      "output_schema_id": null,
+      "output_payload": null,
+      "evidence": [],
+      "findings": [],
+      "decisions": [],
+      "requests": [
+        {
+          "schema_version": "1.0",
+          "kind": "capability",
+          "goal": null,
+          "question": "For KM-500c-2, what must tests demonstrate?",
+          "payload_schema": "leafcutter.retrieval_needs_request.v1",
+          "payload": {
+            "schema_version": "1.0",
+            "original_question": "For KM-500c-2, what must tests demonstrate?",
+            "context": [],
+            "known_ids": [],
+            "source_scope": {
+              "repository_id": "public-needs-acceptance",
+              "revision": "fb7c073bbc93ac4751685c5b45d1b4efeb108ac2",
+              "source_ids": [
+                "knowledge.graph"
+              ],
+              "read_roots": [
+                "docs"
+              ]
+            },
+            "catalog": {
+              "entity_types": {
+                "ac": "Acceptance criterion or requirement",
+                "adr": "Architecture decision record",
+                "ticket": "Work ticket",
+                "component": "Registered component",
+                "flow": "Product Truth flow",
+                "decision": "Recorded decision",
+                "test": "Test source",
+                "document": "Repository document"
+              },
+              "target_ids": {
+                "KM-500c-2": "Literal identifier in the original question; assess its requested role."
+              },
+              "required_fields": {
+                "canonical_id": "The stable identities of the requested entities, such as which tests or ACs.",
+                "kind": "The canonical entity type of each returned item.",
+                "title": "The source-backed human-readable name of each returned item.",
+                "source_sha": "The immutable source revision supporting each entity.",
+                "source_locator": "The exact source location supporting each entity.",
+                "priority": "Declared source priority, not an inferred business ranking or dependency count.",
+                "level": "The canonical requirement hierarchy level.",
+                "test_required": "The explicit source test requirement, not evidence of execution.",
+                "work_status": "Implementation progress, such as done or todo; distinct from lifecycle status.",
+                "status": "Canonical lifecycle status, such as active; not delivery completion.",
+                "criteria": "Exact source acceptance clauses.",
+                "req_status": "Requirement governance state.",
+                "readiness": "Planning approval readiness, not implementation proof.",
+                "covered_by": "Declared test references, not evidence of a test run.",
+                "implemented_by": "Declared implementation references, not a complete call graph.",
+                "depends_on": "Declared requirement dependencies, not inferred code impact.",
+                "test_spec": "Declared test cases and expected assertions; supplements acceptance criteria"
+              },
+              "document_types": {
+                "ac_yaml": "Canonical acceptance criterion definition including acceptance clauses",
+                "adr": "Architecture decision document",
+                "ticket": "Ticket document",
+                "flow": "Product Truth JSON",
+                "decision": "Recorded decision YAML",
+                "code": "Implementation or test source",
+                "documentation": "Repository documentation",
+                "component": "Component definition"
+              },
+              "relationships": {
+                "parent_direct": "Immediate parent only",
+                "children_direct": "Immediate children only",
+                "all_descendants": "Entire declared hierarchy below the target, not only direct children",
+                "declared_dependents": "Records directly declaring a dependency on the target",
+                "covered_by": "Tests declared to cover an acceptance criterion",
+                "implemented_by": "Declared implementation references",
+                "related_docs": "Declared document references"
+              }
+            }
+          },
+          "requested_output_schema": "leafcutter.retrieval_needs_output.v1",
+          "evidence_needs": [],
+          "priority": "required",
+          "context_refs": [],
+          "depends_on": [],
+          "operation": "interpret_retrieval_needs"
+        }
+      ],
+      "continuation_state": {
+        "schema_version": "1.0",
+        "phase": "interpreting_needs",
+        "request": {
+          "schema_version": "1.0",
+          "original_question": "For KM-500c-2, what must tests demonstrate?",
+          "context": [],
+          "known_ids": [],
+          "source_scope": {
+            "repository_id": "public-needs-acceptance",
+            "revision": "fb7c073bbc93ac4751685c5b45d1b4efeb108ac2",
+            "source_ids": [
+              "knowledge.graph"
+            ],
+            "read_roots": [
+              "docs"
+            ]
+          },
+          "catalog": {
+            "entity_types": {
+              "ac": "Acceptance criterion or requirement",
+              "adr": "Architecture decision record",
+              "ticket": "Work ticket",
+              "component": "Registered component",
+              "flow": "Product Truth flow",
+              "decision": "Recorded decision",
+              "test": "Test source",
+              "document": "Repository document"
+            },
+            "target_ids": {
+              "KM-500c-2": "Literal identifier in the original question; assess its requested role."
+            },
+            "required_fields": {
+              "canonical_id": "The stable identities of the requested entities, such as which tests or ACs.",
+              "kind": "The canonical entity type of each returned item.",
+              "title": "The source-backed human-readable name of each returned item.",
+              "source_sha": "The immutable source revision supporting each entity.",
+              "source_locator": "The exact source location supporting each entity.",
+              "priority": "Declared source priority, not an inferred business ranking or dependency count.",
+              "level": "The canonical requirement hierarchy level.",
+              "test_required": "The explicit source test requirement, not evidence of execution.",
+              "work_status": "Implementation progress, such as done or todo; distinct from lifecycle status.",
+              "status": "Canonical lifecycle status, such as active; not delivery completion.",
+              "criteria": "Exact source acceptance clauses.",
+              "req_status": "Requirement governance state.",
+              "readiness": "Planning approval readiness, not implementation proof.",
+              "covered_by": "Declared test references, not evidence of a test run.",
+              "implemented_by": "Declared implementation references, not a complete call graph.",
+              "depends_on": "Declared requirement dependencies, not inferred code impact.",
+              "test_spec": "Declared test cases and expected assertions; supplements acceptance criteria"
+            },
+            "document_types": {
+              "ac_yaml": "Canonical acceptance criterion definition including acceptance clauses",
+              "adr": "Architecture decision document",
+              "ticket": "Ticket document",
+              "flow": "Product Truth JSON",
+              "decision": "Recorded decision YAML",
+              "code": "Implementation or test source",
+              "documentation": "Repository documentation",
+              "component": "Component definition"
+            },
+            "relationships": {
+              "parent_direct": "Immediate parent only",
+              "children_direct": "Immediate children only",
+              "all_descendants": "Entire declared hierarchy below the target, not only direct children",
+              "declared_dependents": "Records directly declaring a dependency on the target",
+              "covered_by": "Tests declared to cover an acceptance criterion",
+              "implemented_by": "Declared implementation references",
+              "related_docs": "Declared document references"
+            }
+          }
+        },
+        "clarifications": []
+      },
+      "usage": [],
+      "error": null,
+      "limitations": [],
+      "diagnostics": {
+        "kernel.elapsed_s": 0.012006800039671361,
+        "kernel.jev_reserved": 0
+      }
+    },
+    "inv-74bf248a52094e2b": {
+      "schema_version": "1.0",
+      "invocation_id": "inv-74bf248a52094e2b",
+      "work_item_id": "work-bb687051daaf4f29",
+      "status": "waiting",
+      "output_schema_id": null,
+      "output_payload": null,
+      "evidence": [],
+      "findings": [],
+      "decisions": [],
+      "requests": [
+        {
+          "schema_version": "1.0",
+          "kind": "synthesis",
+          "goal": null,
+          "question": "For KM-500c-2, what must tests demonstrate?",
+          "payload_schema": "leafcutter.synthesis_request.v1",
+          "payload": {
+            "schema_version": "1.0",
+            "operation": "synthesize_evidence",
+            "question": "For KM-500c-2, what must tests demonstrate?",
+            "evidence_ids": [
+              "ev-b680fc14fad3954a"
+            ],
+            "output_requirements": [
+              "answer only from the listed evidence",
+              "report disagreements without choosing between them"
+            ],
+            "limits": {
+              "schema_version": "1.0",
+              "max_findings": null,
+              "max_chars": null
+            }
+          },
+          "requested_output_schema": "leafcutter.findings.v1",
+          "evidence_needs": [],
+          "priority": "required",
+          "context_refs": [],
+          "depends_on": [],
+          "operation": null
+        }
+      ],
+      "continuation_state": {
+        "schema_version": "1.0",
+        "retrieval_needs": {
+          "schema_version": "1.0",
+          "original_question": "For KM-500c-2, what must tests demonstrate?",
+          "source_scope": {
+            "read_roots": [
+              "docs"
+            ],
+            "repository_id": "public-needs-acceptance",
+            "revision": "fb7c073bbc93ac4751685c5b45d1b4efeb108ac2",
+            "source_ids": [
+              "knowledge.graph"
+            ]
+          },
+          "selections": {
+            "entity_types": [
+              "ac"
+            ],
+            "target_ids": [
+              "KM-500c-2"
+            ],
+            "required_fields": [
+              "criteria",
+              "test_spec"
+            ],
+            "document_types": [
+              "ac_yaml"
+            ],
+            "relationships": []
+          },
+          "uncertain": {
+            "entity_types": [],
+            "target_ids": [],
+            "required_fields": [],
+            "document_types": [],
+            "relationships": []
+          },
+          "detail_mode": "fields",
+          "completeness": "single_entity",
+          "hierarchy_scope": "not_applicable",
+          "hierarchy_levels": [],
+          "scope_resolution": "sufficient",
+          "unresolved": [],
+          "rationale": "The named acceptance criterion's exact clauses and declared expected assertions establish what its tests must demonstrate. Test links, a test-required flag, and progress statuses do not provide those obligations.",
+          "engine": "host_llm",
+          "status": "decided",
+          "model_id": null
+        },
+        "phase": "synthesizing",
+        "needs": [
+          {
+            "schema_version": "1.0",
+            "id": "need.question",
+            "category": "task_context",
+            "question": "For KM-500c-2, what must tests demonstrate?",
+            "priority": "required",
+            "acceptable_source_kinds": [],
+            "resolution": [],
+            "status": "open"
+          }
+        ],
+        "child_map": {
+          "need.question": [
+            "knowledge.graph"
+          ]
+        },
+        "unavailable": [],
+        "attempted": [
+          "knowledge.graph"
+        ],
+        "evidence": [
+          {
+            "schema_version": "1.0",
+            "id": "ev-b680fc14fad3954a",
+            "created_at": "2026-10-09T15:50:59.361881Z",
+            "updated_at": "2026-10-09T15:50:59.361881Z",
+            "created_seq": 0,
+            "category": "task_context",
+            "semantic_type": "documentation_fact",
+            "excerpt": "Given the original research has obtained results from an existing or newly verified query\nWhen its existing evidence evaluation decides whether the question can be answered\nThen the answer or evidence bundle cites the actual source revision and retrieved items and states which required needs remain unsatisfied\nAnd a successful build, successful query execution and successful answer assessment remain separate recorded outcomes\nAnd zero matches, contradictory evidence and insufficient evidence remain distinguishable with their limitations intact\nAnd any bounded synthesis or follow-up uses the existing research policy rather than silently treating query availability as answer quality.\n",
+            "artifact_ref": null,
+            "source": {
+              "schema_version": "1.0",
+              "id": "knowledge.retrieval",
+              "kind": "knowledge_node",
+              "locator": "knowledge://public-needs-acceptance@fb7c073bbc93ac4751685c5b45d1b4efeb108ac2/KM-500c-2?path=docs/acceptance-criteria/knowledge-management/KM-500-research-capability-growth/KM-500c-2.yaml&locator=%2Fcriteria",
+              "title": "Judge the original question against the evidence actually retrieved",
+              "source_version": {
+                "schema_version": "1.0",
+                "commit": "fb7c073bbc93ac4751685c5b45d1b4efeb108ac2",
+                "dirty": false
+              },
+              "retrieved_at": "2026-10-09T15:50:59.361881Z",
+              "observed_modified_at": null,
+              "section_locator": "/criteria"
+            },
+            "content_hash": "9cfea912e97757a50beaab42e39ccfd82dd6f2bbf0d6e9425daf3e1d9e2617d3",
+            "provenance": {
+              "schema_version": "1.0",
+              "producer": "knowledge.retrieval",
+              "invocation_id": "inv-677131e5c05949db",
+              "strategy": "knowledge:ac8ea80b-c6e2-4088-a1b3-f4c65fe59807",
+              "query": null,
+              "terms": [],
+              "rank": null,
+              "relevance": null,
+              "actor": null,
+              "relayed_by": null
+            },
+            "access": "internal",
+            "verification": "unverified",
+            "limitations": [],
+            "truncated": false
+          }
+        ],
+        "coverage": {
+          "need.question": "partial"
+        },
+        "assessments": {
+          "need.question": {
+            "kind": "retrieval_answer",
+            "status": "partial",
+            "original_question": "For KM-500c-2, what must tests demonstrate?",
+            "required_fields": [
+              "criteria",
+              "test_spec"
+            ],
+            "scope": {
+              "population": "returned_entities",
+              "root_id": null,
+              "levels": null,
+              "inclusion": null
+            },
+            "missing_fields": [
+              {
+                "canonical_id": "KM-500c-2",
+                "field": "test_spec",
+                "reason": "unknown"
+              }
+            ],
+            "completeness": {
+              "complete": true,
+              "known_count": 1,
+              "exact_total": 1,
+              "limitations": []
+            },
+            "work_status_counts": null,
+            "known_work_status_counts": {},
+            "limitations": []
+          }
+        },
+        "contradictions": [],
+        "limitations": [
+          "knowledge status: ok",
+          "retrieval choice: Jev selected a supported registered operation and authorized target",
+          "Original answer requirements remain partial",
+          "Retrieved evidence requires the existing research sufficiency assessment.",
+          "need need.question: conditional assessment remains partial"
+        ],
+        "truncated": false,
+        "synthesized": true,
+        "deferred": [],
+        "deferred_dispatched": false,
+        "unanswered": []
+      },
+      "usage": [
+        {
+          "schema_version": "1.0",
+          "provider": "jev",
+          "model_id": "jev-1.13.0",
+          "input_tokens": 996,
+          "output_tokens": 21,
+          "duration_ms": 237,
+          "cost_usd": 4.1832e-05,
+          "cost_provenance": "estimated",
+          "calls": 1
+        }
+      ],
+      "error": null,
+      "limitations": [],
+      "diagnostics": {
+        "kernel.elapsed_s": 0.26165370002854615,
+        "kernel.jev_reserved": 1
+      }
+    },
+    "inv-bd3c6fcd9e7e4306": {
+      "schema_version": "1.0",
+      "invocation_id": "inv-bd3c6fcd9e7e4306",
+      "work_item_id": "work-bb687051daaf4f29",
+      "status": "waiting",
+      "output_schema_id": null,
+      "output_payload": null,
+      "evidence": [],
+      "findings": [],
+      "decisions": [],
+      "requests": [
+        {
+          "schema_version": "1.0",
+          "kind": "evidence",
+          "goal": null,
+          "question": "For KM-500c-2, what must tests demonstrate?",
+          "payload_schema": "leafcutter.retrieval_request.v1",
+          "payload": {
+            "schema_version": "1.0",
+            "retrieval_needs": {
+              "schema_version": "1.0",
+              "original_question": "For KM-500c-2, what must tests demonstrate?",
+              "source_scope": {
+                "read_roots": [
+                  "docs"
+                ],
+                "repository_id": "public-needs-acceptance",
+                "revision": "fb7c073bbc93ac4751685c5b45d1b4efeb108ac2",
+                "source_ids": [
+                  "knowledge.graph"
+                ]
+              },
+              "selections": {
+                "entity_types": [
+                  "ac"
+                ],
+                "target_ids": [
+                  "KM-500c-2"
+                ],
+                "required_fields": [
+                  "criteria",
+                  "test_spec"
+                ],
+                "document_types": [
+                  "ac_yaml"
+                ],
+                "relationships": []
+              },
+              "uncertain": {
+                "entity_types": [],
+                "target_ids": [],
+                "required_fields": [],
+                "document_types": [],
+                "relationships": []
+              },
+              "detail_mode": "fields",
+              "completeness": "single_entity",
+              "hierarchy_scope": "not_applicable",
+              "hierarchy_levels": [],
+              "scope_resolution": "sufficient",
+              "unresolved": [],
+              "rationale": "The named acceptance criterion's exact clauses and declared expected assertions establish what its tests must demonstrate. Test links, a test-required flag, and progress statuses do not provide those obligations.",
+              "engine": "host_llm",
+              "status": "decided",
+              "model_id": null
+            },
+            "knowledge": null,
+            "answer_requirements": {
+              "original_question": "For KM-500c-2, what must tests demonstrate?",
+              "required_fields": [
+                "criteria",
+                "test_spec"
+              ],
+              "scope": {
+                "population": "returned_entities",
+                "root_id": null,
+                "levels": null,
+                "inclusion": null
+              },
+              "require_complete": true
+            },
+            "assessment": null,
+            "need": {
+              "schema_version": "1.0",
+              "id": "need.question",
+              "category": "task_context",
+              "question": "For KM-500c-2, what must tests demonstrate?",
+              "priority": "required",
+              "acceptable_source_kinds": [],
+              "resolution": [],
+              "status": "open"
+            },
+            "source_ids": [
+              "knowledge.graph"
+            ],
+            "detail": "excerpt",
+            "limits": {
+              "schema_version": "1.0",
+              "top_k": null,
+              "max_chars": null
+            },
+            "explicit_locators": [],
+            "query_hints": [
+              "For KM-500c-2, what must tests demonstrate?"
+            ],
+            "max_rerank_batches": 11,
+            "jev_reserve": 0
+          },
+          "requested_output_schema": "leafcutter.evidence_bundle.v1",
+          "evidence_needs": [
+            {
+              "schema_version": "1.0",
+              "id": "need.question",
+              "category": "task_context",
+              "question": "For KM-500c-2, what must tests demonstrate?",
+              "priority": "required",
+              "acceptable_source_kinds": [],
+              "resolution": [],
+              "status": "open"
+            }
+          ],
+          "priority": "required",
+          "context_refs": [],
+          "depends_on": [],
+          "operation": "retrieve"
+        }
+      ],
+      "continuation_state": {
+        "schema_version": "1.0",
+        "retrieval_needs": {
+          "schema_version": "1.0",
+          "original_question": "For KM-500c-2, what must tests demonstrate?",
+          "source_scope": {
+            "read_roots": [
+              "docs"
+            ],
+            "repository_id": "public-needs-acceptance",
+            "revision": "fb7c073bbc93ac4751685c5b45d1b4efeb108ac2",
+            "source_ids": [
+              "knowledge.graph"
+            ]
+          },
+          "selections": {
+            "entity_types": [
+              "ac"
+            ],
+            "target_ids": [
+              "KM-500c-2"
+            ],
+            "required_fields": [
+              "criteria",
+              "test_spec"
+            ],
+            "document_types": [
+              "ac_yaml"
+            ],
+            "relationships": []
+          },
+          "uncertain": {
+            "entity_types": [],
+            "target_ids": [],
+            "required_fields": [],
+            "document_types": [],
+            "relationships": []
+          },
+          "detail_mode": "fields",
+          "completeness": "single_entity",
+          "hierarchy_scope": "not_applicable",
+          "hierarchy_levels": [],
+          "scope_resolution": "sufficient",
+          "unresolved": [],
+          "rationale": "The named acceptance criterion's exact clauses and declared expected assertions establish what its tests must demonstrate. Test links, a test-required flag, and progress statuses do not provide those obligations.",
+          "engine": "host_llm",
+          "status": "decided",
+          "model_id": null
+        },
+        "phase": "planned",
+        "needs": [
+          {
+            "schema_version": "1.0",
+            "id": "need.question",
+            "category": "task_context",
+            "question": "For KM-500c-2, what must tests demonstrate?",
+            "priority": "required",
+            "acceptable_source_kinds": [],
+            "resolution": [],
+            "status": "open"
+          }
+        ],
+        "child_map": {
+          "need.question": [
+            "knowledge.graph"
+          ]
+        },
+        "unavailable": [],
+        "attempted": [
+          "knowledge.graph"
+        ],
+        "evidence": [],
+        "coverage": {},
+        "assessments": {},
+        "contradictions": [],
+        "limitations": [],
+        "truncated": false,
+        "synthesized": false,
+        "deferred": [],
+        "deferred_dispatched": false,
+        "unanswered": []
+      },
+      "usage": [],
+      "error": null,
+      "limitations": [],
+      "diagnostics": {
+        "kernel.elapsed_s": 0.027305299998261034,
+        "kernel.jev_reserved": 0
+      }
+    }
+  },
+  "evidence": {
+    "ev-b680fc14fad3954a": {
+      "schema_version": "1.0",
+      "id": "ev-b680fc14fad3954a",
+      "created_at": "2026-10-09T15:50:59.361881Z",
+      "updated_at": "2026-10-09T15:50:59.361881Z",
+      "created_seq": 0,
+      "category": "task_context",
+      "semantic_type": "documentation_fact",
+      "excerpt": "Given the original research has obtained results from an existing or newly verified query\nWhen its existing evidence evaluation decides whether the question can be answered\nThen the answer or evidence bundle cites the actual source revision and retrieved items and states which required needs remain unsatisfied\nAnd a successful build, successful query execution and successful answer assessment remain separate recorded outcomes\nAnd zero matches, contradictory evidence and insufficient evidence remain distinguishable with their limitations intact\nAnd any bounded synthesis or follow-up uses the existing research policy rather than silently treating query availability as answer quality.\n",
+      "artifact_ref": null,
+      "source": {
+        "schema_version": "1.0",
+        "id": "knowledge.retrieval",
+        "kind": "knowledge_node",
+        "locator": "knowledge://public-needs-acceptance@fb7c073bbc93ac4751685c5b45d1b4efeb108ac2/KM-500c-2?path=docs/acceptance-criteria/knowledge-management/KM-500-research-capability-growth/KM-500c-2.yaml&locator=%2Fcriteria",
+        "title": "Judge the original question against the evidence actually retrieved",
+        "source_version": {
+          "schema_version": "1.0",
+          "commit": "fb7c073bbc93ac4751685c5b45d1b4efeb108ac2",
+          "dirty": false
+        },
+        "retrieved_at": "2026-10-09T15:50:59.361881Z",
+        "observed_modified_at": null,
+        "section_locator": "/criteria"
+      },
+      "content_hash": "9cfea912e97757a50beaab42e39ccfd82dd6f2bbf0d6e9425daf3e1d9e2617d3",
+      "provenance": {
+        "schema_version": "1.0",
+        "producer": "knowledge.retrieval",
+        "invocation_id": "inv-677131e5c05949db",
+        "strategy": "knowledge:ac8ea80b-c6e2-4088-a1b3-f4c65fe59807",
+        "query": null,
+        "terms": [],
+        "rank": null,
+        "relevance": null,
+        "actor": null,
+        "relayed_by": null
+      },
+      "access": "internal",
+      "verification": "unverified",
+      "limitations": [],
+      "truncated": false
+    }
+  },
+  "findings": {},
+  "invocations": {
+    "inv-374815e5c3d94060": {
+      "schema_version": "1.0",
+      "id": "inv-374815e5c3d94060",
+      "created_at": "2026-10-09T15:47:59.458524Z",
+      "updated_at": "2026-10-09T15:47:59.458524Z",
+      "created_seq": 1,
+      "work_item_id": "work-e1a0f3003a1a4e37",
+      "capability_id": "host.retrieval_needs",
+      "capability_version": "1.0.0",
+      "input_payload_schema": "leafcutter.retrieval_needs_request.v1",
+      "input_payload": {
+        "schema_version": "1.0",
+        "original_question": "For KM-500c-2, what must tests demonstrate?",
+        "context": [],
+        "known_ids": [],
+        "source_scope": {
+          "repository_id": "public-needs-acceptance",
+          "revision": "fb7c073bbc93ac4751685c5b45d1b4efeb108ac2",
+          "source_ids": [
+            "knowledge.graph"
+          ],
+          "read_roots": [
+            "docs"
+          ]
+        },
+        "catalog": {
+          "entity_types": {
+            "ac": "Acceptance criterion or requirement",
+            "adr": "Architecture decision record",
+            "ticket": "Work ticket",
+            "component": "Registered component",
+            "flow": "Product Truth flow",
+            "decision": "Recorded decision",
+            "test": "Test source",
+            "document": "Repository document"
+          },
+          "target_ids": {
+            "KM-500c-2": "Literal identifier in the original question; assess its requested role."
+          },
+          "required_fields": {
+            "canonical_id": "The stable identities of the requested entities, such as which tests or ACs.",
+            "kind": "The canonical entity type of each returned item.",
+            "title": "The source-backed human-readable name of each returned item.",
+            "source_sha": "The immutable source revision supporting each entity.",
+            "source_locator": "The exact source location supporting each entity.",
+            "priority": "Declared source priority, not an inferred business ranking or dependency count.",
+            "level": "The canonical requirement hierarchy level.",
+            "test_required": "The explicit source test requirement, not evidence of execution.",
+            "work_status": "Implementation progress, such as done or todo; distinct from lifecycle status.",
+            "status": "Canonical lifecycle status, such as active; not delivery completion.",
+            "criteria": "Exact source acceptance clauses.",
+            "req_status": "Requirement governance state.",
+            "readiness": "Planning approval readiness, not implementation proof.",
+            "covered_by": "Declared test references, not evidence of a test run.",
+            "implemented_by": "Declared implementation references, not a complete call graph.",
+            "depends_on": "Declared requirement dependencies, not inferred code impact.",
+            "test_spec": "Declared test cases and expected assertions; supplements acceptance criteria"
+          },
+          "document_types": {
+            "ac_yaml": "Canonical acceptance criterion definition including acceptance clauses",
+            "adr": "Architecture decision document",
+            "ticket": "Ticket document",
+            "flow": "Product Truth JSON",
+            "decision": "Recorded decision YAML",
+            "code": "Implementation or test source",
+            "documentation": "Repository documentation",
+            "component": "Component definition"
+          },
+          "relationships": {
+            "parent_direct": "Immediate parent only",
+            "children_direct": "Immediate children only",
+            "all_descendants": "Entire declared hierarchy below the target, not only direct children",
+            "declared_dependents": "Records directly declaring a dependency on the target",
+            "covered_by": "Tests declared to cover an acceptance criterion",
+            "implemented_by": "Declared implementation references",
+            "related_docs": "Declared document references"
+          }
+        }
+      },
+      "context_refs": [],
+      "continuation": null,
+      "child_outcomes": [],
+      "input_fingerprint": "dbb98ac031cc985a14c34b14b58ed3bd9b86c47a0bdc5441f5f0352eb1d27c0d",
+      "versions": {
+        "registry_hash": "1206ce45d1899afd758ec9438db1e4251394333e031b80b683fa4662e08918ea",
+        "capability": "1.0.0",
+        "host_template": "host.retrieval_needs.task@1.0.0"
+      },
+      "attempt": 1,
+      "trace": {
+        "schema_version": "1.0",
+        "trace_id": "29efd393f1cfcba21b6957b02674a61a",
+        "parent_observation_id": null,
+        "correlation": {
+          "schema_version": "1.0",
+          "run_id": "run-7532746d8507418e",
+          "root_task_id": "task-d94eed5ab726449b",
+          "task_id": "task-d94eed5ab726449b",
+          "work_item_id": "work-e1a0f3003a1a4e37",
+          "request_id": "req-58978e520f9b49d8",
+          "invocation_id": "inv-374815e5c3d94060",
+          "decision_id": null,
+          "capability_id": "host.retrieval_needs",
+          "interaction_id": null,
+          "parent_work_item_id": "work-bb687051daaf4f29",
+          "causation_seq": null
+        }
+      }
+    },
+    "inv-677131e5c05949db": {
+      "schema_version": "1.0",
+      "id": "inv-677131e5c05949db",
+      "created_at": "2026-10-09T15:50:56.481715Z",
+      "updated_at": "2026-10-09T15:50:56.481715Z",
+      "created_seq": 3,
+      "work_item_id": "work-060564ec3a6b4718",
+      "capability_id": "retrieve.repository",
+      "capability_version": "1.0.0",
+      "input_payload_schema": "leafcutter.retrieval_request.v1",
+      "input_payload": {
+        "schema_version": "1.0",
+        "retrieval_needs": {
+          "schema_version": "1.0",
+          "original_question": "For KM-500c-2, what must tests demonstrate?",
+          "source_scope": {
+            "read_roots": [
+              "docs"
+            ],
+            "repository_id": "public-needs-acceptance",
+            "revision": "fb7c073bbc93ac4751685c5b45d1b4efeb108ac2",
+            "source_ids": [
+              "knowledge.graph"
+            ]
+          },
+          "selections": {
+            "entity_types": [
+              "ac"
+            ],
+            "target_ids": [
+              "KM-500c-2"
+            ],
+            "required_fields": [
+              "criteria",
+              "test_spec"
+            ],
+            "document_types": [
+              "ac_yaml"
+            ],
+            "relationships": []
+          },
+          "uncertain": {
+            "entity_types": [],
+            "target_ids": [],
+            "required_fields": [],
+            "document_types": [],
+            "relationships": []
+          },
+          "detail_mode": "fields",
+          "completeness": "single_entity",
+          "hierarchy_scope": "not_applicable",
+          "hierarchy_levels": [],
+          "scope_resolution": "sufficient",
+          "unresolved": [],
+          "rationale": "The named acceptance criterion's exact clauses and declared expected assertions establish what its tests must demonstrate. Test links, a test-required flag, and progress statuses do not provide those obligations.",
+          "engine": "host_llm",
+          "status": "decided",
+          "model_id": null
+        },
+        "knowledge": null,
+        "answer_requirements": {
+          "original_question": "For KM-500c-2, what must tests demonstrate?",
+          "required_fields": [
+            "criteria",
+            "test_spec"
+          ],
+          "scope": {
+            "population": "returned_entities",
+            "root_id": null,
+            "levels": null,
+            "inclusion": null
+          },
+          "require_complete": true
+        },
+        "assessment": null,
+        "need": {
+          "schema_version": "1.0",
+          "id": "need.question",
+          "category": "task_context",
+          "question": "For KM-500c-2, what must tests demonstrate?",
+          "priority": "required",
+          "acceptable_source_kinds": [],
+          "resolution": [],
+          "status": "open"
+        },
+        "source_ids": [
+          "knowledge.graph"
+        ],
+        "detail": "excerpt",
+        "limits": {
+          "schema_version": "1.0",
+          "top_k": null,
+          "max_chars": null
+        },
+        "explicit_locators": [],
+        "query_hints": [
+          "For KM-500c-2, what must tests demonstrate?"
+        ],
+        "max_rerank_batches": 11,
+        "jev_reserve": 0
+      },
+      "context_refs": [],
+      "continuation": null,
+      "child_outcomes": [],
+      "input_fingerprint": "65c0c543ff1e782e81b4a430d1ebf67886079f565bd1759d2cf3fe861be4590e",
+      "versions": {
+        "registry_hash": "1206ce45d1899afd758ec9438db1e4251394333e031b80b683fa4662e08918ea",
+        "capability": "1.0.0"
+      },
+      "attempt": 1,
+      "trace": {
+        "schema_version": "1.0",
+        "trace_id": "29efd393f1cfcba21b6957b02674a61a",
+        "parent_observation_id": null,
+        "correlation": {
+          "schema_version": "1.0",
+          "run_id": "run-7532746d8507418e",
+          "root_task_id": "task-d94eed5ab726449b",
+          "task_id": "task-d94eed5ab726449b",
+          "work_item_id": "work-060564ec3a6b4718",
+          "request_id": "req-15a42a358dc64654",
+          "invocation_id": "inv-677131e5c05949db",
+          "decision_id": null,
+          "capability_id": "retrieve.repository",
+          "interaction_id": null,
+          "parent_work_item_id": "work-bb687051daaf4f29",
+          "causation_seq": null
+        }
+      }
+    },
+    "inv-6d7a71fd29774b92": {
+      "schema_version": "1.0",
+      "id": "inv-6d7a71fd29774b92",
+      "created_at": "2026-10-09T15:47:59.419335Z",
+      "updated_at": "2026-10-09T15:47:59.419335Z",
+      "created_seq": 0,
+      "work_item_id": "work-bb687051daaf4f29",
+      "capability_id": "research",
+      "capability_version": "1.0.0",
+      "input_payload_schema": "leafcutter.research_request.v1",
+      "input_payload": {
+        "question": "For KM-500c-2, what must tests demonstrate?",
+        "evidence_needs_only": true,
+        "evidence_needs": [
+          {
+            "id": "need.question",
+            "category": "task_context",
+            "priority": "required",
+            "question": "For KM-500c-2, what must tests demonstrate?"
+          }
+        ]
+      },
+      "context_refs": [],
+      "continuation": null,
+      "child_outcomes": [],
+      "input_fingerprint": "51fed308178e1a810effcbc5b0c78361fa91902acab830724efd670f0de3e2e9",
+      "versions": {
+        "registry_hash": "1206ce45d1899afd758ec9438db1e4251394333e031b80b683fa4662e08918ea",
+        "capability": "1.0.0"
+      },
+      "attempt": 1,
+      "trace": {
+        "schema_version": "1.0",
+        "trace_id": "29efd393f1cfcba21b6957b02674a61a",
+        "parent_observation_id": null,
+        "correlation": {
+          "schema_version": "1.0",
+          "run_id": "run-7532746d8507418e",
+          "root_task_id": "task-d94eed5ab726449b",
+          "task_id": "task-d94eed5ab726449b",
+          "work_item_id": "work-bb687051daaf4f29",
+          "request_id": "req-6c072c1420194c00",
+          "invocation_id": "inv-6d7a71fd29774b92",
+          "decision_id": null,
+          "capability_id": "research",
+          "interaction_id": null,
+          "parent_work_item_id": null,
+          "causation_seq": null
+        }
+      }
+    },
+    "inv-74bf248a52094e2b": {
+      "schema_version": "1.0",
+      "id": "inv-74bf248a52094e2b",
+      "created_at": "2026-10-09T15:50:59.400282Z",
+      "updated_at": "2026-10-09T15:50:59.400282Z",
+      "created_seq": 4,
+      "work_item_id": "work-bb687051daaf4f29",
+      "capability_id": "research",
+      "capability_version": "1.0.0",
+      "input_payload_schema": "leafcutter.research_request.v1",
+      "input_payload": {
+        "question": "For KM-500c-2, what must tests demonstrate?",
+        "evidence_needs_only": true,
+        "evidence_needs": [
+          {
+            "id": "need.question",
+            "category": "task_context",
+            "priority": "required",
+            "question": "For KM-500c-2, what must tests demonstrate?"
+          }
+        ]
+      },
+      "context_refs": [],
+      "continuation": {
+        "schema_version": "1.0",
+        "capability_id": "research",
+        "capability_version": "1.0.0",
+        "state": {
+          "schema_version": "1.0",
+          "retrieval_needs": {
+            "schema_version": "1.0",
+            "original_question": "For KM-500c-2, what must tests demonstrate?",
+            "source_scope": {
+              "read_roots": [
+                "docs"
+              ],
+              "repository_id": "public-needs-acceptance",
+              "revision": "fb7c073bbc93ac4751685c5b45d1b4efeb108ac2",
+              "source_ids": [
+                "knowledge.graph"
+              ]
+            },
+            "selections": {
+              "entity_types": [
+                "ac"
+              ],
+              "target_ids": [
+                "KM-500c-2"
+              ],
+              "required_fields": [
+                "criteria",
+                "test_spec"
+              ],
+              "document_types": [
+                "ac_yaml"
+              ],
+              "relationships": []
+            },
+            "uncertain": {
+              "entity_types": [],
+              "target_ids": [],
+              "required_fields": [],
+              "document_types": [],
+              "relationships": []
+            },
+            "detail_mode": "fields",
+            "completeness": "single_entity",
+            "hierarchy_scope": "not_applicable",
+            "hierarchy_levels": [],
+            "scope_resolution": "sufficient",
+            "unresolved": [],
+            "rationale": "The named acceptance criterion's exact clauses and declared expected assertions establish what its tests must demonstrate. Test links, a test-required flag, and progress statuses do not provide those obligations.",
+            "engine": "host_llm",
+            "status": "decided",
+            "model_id": null
+          },
+          "phase": "planned",
+          "needs": [
+            {
+              "schema_version": "1.0",
+              "id": "need.question",
+              "category": "task_context",
+              "question": "For KM-500c-2, what must tests demonstrate?",
+              "priority": "required",
+              "acceptable_source_kinds": [],
+              "resolution": [],
+              "status": "open"
+            }
+          ],
+          "child_map": {
+            "need.question": [
+              "knowledge.graph"
+            ]
+          },
+          "unavailable": [],
+          "attempted": [
+            "knowledge.graph"
+          ],
+          "evidence": [],
+          "coverage": {},
+          "assessments": {},
+          "contradictions": [],
+          "limitations": [],
+          "truncated": false,
+          "synthesized": false,
+          "deferred": [],
+          "deferred_dispatched": false,
+          "unanswered": []
+        },
+        "resume_reason": "children_done",
+        "wait_child_ids": [
+          "work-060564ec3a6b4718"
+        ]
+      },
+      "child_outcomes": [
+        {
+          "schema_version": "1.0",
+          "work_item_id": "work-e1a0f3003a1a4e37",
+          "request_kind": "capability",
+          "status": "completed",
+          "output_schema_id": "leafcutter.retrieval_needs_output.v1",
+          "result_ref": "result-inv-374815e5c3d94060.json",
+          "priority": "required",
+          "current_wait": false,
+          "actor_id": null
+        },
+        {
+          "schema_version": "1.0",
+          "work_item_id": "work-060564ec3a6b4718",
+          "request_kind": "evidence",
+          "status": "partial",
+          "output_schema_id": "leafcutter.evidence_bundle.v1",
+          "result_ref": "result-inv-677131e5c05949db.json",
+          "priority": "required",
+          "current_wait": true,
+          "actor_id": null
+        }
+      ],
+      "input_fingerprint": "47dcfce96fe815d1bacaf4bafa66bba655382fd45510123256b8d0cd6f2b12d0",
+      "versions": {
+        "registry_hash": "1206ce45d1899afd758ec9438db1e4251394333e031b80b683fa4662e08918ea",
+        "capability": "1.0.0"
+      },
+      "attempt": 3,
+      "trace": {
+        "schema_version": "1.0",
+        "trace_id": "29efd393f1cfcba21b6957b02674a61a",
+        "parent_observation_id": null,
+        "correlation": {
+          "schema_version": "1.0",
+          "run_id": "run-7532746d8507418e",
+          "root_task_id": "task-d94eed5ab726449b",
+          "task_id": "task-d94eed5ab726449b",
+          "work_item_id": "work-bb687051daaf4f29",
+          "request_id": "req-6c072c1420194c00",
+          "invocation_id": "inv-74bf248a52094e2b",
+          "decision_id": null,
+          "capability_id": "research",
+          "interaction_id": null,
+          "parent_work_item_id": null,
+          "causation_seq": null
+        }
+      }
+    },
+    "inv-960ff4884cdd4335": {
+      "schema_version": "1.0",
+      "id": "inv-960ff4884cdd4335",
+      "created_at": "2026-10-09T15:50:59.696044Z",
+      "updated_at": "2026-10-09T15:50:59.696044Z",
+      "created_seq": 5,
+      "work_item_id": "work-d34ebb08fb22481a",
+      "capability_id": "host.synthesize",
+      "capability_version": "1.0.0",
+      "input_payload_schema": "leafcutter.synthesis_request.v1",
+      "input_payload": {
+        "schema_version": "1.0",
+        "operation": "synthesize_evidence",
+        "question": "For KM-500c-2, what must tests demonstrate?",
+        "evidence_ids": [
+          "ev-b680fc14fad3954a"
+        ],
+        "output_requirements": [
+          "answer only from the listed evidence",
+          "report disagreements without choosing between them"
+        ],
+        "limits": {
+          "schema_version": "1.0",
+          "max_findings": null,
+          "max_chars": null
+        }
+      },
+      "context_refs": [],
+      "continuation": null,
+      "child_outcomes": [],
+      "input_fingerprint": "01be2763d575f748be1163b319038b9cd65774e7d73c1e8c84828bb20cea8c84",
+      "versions": {
+        "registry_hash": "1206ce45d1899afd758ec9438db1e4251394333e031b80b683fa4662e08918ea",
+        "capability": "1.0.0",
+        "host_template": "host.synthesize.task@1.0.0"
+      },
+      "attempt": 1,
+      "trace": {
+        "schema_version": "1.0",
+        "trace_id": "29efd393f1cfcba21b6957b02674a61a",
+        "parent_observation_id": null,
+        "correlation": {
+          "schema_version": "1.0",
+          "run_id": "run-7532746d8507418e",
+          "root_task_id": "task-d94eed5ab726449b",
+          "task_id": "task-d94eed5ab726449b",
+          "work_item_id": "work-d34ebb08fb22481a",
+          "request_id": "req-b38c3bbd6c86466f",
+          "invocation_id": "inv-960ff4884cdd4335",
+          "decision_id": null,
+          "capability_id": "host.synthesize",
+          "interaction_id": null,
+          "parent_work_item_id": "work-bb687051daaf4f29",
+          "causation_seq": null
+        }
+      }
+    },
+    "inv-bd3c6fcd9e7e4306": {
+      "schema_version": "1.0",
+      "id": "inv-bd3c6fcd9e7e4306",
+      "created_at": "2026-10-09T15:50:56.422772Z",
+      "updated_at": "2026-10-09T15:50:56.422772Z",
+      "created_seq": 2,
+      "work_item_id": "work-bb687051daaf4f29",
+      "capability_id": "research",
+      "capability_version": "1.0.0",
+      "input_payload_schema": "leafcutter.research_request.v1",
+      "input_payload": {
+        "question": "For KM-500c-2, what must tests demonstrate?",
+        "evidence_needs_only": true,
+        "evidence_needs": [
+          {
+            "id": "need.question",
+            "category": "task_context",
+            "priority": "required",
+            "question": "For KM-500c-2, what must tests demonstrate?"
+          }
+        ]
+      },
+      "context_refs": [],
+      "continuation": {
+        "schema_version": "1.0",
+        "capability_id": "research",
+        "capability_version": "1.0.0",
+        "state": {
+          "schema_version": "1.0",
+          "phase": "interpreting_needs",
+          "request": {
+            "schema_version": "1.0",
+            "original_question": "For KM-500c-2, what must tests demonstrate?",
+            "context": [],
+            "known_ids": [],
+            "source_scope": {
+              "repository_id": "public-needs-acceptance",
+              "revision": "fb7c073bbc93ac4751685c5b45d1b4efeb108ac2",
+              "source_ids": [
+                "knowledge.graph"
+              ],
+              "read_roots": [
+                "docs"
+              ]
+            },
+            "catalog": {
+              "entity_types": {
+                "ac": "Acceptance criterion or requirement",
+                "adr": "Architecture decision record",
+                "ticket": "Work ticket",
+                "component": "Registered component",
+                "flow": "Product Truth flow",
+                "decision": "Recorded decision",
+                "test": "Test source",
+                "document": "Repository document"
+              },
+              "target_ids": {
+                "KM-500c-2": "Literal identifier in the original question; assess its requested role."
+              },
+              "required_fields": {
+                "canonical_id": "The stable identities of the requested entities, such as which tests or ACs.",
+                "kind": "The canonical entity type of each returned item.",
+                "title": "The source-backed human-readable name of each returned item.",
+                "source_sha": "The immutable source revision supporting each entity.",
+                "source_locator": "The exact source location supporting each entity.",
+                "priority": "Declared source priority, not an inferred business ranking or dependency count.",
+                "level": "The canonical requirement hierarchy level.",
+                "test_required": "The explicit source test requirement, not evidence of execution.",
+                "work_status": "Implementation progress, such as done or todo; distinct from lifecycle status.",
+                "status": "Canonical lifecycle status, such as active; not delivery completion.",
+                "criteria": "Exact source acceptance clauses.",
+                "req_status": "Requirement governance state.",
+                "readiness": "Planning approval readiness, not implementation proof.",
+                "covered_by": "Declared test references, not evidence of a test run.",
+                "implemented_by": "Declared implementation references, not a complete call graph.",
+                "depends_on": "Declared requirement dependencies, not inferred code impact.",
+                "test_spec": "Declared test cases and expected assertions; supplements acceptance criteria"
+              },
+              "document_types": {
+                "ac_yaml": "Canonical acceptance criterion definition including acceptance clauses",
+                "adr": "Architecture decision document",
+                "ticket": "Ticket document",
+                "flow": "Product Truth JSON",
+                "decision": "Recorded decision YAML",
+                "code": "Implementation or test source",
+                "documentation": "Repository documentation",
+                "component": "Component definition"
+              },
+              "relationships": {
+                "parent_direct": "Immediate parent only",
+                "children_direct": "Immediate children only",
+                "all_descendants": "Entire declared hierarchy below the target, not only direct children",
+                "declared_dependents": "Records directly declaring a dependency on the target",
+                "covered_by": "Tests declared to cover an acceptance criterion",
+                "implemented_by": "Declared implementation references",
+                "related_docs": "Declared document references"
+              }
+            }
+          },
+          "clarifications": []
+        },
+        "resume_reason": "children_done",
+        "wait_child_ids": [
+          "work-e1a0f3003a1a4e37"
+        ]
+      },
+      "child_outcomes": [
+        {
+          "schema_version": "1.0",
+          "work_item_id": "work-e1a0f3003a1a4e37",
+          "request_kind": "capability",
+          "status": "completed",
+          "output_schema_id": "leafcutter.retrieval_needs_output.v1",
+          "result_ref": "result-inv-374815e5c3d94060.json",
+          "priority": "required",
+          "current_wait": true,
+          "actor_id": null
+        }
+      ],
+      "input_fingerprint": "c6350013f38efcc99ce2487b7b1a50aa9f6060fea04bc4dd2436dfe23339bed9",
+      "versions": {
+        "registry_hash": "1206ce45d1899afd758ec9438db1e4251394333e031b80b683fa4662e08918ea",
+        "capability": "1.0.0"
+      },
+      "attempt": 2,
+      "trace": {
+        "schema_version": "1.0",
+        "trace_id": "29efd393f1cfcba21b6957b02674a61a",
+        "parent_observation_id": null,
+        "correlation": {
+          "schema_version": "1.0",
+          "run_id": "run-7532746d8507418e",
+          "root_task_id": "task-d94eed5ab726449b",
+          "task_id": "task-d94eed5ab726449b",
+          "work_item_id": "work-bb687051daaf4f29",
+          "request_id": "req-6c072c1420194c00",
+          "invocation_id": "inv-bd3c6fcd9e7e4306",
+          "decision_id": null,
+          "capability_id": "research",
+          "interaction_id": null,
+          "parent_work_item_id": null,
+          "causation_seq": null
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,24 @@
+{
+  "version": "1",
+  "authored_before_live_outputs": true,
+  "scope": "Public natural-language research, typed needs, registered operation, attributable source evidence and honest assessment. No catalog activation or graph writes.",
+  "baseline_commit": "fb7c073bb",
+  "unchanged_dataset": "docs/analysis/retrieval-needs-probe-2026-10-03/eval-cases.json",
+  "unchanged_semantic_contract": "docs/analysis/retrieval-needs-llm-2026-10-03/evaluation-contract.json",
+  "holdouts": "reports/retrieval-public-2026-10-09/holdouts.json",
+  "evidence_modes": {
+    "controlled_public_wiring": "Actual KernelService, LangGraph, production registry, durable host ledger, real source mapper and GitSourceResolver; external storage and Jev/host responses controlled. No live semantic claim.",
+    "live_needs": "Actual host packet handoff to a fresh blind agent seeing only the packet and input artifacts; accepted ledger results scored after responses. Model ID and provider request counts unknown unless actually supplied.",
+    "live_public": "Actual configured TypeSafe Jev transport plus fresh blind host packet responses; read-only Aura only with verified pinned generation, otherwise explicitly labelled bounded local-source storage mode. No expected answer labels sent to either model."
+  },
+  "limits": {"needs_host_packets": 16, "public_runs": 6, "public_host_packets": 8, "jev_calls_per_public_run": 12, "jev_calls_total": 72, "graph_writes": 0, "catalog_writes": 0, "telemetry_exports": 0},
+  "public_cases": [
+    {"id": "P01", "question": "For KM-500c-2, what must tests demonstrate?", "catalog": false, "assertion": "Complete canonical criteria, literal target and source citations; no caller operation/fields/answer."},
+    {"id": "P02", "question": "For KM-500c-2, what must tests demonstrate?", "catalog": true, "assertion": "Same obligations and canonical evidence as P01; no query construction or catalog activation."},
+    {"id": "P03", "question": "Count every L2 and L3 AC under TQ-500f, excluding only TQ-500f itself, grouped by work status.", "catalog": false, "assertion": "Exact specified structural population and actual work-status counts, or explicit bounded/unknown count; lifecycle status never substituted."},
+    {"id": "P04", "question": "Count every L2 and L3 AC under TQ-500f, excluding only TQ-500f itself, grouped by work status.", "catalog": true, "assertion": "Same population and obligations as P03 with no catalog-path bypass."},
+    {"id": "P05", "question": "How many ACs concern test writing? Exclude parent requirements.", "catalog": true, "clarification": "Use TQ-500f, all L2 and L3 descendants; exclude only the root TQ-500f, retain intermediate parents.", "assertion": "Focused clarification before any exact count; same run, original question and trusted scope preserved."},
+    {"id": "P06", "question": "For KM-500c-2, what must tests demonstrate?", "catalog": false, "source_control": "An explicitly requested revision unavailable from the selected generation.", "assertion": "Unavailable/stale source remains unresolved; no empty success or current-source claim."}
+  ],
+  "reporting": "Record actual question, prepared fields, Jev-selected operation/arguments, source identity/content, assessment/citations and limitations. Separate model semantic scores from deterministic transport success. Preserve all prior accepted receipts and gold unchanged."
+}

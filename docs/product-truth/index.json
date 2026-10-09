@@ -685,7 +685,7 @@
       "path": "flows/leafcutter/retrieve-project-knowledge.flow.json",
       "status": "active",
       "readiness": "draft",
-      "version": 6,
+      "version": 7,
       "entities": [],
       "tags": [
         "retrieval",
@@ -693,10 +693,10 @@
       ],
       "impl_summary": {
         "done": 0,
-        "in_progress": 0,
-        "not_started": 29,
+        "in_progress": 1,
+        "not_started": 28,
         "total": 29,
-        "asof": "2026-10-03"
+        "asof": "2026-10-09"
       }
     },
     {
@@ -785,7 +785,7 @@
       "path": "flows/leafcutter/retrieval-current-baseline.flow.json",
       "status": "active",
       "readiness": "draft",
-      "version": 3,
+      "version": 4,
       "entities": [],
       "tags": [
         "retrieval",
@@ -796,10 +796,10 @@
       ],
       "impl_summary": {
         "done": 13,
-        "in_progress": 14,
+        "in_progress": 16,
         "not_started": 0,
-        "total": 27,
-        "asof": "2026-10-02"
+        "total": 29,
+        "asof": "2026-10-09"
       }
     },
     {
@@ -1129,14 +1129,14 @@
       "id": "leafcutter/retrieval-needs-interpretation",
       "type": "flow",
       "title": "Interpret what a retrieval question needs",
-      "summary": "An isolated host LLM interprets a question into typed information needs; production retrieval does not call it.",
+      "summary": "The standalone host interpretation shares public research contracts; its saved model evaluation stays historical.",
       "kind": "data",
       "source": "real",
       "component": "knowledge-management",
       "path": "flows/leafcutter/retrieval-needs-interpretation.flow.json",
       "status": "active",
       "readiness": "draft",
-      "version": 6,
+      "version": 7,
       "entities": [],
       "tags": [
         "retrieval",
@@ -2113,10 +2113,10 @@
       "impl_status": "in_progress",
       "impl_summary": {
         "done": 13,
-        "in_progress": 14,
+        "in_progress": 16,
         "not_started": 0,
-        "total": 27,
-        "asof": "2026-10-02"
+        "total": 29,
+        "asof": "2026-10-09"
       },
       "expands": [],
       "parents": []
@@ -2231,13 +2231,13 @@
       "level": "journey",
       "entities": [],
       "path": "flows/leafcutter/retrieve-project-knowledge.flow.json",
-      "impl_status": "not_started",
+      "impl_status": "in_progress",
       "impl_summary": {
         "done": 0,
-        "in_progress": 0,
-        "not_started": 29,
+        "in_progress": 1,
+        "not_started": 28,
         "total": 29,
-        "asof": "2026-10-03"
+        "asof": "2026-10-09"
       },
       "expands": [
         "leafcutter/retrieval-needs-interpretation",
@@ -5234,17 +5234,6 @@
         "entities": [],
         "source": "real",
         "asof": "2026-10-02"
-      },
-      {
-        "flow": "leafcutter/retrieval-current-baseline",
-        "node": "understand",
-        "node_kind": "step",
-        "flow_kind": "data",
-        "screen": null,
-        "mock_data": null,
-        "entities": [],
-        "source": "real",
-        "asof": "2026-10-02"
       }
     ],
     "KM-500a-2": [
@@ -5670,6 +5659,30 @@
         "entities": [],
         "source": "real",
         "asof": "2026-10-02"
+      }
+    ],
+    "KM-500e-1-i": [
+      {
+        "flow": "leafcutter/retrieval-current-baseline",
+        "node": "accept-needs",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [],
+        "source": "real",
+        "asof": "2026-10-09"
+      },
+      {
+        "flow": "leafcutter/retrieval-current-baseline",
+        "node": "prepare-needs",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [],
+        "source": "real",
+        "asof": "2026-10-09"
       },
       {
         "flow": "leafcutter/retrieval-current-baseline",
@@ -5680,7 +5693,29 @@
         "mock_data": null,
         "entities": [],
         "source": "real",
-        "asof": "2026-10-02"
+        "asof": "2026-10-09"
+      },
+      {
+        "flow": "leafcutter/retrieve-project-knowledge",
+        "node": "interpret-needs",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [],
+        "source": "real",
+        "asof": "2026-10-09"
+      },
+      {
+        "flow": "leafcutter/retrieve-project-knowledge",
+        "node": "question",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [],
+        "source": "real",
+        "asof": "2026-10-09"
       }
     ],
     "KM-500e-2": [

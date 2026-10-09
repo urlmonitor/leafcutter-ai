@@ -1,0 +1,134 @@
+{
+  "schema_version": "1.0",
+  "run_id": "run-89feafb061a94fc2",
+  "root_task_id": "task-25b07a66e2bb4b03",
+  "state_revision": 7,
+  "status": "partial",
+  "output": {
+    "schema_version": "1.0",
+    "schema_id": "leafcutter.evidence_bundle.v1",
+    "payload": {
+      "schema_version": "1.0",
+      "request_id": null,
+      "evidence_ids": [],
+      "finding_ids": [],
+      "coverage": {
+        "need.question": "unavailable"
+      },
+      "assessments": {},
+      "attempted_sources": [
+        "knowledge.graph"
+      ],
+      "unavailable_sources": [],
+      "contradictions": [],
+      "limitations": [
+        "operation selection confidence is uncertain; assessment={\"confidence\":0.7,\"minimum_confidence\":0.5,\"minimum_selected_probability\":0.8,\"selected_probability\":0.75,\"selected_value\":\"get_ac_descendants\"}",
+        "required need need.question is unavailable"
+      ],
+      "truncated": false,
+      "evidence": [],
+      "findings": [],
+      "unknowns": [],
+      "need_evidence": {},
+      "need_limitations": {}
+    }
+  },
+  "report_ref": "C:\\Users\\Hendrik\\AppData\\Local\\Temp\\leafcutter-public-host-dg5b4rp0\\kernel\\P04\\runs\\run-89feafb061a94fc2\\artifacts\\report.md",
+  "decision_ids": [],
+  "evidence_ids": [],
+  "open_questions": [],
+  "pending_interaction": null,
+  "limitations": [
+    "operation selection confidence is uncertain; assessment={\"confidence\":0.7,\"minimum_confidence\":0.5,\"minimum_selected_probability\":0.8,\"selected_probability\":0.75,\"selected_value\":\"get_ac_descendants\"}",
+    "required need need.question is unavailable"
+  ],
+  "gaps": [
+    {
+      "schema_version": "1.0",
+      "id": "gap-f97e8afbcd99f57f",
+      "created_at": "2026-10-09T15:51:05.865782Z",
+      "updated_at": "2026-10-09T15:51:05.865782Z",
+      "created_seq": 0,
+      "gap_key": "3ecdf0b98288524cdb5201491f390a3bcfcdca6b1c9995365cab89935e358ec4",
+      "gap_type": "host_only",
+      "goal": "Count every L2 and L3 AC under TQ-500f, excluding only TQ-500f itself, grouped by work status.",
+      "normalized_need": "500f ac by count every excluding grouped itself l2 l3 only status",
+      "request_kind": "capability",
+      "input_schema": "leafcutter.retrieval_needs_request.v1",
+      "output_schema": "leafcutter.retrieval_needs_output.v1",
+      "scope_component_ids": [],
+      "registry_snapshot_hash": "1206ce45d1899afd758ec9438db1e4251394333e031b80b683fa4662e08918ea",
+      "candidates_considered": [
+        "host.retrieval_needs",
+        "decision",
+        "host.formulate_question",
+        "host.generate_options",
+        "host.query_build"
+      ],
+      "candidate_exclusions": {
+        "decision": "kind_mismatch",
+        "host.formulate_question": "kind_mismatch",
+        "host.generate_options": "kind_mismatch",
+        "host.query_build": "kind_mismatch"
+      },
+      "need_title": "Count every L2 and L3 AC under TQ-500f, excluding only TQ-500f itself, groupe...",
+      "why_insufficient": "host-backed only; no native implementation exists",
+      "occurrence_count": 1,
+      "example_run_ids": [
+        "run-89feafb061a94fc2"
+      ],
+      "example_trace_urls": [],
+      "fallback_outcome": "host_completed",
+      "missing_native_capability": "native implementation of host.retrieval_needs",
+      "proposal": {
+        "schema_version": "1.0",
+        "author": "template",
+        "title": "Capability for: Count every L2 and L3 AC under TQ-500f, excluding only TQ-500f itself, groupe...",
+        "purpose": "host_only need",
+        "draft_ref": "drafts/3ecdf0b98288524cdb5201491f390a3bcfcdca6b1c9995365cab89935e358ec4.md"
+      },
+      "first_seen": "2026-10-09T15:51:05.865782Z",
+      "last_seen": "2026-10-09T15:51:05.865782Z"
+    }
+  ],
+  "usage_summary": {
+    "schema_version": "1.0",
+    "jev_calls": 1,
+    "host_operations": 1,
+    "input_tokens": 1813,
+    "output_tokens": 76,
+    "cost_usd_known": 7.6146e-05,
+    "cost_unknown_calls": 1,
+    "usage": [
+      {
+        "schema_version": "1.0",
+        "provider": "host",
+        "model_id": null,
+        "input_tokens": null,
+        "output_tokens": null,
+        "duration_ms": 186003,
+        "cost_usd": null,
+        "cost_provenance": "unavailable",
+        "calls": 1
+      },
+      {
+        "schema_version": "1.0",
+        "provider": "jev",
+        "model_id": "jev-1.13.0",
+        "input_tokens": 1813,
+        "output_tokens": 76,
+        "duration_ms": 314,
+        "cost_usd": 7.6146e-05,
+        "cost_provenance": "estimated",
+        "calls": 1
+      }
+    ]
+  },
+  "trace_refs": {
+    "schema_version": "1.0",
+    "trace_id": "bad11563a4573621f65f5d62f1259b25",
+    "trace_url": null,
+    "observability": "ok"
+  },
+  "errors": []
+}

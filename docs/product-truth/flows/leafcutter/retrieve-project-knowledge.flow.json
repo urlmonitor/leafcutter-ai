@@ -10,7 +10,7 @@
   "realization": "spec",
   "status": "active",
   "readiness": "draft",
-  "version": 6,
+  "version": 7,
   "tags": [
     "retrieval",
     "target-design"
@@ -21,13 +21,13 @@
       "id": "question",
       "label": "Ask the question",
       "agent": "Caller",
-      "actor_kind": "human",
-      "description": "The person asks a question in plain words, optionally adding keywords, known IDs or constraints, without choosing how or where to search.",
       "order": 1,
-      "implements": [],
+      "implements": [
+        "KM-500e-1-i"
+      ],
       "produces": [],
-      "impl_asof": "2026-10-02",
-      "impl_status": "not_started",
+      "impl_asof": "2026-10-09",
+      "impl_status": "in_progress",
       "consumes": [
         "task_input/goal: string (required)",
         "task_input/caller: object (required)",
@@ -138,24 +138,16 @@
               ]
             }
           }
-        ],
-        "missing_bindings": [
-          {
-            "name": "Question-first retrieval entry composition",
-            "direction": "both",
-            "reason": "TaskInput already accepts a goal with trusted scope and no caller-selected operation. The new retrieval-specific intake/catalog provisioning route is not wired.",
-            "source": "docs/product-truth/flows/leafcutter/retrieve-project-knowledge.flow.json"
-          }
         ]
-      }
+      },
+      "description": "The caller asks a question in plain words, optionally supplying keywords or known identifiers, without choosing a retrieval method.",
+      "actor_kind": "human"
     },
     {
       "id": "interpret-needs",
-      "label": "Interpret needs (proposed call-site)",
+      "label": "Dispatch information-needs interpretation",
       "agent": "System",
-      "actor_kind": "deterministic",
       "order": 2,
-      "description": "The kernel sends the question to the needs-interpretation flow and carries the interpreted needs into planning, without choosing any retrieval method.",
       "consumes": [
         "retrieval_needs_request/original_question: string (required)",
         "retrieval_needs_request/context: array (optional; default [])",
@@ -178,7 +170,9 @@
       "expands_to": [
         "leafcutter/retrieval-needs-interpretation"
       ],
-      "implements": [],
+      "implements": [
+        "KM-500e-1-i"
+      ],
       "impl_asof": "2026-10-03",
       "impl_status": "not_started",
       "io_contracts": {
@@ -379,23 +373,15 @@
               "status": "decided"
             }
           }
-        ],
-        "missing_bindings": [
-          {
-            "name": "Production invocation of isolated needs interpreter",
-            "direction": "both",
-            "reason": "The typed standalone interpreter exists, but the production retrieval parent has no invocation/normalization/catalog-provisioning edge to it.",
-            "source": "docs/product-truth/flows/leafcutter/retrieve-project-knowledge.flow.json"
-          }
         ]
-      }
+      },
+      "description": "The system requests one interpretation of the information needed and preserves the accepted facts, original targets and scope for retrieval.",
+      "actor_kind": "deterministic"
     },
     {
       "id": "offer-methods",
       "label": "Offer permitted methods and contracts",
       "agent": "System",
-      "actor_kind": "deterministic",
-      "description": "The kernel works out the allowed scope, sources and remaining budget and offers the available retrieval methods, queries and relevant past strategy advice.",
       "order": 3,
       "implements": [],
       "consumes": [
@@ -585,14 +571,14 @@
             "source": "docs/product-truth/flows/leafcutter/retrieve-project-knowledge.flow.json"
           }
         ]
-      }
+      },
+      "description": "The kernel works out the allowed scope, sources and remaining budget and offers the available retrieval methods, queries and relevant past strategy advice.",
+      "actor_kind": "deterministic"
     },
     {
       "id": "plan",
       "label": "Jev chooses how to answer",
       "agent": "Jev",
-      "actor_kind": "jev",
-      "description": "Jev picks one or more offered methods for the original question, from registered queries, searches and graph or folder navigation, or reports a capability gap or a need to ask.",
       "order": 4,
       "implements": [],
       "produces": [],
@@ -608,14 +594,14 @@
             "source": "docs/product-truth/flows/leafcutter/retrieve-project-knowledge.flow.json"
           }
         ]
-      }
+      },
+      "description": "Jev picks one or more offered methods for the original question, from registered queries, searches and graph or folder navigation, or reports a capability gap or a need to ask.",
+      "actor_kind": "jev"
     },
     {
       "id": "retrieve",
       "label": "Retrieve the evidence",
       "agent": "System",
-      "actor_kind": "deterministic",
-      "description": "The kernel runs each chosen method once within scope and budget, keeps useful evidence when one fails, and collects every attempt separately for comparison.",
       "order": 5,
       "implements": [],
       "produces": [
@@ -638,7 +624,8 @@
         "knowledge_request/operation_version: string (optional; default \"1\")",
         "knowledge_request/arguments: object (optional; default {})",
         "knowledge_request/revision: string (optional; default \"latest\")",
-        "knowledge_request/budget: object (optional)"
+        "knowledge_request/budget: object (optional)",
+        "knowledge_request/answer_requirements/scope/entity_ids: array (optional; default [])"
       ],
       "io_contracts": {
         "consumes": [
@@ -683,6 +670,14 @@
                   "object"
                 ],
                 "required": false
+              },
+              {
+                "path": "/answer_requirements/scope/entity_ids",
+                "types": [
+                  "array"
+                ],
+                "required": false,
+                "default": []
               }
             ]
           }
@@ -802,14 +797,14 @@
             "source": "docs/product-truth/flows/leafcutter/retrieve-project-knowledge.flow.json"
           }
         ]
-      }
+      },
+      "description": "The kernel runs each chosen method once within scope and budget, keeps useful evidence when one fails, and collects every attempt separately for comparison.",
+      "actor_kind": "deterministic"
     },
     {
       "id": "compare",
       "label": "Compare attempts against the original question",
       "agent": "Jev",
-      "actor_kind": "jev",
-      "description": "Jev compares the attempts against the original question and picks a preferred one, complementary ones, a tie or none, keeping useful evidence from each.",
       "order": 6,
       "implements": [],
       "consumes": [
@@ -964,14 +959,14 @@
             "source": "docs/product-truth/flows/leafcutter/retrieve-project-knowledge.flow.json"
           }
         ]
-      }
+      },
+      "description": "Jev compares the attempts against the original question and picks a preferred one, complementary ones, a tie or none, keeping useful evidence from each.",
+      "actor_kind": "jev"
     },
     {
       "id": "remember",
       "label": "Record advisory strategy decision",
       "agent": "System",
-      "actor_kind": "deterministic",
-      "description": "The kernel records Jev's comparison as advisory strategy memory, with the question, attempts, methods, evidence links and limits, so future planning can consult it.",
       "order": 7,
       "implements": [],
       "consumes": [],
@@ -987,14 +982,14 @@
             "source": "docs/product-truth/flows/leafcutter/retrieve-project-knowledge.flow.json"
           }
         ]
-      }
+      },
+      "description": "The kernel records Jev's comparison as advisory strategy memory, with the question, attempts, methods, evidence links and limits, so future planning can consult it.",
+      "actor_kind": "deterministic"
     },
     {
       "id": "combine",
       "label": "Combine and deduplicate useful evidence",
       "agent": "System",
-      "actor_kind": "deterministic",
-      "description": "The kernel merges the selected evidence and removes duplicates while keeping every supporting source and keeping differing versions or scopes separately attributed.",
       "order": 8,
       "implements": [],
       "consumes": [
@@ -1193,14 +1188,14 @@
             "source": "docs/product-truth/flows/leafcutter/retrieve-project-knowledge.flow.json"
           }
         ]
-      }
+      },
+      "description": "The kernel merges the selected evidence and removes duplicates while keeping every supporting source and keeping differing versions or scopes separately attributed.",
+      "actor_kind": "deterministic"
     },
     {
       "id": "rank",
       "label": "Judge relevance",
       "agent": "Jev",
-      "actor_kind": "jev",
-      "description": "Jev orders the combined evidence by relevance to the original question without promoting incomplete coverage.",
       "order": 9,
       "implements": [],
       "consumes": [
@@ -1297,14 +1292,14 @@
             "source": "docs/product-truth/flows/leafcutter/retrieve-project-knowledge.flow.json"
           }
         ]
-      }
+      },
+      "description": "Jev orders the combined evidence by relevance to the original question without promoting incomplete coverage.",
+      "actor_kind": "jev"
     },
     {
       "id": "return-evidence",
       "label": "Return ranked evidence",
       "agent": "System",
-      "actor_kind": "deterministic",
-      "description": "The kernel applies Jev's order and passes the ranked evidence, with its sources and limits, to the final sufficiency check without another retrieval.",
       "order": 10,
       "implements": [],
       "consumes": [],
@@ -1412,14 +1407,14 @@
             "source": "docs/product-truth/flows/leafcutter/retrieve-project-knowledge.flow.json"
           }
         ]
-      }
+      },
+      "description": "The kernel applies Jev's order and passes the ranked evidence, with its sources and limits, to the final sufficiency check without another retrieval.",
+      "actor_kind": "deterministic"
     },
     {
       "id": "assess",
       "label": "Jev checks what the evidence answers",
       "agent": "Jev",
-      "actor_kind": "jev",
-      "description": "Jev checks what the evidence actually answers and chooses to finish, retry with a changed method, continue navigating, ask a focused question or honestly stop.",
       "order": 11,
       "implements": [],
       "produces": [
@@ -1641,14 +1636,14 @@
             "source": "docs/product-truth/flows/leafcutter/retrieve-project-knowledge.flow.json"
           }
         ]
-      }
+      },
+      "description": "Jev checks what the evidence actually answers and chooses to finish, retry with a changed method, continue navigating, ask a focused question or honestly stop.",
+      "actor_kind": "jev"
     },
     {
       "id": "dispatch-wording",
       "label": "Dispatch wording only when needed",
       "agent": "System",
-      "actor_kind": "deterministic",
-      "description": "When the answer needs prose, the kernel asks the host model to word it from the accepted evidence and limits, and otherwise passes the structured facts straight on.",
       "order": 12,
       "implements": [],
       "produces": [
@@ -1760,14 +1755,14 @@
             "source": "docs/product-truth/flows/leafcutter/retrieve-project-knowledge.flow.json"
           }
         ]
-      }
+      },
+      "description": "When the answer needs prose, the kernel asks the host model to word it from the accepted evidence and limits, and otherwise passes the structured facts straight on.",
+      "actor_kind": "deterministic"
     },
     {
       "id": "wording",
       "label": "Optionally formulate the answer",
       "agent": "Host LLM",
-      "actor_kind": "llm",
-      "description": "The host model writes the answer from the accepted evidence and stated limits, without inventing facts or dropping qualifications.",
       "order": 13,
       "implements": [],
       "produces": [
@@ -1886,14 +1881,14 @@
             "source": "docs/product-truth/flows/leafcutter/retrieve-project-knowledge.flow.json"
           }
         ]
-      }
+      },
+      "description": "The host model writes the answer from the accepted evidence and stated limits, without inventing facts or dropping qualifications.",
+      "actor_kind": "llm"
     },
     {
       "id": "check-wording",
       "label": "Validate response material",
       "agent": "System",
-      "actor_kind": "deterministic",
-      "description": "The kernel checks the drafted answer's format, citations and retained limits, sending invalid material to correction or a partial stop.",
       "order": 14,
       "implements": [],
       "produces": [
@@ -2025,14 +2020,14 @@
             "source": "docs/product-truth/flows/leafcutter/retrieve-project-knowledge.flow.json"
           }
         ]
-      }
+      },
+      "description": "The kernel checks the drafted answer's format, citations and retained limits, sending invalid material to correction or a partial stop.",
+      "actor_kind": "deterministic"
     },
     {
       "id": "judge-wording",
       "label": "Accept synthesized wording when needed",
       "agent": "Jev",
-      "actor_kind": "jev",
-      "description": "Jev judges the drafted wording against the supplied evidence and accepts it, asks for a revision or stops.",
       "order": 15,
       "implements": [],
       "produces": [],
@@ -2087,14 +2082,14 @@
             "source": "docs/product-truth/flows/leafcutter/retrieve-project-knowledge.flow.json"
           }
         ]
-      }
+      },
+      "description": "Jev judges the drafted wording against the supplied evidence and accepts it, asks for a revision or stops.",
+      "actor_kind": "jev"
     },
     {
       "id": "respond",
       "label": "Return the result",
       "agent": "System",
-      "actor_kind": "deterministic",
-      "description": "The kernel assembles the answer with its evidence, status, limits and follow-up references, never using unaccepted wording, and records the final outcome in strategy memory.",
       "order": 16,
       "implements": [],
       "produces": [
@@ -2243,7 +2238,9 @@
             "source": "docs/product-truth/flows/leafcutter/retrieve-project-knowledge.flow.json"
           }
         ]
-      }
+      },
+      "description": "The kernel assembles the answer with its evidence, status, limits and follow-up references, never using unaccepted wording, and records the final outcome in strategy memory.",
+      "actor_kind": "deterministic"
     }
   ],
   "branches": [
@@ -2251,9 +2248,7 @@
       "id": "clarification",
       "label": "Ask only when necessary",
       "condition": "An essential intent or authority choice cannot be resolved from context",
-      "description": "Jev chooses to ask the person a clarifying question about an unresolved intent or permission, without writing the question itself.",
       "agent": "Jev",
-      "actor_kind": "jev",
       "outcome_kind": "alternative",
       "implements": [],
       "from": "plan",
@@ -2270,15 +2265,15 @@
         ]
       },
       "consumes": [],
-      "produces": []
+      "produces": [],
+      "description": "Jev chooses to ask the person a clarifying question about an unresolved intent or permission, without writing the question itself.",
+      "actor_kind": "jev"
     },
     {
       "id": "retry",
       "label": "Try a better plan",
       "condition": "Evidence has a resolvable gap and budget remains",
-      "description": "Jev goes back to method selection with the gap, retained evidence and remaining budget to try a different method, changed inputs or a new navigation step, never an unchanged repeat.",
       "agent": "Jev",
-      "actor_kind": "jev",
       "outcome_kind": "alternative",
       "implements": [],
       "from": "assess",
@@ -2295,15 +2290,15 @@
         ]
       },
       "consumes": [],
-      "produces": []
+      "produces": [],
+      "description": "Jev goes back to method selection with the gap, retained evidence and remaining budget to try a different method, changed inputs or a new navigation step, never an unchanged repeat.",
+      "actor_kind": "jev"
     },
     {
       "id": "partial",
       "label": "Return the useful partial answer",
       "condition": "Some evidence is useful but completeness cannot be established",
-      "description": "The kernel returns the useful partial findings and the missing facts with their sources, without claiming the answer is complete.",
       "agent": "System",
-      "actor_kind": "deterministic",
       "outcome_kind": "alternative",
       "implements": [],
       "from": "assess",
@@ -2412,15 +2407,15 @@
         "bundle/evidence: array (optional)",
         "bundle/coverage: object (optional)",
         "bundle/limitations: array (optional)"
-      ]
+      ],
+      "description": "The kernel returns the useful partial findings and the missing facts with their sources, without claiming the answer is complete.",
+      "actor_kind": "deterministic"
     },
     {
       "id": "blocked",
       "label": "Explain why retrieval cannot proceed",
       "condition": "No permitted useful alternative remains, or a non-bypassable authority/source boundary prevents progress",
-      "description": "The kernel returns a blocked result with the actual reason, never presenting an outage or denied access as an empty success.",
       "agent": "System",
-      "actor_kind": "deterministic",
       "outcome_kind": "alternative",
       "implements": [],
       "from": "retrieve",
@@ -2492,15 +2487,15 @@
         "capability_result/status: string (required)",
         "capability_result/error: null|object (optional; default null)",
         "capability_result/limitations: array (optional; default [])"
-      ]
+      ],
+      "description": "The kernel returns a blocked result with the actual reason, never presenting an outage or denied access as an empty success.",
+      "actor_kind": "deterministic"
     },
     {
       "id": "clarify-after-evidence",
       "label": "Ask a focused follow-up",
       "condition": "Retrieved evidence reveals an unresolved intent or authority choice",
-      "description": "Jev chooses to ask the person a focused follow-up about an intent or permission the evidence left open, without writing the question itself.",
       "agent": "Jev",
-      "actor_kind": "jev",
       "outcome_kind": "alternative",
       "implements": [],
       "from": "assess",
@@ -2517,15 +2512,15 @@
         ]
       },
       "consumes": [],
-      "produces": []
+      "produces": [],
+      "description": "Jev chooses to ask the person a focused follow-up about an intent or permission the evidence left open, without writing the question itself.",
+      "actor_kind": "jev"
     },
     {
       "id": "finish",
       "label": "Finish with an evidenced answer",
       "condition": "The requested facts are supported and deterministic completeness checks pass",
-      "description": "Jev sends the answer on to the final result with its cited evidence and any remaining non-blocking limits.",
       "agent": "Jev",
-      "actor_kind": "jev",
       "outcome_kind": "alternative",
       "implements": [],
       "from": "assess",
@@ -2542,15 +2537,15 @@
         ]
       },
       "consumes": [],
-      "produces": []
+      "produces": [],
+      "description": "Jev sends the answer on to the final result with its cited evidence and any remaining non-blocking limits.",
+      "actor_kind": "jev"
     },
     {
       "id": "clarification-dispatch",
       "label": "Dispatch the focused clarification",
       "condition": "An essential intent or authority choice cannot be resolved from context",
-      "description": "The kernel sends the person a clarifying question from a fixed template, keeping the original need, sources and progress intact.",
       "agent": "System",
-      "actor_kind": "deterministic",
       "outcome_kind": "alternative",
       "implements": [],
       "from": "plan",
@@ -2626,15 +2621,15 @@
         "human_request/free_text_allowed: boolean (optional; default false)",
         "human_request/subject_ids: array (optional)",
         "human_request/why_research_cannot_settle: string (optional; default \"\")"
-      ]
+      ],
+      "description": "The kernel sends the person a clarifying question from a fixed template, keeping the original need, sources and progress intact.",
+      "actor_kind": "deterministic"
     },
     {
       "id": "clarification-answer",
       "label": "Supply the clarification",
       "condition": "An essential intent or authority choice cannot be resolved from context",
-      "description": "The person answers the clarifying question with the missing intent or fact, which never widens what retrieval may access.",
       "agent": "Human",
-      "actor_kind": "human",
       "outcome_kind": "alternative",
       "implements": [],
       "from": "plan",
@@ -2707,15 +2702,15 @@
       ],
       "produces": [
         "human_answer/free_text: null|string (optional; default null)"
-      ]
+      ],
+      "description": "The person answers the clarifying question with the missing intent or fact, which never widens what retrieval may access.",
+      "actor_kind": "human"
     },
     {
       "id": "clarification-resume",
       "label": "Validate and resume",
       "condition": "An essential intent or authority choice cannot be resolved from context",
-      "description": "The kernel checks that the reply matches the open question, applies only the allowed answer, rejects stale or conflicting replies and resumes once at method selection.",
       "agent": "System",
-      "actor_kind": "deterministic",
       "outcome_kind": "alternative",
       "implements": [],
       "from": "plan",
@@ -2810,15 +2805,15 @@
         "interaction_submission/response_schema_id: string (required)",
         "interaction_submission/response: object (required)"
       ],
-      "produces": []
+      "produces": [],
+      "description": "The kernel checks that the reply matches the open question, applies only the allowed answer, rejects stale or conflicting replies and resumes once at method selection.",
+      "actor_kind": "deterministic"
     },
     {
       "id": "clarify-after-evidence-dispatch",
       "label": "Dispatch the focused clarification",
       "condition": "Retrieved evidence reveals an unresolved intent or authority choice",
-      "description": "The kernel sends the person a focused follow-up question from a fixed template, keeping the original need, evidence and progress intact.",
       "agent": "System",
-      "actor_kind": "deterministic",
       "outcome_kind": "alternative",
       "implements": [],
       "from": "assess",
@@ -2894,15 +2889,15 @@
         "human_request/free_text_allowed: boolean (optional; default false)",
         "human_request/subject_ids: array (optional)",
         "human_request/why_research_cannot_settle: string (optional; default \"\")"
-      ]
+      ],
+      "description": "The kernel sends the person a focused follow-up question from a fixed template, keeping the original need, evidence and progress intact.",
+      "actor_kind": "deterministic"
     },
     {
       "id": "clarify-after-evidence-answer",
       "label": "Supply the clarification",
       "condition": "Retrieved evidence reveals an unresolved intent or authority choice",
-      "description": "The person answers the follow-up with the missing intent or fact, which never widens what retrieval may access.",
       "agent": "Human",
-      "actor_kind": "human",
       "outcome_kind": "alternative",
       "implements": [],
       "from": "assess",
@@ -2975,15 +2970,15 @@
       ],
       "produces": [
         "human_answer/free_text: null|string (optional; default null)"
-      ]
+      ],
+      "description": "The person answers the follow-up with the missing intent or fact, which never widens what retrieval may access.",
+      "actor_kind": "human"
     },
     {
       "id": "clarify-after-evidence-resume",
       "label": "Validate and resume",
       "condition": "Retrieved evidence reveals an unresolved intent or authority choice",
-      "description": "The kernel checks that the reply matches the open follow-up, applies only the allowed answer and resumes at method selection with the same need, evidence and budget.",
       "agent": "System",
-      "actor_kind": "deterministic",
       "outcome_kind": "alternative",
       "implements": [],
       "from": "assess",
@@ -3078,16 +3073,16 @@
         "interaction_submission/response_schema_id: string (required)",
         "interaction_submission/response: object (required)"
       ],
-      "produces": []
+      "produces": [],
+      "description": "The kernel checks that the reply matches the open follow-up, applies only the allowed answer and resumes at method selection with the same need, evidence and budget.",
+      "actor_kind": "deterministic"
     },
     {
       "id": "alternative-method",
       "from": "remember",
       "label": "Try another method or frontier",
       "agent": "System",
-      "actor_kind": "deterministic",
       "condition": "Jev selected a changed plan or observed traversal continuation and budget remains",
-      "description": "After recording the comparison, the kernel returns to method selection or the saved navigation point with the useful evidence, or stops as partial or blocked if nothing new remains.",
       "outcome_kind": "alternative",
       "implements": [],
       "impl_asof": "2026-10-02",
@@ -3103,7 +3098,9 @@
         ]
       },
       "consumes": [],
-      "produces": []
+      "produces": [],
+      "description": "After recording the comparison, the kernel returns to method selection or the saved navigation point with the useful evidence, or stops as partial or blocked if nothing new remains.",
+      "actor_kind": "deterministic"
     }
   ],
   "acceptance_scenarios": [
@@ -3342,14 +3339,26 @@
       "by": "flow-author (agent-led I/O contract migration)",
       "date": "2026-10-03",
       "note": "Added source-bound field/type/requiredness/default metadata and explicitly illustrative JSON projections. Preserved topology, actor ownership, realization and AC status. Non-JSON artifacts and genuinely undefined proposed interfaces remain explicit."
+    },
+    {
+      "action": "extended",
+      "by": "business-analyst / IT PO / flow-author",
+      "date": "2026-10-09",
+      "note": "Document the KM-500e-1-i public needs-to-selection integration against the current contracts. Keep broader target method strategies proposed and Oct3 experimental receipts unchanged. Controlled integration tests and live model quality remain separate evidence."
+    },
+    {
+      "action": "extended",
+      "by": "flow-author",
+      "date": "2026-10-09",
+      "note": "Semantically merged the upstream plain-sentence descriptions and explicit actor mechanisms while retaining the committed typed contracts, source-bound examples, original target obligations, host interpretation steps and separate historical evidence limits."
     }
   ],
   "impl_summary": {
     "done": 0,
-    "in_progress": 0,
-    "not_started": 29,
+    "in_progress": 1,
+    "not_started": 28,
     "total": 29,
-    "asof": "2026-10-03"
+    "asof": "2026-10-09"
   },
   "shape_version": 2,
   "contract_definitions": {

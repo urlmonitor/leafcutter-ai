@@ -1,0 +1,57 @@
+{
+  "run_id": "run-bf45b71c8d0c48bb",
+  "interaction_id": "int-1dd9c136bc8d4dc8",
+  "expected_state_revision": 1,
+  "actor": {
+    "id": "host:blind_retrieval_host",
+    "kind": "host"
+  },
+  "relayed_by": "isolated-evaluation-controller",
+  "response_schema_id": "leafcutter.retrieval_needs_output.v1",
+  "response": {
+    "schema_version": "1.0",
+    "original_question": "How many ACs concern test writing? Exclude parent requirements.",
+    "source_scope": {
+      "allow_retrieval": false,
+      "read_roots": [
+        "docs",
+        "kernel",
+        "knowledge",
+        "integrations"
+      ],
+      "repository": "leafcutter",
+      "source_revision": "planning-probe-only"
+    },
+    "selections": {
+      "entity_types": [
+        "ac"
+      ],
+      "target_ids": [],
+      "required_fields": [
+        "criteria",
+        "parent"
+      ],
+      "document_types": [
+        "ac_yaml"
+      ],
+      "relationships": []
+    },
+    "uncertain": {
+      "entity_types": [],
+      "target_ids": [],
+      "required_fields": [],
+      "document_types": [],
+      "relationships": []
+    },
+    "detail_mode": "fields",
+    "completeness": "exhaustive_count",
+    "hierarchy_scope": "exclude_parents",
+    "hierarchy_levels": [],
+    "scope_resolution": "discovery_needed",
+    "unresolved": [],
+    "rationale": "The count requires discovering the full test-writing topic, inspecting criterion meaning, and using hierarchy facts to remove parent requirements. The supplied TQ-500 candidate does not establish the topic boundary. No level restriction was requested.",
+    "engine": "host_llm",
+    "status": "decided",
+    "model_id": null
+  }
+}

@@ -36,6 +36,8 @@ def field_value(item: KnowledgeEvidence, name: str) -> object:
         return item.entity.source.source_sha
     if name == "source_locator":
         return item.entity.source.locator
+    if name == "test_spec" and (item.disclosure_level != 3 or name not in item.field_contents):
+        return None
     value = item.entity.properties.get(name)
     if name in {
         "status",
@@ -112,3 +114,5 @@ def _availability(
 # DECISION HISTORY
 # ================================================================================
 # - 2026-10-01 18:55 [python-coder]: Keep requested facts separate from execution success and preserve canonical field meaning. (#KM-500/KM-500e-2)
+
+# - 2026-10-09 17:00 [python-coder]: Require actual source-field text before an authored test specification fulfills the answer. (#KM-500/KM-500e-1-i)
