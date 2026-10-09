@@ -68,7 +68,7 @@ Severity in the **filename** is a three-level index bucket (`blocker` / `high` /
 
 Fixed issues move to [`build-orchestration/resolved/`](build-orchestration/resolved/) and are no longer listed as open. They are kept, not deleted.
 
-**Open: 56** (4 blocker, 33 high, 19 low) · **Resolved: 25**
+**Open: 57** (4 blocker, 33 high, 20 low) · **Resolved: 25**
 
 ## Open
 
@@ -131,6 +131,7 @@ Fixed issues move to [`build-orchestration/resolved/`](build-orchestration/resol
 | `low` | KI-BO-20260907-0803 — `blocked` and `deferred` are valid ticket statuses that no transition can reach, so the only way to park a ticket is to bypass the tool | [open-low-ki-bo-20260907-0803.md](build-orchestration/open-low-ki-bo-20260907-0803.md) |
 | `low` | KI-BO-20260927-quick-fix-gitignored-target — /quick-fix takes a gitignored deployed copy as target_file, so a coder that correctly edits the tracked template trips the scope-expansion halt | [open-low-ki-bo-20260927-quick-fix-gitignored-target.md](build-orchestration/open-low-ki-bo-20260927-quick-fix-gitignored-target.md) |
 | `low` | KI-BO-20260927-quick-fix-cannot-target-an-existing-leaf-ac — /quick-fix always authors a new AC, so it cannot build an approved leaf that /plan-feature wrote for it, and a file with no L1 mapping can only go through a full /plan-feature round | [open-low-ki-bo-20260927-quick-fix-cannot-target-an-existing-leaf-ac.md](build-orchestration/open-low-ki-bo-20260927-quick-fix-cannot-target-an-existing-leaf-ac.md) |
+| `low` | KI-BO-20261009-fast-lane-changelog-publishes-absolute-local-paths — the fast lane writes the coder's `files_modified` into its changelog entry exactly as reported, so 12 of the 15 fast-lane entries on main publish a contributor's home directory and worktree name | [open-low-ki-bo-20261009-fast-lane-changelog-publishes-absolute-local-paths.md](build-orchestration/open-low-ki-bo-20261009-fast-lane-changelog-publishes-absolute-local-paths.md) |
 
 ## Resolved
 

@@ -55,7 +55,7 @@ Severity in the **filename** is a three-level index bucket (`blocker` / `high` /
 
 Fixed issues move to [`testing-quality/resolved/`](testing-quality/resolved/) and are no longer listed as open. They are kept, not deleted.
 
-**Open: 27** (1 blocker, 14 high, 12 low) · **Resolved: 3**
+**Open: 28** (1 blocker, 15 high, 12 low) · **Resolved: 3**
 
 ## Open
 
@@ -76,6 +76,7 @@ Fixed issues move to [`testing-quality/resolved/`](testing-quality/resolved/) an
 | `high` | KI-TQ-20260914-1050 — the fast lane's green gate reports a pytest timeout as a list of failing test nodeids, so a budget overrun is indistinguishable from broken code — and the distinguishing machinery that exists for exactly this is discarded one layer below | [open-high-ki-tq-20260914-1050.md](testing-quality/open-high-ki-tq-20260914-1050.md) |
 | `high` | KI-TQ-20260927-windows-local-runs-disagree-with-linux-ci — a fixed set of tests fails on an unmodified Windows checkout and passes on Linux CI, so a local red run cannot tell a regression from the baseline | [open-high-ki-tq-20260927-windows-local-runs-disagree-with-linux-ci.md](testing-quality/open-high-ki-tq-20260927-windows-local-runs-disagree-with-linux-ci.md) |
 | `high` | KI-TQ-20261006-corpus-size-assertions-go-red-on-routine-authoring — six tests assert the size of this repository's own on-disk corpus against a hardcoded integer, so adding a decision record, mockup, mock dataset, changelog entry, flow or ticket turns them red with no defect present, and the failure is attributed to whatever PR is in flight | [open-high-ki-tq-20261006-corpus-size-assertions-go-red-on-routine-authoring.md](testing-quality/open-high-ki-tq-20261006-corpus-size-assertions-go-red-on-routine-authoring.md) |
+| `high` | KI-TQ-20261009-integrity-plugin-prints-clean-while-failing-the-session — the shared-layout integrity plugin prints "clean" and exits 1 when a reader produced the layout after setup, and unittest-style readers have no documented way to request the fixture at setup | [open-high-ki-tq-20261009-integrity-plugin-prints-clean-while-failing-the-session.md](testing-quality/open-high-ki-tq-20261009-integrity-plugin-prints-clean-while-failing-the-session.md) |
 | `low` | KI-TQ-003 — The eval staleness gate asks you to stage a file that is gitignored | [open-low-ki-tq-003.md](testing-quality/open-low-ki-tq-003.md) |
 | `low` | KI-TQ-008 — A repository-global tree-purity guard false-positives under concurrent agents | [open-low-ki-tq-008.md](testing-quality/open-low-ki-tq-008.md) |
 | `low` | KI-TQ-009 — A test-local oracle that duplicated the production bug it was written to detect | [open-low-ki-tq-009.md](testing-quality/open-low-ki-tq-009.md) |
