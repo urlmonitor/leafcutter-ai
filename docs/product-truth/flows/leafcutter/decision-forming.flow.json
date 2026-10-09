@@ -4232,7 +4232,7 @@
       "from": "split-detect",
       "condition": "the subject is a single question and routing finds one capability for it",
       "label": "One question, no split",
-      "human": "Nothing is split: the run goes on as one decision, from the precedent step.\n\nThe checked inputs are today's TaskInput.goal and the intent ChoiceAnswer that binds the root to one capability; the run continues on today's path from the precedent step with no split record (DK-400a-3). Only the bundle judgement that stays below split.bundle_threshold is not built.\n\nContract fields and examples (generated)\nConsumes:\n  task_input/goal: string (required)\n  Runtime contract: [task_input](kernel/contracts/task.py)\n  choice_answer/question_id: string (optional; default \"\")\n  choice_answer/choice: string (required)\n  choice_answer/probabilities: object (required)\n  choice_answer/confidence: null|number (optional; default null)\n  Runtime contract: [choice_answer](kernel/providers/base.py)\nProduces:\n  No checked JSON binding documented in this direction.\n\nPROPOSED - missing JSON binding (consumes): Bundle judgement (Jev noul, template kernel.split.bundled)\nThe one-question-or-several noul is designed in DK-400a-1: it rides the item's existing intent or routing Jev batch and is compared with split.bundle_threshold. It is not built: no question template, answer id or config key exists, so its answer cannot be bound yet. The Decomposition entity's trigger field describes the routing outcomes it is combined with.\nDesign source: [docs/product-truth/mock-data/leafcutter/decisions.mock.json](docs/product-truth/mock-data/leafcutter/decisions.mock.json)\n\nA single bounded question (the question of sample record dec-a41c07e9b35a1d62) — task_input; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"goal\": \"Decide whether to mine the reusable categories from Langfuse as a start\"\n}\n\nIllustrative intent answer that binds the root to the decision capability — choice_answer; illustrative; complete payload:\n{\n  \"question_id\": \"intent.answer_kind\",\n  \"choice\": \"decision\",\n  \"probabilities\": {\n    \"decision\": 0.95,\n    \"evidence\": 0.05\n  },\n  \"confidence\": 0.95\n}",
+      "human": "Nothing is split: the run goes on as one decision, from the precedent step.\n\nThe checked inputs are today's TaskInput.goal and the intent ChoiceAnswer that binds the root to one capability; the run continues on today's path from the precedent step with no split record (DK-400a-3). Built in DK-400a-3 on the DK-400a-1 detection gate: the bundle judgement rides the existing intent or routing Jev batch (no added provider call or host operation) and, below split.bundle_threshold, creates no split record, asks the person nothing about splitting, and leaves report.md without a split section. The item's split_checked flag is set when its bundle question is asked, so a continuation or retry of the same item does not ask it again.\n\nContract fields and examples (generated)\nConsumes:\n  task_input/goal: string (required)\n  Runtime contract: [task_input](kernel/contracts/task.py)\n  choice_answer/question_id: string (optional; default \"\")\n  choice_answer/choice: string (required)\n  choice_answer/probabilities: object (required)\n  choice_answer/confidence: null|number (optional; default null)\n  Runtime contract: [choice_answer](kernel/providers/base.py)\nProduces:\n  No checked JSON binding documented in this direction.\n\nPROPOSED - missing JSON binding (consumes): Bundle judgement (Jev noul, template kernel.split.bundled)\nThe one-question-or-several noul is designed in DK-400a-1: it rides the item's existing intent or routing Jev batch and is compared with split.bundle_threshold. It is not built: no question template, answer id or config key exists, so its answer cannot be bound yet. The Decomposition entity's trigger field describes the routing outcomes it is combined with.\nDesign source: [docs/product-truth/mock-data/leafcutter/decisions.mock.json](docs/product-truth/mock-data/leafcutter/decisions.mock.json)\n\nA single bounded question (the question of sample record dec-a41c07e9b35a1d62) — task_input; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"goal\": \"Decide whether to mine the reusable categories from Langfuse as a start\"\n}\n\nIllustrative intent answer that binds the root to the decision capability — choice_answer; illustrative; complete payload:\n{\n  \"question_id\": \"intent.answer_kind\",\n  \"choice\": \"decision\",\n  \"probabilities\": {\n    \"decision\": 0.95,\n    \"evidence\": 0.05\n  },\n  \"confidence\": 0.95\n}",
       "agent": "kernel routing",
       "consumes": [
         "task_input/goal: string (required)",
@@ -4242,8 +4242,8 @@
         "choice_answer/confidence: null|number (optional; default null)"
       ],
       "outcome_kind": "alternative",
-      "impl_asof": "2026-10-03",
-      "impl_status": "not_started",
+      "impl_asof": "2026-10-09",
+      "impl_status": "in_progress",
       "implements": [
         "DK-400a-3",
         "DK-400a-3-i"
@@ -7075,8 +7075,8 @@
   ],
   "impl_summary": {
     "done": 5,
-    "in_progress": 1,
-    "not_started": 35,
+    "in_progress": 2,
+    "not_started": 34,
     "total": 41,
     "asof": "2026-10-07"
   },
