@@ -29,9 +29,11 @@ BUSINESS CONTEXT: A workflow cannot import Python; it dispatches an agent
     Paths: ``--sink`` defaults to the build-time declaration beside this
     deployed script (config/knowledge_sink.json); with no declaration and no
     ``--sink`` the step reports ``did_not_run`` rather than guess a path
-    relative to wherever the process stands. ``--state`` defaults to
-    harvest_state.json beside the sink -- one bookkeeping file per install,
-    which INF-700a-5-iii requires before its arbitration means anything.
+    relative to wherever the process stands. ``--state`` / ``--marker`` take
+    the harvester's own defaults (``harvest_cli.apply_state_defaults``:
+    harvest_state.json beside the sink, the marker beside that) -- one
+    bookkeeping file per install, shared with ordinary harvester runs, which
+    INF-700a-5-iii requires before its arbitration means anything.
 ARCHITECTURE: Knowledge System component
     (docs/architecture/components/knowledge-system.md). Deployed beside its
     siblings by build_knowledge_scripts (scripts/build_phases_knowledge.py)
@@ -64,12 +66,11 @@ def _load_sibling(module_name: str, filename: str) -> Any:
 _routing = _load_sibling("completion_routing", "completion_routing.py")
 _sink_resolution = _load_sibling("sink_resolution", "sink_resolution.py")
 _harvest_status = _load_sibling("harvest_status", "harvest_status.py")
+_harvest_cli = _load_sibling("harvest_cli", "harvest_cli.py")
 
 logger = logging.getLogger("completion_routing")
 
 RUN_RECORD_NAME = "knowledge_routing_run.json"
-STATE_NAME = "harvest_state.json"
-MARKER_NAME = "harvest_last_run.json"
 _PUBLIC_STAGE_KEYS = ("case", "read", "written", "unwritten", "manifest", "unwritten_records", "detail")
 _RUN_RECORD_KEYS = (
     "case", "read", "unwritten", "entries", "read_hashes", "unwritten_records", "detail",
@@ -93,6 +94,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         cmd.add_argument("--working-dir", type=Path, required=True)
         cmd.add_argument("--sink", type=Path, default=None)
         cmd.add_argument("--state", type=Path, default=None)
+        cmd.add_argument("--marker", type=Path, default=None)
         cmd.add_argument("--base", default=_routing.DEFAULT_BASE_REF)
         if name == "observe":
             cmd.add_argument(
@@ -102,14 +104,17 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
 
 
 def _resolve_sink_and_state(args: argparse.Namespace) -> tuple[Path, Path] | None:
-    """Sink from --sink or the build-time declaration; state beside the sink."""
+    """Sink from --sink or the build-time declaration; --state / --marker
+    filled by the harvester's own ``apply_state_defaults`` (beside the sink),
+    so this step and an ordinary harvester run share one state file."""
     sink = args.sink
     if sink is None:
         declared = _sink_resolution.read_sink_declaration(_sink_resolution.deployed_output_root())
         if declared is None:
             return None
         sink = Path(declared)
-    return sink, (args.state or sink.parent / STATE_NAME)
+    _harvest_cli.apply_state_defaults(args, sink)
+    return sink, args.state
 
 
 def _run_record_path(working_dir: Path) -> Path | None:
@@ -123,7 +128,7 @@ def _stage(args: argparse.Namespace, sink: Path, state: Path) -> dict[str, Any]:
         sink_path=sink, state_path=state, working_dir=working_dir, base_ref=args.base
     )
     if outcome["harvest_completed"]:
-        _harvest_status.write_last_run_marker(state.parent / MARKER_NAME, sink)
+        _harvest_status.write_last_run_marker(args.marker, sink)
     reply = {key: outcome[key] for key in _PUBLIC_STAGE_KEYS}
     reply["manifest"] = sorted({entry["destination"] for entry in outcome["entries"]})
     record_path = _run_record_path(working_dir)
@@ -186,5 +191,6 @@ if __name__ == "__main__":
 # - 2026-10-08 [python-coder/INF-700a-5 wiring]: Created as the production
 #   entry point for completion_routing.py, which had no caller. The run record
 #   lives in the working directory's private git dir so no commit phase can
-#   carry it. --state defaults beside the sink (one per install), never to a
-#   cwd-relative path. (#INF-700a-5, #INF-700a-5-i)
+#   carry it. --state/--marker defaults come from harvest_cli.apply_state_defaults
+#   (#1064: beside the sink, one per install), never a cwd-relative path and
+#   never a second definition of the rule. (#INF-700a-5, #INF-700a-5-i)

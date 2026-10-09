@@ -4,7 +4,7 @@ description: "Lookup for where the knowledge-routing step runs, which completion
 type: reference
 status: active
 created: 2026-10-08
-last_updated: 2026-10-08
+last_updated: 2026-10-09
 components:
   - knowledge_system
   - infrastructure
@@ -18,7 +18,7 @@ related_docs:
 
 # Knowledge Routing Step
 
-Describes what the knowledge-routing step does today: the point at which a completion path runs it, the report it returns, and the status answer that says whether it has run in a tree. The step is dispatched by a workflow as an agent labelled `knowledge-routing-step`. What that agent runs depends on the path: `fast-lane-ship.js` runs the durability CLI `scripts/knowledge/completion_routing_cli.py` (see [Durable routing](#durable-routing-fast-lane-shipjs)); `quick-fix.js` still runs `scripts/knowledge/harvest_learnings.py` (the harvester) directly.
+Describes what the knowledge-routing step does today: the point at which a completion path runs it, the report it returns, and the status answer that says whether it has run in a tree. The step is dispatched by a workflow as two agents, labelled `knowledge-routing-step` and `knowledge-routing-observe`. They run the two subcommands of `scripts/knowledge/completion_routing_cli.py`, which drives `scripts/knowledge/harvest_learnings.py` (the harvester); see [Durable routing](#durable-routing).
 
 This page owns the trigger point and the run report. It does not define which records may be written or how the waiting count is computed; both are defined in [Agent Knowledge System](../architecture/agent_knowledge_system.md) §5 (Write Eligibility and the Waiting Count), which is also the source of the exit-code enumeration used below.
 
@@ -33,7 +33,7 @@ The list is guarded at build time: `check_knowledge_routing_wiring` (`scripts/bu
 | Completion path | Carries the step | Where it runs | Reason, when not carried |
 |---|---|---|---|
 | `fast-lane-ship.js` | Yes | `stage` after the test, coder, review and changelog phases, immediately before the `fastlane-commit` agent; `observe` (label `knowledge-routing-observe`) immediately after it, on the success and the commit-failure path alike. | — |
-| `quick-fix.js` | Yes | After the mutation proof; immediately before the `commit` phase (the fix commit). Runs the harvester directly, which marks records routed when it writes them. | — |
+| `quick-fix.js` | Yes | `stage` after the mutation proof, immediately before the `commit` phase (the fix commit, not the changelog commit); its manifest becomes extra numbered entries in the fix commit's stage list. `observe` immediately after the fix commit, on the success and the blocked path alike. | — |
 | `build-epic.js` | No | — | No commit follows the step; move the step into the building-epics skill (ADR-040 §3). It was removed from the workflow on 2026-10-08. |
 | `build-ticket.js` | No | — | Its commit and pull-request phases are dispatched inside a dynamic loop driven by the ticket's own phase list, so a correct insertion point needs its own design. |
 | `finalize-feature.js` | No | — | Its publish step sits inside a nine-step, confirmation-gated sequence with its own halt semantics; wiring needs its own design. |
@@ -47,68 +47,52 @@ Effect on the reader: work completed through the two carrying paths is routed au
 
 ## Routing outcome
 
-Each carrying path returns the step's result in its terminal payload under the key `knowledge_routing`. The outcome is decided by one enumerated field, `case`, built in a single function (`classifyKnowledgeRouting`) that each of the two workflow files carries a copy of. In `fast-lane-ship.js` the payload is the post-commit observation, settled by `settleKnowledgeRouting` (see [Durable routing](#durable-routing-fast-lane-shipjs)).
+Each carrying path returns the step's result in its terminal payload under the key `knowledge_routing`. The outcome is decided by one enumerated field, `case`, built in a single function (`classifyKnowledgeRouting`) that each of the two workflow files carries a copy of. The payload is the post-commit observation, settled by `settleKnowledgeRouting` (see [Durable routing](#durable-routing)). It also appears on the payload of a run that halts at or after the commit.
 
 | `case` value | Meaning |
 |---|---|
-| `completed` | The harvester ran to completion. |
-| `could_not_complete` | The harvester ran and could not finish: the sink could not be read, the state file was corrupt, or a destination write failed. |
-| `did_not_run` | The harvester was not run or its reply was not usable: the command could not be run, the reply was missing or unparseable, or `case` was not one of the two values above. |
+| `completed` | The step ran to completion. |
+| `could_not_complete` | The step ran and could not finish: the sink could not be read, the state file was corrupt, a destination write failed, or the commit's contents could not be observed. |
+| `did_not_run` | The step was not run or its reply was not usable: no sink declaration and no `--sink`, the command could not be run, the reply was missing or unparseable, or `case` was not one of the two values above. |
 
 Rules enforced by `classifyKnowledgeRouting`:
 
 - Only a reply whose `case` is exactly `completed` or `could_not_complete` is trusted. Anything else is reported as `did_not_run`.
 - `did_not_run` is a distinct `case` value. It is never reported as `completed` with zero figures; its `read`, `written` and `unwritten` are `0` and its `detail` is `null`, and the `case` field is what separates it from a completed run that handled nothing.
-- None of the three values changes the unit of work's own outcome or exit status. The workflow files contain no halt, retry or branch on `knowledge_routing`; its uses are merging it into the returned payload and, in `fast-lane-ship.js`, naming the staged paths in the commit prompt.
+- None of the three values changes the unit of work's own outcome or exit status. The workflow files contain no halt, retry or branch on `knowledge_routing`; its uses are merging it into the returned payload and naming the staged paths in the commit prompt.
 
 ### Report fields
 
 | Field | Type | Meaning |
 |---|---|---|
 | `case` | enum | One of the three values above. The only required field. |
-| `read` | integer | Records read, as reported by the dispatching agent from the harvester's summary. `0` when not a number or when `case` is `did_not_run`. |
-| `written` | integer | Records written to a knowledge surface in that run, as reported by the agent. Same coercion. |
-| `unwritten` | integer | Records left unwritten in that run, as reported by the agent. Same coercion. This is the agent's report of one run, not the waiting count; for the waiting count's definition see the §5 reference above. |
+| `read` | integer | Text-bearing sink records the stage read. `0` when not a number or when `case` is `did_not_run`. |
+| `written` | integer | Learnings the path's own commit was observed to carry. Same coercion. |
+| `unwritten` | integer | Learnings not carried: left out, not committed, or not routable by the harvester. Same coercion. This is one run's report, not the waiting count; for that see the §5 reference above. |
 | `detail` | string or null | What could not be done. A string only when `case` is `could_not_complete`; `null` otherwise. |
+| `manifest` | list of strings | The paths the commit was observed to carry, relative to the worktree. In the stage's reply, the paths the commit must stage by name. Paths that are not plain relative paths inside the worktree are dropped. |
+| `unwritten_records` | list of objects | One entry per learning that did not reach the commit: `destination`, `text`, `reason` and `eligible` (see below). |
+| `waiting` | object or null | `present` and `read` sink records, their `difference`, the `records` emitted after the stage read the sink, and a `note` saying they wait for the next completed unit of work. |
 
-| `manifest` | list of strings | `fast-lane-ship.js` only. From the stage: the paths, relative to the worktree, that the commit phase must stage by name. In the final report: the paths the commit was observed to carry. Paths that are not plain relative paths are dropped. |
-| `unwritten_records` | list of objects | `fast-lane-ship.js` only. One entry per write that did not reach the commit: `destination`, `text`, `reason` and `eligible` (see below). |
-| `waiting` | object or null | `fast-lane-ship.js` only. `present` and `read` sink records, their `difference`, the `records` emitted after the stage read the sink, and a `note` saying they wait for the next completed unit of work. |
-
-The figures are produced by the dispatched agent relaying the command's output; the workflow code validates `case` and coerces the numbers, and does not recompute them.
-
-### What each status means to the caller
-
-On `quick-fix.js` the dispatch prompt maps the harvester's exit status to `case`. The numbers are those enumerated in §5. On `fast-lane-ship.js` the CLI prints `case` itself and always exits `0`.
-
-| Harvester exit | `case` | Meaning to the completion path |
-|---|---|---|
-| `0` | `completed` | No work remained to route. This includes a sink that has never been written to, which is the state of every fresh clone: an absent sink is treated as an empty one, logs at INFO, creates nothing, and exits `0`. |
-| `3` | `completed` | The run finished; unroutable records remain on the sink. Not a routing failure. |
-| `1` | `could_not_complete` | Sink unreadable, or the build-time sink declaration is stale. |
-| `2` | `could_not_complete` | State file corrupt. |
-| `4` | `could_not_complete` | A destination write or state persist failed. Outranks `3`. |
-| command not run | `did_not_run` | No exit status was obtained. |
-
-The completion path reports `could_not_complete` and `did_not_run` in `knowledge_routing` and carries on; neither fails the work.
+The figures are produced by the CLI and relayed verbatim by the dispatched agent; the workflow code validates `case` and coerces the numbers, and does not recompute them. The CLI always exits `0`. A harvester exit `1` or `2` (sink unreadable, state corrupt; see §5) is reported as `could_not_complete`, and so is a destination write failure. An absent sink is the no-work state: `completed` with zero figures. The completion path reports `could_not_complete` and `did_not_run` in `knowledge_routing` and carries on; neither fails the work.
 
 ---
 
-## Durable routing (`fast-lane-ship.js`)
+## Durable routing
 
-A learning counts as written only once the unit of work's own commit carries it (INF-700a-5, [ADR-040](../architecture/adrs/ADR-040-knowledge-write-publication-rides-completion-commit.md)). `fast-lane-ship.js` splits the step across that commit with two subcommands of `completion_routing_cli.py`. Each prints one JSON line and exits `0`.
+A learning counts as written only once the unit of work's own commit carries it (INF-700a-5, [ADR-040](../architecture/adrs/ADR-040-knowledge-write-publication-rides-completion-commit.md)). Both carrying paths split the step across that commit with two subcommands of `completion_routing_cli.py`. Each prints one JSON line and exits `0`.
 
 | Subcommand | When | What it does |
 |---|---|---|
-| `stage --working-dir <worktree>` | Before `fastlane-commit` | Claims, in the state file, every record whose text is already on `origin/main` (fetched first). Then runs the harvester with its writes redirected into the worktree and its state write held back (`harvest(persist_state=False)`). Records the run in the worktree's private git dir, where no commit can carry it, and updates the last-run marker. |
-| `observe --working-dir <worktree> --commit-status ok\|failed` | After `fastlane-commit`, on both paths | Read-only. Asks git whether `HEAD` holds each staged text, and recounts the sink. Its reply is the terminal `knowledge_routing`. |
+| `stage --working-dir <worktree>` | Before the path's own commit | Claims, in the state file, every record whose text is already on `origin/main` (fetched first). Then runs the harvester with its writes redirected into the worktree and its state write held back (`harvest(persist_state=False)`). Records the run in the worktree's private git dir, where no commit can carry it, and updates the last-run marker. |
+| `observe --working-dir <worktree> --commit-status ok\|failed` | After that commit, on both outcomes | Read-only. Asks git whether `HEAD` holds each staged text, and recounts the sink. Its reply is the terminal `knowledge_routing`. |
 
 Rules:
 
 - No record is marked routed when it is written or committed. The mark is written by a later `stage`, once the text is on `origin/main`. A record staged on a branch that never merges stays eligible and is staged again by the next run.
 - Two runs that stage the same record before either merges both carry it. The designed failure is a duplicate in the merged tree, never a learning lost while marked routed.
 - If the observation cannot be obtained, `settleKnowledgeRouting` counts nothing as written: every staged write is reported unwritten and `case` is `could_not_complete`.
-- `--sink` defaults to the build-time declaration. With no declaration and no `--sink`, the reply is `did_not_run`. The state file is `harvest_state.json` beside the sink.
+- `--sink` defaults to the build-time declaration. With no declaration and no `--sink`, the reply is `did_not_run`. `--state` and `--marker` take the harvester's own defaults (`harvest_cli.apply_state_defaults`: `harvest_state.json` beside the sink), so the step and a manual harvester run share one state file.
 
 `unwritten_records[].reason` values:
 
@@ -176,7 +160,7 @@ The harvester can be run by hand from the repository root: `python3 scripts/know
 
 A captured learning reaches its surface without a manual run only when the work is completed through one of the two carrying paths above and the records are on the declared sink at that time. This page makes no claim about the capture half (emission); see [ADR-034](../architecture/adrs/ADR-034-knowledge-write-ownership.md) and the capture-step reference in [Agent Knowledge System](../architecture/agent_knowledge_system.md).
 
-The sink the harvester reads when `--sink` is not given is the build-time declaration; `harvest_learnings.py --print-sink` prints it. The routing step runs the harvester without `--sink`.
+The sink the harvester reads when `--sink` is not given is the build-time declaration; `harvest_learnings.py --print-sink` prints it. The routing step runs `completion_routing_cli.py` without `--sink`, so it reads the same declared sink, and without `--state`, so it shares the harvester's state file beside that sink.
 
 ---
 

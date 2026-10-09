@@ -16,6 +16,14 @@ same dead shape. Instead, every test here drives the whole workflow under the
 E2 engine harness with a stubbed routing reply and asserts on the PROMPT the
 commit dispatch actually received: the routing reply has to flow through the
 workflow's control flow into the commit agent's stage list.
+
+2026-10-09 (INF-700a-5 wiring): the routing reply's path list is now the
+completion_routing CLI's `manifest` -- the paths the stage step actually wrote
+-- instead of `written_paths` derived from a git-status before/after diff,
+which missed a destination that was already dirty before the step ran. Only
+the reply key these tests feed changed; every assertion about which paths
+reach the stage list, which are dropped, and the unchanged-prompt baseline is
+as before.
 """
 from __future__ import annotations
 
@@ -76,7 +84,7 @@ class TestRoutedWritesReachTheCommitStageList(_Base):
         # angle: criterion
         prompt = self._commit_prompt({
             "case": "completed", "read": 2, "written": 2, "unwritten": 0,
-            "written_paths": ["docs/memory/learned.md", "docs/how-to/routing.md"],
+            "manifest": ["docs/memory/learned.md", "docs/how-to/routing.md"],
         })
         stage_list = self._stage_list(prompt)
         self.assertRegex(stage_list, r"\n\s*5\. docs/memory/learned\.md\b")
@@ -92,7 +100,7 @@ class TestRoutedWritesReachTheCommitStageList(_Base):
         prompt = self._commit_prompt({
             "case": "could_not_complete", "read": 2, "written": 1, "unwritten": 1,
             "detail": "one destination was not writable",
-            "written_paths": ["docs/memory/partial.md"],
+            "manifest": ["docs/memory/partial.md"],
         })
         self.assertRegex(self._stage_list(prompt),r"\n\s*5\. docs/memory/partial\.md\b")
 
@@ -101,7 +109,7 @@ class TestRoutedWritesReachTheCommitStageList(_Base):
         # angle: boundary
         prompt = self._commit_prompt({
             "case": "completed", "read": 6, "written": 6, "unwritten": 0,
-            "written_paths": [
+            "manifest": [
                 "/home/someone/.claude/memory/outside.md",  # absolute: not in this tree
                 "C:\\Users\\someone\\memory\\drive.md",       # Windows drive letter
                 "\\\\server\\share\\unc.md",                  # UNC
@@ -134,16 +142,16 @@ class TestNothingWrittenLeavesTheCommitUnchanged(_Base):
         variants = {
             "completed, empty list": {
                 "case": "completed", "read": 0, "written": 0, "unwritten": 0,
-                "written_paths": [],
+                "manifest": [],
             },
             "completed, field absent": {
                 "case": "completed", "read": 0, "written": 0, "unwritten": 0,
             },
             "did_not_run, paths claimed anyway": {
-                "case": "did_not_run", "written_paths": ["docs/memory/ghost.md"],
+                "case": "did_not_run", "manifest": ["docs/memory/ghost.md"],
             },
             "unrecognised case": {
-                "case": "maybe", "written_paths": ["docs/memory/ghost.md"],
+                "case": "maybe", "manifest": ["docs/memory/ghost.md"],
             },
         }
         for name, reply in variants.items():
@@ -159,7 +167,7 @@ class TestNothingWrittenLeavesTheCommitUnchanged(_Base):
         opts = self._call(result, _ROUTING).opts or {}
         props = (opts.get("schema") or {}).get("properties") or {}
         self.assertEqual(
-            props.get("written_paths"), {"type": "array", "items": {"type": "string"}}
+            props.get("manifest"), {"type": "array", "items": {"type": "string"}}
         )
 
 
