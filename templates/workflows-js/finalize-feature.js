@@ -253,9 +253,7 @@ function parseAgentJson(raw, ctx) {
     const code = raw.charCodeAt(i);
     if (code !== 123 && code !== 91) { continue; }
     const closeCode = closeFor[code];
-    let depth = 0;
-    let inString = false;
-    let j = i;
+    let depth = 0, inString = false, j = i;
     while (j < raw.length) {
       const ch = raw.charCodeAt(j);
       if (inString) {
@@ -270,16 +268,13 @@ function parseAgentJson(raw, ctx) {
         else if (ch === closeCode) {
           depth--;
           if (depth === 0) {
-            try {
-              return JSON.parse(raw.slice(i, j + 1));
-            } catch (_) {
-              break;
-            }
+            try { return JSON.parse(raw.slice(i, j + 1)); } catch (_) { i = j; break; }
           }
         }
       }
       j++;
     }
+    if (depth > 0) { break; }
   }
   throw new Error(
     "[" + stage + "] " + agent +
