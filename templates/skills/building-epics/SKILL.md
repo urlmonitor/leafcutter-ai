@@ -516,6 +516,8 @@ and halt the ticket run. Do NOT spawn any phase agent if the status transition f
     # If block is present with empty tests but a code producer exists, dispatch normally.
 
 2.  SPAWN next_agent with input { ticket_path: <absolute path> }.
+    IF next_agent == "commit": spawn it through §5.9 (lock, routing stage,
+    commit staging the manifest by name, one observe, release).
     The agent invokes the `signoff` skill as its final action;
     on return, the ticket file has a new `## Comments` heading
     and updated `agents:` + `## Sign-offs` rows.
@@ -638,6 +640,10 @@ The priority column is the authoritative ordering for dispatch ties. Lower numbe
 | 11.9 | `documentation-verifier` | Documentation coverage gate; runs after documentation-expert (10) and before commit (12) |
 | 12 | `commit` | Atomic commit phase |
 | 13 | `pull-request` | Pushes branch and opens PR |
+
+Knowledge routing is not a phase and has no row: it is not an agent, so a row or a
+`phaseOrder` entry would route nothing (ADR-040 §3). The supervisor runs it around the
+`commit` phase (priority 12) as part of that spawn. See §5.9.
 
 **Flow-change pair ordering note:** For tickets generated from (change_target,
 risk_surface) pairs listed in `config/guardrail_gates.yaml` `flow_change_gates:`
@@ -1076,6 +1082,34 @@ other quality gate in one command. Commits that bypass hooks may contain:
 
 **The `commit` agent enforces this policy** — it refuses `--no-verify` absent explicit
 user authorization in the current conversation (relayed approval does not count).
+
+### §5.9 Knowledge routing around the commit phase (ADR-040 §3, INF-700a-1-iv)
+
+Learnings that phase agents emitted reach their surfaces only if **this ticket's own
+commit** carries them (INF-700a-5). The supervisor therefore runs the routing step around
+every `commit` spawn, inside the commit lock. Sibling tickets share the worktree, and the
+CLI keeps one run record per worktree, so the three calls must not interleave across
+tickets. Each call below is one Bash command. It prints one JSON line and always exits 0.
+
+1. Acquire the commit lock (§5.2).
+2. Run this and keep its JSON reply (if the command cannot run, use `{"case": "did_not_run", "manifest": []}`):
+   `python3 {{config.output_root}}/scripts/knowledge/completion_routing_cli.py stage --working-dir <worktree_root>`
+3. Spawn the `commit` agent with `{ticket_path}`. In its stage list (the ticket-supervisor
+   staging SOP), add every path in the stage reply's `manifest` **by name**, as a relative
+   path under the worktree. A path that is absolute or contains `..` is dropped. Never add
+   a sweep (`git add -A` / `git add .`).
+4. When the commit agent returns, run this exactly once, on success and failure alike
+   (`ok` only when the commit landed, otherwise `failed`):
+   `python3 {{config.output_root}}/scripts/knowledge/completion_routing_cli.py observe --working-dir <worktree_root> --commit-status ok|failed`
+   Its JSON reply, unchanged, is this ticket's
+   `knowledge_routing`. If it cannot run, return `{"case": "did_not_run"}` instead. Never
+   copy figures from the stage reply.
+5. Release the lock (§5.3), then add `knowledge_routing` to the ticket's result payload.
+
+Fail-open: never block, fail, or retry the ticket because of these calls, and never let them change its status.
+A ticket with no `commit` phase does not route, and its records wait for the next carrying
+commit. Records whose text an earlier ticket's commit already carries are not written
+again; the stage reports them as `already_on_branch`.
 
 ---
 
