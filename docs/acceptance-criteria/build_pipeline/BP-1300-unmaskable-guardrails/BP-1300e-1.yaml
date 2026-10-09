@@ -1,0 +1,316 @@
+id: BP-1300e-1
+components:
+  - precommit_hooks
+  - commit_guardian
+title: "A commit carrying a violation either step of CI's required lint check would reject is refused, naming the file, line and rule"
+component: build-pipeline
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Background:
+    Given this repository's required CI lint check runs two steps:
+      step 1 — the repository lint configuration over the trees scripts/, tests/,
+        unit_tests/ and kernel/,
+      step 2 — the error-handling rule set E722, BLE001 and TRY over kernel/ only,
+    And the commit is an ordinary commit — no extra command, flag or manual step.
+
+  Scenario: A step-1 violation outside the error-handling set is refused
+    Given a staged change to a file under unit_tests/ that introduces a variable
+      named `l` (rule E741, ambiguous variable name) at line 12,
+    When the commit is attempted,
+    Then the commit is refused,
+    And the refusal names that file's path, line 12 and rule E741,
+    Because this is the exact escape observed on PR #1058, where every
+      commit-time check accepted two E741 sites and the required CI check rejected
+      them after push.
+
+  Scenario: A step-2 violation in kernel/ is refused
+    Given a staged change to a file under kernel/ that introduces an
+      `except Exception:` handler (rule BLE001) at line 30,
+    When the commit is attempted,
+    Then the commit is refused,
+    And the refusal names that file's path, line 30 and rule BLE001.
+
+  Scenario: The kernel-only rule set is not applied outside kernel/
+    Given a staged change to a file under scripts/ that introduces the same
+      `except Exception:` handler (rule BLE001),
+    And the file has no violation under the repository lint configuration,
+    When the commit is attempted,
+    Then the commit completes,
+    Because CI's second step covers kernel/ only, and refusing here would be a
+      commit-time verdict CI does not share — the reverse half of the parity this
+      L1 promises.
+
+  Scenario: Both steps' findings are reported together
+    Given one staged commit that carries the E741 change under unit_tests/ AND the
+      BLE001 change under kernel/,
+    When the commit is attempted,
+    Then the commit is refused,
+    And the refusal names both findings, each with its path, line and rule,
+    So that fixing one does not reveal the other only on the next attempt.
+
+  Scenario: A clean change commits
+    Given a staged change to files under scripts/ and kernel/ that carries no
+      violation under either step,
+    When the commit is attempted,
+    Then the commit completes and the lint check reports that it inspected the
+      staged files and found nothing to object to.
+depends_on:
+  - BP-1300e
+doc_links:
+  - path: docs/acceptance-criteria/build_pipeline/BP-1300-unmaskable-guardrails/BP-1300e.yaml
+    relationship: parent
+    status: exists
+  - path: docs/known-issues/commit-guardian/open-high-ki-cg-20261009-required-ci-ruff-has-no-local-pre-commit-counterpart.md
+    relationship: context
+    status: exists
+    relevance: "The defect, the PR #1058 instance, and the verified history showing no commit-time lint hook has ever existed."
+  - path: .github/workflows/ci.yml
+    relationship: related
+    status: exists
+    relevance: "Job lint / 'Lint (ruff)': the two steps this record mirrors (repo config over four trees; E722,BLE001,TRY over kernel only)."
+  - path: ruff.toml
+    relationship: related
+    status: exists
+  - path: docs/acceptance-criteria/build-orchestration/BO-500-computed-quality-gates/BO-570.yaml
+    relationship: related
+    status: exists
+    relevance: "COMPLEMENTARY, NOT DUPLICATE. BO-570 is the agent sign-off gate inside the build; this record is the contributor's commit. Neither covers the other's trigger."
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: describes
+    status: exists
+    relevance: "Component home of the new gate script and its hooks_manifest entry; also where the fail-open-on-internal-error convention this check deliberately departs from (BP-1300e-1-iii) is described."
+  - path: docs/architecture/adrs/ADR-001-self-hosting-boundary.md
+    relationship: describes
+    status: exists
+    relevance: "templates/scripts/commit_guardian/ is canonical; scripts/commit_guardian/ and .leafcutter/scripts/commit_guardian/ are build outputs. A template-only fix is a no-op in the layout the hook runs from."
+  - path: docs/architecture/adrs/ADR-038-commit-guardian-shared-change-set-derivation.md
+    relationship: describes
+    status: exists
+    relevance: "Governs the change_set_source value the new hooks_manifest entry must declare truthfully."
+  - path: docs/architecture/adrs/ADR-014-exception-guard-enforcement-scope.md
+    relationship: describes
+    status: exists
+    relevance: "Scope of the existing exception guards (edit-time hook, AST check) that this lint gate sits beside and must not be confused with."
+  - path: unit_tests/commit_guardian/_ge_127a_1_ordinary_commit_fixture.py
+    relationship: related
+    status: exists
+    relevance: "Precedent for the shared fixture this record's tests need: a real temp repo, a .pre-commit-config.yaml carrying ONE hook, real `pre-commit install`, real `git commit`."
+  - path: docs/reference/commit-time-lint-gate.md
+    relationship: describes
+    status: planned
+    relevance: "Reference doc produced by BP-1300e-4."
+assigned_agent: python-coder
+estimated_complexity: L
+package_surface: true
+it_requirements:
+  config_schema_fragment:
+    _declares: >-
+      ONE NEW MEMBER appended to the EXISTING hooks_manifest.hooks array of
+      templates/scripts/commit_guardian/commit_guardian.json -- the commit-time
+      counterpart of CI's required 'Lint (ruff)' job. It is NOT a new top-level
+      key, and the lint scope and second-step rule set are deliberately NOT stored
+      in this file: commit_guardian.json is package-managed and rewritten by
+      build.py in every adopter install, so an adopter's scope written here would
+      be lost on their next build. The scope lives in the project-owned
+      declaration leafcutter-lint.json (BP-1300e-1-i). Every property below is
+      already carried by an existing member, verified 2026-10-09: always_run
+      (check-build-drift), verbose (check-identifier-uniqueness),
+      negative_control (check-negative-control-liveness); id/tier/name/entry/
+      language/stages/pass_filenames/change_set_source on every member.
+    type: object
+    required:
+      - id
+      - tier
+      - name
+      - entry
+      - language
+      - stages
+      - pass_filenames
+      - change_set_source
+      - always_run
+      - verbose
+    properties:
+      id:
+        const: check-lint-gate
+      tier:
+        const: judgment
+      name:
+        type: string
+        minLength: 1
+        description: "Must say it mirrors CI's required 'Lint (ruff)' check, e.g. \"Check Lint Gate (mirrors CI 'Lint (ruff)')\"."
+      entry:
+        type: string
+        pattern: "run_hook\\.py .*check_lint_gate\\.py"
+        description: "python {{config.output_root}}/scripts/commit_guardian/run_hook.py {{config.output_root}}/scripts/commit_guardian/check_lint_gate.py -- staged mode is the default; no mode flag needed."
+      language:
+        const: system
+      stages:
+        const:
+          - pre-commit
+      pass_filenames:
+        const: false
+      change_set_source:
+        const: handed_by_commit_path
+      always_run:
+        const: true
+      verbose:
+        const: true
+      negative_control:
+        type: object
+        description: "GE-120f shape (config/verification_flow.schema.json $defs/negative_control), falsifiable form: input = a staged file under a declared tree carrying E741; expected_result = non-zero exit naming the path, line and E741; currently.state = unverified until the liveness runner has executed it. not_applicable is forbidden -- this check can refuse."
+    not:
+      anyOf:
+        - required:
+            - files
+        - required:
+            - types
+        - required:
+            - types_or
+        - required:
+            - exclude
+  reference_file_path: templates/scripts/commit_guardian/commit_guardian.json
+  n_location_rule: >-
+    1 -- exactly one member appended to hooks_manifest.hooks, positioned AFTER
+    every tier: transform entry so it judges content after any transform hook has
+    re-staged. No top-level key is added, renamed or removed by this AC
+    (exception_handling is BP-1300e-2's).
+  required_skills:
+    - python-coder
+  post_write_commands:
+    - "python scripts/build.py --target-dir <a fresh temporary directory>  (never the workspace parent: KI-BP-016 overwrites docs/INDEX.md)"
+    - "python -m pytest unit_tests/commit_guardian/test_bp_1300e_1.py -q"
+    - "python -m pytest unit_tests/commit_guardian/test_hook_registration_inventory.py -q"
+  constraints:
+    - "CANONICAL SOURCES (ADR-001). The gate is a NEW script templates/scripts/commit_guardian/check_lint_gate.py. Its two helpers live beside it: _lint_scope.py (declaration reader, owned by BP-1300e-1-i) and _ruff_locator.py (ruff discovery, owned by BP-1300e-1-iii). build_commit_guardian() deploys that directory with rglob, so no deploy_map edit is needed IF AND ONLY IF all three stay in templates/scripts/commit_guardian/. Do not place any of them under scripts/ (repo-only, never deployed) or templates/scripts/ac_store/ (hard-coded deploy_map). Underscore-prefix the helpers, matching _resolve_root.py, so the disk-to-registry census (test_hook_registration_inventory.py / BP-1600a-2) does not count them as unregistered gates."
+    - "NO TREE NAME AND NO RULE CODE IN THE SCRIPT. The hook iterates the steps declared in leafcutter-lint.json and nothing else. A literal 'kernel', 'scripts', 'E722', 'BLE001' or 'TRY' anywhere in check_lint_gate.py is a defect: it is how the negative arm (BLE001 under scripts/ commits) gets passed by accident and how the declaration silently stops being the only definition. A step with no 'select' uses the project's own ruff configuration selection; a step with 'select' passes it as ruff --select, which REPLACES the selection while the configuration's exclude, ignore and per-file-ignores still apply -- exactly the semantics of CI's second step today."
+    - "RUFF ARGV IS BUILT IN ONE PLACE AND ALWAYS CARRIES --force-exclude. Never --isolated, never a hook-synthesised --config, never --fix or --unsafe-fixes, never --exit-zero. Output format concise (path:line:col: CODE message) parsed into structured findings; an unparseable ruff output line is could_not_check, not ignored."
+    - "ALL FINDINGS BEFORE ONE VERDICT. Run every declared step over every in-scope staged file, then decide. Each finding carries repo-relative POSIX path, line, column, rule code, message and the declared step name. A finding produced by more than one step for the same (path, line, code) -- E722 under kernel/ is selected by both steps -- is reported ONCE. A refusal that lists only the first step's findings fails the 'reported together' arm."
+    - "VISIBLE OUTCOME ON EVERY PATH. Use templates/scripts/commit_guardian/check_outcome.py's vocabulary (GE-120a-1): RESULT: ok after a clean run, preceded by a line naming how many staged files were inspected and which; RESULT: nothing_to_inspect and RESULT: could_not_check per BP-1300e-1-iii. A refusal needs a value too: add OUTCOME_REFUSED = 'refused' to check_outcome.py itself, with a DECISION HISTORY entry, exactly as GE-120e-1-i and UXP-700c-3-ii added theirs. Never declare an outcome constant locally in check_lint_gate.py. verbose: true on the entry is required, because pre-commit hides a passing hook's output and the clean arm requires the inspected-files line to be seen."
+    - "NO files / types / types_or / exclude ON THE ENTRY. Ruff's own include/exclude decides which files are lint subjects. A pre-commit types filter would be a second, private membership list: a file ruff's include admits but `identify` does not type as python would be skipped at commit time and linted by CI, which is the reverse half of the disagreement this L1 forbids. check_hook_trigger_reachability.py also reports always_run combined with a files filter as a self-contradiction and fails the run."
+    - "PRINT THE RUFF VERSION USED. CI pins ruff==0.15.15 via requirements-dev.txt; a local ruff of another version can give a different verdict on the same content. This AC does not enforce the pin (no criterion asks for it -- recorded as a caveat), but the version must appear in the hook's output so a disagreement is diagnosable from the commit log alone."
+    - "PACKAGE SURFACE. The commit that adds the entry must cite BP-1300e-1, which carries package_surface: true, or check-package-surface-declaration refuses it (_package_surface_registry.WATCHED_REGISTRIES watches hooks_manifest.hooks by id). Reduce nothing and add nothing in test_hook_registration_inventory.py's UNREGISTERED_BASELINE unless its staleness assertion demands it."
+    - "THE EDIT-TIME HOOK IS NOT TOUCHED HERE. templates/hooks/check_exception_handling_hook.py's message and behaviour are BP-1300e-2's. This AC registers the commit-time check that BP-1300e-2's corrected text will point at."
+    - "ERROR-HANDLING POLICY (CLAUDE.md Rules 1-4): every git and ruff subprocess call is wrapped in a specific except (OSError, subprocess.SubprocessError), logged at WARNING, and converted to could_not_check per BP-1300e-1-iii. No bare except; no try/except around the pure argv-building and output-parsing functions."
+    - "VERIFY BEHAVIOURALLY THROUGH A REAL COMMIT. Every test drives an ordinary `git commit` in a temporary repository whose .pre-commit-config.yaml carries check-lint-gate ALONE and whose entry points at the DEPLOYED scripts of the shared reference layout. A test that reads hooks_manifest as text proves nothing (CLAUDE.md 'Gate / Workflow ACs -- Verify Behaviorally, Not by Grep')."
+test_spec:
+  - name: test_bp_1300e_1_e741_under_unit_tests_is_refused_naming_path_line_and_rule
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: "Staged unit_tests/x.py introducing `l = 1` at line 12; ordinary git commit is refused and the output names unit_tests/x.py, 12 and E741."
+  - name: test_bp_1300e_1_ble001_under_kernel_is_refused_naming_path_line_and_rule
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: "Staged kernel/y.py with `except Exception:` at line 30 is refused, naming kernel/y.py, 30 and BLE001."
+  - name: test_bp_1300e_1_ble001_under_scripts_commits_because_step_two_is_kernel_only
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: integration
+    angle: discrimination
+    must_catch:
+      - "applies the second step's rule set to every declared tree"
+      - "merges both steps into one ruff invocation with the union selection over all trees"
+    description: "The same `except Exception:` staged under scripts/ (no other violation) commits; the commit exists afterwards in git log."
+  - name: test_bp_1300e_1_both_steps_findings_reported_in_one_refusal
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: integration
+    angle: criterion
+    must_catch:
+      - "returns after the first step that finds anything"
+    description: "One commit staging the E741 file under unit_tests/ and the BLE001 file under kernel/ is refused once, and the output names both findings with path, line and rule."
+  - name: test_bp_1300e_1_clean_change_commits_and_names_the_files_inspected
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: "Clean staged files under scripts/ and kernel/ commit; the hook's visible output says it inspected exactly those files, emits RESULT: ok, and the pre-commit line for the hook reads Passed."
+  - name: test_bp_1300e_1_ordinary_commit_reaches_the_deployed_gate
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: integration
+    angle: reachability
+    surface_invoked: "git commit -> pre-commit (installed via `pre-commit install`) -> <shared layout>/.leafcutter/scripts/commit_guardian/run_hook.py check_lint_gate.py"
+    description: "With the hook installed by `pre-commit install` and no other command, a commit carrying E741 is refused and the refusal text originates from check_lint_gate.py in the shared deployed layout (not the template source)."
+test_rationale: >-
+  Every arm is about a real commit being refused or completing, so every test
+  drives an ordinary `git commit` through a real `pre-commit install` in a
+  temporary repository. Build that once as a shared fixture module,
+  unit_tests/commit_guardian/_bp_1300e_lint_gate_fixture.py, modelled on
+  _ge_127a_1_ordinary_commit_fixture.py: .pre-commit-config.yaml carries
+  check-lint-gate ALONE (so no unrelated hook can fail the commit), the fixture
+  copies this repository's real ruff.toml and real leafcutter-lint.json (real
+  artifact, not a hand-typed lookalike), and the hook entry points at the
+  DEPLOYED scripts of the session's shared reference layout. Tests that do this
+  read the deployed layout and must declare it: @pytest.mark.shared_layout_reader
+  together with @pytest.mark.usefixtures("shared_reference_layout") on any
+  unittest.TestCase class (without the usefixtures line the integrity plugin
+  fails the session while printing 'clean', KI-TQ-20261009). No test here spawns
+  its own build.py. The scripts/ arm is the one a cheap implementation fails
+  silently in the safe-looking direction, so it carries must_catch entries and is
+  asserted on the commit actually existing, not on exit code alone.
+delivers_to:
+  - agent: python-coder
+    contract: >-
+      To BP-1300e-2: a registered, running commit-time check with hooks_manifest
+      id check-lint-gate, whose applied rule set is exactly what
+      leafcutter-lint.json plus the project's ruff configuration select. The
+      corrected texts name this id and point at the declaration; they enumerate
+      no rule codes of their own except where BP-1300e-2-i requires it.
+  - agent: how-to-author
+    contract: >-
+      To BP-1300e-3: the refusal format -- one line per finding
+      '<repo-relative path>:<line>:<col>: <CODE> <message> [step: <step name>]',
+      an optional 'predates this change' suffix (BP-1300e-1-ii), a final
+      'RESULT: refused|ok|nothing_to_inspect|could_not_check' line, and the
+      ruff version used.
+expects_from:
+  ac_id: BP-1300e-1-i
+  contract: >-
+    _lint_scope.load(subject_root, source='index'|'worktree') returning the
+    ordered declared steps [{name: str, paths: [str], select: [str] | None}] or
+    raising a typed declaration-unreadable error naming the file and the offending
+    key; and the single ruff-argv builder shared by the staged, full and files
+    modes of check_lint_gate.py.
+origin_agent: BrainCandy
+created: 2026-10-09
+amended_by: []
+superseded_by: null
+covered_by:
+  - BP-1300e-1-i
+  - BP-1300e-1-ii
+  - BP-1300e-1-iii
+  - BP-1300e-1-iv
+implemented_by: []
+change_target:
+  - code
+  - config
+risk_surface: contract_boundary
+notes: |
+  THE NEGATIVE ARM (kernel-only rule set, scripts/ not refused) IS MANDATORY.
+  Every positive arm is satisfied by an implementation that applies the
+  error-handling set everywhere, which would refuse work CI accepts. That is a
+  parity failure in the other direction, and BP-1300's L0 names both directions
+  as worse than no check.
+
+  The rule codes, trees and line numbers in the scenarios are concrete example
+  inputs. The tree list and rule sets themselves must NOT be fixed by this
+  record — they come from the single definition required by BP-1300e-1-i.
+
+  VERIFY BEHAVIOURALLY. Every arm is about a real commit being refused or
+  completing. A test that reads the hook registry as text is green on a hook
+  that never runs (CLAUDE.md "Gate / Workflow ACs — Verify Behaviorally, Not by
+  Grep"; false-green mechanism M1).
+
+  Behaviour only. assigned_agent, it_requirements, test_spec and
+  package_surface are the IT PO's. Note for enrichment: adding a hooks_manifest
+  entry trips check-package-surface-declaration (see GE-120h-3's notes).

@@ -166,12 +166,12 @@ def test_every_measured_example_matches_the_shipped_checker() -> None:
     mismatches = []
     for (lang, body), actual in zip(examples, _scores(examples)):
         claimed = _claimed(lang, body)
-        if lang == "sql" and claimed != actual:
-            mismatches.append(f"sql {body.splitlines()[1]!r}: claimed {claimed}, checker {actual}")
-        if lang == "python":
+        if isinstance(claimed, dict):
             for name, score in claimed.items():
                 if actual.get(name) != score:
                     mismatches.append(f"python {name}: claimed {score}, checker {actual.get(name)}")
+        elif claimed != actual:
+            mismatches.append(f"sql {body.splitlines()[1]!r}: claimed {claimed}, checker {actual}")
     assert not mismatches, "labelled scores disagree with the checker:\n" + "\n".join(mismatches)
 
 
@@ -264,5 +264,9 @@ DECISION HISTORY
 - 2026-10-09 [main-session/CR-100b-2]: Created with the complexity-reduction
   skill template. Scores are recomputed in a child interpreter so the
   checkers' bare `config` import stays out of the shared pytest process.
+- 2026-10-09 [main-session/CR-100b-2]: Branch on the claim's type (dict for
+  python, int for sql) instead of on the fence language, so mypy can narrow
+  `_claimed`'s union; the informational type-check job flagged two
+  union-attr errors. Behaviour unchanged.
 ====================================================================
 """

@@ -192,7 +192,7 @@ def test_live_retention_starts_when_generation_is_retired():
             await db.setup()
             await db.publish(snapshot(c, repo))
             await db._run(
-                "MATCH (g:KRGeneration {repository_id:$repo}) SET g.created_at=0",
+                "MATCH (g:Snapshot {repository_id:$repo}) SET g.created_at=0",
                 {"repo": repo},
                 True,
             )
@@ -229,7 +229,7 @@ def test_live_interrupted_build_is_invisible_and_resumable(monkeypatch):
             assert (await db.active(repo)).generation_id == "g1"
             assert await db.get_generation(repo, "g2") is None
             rows = await db._run(
-                'MATCH (g:KRGeneration {repository_id:$repo,generation_id:"g2"}) RETURN g.status AS status',
+                'MATCH (g:Snapshot {repository_id:$repo,generation_id:"g2"}) RETURN g.status AS status',
                 {"repo": repo},
             )
             assert rows[0]["status"] == "failed"

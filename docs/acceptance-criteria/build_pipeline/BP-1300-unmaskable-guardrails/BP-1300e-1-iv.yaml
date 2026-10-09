@@ -1,0 +1,198 @@
+id: BP-1300e-1-iv
+components:
+  - precommit_hooks
+  - commit_guardian
+  - build_pipeline
+title: "The lint check judges the working copy you commit from — in a worktree, and in an adopter's project by the adopter's own rules and declared scope"
+component: build-pipeline
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Scenario: A worktree is judged by its own configuration and scope
+    Given a git worktree of this repository whose installed checks resolve into a
+      shared install location outside the worktree,
+    And the worktree's own lint configuration and declared scope differ from the
+      install location's (for example, the worktree's declared scope adds one
+      tree),
+    When a commit is attempted in the worktree with a staged violation inside the
+      added tree,
+    Then the commit is refused,
+    And the configuration, scope and staged files used are the worktree's own,
+      never the install location's.
+
+  Scenario: The same change gets the same verdict in the main copy and a worktree
+    Given identical staged content and identical lint configuration in the main
+      working copy and in a worktree,
+    When the commit is attempted in each,
+    Then both commits give the same verdict and name the same findings.
+
+  Scenario: An adopter's project is judged by the adopter's own rules
+    Given a project that installed the package, with its own lint configuration
+      selecting only rule F401 and its own scope declared in the one place package
+      configuration provides,
+    When a commit is attempted there with a staged in-scope file carrying rule
+      E741 and no F401,
+    Then the commit completes, because the adopter's rules do not select E741,
+    And given a staged in-scope file carrying rule F401,
+    When the commit is attempted,
+    Then the commit is refused, naming the file, line and F401.
+
+  Scenario: An adopter who declared no scope gets the documented default
+    Given an installed project that declared no lint scope,
+    When a commit is attempted with a staged Python file anywhere in the project
+      that the adopter's lint configuration does not exclude and that carries a
+      violation of a selected rule,
+    Then the commit is refused,
+    And a staged file the adopter's configuration excludes is not refused.
+
+  Scenario: An adopter's CI that reads the declaration agrees
+    Given an adopter's CI lint step that reads the same declared scope,
+    When the declared scope is changed,
+    Then the commit-time check and that CI step apply the changed scope together.
+depends_on:
+  - BP-1300e-1
+doc_links:
+  - path: docs/acceptance-criteria/build_pipeline/BP-1300-unmaskable-guardrails/BP-1300e-1.yaml
+    relationship: parent
+    status: exists
+  - path: docs/acceptance-criteria/guardrail-engine/GE-118-hooks-work-in-worktrees/GE-118.yaml
+    relationship: related
+    status: exists
+    relevance: "The family of defects where a hook resolves from the install tree instead of the worktree (check-secrets scripts dir and allowlist, drift-hook manifest, doc types). This record must not be the next one."
+  - path: docs/acceptance-criteria/guardrail-engine/GE-120-green-means-checked/GE-120b.yaml
+    relationship: related
+    status: exists
+    relevance: "Same work, same verdict, whichever working copy. Cited, not restated."
+  - path: templates/scripts/commit_guardian/_resolve_root.py
+    relationship: related
+    status: exists
+    relevance: "find_project_root() tries `git rev-parse --show-toplevel` but on failure walks __file__ ancestors and caches module-wide -- exactly the install-tree resolution this record forbids. Usable only through a strict variant with no fallback."
+  - path: docs/known-issues/commit-guardian/open-high-ki-cg-20260925-shared-root-resolver-accepts-non-repo-workspace-parent.md
+    relationship: context
+    status: exists
+    relevance: "Why the shared resolver's fallback is wrong and the fix direction (subject_root -> Path | NO_REPO, never __file__, no cache; on NO_REPO emit could_not_check and exit non-zero)."
+  - path: docs/architecture/components/worktree-quality-gate-guard.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-001-self-hosting-boundary.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-013-portable-skill-script-deployment-boundary.md
+    relationship: describes
+    status: exists
+    relevance: "Portable (consumer-facing) scripts ship from templates/scripts/; the gate and its helpers are portable."
+assigned_agent: python-coder
+estimated_complexity: M
+package_surface: false
+it_requirements:
+  - "THE SUBJECT ROOT COMES FROM GIT, IN THE HOOK'S CWD, AND FROM NOTHING ELSE. pre-commit runs hooks with cwd at the toplevel of the repository or worktree being committed. Resolve the subject root with `git rev-parse --show-toplevel` executed there. Never from __file__, never by walking ancestors for .git or CLAUDE.md, never through the .leafcutter symlink target, never from a module-level cache. _resolve_root.find_project_root() is NOT acceptable as it stands: on git failure it falls back to an ancestor walk of __file__, which in a worktree lands in the shared install tree and from the workspace parent accepts the non-repository (KI-CG-20260925-shared-root-resolver-accepts-non-repo-workspace-parent). Preferred: add a strict variant to _resolve_root.py that returns the git toplevel or a NO_REPO sentinel, with no fallback and no cache, so the next hook reuses it. Do NOT write a private resolver in check_lint_gate.py -- the KI counts ~30 already. On NO_REPO: could_not_check, reason no_repository, exit non-zero."
+  - "EVERYTHING IS READ RELATIVE TO THE SUBJECT ROOT; THE INSTALL LOCATION SUPPLIES ONLY CODE. leafcutter-lint.json from the subject root's index, the staged set from the subject root's index, and ruff run with cwd = subject root so its configuration discovery starts from the project's own files. No path in check_lint_gate.py, _lint_scope.py or _ruff_locator.py is computed from the script's own location except to import siblings."
+  - "THE GOVERNING CONFIGURATION MUST BELONG TO THE PROJECT. Ruff discovers configuration by walking up from each file and can pick up a ruff.toml / pyproject.toml in a directory ABOVE the project, or the user-level config, neither of which a CI checkout has. The hook must report which configuration file governed its verdict (ruff reports it, e.g. via `ruff check --show-settings <path>`'s settings path, resolved once per distinct governing directory, not per file). If that file lies outside the subject root, emit could_not_check naming it: a verdict under a configuration CI cannot see is not CI's verdict. A project with no ruff configuration of its own gets ruff's built-in defaults, which is also what its CI's `ruff check` gets -- that is parity, not an error."
+  - "ADOPTER DEFAULT SCOPE. No leafcutter-lint.json -> the single default step paths ['.'] declared in _lint_scope.py: every staged file that ruff's own include/exclude admits (with --force-exclude) is inspected. No second exclude list anywhere in the package."
+  - "DEPLOYED LAYOUT. check_lint_gate.py, _lint_scope.py, _ruff_locator.py and the extended check_outcome.py live in templates/scripts/commit_guardian/, which build_commit_guardian() deploys with rglob -- no deploy_map entry is needed for them, and adding one elsewhere (e.g. scripts/build_phases.py build_ac_store deploy_map) would be wrong. Prove deployment rather than assume it: the adopter arms run against a BUILT install in a separate project (the shared reference layout), and the CI job consumer-install-sim (scripts/ci/check_declaring_files.py --deployed-root .leafcutter) must stay green; if that check requires newly deployed files to be declared, declare them in the same change."
+  - "THE PACKAGE DOES NOT CONFIGURE AN ADOPTER'S CI. It provides one command for an adopter's CI step -- `python <output_root>/scripts/commit_guardian/check_lint_gate.py --mode full` -- which reads the same declaration; BP-1300e-3 and BP-1300e-4 document it. No adopter CI file is generated or edited."
+  - "ERROR-HANDLING POLICY (CLAUDE.md Rules 1-4): the git toplevel probe and the settings-path probe are wrapped in specific excepts (OSError, subprocess.SubprocessError) converting to could_not_check with WARNING logging."
+test_spec:
+  - name: test_bp_1300e_1_iv_worktree_is_judged_by_its_own_declaration_not_the_install_locations
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: integration
+    angle: discrimination
+    must_catch:
+      - "resolves the declaration or ruff config from __file__ or the .leafcutter symlink target"
+      - "uses _resolve_root.find_project_root() with its __file__ fallback"
+    description: "Main fixture repo with the hook installed; `git worktree add` creates a worktree whose .leafcutter is a symlink to the main repo's install and whose staged leafcutter-lint.json adds tools/; a staged violation in tools/ inside the worktree is refused, and the output's inspected path is under the worktree."
+  - name: test_bp_1300e_1_iv_same_content_same_verdict_in_main_copy_and_worktree
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: "Identical staged content and configuration committed in the main copy and in a worktree give the same outcome and the same findings list."
+  - name: test_bp_1300e_1_iv_adopter_rules_select_only_f401
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: integration
+    angle: deployed
+    description: "Adopter fixture project using the built install, its own ruff.toml selecting only F401 and its own leafcutter-lint.json: staged E741-only file commits; staged F401 file is refused naming path, line and F401."
+  - name: test_bp_1300e_1_iv_adopter_without_declaration_gets_whole_project_minus_excludes
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: integration
+    angle: deployed
+    description: "Adopter fixture with no leafcutter-lint.json: a violating staged file in an arbitrary subdirectory is refused; a violating staged file under a directory the adopter's ruff config excludes commits."
+  - name: test_bp_1300e_1_iv_adopter_ci_full_mode_follows_the_declaration_change
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: "In the adopter fixture, change the declared scope; `check_lint_gate.py --mode full` from the install and the commit-time check both apply the new scope on the same content."
+  - name: test_bp_1300e_1_iv_non_repository_with_empty_git_dir_is_could_not_check
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: integration
+    angle: failure
+    description: "Run the deployed check_lint_gate.py with cwd at a directory that is not a repository but contains an empty .git/ and a CLAUDE.md (the KI-CG-20260925 reproduction); exit is non-zero with RESULT: could_not_check reason no_repository, never exit 0."
+  - name: test_bp_1300e_1_iv_config_above_the_project_is_could_not_check
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: integration
+    angle: boundary
+    description: "Fixture project with no ruff config of its own nested inside a directory holding a ruff.toml; a staged in-scope file yields could_not_check naming the outer ruff.toml as outside the project."
+test_rationale: >-
+  The worktree arm only proves anything when the worktree's declaration DIFFERS
+  from the install location's; with identical copies an install-tree reader
+  passes (GE-118's four point fixes passed in layouts where the bug could not
+  reproduce). The hook entry therefore points through a symlinked .leafcutter
+  into an install outside the worktree, as in real use. The adopter arms run
+  against the BUILT install (the session's shared reference layout) in a
+  separate fixture project, because the source tree is the one layout where
+  install-location resolution cannot go wrong. These tests read the deployed
+  layout and never mutate it: @pytest.mark.shared_layout_reader plus
+  @pytest.mark.usefixtures("shared_reference_layout"); none spawns build.py. The
+  empty-.git arm reproduces the KI that makes the shared resolver unusable as-is.
+delivers_to:
+  agent: how-to-author
+  contract: >-
+    To BP-1300e-3: for adopters, leafcutter-lint.json at the project's git
+    toplevel (tracked, never generated), the default when absent (whole project
+    minus the ruff configuration's own excludes), and the single CI command
+    `python <output_root>/scripts/commit_guardian/check_lint_gate.py --mode full`.
+expects_from:
+  ac_id: BP-1300e-1-i
+  contract: "_lint_scope.load(subject_root, source) with the default-when-absent constant, and check_lint_gate.py --mode full reading the same declaration."
+origin_agent: BrainCandy
+created: 2026-10-09
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target:
+  - code
+  - config
+risk_surface: contract_boundary
+notes: |
+  USER DECISION 2026-10-09: for adopters, parity means the adopter's own lint
+  configuration plus a scope declared in ONE place in package configuration,
+  which this repository's own CI also reads. Default when undeclared: the whole
+  project minus the configuration's own excludes. Decided, not open.
+
+  WHY THE WORKTREE ARM NEEDS A DIFFERING CONFIGURATION. With identical
+  configuration in the install location and the worktree, an implementation that
+  reads the install location's copy passes every arm. The first scenario's
+  differing scope is what separates "reads the worktree" from "happens to read an
+  identical copy". Same discipline as GE-118's history: four point fixes there
+  passed their tests in layouts where the bug could not reproduce.
+
+  VERIFY IN A DEPLOYED LAYOUT. The adopter arms must run against a built install
+  in a separate project, not against the source tree, because the source tree is
+  the one layout where install-location resolution cannot go wrong (CLAUDE.md
+  "New Hook / Gate Dependencies Must Be in the Build Deploy-Manifest").
+
+  The package cannot see an adopter's CI. The last arm only constrains a CI step
+  that reads the declaration. The package does not promise to configure the
+  adopter's CI.

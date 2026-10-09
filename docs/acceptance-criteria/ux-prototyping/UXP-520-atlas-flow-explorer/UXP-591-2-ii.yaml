@@ -1,0 +1,111 @@
+id: UXP-591-2-ii
+title: "Opening a real drawer after 'Step not found' clears the notice and replaces the unknown step in place"
+component: ux-prototyping
+components:
+  - ux_prototyping
+  - frontend_coding
+level: L3
+status: active
+req_status: active
+work_status: todo
+readiness: approved
+priority: medium
+criteria: |
+  Given /flows/leafcutter/python-coder-internal?step=lint is open with the 'Step not found'
+    notice and no drawer, and the tab has one history entry,
+  When the person clicks the 'Doc-enforcer' step,
+  Then the notice disappears and the 'Doc-enforcer' drawer opens,
+  And the address bar becomes /flows/leafcutter/python-coder-internal?step=docenforce,
+  And the tab still has one history entry,
+  And after the person then picks "How a flow renders in the Atlas" in the flow selector and
+    presses Back, the Atlas shows /flows/leafcutter/python-coder-internal?step=docenforce with
+    the 'Doc-enforcer' drawer open, never ?step=lint and never the 'Step not found' notice.
+depends_on:
+  - UXP-591-2
+  - UXP-591-2-i
+  - UXP-591-4
+doc_links:
+  - path: docs/product-truth/flows/leafcutter/explore-flows-in-atlas.flow.json
+    relationship: implemented-by-step
+    status: exists
+  - path: docs/product-truth/mock-data/leafcutter/atlas-flows.mock.json
+    relationship: specifies
+    status: exists
+  - path: docs/product-truth/mockups/leafcutter/atlas-flows-canonical-url.html
+    relationship: describes
+    status: exists
+  - path: docs/architecture/components/ux-prototyping.md
+    relationship: describes
+    status: exists
+  - path: leafcutter-web/README.md
+    relationship: describes
+    status: exists
+    relevance: Atlas routes table and how the app reads the repo; gains the /flows/<product>/<flow> addresses.
+assigned_agent: frontend-coder
+estimated_complexity: S
+change_target:
+  - code
+  - ui
+risk_surface: contract_boundary
+it_requirements:
+  - 'Opening a real drawer from the ''Step not found'' state goes through the same replace-entry path
+    as any drawer open (UXP-591-4): one history replace to flowHref(flowId, newStepId), never a push and
+    never a second write.'
+  - Because the notice derives from the address, that replace is what clears it; there is no separate
+    clear call that could leave the notice and the address out of step.
+  - The replace rewrites the entry's stored view state together with its URL, so Back after a later push
+    restores ?step=docenforce, never ?step=lint.
+delivers_to: null
+expects_from:
+  ac_id: UXP-591-4
+  contract: 'One replace-entry path for drawer open, switch and close that rewrites the current history
+    entry with window.history.replaceState: URL flowHref(flowId, stepId | null) and view state {crumbs:
+    string[] (Flow ids, entry flow first), filters: {source: ''real'' | ''mock'', kind: ''user'' | ''data''
+    | ''architecture'', realization: ''all'' | ''built'' | ''spec'' | ''mock''}} kept in history.state
+    under one namespaced key, merged into, never overwriting, the App Router''s own keys (__NA, __PRIVATE_NEXTJS_INTERNALS_TREE);
+    not sessionStorage (owner decision 2026-10-09); history.length never changes.'
+test_spec:
+  - name: clicking Doc-enforcer from the 'Step not found' state clears the notice, opens its drawer and
+      replaces the address with ?step=docenforce at unchanged history length
+    target_dir: leafcutter-web/components/flows/__tests__/
+    framework: vitest
+    type: component
+    angle: criterion
+    must_catch:
+      - the drawer opens but the address keeps ?step=lint
+      - the change is written with pushState, adding a Back entry
+  - name: after picking another flow and pressing Back the entry returns at ?step=docenforce with its
+      drawer open and never ?step=lint or the notice
+    target_dir: leafcutter-web/components/flows/__tests__/
+    framework: vitest
+    type: component
+    angle: seam
+test_rationale: The second test crosses the replace (UXP-591-4), push (UXP-591-5) and pop (UXP-591-5-ii)
+  paths, which is where owner ruling 2 can break even when each path passes alone.
+test_required: true
+declares_side_effect: false
+origin_agent: business-analyst
+created: '2026-10-09'
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-10-09'
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Derived from flow leafcutter/explore-flows-in-atlas v5, branch 'stepNoticeCleared' (from
+  'openStepLink'; FlowNavigation nav-clear-step-notice-1 to -4). Owner ruling 2 (2026-10-09):
+  the notice never outlives the unknown ?step= value and the unknown value never outlives the
+  notice.
+product_truth:
+  - flow: leafcutter/explore-flows-in-atlas
+    node: stepNoticeCleared
+    node_kind: branch
+    flow_kind: user
+    screen: atlas-flows-canonical-url
+    mock_data: null
+    entities:
+      - FlowNavigation
+    source: real
+    asof: '2026-10-09'
