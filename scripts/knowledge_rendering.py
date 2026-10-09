@@ -6,6 +6,8 @@ ARCHITECTURE: Pure rendering sibling re-exported by knowledge_query; no graph tr
 DECISION HISTORY
 ========================================
 - 2026-10-01 [python-coder]: Extract existing rendering functions for the file-size ratchet.
+- 2026-10-09 [python-coder]: KM-KGS-100d-3-i -- render per-field edges/declined figures
+  (JSON ``field_counts``, text ``Field <name>: edges=<n> declined=<m>`` lines).
 """
 
 from __future__ import annotations
@@ -59,6 +61,8 @@ def render_text(
     query: str | None,
     show_edges: bool,
     declined: int = 0,
+    entries_declined: int = 0,
+    field_counts: dict[str, dict[str, int]] | None = None,
 ) -> str:
     """Render the knowledge index as human-readable text.
 
@@ -69,6 +73,10 @@ def render_text(
         show_edges: When True, append the full edge list section.
         declined: Number of relationship values declined as not a repo path
             (KM-KGS-100d-4-iii). Zero included, never omitted.
+        entries_declined: Number of list entries the shared resolver refused
+            (KM-KGS-100d-3-i). Zero included, never omitted.
+        field_counts: Per-field ``{"edges": n, "declined": m}`` figures, one
+            entry per examined edge field, rendered as ``Field`` lines.
 
     Returns:
         Multi-line formatted string.
@@ -92,8 +100,12 @@ def render_text(
     lines.append("# Knowledge Index")
     lines.append(
         f"Surfaces: {len(by_surface)}   Nodes: {len(nodes)}   Edges: {len(filtered_edges)}   "
-        f"Files: {files_count}   Missing: {missing_count}   Declined: {declined}"
+        f"Files: {files_count}   Missing: {missing_count}   Declined: {declined}   "
+        f"Entries declined: {entries_declined}"
     )
+    # One line per examined edge field, zero included (KM-KGS-100d-3-i).
+    for field_name, figures in sorted((field_counts or {}).items()):
+        lines.append(f"Field {field_name}: edges={figures['edges']} declined={figures['declined']}")
     lines.append("")
 
     for surface_name, snodes in sorted(by_surface.items()):
@@ -120,14 +132,20 @@ def render_json(
     nodes: list[NodeRecord],
     edges: list[EdgeRecord],
     declined: int = 0,
+    entries_declined: int = 0,
+    field_counts: dict[str, dict[str, int]] | None = None,
 ) -> str:
     """Render the knowledge index as JSON.
 
     Args:
+        field_counts: Per-field ``{"edges": n, "declined": m}`` figures, one
+            entry per examined edge field, zero included (KM-KGS-100d-3-i).
         nodes: List of NodeRecords.
         edges: List of EdgeRecords.
         declined: Number of relationship values declined as not a repo path
             (KM-KGS-100d-4-iii). Zero included, never omitted.
+        entries_declined: Number of list entries the shared resolver refused
+            (KM-KGS-100d-3-i). Zero included, never omitted.
 
     Returns:
         JSON string with top-level 'nodes' and 'edges' keys, plus the
@@ -160,6 +178,8 @@ def render_json(
             "files_nodes": files_nodes,
             "missing_files": missing_files,
             "declined": declined,
+            "entries_declined": entries_declined,
+            "field_counts": dict(sorted((field_counts or {}).items())),
         },
         indent=2,
     )

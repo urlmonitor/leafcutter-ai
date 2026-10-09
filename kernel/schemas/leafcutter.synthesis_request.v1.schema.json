@@ -15,6 +15,7 @@
             }
           ],
           "default": null,
+          "description": "Most characters the synthesis may return.",
           "title": "Max Chars"
         },
         "max_findings": {
@@ -28,11 +29,13 @@
             }
           ],
           "default": null,
+          "description": "Most findings the synthesis may return.",
           "title": "Max Findings"
         },
         "schema_version": {
           "const": "1.0",
           "default": "1.0",
+          "description": "Version of this contract's shape, so a reader can reject a payload written for another shape.",
           "title": "Schema Version",
           "type": "string"
         }
@@ -47,6 +50,7 @@
   "description": "leafcutter.synthesis_request.v1.",
   "properties": {
     "evidence_ids": {
+      "description": "The evidence to analyse; the synthesis may cite only these.",
       "items": {
         "type": "string"
       },
@@ -54,14 +58,17 @@
       "type": "array"
     },
     "limits": {
-      "$ref": "#/$defs/SynthesisLimits"
+      "$ref": "#/$defs/SynthesisLimits",
+      "description": "Bounds on the size of the synthesis."
     },
     "operation": {
+      "description": "The kind of analysis wanted, which selects the host's instructions.",
       "minLength": 1,
       "title": "Operation",
       "type": "string"
     },
     "output_requirements": {
+      "description": "Extra instructions the host must follow in its output.",
       "items": {
         "type": "string"
       },
@@ -69,6 +76,7 @@
       "type": "array"
     },
     "question": {
+      "description": "The question the synthesis must answer from the evidence.",
       "minLength": 1,
       "title": "Question",
       "type": "string"
@@ -76,6 +84,7 @@
     "schema_version": {
       "const": "1.0",
       "default": "1.0",
+      "description": "Version of this contract's shape, so a reader can reject a payload written for another shape.",
       "title": "Schema Version",
       "type": "string"
     }

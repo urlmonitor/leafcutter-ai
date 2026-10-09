@@ -1,6 +1,8 @@
 """Strict authored query recipes; these data models cannot carry executable code.
 
 DECISION HISTORY
+- 2026-10-09 09:46 [python-coder]: Remove obsolete compiler compatibility after explicit native saved-catalog re-admission. (#KM-400a-3-i/TICKET-20261009-KM-400a-3-i-native-query-maintenance)
+- 2026-10-09 09:11 [python-coder]: Preserve admitted descriptor identity without exposing compiler provenance in authored data. (#KM-400a-3-i/TICKET-20261009-KM-400a-3-i-native-query-maintenance)
 - 2026-10-01 15:46 [python-coder]: Restrict live admission to bounded declared graph paths. (#KM-500/TICKET-20261001-KM-500b-2)
 
 MODULE: knowledge.query_models
@@ -90,7 +92,7 @@ class QueryDescriptor(Model):
 
     @property
     def digest(self) -> str:
-        """Return the descriptor-and-compiled-query identity."""
+        """Return the current native descriptor-and-compiled-query identity."""
         from .query_compile import compile_query
 
         return compile_query(self)["digest"]

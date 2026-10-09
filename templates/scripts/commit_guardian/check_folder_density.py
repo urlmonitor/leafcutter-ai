@@ -25,6 +25,7 @@ BUSINESS CONTEXT: Encourages modular project structure for maintainability.
 ARCHITECTURE: Not needed.
 """
 
+import logging
 import subprocess
 import sys
 from collections import defaultdict
@@ -45,6 +46,8 @@ from config import (
 EXCLUDED_DIRS = DENSITY_EXCLUDED_DIRS
 EXEMPT_EXTENSIONS = DENSITY_EXEMPT_EXTENSIONS
 EXEMPT_FILENAMES = DENSITY_EXEMPT_FILENAMES
+
+logger = logging.getLogger(__name__)
 
 
 def get_staged_files() -> list[str]:
@@ -120,10 +123,62 @@ def is_countable_file(filepath: str) -> bool:
 
 def get_all_tracked_files() -> list[str]:
     """
-    Get all files currently tracked by git (including staged changes).
+    Get all files tracked in HEAD -- the commit's PARENT snapshot.
+
+    ``git ls-files`` was used previously, but its own docstring claim
+    ("including staged changes") is exactly the defect: it reflects the
+    CURRENT INDEX, which already contains whatever THIS commit is staging.
+    A folder pushed over the limit by files staged in this very commit then
+    has a before_count that already includes them, so it is misclassified
+    as pre-existing (a warning) instead of newly-dense (a violation), and
+    the commit that caused the crossing is wrongly let through.
+    ``git ls-tree -r HEAD --name-only`` reads the parent commit's tree
+    instead, so a file only staged now is correctly absent from the BEFORE
+    snapshot.
 
     Returns:
-        List of all tracked file paths relative to repo root.
+        List of all file paths tracked in HEAD, relative to repo root. Empty
+        list when there is no HEAD yet (the repository's first, root commit)
+        -- there is genuinely no parent snapshot to report in that case.
+    """
+    # Locale-independent root-commit detection: the exit code of rev-parse,
+    # never git's (localised) stderr text.
+    try:
+        head = subprocess.run(
+            ["git", "rev-parse", "--verify", "-q", "HEAD"],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+    except OSError as exc:
+        logger.warning("git rev-parse --verify -q HEAD could not run: %s", exc)
+        raise
+    if head.returncode != 0:
+        return []
+
+    try:
+        result = subprocess.run(
+            ["git", "ls-tree", "-r", "HEAD", "--name-only"],
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+    except subprocess.CalledProcessError as exc:
+        logger.warning("git ls-tree -r HEAD --name-only failed: %s", exc)
+        raise
+
+    return [f for f in result.stdout.strip().split("\n") if f]
+
+
+def get_index_files() -> list[str]:
+    """
+    Get all files in the index -- the state this commit will produce.
+
+    The index already reflects staged additions, deletions and rename
+    sources/destinations, so no manual add/subtract is needed.
+
+    Returns:
+        List of all indexed file paths relative to repo root.
     """
     try:
         result = subprocess.run(
@@ -132,10 +187,13 @@ def get_all_tracked_files() -> list[str]:
             text=True,
             check=True,
         )
-    except subprocess.CalledProcessError:
-        return []
+    except subprocess.CalledProcessError as exc:
+        logger.warning("git ls-files failed: %s", exc)
+        raise
 
-    return [f for f in result.stdout.strip().split("\n") if f]
+    # An unmerged path is listed once per stage (up to three times); dedupe,
+    # preserving order, so mid-conflict runs do not inflate AFTER.
+    return list(dict.fromkeys(f for f in result.stdout.strip().split("\n") if f))
 
 
 def count_files_per_folder(files: list[str]) -> dict[str, int]:
@@ -273,19 +331,11 @@ def main() -> int:
     if not affected_dirs:
         return 0
 
-    # Get ALL tracked files to compute true folder densities
-    all_files = get_all_tracked_files()
-
-    # Compute BEFORE counts (tracked files only, before staged additions)
-    before_counts = count_files_per_folder(all_files)
-
-    # Also include newly staged files that might not be tracked yet
-    all_files_set = set(all_files)
-    for f in staged_files:
-        all_files_set.add(f)
-    all_files = list(all_files_set)
-
-    # Compute AFTER counts (including staged additions)
+    # BEFORE = the parent commit's tree; AFTER = the index. The two are read
+    # independently (AFTER is never derived from BEFORE) so staged deletions
+    # and rename sources are correctly absent from AFTER.
+    before_counts = count_files_per_folder(get_all_tracked_files())
+    all_files = get_index_files()
     after_counts = count_files_per_folder(all_files)
 
     # Classify folders: only BLOCK if this commit causes the threshold crossing

@@ -4,7 +4,7 @@ description: "Index of open, reproducible defects in this package that are not y
 type: reference
 status: active
 created: 2026-08-19
-last_updated: 2026-09-10
+last_updated: 2026-10-09
 components:
   - infrastructure
 related_docs:
@@ -91,6 +91,7 @@ directory rather than maintained by hand.
 | `feedback_collector` | [feedback-collector.md](feedback-collector.md) | [`feedback-collector/`](feedback-collector/) |
 | `changelog` | [changelog.md](changelog.md) | [`changelog/`](changelog/) |
 | `security_scanner` | [security-scanner.md](security-scanner.md) | [`security-scanner/`](security-scanner/) |
+| `ux_prototyping` (from 2026-10-09) | [ux-prototyping.md](ux-prototyping.md) | [`ux-prototyping/`](ux-prototyping/) |
 
 At the split: **255 open** (18 blocker, 129 high, 108 low) and **32 resolved**. That is a
 snapshot, not a maintained figure — run the `ls` above.

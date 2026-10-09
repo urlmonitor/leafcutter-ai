@@ -1,0 +1,307 @@
+id: GE-118g-1
+title: "The collision pre-flight reads the repository's own pending changes, whatever directory it was started in"
+component: guardrail-engine
+components:
+  - commit_guardian
+  - doc_compliance
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given a checkout of this repository whose decision records already claim the
+    number 68,
+  And a new decision record claiming that same number 68 is staged in that
+    checkout,
+  And a directory that is NOT inside any git work tree, which nonetheless holds a
+    deployed copy of the collision pre-flight, so the published bare-relative
+    command finds a program to run there,
+  When the author runs the collision pre-flight as the project's numbering
+    procedure prescribes it, with that non-repository directory as the working
+    directory and no argument naming the repository,
+  Then the pre-flight does not complete successfully, and what it reports is the
+    collision — it names the number 68 and the record that already claims it,
+  And it does not report that it was unable to read the pending changes.
+
+  And given the same staged collision, when the author runs the pre-flight with
+    the repository's own root as the working directory,
+  Then it reports the same verdict about the same number — so the directory the
+    program was started in is not an input to the verdict.
+
+  And given instead that the staged decision record claims a number no existing
+    record claims,
+  When the author runs the pre-flight from that same non-repository directory,
+  Then it completes successfully and reports no collision — so the verdict
+    tracks the pending changes rather than refusing from wherever it is run.
+
+  And given the staged collision again, and a run from the non-repository
+    directory in which the pre-flight is prevented from establishing which
+    repository it belongs to,
+  Then it does not report "no collision": it reports that it could not read the
+    pending changes and does not complete successfully — the absence of an
+    answer is never presented as a clean answer.
+
+  And given one further decision record claiming a second already-claimed
+    number is added to the staged set,
+  When the author runs the pre-flight from the non-repository directory,
+  Then the set of colliding numbers it names grows to include that second
+    number — so the numbers it reports are read from the staged set each run,
+    and not from any fixed list.
+depends_on:
+  - GE-118g
+doc_links:
+  - path: docs/acceptance-criteria/guardrail-engine/GE-118-hooks-work-in-worktrees/GE-118g.yaml
+    relationship: parent
+    status: exists
+  - path: templates/scripts/commit_guardian/check_adr_collision.py
+    relationship: modifies
+    status: exists
+    relevance: >-
+      THE DEFECT SITE. The staged-set read at lines 139-141 omits the working-directory
+      argument that the surrounding git helper already accepts at line 87, so git
+      inherits the process working directory and falls into its no-index mode. This is
+      the SOURCE; scripts/commit_guardian/ and .leafcutter/scripts/commit_guardian/ are
+      build outputs regenerated from it, and an edit to a deployed copy alone is reverted
+      by the next build.
+  - path: templates/scripts/commit_guardian/_resolve_root.py
+    relationship: describes
+    status: exists
+    relevance: >-
+      THE ESTABLISHED RESOLVER. The drift hooks and the agent-registry hook already use
+      it for this exact category of problem. Reuse rather than invent.
+  - path: docs/conventions/adr-numbering.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      Section 3 Step 2 PRESCRIBES this program as the numbering pre-flight, with a bare
+      relative command and no directory argument. That is the invocation the criteria
+      above exercise. The criteria do NOT require the program to be registered as a
+      commit-time hook — see the parent's notes on why that is out of scope.
+  - path: docs/known-issues/commit-guardian/open-high-ki-cg-022.md
+    relationship: context
+    status: exists
+    relevance: >-
+      Carries the 2026-10-09 reproduction and the exact observed output, including the
+      "unknown option 'cached'" text. Read it; do not re-derive it. Note what it also
+      records and what this record does NOT claim: on main a failed read returns an empty
+      set, which is a separate fail-open defect.
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: related
+    status: exists
+  - path: CLAUDE.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      "Gate / Workflow ACs — Verify Behaviorally, Not by Grep" is binding. Every arm
+      above is a real invocation of the program from a named working directory against a
+      real staged set, with the verdict read out of what the program actually reported. A
+      test that greps the source for a working-directory argument, for a resolver import,
+      or for the absence of the old call shape satisfies no clause here and would stay
+      green on a program that never runs.
+delivers_to: null
+expects_from: null
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "Every git read in check_adr_collision.py must be performed against the resolved
+    repository, not against the invoking process's working directory. _run_git already
+    accepts a cwd argument (line 87); the staged-set read at lines 139-141 is one call
+    site, not the only one — audit EVERY _run_git call in the module in the same change
+    and verify each passes the resolved context. A fix applied to the one reported call
+    site leaves the rest inheriting the process working directory."
+  - "A read that could not be performed must remain distinguishable from a read that
+    found nothing. The module's existing ReadFailure boundary is the right seam and must
+    not be widened into a return of an empty pending set."
+  - "The resolution itself must come from the single ordered anchor sequence the parent
+    L1 requires, with an explicitly named repository outranking the working directory.
+    Do not add a second, module-local resolution route."
+  - "No new module is required for this record — check_adr_collision.py measures 219
+    lines against its 400-line limit (measured 2026-10-09 with the gate's own
+    measurement rule), so there is headroom to add the resolution plumbing in place. If
+    a helper is extracted anyway it must live in templates/scripts/commit_guardian/,
+    which deploys wholesale; anywhere else needs a deploy-map entry in the same change."
+  - "templates/scripts/commit_guardian/check_adr_collision.py is the SOURCE. An edit to
+    scripts/commit_guardian/ or .leafcutter/scripts/commit_guardian/ alone is reverted
+    by the next build — those paths are untracked build outputs in this checkout."
+  - "Must not change the reference from which the already-claimed number sequence is
+    read; that is a separate filed condition and no clause here depends on it."
+  - "Must handle errors gracefully per the project error handling policy."
+test_spec:
+  - name: test_collision_named_from_non_repository_working_directory
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: integration
+    angle: criterion
+    surface_invoked: templates/scripts/commit_guardian/check_adr_collision.py
+    description: >-
+      Arm 1. Real throwaway git repo with ADR-068 committed and a second ADR-068 staged;
+      a separate directory that is NOT inside any work tree holding a deployed copy of
+      the pre-flight and a declared anchor naming the repo. Invoke the pre-flight as a
+      subprocess with cwd set to that non-repository directory and no repository
+      argument. Assert non-zero exit, that 68 and the already-claiming record's path
+      appear in the output, and that the 'unable to read the pending changes' text does
+      NOT. No build.py spawn, no shared-layout fixture, so no marker.
+    must_catch:
+      - "restore the staged-set read without the working-directory argument, so git inherits the process working directory"
+      - "verify only from the repository root, where the defect and the fix are indistinguishable"
+  - name: test_same_verdict_from_repository_root_and_from_outside
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: integration
+    angle: discrimination
+    description: >-
+      Arm 2 paired with arm 1 as one assertion rather than two. Same staged collision,
+      two runs — cwd=repository root and cwd=the non-repository directory — and the two
+      verdicts must be equal. Stated as an equality because arm 2 alone passes today;
+      only the pairing makes the working directory's irrelevance assertable. No marker
+      (no layout fixture requested).
+    must_catch:
+      - "restore the working-directory-inherited read, under which the two runs disagree"
+  - name: test_non_colliding_staged_record_passes_from_non_repository_directory
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: >-
+      Arm 3. Stage an ADR claiming a number no committed record claims, run from the
+      non-repository directory, assert exit 0 and a reported absence of collision. This
+      is the arm that forbids a fix shaped as 'refuse whenever not run from the root'.
+      No marker.
+    must_catch:
+      - "restore the staged-set read without the working-directory argument, so git inherits the process working directory"
+      - "refuse unconditionally when the working directory is not the repository root"
+  - name: test_unestablishable_repository_does_not_report_clean
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: integration
+    angle: failure
+    description: >-
+      Arm 4. Same staged collision, but the run is prevented from establishing which
+      repository it belongs to (declared anchor removed or pointed at a non-repository).
+      Assert non-zero exit AND that the output states the pending changes could not be
+      read AND that no 'no collision' verdict is reported. The three assertions are
+      separate because an implementation can refuse while still printing a clean verdict
+      line. No marker.
+    must_catch:
+      - "on a read that cannot be performed, return an empty pending set and report no collision"
+      - "swallow the failure and exit 0"
+  - name: test_reported_colliding_set_grows_with_the_staged_set
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: integration
+    angle: discrimination
+    description: >-
+      Arm 5. Stage a second record claiming a second already-claimed number and re-run
+      from the non-repository directory; the set of colliding numbers named must grow to
+      include it. This is the only arm a fixed literal containing 68 fails. No marker.
+    must_catch:
+      - "replace the staged-set read with the set of numbers observed at implementation time"
+  - name: test_deployed_pre_flight_resolves_its_imports_at_hook_runtime
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: integration
+    angle: deployed
+    surface_invoked: scripts/commit_guardian/check_adr_collision.py
+    description: >-
+      The deploy-manifest arm. Runs the pre-flight from the real DEPLOYED layout, not the
+      source tree, against a staged collision, and asserts it reaches a verdict rather
+      than a ModuleNotFoundError. Requests the session-scoped shared_reference_layout
+      fixture and declares @pytest.mark.shared_layout_reader — it only reads the layout,
+      so it must not spawn its own build.py (one build costs 59.8s).
+    must_catch:
+      - "add a resolution helper module that the build does not deploy, so the deployed hook crashes while source-tree tests stay green"
+test_rationale: >-
+  Every entry invokes the pre-flight as a real subprocess against a real git index and
+  reads the verdict out of exit status and output. None greps the source. That is not a
+  stylistic preference here: a test asserting that _run_git is called with a cwd
+  argument, or that a resolver is imported, passes on a program that never runs and on
+  one whose other call sites still inherit the working directory — and CLAUDE.md's
+  behavioural-verification rule outranks any test_spec that sanctioned the weaker form.
+  Two choices are load-bearing. First, the non-repository directory must hold a deployed
+  copy of the program: a harness invoking from an empty temporary directory reproduces
+  'nothing to run', a different condition that proves nothing about this one, as the
+  record's own notes state. Second, arm 2 is specified as an EQUALITY between two runs
+  rather than as its own pass, because arm 2 passes against the defect; verifying only
+  from the repository root cannot distinguish the fix from the bug. Markers: only the
+  deployed-layout entry requests shared_reference_layout and therefore carries
+  @pytest.mark.shared_layout_reader; the other five neither request the fixture nor
+  build anything, so they are outside the marker-routing mechanism entirely and pay no
+  build cost. Caveat carried forward from enrichment: arm 1 requires the pre-flight to
+  reach a repository from a directory that is not one, which is only satisfiable via a
+  DECLARED anchor (the install's own configuration naming its project root). The harness
+  must provision that declaration; a downward filesystem search is not an acceptable
+  substitute, because in the real workspace parent 78 candidate work trees exist and a
+  search would have to pick one.
+declares_side_effect: false
+origin_agent: BrainCandy
+created: 2026-10-09
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-10-09'
+superseded_by: null
+covered_by:
+  - GE-118g-1-i
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  WHY THE WRONG-DIRECTORY ARM IS REACHABLE RATHER THAN HYPOTHETICAL, MEASURED
+  2026-10-09. The directory this workspace's agent sessions start in is not a git work
+  tree — `git -C /home/henzeh/projects/leafcutter rev-parse --show-toplevel` exits 128 —
+  and it DOES contain a deployed `scripts/commit_guardian/`. So the procedure's bare
+  relative command does not fail to start there; it starts, finds the program, and then
+  cannot read git state. That combination is what makes this a wrong-answer defect rather
+  than a missing-program one, and it is why the second Given above specifies a
+  non-repository directory that nonetheless holds a deployed copy. A test harness that
+  invokes from an empty temporary directory reproduces a DIFFERENT condition (nothing to
+  run) and proves nothing about this one.
+
+  THIS IS A CONTEXT-RESOLUTION RECORD, NOT A TRUTHFULNESS ONE. The program as it stands
+  is honest: "could not read the decision-number sequence" is precisely what happened.
+  No clause above asks it to be more honest. Every clause asks it to resolve the
+  repository it belongs to and then answer about that repository. The fourth arm is the
+  one most likely to be misread as a truthfulness clause; it is not. It is the clause
+  that stops the fix being implemented as "swallow the failure and report a clean
+  verdict", which would turn today's visible wrong answer into an invisible one.
+
+  NAMED MUTATIONS — EXECUTE THEM, DO NOT MERELY DESCRIBE THEM.
+
+  (1) THE DEFECT ITSELF. MUTATION: restore the staged-set read without the
+      working-directory argument, so git inherits the process working directory.
+      MUST GO RED: the first arm (collision named from the non-repository directory) and
+      the third (clean pass from the non-repository directory).
+      MUST STAY GREEN: the second arm, run from the repository root — it passes both
+      before and after, which is exactly why it cannot be the only arm. An implementation
+      verified only from the repository root is indistinguishable from the defect.
+
+  (2) THE SWALLOW. MUTATION: on a read that cannot be performed, return an empty pending
+      set and report no collision.
+      MUST GO RED: the fourth arm only.
+      MUST STAY GREEN: arms one through three, and every arm of GE-118g-2. That asymmetry
+      is the evidence that the fourth arm is its own behaviour and not a restatement.
+
+  (3) THE FIXED LIST. MUTATION: replace the staged-set read with the set of numbers
+      observed at implementation time.
+      MUST GO RED: the fifth arm (the set grows when a second colliding record is
+      staged) and the third (a non-colliding record must pass).
+      MUST STAY GREEN: the first arm, which a fixed list containing 68 satisfies exactly.
+      The fifth arm exists because a stated verdict alone is satisfiable by a literal.
+
+  WHAT THIS RECORD DOES NOT CLAIM, SO NOBODY CLOSES IT BY DOING THESE INSTEAD.
+    - It does not require the program to be registered in any hook manifest. It is
+      registered nowhere today and the criteria are invocation-based for that reason.
+    - It does not address the empty-set-on-error return recorded in KI-CG-022 beyond the
+      fourth arm's refusal to present no-answer as a clean answer.
+    - It says nothing about which reference the claimed-number sequence is read from.
+      KI-CG-022's fresh-install blocker (an absent origin/main) is a different condition
+      with its own filed fix direction, and no clause above is discharged by addressing
+      it.
+
+  NOT AUTHORED HERE, BY DESIGN: estimated_complexity, it_requirements, test_spec,
+  test_rationale and declares_side_effect. Those are the IT PO's. The three named
+  mutations above, including which arms must stay green, are written to be turned
+  directly into test descriptors.

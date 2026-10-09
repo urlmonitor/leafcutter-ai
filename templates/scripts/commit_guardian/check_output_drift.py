@@ -173,6 +173,8 @@ logging.basicConfig(level=logging.WARNING, format="%(levelname)s: %(message)s")
 try:
     from _drift_exemptions import (
         ScanResult as _ScanResult,
+        gap_remedy as _gap_remedy,
+        package_root_from_manifest as _package_root_from_manifest,
         load_exemption_registry as _load_exemption_registry,
         validate_exemption_registry as _validate_exemption_registry,
     )
@@ -198,6 +200,12 @@ except ImportError:
 
     def _validate_exemption_registry(_entries: list) -> dict[str, str]:  # type: ignore[misc]
         return {}
+
+    def _gap_remedy(_key: str, _package_root: "Path | None") -> str:  # type: ignore[misc]
+        return "run build.py to register it"
+
+    def _package_root_from_manifest(_manifest: Path, _root: Path) -> "Path | None":  # type: ignore[misc]
+        return None
 
 _HOOK_FILE = Path(__file__).resolve()
 _GATE_NAME = "check-output-drift"
@@ -359,6 +367,7 @@ def _scan_unrecorded(
     output_mappings: dict,
     repo_root: Path,
     exemptions: dict[str, str],
+    package_root: Path | None = None,
 ) -> tuple[int, int]:
     """Pass 1: name real on-disk files ABSENT from the manifest (gap/exempt).
 
@@ -379,6 +388,8 @@ def _scan_unrecorded(
         output_mappings: The manifest's output_mappings section.
         repo_root: Repository root used to form relative manifest keys.
         exemptions: Valid declared-exemption map (key -> ground text).
+        package_root: Package root used to decide whether the build can
+            produce an unrecorded file (BP-100k-3-ii); None keeps the build remedy.
 
     Returns:
         ``(uncomparable, gaps)`` — ``uncomparable`` is gaps plus exempt.
@@ -398,7 +409,7 @@ def _scan_unrecorded(
             _err(f"UNCOMPARABLE: EXEMPT {out_key} ground={ground}")
         else:
             gaps += 1
-            _err(f"UNCOMPARABLE: GAP {out_key} action=run build.py to register it")
+            _err(f"UNCOMPARABLE: GAP {out_key} action={_gap_remedy(out_key, package_root)}")
     return uncomparable, gaps
 
 
@@ -487,6 +498,7 @@ def _scan_output_files(
     output_mappings: dict,
     repo_root: Path,
     exemptions: dict[str, str],
+    package_root: Path | None = None,
 ) -> _ScanResult:
     """Compare output hashes against output_mappings, reporting uncomparables.
 
@@ -514,6 +526,8 @@ def _scan_output_files(
         repo_root: Repository root used to form relative manifest keys.
         exemptions: Valid declared-exemption map (key -> ground text) from
             ``_validate_exemption_registry``.
+        package_root: Package root forwarded to ``_scan_unrecorded`` so the
+            GAP remedy reflects whether the build can produce the file.
 
     Returns:
         The scan outcome (see ``_ScanResult``). Prints one ``UNCOMPARABLE:``
@@ -522,7 +536,9 @@ def _scan_output_files(
         absent from disk (BP-100n-1), and one ``UNCOMPARABLE: UNREADABLE``
         line per recorded key present on disk but not hash-comparable (B-2).
     """
-    uncomparable, gaps = _scan_unrecorded(output_files, output_mappings, repo_root, exemptions)
+    uncomparable, gaps = _scan_unrecorded(
+        output_files, output_mappings, repo_root, exemptions, package_root
+    )
     counts, drift_exempt, violations = _reconcile_recorded(output_mappings, repo_root, exemptions)
     return _ScanResult(
         verified=counts["verified"],
@@ -811,7 +827,8 @@ def check_output_drift(
 
     output_files = _collect_output_files(output_dirs)
     exemptions = _validate_exemption_registry(_load_exemption_registry(_GATE_NAME))
-    result = _scan_output_files(output_files, output_mappings, repo_root, exemptions)
+    package_root = _package_root_from_manifest(manifest_path, repo_root)
+    result = _scan_output_files(output_files, output_mappings, repo_root, exemptions, package_root)
 
     if result.violations:
         _print_blocked_block(result.violations)

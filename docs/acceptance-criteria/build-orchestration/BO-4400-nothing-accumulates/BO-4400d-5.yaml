@@ -1,0 +1,57 @@
+id: BO-4400d-5
+title: "Component diagram: the routine sweep and the capabilities it uses"
+component: build-orchestration
+components:
+  - build_orchestration
+  - worktree_manager
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+change_target: docs
+risk_surface: internal
+criteria: |
+  Given the routine sweep (BO-4400d-1, BO-4400d-2, BO-4400d-3) is in place,
+  When the component diagram for the routine sweep is read,
+  Then it shows the sweep as one component with its session-start trigger,
+  And it shows the sweep's connections to each capability it uses: the complete
+    workspace listing, the holds-work / holds-nothing verdict, the in-use check, the
+    one shared clearing door, the outside-item inventory, and the scratch age and
+    ownership rule,
+  And it shows the sweep's two outputs: the preview / real report, and the durable
+    report log,
+  And it shows no direct connection from the sweep to deleting a workspace folder
+    other than through the one shared clearing door.
+depends_on: [BO-4400d, BO-4400d-1, BO-4400d-3]
+doc_links:
+  - path: docs/architecture/components/worktree-manager.md
+    relationship: describes
+    status: exists
+assigned_agent: architecture-diagram-author
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: BO-4400d-1
+  contract: "Final sweep structure."
+package_surface: false
+it_requirements:
+  - >-
+    C4 component diagram under docs/architecture/diagrams/; the id is allocated with
+    scripts/next_diagram_seq.py immediately before publishing (CLAUDE.md 'Sequential Resource Paths
+    Go Stale'). Linked from docs/architecture/components/worktree-manager.md.
+  - >-
+    Component and connector names match the built sweep (BO-4400d-1) and its config key; the only
+    edge to workspace deletion goes through the one maker's remove verb.
+test_required: false
+origin_agent: business-analyst
+created: 2026-10-09
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Satisfies BO-4400d documentation_triggers: component-diagram. Re-measure the next free
+  diagram id immediately before publishing.

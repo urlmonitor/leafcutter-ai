@@ -82,13 +82,14 @@ MANIFEST_PATH = GUARDIAN_DIR / "commit_guardian.json"
 # prevent; to clear an entry, either register the script in
 # hooks_manifest.hooks or delete it, then remove the line here.
 #
-# The remaining five are all KNOWN AND WANTED — none is a candidate for
+# The remaining four are all KNOWN AND WANTED — none is a candidate for
 # deletion. Each needs real work before it can be registered (a ratchet over
 # existing violations, a crash fix, or an argv fix), scheduled after the
-# file-length gate is fully integrated. check_complexity is the largest and is
-# deliberately withheld: it is functional, but 65 over-threshold functions remain
-# repo-wide, so registering it would block every commit. GE-120h is the parent
-# for that work; note its L2s deliberately require more than draining this list,
+# file-length gate is fully integrated. check_complexity.py was the fifth: GE-131a
+# gave it the per-function ratchet (an existing over-limit function is held to its
+# own previous score, a new or crossing one to the limit) and GE-131a-2 registered
+# it as check-complexity, so it left this list. GE-120h is the parent for the rest
+# of that work; note its L2s deliberately require more than draining this list,
 # because a decomposition that only registers today's orphans leaves the next one
 # free to appear with the same four reassuring signals. The comments below record
 # what each entry is waiting on, measured against the tree at this commit.
@@ -99,10 +100,6 @@ UNREGISTERED_BASELINE: frozenset[str] = frozenset(
         # CI). Also near-blind: _ID_REGEX is $-anchored, so a suffixed id like
         # TQ-100b-4-i never matches — it sees 275 of 4,032 records.
         "check_ac_coverage.py",
-        # Wanted. Nothing enforces cyclomatic complexity today (ruff.toml
-        # selects only E, F, E722 — no C901). Needs a shrink-only ratchet first:
-        # 79 over-limit functions across 50 files at max_score 15.
-        "check_complexity.py",
         # Runs again as of this commit (the _project_root NameError is fixed),
         # but its output is advisory and lands on the passing path, where a
         # hook's stdout is discarded (KI-CG-026). Needs verbose: true to be

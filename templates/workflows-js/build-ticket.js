@@ -1068,9 +1068,7 @@ function parseAgentJson(raw, ctx) {
     const code = raw.charCodeAt(i);
     if (code !== 123 && code !== 91) { continue; }
     const closeCode = closeFor[code];
-    let depth = 0;
-    let inString = false;
-    let j = i;
+    let depth = 0, inString = false, j = i;
     while (j < raw.length) {
       const ch = raw.charCodeAt(j);
       if (inString) {
@@ -1085,16 +1083,13 @@ function parseAgentJson(raw, ctx) {
         else if (ch === closeCode) {
           depth--;
           if (depth === 0) {
-            try {
-              return JSON.parse(raw.slice(i, j + 1));
-            } catch (_) {
-              break;
-            }
+            try { return JSON.parse(raw.slice(i, j + 1)); } catch (_) { i = j; break; }
           }
         }
       }
       j++;
     }
+    if (depth > 0) { break; }
   }
   throw new Error(
     "[" + stage + "] " + agent +
@@ -1105,7 +1100,6 @@ function parseAgentJson(raw, ctx) {
 
 // ---------------------------------------------------------------------------
 // Record I/O — the drive's only channel to the ticket's own record
-//
 // TWIN: mirrors build-feature.js. Keep in sync with that file.
 // ---------------------------------------------------------------------------
 
@@ -1148,9 +1142,8 @@ async function readTicketRecordBack(recordPath) {
  * in the store still read `status: todo`, which blocks finalize-feature's
  * archive check. A report is not a record.
  *
- * Only ever called once per ticket, and only after
- * completionVerdictFromRecord() confirmed every required phase carries a
- * passing sign-off in the record itself.
+ * Only ever called once per ticket, after completionVerdictFromRecord()
+ * confirmed every required phase carries a passing sign-off in the record.
  *
  * @param {string} recordPath
  * @param {Array<string>} confirmedPhases
@@ -1160,7 +1153,7 @@ async function writeTicketCompletion(recordPath, confirmedPhases) {
   return await agent(
     `This is build-ticket.js's completion-write step, writeTicketCompletion(), for the ticket at "${recordPath}". Per your Closing protocol this dispatch IS the authorization to close (the driver-dispatched authorization, not the interactive one): do not look for a same-turn user request, and do not apply the auto-close trigger's merge-commit condition — a ticket branch is unmerged by construction, so that condition can never hold here and is not what gates this write. ` +
     `Every phase that ticket names as needed now carries a passing sign-off in the record itself, verified by reading it back: ${JSON.stringify(confirmedPhases)}. Do not re-litigate that from scratch. ` +
-    `Write the finished state by invoking the checking mechanism exactly as your protocol prescribes, python3 scripts/set_ticket_status.py --ticket "${recordPath}" --status done, with no additional flags and no override — never by any other route, and do not edit the ticket's record directly by any other means. ` +
+    `Write the finished state by invoking the checking mechanism exactly as your protocol prescribes, python3 scripts/set_ticket_status.py --ticket "${recordPath}" --status done --no-stage, with no additional flags beyond --no-stage and no override — never by any other route, and do not edit the ticket's record directly by any other means. ` +
     `If the script exits non-zero, the ticket is NOT closed: return {"status": "error", "error": "<what the script reported>"} rather than reporting success. ` +
     `Return ONLY the JSON object: {"status": "ok"|"error", "ticket_path": "${recordPath}"}.`,
     {
@@ -1189,8 +1182,7 @@ function buildTicketOutcome(spec) {
     reason: p.reason,
   }));
   const base = {
-    // Provisional. The not-completed branch below overwrites it — see the
-    // comment there for why this field cannot stay "ok" on that path.
+    // Provisional: the not-completed branch below overwrites it (see the comment there).
     status: "ok",
     ticket_path: spec.recordPath,
     title: spec.title,

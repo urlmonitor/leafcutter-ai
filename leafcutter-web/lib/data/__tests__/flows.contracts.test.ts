@@ -17,7 +17,7 @@ vi.mock("@/lib/data/repo", async () => {
 import { getFlows } from "../flows";
 
 describe("canonical structured contracts reach Atlas", () => {
-  it("retains definitions, steps, branches and compatibility text from the real flow file", () => {
+  it("retains definitions, steps, branches, descriptions and actor kinds from the real flow file", () => {
     // covers: UXP-523-1
     // covers: UXP-523-2
     // angle: real_artifact
@@ -31,7 +31,8 @@ describe("canonical structured contracts reach Atlas", () => {
       for (const node of nodes) {
         const original = originals.find((item: { id: string }) => item.id === node.id);
         expect(node.ioContracts).toEqual(original.io_contracts);
-        expect(node.human).toBe(original.human);
+        expect(node.description).toBe(original.description);
+        expect(node.actorKind).toBe(original.actor_kind);
         expect(node.consumes).toEqual(original.consumes ?? []);
       }
     }

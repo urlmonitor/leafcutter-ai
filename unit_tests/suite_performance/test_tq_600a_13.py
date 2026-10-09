@@ -46,6 +46,12 @@ import unittest
 import uuid
 from pathlib import Path
 
+from scripts.suite_performance.check_exclusion_compensation import (
+    evaluate_marker_expression,
+    invoked_cadences,
+    pytest_args,
+)
+
 REPO_ROOT = Path(__file__).resolve().parents[2]
 SUFFIX = "_MANUAL"
 DOCS = (
@@ -143,7 +149,9 @@ class TestTq600a13(unittest.TestCase):
         Must be implemented: `-m manual` collects exactly the `_MANUAL` tests; default and
         opt-in are disjoint and, together with the timing lane (`-m timing_ratio`, TQ-600a-13-xix,
         the only other deliberate exclusion from the default run), their union equals the
-        unfiltered collection. The three collections are pairwise disjoint. The population
+        unfiltered collection. A test both `_MANUAL` and `timing_ratio` is the timing lane's
+        only (the correctness opt-in is `manual and not timing_ratio`), so after that split
+        default, (manual minus timing_ratio) and timing are pairwise disjoint. The population
         is derived from the unfiltered collection, never hardcoded.
         """
         self.assertTrue(self.all_manual, f"unfiltered collection found no _MANUAL test:\n{self.all_out[-800:]}")
@@ -152,14 +160,71 @@ class TestTq600a13(unittest.TestCase):
         )
         self.assertTrue(self.timing_ids, f"timing lane collected nothing:\n{self.timing_out[-800:]}")
         default, optin, timing = set(self.default_ids), set(self.optin_ids), set(self.timing_ids)
+        # A `_MANUAL` test that is ALSO `timing_ratio` belongs to the timing lane only: the
+        # holding opt-in cadence selects `manual and not timing_ratio`. So the correctness
+        # lane is `manual minus timing_ratio`, and it is that residue (not raw `-m manual`)
+        # that must be disjoint from the timing lane. Raw `-m manual` still collects every
+        # _MANUAL test (asserted above), so the manual assertions are not weakened.
+        optin_correctness = optin - timing
         self.assertEqual(set(), default & optin, "default and opt-in collections must be disjoint")
         self.assertEqual(set(), default & timing, "default and timing-lane collections must be disjoint")
-        self.assertEqual(set(), optin & timing, "opt-in and timing-lane collections must be disjoint")
+        self.assertEqual(set(), optin_correctness & timing, "correctness opt-in and timing lane must be disjoint")
         self.assertEqual(
             set(self.all_ids),
-            default | optin | timing,
-            "default + opt-in + timing lane must equal the unfiltered collection",
+            default | optin_correctness | timing,
+            "default + (manual minus timing_ratio) + timing lane must equal the unfiltered collection",
         )
+
+    def _cadence_ids(self, run_text):
+        """Node ids an invoked cadence's pytest command selects, from the collections held by this class.
+
+        The cadence's ``-m`` expression is evaluated with the gate module's local evaluator (checked
+        against real pytest in test_tq_600a_13_review_fixes.py) over marker
+        membership taken from the REAL ``-m manual`` / ``-m timing_ratio`` collections above. An
+        expression naming any other marker, or paths other than the whole suite, gets its own real
+        collection instead, so nothing is assumed beyond what a collection produced.
+        """
+        args = pytest_args(run_text)
+        expression = args[args.index("-m") + 1]
+        names = set(re.findall(r"[A-Za-z_]\w*", expression)) - {"and", "or", "not"}
+        paths = [a for a in args if a.rstrip("/") in ("tests", "unit_tests")]
+        if not names <= {"manual", "timing_ratio"} or sorted(paths) != ["tests/", "unit_tests/"]:
+            return set(_collect(args, REPO_ROOT)[1])
+        members = {"manual": set(self.optin_ids), "timing_ratio": set(self.timing_ids)}
+        return {
+            i
+            for i in self.all_ids
+            if evaluate_marker_expression(expression, {m for m, ids in members.items() if i in ids})
+        }
+
+    def test_tq600a_13_i_the_opt_in_collects_every_test_the_default_run_excluded(self):
+        # covers: TQ-600a-13-i
+        # angle: criterion
+        """AC-13-i: default + the INVOKED cadences' selections == the unfiltered suite.
+
+        Lives here (moved from test_tq_600a_13_i.py) so the four whole-suite collections made in
+        setUpClass are performed once, not twice. Which selections to union is derived from the
+        invoked, automatic, non-swallowing workflow cadences, never hardcoded; the unfiltered set
+        is its own real collection (`-m "manual or not manual"`), never default + opt-in added.
+        """
+        self.assertTrue(self.default_ids, f"default collection collected nothing:\n{self.default_out[-600:]}")
+        cadences = invoked_cadences(REPO_ROOT)
+        self.assertTrue(
+            cadences,
+            "no INVOKED opt-in cadence found: no automatically-triggered (push to main / schedule) "
+            "workflow job runs pytest with -m and lets its failure fail the job",
+        )
+        optin_ids = set()
+        for workflow, run_text in cadences:
+            ids = self._cadence_ids(run_text)
+            self.assertTrue(ids, f"opt-in in {workflow} collected nothing")
+            optin_ids |= ids
+        default_ids, whole_ids = set(self.default_ids), set(self.all_ids)
+        excluded = whole_ids - default_ids
+        self.assertTrue(excluded, f"default run excluded nothing; this record would be vacuous:\n{self.all_out[-400:]}")
+        lost = sorted(excluded - optin_ids)
+        self.assertEqual([], lost[:10], f"{len(lost)} excluded test(s) collected by NO opt-in (deleted in effect)")
+        self.assertEqual(whole_ids, default_ids | optin_ids, "default + opt-in must equal the unfiltered suite")
 
     def test_ac13_documented_exclusion_agrees_with_the_real_default_collection(self):
         # covers: TQ-600a-13

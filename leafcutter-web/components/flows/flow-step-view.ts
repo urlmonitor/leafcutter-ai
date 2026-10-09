@@ -1,11 +1,12 @@
 /** Shared drawer view model and the pure projection from a loaded flow. */
 import type { FlowContractDefinition, FlowIoContracts } from "@/lib/data/flow-contracts";
 import type { AcRef, Flow, FlowRealization, FlowScenario, WorkStatus } from "@/lib/data/types";
+import type { ActorKind } from "@/lib/data/actor-kind";
 
 export interface StepView {
   id: string;
   label: string;
-  human: string;
+  description: string;            // one plain sentence of what happens
   screen: string | null;
   screenTitle?: string | null;    // resolved mockup title for the screen slug
   realization?: FlowRealization;  // does the parent flow's system exist yet
@@ -13,6 +14,7 @@ export interface StepView {
   condition?: string;
   status: WorkStatus;
   agent?: string | null;
+  actorKind?: ActorKind | null;   // which mechanism runs it (code, Jev, AI agent, person)
   produces?: string[];
   consumes?: string[];
   ioContracts?: FlowIoContracts;
@@ -36,13 +38,14 @@ export function buildStepViews(
     m.set(`step:${s.id}`, {
       id: s.id,
       label: s.label,
-      human: s.human,
+      description: s.description,
       screen: s.screen,
       screenTitle: screenTitleFor(s.screen),
       realization: flow.realization,
       variant: "step",
       status: s.implStatus,
       agent: s.agent,
+      actorKind: s.actorKind,
       produces: s.produces,
       consumes: s.consumes,
       ioContracts: s.ioContracts,
@@ -59,7 +62,7 @@ export function buildStepViews(
     m.set(`step:${b.id}`, {
       id: b.id,
       label: b.label,
-      human: b.human,
+      description: b.description,
       screen: b.screen,
       screenTitle: screenTitleFor(b.screen),
       realization: flow.realization,
@@ -67,6 +70,7 @@ export function buildStepViews(
       condition: b.condition,
       status: b.implStatus,
       agent: b.agent,
+      actorKind: b.actorKind,
       produces: b.produces,
       consumes: b.consumes,
       ioContracts: b.ioContracts,

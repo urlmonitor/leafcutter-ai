@@ -30,9 +30,10 @@
     {
       "id": "classify",
       "label": "Classify what the request needs",
-      "human": "A classifier reads the plain-language request and decides which artifacts it needs — flow, mock data, mockups, or a subset — plus the target component and entities, so the pipeline only runs the agents that fit.\n\nI/O boundary: This is the pt-classifier prompt output, not a labelled classifier-eval row. The pipeline remains a specification; this schema documents an existing prompt contract and does not prove orchestration is wired.\n\nContract fields and examples (generated)\nConsumes:\n  No checked JSON binding documented in this direction.\nProduces:\n  SOURCE-REVIEWED DOCUMENTATION: Source-reviewed templates/agents/pt-classifier.md S4 prompt contract; no runtime registration or automatic prompt/schema parity.\n  classifier/request: string (required)\n  classifier/expected/needs_flow: boolean (required)\n  classifier/expected/needs_mock_data: boolean (required)\n  classifier/expected/needs_mockup: boolean (required)\n  classifier/outcome: string (required)\n  classifier/component: string (required)\n  classifier/entities: array (required)\n  classifier/decision: string (required)\n  classifier/extends: null|string (optional)\n  classifier/dispatch: array (required)\n  classifier/anomalies: array (required)\n  Schema: [classifier](docs/product-truth/schemas/pt-classifier-output.schema.json)\n\nOutput illustrative classifier projection; not an execution receipt — classifier; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"request\": \"Describe the complete journey to author and approve a feature.\",\n  \"expected\": {\n    \"needs_flow\": true,\n    \"needs_mock_data\": true,\n    \"needs_mockup\": true\n  },\n  \"outcome\": \"full-set\",\n  \"component\": \"ux-prototyping\",\n  \"entities\": [\n    \"Ac\"\n  ],\n  \"decision\": \"create\",\n  \"extends\": null,\n  \"dispatch\": [\n    \"mock-data-author\",\n    \"mockup-author\",\n    \"flow-author\"\n  ],\n  \"anomalies\": []\n}",
+      "description": "The classifier agent reads the plain-language request and decides which of flow, mock data and mockups it needs, plus the target component and entities.",
       "order": 1,
       "agent": "pt-classifier",
+      "actor_kind": "llm",
       "consumes": [],
       "produces": [
         "classifier/request: string (required)",
@@ -176,9 +177,10 @@
     {
       "id": "search",
       "label": "Search the store (add vs create)",
-      "human": "Before drafting anything, the pipeline searches the product-truth index by component and entities to decide whether to extend an existing artifact or create a new one — there is one canonical dataset per entity per component.\n\nI/O boundary: Search resolves existing artifact IDs in index.json. The chosen create/extend fields stay on the classifier decision; no invented search-response DTO.\n\nContract fields and examples (generated)\nConsumes:\n  SOURCE-REVIEWED DOCUMENTATION: Source-reviewed templates/agents/pt-classifier.md S4 prompt contract; no runtime registration or automatic prompt/schema parity.\n  classifier/component: string (required)\n  classifier/entities: array (required)\n  classifier/decision: string (required)\n  classifier/extends: null|string (optional)\n  Schema: [classifier](docs/product-truth/schemas/pt-classifier-output.schema.json)\n  SOURCE-REVIEWED DOCUMENTATION: Projection of generate_product_truth.py write_index/build_by_ac/build_by_flow. Documents index.json lookups, not a complete runtime validator or automatic source parity.\n  index/by_component: object (optional)\n  index/by_entity: object (optional)\n  index/artifacts: array (optional)\n  Schema: [index](docs/product-truth/schemas/product-truth-index-projection.schema.json)\nProduces:\n  SOURCE-REVIEWED DOCUMENTATION: Source-reviewed templates/agents/pt-classifier.md S4 prompt contract; no runtime registration or automatic prompt/schema parity.\n  classifier/decision: string (required)\n  classifier/extends: null|string (optional)\n  Schema: [classifier](docs/product-truth/schemas/pt-classifier-output.schema.json)\n\nInput illustrative classifier projection; not an execution receipt — classifier; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"component\": \"ux-prototyping\",\n  \"entities\": [\n    \"Ac\"\n  ],\n  \"decision\": \"create\",\n  \"extends\": null\n}\n\nInput illustrative index projection; not an execution receipt — index; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"artifacts\": [\n    {\n      \"id\": \"leafcutter/define-a-feature\",\n      \"type\": \"flow\",\n      \"path\": \"flows/leafcutter/define-a-feature.flow.json\",\n      \"version\": 3\n    }\n  ],\n  \"by_component\": {\n    \"ux-prototyping\": {\n      \"flows\": [\n        \"leafcutter/define-a-feature\"\n      ],\n      \"mock_data\": [],\n      \"mockups\": []\n    }\n  },\n  \"by_entity\": {\n    \"Ac\": {\n      \"canonical_mock_data\": {},\n      \"flows\": {\n        \"ux-prototyping\": [\n          \"leafcutter/define-a-feature\"\n        ]\n      }\n    }\n  }\n}\n\nOutput illustrative classifier projection; not an execution receipt — classifier; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"decision\": \"create\",\n  \"extends\": null\n}",
+      "description": "Before drafting, the authoring agent searches the product-truth store by component and entities to decide whether to extend an existing artifact or create one.",
       "order": 2,
       "agent": "mock-data-author / flow-author (add-vs-create)",
+      "actor_kind": "llm",
       "consumes": [
         "classifier/component: string (required)",
         "classifier/entities: array (required)",
@@ -348,9 +350,10 @@
     {
       "id": "mockData",
       "label": "Mock-data agent drafts the data",
-      "human": "The mock-data agent drafts or extends the one canonical dataset for the classified entities — realistic records the mockups and flow are built on, never a duplicate dataset.\n\nI/O boundary: The output is a *.mock.json artifact. Entity records remain dataset-defined objects; the outer artifact schema does not establish their domain field types.\n\nContract fields and examples (generated)\nConsumes:\n  SOURCE-REVIEWED DOCUMENTATION: Source-reviewed templates/agents/pt-classifier.md S4 prompt contract; no runtime registration or automatic prompt/schema parity.\n  classifier/component: string (required)\n  classifier/entities: array (required)\n  Schema: [classifier](docs/product-truth/schemas/pt-classifier-output.schema.json)\nProduces:\n  mock_data/id: string (required)\n  mock_data/component: string (required)\n  mock_data/version: integer (optional)\n  mock_data/readiness: string (required)\n  mock_data/entities/*/fields: object (required)\n  mock_data/entities/*/records: array (required)\n  Schema: [mock_data](docs/product-truth/schemas/mock-data.schema.json)\n\nInput illustrative classifier projection; not an execution receipt — classifier; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"component\": \"ux-prototyping\",\n  \"entities\": [\n    \"Ac\"\n  ]\n}\n\nOutput illustrative mock_data projection; not an execution receipt — mock_data; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"id\": \"leafcutter/feature-review\",\n  \"component\": \"ux-prototyping\",\n  \"readiness\": \"draft\",\n  \"version\": 1,\n  \"entities\": {\n    \"Ac\": {\n      \"fields\": {\n        \"id\": \"string; stable acceptance criterion identifier\"\n      },\n      \"records\": [\n        {\n          \"id\": \"ACD-300\"\n        }\n      ]\n    }\n  }\n}",
+      "description": "The mock-data agent drafts or extends the one canonical dataset of realistic records for the classified entities, which the mockups and flow are built on.",
       "order": 3,
       "agent": "mock-data-author",
+      "actor_kind": "llm",
       "consumes": [
         "classifier/component: string (required)",
         "classifier/entities: array (required)"
@@ -485,9 +488,10 @@
     {
       "id": "mockups",
       "label": "Mockup agent draws the screens",
-      "human": "The mockup agent drafts each screen the request implies, populated from the drafted mock data, registering a screen id the flow's steps can resolve.\n\nI/O boundary: The *.mockup.json record registers a screen and optional HTML path. HTML rendering itself is a file artifact; null renders means no rendered page.\n\nContract fields and examples (generated)\nConsumes:\n  mock_data/id: string (required)\n  mock_data/entities: object (required)\n  Schema: [mock_data](docs/product-truth/schemas/mock-data.schema.json)\nProduces:\n  mockup/id: string (required)\n  mockup/screen: string (required)\n  mockup/title: string (required)\n  mockup/entities: array (required)\n  mockup/mock_data_ref: string (optional)\n  mockup/renders: null|string (required)\n  mockup/readiness: string (required)\n  Schema: [mockup](docs/product-truth/schemas/mockup.schema.json)\n\nInput illustrative mock_data projection; not an execution receipt — mock_data; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"id\": \"leafcutter/feature-review\",\n  \"entities\": {\n    \"Ac\": {\n      \"fields\": {\n        \"id\": \"string; stable acceptance criterion identifier\"\n      },\n      \"records\": [\n        {\n          \"id\": \"ACD-300\"\n        }\n      ]\n    }\n  }\n}\n\nOutput illustrative mockup projection; not an execution receipt — mockup; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"id\": \"leafcutter/feature-review\",\n  \"screen\": \"feature-review\",\n  \"title\": \"Review the feature\",\n  \"entities\": [\n    \"Ac\"\n  ],\n  \"renders\": null,\n  \"readiness\": \"draft\",\n  \"mock_data_ref\": \"leafcutter/feature-review\"\n}",
+      "description": "The mockup agent draws each screen the request implies, filled from the drafted mock data, and registers each screen so the flow's steps can point to it.",
       "order": 4,
       "agent": "mockup-author",
+      "actor_kind": "llm",
       "consumes": [
         "mock_data/id: string (required)",
         "mock_data/entities: object (required)"
@@ -636,9 +640,10 @@
     {
       "id": "flow",
       "label": "Flow agent assembles the journey",
-      "human": "The flow agent assembles the draft flow, ordering the steps and wiring each to its screen and the entities it reads and writes, with an acceptance_scenario per step.\n\nI/O boundary: The draft *.flow.json is the authored contract. Examples are projections, not runnable complete flows; linked screen and AC existence is still validated against the store.\n\nThe flow author also records each real handoff using source-bound fields and coherent JSON examples, distinguishes runtime contracts from reviewed documentation or illustrative designs, and states any genuinely undefined proposed binding. Internal human/UI transitions state why there is no JSON handoff. The author then regenerates compatibility text and validates the artifact.\n\nContract fields and examples (generated)\nConsumes:\n  mockup/screen: string (required)\n  mockup/entities: array (required)\n  mockup/mock_data_ref: string (optional)\n  Schema: [mockup](docs/product-truth/schemas/mockup.schema.json)\nProduces:\n  flow/id: string (required)\n  flow/component: string (required)\n  flow/kind: string (required)\n  flow/source: string (required)\n  flow/readiness: string (required)\n  flow/steps/*/id: string (required)\n  flow/steps/*/screen: string (optional)\n  flow/steps/*/implements: array (optional)\n  flow/acceptance_scenarios: array (optional)\n  Schema: [flow](docs/product-truth/schemas/flow.schema.json)\n\nInput illustrative mockup projection; not an execution receipt — mockup; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"screen\": \"feature-review\",\n  \"entities\": [\n    \"Ac\"\n  ],\n  \"mock_data_ref\": \"leafcutter/feature-review\"\n}\n\nOutput illustrative flow projection; not an execution receipt — flow; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"id\": \"leafcutter/define-a-feature\",\n  \"component\": \"ux-prototyping\",\n  \"kind\": \"user\",\n  \"source\": \"real\",\n  \"readiness\": \"draft\",\n  \"steps\": [\n    {\n      \"id\": \"approve\",\n      \"order\": 1,\n      \"label\": \"Approve the feature\",\n      \"human\": \"Review the proposed behavior.\",\n      \"implements\": [],\n      \"screen\": \"feature-review\"\n    }\n  ],\n  \"acceptance_scenarios\": [\n    {\n      \"for\": \"approve\",\n      \"given\": \"A feature draft exists\",\n      \"when\": \"The person reviews it\",\n      \"then\": \"Their decision is retained\"\n    }\n  ]\n}",
+      "description": "The flow agent assembles the draft flow, ordering the steps and linking each to its screen, the entities it reads and writes, and an acceptance scenario.",
       "order": 5,
       "agent": "flow-author",
+      "actor_kind": "llm",
       "consumes": [
         "mockup/screen: string (required)",
         "mockup/entities: array (required)",
@@ -797,7 +802,7 @@
                   "id": "approve",
                   "order": 1,
                   "label": "Approve the feature",
-                  "human": "Review the proposed behavior.",
+                  "description": "Review the proposed behavior.",
                   "implements": [],
                   "screen": "feature-review"
                 }
@@ -818,9 +823,10 @@
     {
       "id": "deriveAcs",
       "label": "Business-analyst derives the ACs",
-      "human": "Once the person approves the drafted flow, the business-analyst derives the L2/L3 acceptance criteria from the flow's steps and back-links each step via step.implements — the flow stays the reviewable source of truth.\n\nI/O boundary: The human approval is conversational; BA then writes parsed AC YAML and exact step.implements links. Metadata does not advance the real AC readiness or claim that generation already runs.\n\nContract fields and examples (generated)\nConsumes:\n  flow/id: string (required)\n  flow/readiness: string (required)\n  flow/steps/*/id: string (required)\n  flow/acceptance_scenarios: array (optional)\n  Schema: [flow](docs/product-truth/schemas/flow.schema.json)\nProduces:\n  ac/id: string (required)\n  ac/criteria: string (required)\n  ac/component: string (required)\n  ac/readiness: string (optional)\n  Schema: [ac](config/ac_store_schema.json)\n  flow/steps/*/id: string (required)\n  flow/steps/*/implements: array (optional)\n  Schema: [flow](docs/product-truth/schemas/flow.schema.json)\n\nInput illustrative flow projection; not an execution receipt — flow; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"id\": \"leafcutter/define-a-feature\",\n  \"readiness\": \"draft\",\n  \"steps\": [\n    {\n      \"id\": \"approve\",\n      \"order\": 1,\n      \"label\": \"Approve the feature\",\n      \"human\": \"Review the proposed behavior.\",\n      \"implements\": [],\n      \"screen\": \"feature-review\"\n    }\n  ],\n  \"acceptance_scenarios\": [\n    {\n      \"for\": \"approve\",\n      \"given\": \"A feature draft exists\",\n      \"when\": \"The person reviews it\",\n      \"then\": \"Their decision is retained\"\n    }\n  ]\n}\n\nOutput illustrative ac projection; not an execution receipt — ac; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"id\": \"ACD-300\",\n  \"component\": \"ac-driven-dev\",\n  \"criteria\": \"Given an approved requirement, When delivery finishes, Then its evidence is recorded.\",\n  \"readiness\": \"draft\"\n}\n\nOutput illustrative flow projection; not an execution receipt — flow; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"steps\": [\n    {\n      \"id\": \"approve\",\n      \"order\": 1,\n      \"label\": \"Approve the feature\",\n      \"human\": \"Review the proposed behavior.\",\n      \"implements\": [\n        \"UXP-531\"\n      ],\n      \"screen\": \"feature-review\"\n    }\n  ]\n}",
+      "description": "After the person approves the draft flow, the business analyst agent derives acceptance criteria from its steps and links each step back to them.",
       "order": 6,
       "agent": "business-analyst",
+      "actor_kind": "llm",
       "consumes": [
         "flow/id: string (required)",
         "flow/readiness: string (required)",
@@ -950,7 +956,7 @@
                   "id": "approve",
                   "order": 1,
                   "label": "Approve the feature",
-                  "human": "Review the proposed behavior.",
+                  "description": "Review the proposed behavior.",
                   "implements": [],
                   "screen": "feature-review"
                 }
@@ -988,7 +994,7 @@
                   "id": "approve",
                   "order": 1,
                   "label": "Approve the feature",
-                  "human": "Review the proposed behavior.",
+                  "description": "Review the proposed behavior.",
                   "implements": [
                     "UXP-531"
                   ],
@@ -1007,8 +1013,9 @@
       "from": "classify",
       "condition": "classifier outcome = mockup+data (a single screen, not a journey)",
       "label": "Skip the flow agent",
-      "human": "For a single-screen change the classifier returns mockup+data: the mock-data and mockup agents run, but the flow agent is skipped — there is no multi-step journey to assemble.\n\nI/O boundary: This branch forwards the classified dispatch set; it does not fabricate an additional branch result type.\n\nContract fields and examples (generated)\nConsumes:\n  SOURCE-REVIEWED DOCUMENTATION: Source-reviewed templates/agents/pt-classifier.md S4 prompt contract; no runtime registration or automatic prompt/schema parity.\n  classifier/expected: object (required)\n  classifier/outcome: string (required)\n  classifier/dispatch: array (required)\n  Schema: [classifier](docs/product-truth/schemas/pt-classifier-output.schema.json)\nProduces:\n  SOURCE-REVIEWED DOCUMENTATION: Source-reviewed templates/agents/pt-classifier.md S4 prompt contract; no runtime registration or automatic prompt/schema parity.\n  classifier/outcome: string (required)\n  classifier/dispatch: array (required)\n  Schema: [classifier](docs/product-truth/schemas/pt-classifier-output.schema.json)\n\nInput illustrative classifier projection; not an execution receipt — classifier; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"expected\": {\n    \"needs_flow\": false,\n    \"needs_mock_data\": true,\n    \"needs_mockup\": true\n  },\n  \"outcome\": \"mockup+data\",\n  \"dispatch\": [\n    \"mock-data-author\",\n    \"mockup-author\"\n  ]\n}\n\nOutput illustrative classifier projection; not an execution receipt — classifier; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"outcome\": \"mockup+data\",\n  \"dispatch\": [\n    \"mock-data-author\",\n    \"mockup-author\"\n  ]\n}",
+      "description": "For a single-screen change, the classifier agent runs only the mock-data and mockup agents, skipping the flow agent since there is no journey.",
       "agent": "pt-classifier (routing)",
+      "actor_kind": "llm",
       "consumes": [
         "classifier/expected: object (required)",
         "classifier/outcome: string (required)",
@@ -1113,8 +1120,9 @@
       "from": "classify",
       "condition": "classifier outcome = mock-data-only (backend/API/job, no screen)",
       "label": "Only the mock-data agent runs",
-      "human": "For backend logic, an API, or a batch job the classifier returns mock-data-only: just the mock-data agent runs so tests have realistic fixtures — no mockups, no flow.\n\nI/O boundary: This branch forwards the classified dispatch set; it does not fabricate an additional branch result type.\n\nContract fields and examples (generated)\nConsumes:\n  SOURCE-REVIEWED DOCUMENTATION: Source-reviewed templates/agents/pt-classifier.md S4 prompt contract; no runtime registration or automatic prompt/schema parity.\n  classifier/expected: object (required)\n  classifier/outcome: string (required)\n  classifier/dispatch: array (required)\n  Schema: [classifier](docs/product-truth/schemas/pt-classifier-output.schema.json)\nProduces:\n  SOURCE-REVIEWED DOCUMENTATION: Source-reviewed templates/agents/pt-classifier.md S4 prompt contract; no runtime registration or automatic prompt/schema parity.\n  classifier/outcome: string (required)\n  classifier/dispatch: array (required)\n  Schema: [classifier](docs/product-truth/schemas/pt-classifier-output.schema.json)\n\nInput illustrative classifier projection; not an execution receipt — classifier; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"expected\": {\n    \"needs_flow\": false,\n    \"needs_mock_data\": true,\n    \"needs_mockup\": false\n  },\n  \"outcome\": \"mock-data-only\",\n  \"dispatch\": [\n    \"mock-data-author\"\n  ]\n}\n\nOutput illustrative classifier projection; not an execution receipt — classifier; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"outcome\": \"mock-data-only\",\n  \"dispatch\": [\n    \"mock-data-author\"\n  ]\n}",
+      "description": "For backend logic, an API or a batch job, the classifier agent runs only the mock-data agent so tests get realistic fixtures, with no mockups or flow.",
       "agent": "pt-classifier (routing)",
+      "actor_kind": "llm",
       "consumes": [
         "classifier/expected: object (required)",
         "classifier/outcome: string (required)",
@@ -1217,8 +1225,9 @@
       "from": "classify",
       "condition": "classifier outcome = mockup-only (a static screen with no records)",
       "label": "Only the mockup agent runs",
-      "human": "For a static screen with no business data (e.g. an About page) the classifier returns mockup-only: just the mockup agent runs — no dataset to draft, no journey.\n\nI/O boundary: This branch forwards the classified dispatch set; it does not fabricate an additional branch result type.\n\nContract fields and examples (generated)\nConsumes:\n  SOURCE-REVIEWED DOCUMENTATION: Source-reviewed templates/agents/pt-classifier.md S4 prompt contract; no runtime registration or automatic prompt/schema parity.\n  classifier/expected: object (required)\n  classifier/outcome: string (required)\n  classifier/dispatch: array (required)\n  Schema: [classifier](docs/product-truth/schemas/pt-classifier-output.schema.json)\nProduces:\n  SOURCE-REVIEWED DOCUMENTATION: Source-reviewed templates/agents/pt-classifier.md S4 prompt contract; no runtime registration or automatic prompt/schema parity.\n  classifier/outcome: string (required)\n  classifier/dispatch: array (required)\n  Schema: [classifier](docs/product-truth/schemas/pt-classifier-output.schema.json)\n\nInput illustrative classifier projection; not an execution receipt — classifier; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"expected\": {\n    \"needs_flow\": false,\n    \"needs_mock_data\": false,\n    \"needs_mockup\": true\n  },\n  \"outcome\": \"mockup-only\",\n  \"dispatch\": [\n    \"mockup-author\"\n  ]\n}\n\nOutput illustrative classifier projection; not an execution receipt — classifier; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"outcome\": \"mockup-only\",\n  \"dispatch\": [\n    \"mockup-author\"\n  ]\n}",
+      "description": "For a static screen with no business data, such as an About page, the classifier agent runs only the mockup agent, with no dataset or journey to draft.",
       "agent": "pt-classifier (routing)",
+      "actor_kind": "llm",
       "consumes": [
         "classifier/expected: object (required)",
         "classifier/outcome: string (required)",
@@ -1321,8 +1330,9 @@
       "from": "classify",
       "condition": "classifier outcome = none (config / schema / docs, no product surface)",
       "label": "Draft no artifacts",
-      "human": "For a config change, a schema/perf tweak, or documentation the classifier returns none: no product-truth artifacts are drafted and the request goes straight to normal AC authoring.\n\nI/O boundary: This branch forwards the classified dispatch set; it does not fabricate an additional branch result type.\n\nContract fields and examples (generated)\nConsumes:\n  SOURCE-REVIEWED DOCUMENTATION: Source-reviewed templates/agents/pt-classifier.md S4 prompt contract; no runtime registration or automatic prompt/schema parity.\n  classifier/expected: object (required)\n  classifier/outcome: string (required)\n  classifier/dispatch: array (required)\n  Schema: [classifier](docs/product-truth/schemas/pt-classifier-output.schema.json)\nProduces:\n  SOURCE-REVIEWED DOCUMENTATION: Source-reviewed templates/agents/pt-classifier.md S4 prompt contract; no runtime registration or automatic prompt/schema parity.\n  classifier/outcome: string (required)\n  classifier/dispatch: array (required)\n  Schema: [classifier](docs/product-truth/schemas/pt-classifier-output.schema.json)\n\nInput illustrative classifier projection; not an execution receipt — classifier; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"expected\": {\n    \"needs_flow\": false,\n    \"needs_mock_data\": false,\n    \"needs_mockup\": false\n  },\n  \"outcome\": \"none\",\n  \"dispatch\": []\n}\n\nOutput illustrative classifier projection; not an execution receipt — classifier; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"outcome\": \"none\",\n  \"dispatch\": []\n}",
+      "description": "For a configuration, schema, performance or documentation change, the classifier agent drafts nothing and the request goes straight to normal criteria authoring.",
       "agent": "pt-classifier (routing)",
+      "actor_kind": "llm",
       "consumes": [
         "classifier/expected: object (required)",
         "classifier/outcome: string (required)",

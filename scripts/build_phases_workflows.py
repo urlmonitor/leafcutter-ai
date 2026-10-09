@@ -441,6 +441,10 @@ def build_workflow_tools(target_root: Path, config: dict[str, Any],
     - ``scripts/knowledge_rendering.py`` — knowledge_query.py's fourth
       sibling module, the text/JSON renderers; loaded at import time, so
       knowledge_query.py fails to import in consumers without it.
+    - ``scripts/knowledge_edges.py`` — knowledge_query.py's fifth sibling
+      module, edge extraction and routing (GE-127 size-ratchet extraction);
+      loaded at import time, so knowledge_query.py fails to import in
+      consumers without it.
     - ``scripts/set_ticket_status.py`` — used by ticket-lifecycle agents and skills.
     - ``scripts/ticket_prioritizer.py`` — used by the ticket-prioritizer skill.
     - ``scripts/port_registry.py`` — used by the live-surface-tester agent.

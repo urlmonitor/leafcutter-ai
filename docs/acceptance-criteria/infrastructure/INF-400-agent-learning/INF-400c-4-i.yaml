@@ -8,7 +8,7 @@ component: infrastructure
 level: L3
 status: active
 req_status: active
-work_status: done
+work_status: todo
 priority: high
 readiness: reviewed
 created_by: "docs/acceptance-criteria/infrastructure/INF-400-agent-learning/INF-400c-4.yaml"
@@ -90,6 +90,9 @@ amended_by:
   - reason: "BA revision, 2026-09-07, same day, following the anchor being re-settled as a build-time absolute path written into the deployed configuration. The clause added in the entry above forbade a surface handing over a name the AGENT finishes resolving; that was the right instinct against the previous anchor but too weak against this one. Under a build-fixed absolute path, no name a surface could carry is correct in two installs at all — a surface carrying one is right only on the machine the change was authored on, which is the most convincing possible way to be wrong, because it works for whoever writes it. The clause is therefore hardened from 'no name the agent resolves' to 'no destination of its own', and a two-install test descriptor was added: build into two temp projects at different absolute locations and require each surface to reach its own project's sink. That pair cannot be satisfied by any written-down destination. WHAT THIS SETTLES THAT THE PREVIOUS ENTRY RAISED: it flagged, as a question for the IT PO, whether the parity check's emitting side could still compare a path LITERAL extracted from each surface. It cannot — there is no longer a literal to extract, by criterion. The emitting side of the comparison has to be what the surface tells the agent to invoke or read. That is now a consequence of the criteria rather than an open question, and the landing order in the it_requirements is unaffected by it."
     by: business-analyst
     at: 2026-09-07
+  - reason: "REOPENED, work_status done -> todo, criteria unchanged (BrainCandy decision 2026-10-09, on evidence found by the INF-500d-4 IT PO and re-verified on origin/main ed83d9f77). VIOLATED CLAUSE: 'an agent following one of these surfaces from inside an isolated working directory and an agent following the same surface from the project root append to the same file, and the record the first one wrote is still there after its working directory has been removed'. EVIDENCE: the surfaces send the agent to harvest_learnings.py --print-sink (templates/skills/signoff/SKILL.md:1020-1021), which reads the deployed declaration beside it. templates/scripts/setup_ticket_worktree.py:1582 (mirrored at scripts/setup_ticket_worktree.py:1483) runs build.py --target-dir <worktree> in every new per-drive worktree, and scripts/build_phases_knowledge.py:319-337 fixes the sink under that target. So --print-sink from worktrees/ge120f-drive/.leafcutter/scripts/knowledge/harvest_learnings.py prints /home/henzeh/projects/leafcutter/worktrees/ge120f-drive/debugging/logs/knowledge_emissions.jsonl, while the workspace copy prints /home/henzeh/projects/leafcutter/debugging/logs/knowledge_emissions.jsonl. Two different files, and the worktree one is removed with the worktree; eight worktrees already hold their own knowledge_emissions.jsonl. Will be fixed by the INF-500d-4 feedback-sink feature (INF-500d-4-iii and INF-500d-4-iv); return to done when that lands."
+    by: BrainCandy
+    at: 2026-10-09
 superseded_by: null
 covered_by:
 - unit_tests/portability/test_inf_400c_4_i.py

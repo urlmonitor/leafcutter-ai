@@ -70,8 +70,8 @@ class _FileRecord:
     exact: bool
     path_hit_terms: frozenset[str]
     head: Candidate | None = None
-    #: Query words that are names of this structured file's keys (its registry vocabulary).
     vocabulary: frozenset[str] = frozenset()
+    """Query words that are names of this structured file's keys (its registry vocabulary)."""
 
 
 def _iter_files(root: Path) -> tuple[list[Path], list[Path]]:

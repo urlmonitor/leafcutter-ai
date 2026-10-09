@@ -1,0 +1,171 @@
+id: KM-400f-2
+title: "Publication reclaims superseded generations and reports how many"
+component: knowledge-management
+components: [knowledge_management]
+level: L2
+status: active
+req_status: active
+readiness: approved
+priority: high
+work_status: todo
+parent: KM-400f
+criteria: |
+  Given the declared retention bound is at most 3 retained generations and a minimum retirement age of 24 hours
+  And the repository holds active generation G32 and 26 older retained generations
+  And an unexpired pinned continuation is held against G28
+  And a second repository in the same database holds its own 4 generations
+  When generation G33 is published successfully for the first repository
+  Then G33 becomes the active generation and G32 is retired, and both remain intact and readable
+  And every generation of the first repository outside the declared bound is reclaimed within the same publication operation
+  And G28 is not reclaimed while its continuation is unexpired
+  And the second repository's 4 generations are unchanged in count, canonical identity and content
+  And the publication result reports the count of generations reclaimed and the count retained
+  And the result names each retained generation together with the reason it was retained
+
+  Given the first publication after G28's pinned continuation has expired
+  When that publication succeeds
+  Then G28 is reclaimed in that same operation
+  And its continuation receives an explicit expiration result rather than a missing-data result
+
+  Given a repository whose generations are all inside the declared bound
+  When a new generation is published successfully
+  Then the publication reports a reclaimed count of zero
+  And it reports that figure explicitly rather than omitting it
+
+  Given publication of G33 fails before the active pointer is switched
+  When the operation returns
+  Then no generation of either repository is reclaimed
+  And G32 remains the active generation
+  And the failure result reports a reclaimed count of zero
+depends_on: [KM-400f, KM-400f-1]
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: context
+    status: exists
+  - path: docs/architecture/adrs/ADR-062-standalone-knowledge-retrieval.md
+    relationship: context
+    status: exists
+    relevance: Reclamation is part of maintaining the projection, not a separate product.
+  - path: docs/acceptance-criteria/knowledge-management/KM-400-trustworthy-project-knowledge/KM-400b-3.yaml
+    relationship: context
+    status: exists
+    relevance: Reclamation is subordinate to pinning — a retrieval begun against a generation stays pinned to it while retained, so reclamation waits for the continuation to expire.
+  - path: docs/acceptance-criteria/knowledge-management/KM-400-trustworthy-project-knowledge/KM-400b-5.yaml
+    relationship: context
+    status: exists
+    relevance: Supplies the owned-history guarantee this AC invokes automatically; foreign repository data is untouched and continuations receive an explicit expiration result.
+  - path: docs/acceptance-criteria/knowledge-management/KM-400-trustworthy-project-knowledge/KM-400f-1.yaml
+    relationship: context
+    status: exists
+    relevance: Supplies the declared bound and the reclaimability determination this AC acts on; this AC does not recompute the policy.
+  - path: docs/acceptance-criteria/ac-store/ACS-1100-honest-coverage-answers/ACS-1100.yaml
+    relationship: context
+    status: exists
+    relevance: The reclaimed and retained counts are reported figures and state their scope.
+assigned_agent: python-coder
+estimated_complexity: L
+delivers_to:
+  agent: python-coder
+  contract: KM-400f-3 and KM-400f-4 consume the reclamation outcome and its reclaimed
+    and retained counts; the operator surface reports them rather than recomputing them.
+expects_from:
+  ac_id: KM-400f-1
+  contract: The declared retention bound and the per-generation reclaimability
+    determination, including pin and age protections.
+origin_agent: business-analyst
+created: '2026-10-09'
+amended_by:
+  - "2026-10-09: product-owner re-parented this AC from KM-400b to the new KM-400f,
+    where retention and capacity now live. It was authored as KM-400b-7 and is renamed
+    to KM-400f-2 because parentage in this store is derived from the id string. The
+    rename is safe only because the id was one day old and referenced nowhere outside
+    this file and its parents — no test covers tag, no ticket, no implemented_by entry.
+    Criteria, test_spec, test_rationale and must_catch are unchanged; only the id,
+    parent, depends_on, the references in doc_links and the delivers_to/expects_from
+    contracts, the covers tags and the approval fields were touched. readiness moved to
+    approved and priority to high at the user's approval gate."
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  Authored 2026-10-09. A cleanup mechanism already exists and is genuinely tested under
+  KM-400b-5, but nothing invokes it: the projection published a generation on every merge
+  to the canonical branch and reclaimed nothing, so 32 generations accumulated to 189,950
+  nodes and 304,498 relationships and the hosted instance latched read-only. That produced
+  the catch-22 that made recovery impossible — reclaiming space needs the writes a full
+  instance blocks — and the instance had to be destroyed and recreated.
+
+  The reporting clause is load-bearing and is not presentation polish. A silent regression
+  to zero-reclaimed is exactly the failure that occurred, and it is invisible unless the
+  publication result states how many generations it reclaimed and how many it retained.
+  The explicit zero matters for the same reason: an omitted figure and a figure of zero
+  read identically in a log.
+
+  Settled design decision, not to be reopened: immutable generations are KEPT. This AC
+  reclaims generations outside a declared bound; it does not replace generations with
+  in-place upserting, and KM-400b-3's pinning guarantee remains superior to the bound.
+it_requirements: null
+test_required: true
+test_spec:
+  - name: test_successful_publication_reclaims_outside_bound_and_reports_counts
+    target_dir: tests/knowledge/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: Publish a new generation into a fixture holding 27 generations for the
+      target repository plus 4 for a second repository, through the real publication entry
+      point; assert the surviving set, the untouched foreign repository, and that the
+      result states both the reclaimed and the retained count.
+    covers: [KM-400f-2]
+    must_catch:
+      - "publish without invoking reclamation at all, leaving every generation in place"
+      - "report success without stating a reclaimed count"
+      - "reclaim generations belonging to the second repository"
+    requires_db: false
+  - name: test_pinned_generation_survives_until_its_continuation_expires
+    target_dir: tests/knowledge/
+    framework: pytest
+    type: integration
+    angle: boundary
+    description: Hold an unexpired continuation against a generation that is outside the
+      declared bound, publish, assert it survived; expire the continuation, publish again
+      and assert it is reclaimed and the continuation receives an explicit expiration
+      result.
+    covers: [KM-400f-2]
+    must_catch:
+      - "reclaim the pinned generation on the first publication, breaking the pinning guarantee"
+      - "never reclaim a generation that was once pinned, even after expiry"
+    requires_db: false
+  - name: test_failed_publication_reclaims_nothing
+    target_dir: tests/knowledge/
+    framework: pytest
+    type: integration
+    angle: failure
+    description: Fail a publication before the active pointer switches and assert no
+      generation of either repository was reclaimed, the previous generation is still
+      active, and the failure result reports a reclaimed count of zero.
+    covers: [KM-400f-2]
+    must_catch:
+      - "reclaim before the new generation is proven publishable"
+    requires_db: false
+  - name: test_live_publication_reclaims_against_a_real_backend
+    target_dir: tests/knowledge_live/
+    framework: pytest
+    type: integration
+    angle: real_artifact
+    description: Against a real database, publish enough successive generations to exceed
+      the declared bound and assert the retained set, the stable canonical fingerprints of
+      the survivors and the reported counts after each publication.
+    covers: [KM-400f-2]
+    requires_db: true
+test_rationale: >-
+  Reclamation cannot be proved by a test whose fixture never exceeds the bound, so the
+  criterion test seeds 27 generations and the live test publishes successively past the
+  limit, in deliberate contrast to the 2-node live snapshot used elsewhere in this family
+  under which the real limits never bind. The counts are asserted as values because the
+  failure being prevented is a silent regression to zero-reclaimed, which a test that only
+  checks the surviving set after a correct run would still pass once reclamation stopped
+  firing. The foreign-repository and pin cases are separate tests because they are the two
+  ways correct reclamation turns into data loss.

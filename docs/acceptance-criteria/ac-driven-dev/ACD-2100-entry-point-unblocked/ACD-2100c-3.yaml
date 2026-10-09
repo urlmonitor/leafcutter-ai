@@ -117,6 +117,7 @@ amended_by: []
 superseded_by: null
 covered_by:
   - ACD-2100c-3-i
+  - ACD-2100c-3-ii
   - unit_tests/workflows/test_acd_2100c_3.py
 implemented_by:
 - tickets/00_inbox/epics/EPIC-StartingNewWorkTheProperWayAlways/15_TICKET-20260826-ACD-2100c-3.md

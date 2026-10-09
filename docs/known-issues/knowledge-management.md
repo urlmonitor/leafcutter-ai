@@ -56,7 +56,7 @@ Severity in the **filename** is a three-level index bucket (`blocker` / `high` /
 
 Fixed issues move to [`knowledge-management/resolved/`](knowledge-management/resolved/) and are no longer listed as open. They are kept, not deleted.
 
-**Open: 13** (0 blocker, 8 high, 5 low) · **Resolved: 2**
+**Open: 14** (0 blocker, 9 high, 5 low) · **Resolved: 2**
 
 ## Open
 
@@ -70,6 +70,7 @@ Fixed issues move to [`knowledge-management/resolved/`](knowledge-management/res
 | `high` | KI-KM-010 — The emission event is a receipt with no payload, and `_event_hash` keys on a field that is empty in every real record | [open-high-ki-km-010.md](knowledge-management/open-high-ki-km-010.md) |
 | `high` | KI-KM-20260930-entry-kind-vocabulary-has-no-known-issues-member — the declared `entry_kind` vocabulary has no known-issues member, so defect findings fall through route-knowledge to Step 17 and the harvester retains them as permanently unroutable | [open-high-ki-km-20260930-entry-kind-vocabulary-has-no-known-issues-member.md](knowledge-management/open-high-ki-km-20260930-entry-kind-vocabulary-has-no-known-issues-member.md) |
 | `high` | KI-KM-20261008-harvest-state-default-is-cwd-relative — the harvester's `--state` default is relative to the working directory, so a run that omits the flag drops a file into the package root that makes build.py's closure guard abort every later build | [open-high-ki-km-20261008-harvest-state-default-is-cwd-relative.md](knowledge-management/open-high-ki-km-20261008-harvest-state-default-is-cwd-relative.md) |
+| `high` | KI-KM-20261009-knowledge-query-skill-documents-a-path-adopters-do-not-have — the shipped knowledge-query skill tells adopters to run `python scripts/knowledge_query.py`, a path that does not exist in a deployed install; it works only in this repository, where the source copy happens to sit there | [open-high-ki-km-20261009-knowledge-query-skill-documents-a-path-adopters-do-not-have.md](knowledge-management/open-high-ki-km-20261009-knowledge-query-skill-documents-a-path-adopters-do-not-have.md) |
 | `low` | KI-KM-003 — The map understates `ticket-touches`: config flipped to strict, the rating and both notes did not | [open-low-ki-km-003.md](knowledge-management/open-low-ki-km-003.md) |
 | `low` | KI-KM-004 — `check_ac_coverage.py` exists on disk but is registered nowhere, so `covered_by` test entries are never read | [open-low-ki-km-004.md](knowledge-management/open-low-ki-km-004.md) |
 | `low` | KI-KM-006 — The artifact graph is a hand-authored type-level schema; no AC covers making it dynamic | [open-low-ki-km-006.md](knowledge-management/open-low-ki-km-006.md) |

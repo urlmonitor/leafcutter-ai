@@ -1,8 +1,9 @@
 "use client";
 
 /**
- * Slide-in detail drawer for a single flow step (or branch). Shows the plain-
- * language `human` line, the step's acceptance scenario(s), the entities it
+ * Slide-in detail drawer for a single flow step (or branch). Shows the one-
+ * sentence `description`, who runs it (actor kind + agent), the structured
+ * contract detail from io_contracts, the step's acceptance scenario(s), the entities it
  * reads/writes with their actual mock RECORDS, and its acceptance criteria as
  * chips coloured by each AC's LIVE work-status (clickable through to /atlas).
  */
@@ -18,7 +19,6 @@ import {
   ShieldCheck,
   Database,
   GitBranch,
-  Bot,
   LogIn,
   LogOut,
   Maximize2,
@@ -29,7 +29,8 @@ import { cn, humanize } from "@/lib/utils";
 import { WORK_STATUS_TONE, WORK_STATUS_PLAIN } from "@/lib/status";
 import { RealizationBadge } from "./realization-badge";
 import { FlowContracts } from "./flow-contracts";
-import { CONTRACT_PRESENTATION_MARKER, parseIoContracts } from "@/lib/data/flow-contracts";
+import { parseIoContracts } from "@/lib/data/flow-contracts";
+import { StepRunner } from "./step-runner";
 import type { StepView } from "./flow-step-view";
 export type { StepView } from "./flow-step-view";
 import type {
@@ -202,7 +203,6 @@ export function FlowDrawer({
     ? WORK_STATUS_TONE[step.status] ?? WORK_STATUS_TONE.unknown
     : WORK_STATUS_TONE.unknown;
   const contracts = parseIoContracts(step?.ioContracts, step?.contractDefinitions);
-  const narrative = contracts ? step?.human.split(CONTRACT_PRESENTATION_MARKER)[0] : step?.human;
 
   return (
     <AnimatePresence>
@@ -271,9 +271,9 @@ export function FlowDrawer({
                 </button>
               )}
 
-              {narrative && (
+              {step.description && (
                 <p className="whitespace-pre-wrap break-words text-sm leading-relaxed text-foreground/90">
-                  {narrative}
+                  {step.description}
                 </p>
               )}
 
@@ -305,13 +305,7 @@ export function FlowDrawer({
                 </Section>
               )}
 
-              {step.agent && (
-                <Section icon={<Bot className="h-3 w-3" />} title="Runs (agent / script)">
-                  <span className="inline-flex items-center gap-1.5 rounded-md border border-primary/30 bg-primary/10 px-2 py-1 font-mono text-[11px] text-primary">
-                    {step.agent}
-                  </span>
-                </Section>
-              )}
+              <StepRunner agent={step.agent} actorKind={step.actorKind} />
 
               {contracts && <FlowContracts contracts={contracts} definitions={step.contractDefinitions ?? {}} />}
 

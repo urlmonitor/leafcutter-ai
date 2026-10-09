@@ -98,9 +98,12 @@ def _read_flow(path: Path) -> dict:
     if not isinstance(value.get("branches", []), list):
         raise ValueError("Flow branches must be an array")
     for step in value["steps"]:
+        # Read both shapes: pinned historical sources predate the 2026-10-09 rename
+        # of the step text from `human` to `description` (dec-7b1dcfd47f85cf0a).
         if (
             not isinstance(step, dict)
-            or any(not isinstance(step.get(field), str) for field in ("id", "label", "human"))
+            or any(not isinstance(step.get(field), str) for field in ("id", "label"))
+            or not isinstance(step.get("description", step.get("human")), str)
             or type(step.get("order")) is not int
         ):
             raise ValueError("Flow step is missing required fields")

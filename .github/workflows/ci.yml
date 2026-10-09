@@ -187,6 +187,14 @@ jobs:
         # to the full E722/BLE001/TRY set; the other trees are not (see ruff.toml).
         run: ruff check kernel --select E722,BLE001,TRY
 
+      - name: Refuse a deselection with no invoked opt-in (TQ-600a-13-i)
+        # pytest.ini deselects the `manual` and `timing_ratio` tests from this
+        # run. That is only safe while an INVOKED opt-in (a workflow triggered by
+        # push to main or a schedule, whose pytest -m step fails its job) collects
+        # them. The gate refuses otherwise, so the one-line deselection cannot
+        # merge ahead of the cadence that compensates for it. Runs on every PR.
+        run: python scripts/suite_performance/check_exclusion_compensation.py
+
   product-truth-valid:
     name: Product truth valid (offline)
     runs-on: ubuntu-latest

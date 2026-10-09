@@ -14,6 +14,7 @@ BUSINESS CONTEXT: Keeps SQL procedures maintainable by blocking overly complex l
 ARCHITECTURE: Not needed.
 """
 
+import logging
 import re
 import subprocess
 import sys
@@ -24,6 +25,28 @@ from _resolve_root import find_project_root
 project_root = find_project_root()
 
 from config import MAX_SQL_COMPLEXITY_SCORE, SQL_COMPLEXITY_EXCLUDED_DIRS
+
+logger = logging.getLogger(__name__)
+
+try:
+    from check_outcome import (  # type: ignore[import]
+        OUTCOME_COULD_NOT_CHECK,
+        OUTCOME_NOTHING_TO_INSPECT,
+        emit_result,
+    )
+except ImportError:
+    # check_outcome.py is deployed alongside this file in every real layout
+    # (build.py copies the whole templates/scripts/commit_guardian/ tree), so
+    # this fallback exists only for a working copy that exposes this check
+    # script in isolation (e.g. a test fixture) -- same pattern as
+    # check_contract_shrinking.py / check_doc_frontmatter.py. The value here
+    # MUST stay in sync with check_outcome.py.
+    OUTCOME_NOTHING_TO_INSPECT = "nothing_to_inspect"
+    OUTCOME_COULD_NOT_CHECK = "could_not_check"
+
+    def emit_result(outcome: str) -> None:
+        """Fallback RESULT-line emitter used when check_outcome is absent."""
+        print(f"RESULT: {outcome}", file=sys.stdout)
 
 # Keywords that dramatically increase structural complexity in SQL / PL/pgSQL
 COMPLEXITY_KEYWORDS = re.compile(
@@ -102,6 +125,19 @@ def get_staged_files() -> dict[str, str]:
             staged_files[filepath] = status
     return staged_files
 
+def _report_errored(errored_files: list[str]) -> None:
+    """Print each unexaminable file and announce could-not-check.
+
+    Args:
+        errored_files: Staged .sql paths that were read-failed or unreadable.
+    """
+    if not errored_files:
+        return
+    for filepath in errored_files:
+        print(f"⚠️  Could not examine {filepath} (unreadable, missing from the working tree, or not valid UTF-8)")
+    emit_result(OUTCOME_COULD_NOT_CHECK)
+
+
 def main() -> int:
     """Run SQL complexity checks on all staged SQL files.
 
@@ -116,9 +152,11 @@ def main() -> int:
 
     staged_files = get_staged_files()
     if not staged_files:
+        emit_result(OUTCOME_NOTHING_TO_INSPECT)
         return 0
 
     failed_files = []
+    errored_files: list[str] = []
     passed_files_count = 0
     
     for filepath, status in staged_files.items():
@@ -133,14 +171,25 @@ def main() -> int:
         try:
             content = path.read_text(encoding="utf-8")
             complexity = calculate_sql_complexity(content)
-            
+
             if complexity > MAX_SQL_COMPLEXITY_SCORE:
                 failed_files.append((filepath, complexity))
             else:
                 passed_files_count += 1
-                
-        except Exception:
-            continue
+
+        except FileNotFoundError as exc:
+            if status.startswith("D"):
+                # A staged deletion: the file is gone, so there is no subject.
+                continue
+            # Staged in the index but absent from the working tree: the commit
+            # carries content this check could not read.
+            logger.warning("could not examine %s: %s", filepath, exc)
+            errored_files.append(filepath)
+        except (OSError, ValueError, SyntaxError) as exc:
+            # A real subject that could not be read or analysed (e.g. not
+            # valid UTF-8): counted so it is never reported as "nothing".
+            logger.warning("could not examine %s: %s", filepath, exc)
+            errored_files.append(filepath)
 
     if failed_files:
         print("\n🧠 SQL Code Complexity Check Failed\n")
@@ -150,11 +199,19 @@ def main() -> int:
             print(f"❌ {filepath}: Complexity score = {score}")
             
         print("\n💡 Tip: Try breaking large SQL procedures into smaller functions, or using temporary tables to simplify logic.")
+        _report_errored(errored_files)
         return 1
+
+    _report_errored(errored_files)
 
     if passed_files_count > 0:
         print(f"✅ PASSED: {passed_files_count} files passed SQL complexity checks")
-        
+    elif not errored_files:
+        # No staged file was a .sql subject this check could examine (either
+        # none was staged at all, or every staged .sql file fell under
+        # SQL_COMPLEXITY_EXCLUDED_DIRS) -- distinct from a genuine clean pass.
+        emit_result(OUTCOME_NOTHING_TO_INSPECT)
+
     return 0
 
 if __name__ == "__main__":

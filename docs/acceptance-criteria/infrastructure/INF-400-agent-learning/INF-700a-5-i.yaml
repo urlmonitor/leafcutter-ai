@@ -10,7 +10,7 @@ component: infrastructure
 level: L3
 status: active
 req_status: active
-work_status: todo
+work_status: done
 priority: high
 readiness: reviewed
 created_by: "docs/acceptance-criteria/infrastructure/INF-400-agent-learning/INF-700a-5.yaml"
@@ -73,8 +73,14 @@ amended_by:
 superseded_by: null
 covered_by:
 - unit_tests/workflows/test_inf_700a_5_i.py
+- unit_tests/workflows/test_inf_700a_5_cli.py
+- unit_tests/workflows/test_inf_700a_5_fast_lane_wiring.py
+- unit_tests/workflows/test_inf_700a_5_quick_fix_wiring.py
+- unit_tests/workflows/test_inf_700a_5_i_finalize_teardown.py
 implemented_by:
 - scripts/knowledge/completion_routing.py
+- scripts/knowledge/completion_routing_cli.py
+- templates/workflows-js/finalize-feature.js
 test_spec:
   - name: test_a_refused_publication_reports_the_records_unwritten_and_names_the_destinations
     target_dir: unit_tests/workflows/

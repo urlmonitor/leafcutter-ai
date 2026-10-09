@@ -154,8 +154,15 @@ class TestOrphanHalf(unittest.TestCase):
         combined = result.stdout + result.stderr
 
         for rel_path in h.ORPHAN_PATHS:
+            # The GAP classification is what BP-100k-3-iii asserts; the remedy
+            # TEXT is BP-100k-3-ii's contract and is asserted behaviourally by
+            # test_bp_100k_3_ii.py (carry the remedy out, re-run, observe the
+            # report change). Pinning the old "run build.py to register it"
+            # string here duplicated that contract in a record that does not
+            # own it -- and these two orphans are exactly the files for which
+            # that advice was wrong, since no template can produce them.
             self.assertIn(
-                f"UNCOMPARABLE: GAP {rel_path} action=run build.py to register it",
+                f"UNCOMPARABLE: GAP {rel_path}",
                 combined,
                 msg=f"{rel_path} was not reported as a gap. Output:\n{combined}",
             )

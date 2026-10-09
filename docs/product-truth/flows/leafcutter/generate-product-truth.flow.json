@@ -23,7 +23,8 @@
     {
       "id": "map",
       "label": "Build the AC work_status map",
-      "human": "The generator makes a single pass over the AC store, building one {ac_id -> work_status} map that every later step reads from.\n\nI/O boundary: generate_product_truth.py build_ac_map returns an in-process Python dictionary keyed by AC ID whose values are parsed AC records. No separate file/API serializes this map; the record fields shown are the values actually read.\n\nContract fields and examples (generated)\nConsumes:\n  ac/id: string (required)\n  ac/work_status: null|string (optional)\n  Schema: [ac](config/ac_store_schema.json)\nProduces:\n  No checked JSON binding documented in this direction.\n\nInput illustrative ac projection; not an execution receipt — ac; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"id\": \"ACD-300\",\n  \"work_status\": \"todo\"\n}",
+      "description": "The generator reads the acceptance criteria store once and builds a map of each criterion's work status for every later step to use.",
+      "actor_kind": "deterministic",
       "order": 1,
       "implements": [
         "UXP-510"
@@ -76,7 +77,8 @@
     {
       "id": "derive",
       "label": "Derive each step's impl_status and roll up impl_summary",
-      "human": "For every flow step and branch, the generator recomputes impl_status from the work_status of its implements ACs and rolls the counts up into the flow's impl_summary.\n\nI/O boundary: Derived values are written back into the existing flow artifact; there is no new status-report DTO.\n\nThe generator also derives compatibility consumes/produces labels and the technical human suffix from io_contracts, preserving the authored narrative and avoiding a second editable source of field names or examples.\n\nContract fields and examples (generated)\nConsumes:\n  ac/id: string (required)\n  ac/work_status: null|string (optional)\n  Schema: [ac](config/ac_store_schema.json)\n  flow/steps/*/implements: array (optional)\n  flow/steps/*/expands_to: array|string (optional)\n  Schema: [flow](docs/product-truth/schemas/flow.schema.json)\nProduces:\n  flow/steps/*/impl_status: string (optional)\n  flow/impl_summary: object (optional)\n  Schema: [flow](docs/product-truth/schemas/flow.schema.json)\n\nInput illustrative ac projection; not an execution receipt — ac; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"id\": \"ACD-300\",\n  \"work_status\": \"todo\"\n}\n\nInput illustrative flow projection; not an execution receipt — flow; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"steps\": [\n    {\n      \"id\": \"approve\",\n      \"order\": 1,\n      \"label\": \"Approve the feature\",\n      \"human\": \"Review the proposed behavior.\",\n      \"implements\": [\n        \"UXP-531\"\n      ],\n      \"impl_status\": \"not_started\",\n      \"screen\": \"feature-review\"\n    }\n  ]\n}\n\nOutput illustrative flow projection; not an execution receipt — flow; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"steps\": [\n    {\n      \"id\": \"approve\",\n      \"order\": 1,\n      \"label\": \"Approve the feature\",\n      \"human\": \"Review the proposed behavior.\",\n      \"implements\": [\n        \"UXP-531\"\n      ],\n      \"impl_status\": \"not_started\",\n      \"screen\": \"feature-review\"\n    }\n  ],\n  \"impl_summary\": {\n    \"done\": 0,\n    \"in_progress\": 0,\n    \"not_started\": 1,\n    \"total\": 1,\n    \"asof\": \"2026-10-03\"\n  }\n}",
+      "description": "The generator recomputes each step's and branch's build status from its linked acceptance criteria and totals those statuses into a summary for the flow.",
+      "actor_kind": "deterministic",
       "order": 2,
       "implements": [
         "UXP-511",
@@ -170,7 +172,7 @@
                   "id": "approve",
                   "order": 1,
                   "label": "Approve the feature",
-                  "human": "Review the proposed behavior.",
+                  "description": "Review the proposed behavior.",
                   "implements": [
                     "UXP-531"
                   ],
@@ -191,7 +193,7 @@
                   "id": "approve",
                   "order": 1,
                   "label": "Approve the feature",
-                  "human": "Review the proposed behavior.",
+                  "description": "Review the proposed behavior.",
                   "implements": [
                     "UXP-531"
                   ],
@@ -224,7 +226,8 @@
     {
       "id": "invert",
       "label": "Invert flow->AC edges into the by_ac index",
-      "human": "The authored flow->AC edges (step.implements) are inverted into a by_ac index and the reverse indexes (by_component/by_entity/by_flow) are rebuilt in index.json.\n\nI/O boundary: The source-reviewed projection names actual generate_product_truth.py index.json maps. It is not a complete index schema or automatic source-parity proof.\n\nContract fields and examples (generated)\nConsumes:\n  flow/id: string (required)\n  flow/component: string (required)\n  flow/entities: array (required)\n  flow/steps/*/id: string (required)\n  flow/steps/*/implements: array (optional)\n  Schema: [flow](docs/product-truth/schemas/flow.schema.json)\nProduces:\n  SOURCE-REVIEWED DOCUMENTATION: Projection of generate_product_truth.py write_index/build_by_ac/build_by_flow. Documents index.json lookups, not a complete runtime validator or automatic source parity.\n  index/by_ac: object (optional)\n  index/by_component: object (optional)\n  index/by_entity: object (optional)\n  index/by_flow: object (optional)\n  Schema: [index](docs/product-truth/schemas/product-truth-index-projection.schema.json)\n\nInput illustrative flow projection; not an execution receipt — flow; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"id\": \"leafcutter/define-a-feature\",\n  \"component\": \"ux-prototyping\",\n  \"entities\": [\n    \"Ac\"\n  ],\n  \"steps\": [\n    {\n      \"id\": \"approve\",\n      \"order\": 1,\n      \"label\": \"Approve the feature\",\n      \"human\": \"Review the proposed behavior.\",\n      \"implements\": [\n        \"UXP-531\"\n      ],\n      \"impl_status\": \"not_started\",\n      \"screen\": \"feature-review\"\n    }\n  ]\n}\n\nOutput illustrative index projection; not an execution receipt — index; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"by_component\": {\n    \"ux-prototyping\": {\n      \"flows\": [\n        \"leafcutter/define-a-feature\"\n      ],\n      \"mock_data\": [],\n      \"mockups\": []\n    }\n  },\n  \"by_entity\": {\n    \"Ac\": {\n      \"canonical_mock_data\": {},\n      \"flows\": {\n        \"ux-prototyping\": [\n          \"leafcutter/define-a-feature\"\n        ]\n      }\n    }\n  },\n  \"by_flow\": {\n    \"leafcutter/define-a-feature\": {\n      \"component\": \"ux-prototyping\",\n      \"path\": \"flows/leafcutter/define-a-feature.flow.json\",\n      \"entities\": [\n        \"Ac\"\n      ],\n      \"expands\": [],\n      \"parents\": [],\n      \"impl_status\": \"not_started\"\n    }\n  },\n  \"by_ac\": {\n    \"ACD-300\": [\n      {\n        \"flow\": \"leafcutter/deliver-a-feature\",\n        \"node\": \"plan\",\n        \"node_kind\": \"step\",\n        \"flow_kind\": \"user\",\n        \"screen\": null,\n        \"mock_data\": null,\n        \"entities\": [],\n        \"source\": \"real\",\n        \"asof\": \"2026-10-03\"\n      }\n    ]\n  }\n}",
+      "description": "The generator turns the flow-to-criterion links around into an index from each acceptance criterion to its flow steps, and rebuilds the component, entity and flow indexes.",
+      "actor_kind": "deterministic",
       "order": 3,
       "implements": [
         "UXP-512"
@@ -326,7 +329,7 @@
                   "id": "approve",
                   "order": 1,
                   "label": "Approve the feature",
-                  "human": "Review the proposed behavior.",
+                  "description": "Review the proposed behavior.",
                   "implements": [
                     "UXP-531"
                   ],
@@ -409,7 +412,8 @@
     {
       "id": "backref",
       "label": "Write the product_truth back-ref onto each AC",
-      "human": "Each referenced AC's product_truth block is overwritten wholesale from its by_ac list so the AC is self-describing (which flow nodes / screens / mock data realise it).\n\nI/O boundary: The generated parsed-YAML product_truth list is overwritten from the canonical inverted edges; authored criteria are not rewritten.\n\nContract fields and examples (generated)\nConsumes:\n  SOURCE-REVIEWED DOCUMENTATION: Projection of generate_product_truth.py write_index/build_by_ac/build_by_flow. Documents index.json lookups, not a complete runtime validator or automatic source parity.\n  index/by_ac: object (optional)\n  Schema: [index](docs/product-truth/schemas/product-truth-index-projection.schema.json)\nProduces:\n  ac/id: string (required)\n  ac/product_truth/*/flow: string (required)\n  ac/product_truth/*/node: string (required)\n  ac/product_truth/*/node_kind: string (required)\n  ac/product_truth/*/screen: null|string (required)\n  ac/product_truth/*/asof: string (required)\n  Schema: [ac](config/ac_store_schema.json)\n\nInput illustrative index projection; not an execution receipt — index; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"by_ac\": {\n    \"ACD-300\": [\n      {\n        \"flow\": \"leafcutter/deliver-a-feature\",\n        \"node\": \"plan\",\n        \"node_kind\": \"step\",\n        \"flow_kind\": \"user\",\n        \"screen\": null,\n        \"mock_data\": null,\n        \"entities\": [],\n        \"source\": \"real\",\n        \"asof\": \"2026-10-03\"\n      }\n    ]\n  }\n}\n\nOutput illustrative ac projection; not an execution receipt — ac; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"id\": \"ACD-300\",\n  \"product_truth\": [\n    {\n      \"flow\": \"leafcutter/deliver-a-feature\",\n      \"node\": \"plan\",\n      \"node_kind\": \"step\",\n      \"flow_kind\": \"user\",\n      \"screen\": null,\n      \"mock_data\": null,\n      \"entities\": [],\n      \"source\": \"real\",\n      \"asof\": \"2026-10-03\"\n    }\n  ]\n}",
+      "description": "The generator rewrites each linked acceptance criterion's product-truth links to show which flow steps, screens and mock data realize it, leaving its authored text alone.",
+      "actor_kind": "deterministic",
       "order": 4,
       "implements": [
         "UXP-513"
@@ -544,7 +548,8 @@
     {
       "id": "validate",
       "label": "Fail on derived-vs-source drift",
-      "human": "The validator recomputes every derived field and errors if impl_status, product_truth, the derived indexes, or any screen->mockup link has drifted from its source.\n\nI/O boundary: After checking persisted artifacts, normal completion emits console diagnostics, a process exit code and a final stdout JSON outcome. --quiet changes logging verbosity only. Missing validation dependencies or a refused --tighten request return early before that outcome line.\n\nThe same validator verifies declared field paths, types, requiredness and defaults; complete and projected examples; observed receipt provenance; required metadata for every flow node; and drift in generated contract presentation. Declared proposed binding gaps remain visible and are counted separately from implemented interfaces.\n\nContract fields and examples (generated)\nConsumes:\n  flow/steps/*/impl_status: string (optional)\n  flow/impl_summary: object (optional)\n  Schema: [flow](docs/product-truth/schemas/flow.schema.json)\n  SOURCE-REVIEWED DOCUMENTATION: Projection of generate_product_truth.py write_index/build_by_ac/build_by_flow. Documents index.json lookups, not a complete runtime validator or automatic source parity.\n  index/by_ac: object (optional)\n  index/by_component: object (optional)\n  index/by_entity: object (optional)\n  index/by_flow: object (optional)\n  Schema: [index](docs/product-truth/schemas/product-truth-index-projection.schema.json)\n  ac/id: string (required)\n  ac/product_truth: array (optional)\n  Schema: [ac](config/ac_store_schema.json)\nProduces:\n  SOURCE-REVIEWED DOCUMENTATION: Source-reviewed top-level contract of docs/product-truth/scripts/product_truth_outcome.py::_print_outcome_contract. Additive fields and nested source-defined diagnostic objects remain permitted. This documentation schema is not runtime enforcement or automatic source-code parity. Early dependency/tighten failures do not emit this shape.\n  validation_outcome/outcome: string (required)\n  validation_outcome/examined: integer (required)\n  validation_outcome/unreadable: array (required)\n  validation_outcome/empty_types: array (required)\n  validation_outcome/resolved_pointers: integer (required)\n  validation_outcome/unresolvable_pointers: integer (required)\n  validation_outcome/examined_by_check: object (required)\n  validation_outcome/resolved_labels: integer (required)\n  validation_outcome/bounds: object (required)\n  validation_outcome/type_population: object (required)\n  validation_outcome/example_only_types: array (required)\n  Schema: [validation_outcome](docs/product-truth/schemas/product-truth-validation-outcome.schema.json)\n\nInput illustrative flow projection; not an execution receipt — flow; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"steps\": [\n    {\n      \"id\": \"approve\",\n      \"order\": 1,\n      \"label\": \"Approve the feature\",\n      \"human\": \"Review the proposed behavior.\",\n      \"implements\": [\n        \"UXP-531\"\n      ],\n      \"impl_status\": \"not_started\",\n      \"screen\": \"feature-review\"\n    }\n  ],\n  \"impl_summary\": {\n    \"done\": 0,\n    \"in_progress\": 0,\n    \"not_started\": 1,\n    \"total\": 1,\n    \"asof\": \"2026-10-03\"\n  }\n}\n\nInput illustrative index projection; not an execution receipt — index; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"by_component\": {\n    \"ux-prototyping\": {\n      \"flows\": [\n        \"leafcutter/define-a-feature\"\n      ],\n      \"mock_data\": [],\n      \"mockups\": []\n    }\n  },\n  \"by_entity\": {\n    \"Ac\": {\n      \"canonical_mock_data\": {},\n      \"flows\": {\n        \"ux-prototyping\": [\n          \"leafcutter/define-a-feature\"\n        ]\n      }\n    }\n  },\n  \"by_flow\": {\n    \"leafcutter/define-a-feature\": {\n      \"component\": \"ux-prototyping\",\n      \"path\": \"flows/leafcutter/define-a-feature.flow.json\",\n      \"entities\": [\n        \"Ac\"\n      ],\n      \"expands\": [],\n      \"parents\": [],\n      \"impl_status\": \"not_started\"\n    }\n  },\n  \"by_ac\": {\n    \"ACD-300\": [\n      {\n        \"flow\": \"leafcutter/deliver-a-feature\",\n        \"node\": \"plan\",\n        \"node_kind\": \"step\",\n        \"flow_kind\": \"user\",\n        \"screen\": null,\n        \"mock_data\": null,\n        \"entities\": [],\n        \"source\": \"real\",\n        \"asof\": \"2026-10-03\"\n      }\n    ]\n  }\n}\n\nInput illustrative ac projection; not an execution receipt — ac; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"id\": \"ACD-300\",\n  \"product_truth\": [\n    {\n      \"flow\": \"leafcutter/deliver-a-feature\",\n      \"node\": \"plan\",\n      \"node_kind\": \"step\",\n      \"flow_kind\": \"user\",\n      \"screen\": null,\n      \"mock_data\": null,\n      \"entities\": [],\n      \"source\": \"real\",\n      \"asof\": \"2026-10-03\"\n    }\n  ]\n}\n\nFailed validation outcome projection; illustrative, not a measured run — validation_outcome; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"outcome\": \"failed\",\n  \"examined\": 1,\n  \"unreadable\": [],\n  \"resolved_pointers\": 1,\n  \"unresolvable_pointers\": 0\n}",
+      "description": "The validator recomputes every derived value and fails the run if any status, link, index, screen-to-mockup reference or declared step contract has drifted from its source.",
+      "actor_kind": "deterministic",
       "order": 5,
       "implements": [
         "UXP-514",
@@ -724,7 +729,7 @@
                   "id": "approve",
                   "order": 1,
                   "label": "Approve the feature",
-                  "human": "Review the proposed behavior.",
+                  "description": "Review the proposed behavior.",
                   "implements": [
                     "UXP-531"
                   ],

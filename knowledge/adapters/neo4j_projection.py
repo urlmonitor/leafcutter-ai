@@ -21,9 +21,18 @@ import hashlib
 import json
 import time
 
+from knowledge.adapters.domain_schema import EDGE_TYPES, NODE_LABELS
 from knowledge.adapters.neo4j_backend import scope_key
 from knowledge.projection.validation import validate_snapshot
 from knowledge.errors import BackendUnavailable
+
+
+# Control records are separate from the generation-scoped native domain nodes.
+_CONTROL_SCHEMA_QUERY = (
+    "MATCH (n {repository_id:$repo}) WHERE n.generation_key IS NULL "
+    "AND NOT (size(labels(n))=1 AND (n:Repository OR n:Snapshot)) "
+    "RETURN count(n) AS count"
+)
 
 
 async def publish(
@@ -40,12 +49,9 @@ async def publish(
         Whether the guarded operation succeeded.
     """
     validate_snapshot(snapshot)
-    legacy = await db._run(
-        "MATCH (r {repository_id:$repo}) WHERE 'KRRepository' IN labels(r) RETURN count(r) AS count",
-        {"repo": snapshot.repository_id},
-    )
-    if legacy[0]["count"]:
-        raise ValueError("migrate the legacy graph presentation before publishing")
+    unsupported = await db._run(_CONTROL_SCHEMA_QUERY, {"repo": snapshot.repository_id})
+    if unsupported[0]["count"]:
+        raise ValueError("repository control records require native storage")
     key = scope_key(snapshot.repository_id, snapshot.generation_id)
     digest = hashlib.sha256(snapshot.model_dump_json().encode()).hexdigest()
     kinds = snapshot.supported_kinds or sorted({n.kind for n in snapshot.nodes})
@@ -80,13 +86,13 @@ async def publish(
             await _validate_counts(db, key, len(snapshot.nodes), len(snapshot.edges))
         except (ValueError, BackendUnavailable) as error:
             await db._run(
-                'MATCH (g:KRGeneration {key:$key}) WHERE g.status<>"ready" SET g.status="failed",g.error_code=$code,g.failed_at=$now',
+                'MATCH (g:Snapshot {key:$key}) WHERE g.status<>"ready" SET g.status="failed",g.error_code=$code,g.failed_at=$now',
                 {"key": key, "code": type(error).__name__, "now": time.time()},
                 True,
             )
             raise
         await db._run(
-            'MATCH (g:KRGeneration {key:$key}) WHERE g.status<>"ready" SET g.status="validated", g.validated_at=$now',
+            'MATCH (g:Snapshot {key:$key}) WHERE g.status<>"ready" SET g.status="validated", g.validated_at=$now',
             {"key": key, "now": time.time()},
             True,
         )
@@ -118,10 +124,16 @@ async def _validate_counts(db: Neo4jBackend, key: str, nodes: int, edges: int) -
         edges: Expected number of staged relationship records.
     """
     rows = await db._run(
-        "MATCH (n:KREntity {generation_key:$key}) RETURN count(n) AS count", {"key": key}
+        "MATCH (n:" + NODE_LABELS + " {generation_key:$key}) RETURN count(n) AS count", {"key": key}
     )
     links = await db._run(
-        "MATCH (:KREntity {generation_key:$key})-[r:KR_LINK {generation_key:$key}]->(:KREntity {generation_key:$key}) RETURN count(r) AS count",
+        "MATCH (:"
+        + NODE_LABELS
+        + " {generation_key:$key})-[r:"
+        + EDGE_TYPES
+        + " {generation_key:$key}]->(:"
+        + NODE_LABELS
+        + " {generation_key:$key}) RETURN count(r) AS count",
         {"key": key},
     )
     if rows[0]["count"] != nodes or links[0]["count"] != edges:
@@ -154,14 +166,9 @@ async def switch_active(
         Returns:
             True when the pointer was published; False when the comparison refused it.
         """
-        legacy = db._rows(
-            tx,
-            "MATCH (r {repository_id:$repo}) WHERE 'KRRepository' IN labels(r) "
-            "RETURN count(r) AS count",
-            {"repo": repository_id},
-        )
-        if legacy[0]["count"]:
-            raise ValueError("migrate the legacy graph presentation before changing publication")
+        unsupported = db._rows(tx, _CONTROL_SCHEMA_QUERY, {"repo": repository_id})
+        if unsupported[0]["count"]:
+            raise ValueError("repository control records require native storage")
         rows = db._rows(
             tx,
             "MERGE (r:Repository {repository_id:$repo}) SET r.lock=coalesce(r.lock,0)+1, r.name=$repo RETURN r.active AS active",
@@ -174,7 +181,7 @@ async def switch_active(
             return False
         eligible = db._rows(
             tx,
-            'MATCH (g:KRGeneration {key:$key}) WHERE g.status IN ["ready","validated"] RETURN g.key AS key',
+            'MATCH (g:Snapshot {key:$key}) WHERE g.status IN ["ready","validated"] RETURN g.key AS key',
             {"key": key},
         )
         if not eligible:
@@ -185,7 +192,7 @@ async def switch_active(
             set_current(db, tx, current, False)
             db._rows(
                 tx,
-                "MATCH (g:KRGeneration {key:$key}) SET g.retired_at=$now",
+                "MATCH (g:Snapshot {key:$key}) SET g.retired_at=$now",
                 {"key": current, "now": time.time()},
             )
         db._rows(
@@ -195,7 +202,7 @@ async def switch_active(
         )
         db._rows(
             tx,
-            'MATCH (g:KRGeneration {key:$key}) SET g.status="ready",g.ready_at=$now REMOVE g.retired_at',
+            'MATCH (g:Snapshot {key:$key}) SET g.status="ready",g.ready_at=$now REMOVE g.retired_at',
             {"key": key, "now": time.time()},
         )
         set_current(db, tx, key, True)
@@ -239,13 +246,15 @@ async def cleanup(
         """
         rows = db._rows(
             tx,
-            "MATCH (r:KRRepository {repository_id:$repo}) SET r.lock=coalesce(r.lock,0)+1 WITH r MATCH (g:KRGeneration {key:$key}) RETURN r.active AS active,coalesce(g.retired_at,g.created_at) AS created,g.vector_indexes AS vector_indexes",
+            "MATCH (r:Repository {repository_id:$repo}) SET r.lock=coalesce(r.lock,0)+1 WITH r MATCH (g:Snapshot {key:$key}) RETURN r.active AS active,coalesce(g.retired_at,g.created_at) AS created,g.vector_indexes AS vector_indexes",
             {"repo": repository_id, "key": key},
         )
         if not rows or rows[0]["active"] == key or rows[0]["created"] > cutoff:
             return None
-        db._rows(tx, "MATCH (n:KREntity {generation_key:$key}) DETACH DELETE n", {"key": key})
-        db._rows(tx, "MATCH (g:KRGeneration {key:$key}) DELETE g", {"key": key})
+        db._rows(
+            tx, "MATCH (n:" + NODE_LABELS + " {generation_key:$key}) DETACH DELETE n", {"key": key}
+        )
+        db._rows(tx, "MATCH (g:Snapshot {key:$key}) DELETE g", {"key": key})
         return rows[0]["vector_indexes"] or []
 
     index = await db._transaction(transaction, True)

@@ -5,7 +5,7 @@ type: reference
 category: reference
 status: active
 created: 2026-08-18
-last_updated: '2026-09-28'
+last_updated: '2026-10-09'
 components:
   - commit_guardian
 related_docs:
@@ -73,7 +73,7 @@ Severity in the **filename** is a three-level index bucket (`blocker` / `high` /
 
 Fixed issues move to [`commit-guardian/resolved/`](commit-guardian/resolved/) and are no longer listed as open. They are kept, not deleted.
 
-**Open: 75** (2 blocker, 33 high, 40 low) · **Resolved: 17**
+**Open: 77** (2 blocker, 35 high, 40 low) · **Resolved: 17**
 
 ## Open
 
@@ -115,6 +115,8 @@ Fixed issues move to [`commit-guardian/resolved/`](commit-guardian/resolved/) an
 | `high` | KI-CG-20260927-file-size-hook-read-another-worktrees-index — check-file-size once measured the staged files of a different worktree, while every other hook in the same run saw the right ones | [open-high-ki-cg-20260927-file-size-hook-read-another-worktrees-index.md](commit-guardian/open-high-ki-cg-20260927-file-size-hook-read-another-worktrees-index.md) |
 | `high` | KI-CG-20260928-ac-schema-not-deployed-at-consumer-root — the schema is deployed only under .leafcutter/config/, so check-ac-schema degrades to manual field validation in every consumer install | [open-high-ki-cg-20260928-ac-schema-not-deployed-at-consumer-root.md](commit-guardian/open-high-ki-cg-20260928-ac-schema-not-deployed-at-consumer-root.md) |
 | `high` | KI-CG-20260928-first-commit-leaves-the-deployed-config-drifted — the first commit in a worktree strips every em-dash from the deployed `commit_guardian.json`, so EVERY commit after the first is refused by `check-output-drift` for a change no author made (19 refusals across 5+ worktrees) | [open-high-ki-cg-20260928-first-commit-leaves-the-deployed-config-drifted.md](commit-guardian/open-high-ki-cg-20260928-first-commit-leaves-the-deployed-config-drifted.md) |
+| `high` | KI-CG-20261009-required-ci-ruff-has-no-local-pre-commit-counterpart — the required `Lint (ruff)` CI check has never had a matching pre-commit hook, so a lint violation passes every local commit-time gate and fails only in CI; three in-repo texts claim the hook exists | [open-high-ki-cg-20261009-required-ci-ruff-has-no-local-pre-commit-counterpart.md](commit-guardian/open-high-ki-cg-20261009-required-ci-ruff-has-no-local-pre-commit-counterpart.md) |
+| `high` | KI-CG-20261009-file-size-measure-strips-from-slash-star-inside-strings — `check-file-size`'s measure strips block comments with a language-blind regex, so a `/*` inside a string, glob or line comment drops every line to the next `*/`; 16 files on main lose 870 lines, `finalize-feature.js` alone 364, and `test_native_decision.py` reads 332 against a 400 limit when it is 459 | [open-high-ki-cg-20261009-file-size-measure-strips-from-slash-star-inside-strings.md](commit-guardian/open-high-ki-cg-20261009-file-size-measure-strips-from-slash-star-inside-strings.md) |
 | `low` | KI-CG-002 — The diagram-type guard silently swaps its enum source when its declaring file is unreachable | [open-low-ki-cg-002.md](commit-guardian/open-low-ki-cg-002.md) |
 | `low` | KI-CG-011 — The roadmap mirror strips its own `description` frontmatter and backdates `created` to today | [open-low-ki-cg-011.md](commit-guardian/open-low-ki-cg-011.md) |
 | `low` | KI-CG-013 — The schema hook and the done-proof oracle disagree about what a leaf is, so one AC can be required to satisfy both branches | [open-low-ki-cg-013.md](commit-guardian/open-low-ki-cg-013.md) |
@@ -146,7 +148,7 @@ Fixed issues move to [`commit-guardian/resolved/`](commit-guardian/resolved/) an
 | `low` | KI-CG-20260909-gate-folder-density — `check-folder-density`'s grandfather compares `git ls-files`, which already includes staged additions, so its blocking branch is unreachable | [open-low-ki-cg-20260909-gate-folder-density.md](commit-guardian/open-low-ki-cg-20260909-gate-folder-density.md) |
 | `low` | KI-CG-20260909-gate-test-fixture-bloat — `check-test-fixture-bloat` is disabled by an absent config section, hiding 499 violations, and only one of its three axes ratchets cleanly | [open-low-ki-cg-20260909-gate-test-fixture-bloat.md](commit-guardian/open-low-ki-cg-20260909-gate-test-fixture-bloat.md) |
 | `low` | KI-CG-20260909-gate-ticket-ac-limits-and-the-three-inert — the one gate ready to register today, and three whose population is empty here | [open-low-ki-cg-20260909-gate-ticket-ac-limits-and-the-three-inert.md](commit-guardian/open-low-ki-cg-20260909-gate-ticket-ac-limits-and-the-three-inert.md) |
-| `low` | KI-CG-20260914-done-proof-precommit-ignores-test-required — the pre-commit done-proof gate demands a covers tag from an AC that declares it needs no test, while the CI gate it stands in for exempts that AC | [open-low-ki-cg-20260914-done-proof-precommit-ignores-test-required.md](commit-guardian/open-low-ki-cg-20260914-done-proof-precommit-ignores-test-required.md) |
+| `low` | KI-CG-20260914-done-proof-precommit-ignores-test-required — the pre-commit done-proof gate demands a covers tag from an AC that declares it needs no test, while the CI gate it stands in for exempts that AC. The leaf half is fixed (#861/#878). The composite half is still open in both pre-commit and CI: a done `test_required: false` child with a rationale counts as "unproven", so 10 composites, including `INF-700a`, cannot be closed (3 occurrences, last 2026-10-09) | [open-low-ki-cg-20260914-done-proof-precommit-ignores-test-required.md](commit-guardian/open-low-ki-cg-20260914-done-proof-precommit-ignores-test-required.md) |
 | `low` | KI-CG-20260914-exception-hook-blocks-silently — the PostToolUse exception-handling hook failed every Python write with an empty error when `ruff` was importable but not on PATH — RESOLVED 2026-10-07 in two steps: GE-108d routed the blocking message to stderr so the block is readable, GE-108e made the hook try `python -m ruff` before the bare executable so an installed ruff is found | [resolved-low-ki-cg-20260914-exception-hook-blocks-silently.md](commit-guardian/resolved/resolved-low-ki-cg-20260914-exception-hook-blocks-silently.md) |
 | `low` | KI-CG-20260914-post-merge-stage-registers-but-installs-no-shim — a hook on the post-merge stage is registered, renders into the config, and still never fires in any checkout that did not create a ticket worktree | [open-low-ki-cg-20260914-post-merge-stage-registers-but-installs-no-shim.md](commit-guardian/open-low-ki-cg-20260914-post-merge-stage-registers-but-installs-no-shim.md) |
 | `low` | KI-CG-20260923-contract-shrinking-guard-rename-blind — `check-contract-shrinking` correlates deleted test names against added test names, so a renamed test reads as a deleted one | [open-low-ki-cg-20260923-contract-shrinking-guard-rename-blind.md](commit-guardian/open-low-ki-cg-20260923-contract-shrinking-guard-rename-blind.md) |

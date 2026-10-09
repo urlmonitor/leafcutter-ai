@@ -9,13 +9,14 @@ ASSUMED PRODUCTION CONTRACT (written by test-writer; python-coder builds this).
 1. pytest.ini registers a ``timing_ratio`` marker in its ``markers =`` key and
    the default selection becomes ``-m "not manual and not timing_ratio"``.
 2. The two TQ-600a-11 wall-clock ratio tests carry ``@pytest.mark.timing_ratio``.
-3. ``.github/workflows/post-merge-timing.yml`` (name ``Post-merge timing suite``) has
-   one job whose pytest ``run:`` step collects ``-m timing_ratio`` and concludes red
-   on a failing test AND on an empty selection (pytest exit 5).
+3. ``.github/workflows/post-merge-timing.yml`` (name ``Post-merge timing suite``) collects
+   ``-m timing_ratio`` and concludes red on a failing test AND on an empty selection.
+   (xix shipped it as one job with one pytest step; TQ-600a-13-xii extended it to the
+   run / retry / verdict shape, where the ``verdict`` job's exit status is the conclusion.)
 
 Test 1 is made on node ids two REAL ``pytest --collect-only`` subprocesses produced,
 reading the real pytest.ini -- never on a grep of the configuration. Test 2 executes
-the workflow's pytest step verbatim with bash in a synthetic project.
+the workflow's run / retry / verdict jobs verbatim in a synthetic project.
 """
 
 import os
@@ -26,6 +27,8 @@ import unittest
 from pathlib import Path
 
 import yaml
+
+from ._timing_harness import drive_timing, timing_test
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 RATIO_FILE = "unit_tests/ac_store/test_tq_600a_11.py"
@@ -72,25 +75,6 @@ def _load_workflow():
     return yaml.safe_load(text)
 
 
-def _pytest_step_script(workflow):
-    jobs = workflow.get("jobs") or {}
-    assert len(jobs) == 1, f"expected exactly one job, found {sorted(jobs)}"
-    (job,) = jobs.values()
-    scripts = [s["run"] for s in job.get("steps", []) if isinstance(s.get("run"), str) and "pytest" in s["run"]]
-    assert len(scripts) == 1, f"expected exactly one pytest run step, found {len(scripts)}"
-    return scripts[0]
-
-
-def _marker_line():
-    """The repository's own ``timing_ratio`` marker registration line, as written in pytest.ini."""
-    for line in (REPO_ROOT / "pytest.ini").read_text(encoding="utf-8").splitlines():
-        if line.strip().startswith("timing_ratio:"):
-            return line.strip()
-    message = "pytest.ini registers no `timing_ratio` marker line to copy"
-    raise AssertionError(message)
-
-
-_MARKED = "import pytest\n\n\n@pytest.mark.timing_ratio\ndef test_ratio():\n    assert {outcome}\n"
 _UNMARKED = (
     "import os\n\n\ndef test_plain():\n"
     "    open(os.environ['SENTINEL'], 'w').write('ran')\n"
@@ -118,67 +102,47 @@ class TestTq600a13XixTimingLane(unittest.TestCase):
 
 
 class TestTq600a13XixTimingWorkflow(unittest.TestCase):
-    def _run_step(self, script, tests_body, unit_body):
-        """Execute the workflow's pytest step verbatim in a synthetic project; return (rc, sentinel_ran, out)."""
-        marker = _marker_line()
+    def _drive(self, marked_outcome):
+        """Execute run -> retry -> verdict of the workflow in a synthetic project; return (drive, sentinel_ran).
+
+        ``marked_outcome`` is the source of the one ``timing_ratio`` test (None: no marked test at all). The
+        unmarked test writes a sentinel file, so a lane that used the default selection is caught.
+        """
         with tempfile.TemporaryDirectory() as tmp:
-            root = Path(tmp) / "proj"
-            (root / "tests").mkdir(parents=True)
-            (root / "unit_tests").mkdir()
-            (root / "pytest.ini").write_text(
-                f"[pytest]\nstrict_markers = true\nmarkers =\n    {marker}\n", encoding="utf-8"
-            )
-            if tests_body is not None:
-                (root / "tests" / "test_marked.py").write_text(tests_body, encoding="utf-8")
-            (root / "unit_tests" / "test_unmarked.py").write_text(unit_body, encoding="utf-8")
-            shim = Path(tmp) / "bin"
-            shim.mkdir()
-            (shim / "python").symlink_to(sys.executable)
-            (shim / "python3").symlink_to(sys.executable)
             sentinel = Path(tmp) / "sentinel"
-            env = dict(os.environ)
-            env.pop("PYTEST_ADDOPTS", None)
-            env.pop("PYTEST_CURRENT_TEST", None)
-            env["PATH"] = f"{shim}{os.pathsep}{env.get('PATH', '')}"
-            env["PYTEST_DISABLE_PLUGIN_AUTOLOAD"] = "1"
-            env["AC_ENFORCE_STRICT"] = "1"
-            env["SENTINEL"] = str(sentinel)
-            try:
-                proc = subprocess.run(
-                    ["bash", "--noprofile", "--norc", "-eo", "pipefail", "-c", script],
-                    cwd=str(root),
-                    env=env,
-                    capture_output=True,
-                    text=True,
-                    timeout=60,
-                    check=False,
-                )
-            except (OSError, subprocess.TimeoutExpired) as exc:
-                message = f"workflow step could not run: {exc}"
-                raise AssertionError(message) from exc
-            return proc.returncode, sentinel.exists(), proc.stdout + proc.stderr
+            tests = {"unit_tests/test_unmarked.py": _UNMARKED}
+            if marked_outcome is not None:
+                tests["tests/test_marked.py"] = timing_test("ratio", f"assert {marked_outcome}")
+            drive = drive_timing(None, tests, extra_env={"SENTINEL": str(sentinel)})
+            return drive, sentinel.exists()
 
     def test_tq600a_13_xix_the_timing_workflow_goes_red_on_a_failing_ratio_test(self):
         # covers: TQ-600a-13-xix
         # angle: seam
-        """The pytest step is red on a failing marked test and on an empty lane, green on a passing one."""
-        workflow = _load_workflow()
-        script = _pytest_step_script(workflow)
+        """The timing workflow's run is red on a failing marked test and on an empty lane, green on a passing one.
 
+        UPDATED BY TQ-600a-13-xii: the workflow is no longer one job with one pytest step. Its `run` job exits
+        zero whenever it produced a report and the `verdict` job's exit status is the run's conclusion, so the
+        three jobs are executed verbatim (the shared workflow-step executor) and the observed job is `verdict`,
+        the way test_tq_600a_13_i reconciles the correctness lane. Same three rows, same intent.
+        """
         with self.subTest(case="marked test fails"):
-            rc, _, out = self._run_step(script, _MARKED.format(outcome="False"), _UNMARKED)
-            self.assertNotEqual(rc, 0, f"a failing timing_ratio test left the step green:\n{out}")
-            self.assertIn("1 failed", out)
+            drive, _ = self._drive("False")
+            self.assertEqual(("failure", "Verdict: red"), (drive.verdict.conclusion, drive.verdict.failed_step), drive.verdict.log_text()[-800:])
+            self.assertEqual("red", (drive.file or {}).get("verdict"), "a failing timing_ratio test left the run green")
+            self.assertIn("1 failed", drive.run.log_text())
 
         with self.subTest(case="marked test passes"):
-            rc, ran, out = self._run_step(script, _MARKED.format(outcome="True"), _UNMARKED)
-            self.assertEqual(rc, 0, f"a passing timing_ratio test made the step red:\n{out}")
-            self.assertIn("1 passed", out)
-            self.assertFalse(ran, "the unmarked test ran: the step used the default selection")
+            drive, ran = self._drive("True")
+            self.assertEqual(("success", "success"), (drive.run.conclusion, drive.verdict.conclusion), drive.verdict.log_text()[-800:])
+            self.assertEqual("green", (drive.file or {}).get("verdict"))
+            self.assertIn("1 passed", drive.run.log_text())
+            self.assertFalse(ran, "the unmarked test ran: the lane used the default selection")
 
         with self.subTest(case="no marked tests"):
-            rc, ran, out = self._run_step(script, None, _UNMARKED)
-            self.assertNotEqual(rc, 0, f"an empty timing lane concluded green:\n{out}")
+            drive, ran = self._drive(None)
+            self.assertEqual(("failure", "Verdict: did not complete"), (drive.verdict.conclusion, drive.verdict.failed_step), drive.verdict.log_text()[-800:])
+            self.assertEqual("empty_selection", (drive.file or {}).get("stage"), "an empty timing lane concluded green")
             self.assertFalse(ran, "the unmarked test ran in the timing lane")
 
     def test_tq600a_13_xix_the_workflow_triggers_and_permissions(self):

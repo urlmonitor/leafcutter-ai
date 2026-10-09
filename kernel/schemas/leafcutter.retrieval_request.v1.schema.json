@@ -18,6 +18,7 @@
       "description": "A piece of evidence the run still needs, with its resolution status.",
       "properties": {
         "acceptable_source_kinds": {
+          "description": "Source kinds the requester would accept for this need; empty means any (not yet used to filter sources).",
           "items": {
             "$ref": "#/$defs/SourceKind"
           },
@@ -25,23 +26,28 @@
           "type": "array"
         },
         "category": {
-          "$ref": "#/$defs/EvidenceCategory"
+          "$ref": "#/$defs/EvidenceCategory",
+          "description": "Which kind of evidence would satisfy the need."
         },
         "id": {
+          "description": "Stable id of the need; answers and coverage are keyed by it.",
           "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
           "title": "Id",
           "type": "string"
         },
         "priority": {
           "$ref": "#/$defs/Priority",
-          "default": "required"
+          "default": "required",
+          "description": "Whether the need blocks resolution (required) or only improves it (supporting)."
         },
         "question": {
+          "description": "What the evidence must tell the run.",
           "minLength": 1,
           "title": "Question",
           "type": "string"
         },
         "resolution": {
+          "description": "Notes on how the need was resolved, such as why no source could serve it.",
           "items": {
             "type": "string"
           },
@@ -51,12 +57,14 @@
         "schema_version": {
           "const": "1.0",
           "default": "1.0",
+          "description": "Version of this contract's shape, so a reader can reject a payload written for another shape.",
           "title": "Schema Version",
           "type": "string"
         },
         "status": {
           "$ref": "#/$defs/NeedStatus",
-          "default": "open"
+          "default": "open",
+          "description": "Whether the need is open, satisfied, partly met or cannot be met."
         }
       },
       "required": [
@@ -103,11 +111,13 @@
             }
           ],
           "default": null,
+          "description": "Most characters of evidence to return in total; null uses the configured default.",
           "title": "Max Chars"
         },
         "schema_version": {
           "const": "1.0",
           "default": "1.0",
+          "description": "Version of this contract's shape, so a reader can reject a payload written for another shape.",
           "title": "Schema Version",
           "type": "string"
         },
@@ -122,6 +132,7 @@
             }
           ],
           "default": null,
+          "description": "Most evidence items to return; null uses the configured default.",
           "title": "Top K"
         }
       },
@@ -190,6 +201,7 @@
         }
       ],
       "default": null,
+      "description": "Preserved across research, clarification and progressive source disclosure.",
       "title": "Answer Requirements"
     },
     "assessment": {
@@ -205,10 +217,12 @@
         }
       ],
       "default": null,
+      "description": "Scoped supplied evidence interpreted conditionally by the neutral retrieval port.",
       "title": "Assessment"
     },
     "detail": {
       "default": "excerpt",
+      "description": "How much of each hit to return: an excerpt, a summary, or its locator only.",
       "enum": [
         "excerpt",
         "summary",
@@ -218,6 +232,7 @@
       "type": "string"
     },
     "explicit_locators": {
+      "description": "Exact places to fetch before ranking: `path`, `path#Lx-Ly`, `path#heading`, `path::Symbol`.",
       "items": {
         "type": "string"
       },
@@ -226,6 +241,7 @@
     },
     "jev_reserve": {
       "default": 0,
+      "description": "Jev calls retained for the requester; graph planning must not spend this reserve.",
       "minimum": 0,
       "title": "Jev Reserve",
       "type": "integer"
@@ -243,10 +259,12 @@
         }
       ],
       "default": null,
+      "description": "Neutral knowledge request fields, fully validated by the capability adapter.",
       "title": "Knowledge"
     },
     "limits": {
-      "$ref": "#/$defs/RetrievalLimits"
+      "$ref": "#/$defs/RetrievalLimits",
+      "description": "Bounds on how much evidence the request may return."
     },
     "max_rerank_batches": {
       "anyOf": [
@@ -259,12 +277,15 @@
         }
       ],
       "default": null,
+      "description": "Most rerank batches this request may judge (the requester's Jev budget affords no more than this beside its reserve); null means the configured `retrieval.rerank_max_batches`.",
       "title": "Max Rerank Batches"
     },
     "need": {
-      "$ref": "#/$defs/EvidenceNeed"
+      "$ref": "#/$defs/EvidenceNeed",
+      "description": "The evidence need to retrieve for; its question and category steer the search."
     },
     "query_hints": {
+      "description": "Texts to search for before the need's own wording: the goal first, then criteria, options.",
       "items": {
         "type": "string"
       },
@@ -274,10 +295,12 @@
     "schema_version": {
       "const": "1.0",
       "default": "1.0",
+      "description": "Version of this contract's shape, so a reader can reject a payload written for another shape.",
       "title": "Schema Version",
       "type": "string"
     },
     "source_ids": {
+      "description": "Sources to search; empty means every eligible source.",
       "items": {
         "type": "string"
       },

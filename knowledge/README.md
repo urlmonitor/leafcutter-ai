@@ -17,7 +17,7 @@ Independently executable retrieval and immutable Neo4j projection. Canonical pro
 
 No model-supplied Cypher or Python is executed. Recipes support at most two declared directed relationships, twenty seeds and ten neighbors per step. A one-item lookahead reports actual fanout saturation, including when later expansion yields no evidence. Required source kinds and memory relationships fail explicitly if the generation lacks approved mapping. Evidence sufficiency remains the research consumer's responsibility.
 
-Catalog writes require the configured directory and explicit application authorization. The standalone registration command requires `--allow-catalog-write`; the kernel activation capability requires its dedicated permission. Descriptor/Cypher and verification digests are checked on reopening. Retained versions keep old requests stable. Fresh verification receipts stay tied to the current research SHA even when the same query already exists.
+Catalog writes require the configured directory and explicit application authorization. The standalone registration command requires `--allow-catalog-write`; the kernel activation capability requires its dedicated permission. Descriptor/Cypher and verification digests are checked on reopening. Retained native versions keep their admitted requests stable; an explicit catalog-format replacement requires the new digest. Fresh verification receipts stay tied to the current research SHA even when the same query already exists.
 
 ## Maintenance
 
@@ -40,12 +40,13 @@ published source commit; explicit apply requires a private backup and writer
 credentials. The new generation is read back before activation; historical
 canonical data is preserved. Ordinary sync uses the same complete mapping.
 
-The adapter translates the old compiler-owned label patterns at execution so
-existing registered query digests and canonical payloads remain unchanged.
-Legacy and native generations can be read during migration. New publications
-require migrated metadata and always use the native format. Inspect and migrate
-explicitly with `python -m knowledge.domain_migrate`; apply requires separate
-writer credentials and an exclusive backup file. Do not enable an old writer
-against the migrated database.
+The adapter executes native label and relationship names directly. The serving
+catalog accepts only the current native compiler format; obsolete versions and
+pins are rejected. Replace an obsolete saved catalog only after private backup
+and fresh native-query verification, with an explicit digest mapping and a
+conflict-checked atomic replacement. The native inspection and refresh paths do
+not translate generic graphs. See
+[the native graph and saved-query reference](../docs/reference/neo4j-native-queries.md)
+for the completed application-catalog cutover and its measured scope.
 
 Run the focused `tests/knowledge/test_query_admission.py` and independent boundary tests. Run `tests/knowledge_live/query_growth_checks.py` against the isolated Neo4j service before claiming generated-query compatibility. Update the component architecture and operational guide when changing the compiler language. Candidate expected IDs are authored judgments: successful checks do not establish general semantic usefulness.

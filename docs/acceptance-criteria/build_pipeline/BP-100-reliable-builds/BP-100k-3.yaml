@@ -6,7 +6,7 @@ component: build-pipeline
 level: L2
 status: active
 req_status: active
-work_status: todo
+work_status: done
 readiness: approved
 priority: high
 roadmap_phase: phase_1
@@ -159,6 +159,24 @@ amended_by:
       than the gate bypassed. It returns to done when BP-100k-3-ii is built.
       The L1 above (BP-100k) records no work_status of its own, so nothing
       further up is left falsely done by this change.
+  - reason: record-correction
+    by: claude (main loop, for BrainCandy)
+    at: 2026-10-09
+    entry: >-
+      work_status todo -> done, closing the correction made the previous day.
+      Nothing else on this record changed.
+
+      WHY DONE NOW. BP-100k-3-ii -- the one unbuilt child that made this
+      composite falsely done, and the reason it was corrected to todo -- is now
+      implemented and covered, so the condition that entry named ("it returns to
+      done when BP-100k-3-ii is built") is met. All six children are done:
+      -i and -iii were already done; -iv, -v and -vi were closed on 2026-10-08;
+      -ii is closed in this same commit, with covered_by pointing at
+      unit_tests/commit_guardian/test_bp_100k_3_ii.py and implemented_by at the
+      two commit_guardian files it changed. Its four tests were verified green,
+      then verified RED with the implementation reverted to HEAD and green again
+      after a byte-for-byte restore, so the coverage is coupled to the fix
+      rather than passing incidentally.
 superseded_by: null
 covered_by:
   - BP-100k-3-i

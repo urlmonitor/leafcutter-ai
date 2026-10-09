@@ -1,0 +1,82 @@
+id: BP-1300e-2-i
+components:
+  - precommit_hooks
+  - commit_guardian
+title: "The project's written Error Handling Policy states which lint rules are enforced at commit time, and where"
+component: build-pipeline
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the repository's standing instructions contain an Error Handling Policy
+    that today says its rules are "enforced mechanically at commit time by Ruff
+    (rules E722, BLE001, TRY)",
+  And the commit-time lint check from BP-1300e-1 applies E722 repo-wide and
+    BLE001 and TRY to kernel/ only,
+  When the documentation step for this feature runs,
+  Then the policy text states which of those rules the commit-time check enforces
+    and over which trees, matching the declared rule set,
+  And it states that the policy's other rules are explained for understanding
+    and are not all mechanically enforced everywhere,
+  And it no longer states that BLE001 or TRY block a commit outside kernel/,
+  And every rule-and-tree statement in that text can be checked against the
+    declared rule set in one lookup.
+depends_on:
+  - BP-1300e-2
+doc_links:
+  - path: docs/acceptance-criteria/build_pipeline/BP-1300-unmaskable-guardrails/BP-1300e-2.yaml
+    relationship: parent
+    status: exists
+  - path: CLAUDE.md
+    relationship: modifies
+    status: exists
+    relevance: "Error Handling Policy section, opening paragraph and the Rule 2 / Rule 3 headings that name Ruff codes."
+  - path: leafcutter-lint.json
+    relationship: related
+    status: planned
+    relevance: "The one lookup every rule-and-tree statement in the policy text must be checkable against (created by BP-1300e-1-i)."
+  - path: docs/reference/commit-time-lint-gate.md
+    relationship: related
+    status: planned
+    relevance: "Link target for readers who want the full runner/outcome reference (BP-1300e-4)."
+assigned_agent: documentation-expert
+estimated_complexity: S
+test_required: false
+test_rationale: >-
+  Documentation-only change to CLAUDE.md prose; no executable behaviour is
+  added. Its correctness is nevertheless mechanically policed: the commit that
+  carries it is judged by check-lint-rule-claims (BP-1300e-2), which refuses any
+  rule code in this section that no leafcutter-lint.json step applies. That gate,
+  not a test written for this record, is the durable check.
+it_requirements:
+  - "EDIT ONLY CLAUDE.md's '## Error Handling Policy' section: the opening paragraph and the Rule 2 / Rule 3 headings and sentences that name Ruff codes. Rules 1 and 4, their examples, and the docs.astral.sh links stay as they are apart from the sentence that says all four rules are enforced by Ruff."
+  - "STATE WHAT RUNS, MATCHING leafcutter-lint.json AS LANDED. At commit time check-lint-gate applies E722 over the trees of the repository-rules step (as part of ruff.toml's selection) and BLE001 and the TRY family over kernel/ only (the kernel-error-handling step). Read the landed leafcutter-lint.json and ruff.toml before writing; do not copy these values from this record if the landed file differs."
+  - "NAME THE ONE LOOKUP. The section must point the reader at leafcutter-lint.json (and the reference doc from BP-1300e-4) as the place every rule-and-tree statement can be checked in one lookup."
+  - "SAY WHAT IS NOT LINT-ENFORCED, ACCURATELY. Rules 1 and 4 are explained for understanding; state that they are not enforced by the lint gate. If the text mentions the separately registered AST check (check-exception-handling, templates/scripts/commit_guardian/check_exception_handling.py) or the edit-time hook, verify each statement against the registered hooks_manifest entry and the hook's actual behaviour first -- do not replace one unverified claim with another."
+  - "Rule 2's heading ('Ruff E722 blocks the commit on bare excepts') becomes true repo-wide once BP-1300e-1 lands and may stay. Rule 3 must stop attributing BLE001/TRY blocking outside kernel/."
+  - "MUST PASS check-lint-rule-claims ON ITS OWN COMMIT: name only codes some declared step applies. Land this in the same PR as, or after, BP-1300e-1 and BP-1300e-2."
+  - "Glossary gate: if check-glossary-coverage flags new terms (e.g. 'leafcutter-lint.json'), route them through glossary-triage; do not hand-edit docs/glossary.md."
+delivers_to: null
+expects_from:
+  ac_id: BP-1300e-1-i
+  contract: "The landed leafcutter-lint.json (steps, paths, select) and ruff.toml selection that the policy text must match; and BP-1300e-2's check-lint-rule-claims, which judges the edit."
+origin_agent: BrainCandy
+created: 2026-10-09
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: docs
+risk_surface: internal
+notes: |
+  Split out from BP-1300e-2 as requested: the project instructions are
+  documentation owned by a different author (documentation-expert) from the code
+  and configuration texts in the parent. Whichever of the two lands second must
+  agree with the first.
+  Rule 2's heading ("Ruff E722 blocks the commit on bare excepts") becomes TRUE
+  repo-wide once BP-1300e-1 lands, and can stay. Rule 3's attribution of BLE001
+  and TRY is the part that stays false outside kernel/.

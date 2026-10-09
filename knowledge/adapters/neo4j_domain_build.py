@@ -15,7 +15,14 @@ if TYPE_CHECKING:
 
 import hashlib
 
-from knowledge.adapters.domain_schema import LABELS, RELATIONSHIPS, display_properties, memberships
+from knowledge.adapters.domain_schema import (
+    LABELS,
+    RELATIONSHIPS,
+    EDGE_TYPES,
+    NODE_LABELS,
+    display_properties,
+    memberships,
+)
 from knowledge.adapters.neo4j_backend import scope_key
 
 
@@ -56,7 +63,6 @@ async def build(db: Neo4jBackend, snapshot: ProjectionSnapshot, key: str) -> Non
             from knowledge.adapters.native_verification import verify_rows
 
             verify_rows(batch, actual)
-    node_labels = "|".join(LABELS.values())
     for semantic, edge_type in RELATIONSHIPS.items():
         rows = [
             {
@@ -73,9 +79,9 @@ async def build(db: Neo4jBackend, snapshot: ProjectionSnapshot, key: str) -> Non
         for start in range(0, len(rows), 250):
             await db._run(
                 "UNWIND $rows AS row MATCH (a:"
-                + node_labels
+                + NODE_LABELS
                 + " {key:row.source}), (b:"
-                + node_labels
+                + NODE_LABELS
                 + " {key:row.target}) "
                 "MERGE (a)-[r:" + edge_type + " {key:row.key}]->(b) ON CREATE SET r.current=false "
                 "SET r.edge_type=row.edge_type, r.locator=row.locator, r.payload=row.payload, "
@@ -89,11 +95,11 @@ def set_current(db: Neo4jBackend, tx: ManagedTransaction, key: str, current: boo
     """Update scene filters inside the same transaction as the publication pointer."""
     db._rows(
         tx,
-        "MATCH (n:KREntity {generation_key:$key}) SET n.current=$current",
+        "MATCH (n:" + NODE_LABELS + " {generation_key:$key}) SET n.current=$current",
         {"key": key, "current": current},
     )
     db._rows(
         tx,
-        "MATCH ()-[r:KR_LINK {generation_key:$key}]->() SET r.current=$current",
+        "MATCH ()-[r:" + EDGE_TYPES + " {generation_key:$key}]->() SET r.current=$current",
         {"key": key, "current": current},
     )

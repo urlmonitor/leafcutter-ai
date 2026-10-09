@@ -20,202 +20,100 @@ from __future__ import annotations
 import re
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import Field, model_validator
 
-SCHEMA_VERSION = "1.0"
-DECISION_ID_PATTERN = r"^dec-[0-9a-f]{16}$"
-STABLE_ID_PATTERN = r"^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"
-#: A human actor: the bare `human` or `human:<id>`. Anything else (host, jev, service) is refused.
-HUMAN_ACTOR_PATTERN = r"^human(:[A-Za-z0-9][A-Za-z0-9._@-]{0,127})?$"
-TIMESTAMP_PATTERN = r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?Z$"
-SLUG_PATTERN = r"^[a-z][a-z0-9_]{0,63}$"
-HEX_PATTERN = r"^[0-9a-f]{8,128}$"
-PrecedentAction = Literal["used_as_evidence", "offered_for_reuse", "reused", "set_aside",
-                          "not_applicable"]
-
-
-class _Model(BaseModel):
-    """Frozen, extra-forbidding base of every record section."""
-
-    model_config = ConfigDict(extra="forbid", frozen=True, str_strip_whitespace=True)
-
-
-class SourceRevision(_Model):
-    """Repository revision a fact was read at (commit plus dirty flag)."""
-
-    commit: str | None = None
-    dirty: bool = False
-
-
-class TaskContext(_Model):
-    """What the run was asked and where (concept section 15 `task_context`)."""
-
-    goal: str = Field(min_length=1)
-    component_ids: list[str] = Field(default_factory=list)
-    technologies: list[str] = Field(default_factory=list)
-    constraints: list[str] = Field(default_factory=list)
-
-
-class RecordOption(_Model):
-    """One option that was weighed; assumptions are kept verbatim (never edited later)."""
-
-    id: str = Field(pattern=STABLE_ID_PATTERN)
-    title: str = Field(min_length=1)
-    description: str = ""
-    assumptions: list[str] = Field(default_factory=list)
-    evidence_ids: list[str] = Field(default_factory=list)
-    proposed_by: str | None = None
-    approved_by: str | None = None
-
-
-class RecordCriterion(_Model):
-    """One criterion the options were weighed against."""
-
-    id: str = Field(pattern=STABLE_ID_PATTERN)
-    question: str = Field(min_length=1)
-    priority: Literal["required", "supporting"] = "required"
-    kind: Literal["evidence_answerable", "design_judgement"] = "evidence_answerable"
-    evidence_ids: list[str] = Field(default_factory=list)
-
-
-class RecordEvidence(_Model):
-    """A reference to one evidence item: where it was read, its hash and the revision (no text)."""
-
-    id: str = Field(pattern=STABLE_ID_PATTERN)
-    locator: str = Field(min_length=1)
-    category: str = Field(min_length=1)
-    content_hash: str = Field(pattern=HEX_PATTERN)
-    verification: str = "unverified"
-    relevance: float | None = Field(default=None, ge=0.0, le=1.0)
-    source_version: SourceRevision | None = None
-
-
-class RankedOption(_Model):
-    """One option's place in the kernel ranking shown to the human (evidence, never authority)."""
-
-    option_id: str = Field(pattern=STABLE_ID_PATTERN)
-    rank: int = Field(ge=1)
-    required_passed: int | None = Field(default=None, ge=0)
-    required_total: int | None = Field(default=None, ge=0)
-    required_mean: float | None = Field(default=None, ge=0.0, le=1.0)
-    scores: dict[str, float] = Field(default_factory=dict)
-
-
-class RecordAssessment(_Model):
-    """How the decision was assessed: the ranking a human saw, and the model's confidence."""
-
-    basis: Literal["kernel_ranking", "resolved_gate", "precedent_reuse"] = "kernel_ranking"
-    design_reason: str | None = None
-    confidence: float | None = Field(default=None, ge=0.0, le=1.0)
-    selected_rank: int | None = Field(default=None, ge=1)
-    ranking: list[RankedOption] = Field(default_factory=list)
-
-
-class Rationale(_Model):
-    """Why the option was chosen; `origin` says who wrote it (a template, never hidden Jev)."""
-
-    text: str = Field(min_length=1)
-    origin: Literal["template", "host"] = "template"
-
-
-class FinalOutcome(_Model):
-    """What later happened to the decision (concept section 15 `final_outcome`)."""
-
-    status: Literal["pending", "confirmed", "corrected", "abandoned"] = "pending"
-    observed_at: str | None = Field(default=None, pattern=TIMESTAMP_PATTERN)
-    note: str = ""
-
-
-class Approval(_Model):
-    """Who approved the decision and when; `approved` is the only status a record can have."""
-
-    approval_status: Literal["approved"]
-    approved_by: str = Field(pattern=HUMAN_ACTOR_PATTERN)
-    approved_at: str = Field(pattern=TIMESTAMP_PATTERN)
-    note: str = ""
-
-
-class RecordProvenance(_Model):
-    """Concept section 12 provenance: where, when and under which versions it was made."""
-
-    origin: Literal["learned"] = "learned"
-    created_by_capability: str = "decision"
-    created_at: str = Field(pattern=TIMESTAMP_PATTERN)
-    run_id: str = Field(min_length=1)
-    root_task_id: str | None = None
-    langfuse_trace_id: str | None = Field(default=None, pattern=HEX_PATTERN)
-    langfuse_trace_url: str | None = None
-    repository_revision: SourceRevision = Field(default_factory=SourceRevision)
-    policy_version: str | None = None
-    template_version: str | None = None
-    model_version: str | None = None
-    kernel_version: str | None = None
-    decision_versions: dict[str, str] = Field(default_factory=dict)
-
-
-class PrecedentNote(_Model):
-    """An earlier decision the kernel considered for this one, and what became of it."""
-
-    id: str = Field(pattern=DECISION_ID_PATTERN)
-    applicability: float | None = Field(default=None, ge=0.0, le=1.0)
-    action: PrecedentAction = "used_as_evidence"
-    note: str = ""
-
-
-class PreservedOriginal(_Model):
-    """What a correction preserves of the original record (never edited, only kept)."""
-
-    selected_option_id: str | None = None
-    evidence_ids: list[str] = Field(default_factory=list)
-    assumptions: list[str] = Field(default_factory=list)
-
-
-class Correction(_Model):
-    """One append-only correction: why the decision was corrected, by whom, and what it kept."""
-
-    reason: str = Field(min_length=1)
-    corrected_at: str = Field(pattern=TIMESTAMP_PATTERN)
-    corrected_by: str = Field(pattern=HUMAN_ACTOR_PATTERN)
-    superseded_by: str | None = Field(default=None, pattern=DECISION_ID_PATTERN)
-    new_selected_option_id: str | None = None
-    preserved: PreservedOriginal = Field(default_factory=PreservedOriginal)
+from kernel.memory.record_sections import (  # noqa: F401
+    Approval,
+    Correction,
+    DECISION_ID_PATTERN,
+    FinalOutcome,
+    HEX_PATTERN,
+    HUMAN_ACTOR_PATTERN,
+    PrecedentAction,
+    PrecedentNote,
+    PreservedOriginal,
+    RankedOption,
+    Rationale,
+    RecordAssessment,
+    RecordCriterion,
+    RecordEvidence,
+    RecordOption,
+    RecordProvenance,
+    SCHEMA_VERSION,
+    SLUG_PATTERN,
+    STABLE_ID_PATTERN,
+    SourceRevision,
+    TIMESTAMP_PATTERN,
+    TaskContext,
+    _Model,
+)
 
 
 class DecisionRecord(_Model):
     """One filed decision (`docs/decisions/<id>.yaml`), a plain-YAML subset (see module note)."""
 
     schema_version: Literal["1.0"] = "1.0"
+    """Version of this record format, so a reader can reject a record written for another shape."""
     kind: Literal["decision"] = "decision"
+    """Marks the file as a decision record among other documents."""
     id: str = Field(pattern=DECISION_ID_PATTERN)
+    """Identifier (`dec-<16 hex>`) that links and precedent lookups refer to this record by."""
     repository_id: str = Field(min_length=1)
+    """Repository the decision belongs to; with the id it forms the record's identity key."""
     title: str = Field(min_length=1)
+    """Short name shown in the decision index."""
     description: str = ""
+    """One-line summary shown in the decision index."""
     decision_type: str = Field(pattern=SLUG_PATTERN)
+    """Kind of decision (a slug), so similar decisions can be grouped."""
     question: str = Field(min_length=1)
-    #: Classification filters, drawn only from the existing vocabularies (see `validate`).
+    """The decision question as asked; precedent lookup matches new questions against it."""
     components: list[str] = Field(default_factory=list)
+    """Classification filters, drawn only from the existing vocabularies (see `validate`)."""
     change_target: list[str] = Field(default_factory=list)
+    """Kinds of change the decision applies to (a filter drawn from the ticket vocabulary)."""
     risk_surface: list[str] = Field(default_factory=list)
+    """Risk surfaces the decision applies to (a filter drawn from the ticket vocabulary)."""
     roadmap_phase: list[str] = Field(default_factory=list)
+    """Roadmap phases the decision applies to (a filter)."""
     file_globs: list[str] = Field(default_factory=list)
+    """File path patterns the decision applies to (a filter)."""
     repository_wide: bool = False
+    """True when the decision applies to the whole repository, so it needs no other filter."""
     selected_option_id: str = Field(pattern=STABLE_ID_PATTERN)
+    """Id of the option the human chose; it must be one of the listed options."""
     supersedes: list[str] = Field(default_factory=list)
+    """Ids of earlier decisions this one replaces."""
     superseded_by: list[str] = Field(default_factory=list)
+    """Ids of later decisions that replace this one."""
     related: list[str] = Field(default_factory=list)
+    """Ids of decisions that are linked without replacing each other."""
     task_context: TaskContext
+    """What the run was asked and where."""
     rationale: Rationale
+    """Why the option was chosen."""
     assumptions: list[str] = Field(default_factory=list)
+    """Premises the decision as a whole rests on, kept verbatim for later review."""
     unresolved_risks: list[str] = Field(default_factory=list)
+    """Risks that remained open when the decision was made."""
     assessment: RecordAssessment = Field(default_factory=RecordAssessment)
+    """How the decision was assessed, including the ranking the human saw."""
     final_outcome: FinalOutcome = Field(default_factory=FinalOutcome)
+    """What later happened to the decision."""
     options: list[RecordOption] = Field(min_length=1)
+    """The options that were weighed, including the one chosen."""
     criteria: list[RecordCriterion] = Field(default_factory=list)
+    """The criteria the options were weighed against."""
     evidence: list[RecordEvidence] = Field(default_factory=list)
+    """References to the evidence cited, without the text."""
     precedents_considered: list[PrecedentNote] = Field(default_factory=list)
+    """Earlier decisions the kernel considered, and what became of each."""
     approval: Approval
+    """Who approved the decision and when."""
     provenance: RecordProvenance
+    """Where, when and under which versions the record was made."""
     corrections: list[Correction] = Field(default_factory=list)
+    """Append-only corrections made after filing; the original is never edited."""
 
     @model_validator(mode="after")
     def _internally_consistent(self) -> DecisionRecord:
@@ -274,6 +172,9 @@ def _is_decision_id(value: str) -> bool:
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-09 [python-coder]: The record sections moved to record_sections.py (re-exported here)
+#   to fit the file-size limit after field purposes were added; the committed decision_record
+#   schema carries them. (#TICKET-20261009-KernelContractFieldDescriptions)
 # - 2026-10-01 [python-coder]: Filters are flat top-level fields and the stdlib knowledge-map
 #   parser reads id, title, description and the filter lists directly; nested sections are
 #   skipped by it. approval_status is the single literal `approved`: a record can only exist

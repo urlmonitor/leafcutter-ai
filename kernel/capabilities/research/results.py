@@ -107,7 +107,8 @@ def bundle_result(invocation: CapabilityInvocation, plan: Plan, cont: ResearchCo
     unsatisfied = [n.id for n in cont.needs if n.priority is Priority.REQUIRED
                    and out.coverage.get(n.id) is not NeedStatus.SATISFIED]
     if not cont.needs:
-        limitations.append("no evidence needs were identified for the question")
+        limitations += ["no evidence needs were identified for the question",
+                        "no research ran: no source was searched, so this bundle is not an answer"]
     limitations += [f"required need {i} is {out.coverage.get(i, NeedStatus.OPEN).value}"
                     for i in unsatisfied]
     summary = coverage_summary(cont, out, limitations)
@@ -121,7 +122,7 @@ def bundle_result(invocation: CapabilityInvocation, plan: Plan, cont: ResearchCo
         need_evidence={n: [i for i in ids if i in out.evidence]
                        for n, ids in out.need_evidence.items() if ids},
         need_limitations={n: notes for n, notes in out.need_notes.items() if notes})
-    partial = bool(unsatisfied) and plan.expected_coverage == "all_required"
+    partial = not cont.needs or (bool(unsatisfied) and plan.expected_coverage == "all_required")
     return CapabilityResult(
         invocation_id=invocation.id, work_item_id=invocation.work_item_id,
         status=ResultStatus.PARTIAL if partial else ResultStatus.COMPLETED,
@@ -133,6 +134,8 @@ def bundle_result(invocation: CapabilityInvocation, plan: Plan, cont: ResearchCo
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-09 [python-coder]: A bundle with no planned need is partial and states that no research
+#   ran, never completed. (#TICKET-20261009-KernelEvidenceLookupNoNeeds)
 # - 2026-10-01 [python-coder]: The bundle names, per need, the evidence that passed relevance, so
 #   the decision can link a human-added option's claim evidence to that option (round 8 defect
 #   a). (#KernelDecisionStore)

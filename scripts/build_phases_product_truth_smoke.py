@@ -72,6 +72,7 @@ _TRACED_MODULE_NAMES: tuple[str, ...] = (
     "validate_product_truth",
     "generate_product_truth",
     "product_truth_checks",
+    "product_truth_dependencies",
     "product_truth_contracts",
     "product_truth_contract_sources",
     "product_truth_contract_render",

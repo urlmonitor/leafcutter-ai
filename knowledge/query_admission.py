@@ -1,6 +1,7 @@
 """Independent query verification followed by explicitly governed catalog activation.
 
 DECISION HISTORY
+- 2026-10-09 09:11 [python-coder]: Emit native queries while preserving versioned catalog admission identities. (#KM-400a-3-i/TICKET-20261009-KM-400a-3-i-native-query-maintenance)
 - 2026-10-01 15:46 [python-coder]: Rerun checks; never trust a builder's success receipt. (#KM-500/TICKET-20261001-KM-500b-2)
 
 MODULE: knowledge.query_admission
@@ -24,7 +25,7 @@ from .deadlines import deadline
 from uuid import uuid4
 from .errors import invalid, KnowledgeError
 from .query_models import QueryCandidate, QueryDescriptor, validate_arguments
-from .query_compile import compile_query, digest_data
+from .query_compile import COMPILER_VERSION, compile_query, digest_data
 from .query_execution import execute_query
 from .query_store import activate
 
@@ -207,7 +208,7 @@ async def evaluate_candidate(
         "foreign_scope_rejected": True,
         "semantic_usefulness_proven": False,
         "verification_method": "fresh compiled-query execution and fixed boundary checks",
-        "compiler_version": "1",
+        "compiler_version": COMPILER_VERSION,
     }
 
 
